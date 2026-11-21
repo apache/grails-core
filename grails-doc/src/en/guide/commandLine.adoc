@@ -509,7 +509,7 @@ The `GRAILS_PLUGIN_INDEX` environment variable, or the `--plugin-index` option o
 
 === Commands of Earlier Versions
 
-The Grails shell and its profiles of Grails 8 and earlier had commands that the `grails` command does not have under the name they had. link:upgrading.html#upgrading90x[Upgrading from Grails 8 to Grails 9] says what else differs for the commands that are kept. When one of these names is typed, the command line refuses it as it refuses anything that is no command, with exit code 2, and adds one line that says what there is in its place:
+The Grails shell and its profiles of Grails 8 and earlier had commands that the `grails` command does not have under the name they had. link:upgrading.html#upgrading90x[Upgrading from Grails 8 to Grails 9] says what else differs for the commands that are kept, and its link:upgrading.html#cliMappingGrails8[note 55] has a table of every command line of Grails 8, the commands that are kept among them, with what it is in Grails 9. When one of these names is typed, the command line refuses it as it refuses anything that is no command, with exit code 2, and adds one line that says what there is in its place:
 
 [source,console]
 ----
@@ -607,7 +607,7 @@ Outside a project these commands are not mistakes: `create-controller`, `install
 |replaced: `create-app --list-features`, and the same option of the other create commands.
 
 |`query-tail`
-|a script command of Grails Data
+|a script command of Grails Data in earlier builds of Grails 9; Grails 8 has no `query-tail`
 |a command of a plugin: `query-tail` of Grails Data, which the build of the project runs without starting the application (see the section before this one for how the command of a plugin becomes a command here). `run-command query-tail` runs it before the build has listed it.
 
 |`quit`

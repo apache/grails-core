@@ -25,7 +25,7 @@ Three ideas carry the whole command line:
 * A generated project keeps a _record_ of how it was generated, in its `.grails` directory. The record is what lets the command line add a feature to the project later.
 * Whatever needs the classes of the application (compiling, testing, running, the commands of the application and its plugins) runs in the Gradle build of the project. The `grails` command starts that build with the Gradle wrapper of the project, so `grails` and `./gradlew` always build the same thing.
 
-If you know the Grails shell and the profiles of Grails 8 and earlier, link:upgrading.html#upgrading90x[Upgrading from Grails 8 to Grails 9] and link:applicationTypes.html#profilesReplaced[What Became of Profiles] say what changed.
+If you know the Grails shell and the profiles of Grails 8 and earlier, link:upgrading.html#upgrading90x[Upgrading from Grails 8 to Grails 9] and link:applicationTypes.html#profilesReplaced[What Became of Profiles] say what changed, and link:upgrading.html#cliMappingGrails8[note 55 of the upgrade notes] has every command of Grails 8 with what it is now.
 
 === Installing the command line
 
@@ -127,6 +127,8 @@ The file has a few more keys than are shown here. Three things follow from the r
 * *Do not edit it.* The files carry digests of each other. A record that was changed by hand is not used, and the commands that need it say so.
 * *The application does not read it.* Only the command line does: the commands that create classes take the type, the package and the features from it, and `feature add`, `project show` and `project regenerate` work from it.
 
+An application that Grails 9 did not generate, such as one that was created with the Grails shell of an earlier version, has no record. link:{commandLineRef}project-migrate.html[project migrate] writes one from the files of the application, and the commands that create classes are there afterwards. `feature add` and `project regenerate` still refuse such an application: they need the record of an application that Grails 9 generated.
+
 See "The `.grails` directory of a project" in xref:commandLine#creatingProject[Creating a Grails Project].
 
 === Creating classes
@@ -217,7 +219,7 @@ $ grails help
 $ grails data-import orders.csv
 ----
 
-`help` then lists the commands of the application and of its plugins after its own, each with where it comes from, and each is run by its name. The scaffolding plugin, which a web application has by default, brings link:{commandLineRef}generate-all.html[generate-all], link:{commandLineRef}generate-controller.html[generate-controller] and link:{commandLineRef}generate-views.html[generate-views] this way. `run-command NAME` runs a command without the list, and is also how to reach a command of a plugin whose name a command of `grails` itself has.
+`help` then lists the commands of the application and of its plugins after its own, each with where it comes from, and each is run by its name. The scaffolding plugin, which a web application has by default, brings link:{commandLineRef}generate-all.html[generate-all], link:{commandLineRef}generate-controller.html[generate-controller] and link:{commandLineRef}generate-views.html[generate-views] this way. `run-command NAME` runs a command without the list, and is also how to reach a command of a plugin whose name a command of `grails` itself has. A command that needs no application, because it only works on the files of the project, can say so and is then run without starting it; `query-tail` of Grails Data is one.
 
 A project can also have _scripts_ in `src/main/scripts`, created with `create-script`. A script is run by the build without the application and cannot use the classes of the application. Scripts are deprecated: write a new command as a class with `create-command`.
 
@@ -267,7 +269,7 @@ $ grails feature add postgres
 | Feature postgres added, in the place of h2. Commit the changes together with the directory .grails
 ----
 
-The command also names the features that come with the one you asked for, here `testcontainers`. It is deliberately careful about the rest. It does not replace a feature that was asked for by name when the project was created, and it does not change an option such as `--data`. No command takes a feature out again, and adding a feature does not move a project to another version of Grails. It works only in a project that has a record. Review the result with your version control and commit it together with `.grails`.
+The command also names the features that come with the one you asked for, here `testcontainers`. It is deliberately careful about the rest. A feature that was asked for by name, when the project was created or with an earlier `feature add`, is not replaced unless you say so with `--replace`: in a project that was created with `postgres`, `grails feature add mysql --replace` puts MySQL in its place, and without the option the command refuses and names both features. An option such as `--data` is never changed. No command takes a feature out again, and adding a feature does not move a project to another version of Grails. It works only in a project that Grails 9 generated; the record that `project migrate` writes for another application is not enough for it. See link:{commandLineRef}feature-add.html[feature add]. Review the result with your version control and commit it together with `.grails`.
 
 "Adding a feature to a project" in xref:commandLine#creatingProject[Creating a Grails Project] describes the merge, the conflicts and everything that is refused.
 

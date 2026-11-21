@@ -71,7 +71,7 @@ The command also adds the setting `grails.plugin.springsecurity.oauth2.domainCla
 
 `init-oauth2` is a command of the plugin and runs in the application, which is started for it (without its `BootStrap` classes), so the application has to be able to start. Besides the Gradle task above, `grails run-command init-oauth2 com.yourapp User OAuthID` runs it, and so does `grails init-oauth2 com.yourapp User OAuthID` once the build of the project has listed the commands of the application and its plugins, which `grails gradle grailsCommandCatalog` does.
 
-NOTE: Before Grails 9 the plugin also had a script of this name, run with `./gradlew runScriptCommand --arg=init-oauth2 --arg=com.yourapp --arg=User --arg=OAuthID`. The script is gone; the command takes the same arguments and writes the same files.
+NOTE: Before Grails 9 the plugin also had a script of this name, which the Grails shell ran as `grails init-oauth2 com.yourapp User OAuthID`, and earlier builds of Grails 9 with `./gradlew runScriptCommand --arg=init-oauth2 --arg=com.yourapp --arg=User --arg=OAuthID`. The script is gone; the command takes the same arguments and writes the same files.
 
 Finally, you also need to add the following domain class relationship mapping to
 the `User.groovy` domain class:
