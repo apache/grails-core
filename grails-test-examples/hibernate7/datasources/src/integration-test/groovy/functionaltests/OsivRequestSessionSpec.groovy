@@ -119,19 +119,24 @@ class OsivRequestSessionSpec extends Specification implements HttpClientSupport 
         }
     }
 
-    void 'a request that goes asynchronous and times out has its sessions closed after the timeout'() {
+    void 'a request that goes asynchronous and times out keeps its sessions open until the timeout and has them closed after it'() {
         given:
         RequestSessions.asyncDefaultSession = null
         RequestSessions.asyncSecondarySession = null
 
-        when: 'the request goes asynchronous and never completes'
+        when: 'the request goes asynchronous, never completes, and waits past the handoff'
         final asyncResponse = CompletableFuture.supplyAsync({ http('/asyncRequestSession/timesOut') } as Supplier<TestHttpResponse>)
         new PollingConditions(timeout: 10).eventually {
             assert RequestSessions.asyncDefaultSession != null
             assert RequestSessions.asyncSecondarySession != null
         }
+        sleep(500)
 
-        and: 'the container times it out'
+        then: 'its sessions are still open'
+        RequestSessions.asyncDefaultSession.open
+        RequestSessions.asyncSecondarySession.open
+
+        when: 'the container times it out'
         asyncResponse.get(30, TimeUnit.SECONDS)
 
         then: 'both sessions are closed'

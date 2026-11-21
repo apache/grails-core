@@ -28,6 +28,6 @@ class AsyncRequestSessionController implements AsyncController {
     def timesOut() {
         RequestSessions.asyncDefaultSession = RequestSessions.defaultSession()
         RequestSessions.asyncSecondarySession = RequestSessions.secondary()
-        startAsync().timeout = 1000
+        startAsync().timeout = 3000
     }
 }
