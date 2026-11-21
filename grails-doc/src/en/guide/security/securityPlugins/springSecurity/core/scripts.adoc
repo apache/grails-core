@@ -20,7 +20,7 @@ under the License.
 [[core-scripts]]
 == Commands
 
-The plugin has three commands that create domain classes and add their settings to the configuration of the project. They are commands of the plugin that run in the application: the Gradle task `runCommand` starts the application and calls the command, so the application has to be able to start, which an application that has the plugin and no security settings yet does.
+The plugin has three commands that create domain classes and add their settings to the configuration of the project. They are commands of the plugin that only write files of the project, so they are run without the application being started: the Gradle task `runCommand` compiles the project and calls the command, and an application that has no security settings yet, or cannot start for another reason, has the commands all the same.
 
 A command is run in one of three ways, here for `s2-quickstart`:
 

@@ -24,6 +24,7 @@ import grails.build.logging.ConsoleLogger
 import grails.build.logging.GrailsConsole
 import grails.util.GrailsNameUtils
 import org.apache.grails.core.cli.GrailsApplicationCommand
+import org.apache.grails.core.cli.StandaloneCommand
 import org.grails.io.support.Resource
 
 /**
@@ -38,7 +39,7 @@ import org.grails.io.support.Resource
  * @since 9.0
  */
 @CompileStatic
-class S2uiOverrideCommand implements GrailsApplicationCommand, CommandLineHelper {
+class S2uiOverrideCommand implements GrailsApplicationCommand, StandaloneCommand, CommandLineHelper {
 
     static final String USAGE_MESSAGE = '''
 grails s2ui-override <type> [controllerPackage]

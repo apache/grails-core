@@ -19,6 +19,7 @@
 
 package org.apache.grails.security.acl.cli
 
+import org.apache.grails.core.cli.StandaloneCommand
 import spock.lang.Specification
 import spock.lang.TempDir
 import spock.lang.Unroll
@@ -176,5 +177,10 @@ class S2CreateAclDomainsCommandSpec extends Specification {
             }
         }
         paths.sort()
+    }
+
+    void 'the commands only write files of the project, so they are run without the application being started'() {
+        expect: 'an application that cannot start, as one that is not configured yet, has them all the same'
+        [S2CreateAclDomainsCommand].every { Class command -> StandaloneCommand.isAssignableFrom(command) }
     }
 }

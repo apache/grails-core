@@ -24,6 +24,7 @@ import grails.build.logging.ConsoleLogger
 import grails.build.logging.GrailsConsole
 import grails.codegen.model.Model
 import org.apache.grails.core.cli.GrailsApplicationCommand
+import org.apache.grails.core.cli.StandaloneCommand
 
 /**
  * Generates what the challenge questions of the forgotten password workflow need:
@@ -37,7 +38,7 @@ import org.apache.grails.core.cli.GrailsApplicationCommand
  * @since 9.0
  */
 @CompileStatic
-class S2uiCreateChallengeQuestionsCommand implements GrailsApplicationCommand, CommandLineHelper {
+class S2uiCreateChallengeQuestionsCommand implements GrailsApplicationCommand, StandaloneCommand, CommandLineHelper {
 
     static final String USAGE_MESSAGE = '''
 grails s2ui-create-challenge-questions <domain-class-package> <challenge-qa-class-name> <user-domain-class-name> [number-of-questions]

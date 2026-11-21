@@ -2113,7 +2113,7 @@ $ grails gradle grailsCommandCatalog
 $ grails s2-quickstart com.example User Role
 ----
 
-The first two work as soon as the plugin is a dependency of the project; the last one works once the build has listed the commands. These commands run in the application: the Gradle task `runCommand` compiles and starts it, so the application has to be able to start, which an application that has the plugin and no security settings yet does.
+The first two work as soon as the plugin is a dependency of the project; the last one works once the build has listed the commands. These commands only write files of the project, so they are run without the application being started (they are `StandaloneCommand` classes, as `query-tail` is): the Gradle task `runCommand` compiles the project and calls the command, so the project has to compile, and need not be able to start.
 
 What the commands do differently from the scripts:
 

@@ -20,7 +20,7 @@ under the License.
 [[ui-scripts]]
 == Commands
 
-The plugin has two commands. They are commands of the application they are run in: the Gradle task `runCommand` of the project starts the application and runs the command in it, so the application has to compile and start.
+The plugin has two commands. They only write files of the project, so they are run without the application being started: the Gradle task `runCommand` of the project compiles the project and runs the command, so the project has to compile.
 
 [source,bash]
 ----

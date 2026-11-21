@@ -18,6 +18,7 @@
  */
 package org.apache.grails.security.ui.cli
 
+import org.apache.grails.core.cli.StandaloneCommand
 import spock.lang.Specification
 import spock.lang.TempDir
 import spock.lang.Unroll
@@ -257,5 +258,10 @@ class S2uiOverrideCommandSpec extends Specification {
         File file = new File(project, path)
         assert file.isFile()
         file.text
+    }
+
+    void 'the commands only write files of the project, so they are run without the application being started'() {
+        expect: 'an application that cannot start, as one that is not configured yet, has them all the same'
+        [S2uiOverrideCommand, S2uiCreateChallengeQuestionsCommand].every { Class command -> StandaloneCommand.isAssignableFrom(command) }
     }
 }
