@@ -673,7 +673,7 @@ to default to 'Annotation'; setting value to 'Annotation'
             roleHierarchy = conf.roleHierarchy
         }
 
-        applicationContext.roleHierarchy.hierarchy = roleHierarchy
+        applicationContext.roleHierarchy.hierarchy = RoleHierarchyNormalizer.normalize(roleHierarchy)
 
         // build filters here to give dependent plugins a chance to register some
         SortedMap<Integer, String> filterNames = ReflectionUtils.findFilterChainNames(conf)
