@@ -27,7 +27,7 @@ under the License.
 
 |active
 |`true`
-|Whether the plugin is enabled
+|Whether the plugin is enabled. When `false` the plugin defines none of its beans and every `sec:` tag renders nothing, so a GSP that uses them still renders
 
 |printStatusMessages
 |`true`
