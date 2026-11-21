@@ -29,14 +29,32 @@ plugins {
     id 'org.apache.grails.gradle.grails-code-style'
     id 'org.apache.grails.gradle.grails-gsp'
     id 'org.apache.grails.gradle.grails-plugin'
+    id 'org.apache.grails.gradle.grails-plugin-cli'
 }
 
 version = projectVersion
 group = 'org.apache.grails'
 
+cliArtifact {
+    automaticModuleName = 'org.apache.grails.security.acl.cli'
+    // this framework module wires its cli dependencies with project dependencies below
+    defaultDependencies = false
+}
+
 dependencies {
 
     implementation platform(project(':grails-bom'))
+
+    // the cli tier — published separately as a companion -cli artifact
+    cliImplementation platform(project(':grails-bom'))
+    cliApi project(project.path)
+    cliApi(project(':grails-core')) {
+        capabilities {
+            requireCapability('org.apache.grails:grails-core-cli')
+        }
+    }
+
+    cliCompileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
 
     implementation 'org.springframework.boot:spring-boot-starter-logging'
     implementation 'org.springframework.boot:spring-boot-autoconfigure'

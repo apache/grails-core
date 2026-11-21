@@ -22,7 +22,7 @@ under the License.
 
 The plugin uses domain classes to manage database state. Ordinarily the database structure isn't all that important, but to be compatible with the traditional JDBC-based Spring Security code, the domain classes are configured to generate the table and column names that are used there.
 
-The plugin classes related to persistence use these classes, so they're included in the plugin but can be overridden by running the <<acl-s2-create-acl-domains>> script.
+The plugin classes related to persistence use these classes, so they're included in the plugin but can be overridden by running the <<acl-s2-create-acl-domains>> command.
 
 As you can see, the database structure is highly normalized.
 

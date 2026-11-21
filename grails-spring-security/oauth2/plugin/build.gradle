@@ -54,7 +54,7 @@ dependencies {
 			requireCapability('org.apache.grails:grails-core-cli')
 		}
 	}
-	// GrailsConsole (used by init-o-auth2) needs jline at compile time
+	// GrailsConsole (used by init-oauth2) needs jline at compile time
 	cliImplementation 'org.jline:jline'
 
     cliCompileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
@@ -119,6 +119,8 @@ dependencies {
 	integrationTestImplementation 'org.spockframework:spock-core'
 
 	integrationTestRuntimeOnly 'net.bytebuddy:byte-buddy'
+
+	testCliImplementation 'org.spockframework:spock-core'
 }
 
 apply {

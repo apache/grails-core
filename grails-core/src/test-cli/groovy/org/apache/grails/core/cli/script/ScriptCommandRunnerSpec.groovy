@@ -425,13 +425,11 @@ class ScriptCommandRunnerSpec extends Specification {
         'grails-spring-security/plugin' | 's2-create-persistent-token' | ['com.example.PersistentLogin'] | '' | ['grails-app/domain/com/example/PersistentLogin.groovy', 'grails-app/conf/application.groovy']
         'grails-spring-security/plugin' | 's2-create-role-hierarchy-entry' | ['com.example.RoleHierarchyEntry'] | '' | ['grails-app/domain/com/example/RoleHierarchyEntry.groovy']
         'grails-spring-security/plugin' | 's2-quickstart' | ['com.example', 'User', 'Role'] | '' | ['grails-app/domain/com/example/User.groovy', 'grails-app/domain/com/example/UserRole.groovy']
-        'grails-spring-security/acl/plugin' | 's2-create-acl-domains' | [] | '' | ['grails-app/domain/grails/plugin/springsecurity/acl/AclClass.groovy', 'grails-app/domain/grails/plugin/springsecurity/acl/AclSid.groovy']
         'grails-spring-security/ui/plugin' | 's2ui-create-challenge-questions' | ['com.example', 'Profile', 'com.example.User'] | '' | ['grails-app/domain/com/example/Profile.groovy', 'grails-app/controllers/com/example/ProfileController.groovy']
         'grails-spring-security/ui/plugin' | 's2ui-override' | ['auth'] | '' | ['grails-app/views/login/auth.gsp']
         'grails-spring-security/ui/plugin' | 's2ui-override' | ['user', 'com.example'] | '' | ['grails-app/controllers/com/example/UserController.groovy', 'grails-app/views/user/create.gsp', 'grails-app/views/user/edit.gsp', 'grails-app/views/user/search.gsp']
         'grails-spring-security/ui/plugin' | 's2ui-override' | ['layout'] | '' | ['grails-app/views/layouts/springSecurityUI.gsp', 'grails-app/views/includes/_ajaxLogin.gsp']
         'end-to-end/legacy-commands-plugin' | 'hello-legacy-script' | ['hello'] | '' | []
-        'grails-spring-security/oauth2/plugin' | 'init-oauth2' | ['com.example', 'User', 'OAuthID'] | '' | ['grails-app/domain/com/example/OAuthID.groovy']
     }
 
     @Unroll
