@@ -103,6 +103,72 @@ bootRun{
 }
 ----
 
+=== JVM Options, Memory and Environment Variables
+
+Three Java virtual machines are involved when a command of `grails` builds or runs a project, and each takes its JVM options (memory settings such as `-Xmx`, system properties, a proxy) from a different place.
+
+[cols="2,3,4"]
+|===
+|JVM |What runs in it |Where its options come from
+
+|The `grails` command
+|The command line itself: creating a project, the `create-*` commands, `feature add`, the interactive mode
+|The environment variables `GRAILS_OPTS` and `JAVA_OPTS`, for example `export GRAILS_OPTS="-Xmx512m -Dhttps.proxyHost=proxy.example.com -Dhttps.proxyPort=3128"`. The Grails wrapper (`grailsw`) reads `GRAILSW_OPTS` and `JAVA_OPTS` for the JVM that downloads and starts the command line. The Java that is used is that of `JAVA_HOME`, or the `java` on the path.
+
+|The build
+|Gradle, which the commands that build, test and run a project start through the Gradle wrapper of the project
+|`org.gradle.jvmargs` in the `gradle.properties` of the project, for example `org.gradle.jvmargs=-Xmx2g`. A `-Dname=value` after the name of a command is a system property of this JVM. `GRAILS_OPTS` does not reach it.
+
+|The application and the tests
+|The application that `run-app` starts, and the tests of `test-app`
+|The build of the project: `jvmArgs`, `maxHeapSize` and `systemProperty` of the `bootRun` task and of the test tasks in `build.gradle`, as shown above. Neither `GRAILS_OPTS` nor `org.gradle.jvmargs` sets the memory of the application.
+|===
+
+The port of the application is an option of `run-app`: `grails run-app --port=8081`. The Grails environment is `-Dgrails.env=NAME` after the name of the command, and where that is not given the environment variable `GRAILS_ENV` names it, which is also how an application that is started with `java -jar` or in a container is given its environment; see link:conf.html#environments[Environments].
+
+These are the environment variables the command line and the Grails wrapper read or set:
+
+[cols="2,5"]
+|===
+|Variable |Meaning
+
+|`JAVA_HOME`
+|The Java installation that runs the command line and the Grails wrapper. Without it the `java` on the path is used.
+
+|`GRAILS_OPTS`, `JAVA_OPTS`
+|JVM options of the `grails` command.
+
+|`GRAILSW_OPTS`
+|JVM options of the Grails wrapper.
+
+|`GRAILS_ENV`
+|The Grails environment, where no `grails.env` system property names one.
+
+|`GRAILS_REPO_URL`
+|Maven repositories to use ahead of the default ones: by the Grails wrapper to find the command line, and in a project that is generated, in its build.
+
+|`GRAILS_WRAPPER_HOME`
+|The directory the Grails wrapper keeps the command line in, in the place of `.grails/wrapper` in the home directory of the user.
+
+|`GRAILS_WRAPPER_ALLOWED_TYPES`
+|The kinds of release the Grails wrapper may use, for example `SNAPSHOT,RC`.
+
+|`GRAILS_SAFE_DIRECTORY`
+|Directories of projects that are used although another user owns them; see "Commands of a project, in every directory of it" below.
+
+|`GRAILS_FORGE_CATALOG`
+|The catalog of features of plugins the create commands read, or `none`.
+
+|`GRAILS_PLUGIN_INDEX`
+|The plugin index that `list-plugins` and `plugin-info` read, or `none`; see <<findingPlugins,Finding Plugins>>.
+
+|`GRAILS_NON_INTERACTIVE`
+|Set to `true` by the command line for the build it starts when `--non-interactive` was given, so that a command of the application or a script knows that nothing may wait for what a user types. The command line itself does not read it.
+
+|`NO_COLOR`
+|When set, the command line writes no colors.
+|===
+
 === The Grails Forge Website
 
 You can also begin your Grails application without the need to install the `grails` command by visiting https://start.grails.org/[the Grails Forge website]. It creates projects from the same application types and features as the `create-` commands.
