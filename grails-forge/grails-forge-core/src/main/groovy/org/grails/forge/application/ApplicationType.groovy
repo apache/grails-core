@@ -27,7 +27,8 @@ enum ApplicationType {
     WEB('Web Application', 'A Grails® framework Web Application'),
     REST_API('Rest API', 'A Grails® framework Rest API'),
     WEB_PLUGIN('Web Plugin', 'A Grails® framework Web Plugin'),
-    PLUGIN('Plugin', 'A Grails® framework Plugin')
+    PLUGIN('Plugin', 'A Grails® framework Plugin'),
+    REST_API_PLUGIN('Rest API Plugin', 'A Grails® framework Rest API Plugin')
 
     public static final ApplicationType DEFAULT_OPTION = WEB
 
@@ -57,5 +58,21 @@ enum ApplicationType {
     @Nonnull
     String getName() {
         return name().toLowerCase(Locale.ENGLISH)
+    }
+
+    /**
+     * @return whether a project of the type is a Grails plugin: it has a plugin descriptor class and is built
+     * with the Gradle plugin for Grails plugins
+     */
+    boolean isPlugin() {
+        return this == PLUGIN || this == WEB_PLUGIN || this == REST_API_PLUGIN
+    }
+
+    /**
+     * @return whether a project of the type has the content of a REST API: JSON views and the REST URL mappings,
+     * and no GSP
+     */
+    boolean isRestApi() {
+        return this == REST_API || this == REST_API_PLUGIN
     }
 }

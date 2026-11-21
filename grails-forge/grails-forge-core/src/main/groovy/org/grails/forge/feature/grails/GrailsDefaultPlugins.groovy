@@ -91,7 +91,7 @@ class GrailsDefaultPlugins implements DefaultFeature {
      */
     static String bundleBaseName(GeneratorContext generatorContext) {
         ApplicationType applicationType = generatorContext.getApplicationType()
-        if (applicationType == ApplicationType.PLUGIN || applicationType == ApplicationType.WEB_PLUGIN) {
+        if (applicationType.isPlugin()) {
             return NameUtils.getPluginName(generatorContext.getProject().getClassName() + 'GrailsPlugin.groovy')
         }
         return 'messages'

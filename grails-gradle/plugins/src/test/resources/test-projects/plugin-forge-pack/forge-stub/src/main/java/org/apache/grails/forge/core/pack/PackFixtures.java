@@ -55,6 +55,7 @@ public final class PackFixtures {
             fixtures.add("rest-api rest-api");
             fixtures.add("web-plugin web-plugin");
             fixtures.add("plugin plugin");
+            fixtures.add("rest-api-plugin rest-api-plugin");
         }
         Path descriptor = directory.resolve("feature.yml");
         String text = Files.isRegularFile(descriptor, LinkOption.NOFOLLOW_LINKS) ? Files.readString(descriptor, StandardCharsets.UTF_8) : null;

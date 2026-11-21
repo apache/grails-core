@@ -22,7 +22,7 @@ compatibility:
   grails: '[9.0.0,10.0.0)'
   forge: '[9.0.0,10.0.0)'
 visible: false
-default: { applicationType: [web, web-plugin, rest-api] }
+default: { applicationType: [web, web-plugin, rest-api, rest-api-plugin] }
 reliesOn:
   - feature: gsp
     when: { applicationType: [web, web-plugin] }

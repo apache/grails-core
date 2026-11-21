@@ -56,7 +56,8 @@ class CreateFunctionalTestCommand extends CodeGenCommand {
 
     @Override
     boolean applies() {
-        return config.getApplicationType() == ApplicationType.REST_API
+        ApplicationType type = config.getApplicationType()
+        return type != null && type.isRestApi()
     }
 
     @Override

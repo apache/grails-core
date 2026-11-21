@@ -48,7 +48,7 @@ class CommandLineCompleterSpec extends Specification {
 
     void 'an empty prompt offers every command and the options of the root command'() {
         expect:
-        complete('').containsAll(['create-app', 'create-webapp', 'create-restapi', 'create-plugin', 'create-web-plugin',
+        complete('').containsAll(['create-app', 'create-webapp', 'create-restapi', 'create-plugin', 'create-web-plugin', 'create-rest-api-plugin',
                                   '--help', '--version'])
     }
 

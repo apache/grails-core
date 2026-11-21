@@ -28,7 +28,7 @@ guideOfGrails: guide/theWebLayer.html
 oneOf: api-views
 default:
   allOf:
-    - applicationType: rest-api
+    - applicationType: [rest-api, rest-api-plugin]
     - not: { group: api-views }
 adds:
   - grails-web

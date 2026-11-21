@@ -304,6 +304,8 @@ class CodeGenConfig {
                 codeGenConfig.setApplicationType(ApplicationType.PLUGIN)
             } else if ('web-plugin' == profile) {
                 codeGenConfig.setApplicationType(ApplicationType.WEB_PLUGIN)
+            } else if ('rest-api-plugin' == profile) {
+                codeGenConfig.setApplicationType(ApplicationType.REST_API_PLUGIN)
             } else {
                 return null
             }

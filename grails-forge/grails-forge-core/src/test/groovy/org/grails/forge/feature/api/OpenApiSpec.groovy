@@ -80,6 +80,7 @@ class OpenApiSpec extends ApplicationContextSpec implements CommandOutputFixture
         feature.supports(ApplicationType.WEB)
         feature.supports(ApplicationType.REST_API)
         !feature.supports(ApplicationType.WEB_PLUGIN)
+        !feature.supports(ApplicationType.REST_API_PLUGIN)
         !feature.supports(ApplicationType.PLUGIN)
     }
 

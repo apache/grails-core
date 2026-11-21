@@ -58,12 +58,12 @@ class GrailsApplication implements GrailsApplicationFeature, DefaultFeature {
             generatorContext.addBuildPlugin(GradlePlugin.builder().id('war').build())
             generatorContext.addTemplate('application', new GspTemplate(getPath(),
                     GspView.of('/forge/feature/lang/groovy/templates/application.gsp', [applicationType: applicationType, project: generatorContext.getProject(), features: generatorContext.getFeatures()])))
-            if (applicationType == ApplicationType.REST_API) {
+            if (applicationType.isRestApi()) {
                 generatorContext.addTemplate('applicationController', new GspTemplate('grails-app/controllers/{packagePath}/ApplicationController.groovy',
                         GspView.of('/forge/feature/grails/templates/applicationController.gsp', [project: generatorContext.getProject()])))
             }
         }
-        if (applicationType == ApplicationType.PLUGIN || applicationType == ApplicationType.WEB_PLUGIN) {
+        if (applicationType.isPlugin()) {
             generatorContext.addTemplate('plugin', new GspTemplate(generatorContext.getSourcePath('/{packagePath}/{className}GrailsPlugin'),
                     GspView.of('/forge/feature/grails/templates/plugin.gsp', [project: generatorContext.getProject(), applicationType: applicationType])))
         }
@@ -74,6 +74,7 @@ class GrailsApplication implements GrailsApplicationFeature, DefaultFeature {
         return applicationType == ApplicationType.WEB ||
                 applicationType == ApplicationType.PLUGIN ||
                 applicationType == ApplicationType.WEB_PLUGIN ||
+                applicationType == ApplicationType.REST_API_PLUGIN ||
                 applicationType == ApplicationType.REST_API
     }
 
@@ -83,6 +84,7 @@ class GrailsApplication implements GrailsApplicationFeature, DefaultFeature {
 
     @Override
     boolean shouldApply(ApplicationType applicationType, Options options, Set<Feature> selectedFeatures) {
-        return applicationType == ApplicationType.WEB || applicationType == ApplicationType.REST_API || applicationType == ApplicationType.WEB_PLUGIN || applicationType == ApplicationType.PLUGIN
+        return applicationType == ApplicationType.WEB || applicationType == ApplicationType.REST_API || applicationType == ApplicationType.WEB_PLUGIN ||
+                applicationType == ApplicationType.REST_API_PLUGIN || applicationType == ApplicationType.PLUGIN
     }
 }

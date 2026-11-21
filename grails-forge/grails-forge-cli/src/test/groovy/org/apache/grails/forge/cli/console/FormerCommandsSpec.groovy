@@ -39,6 +39,7 @@ class FormerCommandsSpec extends CommandSpec {
             rest       : ['create-restapi', 'example.rest'],
             plugin     : ['create-plugin', 'example.plain'],
             'web-plugin': ['create-web-plugin', 'example.webplugin'],
+            'rest-plugin': ['create-rest-api-plugin', 'example.restplugin'],
             quartz     : ['create-app', 'example.jobs', '--features', 'grails-quartz']]
 
     PrintStream originalOut
@@ -141,6 +142,7 @@ class FormerCommandsSpec extends CommandSpec {
         table.collect { (it.hint =~ /Type: \{cli\} ([a-z-]+)$/) }.findAll { it.find() }*.group(1).sort() == ['create-taglib', 'run-app', 'stop-app', 'test-app']
         ['create-taglib', 'run-app', 'stop-app', 'test-app', 'help', 'gradle', 'feature', 'create-app', 'create-unit-test'].every { commands.web.contains(it) }
         ['create-restful-controller', 'create-functional-test'].every { commands.rest.contains(it) }
+        ['create-restful-controller', 'create-functional-test', 'package-plugin'].every { commands['rest-plugin'].contains(it) }
 
         and: 'in every directory, each of them is either a command or refused with its line and nothing else of the table'
         (['outside'] + PROJECTS.keySet()).every { String kind ->
@@ -188,7 +190,8 @@ class FormerCommandsSpec extends CommandSpec {
         exit == 2
         lines[0].startsWith('There is no command create-functional-test')
         lines[1] == MISSING
-        lines[2] == 'create-functional-test is a command in the directory of a REST API application (create-restapi), and the current directory is in none. ' +
+        lines[2] == 'create-functional-test is a command in the directory of a REST API application or REST API plugin (create-restapi, create-rest-api-plugin), ' +
+                'and the current directory is in none. ' +
                 'In a web application it was a script of the Geb plugin, which has no replacement here'
 
         when: 'a command of a plugin, which the build of the project may list'

@@ -52,7 +52,7 @@ import org.grails.forge.util.VersionInfo
  * <tr><td>{@code project.naturalName}</td><td>the name as words, {@code Shop}</td></tr>
  * <tr><td>{@code project.propertyName}</td><td>the name as that of a property, {@code shop}</td></tr>
  * <tr><td>{@code features}</td><td>the names of every feature of the application, in order of name</td></tr>
- * <tr><td>{@code applicationType}</td><td>{@code web}, {@code rest-api}, {@code plugin} or {@code web-plugin}</td></tr>
+ * <tr><td>{@code applicationType}</td><td>{@code web}, {@code rest-api}, {@code plugin}, {@code web-plugin} or {@code rest-api-plugin}</td></tr>
  * <tr><td>{@code options.jdk}</td><td>the version of Java the application is for, a number</td></tr>
  * <tr><td>{@code options.data}</td><td>the Grails Data implementation, as {@code --data} takes it: {@code hibernate5}, {@code hibernate7}, {@code mongodb} or {@code neo4j}</td></tr>
  * <tr><td>{@code options.servlet}</td><td>the servlet container, as {@code --servlet} takes it: {@code tomcat}, {@code jetty}, {@code undertow} or {@code none}</td></tr>

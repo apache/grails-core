@@ -53,7 +53,7 @@ class GrailsBaseSpec extends ApplicationContextSpec implements CommandOutputFixt
     }
 
     @Unroll
-    void "test domain, services and taglib directories are present for ApplicationTypes other than REST_API"() {
+    void "test domain, services and taglib directories are present for ApplicationTypes other than REST_API and REST_API_PLUGIN"() {
         when:
         final def output = generate(applicationType, new Options(DevelopmentReloading.DEVTOOLS))
 
@@ -64,11 +64,11 @@ class GrailsBaseSpec extends ApplicationContextSpec implements CommandOutputFixt
         output.containsKey("grails-app/taglib/.gitkeep")
 
         where:
-        applicationType << ApplicationType.values() - ApplicationType.REST_API
+        applicationType << ApplicationType.values() - ApplicationType.REST_API - ApplicationType.REST_API_PLUGIN
     }
 
     @Unroll
-    void "test domain and services directories are present for ApplicationType.REST_API"() {
+    void "test domain and services directories are present for #applicationType, which has no tag libraries"() {
         when:
         final def output = generate(applicationType, new Options(DevelopmentReloading.DEVTOOLS))
 
@@ -79,6 +79,6 @@ class GrailsBaseSpec extends ApplicationContextSpec implements CommandOutputFixt
         !output.containsKey("grails-app/taglib/.gitkeep")
 
         where:
-        applicationType << [ApplicationType.REST_API]
+        applicationType << [ApplicationType.REST_API, ApplicationType.REST_API_PLUGIN]
     }
 }

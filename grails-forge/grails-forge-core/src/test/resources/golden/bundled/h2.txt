@@ -49,3 +49,14 @@ dependentFeatures: []
 in an application without being named: the default options
 no application without it: The feature gorm-hibernate5 takes the data source of the database driver, and the application has no database driver
 
+# rest_api_plugin
+title: H2 Database
+description: Add the H2 database with default configuration. H2 is a lightweight in-memory database, perfect for development and testing.
+category: Database
+documentation: null
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+in an application without being named: the default options
+no application without it: The feature gorm-hibernate5 takes the data source of the database driver, and the application has no database driver
+

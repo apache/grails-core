@@ -185,6 +185,7 @@ class ProjectStateSpec extends ApplicationContextSpec {
         ApplicationType.REST_API   | GormImpl.MONGODB    | ServletImpl.UNDERTOW | DevelopmentReloading.JREBEL | JdkVersion.JDK_21
         ApplicationType.PLUGIN     | GormImpl.HIBERNATE5 | ServletImpl.NONE     | DevelopmentReloading.NONE   | JdkVersion.JDK_21
         ApplicationType.WEB_PLUGIN | GormImpl.NEO4J      | ServletImpl.TOMCAT   | DevelopmentReloading.DEVTOOLS | JdkVersion.JDK_21
+        ApplicationType.REST_API_PLUGIN | GormImpl.HIBERNATE7 | ServletImpl.JETTY | DevelopmentReloading.NONE     | JdkVersion.JDK_25
     }
 
     void "the feature of a feature pack is locked as one, without the path it was read from"() {
@@ -549,7 +550,7 @@ class ProjectStateSpec extends ApplicationContextSpec {
         'the manifest is nested deeper than it is written' | '.grails/project.yml' | { it.replace('parameters: {}', 'parameters: {a: {b: {c: {d: {e: {f: {g: h}}}}}}}') } |
                 '.grails/project.yml has mappings and lists more than 6 deep'
         'the manifest names no kind of application there is' | '.grails/project.yml' | { it.replace('applicationType: web', 'applicationType: desktop') } |
-                ".grails/project.yml: applicationType must be one of web, rest-api, web-plugin, plugin, but is 'desktop'"
+                ".grails/project.yml: applicationType must be one of web, rest-api, web-plugin, plugin, rest-api-plugin, but is 'desktop'"
         'the manifest has an option there is not' | '.grails/project.yml' | { it.replace('servlet: tomcat', 'servlet: resin') } |
                 ".grails/project.yml: options.servlet must be one of tomcat, jetty, undertow, none, but is 'resin'"
         'the manifest has a version of Java there is not' | '.grails/project.yml' | { it.replace('jdk: 21', 'jdk: 8') } |

@@ -45,3 +45,13 @@ visible: true
 dependentFeatures: []
 no application with it alone: mongodb-testing-support requires mongo-sync or gorm-mongodb to be selected.
 
+# rest_api_plugin
+title: MongoDB Testing Support
+description: Adds Grails MongoDB testing support with Testcontainers for unit and integration tests.
+category: Testing
+documentation: https://grails.apache.org/docs/latest/guide/testing.html#testingMongodb
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+no application with it alone: mongodb-testing-support requires mongo-sync or gorm-mongodb to be selected.
+

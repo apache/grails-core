@@ -100,3 +100,27 @@ dependentFeatures: []
 +             remote:
 +               enabled: false
 
+# rest_api_plugin
+title: Web Console
+description: A web-based Groovy console for interactive runtime application management and debugging.
+category: Management
+documentation: https://github.com/grails-plugins/grails-web-console/#readme
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+== README.md
++ ## Feature grails-web-console documentation
++ - [Grails Web Console documentation](https://github.com/grails-plugins/grails-web-console/#readme)
++ 
++ 
+== build.gradle
++     runtimeOnly "org.grails.plugins:grails-web-console:VERSION"
+== grails-app/conf/application.yml
++     grails:
++       plugin:
++         console:
++           enabled: false
++           fileStore:
++             remote:
++               enabled: false
+

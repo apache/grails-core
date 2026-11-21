@@ -120,6 +120,8 @@ class FeatureAddCommandSpec extends CommandSpec implements CommandFixture {
         CreatePluginCommand    | []                                                      | 'grails-quartz'
         CreateWebPluginCommand | []                                                      | 'grails-quartz'
         CreateWebPluginCommand | []                                                      | 'asciidoctor'
+        CreateRestApiPluginCommand | []                                                  | 'grails-quartz'
+        CreateRestApiPluginCommand | ['--exclude-features', 'mockito']                   | 'asciidoctor'
     }
 
     void "a feature is added to an application that has features that were asked for, and brings what it requires"() {

@@ -70,6 +70,7 @@ class ProjectShowCommand extends BaseCommand implements Callable<Integer>, Proje
 
     private static final Map<ApplicationType, String> CREATE = [(ApplicationType.WEB): CreateAppCommand.NAME, (ApplicationType.REST_API): CreateRestApiCommand.NAME,
                                                                 (ApplicationType.WEB_PLUGIN): CreateWebPluginCommand.NAME,
+                                                                (ApplicationType.REST_API_PLUGIN): CreateRestApiPluginCommand.NAME,
                                                                 (ApplicationType.PLUGIN): CreatePluginCommand.NAME] as Map<ApplicationType, String>
 
     /** The value is what a create command of this version takes when the option is not given. */

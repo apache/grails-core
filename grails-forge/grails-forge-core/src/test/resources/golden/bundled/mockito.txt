@@ -73,3 +73,20 @@ in an application without being named: the default options
 == build.gradle
 +     testImplementation "org.mockito:mockito-core"
 
+# rest_api_plugin
+title: Mockito Framework
+description: Mockito test mocking framework for JUnit
+category: Testing
+documentation: null
+thirdPartyDocumentation: https://site.mockito.org
+visible: true
+dependentFeatures: []
+in an application without being named: the default options
+== README.md
++ ## Feature mockito documentation
++ - [https://site.mockito.org](https://site.mockito.org)
++ 
++ 
+== build.gradle
++     testImplementation "org.mockito:mockito-core"
+

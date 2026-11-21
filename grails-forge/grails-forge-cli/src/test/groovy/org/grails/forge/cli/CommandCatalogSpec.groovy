@@ -80,6 +80,8 @@ class CommandCatalogSpec extends CommandSpec implements CommandFixture {
         'cR'        | 'create-restapi'
         'cP'        | 'create-plugin'
         'cWP'       | 'create-web-plugin'
+        'cRApiP'    | 'create-rest-api-plugin'
+        'create-rest-a-p' | 'create-rest-api-plugin'
         'f'         | 'feature'
         'f a'       | 'feature add'
         'feature a' | 'feature add'
@@ -427,6 +429,7 @@ class CommandCatalogSpec extends CommandSpec implements CommandFixture {
         exit == 0
         commands.find { it.name == 'create-plugin' }.description == 'Creates a Grails plugin'
         commands.find { it.name == 'create-web-plugin' }.description == 'Creates a Grails plugin with a web layer'
+        commands.find { it.name == 'create-rest-api-plugin' }.description == 'Creates a Grails plugin with a REST API'
         commands.find { it.name == 'create-restapi' }.description == 'Creates a REST API application'
         commands.find { it.name == 'create-webapp' }.description == 'Creates an application; another name of create-app'
         commands.find { it.name == 'create-webapp' }.description != commands.find { it.name == 'create-app' }.description
@@ -481,7 +484,7 @@ class CommandCatalogSpec extends CommandSpec implements CommandFixture {
         described.projectDirectory == null
 
         and: 'every command the help lists, with what it needs'
-        commands*.name.containsAll(['create-app', 'create-webapp', 'create-plugin', 'create-web-plugin', 'create-restapi', 'feature', 'gradle', 'help'])
+        commands*.name.containsAll(['create-app', 'create-webapp', 'create-plugin', 'create-web-plugin', 'create-rest-api-plugin', 'create-restapi', 'feature', 'gradle', 'help'])
         commands*.name.unique(false) == commands*.name
         commands.every { it.origin == 'built-in' && it.aliases instanceof List && it.description }
         commands.find { it.name == 'assemble' }.aliases == ['war', 'package']

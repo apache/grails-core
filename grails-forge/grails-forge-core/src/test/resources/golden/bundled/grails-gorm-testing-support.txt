@@ -53,3 +53,15 @@ in an application without being named: the default options
 == build.gradle
 +     testImplementation "org.apache.grails:grails-testing-support-datamapping"
 
+# rest_api_plugin
+title: grails-gorm-testing-support
+description: grails-gorm-testing-support
+category: Testing
+documentation: null
+thirdPartyDocumentation: null
+visible: false
+dependentFeatures: []
+in an application without being named: the default options
+== build.gradle
++     testImplementation "org.apache.grails:grails-testing-support-datamapping"
+

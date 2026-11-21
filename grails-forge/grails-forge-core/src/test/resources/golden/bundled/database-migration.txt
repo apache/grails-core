@@ -77,3 +77,21 @@ dependentFeatures: []
 == build.gradle
 +     implementation "org.apache.grails:grails-data-hibernate5-dbmigration"
 
+# rest_api_plugin
+title: Database Migration
+description: Add support for Liquibase database migrations. The Database Migration Plugin helps you manage database schema changes while developing Grails applications.
+category: Database
+documentation: https://grails.apache.org/docs/VERSION/grails-data/hibernate5/manual/index.html#databaseMigration
+thirdPartyDocumentation: https://docs.liquibase.com/home.html
+visible: true
+dependentFeatures: []
+== README.md
++ ## Feature database-migration documentation
++ - [Grails Database Migration documentation](https://grails.apache.org/docs/VERSION/grails-data/hibernate5/manual/index.html#databaseMigration)
++ - [https://docs.liquibase.com/home.html](https://docs.liquibase.com/home.html)
++ 
++ 
++ 
+== build.gradle
++     implementation "org.apache.grails:grails-data-hibernate5-dbmigration"
+

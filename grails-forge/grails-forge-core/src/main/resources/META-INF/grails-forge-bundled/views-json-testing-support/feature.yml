@@ -23,7 +23,7 @@ compatibility:
   forge: '[9.0.0,10.0.0)'
 category: Testing
 visible: false
-default: { applicationType: rest-api }
+default: { applicationType: [rest-api, rest-api-plugin] }
 dependencies:
   - scope: testImplementation
     coordinates: org.apache.grails:grails-testing-support-views-gson

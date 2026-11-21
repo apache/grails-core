@@ -48,7 +48,7 @@ class SpringBootSpec extends ApplicationContextSpec implements CommandOutputFixt
         build.contains("implementation \"org.springframework.boot:spring-boot-autoconfigure\"")
 
         where:
-        applicationType << [ApplicationType.WEB, ApplicationType.REST_API, ApplicationType.WEB_PLUGIN]
+        applicationType << [ApplicationType.WEB, ApplicationType.REST_API, ApplicationType.WEB_PLUGIN, ApplicationType.REST_API_PLUGIN]
     }
 
     void "test spring boot starter dependencies for PLUGIN application"() {

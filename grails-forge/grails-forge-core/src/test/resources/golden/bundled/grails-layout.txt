@@ -34,3 +34,6 @@ dependentFeatures: []
 # plugin
 not for this kind of application
 
+# rest_api_plugin
+not for this kind of application
+

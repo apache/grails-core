@@ -69,3 +69,19 @@ in an application without being named: the default options
 + }
 + 
 
+# rest_api_plugin
+title: Spock Testing Framework
+description: Spock is a testing, specification, and mocking framework for JVM developers that emphasizes readability and clarity. By blending BDD concepts and Groovy's concise syntax, Spock helps teams write tests that are easy to understand and enjoyable to maintain.
+category: Other
+documentation: null
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+in an application without being named: the default options
+== build.gradle
++     testImplementation "org.spockframework:spock-core"
++ tasks.withType(Test).configureEach {
++     useJUnitPlatform()
++ }
++ 
+

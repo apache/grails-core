@@ -120,6 +120,9 @@ class ForgeRequestSupportSpec extends Specification {
         'rest_api'   | ApplicationType.REST_API
         'REST_API'   | ApplicationType.REST_API
         'web-plugin' | ApplicationType.WEB_PLUGIN
+        'rest-api-plugin' | ApplicationType.REST_API_PLUGIN
+        'rest_api_plugin' | ApplicationType.REST_API_PLUGIN
+        'REST_API_PLUGIN' | ApplicationType.REST_API_PLUGIN
         'not-a-type' | null
         ''           | null
         null         | null

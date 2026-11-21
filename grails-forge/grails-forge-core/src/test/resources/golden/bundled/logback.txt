@@ -45,3 +45,13 @@ visible: false
 dependentFeatures: []
 in an application without being named: the default options
 
+# rest_api_plugin
+title: Logback Logging
+description: Add Logback Logging library.
+category: Logging
+documentation: null
+thirdPartyDocumentation: null
+visible: false
+dependentFeatures: []
+in an application without being named: the default options
+

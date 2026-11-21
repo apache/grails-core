@@ -559,3 +559,151 @@ dependentFeatures: []
 + xmlDeclaration()
 + g.render(object)
 
+# rest_api_plugin
+title: Markup Views
+description: Markup views are written in Groovy, end with the file extension gml and reside in the grails-app/views directory. They provide a DSL for producing output in the XML.
+category: View Rendering
+documentation: https://grails.apache.org/docs/VERSION/guide/theWebLayer.html
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+== README.md
+- ## Feature views-json documentation
+- - [Grails JSON Views documentation](https://grails.apache.org/docs/VERSION/guide/theWebLayer.html)
++ ## Feature views-markup documentation
++ - [Grails Markup Views documentation](https://grails.apache.org/docs/VERSION/guide/theWebLayer.html)
+== build.gradle
+- apply plugin: "org.apache.grails.gradle.grails-gson"
+-     implementation "org.apache.grails:grails-data-mongodb-gson-templates"
+-     implementation "org.apache.grails:grails-views-gson"
++ apply plugin: "org.apache.grails.gradle.grails-markup"
++     implementation "org.apache.grails:grails-views-markup"
+== grails-app/views/application/index.gml
++ import grails.core.*
++ import grails.util.*
++ import grails.plugins.*
++ import org.grails.core.artefact.*
++ 
++ model {
++ 	GrailsApplication grailsApplication
++ 	GrailsPluginManager pluginManager
++ }
++ 
++ xmlDeclaration()
++ application {
++     message "Welcome to Grails!"
++     environment Environment.current.name
++     appversion grailsApplication.metadata.getApplicationVersion()
++     grailsversion GrailsUtil.grailsVersion
++     groovyversion GroovySystem.getVersion()
++     jvmversion System.getProperty('java.version')
++     reloadingagentenabled Environment.reloadingAgentEnabled
++ 
++     artefacts {
++         artefact(type: "controllers") {
++          count grailsApplication.getArtefactInfo(ControllerArtefactHandler.TYPE).classesByName.size()
++         }
++         artefact(type: "domains") {
++             count grailsApplication.getArtefactInfo(DomainClassArtefactHandler.TYPE).classesByName.size()
++         }
++         arefact(type: "services") {
++             count grailsApplication.getArtefactInfo(ServiceArtefactHandler.TYPE).classesByName.size()
++         }
++     }
++     controllers {
++       grailsApplication.getArtefacts(ControllerArtefactHandler.TYPE).each { GrailsClass c ->
++         controller {
++             name c.fullName
++             logicalPropertyName c.logicalPropertyName
++         }
++       }
++     }
++     plugins {
++       pluginManager.allPlugins.each { GrailsPlugin p ->
++         plugin {
++           name p.name
++           version p.version
++         }
++       }
++     }
++ }
+== grails-app/views/error.gml
++ response.status 500
++ 
++ xmlDeclaration()
++ error {
++     status 500
++     message "Internal server error"
++ }
+== grails-app/views/errors/_errors.gml
++ import org.springframework.validation.*
++ 
++ /**
++  * Renders validation errors according to vnd.error: https://github.com/blongden/vnd.error
++  */
++ model {
++     Errors errors
++ }
++ 
++ xmlDeclaration()
++ response { status UNPROCESSABLE_ENTITY }
++ 
++ 'errors' {
++     Errors errorsObject = (Errors)this.errors
++     def allErrors = errorsObject.allErrors
++     int errorCount = allErrors.size()
++     def resourcePath = g.link(resource:request.uri, absolute:false)
++     def resourceLink = g.link(resource:request.uri, absolute:true)
++     if(errorCount == 1) {
++         def error = allErrors.iterator().next()
++         'error' {
++             message messageSource.getMessage(error, locale)
++             path resourcePath
++             _links {
++                 self {
++                     href resourceLink
++                 }
++             }
++         }
++     }
++     else {
++         total errorCount
++         _embedded {
++             errors(allErrors) { ObjectError error ->
++                 message messageSource.getMessage(error, locale)
++                 path resourcePath
++                 _links {
++                     self {
++                         href resourceLink
++                     }
++                 }
++             }
++         }
++     }
++ }
+== grails-app/views/notFound.gml
++ response.status 404
++ 
++ xmlDeclaration()
++ error {
++ 	status 404
++ 	message "Not Found"
++ }
+== grails-app/views/object/_object.gml
++ import groovy.transform.*
++ 
++ @Field Object object
++ 
++ xmlDeclaration()
++ g.render(object)
+== grails-app/views/application/index.gson
+(not written)
+== grails-app/views/error.gson
+(not written)
+== grails-app/views/errors/_errors.gson
+(not written)
+== grails-app/views/notFound.gson
+(not written)
+== grails-app/views/object/_object.gson
+(not written)
+

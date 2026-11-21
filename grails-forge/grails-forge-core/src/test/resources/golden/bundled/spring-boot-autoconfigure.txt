@@ -53,3 +53,15 @@ in an application without being named: the default options
 == build.gradle
 +     implementation "org.springframework.boot:spring-boot-autoconfigure"
 
+# rest_api_plugin
+title: spring-boot-autoconfigure
+description: spring-boot-autoconfigure
+category: Spring Framework
+documentation: null
+thirdPartyDocumentation: null
+visible: false
+dependentFeatures: []
+in an application without being named: the default options
+== build.gradle
++     implementation "org.springframework.boot:spring-boot-autoconfigure"
+

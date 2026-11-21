@@ -53,3 +53,15 @@ in an application without being named: servlet jetty
 == build.gradle
 +     implementation "org.springframework.boot:spring-boot-starter-jetty"
 
+# rest_api_plugin
+title: Embedded Jetty
+description: spring-boot-starter-jetty
+category: Server
+documentation: null
+thirdPartyDocumentation: null
+visible: false
+dependentFeatures: []
+in an application without being named: servlet jetty
+== build.gradle
++     implementation "org.springframework.boot:spring-boot-starter-jetty"
+

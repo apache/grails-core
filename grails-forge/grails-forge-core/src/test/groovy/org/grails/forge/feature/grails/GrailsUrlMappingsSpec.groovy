@@ -58,6 +58,28 @@ class GrailsUrlMappingsSpec extends ApplicationContextSpec implements CommandOut
         !urlMappings.contains('favicon')
 
         where:
-        applicationType << [ApplicationType.WEB_PLUGIN, ApplicationType.REST_API]
+        applicationType << [ApplicationType.WEB_PLUGIN, ApplicationType.REST_API, ApplicationType.REST_API_PLUGIN]
+    }
+
+    @Unroll
+    void 'a #applicationType maps the HTTP methods to the actions of a controller, and no page'(ApplicationType applicationType) {
+        when:
+        def urlMappings = generate(applicationType, new Options(DevelopmentReloading.DEVTOOLS))['grails-app/controllers/example/grails/UrlMappings.groovy']
+
+        then:
+        urlMappings.contains('package example.grails')
+        urlMappings.contains('get "/$controller(.$format)?"(action:"index")')
+        urlMappings.contains('post "/$controller(.$format)?"(action:"save")')
+        urlMappings.contains('patch "/$controller/$id(.$format)?"(action:"patch")')
+        urlMappings.contains('"/"(controller: \'application\', action:\'index\')')
+        urlMappings.contains('"500"(view:\'/error\')')
+        urlMappings.contains('"404"(view:\'/notFound\')')
+
+        and:
+        !urlMappings.contains('"/"(view:"/index")')
+        !urlMappings.contains('$namespace')
+
+        where:
+        applicationType << [ApplicationType.REST_API, ApplicationType.REST_API_PLUGIN]
     }
 }

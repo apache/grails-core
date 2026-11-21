@@ -667,7 +667,7 @@ class CreateAppFeatureCatalogSpec extends CommandSpec implements CommandFixture 
         'a template API that is a fraction'   | { it.versions[0].pack.templateApi = 1.5 }                                      || "${PLUGIN}: the pack of version 2.3.0: templateApi is not a whole number from 1"
         'no compatibility'                    | { it.versions[0].pack.remove('compatibility') }                                || "${PLUGIN}: the pack of version 2.3.0: compatibility is not an object"
         'a range that is none'                | { it.versions[0].pack.compatibility.grails = '@|red 9|@' }                     || "${PLUGIN}: the pack of version 2.3.0: compatibility.grails is not a range of versions"
-        'a type of application there is not'  | { it.versions[0].pack.applicationTypes = ['web', 'desktop'] }                  || "${PLUGIN}: the pack of version 2.3.0: applicationTypes is not an array of web, rest-api, web-plugin, plugin"
+        'a type of application there is not'  | { it.versions[0].pack.applicationTypes = ['web', 'desktop'] }                  || "${PLUGIN}: the pack of version 2.3.0: applicationTypes is not an array of web, rest-api, web-plugin, plugin, rest-api-plugin"
         'coordinates longer than a plugin has' | { it.coords = "com.${'a' * 120}:acme" }                                       || 'coords is not group:artifact of at most 120 characters, but com.aaaa'
         'coordinates longer than a text'      | { it.coords = "com.${'a' * 5000}:acme" }                                       || 'coords has more than 4096 characters'
         'a version longer than a version has' | { it.versions[0].version = '1.' + ('0' * 60) }                                 || "${PLUGIN}: has a version of more than 60 characters"

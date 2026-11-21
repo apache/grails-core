@@ -57,7 +57,7 @@ class GrailsPluginForgePackTestSpec extends GradleSpecification {
         !classPath.contains(File.pathSeparator)
 
         and: 'each application is built in its directory, with the Gradle user home of this build and the task that packages it'
-        ['web', 'rest-api', 'web-plugin', 'plugin'].every { String fixture ->
+        ['web', 'rest-api', 'web-plugin', 'plugin', 'rest-api-plugin'].every { String fixture ->
             String log = new File(project, "build/forge-pack-test/${fixture}/build.log").getText('UTF-8')
             wrapperArguments(project, fixture) == 'assemble --console=plain --gradle-user-home <home>' &&
                     log.contains("stand-in wrapper directory: ${new File(project, "build/forge-pack-fixtures/${fixture}")}") &&
@@ -70,9 +70,9 @@ class GrailsPluginForgePackTestSpec extends GradleSpecification {
                 new File(System.getProperty('java.home')).canonicalFile
 
         and: 'what became of them is said, and written down'
-        result.output.contains('The feature pack in src/main/forge was generated into 4 applications and built with assemble: web, rest-api, web-plugin, plugin. ' +
+        result.output.contains('The feature pack in src/main/forge was generated into 5 applications and built with assemble: web, rest-api, web-plugin, plugin, rest-api-plugin. ' +
                 "The logs are in ${new File(project, 'build/forge-pack-test')}")
-        new File(project, 'build/forge-pack-test/report.txt').getText('UTF-8') == 'web: built\nrest-api: built\nweb-plugin: built\nplugin: built\n'
+        new File(project, 'build/forge-pack-test/report.txt').getText('UTF-8') == 'web: built\nrest-api: built\nweb-plugin: built\nplugin: built\nrest-api-plugin: built\n'
     }
 
     def "the fixtures, the tasks and the arguments the build names are the ones that are generated and run"() {
@@ -364,7 +364,8 @@ class GrailsPluginForgePackTestSpec extends GradleSpecification {
 
         and: 'and nothing else has it: not the output, not the report, not what Gradle keeps of the inputs of the task'
         !result.output.contains('hunter2')
-        holding(project, 'hunter2') == ['build/forge-pack-fixtures/plugin/repositories.txt', 'build/forge-pack-fixtures/rest-api/repositories.txt',
+        holding(project, 'hunter2') == ['build/forge-pack-fixtures/plugin/repositories.txt', 'build/forge-pack-fixtures/rest-api-plugin/repositories.txt',
+                                        'build/forge-pack-fixtures/rest-api/repositories.txt',
                                         'build/forge-pack-fixtures/web-plugin/repositories.txt', 'build/forge-pack-fixtures/web/repositories.txt']
 
         when: 'other repositories'

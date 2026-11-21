@@ -86,3 +86,22 @@ in an application without being named: gorm mongodb
 +     testImplementation "org.testcontainers:testcontainers-mongodb"
 +     testImplementation "org.testcontainers:testcontainers-spock"
 
+# rest_api_plugin
+title: Testcontainers
+description: Leverage Testcontainers to run databases and other services in Docker containers during testing.
+category: Testing
+documentation: null
+thirdPartyDocumentation: https://java.testcontainers.org/
+visible: true
+dependentFeatures: []
+in an application without being named: gorm mongodb
+== README.md
++ ## Feature testcontainers documentation
++ - [https://java.testcontainers.org/](https://java.testcontainers.org/)
++ 
++ 
+== build.gradle
++     testImplementation "org.testcontainers:testcontainers"
++     testImplementation "org.testcontainers:testcontainers-mongodb"
++     testImplementation "org.testcontainers:testcontainers-spock"
+

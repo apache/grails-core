@@ -116,7 +116,7 @@ class GrailsBase implements DefaultFeature {
         generatorContext.addTemplate('grails-app/services', new URLTemplate('grails-app/services/.gitkeep', classLoader.getResource('.gitkeep')))
         generatorContext.addTemplate('grails-app/domain', new URLTemplate('grails-app/domain/.gitkeep', classLoader.getResource('.gitkeep')))
 
-        if (generatorContext.getApplicationType() != ApplicationType.REST_API) {
+        if (!generatorContext.getApplicationType().isRestApi()) {
             generatorContext.addTemplate('grails-app/taglib', new URLTemplate('grails-app/taglib/.gitkeep', classLoader.getResource('.gitkeep')))
         }
     }

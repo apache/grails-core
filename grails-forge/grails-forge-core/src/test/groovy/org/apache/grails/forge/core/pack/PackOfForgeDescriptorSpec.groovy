@@ -241,8 +241,8 @@ build:
         'default: { allOf: gsp }\n'                                       | "default.allOf: must be a list of conditions and names of features, but is 'gsp'"
         'default: { anyOf: [gsp, 1] }\n'                                  | "default.anyOf[1]: must be a condition, a mapping with one of the keys ${CONDITION_KEYS}, but is the number 1"
         'default: { not: [gsp] }\n'                                       | "default.not: must be a condition, a mapping with one of the keys ${CONDITION_KEYS}, but is a list"
-        'default: { applicationType: desktop }\n'                         | "default.applicationType: must be one of [web, rest-api, web-plugin, plugin], or a list of them, but is 'desktop'"
-        'default: { applicationType: [] }\n'                              | 'default.applicationType: must be one of [web, rest-api, web-plugin, plugin], or a list of them, but is a list'
+        'default: { applicationType: desktop }\n'                         | "default.applicationType: must be one of [web, rest-api, web-plugin, plugin, rest-api-plugin], or a list of them, but is 'desktop'"
+        'default: { applicationType: [] }\n'                              | 'default.applicationType: must be one of [web, rest-api, web-plugin, plugin, rest-api-plugin], or a list of them, but is a list'
         'default: { option: { data: oracle } }\n'                         | "default.option.data: must be one of [hibernate5, hibernate7, mongodb, neo4j], or a list of them, but is 'oracle'"
         'default: { option: { servlet: [tomcat, netty] } }\n'             | 'default.option.servlet: must be one of [tomcat, jetty, undertow, none], or a list of them, but is a list'
         'default: { option: { jdk: 21 } }\n'                              | 'default.option: must be one of the options [data, servlet, reloading] with a value or a list of values, but is a mapping'

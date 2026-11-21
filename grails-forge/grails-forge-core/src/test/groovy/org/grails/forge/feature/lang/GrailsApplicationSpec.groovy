@@ -60,12 +60,20 @@ class GrailsApplicationSpec extends ApplicationContextSpec implements CommandOut
         applicationGroovyFile.contains("@PluginSource")
 
         where:
-        applicationType << [ApplicationType.PLUGIN, ApplicationType.WEB_PLUGIN]
+        applicationType << [ApplicationType.PLUGIN, ApplicationType.WEB_PLUGIN, ApplicationType.REST_API_PLUGIN]
     }
 
     void "REST-API application should have ApplicationController"() {
         when:
         def output = generate(ApplicationType.REST_API)
+
+        then:
+        output.containsKey("grails-app/controllers/example/grails/ApplicationController.groovy")
+    }
+
+    void "REST-API plugin should have ApplicationController"() {
+        when:
+        def output = generate(ApplicationType.REST_API_PLUGIN)
 
         then:
         output.containsKey("grails-app/controllers/example/grails/ApplicationController.groovy")
@@ -80,7 +88,22 @@ class GrailsApplicationSpec extends ApplicationContextSpec implements CommandOut
         def pluginGroovy = output.get("src/main/groovy/example/grails/FooGrailsPlugin.groovy")
 
         where:
-        applicationType << [ApplicationType.PLUGIN, ApplicationType.WEB_PLUGIN]
+        applicationType << [ApplicationType.PLUGIN, ApplicationType.WEB_PLUGIN, ApplicationType.REST_API_PLUGIN]
+    }
+
+    void "the plugin descriptor of a #applicationType excludes the error view the project has from packaging: #view"() {
+        when:
+        def descriptor = generate(applicationType).get('src/main/groovy/example/grails/FooGrailsPlugin.groovy')
+
+        then:
+        descriptor.contains("def pluginExcludes = [\n           \"grails-app/views/${view}\"\n       ]")
+        descriptor.contains('.gsp') == (view == 'error.gsp')
+
+        where:
+        applicationType                 | view
+        ApplicationType.PLUGIN          | 'error.gsp'
+        ApplicationType.WEB_PLUGIN      | 'error.gsp'
+        ApplicationType.REST_API_PLUGIN | 'error.gson'
     }
 
     void "PluginDescriptor is NOT generated for #applicationType application type"() {

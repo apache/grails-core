@@ -21,6 +21,6 @@ name: grails-web
 compatibility:
   grails: '[9.0.0,10.0.0)'
   forge: '[9.0.0,10.0.0)'
-applicationTypes: [web, rest-api, web-plugin]
+applicationTypes: [web, rest-api, web-plugin, rest-api-plugin]
 visible: false
 default: { applicationType: [web, web-plugin] }

@@ -239,6 +239,7 @@ class FeatureSelectionSpec extends ApplicationContextSpec {
         ApplicationType.WEB_PLUGIN | ['scaffolding', 'spock', 'mockito']           || []
         ApplicationType.WEB      | ['spock', 'mockito', 'geb-with-testcontainers'] || []
         ApplicationType.REST_API | ['mockito']                                     || []
+        ApplicationType.REST_API_PLUGIN | ['spock', 'mockito']                      || []
         ApplicationType.PLUGIN   | ['mockito']                                     || []
     }
 
@@ -677,6 +678,7 @@ class FeatureSelectionSpec extends ApplicationContextSpec {
         ApplicationType.WEB        || ServletImpl.TOMCAT
         ApplicationType.REST_API   || ServletImpl.TOMCAT
         ApplicationType.WEB_PLUGIN || ServletImpl.TOMCAT
+        ApplicationType.REST_API_PLUGIN || ServletImpl.TOMCAT
         ApplicationType.PLUGIN     || ServletImpl.NONE
     }
 
@@ -769,6 +771,7 @@ class FeatureSelectionSpec extends ApplicationContextSpec {
         acceptedExclusions(ApplicationType.WEB_PLUGIN) == [['mockito'], ['scaffolding'], ['spock'], ['mockito', 'scaffolding'], ['mockito', 'spock'],
                                                            ['scaffolding', 'spock']]
         acceptedExclusions(ApplicationType.REST_API) == [['mockito'], ['spock'], ['mockito', 'spock']]
+        acceptedExclusions(ApplicationType.REST_API_PLUGIN) == [['mockito'], ['spock'], ['mockito', 'spock']]
         acceptedExclusions(ApplicationType.PLUGIN) == [['mockito'], ['spock'], ['mockito', 'spock']]
     }
 

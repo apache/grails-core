@@ -72,7 +72,7 @@ final class FormerCommands {
     }
 
     private static final String PROFILES_GONE = 'Profiles are replaced by application types, features and feature packs, and no command creates any of these'
-    private static final String REST_API = 'is a command in the directory of a REST API application (create-restapi), and the current directory is in none'
+    private static final String REST_API = 'is a command in the directory of a REST API application or REST API plugin (create-restapi, create-rest-api-plugin), and the current directory is in none'
     private static final String PLUGIN_PROJECT = 'is a command in the directory of a Grails plugin, which has a class whose name ends with GrailsPlugin under src/main/groovy, and the current directory is in none'
     private static final String SCAFFOLDING = 'is a command of the scaffolding plugin (grails-scaffolding) for applications with GSP views: where the application has the plugin, ' +
             '{cli} gradle grailsCommandCatalog makes it a command here. What the REST API profile generated with it (JSON views) has no replacement'
@@ -174,7 +174,7 @@ final class FormerCommands {
         add('create-template', 'profile profile', Status.REMOVED, 'create-template wrote a template of a profile for the Grails shell. ' + PROFILES_GONE)
 
         add('create-integration-test', 'web and rest-api profiles', Status.ELSEWHERE,
-                'create-integration-test is a command in the directory of a Grails application or web plugin whose record is read, not of a plain plugin, and the current directory is in none')
+                'create-integration-test is a command in the directory of a Grails application, web plugin or REST API plugin whose record is read, not of a plain plugin, and the current directory is in none')
         add('create-job', 'Quartz plugin', Status.ELSEWHERE,
                 'create-job is a command in the directory of a Grails project that has the grails-quartz feature, which {cli} feature add grails-quartz adds, ' +
                 'and the current directory is in none')

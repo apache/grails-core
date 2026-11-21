@@ -33,7 +33,7 @@ class ${project.getClassName()}GrailsPlugin extends Plugin {
        def grailsVersion = "${grailsVersion()} > *"
        // resources that are excluded from plugin packaging
        def pluginExcludes = [
-           "grails-app/views/error.gsp"
+           "grails-app/views/error.${applicationType.isRestApi() ? 'gson' : 'gsp'}"
        ]
 
        // TODO Fill in these fields

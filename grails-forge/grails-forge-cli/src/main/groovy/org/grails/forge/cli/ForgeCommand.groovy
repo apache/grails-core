@@ -23,6 +23,7 @@ import org.grails.forge.cli.command.BaseCommand
 import org.grails.forge.cli.command.CreateAppCommand
 import org.grails.forge.cli.command.CreatePluginCommand
 import org.grails.forge.cli.command.CreateRestApiCommand
+import org.grails.forge.cli.command.CreateRestApiPluginCommand
 import org.grails.forge.cli.command.CreateWebPluginCommand
 import org.grails.forge.cli.command.CreateWebappCommand
 import org.grails.forge.cli.command.FeatureCommand
@@ -48,6 +49,7 @@ import java.util.concurrent.Callable
         '*  @|bold create-restapi|@ @|yellow NAME|@',
         '*  @|bold create-plugin|@ @|yellow NAME|@',
         '*  @|bold create-web-plugin|@ @|yellow NAME|@',
+        '*  @|bold create-rest-api-plugin|@ @|yellow NAME|@',
         '',
         'In the directory of an application, a feature is added to it with:',
         '',
@@ -66,6 +68,7 @@ import java.util.concurrent.Callable
                 CreateWebappCommand,
                 CreatePluginCommand,
                 CreateWebPluginCommand,
+                CreateRestApiPluginCommand,
                 CreateRestApiCommand,
                 FeatureCommand,
                 ProjectGroupCommand,

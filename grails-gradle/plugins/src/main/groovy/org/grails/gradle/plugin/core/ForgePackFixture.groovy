@@ -62,7 +62,7 @@ abstract class ForgePackFixture implements Named {
         return name
     }
 
-    /** The type of application: {@code web}, the default, {@code rest-api}, {@code web-plugin} or {@code plugin}. */
+    /** The type of application: {@code web}, the default, {@code rest-api}, {@code web-plugin}, {@code plugin} or {@code rest-api-plugin}. */
     abstract Property<String> getApplicationType()
 
     /**

@@ -56,7 +56,7 @@ grails-web
 
 Typical Project Type Gradle Plugin Includes
 ========
-Below are the Gradle plugins that certain types of projects apply. The `grails create-app`, `grails create-restapi`, `grails create-plugin` and `grails create-web-plugin` commands add them for you. If you change the scope of your plugin or project you may have to add or remove a Grails Gradle plugin.
+Below are the Gradle plugins that certain types of projects apply. The `grails create-app`, `grails create-restapi`, `grails create-plugin`, `grails create-web-plugin` and `grails create-rest-api-plugin` commands add them for you. If you change the scope of your plugin or project you may have to add or remove a Grails Gradle plugin.
 
 Create App
 ----
@@ -88,6 +88,14 @@ A project created with `grails create-web-plugin`
 ```
 apply plugin: "org.apache.grails.gradle.grails-plugin"
 apply plugin: "org.apache.grails.gradle.grails-gsp"
+```
+
+<h4>Grails REST API Plugin Project</h4>
+A project created with `grails create-rest-api-plugin`
+
+```
+apply plugin: "org.apache.grails.gradle.grails-plugin"
+apply plugin: "org.apache.grails.gradle.grails-gson"
 ```
 
 <h4>Grails Plugin Project</h4>

@@ -105,6 +105,6 @@ class GrailsStartupProgressSpec extends ApplicationContextSpec implements Comman
         e.message == 'The requested feature does not exist: grails-startup-progress'
 
         where:
-        applicationType << [ApplicationType.PLUGIN, ApplicationType.WEB_PLUGIN]
+        applicationType << [ApplicationType.PLUGIN, ApplicationType.WEB_PLUGIN, ApplicationType.REST_API_PLUGIN]
     }
 }

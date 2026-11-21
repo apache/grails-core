@@ -114,7 +114,7 @@ class GrailsSpringAiSpec extends ApplicationContextSpec implements CommandOutput
     void "a provider is a choice an application makes, not one a plugin imposes on its applications"() {
         expect:
         providers().every { it.supports(ApplicationType.WEB) && it.supports(ApplicationType.REST_API) }
-        providers().every { !it.supports(ApplicationType.PLUGIN) && !it.supports(ApplicationType.WEB_PLUGIN) }
+        providers().every { !it.supports(ApplicationType.PLUGIN) && !it.supports(ApplicationType.WEB_PLUGIN) && !it.supports(ApplicationType.REST_API_PLUGIN) }
         featureNamed('grails-spring-ai').supports(ApplicationType.PLUGIN)
     }
 

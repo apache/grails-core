@@ -48,3 +48,16 @@ in an application without being named: the default options
 # plugin
 not for this kind of application
 
+# rest_api_plugin
+title: Embedded Tomcat
+description: spring-boot-starter-tomcat
+category: Server
+documentation: null
+thirdPartyDocumentation: null
+visible: false
+dependentFeatures: []
+in an application without being named: the default options
+== build.gradle
++     implementation "org.springframework.boot:spring-boot-starter-tomcat"
++     implementation "org.springframework.boot:spring-boot-tomcat"
+

@@ -288,7 +288,7 @@ class PackCheckSpec extends Specification {
 
         then:
         result == PackCheck.VALID
-        out.toString('UTF-8').readLines() == ['feature pack checked: templates=1 applications=4']
+        out.toString('UTF-8').readLines() == ['feature pack checked: templates=1 applications=5']
         err.toString('UTF-8') == ''
     }
 
@@ -344,6 +344,7 @@ class PackCheckSpec extends Specification {
                 'applicationType rest-api, options [data:hibernate7, jdk:25, reloading:jrebel, servlet:jetty]',
                 'applicationType web-plugin, options [data:mongodb, jdk:26, reloading:none, servlet:undertow]',
                 'applicationType plugin, options [data:neo4j, jdk:21, reloading:devtools, servlet:none]',
+                'applicationType rest-api-plugin, options [data:hibernate5, jdk:25, reloading:jrebel, servlet:tomcat]',
         ]
     }
 
@@ -395,7 +396,7 @@ class PackCheckSpec extends Specification {
 
         then: 'what a template says is not taken for a problem'
         ofValid.exit == PackCheck.VALID
-        ofValid.out == ['feature pack checked: templates=1 applications=4']
+        ofValid.out == ['feature pack checked: templates=1 applications=5']
         ofValid.err.contains('said by the template')
 
         and:

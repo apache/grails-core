@@ -66,3 +66,18 @@ in an application without being named: the default options
 +     implementation "org.springframework.boot:spring-boot-starter-logging"
 +     implementation "org.springframework.boot:spring-boot-starter-validation"
 
+# rest_api_plugin
+title: spring-boot-starter
+description: spring-boot-starter
+category: Other
+documentation: null
+thirdPartyDocumentation: null
+visible: false
+dependentFeatures: []
+in an application without being named: the default options
+== build.gradle
++     implementation "org.springframework.boot:spring-boot-starter"
++     implementation "org.springframework.boot:spring-boot-starter-actuator"
++     implementation "org.springframework.boot:spring-boot-starter-logging"
++     implementation "org.springframework.boot:spring-boot-starter-validation"
+

@@ -69,3 +69,19 @@ dependentFeatures: []
 == build.gradle
 +     implementation "org.apache.grails:grails-datamapping-async"
 
+# rest_api_plugin
+title: Asynchronous Grails Data
+description: Adds the asynchronous programming model for Grails Data, including the AsyncEntity trait and the async namespace.
+category: Database
+documentation: https://grails.apache.org/docs/VERSION/guide/async.html
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+== README.md
++ ## Feature gorm-async documentation
++ - [Grails Asynchronous Grails Data documentation](https://grails.apache.org/docs/VERSION/guide/async.html)
++ 
++ 
+== build.gradle
++     implementation "org.apache.grails:grails-datamapping-async"
+

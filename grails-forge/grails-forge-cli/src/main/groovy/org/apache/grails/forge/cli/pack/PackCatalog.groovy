@@ -119,7 +119,7 @@ final class PackCatalog {
     private static final Pattern UNREADABLE = Pattern.compile(/[\p{Cc}\p{Cf}\p{Cs}\p{Co}\p{Zl}\p{Zp}]/)
     private static final Pattern DOCS = Pattern.compile(/https:\/\/[A-Za-z0-9\-._~:\/?#!&()*+,;=%]+/)
     private static final Pattern WHOLE = Pattern.compile(/0|[1-9][0-9]{0,8}/)
-    private static final Set<String> APPLICATION_TYPES = ['web', 'rest-api', 'web-plugin', 'plugin'] as Set<String>
+    private static final Set<String> APPLICATION_TYPES = ['web', 'rest-api', 'web-plugin', 'plugin', 'rest-api-plugin'] as Set<String>
     private static final int MAX_NAME = 100
     private static final int MAX_TITLE = 100
     private static final int MAX_DESCRIPTION = 200

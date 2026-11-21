@@ -34,7 +34,7 @@ class UrlMappings {
         "/favicon.ico"(redirect: [uri: '/assets/favicon.ico', permanent: true])
         <% } %>
         <% } %>
-        <% if (applicationType == 'rest-api') { %>
+        <% if (applicationType == 'rest-api' || applicationType == 'rest-api-plugin') { %>
         delete "/$controller/$id(.$format)?"(action:"delete")
         get "/$controller(.$format)?"(action:"index")
         get "/$controller/$id(.$format)?"(action:"show")

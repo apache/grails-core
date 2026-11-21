@@ -29,7 +29,7 @@ dependencies:
 buildPlugins:
   - id: org.apache.grails.gradle.grails-plugin
     apply: true
-    when: { applicationType: [plugin, web-plugin] }
+    when: { applicationType: [plugin, web-plugin, rest-api-plugin] }
   - id: org.apache.grails.gradle.grails-web
     apply: true
     when:

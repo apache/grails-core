@@ -147,6 +147,6 @@ class GrailsSpringSecuritySpec extends ApplicationContextSpec implements Command
         e.message == 'The requested feature does not exist: grails-spring-security'
 
         where:
-        applicationType << [ApplicationType.PLUGIN, ApplicationType.REST_API, ApplicationType.WEB_PLUGIN]
+        applicationType << [ApplicationType.PLUGIN, ApplicationType.REST_API, ApplicationType.WEB_PLUGIN, ApplicationType.REST_API_PLUGIN]
     }
 }

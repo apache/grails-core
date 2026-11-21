@@ -104,6 +104,7 @@ class ProjectCommandsSpec extends CommandSpec {
         'create-restapi'    | ['--exclude-features', 'mockito', '--features', 'openapi']                              || ['--features', 'openapi', '--exclude-features', 'mockito']
         'create-plugin'     | ['--features', 'asciidoctor']                                                           || ['--servlet', 'none', '--features', 'asciidoctor']
         'create-web-plugin' | ['--jdk', '25', '--features', 'grails-quartz']                                          || ['--jdk', '25', '--features', 'grails-quartz']
+        'create-rest-api-plugin' | ['--data', 'hibernate7', '--features', 'asciidoctor', '--exclude-features', 'mockito'] || ['--data', 'hibernate7', '--features', 'asciidoctor', '--exclude-features', 'mockito']
     }
 
     void "project show says what the record has, the features in the order they are applied, and the command line last"() {

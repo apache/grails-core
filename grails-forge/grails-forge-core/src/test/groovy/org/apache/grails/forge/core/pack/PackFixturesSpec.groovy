@@ -51,11 +51,11 @@ class PackFixturesSpec extends Specification {
 
         then:
         result.exit == PackFixtures.GENERATED
-        result.out == ['generated web', 'generated rest-api', 'generated web-plugin', 'generated plugin',
-                       'feature pack fixtures: generated=4 refused=0']
+        result.out == ['generated web', 'generated rest-api', 'generated web-plugin', 'generated plugin', 'generated rest-api-plugin',
+                       'feature pack fixtures: generated=5 refused=0']
 
         and: 'each is a whole application of its type, in the directory of the fixture, with the file of the pack'
-        ['web', 'rest-api', 'web-plugin', 'plugin'].collectMany { String type ->
+        ['web', 'rest-api', 'web-plugin', 'plugin', 'rest-api-plugin'].collectMany { String type ->
             Path application = output.resolve(type)
             List<String> missing = ['build.gradle', 'settings.gradle', 'gradle/wrapper/gradle-wrapper.properties', 'gradlew.bat',
                                     'src/main/groovy/com/example/Audit.groovy', '.grails/project.yml']
@@ -284,7 +284,7 @@ class PackFixturesSpec extends Specification {
         'has a name that acts on a terminal'  | 'a\u001b[31m web\n'                   || 'Line 1 of the fixtures: the name of a fixture is lower case letters, digits and single hyphens, starts with a letter and has at most 60 characters, and this is a?[31m'
         'has a name twice'                    | 'one web\none rest-api\n'             || 'Line 2 of the fixtures: there are two fixtures of the name one'
         'has a fixture without a type'        | 'one\n'                               || 'Line 1 of the fixtures: the fixture one has no type of application'
-        'has a type there is not'             | 'one desktop\n'                       || 'Line 1 of the fixtures: the type of application of the fixture one is one of [web, rest-api, web-plugin, plugin], and this is desktop'
+        'has a type there is not'             | 'one desktop\n'                       || 'Line 1 of the fixtures: the type of application of the fixture one is one of [web, rest-api, web-plugin, plugin, rest-api-plugin], and this is desktop'
         'has an option there is not'          | 'one web database=h2\n'               || 'Line 1 of the fixtures: the fixture one can have data=, servlet=, reloading=, jdk= and features=, each with a value, and this is database=h2'
         'has an option without a value'       | 'one web data=\n'                     || 'Line 1 of the fixtures: the fixture one can have data=, servlet=, reloading=, jdk= and features=, each with a value, and this is data='
         'has an option twice'                 | 'one web data=mongodb data=neo4j\n'   || 'Line 1 of the fixtures: the fixture one has data twice'

@@ -104,6 +104,7 @@ class GraphqlGormSpec extends ApplicationContextSpec implements CommandOutputFix
         feature.supports(ApplicationType.WEB)
         feature.supports(ApplicationType.REST_API)
         !feature.supports(ApplicationType.WEB_PLUGIN)
+        !feature.supports(ApplicationType.REST_API_PLUGIN)
         !feature.supports(ApplicationType.PLUGIN)
     }
 
@@ -122,6 +123,7 @@ class GraphqlGormSpec extends ApplicationContextSpec implements CommandOutputFix
         ApplicationType.REST_API   | true
         ApplicationType.PLUGIN     | false
         ApplicationType.WEB_PLUGIN | false
+        ApplicationType.REST_API_PLUGIN | false
     }
 
     void "test grails-data-graphql dependency is present in gradle build"() {

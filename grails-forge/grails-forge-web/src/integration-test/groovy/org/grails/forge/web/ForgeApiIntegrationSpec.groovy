@@ -346,7 +346,7 @@ class ForgeApiIntegrationSpec extends Specification {
         options.type.options.any { it.name == 'web' }
         (options.reloading.options*.value as Set) == (['DEVTOOLS', 'JREBEL', 'NONE'] as Set)
         options.lang.options*.value == ['GROOVY']
-        options.type.options*.value.containsAll(['WEB', 'REST_API', 'PLUGIN', 'WEB_PLUGIN'])
+        options.type.options*.value.containsAll(['WEB', 'REST_API', 'PLUGIN', 'WEB_PLUGIN', 'REST_API_PLUGIN'])
     }
 
     void "GET / returns the plain text API description"() {
@@ -657,6 +657,37 @@ class ForgeApiIntegrationSpec extends Specification {
         get('/application-types/REST_API').status == 200
         json(get('/application-types/rest-api')).name == 'rest_api'
         get('/create/rest-api/forge-rest').status == 201
+    }
+
+    void "a REST API plugin is a type of application: it is listed, has its features, and is created"() {
+        when:
+        Map type = json(get('/application-types/rest-api-plugin'))
+        Map defaults = json(get('/application-types/rest-api-plugin/features/default'))
+        Map available = json(get('/application-types/rest-api-plugin/features'))
+        Map created = get('/create/rest-api-plugin/com.example.forge-rest-plugin')
+        byte[] zip = created.body as byte[]
+        List<String> entries = zipEntries(zip)
+
+        then:
+        json(get('/application-types')).types*.name.contains('rest_api_plugin')
+        get('/application-types/rest_api_plugin').status == 200
+        get('/application-types/REST_API_PLUGIN').status == 200
+        type.name == 'rest_api_plugin'
+        type.title == 'Rest API Plugin'
+        text(get('/')).contains('REST_API_PLUGIN')
+
+        and: 'with the features of a REST API, and none of those a plugin does not impose on its applications'
+        defaults.features*.name.contains('views-json')
+        !defaults.features*.name.contains('gsp')
+        !available.features*.name.any { it in ['scaffolding', 'asset-pipeline-grails', 'openapi', 'grails-spring-security'] }
+
+        and: 'what is created is a plugin with JSON views'
+        created.status == 201
+        entries.contains('forge-rest-plugin/src/main/groovy/com/example/ForgeRestPluginGrailsPlugin.groovy')
+        entries.contains('forge-rest-plugin/grails-app/views/application/index.gson')
+        !entries.any { it.endsWith('.gsp') }
+        zipText(zip, 'forge-rest-plugin/build.gradle').contains('apply plugin: "org.apache.grails.gradle.grails-plugin"')
+        zipText(zip, 'forge-rest-plugin/.grails/project.yml').contains('applicationType: rest-api-plugin\n')
     }
 
     void 'generation endpoint #path refuses the chosen option #query that does not agree with the selected features'() {

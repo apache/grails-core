@@ -23,7 +23,7 @@ compatibility:
   forge: '[9.0.0,10.0.0)'
 title: Embedded Tomcat
 category: Server
-applicationTypes: [web, web-plugin, rest-api]
+applicationTypes: [web, web-plugin, rest-api, rest-api-plugin]
 oneOf: embedded-servlet
 visible: false
 default: { option: { servlet: tomcat } }

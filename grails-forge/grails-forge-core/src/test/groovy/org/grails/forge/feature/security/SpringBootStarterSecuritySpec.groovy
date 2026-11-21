@@ -185,6 +185,6 @@ class SpringBootStarterSecuritySpec extends ApplicationContextSpec implements Co
         e.message == 'The requested feature does not exist: spring-boot-starter-security'
 
         where:
-        applicationType << [ApplicationType.PLUGIN, ApplicationType.REST_API, ApplicationType.WEB_PLUGIN]
+        applicationType << [ApplicationType.PLUGIN, ApplicationType.REST_API, ApplicationType.WEB_PLUGIN, ApplicationType.REST_API_PLUGIN]
     }
 }

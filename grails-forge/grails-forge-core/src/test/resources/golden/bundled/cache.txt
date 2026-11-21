@@ -96,3 +96,28 @@ dependentFeatures: []
 +   codegen:
 +     defaultPackage: example.grails
 
+# rest_api_plugin
+title: Cache
+description: The Cache Plugin provides powerful and easy-to-use caching functionality for Grails applications and plugins.
+category: Cache
+documentation: https://grails.apache.org/docs/VERSION/guide/cache.html
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+== README.md
++ ## Feature cache documentation
++ - [Grails Cache documentation](https://grails.apache.org/docs/VERSION/guide/cache.html)
++ 
++ 
+== build.gradle
++     implementation "org.apache.grails:grails-cache"
+== grails-app/conf/application.yml
+- grails.codegen.defaultPackage: example.grails
++ grails:
++     enabled: true
++     cleanAtStartup: false
++     cacheManager: grails.plugin.cache.GrailsConcurrentMapCacheManager
++   codegen:
++     defaultPackage: example.grails
++   cache:
+

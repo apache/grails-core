@@ -90,6 +90,7 @@ class GrailsDefaultPluginsSpec extends ApplicationContextSpec implements Command
         ApplicationType.WEB_PLUGIN | 'example.tools'         | 'ToolsGrailsPlugin'     | 'tools'
         ApplicationType.PLUGIN     | 'example.audit-log'     | 'AuditLogGrailsPlugin'  | 'audit-log'
         ApplicationType.WEB_PLUGIN | 'com.example.shopAdmin' | 'ShopAdminGrailsPlugin' | 'shop-admin'
+        ApplicationType.REST_API_PLUGIN | 'com.example.shopApi' | 'ShopApiGrailsPlugin'  | 'shop-api'
     }
 
     @Unroll

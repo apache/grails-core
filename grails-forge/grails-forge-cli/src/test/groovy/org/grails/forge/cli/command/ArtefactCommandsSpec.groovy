@@ -232,6 +232,10 @@ class ArtefactCommandsSpec extends CommandSpec implements CommandFixture {
         'create-functional-test'    | ApplicationType.REST_API
         'create-restful-controller' | ApplicationType.REST_API
         'create-domain-resource'    | ApplicationType.REST_API
+        'create-functional-test'    | ApplicationType.REST_API_PLUGIN
+        'create-restful-controller' | ApplicationType.REST_API_PLUGIN
+        'create-domain-resource'    | ApplicationType.REST_API_PLUGIN
+        'create-integration-test'   | ApplicationType.REST_API_PLUGIN
         'create-integration-test'   | ApplicationType.WEB_PLUGIN
         'create-unit-test'          | ApplicationType.PLUGIN
         'create-command'            | ApplicationType.PLUGIN

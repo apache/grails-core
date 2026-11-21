@@ -53,3 +53,15 @@ in an application without being named: servlet undertow
 == build.gradle
 +     implementation "org.apache.grails:grails-undertow"
 
+# rest_api_plugin
+title: Embedded Undertow
+description: grails-undertow
+category: Server
+documentation: null
+thirdPartyDocumentation: null
+visible: false
+dependentFeatures: []
+in an application without being named: servlet undertow
+== build.gradle
++     implementation "org.apache.grails:grails-undertow"
+

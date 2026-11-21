@@ -41,3 +41,13 @@ in an application without being named: the default options
 # plugin
 not for this kind of application
 
+# rest_api_plugin
+title: grails-web
+description: grails-web
+category: Other
+documentation: null
+thirdPartyDocumentation: null
+visible: false
+dependentFeatures: []
+in an application without being named: the default options
+
