@@ -76,16 +76,22 @@ abstract class AbstractMemberDefinition {
         }
 
         if (blank != null && type != 'String') {
-            throw new IllegalArgumentException("The 'blank' constraint is only applicable to String ${getMemberType().toLowerCase()}s")
+            throw new IllegalArgumentException("The 'blank' constraint is only applicable to String ${plural()}")
         }
 
         if (maxSize != null && type != 'String') {
-            throw new IllegalArgumentException("The 'maxSize' constraint is only applicable to String ${getMemberType().toLowerCase()}s")
+            throw new IllegalArgumentException("The 'maxSize' constraint is only applicable to String ${plural()}")
         }
 
         if (minSize != null && type != 'String') {
-            throw new IllegalArgumentException("The 'minSize' constraint is only applicable to String ${getMemberType().toLowerCase()}s")
+            throw new IllegalArgumentException("The 'minSize' constraint is only applicable to String ${plural()}")
         }
+    }
+
+    // the kind of member in the plural, for a message: properties, fields
+    private String plural() {
+        String kind = getMemberType().toLowerCase()
+        kind.endsWith('y') ? kind.substring(0, kind.length() - 1) + 'ies' : kind + 's'
     }
 
     /**
