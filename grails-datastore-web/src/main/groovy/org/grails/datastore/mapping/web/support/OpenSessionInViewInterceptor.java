@@ -63,9 +63,7 @@ public class OpenSessionInViewInterceptor implements AsyncWebRequestInterceptor 
     public void preHandle(WebRequest webRequest) throws Exception {
         if (hasSessionBound()) {
             // a session is already open for this request: use it, and leave it to the one that opened it
-            String participateAttributeName = getParticipateAttributeName();
-            Integer count = (Integer) webRequest.getAttribute(participateAttributeName, WebRequest.SCOPE_REQUEST);
-            webRequest.setAttribute(participateAttributeName, count != null ? count + 1 : 1, WebRequest.SCOPE_REQUEST);
+            incrementParticipateCount(webRequest);
             return;
         }
 
@@ -74,7 +72,12 @@ public class OpenSessionInViewInterceptor implements AsyncWebRequestInterceptor 
 
         Session session = DatastoreUtils.getSession(datastore, true);
         session.setFlushMode(flushMode);
-        if (!hasSessionBound()) {
+        if (hasSessionBound()) {
+            // transaction synchronization is active, so getSession bound the session and closes it when the
+            // transaction completes: leave it to the transaction
+            incrementParticipateCount(webRequest);
+        }
+        else {
             DatastoreUtils.bindSession(session);
         }
     }
@@ -135,6 +138,12 @@ public class OpenSessionInViewInterceptor implements AsyncWebRequestInterceptor 
         if (session.getFlushMode() == FlushModeType.AUTO && session.hasTransaction()) {
             session.flush();
         }
+    }
+
+    private void incrementParticipateCount(WebRequest webRequest) {
+        String participateAttributeName = getParticipateAttributeName();
+        Integer count = (Integer) webRequest.getAttribute(participateAttributeName, WebRequest.SCOPE_REQUEST);
+        webRequest.setAttribute(participateAttributeName, count != null ? count + 1 : 1, WebRequest.SCOPE_REQUEST);
     }
 
     /**

@@ -25,7 +25,9 @@ import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.datastore.mapping.core.Session
 import org.grails.datastore.mapping.transactions.SessionHolder
 import org.springframework.mock.web.MockHttpServletRequest
+import org.springframework.transaction.support.TransactionSynchronization
 import org.springframework.transaction.support.TransactionSynchronizationManager
+import org.springframework.transaction.support.TransactionSynchronizationUtils
 import org.springframework.web.context.request.ServletWebRequest
 import spock.lang.Specification
 
@@ -48,6 +50,9 @@ class OpenSessionInViewInterceptorSpec extends Specification {
     }
 
     void cleanup() {
+        if (TransactionSynchronizationManager.synchronizationActive) {
+            TransactionSynchronizationManager.clearSynchronization()
+        }
         TransactionSynchronizationManager.resourceMap.keySet().toList().each { key ->
             TransactionSynchronizationManager.unbindResource(key)
         }
@@ -138,5 +143,28 @@ class OpenSessionInViewInterceptorSpec extends Specification {
         0 * session.flush()
         0 * session.disconnect()
         boundSession().is(session)
+    }
+
+    void 'a session that transaction synchronization binds as it is opened is left for the transaction to close'() {
+        given: 'synchronization is active, so opening the session binds it and registers its cleanup'
+        TransactionSynchronizationManager.initSynchronization()
+
+        when:
+        interceptor.preHandle(request)
+        interceptor.postHandle(request, null)
+        interceptor.afterCompletion(request, null)
+
+        then:
+        0 * session.disconnect()
+        boundSession().is(session)
+
+        when: 'the transaction completes'
+        List<TransactionSynchronization> synchronizations = TransactionSynchronizationManager.synchronizations
+        TransactionSynchronizationUtils.triggerBeforeCompletion()
+        TransactionSynchronizationUtils.invokeAfterCompletion(synchronizations, TransactionSynchronization.STATUS_COMMITTED)
+
+        then:
+        1 * session.disconnect()
+        boundSession() == null
     }
 }
