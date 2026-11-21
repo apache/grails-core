@@ -1140,8 +1140,9 @@ public abstract class AbstractHibernateQuery extends Query {
      * that the orders made are kept, so that the query counts the rows that it lists.
      */
     private void removeOrdersOfRowCount() {
-        if (hibernateProjectionList == null || !hibernateProjectionList.isRowCount() ||
-                hibernateProjectionList.getHibernateProjectionList().getLength() != 1 || !(criteria instanceof CriteriaImpl)) {
+        if (hibernateProjectionList == null || hibernateProjectionList.getHibernateProjectionList().getLength() != 1 ||
+                !(hibernateProjectionList.getHibernateProjectionList().getProjection(0) instanceof org.hibernate.criterion.RowCountProjection) ||
+                !(criteria instanceof CriteriaImpl)) {
             return;
         }
         Iterator<CriteriaImpl.OrderEntry> orders = ((CriteriaImpl) criteria).iterateOrderings();

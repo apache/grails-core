@@ -46,7 +46,7 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
         manager.domainClasses.addAll([Club, Team, Player, Contract, AssociationJoinTypeCategory, AssociationJoinTypeShelf, AssociationJoinTypeTag,
                                       AssociationJoinTypeFace, AssociationJoinTypeNose, AssociationJoinTypePost, AssociationJoinTypeAuthor,
                                       AssociationJoinTypeBook, AssociationJoinTypeSquad, AssociationJoinTypeSquadMember, AssociationJoinTypeTrophy, AssociationJoinTypeMedal,
-                                      AssociationJoinTypePrize, AssociationJoinTypeRibbon])
+                                      AssociationJoinTypePrize, AssociationJoinTypeRibbon, Join0_0])
     }
 
     void setup() {
@@ -60,6 +60,28 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
         new Team(club: arsenal, name: 'Playerless First Team').save(failOnError: true)
         manager.session.flush()
         manager.session.clear()
+    }
+
+    void 'a requested bulk join does not shadow the queried entity alias for #operation'() {
+        given:
+        final category = new AssociationJoinTypeTag(name: 'Category').save(failOnError: true)
+        new Join0_0(name: 'With category', category: category).save(failOnError: true)
+        new Join0_0(name: 'Without category').save(failOnError: true, flush: true)
+        manager.session.clear()
+        final query = new DetachedCriteria(Join0_0).join('category', JoinType.INNER)
+
+        when:
+        final changed = mutate.call(query)
+        manager.session.clear()
+
+        then:
+        changed == 1
+        Join0_0.list(sort: 'name')*.name == expected
+
+        where:
+        operation | mutate                                             | expected
+        'update'  | { criteria -> criteria.updateAll(name: 'Updated') } | ['Updated', 'Without category']
+        'delete'  | { criteria -> criteria.deleteAll() }                | ['Without category']
     }
 
     protected static void savePlayer(String name, Team team) {
@@ -827,6 +849,24 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
         JoinType.RIGHT || TEAMS_WITH_A_CLUB
     }
 
+    void 'a criteria sort keeps an explicitly requested left join from #request'() {
+        when:
+        final results = query.call()
+
+        then:
+        results*.name.sort() == expected
+        results.totalCount == expected.size()
+
+        where:
+        request      | query                                                                                                                          | expected
+        'fetch'      | { Team.createCriteria().list(max: 10, sort: 'club.name', fetch: [club: JoinType.LEFT]) {} }                                       | ALL_TEAMS
+        'join'       | { Team.createCriteria().list(max: 10, sort: 'club.name') { join('club', JoinType.LEFT) } }                                         | ALL_TEAMS
+        'fetch and order' | { Team.createCriteria().list(max: 10, fetch: [club: JoinType.LEFT]) { order('club.name') } }                              | ALL_TEAMS
+        'join after order' | { Team.createCriteria().list(max: 10) { order('club.name'); join('club', JoinType.LEFT) } }                            | ALL_TEAMS
+        'nested fetch' | { Player.createCriteria().list(max: 10, sort: 'team.club.name', fetch: ['team.club': JoinType.LEFT]) {} }                     | ['Arsenal Player', 'Chelsea Player', 'MU Player', 'Unattached Player']
+        'nested join'  | { Player.createCriteria().list(max: 10, sort: 'team.club.name') { join('team.club', JoinType.LEFT) } }                       | ['Arsenal Player', 'Chelsea Player', 'MU Player', 'Unattached Player']
+    }
+
     void 'count and get apply an inner join that a criteria query requests'() {
         when:
         final count = Team.createCriteria().count {
@@ -1282,5 +1322,16 @@ class AssociationJoinTypeCategory {
 
     static constraints = {
         parent nullable: true
+    }
+}
+
+// Its decapitalized name collides with the first generated alias of a requested bulk join.
+@Entity
+class Join0_0 {
+    String name
+    AssociationJoinTypeTag category
+
+    static constraints = {
+        category nullable: true
     }
 }
