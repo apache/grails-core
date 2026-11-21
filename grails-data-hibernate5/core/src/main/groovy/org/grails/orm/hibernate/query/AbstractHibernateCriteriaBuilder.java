@@ -21,6 +21,7 @@ package org.grails.orm.hibernate.query;
 
 import java.beans.PropertyDescriptor;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -2072,7 +2073,43 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
                 return false;
             }
         }
-        addOrder(criteria, aliasForSortedAssociation(association) + "." + property.substring(lastPropertyPos + 1), order, ignoreCase);
+        String leaf = property.substring(lastPropertyPos + 1);
+        String joinedPart = association;
+        String embeddedPart = "";
+        String[] names = association.split("\\.");
+        PersistentEntity current = entity;
+        StringBuilder joined = new StringBuilder();
+        for (int i = 0; i < names.length; i++) {
+            PersistentProperty step = current == null ? null : current.getPropertyByName(names[i]);
+            if (step instanceof Embedded) {
+                // an embedded component is not joined: the rest of the path is read through the join before it
+                String rest = String.join(".", Arrays.copyOfRange(names, i, names.length));
+                if (joined.length() == 0 || !isEmbeddedPath(current, Arrays.copyOfRange(names, i, names.length))) {
+                    return false;
+                }
+                joinedPart = joined.toString();
+                embeddedPart = rest + ".";
+                break;
+            }
+            if (joined.length() > 0) {
+                joined.append('.');
+            }
+            joined.append(names[i]);
+            current = step instanceof Association ? ((Association) step).getAssociatedEntity() : null;
+        }
+        addOrder(criteria, aliasForSortedAssociation(joinedPart) + "." + embeddedPart + leaf, order, ignoreCase);
+        return true;
+    }
+
+    private static boolean isEmbeddedPath(PersistentEntity owner, String[] names) {
+        PersistentEntity current = owner;
+        for (String name : names) {
+            PersistentProperty property = current == null ? null : current.getPropertyByName(name);
+            if (!(property instanceof Embedded)) {
+                return false;
+            }
+            current = ((Embedded) property).getAssociatedEntity();
+        }
         return true;
     }
 

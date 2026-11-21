@@ -34,7 +34,7 @@ import spock.lang.Unroll
 class MapSortAndEmptyListHibernateSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
 
     void setupSpec() {
-        manager.domainClasses.addAll([MsPublisher, MsAuthor, MsBook])
+        manager.domainClasses.addAll([MsPublisher, MsAuthor, MsBook, MsHomeAuthor, MsHomeBook])
     }
 
     void setup() {
@@ -74,6 +74,23 @@ class MapSortAndEmptyListHibernateSpec extends GrailsDataTckSpec<GrailsDataHiber
         MsBook.createCriteria().list(sort: ['author.name': 'desc', title: 'asc']) {
             gt('id', 0L)
         }*.title == ['omega', 'zeta', 'alpha', 'beta']
+    }
+
+    void "a map sort that goes through an embedded component of an association orders by it on the join of the association"() {
+        given:
+        MsHomeAuthor ann = new MsHomeAuthor(name: 'ann', home: new MsHome(city: 'rome')).save(failOnError: true)
+        MsHomeAuthor bob = new MsHomeAuthor(name: 'bob', home: new MsHome(city: 'oslo')).save(failOnError: true)
+        MsHomeAuthor cat = new MsHomeAuthor(name: 'cat', home: new MsHome(city: 'oslo')).save(failOnError: true)
+        new MsHomeBook(title: 'one', author: ann).save(failOnError: true)
+        new MsHomeBook(title: 'two', author: bob).save(failOnError: true)
+        new MsHomeBook(title: 'three', author: cat).save(flush: true, failOnError: true)
+        manager.session.clear()
+
+        expect:
+        MsHomeBook.createCriteria().list(sort: ['author.home.city': 'asc', 'author.name': 'desc']) { }*.title == ['three', 'two', 'one']
+        MsHomeBook.createCriteria().list(sort: ['author.name': 'asc', 'author.home.city': 'asc']) { }*.title == ['one', 'two', 'three']
+        MsHomeBook.createCriteria().list(sort: ['author.home.city': 'desc', 'author.name': 'asc']) { gt('id', 0L) }*.title == ['one', 'two', 'three']
+        MsHomeBook.createCriteria().list(sort: ['author.home.city': 'asc', title: 'asc']) { }*.title == ['three', 'two', 'one']
     }
 
     void "a map sort of two properties of the same association joins it once"() {
@@ -286,4 +303,21 @@ class MsBook {
     static constraints = {
         author nullable: true
     }
+}
+
+class MsHome {
+    String city
+}
+
+@Entity
+class MsHomeAuthor {
+    String name
+    MsHome home
+    static embedded = ['home']
+}
+
+@Entity
+class MsHomeBook {
+    String title
+    MsHomeAuthor author
 }
