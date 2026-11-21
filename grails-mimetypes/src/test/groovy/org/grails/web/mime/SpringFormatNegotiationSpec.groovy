@@ -337,6 +337,8 @@ class SpringFormatNegotiationSpec extends Specification {
         'application/xml, application/atom+xml;q=0.5'             || ['xml', 'atom']            | ['application/xml', 'application/atom+xml;q=0.5']
         'application/atom+xml, application/xml'                   || ['atom', 'xml']            | ['application/atom+xml', 'application/xml']
         'application/json, application/atom+xml'                  || ['json', 'atom']           | ['application/json', 'application/atom+xml']
+        'application/problem+xml, application/atom+xml'           || ['atom', 'xml']            | ['application/atom+xml', 'application/problem+xml']
+        'application/problem+xml;q=0.5, application/atom+xml;q=0.4' || ['xml', 'atom']          | ['application/problem+xml;q=0.5', 'application/atom+xml;q=0.4']
     }
 
     void 'a wildcard is of the all format, which withFormat answers with the first block compatible with it: #result for #accept'() {
@@ -466,6 +468,20 @@ class SpringFormatNegotiationSpec extends Specification {
         'whatever the case of the format'                      | false          | 'PLAIN'   || [MediaType.TEXT_PLAIN]
         'and a format neither maps is not acceptable'          | false          | 'unknown' || 'not acceptable'
         'and with parameter negotiation, still not acceptable' | true           | 'unknown' || 'not acceptable'
+    }
+
+    void "a format grails.mime.types does not list is written in the type Spring MVC maps it to by default, as #format"() {
+        given: 'grails.mime.types without json, which Spring MVC maps by default for its JSON message converter'
+        start((Settings.MIME_NEGOTIATION_SPRING): true, 'grails.mime.types': [all: '*/*', xml: 'application/xml'])
+        def request = request('Accept': 'application/xml')
+        request.addParameter('format', format)
+        handledBy(request, urlMapping())
+
+        expect:
+        resolve(request) == [MediaType.APPLICATION_JSON]
+
+        where:
+        format << ['json', 'JSON']
     }
 
     void "a format Grails configures keeps the types grails.mime.types gives it, whatever type Spring MVC's media types map it to"() {

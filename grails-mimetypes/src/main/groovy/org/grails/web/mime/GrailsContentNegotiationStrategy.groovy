@@ -261,9 +261,11 @@ class GrailsContentNegotiationStrategy {
     }
 
     /**
-     * The media type Spring MVC's content negotiation manager maps a format to, as {@code spring.mvc.contentnegotiation.media-types}
-     * maps one, for a format no type of {@code grails.mime.types} stands for, so that what Spring MVC writes for a request
-     * that names it is in that type, as without {@code grails.mime.negotiation.spring}.
+     * The media type Spring MVC's content negotiation manager maps a format to, whatever its case, for a format no
+     * type of {@code grails.mime.types} stands for, so that what Spring MVC writes for a request that names it is in
+     * that type, as without {@code grails.mime.negotiation.spring}. The manager maps the formats
+     * {@code spring.mvc.contentnegotiation.media-types} adds and the defaults Spring MVC registers for the message
+     * converters present, such as {@code json}.
      *
      * @param format the format
      * @return the media type, as a list, or {@code null} where the manager maps no type to the format
@@ -409,16 +411,22 @@ class GrailsContentNegotiationStrategy {
 
     /**
      * Media types in the order Grails reads them, which keeps Spring MVC's order but for the types with the {@code +xml}
-     * suffix of the quality of the XML type, the first {@code application/xml} or {@code text/xml}: they come ahead of
-     * it, as the more specific types, each one later in the header in front of those before it, as Grails 9 orders them.
+     * suffix of the quality of the XML type, the first {@code application/xml} or {@code text/xml}, or
+     * {@code application/problem+xml} where no configured type names it, since Grails reads that problem type as
+     * {@code application/xml}: they come ahead of it, as the more specific types, each one later in the header in front
+     * of those before it, as Grails 9 orders them.
      *
      * @param mediaTypes the media types in Spring MVC's order
      * @return the media types in the order Grails reads them
      * @since 9.0
      */
-    static List<MediaType> preferringSuffixedXml(List<MediaType> mediaTypes) {
+    List<MediaType> preferringSuffixedXml(List<MediaType> mediaTypes) {
+        boolean problemXmlConfigured = mimeTypes.any { MimeType configured ->
+            configured?.name?.equalsIgnoreCase(MediaType.APPLICATION_PROBLEM_XML_VALUE)
+        }
         int xml = mediaTypes.findIndexOf { MediaType mediaType ->
-            mediaType.type == 'application' && mediaType.subtype == 'xml' || mediaType.type == 'text' && mediaType.subtype == 'xml'
+            mediaType.type == 'application' && mediaType.subtype == 'xml' || mediaType.type == 'text' && mediaType.subtype == 'xml' ||
+                    !problemXmlConfigured && mediaType.equalsTypeAndSubtype(MediaType.APPLICATION_PROBLEM_XML)
         }
         if (xml < 0) {
             return mediaTypes
