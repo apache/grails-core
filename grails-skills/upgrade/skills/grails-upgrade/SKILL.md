@@ -751,6 +751,8 @@ Kept under their names: `create-app`, `create-plugin`, `create-web-plugin`, the 
 - `create-integration-test` is not a command in a plain plugin; `create-domain-resource` and `create-restful-controller` only in a REST API application; `create-job` only where the record of the project has the `grails-quartz` feature; `package-plugin` and `publish-plugin` only where `src/main/groovy` has a `*GrailsPlugin.groovy`.
 - The command line chapter of the guide has the full table: `https://grails.apache.org/docs/<version>/guide/commandLine.html`, section "Commands of Earlier Versions".
 
+- `grails list-plugins [TEXT]` and `grails plugin-info NAME|group:artifact` exist in Grails 9 (they were shell commands). To find the coordinates and the dependency line of a plugin, run `grails plugin-info NAME --json` and read `plugin.dependency`, `plugin.version`, `plugin.managedBy` and `plugin.features` (a feature there is added with `grails feature add FEATURE`). Use `--offline` when there is no network: the plugins of the Grails release are still answered. Set `GRAILS_PLUGIN_INDEX=none` in CI to keep the commands from the network. Do not parse the text output.
+
 ## Environment, Short Forms, Options and Exit Codes
 
 - Replace an environment in front of the command with a system property after it: `grails prod war` becomes `grails war -Dgrails.env=production`, `grails test run-app` becomes `grails run-app -Dgrails.env=test`, `grails dev run-app` becomes `grails run-app`. `test`, `prod` and `dev` in that place are refused with exit code 2. Defaults: `development` for `run-app`, `console`, `shell`, `run-command`, `run-script`; `test` for `test-app`; `production` for `assemble`, `war`, `package`.

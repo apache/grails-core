@@ -1857,12 +1857,15 @@ Most commands of the Grails shell and of its profiles are commands of `grails` u
 
 Every other command is kept under its name: `create-app`, `create-plugin`, `create-web-plugin`, the `create-*` commands of a project, `add-property`, `run-app`, `stop-app`, `test-app`, `compile`, `clean`, `assemble`, `console`, `shell`, `run-command`, `run-script`, `dependency-report`, `stats`, `bug-report`, `gradle` and `help`. What each of them does differently is in the notes that follow. New in Grails 9 are `create-restapi`, `create-webapp` (another name of `create-app`), `feature add`, `project show` and `project regenerate`.
 
+*`list-plugins` and `plugin-info` are kept, and read another source.* `list-plugins` lists the plugins of the Grails release, which the command line knows without the network, and the plugins of the Grails plugin index, which it reads from `https://raw.githubusercontent.com/apache/grails-plugins-metadata/main/grails-plugins-index.json` in the place of the directory listing of `repo.grails.org` the shell read; it takes a text to list by, and no longer the `-repository` argument. `plugin-info` takes the name or the artifact of a plugin, or its coordinates as `group:artifact`, and prints the dependency for `build.gradle` as `implementation`, without a version when the Grails BOM manages the plugin. Both have `--offline`, `--json` and `--plugin-index`; the `GRAILS_PLUGIN_INDEX` environment variable names another index, or `none`.
+
 ===== Required Actions
 
 * Search scripts, continuous integration jobs, documentation of your own and the run configurations of an IDE for `grails` and `grailsw` followed by one of the names of the table, and replace each as the table says. A job that called a removed command now ends with exit code 2 and has run nothing.
 * Replace `grails test` with `grails test-app`, `grails run` with `grails run-app` and `grails stop` with `grails stop-app`.
 * Replace `grails install` with `grails gradle publishToMavenLocal`, or `./gradlew publishToMavenLocal`.
 * A step that ran `open` or `!` from input that was piped into interactive mode runs the program itself.
+* A script that read the output of `list-plugins` or `plugin-info` reads the output of `--json`, and names a repository of its own with `GRAILS_REPO_URL` where it gave `-repository`.
 
 ==== 43. The Environment, Short Forms, Options and Exit Codes of the `grails` Command
 

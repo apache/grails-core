@@ -18,7 +18,7 @@ limitations under the License.
 > Each section says under "Implemented" and "Not done" what the code does; where those and the design text differ, the code is what they describe.
 > Imported on 2026-10-26 from [issue #16348, comment 6150508865](https://github.com/apache/grails-core/issues/16348#issuecomment-6150508865),
 > revision 10 (last updated 2026-10-13T17:07:30Z).
-> The verbatim import is preserved in the first commit of this branch ("Document the Forge and CLI unification proposal"); this is revision 34.
+> The verbatim import is preserved in the first commit of this branch ("Document the Forge and CLI unification proposal"); this is revision 36.
 > Implementation target: **9.0.x**. The Grails-application conversion landed in 8.1.x;
 > profiles and the existing command behavior remain on that line.
 > Reviewed code baseline: `8.1.x` at `abd7ea720d0e3db96a48a89ee82ce7e79e069524`,
@@ -28,7 +28,7 @@ limitations under the License.
 
 # One generator: Forge, feature packs, and a profile-free console
 
-**Issue:** apache/grails-core #16348 · **Target:** 9.0.x · **Revision:** 17, 2026-11-20
+**Issue:** apache/grails-core #16348 · **Target:** 9.0.x · **Revision:** 36, 2026-11-21
 
 Contents
 
@@ -929,7 +929,7 @@ Not done: adding the feature of an external pack (by coordinates, `--feature-pac
 | `gradle` | shell | `gradle` | retained, changed (every argument reaches Gradle as it is) | `GradleCommandSpec`; end-to-end run |
 | `help` | shell | `help`, `help --json` | retained, changed | `CommandCatalogSpec`; end-to-end run |
 | `install` | plugin profile, profile profile | a hidden command that runs nothing, names `gradle publishToMavenLocal` and ends with 1 | replaced by a Gradle task | `ConsoleCommandsSpec`, `FormerCommandsSpec` |
-| `list-plugins`, `plugin-info` | base profile | nothing; section 3 names `plugin search` and `plugin info`, which are not implemented | no replacement today | the lines of the table |
+| `list-plugins`, `plugin-info` | base profile | the commands of the same names of the command line (revision 36): the plugins of the release from a list in the CLI, those of the community from `grails-plugins-index.json` | kept, another source | `PluginCommandsSpec`, `PluginIndexSpec`, `BundledPluginsSpec` |
 | `list-profiles`, `profile-info` | shell | `--list-features` of the create commands; section 3 names `feature list` and `feature info`, which are not implemented | replaced | the lines of the table |
 | `open` | shell | nothing; Appendix A has `open <path>`, which is not implemented | no replacement today | the line of the table |
 | `package-plugin` | plugin profile | `package-plugin`, in a plugin | retained | `ConsoleCommandsSpec`; the table elsewhere |
@@ -1220,6 +1220,8 @@ Earlier entries describe earlier proposals, including release assignments supers
 
 | Revision | Date | Change |
 | --- | --- | --- |
+| 36 | 2026-11-21 | `list-plugins` and `plugin-info` are commands of the command line (`org.apache.grails.forge.cli.plugin`), under the names the shell had and not as a `plugin search\|info` group: the plugins of the release from a list in the CLI (`META-INF/grails-forge-plugins/plugins.tsv`, held to the sources, the BOM tables and the bundled packs by `BundledPluginsSpec`), the plugins of the community from `grails-plugins-index.json`, read through `PackArtifacts` on each run, without a copy on disk, by these two commands only, and shown as sanitised text; `plugin-info` also reads `maven-metadata.xml` and the `-plugin.xml` of a plugin from the repositories of `GRAILS_REPO_URL`, Maven Central and the repository the index names. `GRAILS_PLUGIN_INDEX` and `--plugin-index` name another index or none. The two entries left `FormerCommands`. The user decided the same day that `open`, `!` of interactive mode and `generate-unit-test`, `generate-functional-test` and `generate-resource-controller` of the REST API profile stay removed. |
+| 35 | 2026-11-21 | Documentation audit: the Grails 9 upgrade guide has notes 42 to 51 for every difference of the command line from the Grails shell, and the upgrade skill mirrors them; the command line chapter says "the `grails` command" where it said "the Grails Forge CLI", and four scaffolding commands have reference pages. The guide now records that an application created with the shell has no code generation commands until a `grails-forge-cli.yml` with `applicationType`, `defaultPackage` and `features` is written by hand, since no command writes a record for an existing application. Open from the audit: the `profile:` form of an earlier record ends in a NullPointerException and its warning names `update-cli-config`, which is no command; `GenerateServiceCommand` writes its spec to the unit tests and goes on after its errors; the root help banner and the `--inplace` description still speak of the Forge CLI and of a service. The header of this document carries the revision of the change log again. |
 | 34 | 2026-11-21 | The home of the Grails wrapper and the `.grails` directory of a project are kept apart in the code as they are in use: the wrapper keeps its downloads in `~/.grails/wrapper` or under `GRAILS_WRAPPER_HOME` and never looks in a project. The lookup in the project directory, which was commented out, and its helpers are deleted, the description of `GrailsWrapperHome.findGrailsHome` says what it does. A directory that is named is used whatever it holds, the `.grails` directory of a project too (`GrailsWrapperHomeSpec`). |
 | 33 | 2026-11-21 | The scripts of the scaffolding plugin are deleted (`grails-scaffolding/src/main/scripts`), which reverses the decision of slice d2(iv) to keep them: since revision 32 the application commands do what they did, and one set is kept. The eight rows of `ScriptCommandRunnerSpec` that ran them on the script host are removed; a script that calls another script is still covered there by a script of the spec. Upgrade notes 34 and 41, the skill entry, the page on scripts in the guide and the table of script commands in section 3 say so. |
 | 32 | 2026-11-21 | The application commands of the scaffolding plugin do what its scripts did where the two differed and the scripts were right, which slice d2(iv) had left open: `generate-controller` writes the service spec to `src/integration-test/groovy`; `generate-all` runs both of its commands when a class is not found; `create-scaffold-controller`, `create-scaffold-service` and `generate-scaffold-all` take a class without a source in the project by its full name and still find one of the project by its simple name; `install-templates` writes below the project directory and fails when it cannot. `ScaffoldingCommandsSpec`, upgrade note 41 and its skill entry. The scripts are still there; whether they are deleted is not decided. |
