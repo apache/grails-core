@@ -89,7 +89,7 @@ class FormerCommandsSpec extends CommandSpec {
         'list-profiles'            | 'list-profiles listed the profiles of the Grails shell. Profiles are replaced by application types and features: grails-forge-cli help lists the create commands, and each lists its features with --list-features'
         'open'                     | 'open opened a file with the program the desktop has for it in the Grails shell. It has no replacement in grails-forge-cli'
         'create-profile'           | 'create-profile created a profile for the Grails shell. Profiles are replaced by application types, features and feature packs, and no command creates any of these'
-        'generate-functional-test' | 'generate-functional-test was a command of the REST API profile of the Grails shell. It has no replacement in grails-forge-cli; create-functional-test writes an empty test in a REST API application'
+        'generate-functional-test' | 'generate-functional-test was a command of the REST API profile of the Grails shell. It has no replacement in grails-forge-cli; create-functional-test writes a test of the home page, in a REST API project and in a project with a Geb feature'
     }
 
     @Unroll
@@ -183,16 +183,15 @@ class FormerCommandsSpec extends CommandSpec {
 
         when: 'a command of another kind of project'
         err.reset()
-        exit = ForgeCli.execute(beanContext, 'create-functional-test', 'Api')
+        exit = ForgeCli.execute(beanContext, 'create-restful-controller', 'Api')
         lines = err.toString().readLines()
 
         then:
         exit == 2
-        lines[0].startsWith('There is no command create-functional-test')
+        lines[0].startsWith('There is no command create-restful-controller')
         lines[1] == MISSING
-        lines[2] == 'create-functional-test is a command in the directory of a REST API application or REST API plugin (create-restapi, create-rest-api-plugin), ' +
-                'and the current directory is in none. ' +
-                'In a web application it was a script of the Geb plugin, which has no replacement here'
+        lines[2] == 'create-restful-controller is a command in the directory of a REST API application or REST API plugin (create-restapi, create-rest-api-plugin), ' +
+                'and the current directory is in none'
 
         when: 'a command of a plugin, which the build of the project may list'
         err.reset()
@@ -426,6 +425,33 @@ class FormerCommandsSpec extends CommandSpec {
         guide.isFile()
         rows.keySet() == (gone*.name + 'install') as Set
         gone.every { rows[it.name].startsWith("|${it.status.shown}".toString()) }
+    }
+
+    void "create-functional-test, which was a script of the Geb plugin in a web application, is a command there, and is refused with its line in a project without Geb"() {
+        given: 'a web application, which has a Geb feature by default'
+        inProject('web')
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'create-functional-test', 'Home')
+
+        then:
+        exit == 0
+        err.toString().isEmpty()
+        new File(top, 'web/src/integration-test/groovy/example/HomeSpec.groovy').text.contains('class HomeSpec extends ContainerGebSpec {')
+
+        when: 'a plugin, which has none'
+        inProject('plugin')
+        exit = ForgeCli.execute(beanContext, 'create-functional-test', 'Home')
+        List<String> lines = err.toString().readLines()
+
+        then:
+        exit == 2
+        lines[0].startsWith('There is no command create-functional-test')
+        lines[1] == MISSING
+        lines[2] == 'create-functional-test is a command in the directory of a REST API application or REST API plugin, and of a web application or web plugin ' +
+                'that has a Geb feature (geb-with-testcontainers or geb-with-local-browsers), which grails-forge-cli feature add geb-with-testcontainers adds, ' +
+                'and the current directory is in none'
+        !new File(top, 'plain/src/integration-test/groovy/example/HomeSpec.groovy').exists()
     }
 
     private Set<String> commandsHere() {

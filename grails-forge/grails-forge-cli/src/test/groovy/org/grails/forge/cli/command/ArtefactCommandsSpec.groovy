@@ -211,7 +211,7 @@ class ArtefactCommandsSpec extends CommandSpec implements CommandFixture {
     void "the templates of the command line are resources on its class path, one of each"() {
         expect:
         ArtefactTemplate.values().each { ArtefactTemplate template ->
-            List<URL> found = Collections.list(Thread.currentThread().getContextClassLoader().getResources('META-INF/grails-forge-cli/templates/' + template.location))
+            List<URL> found = Collections.list(Thread.currentThread().getContextClassLoader().getResources('META-INF/grails-forge-cli/templates/' + template.resource))
             assert found.size() == 1
             assert !found[0].toString().contains('/src/main/')
             assert found[0].getText('UTF-8') == ArtefactTemplates.builtIn(template)
@@ -261,7 +261,7 @@ class ArtefactCommandsSpec extends CommandSpec implements CommandFixture {
 
         where:
         command                     | hasNot
-        'create-functional-test'    | ApplicationType.WEB
+        'create-functional-test'    | ApplicationType.PLUGIN
         'create-restful-controller' | ApplicationType.WEB
         'create-domain-resource'    | ApplicationType.WEB_PLUGIN
         'create-integration-test'   | ApplicationType.PLUGIN
@@ -756,10 +756,10 @@ class ArtefactCommandsSpec extends CommandSpec implements CommandFixture {
 
         where:
         type                     | features          | without                                                                                     | files
-        ApplicationType.WEB      | ['grails-quartz'] | ['create-functional-test', 'create-restful-controller', 'create-domain-resource']           | 30
+        ApplicationType.WEB      | ['grails-quartz'] | ['create-restful-controller', 'create-domain-resource']                                     | 32
         ApplicationType.REST_API | []                | ['create-job']                                                                              | 36
 
-        templates = (type == ApplicationType.WEB ? ['Job.groovy'] : ['artifacts/Resource.groovy', 'artifacts/RestfulController.groovy', 'testing/Functional.groovy', 'testing/Resource.groovy']) + [
+        templates = (type == ApplicationType.WEB ? ['FunctionalSpec.groovy', 'Job.groovy'] : ['artifacts/Resource.groovy', 'artifacts/RestfulController.groovy', 'testing/Functional.groovy', 'testing/Resource.groovy']) + [
                 'artifacts/Command.groovy', 'artifacts/Controller.groovy', 'artifacts/DomainClass.groovy', 'artifacts/Interceptor.groovy',
                 'artifacts/Script.groovy', 'artifacts/Service.groovy', 'artifacts/TagLib.groovy', 'testing/Controller.groovy', 'testing/DomainClass.groovy',
                 'testing/Generic.groovy', 'testing/Integration.groovy', 'testing/Interceptor.groovy', 'testing/Service.groovy', 'testing/TagLib.groovy']

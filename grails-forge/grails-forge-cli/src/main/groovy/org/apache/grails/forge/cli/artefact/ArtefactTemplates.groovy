@@ -97,9 +97,9 @@ final class ArtefactTemplates {
      * @return the text of the template this program has
      */
     static String builtIn(ArtefactTemplate template) {
-        InputStream stream = ArtefactTemplates.getResourceAsStream(BUILT_IN + template.location)
+        InputStream stream = ArtefactTemplates.getResourceAsStream(BUILT_IN + template.resource)
         if (stream == null) {
-            throw new IllegalStateException("The template ${template.location} is missing from the command line")
+            throw new IllegalStateException("The template ${template.resource} is missing from the command line")
         }
         try {
             return new String(stream.readAllBytes(), StandardCharsets.UTF_8)

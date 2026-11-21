@@ -29,8 +29,12 @@ import org.grails.forge.util.ThrowingSupplier
 import picocli.CommandLine
 
 /**
- * {@code create-functional-test}: a specification under {@code src/integration-test/groovy} that calls the
- * running application over HTTP. It is a command of a REST API application, as it was of its profile.
+ * {@code create-functional-test}: a specification under {@code src/integration-test/groovy} that tests the
+ * running application from outside. In a REST API application or REST API plugin it calls the application
+ * over HTTP, as the command of that profile did. In another project that has a Geb feature it is a Geb
+ * specification, which the script of the Geb plugin wrote: one that extends {@code ContainerGebSpec} where
+ * the browser runs in a container ({@code geb-with-testcontainers}) and {@code GebSpec} where it is a
+ * browser of the machine ({@code geb-with-local-browsers}).
  *
  * @since 9.0
  */
@@ -39,6 +43,12 @@ import picocli.CommandLine
 class CreateFunctionalTestCommand extends CodeGenCommand {
 
     public static final String NAME = 'create-functional-test'
+
+    /** The feature of a project whose Geb specifications run their browser in a container. */
+    public static final String GEB_CONTAINER = 'geb-with-testcontainers'
+
+    /** The feature of a project whose Geb specifications run a browser of the machine. */
+    public static final String GEB_LOCAL = 'geb-with-local-browsers'
 
     @CommandLine.Parameters(paramLabel = 'TEST-NAME', description = 'The name of the functional test to create')
     String testName
@@ -56,19 +66,43 @@ class CreateFunctionalTestCommand extends CodeGenCommand {
 
     @Override
     boolean applies() {
-        ApplicationType type = config.getApplicationType()
-        return type != null && type.isRestApi()
+        return template() != null
     }
 
     @Override
     List<ArtefactTemplate> getTemplates() {
-        return [ArtefactTemplate.FUNCTIONAL_TEST]
+        ArtefactTemplate template = template()
+        return template == null ? Collections.<ArtefactTemplate>emptyList() : [template]
+    }
+
+    // the template of the test this project gets, or null for a project the command is no command of
+    private ArtefactTemplate template() {
+        if (config == null) {
+            return null
+        }
+        ApplicationType type = config.getApplicationType()
+        if (type != null && type.isRestApi()) {
+            return ArtefactTemplate.FUNCTIONAL_TEST
+        }
+        List<String> features = config.getFeatures()
+        if (features == null) {
+            return null
+        }
+        // a project has one of the two; the browser of the machine was asked for where it is there
+        if (features.contains(GEB_LOCAL)) {
+            return ArtefactTemplate.GEB_FUNCTIONAL_TEST
+        }
+        return features.contains(GEB_CONTAINER) ? ArtefactTemplate.GEB_CONTAINER_FUNCTIONAL_TEST : null
     }
 
     @Override
     Integer call() throws Exception {
+        ArtefactTemplate template = template()
+        if (template == null) {
+            throw new IllegalArgumentException('create-functional-test is a command of a REST API project and of a project with a Geb feature')
+        }
         return generate('functional test', newArtefact(testName, 'Spec'), [
-                'src/integration-test/groovy/{packagePath}/{className}Spec.groovy': ArtefactTemplate.FUNCTIONAL_TEST
+                'src/integration-test/groovy/{packagePath}/{className}Spec.groovy': template
         ])
     }
 }

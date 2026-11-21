@@ -164,7 +164,7 @@ final class FormerCommands {
                 'generate-unit-test was a command of the REST API profile of the Grails shell. It has no replacement in {cli}; create-unit-test writes an empty test')
         add('generate-functional-test', 'rest-api profile', Status.NO_REPLACEMENT,
                 'generate-functional-test was a command of the REST API profile of the Grails shell. It has no replacement in {cli}; ' +
-                'create-functional-test writes an empty test in a REST API application')
+                'create-functional-test writes a test of the home page, in a REST API project and in a project with a Geb feature')
         add('open', 'shell', Status.NO_REPLACEMENT,
                 'open opened a file with the program the desktop has for it in the Grails shell. It has no replacement in {cli}')
         add('!', 'shell, interactive mode', Status.NO_REPLACEMENT,
@@ -184,7 +184,9 @@ final class FormerCommands {
                 'and the current directory is in none')
         add('create-domain-resource', 'rest-api profile', Status.ELSEWHERE, 'create-domain-resource ' + REST_API)
         add('create-functional-test', 'rest-api profile, and in a web application a script of the Geb plugin', Status.ELSEWHERE,
-                'create-functional-test ' + REST_API + '. In a web application it was a script of the Geb plugin, which has no replacement here')
+                'create-functional-test is a command in the directory of a REST API application or REST API plugin, and of a web application or web plugin ' +
+                        'that has a Geb feature (geb-with-testcontainers or geb-with-local-browsers), which {cli} feature add geb-with-testcontainers adds, ' +
+                        'and the current directory is in none')
         add('create-restful-controller', 'rest-api profile', Status.ELSEWHERE, 'create-restful-controller ' + REST_API)
         add('package-plugin', 'plugin profile', Status.ELSEWHERE, 'package-plugin ' + PLUGIN_PROJECT)
         add('publish-plugin', 'plugin profile', Status.ELSEWHERE, 'publish-plugin ' + PLUGIN_PROJECT)

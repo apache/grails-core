@@ -574,7 +574,7 @@ Outside a project these commands are not mistakes: `create-controller`, `install
 
 |`generate-functional-test`
 |the REST API profile
-|no replacement: removed with the REST API profile. `create-functional-test` writes an empty test in a REST API application.
+|no replacement: removed with the REST API profile. `create-functional-test` writes a test of the home page, in a REST API project and in a project with a Geb feature.
 
 |`generate-resource-controller`
 |the REST API profile, another name of `generate-all` and `generate-controller`
@@ -695,8 +695,8 @@ In the directory of a project the `grails` command has commands that write a cla
 |web applications, REST API applications, web plugins and REST API plugins
 
 |`create-functional-test <name>`
-|`src/integration-test/groovy/<package>/<Name>Spec.groovy`, a test that calls the running application over HTTP
-|REST API applications and REST API plugins
+|`src/integration-test/groovy/<package>/<Name>Spec.groovy`: in a REST API application or REST API plugin a test that calls the running application over HTTP, in a web application or web plugin a Geb test that opens the home page in a browser
+|REST API applications and REST API plugins, and web applications and web plugins with the `geb-with-testcontainers` feature, which a web application has by default, or the `geb-with-local-browsers` feature
 
 |`create-restful-controller <domain class>`
 |`grails-app/controllers/<package>/<Name>Controller.groovy`, a controller that extends `RestfulController` for the domain class
@@ -769,8 +769,12 @@ Every file these commands write comes from a template, and a project can have it
 |tokens
 
 |`testing/Functional.groovy`
-|`create-functional-test`
+|`create-functional-test`, in a REST API application or REST API plugin
 |tokens
+
+|`FunctionalSpec.groovy`
+|`create-functional-test`, in a project with a Geb feature
+|names in braces
 
 |`artifacts/RestfulController.groovy`
 |`create-restful-controller`
@@ -789,7 +793,7 @@ Every file these commands write comes from a template, and a project can have it
 |tokens
 |===
 
-The locations are those the templates had before Grails 9, in a profile and in the Quartz plugin, and so are the two ways of writing a name, so a template that only names what it wants can be put under `src/main/templates` as it is. No template is run: a template is text in which names are replaced. The shell ran `Job.groovy` and `artifacts/Script.groovy` as Groovy templates; a template that relied on that, with code or with an expression that is more than a name, has to be written without.
+The locations are those the templates had before Grails 9, in a profile, in the Quartz plugin and in the Geb plugin, and so are the two ways of writing a name, so a template that only names what it wants can be put under `src/main/templates` as it is. No template is run: a template is text in which names are replaced. The shell ran `Job.groovy`, `FunctionalSpec.groovy` and `artifacts/Script.groovy` as Groovy templates; a template that relied on that, with code or with an expression that is more than a name, has to be written without.
 
 In a template with tokens these are replaced, and everything else, a `$`, `${...}` and `<% %>` included, is written as it is:
 
@@ -828,7 +832,7 @@ class @artifact.name@Controller {
 }
 ----
 
-`Job.groovy` names what it wants in braces, as the template of the Quartz plugin does: `${className}`, `${simpleName}`, `${propertyName}`, `${modelName}`, `${packageName}`, `${packagePath}`, `${fullName}` and `${lowerCaseName}` are replaced. A `$` that is to be written is written `\$`, and a backslash `\\`. A line that is only `package ${packageName}` is left out for a class without a package.
+`Job.groovy` and `FunctionalSpec.groovy` name what they want in braces, as the templates of the Quartz plugin and of the Geb plugin did: `${className}`, `${simpleName}`, `${propertyName}`, `${modelName}`, `${packageName}`, `${packagePath}`, `${fullName}` and `${lowerCaseName}` are replaced. A `$` that is to be written is written `\$`, and a backslash `\\`. A line that is only `package ${packageName}` is left out for a class without a package.
 
 [source,groovy]
 .src/main/templates/Job.groovy

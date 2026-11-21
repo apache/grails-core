@@ -45,6 +45,10 @@ enum ArtefactTemplate {
     UNIT_TEST('testing/Generic.groovy', Syntax.TOKENS),
     INTEGRATION_TEST('testing/Integration.groovy', Syntax.TOKENS),
     FUNCTIONAL_TEST('testing/Functional.groovy', Syntax.TOKENS),
+    // the template of the Geb plugin's script, where it was and written as it was; what this program has for it
+    // depends on where the browser of the project runs, so there are two, and a project has one of its own for both
+    GEB_CONTAINER_FUNCTIONAL_TEST('FunctionalSpec.groovy', Syntax.PLACEHOLDERS, 'geb/ContainerGebSpec.groovy'),
+    GEB_FUNCTIONAL_TEST('FunctionalSpec.groovy', Syntax.PLACEHOLDERS, 'geb/GebSpec.groovy'),
     RESTFUL_CONTROLLER('artifacts/RestfulController.groovy', Syntax.TOKENS),
     RESOURCE('artifacts/Resource.groovy', Syntax.TOKENS),
     RESOURCE_TEST('testing/Resource.groovy', Syntax.TOKENS),
@@ -69,12 +73,19 @@ enum ArtefactTemplate {
         PLACEHOLDERS
     }
 
-    /** Where the template is, below {@code src/main/templates} of a project and below {@code META-INF/grails-forge-cli/templates} here */
+    /** Where the template is below {@code src/main/templates} of a project */
     final String location
     final Syntax syntax
+    /** Where the template of this program is below {@code META-INF/grails-forge-cli/templates}: at the same place, for all but the templates that share one in a project */
+    final String resource
 
     private ArtefactTemplate(String location, Syntax syntax) {
+        this(location, syntax, location)
+    }
+
+    private ArtefactTemplate(String location, Syntax syntax, String resource) {
         this.location = location
         this.syntax = syntax
+        this.resource = resource
     }
 }

@@ -147,7 +147,7 @@ $ grails create-job Nightly
 
 A name without a package goes into the default package of the project. The commands work in every directory of the project and write relative to its top, and they do not replace a file that exists unless `--force` is given.
 
-Which commands there are depends on the record. `create-job` is there because this project has the `grails-quartz` feature; `create-restful-controller`, `create-domain-resource` and `create-functional-test` are commands of REST API applications and REST API plugins.
+Which commands there are depends on the record. `create-job` is there because this project has the `grails-quartz` feature, and `create-functional-test` writes a Geb test because it has the `geb-with-testcontainers` feature, as a web application has by default; `create-restful-controller` and `create-domain-resource` are commands of REST API applications and REST API plugins, where `create-functional-test` writes a test that calls the application over HTTP.
 
 Names can be shortened to the first letters of their words: `cDC` is `create-domain-class`. A short form that fits two commands runs neither: in a project `cC` fits `create-controller` and `create-command`, so type `cCont`.
 
