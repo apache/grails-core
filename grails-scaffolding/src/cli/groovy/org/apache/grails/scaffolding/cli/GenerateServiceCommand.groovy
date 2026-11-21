@@ -44,11 +44,13 @@ class GenerateServiceCommand implements GrailsApplicationCommand, CommandLineHel
     boolean handle() {
         if (!args) {
             error('No domain-class specified')
+            return FAILURE
         }
         final String domainClassName = args[0]
         final Resource sourceClass = source(domainClassName)
         if (!sourceClass) {
             error("No domain-class found for name: ${domainClassName}")
+            return FAILURE
         }
 
         boolean overwrite = isFlagPresent('force')
