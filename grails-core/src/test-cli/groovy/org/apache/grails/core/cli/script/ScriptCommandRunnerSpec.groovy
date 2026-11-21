@@ -416,8 +416,6 @@ class ScriptCommandRunnerSpec extends Specification {
 
         where:
         module                               | name                              | arguments          | outcome | written
-        'grails-quartz' | 'create-job' | ['Nightly'] | '' | ['grails-app/jobs/com/example/NightlyJob.groovy']
-        'grails-geb' | 'create-functional-test' | ['Home'] | '' | ['src/integration-test/groovy/com/example/HomeSpec.groovy']
         'end-to-end/legacy-commands-plugin' | 'hello-legacy-script' | ['hello'] | '' | []
     }
 

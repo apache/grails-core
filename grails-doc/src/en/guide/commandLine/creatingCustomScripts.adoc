@@ -58,7 +58,7 @@ grails data-import orders.csv --force
 ==== Template Generation
 
 
-Plugins and applications that need to define template generation tasks can do so using scripts. An example of this is the Quartz plugin, which has a `create-job` script.
+Plugins and applications that need to define template generation tasks can do so using scripts.
 
 Every Grails script has the methods of the link:{api}org/apache/grails/core/cli/template/TemplateRenderer.html[TemplateRenderer] interface which makes it trivial to render templates to the users project workspace.
 
@@ -161,7 +161,7 @@ $ ./gradlew runScriptCommand --arg=data-import --arg=orders.csv --arg=--dry-run
 $ ./gradlew runScriptCommand --args-file=build/tmp/arguments.json
 ----
 
-The JVM of the script has what the project depends on at run time and the `grailsCli` dependencies on its class path. The classes of the project are not on it and the project is not compiled first, so that a script can generate code for an application that does not compile yet; a project that it depends on (`implementation project(':lib')`) is built, as for anything that uses that class path. A script that is not found in `src/main/scripts` is looked for among the files of `META-INF/commands` on that class path, where the scripts of plugins are, by the same rule for names (`CreateJob.groovy` is `create-job`); the scripts of plugins are run by the task and are not listed by `help`. What a script says through `console` arrives as whole lines of plain text, since Gradle is no terminal, and progress indicators are not drawn. The stack trace of what a script threw is shown when the build is started with `-Dgrails.full.stacktrace=true`.
+The JVM of the script has what the project depends on at run time and the `grailsCli` dependencies on its class path. The classes of the project are not on it and the project is not compiled first, so that a script can generate code for an application that does not compile yet; a project that it depends on (`implementation project(':lib')`) is built, as for anything that uses that class path. A script that is not found in `src/main/scripts` is looked for among the files of `META-INF/commands` on that class path, where the scripts of plugins are, by the same rule for names (`CreateReport.groovy` is `create-report`); the scripts of plugins are run by the task and are not listed by `help`. What a script says through `console` arrives as whole lines of plain text, since Gradle is no terminal, and progress indicators are not drawn. The stack trace of what a script threw is shown when the build is started with `-Dgrails.full.stacktrace=true`.
 
 A script that the build runs has `description`, `args`, `argsMap`, `flag`, `model`, `render`, `template`, `templates`, the methods for working with files, `console`, `config` and `navigateConfig` (read from `grails-app/conf/application.yml` and `application.groovy`), `ant`, the events (`on`, `before`, `after`, `notify`), and calling another script as a method. A closure reaches what its delegate has, as in any Groovy script: `copy { from ...; into ... }`, the nested elements of an Ant task and builders work, and a method that is not there is a `MissingMethodException` a script can catch. It does not have what belonged to the Grails shell:
 
@@ -173,7 +173,7 @@ A script that the build runs has `description`, `args`, `argsMap`, `flag`, `mode
 | A script cannot run a build from inside the build. Run the tasks from the command line (`grails gradle compileGroovy`), or make the work a task of the build that depends on them.
 
 | `testApp()`, `runApp()` and other commands that are no scripts
-| Run them from the command line, one after the other. A method that names another script (`createJob('Nightly')` for the `create-job` script of the Quartz plugin, `dataImport('orders.csv')` for a script `data-import` of the project) runs that script.
+| Run them from the command line, one after the other. A method that names another script (`dataImport('orders.csv')` for a script `data-import` of the project or of a plugin) runs that script.
 
 | Classes of `org.grails.cli`, such as the completers named in a `description`
 | They are not on the class path: remove the `import`. A script that imports one is not compiled, and the message says so. A class that is named in full in the `description` closure, without an import, does not stop the script, because the closure is not run; remove such a `completer` line as well, since nothing completes the arguments of a script. The scripts of the plugins of the framework name no completer.

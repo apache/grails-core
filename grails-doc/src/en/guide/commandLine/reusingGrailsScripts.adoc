@@ -27,10 +27,10 @@ A script can invoke another script, of the project or of a plugin, by invoking a
 
 [source,groovy]
 ----
-createJob('Nightly')
+dataImport('orders.csv')
 ----
 
-The above runs the script `create-job`, as `grails create-job Nightly` does where the script is a command. The arguments of the method are the arguments of the script.
+The above runs the script `data-import`, as `grails data-import orders.csv` does in the project that has the script. The arguments of the method are the arguments of the script.
 
 Only a script can be invoked this way. The commands of the `grails` command line that are no scripts, such as `test-app`, `run-app` and `compile`, and the commands an application or a plugin brings as classes, such as `generate-all` of the scaffolding plugin, are not: `testApp()` in a script fails. Before Grails 9 the Grails shell ran scripts itself, and such a method ran any command of the shell. Run those commands from the command line, one after the other.
 

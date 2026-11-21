@@ -64,13 +64,11 @@ tasks.named('rat') {
             '**/*.ldif', // LDAP test data files
             'grails-fields/grails-app/views/layouts/_fields/*.gsp', // template files that people are expected to use in the end application
             'grails-fields/grails-app/views/templates/_fields/*.gsp', // template files that people are expected to use in the end application
-            'grails-geb/src/main/templates/*.groovy', // template files that people are expected to use in the end application
             'grails-doc/src/en/ref/Versions/Grails BOM.adoc', // exclude generated data
             'grails-doc/src/en/ref/Versions/Grails BOM Hibernate5.adoc', // exclude generated data
             'grails-doc/src/en/ref/Versions/Grails BOM Hibernate7.adoc', // exclude generated data
             'grails-doc/src/en/ref/Versions/Grails BOM Neo4j.adoc', // exclude generated data
             'grails-doc/src/en/ref/Configuration/Application Properties.adoc', // exclude generated data
-            'grails-quartz/src/main/templates/**', // template files that people are expected to use in the end application
             'grails-scaffolding/src/main/templates/scaffolding/**/*', // template files that people are expected to use in the end application
             'build-logic/plugins/build/**', // exclude build artifacts
             'build-logic/docs-core/build/**', // exclude build artifacts
