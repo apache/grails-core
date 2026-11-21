@@ -27,6 +27,11 @@ import picocli.CommandLine
  * {@code src/integration-test} directory, {@code integrationTest}, for the test environment unless
  * another one is given. The names of tests are the filter of both tasks.
  *
+ * <p>Gradle fails a test task that has no test for its filter, so a filter that is given to both
+ * tasks is given with the project property {@value #LENIENT_FILTER}: the Grails Gradle plugin then
+ * lets a task without a match pass and fails the build when neither task ran a test. A build without
+ * that plugin does not know the property and fails as Gradle does.</p>
+ *
  * @since 9.0
  */
 @CommandLine.Command(name = 'test-app',
@@ -41,6 +46,9 @@ import picocli.CommandLine
 class TestAppCommand extends GradleEnvironmentCommand {
 
     private static final String INTEGRATION_TESTS = 'src/integration-test'
+
+    /** The project property of the Grails Gradle plugin for a filter that is given to several test tasks. */
+    static final String LENIENT_FILTER = 'grails.test.filter.lenient'
 
     @CommandLine.Parameters(arity = '0..*', paramLabel = 'TEST',
             description = 'The tests to run, as the filter of Gradle: a class name or a pattern such as example.BookSpec, *BookSpec or "*BookSpec.saves a book".')
@@ -87,6 +95,9 @@ class TestAppCommand extends GradleEnvironmentCommand {
             err("The project in ${GradleRunner.line(project.directory)} has no integration tests: there is no ${INTEGRATION_TESTS} directory in it. Gradle was not run")
             return null
         }
+        if (both && !(names + tests).isEmpty()) {
+            arguments.add("-P${LENIENT_FILTER}=true".toString())
+        }
         if (continuous) {
             arguments.add('--continuous')
         }
@@ -96,12 +107,14 @@ class TestAppCommand extends GradleEnvironmentCommand {
 
     @Override
     protected void failed(ConsoleProject project) {
-        // Gradle has no switch on its command line that lets a task pass which has no test of a name, so
-        // it is said: which of the two tasks failed is in what Gradle wrote, and is not read from there.
+        // Which of the reasons a build fails for it was is in what Gradle wrote, and is not read from there
         if (both && !(names + tests).isEmpty()) {
-            spec.commandLine().getErr().println(CommandLine.Help.Ansi.AUTO.string('@|bold | Note|@ The tests that were named were asked of the unit tests and of the ' +
-                    'integration tests, and Gradle fails a task that has no test of a name ("No tests found for given includes"). ' +
-                    'If that is what happened, say which are meant with --unit or with --integration'))
+            List<String> named = (names + tests).collect { String test -> GradleRunner.line(test) }
+            spec.commandLine().getErr().println(CommandLine.Help.Ansi.AUTO.string("@|bold | Note|@ The tests were named (${named.join(', ')}) and looked for among " +
+                    'the unit tests and the integration tests. If Gradle said that no tests were found for the filter, neither has a test of that name: it is the name ' +
+                    'of a test class or a pattern for it, such as example.BookSpec or *BookSpec. If Gradle said "No tests found for given includes" for one of the two ' +
+                    'tasks, the build of the project does not have the Grails Gradle plugin of Grails 9, which lets the task without such a test pass: say which tests ' +
+                    'are meant with --unit or with --integration'))
         }
     }
 

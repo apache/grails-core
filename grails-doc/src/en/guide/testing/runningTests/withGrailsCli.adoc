@@ -118,6 +118,17 @@ This will run the `testLogin` test in the `SimpleController` tests. You can spec
 grails test-app some.org.* SimpleController.testLogin BookController
 ----
 
+The names are looked for among the unit tests and among the integration tests, and the tests are run where they are found: a name that only a unit test has runs that unit test, and the integration tests pass without running one. The command fails when neither has a test of the name, and Gradle then names the filter:
+
+[source,console]
+----
+$ grails test-app BookControllerSpex
+...
+> No tests found for the given filter (BookControllerSpex) in any of the test tasks :test, :integrationTest: ...
+----
+
+For this the command gives Gradle the project property `grails.test.filter.lenient` when a name goes to both test tasks, and the Grails Gradle plugin then lets a test task pass that has no test for the filter and checks, in the task `checkTestFilterMatched`, that one of them ran a test. Gradle alone fails every test task that has no test for its filter (`No tests found for given includes`), which is what you see when you give both tasks one filter with `./gradlew test integrationTest --tests ...` without the property, and in a project whose build has an earlier Grails Gradle plugin; there, say which tests are meant with `--unit` or `--integration`.
+
 NOTE: In Grails 2.x, adding `-rerun` as an argument would only run those tests which failed in the previous test-app run. This argument is no longer supported.
 
 NOTE: In Grails 3.x, you might need to specify the package name before the class name, as well as append "Spec" to the end. For example, if you want to run the test for the ProductController, you should use `grails test-app *.ProductControllerSpec`. Note that the star can be used if you don't want to type the whole package hierarchy.

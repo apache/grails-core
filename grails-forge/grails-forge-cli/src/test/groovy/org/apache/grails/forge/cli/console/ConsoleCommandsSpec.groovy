@@ -76,6 +76,7 @@ class ConsoleCommandsSpec extends CommandSpec implements CommandFixture {
         println 'system=' + start.systemPropertiesArgs.findAll { !(it.key in own) }.sort().collect { name, value -> '<' + name + '=' + value + '>' }.join('')
         println "stacktrace=${start.showStacktrace} level=${start.logLevel} continuous=${start.continuous} offline=${start.offline}"
         println "given=[${providers.gradleProperty('given').getOrElse('(none)')}] in ${project.projectDir.name}"
+        println "lenientFilter=${providers.gradleProperty('grails.test.filter.lenient').getOrElse('(not given)')}"
 
         configurations.create('runtimeClasspath')
         ['test', 'integrationTest', 'cleanTest', 'cleanIntegrationTest', 'classes', 'clean', 'assemble', 'jar', 'publish'].each { String name ->
@@ -230,7 +231,7 @@ class ConsoleCommandsSpec extends CommandSpec implements CommandFixture {
     }
 
     @Unroll
-    void "when #line fails, it is #said that Gradle fails a test task that has no test of a name"() {
+    void "when #line fails, it is #said what a failure can have to do with the names of the tests"() {
         given: 'a project with integration tests, whose build fails'
         plainProject(dir)
         new File(dir, 'src/integration-test/groovy').mkdirs()
@@ -238,20 +239,50 @@ class ConsoleCommandsSpec extends CommandSpec implements CommandFixture {
         when:
         int exit = ForgeCli.execute(beanContext, (line + ['-Dfail=true']) as String[])
 
-        then: 'the failure is the one line it was, and the note is another kind of line'
+        then: 'the failure is the one line it was, and the note is another kind of line, which names the filter'
         exit == 1
         errors() == ['| Error Gradle did not succeed: it ended with exit code 1']
         out.toString().readLines().findAll { String each -> each.startsWith('| Note') } == (said == 'said' ? [
-                '| Note The tests that were named were asked of the unit tests and of the integration tests, and Gradle fails a task that has no test of a name ' +
-                        '("No tests found for given includes"). If that is what happened, say which are meant with --unit or with --integration'] : [])
+                "| Note The tests were named (${named}) and looked for among the unit tests and the integration tests. If Gradle said that no tests were found " +
+                        'for the filter, neither has a test of that name: it is the name of a test class or a pattern for it, such as example.BookSpec or *BookSpec. ' +
+                        'If Gradle said "No tests found for given includes" for one of the two tasks, the build of the project does not have the Grails Gradle plugin ' +
+                        'of Grails 9, which lets the task without such a test pass: say which tests are meant with --unit or with --integration'] : [])
 
         where:
-        line                                          | said
-        ['test-app', '*BookControllerSpec']           | 'said'
-        ['test-app', '--tests', '*BookControllerSpec'] | 'said'
-        ['test-app', '--unit', 'BookControllerSpec']  | 'not said'
-        ['test-app', '--integration', 'BookSpec']     | 'not said'
-        ['test-app']                                  | 'not said'
+        line                                                    | said       | named
+        ['test-app', '*BookControllerSpec']                     | 'said'     | '*BookControllerSpec'
+        ['test-app', '--tests', '*BookControllerSpec', 'Other'] | 'said'     | 'Other, *BookControllerSpec'
+        ['test-app', '--unit', 'BookControllerSpec']            | 'not said' | null
+        ['test-app', '--integration', 'BookSpec']               | 'not said' | null
+        ['test-app']                                            | 'not said' | null
+    }
+
+    @Unroll
+    void "#line #gives the Grails Gradle plugin the property that lets a test task without a test of the name pass"() {
+        given:
+        plainProject(dir)
+        if (integrationTests) {
+            new File(dir, 'src/integration-test/groovy').mkdirs()
+        }
+
+        when:
+        int exit = ForgeCli.execute(beanContext, line as String[])
+
+        then: 'only where one filter goes to both tasks: a task that is run alone fails without a match, as Gradle has it'
+        exit == 0
+        lineOf('requested=') == requested
+        lineOf('lenientFilter=') == (gives == 'gives' ? 'true' : '(not given)')
+
+        where:
+        line                                          | integrationTests | gives            | requested
+        ['test-app', 'BookSpec']                      | true             | 'gives'          | '<test><--tests><BookSpec><integrationTest><--tests><BookSpec>'
+        ['test-app', '--tests', '*BookSpec']          | true             | 'gives'          | '<test><--tests><*BookSpec><integrationTest><--tests><*BookSpec>'
+        ['test-app', '--unit', '--integration', 'A']  | true             | 'gives'          | '<test><--tests><A><integrationTest><--tests><A>'
+        ['test-app']                                  | true             | 'does not give'  | '<test><integrationTest>'
+        ['test-app', '--unit', 'BookSpec']            | true             | 'does not give'  | '<test><--tests><BookSpec>'
+        ['test-app', '--integration', 'BookSpec']     | true             | 'does not give'  | '<integrationTest><--tests><BookSpec>'
+        ['test-app', 'BookSpec']                      | false            | 'does not give'  | '<test><--tests><BookSpec>'
+        ['test-app', '--', '--tests', 'Later']        | true             | 'does not give'  | '<test><integrationTest><--tests><Later>'
     }
 
     @Unroll

@@ -52,6 +52,8 @@ grails test-app *Foo* *Bar*
 
 The first example will execute a test called `FooSpec.groovy` whilst the second will execute `FooSpec.groovy` and `BarSpec.groovy` if they exist.
 
+A name is looked for among the unit tests and among the integration tests, and the tests are run where they are found: a test that is among the unit tests alone does not fail the integration tests, nor the other way round. The command ends with 1 when neither has a test for a name, and Gradle names the filter that matched nothing. With `--unit` or `--integration` the name has to be that of a test of that phase. In a project whose build does not have the Grails Gradle plugin of Grails 9, Gradle fails the test task that has no test for the name (`No tests found for given includes`); say which tests are meant with `--unit` or `--integration` there.
+
 The task of finding tests that match the pattern you provide is passed to Gradle. Take a look at the section in their docs titled link:https://docs.gradle.org/current/userguide/java_plugin.html#test_filtering[Test filtering] for more information.
 
 Options:

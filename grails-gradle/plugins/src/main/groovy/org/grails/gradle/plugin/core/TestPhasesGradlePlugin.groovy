@@ -69,6 +69,7 @@ class TestPhasesGradlePlugin implements Plugin<Project> {
         project.extensions.add(EXTENSION_NAME, testPhases)
 
         registerMergeTestReports(project)
+        TestFilterAcrossTasks.apply(project)
 
         testPhases.configureEach { TestPhase phase ->
             configureTestPhase(project, phase)
