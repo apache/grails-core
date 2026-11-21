@@ -306,10 +306,11 @@ that accepts any type, with the `all` format.
 of the parameter counts, as for Spring MVC; a format no type is configured for is not acceptable, where the Grails rules
 answer in the first configured format, but what Spring MVC writes for a format `grails.mime.types` does not list and
 Spring MVC's content negotiation manager maps is in the type the manager maps it to, while `respond` answers it with
-`406 Not Acceptable`. The manager maps the formats `spring.mvc.contentnegotiation.media-types` adds and the defaults
-Spring MVC registers for its message converters: `json`, and `xml`, `atom`, `rss`, `smile`, `cbor` and `yaml` where
-their libraries are on the classpath. It matches a format whatever its case, so `?format=JSON`, which
-`grails.mime.types` does not list, is written as `application/json` through Spring MVC's `json`. The `all` format,
+`406 Not Acceptable`. The manager maps the data formats Grails registers with it, those among `json`, `xml`, `hal`,
+`atom`, `rss`, `csv` and `text` that `grails.mime.types` lists, the formats `spring.mvc.contentnegotiation.media-types`
+adds, and those Spring MVC registers for the types its message converters support, such as `json`. It matches a
+format whatever its case, which `grails.mime.types` does not, so `?format=JSON` and `?format=HAL` are written as
+`application/json` and `application/hal+json`. The `all` format,
 which is any type whether or not `grails.mime.types` lists it, leaves the format to the `Accept` header. Where
 `spring.mvc.contentnegotiation.favor-parameter` has Spring MVC read the `format` parameter too, Grails reads it in its
 place for a request a URL mapping handles, so `?format=all` is left to the `Accept` header there as well, while a Spring
