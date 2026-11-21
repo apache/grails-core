@@ -1668,6 +1668,8 @@ java -XX:MaxRAMPercentage=60.0 -XX:MaxMetaspaceSize=256m -Dgrails.env=prod -jar 
 
 A sort by a property of an association, such as `Book.list(sort: 'author.name')`, joins the association with an inner join, so it leaves out the instances whose association is `null`. That is unchanged by default. As of 8.0.1, GORM for Hibernate 7 reads the `grails.gorm.leftJoinAssociationSort` setting, default `false`, as GORM for Hibernate 5 does. Set to `true`, the association is joined with a left join and the sort keeps those instances.
 
+When sorting by a collection property, pagination limits the joined rows before duplicate instances are removed. A page can contain fewer than `max` instances, and an instance can appear on more than one page; adding the page sizes need not equal `totalCount`. Use a property of the queried class or a to-one association to page without repeated instances.
+
 - Nothing needs to change to keep the previous results.
 - Search for `sort:` arguments, `.sort(` calls and `order(` calls whose property contains a `.`, such as `sort: 'author.name'`. If the application expects every instance from such a query, set `grails.gorm.leftJoinAssociationSort: true` in `application.yml`.
 - An `order` inside an association block, such as `author { order('name') }`, now sorts the query by that property of the association. It was ignored. Remove the `order` to get the previous order.

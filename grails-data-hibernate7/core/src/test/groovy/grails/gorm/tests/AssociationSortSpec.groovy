@@ -445,6 +445,37 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManag
         results*.player*.name == ['Unattached Player', 'Cole', 'Bukayo', 'Bruno']
     }
 
+    void 'a selected enclosing alias keeps its order inside an association block'() {
+        when:
+        final results = Player.withCriteria {
+            createAlias('team', 't')
+            projections { distinct('t.name') }
+            team { order('t.name', direction) }
+        }
+
+        then:
+        results == (direction == 'asc' ? expected : expected.reverse())
+
+        where:
+        direction << ['asc', 'desc']
+        expected = ['Arsenal First Team', 'Chelsea First Team', 'Manchester United First Team', 'Unattached First Team']
+    }
+
+    void 'reusing a block in a subquery keeps the order on its owning query'() {
+        given:
+        final base = new DetachedCriteria(Team).build {
+            club { order('name', 'desc') }
+        }
+
+        when:
+        final results = base.build {
+            inList('id', base.id())
+        }.list()
+
+        then:
+        results*.name == ['Manchester United First Team', 'Chelsea First Team', 'Arsenal First Team']
+    }
+
     @Requires({ instance.leftJoinSort })
     void 'a distinct list is ordered by a property of an association'() {
         when:

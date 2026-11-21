@@ -48,8 +48,8 @@ public class JpaQueryContext implements Cloneable {
     private boolean leftJoinSort;
     private final Map<ParameterExpression<?>, Object> parameterValues = new LinkedHashMap<>();
     private final Map<String, Expression<?>> selectionAliases = new HashMap<>();
-    // only the context of a query, which has no parent, records the contexts of its association blocks
-    private Map<DetachedAssociationCriteria<?>, JpaQueryContext> associationContexts;
+    // Blocks share their query's registrations; a subquery has registrations of its own.
+    private final Map<DetachedAssociationCriteria<?>, JpaQueryContext> associationContexts;
     private JpaQueryContext parent;
 
     public JpaQueryContext() {
@@ -106,6 +106,7 @@ public class JpaQueryContext implements Cloneable {
 
     private JpaQueryContext(JpaQueryContext parent, List<HibernateAlias> aliases, From<?, ?> root, String blockPath) {
         this.parent = parent;
+        this.associationContexts = blockPath != null ? parent.associationContexts : new IdentityHashMap<>();
         this.joinTracker = blockPath != null ? JoinTracker.forBlock(parent.getJoinTracker(), root, blockPath) :
                 new JoinTracker(parent != null ? parent.getJoinTracker() : null, root);
         this.aliasRegistry = new AliasRegistry(parent != null ? parent.getAliasRegistry() : null);
@@ -281,14 +282,7 @@ public class JpaQueryContext implements Cloneable {
      * @param context the context of the block
      */
     public void registerAssociationContext(DetachedAssociationCriteria<?> association, JpaQueryContext context) {
-        if (parent != null) {
-            parent.registerAssociationContext(association, context);
-        } else {
-            if (associationContexts == null) {
-                associationContexts = new IdentityHashMap<>();
-            }
-            associationContexts.put(association, context);
-        }
+        associationContexts.put(association, context);
     }
 
     /**
@@ -299,10 +293,7 @@ public class JpaQueryContext implements Cloneable {
      * @return the context of the block, or {@code null} if the query has built no criteria of that block
      */
     public JpaQueryContext getAssociationContext(DetachedAssociationCriteria<?> association) {
-        if (parent != null) {
-            return parent.getAssociationContext(association);
-        }
-        return associationContexts != null ? associationContexts.get(association) : null;
+        return associationContexts.get(association);
     }
 
     /**
