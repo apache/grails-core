@@ -106,7 +106,9 @@ class FeatureAddCommand extends BaseCommand implements Callable<Integer>, Projec
         try {
             if (!ProjectState.exists(directory)) {
                 throw new ProjectStateException("There is no application here that a feature can be added to: ${ProjectState.MANIFEST} is missing. " +
-                        'Run the command in the directory of an application that Grails 9 created')
+                        'Run the command in the directory of an application that Grails 9 created. For an application that was there before, ' +
+                        "${spec.root().name()} ${ProjectGroupCommand.NAME} ${ProjectInitCommand.NAME} writes the record the commands that create its classes read; " +
+                        'a feature is added to such an application by hand')
             }
             FeatureAddition addition = new FeatureAddition(projectGeneratorSource.get())
             for (String message : (preview ? Collections.<String>emptyList() : addition.recover(directory).getMessages())) {

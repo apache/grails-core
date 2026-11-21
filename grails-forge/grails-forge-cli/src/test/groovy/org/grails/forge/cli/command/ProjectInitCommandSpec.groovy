@@ -1,0 +1,685 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+package org.grails.forge.cli.command
+
+import java.nio.file.Files
+import java.nio.file.LinkOption
+import java.security.MessageDigest
+import groovy.json.JsonSlurper
+import org.apache.grails.forge.core.state.ProjectState
+import org.grails.forge.application.ApplicationType
+import org.grails.forge.cli.CommandSpec
+import org.grails.forge.cli.ForgeCli
+import org.grails.forge.options.DevelopmentReloading
+import org.grails.forge.options.GormImpl
+import org.grails.forge.options.JdkVersion
+import org.grails.forge.options.ServletImpl
+import org.grails.forge.util.VersionInfo
+import spock.lang.Unroll
+
+/**
+ * {@code project init}: the record of an application that was there before it had one, worked out
+ * from the files of the project and from the command line, and what the other commands make of it.
+ */
+class ProjectInitCommandSpec extends CommandSpec {
+
+    static final String SHELL_CONFIGURATION = '''\
+---
+grails:
+    profile: web
+    codegen:
+        defaultPackage: com.example.legacy
+    gorm:
+        reactor:
+            events: false
+info:
+    app:
+        name: legacy
+---
+dataSource:
+    pooled: true
+'''
+
+    static final String SHELL_BUILD = '''\
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath "org.apache.grails:grails-gradle-plugins"
+    }
+}
+
+version "0.1"
+group "legacy"
+
+apply plugin: "war"
+apply plugin: "org.apache.grails.gradle.grails-web"
+apply plugin: "org.apache.grails.gradle.grails-gsp"
+
+dependencies {
+    profile "org.apache.grails.profiles:web"
+    implementation platform("org.apache.grails:grails-bom:$grailsVersion")
+    implementation "org.apache.grails:grails-core"
+    implementation "org.apache.grails:grails-data-hibernate5"
+    implementation "org.apache.grails:grails-quartz"
+    // implementation "org.apache.grails:grails-data-mongodb"
+    runtimeOnly "org.postgresql:postgresql"
+    testImplementation "org.testcontainers:testcontainers"
+}
+'''
+
+    PrintStream originalOut
+    PrintStream originalErr
+    ByteArrayOutputStream out = new ByteArrayOutputStream()
+    ByteArrayOutputStream err = new ByteArrayOutputStream()
+    File home
+    String previousHome
+
+    void setup() {
+        originalOut = System.out
+        originalErr = System.err
+        System.setOut(new PrintStream(out))
+        System.setErr(new PrintStream(err))
+        // where a change of a project that was interrupted is looked for
+        home = Files.createTempDirectory('grailsforgehome').toFile()
+        previousHome = System.getProperty('user.home')
+        System.setProperty('user.home', home.absolutePath)
+    }
+
+    void cleanup() {
+        System.setOut(originalOut)
+        System.setErr(originalErr)
+        System.setProperty('user.home', previousHome)
+        home.deleteDir()
+    }
+
+    void "an application the Grails shell created gets a record from its profile, its configuration and its build, and no other file is touched"() {
+        given:
+        shellProject()
+        Map<String, String> before = tree()
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'project', 'init')
+        List<String> said = out.toString().readLines()
+        ProjectState state = ProjectState.read(dir.toPath())
+
+        then: 'what was found is said with where it was found, and what was assumed is said to be'
+        exit == 0
+        err.toString().isEmpty()
+        said[0] == '| The record of the application legacy, as it is written to .grails'
+        row(said, 'type') == ['web', '(the profile web, grails.profile of grails-app/conf/application.yml)']
+        row(said, 'name') == ['legacy', '(rootProject.name of settings.gradle)']
+        row(said, 'package') == ['com.example.legacy', '(grails.codegen.defaultPackage of grails-app/conf/application.yml)']
+        row(said, 'jdk') == [String.valueOf(JdkVersion.DEFAULT_OPTION.majorVersion()), '(assumed)']
+        row(said, 'servlet') == ['tomcat', '(assumed)']
+        row(said, 'data') == ['hibernate5', '(the feature gorm-hibernate5)']
+        row(said, 'reloading') == ['none', '(assumed)']
+        said.contains('    grails-quartz (build.gradle declares org.apache.grails:grails-quartz)')
+        said.contains('    postgres (build.gradle declares org.postgresql:postgresql)')
+        said.any { it.startsWith('| Assumed, because nothing in the project says it: jdk (--jdk), servlet (--servlet), reloading (--reloading). ') }
+        said.any { it.contains('run grails-forge-cli project init --force with the name and the package (com.example.shop), --type, --jdk, --servlet, --data, ' +
+                '--reloading, --features for features that were not found and --exclude-features for features the application does not have') }
+        said.any { it.startsWith('| The record was written: .grails/.gitignore, .grails/.gitattributes, .grails/baseline/index.yml, .grails/forge.lock.yml, ' +
+                '.grails/project.yml. No other file of the project was changed.') }
+
+        and: 'the record says that it was written for an application that was there, and has no baseline'
+        state.manifest.generationState == 'untracked'
+        !state.manifest.tracked
+        state.manifest.applicationType == ApplicationType.WEB
+        state.manifest.name == 'legacy'
+        state.manifest.defaultPackage == 'com.example.legacy'
+        state.manifest.grailsVersion == VersionInfo.getGrailsVersion()
+        state.manifest.requestedFeatures.isEmpty()
+        state.manifest.options.jdk == JdkVersion.DEFAULT_OPTION
+        state.manifest.options.servlet == ServletImpl.TOMCAT
+        state.manifest.options.data == GormImpl.HIBERNATE5
+        state.manifest.options.reloading == DevelopmentReloading.NONE
+        !state.manifest.options.subproject
+        state.baseline.files.isEmpty()
+        state.lock.featureNames.containsAll(['gorm-hibernate5', 'grails-quartz', 'postgres'])
+        !state.lock.featureNames.contains('gorm-mongodb')
+
+        and: 'only the record was written'
+        tree().findAll { !it.key.startsWith('.grails') } == before
+        tree().keySet().findAll { it.startsWith('.grails') } ==
+                ['.grails', '.grails/.gitattributes', '.grails/.gitignore', '.grails/baseline', '.grails/baseline/index.yml', '.grails/forge.lock.yml', '.grails/project.yml'] as Set
+    }
+
+    void "the commands that create classes are there once the record is written, and write into the package of the record"() {
+        given:
+        shellProject()
+
+        when: 'before there is a record'
+        int exit = ForgeCli.execute(beanContext, 'create-controller', 'Book')
+
+        then: 'the command says which command writes one'
+        exit == 1
+        err.toString().contains('create-controller is a command of a Grails project whose record is read')
+        err.toString().contains('grails-forge-cli project init writes the record of an application that has none')
+        !new File(dir, 'grails-app/controllers').exists()
+
+        when:
+        err.reset()
+        int init = ForgeCli.execute(beanContext, 'project', 'init')
+        out.reset()
+        exit = ForgeCli.execute(beanContext, 'create-controller', 'Book')
+
+        then:
+        init == 0
+        exit == 0
+        err.toString().isEmpty()
+        new File(dir, 'grails-app/controllers/com/example/legacy/BookController.groovy').text.contains('package com.example.legacy')
+        new File(dir, 'src/test/groovy/com/example/legacy/BookControllerSpec.groovy').isFile()
+
+        when: 'the feature grails-quartz was found in the build, so its command is there too'
+        out.reset()
+        exit = ForgeCli.execute(beanContext, 'create-job', 'Nightly')
+
+        then:
+        exit == 0
+        new File(dir, 'grails-app/jobs/com/example/legacy/NightlyJob.groovy').isFile()
+
+        when:
+        out.reset()
+        exit = ForgeCli.execute(beanContext, 'help')
+
+        then:
+        exit == 0
+        out.toString().contains('create-domain-class')
+        !err.toString().contains('Warning')
+    }
+
+    void "no feature is added to an application whose record was written for it, and it is not generated again: nothing is changed"() {
+        given:
+        shellProject()
+        ForgeCli.execute(beanContext, 'project', 'init')
+        Map<String, String> before = tree()
+        out.reset()
+
+        when:
+        int exit = ForgeCli.execute(beanContext, (['feature', 'add', 'grails-web-console'] + options) as String[])
+
+        then:
+        exit == 1
+        err.toString().contains('The record of the application was written for an application that was there, and not by the generator ' +
+                '(generationState in .grails/project.yml is untracked, as project init writes it)')
+        err.toString().contains('no feature is added to such an application by a command, and it is not generated again. Nothing was changed. ' +
+                'Add to the build and the configuration by hand what the feature adds to an application that is created with it')
+        tree() == before
+
+        when:
+        err.reset()
+        exit = ForgeCli.execute(beanContext, 'project', 'regenerate', '--diff')
+
+        then:
+        exit == 1
+        err.toString().contains('it is not generated again')
+        tree() == before
+
+        where:
+        options << [[], ['--dry-run'], ['--diff']]
+    }
+
+    void "project show says of such a record what it is, in words and in the document"() {
+        given:
+        shellProject()
+        ForgeCli.execute(beanContext, 'project', 'init', '--features', 'grails-web-console')
+        out.reset()
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'project', 'show')
+        List<String> said = out.toString().readLines()
+
+        then:
+        exit == 0
+        err.toString().isEmpty()
+        said[0] == '| What the application legacy is taken to be, from the record that was written for it in .grails'
+        said.any { it ==~ / +state +untracked/ }
+        said.any { it ==~ / +recorded by +grails-forge .*/ }
+        said.any { it ==~ / +asked for +grails-web-console/ }
+        said.any { it.startsWith('| The record was written for an application that was there, by project init, and not when the application was generated') }
+        said[-2] == '| A new application of this type, with these options and features, is created with:'
+        said[-1].startsWith('grails-forge-cli create-app com.example.legacy.legacy ')
+
+        when:
+        out.reset()
+        exit = ForgeCli.execute(beanContext, 'project', 'show', '--json')
+        Map document = (Map) new JsonSlurper().parseText(out.toString())
+
+        then:
+        exit == 0
+        document.generationState == 'untracked'
+        document.requestedFeatures*.name == ['grails-web-console']
+        ((List<String>) document.notes).any { it.startsWith('The record was written for an application that was there') }
+    }
+
+    void "an application Forge of an earlier version generated gets its record from grails-forge-cli.yml, which is left where it is"() {
+        given:
+        new File(dir, 'grails-app/conf').mkdirs()
+        new File(dir, 'settings.gradle').text = "rootProject.name = 'shop'\n"
+        new File(dir, 'build.gradle').text = 'plugins {\n    id "org.apache.grails.gradle.grails-web"\n}\n'
+        new File(dir, 'grails-forge-cli.yml').text = 'applicationType: rest_api\ndefaultPackage: com.acme.shop\nreloading: devtools\nsourceLanguage: groovy\n' +
+                'features: [gorm-hibernate5, grails-quartz, a-feature-of-grails-7, spring-boot-starter-jetty]\n'
+        Map<String, String> before = tree()
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'project', 'init')
+        List<String> said = out.toString().readLines()
+        ProjectState state = ProjectState.read(dir.toPath())
+
+        then:
+        exit == 0
+        row(said, 'type') == ['rest-api', '(applicationType of grails-forge-cli.yml)']
+        row(said, 'package') == ['com.acme.shop', '(defaultPackage of grails-forge-cli.yml)']
+        row(said, 'servlet') == ['jetty', '(the feature spring-boot-starter-jetty)']
+        row(said, 'reloading') == ['devtools', '(reloading of grails-forge-cli.yml)']
+        said.contains('    grails-quartz (grails-forge-cli.yml)')
+        said.contains('| grails-forge-cli.yml names a feature this version of Grails does not have for the type, which is not in the record: a-feature-of-grails-7')
+        said.contains('| grails-forge-cli.yml was read and is left as it is. With a record under .grails the commands go by that, and warn when grails-forge-cli.yml ' +
+                'does not name the same package and features: remove the file when nothing else reads it')
+        state.manifest.applicationType == ApplicationType.REST_API
+        state.manifest.options.servlet == ServletImpl.JETTY
+        state.manifest.options.reloading == DevelopmentReloading.DEVTOOLS
+        state.lock.featureNames.containsAll(['gorm-hibernate5', 'grails-quartz', 'spring-boot-starter-jetty'])
+        !state.lock.featureNames.contains('a-feature-of-grails-7')
+        tree().findAll { !it.key.startsWith('.grails') } == before
+
+        when: 'both records are there, and say the same of the package and the features'
+        out.reset()
+        new File(dir, 'grails-forge-cli.yml').text = 'applicationType: rest_api\ndefaultPackage: com.acme.shop\n' +
+                "features: [${state.lock.featureNames.join(', ')}]\n"
+        exit = ForgeCli.execute(beanContext, 'create-service', 'Stock')
+
+        then: 'the commands go by the record under .grails, without a word'
+        exit == 0
+        err.toString().isEmpty()
+        new File(dir, 'grails-app/services/com/acme/shop/StockService.groovy').isFile()
+    }
+
+    @Unroll
+    void "the type of a build that names no profile is told by its Grails Gradle plugins: #plugins is #type"() {
+        given:
+        new File(dir, 'grails-app/init/org/acme').mkdirs()
+        new File(dir, 'grails-app/init/org/acme/Application.groovy').text = 'package org.acme\n\nclass Application {\n}\n'
+        new File(dir, 'settings.gradle').text = 'rootProject.name = "audit"\n'
+        new File(dir, 'build.gradle').text = 'plugins {\n' + plugins.collect { "    id \"${it}\"\n" }.join('') + '}\n'
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'project', 'init')
+        List<String> said = out.toString().readLines()
+
+        then:
+        exit == 0
+        row(said, 'type')[0] == type
+        row(said, 'package') == ['org.acme', '(the package of the Application class)']
+        ProjectState.read(dir.toPath()).manifest.applicationType.name() == type.toUpperCase().replace('-', '_')
+        said.any { it.contains('Assumed, because nothing in the project says it: the type (--type)') } == assumed
+        row(said, 'servlet')[0] == servlet
+
+        where:
+        plugins                                                                             || type         | assumed | servlet
+        ['org.apache.grails.gradle.grails-web', 'org.apache.grails.gradle.grails-gsp']       || 'web'        | false   | 'tomcat'
+        ['org.apache.grails.gradle.grails-web']                                              || 'rest-api'   | false   | 'tomcat'
+        ['org.apache.grails.gradle.grails-plugin', 'org.apache.grails.gradle.grails-gsp']    || 'web-plugin' | false   | 'tomcat'
+        ['org.apache.grails.gradle.grails-plugin']                                           || 'plugin'     | true    | 'none'
+        ['org.grails.grails-plugin']                                                         || 'plugin'     | true    | 'none'
+    }
+
+    void "a plugin the Grails shell created is a plugin by its profile, of whichever kind the profile was"() {
+        given:
+        new File(dir, 'grails-app/conf').mkdirs()
+        new File(dir, 'grails-app/conf/application.yml').text = "grails.profile: 'rest-api-plugin' # as the shell wrote it\ngrails.codegen.defaultPackage: org.acme.audit\n"
+        new File(dir, 'build.gradle').text = 'group = "org.acme"\napply plugin: "org.apache.grails.gradle.grails-plugin"\n' +
+                'dependencies {\n    profile "org.apache.grails.profiles:rest-api-plugin"\n}\n'
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'project', 'init', 'audit')
+        List<String> said = out.toString().readLines()
+        ProjectState state = ProjectState.read(dir.toPath())
+
+        then:
+        exit == 0
+        row(said, 'type') == ['rest-api-plugin', '(the profile rest-api-plugin, grails.profile of grails-app/conf/application.yml)']
+        row(said, 'name') == ['audit', '(given)']
+        row(said, 'layout') == ['subproject', '(the project has no settings.gradle of its own)']
+        state.manifest.applicationType == ApplicationType.REST_API_PLUGIN
+        state.manifest.defaultPackage == 'org.acme.audit'
+        state.manifest.options.subproject
+    }
+
+    void "what is given on the command line counts for more than what the files say, and is recorded as asked for"() {
+        given:
+        shellProject()
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'project', 'init', 'org.other.store', '--type', 'rest-api', '--jdk', '25', '--servlet', 'undertow',
+                '--data', 'hibernate7', '--reloading', 'devtools', '--features', 'grails-web-console,cache', '--exclude-features', 'postgres')
+        List<String> said = out.toString().readLines()
+        ProjectState state = ProjectState.read(dir.toPath())
+
+        then:
+        exit == 0
+        row(said, 'type') == ['rest-api', '(given with --type)']
+        row(said, 'name') == ['store', '(given)']
+        row(said, 'package') == ['org.other', '(given)']
+        row(said, 'jdk') == ['25', '(given with --jdk)']
+        row(said, 'servlet') == ['undertow', '(given with --servlet)']
+        row(said, 'data') == ['hibernate7', '(given with --data)']
+        row(said, 'reloading') == ['devtools', '(given with --reloading)']
+        said.contains('    grails-web-console (given with --features)')
+        said.contains('    gorm-hibernate7 (the option --data)')
+        said.contains('| Left out with --exclude-features: postgres')
+        said.any { it.startsWith('| Nothing was assumed. ') }
+        state.manifest.applicationType == ApplicationType.REST_API
+        state.manifest.name == 'store'
+        state.manifest.defaultPackage == 'org.other'
+        state.manifest.options.jdk == JdkVersion.JDK_25
+        state.manifest.options.servlet == ServletImpl.UNDERTOW
+        state.manifest.options.data == GormImpl.HIBERNATE7
+        state.manifest.options.reloading == DevelopmentReloading.DEVTOOLS
+        state.manifest.requestedFeatures*.name == ['cache', 'grails-web-console']
+        state.manifest.excludedFeatures*.name == ['postgres']
+        state.lock.featureNames.containsAll(['cache', 'grails-web-console', 'gorm-hibernate7', 'grails-undertow', 'spring-boot-devtools', 'grails-quartz'])
+        !state.lock.featureNames.contains('postgres')
+        !state.lock.featureNames.contains('gorm-hibernate5')
+    }
+
+    void "--dry-run says what the record would be and writes nothing"() {
+        given:
+        shellProject()
+        Map<String, String> before = tree()
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'project', 'init', '--dry-run')
+        List<String> said = out.toString().readLines()
+
+        then:
+        exit == 0
+        said[0] == '| The record of the application legacy, as it would be written to .grails'
+        said[-1] == '| Nothing was written'
+        tree() == before
+    }
+
+    void "a record this command wrote is written again with --force only, and the record of a generated application never"() {
+        given:
+        shellProject()
+        ForgeCli.execute(beanContext, 'project', 'init')
+        Map<String, String> before = tree()
+        out.reset()
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'project', 'init', '--type', 'rest-api')
+
+        then:
+        exit == 1
+        err.toString().readLines() == ['| Error The application already has a record that grails-forge-cli project init wrote (.grails/project.yml). ' +
+                                               'Run again with --force to write it anew, or with --dry-run to see what it would be. Nothing was written']
+        out.toString().isEmpty()
+        tree() == before
+
+        when:
+        err.reset()
+        exit = ForgeCli.execute(beanContext, 'project', 'init', '--type', 'rest-api', '--force')
+
+        then:
+        exit == 0
+        err.toString().isEmpty()
+        ProjectState.read(dir.toPath()).manifest.applicationType == ApplicationType.REST_API
+        tree().findAll { !it.key.startsWith('.grails') } == before.findAll { !it.key.startsWith('.grails') }
+    }
+
+    @Unroll
+    void "the record of an application this version generated is never replaced: project init #options"() {
+        given:
+        ForgeCli.execute(beanContext, 'create-app', 'com.example.shop')
+        File generated = new File(dir, 'shop')
+        System.setProperty('user.dir', generated.absolutePath)
+        Map<String, String> before = tree(generated)
+        out.reset()
+
+        when:
+        int exit = ForgeCli.execute(beanContext, (['project', 'init'] + options) as String[])
+
+        then:
+        exit == 1
+        err.toString().readLines() == ['| Error The application has the record of how it was generated (.grails/project.yml), which this command does not replace: ' +
+                                               'grails-forge-cli project show says what it has. Nothing was written']
+        out.toString().isEmpty()
+        tree(generated) == before
+
+        where:
+        options << [[], ['--force'], ['--dry-run']]
+    }
+
+    @Unroll
+    void "what is left of a record, and a record that cannot be read, is not written over: #what"() {
+        given:
+        shellProject()
+        ForgeCli.execute(beanContext, 'project', 'init')
+        change.call(dir)
+        Map<String, String> before = tree()
+        out.reset()
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'project', 'init', '--force')
+
+        then:
+        exit == 1
+        err.toString().contains(message)
+        err.toString().contains('Nothing was written')
+        out.toString().isEmpty()
+        tree() == before
+
+        where:
+        what                    | change                                                                       || message
+        'no manifest'           | { File project -> new File(project, '.grails/project.yml').delete() }         || 'The project has .grails/forge.lock.yml and .grails/baseline and no .grails/project.yml'
+        'a manifest by hand'    | { File project -> new File(project, '.grails/project.yml') << '# mine\n' }   || 'The project has a record under .grails that cannot be read'
+    }
+
+    @Unroll
+    void "what is found in the build of an application of #command #options is nothing the application does not have"() {
+        given: 'an application this version generates, which has the record of every feature it has'
+        ForgeCli.execute(beanContext, ([command, 'com.example.shop'] + options) as String[])
+        File generated = new File(dir, 'shop')
+        ProjectState generatedState = ProjectState.read(generated.toPath())
+        new File(generated, '.grails').deleteDir()
+        System.setProperty('user.dir', generated.absolutePath)
+        out.reset()
+
+        when: 'its record is written from its files alone'
+        int exit = ForgeCli.execute(beanContext, 'project', 'init')
+        ProjectState state = ProjectState.read(generated.toPath())
+
+        then: 'the type, the name, the package and the features that were found are those it was generated with'
+        exit == 0
+        state.manifest.applicationType == generatedState.manifest.applicationType
+        state.manifest.name == 'shop'
+        state.manifest.defaultPackage == 'com.example'
+        state.manifest.options.data == generatedState.manifest.options.data
+        (state.lock.featureNames - generatedState.lock.featureNames).isEmpty()
+        state.lock.featureNames.containsAll(found)
+
+        where:
+        command             | options                                                          || found
+        'create-app'        | []                                                               || ['gorm-hibernate5', 'h2', 'gsp', 'scaffolding']
+        'create-app'        | ['--data', 'hibernate7', '--features', 'postgres,grails-quartz'] || ['gorm-hibernate7', 'postgres', 'grails-quartz']
+        'create-restapi'    | ['--data', 'mongodb', '--servlet', 'undertow']                   || ['gorm-mongodb', 'grails-undertow']
+        'create-web-plugin' | []                                                               || ['gsp']
+        'create-plugin'     | []                                                               || []
+    }
+
+    void "what tells Git how to keep the record is left as it is when the project has it"() {
+        given:
+        shellProject()
+        new File(dir, '.grails').mkdirs()
+        new File(dir, '.grails/.gitignore').text = '/run/\n'
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'project', 'init')
+
+        then:
+        exit == 0
+        new File(dir, '.grails/.gitignore').text == '/run/\n'
+        out.toString().contains('| The record was written: .grails/.gitattributes, .grails/baseline/index.yml, .grails/forge.lock.yml, .grails/project.yml. ')
+    }
+
+    @Unroll
+    void "a project the type or the package of cannot be worked out is not given a record by a guess: #what"() {
+        given:
+        new File(dir, 'grails-app').mkdirs()
+        files.each { String path, String text -> new File(dir, path).text = text }
+        Map<String, String> before = tree()
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'project', 'init')
+
+        then:
+        exit == 1
+        err.toString().contains(message)
+        err.toString().contains('Nothing was written')
+        tree() == before
+
+        where:
+        what                    | files                                                                                              || message
+        'no build file'         | [:]                                                                                                || 'What type of application this is could not be worked out: The project has no build.gradle that could be read. Say it with --type, which is one of web, rest-api, web-plugin, plugin, rest-api-plugin'
+        'a profile of another'  | ['build.gradle': 'dependencies {\n    profile "com.acme.profiles:intranet"\n}\n']                || 'The profile com.acme.profiles:intranet of build.gradle is not one of Grails'
+        'a profile without type' | ['build.gradle': 'dependencies {\n    profile "org.grails.profiles:angular"\n}\n']               || 'The profile angular (the profile dependency of build.gradle) has no type of application in this version'
+        'no package'            | ['build.gradle': 'apply plugin: "org.apache.grails.gradle.grails-web"\n']                         || 'The package the classes of the application are created in could not be worked out'
+        'a name that is none'   | ['build.gradle': 'group "org.acme"\napply plugin: "org.apache.grails.gradle.grails-web"\n',
+                                   'settings.gradle': "rootProject.name = 'a/b'\n"]                                                   || "is not a name an application can be created with"
+    }
+
+    void "a project that is on an earlier version of Grails is upgraded first"() {
+        given:
+        shellProject()
+        new File(dir, 'gradle.properties').text = 'grailsVersion=7.0.4\n'
+        Map<String, String> before = tree()
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'project', 'init')
+
+        then:
+        exit == 1
+        err.toString().contains('This project is on Grails 7.0.4 (gradle.properties)')
+        err.toString().contains('The record is written for an application that is on this version of Grails. Nothing was written')
+        tree() == before
+    }
+
+    @Unroll
+    void "project init #arguments is a mistake in the command line"() {
+        given:
+        shellProject()
+        Map<String, String> before = tree()
+
+        when:
+        int exit = ForgeCli.execute(beanContext, (['project', 'init'] + arguments) as String[])
+
+        then:
+        exit == 2
+        err.toString().readLines()[0].contains(message)
+        tree() == before
+
+        where:
+        arguments                                                   || message
+        ['--type', 'angular']                                       || 'angular is no type of application: --type is one of web, rest-api, web-plugin, plugin, rest-api-plugin'
+        ['--features', 'no-such-feature']                           || 'no-such-feature, given to --features, is no feature of Grails for this type of application'
+        ['--features', 'org.acme:audit:1.0']                        || 'org.acme:audit:1.0, given to --features, is no feature of Grails'
+        ['--exclude-features', 'no-such-feature']                   || 'no-such-feature, given to --exclude-features, is no feature of Grails'
+        ['--features', 'cache', '--exclude-features', 'cache']      || 'cache cannot be given to --features and to --exclude-features both'
+        ['--jdk', '8']                                              || '--jdk is one of 21, 25, 26'
+        ['--servlet', 'websphere']                                  || '--servlet'
+        ['--no-such-option']                                        || 'project init has no option --no-such-option'
+    }
+
+    void "project init outside a Grails project says that there is none"() {
+        when:
+        int exit = ForgeCli.execute(beanContext, 'project', 'init')
+
+        then:
+        exit == 1
+        err.toString().readLines() == ["| Error project init is a command of a Grails project; there is none in ${dir.canonicalPath} or above it".toString()]
+        dir.list() as List == []
+    }
+
+    void "a record that names a profile and nothing else of the application is read, and says which command writes the record of this version"() {
+        given:
+        new File(dir, 'grails-app').mkdirs()
+        new File(dir, 'grails-forge-cli.yml').text = 'profile: web\ndefaultPackage: example\n'
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'help')
+
+        then:
+        exit == 0
+        out.toString().contains('create-controller')
+        err.toString().readLines() == ['| Warning grails-forge-cli.yml names a profile, as the record of an earlier command line did, and not the features of the ' +
+                                               'application: the commands take the application to have the features an application of the type web has by default. ' +
+                                               'project init writes the record of this version, from what the project has']
+
+        when: 'a profile there is no type of application for'
+        out.reset()
+        err.reset()
+        new File(dir, 'grails-forge-cli.yml').text = 'profile: angular\ndefaultPackage: example\n'
+        exit = ForgeCli.execute(beanContext, 'help')
+
+        then:
+        exit == 0
+        !out.toString().contains('create-controller')
+        err.toString().readLines() == ['| Warning grails-forge-cli.yml: the profile angular has no type of application in this version of Grails; ' +
+                                               'the commands that create the classes of an application are not there without it']
+    }
+
+    private void shellProject() {
+        new File(dir, 'grails-app/conf').mkdirs()
+        new File(dir, 'grails-app/init/com/example/legacy').mkdirs()
+        new File(dir, 'grails-app/conf/application.yml').text = SHELL_CONFIGURATION
+        new File(dir, 'grails-app/init/com/example/legacy/Application.groovy').text = 'package com.example.legacy\n\nclass Application {\n}\n'
+        new File(dir, 'build.gradle').text = SHELL_BUILD
+        new File(dir, 'settings.gradle').text = "rootProject.name = 'legacy'\n"
+    }
+
+    // the value of a row of what the command says, and what it says of where the value is from
+    private static List<String> row(List<String> said, String what) {
+        String line = said.find { String each -> each.startsWith("    ${what} ") }
+        assert line != null: "no row ${what} in ${said}"
+        String rest = line.substring(4 + what.length()).trim()
+        int open = rest.indexOf(' (')
+        return [rest.substring(0, open).trim(), rest.substring(open + 1).trim()]
+    }
+
+    private Map<String, String> tree() {
+        return tree(dir)
+    }
+
+    private static Map<String, String> tree(File project) {
+        Map<String, String> entries = new TreeMap<>()
+        Files.walk(project.toPath()).withCloseable { stream ->
+            stream.each { java.nio.file.Path path ->
+                String name = project.toPath().relativize(path).join('/')
+                if (name.isEmpty()) {
+                    return
+                }
+                entries.put(name, Files.isDirectory(path, LinkOption.NOFOLLOW_LINKS) ? 'directory' :
+                        MessageDigest.getInstance('SHA-256').digest(Files.readAllBytes(path)).encodeHex().toString())
+            }
+        }
+        return entries
+    }
+}

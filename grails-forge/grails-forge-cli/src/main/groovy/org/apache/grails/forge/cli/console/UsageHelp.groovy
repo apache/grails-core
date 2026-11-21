@@ -227,7 +227,8 @@ class UsageHelp extends CommandLine.Help {
             // a command that writes what the record of a project says, in a project that has none that is read
             if (spec.userObject() instanceof CodeGenCommand && !((CodeGenCommand) spec.userObject()).hasRecord()) {
                 return "${typed(spec)} is a command of a Grails project whose record is read; the project in ${GradleRunner.line(search.project.directory)} " +
-                        "has no ${ProjectState.MANIFEST} or ${ProjectState.EARLIER_RECORD} that is"
+                        "has no ${ProjectState.MANIFEST} or ${ProjectState.EARLIER_RECORD} that is. ${spec.root().name()} project init writes the record of " +
+                        'an application that has none'
             }
             return null
         } catch (IOException ignored) {

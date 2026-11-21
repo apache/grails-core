@@ -116,6 +116,11 @@ class ProjectRegenerateCommand extends BaseCommand implements Callable<Integer>,
             return 1
         }
         Path directory = search.project.directory
+        if (!ProjectState.exists(directory) && !Files.exists(directory.resolve(ProjectState.LOCK), LinkOption.NOFOLLOW_LINKS) &&
+                !Files.exists(directory.resolve(ProjectState.BASELINE_INDEX), LinkOption.NOFOLLOW_LINKS)) {
+            err(ProjectShowCommand.noRecord(spec.root().name()))
+            return 1
+        }
         try {
             // looked at before the application is generated, which takes a moment
             Path target = diff ? null : target(current, directory)

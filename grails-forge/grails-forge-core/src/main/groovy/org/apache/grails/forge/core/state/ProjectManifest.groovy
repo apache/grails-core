@@ -41,7 +41,10 @@ final class ProjectManifest {
     /** The baseline is what the generator wrote, so a feature can be added to the project later */
     public static final String TRACKED = 'tracked'
 
-    /** There is no baseline the generator wrote: the project was made by an earlier version */
+    /**
+     * There is no baseline the generator wrote: the application was there before it had a record, and
+     * the record says what it is taken to be, see {@link AdoptedProjectRecord}
+     */
     public static final String UNTRACKED = 'untracked'
 
     @PackageScope

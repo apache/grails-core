@@ -307,7 +307,12 @@ class CodeGenConfig {
             } else if ('rest-api-plugin' == profile) {
                 codeGenConfig.setApplicationType(ApplicationType.REST_API_PLUGIN)
             } else {
-                return null
+                // said, as every record that cannot be used is: the directory is not one without a record
+                throw new ProjectStateException("${file}: ${profile == null ? 'profile has no value' : "the profile ${EarlierRecord.shown(profile)} has no type of application in this version of Grails"}")
+            }
+            // such a record names no way of reloading, and the defaults of an application are asked with one
+            if (codeGenConfig.getReloading() == null) {
+                codeGenConfig.setReloading(DevelopmentReloading.NONE)
             }
 
             AvailableFeatures availableFeatures = beanContext.get().getBean(FeatureRegistry)
@@ -323,8 +328,9 @@ class CodeGenConfig {
                     .map(Feature::getName)
                     .collect(Collectors.toList()))
 
-            consoleOutput.warning('This project is using Grails Forge CLI v2 but is still using the v1 grails-forge-cli.yml format')
-            consoleOutput.warning('To replace the configuration with the new format, run `grails update-cli-config`')
+            consoleOutput.warning("${file} names a profile, as the record of an earlier command line did, and not the features of the application: the commands take " +
+                    "the application to have the features an application of the type ${codeGenConfig.getApplicationType().name().toLowerCase(Locale.ROOT).replace('_', '-')} " +
+                    'has by default. project init writes the record of this version, from what the project has')
         }
         // the commands ask what kind of application it is and which features it has
         if (codeGenConfig.getApplicationType() == null || codeGenConfig.getFeatures() == null) {

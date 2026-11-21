@@ -58,7 +58,11 @@ import java.util.concurrent.Callable
         'and how it was generated is said, and done again, with:',
         '',
         '*  @|bold project show|@',
-        '*  @|bold project regenerate|@ @|yellow --output DIRECTORY|@'
+        '*  @|bold project regenerate|@ @|yellow --output DIRECTORY|@',
+        '',
+        'An application that has no record of how it was generated, as one of an earlier version, is given one with:',
+        '',
+        '*  @|bold project init|@'
 ],
         synopsisHeading = '@|bold,underline Usage:|@ ',
         optionListHeading = '%n@|bold,underline Options:|@%n',
