@@ -77,3 +77,14 @@ tasks.named('test', Test).configure { Test test ->
     FileCollection declared = test.classpath
     test.classpath = declared.filter { File jar -> jar.name ==~ /groovy-\d.*\.jar/ } + declared
 }
+
+// FeaturePackTasksSpec runs the tasks of the Grails Gradle plugin that check and test the feature pack of a
+// plugin with the Forge of this build, as a plugin gets it from a repository: the class path of the Forge
+// module without its tests, which that module writes to a file for its own specs.
+tasks.named('test', Test).configure { Test test ->
+    test.dependsOn(':grails-forge-core:writePackCheckClasspath')
+    String forgeClasspathFile = rootProject.layout.projectDirectory.file('grails-forge-core/build/pack-check/classpath.txt').asFile.absolutePath
+    test.jvmArgumentProviders.add({
+        ["-Dforge.packCheck.classpathFile=${forgeClasspathFile}".toString()]
+    } as CommandLineArgumentProvider)
+}
