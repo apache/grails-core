@@ -737,6 +737,44 @@ class ProjectCommandsSpec extends CommandSpec {
                                                '.grails/.gitattributes differs']
     }
 
+    @IgnoreIf({ os.windows || System.getProperty('user.name') == 'root' })
+    void "when a file cannot be written the command names it and ends with 1, and the project is as it was"() {
+        given: 'a directory of the application, where it is written to, that takes a new file by its mode and lets nobody look into it'
+        create(dir, ['create-app', 'com.example.shop'])
+        File project = new File(dir, 'shop')
+        Map<String, String> before = tree(project)
+        File output = new File(dir.canonicalFile, 'again')
+        File closed = new File(output, 'grails-app/conf')
+        closed.mkdirs()
+        Files.setPosixFilePermissions(closed.toPath(), PosixFilePermissions.fromString('-w-------'))
+
+        when:
+        int exit = run('project', 'regenerate', '--output', output.absolutePath, '--force')
+        Files.setPosixFilePermissions(closed.toPath(), PosixFilePermissions.fromString('rwxr-xr-x'))
+        Map<String, String> left = tree(output)
+        def said = err.toString().trim() =~ /^\| Error Cannot write grails-app\/conf\/[a-z.-]+: .+\. The application at (.+) is not complete: (\d+) of (\d+) files were written before it$/
+
+        then: 'one line names the file, and says that what the directory has is not the application'
+        exit == 1
+        out.toString().isEmpty()
+        err.toString().readLines().size() == 1
+        said.matches()
+        said.group(1) == output.canonicalPath
+
+        and: 'what was written before it is there, the record among it, and nothing of the directory that could not be written to'
+        (said.group(2) as int) == left.count { !it.value.startsWith('directory') }
+        (said.group(2) as int) < (said.group(3) as int)
+        (said.group(3) as int) == before.count { !it.value.startsWith('directory') }
+        left.containsKey('.grails/project.yml')
+        closed.list() as List == []
+
+        and: 'the project is as it was'
+        tree(project) == before
+
+        cleanup:
+        Files.setPosixFilePermissions(new File(dir.canonicalFile, 'again/grails-app/conf').toPath(), PosixFilePermissions.fromString('rwxr-xr-x'))
+    }
+
     void "a file the record of the project has and the application that was written has not is named"() {
         given:
         create(dir, ['create-app', 'com.example.shop'])
@@ -751,6 +789,29 @@ class ProjectCommandsSpec extends CommandSpec {
         exit == 1
         err.toString().readLines() == ["| Error The application was written to ${output.canonicalPath}, and its record is not that of the project: " +
                                                '.grails/baseline/extra.txt is a file of the project only']
+    }
+
+    @IgnoreIf({ os.windows || System.getProperty('user.name') == 'root' })
+    void "project regenerate --diff names a directory of the project it cannot read, and names no file as added, removed or changed"() {
+        given:
+        create(dir, ['create-app', 'com.example.shop'])
+        File project = new File(dir, 'shop')
+        File closed = new File(project, 'src/main/groovy/closed')
+        closed.mkdirs()
+        new File(closed, 'Mine.groovy').text = 'class Mine {}\n'
+        Files.setPosixFilePermissions(closed.toPath(), PosixFilePermissions.fromString('---------'))
+        out.reset()
+
+        when:
+        int exit = run('project', 'regenerate', '--diff')
+
+        then:
+        exit == 1
+        out.toString().isEmpty()
+        err.toString().readLines() == ['| Error The files of the project cannot be read: src/main/groovy/closed cannot be opened']
+
+        cleanup:
+        Files.setPosixFilePermissions(new File(dir, 'shop/src/main/groovy/closed').toPath(), PosixFilePermissions.fromString('rwxr-xr-x'))
     }
 
     void "with -x a record that cannot be used is said with where it failed, by both commands"() {

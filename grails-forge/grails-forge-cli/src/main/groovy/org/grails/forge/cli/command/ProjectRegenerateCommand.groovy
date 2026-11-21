@@ -40,8 +40,11 @@ import org.springframework.context.annotation.Scope
 import org.springframework.stereotype.Component
 import picocli.CommandLine
 import java.nio.charset.StandardCharsets
+import java.nio.file.AccessDeniedException
+import java.nio.file.FileSystemException
 import java.nio.file.FileVisitResult
 import java.nio.file.Files
+import java.nio.file.InvalidPathException
 import java.nio.file.LinkOption
 import java.nio.file.Path
 import java.nio.file.SimpleFileVisitor
@@ -166,6 +169,7 @@ class ProjectRegenerateCommand extends BaseCommand implements Callable<Integer>,
 
     private Integer write(Path project, Path target, RegeneratedProject regenerated) {
         String written = null
+        int before = 0
         try {
             Files.createDirectories(target)
             // every file can be written, or none is
@@ -178,6 +182,7 @@ class ProjectRegenerateCommand extends BaseCommand implements Callable<Integer>,
             for (String path : regenerated.paths) {
                 written = path
                 handler.write(path, new Regenerated(path, regenerated.content(path), regenerated.isExecutable(path)))
+                before++
             }
             written = null
             String unlike = unlike(project, target)
@@ -186,8 +191,12 @@ class ProjectRegenerateCommand extends BaseCommand implements Callable<Integer>,
                 return 1
             }
         } catch (IOException e) {
+            // the files are written one by one, and those before the one that failed stay: the directory then has the record of an
+            // application and not all of its files, which is said, so that it is not taken for the application
             err((written == null ? 'The record of the application that was written could not be compared with that of the project' :
-                    "Cannot write ${FeatureSelectionException.shown(written)}") + ": ${e instanceof ProjectOutputHandler.Refused ? e.getMessage() : OutputFailedException.reason(e)}")
+                    "Cannot write ${FeatureSelectionException.shown(written)}") + ": ${e instanceof ProjectOutputHandler.Refused ? e.getMessage() : OutputFailedException.reason(e)}" +
+                    (written == null ? '' : before == 0 ? '. Nothing was written' :
+                            ". The application at ${GradleRunner.line(target)} is not complete: ${before} of ${regenerated.paths.size()} files were written before it"))
             if (showStacktrace()) {
                 e.printStackTrace(spec.commandLine().getErr())
             }
@@ -268,7 +277,10 @@ class ProjectRegenerateCommand extends BaseCommand implements Callable<Integer>,
                 }
             })
         } catch (IOException e) {
-            err("The files of the project cannot be read: ${OutputFailedException.reason(e)}")
+            err("The files of the project cannot be read: ${unread(project, e)}")
+            if (showStacktrace()) {
+                e.printStackTrace(spec.commandLine().getErr())
+            }
             return 1
         }
         Map<String, String> unlike = new TreeMap<>()
@@ -297,6 +309,20 @@ class ProjectRegenerateCommand extends BaseCommand implements Callable<Integer>,
         out("@|blue ||@ ${unlike.size()} ${unlike.size() == 1 ? 'file is' : 'files are'} not as the application was generated: " +
                 ['added', 'removed', 'changed'].findAll { String kind -> counted.containsKey(kind) }.collect { String kind -> "${counted.get(kind)} ${kind}" }.join(', '))
         return 1
+    }
+
+    // What could not be read, by its path in the project where the file system names one in it: what it says besides is of writing
+    private static String unread(Path project, IOException failure) {
+        String named = failure instanceof FileSystemException ? ((FileSystemException) failure).getFile() : null
+        try {
+            Path file = named == null ? null : Path.of(named)
+            if (file != null && file.startsWith(project) && file != project) {
+                return "${FeatureSelectionException.shown(project.relativize(file).join('/'))} cannot be opened"
+            }
+        } catch (InvalidPathException ignored) {
+            // said without a path, below
+        }
+        return failure instanceof AccessDeniedException ? 'a directory of it cannot be opened' : OutputFailedException.reason(failure)
     }
 
     // a file of the baseline as the state compares it, which allows a clone the line endings of its platform; another byte by byte
