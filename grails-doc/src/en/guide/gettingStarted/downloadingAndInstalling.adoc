@@ -95,4 +95,5 @@ Grails Version: {version}
 
 A generated project includes a wrapper, `grailsw` (with `grailsw.bat` and `grails-wrapper.jar`), that can be checked into source control.
 The wrapper downloads the command line of the version of Grails the project is on, the `grailsVersion` of its `gradle.properties`, to `~/.grails/wrapper` and starts it, so `./grailsw` takes the commands `grails` takes.
+The environment variable `GRAILS_WRAPPER_HOME` names another directory than `~/.grails` for the downloads. The wrapper keeps nothing in the project: the `.grails` directory of a project is the record of how the project was generated, and the wrapper refuses it as its home.
 It is meant to be a lightweight option if SDKMAN is not available, and it gives everyone who works on the project the command line of the same version.

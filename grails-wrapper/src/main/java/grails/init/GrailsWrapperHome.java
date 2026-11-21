@@ -32,6 +32,11 @@ import java.util.stream.Stream;
 public class GrailsWrapperHome {
     public static final String CLI_COMBINED_PROJECT_NAME = "grails-cli";
 
+    /**
+     * The file that makes a directory {@code .grails} the record of a project and not a home of the wrapper.
+     */
+    private static final String PROJECT_RECORD = "project.yml";
+
     public final File home;
     public final File wrapperDirectory;
     public final List<GrailsVersion> versions;
@@ -168,14 +173,18 @@ public class GrailsWrapperHome {
     }
 
     /**
-     * Locate the “Grails" home by:
-     * 1. using the specified home
-     * 2. using the environment variable
-     * 3. Looking in the current directory for a GRAILS_MARKERS or for a .grails directory
-     * and all parent directories.  If none, is found, the current directory will be returned.
-     * There is a special case for the current directory if inside of the grails core repository.
+     * Locates the home of the wrapper, where the command line it downloads is kept in {@code wrapper}:
+     * <ol>
+     * <li>the directory that is given,</li>
+     * <li>the directory the environment variable {@code GRAILS_WRAPPER_HOME} names,</li>
+     * <li>{@code .grails} of the home directory of the user.</li>
+     * </ol>
+     * The home is never looked for in a project. The directory {@code .grails} of a project is the record of
+     * how the project was generated, which is committed with it, and a directory that holds such a record is
+     * refused as the home of the wrapper.
      *
-     * @return the GRAILS_WRAPPER_HOME directory
+     * @param grailsHomeOverride the directory to use, or null
+     * @return the home directory of the wrapper
      * @throws IOException if canonicalization fails
      */
     public static File findGrailsHome(String grailsHomeOverride) throws IOException {
@@ -188,9 +197,6 @@ public class GrailsWrapperHome {
             return validateGrailsHome(environmentOverride, "GRAILS_WRAPPER_HOME environment variable");
         }
 
-        // TODO: this previously allowed grails home to be in the grails project directory, but may no longer be needed
-        //return locateGrailsHome(new File("."));
-
         File userHome = new File(System.getProperty("user.home")).getCanonicalFile();
         File grailsHome = new File(userHome, ".grails");
         if (grailsHome.exists() && !grailsHome.isDirectory()) {
@@ -202,6 +208,10 @@ public class GrailsWrapperHome {
 
     private static File validateGrailsHome(String possibleGrailsHome, String description) {
         File possibleHome = new File(possibleGrailsHome);
+        if (isProjectRecord(possibleHome)) {
+            throw new IllegalArgumentException(description + " [" + possibleGrailsHome + "] is the record of a Grails project (it has " +
+                PROJECT_RECORD + "), which is committed with the project. Name another directory for the downloads of the wrapper.");
+        }
         if (!possibleHome.exists()) {
             possibleHome.mkdirs();
         }
@@ -213,14 +223,7 @@ public class GrailsWrapperHome {
         return possibleHome;
     }
 
-    private static boolean exists(File baseDirectory, String name) {
-        File file = new File(baseDirectory, name);
-        return file.exists();
-    }
-
-    private static boolean directoryExists(File baseDirectory, String name) {
-        File file = new File(baseDirectory, name);
-        return file.exists() && file.isDirectory();
+    private static boolean isProjectRecord(File directory) {
+        return new File(directory, PROJECT_RECORD).isFile();
     }
 }
-
