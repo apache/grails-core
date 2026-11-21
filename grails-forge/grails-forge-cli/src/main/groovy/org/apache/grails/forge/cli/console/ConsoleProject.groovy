@@ -313,7 +313,10 @@ final class ConsoleProject {
      * to a file in the directory the link is in or below it. A wrapper that is not in the directory the
      * command is run in is also the user's own, with the jar and the properties it runs, and one above
      * the project is in a directory that is the user's own and has the settings of a Gradle build, which
-     * make it the root of a build of several projects and are the user's own too.
+     * make it the root of a build of several projects and are the user's own too. Such a wrapper that is
+     * a link names its file itself, through no second link, and the file and every directory from the
+     * link down to it are the user's own as well: who can write to a directory on the way decides
+     * which file the link leads to.
      *
      * @param windows whether the script for Windows is asked for
      * @return the wrapper script, or why there is none that is run
@@ -403,7 +406,7 @@ final class ConsoleProject {
             looked.addAll(WRAPPER_FILES)
             String distrusted = distrust(holder, looked)
             if (distrusted == null && target != null && !isSafeDirectory(holder)) {
-                distrusted = distrustEntry(target)
+                distrusted = distrustLinked(holder, wrapper, target)
             }
             if (distrusted != null) {
                 return "${distrusted}; name ${GradleRunner.line(holder)} in the environment variable ${SAFE_DIRECTORY} to run it all the same"
@@ -428,6 +431,50 @@ final class ConsoleProject {
                 if (distrusted != null) {
                     return distrusted
                 }
+            }
+        }
+        return null
+    }
+
+    // Why the file a link in a directory above leads to is not the user's own. The file is held to what
+    // a file there is held to, and so is the way to it: whoever can write to a directory on the way, or
+    // put a second link there, decides which file the link leads to, and can make that any file of the
+    // user. So the link names its file by directories alone, and each of them is the user's own.
+    private static String distrustLinked(Path holder, Path link, Path target) {
+        Path root
+        Path named
+        try {
+            root = holder.toRealPath()
+            named = Files.readSymbolicLink(link)
+            if (named.isAbsolute()) {
+                named = within(root, named)
+            }
+        } catch (IOException | RuntimeException ignored) {
+            return "it is a link that cannot be read, so it is not known to lead to a file of the user's own"
+        }
+        // the path a link is followed to has no link in it: the one the link names is that path only when it has none either
+        if (named == null || root.resolve(named).normalize() != target) {
+            return "it is a link that leads to its file through another link, and where a second link leads need not be the user's choice (link it to the file itself)"
+        }
+        List<Path> way = []
+        for (Path each = target.getParent(); each != null && each != root && each.startsWith(root); each = each.getParent()) {
+            way.add(0, each)
+        }
+        for (Path each : way) {
+            String distrusted = distrustEntry(each)
+            if (distrusted != null) {
+                return distrusted
+            }
+        }
+        return distrustEntry(target)
+    }
+
+    // what a whole path names in a directory, as a path in that directory; null when it does not lead through it
+    private static Path within(Path directory, Path named) throws IOException {
+        for (int count = 1; count < named.getNameCount(); count++) {
+            Path start = named.getRoot().resolve(named.subpath(0, count))
+            if (Files.exists(start) && Files.isSameFile(start, directory)) {
+                return named.subpath(count, named.getNameCount())
             }
         }
         return null

@@ -543,6 +543,144 @@ class GradleCommandSpec extends CommandSpec implements CommandFixture {
         outside?.deleteDir()
     }
 
+    @Unroll
+    @IgnoreIf({ os.windows })
+    void "a wrapper that is a link, in a project above the current directory, is held to what its file is: #what"() {
+        given: 'a project of this user whose wrapper is a link, and the command run in a directory below the project'
+        new File(dir, 'grails-app').mkdirs()
+        File below = new File(dir, 'work')
+        below.mkdirs()
+        System.setProperty('user.dir', below.canonicalPath)
+        File outside = Files.createTempDirectory(dir.parentFile.toPath(), 'grailsforgeoutside').toFile()
+        wrapper(outside)
+        new File(dir, 'tools').mkdirs()
+        wrapper(new File(dir, 'tools'))
+        if (secondName) {
+            new File(dir, 'tools/gradlew').delete()
+            Files.createLink(new File(dir, 'tools/gradlew').toPath(), new File(outside, 'gradlew').toPath())
+        }
+        Files.createSymbolicLink(new File(dir, 'gradlew').toPath(), Path.of(target.replace('OUTSIDE', outside.canonicalPath).replace('BESIDE', outside.name).replace('GIVEN', dir.absolutePath)))
+        if (notOwned != null) {
+            ConsoleProject.setOwnedByUser({ Path path -> path != dir.canonicalFile.toPath().resolve(notOwned) && ProcessUser.current().owns(path) } as Predicate<Path>)
+        }
+        if (safe) {
+            ConsoleProject.setSafeDirectories(dir.canonicalPath)
+        }
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'gradle', 'build')
+
+        then:
+        exit == (said == null ? 0 : 1)
+        out.toString().contains('the wrapper ran with build') == (said == null)
+        said == null || (errors().size() == 1 && errors()[0].contains(said.replace('DIR', dir.canonicalPath)))
+        said == null || errors()[0].endsWith('Gradle was not run, since the command runs the Gradle of the project and no other')
+
+        cleanup:
+        outside?.deleteDir()
+
+        where:
+        what                                                 | target             | secondName | notOwned        | safe  | said
+        'a file of this user below the project'              | 'tools/gradlew'    | false      | null            | false | null
+        'a file of this user, named by its whole path'       | 'GIVEN/tools/gradlew' | false   | null            | false | null
+        'a file outside the project'                         | 'OUTSIDE/gradlew'  | false      | null            | false | 'DIR/gradlew is not run for the project in DIR: it is a link to a file outside DIR'
+        'a file that leaves the project and comes back'      | '../BESIDE/gradlew' | false     | null            | false | 'DIR/gradlew is not run for the project in DIR: it is a link to a file outside DIR'
+        'a file below the project that is another user\'s'   | 'tools/gradlew'    | false      | 'tools/gradlew' | false | 'DIR/tools/gradlew is owned by '
+        'a link of another user to a file of this user'      | 'tools/gradlew'    | false      | 'gradlew'       | false | 'DIR/gradlew is owned by '
+        'a file below the project with another name elsewhere' | 'tools/gradlew'  | true       | null            | false | 'DIR/tools/gradlew has another name elsewhere (a hard link)'
+        'another user\'s file, in a directory named as safe' | 'tools/gradlew'    | false      | 'tools/gradlew' | true  | null
+        'nothing that is there'                              | 'missing'          | false      | null            | false | 'has no Gradle wrapper: there is no gradlew in it or in a directory above it'
+        'a directory'                                        | 'tools'            | false      | null            | false | 'has no Gradle wrapper: there is no gradlew in it or in a directory above it'
+    }
+
+    @Unroll
+    @IgnoreIf({ os.windows || System.getProperty('user.name') == 'root' })
+    void "a wrapper above that is a link is not run when another user can change where the link leads: #what"() {
+        given: 'a project of this user whose wrapper is a link, and a file of this user in it that is no wrapper'
+        new File(dir, 'grails-app').mkdirs()
+        File below = new File(dir, 'work')
+        below.mkdirs()
+        System.setProperty('user.dir', below.canonicalPath)
+        new File(dir, 'tools').mkdirs()
+        wrapper(new File(dir, 'tools'))
+        new File(dir, 'notes').mkdirs()
+        new File(dir, 'notes/written.txt').text = 'echo "a file that is no wrapper ran"\n'
+        arrange.call(dir)
+
+        when: 'what the system says, with nothing replaced'
+        int exit = ForgeCli.execute(beanContext, 'gradle', 'build')
+
+        then:
+        exit == 1
+        errors().size() == 1
+        errors()[0].contains(said.replace('DIR', dir.canonicalPath))
+        errors()[0].contains("name ${dir.canonicalPath} in the environment variable GRAILS_SAFE_DIRECTORY to run it all the same")
+        !out.toString().contains(' ran')
+
+        when: 'the directory is named as one to use'
+        out.reset()
+        ConsoleProject.setSafeDirectories(dir.canonicalPath)
+        exit = ForgeCli.execute(beanContext, 'gradle', 'build')
+
+        then:
+        exit == 0
+        out.toString().contains(' ran')
+
+        where:
+        what                                                         | said                                                    | arrange
+        'its file is in a directory everybody can write to'          | 'DIR/tools can be written to by everybody'              | { File project ->
+            Files.createSymbolicLink(new File(project, 'gradlew').toPath(), Path.of('tools/gradlew'))
+            Files.setPosixFilePermissions(new File(project, 'tools').toPath(), PosixFilePermissions.fromString('rwxrwxrwx'))
+        }
+        'a directory on the way to its file is one everybody can write to' | 'DIR/tools can be written to by everybody'        | { File project ->
+            new File(project, 'tools/bin').mkdirs()
+            wrapper(new File(project, 'tools/bin'))
+            Files.createSymbolicLink(new File(project, 'gradlew').toPath(), Path.of('tools/bin/gradlew'))
+            Files.setPosixFilePermissions(new File(project, 'tools').toPath(), PosixFilePermissions.fromString('rwxrwxrwx'))
+        }
+        'it leads to a second link, which was pointed at another file of this user' | 'it is a link that leads to its file through another link' | { File project ->
+            // what anyone can do in a directory everybody can write to: the file the first link names is replaced by a link
+            Files.setPosixFilePermissions(new File(project, 'tools').toPath(), PosixFilePermissions.fromString('rwxrwxrwx'))
+            new File(project, 'tools/gradlew').delete()
+            Files.createSymbolicLink(new File(project, 'tools/gradlew').toPath(), Path.of('../notes/written.txt'))
+            Files.createSymbolicLink(new File(project, 'gradlew').toPath(), Path.of('tools/gradlew'))
+        }
+        'it leads through a directory that is a link'                | 'it is a link that leads to its file through another link' | { File project ->
+            Files.createSymbolicLink(new File(project, 'linked').toPath(), Path.of('tools'))
+            Files.createSymbolicLink(new File(project, 'gradlew').toPath(), Path.of('linked/gradlew'))
+        }
+    }
+
+    @Unroll
+    @IgnoreIf({ os.windows })
+    void "a wrapper above the project that is a link is run from the root of a build when its file is the user's own too: #what"() {
+        given: 'a project in the current directory, and in the root of the build above it a wrapper that is a link'
+        File project = new File(dir, 'app')
+        new File(project, 'grails-app').mkdirs()
+        new File(dir, 'settings.gradle').text = "include 'app'\n"
+        new File(dir, 'tools').mkdirs()
+        wrapper(new File(dir, 'tools'))
+        Files.createSymbolicLink(new File(dir, 'gradlew').toPath(), Path.of('tools/gradlew'))
+        System.setProperty('user.dir', project.canonicalPath)
+        if (notOwned != null) {
+            ConsoleProject.setOwnedByUser({ Path path -> path != dir.canonicalFile.toPath().resolve(notOwned) && ProcessUser.current().owns(path) } as Predicate<Path>)
+        }
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'gradle', 'build')
+
+        then:
+        exit == (said == null ? 0 : 1)
+        out.toString().contains('the wrapper ran with build') == (said == null)
+        said == null || (errors().size() == 1 && errors()[0].contains("${dir.canonicalPath}/${said}"))
+
+        where:
+        what                              | notOwned        | said
+        'a file of this user'             | null            | null
+        'a file of another user'          | 'tools/gradlew' | 'tools/gradlew is owned by '
+        'a directory of another user'     | 'tools'         | 'tools is owned by '
+    }
+
     void "where the search for a project ended is what the command says: at the directories it looks at, or where there are no more"() {
         given: 'more directories than are looked at, none of them a project'
         File deep = new File(dir, (1..(ConsoleProject.MAX_LEVELS + 2)).collect { int level -> "l${level}" }.join('/'))
