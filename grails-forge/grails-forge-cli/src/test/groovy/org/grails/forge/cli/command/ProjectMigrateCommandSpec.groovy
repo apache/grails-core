@@ -646,6 +646,151 @@ dependencies {
                                                'the commands that create the classes of an application are not there without it']
     }
 
+}
+
+dependencies {
+    implementation(platform("org.apache.grails:grails-bom:$grailsVersion"))
+    implementation("org.apache.grails:grails-data-hibernate5")
+    implementation("org.apache.grails:grails-quartz")
+    runtimeOnly(group = "org.postgresql", name = "postgresql")
+    // implementation("org.apache.grails:grails-data-mongodb")
+}
+'''
+        new File(dir, 'settings.gradle.kts').text = '// rootProject.name = "commented"\nrootProject.name = "kshop"\n'
+        Map<String, String> before = tree()
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'project', 'init')
+        List<String> said = out.toString().readLines()
+
+        then:
+        exit == 0
+        err.toString().isEmpty()
+        row(said, 'type') == ['web', '(the Gradle plugins grails-web and grails-gsp of build.gradle.kts)']
+        row(said, 'name') == ['kshop', '(rootProject.name of settings.gradle.kts)']
+        row(said, 'package') == ['com.example.kotlin', '(group of build.gradle.kts)']
+        row(said, 'jdk') == ['25', '(the version of Java build.gradle.kts names)']
+        said.contains('    grails-quartz (build.gradle.kts declares org.apache.grails:grails-quartz)')
+        said.contains('    postgres (build.gradle.kts declares org.postgresql:postgresql)')
+        !said.any { it.startsWith('    gorm-mongodb ') }
+        !said.any { it.startsWith('    layout ') }
+        !said.any { it.contains('was not read') }
+
+        and: 'the record is that of such an application, and no other file is touched'
+        ProjectState state = ProjectState.read(dir.toPath())
+        state.manifest.name == 'kshop'
+        state.manifest.defaultPackage == 'com.example.kotlin'
+        state.manifest.options.jdk.majorVersion() == 25
+        !state.manifest.options.subproject
+        state.lock.featureNames.containsAll(['gorm-hibernate5', 'grails-quartz', 'postgres'])
+        tree().findAll { !it.key.startsWith('.grails') } == before
+    }
+
+}
+
+configure(subprojects.findAll { it.name.startsWith('web') }) { dependencies { runtimeOnly "org.postgresql:postgresql" } }
+
+group "com.example"
+
+allprojects {
+    dependencies {
+        implementation "org.apache.grails:grails-data-hibernate5"
+    }
+}
+
+dependencies {
+    implementation libs.grails.quartz
+    implementation(libs.spring.security)
+    runtimeOnly "com.h2database:h2"
+}
+'''
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'project', 'init', '--dry-run')
+        List<String> said = out.toString().readLines()
+
+        then: 'what is declared for every project, and for this one, is found'
+        exit == 0
+        row(said, 'type') == ['web', '(the Gradle plugins grails-web and grails-gsp of build.gradle)']
+        said.contains('    gorm-hibernate5 (build.gradle declares org.apache.grails:grails-data-hibernate5)')
+        said.contains('    h2 (build.gradle declares com.h2database:h2)')
+
+        and: 'what is declared for other projects is not taken for the application'
+        row(said, 'package') == ['com.example', '(group of build.gradle)']
+        !said.any { it.startsWith('    grails-quartz ') || it.startsWith('    gorm-mongodb ') || it.startsWith('    postgres ') }
+
+        and: 'and each thing that was not read is said in a line of its own'
+        said.contains('| build.gradle applies 2 other build files (apply from), which were not read')
+        said.contains('| build.gradle names 2 dependencies by a version catalog (libs.), which was not read: what they are is not known here')
+        said.contains('| build.gradle declares dependencies for other projects (in a subprojects, configure or project block), which are not those of this application ' +
+                'and were not counted')
+    }
+
+    @Unroll
+    void "an earlier record that #what is said to be, and the record is worked out from the rest of the project"() {
+        given:
+        shellProject()
+        new File(dir, 'grails-forge-cli.yml').setText(record, 'UTF-8')
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'project', 'init', '--dry-run')
+        List<String> said = out.toString().readLines()
+
+        then:
+        exit == 0
+        row(said, 'type') == type
+        said.any { it.startsWith('| ') && it.contains(note) }
+
+        where:
+        what                           | record                                                    || type                                                                          | note
+        'cannot be read'               | 'features: [a\n'                                          || ['web', '(the profile web, grails.profile of grails-app/conf/application.yml)'] | 'grails-forge-cli.yml is not YAML that can be read: '
+        'names a type that is none'    | 'applicationType: nonsense\ndefaultPackage: com.other\n'  || ['web', '(the profile web, grails.profile of grails-app/conf/application.yml)'] | 'applicationType of grails-forge-cli.yml is nonsense, which is no type of application'
+        'names a profile'              | 'profile: rest-api\ndefaultPackage: com.other\n'          || ['rest-api', '(the profile rest-api, profile of grails-forge-cli.yml)']        | 'grails-forge-cli.yml was read and is left as it is'
+        'names a profile of no type'   | 'profile: angular\ndefaultPackage: com.other\n'           || ['web', '(the profile web, grails.profile of grails-app/conf/application.yml)'] | 'The profile angular (profile of grails-forge-cli.yml) has no type of application in this version'
+    }
+
+    void "the version of Java the build names is that of the record when this version generates for it, and is said not to be otherwise"() {
+        given:
+        shellProject()
+        new File(dir, 'build.gradle') << '\njava {\n    toolchain {\n        languageVersion = JavaLanguageVersion.of(25)\n    }\n}\n'
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'project', 'init', '--dry-run')
+
+        then:
+        exit == 0
+        row(out.toString().readLines(), 'jdk') == ['25', '(the version of Java build.gradle names)']
+
+        when:
+        out.reset()
+        new File(dir, 'build.gradle').text = SHELL_BUILD + '\nsourceCompatibility = 11\n'
+        exit = ForgeCli.execute(beanContext, 'project', 'init', '--dry-run')
+        List<String> said = out.toString().readLines()
+
+        then:
+        exit == 0
+        row(said, 'jdk') == [String.valueOf(JdkVersion.DEFAULT_OPTION.majorVersion()), '(assumed)']
+        said.contains('| build.gradle names Java 11, which this version of Grails does not generate for')
+    }
+
+    void "a record that cannot be written is said not to be, and nothing is left of it"() {
+        given: 'a file where the directory of the record goes'
+        shellProject()
+        new File(dir, '.grails').text = 'not a directory'
+        Map<String, String> before = tree()
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'project', 'init')
+
+        then:
+        exit == 1
+        err.toString().readLines().size() == 1
+        err.toString().startsWith('| Error Cannot write .grails/')
+        err.toString().trim().endsWith(': .grails is a file where a directory is needed')
+        !out.toString().contains('The record was written')
+        tree() == before
+    }
+
     private void shellProject() {
         new File(dir, 'grails-app/conf').mkdirs()
         new File(dir, 'grails-app/init/com/example/legacy').mkdirs()
