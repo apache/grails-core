@@ -100,6 +100,8 @@ final class DatabaseContainers {
             }
         }
         if (db2FetchFailure != null) {
+            // On GitHub Actions, the build script of this module looks for the start of this message to warn about the
+            // skipped rows
             throw new TestAbortedException(
                     "The Db2 image could not be fetched, so the Db2 rows are skipped: ${db2FetchFailure.message}",
                     db2FetchFailure)
