@@ -1317,6 +1317,8 @@ With GORM for Hibernate, `list` with a `Map` of sort properties, such as `Book.l
 
 With GORM for Hibernate, `count` on a where query or a detached criteria that has a sort, as in `Book.where { ... }.sort('title').count()` or `count(sort: 'title')`, failed with a `SQLGrammarException` on a database that rejects an order in a query that counts its rows, such as H2. As of Grails 7.0.18, the count is made without the sort. The join that a sort by a property of an association makes is kept, so `count` returns the number of instances that `list` returns for the same query.
 
+This also applies to a query that selects only a `count()` projection and to orders added by a `PreQueryEvent` listener. The count keeps the joins of those orders as well.
+
 ==== A setting makes a sort by an association keep every instance
 
 With GORM for Hibernate, a sort by a property of an association, such as `Book.list(sort: 'author.name')`, joins the association with an inner join. The sort therefore leaves out the instances whose association is `null`, and the `totalCount` of a paged list and `count` do not count them. That is unchanged by default. As of Grails 7.0.18, the new `grails.gorm.leftJoinAssociationSort` setting makes such a sort join the association with a left join, so that a sort no longer changes which instances a query returns:
