@@ -19,9 +19,14 @@
 package org.grails.orm.hibernate.query;
 
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.Fetch;
+import jakarta.persistence.criteria.From;
+import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.Root;
 
 import org.hibernate.HibernateException;
@@ -63,6 +68,11 @@ public class PagedResultList extends grails.gorm.PagedResultList {
         if (totalCount == Integer.MIN_VALUE) {
             totalCount = hibernateTemplate.execute(new GrailsHibernateTemplate.HibernateCallback<>() {
                 public Integer doInHibernate(Session session) throws HibernateException, SQLException {
+                    // the list fetched associations, and a count has no entity to fetch them into: Hibernate rejects a
+                    // fetch whose owner is not in the select list. Each fetch becomes a join of the same type, so an
+                    // inner join keeps out of the total the rows it kept out of the page.
+                    joinFetches(new ArrayList<>(queryRoot.getFetches()), queryRoot, new int[1]);
+                    queryRoot.getFetches().clear();
                     final CriteriaQuery finalQuery = criteriaQuery.select(criteriaBuilder.count(queryRoot)).distinct(true).orderBy();
                     final Query query = session.createQuery(finalQuery);
                     hibernateTemplate.applySettings(query);
@@ -71,6 +81,16 @@ public class PagedResultList extends grails.gorm.PagedResultList {
             });
         }
         return totalCount;
+    }
+
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private static void joinFetches(List<Fetch> fetches, From target, int[] count) {
+        for (Fetch fetch : fetches) {
+            Join join = target.join(fetch.getAttribute().getName(), fetch.getJoinType());
+            // the aliases of the list's query were fixed when it ran; a name of its own keeps the new joins from reusing one
+            join.alias("pagedFetch" + count[0]++);
+            joinFetches(new ArrayList<Fetch>(fetch.getFetches()), join, count);
+        }
     }
 
     public void setTotalCount(int totalCount) {
