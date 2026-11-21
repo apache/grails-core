@@ -505,11 +505,15 @@ include(
         'grails-test-examples-spring-security-ldap-retrieve-group-roles',
         'grails-test-examples-spring-security-rest-common',
         'grails-test-examples-spring-security-rest-gorm',
+        'grails-test-examples-spring-security-rest-gorm-minimal',
         'grails-test-examples-spring-security-rest-grailscache',
+        'grails-test-examples-spring-security-rest-grailscache-minimal',
         'grails-test-examples-spring-security-rest-jwt',
         'grails-test-examples-spring-security-rest-jwt-bearer',
         'grails-test-examples-spring-security-rest-memcached',
+        'grails-test-examples-spring-security-rest-memcached-minimal',
         'grails-test-examples-spring-security-rest-redis',
+        'grails-test-examples-spring-security-rest-redis-minimal',
         'grails-test-examples-spring-security-ui-common',
         'grails-test-examples-spring-security-ui-extended',
         'grails-test-examples-spring-security-ui-simple',
@@ -527,11 +531,15 @@ project(':grails-test-examples-spring-security-ldap-retrieve-db-roles').projectD
 project(':grails-test-examples-spring-security-ldap-retrieve-group-roles').projectDir = new File(settingsDir, 'grails-test-examples/spring-security/ldap/retrieve-group-roles')
 project(':grails-test-examples-spring-security-rest-common').projectDir = new File(settingsDir, 'grails-test-examples/spring-security/rest/common')
 project(':grails-test-examples-spring-security-rest-gorm').projectDir = new File(settingsDir, 'grails-test-examples/spring-security/rest/gorm')
+project(':grails-test-examples-spring-security-rest-gorm-minimal').projectDir = new File(settingsDir, 'grails-test-examples/spring-security/rest/gorm-minimal')
 project(':grails-test-examples-spring-security-rest-grailscache').projectDir = new File(settingsDir, 'grails-test-examples/spring-security/rest/grailscache')
+project(':grails-test-examples-spring-security-rest-grailscache-minimal').projectDir = new File(settingsDir, 'grails-test-examples/spring-security/rest/grailscache-minimal')
 project(':grails-test-examples-spring-security-rest-jwt').projectDir = new File(settingsDir, 'grails-test-examples/spring-security/rest/jwt')
 project(':grails-test-examples-spring-security-rest-jwt-bearer').projectDir = new File(settingsDir, 'grails-test-examples/spring-security/rest/jwt-bearer')
 project(':grails-test-examples-spring-security-rest-memcached').projectDir = new File(settingsDir, 'grails-test-examples/spring-security/rest/memcached')
+project(':grails-test-examples-spring-security-rest-memcached-minimal').projectDir = new File(settingsDir, 'grails-test-examples/spring-security/rest/memcached-minimal')
 project(':grails-test-examples-spring-security-rest-redis').projectDir = new File(settingsDir, 'grails-test-examples/spring-security/rest/redis')
+project(':grails-test-examples-spring-security-rest-redis-minimal').projectDir = new File(settingsDir, 'grails-test-examples/spring-security/rest/redis-minimal')
 project(':grails-test-examples-spring-security-ui-common').projectDir = new File(settingsDir, 'grails-test-examples/spring-security/ui/common')
 project(':grails-test-examples-spring-security-ui-extended').projectDir = new File(settingsDir, 'grails-test-examples/spring-security/ui/extended')
 project(':grails-test-examples-spring-security-ui-simple').projectDir = new File(settingsDir, 'grails-test-examples/spring-security/ui/simple')
