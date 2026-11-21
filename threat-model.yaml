@@ -220,6 +220,11 @@ entry_points:
     parameter: plugin_index_and_plugin_metadata
     attacker_controllable: true
     notes: "CLI-only (list-plugins, plugin-info); read over https within size and time limits and shown as sanitised text, never executed."
+  - surface: ConsoleProject
+    parameter: project_directory_and_gradle_wrapper
+    attacker_controllable: false
+    trusted_role: developer
+    notes: "CLI-only (commands of a project); a project or Gradle wrapper outside the current directory is used only when the user owns it and others cannot write it, a linked wrapper must name its file directly, GRAILS_SAFE_DIRECTORY opts a directory in; code of the project runs only through its Gradle wrapper."
 
 # §7 - adversary model summary.
 adversaries:
