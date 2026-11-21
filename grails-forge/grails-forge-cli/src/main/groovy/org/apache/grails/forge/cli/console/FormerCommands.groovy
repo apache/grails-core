@@ -161,10 +161,6 @@ final class FormerCommands {
         add('generate-functional-test', 'rest-api profile', Status.NO_REPLACEMENT,
                 'generate-functional-test was a command of the REST API profile of the Grails shell. It has no replacement in {cli}; ' +
                 'create-functional-test writes an empty test in a REST API application')
-        add('list-plugins', 'base profile', Status.NO_REPLACEMENT,
-                'list-plugins listed the plugins of the Grails plugin portal in the Grails shell. It has no replacement in {cli}')
-        add('plugin-info', 'base profile', Status.NO_REPLACEMENT,
-                'plugin-info described a plugin of the Grails plugin portal in the Grails shell. It has no replacement in {cli}')
         add('open', 'shell', Status.NO_REPLACEMENT,
                 'open opened a file with the program the desktop has for it in the Grails shell. It has no replacement in {cli}')
         add('!', 'shell, interactive mode', Status.NO_REPLACEMENT,

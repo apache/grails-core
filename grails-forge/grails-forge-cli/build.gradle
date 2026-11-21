@@ -123,7 +123,13 @@ tasks.named('test', Test).configure { Test test ->
     // the specs name their catalogs themselves, whatever the environment of whoever runs them names; and a spec that
     // would ask another computer for anything fails with the address (NoNetworkExtension, in the test sources)
     test.environment('GRAILS_FORGE_CATALOG', 'none')
-    // -PpluginIndex=<file> has PluginIndexCatalogSpec read a whole copy of grails-plugins-index.json besides the part among the test resources:
+    // and so do the specs of list-plugins and plugin-info name their plugin index
+    test.environment('GRAILS_PLUGIN_INDEX', 'none')
+    // BundledPluginsSpec holds the list of the plugins of this release to the plugin classes in the sources of the framework:
+    // a project that is added to its build, which is where a new plugin comes from, runs the spec again
+    test.inputs.files(rootProject.layout.projectDirectory.file('../settings.gradle'), rootProject.layout.projectDirectory.file('../gradle/publish-root-config.gradle'))
+            .withPropertyName('frameworkProjects').withPathSensitivity(PathSensitivity.NONE)
+    // -PpluginIndex=<file> has PluginIndexCatalogSpec and PluginIndexSpec read a whole copy of grails-plugins-index.json besides the part among the test resources:
     // ./gradlew :grails-forge-cli:test --tests '*PluginIndexCatalogSpec' -PpluginIndex=/path/to/grails-plugins-index.json
     if (providers.gradleProperty('pluginIndex').present) {
         test.systemProperty('forge.pluginIndex', providers.gradleProperty('pluginIndex').get())

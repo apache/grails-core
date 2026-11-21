@@ -86,7 +86,6 @@ class FormerCommandsSpec extends CommandSpec {
         'stop'                     | 'stop was another name of stop-app in the Grails shell. Type: grails-forge-cli stop-app'
         'quit'                     | 'quit ended the interactive mode of the Grails shell. The interactive mode of grails-forge-cli is ended with exit, and there is none to end outside it'
         'list-profiles'            | 'list-profiles listed the profiles of the Grails shell. Profiles are replaced by application types and features: grails-forge-cli help lists the create commands, and each lists its features with --list-features'
-        'list-plugins'             | 'list-plugins listed the plugins of the Grails plugin portal in the Grails shell. It has no replacement in grails-forge-cli'
         'open'                     | 'open opened a file with the program the desktop has for it in the Grails shell. It has no replacement in grails-forge-cli'
         'create-profile'           | 'create-profile created a profile for the Grails shell. Profiles are replaced by application types, features and feature packs, and no command creates any of these'
         'generate-functional-test' | 'generate-functional-test was a command of the REST API profile of the Grails shell. It has no replacement in grails-forge-cli; create-functional-test writes an empty test in a REST API application'
@@ -285,19 +284,19 @@ class FormerCommandsSpec extends CommandSpec {
         where:
         typed                          | shown
         'Test'                         | 'another case'
-        'LIST-PLUGINS'                 | 'upper case'
+        'LIST-PROFILES'                | 'upper case'
         'test '                        | 'a space after it'
-        ' list-plugins'                | 'a space before it'
-        'list-plugins\n'               | 'a line break after it'
+        ' list-profiles'               | 'a space before it'
+        'list-profiles\n'              | 'a line break after it'
         'test\u001b[31m'               | 'an escape sequence after it'
-        '\u001b]0;x\u0007list-plugins' | 'an escape sequence before it'
-        'list-plugins\u0000'           | 'a NUL after it'
-        'list‐plugins'            | 'another hyphen'
-        'list-plugins@|red x|@'        | 'the markup of picocli'
-        'list-plugins%n%s'             | 'a format'
-        '${list-plugins}'              | 'a variable'
+        '\u001b]0;x\u0007list-profiles' | 'an escape sequence before it'
+        'list-profiles\u0000'          | 'a NUL after it'
+        'list‐profiles'           | 'another hyphen'
+        'list-profiles@|red x|@'       | 'the markup of picocli'
+        'list-profiles%n%s'            | 'a format'
+        '${list-profiles}'             | 'a variable'
         'tes'                          | 'part of a name'
-        ('list-plugins' * 400)         | 'a name many times'
+        ('list-profiles' * 400)        | 'a name many times'
     }
 
     @Unroll
@@ -332,7 +331,7 @@ class FormerCommandsSpec extends CommandSpec {
 
         when:
         err.reset()
-        exit = ForgeCli.execute(beanContext, 'help', 'feature', 'list-plugins')
+        exit = ForgeCli.execute(beanContext, 'help', 'feature', 'list-profiles')
 
         then:
         exit == 2
@@ -340,7 +339,7 @@ class FormerCommandsSpec extends CommandSpec {
 
         when: 'the help was asked for before it'
         err.reset()
-        exit = ForgeCli.execute(beanContext, '--help', 'list-plugins')
+        exit = ForgeCli.execute(beanContext, '--help', 'list-profiles')
 
         then:
         exit == 0
@@ -349,12 +348,12 @@ class FormerCommandsSpec extends CommandSpec {
 
         when: 'a name of the table as the argument of a command'
         out.reset()
-        exit = ForgeCli.execute(beanContext, 'create-app', 'list-plugins')
+        exit = ForgeCli.execute(beanContext, 'create-app', 'list-profiles')
 
         then:
         exit == 0
         err.toString().isEmpty()
-        new File(top, 'list-plugins/grails-app').isDirectory()
+        new File(top, 'list-profiles/grails-app').isDirectory()
     }
 
     void "install, which the plugin profiles had, is still answered by the command line itself"() {

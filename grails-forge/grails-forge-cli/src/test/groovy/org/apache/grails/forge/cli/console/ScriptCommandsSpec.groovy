@@ -534,25 +534,25 @@ class ScriptCommandsSpec extends CommandSpec implements CommandFixture {
     void "a script that has the name of a command of earlier versions is the script, and nothing is said about the earlier command"() {
         given:
         catalog([])
-        script('list-plugins.groovy')
+        script('list-profiles.groovy')
 
         when:
-        int exit = ForgeCli.execute(beanContext, 'help', 'list-plugins')
+        int exit = ForgeCli.execute(beanContext, 'help', 'list-profiles')
 
         then:
         exit == 0
         err.toString().isEmpty()
-        out.toString().readLines()[0] == 'Usage: grails-forge-cli list-plugins [ARGS...]'
+        out.toString().readLines()[0] == 'Usage: grails-forge-cli list-profiles [ARGS...]'
         out.toString().contains('A script of the application')
 
         when: 'another one of that table, which no script is'
         out.reset()
-        exit = ForgeCli.execute(beanContext, 'plugin-info')
+        exit = ForgeCli.execute(beanContext, 'profile-info')
 
         then: 'the line of the table follows the refusal'
         exit == 2
-        err.toString().readLines()[0].startsWith('There is no command plugin-info')
-        err.toString().readLines()[1].startsWith('plugin-info described a plugin')
+        err.toString().readLines()[0].startsWith('There is no command profile-info')
+        err.toString().readLines()[1].startsWith('profile-info described a profile')
         notEvaluated()
     }
 

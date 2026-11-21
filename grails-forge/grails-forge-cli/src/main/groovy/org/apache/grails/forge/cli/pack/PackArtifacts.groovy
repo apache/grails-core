@@ -358,6 +358,16 @@ class PackArtifacts {
     }
 
     /**
+     * @param address the address of a plugin index: {@code https}, or {@code file:} for a file
+     * @return the address
+     * @throws IllegalArgumentException when it is not one a plugin index is read from, by the rules of
+     * {@link #repository(String)}
+     */
+    static URI pluginIndex(String address) {
+        return checked(address, 'plugin index', 'a plugin index that is read', false)
+    }
+
+    /**
      * The repository a catalog names for a plugin. A catalog is read from elsewhere, and what it names
      * is asked as a repository is that a redirect leads to: over https, and not on this computer or
      * in its network, which only the command line and the environment can name.
@@ -608,14 +618,38 @@ class PackArtifacts {
      * @see #file(URI, int, String)
      */
     byte[] file(URI address, int limit, String name, Duration within) {
+        return file(address, limit, name, within, false)
+    }
+
+    /**
+     * Reads one file as {@link #file(URI, int, String, Duration)} does, for a caller that looks for it
+     * in more than one place: a file that is not there is no failure then.
+     *
+     * @return the bytes of the file, or {@code null} when the address has no such file, or when it is
+     * one of the network and nothing is asked of the network
+     * @throws PackArtifactException when the file was not read for another reason
+     */
+    byte[] fileIfThere(URI address, int limit, String name, Duration within) {
+        return file(address, limit, name, within, true)
+    }
+
+    private byte[] file(URI address, int limit, String name, Duration within, boolean orNone) {
         ByteArrayOutputStream sink = new ByteArrayOutputStream()
         String why
         try {
             copy(address, address, limit, name, sink, [], within == null ? new Watch(answerTimeout, fileTimeout) : new Watch(within, within))
             return sink.toByteArray()
         } catch (Missing ignored) {
+            if (orNone) {
+                return null
+            }
             why = 'not found'
-        } catch (Offline | Refused e) {
+        } catch (Offline e) {
+            if (orNone) {
+                return null
+            }
+            why = e.message
+        } catch (Refused e) {
             why = e.message
         } catch (IOException e) {
             why = reason(e)
