@@ -58,7 +58,7 @@ grails generate-all MyClass --force
 ==== Template Generation
 
 
-Plugins and applications that need to define template generation tasks can do so using scripts. A example of this is the Scaffolding plugin which defines the `generate-all` and `generate-controllers` commands.
+Plugins and applications that need to define template generation tasks can do so using scripts. An example of this is the Quartz plugin, which defines the `create-job` command.
 
 Every Grails script has the methods of the link:{api}org/apache/grails/core/cli/template/TemplateRenderer.html[TemplateRenderer] interface which makes it trivial to render templates to the users project workspace.
 

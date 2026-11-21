@@ -709,6 +709,7 @@ With the Redis and the Grails cache token storage of the Spring Security REST pl
 In Grails 9 `generate-controller` and `generate-all` write `<Name>ServiceSpec.groovy`, an `@Integration` spec, to `src/integration-test/groovy`. The application command of earlier versions (`./gradlew runCommand -Pargs="generate-controller ..."`) wrote it to `src/test/groovy`. `create-scaffold-controller`, `create-scaffold-service` and `generate-scaffold-all` also take the full name of a domain class the project has no source of.
 
 - Search `src/test/groovy` for generated `*ServiceSpec.groovy` files annotated with `@Integration` and move each to the same package under `src/integration-test/groovy`.
+- The scaffolding plugin has no scripts in Grails 9. Replace `./gradlew runScriptCommand --arg=generate-all ...` (and the other scaffolding names) with `grails generate-all ...` or `./gradlew runCommand -Pargs="generate-all ..."`, and remove calls of `generateController(...)` or `generateViews(...)` from scripts of the project.
 
 # After the Upgrade
 

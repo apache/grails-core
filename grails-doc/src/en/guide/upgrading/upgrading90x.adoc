@@ -1604,7 +1604,7 @@ A build that has a task of its own named `runScriptCommand` gives it another nam
 
 `dbm-changelog-to-groovy` now writes to the file it is given (it wrote to the standard output, because of how Groovy 5 reads a file that does not exist yet) and converts YAML and JSON changelogs, which failed.
 
-The script commands of the other plugins (`s2-quickstart` and the other Spring Security scripts, `create-job` of Quartz, `create-functional-test` of Geb, the scaffolding scripts, `query-tail`) run where the build of a project runs scripts: `./gradlew runScriptCommand --arg=s2-quickstart --arg=com.example --arg=User --arg=Role`. The Grails Forge CLI does not list the scripts of plugins. `query-tail` run this way writes its summary as plain text again and again and does not redraw it in place; `--once` and `--stream` read best.
+The script commands of the other plugins (`s2-quickstart` and the other Spring Security scripts, `create-job` of Quartz, `create-functional-test` of Geb, `query-tail`) run where the build of a project runs scripts: `./gradlew runScriptCommand --arg=s2-quickstart --arg=com.example --arg=User --arg=Role`. The Grails Forge CLI does not list the scripts of plugins. `query-tail` run this way writes its summary as plain text again and again and does not redraw it in place; `--once` and `--stream` read best.
 
 ===== Required Actions
 
@@ -1786,6 +1786,9 @@ The commands of the scaffolding plugin that the Grails 9 command line runs are i
 * *`create-scaffold-controller`, `create-scaffold-service` and `generate-scaffold-all` take a class the project has no source of*, by its full name: a domain class of a plugin or of another project of the build. The application commands refused it. A domain class of the project is still found by its simple name and gives its package.
 * *`install-templates` of the plugin writes to `src/main/templates/scaffolding` of the project*, whatever the directory the command was started in.
 
+The scripts are removed from the plugin: its jar has no `META-INF/commands`, and `./gradlew runScriptCommand --arg=generate-all ...` finds no script. The commands are run as `grails generate-all org.bookstore.Book` or `./gradlew runCommand -Pargs="generate-all org.bookstore.Book"`.
+
 ===== Required Actions
 
+* *A build or a CI job that ran a scaffolding script with `runScriptCommand`* runs the command of the same name with `grails` or `runCommand`. A script of your own that called `generateController(...)` or `generateViews(...)` as a method cannot do so: run the commands one after the other.
 * *A project that generated a service spec with `./gradlew runCommand -Pargs="generate-controller ..."`* moves `src/test/groovy/<package>/<Name>ServiceSpec.groovy` to `src/integration-test/groovy/<package>/`, or generates it again there and deletes the first one. Nothing changes for a spec that is already in the integration tests.

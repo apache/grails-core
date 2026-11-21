@@ -414,28 +414,11 @@ class ScriptCommandRunnerSpec extends Specification {
 
         then:
         first.startsWith(outcome)
-        if (name == 'generate-all') {
-            // the templates of the plugin, rendered for the domain class
-            assert new File(project, 'grails-app/controllers/com/example/BookController.groovy').text.contains('class BookController')
-            assert new File(project, 'grails-app/controllers/com/example/BookController.groovy').text.startsWith('package com.example')
-            assert new File(project, 'grails-app/services/com/example/BookService.groovy').text.contains('BookService')
-            assert new File(project, 'src/test/groovy/com/example/BookControllerSpec.groovy').text.contains('class BookControllerSpec')
-            assert new File(project, 'grails-app/views/book/index.gsp').text.contains('book')
-            assert !new File(project, 'grails-app/views/book/index.gsp').text.contains('${propertyName}')
-        }
         exit == (outcome.isEmpty() ? 0 : 1)
         written.every { String path -> new File(project, path).isFile() }
 
         where:
         module                               | name                              | arguments          | outcome | written
-        'grails-scaffolding' | 'install-templates' | [] | '' | ['src/main/templates/scaffolding/index.gsp', 'src/main/templates/scaffolding/Controller.groovy', 'src/main/templates/scaffolding/Spec.groovy']
-        'grails-scaffolding' | 'create-scaffold-controller' | ['Book'] | '' | ['grails-app/controllers/com/example/BookController.groovy']
-        'grails-scaffolding' | 'create-scaffold-service' | ['Book'] | '' | ['grails-app/services/com/example/BookService.groovy']
-        'grails-scaffolding' | 'generate-scaffold-all' | ['Book'] | '' | ['grails-app/controllers/com/example/BookController.groovy', 'grails-app/services/com/example/BookService.groovy']
-        'grails-scaffolding' | 'generate-all' | ['com.example.Book'] | '' | ['grails-app/controllers/com/example/BookController.groovy', 'grails-app/services/com/example/BookService.groovy', 'grails-app/views/book/create.gsp', 'grails-app/views/book/edit.gsp', 'grails-app/views/book/index.gsp', 'grails-app/views/book/show.gsp', 'src/test/groovy/com/example/BookControllerSpec.groovy', 'src/integration-test/groovy/com/example/BookServiceSpec.groovy']
-        'grails-scaffolding' | 'generate-controller' | ['com.example.Book'] | '' | ['grails-app/controllers/com/example/BookController.groovy', 'grails-app/services/com/example/BookService.groovy', 'src/test/groovy/com/example/BookControllerSpec.groovy', 'src/integration-test/groovy/com/example/BookServiceSpec.groovy']
-        'grails-scaffolding' | 'generate-async-controller' | ['com.example.Book'] | '' | ['grails-app/controllers/com/example/BookController.groovy', 'src/test/groovy/com/example/BookControllerSpec.groovy']
-        'grails-scaffolding' | 'generate-views' | ['com.example.Book'] | '' | ['grails-app/views/book/create.gsp', 'grails-app/views/book/edit.gsp', 'grails-app/views/book/index.gsp', 'grails-app/views/book/show.gsp']
         'grails-quartz' | 'create-job' | ['Nightly'] | '' | ['grails-app/jobs/com/example/NightlyJob.groovy']
         'grails-geb' | 'create-functional-test' | ['Home'] | '' | ['src/integration-test/groovy/com/example/HomeSpec.groovy']
         'grails-spring-security/plugin' | 's2-create-persistent-token' | ['com.example.PersistentLogin'] | '' | ['grails-app/domain/com/example/PersistentLogin.groovy', 'grails-app/conf/application.groovy']
