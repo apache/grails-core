@@ -54,9 +54,10 @@ import org.grails.orm.hibernate.connections.HibernateConnectionSourceSettings;
  * subclass, which opens and closes sessions for each one alongside the
  * default session. As the parent class does for the default session, a request
  * that finds a session already bound, such as an include within a request that
- * opened one, uses that session and leaves it to the one that opened it, and a
- * request that goes asynchronous closes the sessions it opened, so that they do
- * not stay bound to the thread for the next request that thread serves.
+ * opened one, uses that session and leaves it to the one that opened it. A
+ * request that goes asynchronous takes the sessions it opened off the thread, so
+ * that they do not stay bound to it for the next request that thread serves, and
+ * they are closed when the asynchronous request completes.
  *
  * @author Graeme Rocher
  * @since 0.5
@@ -191,7 +192,8 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
     /**
      * Called instead of {@link #postHandle} and {@link #afterCompletion} on the thread that started asynchronous
      * handling. The sessions this interceptor opened for the other datasources are unbound here, so that the thread
-     * goes back to its pool without them, and closed when the asynchronous request completes. Each is flushed first
+     * goes back to its pool without them, and closed when the asynchronous request completes, whether a promise,
+     * {@code startAsync()}, a {@code Callable} or a {@code DeferredResult} started it. Each is flushed first
      * when {@link #postHandle} would flush it and Hibernate allows the flush: inside a transaction, or with
      * {@code hibernate.allow_update_outside_transaction}.
      *
