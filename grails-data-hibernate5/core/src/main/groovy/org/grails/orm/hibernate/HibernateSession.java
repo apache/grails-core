@@ -320,12 +320,12 @@ public class HibernateSession extends AbstractHibernateSession {
             if (associatedEntity == null && !(association instanceof Basic)) {
                 return null;
             }
-            String joinAlias = "join" + index + '_' + i;
+            String joinAlias = rootAlias + "_join" + index + '_' + i;
             if (i > 0) {
                 from.append(" INNER JOIN ").append(alias).append('.').append(tokens[i]).append(' ').append(joinAlias);
             }
             else if (association instanceof Basic) {
-                String ownerAlias = "join" + index + "_owner";
+                String ownerAlias = rootAlias + "_join" + index + "_owner";
                 from.append(entity.getName()).append(' ').append(ownerAlias)
                         .append(" INNER JOIN ").append(ownerAlias).append('.').append(tokens[i]).append(' ').append(joinAlias);
                 correlation = ownerAlias + " = " + rootAlias;
