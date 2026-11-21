@@ -317,6 +317,7 @@ public abstract class DynamicFinder extends AbstractFinder implements QueryBuild
                     operatorInUse = operators[i];
 
                     queryParameters = querySequence.split(operatorInUse);
+                    rejectTrailingOperator(querySequence, operatorInUse, methodName);
 
                     // loop through query parameters and create expressions
                     // calculating the number of arguments required for the expression
@@ -760,6 +761,17 @@ public abstract class DynamicFinder extends AbstractFinder implements QueryBuild
         if (!tail.isEmpty()) {
             throw new IllegalArgumentException("Unexpected text [" + tail + "] after the [" + clause + "] operator in the dynamic finder expression [" +
                     expression + "]. A dynamic finder cannot sort by name: pass the sort and order arguments, for example [sort: 'name', order: 'desc'], or use listOrderBy*.");
+        }
+    }
+
+    /**
+     * An operator that joins two expressions needs one after it: {@code split} drops the empty text that follows a last
+     * {@code And} or {@code Or}, so the finder would run as if the operator were not there.
+     */
+    private static void rejectTrailingOperator(String querySequence, String operator, String methodName) {
+        if (querySequence.endsWith(operator)) {
+            throw new IllegalArgumentException("The dynamic finder [" + methodName + "] ends with the [" + operator +
+                    "] operator, and no expression follows it. Remove the operator or name the property after it.");
         }
     }
 

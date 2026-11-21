@@ -48,6 +48,26 @@ class DynamicFinderTextAfterOperatorSpec extends GrailsDataTckSpec {
         'countByNameLikeFoo'                  | ['a%']
     }
 
+    @Unroll
+    void "a dynamic finder that ends with a joining operator is refused: #finder"() {
+        given:
+        new TestEntity(name: 'Ada', age: 30).save(flush: true, failOnError: true)
+
+        when:
+        TestEntity."$finder"(*arguments)
+
+        then: 'it does not run as if the operator were not there'
+        IllegalArgumentException e = thrown()
+        e.message.contains('operator')
+
+        where:
+        finder                          | arguments
+        'findAllByNameAndAgeInListAnd'  | ['Ada', [30]]
+        'findAllByNameAndAgeAnd'        | ['Ada', 30]
+        'findAllByNameOrAgeOr'          | ['Ada', 30]
+        'countByNameAndAgeInListAnd'    | ['Ada', [30]]
+    }
+
     void "the sort and order parameters sort a dynamic finder"() {
         given:
         new TestEntity(name: 'cat').save(failOnError: true)
