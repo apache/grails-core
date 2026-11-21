@@ -24,25 +24,22 @@ Grails applications can be run with the built in Tomcat server using the link:{c
 grails run-app
 ----
 
-You can specify a different port by using the `-port` argument:
+You can specify a different port by using the `--port` option:
 
 [source,bash]
 ----
-grails run-app -port=8090
+grails run-app --port=8090
 ----
 
-Note that it is better to start up the application in interactive mode since a container restart is much quicker:
+In link:commandLine.html#interactiveMode[interactive mode] `run-app` returns to the prompt once the application answers on its port, so that other commands can be given while it runs, and `stop-app` stops it:
 
 [source,bash]
 ----
 $ grails
 grails> run-app
-| Grails application running at http://localhost:8080 in environment: development
+grails> create-controller Book
 grails> stop-app
-| Stopping application...
-| Application stopped.
 grails> run-app
-| Grails application running at http://localhost:8080 in environment: development
 ----
 
 You can debug a grails app by simply right-clicking on the `Application.groovy` class in your IDE and choosing the appropriate action (since Grails 3).

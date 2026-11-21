@@ -76,8 +76,8 @@ import io.micronaut.http.client.annotation.Client
 @Client("https://start.grails.org")
 interface GrailsAppForgeClient {
 
-    @Get("/{version}/profiles")
-    List<Map> profiles(String version)
+    @Get("/application-types")
+    Map applicationTypes()
 }
 
 ----
@@ -90,8 +90,8 @@ To use a client like the one in the above example, simply inject an instance of 
 ----
   @Autowired GrailsAppForgeClient appForgeClient
 
-    List<Map> profiles(String grailsVersion) {
-        respond appForgeClient.profiles(grailsVersion)
+    def applicationTypes() {
+        respond appForgeClient.applicationTypes()
     }
 ----
 

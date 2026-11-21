@@ -17,120 +17,69 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-
 == generate-controller
-
-
 
 === Purpose
 
-
-Generates a controller and associated unit test for the given domain class
-
+Generates a controller, the service it uses and a test of each for a domain class
 
 === Examples
 
-
-[source,groovy]
+[source,console]
 ----
-grails generate-controller
 grails generate-controller org.bookstore.Book
+grails generate-controller Book Author
 grails generate-controller "*"
 ----
 
-
 === Description
 
+Grails supports a feature known as static scaffolding, which generates a CRUD (Create/Read/Update/Delete) interface for a domain class as source files. Once generated, the files are yours to change, and they are not updated when the domain class changes.
 
-Grails supports a feature known as static scaffolding which involves the generation of a CRUD (Create/Read/Update/Delete) interface for a given domain class. Once generated, the controller and its views can be modified by you but they won't automatically update when you change the domain class.
+The `generate-controller` command generates the controller that implements CRUD for the domain class, the service the controller uses, and a test of each. For the domain class `org.bookstore.Book` it writes:
 
-The `generate-controller` command generates just the controller (and associated unit test) that implements CRUD for the given domain class. The argument is optional, but if you don't include it the command will ask you for the name of the domain class to scaffold. So for a domain class `org.bookstore.Book`, this command will generate the controller `BookController.groovy` in `grails-app/controllers/org/bookstore`.
-
-With the controller the command generates the service the controller uses and a test of each:
-
+* `grails-app/controllers/org/bookstore/BookController.groovy`
 * `grails-app/services/org/bookstore/BookService.groovy`
 * `src/test/groovy/org/bookstore/BookControllerSpec.groovy`, a unit test
 * `src/integration-test/groovy/org/bookstore/BookServiceSpec.groovy`, an integration test
 
-A domain class that is not found is named, the other classes are generated, and the command fails.
+It writes no views: link:{commandLineRefFromRef}generate-views.html[generate-views] does, and link:{commandLineRefFromRef}generate-all.html[generate-all] does both.
 
 Usage:
-[source,groovy]
-----
-grails generate-controller <<domain class name>>
-----
 
+[source,console]
+----
+grails generate-controller <domain class>... [--force]
+----
 
 Arguments:
 
-* `domain class name` - Either a domain class name (case-sensitive) or a wildcard (\*). If you specify the wildcard controllers will be generated for _all_ domain classes.
+* `domain class` - The name of a domain class of the project, which is case-sensitive, with or without its package: `Book` or `org.bookstore.Book`. Several names can be given. `*` stands for every domain class under `grails-app/domain`; quote it so that the shell of the operating system does not expand it.
 
 Flags:
 
-* `force` - Whether to overwrite existing files
+* `force` - Replace files that are there already (`--force`)
 
+=== Running the Command
 
+The command is a command of the scaffolding plugin (`org.apache.grails:grails-scaffolding`), which the application has to depend on, and it runs in the application, started by the Gradle task `runCommand` of the project. There are three ways to run it:
 
-== Gradle runCommand `generate-controller` Command
-
-=== Purpose
-
-The purpose of the `generate-controller` command in Grails is to create a controller and its associated unit test for a specified domain class.
-
-=== Examples
-
-Here are some usage examples of the `generate-controller` command:
-
-1. Generate a controller and unit test for a specific domain class, such as `org.bookstore.Book`:
-+
-[source,shell]
+[source,console]
 ----
-./gradlew runCommand -Pargs="generate-controller org.bookstore.Book"
+$ grails generate-controller org.bookstore.Book                              <1>
+$ grails run-command generate-controller org.bookstore.Book                  <2>
+$ ./gradlew runCommand -Pargs="generate-controller org.bookstore.Book"       <3>
 ----
+<1> By its name, once the build has listed the commands of the application and its plugins: `grails gradle grailsCommandCatalog` does that, and `grails help` then lists the command. See "Commands of the Application and its Plugins" in link:{guidePath}commandLine.html[The Command Line].
+<2> With `run-command`, which needs no list.
+<3> With Gradle alone. `--arg=generate-controller --arg=org.bookstore.Book` in place of `-Pargs` gives each argument as it is.
 
-2. Generate controllers and unit tests for all domain classes using a wildcard (`*`):
-+
-[source,shell]
-----
-./gradlew runCommand -Pargs="generate-controller *"
-----
+=== Failures
 
-3. Generate a controller and unit test interactively, allowing the user to specify the domain class name:
-+
-[source,shell]
-----
-./gradlew runCommand -Pargs="generate-controller"
-----
+A file that is there already is kept: the command warns that it skips the file and goes on. With `--force` the file is replaced.
 
-=== Description
+Without a domain class the command says `No domain-class specified` and fails. A domain class that is not found is named (`Domain class not found for name: ...`); the files of the other classes are generated, and the command fails.
 
-Grails offers a feature known as static scaffolding, which simplifies the creation of a CRUD (Create/Read/Update/Delete) interface for a given domain class. This interface typically includes a controller responsible for handling HTTP requests and implementing CRUD operations. However, it's important to note that once these artifacts are generated, they do not automatically update when changes are made to the underlying domain class.
+When the command fails, the Gradle task fails, and `grails` ends with exit code 1.
 
-The `generate-controller` command addresses this by generating only the controller (and its associated unit test) required to implement CRUD functionality for the specified domain class. You have the option to provide the domain class name as an argument. If you omit the argument, the command will interactively prompt you to enter the name of the domain class you want to scaffold.
-
-For instance, if your domain class is `org.bookstore.Book`, executing the `generate-controller` command will create the following files:
-
-- Controller: `BookController.groovy`
-- Associated unit test: `BookControllerSpec.groovy`
-
-These files will be placed in the appropriate directory within your Grails project.
-
-Usage:
-[source,shell]
-----
-./gradlew runCommand -Pargs="generate-controller <<domain class name>>"
-----
-
-=== Arguments
-
-The `generate-controller` command accepts the following argument:
-
-* `domain class name` - Specifies the name of the domain class for which you want to generate the controller and unit test. This argument is case-sensitive. Additionally, you can use a wildcard (`*`) as the argument to generate controllers and unit tests for all domain classes within your Grails application.
-
-=== Flags
-
-The command supports the following flag:
-
-* `force` - Determines whether the command should overwrite existing files. When this flag is enabled, existing controller and unit test files will be replaced with the newly generated ones if necessary.
-
-By utilizing the `generate-controller` command effectively, Grails developers can efficiently create controllers and unit tests tailored to specific domain classes or generate them for all classes within their application. This allows for better management of CRUD operations and the customization of controller behavior as needed.
+Before Grails 9 the Grails shell ran a script of the same name. The plugin has no scripts any more, and the command asks no questions: the name of the domain class has to be given.

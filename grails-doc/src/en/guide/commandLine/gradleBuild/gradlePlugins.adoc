@@ -19,8 +19,6 @@ under the License.
 
 Use `grails create-app myapp` to generate a project; application generation options such as `--jdk` and `--data` are options of that command.
 
-The example below assumes you are using the Forge CLI, which is solely intended for **application generation**. It does not support running, building, or managing a Grails application.
-
 When you create a new project with the link:{commandLineRef}create-app.html[create-app] command (`grails create-app`), a default `build.gradle` is generated for you.
 
 [source,groovy]

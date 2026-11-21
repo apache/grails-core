@@ -17,128 +17,71 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-
 == generate-all
-
-
 
 === Purpose
 
-
-Generates a controller, views, and a controller unit test for the given domain class
-
+Generates a controller, the service it uses, their tests and the GSP views for a domain class
 
 === Examples
 
-
-[source,groovy]
+[source,console]
 ----
-grails generate-all
 grails generate-all org.bookstore.Book
+grails generate-all Book Author
 grails generate-all "*"
+grails generate-all org.bookstore.Book --force
 ----
-
 
 === Description
 
+Grails supports a feature known as static scaffolding, which generates a CRUD (Create/Read/Update/Delete) interface for a domain class as source files. Once generated, the files are yours to change, and they are not updated when the domain class changes.
 
-Grails supports a feature known as static scaffolding which involves the generation of a CRUD (Create/Read/Update/Delete) interface for a given domain class. Once generated, the controller and its views can be modified by you but they won't automatically update when you change the domain class.
+The `generate-all` command does what link:{commandLineRefFromRef}generate-controller.html[generate-controller] and link:{commandLineRefFromRef}generate-views.html[generate-views] do, one after the other. For the domain class `org.bookstore.Book` it writes:
 
-The generate-all command generates an implementation of CRUD including a controller and views for the given domain class. The argument is optional, but if you don't include it the command will ask you for the name of the domain class to scaffold. So for a domain class `org.bookstore.Book`, this command will generate the controller `grails-app/controllers/org/bookstore/BookController.groovy` and its associated views in `grails-app/views/book`.
+* `grails-app/controllers/org/bookstore/BookController.groovy`
+* `grails-app/services/org/bookstore/BookService.groovy`
+* `src/test/groovy/org/bookstore/BookControllerSpec.groovy`, a unit test
+* `src/integration-test/groovy/org/bookstore/BookServiceSpec.groovy`, an integration test
+* `grails-app/views/book/index.gsp`, `show.gsp`, `create.gsp` and `edit.gsp`
+
+The files are written from the templates of the scaffolding plugin, or from those of the project under `src/main/templates/scaffolding` where it has them (see link:{commandLineRefFromRef}install-templates.html[install-templates]).
 
 Usage:
-[source,groovy]
+
+[source,console]
 ----
-grails generate-all <<name>>
+grails generate-all <domain class>... [--force]
 ----
 
 Arguments:
 
-* `name` - Either a domain class name (case-sensitive) or a wildcard (\*). If you specify the wildcard then controllers and views will be generated for _all_ domain classes.
+* `domain class` - The name of a domain class of the project, which is case-sensitive, with or without its package: `Book` or `org.bookstore.Book`. Several names can be given. `*` stands for every domain class under `grails-app/domain`; quote it so that the shell of the operating system does not expand it.
 
 Flags:
 
-* `force` - Whether to overwrite existing files
+* `force` - Replace files that are there already (`--force`)
 
+=== Running the Command
 
+The command is a command of the scaffolding plugin (`org.apache.grails:grails-scaffolding`), which the application has to depend on, and it runs in the application, started by the Gradle task `runCommand` of the project. There are three ways to run it:
 
-== Gradle runCommand `generate-all` Command
-
-=== Purpose
-
-The purpose of the `generate-all` command in Grails is to automate the creation of a controller, associated views, and a controller unit test for a specified domain class. This command simplifies the process of generating a CRUD (Create/Read/Update/Delete) interface for the domain class, saving developers time and effort.
-
-Here are some usage examples of the generate-all command:
-
-1. Generate CRUD artifacts for a specific domain class, such as org.bookstore.Book:
-+
-[source,shell]
+[source,console]
 ----
-./gradlew runCommand -Pargs="generate-all org.bookstore.Book"
+$ grails generate-all org.bookstore.Book                              <1>
+$ grails run-command generate-all org.bookstore.Book                  <2>
+$ ./gradlew runCommand -Pargs="generate-all org.bookstore.Book"       <3>
 ----
+<1> By its name, once the build has listed the commands of the application and its plugins: `grails gradle grailsCommandCatalog` does that, and `grails help` then lists the command. See "Commands of the Application and its Plugins" in link:{guidePath}commandLine.html[The Command Line].
+<2> With `run-command`, which needs no list.
+<3> With Gradle alone. `--arg=generate-all --arg=org.bookstore.Book` in place of `-Pargs` gives each argument as it is.
 
-2. Generate CRUD artifacts for all domain classes using a wildcard (*):
-+
-[source,shell]
-----
-./gradlew runCommand -Pargs="generate-all *"
-----
+=== Failures
 
-3. Generate CRUD artifacts with no specific domain class (interactive mode):
-+
-[source,shell]
-----
-./gradlew runCommand -Pargs="generate-all"
-----
+A file that is there already is kept: the command warns that it skips the file and goes on. With `--force` the file is replaced.
 
-=== Description
+Without a domain class the command says `No domain-class specified` and fails. A domain class that is not found is named (`Domain class not found for name: ...`); the controllers and the views of the other classes are generated, and the command fails.
 
-Grails framework offers a powerful feature known as static scaffolding, which streamlines the generation of a complete CRUD interface for a specified domain class. This interface includes a controller responsible for handling CRUD operations and views for creating, reading, updating, and deleting records. However, it's important to note that once these artifacts are generated, they do not automatically update when changes are made to the underlying domain class.
+When the command fails, the Gradle task fails, and `grails` ends with exit code 1.
 
-The `generate-all` command provides a solution to this by generating a comprehensive implementation of CRUD tailored to the given domain class. This implementation includes:
-
-- A controller: This controller handles HTTP requests and manages interactions with the domain class.
-- Associated views: These views are responsible for rendering the user interface for CRUD operations.
-
-You have the flexibility to provide the domain class name as an argument when executing the command. Alternatively, if you omit the argument, the command will interactively prompt you to enter the name of the domain class you wish to scaffold.
-
-For example, if your domain class is `org.bookstore.Book`, executing the `generate-all` command will create the following files:
-
-- Controller: `grails-app/controllers/org/bookstore/BookController.groovy`
-- Associated views: `grails-app/views/book`
-
-Usage:
-[source,shell]
-----
-./gradlew runCommand -Pargs="generate-all <<name>>"
-----
-
-=== Arguments
-
-The `generate-all` command accepts the following argument:
-
-* `name` - This argument specifies the name of the domain class for which you want to generate the CRUD interface. It is case-sensitive. Additionally, you can use a wildcard (`*`) as the argument to generate controllers and views for all domain classes within your Grails application.
-
-=== Flags
-
-The command supports the following flag:
-
-* `force` - This flag controls whether the command should overwrite existing files. If enabled, existing files will be replaced with the newly generated ones.
-
-=== Additional Examples
-
-1. Generate CRUD artifacts for the `Author` domain class:
-+
-[source,shell]
-----
-./gradlew runCommand -Pargs="generate-all org.bookstore.Author"
-----
-
-2. Generate CRUD artifacts for all domain classes while overwriting existing files:
-+
-[source,shell]
-----
-./gradlew runCommand -Pargs="generate-all * --force"
-----
-
-By using the `generate-all` command effectively, developers can quickly create the foundation for managing data through a web interface in Grails applications.
+Before Grails 9 the Grails shell ran a script of the same name. The plugin has no scripts any more, and the command asks no questions: the name of the domain class has to be given.

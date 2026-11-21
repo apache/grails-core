@@ -1,0 +1,82 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+== generate-async-controller
+
+=== Purpose
+
+Generates an asynchronous controller and its unit test for a domain class
+
+=== Examples
+
+[source,console]
+----
+grails generate-async-controller org.bookstore.Book
+grails generate-async-controller "*"
+----
+
+=== Description
+
+Grails supports a feature known as static scaffolding, which generates a CRUD (Create/Read/Update/Delete) interface for a domain class as source files. Once generated, the files are yours to change, and they are not updated when the domain class changes.
+
+The `generate-async-controller` command generates a controller that implements CRUD for the domain class with asynchronous actions. For the domain class `org.bookstore.Book` it writes:
+
+* `grails-app/controllers/org/bookstore/BookController.groovy`
+* `src/test/groovy/org/bookstore/BookControllerSpec.groovy`, a unit test
+
+It writes the same controller file as link:{commandLineRefFromRef}generate-controller.html[generate-controller], and no service.
+
+Usage:
+
+[source,console]
+----
+grails generate-async-controller <domain class>... [--force]
+----
+
+Arguments:
+
+* `domain class` - The name of a domain class of the project, which is case-sensitive, with or without its package: `Book` or `org.bookstore.Book`. Several names can be given. `*` stands for every domain class under `grails-app/domain`; quote it so that the shell of the operating system does not expand it.
+
+Flags:
+
+* `force` - Replace files that are there already (`--force`)
+
+=== Running the Command
+
+The command is a command of the scaffolding plugin (`org.apache.grails:grails-scaffolding`), which the application has to depend on, and it runs in the application, started by the Gradle task `runCommand` of the project. There are three ways to run it:
+
+[source,console]
+----
+$ grails generate-async-controller org.bookstore.Book                              <1>
+$ grails run-command generate-async-controller org.bookstore.Book                  <2>
+$ ./gradlew runCommand -Pargs="generate-async-controller org.bookstore.Book"       <3>
+----
+<1> By its name, once the build has listed the commands of the application and its plugins: `grails gradle grailsCommandCatalog` does that, and `grails help` then lists the command. See "Commands of the Application and its Plugins" in link:{guidePath}commandLine.html[The Command Line].
+<2> With `run-command`, which needs no list.
+<3> With Gradle alone. `--arg=generate-async-controller --arg=org.bookstore.Book` in place of `-Pargs` gives each argument as it is.
+
+=== Failures
+
+A file that is there already is kept: the command warns that it skips the file and goes on. With `--force` the file is replaced.
+
+Without a domain class the command says `No domain-class specified` and fails. A domain class that is not found is named (`Domain class not found for name: ...`); the files of the other classes are generated, and the command fails.
+
+When the command fails, the Gradle task fails, and `grails` ends with exit code 1.
+
+Before Grails 9 the Grails shell ran a script of the same name. The plugin has no scripts any more, and the command asks no questions: the name of the domain class has to be given.

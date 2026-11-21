@@ -22,25 +22,27 @@ It is recommended to use Gradle {GradleVersion} or above with Grails.
 
 The build is defined by the `build.gradle` file which specifies the version of your project, the dependencies of the project and the repositories where to find those dependencies (amongst other things).
 
-When you invoke the `grails` command the version of Gradle that ships with Grails (currently {GradleVersion}) is invoked by the `grails` process via the https://docs.gradle.org/current/userguide/tooling_api.html[Gradle Tooling API]:
+The commands of `grails` that build, test or run a project run the Gradle wrapper of that project (`gradlew`, or `gradlew.bat` on Windows), so the build is the same whether it is started with `grails` or with the wrapper:
 
 [source,bash]
 ----
-# Equivalent to 'gradle classes'
+# The same as './gradlew classes'
 $ grails compile
 ----
 
-You can invoke Gradle directly using the `gradle` command and use your own local version of Gradle, however you will need Gradle 2.2 or above to work with Grails 3.0 (and higher):
+The `grails` command has no Gradle of its own and does not use a Gradle that is installed on the computer: a project without a Gradle wrapper is not built by it. Before Grails 9 the Grails shell ran the build through the Gradle Tooling API, with a version of Gradle the shell chose.
+
+You can always run the wrapper yourself:
 
 [source,bash]
 ----
-$ gradle assemble
+$ ./gradlew assemble
 ----
 
 
-=== Running Gradle with the Grails Forge CLI
+=== Running Gradle with the `grails` Command
 
-The Grails Forge CLI has a `gradle` command, which runs Gradle in the project the current directory is in, with the Gradle wrapper of that project (`gradlew`, or `gradlew.bat` on Windows):
+The `grails` command has a `gradle` command, which runs Gradle in the project the current directory is in, with the Gradle wrapper of that project (`gradlew`, or `gradlew.bat` on Windows):
 
 [source,console]
 ----
@@ -49,7 +51,7 @@ $ grails gradle test --tests "example.BookSpec" -x integrationTest
 $ grails gradle bootRun "-Pmessage=two words"
 ----
 
-Everything after `gradle` is given to Gradle as it is, each argument as the one argument it was on the command line: an argument that has spaces or quotes is not split or put together again, and an option such as `-x`, `-v`, `--stacktrace` or `--help` is an option of Gradle, not of `grails`. The command has no options of its own for that reason, and it needs at least one argument: without any it says how it is used and ends with exit code 2. One thing is read before Gradle gets it, as on every command line of the Grails Forge CLI: an argument that starts with `@` and names a file is replaced by the arguments in that file. Write `@@` for an `@` that is meant for Gradle.
+Everything after `gradle` is given to Gradle as it is, each argument as the one argument it was on the command line: an argument that has spaces or quotes is not split or put together again, and an option such as `-x`, `-v`, `--stacktrace` or `--help` is an option of Gradle, not of `grails`. The command has no options of its own for that reason, and it needs at least one argument: without any it says how it is used and ends with exit code 2. One thing is read before Gradle gets it, as on every command line of `grails`: an argument that starts with `@` and names a file is replaced by the arguments in that file. Write `@@` for an `@` that is meant for Gradle.
 
 The project is the nearest directory, from the current one upwards, that has a `grails-app` directory, a `.grails/project.yml` or a `grails-forge-cli.yml`, and Gradle runs in that directory, also when the command is given in a directory below it. In a build of several projects the wrapper is the nearest one above the project, and because Gradle runs in the directory of the project, a task that is named without a path is the task of that project and not of the ones beside it. The search does not go above the root of the Git repository the directory is in, or more than 32 directories up. Outside a project, and in a project that has no Gradle wrapper, the command runs nothing, says so and ends with exit code 1: it does not fall back to another Gradle installation.
 
@@ -77,9 +79,9 @@ What Gradle writes goes to the terminal directly, so Gradle shows its colors and
 On Windows the wrapper is a batch file, and a batch file does not receive an argument as it is when the argument is empty, contains one of `"`, `%`, `&`, `|`, `<`, `>`, `^` or a control character, or contains a space and ends with a backslash. The command refuses such an argument with exit code 2 before anything is run; run `gradlew.bat` directly for it. For the same reason nothing is run, with exit code 1, when the path of the project or of the wrapper has one of these characters.
 
 
-=== Building and Testing with the Grails Forge CLI
+=== Building and Testing with the `grails` Command
 
-The Grails Forge CLI has the commands of the `grails` shell that are a Gradle build. Each of them runs the Gradle wrapper of the project the current directory is in, exactly as the `gradle` command above does: the project and the wrapper are found and trusted in the same way, what Gradle writes goes to the terminal in the same way, cancelling stops Gradle in the same way, and the exit codes are the same (0 when the build succeeds, 1 with one line when it fails, when there is no project or no wrapper, and 2 with the usage of the command for a mistake in its use).
+The `grails` command has the commands of the Grails shell that are a Gradle build. Each of them runs the Gradle wrapper of the project the current directory is in, exactly as the `gradle` command above does: the project and the wrapper are found and trusted in the same way, what Gradle writes goes to the terminal in the same way, cancelling stops Gradle in the same way, and the exit codes are the same (0 when the build succeeds, 1 with one line when it fails, when there is no project or no wrapper, and 2 with the usage of the command for a mistake in its use).
 
 [cols="2,3,4"]
 |===
@@ -123,7 +125,7 @@ $ grails compile -- --offline --console=rich
 
 Every option of a command becomes arguments of Gradle one for one, so a test filter or a property value with spaces or quotes reaches Gradle as the one argument it was. Whatever follows `--` is not read by the command and is given to Gradle as it is, after the arguments of the command; an option of a Gradle task there, such as `--tests`, belongs to the last task the command names. An option the command does not have is a mistake and is not passed on without the `--`. `--stacktrace` (`-x`) adds `--stacktrace` and `-Dgrails.full.stacktrace=true` to the arguments of Gradle and `--verbose` (`-v`) adds `--info`, which shows what the build does task by task; both mean the same in front of the command (`grails -v compile`) and after its name. The debug log of Gradle is asked for with `-- --debug`. Use `-- -x TASK` to leave a task out. The spellings of the shell with one dash (`-unit`, `-integration`, `-clean`, `-continuous`, `-debug-jvm`) are accepted too. A system property is written as `-Dname=value`, or `-Dname` for one without a value; `-D name=value` with a space is accepted as well. A `-D` that stands alone and is not followed by `name=value`, as in `test-app -D BookSpec`, and a `-D` without a name, as in `-D=x`, are mistakes: the command runs nothing, shows its usage and ends with exit code 2. On Windows an argument that a batch file does not receive unchanged is refused, as by the `gradle` command.
 
-These things differ from the `grails` shell:
+These things differ from the Grails shell:
 
 * The environment is selected with `-Dgrails.env=NAME` after the name of the command. An environment in front of the command (`grails prod war`) is refused: `prod` is no command.
 * `test-app --continuous` is the continuous build of Gradle: the tests run once, and again whenever a file they depend on changes, until the command is cancelled. The shell watches four source directories itself and does not run the tests when it starts.
@@ -151,9 +153,9 @@ WARNING: The configuration of the application under `grails-app/conf` is in the 
 It follows no link, so nothing from outside the project is read. It says how many links, key files, directories and hard links it left out, and warns of files it left out for their name. A secret in a file of any other name is not recognized: the list goes by names only. It does not replace a ZIP file of the same name unless `--force` is given, and it writes nothing and ends with exit code 1 when the sources are more than 10000 files or more than 256 MiB.
 
 
-=== Running the Application with the Grails Forge CLI
+=== Running the Application with the `grails` Command
 
-The Grails Forge CLI has the commands of the `grails` shell that run the application of the project, or a session with it. They run the Gradle wrapper of the project as the commands above do, with the same rules for the project, the wrapper, the output and the exit codes.
+The `grails` command has the commands of the Grails shell that run the application of the project, or a session with it. They run the Gradle wrapper of the project as the commands above do, with the same rules for the project, the wrapper, the output and the exit codes.
 
 [cols="2,3,4"]
 |===
@@ -193,7 +195,7 @@ $ grails run-command dbm-status --contexts "two words"
 $ grails run-script src/main/scripts/load.groovy
 ----
 
-`--port` and `--host` are given to the application as `-Dgrails.server.port` and `-Dgrails.server.address`. `--https` gives it a self-signed certificate for `localhost`, which is created in `build/ssl/keystore` when there is none (with the `keytool` of the Java installation the command runs with, and the password `123456`: it is for development on your own computer; the file can be read by you only), and the port 8443 unless a port is given or configured; give `-Dgrails.server.ssl.key-store=FILE` to use a key store of your own. As for the commands above, what follows `--` is given to Gradle as it is, except for `run-command`. The options `--port`, `--host`, `--https`, `--debug-jvm` and `--query-tail` are also taken with one dash, as the `grails` shell spells them.
+`--port` and `--host` are given to the application as `-Dgrails.server.port` and `-Dgrails.server.address`. `--https` gives it a self-signed certificate for `localhost`, which is created in `build/ssl/keystore` when there is none (with the `keytool` of the Java installation the command runs with, and the password `123456`: it is for development on your own computer; the file can be read by you only), and the port 8443 unless a port is given or configured; give `-Dgrails.server.ssl.key-store=FILE` to use a key store of your own. As for the commands above, what follows `--` is given to Gradle as it is, except for `run-command`. The options `--port`, `--host`, `--https`, `--debug-jvm` and `--query-tail` are also taken with one dash, as the Grails shell spells them.
 
 ==== The two ways run-app runs
 
@@ -229,13 +231,13 @@ The directory `.grails/run`, and the files in it, can be read and written by you
 
 `run-command` runs a command of the application (`grails-app/commands`) or of one of its plugins by its name. Everything after the name is given to that command as it is, each argument as the one it was, also an argument that is empty, has spaces, quotes or line breaks, looks like an option of `run-command`, or is `--`: options of `run-command` itself therefore come before the name. The name and the arguments are not on the command line of Gradle. They are written to a file in `.grails/run` that only you can read, which the task reads and which is deleted when the command has ended, also when `grails` is ended while Gradle runs. A file that is left all the same, as after `grails` was killed, is deleted by the next `run-command`, which sees that the process that wrote it is gone. An argument with the character U+0000 or with half of a character of two code units, more than 4096 arguments, and arguments of more than 1 MiB in UTF-8 are refused with exit code 2.
 
-These things differ from the `grails` shell:
+These things differ from the Grails shell:
 
 * `run-app` takes no task or other argument for Gradle after its name; what is for Gradle follows `--`.
 * `run-app --detach` leaves the application running after `grails` has ended. In the shell an application runs on only inside the interactive mode.
 * `run-app --https` without a port waits on port 8443, the one it gives the application.
-* `stop-app` ends the Gradle that `run-app` started with everything below it, and goes by the record in `.grails/run`; the shell ends the process whose number the application wrote to `build/run-app.pid`. An application that was started by the shell or by `gradlew bootRun` is not stopped by the `stop-app` of the Grails Forge CLI, and the other way round.
-* `shell` runs the shell. In the `grails` shell the command only says to run `gradle shell -q`.
+* `stop-app` ends the Gradle that `run-app` started with everything below it, and goes by the record in `.grails/run`; the shell ends the process whose number the application wrote to `build/run-app.pid`. An application that was started by the shell or by `gradlew bootRun` is not stopped by the `stop-app` of the `grails` command, and the other way round.
+* `shell` runs the shell. In the Grails shell the command only says to run `gradle shell -q`.
 * `run-script` and `run-command` keep each argument as it was. The shell joins the arguments with spaces, the task splits them again, and arguments that start with a dash do not reach the command.
 * `run-app`, `stop-app` and `shell` do not have the other names `run`, `stop` and `sh` of the shell: with `run`, the short form `r` would start the application.
 * `s` and `co` are no short forms of one command any more: `s` fits `stats` and `shell`, and `co` fits `compile` and `console`.

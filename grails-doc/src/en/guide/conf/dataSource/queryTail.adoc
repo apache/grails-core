@@ -337,10 +337,10 @@ statements as one GORM builds does, reading the capture settings from `grails.go
 other datastores may be configured with.
 An application started by Gradle writes under the build directory the
 build configures, even one moved with `layout.buildDirectory`, which the Grails Gradle plugin hands
-the application as `grails.project.target.dir`. The `grails` command runs outside Gradle, so it
-looks under `build` unless it is started with the same property, as with
-`JAVA_OPTS=-Dgrails.project.target.dir=out grails query-tail`; with a moved build directory, pass that
-property, set `grails.gorm.queryTail.file`, which both sides read, or pass `--file`. An application that configures its own Hibernate `StatementInspector`,
+the application as `grails.project.target.dir`. The `query-tail` command is run by the same build, through
+the Gradle task `runScriptCommand`, and is handed the same property, so it looks where the application
+writes. Run in another way, without that property, it looks under `build`: set
+`grails.gorm.queryTail.file`, which both sides read, or pass `--file`. An application that configures its own Hibernate `StatementInspector`,
 with `hibernate.session_factory.statement_inspector`, by its class or by a name registered with
 Hibernate's strategy selector, or in a `hibernate.configClass`, keeps it: Hibernate runs it as it
 does without the capture, and the capture records the statement it returns, without its values. SQL is counted at JDBC execution: a

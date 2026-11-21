@@ -133,15 +133,35 @@ include::ref/Command Line/dependency-report.adoc[]
 include::ref/Command Line/docs.adoc[]
 include::ref/Command Line/create-web-plugin.adoc[]
 
+[[ref-command-line-create-scaffold-controller]]
+==== create-scaffold-controller
+
+include::ref/Command Line/create-scaffold-controller.adoc[]
+
+[[ref-command-line-create-scaffold-service]]
+==== create-scaffold-service
+
+include::ref/Command Line/create-scaffold-service.adoc[]
+
 [[ref-command-line-generate-all]]
 ==== generate-all
 
 include::ref/Command Line/generate-all.adoc[]
 
+[[ref-command-line-generate-async-controller]]
+==== generate-async-controller
+
+include::ref/Command Line/generate-async-controller.adoc[]
+
 [[ref-command-line-generate-controller]]
 ==== generate-controller
 
 include::ref/Command Line/generate-controller.adoc[]
+
+[[ref-command-line-generate-scaffold-all]]
+==== generate-scaffold-all
+
+include::ref/Command Line/generate-scaffold-all.adoc[]
 
 [[ref-command-line-generate-views]]
 ==== generate-views

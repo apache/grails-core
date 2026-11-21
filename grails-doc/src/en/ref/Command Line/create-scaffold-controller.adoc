@@ -1,0 +1,81 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+== create-scaffold-controller
+
+=== Purpose
+
+Creates a controller that is scaffolded for a domain class with `@Scaffold`
+
+=== Examples
+
+[source,console]
+----
+grails create-scaffold-controller org.bookstore.Book
+grails create-scaffold-controller Book --service
+grails create-scaffold-controller Book --namespace=admin --extends=org.bookstore.BaseController
+----
+
+=== Description
+
+Dynamic scaffolding generates the actions and the views of a controller, or the methods of a service, when the application runs, for a class that is annotated with `@Scaffold` (see link:{guidePath}scaffolding.html[Scaffolding]).
+
+The `create-scaffold-controller` command writes such a controller. For the domain class `org.bookstore.Book` it writes `grails-app/controllers/org/bookstore/BookController.groovy`; with `--namespace=admin` the file is `grails-app/controllers/org/bookstore/admin/BookController.groovy`. It writes no test.
+
+Usage:
+
+[source,console]
+----
+grails create-scaffold-controller <domain class> [--service] [--namespace=<namespace>] [--extends=<class>] [--force]
+----
+
+Arguments:
+
+* `domain class` - The name of one domain class. A domain class of the project is found by its simple name or its full name, and what is created goes into its package. A class the project has no source of, which is a domain class of a plugin or of another project of the build, is given by its full name.
+
+Flags:
+
+* `service` - The controller uses the scaffolded service of the domain class, which link:{commandLineRefFromRef}create-scaffold-service.html[create-scaffold-service] creates (`--service`)
+* `namespace` - The namespace of the controller: its `static namespace`, the last part of its package, and the directory below the package that it is written to
+* `extends` - The full name of the class the scaffolded controller extends
+* `force` - Replace files that are there already (`--force`)
+
+=== Running the Command
+
+The command is a command of the scaffolding plugin (`org.apache.grails:grails-scaffolding`), which the application has to depend on, and it runs in the application, started by the Gradle task `runCommand` of the project. There are three ways to run it:
+
+[source,console]
+----
+$ grails create-scaffold-controller org.bookstore.Book                              <1>
+$ grails run-command create-scaffold-controller org.bookstore.Book                  <2>
+$ ./gradlew runCommand -Pargs="create-scaffold-controller org.bookstore.Book"       <3>
+----
+<1> By its name, once the build has listed the commands of the application and its plugins: `grails gradle grailsCommandCatalog` does that, and `grails help` then lists the command. See "Commands of the Application and its Plugins" in link:{guidePath}commandLine.html[The Command Line].
+<2> With `run-command`, which needs no list.
+<3> With Gradle alone. `--arg=create-scaffold-controller --arg=org.bookstore.Book` in place of `-Pargs` gives each argument as it is.
+
+=== Failures
+
+A file that is there already is kept: the command warns that it skips the file and goes on. With `--force` the file is replaced.
+
+Without a domain class the command says `No domain-class specified` and fails.
+
+When the command fails, the Gradle task fails, and `grails` ends with exit code 1.
+
+Before Grails 9 the Grails shell ran a script of the same name. The plugin has no scripts any more, and the command asks no questions: the name of the domain class has to be given.
