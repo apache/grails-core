@@ -124,9 +124,9 @@ class FailedActionObservationSpec extends Specification implements HttpClientSup
     }
 
     /**
-     * Tomcat tells the listeners of an asynchronous dispatch that ends in an error it sent that the processing
-     * completed, then that it failed, then that it completed again, so the observation reports the failure three times
-     * and stops twice, with or without Grails, which cannot add a listener during that dispatch to correct it.
+     * Tomcat tells the listeners of an asynchronous dispatch that ends in {@code sendError} that the processing
+     * completed, then that it failed, then that it completed again, with or without Grails. So the observation reports
+     * the failure three times and stops twice, and Grails can't add a listener during that dispatch to correct it.
      */
     @PendingFeature(reason = 'https://bz.apache.org/bugzilla/show_bug.cgi?id=70362')
     void 'a failed action is reported once with its own exception when its error controller fails with a server error Spring MVC resolves, asynchronously'() {
