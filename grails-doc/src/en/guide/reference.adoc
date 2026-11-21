@@ -218,6 +218,11 @@ include::ref/Command Line/gradle.adoc[]
 
 include::ref/Command Line/plugin-info.adoc[]
 
+[[ref-command-line-project-init]]
+==== project init
+
+include::ref/Command Line/project-init.adoc[]
+
 [[ref-command-line-project-regenerate]]
 ==== project regenerate
 
