@@ -94,6 +94,7 @@ class GradleCommandSpec extends CommandSpec implements CommandFixture {
         System.setProperty('os.name', originalOs)
         ConsoleProject.setOwnedByUser(null)
         ConsoleProject.setSafeDirectories(null)
+        ProcessUser.setCurrent(null)
     }
 
     @IgnoreIf({ os.windows })
@@ -1147,6 +1148,62 @@ class GradleCommandSpec extends CommandSpec implements CommandFixture {
         then: 'the project of this user above is still this user\'s'
         exit == 0
         out.toString().contains('the wrapper ran with build')
+    }
+
+    @IgnoreIf({ os.windows })
+    void "when the user who runs the command cannot be established, nothing above the current directory is used, and the command says why"() {
+        given: 'a project of this user, in the root of a build with a wrapper, and no source that says who the user is'
+        File project = new File(dir, 'app')
+        new File(project, 'grails-app/controllers').mkdirs()
+        new File(dir, 'settings.gradle').text = "include 'app'\n"
+        wrapper(dir)
+        ProcessUser.setCurrent(ProcessUser.establish(ProcessUser.SOURCES))
+
+        when: 'the command is run below the project'
+        System.setProperty('user.dir', new File(project, 'grails-app/controllers').canonicalPath)
+        int exit = ForgeCli.execute(beanContext, 'gradle', 'build')
+
+        then: 'the project is not used, and the line says that it is the user that is not known, and not who owns the directory'
+        exit == 1
+        errors().size() == 1
+        errors()[0].contains("is not used: the user who runs the command could not be established (asked for: ${ProcessUser.SOURCES.join(', ')}), " +
+                "so ${project.canonicalPath} is not known to be the user's own")
+        !errors()[0].contains('is owned by')
+        errors()[0].contains("name ${project.canonicalPath} in the environment variable GRAILS_SAFE_DIRECTORY")
+        !out.toString().contains('the wrapper ran')
+
+        when: 'in the project, which the user chose, the wrapper above it is the next thing that is not known to be the user\'s'
+        out.reset()
+        System.setProperty('user.dir', project.canonicalPath)
+        exit = ForgeCli.execute(beanContext, 'gradle', 'build')
+
+        then:
+        exit == 1
+        errors().size() == 1
+        errors()[0].contains("${dir.canonicalPath}/gradlew is not run for the project in ${project.canonicalPath}: the user who runs the command could not be established")
+        errors()[0].contains("so ${dir.canonicalPath} is not known to be the user's own; name ${dir.canonicalPath} in the environment variable GRAILS_SAFE_DIRECTORY")
+        !out.toString().contains('the wrapper ran')
+
+        when: 'the directory of the wrapper is named as one to use'
+        out.reset()
+        ConsoleProject.setSafeDirectories(dir.canonicalPath)
+        exit = ForgeCli.execute(beanContext, 'gradle', 'build')
+
+        then:
+        exit == 0
+        out.toString().contains('the wrapper ran with build')
+
+        when: 'a project that has its wrapper, and is the current directory, needs nobody to be known'
+        out.reset()
+        ConsoleProject.setSafeDirectories('')
+        wrapper(project, 'echo "the wrapper of the project ran"\n')
+        new File(dir, 'settings.gradle').delete()
+        new File(project, 'settings.gradle').text = "rootProject.name = 'app'\n"
+        exit = ForgeCli.execute(beanContext, 'gradle', 'build')
+
+        then:
+        exit == 0
+        out.toString().contains('the wrapper of the project ran')
     }
 
     private List<String> errors() {

@@ -58,6 +58,8 @@ final class ProcessUser {
 
     private static final String USER_ID = 'unix:uid'
 
+    private static volatile ProcessUser replaced
+
     private final Integer uid
     private final String name
     private final String source
@@ -72,7 +74,19 @@ final class ProcessUser {
      * @return the user of this process, established once
      */
     static ProcessUser current() {
-        return Holder.CURRENT
+        ProcessUser instead = replaced
+        return instead == null ? Holder.CURRENT : instead
+    }
+
+    /**
+     * Replaces the user of this process, for a specification: on the systems a specification runs on
+     * a source always answers, so the user is never one that is not known there.
+     *
+     * @param user who {@link #current} is taken to be, as {@link #establish} gives one; {@code null}
+     * for the user of the process
+     */
+    static void setCurrent(ProcessUser user) {
+        replaced = user
     }
 
     /**
