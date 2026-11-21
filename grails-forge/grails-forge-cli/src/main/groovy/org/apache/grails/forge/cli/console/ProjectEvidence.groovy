@@ -38,10 +38,13 @@ import org.apache.grails.forge.core.state.ProjectStateException
  * went by, the plugins and the dependencies of the build, the group, and the package of the
  * {@code Application} class.
  *
- * <p>The files are read as text, within bounds, and nothing of them is run: a build file is Groovy,
- * and what it declares in a loop, through a variable, in a convention plugin or in another file is
- * not seen. So what is found here is evidence and no more, and what is not found is not known not to
- * be there. Each thing that was found is kept with where it was found, so that it can be said.</p>
+ * <p>The files are read as text, within bounds, and nothing of them is run: a build file is Groovy
+ * or Kotlin, and what it declares in a loop, through a variable, in a convention plugin or in another
+ * file is not seen. So what is found here is evidence and no more, and what is not found is not known
+ * not to be there. Each thing that was found is kept with where it was found, so that it can be said.
+ * A comment is not read as what it comments out, and what the build file has that is known not to
+ * have been read (another file it applies, a version catalog, what it declares for other projects)
+ * is kept as well, see {@link #notRead}, so that it can be said too.</p>
  *
  * @since 9.0
  */
@@ -54,8 +57,14 @@ final class ProjectEvidence {
     /** The build file of the application, in the project */
     public static final String BUILD = 'build.gradle'
 
+    /** The build file of an application whose build is written in Kotlin, which is read in a project that has no {@link #BUILD} */
+    public static final String KOTLIN_BUILD = 'build.gradle.kts'
+
     /** The settings of a build, in the project that is the root of one */
     public static final String SETTINGS = 'settings.gradle'
+
+    /** The settings of a build that is written in Kotlin, which are read in a project that has no {@link #SETTINGS} */
+    public static final String KOTLIN_SETTINGS = 'settings.gradle.kts'
 
     private static final int MAX_FILE = 1024 * 1024
     private static final int MAX_LINE = 2000
@@ -65,6 +74,14 @@ final class ProjectEvidence {
     private static final List<String> PROFILE_GROUPS = ['org.apache.grails.profiles', 'org.grails.profiles']
     private static final Pattern YAML_KEY = Pattern.compile(/^( *)([A-Za-z0-9_.-]+):(?:[ \t]+(.*))?$/)
     private static final Pattern DEPENDENCY = Pattern.compile(/^\s*([A-Za-z][A-Za-z0-9]*)[ (]+(?:platform\()?["']([^:"'\s]+):([^:"'\s]+)(?::[^"']*)?["']/)
+    // the same with the group and the name each said by its own: implementation group: 'g', name: 'n', and (group = "g", name = "n") in Kotlin
+    private static final Pattern MAP_DEPENDENCY = Pattern.compile(
+            /^\s*([A-Za-z][A-Za-z0-9]*)[ (]+(?:platform\()?\s*group\s*[:=]\s*["']([^:"'\s]+)["']\s*,\s*name\s*[:=]\s*["']([^:"'\s]+)["']/)
+    // a dependency that is named in a version catalog, which is another file
+    private static final Pattern CATALOG_DEPENDENCY = Pattern.compile(/^\s*[A-Za-z][A-Za-z0-9]*[ (]+(?:platform\()?libs\.[A-Za-z]/)
+    // a block that says something of other projects than the one the build file is of
+    private static final Pattern FOR_OTHERS = Pattern.compile(/^\s*(?:subprojects|configure\s*\(.*\)|project\s*\(.*\))\s*\{/)
+    private static final Pattern APPLIED_FILE = Pattern.compile(/^\s*apply\s*\(?\s*from\s*[:=]/)
     private static final Pattern GRADLE_PLUGIN = Pattern.compile(/["'](?:org\.apache\.grails\.gradle|org\.grails)\.(grails-[a-z-]+)["']/)
     private static final Pattern GROUP = Pattern.compile(/^\s*group\s*=?\s*["']([^"']+)["']\s*$/)
     private static final Pattern ROOT_NAME = Pattern.compile(/^\s*rootProject\.name\s*=\s*["']([^"']+)["']\s*$/)
@@ -128,6 +145,20 @@ final class ProjectEvidence {
     /** Whether the project has a build file that was read */
     final boolean buildRead
 
+    /** The build file that was read: {@link #BUILD}, or {@link #KOTLIN_BUILD} in a project that has only that; {@link #BUILD} when none was read */
+    final String buildFile
+
+    /** The settings that were read, as {@link #buildFile} is the build file; {@link #SETTINGS} when none were read */
+    final String settingsFile
+
+    /**
+     * What the build file has that says something of the dependencies of the application and was not
+     * read, each as a sentence without its full stop: another build file it applies, a dependency of
+     * a version catalog, and what it declares for other projects, which is not counted for this one.
+     * Empty when the build file has nothing of the kind, which is not to say that everything was found.
+     */
+    final List<String> notRead
+
     private ProjectEvidence(Path directory) {
         String recordFile = EARLIER_RECORDS.find { String name -> Files.exists(directory.resolve(name), LinkOption.NOFOLLOW_LINKS) }
         Map<String, Object> record = [:]
@@ -155,38 +186,69 @@ final class ProjectEvidence {
         configuredPackage = configuration.get('grails.codegen.defaultPackage')
 
         List<String> build = lines(directory.resolve(BUILD))
+        String read = BUILD
+        if (build == null && !Files.exists(directory.resolve(BUILD), LinkOption.NOFOLLOW_LINKS)) {
+            build = lines(directory.resolve(KOTLIN_BUILD))
+            read = build == null ? BUILD : KOTLIN_BUILD
+        }
         buildRead = build != null
+        buildFile = read
         String profile = null
         String ofGroup = null
         Integer java = null
         Set<String> plugins = new LinkedHashSet<>()
         Set<String> declared = new LinkedHashSet<>()
-        for (String line : (build ?: [] as List<String>)) {
-            if (line.trim().startsWith('//') || line.trim().startsWith('*') || line.trim().startsWith('/*')) {
-                continue
+        int applied = 0
+        int ofCatalog = 0
+        boolean ofOthers = false
+        // how deep in braces the line is, and how deep the block for other projects began that the line is in
+        int depth = 0
+        int others = -1
+        for (String line : withoutComments(build ?: [] as List<String>)) {
+            if (others < 0 && FOR_OTHERS.matcher(line).find()) {
+                others = depth
             }
-            Matcher dependency = DEPENDENCY.matcher(line)
-            if (dependency.find()) {
-                String coordinates = "${dependency.group(2)}:${dependency.group(3)}".toString()
-                if (dependency.group(1) == 'profile') {
-                    profile = profile ?: coordinates
-                } else {
-                    declared.add(coordinates)
+            // what is said for other projects is not said of this one
+            if (others >= 0) {
+                ofOthers = ofOthers || DEPENDENCY.matcher(line).find() || MAP_DEPENDENCY.matcher(line).find() || CATALOG_DEPENDENCY.matcher(line).find()
+            } else {
+                Matcher dependency = DEPENDENCY.matcher(line)
+                boolean found = dependency.find()
+                if (!found) {
+                    dependency = MAP_DEPENDENCY.matcher(line)
+                    found = dependency.find()
+                }
+                if (found) {
+                    String coordinates = "${dependency.group(2)}:${dependency.group(3)}".toString()
+                    if (dependency.group(1) == 'profile') {
+                        profile = profile ?: coordinates
+                    } else {
+                        declared.add(coordinates)
+                    }
+                } else if (CATALOG_DEPENDENCY.matcher(line).find()) {
+                    ofCatalog++
+                }
+                if (APPLIED_FILE.matcher(line).find()) {
+                    applied++
+                }
+                Matcher plugin = GRADLE_PLUGIN.matcher(line)
+                while (plugin.find()) {
+                    plugins.add(plugin.group(1))
+                }
+                Matcher grouped = GROUP.matcher(line)
+                if (ofGroup == null && grouped.matches()) {
+                    ofGroup = value(grouped.group(1))
+                }
+                for (Pattern pattern : JAVA) {
+                    Matcher version = pattern.matcher(line)
+                    if (java == null && version.find()) {
+                        java = Integer.valueOf(version.group(1))
+                    }
                 }
             }
-            Matcher plugin = GRADLE_PLUGIN.matcher(line)
-            while (plugin.find()) {
-                plugins.add(plugin.group(1))
-            }
-            Matcher grouped = GROUP.matcher(line)
-            if (ofGroup == null && grouped.matches()) {
-                ofGroup = value(grouped.group(1))
-            }
-            for (Pattern pattern : JAVA) {
-                Matcher version = pattern.matcher(line)
-                if (java == null && version.find()) {
-                    java = Integer.valueOf(version.group(1))
-                }
+            depth += line.count('{') - line.count('}')
+            if (others >= 0 && depth <= others) {
+                others = -1
             }
         }
         profileDependency = profile
@@ -194,10 +256,29 @@ final class ProjectEvidence {
         dependencies = Collections.unmodifiableSet(declared)
         group = ofGroup
         javaVersion = java
+        List<String> unread = []
+        if (applied > 0) {
+            unread << "${read} applies ${applied == 1 ? 'another build file' : "${applied} other build files"} (apply from), which ${applied == 1 ? 'was' : 'were'} not read".toString()
+        }
+        if (ofCatalog > 0) {
+            unread << ("${read} names ${ofCatalog == 1 ? 'a dependency' : "${ofCatalog} dependencies"} by a version catalog (libs.), which was not read: " +
+                    "what ${ofCatalog == 1 ? 'it is' : 'they are'} is not known here").toString()
+        }
+        if (ofOthers) {
+            unread << ("${read} declares dependencies for other projects (in a subprojects, configure or project block), which are not those of this " +
+                    'application and were not counted').toString()
+        }
+        notRead = Collections.unmodifiableList(unread)
 
         List<String> settings = lines(directory.resolve(SETTINGS))
-        ownBuild = settings != null || Files.isRegularFile(directory.resolve('settings.gradle.kts'))
-        rootProjectName = settings == null ? null : settings.findResult { String line ->
+        String settingsRead = SETTINGS
+        if (settings == null && !Files.exists(directory.resolve(SETTINGS), LinkOption.NOFOLLOW_LINKS)) {
+            settings = lines(directory.resolve(KOTLIN_SETTINGS))
+            settingsRead = settings == null ? SETTINGS : KOTLIN_SETTINGS
+        }
+        settingsFile = settingsRead
+        ownBuild = settings != null || Files.isRegularFile(directory.resolve(SETTINGS)) || Files.isRegularFile(directory.resolve(KOTLIN_SETTINGS))
+        rootProjectName = settings == null ? null : withoutComments(settings).findResult { String line ->
             Matcher named = ROOT_NAME.matcher(line)
             named.matches() ? value(named.group(1)) : null
         }
@@ -251,6 +332,52 @@ final class ProjectEvidence {
         } catch (IOException ignored) {
             return null
         }
+    }
+
+    /**
+     * The lines of a build file without their comments: a comment that begins with two slashes ends
+     * with its line, and one between a slash with a star and a star with a slash ends where it ends,
+     * on whichever line. What is between quotes is no comment, so the address of a repository is kept
+     * whole. A text of several lines is read line by line, as if each began outside quotes.
+     */
+    static List<String> withoutComments(List<String> lines) {
+        List<String> code = []
+        boolean comment = false
+        for (String line : lines) {
+            StringBuilder kept = new StringBuilder()
+            char quote = (char) 0
+            int i = 0
+            while (i < line.length()) {
+                char c = line.charAt(i)
+                char next = i + 1 < line.length() ? line.charAt(i + 1) : (char) 0
+                if (comment) {
+                    comment = !(c == (char) '*' && next == (char) '/')
+                    i += comment ? 1 : 2
+                } else if (quote != (char) 0) {
+                    kept.append(c)
+                    if (c == (char) '\\' && next != (char) 0) {
+                        kept.append(next)
+                        i++
+                    } else if (c == quote) {
+                        quote = (char) 0
+                    }
+                    i++
+                } else if (c == (char) '/' && next == (char) '/') {
+                    break
+                } else if (c == (char) '/' && next == (char) '*') {
+                    comment = true
+                    i += 2
+                } else {
+                    if (c == (char) '"' || c == (char) "'") {
+                        quote = c
+                    }
+                    kept.append(c)
+                    i++
+                }
+            }
+            code << kept.toString()
+        }
+        return code
     }
 
     /**
@@ -328,7 +455,7 @@ final class ProjectEvidence {
         if (found.size() != 1) {
             return null
         }
-        return (lines(found.first()) ?: [] as List<String>).findResult { String line ->
+        return withoutComments(lines(found.first()) ?: [] as List<String>).findResult { String line ->
             Matcher declared = PACKAGE.matcher(line)
             declared.matches() ? declared.group(1) : null
         }

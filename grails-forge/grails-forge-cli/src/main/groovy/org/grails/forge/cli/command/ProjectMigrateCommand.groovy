@@ -186,6 +186,15 @@ class ProjectMigrateCommand extends BaseCommand implements Callable<Integer>, Pr
         }
         AvailableFeatures available = projectGeneratorSource.get().availableFeatures(applicationType.value, [])
         Map<String, String> found = featuresFound(available, evidence, notes)
+        // what is known not to have been read is said, so that no feature is taken to be absent because it was not found
+        if (!evidence.buildRead) {
+            notes << "The project has no ${ProjectEvidence.BUILD} or ${ProjectEvidence.KOTLIN_BUILD} that could be read, so no feature was looked for in its build".toString()
+        }
+        notes.addAll(evidence.notRead)
+        if (!evidence.ownBuild) {
+            notes << ("The project has no ${ProjectEvidence.SETTINGS} of its own, so it is part of a build above it: what that build declares for it, in a subprojects or " +
+                    'allprojects block or in a convention plugin, was not read').toString()
+        }
         if (evidence.earlierRecord != null && evidence.earlierRecordRefused == null) {
             notes << ("${evidence.earlierRecord} was read and is left as it is. With a record under ${ProjectState.DIRECTORY} the commands go by that, and warn when " +
                     "${evidence.earlierRecord} does not name the same package and features: remove the file when nothing else reads it").toString()
@@ -302,9 +311,9 @@ class ProjectMigrateCommand extends BaseCommand implements Callable<Integer>, Pr
         }
         if (evidence.profileDependency != null) {
             if (evidence.profileOfGrails != null) {
-                profiles.put("the profile dependency of ${ProjectEvidence.BUILD}".toString(), evidence.profileOfGrails)
+                profiles.put("the profile dependency of ${evidence.buildFile}".toString(), evidence.profileOfGrails)
             } else {
-                notes << "The profile ${shown(evidence.profileDependency)} of ${ProjectEvidence.BUILD} is not one of Grails, and says nothing of the type here".toString()
+                notes << "The profile ${shown(evidence.profileDependency)} of ${evidence.buildFile} is not one of Grails, and says nothing of the type here".toString()
             }
         }
         for (Map.Entry<String, String> each : profiles.entrySet()) {
@@ -317,14 +326,14 @@ class ProjectMigrateCommand extends BaseCommand implements Callable<Integer>, Pr
         Set<String> plugins = evidence.gradlePlugins
         if ('grails-plugin' in plugins) {
             return 'grails-gsp' in plugins ?
-                    new Found<ApplicationType>(ApplicationType.WEB_PLUGIN, "the Gradle plugins grails-plugin and grails-gsp of ${ProjectEvidence.BUILD}") :
-                    new Found<ApplicationType>(ApplicationType.PLUGIN, "the Gradle plugin grails-plugin of ${ProjectEvidence.BUILD}, without grails-gsp; " +
+                    new Found<ApplicationType>(ApplicationType.WEB_PLUGIN, "the Gradle plugins grails-plugin and grails-gsp of ${evidence.buildFile}") :
+                    new Found<ApplicationType>(ApplicationType.PLUGIN, "the Gradle plugin grails-plugin of ${evidence.buildFile}, without grails-gsp; " +
                             'a plugin with controllers and no views is --type rest-api-plugin', true)
         }
         if ('grails-web' in plugins) {
             return 'grails-gsp' in plugins ?
-                    new Found<ApplicationType>(ApplicationType.WEB, "the Gradle plugins grails-web and grails-gsp of ${ProjectEvidence.BUILD}") :
-                    new Found<ApplicationType>(ApplicationType.REST_API, "the Gradle plugin grails-web of ${ProjectEvidence.BUILD}, without grails-gsp")
+                    new Found<ApplicationType>(ApplicationType.WEB, "the Gradle plugins grails-web and grails-gsp of ${evidence.buildFile}") :
+                    new Found<ApplicationType>(ApplicationType.REST_API, "the Gradle plugin grails-web of ${evidence.buildFile}, without grails-gsp")
         }
         if (!evidence.buildRead) {
             notes << "The project has no ${ProjectEvidence.BUILD} that could be read".toString()
@@ -344,7 +353,7 @@ class ProjectMigrateCommand extends BaseCommand implements Callable<Integer>, Pr
             }
         }
         if (named == null && evidence.rootProjectName != null) {
-            named = new Found<String>(evidence.rootProjectName, "rootProject.name of ${ProjectEvidence.SETTINGS}")
+            named = new Found<String>(evidence.rootProjectName, "rootProject.name of ${evidence.settingsFile}")
         }
         if (named == null) {
             named = new Found<String>(directory.getFileName()?.toString() ?: '', 'the name of the directory')
@@ -357,7 +366,7 @@ class ProjectMigrateCommand extends BaseCommand implements Callable<Integer>, Pr
             packages.put("grails.codegen.defaultPackage of ${ProjectEvidence.CONFIGURATION}".toString(), evidence.configuredPackage)
         }
         if (evidence.group != null) {
-            packages.put("group of ${ProjectEvidence.BUILD}".toString(), evidence.group)
+            packages.put("group of ${evidence.buildFile}".toString(), evidence.group)
         }
         if (evidence.applicationClassPackage != null) {
             packages.put('the package of the Application class', evidence.applicationClassPackage)
@@ -368,7 +377,7 @@ class ProjectMigrateCommand extends BaseCommand implements Callable<Integer>, Pr
         }
         if (ofPackage == null) {
             return new Identity(null, null, 'The package the classes of the application are created in could not be worked out: neither ' +
-                    "grails.codegen.defaultPackage of ${ProjectEvidence.CONFIGURATION} nor the group of ${ProjectEvidence.BUILD} nor an Application class under " +
+                    "grails.codegen.defaultPackage of ${ProjectEvidence.CONFIGURATION} nor the group of ${evidence.buildFile} nor an Application class under " +
                     'grails-app/init names one. Give the name of the application with its package to the command, as com.example.shop')
         }
         // what the record takes: a name and a package a create command would have made the application with
@@ -423,7 +432,7 @@ class ProjectMigrateCommand extends BaseCommand implements Callable<Integer>, Pr
                     .collect { PackDependency each -> "${each.groupId}:${each.artifactId}".toString() }
                     .findAll { String each -> added.get(each) == 1 }
             if (!adds.isEmpty() && evidence.dependencies.containsAll(adds) && !found.containsKey(feature.getName())) {
-                found.put(feature.getName(), "${ProjectEvidence.BUILD} declares ${adds.join(' and ')}".toString())
+                found.put(feature.getName(), "${evidence.buildFile} declares ${adds.join(' and ')}".toString())
             }
         }
         return found
@@ -454,10 +463,10 @@ class ProjectMigrateCommand extends BaseCommand implements Callable<Integer>, Pr
             }
             options.put('jdk', new Found<String>(String.valueOf(javaVersion), GIVEN + '--jdk'))
         } else if (evidence.javaVersion != null && JdkVersion.values().any { JdkVersion each -> each.majorVersion() == evidence.javaVersion }) {
-            options.put('jdk', new Found<String>(String.valueOf(evidence.javaVersion), "the version of Java ${ProjectEvidence.BUILD} names"))
+            options.put('jdk', new Found<String>(String.valueOf(evidence.javaVersion), "the version of Java ${evidence.buildFile} names"))
         } else {
             if (evidence.javaVersion != null) {
-                notes << "${ProjectEvidence.BUILD} names Java ${evidence.javaVersion}, which this version of Grails does not generate for".toString()
+                notes << "${evidence.buildFile} names Java ${evidence.javaVersion}, which this version of Grails does not generate for".toString()
             }
             options.put('jdk', new Found<String>(String.valueOf(JdkVersion.DEFAULT_OPTION.majorVersion()), ASSUMED, true))
         }

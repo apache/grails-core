@@ -646,6 +646,93 @@ dependencies {
                                                'the commands that create the classes of an application are not there without it']
     }
 
+    void "a dependency whose group and name are said each by its own is a dependency"() {
+        given:
+        shellProject()
+        new File(dir, 'build.gradle').text = '''\
+apply plugin: "org.apache.grails.gradle.grails-web"
+apply plugin: "org.apache.grails.gradle.grails-gsp"
+
+dependencies {
+    implementation group: 'org.apache.grails', name: 'grails-data-hibernate5'
+    implementation group: "org.apache.grails", name: "grails-quartz", version: "5.0.0"
+    runtimeOnly(group: 'org.postgresql', name: 'postgresql')
+    testImplementation name: 'no-group-is-no-dependency'
+}
+'''
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'project', 'init', '--dry-run')
+        List<String> said = out.toString().readLines()
+
+        then:
+        exit == 0
+        row(said, 'data') == ['hibernate5', '(the feature gorm-hibernate5)']
+        said.contains('    gorm-hibernate5 (build.gradle declares org.apache.grails:grails-data-hibernate5)')
+        said.contains('    grails-quartz (build.gradle declares org.apache.grails:grails-quartz)')
+        said.contains('    postgres (build.gradle declares org.postgresql:postgresql)')
+    }
+
+    void "what a build file comments out is no plugin and no dependency of the application, and what stands beside a comment is one"() {
+        given:
+        shellProject()
+        new File(dir, 'grails-app/conf/application.yml').text = 'grails.codegen.defaultPackage: com.example.legacy\n'
+        new File(dir, 'build.gradle').text = '''\
+/*
+ * apply plugin: "org.apache.grails.gradle.grails-plugin"
+ */
+apply plugin: "org.apache.grails.gradle.grails-web" // not "org.apache.grails.gradle.grails-gsp"
+/* apply plugin: "org.apache.grails.gradle.grails-gsp" */
+
+repositories {
+    maven { url "https://repo.example.org/maven" } /* the address has two slashes, and is no comment
+    implementation "org.apache.grails:grails-data-mongodb"
+    group "com.example.commented" */
+}
+
+dependencies {
+    /*
+    implementation "org.apache.grails:grails-quartz"
+    runtimeOnly group: 'org.postgresql', name: 'postgresql'
+    */
+    /* implementation "org.apache.grails:grails-data-neo4j" */ implementation "org.apache.grails:grails-data-hibernate5"
+    // implementation "org.apache.grails:grails-data-hibernate7"
+    runtimeOnly "com.h2database:h2" // implementation "org.apache.grails:grails-quartz"
+}
+'''
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'project', 'init', '--dry-run')
+        List<String> said = out.toString().readLines()
+
+        then: 'the type is that of the plugins that are applied'
+        exit == 0
+        row(said, 'type') == ['rest-api', '(the Gradle plugin grails-web of build.gradle, without grails-gsp)']
+        row(said, 'package') == ['com.example.legacy', '(grails.codegen.defaultPackage of grails-app/conf/application.yml)']
+
+        and: 'and the features are those of the dependencies that are declared'
+        row(said, 'data') == ['hibernate5', '(the feature gorm-hibernate5)']
+        said.contains('    gorm-hibernate5 (build.gradle declares org.apache.grails:grails-data-hibernate5)')
+        said.contains('    h2 (build.gradle declares com.h2database:h2)')
+        !said.any { it.startsWith('    grails-quartz ') || it.startsWith('    postgres ') || it.startsWith('    gorm-mongodb ') || it.startsWith('    gorm-neo4j ') ||
+                it.startsWith('    gorm-hibernate7 ') }
+    }
+
+    void "a build that is written in Kotlin is read from build.gradle.kts and settings.gradle.kts, which are named as where things were found"() {
+        given:
+        new File(dir, 'grails-app/conf').mkdirs()
+        new File(dir, 'build.gradle.kts').text = '''\
+plugins {
+    id("org.apache.grails.gradle.grails-web")
+    id("org.apache.grails.gradle.grails-gsp")
+}
+
+group = "com.example.kotlin"
+
+java {
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(25))
+    }
 }
 
 dependencies {
@@ -686,6 +773,38 @@ dependencies {
         tree().findAll { !it.key.startsWith('.grails') } == before
     }
 
+    void "a build.gradle that is there is the one that is read, also where a build.gradle.kts is beside it"() {
+        given:
+        shellProject()
+        new File(dir, 'build.gradle.kts').text = 'dependencies {\n    implementation("org.apache.grails:grails-data-mongodb")\n}\n'
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'project', 'init', '--dry-run')
+        List<String> said = out.toString().readLines()
+
+        then:
+        exit == 0
+        said.contains('    grails-quartz (build.gradle declares org.apache.grails:grails-quartz)')
+        !said.any { it.contains('build.gradle.kts') || it.startsWith('    gorm-mongodb ') }
+    }
+
+    void "what the build file has that was not read is said: another build file, a version catalog, and what it declares for other projects"() {
+        given: 'a project whose type and package are said by its build file alone'
+        new File(dir, 'grails-app').mkdirs()
+        new File(dir, 'settings.gradle').text = "rootProject.name = 'legacy'\n"
+        new File(dir, 'build.gradle').text = '''\
+apply plugin: "org.apache.grails.gradle.grails-web"
+apply plugin: "org.apache.grails.gradle.grails-gsp"
+apply from: "gradle/dependencies.gradle"
+apply from: rootProject.file("gradle/publishing.gradle")
+
+subprojects {
+    group "com.example.modules"
+    apply plugin: "org.apache.grails.gradle.grails-plugin"
+    dependencies {
+        implementation "org.apache.grails:grails-quartz"
+        implementation group: 'org.apache.grails', name: 'grails-data-mongodb'
+    }
 }
 
 configure(subprojects.findAll { it.name.startsWith('web') }) { dependencies { runtimeOnly "org.postgresql:postgresql" } }
@@ -724,6 +843,35 @@ dependencies {
         said.contains('| build.gradle names 2 dependencies by a version catalog (libs.), which was not read: what they are is not known here')
         said.contains('| build.gradle declares dependencies for other projects (in a subprojects, configure or project block), which are not those of this application ' +
                 'and were not counted')
+    }
+
+    void "a project that is part of a build above it, and one without a build file, are said not to have been read there"() {
+        given: 'a project with no settings and no build file of its own, whose type and name are given'
+        new File(dir, 'grails-app').mkdirs()
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'project', 'init', 'com.example.shop', '--type', 'web', '--dry-run')
+        List<String> said = out.toString().readLines()
+
+        then:
+        exit == 0
+        row(said, 'layout') == ['subproject', '(the project has no settings.gradle of its own)']
+        said.contains('| The 0 features of Grails it is taken to have: none was found')
+        said.contains('| The project has no build.gradle or build.gradle.kts that could be read, so no feature was looked for in its build')
+        said.contains('| The project has no settings.gradle of its own, so it is part of a build above it: what that build declares for it, in a subprojects or ' +
+                'allprojects block or in a convention plugin, was not read')
+
+        when: 'the same with one applied file and one dependency'
+        out.reset()
+        new File(dir, 'build.gradle').text = 'apply from: "../gradle/grails.gradle"\ndependencies {\n    implementation libs.grails.core\n}\n'
+        exit = ForgeCli.execute(beanContext, 'project', 'init', 'com.example.shop', '--type', 'web', '--dry-run')
+        said = out.toString().readLines()
+
+        then:
+        exit == 0
+        said.contains('| build.gradle applies another build file (apply from), which was not read')
+        said.contains('| build.gradle names a dependency by a version catalog (libs.), which was not read: what it is is not known here')
+        !said.any { it.contains('that could be read') }
     }
 
     @Unroll
