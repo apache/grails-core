@@ -19,6 +19,7 @@
 package org.grails.forge.cli.command
 
 import java.nio.file.Files
+import java.nio.file.attribute.PosixFilePermissions
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.application.OperatingSystem
 import org.grails.forge.application.generator.ProjectGenerator
@@ -28,6 +29,7 @@ import org.grails.forge.io.ConsoleOutput
 import org.grails.forge.io.FileSystemOutputHandler
 import org.grails.forge.options.Options
 import org.grails.forge.util.NameUtils
+import spock.lang.IgnoreIf
 import spock.lang.Shared
 import spock.lang.Unroll
 
@@ -251,10 +253,10 @@ class Book {
         ['Book', 'isbn:string']                           || "Invalid property definition: Invalid property type 'string'. Type must start with an uppercase letter"
         ['Book', 'isbn:Str ing']                          || "Invalid property definition: Invalid property type 'Str ing'"
         ['Book', 'isbn:String = "x"\n    def evil']       || 'Invalid property definition: Invalid property type'
-        ['Book', 'pages:Integer', '--blank']              || "Invalid property definition: The 'blank' constraint is only applicable to String "
-        ['Book', 'pages:Integer', '--not-blank']          || "Invalid property definition: The 'blank' constraint is only applicable to String "
-        ['Book', 'pages:Integer', '--max-size', '3']      || "Invalid property definition: The 'maxSize' constraint is only applicable to String "
-        ['Book', 'pages:Integer', '--min-size', '3']      || "Invalid property definition: The 'minSize' constraint is only applicable to String "
+        ['Book', 'pages:Integer', '--blank']              || "Invalid property definition: The 'blank' constraint is only applicable to String properties"
+        ['Book', 'pages:Integer', '--not-blank']          || "Invalid property definition: The 'blank' constraint is only applicable to String properties"
+        ['Book', 'pages:Integer', '--max-size', '3']      || "Invalid property definition: The 'maxSize' constraint is only applicable to String properties"
+        ['Book', 'pages:Integer', '--min-size', '3']      || "Invalid property definition: The 'minSize' constraint is only applicable to String properties"
         ['Book', 'isbn', '--constraint-style', 'xml']     || 'Invalid constraint style: xml. Use: grails, jakarta, or both'
         ['Book', 'title:String']                          || "Property 'title' already exists in Book"
         ['Book', 'title:Integer', '--nullable']           || "Property 'title' already exists in Book"
@@ -321,10 +323,10 @@ class Book {
         when:
         int exit = ForgeCli.execute(beanContext, 'add-property', 'Book', 'isbn')
 
-        then:
+        then: 'both are named, by their paths in the project'
         exit == 1
-        err.toString().contains("Multiple domain classes found with name 'Book'")
-        err.toString().contains('Please specify the fully qualified class name.')
+        err.toString().readLines() == ["| Error Multiple domain classes found with name 'Book': grails-app/domain/example/grails/Book.groovy, " +
+                                               'grails-app/domain/example/library/Book.groovy. Please specify the fully qualified class name.']
         book.getText('UTF-8') == BOOK
         other.getText('UTF-8') == BOOK.replace('example.grails', 'example.library')
 
@@ -397,6 +399,149 @@ class Book {
         then:
         exit == 0
         book.getText('UTF-8') == BOOK.replace('    String title\n', '    String title\n    String isbn\n')
+    }
+
+    @Unroll
+    void "a class that #how gets #arguments where it belongs, and every other byte of the file is what it was"() {
+        given:
+        File book = domain(source)
+
+        when:
+        int exit = ForgeCli.execute(beanContext, (['add-property', 'Book'] + arguments) as String[])
+
+        then:
+        exit == 0
+        err.toString().isEmpty()
+        book.getText('UTF-8') == expected
+
+        where:
+        how << ['is as create-domain-class writes it, without a line ending at its end',
+                'has the line endings of Windows',
+                'is indented with tabs',
+                'is indented with two spaces and has an empty block',
+                'has a method that returns a String and declares one',
+                'has an empty constraints block on one line',
+                'has a constraints block with an entry on one line',
+                'ends its constraints block on the line of the last entry',
+                'has its constraints above its properties',
+                'is abstract',
+                'begins its body on a line of its own',
+                'has nothing and begins its body on a line of its own',
+                'is written on one line with nothing in it',
+                'has a property with a value of several lines, and one of a type with parameters',
+                'has braces in a comment and in strings',
+                'shares its file with an enum before it and a class after it',
+                'follows its package without a line between, for an annotation',
+                'has no package, for an annotation',
+                'imports every constraint annotation with a star',
+                'has a service and a property after an empty line']
+        arguments << [['isbn', '--nullable'], ['isbn', '--nullable'], ['isbn', '--nullable'], ['isbn', '--nullable'], ['isbn', '--nullable'],
+                      ['isbn', '--nullable'], ['isbn', '--nullable'], ['isbn', '--nullable'], ['isbn', '--nullable'], ['isbn', '--nullable'],
+                      ['isbn'], ['isbn'], ['isbn', '--nullable'], ['isbn', '--nullable'], ['isbn', '--nullable'], ['isbn', '--nullable'],
+                      ['isbn', '--not-nullable', '--constraint-style', 'jakarta'], ['isbn', '--not-nullable', '--constraint-style', 'jakarta'],
+                      ['isbn', '--not-nullable', '--constraint-style', 'jakarta'], ['isbn']]
+        source << ['package example.grails\n\nclass Book {\n\n    static constraints = {\n    }\n}',
+                   BOOK.replace('\n', '\r\n'),
+                   'package example.grails\n\nclass Book {\n\tString title\n\n\tstatic constraints = {\n\t\ttitle blank: false\n\t}\n}\n',
+                   'class Book {\n  String title\n\n  static constraints = {\n  }\n}\n',
+                   BOOK.replace('    }\n}\n', '    }\n\n    String toString() {\n        String label = title\n        return label\n    }\n}\n'),
+                   'class Book {\n    String title\n\n    static constraints = {}\n}\n',
+                   'class Book {\n    String title\n\n    static constraints = { title blank: false }\n}\n',
+                   'class Book {\n    String title\n\n    static constraints = {\n        title blank: false }\n}\n',
+                   'class Book {\n\n    static constraints = {\n        title blank: false\n    }\n\n    String title\n}\n',
+                   BOOK.replace('class Book', 'abstract class Book'),
+                   "@Resource(uri = '/books')\nclass Book implements Serializable\n{\n    String title\n}\n",
+                   'class Book implements Serializable\n{\n}\n',
+                   'package example.grails\n\nclass Book {}\n',
+                   "class Book {\n    String title\n    List<String> tags = [\n            'new',\n            'unread'\n    ]\n    Map<String, Object> extra = [:]\n\n" +
+                           '    static hasMany = [chapters: Chapter]\n}\n',
+                   "class Book {\n    String title // the } of a title\n\n    static constraints = {\n        title matches: '[a-z]{3}', validator: { val -> val != '}' } // }\n" +
+                           "    }\n\n    static mapping = {\n        table 'book{s'\n    }\n}\n",
+                   'package example.grails\n\nenum Kind { PAPER, CLOTH }\n\nclass Book {\n    String title\n    Kind kind\n}\n\nclass Shelf {\n    String room\n}\n',
+                   'package example.grails\nclass Book {\n    String title\n}\n',
+                   'class Book {\n    String title\n}\n',
+                   'package example.grails\n\nimport jakarta.validation.constraints.*\n\nclass Book {\n    String title\n}\n',
+                   'class Book {\n    String title\n    def bookService\n\n    Date dateCreated\n\n    static hasMany = [chapters: Chapter]\n}\n']
+        expected << ['package example.grails\n\nclass Book {\n    String isbn\n\n    static constraints = {\n        isbn nullable: true\n    }\n}',
+                     BOOK.replace('    String title\n', '    String title\n    String isbn\n')
+                             .replace('        title blank: false\n', '        title blank: false\n        isbn nullable: true\n').replace('\n', '\r\n'),
+                     'package example.grails\n\nclass Book {\n\tString title\n\tString isbn\n\n\tstatic constraints = {\n\t\ttitle blank: false\n\t\tisbn nullable: true\n\t}\n}\n',
+                     'class Book {\n  String title\n  String isbn\n\n  static constraints = {\n    isbn nullable: true\n  }\n}\n',
+                     BOOK.replace('    String title\n', '    String title\n    String isbn\n')
+                             .replace('        title blank: false\n', '        title blank: false\n        isbn nullable: true\n')
+                             .replace('    }\n}\n', '    }\n\n    String toString() {\n        String label = title\n        return label\n    }\n}\n'),
+                     'class Book {\n    String title\n    String isbn\n\n    static constraints = {\n        isbn nullable: true\n    }\n}\n',
+                     'class Book {\n    String title\n    String isbn\n\n    static constraints = {\n        title blank: false\n        isbn nullable: true\n    }\n}\n',
+                     'class Book {\n    String title\n    String isbn\n\n    static constraints = {\n        title blank: false\n        isbn nullable: true\n    }\n}\n',
+                     'class Book {\n\n    static constraints = {\n        title blank: false\n        isbn nullable: true\n    }\n\n    String title\n    String isbn\n}\n',
+                     BOOK.replace('class Book', 'abstract class Book').replace('    String title\n', '    String title\n    String isbn\n')
+                             .replace('        title blank: false\n', '        title blank: false\n        isbn nullable: true\n'),
+                     "@Resource(uri = '/books')\nclass Book implements Serializable\n{\n    String title\n    String isbn\n}\n",
+                     'class Book implements Serializable\n{\n    String isbn\n}\n',
+                     'package example.grails\n\nclass Book {\n    String isbn\n\n    static constraints = {\n        isbn nullable: true\n    }\n}\n',
+                     "class Book {\n    String title\n    List<String> tags = [\n            'new',\n            'unread'\n    ]\n    Map<String, Object> extra = [:]\n" +
+                             '    String isbn\n\n    static constraints = {\n        isbn nullable: true\n    }\n\n    static hasMany = [chapters: Chapter]\n}\n',
+                     "class Book {\n    String title // the } of a title\n    String isbn\n\n    static constraints = {\n" +
+                             "        title matches: '[a-z]{3}', validator: { val -> val != '}' } // }\n        isbn nullable: true\n" +
+                             "    }\n\n    static mapping = {\n        table 'book{s'\n    }\n}\n",
+                     'package example.grails\n\nenum Kind { PAPER, CLOTH }\n\nclass Book {\n    String title\n    Kind kind\n    String isbn\n\n' +
+                             '    static constraints = {\n        isbn nullable: true\n    }\n}\n\nclass Shelf {\n    String room\n}\n',
+                     'package example.grails\n\nimport jakarta.validation.constraints.NotNull\n\nclass Book {\n    String title\n    @NotNull\n    String isbn\n}\n',
+                     'import jakarta.validation.constraints.NotNull\n\nclass Book {\n    String title\n    @NotNull\n    String isbn\n}\n',
+                     'package example.grails\n\nimport jakarta.validation.constraints.*\n\nclass Book {\n    String title\n    @NotNull\n    String isbn\n}\n',
+                     'class Book {\n    String title\n    def bookService\n\n    Date dateCreated\n    String isbn\n\n    static hasMany = [chapters: Chapter]\n}\n']
+    }
+
+    @Unroll
+    void "a class that #how is not changed, and why is said in one line"() {
+        given:
+        File book = new File(dir, PATH)
+        book.parentFile.mkdirs()
+        book.bytes = source
+        byte[] before = book.bytes
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'add-property', 'Book', 'isbn', '--nullable')
+
+        then:
+        exit == 1
+        err.toString().readLines() == ['| Error ' + message]
+        out.toString().isEmpty()
+        book.bytes == before
+
+        where:
+        how                                        | source                                                                                || message
+        'has constraints that are not a block'     | 'class Book {\n    String title\n\n    static constraints = Shared.rules\n}\n'.bytes || "Cannot add 'isbn' to 'Book.groovy': the constraints of the class are not a block that is written in it, as static constraints = { }, so the constraint has no place. The file was not changed."
+        'is written on one line'                   | 'class Book { String title }\n'.bytes                                                 || "Cannot add 'isbn' to 'Book.groovy': the class is written on one line; write its closing brace on a line of its own. The file was not changed."
+        'ends on the line of its last property'    | 'class Book {\n    String title }\n'.bytes                                            || "Cannot add 'isbn' to 'Book.groovy': the property title is on the line the class begins or ends with; write it on a line of its own. The file was not changed."
+        'has something on the line it begins with' | 'class Book { static hasMany = [chapters: Chapter]\n}\n'.bytes                       || "Cannot add 'isbn' to 'Book.groovy': there is something after the brace the class begins with, on its line; write it on a line of its own. The file was not changed."
+        'is a script and declares no class'        | 'println "no class"\n'.bytes                                                           || "Cannot add 'isbn' to 'Book.groovy': the file declares no class. The file was not changed."
+        'is not text in UTF-8'                     | 'class Book {\n    String café\n}\n'.getBytes('ISO-8859-1')                     || "'Book.groovy' is not text in UTF-8, and was not changed."
+    }
+
+    void "the property is added where the constraints are no block, when it has no constraint"() {
+        given:
+        File book = domain('class Book {\n    String title\n\n    static constraints = Shared.rules\n}\n')
+
+        expect:
+        ForgeCli.execute(beanContext, 'add-property', 'Book', 'isbn') == 0
+        book.getText('UTF-8') == 'class Book {\n    String title\n    String isbn\n\n    static constraints = Shared.rules\n}\n'
+    }
+
+    @IgnoreIf({ os.windows || System.getProperty('user.name') == 'root' })
+    void "a class that cannot be written to is said to be by its path in the project, and is what it was"() {
+        given:
+        File book = domain(BOOK)
+        Files.setPosixFilePermissions(book.toPath(), PosixFilePermissions.fromString('r--r--r--'))
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'add-property', 'Book', 'isbn')
+
+        then:
+        exit == 1
+        err.toString().readLines() == ["| Error Cannot change ${PATH}: it, or the directory it is in, cannot be written to".toString()]
+        !err.toString().contains(dir.name)
+        book.getText('UTF-8') == BOOK
     }
 
     private File domain(String text) {
