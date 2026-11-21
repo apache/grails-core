@@ -207,6 +207,75 @@ class AliasLeakBook {
         methodCallsNamed(classNode, 'eq', 'usesTAsAMap').any { constantArg(it, 0) == 'otherProperty' }
     }
 
+    void "an alias declared in a static where field is not an alias in a method of the class"() {
+        given:
+        String source = '''
+import grails.gorm.annotation.Entity
+import org.grails.datastore.gorm.query.transform.ApplyDetachedCriteriaTransform
+
+@ApplyDetachedCriteriaTransform
+@Entity
+class AliasFieldLeakBook {
+    String otherProperty
+
+    static q = AliasFieldLeakBook.where {
+        def t = AliasFieldLeakBook
+        otherProperty == t.nested.whatever
+    }
+
+    static usesTAsAMap() {
+        Map t = [nested: [whatever: 'x']]
+        AliasFieldLeakBook.where {
+            otherProperty == t.nested.whatever
+        }
+    }
+}
+'''
+
+        when:
+        ClassNode classNode = compileToClassNode(source, 'AliasFieldLeakBook')
+
+        then: 'the method compares with the value of its local variable, not with a property'
+        methodCallsNamed(classNode, 'eqProperty', 'usesTAsAMap').isEmpty()
+        methodCallsNamed(classNode, 'eq', 'usesTAsAMap').any { constantArg(it, 0) == 'otherProperty' }
+    }
+
+    void "a captured local variable named like a property of the queried class is a value on the right of a nested alias path"() {
+        given:
+        String source = '''
+import grails.gorm.annotation.Entity
+import org.grails.datastore.gorm.query.transform.ApplyDetachedCriteriaTransform
+
+@ApplyDetachedCriteriaTransform
+@Entity
+class AliasCapturedLocalBook {
+    String title
+
+    static findCaptured() {
+        def title = 'x'
+        AliasCapturedLocalBook.where {
+            def t = AliasCapturedLocalBook
+            t.nested.whatever == title
+        }
+    }
+
+    static findProperty() {
+        AliasCapturedLocalBook.where {
+            def t = AliasCapturedLocalBook
+            t.nested.whatever == title
+        }
+    }
+}
+'''
+
+        when:
+        ClassNode classNode = compileToClassNode(source, 'AliasCapturedLocalBook')
+
+        then: 'the captured local is not read as the property title, the property itself is'
+        methodCallsNamed(classNode, 'eqProperty', 'findCaptured').isEmpty()
+        methodCallsNamed(classNode, 'eqProperty', 'findProperty').any { constantArg(it, 0) == 'title' && constantArg(it, 1) == 't.nested.whatever' }
+    }
+
     void "comparing a property against a property chain not rooted at a variable produces an eq call"() {
         given:
         String source = '''

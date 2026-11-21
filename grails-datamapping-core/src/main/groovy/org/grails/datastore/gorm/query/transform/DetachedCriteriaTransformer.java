@@ -199,6 +199,16 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
 
     @Override
     public void visitField(FieldNode node) {
+        try {
+            visitFieldNode(node);
+        } finally {
+            // an alias belongs to the field that declares it, as to the method: fields are visited before methods
+            aliases.clear();
+            aliasExpressions.clear();
+        }
+    }
+
+    private void visitFieldNode(FieldNode node) {
         ClassNode classNode = node.getOwner();
         if (node.isStatic() && AstUtils.isDomainClass(classNode)) {
             Expression initialExpression = node.getInitialExpression();
@@ -916,8 +926,9 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
     }
 
     /** Whether the expression is the name of a property of the class the query is on, such as {@code id}. */
-    private static boolean isPropertyOfQueriedClass(Expression expression, List<String> propertyNames) {
-        return expression instanceof VariableExpression && propertyNames.contains(((VariableExpression) expression).getName());
+    private static boolean isPropertyOfQueriedClass(Expression expression, List<String> propertyNames, VariableScope variableScope) {
+        return expression instanceof VariableExpression && propertyNames.contains(((VariableExpression) expression).getName()) &&
+                !variableScope.isReferencedLocalVariable(((VariableExpression) expression).getName());
     }
 
     private void addBinaryExpressionToNewBody(List<String> propertyNames, BlockStatement newCode, BinaryExpression be, boolean addAll, VariableScope variableScope) {
@@ -929,7 +940,7 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
         Expression rightExpression = be.getRightExpression();
         String swappedOperator = SWAPPED_COMPARISON_OPERATORS.get(operator);
         if (swappedOperator != null && isNestedAliasPath(leftExpression) &&
-                (isAliasProperty(rightExpression) || isPropertyOfQueriedClass(rightExpression, propertyNames))) {
+                (isAliasProperty(rightExpression) || isPropertyOfQueriedClass(rightExpression, propertyNames, variableScope))) {
             // t.club.id == c.id or t.club.id == id: a nested path of an alias is handled on the right of the comparison, so
             // the sides change places, and the operator with them
             BinaryExpression swapped = new BinaryExpression(rightExpression, Token.newSymbol(swappedOperator, operation.getStartLine(), operation.getStartColumn()), leftExpression);
