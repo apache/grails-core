@@ -129,6 +129,11 @@ final class ProjectLock {
 
     @PackageScope
     static ProjectLock read(byte[] bytes) {
+        return read(bytes, false)
+    }
+
+    @PackageScope
+    static ProjectLock read(byte[] bytes, boolean missingOptionsAsDefaults) {
         StateSection root = new StateSection(ProjectState.LOCK, '', StateYaml.load(bytes, ProjectState.LOCK, StateLimits.LOCK_LINES))
         ProjectManifest.format(root, FORMAT)
         StateSection manifest = root.section('manifest')
@@ -141,7 +146,7 @@ final class ProjectLock {
         String grailsVersion = root.matching('grailsVersion', ProjectManifest.VERSION, 'a version')
         int templateApi = root.number('templateApi', 1, 9999)
         ApplicationType applicationType = ProjectManifest.applicationType(root)
-        GenerationOptions options = GenerationOptions.read(root.section('options'))
+        GenerationOptions options = GenerationOptions.read(root.section('options'), missingOptionsAsDefaults)
         String lineEndings = root.oneOf('lineEndings', [LINE_ENDINGS_OF_TEMPLATES])
         List<LockedRepository> repositories = !root.has('repositories') ? [] as List<LockedRepository> :
                 root.sections('repositories', StateLimits.MAX_REPOSITORIES).collect { StateSection each -> LockedRepository.read(each) }

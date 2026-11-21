@@ -103,6 +103,11 @@ final class ProjectManifest {
 
     @PackageScope
     static ProjectManifest read(byte[] bytes) {
+        return read(bytes, false)
+    }
+
+    @PackageScope
+    static ProjectManifest read(byte[] bytes, boolean missingOptionsAsDefaults) {
         StateSection root = new StateSection(ProjectState.MANIFEST, '', StateYaml.load(bytes, ProjectState.MANIFEST, StateLimits.MANIFEST_LINES))
         format(root, FORMAT)
         String grailsVersion = root.matching('grailsVersion', VERSION, 'a version')
@@ -122,7 +127,7 @@ final class ProjectManifest {
                 applicationType,
                 name,
                 defaultPackage,
-                GenerationOptions.read(root.section('options')),
+                GenerationOptions.read(root.section('options'), missingOptionsAsDefaults),
                 root.oneOf('generationState', [TRACKED, UNTRACKED]),
                 root.sections('requestedFeatures', StateLimits.MAX_FEATURES).collect { StateSection each -> RequestedFeature.read(each) },
                 root.sections('excludedFeatures', StateLimits.MAX_FEATURES).collect { StateSection each -> RequestedFeature.read(each) },

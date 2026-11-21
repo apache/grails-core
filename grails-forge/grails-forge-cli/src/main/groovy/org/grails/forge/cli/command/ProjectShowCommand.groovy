@@ -34,10 +34,13 @@ import org.apache.grails.forge.core.state.ProjectStateException
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.feature.FeatureSelectionException
 import org.grails.forge.io.FileSystemOutputHandler
+import org.grails.forge.options.BuildTool
 import org.grails.forge.options.DevelopmentReloading
 import org.grails.forge.options.GormImpl
 import org.grails.forge.options.JdkVersion
 import org.grails.forge.options.ServletImpl
+import org.grails.forge.options.TestFramework
+import org.grails.forge.util.NameUtils
 import org.grails.forge.util.VersionInfo
 import org.springframework.context.annotation.Scope
 import org.springframework.stereotype.Component
@@ -55,6 +58,8 @@ import java.util.regex.Pattern
 @CommandLine.Command(name = ProjectShowCommand.NAME, description = [
         'Says how the application in the current directory was generated: its type, name and package, its options, the features that were asked for ' +
                 'and left out, and every feature it has.',
+        'Every option of the create command is listed with the value the record has for it, also one that was not given, and with whether that value ' +
+                'is the default of this version of the command line: a default can change from one version to the next.',
         'The last line is the command that creates the application again, with the version of the command line that generated it.'])
 @Component
 @Scope('prototype')
@@ -66,6 +71,34 @@ class ProjectShowCommand extends BaseCommand implements Callable<Integer>, Proje
     private static final Map<ApplicationType, String> CREATE = [(ApplicationType.WEB): CreateAppCommand.NAME, (ApplicationType.REST_API): CreateRestApiCommand.NAME,
                                                                 (ApplicationType.WEB_PLUGIN): CreateWebPluginCommand.NAME,
                                                                 (ApplicationType.PLUGIN): CreatePluginCommand.NAME] as Map<ApplicationType, String>
+
+    /** The value is what a create command of this version takes when the option is not given. */
+    public static final String DEFAULT = 'default'
+
+    /** The value is another one than a create command of this version takes when the option is not given. */
+    public static final String DIFFERS = 'differs'
+
+    /** The record does not have the value: what is shown is what this version takes or generates. */
+    public static final String NOT_RECORDED = 'not-recorded'
+
+    /** The value is of the record and there is no default for it. */
+    public static final String RECORDED = 'recorded'
+
+    /** The options of a create command that are shown with their value, in the order they are shown. */
+    public static final List<String> SHOWN_OPTIONS = Collections.unmodifiableList([
+            '--jdk', '--servlet', '--data', '--reloading', '--subproject', '--features', '--exclude-features', '--feature-pack-dir',
+            '--feature-pack-repository', '--feature-pack-sha256', '--feature-catalog'])
+
+    /**
+     * The options of a create command that are not shown, because they say nothing of the application:
+     * where it is written, what the command writes of itself and what it asks of the network.
+     * {@code --feature-pack-jar} is not told from {@code --feature-pack-dir} by the record. An option
+     * of a create command that is neither here nor in {@link #SHOWN_OPTIONS} is shown as one the record
+     * does not have.
+     */
+    public static final Set<String> OPTIONS_NOT_OF_THE_APPLICATION = Collections.unmodifiableSet([
+            '--inplace', '--list-features', '--list-catalog-features', '--refresh', '--offline', '--feature-pack-jar', '--help', '--version',
+            '--stacktrace', '--verbose', '--plain-output', '--non-interactive'] as Set<String>)
 
     // what a shell takes as it is
     private static final Pattern PLAIN = Pattern.compile('[A-Za-z0-9_@%+=:,./-]+')
@@ -83,7 +116,8 @@ class ProjectShowCommand extends BaseCommand implements Callable<Integer>, Proje
         }
         ProjectState state
         try {
-            state = ProjectState.readSelection(search.project.directory)
+            // an option the record lacks is shown as the default, marked, and is no reason not to show the others
+            state = ProjectState.readSelection(search.project.directory, true)
         } catch (ProjectStateException e) {
             err(GradleRunner.line(e.getMessage() ?: e.getClass().getSimpleName()))
             if (showStacktrace()) {
@@ -94,12 +128,14 @@ class ProjectShowCommand extends BaseCommand implements Callable<Integer>, Proje
         List<String> arguments = arguments(state)
         List<String> notes = notes(state)
         String line = commandLine(spec.root().name(), arguments)
+        List<Setting> settings = settings(state, createOptions(arguments.first()))
         if (json) {
             // written as it is: a document is not markup of the command line, and JSON writes a control character as an escape
-            spec.commandLine().getOut().println(JsonOutput.toJson(document(state, arguments, line, notes)))
+            spec.commandLine().getOut().println(JsonOutput.toJson(document(state, arguments, line, notes, settings)))
             return 0
         }
         describe(state)
+        describe(state, arguments.first(), settings)
         for (String note : notes) {
             out("@|blue ||@ ${GradleRunner.line(note)}")
         }
@@ -112,8 +148,9 @@ class ProjectShowCommand extends BaseCommand implements Callable<Integer>, Proje
     /**
      * @param state the state of a project
      * @return the arguments that create the application again, the name of the create command first:
-     * the name with the package, each option that is not what a create command takes when the option
-     * is not given, the features that were asked for, a plugin by its coordinates with the SHA-256 of
+     * the name with the package, each option whose value in the record is not what a create command of
+     * this version takes when the option is not given, whatever the default was when the application
+     * was generated, the features that were asked for, a plugin by its coordinates with the SHA-256 of
      * its jar and the repository it came from, and the features that were left out
      */
     static List<String> arguments(ProjectState state) {
@@ -132,31 +169,17 @@ class ProjectShowCommand extends BaseCommand implements Callable<Integer>, Proje
         if (options.reloading != DevelopmentReloading.DEFAULT_OPTION) {
             arguments << '--reloading' << written(options.reloading)
         }
-        List<String> features = []
-        List<String> digests = []
-        List<String> repositories = []
-        for (RequestedFeature requested : manifest.requestedFeatures) {
-            if (requested.coordinates == null || requested.version == null) {
-                features << requested.name
-                continue
-            }
-            String plugin = "${requested.coordinates}:${requested.version}".toString()
-            features << plugin
-            LockedFeature locked = state.lock.features.find { LockedFeature feature -> feature.name == requested.name }
-            if (locked != null && locked.sha256 != null) {
-                digests << "${plugin}=${locked.sha256}".toString()
-            }
-            if (locked != null && locked.origin != null && !repositories.contains(locked.origin)) {
-                repositories << locked.origin
-            }
+        if (options.subproject) {
+            arguments << '--subproject'
         }
-        if (!features.isEmpty()) {
-            arguments << '--features' << features.join(',')
+        Plugins plugins = new Plugins(state)
+        if (!plugins.features.isEmpty()) {
+            arguments << '--features' << plugins.features.join(',')
         }
-        for (String repository : repositories) {
+        for (String repository : plugins.repositories) {
             arguments << '--feature-pack-repository' << repository
         }
-        for (String digest : digests) {
+        for (String digest : plugins.digests) {
             arguments << '--feature-pack-sha256' << digest
         }
         if (!manifest.excludedFeatures.isEmpty()) {
@@ -183,6 +206,12 @@ class ProjectShowCommand extends BaseCommand implements Callable<Integer>, Proje
     private static List<String> notes(ProjectState state) {
         ProjectLock lock = state.lock
         List<String> notes = []
+        Set<String> notRecorded = state.manifest.options.notRecorded
+        if (!notRecorded.isEmpty()) {
+            notes << ("The record does not have the ${notRecorded.size() == 1 ? 'option' : 'options'} ${notRecorded.collect { String key -> '--' + key }.join(', ')}: " +
+                    "the command takes the default of this version of the command line for ${notRecorded.size() == 1 ? 'it' : 'them'}, which need not be what " +
+                    'the application was generated with').toString()
+        }
         List<String> given = lock.features.findAll { LockedFeature feature -> feature.source == LockedFeature.PACK && feature.coordinates == null }
                 .collect { LockedFeature feature -> FeatureSelectionException.shown(feature.name) }
         if (!given.isEmpty()) {
@@ -243,7 +272,205 @@ class ProjectShowCommand extends BaseCommand implements Callable<Integer>, Proje
         out("    ${what.padRight(13)} ${value}")
     }
 
-    private static Map<String, Object> document(ProjectState state, List<String> arguments, String line, List<String> notes) {
+    /**
+     * The options of the create command of the application, as picocli has them: what is shown is
+     * every one of them, so that an option a create command gains is shown without a change here.
+     */
+    private List<String> createOptions(String create) {
+        CommandLine command = spec.root().subcommands().get(create)
+        return command == null ? SHOWN_OPTIONS : command.getCommandSpec().options().collect { CommandLine.Model.OptionSpec option -> nameOf(option.names().toList()) }
+    }
+
+    /**
+     * @param names the names of an option of a create command
+     * @return the one it is shown by: the one {@link #SHOWN_OPTIONS} or
+     * {@link #OPTIONS_NOT_OF_THE_APPLICATION} has, and the longest one for an option neither has
+     */
+    static String nameOf(List<String> names) {
+        return names.find { String name -> name in SHOWN_OPTIONS || name in OPTIONS_NOT_OF_THE_APPLICATION } ?: names.max { String name -> name.length() }
+    }
+
+    /**
+     * @param state the state of a project
+     * @param createOptions the options of the create command of its application type, by their longest names
+     * @return what the application was generated with, one entry for each thing that could have been
+     * another: the type, the name, the package and the version of Grails, then every option of the
+     * create command but those of {@link #OPTIONS_NOT_OF_THE_APPLICATION} with the value the record has
+     * and whether it is the default of this version, then the test framework and the build tool, which
+     * the record does not have because there is one of each
+     */
+    static List<Setting> settings(ProjectState state, Collection<String> createOptions) {
+        ProjectManifest manifest = state.manifest
+        ProjectLock lock = state.lock
+        GenerationOptions options = manifest.options
+        Plugins plugins = new Plugins(state)
+        String ofName = packageOf(manifest.name)
+        List<Setting> settings = [
+                new Setting('application-type', null, written(manifest.applicationType), null, RECORDED),
+                new Setting('name', null, manifest.name, null, RECORDED),
+                new Setting('package', null, manifest.defaultPackage, ofName, ofName == null ? RECORDED : manifest.defaultPackage == ofName ? DEFAULT : DIFFERS),
+                new Setting('grails-version', null, manifest.grailsVersion, null, RECORDED)]
+        List<String> unnamedPacks = lock.features.findAll { LockedFeature feature -> feature.source == LockedFeature.PACK && feature.coordinates == null }*.name
+        Map<String, Setting> known = new LinkedHashMap<>()
+        known.put('--jdk', compared('--jdk', options.jdk.majorVersion(), JdkVersion.DEFAULT_OPTION.majorVersion(), options.notRecorded.contains('jdk')))
+        known.put('--servlet', compared('--servlet', written(options.servlet), written(ServletImpl.DEFAULT_OPTION), options.notRecorded.contains('servlet')))
+        known.put('--data', compared('--data', written(options.data), written(GormImpl.DEFAULT_OPTION), options.notRecorded.contains('data')))
+        known.put('--reloading', compared('--reloading', written(options.reloading), written(DevelopmentReloading.DEFAULT_OPTION), options.notRecorded.contains('reloading')))
+        known.put('--subproject', compared('--subproject', options.subproject, false, false))
+        known.put('--features', compared('--features', plugins.features, [], false))
+        known.put('--exclude-features', compared('--exclude-features', manifest.excludedFeatures*.name, [], false))
+        // the record has the features of such a pack and not where the pack was
+        known.put('--feature-pack-dir', unnamedPacks.isEmpty() ? compared('--feature-pack-dir', [], [], false) :
+                new Setting('feature-pack-dir', '--feature-pack-dir', null, [], NOT_RECORDED))
+        known.put('--feature-pack-repository', compared('--feature-pack-repository', plugins.repositories, [], false))
+        known.put('--feature-pack-sha256', compared('--feature-pack-sha256', plugins.digests, [], false))
+        known.put('--feature-catalog', compared('--feature-catalog', lock.features.findAll { LockedFeature feature -> feature.catalog != null }*.catalog.unique(false), [], false))
+        for (String option : SHOWN_OPTIONS) {
+            if (createOptions.contains(option)) {
+                settings << known.get(option)
+            }
+        }
+        for (String option : createOptions.findAll { String each -> !(each in SHOWN_OPTIONS) && !(each in OPTIONS_NOT_OF_THE_APPLICATION) }.sort(false)) {
+            settings << new Setting(option.replaceFirst(/^-+/, ''), option, null, null, NOT_RECORDED)
+        }
+        settings << new Setting('test-framework', null, TestFramework.DEFAULT_OPTION.getName(), TestFramework.DEFAULT_OPTION.getName(), NOT_RECORDED)
+        settings << new Setting('build-tool', null, BuildTool.DEFAULT_OPTION.getName(), BuildTool.DEFAULT_OPTION.getName(), NOT_RECORDED)
+        return settings
+    }
+
+    /**
+     * @param state the state of a project
+     * @return the features the application has that were not asked for: they came with the application
+     * type, with an option, or because another feature needs them, which the record does not tell apart
+     */
+    static List<String> addedFeatures(ProjectState state) {
+        Set<String> requested = state.manifest.requestedFeatures*.name.toSet()
+        return state.lock.featureNames.findAll { String feature -> !(feature in requested) }
+    }
+
+    private static Setting compared(String option, Object value, Object defaultValue, boolean notRecorded) {
+        return new Setting(option.replaceFirst(/^-+/, ''), option, value, defaultValue, notRecorded ? NOT_RECORDED : value == defaultValue ? DEFAULT : DIFFERS)
+    }
+
+    // the package a create command gives an application whose name is given without one
+    private static String packageOf(String name) {
+        try {
+            return NameUtils.parse(name).getPackageName()
+        } catch (IllegalArgumentException ignored) {
+            return null
+        }
+    }
+
+    private void describe(ProjectState state, String create, List<Setting> settings) {
+        out("@|blue ||@ Every option of ${create} with the value the application was generated with, and whether that is the default of this version " +
+                "(${shown(VersionInfo.getVersion())}) of the command line")
+        int width = settings.collect { Setting setting -> setting.label().length() }.max()
+        for (Setting setting : settings) {
+            out("    ${setting.label().padRight(width)}  ${text(setting.value)}${setting.remark() ? '  (' + setting.remark() + ')' : ''}")
+        }
+        List<String> added = addedFeatures(state)
+        int asked = state.manifest.requestedFeatures.size()
+        out("@|blue ||@ Of the ${state.lock.features.size()} features, ${asked} ${asked == 1 ? 'was' : 'were'} asked for (--features above) and " +
+                "${added.size()} came with the application type, with an option or with another feature:")
+        out("    ${added.collect { String feature -> shown(feature) }.join(', ') ?: '(no features)'}")
+    }
+
+    private static String text(Object value) {
+        if (value instanceof Collection) {
+            return ((Collection) value).collect { Object each -> shown(String.valueOf(each)) }.join(', ') ?: '(none)'
+        }
+        if (value instanceof Boolean) {
+            return value ? 'yes' : 'no'
+        }
+        return value == null ? '(not known)' : shown(String.valueOf(value))
+    }
+
+    /**
+     * One thing an application was generated with: its name, the option of the create commands that
+     * decides it where there is one, the value, the default of this version of the command line where
+     * there is one, and how the two compare: {@link #DEFAULT}, {@link #DIFFERS}, {@link #NOT_RECORDED}
+     * or {@link #RECORDED}.
+     */
+    @CompileStatic
+    static final class Setting {
+
+        final String name
+        final String option
+        final Object value
+        final Object defaultValue
+        final String status
+
+        Setting(String name, String option, Object value, Object defaultValue, String status) {
+            this.name = name
+            this.option = option
+            this.value = value
+            this.defaultValue = defaultValue
+            this.status = status
+        }
+
+        String label() {
+            return option ?: name.replace('-', ' ').replace('grails', 'Grails')
+        }
+
+        String remark() {
+            switch (status) {
+                case DEFAULT:
+                    return 'default'
+                case DIFFERS:
+                    return "differs from the current default: ${text(defaultValue)}"
+                case NOT_RECORDED:
+                    return option == null ? 'not recorded: the only one this version generates' :
+                            value == null ? 'not recorded' : 'not recorded: the current default'
+                default:
+                    return null
+            }
+        }
+
+        Map<String, Object> toMap() {
+            Map<String, Object> map = new LinkedHashMap<>()
+            map.put('name', name)
+            if (option != null) {
+                map.put('option', option)
+            }
+            if (value != null) {
+                map.put('value', value)
+            }
+            if (defaultValue != null) {
+                map.put('default', defaultValue)
+            }
+            map.put('status', status)
+            return map
+        }
+    }
+
+    // the features as --features takes them, and what the command needs to find the plugins among them again
+    @CompileStatic
+    private static final class Plugins {
+
+        final List<String> features = []
+        final List<String> digests = []
+        final List<String> repositories = []
+
+        Plugins(ProjectState state) {
+            for (RequestedFeature requested : state.manifest.requestedFeatures) {
+                if (requested.coordinates == null || requested.version == null) {
+                    features << requested.name
+                    continue
+                }
+                String plugin = "${requested.coordinates}:${requested.version}".toString()
+                features << plugin
+                LockedFeature locked = state.lock.features.find { LockedFeature feature -> feature.name == requested.name }
+                if (locked != null && locked.sha256 != null) {
+                    digests << "${plugin}=${locked.sha256}".toString()
+                }
+                if (locked != null && locked.origin != null && !repositories.contains(locked.origin)) {
+                    repositories << locked.origin
+                }
+            }
+        }
+    }
+
+    private static Map<String, Object> document(ProjectState state, List<String> arguments, String line, List<String> notes, List<Setting> settings) {
         ProjectManifest manifest = state.manifest
         ProjectLock lock = state.lock
         Map<String, Object> document = new LinkedHashMap<>()
@@ -269,6 +496,9 @@ class ProjectShowCommand extends BaseCommand implements Callable<Integer>, Proje
         })
         document.put('command', entries(name: arguments.first(), arguments: arguments.drop(1), line: line))
         document.put('notes', notes)
+        // added after the first version of the document, at its end: the format is the same, and a reader that does not know them leaves them
+        document.put('effectiveOptions', settings.collect { Setting setting -> setting.toMap() })
+        document.put('addedFeatures', addedFeatures(state))
         return document
     }
 

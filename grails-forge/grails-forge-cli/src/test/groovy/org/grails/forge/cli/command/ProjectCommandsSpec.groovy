@@ -152,7 +152,8 @@ class ProjectCommandsSpec extends CommandSpec {
         out.toString().readLines().size() == 1
         out.toString().startsWith('{"format":1,"applicationType":"web","name":"shop","defaultPackage":"com.example","grailsVersion":')
         document.keySet() as List == ['format', 'applicationType', 'name', 'defaultPackage', 'grailsVersion', 'generator', 'templateApi', 'generationState', 'options',
-                                      'requestedFeatures', 'excludedFeatures', 'repositories', 'repositoriesNotNamed', 'features', 'command', 'notes']
+                                      'requestedFeatures', 'excludedFeatures', 'repositories', 'repositoriesNotNamed', 'features', 'command', 'notes',
+                                      'effectiveOptions', 'addedFeatures']
         document.generator == [name: 'grails-forge', version: VersionInfo.version]
         document.generationState == 'tracked'
         document.options == [jdk: 25, servlet: 'tomcat', data: 'hibernate5', reloading: 'devtools']
@@ -166,6 +167,29 @@ class ProjectCommandsSpec extends CommandSpec {
                              line: 'grails-forge-cli create-app com.example.shop --jdk 25 --features grails-quartz --exclude-features mockito']
         document.notes == ofRepositories()
 
+        and: 'every option with its value, the default of this command line, and how the two compare'
+        document.format == 1
+        document.effectiveOptions == [
+                [name: 'application-type', value: 'web', status: 'recorded'],
+                [name: 'name', value: 'shop', status: 'recorded'],
+                [name: 'package', value: 'com.example', default: 'shop', status: 'differs'],
+                [name: 'grails-version', value: VersionInfo.grailsVersion, status: 'recorded'],
+                [name: 'jdk', option: '--jdk', value: 25, default: 21, status: 'differs'],
+                [name: 'servlet', option: '--servlet', value: 'tomcat', default: 'tomcat', status: 'default'],
+                [name: 'data', option: '--data', value: 'hibernate5', default: 'hibernate5', status: 'default'],
+                [name: 'reloading', option: '--reloading', value: 'devtools', default: 'devtools', status: 'default'],
+                [name: 'subproject', option: '--subproject', value: false, default: false, status: 'default'],
+                [name: 'features', option: '--features', value: ['grails-quartz'], default: [], status: 'differs'],
+                [name: 'exclude-features', option: '--exclude-features', value: ['mockito'], default: [], status: 'differs'],
+                [name: 'feature-pack-dir', option: '--feature-pack-dir', value: [], default: [], status: 'default'],
+                [name: 'feature-pack-repository', option: '--feature-pack-repository', value: [], default: [], status: 'default'],
+                [name: 'feature-pack-sha256', option: '--feature-pack-sha256', value: [], default: [], status: 'default'],
+                [name: 'feature-catalog', option: '--feature-catalog', value: [], default: [], status: 'default'],
+                [name: 'test-framework', value: 'spock', default: 'spock', status: 'not-recorded'],
+                [name: 'build-tool', value: 'gradle', default: 'gradle', status: 'not-recorded']]
+        document.addedFeatures == state.lock.featureNames - 'grails-quartz'
+        !document.addedFeatures.isEmpty()
+
         when: 'asked again'
         String first = out.toString()
         out.reset()
@@ -173,6 +197,141 @@ class ProjectCommandsSpec extends CommandSpec {
 
         then:
         out.toString() == first
+    }
+
+    void "project show lists every option with its value, the ones that were not given too, and says which are the default of this command line"() {
+        given:
+        create(dir, ['create-app', 'com.example.shop', '--features', 'grails-quartz'])
+        ProjectState state = ProjectState.read(new File(dir, 'shop').toPath())
+
+        when:
+        int exit = run('project', 'show')
+        List<String> lines = out.toString().readLines()
+        int from = lines.indexOf("| Every option of create-app with the value the application was generated with, and whether that is the default of this version " +
+                "(${VersionInfo.version}) of the command line".toString())
+        List<List<String>> rows = lines.subList(from + 1, from + 18).collect { String line -> line.trim().split(/ {2,}/).toList() }
+
+        then:
+        exit == 0
+        err.toString().isEmpty()
+        from > 0
+        rows == [['application type', 'web'],
+                 ['name', 'shop'],
+                 ['package', 'com.example', '(differs from the current default: shop)'],
+                 ['Grails version', VersionInfo.grailsVersion],
+                 ['--jdk', '21', '(default)'],
+                 ['--servlet', 'tomcat', '(default)'],
+                 ['--data', 'hibernate5', '(default)'],
+                 ['--reloading', 'devtools', '(default)'],
+                 ['--subproject', 'no', '(default)'],
+                 ['--features', 'grails-quartz', '(differs from the current default: (none))'],
+                 ['--exclude-features', '(none)', '(default)'],
+                 ['--feature-pack-dir', '(none)', '(default)'],
+                 ['--feature-pack-repository', '(none)', '(default)'],
+                 ['--feature-pack-sha256', '(none)', '(default)'],
+                 ['--feature-catalog', '(none)', '(default)'],
+                 ['test framework', 'spock', '(not recorded: the only one this version generates)'],
+                 ['build tool', 'gradle', '(not recorded: the only one this version generates)']]
+
+        and: 'the features that were asked for apart from those that came with them'
+        lines[from + 18] == "| Of the ${state.lock.features.size()} features, 1 was asked for (--features above) and ${state.lock.features.size() - 1} came with the " +
+                'application type, with an option or with another feature:'
+        lines[from + 19].trim().split(', ').toList() == state.lock.featureNames - 'grails-quartz'
+
+        and: 'the command line is the short one, and last'
+        lines[-1] == 'grails-forge-cli create-app com.example.shop --features grails-quartz'
+    }
+
+    void "an option of a create command is shown by project show, or is one that says nothing of the application"() {
+        given:
+        create(dir, [command, 'com.example.shop'])
+        List<String> options = ForgeCli.createCommandLine(beanContext, true).getSubcommands().get(command).getCommandSpec().options().collect { ProjectShowCommand.nameOf(it.names().toList()) }
+
+        when:
+        run('project', 'show', '--json')
+        Map document = (Map) new JsonSlurper().parseText(out.toString())
+
+        then: 'a new option is added to one of the two lists of the command, with what the record has for it'
+        options.findAll { !(it in ProjectShowCommand.SHOWN_OPTIONS) && !(it in ProjectShowCommand.OPTIONS_NOT_OF_THE_APPLICATION) } == []
+        ProjectShowCommand.SHOWN_OPTIONS.every { it in options }
+        ProjectShowCommand.SHOWN_OPTIONS.intersect(ProjectShowCommand.OPTIONS_NOT_OF_THE_APPLICATION).isEmpty()
+
+        and: 'each of them is in the document, none without a status'
+        document.effectiveOptions.findAll { it.option != null }*.option == ProjectShowCommand.SHOWN_OPTIONS
+        document.effectiveOptions.every { it.status in ['default', 'differs', 'recorded', 'not-recorded'] }
+
+        where:
+        command << ['create-app', 'create-restapi', 'create-web-plugin', 'create-plugin']
+    }
+
+    void "a value that is not the default of this command line is said to differ and is on the command line, whoever chose it"() {
+        given: 'a record with another Grails Data implementation than a create command of this version takes: that of an application created when it was the default'
+        create(dir, ['create-app', 'com.example.shop', '--data', 'hibernate7'])
+
+        when:
+        int exit = run('project', 'show')
+        List<String> lines = out.toString().readLines()
+
+        then:
+        exit == 0
+        lines.any { it ==~ / +--data +hibernate7 +\(differs from the current default: hibernate5\)/ }
+        lines.any { it ==~ / +--servlet +tomcat +\(default\)/ }
+        lines[-1] == 'grails-forge-cli create-app com.example.shop --data hibernate7'
+
+        when:
+        out.reset()
+        run('project', 'show', '--json')
+        Map document = (Map) new JsonSlurper().parseText(out.toString())
+
+        then:
+        document.effectiveOptions.find { it.name == 'data' } == [name: 'data', option: '--data', value: 'hibernate7', default: 'hibernate5', status: 'differs']
+        document.command.arguments == ['com.example.shop', '--data', 'hibernate7']
+
+        when: 'the printed command line is run in another directory'
+        int again = create(other, words(lines[-1]).drop(1))
+
+        then: 'the application is the one that was generated, not one of the defaults of today'
+        again == 0
+        tree(new File(other, 'shop')) == tree(new File(dir, 'shop'))
+    }
+
+    void "a record that lacks an option is shown with the default of this command line for it, marked as not recorded"() {
+        given: 'a record as a build that did not write the option left it'
+        create(dir, ['create-app', 'com.example.shop', '--servlet', 'jetty'])
+        File project = new File(dir, 'shop')
+        withoutOption(project, 'reloading')
+
+        when:
+        int exit = run('project', 'show')
+        List<String> lines = out.toString().readLines()
+
+        then:
+        exit == 0
+        err.toString().isEmpty()
+        lines.any { it ==~ / +--reloading +devtools +\(not recorded: the current default\)/ }
+        lines.any { it ==~ / +--servlet +jetty +\(differs from the current default: tomcat\)/ }
+        lines.contains('| The record does not have the option --reloading: the command takes the default of this version of the command line for it, ' +
+                'which need not be what the application was generated with')
+        lines[-1] == 'grails-forge-cli create-app com.example.shop --servlet jetty'
+
+        when:
+        out.reset()
+        exit = run('project', 'show', '--json')
+        Map document = (Map) new JsonSlurper().parseText(out.toString())
+
+        then:
+        exit == 0
+        document.effectiveOptions.find { it.name == 'reloading' } == [name: 'reloading', option: '--reloading', value: 'devtools', default: 'devtools', status: 'not-recorded']
+        document.options == [jdk: 21, servlet: 'jetty', data: 'hibernate5', reloading: 'devtools']
+        document.notes.first().startsWith('The record does not have the option --reloading')
+
+        when: 'what changes the application reads the record as before'
+        err.reset()
+        exit = run('project', 'regenerate', '--diff')
+
+        then:
+        exit == 1
+        err.toString().contains('.grails/project.yml: options.reloading')
     }
 
     void "the plugin of a feature pack is named by its coordinates with the SHA-256 of its jar, and the command line gives the same application"() {
@@ -193,7 +352,7 @@ class ProjectCommandsSpec extends CommandSpec {
         lines.contains("    acme-audit (pack, com.acme:acme-audit-grails:2.3.0, sha256 ${sha(jar.bytes)})".toString())
         lines.contains('| The record does not name the repository com.acme:acme-audit-grails:2.3.0 was taken from: give it to the command with --feature-pack-repository, ' +
                 'unless it is one of those the command asks anyway')
-        lines.findAll { it.startsWith('| ') }.size() == 4 + ofRepositories().size()
+        lines.findAll { it.startsWith('| ') }.size() == 6 + ofRepositories().size()
         words(lines[-1]) == ['grails-forge-cli', 'create-app', 'com.example.shop', '--features', 'com.acme:acme-audit-grails:2.3.0,h2',
                              '--feature-pack-sha256', "com.acme:acme-audit-grails:2.3.0=${sha(jar.bytes)}".toString()]
 
@@ -237,6 +396,7 @@ class ProjectCommandsSpec extends CommandSpec {
         document.notes == ['The feature acme-audit is that of a feature pack given as a directory or a jar, which the record does not name: ' +
                                    'give it to the command with --feature-pack-dir'] + ofRepositories()
         document.features.find { it.name == 'acme-audit' } == [name: 'acme-audit', source: 'pack']
+        document.effectiveOptions.find { it.name == 'feature-pack-dir' } == [name: 'feature-pack-dir', option: '--feature-pack-dir', default: [], status: 'not-recorded']
         !out.toString().contains(other.name)
     }
 
@@ -651,6 +811,19 @@ class ProjectCommandsSpec extends CommandSpec {
             // what a create command says is not what is looked at
             out.reset()
         }
+    }
+
+    // takes an option out of the manifest and the lock, and seals the lock again, so that the two belong together as before
+    private static void withoutOption(File project, String key) {
+        File manifest = new File(project, '.grails/project.yml')
+        File lock = new File(project, '.grails/forge.lock.yml')
+        String before = sha(manifest.bytes)
+        manifest.setText(manifest.getText('UTF-8').readLines().findAll { String line -> !line.startsWith("  ${key}:") }.join('\n') + '\n', 'UTF-8')
+        String text = lock.getText('UTF-8')
+        assert text.contains(before)
+        String sealed = text.substring(0, text.indexOf('seal:\n')).readLines().findAll { String line -> !line.startsWith("  ${key}:") }.join('\n') + '\n'
+        sealed = sealed.replace(before, sha(manifest.bytes))
+        lock.setText(sealed + "seal:\n  sha256: ${sha(sealed.getBytes('UTF-8'))}\n", 'UTF-8')
     }
 
     // the note for the repositories the build of Forge gives its tests in GRAILS_REPO_URL, when it does

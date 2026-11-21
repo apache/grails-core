@@ -179,10 +179,28 @@ final class ProjectState {
      * @throws ProjectStateException with what is wrong, in one line
      */
     static ProjectState readSelection(Path projectDirectory) {
-        return read(projectDirectory, false)
+        return read(projectDirectory, false, false)
+    }
+
+    /**
+     * Reads the manifest and the lock as {@link #readSelection(Path)} does, for what shows the record
+     * and changes nothing.
+     *
+     * @param projectDirectory the directory of a project
+     * @param missingOptionsAsDefaults whether a record that lacks an option, as one written before the
+     * option was recorded does, is read with what a create command takes when the option is not given,
+     * the option named by {@link GenerationOptions#notRecorded}; otherwise such a record is refused
+     * @throws ProjectStateException with what is wrong, in one line
+     */
+    static ProjectState readSelection(Path projectDirectory, boolean missingOptionsAsDefaults) {
+        return read(projectDirectory, false, missingOptionsAsDefaults)
     }
 
     private static ProjectState read(Path projectDirectory, boolean withBaseline) {
+        return read(projectDirectory, withBaseline, false)
+    }
+
+    private static ProjectState read(Path projectDirectory, boolean withBaseline, boolean missingOptionsAsDefaults) {
         List<String> files = [MANIFEST, LOCK, BASELINE_INDEX]
         List<String> missing = files.findAll { String file -> !Files.exists(projectDirectory.resolve(file), LinkOption.NOFOLLOW_LINKS) }
         if (missing.size() == files.size()) {
@@ -204,7 +222,7 @@ final class ProjectState {
         try {
             byte[] manifestBytes = bytes(projectDirectory, MANIFEST, StateLimits.MAX_MANIFEST)
             byte[] lockBytes = bytes(projectDirectory, LOCK, StateLimits.MAX_LOCK)
-            return of(manifestBytes, lockBytes, withBaseline ? bytes(projectDirectory, BASELINE_INDEX, StateLimits.MAX_INDEX) : null)
+            return of(manifestBytes, lockBytes, withBaseline ? bytes(projectDirectory, BASELINE_INDEX, StateLimits.MAX_INDEX) : null, missingOptionsAsDefaults)
         } catch (IOException e) {
             throw new ProjectStateException("The state of the project cannot be read: ${e.class.simpleName}")
         }
@@ -219,14 +237,18 @@ final class ProjectState {
      * @throws ProjectStateException with what is wrong, in one line
      */
     static ProjectState of(byte[] manifestBytes, byte[] lockBytes, byte[] indexBytes) {
+        return of(manifestBytes, lockBytes, indexBytes, false)
+    }
+
+    private static ProjectState of(byte[] manifestBytes, byte[] lockBytes, byte[] indexBytes, boolean missingOptionsAsDefaults) {
         for (Map.Entry<String, Integer> each : [(MANIFEST): manifestBytes.length - StateLimits.MAX_MANIFEST, (LOCK): lockBytes.length - StateLimits.MAX_LOCK,
                                                (BASELINE_INDEX): (indexBytes == null ? 0 : indexBytes.length) - StateLimits.MAX_INDEX].entrySet()) {
             if (each.value > 0) {
                 throw new ProjectStateException("${each.key} is larger than it can be, by ${each.value} bytes")
             }
         }
-        ProjectManifest manifest = ProjectManifest.read(manifestBytes)
-        ProjectLock lock = ProjectLock.read(lockBytes)
+        ProjectManifest manifest = ProjectManifest.read(manifestBytes, missingOptionsAsDefaults)
+        ProjectLock lock = ProjectLock.read(lockBytes, missingOptionsAsDefaults)
         String apart = apart(manifest, lock, manifestBytes)
         if (apart != null) {
             throw new ProjectStateException("${LOCK} does not belong to ${MANIFEST}: ${apart}")

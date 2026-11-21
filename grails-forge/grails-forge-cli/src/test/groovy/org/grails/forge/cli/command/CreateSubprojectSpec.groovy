@@ -268,6 +268,15 @@ class CreateSubprojectSpec extends CommandSpec {
 
         expect: 'and the application is as it was generated'
         run(shop, 'project', 'regenerate', '--diff') == 0
+
+        when: 'the record is shown'
+        out.reset()
+        exit = run(shop, 'project', 'show')
+
+        then: 'the command that creates it again has the option, which is not the default'
+        exit == 0
+        said().contains(' --subproject yes (differs from the current default: no) ')
+        out.toString().readLines().last() == 'grails-forge-cli create-app example.shop --subproject'
     }
 
     void "the commands that write classes write into the project of the build they are run below"() {

@@ -336,11 +336,52 @@ $ ./grailsw project show
     name          shop
     package       com.example
     ...
+| Every option of create-app with the value the application was generated with, and whether that is the default of this version (9.0.0) of the command line
+    application type           web
+    name                       shop
+    package                    com.example  (differs from the current default: shop)
+    Grails version             9.0.0
+    --jdk                      21  (default)
+    --servlet                  tomcat  (default)
+    --data                     hibernate7  (differs from the current default: hibernate5)
+    --reloading                devtools  (default)
+    --subproject               no  (default)
+    --features                 grails-quartz  (differs from the current default: (none))
+    --exclude-features         mockito  (differs from the current default: (none))
+    --feature-pack-dir         (none)  (default)
+    --feature-pack-repository  (none)  (default)
+    --feature-pack-sha256      (none)  (default)
+    --feature-catalog          (none)  (default)
+    test framework             spock  (not recorded: the only one this version generates)
+    build tool                 gradle  (not recorded: the only one this version generates)
+| Of the 30 features, 1 was asked for (--features above) and 29 came with the application type, with an option or with another feature:
+    app-name, asset-pipeline-grails, base, ...
 | The application is created again with:
 grails create-app com.example.shop --data hibernate7 --features grails-quartz --exclude-features mockito
 ----
 
-The command line names the application with its package, each option that is not the default of the `create-` commands, the features that were asked for (`--features`) and those that were left out (`--exclude-features`). A feature pack that was selected by the coordinates of its plugin is named by those coordinates, with `--feature-pack-sha256` for the SHA-256 of the jar that was used and `--feature-pack-repository` for the repository, when the record has its address. An argument that a shell would act on is written between single quotes, so the line can be pasted into a POSIX shell as it is. Run by the version of Grails that generated the project, in an empty directory, it gives the same application with the same record. Three things the record does not hold are said in a line before the command, when they apply: a feature pack that was given as a directory (`--feature-pack-dir`), a repository whose address is not recorded, and the repositories of the `GRAILS_REPO_URL` environment variable, which has to be set to the same ones. `--json` writes the same as one JSON document, for a tool: the record (`applicationType`, `name`, `defaultPackage`, `grailsVersion`, `generator`, `options`, `requestedFeatures`, `excludedFeatures`, `repositories`, `features`), the command as `command.name`, `command.arguments` and `command.line`, and those lines as `notes`. The keys are always in the same order.
+The list of options has every option of the `create-` command that decides something of the application, also the ones that were not given when it was created, because the value an option has when it is not given can change from one version of Grails to the next. The record holds the value the application was generated with, whether it was given or not, and that is the value shown. What follows it compares it with the command line that is running:
+
+[cols="1,3"]
+|===
+| Mark | Meaning
+
+| `default`
+| The value is what a `create-` command of the version of the command line that is running takes when the option is not given. The record does not say whether the option was given.
+
+| `differs from the current default: VALUE`
+| The value is another one. It was chosen with the option, or it follows from the application type or a feature (a plugin has `--servlet none`), or it was the default when the application was generated and the default has changed since. The command line at the end has every such option, so it creates the application with the recorded values whatever the defaults are now.
+
+| `not recorded: the current default`
+| The record does not have the option, because it was written by a build of Grails that did not record it. The default of the running command line is shown in its place, and a line before the command says that the command takes that default, which need not be what the application was generated with.
+
+| `not recorded: the only one this version generates`
+| The test framework and the build tool are no options: every application has Spock and Gradle, and the record does not name them.
+|===
+
+The line after the options tells the features that were asked for from the ones the application has because of its type, an option or another feature; the record does not say which of the three brought a feature in.
+
+The command line names the application with its package, each option whose recorded value is not the default of the `create-` commands of the running version (`--subproject` among them), the features that were asked for (`--features`) and those that were left out (`--exclude-features`). A feature pack that was selected by the coordinates of its plugin is named by those coordinates, with `--feature-pack-sha256` for the SHA-256 of the jar that was used and `--feature-pack-repository` for the repository, when the record has its address. An argument that a shell would act on is written between single quotes, so the line can be pasted into a POSIX shell as it is. Run by the version of Grails that generated the project, in an empty directory, it gives the same application with the same record. Three things the record does not hold are said in a line before the command, when they apply: a feature pack that was given as a directory (`--feature-pack-dir`), a repository whose address is not recorded, and the repositories of the `GRAILS_REPO_URL` environment variable, which has to be set to the same ones. `--json` writes the same as one JSON document, for a tool: the record (`applicationType`, `name`, `defaultPackage`, `grailsVersion`, `generator`, `options`, `requestedFeatures`, `excludedFeatures`, `repositories`, `features`), the command as `command.name`, `command.arguments` and `command.line`, those lines as `notes`, the list of options as `effectiveOptions` and the features that were not asked for as `addedFeatures`. An entry of `effectiveOptions` has a `name`, the `option` of the `create-` commands where there is one, the `value`, the `default` of the running command line where there is one, and a `status`: `default`, `differs`, `not-recorded`, or `recorded` for the type, the name and the version of Grails, which have no default. The keys are always in the same order. `format` is 1; a member that is added to the document later comes after the ones that are there and does not change the format, so a tool ignores a member it does not know.
 
 `project regenerate` generates the application again from the record, without a command line to copy, and changes nothing in the project:
 

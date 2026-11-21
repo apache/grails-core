@@ -36,8 +36,11 @@ import org.grails.forge.options.ServletImpl
  * @since 9.0
  */
 @CompileStatic
-@EqualsAndHashCode
+@EqualsAndHashCode(excludes = 'notRecorded')
 final class GenerationOptions {
+
+    /** The options a record has to have, by the keys they are written with. */
+    public static final List<String> RECORDED = Collections.unmodifiableList(['jdk', 'servlet', 'data', 'reloading'])
 
     final JdkVersion jdk
     final ServletImpl servlet
@@ -47,6 +50,14 @@ final class GenerationOptions {
     /** Whether the application has only its own files, and not those of the root of a Gradle build. */
     final boolean subproject
 
+    /**
+     * The keys of the options the record did not have, for which this has what a create command takes
+     * when the option is not given. Empty unless the record was read for showing it, see
+     * {@link ProjectState#readSelection(java.nio.file.Path, boolean)}; two sets of options that differ
+     * in this alone are equal.
+     */
+    final Set<String> notRecorded
+
     /** What {@code layout} is for an application that is a project of a build that is not its own. */
     public static final String SUBPROJECT = 'subproject'
 
@@ -55,6 +66,11 @@ final class GenerationOptions {
     }
 
     GenerationOptions(JdkVersion jdk, ServletImpl servlet, GormImpl data, DevelopmentReloading reloading, boolean subproject) {
+        this(jdk, servlet, data, reloading, subproject, Collections.<String>emptySet())
+    }
+
+    private GenerationOptions(JdkVersion jdk, ServletImpl servlet, GormImpl data, DevelopmentReloading reloading, boolean subproject, Set<String> notRecorded) {
+        this.notRecorded = Collections.unmodifiableSet(new LinkedHashSet<String>(notRecorded))
         this.jdk = jdk
         this.servlet = servlet
         this.data = data
@@ -83,17 +99,32 @@ final class GenerationOptions {
 
     @PackageScope
     static GenerationOptions read(StateSection section) {
-        int major = section.number('jdk', 1, 999)
-        JdkVersion jdk = JdkVersion.values().find { JdkVersion each -> each.majorVersion() == major }
-        if (jdk == null) {
-            throw section.problem('jdk', "is ${major}, a version of Java this version of Grails does not generate for")
+        return read(section, false)
+    }
+
+    /**
+     * @param missingAsDefaults whether an option the section does not have is the one a create command
+     * takes when the option is not given, and is named by {@link #notRecorded}; otherwise it is refused
+     */
+    @PackageScope
+    static GenerationOptions read(StateSection section, boolean missingAsDefaults) {
+        Set<String> notRecorded = missingAsDefaults ? RECORDED.findAll { String key -> !section.has(key) }.toSet() : Collections.<String>emptySet()
+        JdkVersion jdk = JdkVersion.DEFAULT_OPTION
+        if (!notRecorded.contains('jdk')) {
+            int major = section.number('jdk', 1, 999)
+            jdk = JdkVersion.values().find { JdkVersion each -> each.majorVersion() == major }
+            if (jdk == null) {
+                throw section.problem('jdk', "is ${major}, a version of Java this version of Grails does not generate for")
+            }
         }
         GenerationOptions options = new GenerationOptions(
                 jdk,
-                ServletImpl.valueOf(named(section, 'servlet', ServletImpl.values() as List<Enum>)),
-                GormImpl.valueOf(named(section, 'data', GormImpl.values() as List<Enum>)),
-                DevelopmentReloading.valueOf(named(section, 'reloading', DevelopmentReloading.values() as List<Enum>)),
-                section.has('layout') && section.oneOf('layout', [SUBPROJECT]) == SUBPROJECT)
+                notRecorded.contains('servlet') ? ServletImpl.DEFAULT_OPTION : ServletImpl.valueOf(named(section, 'servlet', ServletImpl.values() as List<Enum>)),
+                notRecorded.contains('data') ? GormImpl.DEFAULT_OPTION : GormImpl.valueOf(named(section, 'data', GormImpl.values() as List<Enum>)),
+                notRecorded.contains('reloading') ? DevelopmentReloading.DEFAULT_OPTION :
+                        DevelopmentReloading.valueOf(named(section, 'reloading', DevelopmentReloading.values() as List<Enum>)),
+                section.has('layout') && section.oneOf('layout', [SUBPROJECT]) == SUBPROJECT,
+                notRecorded)
         section.end()
         return options
     }
