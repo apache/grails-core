@@ -848,7 +848,7 @@ Generated YAML configuration has a fixed key order (`info`, `dataSource`, `envir
 
 - Do not reorder an existing `application.yml` to match: `grails feature add` keeps the order a file has and only inserts the new keys.
 - To switch a default feature, run `grails feature add <feature>` (for example `postgres` for the default `h2`); it removes the default's dependency and configuration and updates `.grails`.
-- If the project was created with the feature it would replace named in `--features`, the command refuses: change it by hand.
+- If the feature it would replace was named in `--features` at creation or added by name earlier, the command refuses with exit code 2 and names `--replace`: run `grails feature add <feature> --replace`. It still refuses when another selected feature requires the one to be replaced (for example `grails-spring-security` with `grails-spring-security-ui`), and it never changes `--data`, `--servlet`, `--reloading` or `--jdk`.
 - If lines of the default were edited (for example the H2 URL), the command reports a conflict and writes nothing: restore the generated line, add the feature, then reapply the edit.
 
 ## `test-app` With a Test Name, `project show`, and REST API Plugins
