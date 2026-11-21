@@ -20,7 +20,7 @@ under the License.
 [[ui-aclObjectIdentity]]
 === AclObjectIdentity Management
 
-The default action for the AclObjectIdentity controller is search. By default only the standard fields are available but this is customizable with the <<ui-s2ui-override>> script - see the <<ui-customization>> section for details.
+The default action for the AclObjectIdentity controller is search. By default only the standard fields are available but this is customizable with the <<ui-s2ui-override>> command - see the <<ui-customization>> section for details.
 
 Leave all fields at their default values to return all instances.
 

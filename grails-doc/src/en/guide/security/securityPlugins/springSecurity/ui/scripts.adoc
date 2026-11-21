@@ -18,7 +18,18 @@ under the License.
 ////
 
 [[ui-scripts]]
-== Scripts
+== Commands
+
+The plugin has two commands. They are commands of the application they are run in: the Gradle task `runCommand` of the project starts the application and runs the command in it, so the application has to compile and start.
+
+[source,bash]
+----
+./gradlew runCommand -Pargs="s2ui-override user com.yourcompany.yourapp"
+----
+
+The `grails` command runs the same task: `grails run-command s2ui-override user com.yourcompany.yourapp`, or, once the Gradle task `grailsCommandCatalog` has listed the commands of the project (`grails gradle grailsCommandCatalog`), `grails s2ui-override user com.yourcompany.yourapp`.
+
+Up to Grails 8 the two were scripts of the plugin. They take the same arguments and write the same files; the Gradle task `runScriptCommand` and `grails run-script` do not run them any more.
 
 include::scripts/s2ui-override.adoc[]
 include::scripts/s2ui-create-challenge-questions.adoc[]

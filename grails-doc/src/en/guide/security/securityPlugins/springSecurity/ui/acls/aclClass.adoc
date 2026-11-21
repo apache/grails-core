@@ -20,7 +20,7 @@ under the License.
 [[ui-aclClass]]
 === AclClass Management
 
-The default action for the AclClass controller is search. By default only the standard fields are available but this is customizable with the <<ui-s2ui-override>> script - see the <<ui-customization>> section for details.
+The default action for the AclClass controller is search. By default only the standard fields are available but this is customizable with the <<ui-s2ui-override>> command - see the <<ui-customization>> section for details.
 
 The `className` field has an Ajax autocomplete to assist in finding instances. Leave the field empty to return all instances.
 
