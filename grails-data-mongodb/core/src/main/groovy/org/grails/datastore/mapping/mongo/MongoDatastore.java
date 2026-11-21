@@ -95,6 +95,7 @@ import org.grails.datastore.mapping.mongo.config.MongoSettings;
 import org.grails.datastore.mapping.mongo.connections.MongoConnectionSourceFactory;
 import org.grails.datastore.mapping.mongo.connections.MongoConnectionSourceSettings;
 import org.grails.datastore.mapping.mongo.connections.MongoConnectionSourceSettingsBuilder;
+import org.grails.datastore.mapping.mongo.engine.PersistedInstances;
 import org.grails.datastore.mapping.mongo.engine.codecs.PersistentEntityCodec;
 import org.grails.datastore.mapping.multitenancy.AllTenantsResolver;
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings;
@@ -132,6 +133,7 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
     protected final Map<PersistentEntity, String> mongoCollections = new ConcurrentHashMap<>();
     protected final Map<PersistentEntity, String> mongoDatabases = new ConcurrentHashMap<>();
     protected final boolean stateless;
+    protected final PersistedInstances persistedInstances = new PersistedInstances();
     protected final boolean codecEngine;
     protected CodecRegistry codecRegistry;
     protected final ConfigurableApplicationEventPublisher eventPublisher;
@@ -614,6 +616,13 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      */
     public PlatformTransactionManager getTransactionManager() {
         return transactionManager;
+    }
+
+    /**
+     * @return The instances with an assigned identifier that were loaded or inserted, which tells a detached instance from a new one
+     */
+    public PersistedInstances getPersistedInstances() {
+        return persistedInstances;
     }
 
     /**

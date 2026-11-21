@@ -154,7 +154,12 @@ class PersistentEntityCodec extends BsonPersistentEntityCodec {
 
     @Override
     protected void readingComplete(EntityAccess access) {
+        boolean assigned = !(entity instanceof EmbeddedPersistentEntity) &&
+                MongoConstants.ASSIGNED_IDENTIFIER_MAPPING == entity.identity?.mapping?.mappedForm?.generator
         Closure callback = { Session session ->
+            if (assigned) {
+                ((MongoDatastore) session.datastore).persistedInstances.add(access.entity)
+            }
             decodeAssociations(session, access)
         }
         if (entity instanceof EmbeddedPersistentEntity) {
