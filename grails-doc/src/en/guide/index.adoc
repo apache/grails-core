@@ -1326,6 +1326,11 @@ include::contributing.adoc[]
 [[ref-command-line]]
 === Command Line
 
+[[ref-command-line-add-property]]
+==== add-property
+
+include::ref/Command Line/add-property.adoc[]
+
 [[ref-command-line-bug-report]]
 ==== bug-report
 

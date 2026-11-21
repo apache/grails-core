@@ -25,6 +25,11 @@ under the License.
 ////
 NOTE: This file serves as the centralized reference index for all CLI commands, constraints, domain class methods, tags, and more. Each section includes modular AsciiDoc files stored under `ref/`. When adding a new command or feature, update this file accordingly to maintain navigation integrity.
 ////
+[[ref-command-line-add-property]]
+==== add-property
+
+include::ref/Command Line/add-property.adoc[]
+
 [[ref-command-line-bug-report]]
 ==== bug-report
 
