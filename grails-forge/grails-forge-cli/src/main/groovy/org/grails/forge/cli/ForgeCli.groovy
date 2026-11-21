@@ -53,6 +53,8 @@ import org.grails.forge.cli.command.CreateTagLibCommand
 import org.grails.forge.cli.command.CreateUnitTestCommand
 import org.grails.forge.cli.command.InstallTemplatesCommand
 import org.grails.forge.cli.command.HelpCommand
+import org.grails.forge.cli.command.ProjectGroupCommand
+import org.grails.forge.cli.command.ProjectMigrateCommand
 import org.grails.forge.io.ConsoleOutput
 import org.grails.forge.io.FileSystemOutputHandler
 
@@ -244,6 +246,12 @@ final class ForgeCli {
         try {
             expanded = new CommandCatalog(commandLine).expand(args)
         } catch (CommandLine.ParameterException e) {
+            String refused = refusedIn(args)
+            if (refused != null) {
+                // whatever was typed, it is no command that is run in this project
+                root.err(refused)
+                return 1
+            }
             held.replay(root)
             // what was typed may be the name of a command of the application that is not there for it
             ApplicationCommands.said(commandLine, commandOf(args))
@@ -251,6 +259,16 @@ final class ForgeCli {
         }
         CommandLine help = commandLine.getSubcommands().get(HelpCommand.NAME)
         boolean document = help != null && commandOf(expanded) == HelpCommand.NAME && optionsOf(expanded).contains('--json')
+        String refused = refusedIn(expanded)
+        if (refused != null) {
+            if (commandOf(expanded) != null && commandOf(expanded) != HelpCommand.NAME) {
+                // nothing of the project is run, read for a command or written
+                root.err(refused)
+                return 1
+            }
+            // the help is shown all the same, and says first why its commands of a project are not run
+            held.warning(refused)
+        }
         if (readsProject(expanded)) {
             // A project of an earlier version of Grails is said to be one by the commands that write
             // into it what this version has, and by the help; a command that runs its build does in
@@ -272,6 +290,29 @@ final class ForgeCli {
             ApplicationCommands.said(commandLine, commandOf(args), commandOf(expanded))
         }
         return commandLine.execute(expanded)
+    }
+
+    /**
+     * What there is to say of a command line in a project of a version of Grails before the first this
+     * command line works with, and {@code null} in any other directory and for the command lines that
+     * are run there all the same: asking for the version, creating an application, and
+     * {@code project migrate}, which is how such a project gets the record of this version.
+     */
+    private static String refusedIn(String... args) {
+        Class<?> type = declared(args)
+        if (args.any { String arg -> arg == '-V' || arg == '--version' } || (type != null && CreateCommand.isAssignableFrom(type))) {
+            return null
+        }
+        List<String> words = optionsOf(args).findAll { String arg -> !arg.startsWith('-') }
+        if (words.size() > 1 && words[0] == ProjectGroupCommand.NAME && words[1] == ProjectMigrateCommand.NAME) {
+            return null
+        }
+        try {
+            return EarlierGrailsProject.refusal(FileSystemOutputHandler.getDefaultBaseDirectory().toPath())
+        } catch (IOException ignored) {
+            // without a current directory there is no project to refuse
+            return null
+        }
     }
 
     /**

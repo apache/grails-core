@@ -566,20 +566,53 @@ dependencies {
                                    'settings.gradle': "rootProject.name = 'a/b'\n"]                                                   || "is not a name an application can be created with"
     }
 
-    void "a project that is on an earlier version of Grails is upgraded first"() {
+    void "a project that is on Grails 7 or 8 gets its record, and the other commands of a project once it is on Grails 9"() {
         given:
         shellProject()
-        new File(dir, 'gradle.properties').text = 'grailsVersion=7.0.4\n'
+        new File(dir, 'gradle.properties').text = "grailsVersion=${version}\n"
         Map<String, String> before = tree()
 
         when:
         int exit = ForgeCli.execute(beanContext, 'project', 'migrate')
 
+        then: 'the record is written, and what is said says which version the project is on'
+        exit == 0
+        err.toString().isEmpty()
+        out.toString().contains("The project is on Grails ${version} (gradle.properties): the record is that of an application of Grails 9")
+        new File(dir, '.grails/project.yml').file
+        tree().findAll { it.key != '.grails' && !it.key.startsWith('.grails/') } == before
+
+        when: 'a command that reads the record, while the project is on the earlier version'
+        out.reset()
+        err.reset()
+        exit = ForgeCli.execute(beanContext, 'create-controller', 'Book')
+
         then:
         exit == 1
-        err.toString().contains('This project is on Grails 7.0.4 (gradle.properties)')
-        err.toString().contains('The record is written for an application that is on this version of Grails. Nothing was written')
-        tree() == before
+        err.toString().contains("This project is on Grails ${version} (gradle.properties)")
+        !new File(dir, 'grails-app/controllers').exists()
+
+        when: 'a command that creates another application has nothing to do with the project it is typed in'
+        out.reset()
+        err.reset()
+        exit = ForgeCli.execute(beanContext, 'create-app', '--list-features')
+
+        then:
+        exit == 0
+        !(out.toString() + err.toString()).contains('This project is on Grails')
+
+        when: 'the project is on Grails 9'
+        new File(dir, 'gradle.properties').text = 'grailsVersion=9.0.0\n'
+        out.reset()
+        err.reset()
+        exit = ForgeCli.execute(beanContext, 'create-controller', 'Book')
+
+        then:
+        exit == 0
+        !(out.toString() + err.toString()).contains('This project is on Grails')
+
+        where:
+        version << ['7.0.4', '8.1.2']
     }
 
     @Unroll

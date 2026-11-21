@@ -433,16 +433,18 @@ The exit code says what happened:
 
 ==== In a Project of an Earlier Version of Grails
 
-The commands write what Grails 9 has. In a project whose `gradle.properties` names an earlier major version as `grailsVersion`, and which has no `.grails` directory of this generator, the commands that write into the project what this version has (`create-controller` and the other commands that create classes, `add-property`, `install-templates`) and `help` first warn of it, on the standard error:
+This command line works with projects of Grails 9 and later: Grails 9 is the first version it came with, and the build of an earlier project does not have what its commands run. In a project whose `gradle.properties` names a major version before 9 as `grailsVersion`, the commands of a project are not run: `compile`, `test-app`, `run-app`, `gradle`, the commands that create classes, `feature add`, `project show` and the commands of the application and its plugins end with exit code 1 and one line, on the standard error:
 
 [source,console]
 ----
-| Warning This project is on Grails 8.1.2 (gradle.properties), and this is the command line of Grails 9: what its commands create is written for Grails 9. Use the command line of Grails 8 for this project, or upgrade the project to Grails 9 first, as the upgrade notes of the Grails guide describe
+| Error This project is on Grails 8.1.2 (gradle.properties), and the command line of Grails 9 works with projects of Grails 9 and later. Use the command line of Grails 8 for this project, or upgrade the project to Grails 9 first, as the upgrade notes of the Grails guide describe; project migrate, which writes the record the commands of a project read, is the one command of a project that runs here
 ----
 
-The command is then run all the same. The commands that run the build of the project or only look at it, such as `gradle`, `compile`, `test-app`, `run-app` and `stats`, do in such a project what they do in any other and do not warn. In the interactive console the warning is given once. `help --json` has it in `diagnostics`. The version is read as Gradle reads it: from the `gradle.properties` of the project, or for a project of a build of several from that of the build above it (the directory with `settings.gradle`), and where a file names it twice, the last one.
+Nothing of the project is run, read for a command or written. Three things are run there all the same: `grails --version`; the commands that create another application; and link:{commandLineRef}project-migrate.html[project migrate], which writes the record of the project as a step of its upgrade, before or after `grailsVersion` is changed. `help` is shown, with the line in front of it as a warning, and `help --json` has it in `diagnostics`. A project that has a `.grails` directory is held to the same rule: the record does not make it a project of Grails 9. The Grails wrapper of a project (`./grailsw`) starts the command line of the version the project is on, so it is the installed `grails` of a later version that meets such a project. The version is read as Gradle reads it: from the `gradle.properties` of the project, or for a project of a build of several from that of the build above it (the directory with `settings.gradle`), and where a file names it twice, the last one.
 
-This warning, and what there is to say about the record of a project (`grails-forge-cli.yml`, `.grails`), is written to the standard error, so that it is never among what a command writes to the standard output.
+A project of Grails 9 or later on a command line of a later major version is used. The commands that write into it what the later version has (`create-controller` and the other commands that create classes, `add-property`, `install-templates`) and `help` first warn, once in the interactive console, that what they create is written for the version of the command line, unless the project has the record of this generator under `.grails`.
+
+These lines, and what there is to say about the record of a project (`grails-forge-cli.yml`, `.grails`), are written to the standard error, so that they are never among what a command writes to the standard output.
 
 === Commands of the Application and its Plugins
 

@@ -29,11 +29,13 @@ import org.apache.grails.forge.core.state.ProjectState
 import org.grails.forge.util.VersionInfo
 
 /**
- * Tells a project of an earlier major version of Grails from one this command line is for, so that
- * the user is told before a command writes into it what this version of Grails would have there.
+ * Tells a project of an earlier major version of Grails from one this command line is for. A project
+ * of a version before {@link #FIRST_MAJOR}, the first version of this command line, is refused by the
+ * commands of a project: its build has not what they run, and what they create is not written for it.
+ * A project of that version or a later one, on a command line that is later still, is used, and the
+ * user is told before a command writes into it what the version of the command line would have there.
  * The version is the {@code grailsVersion} of the {@code gradle.properties} of the project, as the
- * build of an application reads it; a project that has the record of this generator under
- * {@code .grails} is one of this version whatever that file says.
+ * build of an application reads it.
  *
  * @since 9.0
  */
@@ -46,7 +48,50 @@ final class EarlierGrailsProject {
     private static final List<String> SETTINGS = ['settings.gradle', 'settings.gradle.kts']
     private static final Pattern MAJOR = Pattern.compile(/^(\d{1,4})\..*/)
 
+    /** The first major version of Grails whose projects this command line works with: the one it came with. */
+    static final int FIRST_MAJOR = 9
+
     private EarlierGrailsProject() {
+    }
+
+    /**
+     * @param from the directory a command is run in
+     * @return one line that says why the commands of a project are not run, when the directory is in a
+     * project of a major version of Grails before {@link #FIRST_MAJOR}, with or without a record under
+     * {@code .grails}; {@code null} outside a project, in a project of that version or a later one, and
+     * wherever the version cannot be told
+     */
+    static String refusal(Path from) {
+        return refusal(from, VersionInfo.getGrailsVersion())
+    }
+
+    /**
+     * @param version the version of Grails this command line is of
+     */
+    static String refusal(Path from, String version) {
+        ConsoleProject project = ConsoleProject.find(from)
+        String theirs = project == null ? null : versionOf(project)
+        if (theirs == null || majorOf(theirs) >= FIRST_MAJOR) {
+            return null
+        }
+        Matcher own = MAJOR.matcher(version ?: '')
+        String ours = own.matches() ? own.group(1) : FIRST_MAJOR as String
+        return "This project is on Grails ${theirs} (${PROPERTIES}), and the command line of Grails ${ours} works with projects of Grails ${FIRST_MAJOR} and later. " +
+                "Use the command line of Grails ${majorOf(theirs)} for this project, or upgrade the project to Grails ${FIRST_MAJOR} first, as the upgrade notes of the " +
+                'Grails guide describe; project migrate, which writes the record the commands of a project read, is the one command of a project that runs here'
+    }
+
+    /**
+     * @return the version the project of a directory is on, when it is one before {@link #FIRST_MAJOR}, and {@code null} otherwise
+     */
+    static String earlierVersion(Path from) {
+        ConsoleProject project = ConsoleProject.find(from)
+        String theirs = project == null ? null : versionOf(project)
+        return theirs == null || majorOf(theirs) >= FIRST_MAJOR ? null : theirs
+    }
+
+    private static int majorOf(String version) {
+        return Integer.parseInt(version.substring(0, version.indexOf('.')))
     }
 
     /**
@@ -68,6 +113,19 @@ final class EarlierGrailsProject {
         if (project == null || !own.matches() || ProjectState.exists(project.directory)) {
             return null
         }
+        String theirs = versionOf(project)
+        int ownMajor = Integer.parseInt(own.group(1))
+        if (theirs == null || majorOf(theirs) >= ownMajor || majorOf(theirs) < FIRST_MAJOR) {
+            // the last is refused, and has been told why
+            return null
+        }
+        return "This project is on Grails ${theirs} (${PROPERTIES}), and this is the command line of Grails ${ownMajor}: what its commands create is written " +
+                "for Grails ${ownMajor}. Use the command line of Grails ${majorOf(theirs)} for this project, or upgrade the project to Grails ${ownMajor} first, " +
+                'as the upgrade notes of the Grails guide describe'
+    }
+
+    // the version the project is on, as major.minor and what follows; null where none can be read
+    private static String versionOf(ConsoleProject project) {
         try {
             // The version is in the gradle.properties of the project, or for a project of a build of
             // several in that of the build: the directories above are looked at up to the one that has
@@ -81,18 +139,7 @@ final class EarlierGrailsProject {
                 }
                 each = each.getParent()
             }
-            if (found == null) {
-                return null
-            }
-            int major = Integer.parseInt(found.group(1))
-            int ownMajor = Integer.parseInt(own.group(1))
-            if (major >= ownMajor) {
-                return null
-            }
-            String theirs = "${found.group(1)}.${found.group(2)}${found.group(3)}"
-            return "This project is on Grails ${theirs} (${PROPERTIES}), and this is the command line of Grails ${ownMajor}: what its commands create is written " +
-                    "for Grails ${ownMajor}. Use the command line of Grails ${major} for this project, or upgrade the project to Grails ${ownMajor} first, " +
-                    'as the upgrade notes of the Grails guide describe'
+            return found == null ? null : "${found.group(1)}.${found.group(2)}${found.group(3)}".toString()
         } catch (IOException ignored) {
             return null
         }

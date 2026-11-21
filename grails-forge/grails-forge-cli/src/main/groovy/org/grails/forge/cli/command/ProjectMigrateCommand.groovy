@@ -163,7 +163,7 @@ class ProjectMigrateCommand extends BaseCommand implements Callable<Integer>, Pr
         }
         Path directory = search.project.directory
         ApplicationType given = givenType()
-        String refusal = refusal(current, directory)
+        String refusal = refusal(directory)
         if (refusal != null) {
             err(refusal)
             return 1
@@ -191,6 +191,11 @@ class ProjectMigrateCommand extends BaseCommand implements Callable<Integer>, Pr
             notes << "The project has no ${ProjectEvidence.BUILD} or ${ProjectEvidence.KOTLIN_BUILD} that could be read, so no feature was looked for in its build".toString()
         }
         notes.addAll(evidence.notRead)
+        String earlier = EarlierGrailsProject.earlierVersion(current)
+        if (earlier != null) {
+            notes << ("The project is on Grails ${earlier} (gradle.properties): the record is that of an application of Grails ${EarlierGrailsProject.FIRST_MAJOR}, and the " +
+                    "other commands of a project are run once the project is on Grails ${EarlierGrailsProject.FIRST_MAJOR} or later").toString()
+        }
         if (!evidence.ownBuild) {
             notes << ("The project has no ${ProjectEvidence.SETTINGS} of its own, so it is part of a build above it: what that build declares for it, in a subprojects or " +
                     'allprojects block or in a convention plugin, was not read').toString()
@@ -257,13 +262,10 @@ class ProjectMigrateCommand extends BaseCommand implements Callable<Integer>, Pr
         return given
     }
 
-    // Why no record is written for the project, whatever its files say: it is on an earlier version of
-    // Grails, or it has a record already that is not this command's to replace
-    private String refusal(Path current, Path directory) {
-        String earlier = EarlierGrailsProject.guidance(current)
-        if (earlier != null) {
-            return "${earlier}. The record is written for an application that is on this version of Grails. Nothing was written"
-        }
+    // Why no record is written for the project, whatever its files say: it has a record already that is
+    // not this command's to replace. A project on an earlier version of Grails is given its record all
+    // the same: writing it is a step of the upgrade, before the version is changed or after
+    private String refusal(Path directory) {
         String root = spec.root().name()
         List<String> parts = [ProjectState.LOCK, ProjectState.BASELINE].findAll { String each -> Files.exists(directory.resolve(each), LinkOption.NOFOLLOW_LINKS) }
         if (!ProjectState.exists(directory)) {

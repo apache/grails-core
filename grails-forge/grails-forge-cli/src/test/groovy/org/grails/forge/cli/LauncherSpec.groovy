@@ -23,6 +23,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.function.Supplier
 import groovy.json.JsonSlurper
+import org.apache.grails.forge.cli.console.EarlierGrailsProject
 import org.apache.grails.forge.cli.console.ConsoleProject
 import org.apache.grails.forge.cli.console.PlainOutput
 import org.springframework.context.ApplicationContext
@@ -39,6 +40,10 @@ import spock.lang.Unroll
  * and a Gradle wrapper that says what it was run with: nothing is built.
  */
 class LauncherSpec extends Specification {
+
+    private static final String REFUSAL = 'This project is on Grails 8.1.2 (gradle.properties), and the command line of Grails 9 works with projects of Grails 9 and later. ' +
+                'Use the command line of Grails 8 for this project, or upgrade the project to Grails 9 first, as the upgrade notes of the Grails guide describe; ' +
+                'project migrate, which writes the record the commands of a project read, is the one command of a project that runs here'
 
     static final String ESCAPE = '\u001b['
     static final String BROKEN = 'the generator is broken on purpose'
@@ -645,7 +650,7 @@ class LauncherSpec extends Specification {
     }
 
     @IgnoreIf({ os.windows })
-    void "in a project of an earlier Grails the commands that write into it, and the help, say which the command line is for, once, on the error stream"() {
+    void "in a project of a Grails before the first of this command line the commands of a project are refused, and the help says why"() {
         given:
         project()
         new File(dir, 'gradle.properties').text = 'org.gradle.caching=true\ngrailsVersion=8.1.2\n'
@@ -653,29 +658,27 @@ class LauncherSpec extends Specification {
         when: 'a command that creates a class, which is one of this version'
         int exit = ForgeCli.execute(broken, 'create-controller', 'Book')
 
-        then: 'the warning comes first, and is not among what a command writes'
+        then: 'nothing is created, and the one line says why and what to do'
         exit == 1
-        err.toString().readLines()[0] == '| Warning This project is on Grails 8.1.2 (gradle.properties), and this is the command line of Grails 9: ' +
-                'what its commands create is written for Grails 9. Use the command line of Grails 8 for this project, or upgrade the project to Grails 9 first, ' +
-                'as the upgrade notes of the Grails guide describe'
-        !out.toString().contains('This project is on Grails')
+        err.toString().readLines() == ['| Error ' + REFUSAL]
+        out.toString().isEmpty()
+        !new File(dir, 'grails-app/controllers').exists()
 
-        when: 'the same context, as in the interactive shell'
+        when: 'the same context, as in the interactive shell: it is refused each time'
         err.reset()
-        ForgeCli.execute(broken, 'create-controller', 'Book')
+        exit = ForgeCli.execute(broken, 'create-controller', 'Book')
 
         then:
-        !err.toString().contains('This project is on Grails')
+        exit == 1
+        err.toString().readLines() == ['| Error ' + REFUSAL]
 
-        when: 'the help'
+        when: 'the help is shown, and says it first'
         err.reset()
         exit = ForgeCli.execute(another(), 'help')
 
         then:
         exit == 0
-        err.toString().readLines()[0] == '| Warning This project is on Grails 8.1.2 (gradle.properties), and this is the command line of Grails 9: ' +
-                'what its commands create is written for Grails 9. Use the command line of Grails 8 for this project, or upgrade the project to Grails 9 first, ' +
-                'as the upgrade notes of the Grails guide describe'
+        err.toString().readLines()[0] == '| Warning ' + REFUSAL
         out.toString().readLines()[0].startsWith('Usage: ')
 
         when: 'the document for a tool is nothing but the document, and says it there'
@@ -685,13 +688,47 @@ class LauncherSpec extends Specification {
         Map document = new JsonSlurper().parseText(out.toString()) as Map
 
         then:
-        document.diagnostics.any { String line -> line.startsWith('This project is on Grails 8.1.2 (gradle.properties)') }
+        document.diagnostics.any { String line -> line == REFUSAL }
         err.toString().isEmpty()
     }
 
     @IgnoreIf({ os.windows })
     @Unroll
-    void "#line does in a project of an earlier Grails what it does in any project, and says nothing of the version"() {
+    void "#line is not run in a project of a Grails before the first of this command line, with or without a record"() {
+        given:
+        project()
+        new File(dir, 'gradle.properties').text = 'grailsVersion=8.1.2\n'
+        if (state) {
+            new File(dir, '.grails').mkdirs()
+            new File(dir, '.grails/project.yml').text = 'not read here\n'
+        }
+
+        when:
+        int exit = ForgeCli.execute(another(), line as String[])
+
+        then: 'the wrapper of the project is not started'
+        exit == 1
+        err.toString().readLines() == ['| Error ' + REFUSAL]
+        !out.toString().contains('the wrapper ran')
+
+        where:
+        line                             | state
+        ['compile']                      | false
+        ['gradle', 'build']              | false
+        ['test-app', '--unit']           | false
+        ['stats']                        | false
+        ['run-command', 'dbm-update']    | false
+        ['dbm-update']                   | false
+        ['feature', 'add', 'cache']      | false
+        ['project', 'show']              | false
+        ['project', 'regenerate', '--diff'] | false
+        ['compile']                      | true
+        ['create-controller', 'Book']    | true
+    }
+
+    @IgnoreIf({ os.windows })
+    @Unroll
+    void "#line is run in a project of a Grails before the first of this command line all the same"() {
         given:
         project()
         new File(dir, 'gradle.properties').text = 'grailsVersion=8.1.2\n'
@@ -702,15 +739,30 @@ class LauncherSpec extends Specification {
         then:
         exit == 0
         !(out.toString() + err.toString()).contains('This project is on Grails')
-        said == null || out.toString().contains(said)
 
         where:
-        line                  | said
-        ['compile']           | 'the wrapper ran with classes'
-        ['gradle', 'build']   | 'the wrapper ran with build'
-        ['test-app', '--unit'] | 'the wrapper ran with test'
-        ['stats']             | null
-        ['--version']         | null
+        line << [['--version'], ['-V']]
+    }
+
+    void "a project of the first version of this command line or a later one is told of a command line that is later still, and one before it is not"() {
+        given:
+        project()
+        new File(dir, 'gradle.properties').text = "grailsVersion=${version}\n"
+
+        expect:
+        (EarlierGrailsProject.refusal(dir.toPath(), commandLine) != null) == refused
+        (EarlierGrailsProject.guidance(dir.toPath(), commandLine) != null) == told
+        (EarlierGrailsProject.earlierVersion(dir.toPath()) != null) == refused
+
+        where:
+        version   | commandLine      | refused | told
+        '8.1.2'   | '9.0.0'          | true    | false
+        '8.1.2'   | '10.0.0'         | true    | false
+        '7.0.4'   | '9.0.0-SNAPSHOT' | true    | false
+        '9.0.0'   | '9.0.3'          | false   | false
+        '9.2.1'   | '10.0.0'         | false   | true
+        '10.0.0'  | '10.1.0'         | false   | false
+        '10.0.0'  | '9.0.0'          | false   | false
     }
 
     @IgnoreIf({ os.windows })
@@ -773,7 +825,7 @@ class LauncherSpec extends Specification {
         'that does not say which it is on'         | 'org.gradle.caching=true\n'         | false
         'without properties of its build'          | null                                | false
         'whose version is no version'              | 'grailsVersion=\u001b[31mold\n'     | false
-        'that this generator has a record of'      | 'grailsVersion=8.1.2\n'             | true
+        'of this version that has a record'        | 'grailsVersion=9.0.0\n'             | true
     }
 
     @IgnoreIf({ os.windows || !ForkedCli.available() })
