@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.hibernate.FlushMode;
+import org.hibernate.HibernateException;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.engine.spi.SharedSessionContractImplementor;
@@ -30,6 +31,7 @@ import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.ui.ModelMap;
+import org.springframework.util.Assert;
 import org.springframework.util.ReflectionUtils;
 import org.springframework.web.context.request.WebRequest;
 
@@ -77,14 +79,29 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
         }
     }
 
+    /**
+     * Opens the default session and applies {@link #applyFlushMode its flush mode}. The session is not bound yet, so
+     * when applying the flush mode fails, it is closed here, before the failure is thrown on. A
+     * {@link HibernateException} from either step is wrapped, as the parent class does.
+     */
     @Override
     protected Session openSession() throws DataAccessResourceFailureException {
-        Session session = super.openSession();
+        SessionFactory sf = getSessionFactory();
+        Assert.state(sf != null, "No SessionFactory set");
+        Session session;
+        try {
+            session = sf.openSession();
+        } catch (HibernateException ex) {
+            throw new DataAccessResourceFailureException("Could not open Hibernate Session", ex);
+        }
         try {
             applyFlushMode(session);
         } catch (RuntimeException | Error ex) {
             // not bound yet, so afterCompletion would not find it
             SessionFactoryUtils.closeSession(session);
+            if (ex instanceof HibernateException) {
+                throw new DataAccessResourceFailureException("Could not open Hibernate Session", ex);
+            }
             throw ex;
         }
         return session;

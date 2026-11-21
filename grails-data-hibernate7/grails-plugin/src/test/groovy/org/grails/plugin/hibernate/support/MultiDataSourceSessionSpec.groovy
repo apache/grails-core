@@ -22,10 +22,12 @@ import grails.gorm.annotation.Entity
 import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.orm.hibernate.HibernateDatastore
 import org.hibernate.FlushMode
+import org.hibernate.HibernateException
 import org.hibernate.Session
 import org.hibernate.SessionFactory
 import org.hibernate.dialect.H2Dialect
 import org.grails.orm.hibernate.support.hibernate7.SessionHolder
+import org.springframework.dao.DataAccessResourceFailureException
 import org.springframework.transaction.support.TransactionSynchronizationManager
 import org.springframework.web.context.request.WebRequest
 import spock.lang.AutoCleanup
@@ -246,6 +248,34 @@ class MultiDataSourceSessionSpec extends Specification {
         refused != null
         !refused.open
         !TransactionSynchronizationManager.hasResource(datastore.sessionFactory)
+    }
+
+    def "a request whose default session refuses its flush mode as it is opened closes it, failing with #expected.simpleName"() {
+        given: "a default session factory whose new session refuses any flush mode"
+        Session refusing = Mock(Session) {
+            isOpen() >> true
+            setHibernateFlushMode(_) >> { throw failure }
+        }
+        SessionFactory refusingSf = Stub(SessionFactory) {
+            openSession() >> refusing
+        }
+        def interceptor = new GrailsOpenSessionInViewInterceptor()
+        interceptor.setHibernateDatastore(datastore)
+        interceptor.setSessionFactory(refusingSf)
+
+        when:
+        interceptor.preHandle(webRequest())
+
+        then: "the failure is thrown, and the session is closed and not bound"
+        def thrownFailure = thrown(expected)
+        thrownFailure.is(failure) || thrownFailure.cause.is(failure)
+        1 * refusing.close()
+        !TransactionSynchronizationManager.hasResource(refusingSf)
+
+        where:
+        failure                                          || expected
+        new IllegalStateException('flush mode refused')  || IllegalStateException
+        new HibernateException('flush mode refused')     || DataAccessResourceFailureException
     }
 
     def "an include uses the sessions of the request for every datasource and leaves them open"() {
