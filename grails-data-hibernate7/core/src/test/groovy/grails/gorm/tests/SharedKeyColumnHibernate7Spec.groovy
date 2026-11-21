@@ -67,9 +67,7 @@ class SharedKeyColumnHibernate7Spec extends HibernateGormDatastoreSpec {
     @IgnoreIf({ data.db == 'DB2' && System.getProperty('os.arch') in ['aarch64', 'arm64'] })
     void "on #db several rows in each association of a join table with a shared key column are accepted"() {
         given: 'the datastore on this database, with the schema created for it'
-        if (container != null && !container.isRunning()) {
-            container.start()
-        }
+        DatabaseContainers.start(container)
         manager.destroy()
         manager.grailsConfig = [
                 'dataSource.url'            : container?.jdbcUrl ?: 'jdbc:h2:mem:sharedKeyColumnDB;LOCK_TIMEOUT=10000',
