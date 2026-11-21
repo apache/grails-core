@@ -42,4 +42,15 @@ class DynamicFinderSpec extends Specification {
         "findBy" | "findByTitleBetween"    | 2          |    1        | "TitleBetween"     |  ['title']
         "findBy" | "findByTitleAndAuthor"  | 2          |    2        | "TitleAndAuthor"   |  ['title', 'author']
     }
+
+    void "a finder that ends with a joining operator has no match spec"() {
+        expect:
+        DynamicFinder.buildMatchSpec(prefix, methodName, parameters) == null
+
+        where:
+        prefix   | methodName                      | parameters
+        "findBy" | "findByTitleAndAuthorAnd"       | 2
+        "findBy" | "findByTitleOrAuthorOr"         | 2
+        "findBy" | "findByTitleAndAuthorInListAnd" | 2
+    }
 }

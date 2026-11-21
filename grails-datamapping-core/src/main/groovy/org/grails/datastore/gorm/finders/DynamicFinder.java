@@ -196,6 +196,10 @@ public abstract class DynamicFinder extends AbstractFinder implements QueryBuild
                         containsOperator = true;
                         operatorInUse = DEFAULT_OPERATORS[i];
 
+                        if (querySequence.endsWith(operatorInUse)) {
+                            // nothing follows the last operator, as at run time where the finder is refused
+                            return null;
+                        }
                         queryParameters = querySequence.split(operatorInUse);
                         // loop through query parameters and create expressions
                         // calculating the number of arguments required for the expression
