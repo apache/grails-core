@@ -42,11 +42,13 @@ dependencies {
     api 'org.apache.groovy:groovy'
 
     compileOnly 'jakarta.servlet:jakarta.servlet-api'
+    compileOnly 'org.apache.grails.views:grails-gsp-core'
     compileOnly 'org.springframework:spring-test', {
         // MockHttpServletRequest/Response/Context used in many classes
     }
 
     testImplementation 'jakarta.servlet:jakarta.servlet-api'
+    testImplementation 'org.apache.grails.views:grails-gsp-core'
     testImplementation 'org.springframework:spring-test'
 
     testImplementation 'org.apache.groovy:groovy-test-junit5'
