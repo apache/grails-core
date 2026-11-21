@@ -344,6 +344,56 @@ class GradleCommandSpec extends CommandSpec implements CommandFixture {
     }
 
     @Unroll
+    @IgnoreIf({ os.windows })
+    void "a wrapper that #what is a failure of the command, said in one line"() {
+        given:
+        new File(dir, 'grails-app').mkdirs()
+        File wrapper = new File(dir, 'gradlew')
+        wrapper.bytes = content
+        wrapper.setExecutable(executable, false)
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'gradle', 'build')
+
+        then:
+        exit == 1
+        errors().size() == 1
+        said.any { String start -> errors()[0].startsWith("| Error ${start.replace('WRAPPER', new File(dir.canonicalFile, 'gradlew').path)}") }
+        !out.toString().contains('Usage:')
+        !out.toString().contains('\tat ')
+
+        and: 'the command is not left waiting for it'
+        !GradleRunner.running
+
+        where:
+        what                                          | executable | content                                              | said
+        'names a program that is not there'           | true       | '#!/nonexistent/interpreter\n'.bytes                 | ['The Gradle wrapper WRAPPER could not be started: ']
+        'is a directory of a program that is no file' | true       | '#!/\n'.bytes                                        | ['The Gradle wrapper WRAPPER could not be started: ', 'Gradle did not succeed: it ended with exit code ']
+        // the system refuses to run it, and a shell is then asked to, as for a script without a first line
+        'is no program and no script'                 | true       | ([0x7f, 0x45, 0x4c, 0x46, 0, 1, 2, 3] as byte[])     | ['The Gradle wrapper WRAPPER could not be started: ', 'Gradle did not succeed: it ended with exit code ']
+        'is no script and cannot be executed'         | false      | ([0x7f, 0x45, 0x4c, 0x46, 0, 1, 2, 3] as byte[])     | ['Gradle did not succeed: it ended with exit code ']
+        'ends as soon as it is started, with 3'       | true       | '#!/bin/sh\nexit 3\n'.bytes                          | ['Gradle did not succeed: it ended with exit code 3']
+        'ends at once and cannot be executed'         | false      | 'exit 4\n'.bytes                                     | ['Gradle did not succeed: it ended with exit code 4']
+    }
+
+    @IgnoreIf({ os.windows })
+    void "a wrapper that ends at once without a failure is a build that succeeded, whatever it did"() {
+        given:
+        new File(dir, 'grails-app').mkdirs()
+        File wrapper = new File(dir, 'gradlew')
+        wrapper.text = ''
+        wrapper.setExecutable(false, false)
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'gradle', 'build')
+
+        then:
+        exit == 0
+        errors() == []
+        !GradleRunner.running
+    }
+
+    @Unroll
     void "on Windows an argument a batch file would not get as it is, is refused before Gradle is run: #argument"() {
         given:
         plainProject(dir)
