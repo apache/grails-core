@@ -288,8 +288,8 @@ class JpaQueryContextSpec extends Specification {
     def "test the context of an association block is recorded in the context of the query"() {
         given:
         def context = new JpaQueryContext(Mock(From))
-        def outerContext = new JpaQueryContext(context, Mock(From))
-        def blockContext = new JpaQueryContext(outerContext, Mock(From))
+        def outerContext = JpaQueryContext.forBlock(context, null, Mock(From), 'owner')
+        def blockContext = JpaQueryContext.forBlock(outerContext, null, Mock(From), 'club')
         def block = new DetachedAssociationCriteria(Object, Mock(Association))
         def other = new DetachedAssociationCriteria(Object, Mock(Association))
 

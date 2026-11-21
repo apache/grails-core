@@ -391,12 +391,24 @@ public class JpaCriteriaQueryCreator<T> {
         List<jakarta.persistence.criteria.Order> jpaOrders = new ArrayList<>();
         for (Query.Order order : orders) {
             var propertyName = order.getProperty();
-            SqlProjection sqlProjection = findSqlProjection(propertyName, false);
-            boolean selected = isSelected(propertyName);
             // an order of an association block, and the context that the criteria of its block were built against
             AssociationOrder blockOrder = order instanceof AssociationOrder associationOrder ? associationOrder : null;
             JpaQueryContext blockContext =
                     blockOrder != null ? context.getAssociationContext(blockOrder.getAssociation()) : null;
+            if (blockContext != null) {
+                String blockProperty = blockOrder.getAssociationProperty();
+                int dot = blockProperty.indexOf('.');
+                if (dot > 0) {
+                    String alias = blockProperty.substring(0, dot);
+                    Expression<?> aliased = context.getAliasedExpression(alias);
+                    if (aliased != null && aliased == blockContext.getAliasedExpression(alias)) {
+                        // An enclosing alias names the same expression from either scope, without the block prefix.
+                        propertyName = blockProperty;
+                    }
+                }
+            }
+            SqlProjection sqlProjection = findSqlProjection(propertyName, false);
+            boolean selected = isSelected(propertyName);
             Expression<?> expression;
             if (sqlProjection != null) {
                 expression = context.getSelectionAlias(sqlProjection.getColumnAlias());
