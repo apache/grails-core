@@ -44,7 +44,7 @@ class ScaffoldingSpec extends CommandSpec {
         output ==~ /(?s).*Rendered template Controller\.groovy to destination grails-app[\/\\]controllers[\/\\]example[\/\\]grails[\/\\]BirdController\.groovy(?s).*/
         output ==~ /(?s).*Rendered template Service\.groovy to destination grails-app[\/\\]services[\/\\]example[\/\\]grails[\/\\]BirdService\.groovy(?s).*/
         output ==~ /(?s).*Rendered template Spec\.groovy to destination src[\/\\]test[\/\\]groovy[\/\\]example[\/\\]grails[\/\\]BirdControllerSpec\.groovy(?s).*/
-        output ==~ /(?s).*Rendered template ServiceSpec\.groovy to destination src[\/\\]test[\/\\]groovy[\/\\]example[\/\\]grails[\/\\]BirdServiceSpec\.groovy(?s).*/
+        output ==~ /(?s).*Rendered template ServiceSpec\.groovy to destination src[\/\\]integration-test[\/\\]groovy[\/\\]example[\/\\]grails[\/\\]BirdServiceSpec\.groovy(?s).*/
         new File(dir, 'grails-app/controllers/example/grails/BirdController.groovy').exists()
         new File(dir, 'grails-app/services/example/grails/BirdService.groovy').exists()
         new File(dir, 'src/test/groovy/example/grails/BirdControllerSpec.groovy').exists()

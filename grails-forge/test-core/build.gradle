@@ -67,3 +67,13 @@ ext {
 apply {
     from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
 }
+
+tasks.named('test', Test).configure { Test test ->
+    // The Gradle API jar of TestKit has, besides the classes of Gradle, the file in which Groovy reads its own
+    // version, and it is that of the Groovy 4 Gradle runs on. Groovy takes the first such file on the class path.
+    // Generating an application compiles the templates of the feature packs, the compiler then loads the global
+    // transform of Spock from this class path, and Spock refuses a Groovy that says it is version 4. So the
+    // Groovy of the specs comes first.
+    FileCollection declared = test.classpath
+    test.classpath = declared.filter { File jar -> jar.name ==~ /groovy-\d.*\.jar/ } + declared
+}
