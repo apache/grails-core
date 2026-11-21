@@ -626,7 +626,7 @@ Outside a project these commands are not mistakes: `create-controller`, `install
 
 |`update-cli-config`
 |the Grails Forge CLI of Grails 7, which told to run it in a warning and did not have it
-|replaced: link:{commandLineRef}project-init.html[project init] writes the record of an application whose `grails-forge-cli.yml` or `grails-cli.yml` names a profile. The name never was a command.
+|replaced: link:{commandLineRef}project-migrate.html[project migrate] writes the record of an application whose `grails-forge-cli.yml` or `grails-cli.yml` names a profile. The name never was a command.
 
 |===
 

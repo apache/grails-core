@@ -147,7 +147,7 @@ final class FormerCommands {
 
         add('update-cli-config', 'the command line of Grails 7, which named it in a warning and did not have it', Status.REPLACED,
                 'update-cli-config is what the command line of Grails 7 told to run for a grails-cli.yml or grails-forge-cli.yml that names a profile, ' +
-                'and it never was a command. In the project, {cli} project init writes the record of this version from what the project has')
+                'and it never was a command. In the project, {cli} project migrate writes the record of this version from what the project has')
 
         add('generate-all', 'rest-api profile', Status.PLUGIN, 'generate-all ' + SCAFFOLDING)
         add('generate-controller', 'rest-api profile', Status.PLUGIN, 'generate-controller ' + SCAFFOLDING)

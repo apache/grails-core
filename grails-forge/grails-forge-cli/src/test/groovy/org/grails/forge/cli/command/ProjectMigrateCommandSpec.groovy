@@ -662,7 +662,7 @@ dependencies {
 '''
 
         when:
-        int exit = ForgeCli.execute(beanContext, 'project', 'init', '--dry-run')
+        int exit = ForgeCli.execute(beanContext, 'project', 'migrate', '--dry-run')
         List<String> said = out.toString().readLines()
 
         then:
@@ -702,7 +702,7 @@ dependencies {
 '''
 
         when:
-        int exit = ForgeCli.execute(beanContext, 'project', 'init', '--dry-run')
+        int exit = ForgeCli.execute(beanContext, 'project', 'migrate', '--dry-run')
         List<String> said = out.toString().readLines()
 
         then: 'the type is that of the plugins that are applied'
@@ -747,7 +747,7 @@ dependencies {
         Map<String, String> before = tree()
 
         when:
-        int exit = ForgeCli.execute(beanContext, 'project', 'init')
+        int exit = ForgeCli.execute(beanContext, 'project', 'migrate')
         List<String> said = out.toString().readLines()
 
         then:
@@ -779,7 +779,7 @@ dependencies {
         new File(dir, 'build.gradle.kts').text = 'dependencies {\n    implementation("org.apache.grails:grails-data-mongodb")\n}\n'
 
         when:
-        int exit = ForgeCli.execute(beanContext, 'project', 'init', '--dry-run')
+        int exit = ForgeCli.execute(beanContext, 'project', 'migrate', '--dry-run')
         List<String> said = out.toString().readLines()
 
         then:
@@ -825,7 +825,7 @@ dependencies {
 '''
 
         when:
-        int exit = ForgeCli.execute(beanContext, 'project', 'init', '--dry-run')
+        int exit = ForgeCli.execute(beanContext, 'project', 'migrate', '--dry-run')
         List<String> said = out.toString().readLines()
 
         then: 'what is declared for every project, and for this one, is found'
@@ -850,7 +850,7 @@ dependencies {
         new File(dir, 'grails-app').mkdirs()
 
         when:
-        int exit = ForgeCli.execute(beanContext, 'project', 'init', 'com.example.shop', '--type', 'web', '--dry-run')
+        int exit = ForgeCli.execute(beanContext, 'project', 'migrate', 'com.example.shop', '--type', 'web', '--dry-run')
         List<String> said = out.toString().readLines()
 
         then:
@@ -864,7 +864,7 @@ dependencies {
         when: 'the same with one applied file and one dependency'
         out.reset()
         new File(dir, 'build.gradle').text = 'apply from: "../gradle/grails.gradle"\ndependencies {\n    implementation libs.grails.core\n}\n'
-        exit = ForgeCli.execute(beanContext, 'project', 'init', 'com.example.shop', '--type', 'web', '--dry-run')
+        exit = ForgeCli.execute(beanContext, 'project', 'migrate', 'com.example.shop', '--type', 'web', '--dry-run')
         said = out.toString().readLines()
 
         then:
@@ -881,7 +881,7 @@ dependencies {
         new File(dir, 'grails-forge-cli.yml').setText(record, 'UTF-8')
 
         when:
-        int exit = ForgeCli.execute(beanContext, 'project', 'init', '--dry-run')
+        int exit = ForgeCli.execute(beanContext, 'project', 'migrate', '--dry-run')
         List<String> said = out.toString().readLines()
 
         then:
@@ -903,7 +903,7 @@ dependencies {
         new File(dir, 'build.gradle') << '\njava {\n    toolchain {\n        languageVersion = JavaLanguageVersion.of(25)\n    }\n}\n'
 
         when:
-        int exit = ForgeCli.execute(beanContext, 'project', 'init', '--dry-run')
+        int exit = ForgeCli.execute(beanContext, 'project', 'migrate', '--dry-run')
 
         then:
         exit == 0
@@ -912,7 +912,7 @@ dependencies {
         when:
         out.reset()
         new File(dir, 'build.gradle').text = SHELL_BUILD + '\nsourceCompatibility = 11\n'
-        exit = ForgeCli.execute(beanContext, 'project', 'init', '--dry-run')
+        exit = ForgeCli.execute(beanContext, 'project', 'migrate', '--dry-run')
         List<String> said = out.toString().readLines()
 
         then:
@@ -928,7 +928,7 @@ dependencies {
         Map<String, String> before = tree()
 
         when:
-        int exit = ForgeCli.execute(beanContext, 'project', 'init')
+        int exit = ForgeCli.execute(beanContext, 'project', 'migrate')
 
         then:
         exit == 1

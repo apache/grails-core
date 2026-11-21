@@ -107,7 +107,7 @@ class CodeGenConfigLegacyRecordSpec extends CommandSpec {
         and: 'what is said is the type the record was taken for, and the command that writes the record of this version'
         err.toString().readLines() == ["| Warning ${record} names a profile, as the record of an earlier command line did, and not the features of the application: " +
                                                "the commands take the application to have the features an application of the type ${written} has by default. " +
-                                               'project init writes the record of this version, from what the project has']
+                                               'project migrate writes the record of this version, from what the project has']
 
         where:
         profile           | record                 | type                            | written           | create                   | gsp   | has                                                                                               | lacks
@@ -183,7 +183,7 @@ class CodeGenConfigLegacyRecordSpec extends CommandSpec {
         out.toString().isEmpty()
         lines.any { it.startsWith('There is no command update-cli-config') }
         lines.contains('update-cli-config is what the command line of Grails 7 told to run for a grails-cli.yml or grails-forge-cli.yml that names a profile, ' +
-                'and it never was a command. In the project, grails-forge-cli project init writes the record of this version from what the project has')
+                'and it never was a command. In the project, grails-forge-cli project migrate writes the record of this version from what the project has')
 
         and: 'what reading the record has to say is said, as for every other name that is no command'
         lines.first().startsWith('| Warning grails-forge-cli.yml names a profile')
