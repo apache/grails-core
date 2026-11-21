@@ -1474,7 +1474,7 @@ Writes of such a class inside the block go to the default datastore. Binding a t
 
 For most applications **no changes are required**.
 
-Move a write of such a class that runs inside a tenant's transaction into a transaction of the class's own datastore: call its data service, or wrap the write in the class's `withTransaction { }` block. A save with `flush: true` still requires that transaction: flushing does not enlist the write in the tenant's transaction. A write committed in the class's own transaction stays when the tenant's transaction rolls back.
+Move a write of such a class that runs inside a tenant's transaction into a transaction of the class's own datastore: call its data service, or wrap the write in the class's `withTransaction { }` block. A save with `flush: true` still requires that transaction: flushing does not enlist the write in the tenant's transaction. This requirement also applies when transaction synchronization is disabled on the tenant's transaction manager. A write committed in the class's own transaction stays when the tenant's transaction rolls back.
 
 With GORM for MongoDB, a class that is not multi-tenant and was saved inside a tenant block in Grails 8 has its documents in that tenant's database. Grails 9 reads the class from the default database only, so `list`, `get`, `count` and queries no longer find those documents, although they are still in the tenant's database. Decide what the class is for before upgrading:
 
