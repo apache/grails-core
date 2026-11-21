@@ -20,6 +20,7 @@ package grails.init
 
 import spock.lang.Specification
 import spock.lang.TempDir
+import spock.lang.Unroll
 import uk.org.webcompere.systemstubs.SystemStubs
 
 /**
@@ -84,5 +85,135 @@ class GrailsWrapperHomeSpec extends Specification {
         home.home == record.canonicalFile
         home.wrapperDirectory == new File(record.canonicalFile, 'wrapper')
         new File(record, 'project.yml').text == 'format: 1\n'
+    }
+
+    def "a directory that is given is the home, before the one GRAILS_WRAPPER_HOME names"() {
+        given:
+        File given = new File(dir, 'given/home')
+        File environment = new File(dir, 'environment')
+
+        when:
+        File found = null
+        SystemStubs.withEnvironmentVariable('GRAILS_WRAPPER_HOME', environment.path).execute {
+            found = GrailsWrapperHome.findGrailsHome(given.path)
+        }
+
+        then:
+        found == given
+        given.isDirectory()
+        !environment.exists()
+    }
+
+    @Unroll
+    def "a home that #situation is refused, and says where it was named"() {
+        given:
+        File file = new File(dir, 'file')
+        file.text = 'not a directory'
+        String named = new File(dir, path).path
+
+        when:
+        SystemStubs.withEnvironmentVariable('GRAILS_WRAPPER_HOME', fromEnvironment ? named : null).execute {
+            GrailsWrapperHome.findGrailsHome(fromEnvironment ? null : named)
+        }
+
+        then:
+        IllegalArgumentException e = thrown()
+        e.message == "${description} [${named}] is not a directory"
+        file.text == 'not a directory'
+
+        where:
+        situation                         | path        | fromEnvironment | description
+        'is a file'                       | 'file'      | true            | 'GRAILS_WRAPPER_HOME environment variable'
+        'cannot be created, under a file' | 'file/home' | true            | 'GRAILS_WRAPPER_HOME environment variable'
+        'is given and is a file'          | 'file'      | false           | 'Specified Grails Home'
+        'is given and cannot be created'  | 'file/home' | false           | 'Specified Grails Home'
+    }
+
+    def "a file where the default home would be is refused"() {
+        given:
+        File userHome = new File(dir, 'user')
+        userHome.mkdirs()
+        new File(userHome, '.grails').text = 'not a directory'
+
+        when:
+        SystemStubs.restoreSystemProperties {
+            System.setProperty('user.home', userHome.path)
+            SystemStubs.withEnvironmentVariable('GRAILS_WRAPPER_HOME', null).execute {
+                GrailsWrapperHome.findGrailsHome(null)
+            }
+        }
+
+        then:
+        IllegalStateException e = thrown()
+        e.message == "Grails Wrapper Home [${new File(userHome.canonicalFile, '.grails')}] is not a directory."
+        new File(userHome, '.grails').text == 'not a directory'
+    }
+
+    def "a home whose wrapper is a file is refused"() {
+        given:
+        new File(dir, 'wrapper').text = 'not a directory'
+
+        when:
+        new GrailsWrapperHome(new LinkedHashSet<>([GrailsReleaseType.RELEASE]), dir.path)
+
+        then:
+        IllegalStateException e = thrown()
+        e.message == "GRAILS_WRAPPER_HOME must contain a wrapper directory. File exists instead at ${new File(dir.canonicalFile, 'wrapper').absolutePath}"
+    }
+
+    def "a directory in the wrapper directory that is not named by a version is refused, a file is passed over"() {
+        given:
+        new File(dir, 'wrapper/9.0.0').mkdirs()
+        new File(dir, 'wrapper/notes.txt').text = 'a file'
+
+        when:
+        GrailsWrapperHome home = new GrailsWrapperHome(new LinkedHashSet<>([GrailsReleaseType.RELEASE]), dir.path)
+
+        then:
+        home.versions == [new GrailsVersion('9.0.0')]
+
+        when:
+        File other = new File(dir, 'wrapper/latest')
+        other.mkdirs()
+        new GrailsWrapperHome(new LinkedHashSet<>([GrailsReleaseType.RELEASE]), dir.path)
+
+        then:
+        IllegalStateException e = thrown()
+        e.message == "Grails Version [latest] at [${new File(dir.canonicalFile, 'wrapper/latest').absolutePath}] is not a valid Grails version."
+    }
+
+    @Unroll
+    def "of the versions in the home the latest of the allowed types #allowed is #latest"() {
+        given:
+        ['9.0.0', '9.0.1', '9.1.0-RC1', '9.1.0-M2', '9.1.0-SNAPSHOT', '8.0.5'].each { String version ->
+            new File(dir, "wrapper/${version}").mkdirs()
+        }
+
+        when:
+        GrailsWrapperHome home = new GrailsWrapperHome(allowed == null ? null : new LinkedHashSet<>(allowed), dir.path)
+
+        then:
+        home.latestVersion == new GrailsVersion(latest)
+        home.versions.size() == count
+        home.latestWrapperImplementation == new File(dir.canonicalFile, "wrapper/${latest}/grails-cli-${latest}-all.jar")
+
+        where:
+        allowed                                           | latest           | count
+        [GrailsReleaseType.RELEASE]                       | '9.0.1'          | 3
+        [GrailsReleaseType.RELEASE, GrailsReleaseType.RC] | '9.1.0-RC1'      | 4
+        [GrailsReleaseType.SNAPSHOT]                      | '9.1.0-SNAPSHOT' | 1
+        null                                              | '9.1.0-RC1'      | 6
+    }
+
+    def "a home that has no version has no latest version and no command line"() {
+        when:
+        GrailsWrapperHome home = new GrailsWrapperHome(new LinkedHashSet<>([GrailsReleaseType.RELEASE]), new File(dir, 'new').path)
+
+        then:
+        new File(dir, 'new/wrapper').isDirectory()
+        home.versions.empty
+        home.latestVersion == null
+        home.latestWrapperImplementation == null
+        home.getVersionDirectory(null) == null
     }
 }

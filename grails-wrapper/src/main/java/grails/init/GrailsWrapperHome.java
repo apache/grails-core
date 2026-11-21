@@ -22,9 +22,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Objects;
 import java.util.Set;
-import java.util.stream.Stream;
 
 /**
  * Helper class for managing the `grails-cli` jar files in the Grails Wrapper home directory.
@@ -102,42 +100,15 @@ public class GrailsWrapperHome {
         }
     }
 
+    /**
+     * The versions are sorted as {@link GrailsVersion} orders them, the latest first.
+     */
     private GrailsVersion findLatestVersion() {
-        if (versions.isEmpty()) {
-            return null;
-        }
-
-        GrailsVersion lastRelease = null;
-        GrailsVersion lastReleaseCandidate = null;
-        GrailsVersion lastMilestone = null;
-        GrailsVersion lastSnapshot = null;
-        for (GrailsVersion version : versions) {
-            if (version.releaseType == GrailsReleaseType.RELEASE && (lastRelease == null || version.compareTo(lastRelease) > 0)) {
-                lastRelease = version;
-            } else if (version.releaseType == GrailsReleaseType.RC && (lastReleaseCandidate == null || version.compareTo(lastReleaseCandidate) > 0)) {
-                lastReleaseCandidate = version;
-            } else if (version.releaseType == GrailsReleaseType.MILESTONE && (lastMilestone == null || version.compareTo(lastMilestone) > 0)) {
-                lastMilestone = version;
-            } else if (version.releaseType == GrailsReleaseType.SNAPSHOT && (lastSnapshot == null || version.compareTo(lastSnapshot) > 0)) {
-                lastSnapshot = version;
-            }
-        }
-
-        List<GrailsVersion> sortedVersions = Stream.of(
-                lastRelease,
-                lastReleaseCandidate,
-                lastMilestone,
-                lastSnapshot
-            )
-            .filter(Objects::nonNull)
-            .sorted()
-            .toList();
-
-        return sortedVersions.isEmpty() ? null : sortedVersions.get(sortedVersions.size() - 1);
+        return versions.isEmpty() ? null : versions.get(0);
     }
 
     /**
-     * Finds the available versions in the GRAILS_WRAPPER_HOME directory; sorted by smallest version to largest
+     * Finds the available versions in the GRAILS_WRAPPER_HOME directory; sorted as {@link GrailsVersion} orders them, the latest first
      */
     private List<GrailsVersion> determineVersions() {
         File[] children = wrapperDirectory.listFiles();
