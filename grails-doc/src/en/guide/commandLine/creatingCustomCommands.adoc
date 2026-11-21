@@ -309,6 +309,49 @@ In this example:
 
 When you run this custom command using `./gradlew runCommand -Pargs="backup"`, it will adapt its behavior based on whether you're in a production or non-production environment, demonstrating how the `executionContext` can be used to make environment-specific decisions in a realistic scenario.
 
+**Commands That Run Without the Application**
+
+A command is run with the application started around it: its context is built, its plugins are loaded and its data sources are opened, and `BootStrap` runs unless the command sets `skipBootstrap`. A command that only works on the files of the project, one that renders templates into it or reads a file the running application writes, has no use for any of that, and starting a second instance of an application to read a file is slow and can be harmful. Such a command also implements link:{api}org/apache/grails/core/cli/StandaloneCommand.html[StandaloneCommand], an interface without methods:
+
+[source,groovy]
+.grails-app/commands/com/example/CreateReportCommand.groovy
+----
+package com.example
+
+import org.apache.grails.core.cli.GrailsApplicationCommand
+import org.apache.grails.core.cli.StandaloneCommand
+
+class CreateReportCommand implements GrailsApplicationCommand, StandaloneCommand {
+
+    String description = 'Creates a report class from a template'
+
+    boolean handle() {
+        if (!args) {
+            System.err.println('Usage: create-report <name>')
+            return false
+        }
+        def model = model(args[0])
+        render template: template('artifacts/Report.groovy'),
+               destination: file("src/main/groovy/${model.packagePath}/${model.simpleName}Report.groovy"),
+               model: model
+        true
+    }
+}
+----
+
+The template is `src/main/templates/artifacts/Report.groovy` of the project, or `META-INF/templates/artifacts/Report.groovy` of a plugin, with `${packageName}` and `${className}` where the package and the class name go. The command is created, registered, listed and run as every command is: `grails run-command create-report Sales`, `./gradlew runCommand --arg=create-report --arg=Sales`, and `grails create-report Sales` once `grailsCommandCatalog` has listed it. What differs is what the `runCommand` task does for it:
+
+* The application is not started: no application context, no plugins, no data source, no `BootStrap`. The `Application` class is not initialized.
+* `applicationContext` is `null`, and nothing is injected into the command. A `skipBootstrap` property is not read.
+* The command gets what every command gets that is not of the application: the command line (`args`, `executionContext.commandLine`), the directories of the project (`executionContext.baseDir`, `classesDir`, `targetDir`), and with `GrailsApplicationCommand` the helpers for templates, files and models (`render`, `template`, `file`, `model`, ...).
+* The class path is that of every command: the compiled classes of the application, its run time dependencies, and the command line tier (`grailsCli`). The project is compiled before the command runs.
+* The configuration of the application is not loaded. A command that needs a setting reads the file, `grails-app/conf/application.yml` for example, and gets what is written there, without what an environment block, a profile, a system property or a plugin would change.
+* `true` ends the task successfully; `false` or an exception fails it.
+
+The descriptor of such a command, and the catalog of the build, name the target `standalone` where another command has `application`. The interface on the class is what decides how the command is run.
+
+Use it for a command that would also work if the application could not start. A command that needs a bean, a domain class with GORM, or the configuration as the application sees it is a command of the application and does not implement the interface. The `query-tail` command of Grails Data is one that does: it follows the capture file of the application that is running.
+
 **How to Create a Custom Command from a Grails Plugin**
 
 Plugins publish their commands in a *companion cli artifact* (`<plugin-artifactId>-cli`) instead of
@@ -492,6 +535,8 @@ Write the name in lower case letters and digits, in words joined by single hyphe
 {"format": 1, "class": "com.example.AuditReportCommand", "name": "audit-report", "description": "Writes the audit report", "target": "application"}
 ----
 
+`target` is `application`, or `standalone` for a command that runs without the application; a descriptor without it is of a command of the application.
+
 The `grailsCommandCatalog` task of an application or plugin project writes the list of the commands the project can run with `runCommand` to `build/grails/command-catalog.json`:
 
 [source,shell]
@@ -511,6 +556,7 @@ It lists the commands of the project itself, of the `-cli` companions of its plu
 ----
 
 * `origin` is the coordinates of the artifact the command comes from, or `application` for a command of the project itself.
+* `target` is `application` for a command that is run with the application started around it, and `standalone` for one that is run without it (see "Commands That Run Without the Application" above). A command without a descriptor is listed as `application`, whatever its class says, and is run as its class says.
 * `registration` says how much is known: `descriptor` for a command with a descriptor; `factories` for a command that is registered without one, whose name is the one its class name gives and whose description is empty; `legacy` for a command of a Grails 7 plugin, listed the same way.
 * The file lists at most 512 commands in at most 512 KiB, which is what the `grails` command reads: when a project has more, the first by name are listed and a line of `diagnostics` says how many are not.
 * `complete` is `false` when something could not be listed, and `diagnostics` then says what and why, one line each: a descriptor that is not as described above, a name that two commands have (neither is listed, because the task does not choose between them), a descriptor in a jar for a class of the application (the command keeps what the application says of it, and the other descriptor is not used), or Grails 7 commands in a project without `legacyCommandSupport`. The task prints the same lines as warnings.

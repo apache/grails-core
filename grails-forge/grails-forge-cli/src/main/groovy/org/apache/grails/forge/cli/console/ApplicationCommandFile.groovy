@@ -93,8 +93,11 @@ final class ApplicationCommandFile {
     /** How deep a directory of commands is looked at for what was changed, at most. */
     public static final int MAX_WALK_DEPTH = 24
 
-    /** The origin of a command of the project itself, and the target of every command of the file. */
+    /** The origin of a command of the project itself, and the target of a command that runs with the application started around it. */
     public static final String APPLICATION = 'application'
+
+    /** The target of a command the build runs without the application: with the class path of the project, and nothing of it started. */
+    public static final String STANDALONE = 'standalone'
 
     // the document is four deep; what a later task adds to a command and is not read here may go deeper
     private static final int MAX_DEPTH = 8
@@ -102,7 +105,7 @@ final class ApplicationCommandFile {
     private static final int MAX_TEXT = 4096
     private static final Pattern NAME = Pattern.compile('[a-z][a-z0-9]*(-[a-z0-9]+)*')
     private static final List<String> REGISTRATIONS = ['descriptor', 'factories', 'legacy']
-    private static final List<String> OTHER_TARGETS = ['console', 'standalone', 'gradle', 'session']
+    private static final List<String> OTHER_TARGETS = ['console', 'gradle', 'session']
     private static final List<Integer> NOT_SHOWN = [(int) Character.CONTROL, (int) Character.FORMAT, (int) Character.LINE_SEPARATOR,
                                                     (int) Character.PARAGRAPH_SEPARATOR, (int) Character.SURROGATE, (int) Character.PRIVATE_USE,
                                                     (int) Character.UNASSIGNED]
@@ -288,7 +291,8 @@ final class ApplicationCommandFile {
                 wrong = wrongWith(command)
                 if (wrong == null) {
                     entry = new Entry((String) command.get('name'), command.containsKey('aliases') ? (List<String>) command.get('aliases') : Collections.<String>emptyList(),
-                            command.containsKey('description') ? (String) command.get('description') : '', (String) command.get('origin'), (String) command.get('registration'))
+                            command.containsKey('description') ? (String) command.get('description') : '', (String) command.get('origin'), (String) command.get('registration'),
+                            (String) command.get('target'))
                     if (entry.names().any { String name -> names.contains(name) } || entry.names().toSet().size() < entry.names().size()) {
                         wrong = 'it has a name that a command before it has'
                     }
@@ -325,7 +329,7 @@ final class ApplicationCommandFile {
             return "its origin is not at most ${MAX_ORIGIN} characters of printable ASCII without a space, an @ or a dollar sign, or is a word the command line keeps for itself"
         }
         Object target = command.get('target')
-        if (target != APPLICATION) {
+        if (target != APPLICATION && target != STANDALONE) {
             return target in OTHER_TARGETS ? "its target is ${target}, which is not run from here" : 'its target is none there is'
         }
         if (!(command.get('registration') in REGISTRATIONS)) {
@@ -473,12 +477,23 @@ final class ApplicationCommandFile {
         /** How the command is registered, which says how much the build knows of it. */
         final String registration
 
-        private Entry(String name, List<String> aliases, String description, String origin, String registration) {
+        /** How the build runs the command: {@link #APPLICATION} with the application, {@link #STANDALONE} without it. */
+        final String target
+
+        private Entry(String name, List<String> aliases, String description, String origin, String registration, String target = APPLICATION) {
             this.name = name
             this.aliases = new ArrayList<String>(aliases).asImmutable()
             this.description = description
             this.origin = origin
             this.registration = registration
+            this.target = target
+        }
+
+        /**
+         * @return whether the build runs the command without starting the application
+         */
+        boolean isStandalone() {
+            return target == STANDALONE
         }
 
         /**

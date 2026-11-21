@@ -209,7 +209,7 @@ class CommandCatalogBuilder {
             command.aliases = []
             command.description = entry.description ?: ''
             command.origin = entry.origin
-            command.target = CommandDescriptor.TARGET_APPLICATION
+            command.target = entry.target ?: CommandDescriptor.TARGET_APPLICATION
             command.registration = entry.registration
             commands << command
         }
@@ -270,7 +270,7 @@ class CommandCatalogBuilder {
                 return null
             }
             return new Entry(name: application.described.name, description: application.described.description, origin: application.origin,
-                    className: className, registration: REGISTRATION_DESCRIPTOR)
+                    className: className, registration: REGISTRATION_DESCRIPTOR, target: application.described.target)
         }
         List<Candidate> described = candidates.findAll { Candidate candidate -> candidate.digest != null }
         if (described.isEmpty()) {
@@ -288,7 +288,7 @@ class CommandCatalogBuilder {
             return null
         }
         new Entry(name: first.described.name, description: first.described.description, origin: first.origin,
-                className: className, registration: REGISTRATION_DESCRIPTOR)
+                className: className, registration: REGISTRATION_DESCRIPTOR, target: first.described.target)
     }
 
     private static Entry named(String origin, String className, String registration, Set<String> said) {
@@ -450,6 +450,8 @@ class CommandCatalogBuilder {
         String origin
         String className
         String registration
+        // what the descriptor says, or null for a command that is listed from its registration alone
+        String target
     }
 
     // one place a class is registered: with the descriptor found there (read, or refused), or without one

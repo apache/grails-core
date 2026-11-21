@@ -24,7 +24,8 @@ import picocli.CommandLine
 
 /**
  * {@code run-command}: the Gradle task {@code runCommand} of the project, which runs a command of
- * the application or of one of its plugins with the application started around it.
+ * the application or of one of its plugins with the application started around it, or without the
+ * application when the command is one that needs none: the task knows which from the command.
  *
  * <p>Everything after the name of the command is the command's, whatever it looks like, and reaches
  * it as the arguments it was: the name and the arguments are written to a file the task reads, see
@@ -35,7 +36,8 @@ import picocli.CommandLine
 @CommandLine.Command(name = 'run-command',
         description = [
                 'Runs a command of the Grails application: the Gradle task runCommand.',
-                'NAME is a command of the application or of one of its plugins, which is run with the application started around it.',
+                'NAME is a command of the application or of one of its plugins, which is run with the application started around it,',
+                'or without the application when the command is one that needs none.',
                 'Everything after NAME is given to that command as it is, also what looks like an option of this one.',
                 'The environment is development unless -Dgrails.env names another one, before NAME.'
         ],

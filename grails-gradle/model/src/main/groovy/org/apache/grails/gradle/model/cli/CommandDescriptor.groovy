@@ -33,7 +33,9 @@ import grails.util.GrailsNameUtils
  * so that compiling one class again writes one file and nothing has to be merged. Format 1 is one
  * JSON object with the members {@code format} (the number 1), {@code class} (the name of the command
  * class, which is the name of the resource), {@code name} (what is typed), and optionally
- * {@code description} (one line) and {@code target} ({@code application}). A reader ignores a member
+ * {@code description} (one line) and {@code target}: {@code application} for a command that is run
+ * with the application started around it, which is also what a descriptor without the member means,
+ * or {@code standalone} for one that is run without the application. A reader ignores a member
  * it does not know, and reads a descriptor only for a class the factories file of the same jar or
  * directory registers.</p>
  *
@@ -56,6 +58,15 @@ final class CommandDescriptor {
 
     /** The execution target of a command that runs with the application context. */
     public static final String TARGET_APPLICATION = 'application'
+
+    /**
+     * The execution target of a command that is run without the application: with the class path of
+     * the project and its directories, and no application context.
+     */
+    public static final String TARGET_STANDALONE = 'standalone'
+
+    /** The execution targets of the commands a build runs, which are the ones a descriptor is read for. */
+    public static final List<String> RUN_TARGETS = [TARGET_APPLICATION, TARGET_STANDALONE].asImmutable()
 
     /** The execution targets a descriptor can name. */
     public static final List<String> TARGETS = ['console', 'standalone', 'application', 'gradle', 'session'].asImmutable()
@@ -170,9 +181,17 @@ final class CommandDescriptor {
         /** The description of the command, or {@code null} when the descriptor has none. */
         final String description
 
+        /** The execution target of the command, one of {@link CommandDescriptor#RUN_TARGETS}. */
+        final String target
+
         Described(String name, String description) {
+            this(name, description, TARGET_APPLICATION)
+        }
+
+        Described(String name, String description, String target) {
             this.name = name
             this.description = description
+            this.target = target
         }
     }
 
@@ -216,13 +235,13 @@ final class CommandDescriptor {
             throw new Refused("has a description that is not one line of at most ${MAX_DESCRIPTION_LENGTH} characters that can be shown")
         }
         Object target = descriptor.get('target')
-        if (target != null && target != TARGET_APPLICATION) {
+        if (target != null && !(target instanceof String && RUN_TARGETS.contains(target))) {
             String why = target instanceof String && TARGETS.contains(target) ?
                     "is for the execution target ${target}, which this version of Grails cannot run".toString() :
                     'has an execution target that does not exist'
             throw new Refused(why)
         }
-        new Described((String) name, (String) description)
+        new Described((String) name, (String) description, target == null ? TARGET_APPLICATION : (String) target)
     }
 
     /**
@@ -236,10 +255,23 @@ final class CommandDescriptor {
      * @return the JSON document, or {@code null} when the command cannot be described
      */
     static String describe(String className, String name, String description) {
-        if (!isClassName(className) || !isCommandName(name)) {
+        describe(className, name, description, TARGET_APPLICATION)
+    }
+
+    /**
+     * Writes the descriptor of a command with its execution target, when {@link #read} would take it.
+     *
+     * @param className the name of the command class
+     * @param name what is typed for the command
+     * @param description the description of the command, or {@code null} when it is not known
+     * @param target the execution target of the command, one of {@link #RUN_TARGETS}
+     * @return the JSON document, or {@code null} when the command cannot be described
+     */
+    static String describe(String className, String name, String description, String target) {
+        if (!isClassName(className) || !isCommandName(name) || !RUN_TARGETS.contains(target)) {
             return null
         }
-        toJson(className, name, description != null && isDescription(description) ? description : null)
+        toJson(className, name, description != null && isDescription(description) ? description : null, target)
     }
 
     /**
@@ -252,6 +284,19 @@ final class CommandDescriptor {
      * @return the JSON document, in ASCII, with a line end
      */
     static String toJson(String className, String name, String description) {
+        toJson(className, name, description, TARGET_APPLICATION)
+    }
+
+    /**
+     * Writes a descriptor of format 1 with the execution target it names.
+     *
+     * @param className the name of the command class
+     * @param name what is typed for the command
+     * @param description the description of the command, or {@code null} when it is not known
+     * @param target the execution target of the command
+     * @return the JSON document, in ASCII, with a line end
+     */
+    static String toJson(String className, String name, String description, String target) {
         StringBuilder json = new StringBuilder()
         json.append('{"format":').append(FORMAT)
         json.append(',"class":')
@@ -263,7 +308,7 @@ final class CommandDescriptor {
             appendString(json, description)
         }
         json.append(',"target":')
-        appendString(json, TARGET_APPLICATION)
+        appendString(json, target)
         json.append('}\n')
         json.toString()
     }

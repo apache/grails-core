@@ -26,7 +26,8 @@ import picocli.CommandLine
 /**
  * A command of the application or of one of its plugins, as a command of the CLI: one for each
  * command the build of the project lists, under the name the build gives. The command itself runs in
- * the application, started by the Gradle task {@code runCommand} of the project. A script of the
+ * the application, started by the Gradle task {@code runCommand} of the project; one the build lists
+ * with the target {@code standalone} is started by the same task and runs without the application. A script of the
  * application is such a command too: it is run by the build as well, by the Gradle task
  * {@code runScriptCommand}, and never by the CLI.
  *
@@ -86,7 +87,8 @@ class ApplicationCommandCommand extends InProjectCommand {
         } else {
             // where a command comes from is the name of a jar or of a project: text, as the description is
             description.add(("A command of ${entry.origin == ApplicationCommandFile.APPLICATION ? 'the application' : shown(entry.origin).replace('%', '%%')}, " +
-                    "which runs in the application: it is started by the Gradle task ${TASK} of the project.").toString())
+                    (entry.isStandalone() ? 'which runs without the application' : 'which runs in the application') +
+                    ": it is started by the Gradle task ${TASK} of the project.").toString())
         }
         description.add('Everything after the name of the command is given to the command as it is, the options too.')
         spec.usageMessage().description(description as String[])
@@ -119,7 +121,7 @@ class ApplicationCommandCommand extends InProjectCommand {
         described.put('description', entry.description)
         described.put('project', true)
         described.put('origin', entry.origin)
-        described.put('target', entry.isScript() ? ScriptCommandFiles.TARGET : ApplicationCommandFile.APPLICATION)
+        described.put('target', entry.isScript() ? ScriptCommandFiles.TARGET : entry.target)
         described.put('registration', entry.registration)
         described.put('commands', [])
         return described

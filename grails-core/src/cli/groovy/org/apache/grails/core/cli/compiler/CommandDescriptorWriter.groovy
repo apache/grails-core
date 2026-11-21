@@ -62,6 +62,10 @@ import org.apache.grails.gradle.model.cli.CommandDescriptor
  * from its registration alone; a description declared in another way is left out of the
  * descriptor.</p>
  *
+ * <p>The execution target of the descriptor is {@code standalone} for a class that implements
+ * {@code StandaloneCommand}, itself or through a class it extends or an interface, and
+ * {@code application} for every other command.</p>
+ *
  * @since 9.0
  */
 @CompileStatic
@@ -70,6 +74,8 @@ class CommandDescriptorWriter {
     private static final ClassNode TRAIT_BRIDGE = ClassHelper.make(Traits.TraitBridge)
 
     private static final String TRAIT_CLASS_MEMBER = 'traitClass'
+
+    private static final String STANDALONE_COMMAND = 'org.apache.grails.core.cli.StandaloneCommand'
 
     private static final Object UNKNOWN = new Object()
 
@@ -103,7 +109,8 @@ class CommandDescriptorWriter {
                 declaredDescription == null ? name : (String) declaredDescription
         // nothing is written that the reader of a descriptor refuses: a name that is not the name of a
         // command gets no descriptor, and a description that is not one line that can be shown is left out
-        String json = CommandDescriptor.describe(classNode.name, name, description)
+        String json = CommandDescriptor.describe(classNode.name, name, description,
+                isStandalone(classNode) ? CommandDescriptor.TARGET_STANDALONE : CommandDescriptor.TARGET_APPLICATION)
         if (json == null) {
             descriptor.delete()
             return false
@@ -128,6 +135,18 @@ class CommandDescriptorWriter {
                 descriptor.delete()
             }
         }
+    }
+
+    // whether the class, or a class it extends, is marked as a command that runs without the application
+    private static boolean isStandalone(ClassNode classNode) {
+        ClassNode current = classNode
+        while (current != null && current != ClassHelper.OBJECT_TYPE) {
+            if (current.allInterfaces.any { ClassNode interfaceNode -> interfaceNode.name == STANDALONE_COMMAND }) {
+                return true
+            }
+            current = current.superClass
+        }
+        false
     }
 
     // null: nothing declares the property, so the command contract's default applies;

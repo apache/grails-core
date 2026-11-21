@@ -289,6 +289,26 @@ class CommandDescriptorWriterSpec extends Specification {
         CommandDescriptor.isDescription(command.description)
     }
 
+    @Unroll
+    def "a command that runs without the application, marked #where, is described as standalone"() {
+        when:
+        compile('TailCommand', source)
+
+        then:
+        descriptor('example.TailCommand') == [format: 1, class: 'example.TailCommand', name: 'tail',
+                                              description: 'Follows a file', target: 'standalone']
+        registered() == ['example.TailCommand']
+
+        where:
+        where                         | source
+        'on the class'                | "class TailCommand implements ${CONTRACT}, ${STANDALONE} { String description = 'Follows a file'; ${HANDLE} }"
+        'on a Grails command'         | "class TailCommand implements org.apache.grails.core.cli.GrailsApplicationCommand, ${STANDALONE} { String description = 'Follows a file'; boolean handle() { true } }"
+        'on an interface it has'      | "interface FileCommand extends ${STANDALONE} {}\nclass TailCommand implements ${CONTRACT}, FileCommand { String description = 'Follows a file'; ${HANDLE} }"
+        'on a class it extends'       | "abstract class FileCommand implements ${CONTRACT}, ${STANDALONE} { String description = 'Follows a file' }\nclass TailCommand extends FileCommand { ${HANDLE} }"
+    }
+
+    private static final String STANDALONE = 'org.apache.grails.core.cli.StandaloneCommand'
+
     private static final String HANDLE = 'boolean handle(org.apache.grails.core.cli.ExecutionContext executionContext) { true }'
 
     private File getTargetDirectory() {
