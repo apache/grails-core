@@ -173,7 +173,7 @@ A script that the build runs has `description`, `args`, `argsMap`, `flag`, `mode
 | A script cannot run a build from inside the build. Run the tasks from the command line (`grails gradle compileGroovy`), or make the work a task of the build that depends on them.
 
 | `testApp()`, `runApp()` and other commands that are no scripts
-| Run them from the command line, one after the other. A method that names another script (`generateController('Book')` for `generate-controller`) runs that script.
+| Run them from the command line, one after the other. A method that names another script (`createJob('Nightly')` for the `create-job` script of the Quartz plugin, `dataImport('orders.csv')` for a script `data-import` of the project) runs that script.
 
 | Classes of `org.grails.cli`, such as the completers named in a `description`
 | They are not on the class path: remove the `import`. A script that imports one is not compiled, and the message says so. A class that is named in full in the `description` closure, without an import, does not stop the script, because the closure is not run; remove such a `completer` line as well, since nothing completes the arguments of a script. The scripts of the plugins of the framework name no completer.
