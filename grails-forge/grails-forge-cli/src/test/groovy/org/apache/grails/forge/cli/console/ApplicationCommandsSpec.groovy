@@ -807,6 +807,10 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
         and: 'before Gradle is started it is said what is run, and where it comes from, on the error stream'
         err.toString().readLines()[0] == '| Running the command hello-world of org.example:hello-cli:1.2.3, with the Gradle task runCommand'
 
+        and: 'an environment after the name is an argument of the command like any other, and it is said that the command runs for another one'
+        err.toString().readLines()[1] == '| Warning -Dgrails.env=... after the name of hello-world is given to the command as an argument, and the command runs for the ' +
+                'environment development. To run it for another environment, name it before the command: grails-forge-cli run-command -Dgrails.env=production hello-world'
+
         and: 'the file has the same name in the project every time, which is what Gradle is given, and is gone afterwards'
         lineOf('option=') == '.grails/run/command-args-0.json'
         file.canonicalFile == new File(dir, '.grails/run/command-args-0.json').canonicalFile
@@ -815,10 +819,12 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
 
         when: 'by another name of the command, and without arguments'
         out.reset()
+        err.reset()
         exit = ForgeCli.execute(beanContext, 'hi')
 
-        then:
+        then: 'nothing is said of an environment that was not given'
         exit == 0
+        !err.toString().contains('-Dgrails.env')
         lineOf('vector=') == '<' + 'hello-world'.bytes.encodeHex() + '>'
         lineOf('option=') == '.grails/run/command-args-0.json'
         new File(dir, '.grails/run').list().sort() == ['.gitignore']

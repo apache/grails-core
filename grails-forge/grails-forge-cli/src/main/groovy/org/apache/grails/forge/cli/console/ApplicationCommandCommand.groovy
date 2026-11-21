@@ -49,6 +49,9 @@ class ApplicationCommandCommand extends InProjectCommand {
     /** The environment a command of the application runs in, which is the one {@code run-command} has unless it is given another. */
     public static final String ENVIRONMENT = 'development'
 
+    /** What names the environment of the build, which a command of the application takes before its name with run-command and not after it. */
+    public static final String ENVIRONMENT_OPTION = '-Dgrails.env='
+
     /** What is said of every script: scripts are kept for the applications that have them. */
     public static final String DEPRECATED = 'Script commands are deprecated. Write a new command as a class of the application: create-command'
 
@@ -161,6 +164,14 @@ class ApplicationCommandCommand extends InProjectCommand {
             said.println(CommandLine.Help.Ansi.AUTO.string("@|bold | Running|@ ${entry.isScript() ? "the script ${entry.name} of ${ScriptCommandFiles.LOCATION}, with the Gradle task ${task()}" : running(entry.name, entry.origin)}"))
             if (entry.isScript()) {
                 said.println(CommandLine.Help.Ansi.AUTO.string('@|bold,red | Warning|@ ' + DEPRECATED))
+            } else if (arguments.any { String argument -> argument.startsWith(ENVIRONMENT_OPTION) }) {
+                // Every argument after the name of a command is the command's, and so is this one. Who types
+                // grails dbm-update -Dgrails.env=production means the environment, as after the name of every
+                // command that runs the build, and is told that the command runs for another one.
+                String cli = spec.root().name()
+                said.println(CommandLine.Help.Ansi.AUTO.string('@|bold,red | Warning|@ ' + GradleRunner.line("${ENVIRONMENT_OPTION}... after the name of ${entry.name} is given " +
+                        "to the command as an argument, and the command runs for the environment ${ENVIRONMENT}. To run it for another environment, name it before the command: " +
+                        "${cli} run-command ${ENVIRONMENT_OPTION}production ${entry.name}")))
             }
             said.flush()
             GradleRunner runner = new GradleRunner({ String message -> err(message) } as Consumer<String>, getOperatingSystem() == OperatingSystem.WINDOWS)
