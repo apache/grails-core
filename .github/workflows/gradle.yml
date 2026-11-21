@@ -427,7 +427,6 @@ jobs:
           unzip cli -d tmp1
           mv tmp1/apache-grails-* tmp1/cli
           ./tmp1/cli/bin/grails --version
-          ./tmp1/cli/bin/grails-forge-cli --version
       - name: "📤 Upload CLI Zip to Workflow Summary Page"
         if: ${{ matrix.java == '21' && matrix.indy == false }}
         uses: actions/upload-artifact@v7.0.1
