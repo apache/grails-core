@@ -411,16 +411,22 @@ class GrailsContentNegotiationStrategy {
 
     /**
      * Media types in the order Grails reads them, which keeps Spring MVC's order but for the types with the {@code +xml}
-     * suffix of the quality of the XML type, the first {@code application/xml} or {@code text/xml}: they come ahead of
-     * it, as the more specific types, each one later in the header in front of those before it, as Grails 9 orders them.
+     * suffix of the quality of the XML type, the first {@code application/xml} or {@code text/xml}, or
+     * {@code application/problem+xml} where no configured type names it, since Grails reads that problem type as
+     * {@code application/xml}: they come ahead of it, as the more specific types, each one later in the header in front
+     * of those before it, as Grails 9 orders them.
      *
      * @param mediaTypes the media types in Spring MVC's order
      * @return the media types in the order Grails reads them
      * @since 9.0
      */
-    static List<MediaType> preferringSuffixedXml(List<MediaType> mediaTypes) {
+    List<MediaType> preferringSuffixedXml(List<MediaType> mediaTypes) {
+        boolean problemXmlConfigured = mimeTypes.any { MimeType configured ->
+            configured?.name?.equalsIgnoreCase(MediaType.APPLICATION_PROBLEM_XML_VALUE)
+        }
         int xml = mediaTypes.findIndexOf { MediaType mediaType ->
-            mediaType.type == 'application' && mediaType.subtype == 'xml' || mediaType.type == 'text' && mediaType.subtype == 'xml'
+            mediaType.type == 'application' && mediaType.subtype == 'xml' || mediaType.type == 'text' && mediaType.subtype == 'xml' ||
+                    !problemXmlConfigured && mediaType.equalsTypeAndSubtype(MediaType.APPLICATION_PROBLEM_XML)
         }
         if (xml < 0) {
             return mediaTypes

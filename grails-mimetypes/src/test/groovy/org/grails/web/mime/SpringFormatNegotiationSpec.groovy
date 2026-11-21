@@ -337,6 +337,8 @@ class SpringFormatNegotiationSpec extends Specification {
         'application/xml, application/atom+xml;q=0.5'             || ['xml', 'atom']            | ['application/xml', 'application/atom+xml;q=0.5']
         'application/atom+xml, application/xml'                   || ['atom', 'xml']            | ['application/atom+xml', 'application/xml']
         'application/json, application/atom+xml'                  || ['json', 'atom']           | ['application/json', 'application/atom+xml']
+        'application/problem+xml, application/atom+xml'           || ['atom', 'xml']            | ['application/atom+xml', 'application/problem+xml']
+        'application/problem+xml;q=0.5, application/atom+xml;q=0.4' || ['xml', 'atom']          | ['application/problem+xml;q=0.5', 'application/atom+xml;q=0.4']
     }
 
     void 'a wildcard is of the all format, which withFormat answers with the first block compatible with it: #result for #accept'() {
