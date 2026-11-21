@@ -93,10 +93,10 @@ tasks.register('inspectDefaultDependencies') {
                 "LAZY_TOOL_RESOLVED=${resolvedModules(lazyTool)}",
                 "MANAGED_RESOLVED=${resolvedModules(managed)}",
 
-                // Observing a configuration's dependencies runs its dependency actions, so the default
-                // dependency and the lazily contributed platform must both be declared by now.
-                "PROFILE_DEFAULT_DECLARED=${profile.incoming.dependencies.any { it.group == 'org.apache.grails.profiles' }}",
-                "PROFILE_HAS_BOM=${profile.incoming.dependencies.any(isLazyBom)}",
+                // Observing a configuration's dependencies runs its dependency actions, so the lazily
+                // contributed platform must be declared by now, except on the configuration that refuses
+                // every dependency.
+                "PROFILE_DEPENDENCIES=${profile.incoming.dependencies.collect { it.name }}",
                 "LAZY_TOOL_HAS_BOM=${lazyTool.incoming.dependencies.any(isLazyBom)}",
                 "JACOCO_AGENT_HAS_BOM=${jacocoAgent.incoming.dependencies.any(isLazyBom)}",
                 "JACOCO_ANT_HAS_BOM=${jacocoAnt.incoming.dependencies.any(isLazyBom)}"

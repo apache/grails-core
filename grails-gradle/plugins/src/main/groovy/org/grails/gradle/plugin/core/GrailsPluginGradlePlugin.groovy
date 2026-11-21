@@ -24,8 +24,6 @@ import java.nio.file.Path
 import java.util.regex.Pattern
 import java.util.stream.Stream
 
-import javax.inject.Inject
-
 import grails.util.BuildSettings
 import grails.util.GrailsNameUtils
 import groovy.transform.CompileDynamic
@@ -68,7 +66,6 @@ import org.gradle.api.tasks.util.PatternFilterable
 import org.gradle.jvm.toolchain.JavaToolchainService
 import org.gradle.language.base.plugins.LifecycleBasePlugin
 import org.gradle.language.jvm.tasks.ProcessResources
-import org.gradle.tooling.provider.model.ToolingModelBuilderRegistry
 
 import org.springframework.boot.gradle.tasks.bundling.BootJar
 import org.yaml.snakeyaml.DumperOptions
@@ -137,11 +134,6 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
 
     private static final int FORGE_PACK_DESCRIPTOR_LENGTH = 256 * 1024
 
-    @Inject
-    GrailsPluginGradlePlugin(ToolingModelBuilderRegistry registry) {
-        super(registry)
-    }
-
     @Override
     protected String grailsArtifactType() {
         GenerateI18nDescriptorTask.TYPE_PLUGIN
@@ -208,10 +200,6 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
             }
             """ as String
         }
-    }
-
-    protected String getDefaultProfile() {
-        'web-plugin'
     }
 
     @Override

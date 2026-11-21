@@ -16,15 +16,15 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.gradle.plugin.model
+plugins {
+    id 'org.apache.grails.gradle.grails-plugin'
+}
 
-import groovy.transform.CompileStatic
+grails {
+    bom = null
+    cliAutoProvision = false
+}
 
-@CompileStatic
-class DefaultGrailsClasspath implements GrailsClasspath {
-
-    private static final long serialVersionUID = 1L
-    List<URL> dependencies
-    List<URL> profileDependencies
-    String error
+dependencies {
+    implementation localGroovy()
 }

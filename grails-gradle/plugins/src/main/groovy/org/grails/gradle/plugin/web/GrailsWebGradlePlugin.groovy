@@ -18,13 +18,10 @@
  */
 package org.grails.gradle.plugin.web
 
-import javax.inject.Inject
-
 import groovy.transform.CompileStatic
 
 import org.gradle.api.Project
 import org.gradle.process.CommandLineArgumentProvider
-import org.gradle.tooling.provider.model.ToolingModelBuilderRegistry
 
 import grails.util.Environment
 import org.grails.gradle.plugin.commands.GrailsCliGradlePlugin
@@ -42,11 +39,6 @@ import org.grails.gradle.plugin.core.GrailsGradlePlugin
 class GrailsWebGradlePlugin extends GrailsGradlePlugin {
 
     private static final String URL_MAPPINGS_REPORT = 'urlMappingsReport'
-
-    @Inject
-    GrailsWebGradlePlugin(ToolingModelBuilderRegistry registry) {
-        super(registry)
-    }
 
     @Override
     void apply(Project project) {

@@ -145,23 +145,11 @@ gradlePlugin {
             id = 'org.apache.grails.gradle.grails-cli-library'
             implementationClass = 'org.grails.gradle.plugin.commands.GrailsCliLibraryGradlePlugin'
         }
-        grailsProfile {
-            displayName = 'Grails Profile Gradle Plugin'
-            description = 'A plugin that is capable of compiling a Grails profile into a JAR file for distribution'
-            id = 'org.apache.grails.gradle.grails-profile'
-            implementationClass = 'org.grails.gradle.plugin.profiles.GrailsProfileGradlePlugin'
-        }
         grailsWeb {
             displayName = 'Grails Web Gradle Plugin'
             description = 'Adds web specific extensions'
             id = 'org.apache.grails.gradle.grails-web'
             implementationClass = 'org.grails.gradle.plugin.web.GrailsWebGradlePlugin'
-        }
-        grailsProfilePublish {
-            displayName = 'Grails Profile Publish Plugin'
-            description = 'A plugin for publishing profiles'
-            id = 'org.apache.grails.gradle.grails-publish-profile'
-            implementationClass = 'org.grails.gradle.plugin.profiles.GrailsProfilePublishGradlePlugin'
         }
         grailsExploded {
             displayName = 'Grails Exploded Plugin'

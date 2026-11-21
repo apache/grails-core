@@ -16,29 +16,13 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.gradle.plugin.model
+package example
 
-import groovy.transform.CompileStatic
+import grails.boot.config.GrailsAutoConfiguration
 
-/**
- * Gradle ToolingModel class that is used to return Classpath to Grails cli
- *
- * this file is also in grails-shell-cli project
- */
-@CompileStatic
-interface GrailsClasspath extends Serializable {
+class Application extends GrailsAutoConfiguration {
 
-    /**
-     * @return All Grails dependencies, pull from 'testRuntimeOnly' scope
-     */
-    List<URL> getDependencies()
-
-    /**
-     * @return The profile dependencies
-     */
-    List<URL> getProfileDependencies()
-    /**
-     * @return The error message if one occurred
-     */
-    String getError()
+    static void main(String[] args) {
+        println 'APPLICATION_STARTED'
+    }
 }

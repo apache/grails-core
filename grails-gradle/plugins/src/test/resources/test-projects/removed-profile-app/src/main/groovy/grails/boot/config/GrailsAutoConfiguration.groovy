@@ -16,36 +16,8 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.cli.profile
+package grails.boot.config
 
-import groovy.transform.CompileStatic
-
-/**
- * Represents argument to a command
- *
- * @author Graeme Rocher
- * @since
- */
-@CompileStatic
-class CommandArgument {
-
-    /**
-     * The name of the argument
-     */
-    String name
-    /**
-     * The description of the argument
-     */
-    String description
-
-    /**
-     * Whether the argument is required or not
-     */
-    boolean required = true
-
-    /**
-     * The string argument this argument translates into
-     */
-    String target
-
+// Stands in for the framework class: findMainClass only accepts a main class that extends one of its package
+class GrailsAutoConfiguration {
 }

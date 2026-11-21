@@ -32,6 +32,7 @@ import org.apache.tools.ant.filters.ReplaceTokens
 import org.gradle.api.DefaultTask
 import org.gradle.api.Action
 import org.gradle.api.GradleException
+import org.gradle.api.InvalidUserDataException
 import org.gradle.api.JavaVersion
 import org.gradle.api.Plugin
 import org.gradle.api.Project
@@ -72,7 +73,6 @@ import org.gradle.jvm.toolchain.JavaLauncher
 import org.gradle.jvm.toolchain.JavaToolchainService
 import org.gradle.language.jvm.tasks.ProcessResources
 import org.gradle.process.JavaForkOptions
-import org.gradle.tooling.provider.model.ToolingModelBuilderRegistry
 import org.grails.gradle.plugin.bom.BomPropertyOverridesExtension
 import org.grails.gradle.plugin.bom.BomPropertyOverridesPlugin
 import org.grails.gradle.plugin.commands.GrailsCliGradlePlugin
@@ -86,7 +86,6 @@ import org.apache.grails.gradle.plugin.aot.GenerateNativeMetadataTask
 import org.apache.grails.gradle.plugin.aot.NativeMetadataExtension
 import org.apache.grails.gradle.plugin.aot.TraceNativeMetadataTask
 import org.apache.grails.gradle.plugin.aot.TrainAotCacheTask
-import org.grails.gradle.plugin.model.GrailsClasspathToolingModelBuilder
 import org.grails.gradle.plugin.run.FindMainClassTask
 import org.grails.gradle.plugin.util.SourceSets
 import org.springframework.boot.gradle.dsl.SpringBootExtension
@@ -94,7 +93,6 @@ import org.springframework.boot.gradle.plugin.ResolveMainClassName
 import org.springframework.boot.gradle.plugin.SpringBootPlugin
 import org.springframework.boot.gradle.tasks.bundling.BootArchive
 import org.springframework.boot.gradle.tasks.run.BootRun
-import javax.inject.Inject
 
 /**
  * The main Grails gradle plugin implementation
@@ -103,6 +101,14 @@ import javax.inject.Inject
  */
 @CompileStatic
 class GrailsGradlePlugin implements Plugin<Project> {
+
+    /**
+     * The configuration a build declared its profile in until Grails 9. It refuses every dependency
+     * and is not a supported dependency configuration.
+     */
+    public static final String REMOVED_PROFILE_CONFIGURATION = 'profile'
+
+    private static final String UPGRADE_NOTES_URL = 'https://grails.apache.org/docs/latest/guide/upgrading.html'
 
     private static final String NATIVE_IMAGE_PLUGIN = 'org.graalvm.buildtools.native'
     private static final String NATIVE_IMAGE_NEEDS_INDY = 'A native image needs every Groovy class compiled with ' +
@@ -148,16 +154,12 @@ class GrailsGradlePlugin implements Plugin<Project> {
      */
     private final Map<String, Closure<String>> grailsCompilerConfigScripts = new ConcurrentHashMap<>()
 
+    /** Whether the {@code profile} configuration of the project is the one of this plugin, which refuses dependencies. */
+    private boolean rejectsProfileDependencies
+
     List<Class<Plugin>> basePluginClasses = [IntegrationTestGradlePlugin] as List<Class<Plugin>>
     List<String> excludedGrailsAppSourceDirs = ['migrations', 'assets']
     List<String> grailsAppResourceDirs = ['views', 'i18n', 'conf', 'migrations']
-    private final ToolingModelBuilderRegistry registry
-
-    @Inject
-    GrailsGradlePlugin(ToolingModelBuilderRegistry registry) {
-        this.registry = registry
-    }
-
     void apply(Project project) {
 
         project.pluginManager.apply(GroovyPlugin)
@@ -174,7 +176,7 @@ class GrailsGradlePlugin implements Plugin<Project> {
 
         excludeDependencies(project)
 
-        configureProfile(project)
+        rejectProfileDependencies(project)
 
         registerGrailsExtension(project)
 
@@ -183,8 +185,6 @@ class GrailsGradlePlugin implements Plugin<Project> {
         configureGroovy(project)
 
         configureMicronaut(project)
-
-        registerToolingModelBuilder(project, registry)
 
         applyBasePlugins(project)
 
@@ -492,33 +492,37 @@ ${importStatements}
         }
     }
 
-    protected void configureProfile(Project project) {
-        if (!project.configurations.names.contains(GrailsClasspathToolingModelBuilder.PROFILE_CONFIGURATION_NAME)) {
-            project.configurations.register(GrailsClasspathToolingModelBuilder.PROFILE_CONFIGURATION_NAME).configure { Configuration profileConfiguration ->
-                profileConfiguration.description = 'Configuration that allows for finding profile artifacts so commands, scripts, and other helpers can be found by the Grails Shell'
-                profileConfiguration.canBeConsumed = false
-                profileConfiguration.canBeResolved = true
-                profileConfiguration.transitive = true
-
-                profileConfiguration.defaultDependencies { DependencySet deps ->
-                    String defaultProfileCoordinates = "org.apache.grails.profiles:${System.getProperty('grails.profile') ?: getDefaultProfile()}:${project.findProperty('grailsVersion') ?: BuildSettings.grailsVersion}" as String
-                    project.logger.info('No Grails profile is defined for project {}, defaulting to: {}', project.name, defaultProfileCoordinates)
-                    deps.add(
-                            project.dependencies.create(defaultProfileCoordinates)
-                    )
-                }
-
-                profileConfiguration.resolutionStrategy.eachDependency { details ->
-                    if (details.requested.group == 'org.apache.grails.profiles' && !details.requested.version) {
-                        String grailsVersion = (project.findProperty('grailsVersion') ?: BuildSettings.grailsVersion) as String
-                        project.logger.info('Dependency: {}:{} did not define a version, defaulting to grails version {}', details.requested.group, details.requested.name, grailsVersion)
-
-                        details.useVersion(grailsVersion)
-                        details.because('Grails Profile defined without a version, defaulting to configured Grails Version')
-                    }
-                }
+    /**
+     * Registers the {@code profile} configuration, whose only purpose is to refuse a dependency: until
+     * Grails 9 a build declared the profile of the project in it. Nothing resolves or consumes the
+     * configuration, and it is not a supported place for dependencies. A listener of the dependency set
+     * rather than a check after the project is evaluated, so the build fails at the line that declares the
+     * dependency, and a dependency added through a provider is seen too, because a set that is listened to
+     * realizes what is added to it. A build that has a {@code profile} configuration of its own before this
+     * plugin is applied keeps it as it is.
+     */
+    protected void rejectProfileDependencies(Project project) {
+        if (project.configurations.names.contains(REMOVED_PROFILE_CONFIGURATION)) {
+            return
+        }
+        rejectsProfileDependencies = true
+        String owner = project.displayName
+        project.configurations.register(REMOVED_PROFILE_CONFIGURATION) { Configuration configuration ->
+            configuration.description = 'Removed in Grails 9, which has no profiles. A dependency declared here fails the build.'
+            configuration.canBeConsumed = false
+            configuration.canBeResolved = false
+            configuration.dependencies.whenObjectAdded { Dependency dependency ->
+                throw new InvalidUserDataException(removedProfileMessage(dependency, owner))
             }
         }
+    }
+
+    private static String removedProfileMessage(Dependency dependency, String owner) {
+        String notation = [dependency.group, dependency.name, dependency.version].findAll().join(':')
+        "Grails 9 has no profiles: remove the 'profile' dependency '${notation}' from the build of ${owner}. " +
+                'Nothing reads it, and the profiles are not published for Grails 9. ' +
+                'See "The Grails Shell and the Profiles Are Not Published, and a Build Cannot Declare a Profile" ' +
+                "in the Grails 9 upgrade notes: ${UPGRADE_NOTES_URL}"
     }
 
     protected void applyDefaultPlugins(Project project) {
@@ -542,8 +546,7 @@ ${importStatements}
      *       The platform is contributed lazily, through {@link Configuration#withDependencies},
      *       when a configuration's dependencies are first observed. It therefore never counts
      *       against the {@link Configuration#defaultDependencies} that other plugins use to
-     *       populate an otherwise empty configuration on demand (such as this plugin's
-     *       {@code profile} configuration). Dedicated tool and annotation-processor
+     *       populate an otherwise empty configuration on demand. Dedicated tool and annotation-processor
      *       classpaths, including {@code jacocoAgent} and {@code jacocoAnt}, are excluded.
      *       Exactly one Grails BOM is ever applied; the BOMs are split by integration
      *       (default / hibernate / micronaut), so the plugin never layers two of them.</li>
@@ -624,12 +627,16 @@ ${importStatements}
             // defaultDependencies actions first - and only while the configuration holds no
             // dependencies at all - then the withDependencies actions. A platform added eagerly
             // counts as a declared dependency and silently disables the defaults other plugins
-            // rely on, such as this plugin's own profile configuration (#16335).
+            // rely on (#16335).
             // Registering through configureEach also covers configurations that plugins create
             // after this callback has run.
             DependencyHandler dependencyHandler = project.dependencies
             project.configurations.configureEach { Configuration configuration ->
                 if (!configuration.canBeDeclared || isExcludedFromBomPlatform(configuration.name)) {
+                    return
+                }
+                if (rejectsProfileDependencies && configuration.name == REMOVED_PROFILE_CONFIGURATION) {
+                    // The platform would be refused as a profile dependency.
                     return
                 }
                 configuration.withDependencies { DependencySet dependencies ->
@@ -735,7 +742,7 @@ ${importStatements}
         // (default / hibernate / micronaut), so a project must select a single variant.
         // If the build declares a Grails BOM by hand - for example a Micronaut application
         // declaring enforcedPlatform(grails-micronaut-bom), or an application generated by
-        // Grails Forge / a profile that declares platform(grails-bom) directly - honor that
+        // Grails Forge that declares platform(grails-bom) directly - honor that
         // selection instead of the configured default, and fail fast if more than one distinct
         // Grails BOM is declared.
         Set<String> declaredBoms = declaredGrailsBoms(project)
@@ -822,10 +829,6 @@ ${importStatements}
         if (!springBoot) {
             project.plugins.apply(SpringBootPlugin)
         }
-    }
-
-    protected String getDefaultProfile() {
-        'web'
     }
 
     @CompileDynamic
@@ -959,11 +962,6 @@ ${importStatements}
                 }
             }
         }
-    }
-
-    @CompileStatic
-    protected void registerToolingModelBuilder(Project project, ToolingModelBuilderRegistry registry) {
-        registry.register(new GrailsClasspathToolingModelBuilder())
     }
 
     @CompileStatic
