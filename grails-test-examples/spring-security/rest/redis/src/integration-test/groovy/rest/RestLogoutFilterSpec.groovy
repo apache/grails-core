@@ -23,12 +23,4 @@ import grails.testing.mixin.integration.Integration
 
 @Integration
 class RestLogoutFilterSpec extends AbstractRestLogoutFilterSpec {
-
-    /**
-     * {@code RedisTokenStorageService.removeToken} does not look whether the token is there.
-     */
-    @Override
-    protected boolean isUnknownTokenReported() {
-        false
-    }
 }

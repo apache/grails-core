@@ -697,6 +697,13 @@ Grails 9 has no profiles: remove the 'profile' dependency 'org.apache.grails.pro
 - Remove the plugin ids `org.apache.grails.gradle.grails-profile` and `org.apache.grails.gradle.grails-publish-profile`; there is nothing to apply in their place. A profile of the project's own becomes a plugin with a feature pack.
 - Remove references to `BuildSettings.PROFILE` and `BuildSettings.PROFILE_REPOSITORIES`, which are removed. A subclass of `GrailsGradlePlugin`, `GrailsWebGradlePlugin` or `GrailsPluginGradlePlugin` no longer passes a `ToolingModelBuilderRegistry` to the constructor.
 
+## Spring Security REST: Logout of an Unknown Token Answers 404
+
+With the Redis and the Grails cache token storage of the Spring Security REST plugin, the logout endpoint (`/api/logout`) answered 200 for a token the storage did not have. In Grails 9 `RedisTokenStorageService.removeToken` and `GrailsCacheTokenStorageService.removeToken` throw `TokenNotFoundException` for such a token, as the GORM and memcached storage do, and the endpoint answers 404. The memcached storage treats a token that memcached does not accept as a key (longer than 250 bytes, or with a space or a line break) as not found: 401 on validation and 404 on logout, where it answered 500.
+
+- Search clients and tests for calls of the logout endpoint that expect 200 for a token that is expired, was logged out before or was never issued, and let them accept 404.
+- Wrap calls of `removeToken` on the two services in code of the project's own with a handler for `TokenNotFoundException` where the token may be gone.
+
 # After the Upgrade
 
 ## Verification Checklist
@@ -749,6 +756,7 @@ Grails 9 has no profiles: remove the 'profile' dependency 'org.apache.grails.pro
 - [ ] Code that uses JLine compiles against JLine 4, and no build file declares `org.jline:jline-terminal-jna` or `org.jline:jline-terminal-jansi`
 - [ ] Commands that read an option followed by an empty argument, or quoted arguments with spaces at their ends, expect the Grails 9 values, and no command works around a value cut at its second `=`
 - [ ] No build file declares a `profile` dependency, depends on `grails-shell-cli` or `org.apache.grails.profiles`, applies `grails-profile` or `grails-publish-profile`, or declares `spring-boot-cli` without a version
+- [ ] No client or test of an application with Redis or Grails cache token storage expects 200 from the REST logout endpoint for a token that is not stored
 - [ ] The full test suite passes on Groovy 6
 
 ## Pitfalls to Avoid

@@ -1765,3 +1765,14 @@ Nothing is downloaded for that configuration, and it cannot be resolved or used 
 * *A profile of your own becomes a plugin with a feature pack*: see note 37.
 * *A build that applied `org.apache.grails.gradle.grails-profile` or `org.apache.grails.gradle.grails-publish-profile`* removes both plugin ids. There is nothing to apply in their place; the plugin that holds the feature pack is built and published as any other plugin.
 * *Build logic of your own that named `BuildSettings.PROFILE` or `BuildSettings.PROFILE_REPOSITORIES`* (`grails.util.BuildSettings` of `grails-gradle-model`) removes the reference: the constants are removed and nothing reads the two system properties. The `GrailsClasspath` tooling model of the Grails Gradle plugin, which the shell asked for the class path of a project, is removed with its `profile` part; a subclass of `GrailsGradlePlugin`, `GrailsWebGradlePlugin` or `GrailsPluginGradlePlugin` no longer passes a `ToolingModelBuilderRegistry` to the constructor.
+
+==== 40. Spring Security REST: Logging Out an Unknown Token Answers 404 With Every Token Storage
+
+The logout endpoint of the Spring Security REST plugin, `/api/logout` by default, answers 404 when the storage does not have the token of the request. With the Redis and the Grails cache token storage it answered 200 for any token, including one that was never issued or was logged out before, because `RedisTokenStorageService.removeToken` and `GrailsCacheTokenStorageService.removeToken` did not throw the `TokenNotFoundException` that `TokenStorageService.removeToken` declares. They throw it in Grails 9, as the GORM and the memcached storage always did.
+
+The memcached token storage also answers for a token that memcached does not accept as a key: one that is longer than 250 bytes or holds a space or a line break. Validating such a token gave a 500 response; it is now a token that was not found, so validation answers 401 and logout answers 404.
+
+===== Required Actions
+
+* *A client that logs out with Redis or Grails cache token storage* treats 404 from the logout endpoint as "this token is not logged in", not as a failure: a second logout of the same token, or a logout after the token expired, answers 404.
+* *Code of your own that calls `removeToken`* on one of the two services handles `TokenNotFoundException` where the token may be gone.

@@ -19,7 +19,6 @@
 
 package rest
 
-import spock.lang.PendingFeatureIf
 import spock.lang.Unroll
 
 import org.apache.grails.testing.http.client.TestHttpResponse
@@ -46,19 +45,6 @@ abstract class AbstractRestLogoutFilterSpec extends AbstractRestSpec {
         response.statusCode() == 401
     }
 
-    /**
-     * Whether the token storage of the application says that it does not have a token it is asked to remove, as
-     * {@code TokenStorageService.removeToken} requires. Where it does not, the logout filter answers 200 for a token
-     * that was never issued.
-     */
-    protected boolean isUnknownTokenReported() {
-        true
-    }
-
-    @PendingFeatureIf(
-            value = { !instance.unknownTokenReported },
-            reason = 'The token storage removes a token it does not have without a TokenNotFoundException, so the filter answers 200'
-    )
     void "logout filter returns 404 if token is not found"() {
         when:
         TestHttpResponse response = post('/api/logout', ['X-Auth-Token': 'whatever'])

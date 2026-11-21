@@ -22,7 +22,6 @@ package memcached
 import net.spy.memcached.MemcachedClient
 import rest.AbstractRestSpec
 import spock.lang.Issue
-import spock.lang.PendingFeature
 import spock.lang.Requires
 import spock.lang.Unroll
 
@@ -57,8 +56,6 @@ class MemcachedSpec extends AbstractRestSpec {
         tokenStorageService.expiration = configuredExpiration
     }
 
-    @PendingFeature(reason = 'MemcachedTokenStorageService passes the token of the request to the client as a key: ' +
-            'one longer than 250 bytes fails with "IllegalArgumentException: Key is too long" and the response is a 500')
     void "a token that is too long to be a key of memcached is refused"() {
         expect:
         get('/api/validate', ['X-Auth-Token': 'a' * 251]).statusCode() == 401
