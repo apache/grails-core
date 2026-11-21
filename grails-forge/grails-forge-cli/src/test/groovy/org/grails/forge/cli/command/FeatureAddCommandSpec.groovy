@@ -27,6 +27,7 @@ import java.util.zip.ZipInputStream
 import org.apache.grails.forge.core.change.FeatureAddition
 import org.apache.grails.forge.core.state.ProjectLock
 import org.apache.grails.forge.core.state.ProjectState
+import org.apache.grails.forge.core.state.StateLimits
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.application.OperatingSystem
 import org.grails.forge.application.generator.ProjectGenerator
@@ -1241,6 +1242,60 @@ class FeatureAddCommandSpec extends CommandSpec implements CommandFixture {
         'lacks a file of the baseline'   | { File it -> new File(it, '.grails/baseline/files/build.gradle').delete() }              || '.grails/baseline/files/build.gradle is missing from the baseline'
         'has a baseline that was edited' | { File it -> new File(it, '.grails/baseline/files/build.gradle') << '// edited\n' }      || '.grails/baseline/files/build.gradle is not what the generator wrote'
         'has another file in its baseline' | { File it -> new File(it, '.grails/baseline/files/extra.txt').text = 'x' }             || '.grails/baseline/files/extra.txt is not a file of the baseline index'
+        'has parameters, which this version writes none of' | { File it ->
+            File manifest = new File(it, '.grails/project.yml')
+            manifest.text = manifest.text.replace('parameters: {}\n', 'parameters:\n  region: eu\n')
+            resealed(it) { String lock -> lock }
+        } || 'The record of the application under .grails is not what this generator writes for the same choices, so a feature cannot be added to it'
+        'has a lock with a feature from an address that cannot be committed' | { File it ->
+            resealed(it) { String lock ->
+                lock.replace('features:\n', "features:\n- name: acme-audit\n  source: pack\n  origin: http://repo.acme.example/maven/\n  coordinates: com.acme:audit\n  version: 1.0\n  sha256: ${'ab' * 32}\n")
+            }
+        } || '.grails/forge.lock.yml: features[0].origin must be the https address of a repository, without a name, a password, a query or a fragment'
+    }
+
+    void "a file of the application that is larger than a generated file can be is a conflict, and nothing is written"() {
+        given:
+        create(dir, CreateAppCommand, [])
+        new RandomAccessFile(new File(dir, 'build.gradle'), 'rw').withCloseable { it.setLength(StateLimits.MAX_BASELINE_FILE + 1) }
+        Map<String, String> before = tree(dir)
+
+        when:
+        int exit = add('grails-quartz')
+
+        then:
+        exit == 1
+        out.toString().contains('    conflict build.gradle: the feature changes this file, and in the project it is larger than a generated file can be')
+        !out.toString().contains('Feature grails-quartz added')
+        tree(dir) == before
+        !new File(dir, '.grails/transactions').exists()
+        !new File(home, '.grails').exists()
+    }
+
+    @spock.lang.Requires({ FeatureAddCommandSpec.rootIsOfAnother() })
+    void "with the home directory of another user nothing is added, and nothing is written into that directory"() {
+        given: 'the root of the file system, which is not of whoever runs the tests'
+        create(dir, CreateAppCommand, [])
+        Map<String, String> before = tree(dir)
+        System.setProperty('user.home', '/')
+
+        when: 'what would be done is still said'
+        int preview = add('grails-quartz', '--dry-run')
+
+        then:
+        preview == 0
+        out.toString().contains('To add the feature grails-quartz')
+
+        when:
+        int exit = add('grails-quartz')
+
+        then:
+        exit == 1
+        err.toString().contains('Adding a feature needs a home directory to keep the record of the change in, and the one the system property user.home names ' +
+                'cannot be used: the directory is not that of the user who runs the command. Nothing of the project was changed')
+        tree(dir) == before
+        !new File(dir, '.grails/transactions').exists()
+        !new File('/.grails/forge').exists()
     }
 
     void "an application that another version generated is sent to the command line of that version"() {
@@ -1470,6 +1525,27 @@ grails:
         assert lock.text.count(indexWas) == 1
         String sealed = lock.text.substring(0, lock.text.indexOf('seal:\n')).replace(indexWas, sha(index.bytes))
         lock.text = sealed + "seal:\n  sha256: ${sha(sealed.bytes)}\n"
+    }
+
+    // the lock of a project with a change, the digest of the manifest as it is now, and the digest of what the lock now is at its end, as a tool that wrote it would have it
+    private static void resealed(File project, Closure<String> change) {
+        File lock = new File(project, '.grails/forge.lock.yml')
+        String body = change.call(lock.text).replaceFirst('manifest:\n  sha256: [0-9a-f]{64}', "manifest:\n  sha256: ${sha(new File(project, '.grails/project.yml').bytes)}")
+        body = body.substring(0, body.lastIndexOf('seal:\n'))
+        lock.text = body + "seal:\n  sha256: ${sha(body.bytes)}\n"
+    }
+
+    static boolean rootIsOfAnother() {
+        java.nio.file.Path root = java.nio.file.Path.of('/')
+        if (!root.fileSystem.supportedFileAttributeViews().contains('posix')) {
+            return false
+        }
+        java.nio.file.Path probe = Files.createTempFile('probe', '.owner')
+        try {
+            return Files.getOwner(root) != Files.getOwner(probe)
+        } finally {
+            Files.delete(probe)
+        }
     }
 
     // the lines of a file without a block of lines that follow each other in it

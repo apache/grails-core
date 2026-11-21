@@ -309,6 +309,103 @@ class ProjectStateSpec extends ApplicationContextSpec {
         'and is of the framework'        | "  source: framework\n  catalogSha256: ${'ab' * 32}\n"                                            || 'catalogSha256'
     }
 
+    @Unroll
+    void "a lock whose feature of a feature pack came from an address #what is refused, and the address is not repeated"() {
+        given:
+        Path project = generate('shop', [])
+        Path lock = project.resolve('.grails/forge.lock.yml')
+        Files.writeString(lock, sealed(lock.toFile().getText('UTF-8').replace('features:\n', 'features:\n- name: acme-audit\n  source: pack\n' +
+                "  origin: ${origin}\n  coordinates: com.acme:acme-audit-grails\n  version: 2.3.0\n  sha256: ${'ab' * 32}\n")))
+
+        when:
+        ProjectState.read(project)
+
+        then:
+        ProjectStateException e = thrown()
+        e.message == '.grails/forge.lock.yml: features[0].origin must be the https address of a repository, without a name, a password, a query or a fragment'
+
+        when: 'what shows the record does not read it either'
+        ProjectState.readSelection(project)
+
+        then:
+        ProjectStateException selection = thrown()
+        selection.message == e.message
+
+        where:
+        what                         | origin
+        'that is not https'          | 'http://repo.acme.example/maven/'
+        'with a name and a password' | 'https://zzsomeone:zzsecret@repo.acme.example/maven/'
+        'with a query'               | 'https://repo.acme.example/maven/?token=zzsecret'
+        'with a fragment'            | 'https://repo.acme.example/maven/#zzsecret'
+        'of a file of the machine'   | 'file:///home/zzsomeone/.m2/repository'
+        'that is a directory'        | '/home/zzsomeone/repository'
+        'without a host'             | 'https:///maven'
+    }
+
+    void "the parameters of a manifest and of a lock are read as they are written, each a name with one line of text, and in their order"() {
+        given: 'this version writes none: a manifest and a lock with some, as a tool that wrote them would have them'
+        Path project = generate('shop', [])
+        Path manifest = project.resolve('.grails/project.yml')
+        Path lock = project.resolve('.grails/forge.lock.yml')
+
+        expect:
+        manifest.toFile().getText('UTF-8').endsWith('parameters: {}\n')
+        lock.toFile().getText('UTF-8').contains('\nparameters: {}\n')
+        ProjectState.read(project).manifest.parameters == [:]
+        ProjectState.read(project).lock.parameters == [:]
+
+        when:
+        Files.writeString(manifest, manifest.toFile().getText('UTF-8').replace('parameters: {}\n', "parameters:\n  region: eu\n  tier: '2'\n  a.b: c d\n"))
+        rebind(project)
+        Files.writeString(lock, sealed(lock.toFile().getText('UTF-8').replace('\nparameters: {}\n', '\nparameters:\n  seed: 0a1b\n')))
+        ProjectState state = ProjectState.read(project)
+
+        then: 'a number is the text it was written as, and neither file is held to the parameters of the other'
+        state.manifest.parameters == [region: 'eu', tier: '2', 'a.b': 'c d']
+        state.manifest.parameters.keySet().toList() == ['region', 'tier', 'a.b']
+        state.lock.parameters == [seed: '0a1b']
+        ProjectState.readSelection(project).manifest.parameters == state.manifest.parameters
+
+        when:
+        state.manifest.parameters.put('more', 'x')
+
+        then:
+        thrown(UnsupportedOperationException)
+    }
+
+    @Unroll
+    void "parameters are refused when #what"() {
+        given:
+        Path project = generate('shop', [])
+        Path manifest = project.resolve('.grails/project.yml')
+        Path lock = project.resolve('.grails/forge.lock.yml')
+        if (file == '.grails/project.yml') {
+            Files.writeString(manifest, manifest.toFile().getText('UTF-8').replace('parameters: {}\n', 'parameters:' + parameters))
+            rebind(project)
+        } else {
+            Files.writeString(lock, sealed(lock.toFile().getText('UTF-8').replace('\nparameters: {}\n', '\nparameters:' + parameters)))
+        }
+
+        when:
+        ProjectState.read(project)
+
+        then:
+        ProjectStateException e = thrown()
+        e.message == "${file}: ${message}"
+
+        where:
+        what                                     | file                     | parameters                                                    || message
+        'a value of the manifest is a list'      | '.grails/project.yml'    | '\n  region: [eu, us]\n'                                      || 'parameters.region must be one line of at most 255 characters, none of them a control character or one that is not shown'
+        'a value of the manifest is a mapping'   | '.grails/project.yml'    | '\n  region:\n    name: eu\n'                                 || 'parameters.region must be one line of at most 255 characters, none of them a control character or one that is not shown'
+        'a value of the manifest is empty'       | '.grails/project.yml'    | '\n  region:\n'                                               || 'parameters.region must be one line of at most 255 characters, none of them a control character or one that is not shown'
+        'a value of the manifest has two lines'  | '.grails/project.yml'    | '\n  region: "eu\\nus"\n'                                     || 'parameters.region must be one line of at most 255 characters, none of them a control character or one that is not shown'
+        'a name of the manifest is markup'       | '.grails/project.yml'    | "\n  '@|red x|@': eu\n"                                        || 'parameters has a key that is not one line of text'
+        'the manifest has no mapping of them'    | '.grails/project.yml'    | ' none\n'                                                     || 'parameters must be a mapping'
+        'the manifest has more than it can have' | '.grails/project.yml'    | '\n' + (1..201).collect { "  p${it}: v\n" }.join('')          || 'parameters has 201 entries, and can have 200'
+        'a value of the lock is a list'          | '.grails/forge.lock.yml' | '\n  seed: [1]\n'                                             || 'parameters.seed must be one line of at most 255 characters, none of them a control character or one that is not shown'
+        'the lock has more than it can have'     | '.grails/forge.lock.yml' | '\n' + (1..201).collect { "  p${it}: v\n" }.join('')          || 'parameters has 201 entries, and can have 200'
+    }
+
     void "a feature cannot write into the state of the project"() {
         given:
         Pack pack = pack('acme-audit', "'.grails/cache/audit.txt'")
