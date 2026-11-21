@@ -23,7 +23,7 @@ import spock.lang.TempDir
 import uk.org.webcompere.systemstubs.SystemStubs
 
 /**
- * Where the wrapper keeps what it downloads, and that it is never the {@code .grails} directory of a project.
+ * Where the wrapper keeps what it downloads: a project is not looked at unless its directory is named.
  */
 class GrailsWrapperHomeSpec extends Specification {
 
@@ -68,26 +68,21 @@ class GrailsWrapperHomeSpec extends Specification {
         !new File(project, '.grails/wrapper').exists()
     }
 
-    def "the record of a project is refused as the home, named #how"() {
+    def "the .grails directory of a project can be named as the home"() {
         given:
         File record = new File(dir, 'project/.grails')
         record.mkdirs()
         new File(record, 'project.yml').text = 'format: 1\n'
 
         when:
-        SystemStubs.withEnvironmentVariable('GRAILS_WRAPPER_HOME', environment ? record.path : null).execute {
-            GrailsWrapperHome.findGrailsHome(environment ? null : record.path)
+        GrailsWrapperHome home = null
+        SystemStubs.withEnvironmentVariable('GRAILS_WRAPPER_HOME', record.path).execute {
+            home = new GrailsWrapperHome(new LinkedHashSet<>([GrailsReleaseType.RELEASE]), null)
         }
 
         then:
-        IllegalArgumentException e = thrown()
-        e.message == "${description} [${record.path}] is the record of a Grails project (it has project.yml), which is committed " +
-                'with the project. Name another directory for the downloads of the wrapper.'
-        !new File(record, 'wrapper').exists()
-
-        where:
-        how                        | environment | description
-        'by GRAILS_WRAPPER_HOME'   | true        | 'GRAILS_WRAPPER_HOME environment variable'
-        'to the wrapper directly'  | false       | 'Specified Grails Home'
+        home.home == record.canonicalFile
+        home.wrapperDirectory == new File(record.canonicalFile, 'wrapper')
+        new File(record, 'project.yml').text == 'format: 1\n'
     }
 }

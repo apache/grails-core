@@ -32,11 +32,6 @@ import java.util.stream.Stream;
 public class GrailsWrapperHome {
     public static final String CLI_COMBINED_PROJECT_NAME = "grails-cli";
 
-    /**
-     * The file that makes a directory {@code .grails} the record of a project and not a home of the wrapper.
-     */
-    private static final String PROJECT_RECORD = "project.yml";
-
     public final File home;
     public final File wrapperDirectory;
     public final List<GrailsVersion> versions;
@@ -179,9 +174,8 @@ public class GrailsWrapperHome {
      * <li>the directory the environment variable {@code GRAILS_WRAPPER_HOME} names,</li>
      * <li>{@code .grails} of the home directory of the user.</li>
      * </ol>
-     * The home is never looked for in a project. The directory {@code .grails} of a project is the record of
-     * how the project was generated, which is committed with it, and a directory that holds such a record is
-     * refused as the home of the wrapper.
+     * The home is never looked for in a project. Any directory can be named, the {@code .grails} directory of
+     * a project among them; the downloads are then in its {@code wrapper} directory.
      *
      * @param grailsHomeOverride the directory to use, or null
      * @return the home directory of the wrapper
@@ -208,10 +202,6 @@ public class GrailsWrapperHome {
 
     private static File validateGrailsHome(String possibleGrailsHome, String description) {
         File possibleHome = new File(possibleGrailsHome);
-        if (isProjectRecord(possibleHome)) {
-            throw new IllegalArgumentException(description + " [" + possibleGrailsHome + "] is the record of a Grails project (it has " +
-                PROJECT_RECORD + "), which is committed with the project. Name another directory for the downloads of the wrapper.");
-        }
         if (!possibleHome.exists()) {
             possibleHome.mkdirs();
         }
@@ -221,9 +211,5 @@ public class GrailsWrapperHome {
         }
 
         return possibleHome;
-    }
-
-    private static boolean isProjectRecord(File directory) {
-        return new File(directory, PROJECT_RECORD).isFile();
     }
 }
