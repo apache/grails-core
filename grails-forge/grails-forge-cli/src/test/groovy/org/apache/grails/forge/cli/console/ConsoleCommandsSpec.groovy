@@ -20,9 +20,11 @@ package org.apache.grails.forge.cli.console
 
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.attribute.PosixFilePermissions
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.concurrent.Callable
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.function.Predicate
 import java.util.zip.ZipFile
@@ -31,6 +33,7 @@ import org.grails.forge.cli.CommandFixture
 import org.grails.forge.cli.CommandSpec
 import org.grails.forge.cli.ForgeCli
 import org.grails.forge.cli.command.BaseCommand
+import org.opentest4j.TestAbortedException
 import picocli.CommandLine
 import spock.lang.IgnoreIf
 import spock.lang.Unroll
@@ -1018,6 +1021,193 @@ class ConsoleCommandsSpec extends CommandSpec implements CommandFixture {
         exit == 0
         !out.toString().contains('Warning')
         out.toString().readLines()[0] == "| Created bug report ZIP: build/${archive().name}"
+    }
+
+    void "bug-report writes nothing where the build directory is a file, or where what has the name of the ZIP file is no file"() {
+        given:
+        new File(dir, 'grails-app').mkdirs()
+        source('build.gradle', 'version = 1\n')
+        source('build', 'not a directory\n')
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'bug-report', '--force')
+
+        then:
+        exit == 1
+        errors().size() == 1
+        errors()[0].contains('is a file or a link, so the bug report cannot be written to it. No bug report was created')
+        new File(dir, 'build').text == 'not a directory\n'
+
+        when: 'a directory has the name of the ZIP file'
+        out.reset()
+        new File(dir, 'build').delete()
+        new File(archive(), 'kept').mkdirs()
+        exit = ForgeCli.execute(beanContext, 'bug-report')
+
+        then:
+        exit == 1
+        errors() == ["| Error build/${archive().name} exists already and was not replaced. Give --force to replace it".toString()]
+
+        when: 'which --force does not replace either'
+        out.reset()
+        exit = ForgeCli.execute(beanContext, 'bug-report', '--force')
+
+        then:
+        exit == 1
+        errors() == ["| Error build/${archive().name} is not a file, and was not replaced. No bug report was created".toString()]
+        new File(archive(), 'kept').isDirectory()
+        new File(dir, 'build').list() == [archive().name]
+    }
+
+    void "bug-report holds sources that are 64 directories deep, and writes nothing for a project that has deeper ones"() {
+        given:
+        new File(dir, 'grails-app').mkdirs()
+        source('build.gradle', 'version = 1\n')
+        String deepest = 'src/' + 'd/' * 63
+        source("${deepest}Deep.groovy", 'class Deep { }\n')
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'bug-report')
+
+        then:
+        exit == 0
+        entries() == ['build.gradle', "${deepest}Deep.groovy".toString()]
+
+        when: 'one directory more'
+        out.reset()
+        source("${deepest}d/Deeper.groovy", 'class Deeper { }\n')
+        exit = ForgeCli.execute(beanContext, 'bug-report', '--force')
+
+        then: 'the report that was there is as it was'
+        exit == 1
+        errors() == ["| Error The sources of the project are more than 64 directories deep at ${deepest}d, which is more than a bug report holds. No bug report was created".toString()]
+        entries() == ['build.gradle', "${deepest}Deep.groovy".toString()]
+        new File(dir, 'build').list() == [archive().name]
+    }
+
+    @Unroll
+    @IgnoreIf({ os.windows || System.getProperty('user.name') == 'root' })
+    void "bug-report writes nothing when #what cannot be read, and leaves nothing of what it began"() {
+        given:
+        new File(dir, 'grails-app').mkdirs()
+        source('build.gradle', 'version = 1\n')
+        source('src/main/groovy/example/Util.groovy', 'package example\nclass Util { }\n')
+        source('src/main/groovy/locked/Inner.groovy', 'class Inner { }\n')
+        File locked = new File(dir, path)
+        Files.setPosixFilePermissions(locked.toPath(), PosixFilePermissions.fromString('---------'))
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'bug-report')
+
+        then:
+        exit == 1
+        errors().size() == 1
+        errors()[0].startsWith("| Error ${said.replace('ZIP', "build/${archive().name}")}")
+        !out.toString().contains('Created bug report')
+        !archive().exists()
+
+        and: 'no file it wrote to is left in the build directory'
+        !new File(dir, 'build').exists() || new File(dir, 'build').list().length == 0
+
+        cleanup:
+        if (locked != null) {
+            Files.setPosixFilePermissions(locked.toPath(), PosixFilePermissions.fromString('rwx------'))
+        }
+
+        where:
+        what          | path                                   | said
+        'a directory' | 'src/main/groovy/locked'               | 'src/main/groovy/locked cannot be read. No bug report was created'
+        'a file'      | 'src/main/groovy/locked/Inner.groovy'  | 'The bug report could not be written to ZIP: '
+    }
+
+    @IgnoreIf({ os.windows || System.getProperty('user.name') == 'root' })
+    void "bug-report says so when nothing can be written to the build directory"() {
+        given:
+        new File(dir, 'grails-app').mkdirs()
+        source('build.gradle', 'version = 1\n')
+        File build = new File(dir, 'build')
+        build.mkdirs()
+        Files.setPosixFilePermissions(build.toPath(), PosixFilePermissions.fromString('r-x------'))
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'bug-report')
+
+        then:
+        exit == 1
+        errors().size() == 1
+        errors()[0].startsWith("| Error The bug report could not be written to build/${archive().name}: ")
+        build.list().length == 0
+
+        cleanup:
+        if (build != null) {
+            Files.setPosixFilePermissions(build.toPath(), PosixFilePermissions.fromString('rwx------'))
+        }
+    }
+
+    @IgnoreIf({ os.windows })
+    void "bug-report follows neither a build file nor a source directory that is itself a link"() {
+        given: 'a project whose build file and whose src are elsewhere'
+        new File(dir, 'grails-app/conf').mkdirs()
+        source('grails-app/conf/logback.xml', '<configuration/>\n')
+        File outside = Files.createTempDirectory('grailsforgeoutside').toFile()
+        new File(outside, 'build.gradle').text = 'version = 1\n'
+        new File(outside, 'main').mkdirs()
+        new File(outside, 'main/Elsewhere.groovy').text = 'class Elsewhere { }\n'
+        Files.createSymbolicLink(new File(dir, 'build.gradle').toPath(), new File(outside, 'build.gradle').toPath())
+        Files.createSymbolicLink(new File(dir, 'src').toPath(), outside.toPath())
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'bug-report')
+
+        then:
+        exit == 0
+        entries() == ['grails-app/conf/logback.xml']
+        out.toString().contains('| It holds 1 file(s)')
+        out.toString().contains('| Left out: 2 link(s), which are not followed, and 0 file(s) that are keys by their name')
+
+        cleanup:
+        outside?.deleteDir()
+    }
+
+    @IgnoreIf({ os.windows })
+    void "bug-report leaves out what an editor or a system keeps beside a source, and what is no file, without reading it"() {
+        given:
+        new File(dir, 'grails-app').mkdirs()
+        source('build.gradle', 'version = 1\n')
+        source('src/main/groovy/Util.groovy', 'class Util { }\n')
+        ['._Util.groovy', '.#Util.groovy', '#Util.groovy#', '%Util.groovy%', '.DS_Store', 'Util.groovy~'].each { String name ->
+            source("src/main/groovy/${name}", 'kept beside the source\n')
+        }
+        // names that only look like those
+        source('src/main/groovy/#', 'a source\n')
+        source('src/main/groovy/%', 'a source\n')
+        File pipe = new File(dir, 'src/main/groovy/pipe')
+        Process made = new ProcessBuilder('mkfifo', pipe.path).redirectErrorStream(true).start()
+        if (!made.waitFor(60, TimeUnit.SECONDS) || made.exitValue() != 0) {
+            throw new TestAbortedException('this system makes no named pipe here')
+        }
+        AtomicInteger exit = new AtomicInteger(-1)
+        // reading a pipe nothing writes to does not end: the command is not waited for longer than this
+        Thread command = new Thread({ exit.set(ForgeCli.execute(beanContext, 'bug-report')) })
+
+        when:
+        command.start()
+        command.join(120_000)
+
+        then:
+        !command.alive
+        exit.get() == 0
+        entries() == ['build.gradle', 'src/main/groovy/#', 'src/main/groovy/%', 'src/main/groovy/Util.groovy']
+
+        and: 'they are no links, keys or hard links, and nothing is said of them'
+        !out.toString().contains('Left out')
+
+        cleanup:
+        if (command?.alive) {
+            // a writer lets the read of the pipe end
+            new FileOutputStream(pipe).close()
+            command.join(60_000)
+        }
     }
 
     void "the list of commands gives each a sentence, and the usage of every command is as wide as that of the others"() {
