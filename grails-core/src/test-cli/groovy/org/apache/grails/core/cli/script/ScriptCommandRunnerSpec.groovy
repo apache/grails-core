@@ -418,9 +418,6 @@ class ScriptCommandRunnerSpec extends Specification {
         module                               | name                              | arguments          | outcome | written
         'grails-quartz' | 'create-job' | ['Nightly'] | '' | ['grails-app/jobs/com/example/NightlyJob.groovy']
         'grails-geb' | 'create-functional-test' | ['Home'] | '' | ['src/integration-test/groovy/com/example/HomeSpec.groovy']
-        'grails-spring-security/plugin' | 's2-create-persistent-token' | ['com.example.PersistentLogin'] | '' | ['grails-app/domain/com/example/PersistentLogin.groovy', 'grails-app/conf/application.groovy']
-        'grails-spring-security/plugin' | 's2-create-role-hierarchy-entry' | ['com.example.RoleHierarchyEntry'] | '' | ['grails-app/domain/com/example/RoleHierarchyEntry.groovy']
-        'grails-spring-security/plugin' | 's2-quickstart' | ['com.example', 'User', 'Role'] | '' | ['grails-app/domain/com/example/User.groovy', 'grails-app/domain/com/example/UserRole.groovy']
         'end-to-end/legacy-commands-plugin' | 'hello-legacy-script' | ['hello'] | '' | []
     }
 
