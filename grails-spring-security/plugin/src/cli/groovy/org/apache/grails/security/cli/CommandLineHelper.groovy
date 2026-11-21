@@ -19,6 +19,8 @@
 
 package org.apache.grails.security.cli
 
+import grails.build.logging.GrailsConsole
+import grails.codegen.model.Model
 import org.apache.grails.core.cli.ExecutionContext
 import org.grails.build.parsing.CommandLine
 
@@ -29,24 +31,80 @@ trait CommandLineHelper {
 
     abstract ExecutionContext getExecutionContext()
 
+    abstract File file(Object path)
+
+    abstract Model model(String className)
+
     boolean isFlagPresent(String name) {
-        final CommandLine commandLine = executionContext.commandLine
-        if (commandLine.hasOption(name)) {
-            return commandLine.optionValue(name) ? true : false
-        } else {
-            def value = commandLine?.undeclaredOptions?.get(name)
-            return value ? true : false
-        }
+        String value = flag(name)
+        value && value != 'false'
     }
 
-    String flagValue(String name) {
+    String flag(String name) {
         final CommandLine commandLine = executionContext.commandLine
         if (commandLine.hasOption(name)) {
-            return commandLine.optionValue(name)
-        } else {
-            def value = commandLine?.undeclaredOptions?.get(name)
-            return value
+            return commandLine.optionValue(name)?.toString()
         }
+        commandLine.undeclaredOptions?.get(name)?.toString()
+    }
+
+    /**
+     * @param known the names of the flags the command has
+     * @return the flags the command was given and does not have, as they are written on the command line
+     */
+    List<String> unknownFlags(List<String> known) {
+        Collection<String> given = executionContext.commandLine.undeclaredOptions?.keySet() ?: []
+        given.findAll { String name -> !known.contains(name) }.collect { String name -> "--${name}".toString() }
+    }
+
+    /**
+     * @param name what was given as the name of a package or as the full name of a class
+     * @return whether it is one: Java identifiers joined by dots
+     */
+    boolean isQualifiedName(String name) {
+        name ==~ /[A-Za-z_$][\w$]*(\.[A-Za-z_$][\w$]*)*/
+    }
+
+    /**
+     * @param name what was given as the name of a class
+     * @return whether it is the name of a class without its package
+     */
+    boolean isSimpleName(String name) {
+        isQualifiedName(name) && !name.contains('.')
+    }
+
+    /**
+     * Reads the one argument of a command that creates a domain class: the full name of that class.
+     *
+     * @param usage the usage of the command, said with what is wrong
+     * @return the model of the class, or {@code null} when the command was given something else, which was said
+     */
+    Model domainModel(String usage) {
+        List<String> arguments = executionContext.commandLine.remainingArgs
+        List<String> unknown = unknownFlags([])
+        String refusal = null
+        if (unknown) {
+            refusal = "Unknown option ${unknown.join(', ')}."
+        } else if (arguments.size() != 1) {
+            refusal = arguments ? 'Too many arguments.' : 'The name of the domain class is required.'
+        } else if (!isQualifiedName(arguments[0]) || !arguments[0].contains('.')) {
+            refusal = "'${arguments[0]}' is no full name of a class: the name of the domain class is given with its package."
+        }
+        if (refusal != null) {
+            GrailsConsole.getInstance().error("${refusal} Usage:${usage}")
+            return null
+        }
+        model(arguments[0])
+    }
+
+    /**
+     * Appends settings to the configuration of the project, see {@link ApplicationConfigAppender}.
+     *
+     * @param settings the settings by their full keys
+     * @return the path in the project of the file they were appended to
+     */
+    String appendConfig(Map<String, Object> settings) {
+        new ApplicationConfigAppender(file('')).append('Added by the Spring Security Core plugin:', settings)
     }
 
 }
