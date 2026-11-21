@@ -391,7 +391,7 @@ class ControllerJsonSerializationSpec extends Specification implements Controlle
         response.json.detail == 'taken'
     }
 
-    void 'a client whose Accept header Spring MVC cannot read is answered with the status alone for #description, and as in Grails 8 for any other value'() {
+    void 'a client whose Accept header Spring MVC cannot read is answered with the status alone for #description'() {
         given: 'a quality value above 1'
         response.format = null
         request.addHeader('Accept', 'application/json;q=2')
@@ -406,7 +406,7 @@ class ControllerJsonSerializationSpec extends Specification implements Controlle
         where:
         description | value                                                                                      || status | body
         'a problem' | org.springframework.http.ProblemDetail.forStatus(org.springframework.http.HttpStatus.CONFLICT) || 409    | ''
-        'a map'     | [title: 'Grails']                                                                          || 200    | '{"title":"Grails"}'
+        'a map'     | [title: 'Grails']                                                                          || 406    | ''
     }
 
     void 'a client that accepts only #accept is answered as one that asks for #format'() {

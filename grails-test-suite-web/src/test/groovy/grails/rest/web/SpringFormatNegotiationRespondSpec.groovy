@@ -233,12 +233,15 @@ class SpringFormatNegotiationParameterRespondSpec extends Specification implemen
 }
 
 /**
- * Without {@code grails.mime.negotiation.spring}, the Grails 9 rules resolve the format {@code respond} answers in.
+ * With {@code grails.mime.negotiation.spring: false}, the Grails 9 rules resolve the format {@code respond} answers in.
  */
 class GrailsFormatNegotiationRespondSpec extends Specification implements ControllerUnitTest<NegotiatedResponseController> {
 
     Closure doWithConfig() {
-        { config -> config[Settings.WEB_RENDERING_JSON_SPRING] = true }
+        { config ->
+            config[Settings.WEB_RENDERING_JSON_SPRING] = true
+            config[Settings.MIME_NEGOTIATION_SPRING] = false
+        }
     }
 
     void 'the request of the action a web unit test calls is not marked as handled by a URL mapping, as in Grails 9'() {
@@ -285,6 +288,18 @@ class GrailsFormatNegotiationRespondSpec extends Specification implements Contro
         then:
         request.format == null
         model.title == null
+    }
+
+    void 'a client whose Accept header Spring MVC cannot read is answered as Grails 9 reads it, leniently'() {
+        given: 'a quality value above 1'
+        request.addHeader('Accept', 'application/json;q=2')
+
+        when:
+        controller.respond([title: 'Grails'], formats: ['json'])
+
+        then:
+        response.status == 200
+        response.contentAsString == '{"title":"Grails"}'
     }
 
     void 'a client that accepts any type of a version is answered 406, as in Grails 9'() {

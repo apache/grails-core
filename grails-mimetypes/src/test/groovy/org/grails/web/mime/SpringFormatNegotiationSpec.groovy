@@ -97,12 +97,22 @@ class SpringFormatNegotiationSpec extends Specification {
         'built for the request in a context without one'       | false
     }
 
-    void "without the setting, Spring MVC's manager is left as it is"() {
+    void "with the setting false, Spring MVC's manager is left as it is"() {
         when:
-        start([:])
+        start((Settings.MIME_NEGOTIATION_SPRING): false)
 
         then:
         manager().getClass() == ContentNegotiationManager
+    }
+
+    void "without the setting, Spring MVC's manager resolves the Grails formats, as Grails 10 does by default"() {
+        when:
+        start([:])
+        request('Accept': '*/*, application/json')
+
+        then:
+        manager() instanceof GrailsContentNegotiationManager
+        GrailsWebRequest.lookup().currentResponse.format == 'json'
     }
 
     void "with the setting, Spring MVC's manager resolves a Grails format ahead of its own strategies, and keeps its formats"() {
@@ -429,7 +439,7 @@ class SpringFormatNegotiationSpec extends Specification {
         manager().resolveMediaTypes(new ServletWebRequest(request)) == [MediaType.APPLICATION_JSON]
     }
 
-    void "Spring MVC's parameter negotiation of the format parameter still answers #format for an endpoint, as it does without the setting"() {
+    void "Spring MVC's parameter negotiation of the format parameter still answers #format for an endpoint, as it does with the setting false"() {
         given:
         start((Settings.MIME_NEGOTIATION_SPRING): true, (ParameterConfiguration.ENABLED): true, (ParameterConfiguration.NAME): 'format')
         def request = request('Accept': 'application/json')
@@ -547,9 +557,9 @@ class SpringFormatNegotiationSpec extends Specification {
         true        | false      || 'all'
     }
 
-    void 'without the setting, the Grails 9 rules resolve the formats'() {
+    void 'with the setting false, the Grails 9 rules resolve the formats'() {
         given:
-        start([:])
+        start((Settings.MIME_NEGOTIATION_SPRING): false)
         request('Accept': '*/*, application/json')
 
         expect:

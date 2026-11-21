@@ -44,7 +44,7 @@ import spock.lang.Specification
 import spock.lang.Unroll
 
 /**
- * Tests for mime type resolution
+ * Tests for mime type resolution by the Grails rules, which {@code grails.mime.negotiation.spring: false} keeps.
  */
 class RequestAndResponseMimeTypesApiSpec extends Specification{
     def responseMimeTypesApiInstance
@@ -557,6 +557,7 @@ class RequestAndResponseMimeTypesApiSpec extends Specification{
     String applicationConfigText = '''
 grails.mime.file.extensions = true // enables the parsing of file extensions from URLs into the request format
 grails.mime.use.accept.header = true
+grails.mime.negotiation.spring = false // these features pin the Grails rules
 grails.mime.types = [ 
                       all: '*/*',
                       html: ['text/html','application/xhtml+xml'],

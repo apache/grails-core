@@ -134,8 +134,10 @@ class UrlMappingsGrailsPlugin extends Plugin {
             boolean resolveHiddenHttpMethod = !HiddenHttpMethod.isServletFilterMode(environment)
             // Only Spring MVC's content negotiation of grails.mime.negotiation.spring reads which requests a URL
             // mapping handles; it is read from the Grails configuration, as the negotiation reads it
-            boolean markHandledRequests = grailsApplication.config?.getProperty(Settings.MIME_NEGOTIATION_SPRING, Boolean,
-                    Boolean.valueOf(Settings.MIME_NEGOTIATION_SPRING_DEFAULT)) ?: false
+            boolean springNegotiationDefault = Boolean.valueOf(Settings.MIME_NEGOTIATION_SPRING_DEFAULT)
+            Boolean springNegotiation = grailsApplication.config?.getProperty(Settings.MIME_NEGOTIATION_SPRING, Boolean,
+                    springNegotiationDefault)
+            boolean markHandledRequests = springNegotiation != null ? springNegotiation : springNegotiationDefault
 
             // The url-mapping holder is a ProxyFactoryBean (reload mode) whose produced UrlMappings
             // type must stay answerable from the bean definition for by-type autowiring of

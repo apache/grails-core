@@ -223,12 +223,12 @@ interface Settings {
     String MIME_NEGOTIATION_SPRING = 'grails.mime.negotiation.spring'
 
     /**
-     * The default of {@link #MIME_NEGOTIATION_SPRING}, as a property placeholder reads it: {@code false} in Grails 9,
-     * and {@code true} from Grails 10.
+     * The default of {@link #MIME_NEGOTIATION_SPRING}, as a property placeholder reads it: {@code true} from Grails 10,
+     * and {@code false} in Grails 9. Set the setting to {@code false} to keep Grails' own rules.
      *
      * @since 9.0
      */
-    String MIME_NEGOTIATION_SPRING_DEFAULT = 'false'
+    String MIME_NEGOTIATION_SPRING_DEFAULT = 'true'
 
     /**
      * The default scope for controllers
