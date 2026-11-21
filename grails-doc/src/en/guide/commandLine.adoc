@@ -51,7 +51,7 @@ Commands:
 ...
 ----
 
-`grails help NAME` and `grails NAME --help` show how the command `NAME` is used. Without a command, `grails` starts xref:commandLine#interactiveMode[interactive mode] in a project and shows the help elsewhere.
+`grails help NAME` and `grails NAME --help` show how the command `NAME` is used. If the command line is new to you, xref:commandLine#tour[A Tour from Install to Maintaining a Project] goes through it once from beginning to end before the sections that describe each part. Without a command, `grails` starts xref:commandLine#interactiveMode[interactive mode] in a project and shows the help elsewhere.
 
 NOTE: Refer to the Command Line reference in the Quick Reference menu of the reference guide for more information about individual commands
 

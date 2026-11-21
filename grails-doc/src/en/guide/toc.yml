@@ -80,6 +80,7 @@ conf:
   dependencyResolution: Dependency Resolution
 commandLine:
   title: The Command Line
+  tour: A Tour from Install to Maintaining a Project
   interactiveMode: Interactive Mode
   creatingCustomScripts: Creating Custom Scripts
   creatingCustomCommands: Creating Custom Commands
