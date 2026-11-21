@@ -918,7 +918,6 @@ public abstract class AbstractHibernateQuery extends Query {
             criteria.setResultTransformer(CriteriaSpecification.DISTINCT_ROOT_ENTITY);
         }
 
-        removeOrdersOfRowCount();
         applyDefaultSortOrderAndCaching();
         applyFetchStrategies();
 
@@ -932,6 +931,7 @@ public abstract class AbstractHibernateQuery extends Query {
             publisher.publishEvent(new PreQueryEvent(datastore, this));
         }
 
+        removeOrdersOfRowCount();
         List results = criteria.list();
         if (publisher != null) {
             publisher.publishEvent(new PostQueryEvent(datastore, this, results));
@@ -945,8 +945,9 @@ public abstract class AbstractHibernateQuery extends Query {
      * that the orders made are kept, so that the query counts the rows that it lists.
      */
     private void removeOrdersOfRowCount() {
-        if (hibernateProjectionList == null || !hibernateProjectionList.isRowCount() ||
-                hibernateProjectionList.getHibernateProjectionList().getLength() != 1 || !(criteria instanceof CriteriaImpl)) {
+        if (hibernateProjectionList == null || hibernateProjectionList.getHibernateProjectionList().getLength() != 1 ||
+                !(hibernateProjectionList.getHibernateProjectionList().getProjection(0) instanceof org.hibernate.criterion.RowCountProjection) ||
+                !(criteria instanceof CriteriaImpl)) {
             return;
         }
         Iterator<CriteriaImpl.OrderEntry> orders = ((CriteriaImpl) criteria).iterateOrderings();
@@ -1006,7 +1007,6 @@ public abstract class AbstractHibernateQuery extends Query {
             criteria.setProjection(hibernateProjectionList.getHibernateProjectionList());
         }
         criteria.setResultTransformer(CriteriaSpecification.DISTINCT_ROOT_ENTITY);
-        removeOrdersOfRowCount();
         applyDefaultSortOrderAndCaching();
         applyFetchStrategies();
 
@@ -1016,6 +1016,7 @@ public abstract class AbstractHibernateQuery extends Query {
             publisher.publishEvent(new PreQueryEvent(datastore, this));
         }
 
+        removeOrdersOfRowCount();
         Object result;
         if (hasJoins) {
             try {
