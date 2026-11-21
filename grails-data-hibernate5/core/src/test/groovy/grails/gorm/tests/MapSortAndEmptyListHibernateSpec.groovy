@@ -20,6 +20,7 @@
 package grails.gorm.tests
 
 import grails.gorm.annotation.Entity
+import grails.orm.HibernateCriteriaBuilder
 import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import spock.lang.Issue
@@ -208,6 +209,33 @@ class MapSortAndEmptyListHibernateSpec extends GrailsDataTckSpec<GrailsDataHiber
                 ['author.publisher.name', 'asc', 3, { String arg -> MsBook.where { author.active == true }.list(sort: arg) }],
                 ['author.name', 'asc', 3, { String arg -> MsBook.where { author.active == true }.list(sort: arg, max: 10) }]
         ].collect { List row -> [row[0], row[1], row[2], row[3]] }
+    }
+
+    void "a map sort on a criteria builder constructed on its own sorts like the one of the domain class"() {
+        given:
+        List<String> wrong = []
+        List<Map> sorts = [
+                [title: 'asc'],
+                [title: 'desc'],
+                [title: 'DESC'],
+                [title: 'asc', id: 'desc'],
+                [id: 'desc', title: 'asc']
+        ]
+
+        when:
+        sorts.each { Map sort ->
+            Closure block = { ne('title', 'omega') }
+            List expected = MsBook.createCriteria().list(sort: sort, block)*.title
+            List standalone = new HibernateCriteriaBuilder(MsBook, manager.sessionFactory).list(sort: sort, block)*.title
+            if (standalone != expected) {
+                wrong << "$sort: expected $expected, standalone $standalone".toString()
+            }
+        }
+        List allTitles = new HibernateCriteriaBuilder(MsBook, manager.sessionFactory).list(sort: [title: 'desc']) { }*.title
+
+        then:
+        wrong == []
+        allTitles == ['zeta', 'omega', 'beta', 'alpha']
     }
 
     void "a negated empty list on a collection of strings matches the books without elements"() {

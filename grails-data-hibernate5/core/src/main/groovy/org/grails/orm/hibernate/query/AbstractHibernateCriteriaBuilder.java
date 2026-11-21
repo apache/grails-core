@@ -1742,9 +1742,10 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
                     }
                     // GRAILS-7324 look if we already have association to sort by
                     Map argMap = (Map) args[0];
-                    // a map of sort properties is applied with the other arguments, in populateArgumentsForCriteria
+                    // a map of sort properties is applied with the other arguments, in populateArgumentsForCriteria;
+                    // a builder constructed without a datastore has no mapping to resolve the properties against, so it stays there
                     final Object sortArgument = argMap.get(HibernateQueryConstants.ARGUMENT_SORT);
-                    if (sortArgument instanceof Map) {
+                    if (sortArgument instanceof Map && datastore != null) {
                         applyMapSort(argMap, (Map<?, ?>) sortArgument);
                         argMap = withSortApplied(argMap);
                     }
