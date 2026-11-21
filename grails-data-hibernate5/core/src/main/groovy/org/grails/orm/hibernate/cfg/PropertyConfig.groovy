@@ -313,6 +313,8 @@ class PropertyConfig extends Property {
     static PropertyConfig configureExisting(PropertyConfig property, Map config) {
         DataBinder dataBinder = new DataBinder(property)
         dataBinder.bind(new MutablePropertyValues(config))
+        // the binder keeps the exception of a setter in its result: a cascadeValidate that names no mode is refused here
+        Property.refuseInvalidCascadeValidate(dataBinder)
 
         ColumnConfig cc
         if (property.columns) {
