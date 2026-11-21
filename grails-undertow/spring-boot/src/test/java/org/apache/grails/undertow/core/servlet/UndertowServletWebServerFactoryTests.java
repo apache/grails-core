@@ -312,6 +312,36 @@ class UndertowServletWebServerFactoryTests {
         assertThat(events).containsExactly("onComplete");
     }
 
+    @Test
+    void asynchronousProcessingThatADispatchCompletesAfterSendingAnErrorCompletesOnceTheErrorPageHasAnsweredIt()
+            throws Exception {
+        List<String> events = new CopyOnWriteArrayList<>();
+        UndertowServletWebServerFactory factory = new UndertowServletWebServerFactory(0);
+        factory.addErrorPages(new ErrorPage("/errorPage"));
+        this.webServer = factory.getWebServer(recordingErrorPage(events), sendsErrorAfterStartingAsync(events, true));
+        this.webServer.start();
+
+        assertThat(getResponse("http://localhost:" + this.webServer.getPort() + "/sendsError")).isEqualTo("Error page");
+
+        Awaitility.await().untilAsserted(() -> assertThat(events).containsExactly("errorPage", "onComplete"));
+        Thread.sleep(200);
+        assertThat(events).containsExactly("errorPage", "onComplete");
+    }
+
+    private ServletRegistrationBean<HttpServlet> recordingErrorPage(List<String> events) {
+        ServletRegistrationBean<HttpServlet> registration = new ServletRegistrationBean<>(new HttpServlet() {
+
+            @Override
+            protected void service(HttpServletRequest request, HttpServletResponse response) throws IOException {
+                events.add("errorPage");
+                response.getWriter().write("Error page");
+            }
+
+        }, "/errorPage");
+        registration.setName("errorPage");
+        return registration;
+    }
+
     private ServletRegistrationBean<HttpServlet> sendsErrorAfterStartingAsync(List<String> events, boolean completes) {
         ServletRegistrationBean<HttpServlet> registration = new ServletRegistrationBean<>(new HttpServlet() {
 
