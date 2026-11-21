@@ -30,6 +30,7 @@ import org.hibernate.engine.internal.ForeignKeys
 import org.hibernate.engine.spi.EntityEntry
 import org.hibernate.engine.spi.SessionImplementor
 import org.hibernate.persister.entity.EntityPersister
+import org.hibernate.proxy.HibernateProxy
 
 import org.springframework.beans.BeanWrapperImpl
 import org.springframework.beans.InvalidPropertyException
@@ -266,7 +267,10 @@ abstract class AbstractHibernateGormInstanceApi<D> extends GormInstanceApi<D> {
         }
     }
 
-    protected D performMerge(final D target, final boolean flush) {
+    protected D performMerge(final D candidate, final boolean flush) {
+        // a proxy is not a mapped class: merge the entity it stands for, which an initialized proxy holds
+        final D target = candidate instanceof HibernateProxy ?
+                (D) ((HibernateProxy) candidate).hibernateLazyInitializer.implementation : candidate
         // Hibernate copies the state of a detached instance onto the managed one without GORM's change tracking
         // seeing it, so the properties the detached instance changed are marked on the managed one; otherwise
         // the dirtiness strategy finds nothing to flush.

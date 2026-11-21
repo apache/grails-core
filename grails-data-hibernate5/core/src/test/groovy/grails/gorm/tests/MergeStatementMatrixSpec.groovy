@@ -23,6 +23,7 @@ import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.orm.hibernate.HibernateDatastore
 import org.grails.orm.hibernate.cfg.Settings
 import org.hibernate.EmptyInterceptor
+import org.hibernate.proxy.HibernateProxy
 import org.hibernate.resource.jdbc.spi.StatementInspector
 import spock.lang.AutoCleanup
 import spock.lang.IgnoreIf
@@ -231,6 +232,31 @@ class MergeStatementMatrixSpec extends Specification {
 
         then:
         count(kind, 'insert') == 1
+        count(kind, 'update') == 1
+
+        where:
+        kind << kinds
+    }
+
+    @Unroll
+    void "merge of an initialized proxy of a #kind instance, handed to the instance api, merges the entity and writes one update"() {
+        given:
+        String key = "proxy-${kind}"
+        MxGenerated.withNewTransaction { stored(kind, key) }
+        Object api = datastore.gormEnhancer.findInstanceApi(entityClass(kind))
+
+        when:
+        statements.clear()
+        Object merged = MxGenerated.withNewTransaction {
+            Object proxy = entityClass(kind).load(kind == 'generated' ? MxGenerated.findByTitle(key).id : key)
+            proxy.title = key + '-changed'
+            api.merge(proxy, [flush: true])
+        }
+
+        then:
+        !(merged instanceof HibernateProxy)
+        merged.title == key + '-changed'
+        count(kind, 'insert') == 0
         count(kind, 'update') == 1
 
         where:
