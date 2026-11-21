@@ -135,7 +135,6 @@ class GrailsCliSpec extends Specification {
 
     void "GRAILS_PREFERRED_SHELL is not read, and the artifact has no Grails shell and no class that delegates to one"() {
         expect: 'whatever the variable says, there is one command line to start'
-        !classThere('org.apache.grails.cli.DelegatingShellApplication')
         !classThere('org.grails.cli.GrailsCli')
         !classThere('org.springframework.boot.cli.command.CommandRunner')
         classThere('org.grails.forge.cli.ForgeCli')

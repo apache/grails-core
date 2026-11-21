@@ -104,6 +104,13 @@ tasks.named('test', Test).configure { Test it ->
 }
 
 TaskProvider<Jar> shadowJarTask = tasks.named('shadowJar', ShadowJar)
+
+// WrapperUpgradeSpec starts a Grails wrapper on the jar the wrapper downloads, which is the one with everything in it.
+tasks.named('test', Test).configure { Test it ->
+    it.inputs.files(shadowJarTask).withPropertyName('cliAllJar').withPathSensitivity(PathSensitivity.NONE)
+    Provider<String> cliAllJarPath = shadowJarTask.flatMap { Jar jar -> jar.archiveFile }.map { RegularFile file -> file.asFile.absolutePath }
+    it.jvmArgumentProviders.add({ ["-Dgrails.cli.all.jar=${cliAllJarPath.get()}".toString()] } as CommandLineArgumentProvider)
+}
 shadowJarTask.configure { ShadowJar it ->
     it.archiveClassifier = 'all'
 

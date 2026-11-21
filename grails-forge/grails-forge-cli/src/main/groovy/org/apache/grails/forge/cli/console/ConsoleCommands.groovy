@@ -87,7 +87,8 @@ final class ConsoleCommands {
                 new ConsoleCommand(),
                 new ShellCommand(),
                 new RunScriptCommand(),
-                new RunCommandCommand()
+                new RunCommandCommand(),
+                new UpdateWrapperCommand()
         ] as List<Object>
         if (readsProject) {
             ConsoleProject project = ConsoleProject.find(FileSystemOutputHandler.getDefaultBaseDirectory().toPath())

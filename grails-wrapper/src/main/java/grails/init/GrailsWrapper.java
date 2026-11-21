@@ -36,6 +36,8 @@ import grails.proxy.SystemPropertiesAuthenticator;
  */
 public class GrailsWrapper {
 
+    private static final int FIRST_MAJOR_WITH_UPDATE_WRAPPER = 9;
+
     public GrailsWrapper() {
         Authenticator.setDefault(new SystemPropertiesAuthenticator());
     }
@@ -55,8 +57,10 @@ public class GrailsWrapper {
 
             updated = updater.update();
 
-            // remove "update-wrapper" command argument
-            if (forceUpdate) {
+            // The command line of Grails 9 and later has the command update-wrapper, which replaces the wrapper
+            // that is committed in the project by the one of its version: it is given the argument. An earlier
+            // command line has no such command, and for it the argument only asked for this download.
+            if (forceUpdate && !hasUpdateWrapperCommand(updater.getSelectedVersion())) {
                 adjustedArgs = Arrays.copyOfRange(args, 1, args.length);
             }
         }
@@ -73,6 +77,14 @@ public class GrailsWrapper {
         // its logging, the generator it starts) is in the downloaded jar and not on the class path of the wrapper
         Thread.currentThread().setContextClassLoader(classToLoad.getClassLoader());
         main.invoke(null, (Object) adjustedArgs);
+    }
+
+    /**
+     * @param version the version of the command line that is started
+     * @return whether that command line has the command {@code update-wrapper}, as every one since Grails 9 has
+     */
+    static boolean hasUpdateWrapperCommand(GrailsVersion version) {
+        return version != null && version.major >= FIRST_MAJOR_WITH_UPDATE_WRAPPER;
     }
 
     /**

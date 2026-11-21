@@ -167,6 +167,50 @@ class StartClassSpec extends Specification {
         null                                               | 'org.apache.grails.cli.GrailsCli'
     }
 
+    @Unroll
+    def "update-wrapper is given to the command line of Grails #version, which #does"() {
+        given: 'a repository with the jar of the version'
+        File repository = new File(dir, 'repository')
+        File versionDirectory = new File(repository, "org/apache/grails/grails-cli/${version}")
+        versionDirectory.mkdirs()
+        File published = cliJar('published.jar', startClass, [startClass])
+        Files.copy(published.toPath(), new File(versionDirectory, "grails-cli-${version}-all.jar").toPath())
+        File home = new File(dir, 'home')
+        home.mkdirs()
+        Authenticator authenticator = Authenticator.getDefault()
+        ClassLoader contextClassLoader = Thread.currentThread().contextClassLoader
+        System.setProperty('grails.repo.url', repository.absolutePath)
+
+        when: 'the command line is there already, and update-wrapper as the first argument asks for it again'
+        SystemStubs.withEnvironmentVariable('GRAILS_WRAPPER_HOME', home.absolutePath)
+                .and('PREFERRED_GRAILS_VERSION', version)
+                .execute {
+                    new GrailsWrapper().execute(['help'] as String[])
+                    if (typed[0] == 'update-wrapper') {
+                        new File(home, "wrapper/${version}/grails-cli-${version}-all.jar").text = 'what was downloaded before'
+                    }
+                    new GrailsWrapper().execute(typed as String[])
+                }
+
+        then: 'it is downloaded again, and started with the command or without it'
+        new File(home, "wrapper/${version}/grails-cli-${version}-all.jar").bytes == published.bytes
+        System.getProperty(STARTED) == "${startClass}:${given.join(',')}"
+
+        cleanup:
+        System.clearProperty('grails.repo.url')
+        Authenticator.setDefault(authenticator)
+        Thread.currentThread().contextClassLoader = contextClassLoader
+
+        where:
+        version          | startClass                                         | typed                                | given                                | does
+        '9.0.0'          | 'org.apache.grails.cli.GrailsCli'                  | ['update-wrapper']                   | ['update-wrapper']                   | 'has the command'
+        '9.1.0-RC1'      | 'org.apache.grails.cli.GrailsCli'                  | ['update-wrapper', '--plain-output'] | ['update-wrapper', '--plain-output'] | 'has the command'
+        '10.0.0'         | 'org.example.cli.Moved'                            | ['update-wrapper']                   | ['update-wrapper']                   | 'has the command'
+        '8.1.0'          | 'org.apache.grails.cli.DelegatingShellApplication' | ['update-wrapper']                   | []                                   | 'has no such command and is started without it'
+        '7.0.14'         | 'org.apache.grails.cli.DelegatingShellApplication' | ['update-wrapper', 'help']           | ['help']                             | 'has no such command and is started without it'
+        '9.0.0'          | 'org.apache.grails.cli.GrailsCli'                  | ['help', 'update-wrapper']           | ['help', 'update-wrapper']           | 'is given every command line as it is'
+    }
+
     /**
      * A jar with a class for each name, whose {@code main} records its name and its arguments.
      */
