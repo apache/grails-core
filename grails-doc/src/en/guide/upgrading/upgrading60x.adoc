@@ -1309,6 +1309,14 @@ As of Grails 7.0.18, with `grails.plugin.springsecurity.rest.token.storage.jwt.u
 * With encrypted JWTs enabled, a signed JWT is rejected as an invalid token, and with signed JWTs, an encrypted JWT is. Previously such a token failed with a `NullPointerException`.
 * An encrypted JWT whose content encryption key is encrypted with `RSA1_5` is rejected unless `grails.plugin.springsecurity.rest.token.generation.jwt.jweAlgorithm` is `RSA1_5`. The plugin passes that setting to the new `jweAlgorithm` property of `JwtService`. A `jwtService` bean that an application defines itself accepts `RSA1_5` as before, unless the application sets that property too.
 
+==== The total of a paged criteria with groupProperty counts the groups
+
+The `totalCount` of a paged criteria result that uses a `groupProperty` projection, for example
+`Item.createCriteria().list(max: 10) { projections { groupProperty('city') } }`, is now the number of groups, as the page it
+belongs to is. Previously it was the number of rows before grouping, so a page of 3 groups from 6 rows reported a total of 6.
+Code that paged through such a result by `totalCount` now stops after the last group, and code that worked around the
+larger number needs no workaround. Criteria without a grouping projection count rows as before.
+
 ==== More GSP tags HTML-encode the attribute values they write
 
 These tags now HTML-encode the values they write into attributes, as `<g:link>` and `<g:textField>` already did and as these tags already encoded their other attributes:
