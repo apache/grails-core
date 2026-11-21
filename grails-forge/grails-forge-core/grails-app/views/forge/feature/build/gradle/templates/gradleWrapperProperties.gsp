@@ -28,7 +28,7 @@ under the License.
 <%@ model="GradleBuild gradleBuild" %>
 <%@ model="Function<String,Coordinate> coordinateResolver" %>
 <%@ model="Features features" %>
-%{-- Keep gradle version synced with .sdkmanrc, gradle.properties (gradleToolingApiVersion), all gradle-wrapper.properties files --}%
+%{-- Keep gradle version synced with .sdkmanrc and all gradle-wrapper.properties files --}%
 distributionBase=GRADLE_USER_HOME
 distributionPath=wrapper/dists
 distributionUrl=https\://services.gradle.org/distributions/gradle-9.9.1-bin.zip
