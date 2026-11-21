@@ -336,7 +336,7 @@ class BookSpec extends ${superClass} {
         how = options ? "with ${options.join(' ')}" : "and found ${feature} in the build"
     }
 
-    void "project migrate does not find geb-with-testcontainers in a build, which declares nothing the other Geb feature does not, and the command is not there until it is named"() {
+    void "project migrate finds geb-with-testcontainers in a build that declares the Geb plugin and none of the drivers the other Geb feature adds"() {
         given:
         generateProject(ApplicationType.WEB)
         new File(dir, '.grails').deleteDir()
@@ -349,20 +349,34 @@ class BookSpec extends ${superClass} {
 
         then:
         migrated == 0
-        !said.contains('geb-with-')
-        exit == 2
-        out.toString().contains('which grails-forge-cli feature add geb-with-testcontainers adds')
-        !new File(dir, BOOK_SPEC).exists()
+        said.contains("${CONTAINER} (build.gradle declares org.apache.grails:grails-geb, and nothing that the feature ${LOCAL} would add to it)")
+        !said.contains("    ${LOCAL} (")
+        exit == 0
+        new File(dir, BOOK_SPEC).getText('UTF-8').contains('class BookSpec extends ContainerGebSpec {')
+    }
 
-        when: 'the record is written again with the feature named'
-        out.reset()
-        migrated = ForgeCli.execute(beanContext, 'project', 'migrate', '--force', '--features', CONTAINER)
-        exit = ForgeCli.execute(beanContext, 'create-functional-test', 'Book')
+    void "project migrate finds neither Geb feature in a build without the Geb plugin, and the one for local browsers where its drivers are"() {
+        given:
+        generateProject(ApplicationType.WEB, features as String[])
+        new File(dir, '.grails').deleteDir()
+        if (without) {
+            File build = new File(dir, 'build.gradle')
+            build.text = build.readLines().findAll { String line -> !line.contains('grails-geb') }.join('\n') + '\n'
+        }
+
+        when:
+        int migrated = ForgeCli.execute(beanContext, 'project', 'migrate')
+        String said = out.toString()
 
         then:
         migrated == 0
-        exit == 0
-        new File(dir, BOOK_SPEC).getText('UTF-8').contains('class BookSpec extends ContainerGebSpec {')
+        said.contains("    ${CONTAINER} (") == container
+        said.contains("    ${LOCAL} (") == local
+
+        where:
+        features | without || container | local
+        []       | true    || false     | false
+        [LOCAL]  | false   || false     | true
     }
 
     private static boolean parses(File source) {

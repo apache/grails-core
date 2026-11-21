@@ -73,7 +73,7 @@ final class ProjectEvidence {
     private static final List<String> EARLIER_RECORDS = [ProjectState.EARLIER_RECORD, 'grails-cli.yml']
     private static final List<String> PROFILE_GROUPS = ['org.apache.grails.profiles', 'org.grails.profiles']
     private static final Pattern YAML_KEY = Pattern.compile(/^( *)([A-Za-z0-9_.-]+):(?:[ \t]+(.*))?$/)
-    private static final Pattern DEPENDENCY = Pattern.compile(/^\s*([A-Za-z][A-Za-z0-9]*)[ (]+(?:platform\()?["']([^:"'\s]+):([^:"'\s]+)(?::[^"']*)?["']/)
+    private static final Pattern DEPENDENCY = Pattern.compile(/^\s*([A-Za-z][A-Za-z0-9]*)[ (]+(?:(?:platform|enforcedPlatform|testFixtures)\()?["']([^:"'\s]+):([^:"'\s]+)(?::[^"']*)?["']/)
     // the same with the group and the name each said by its own: implementation group: 'g', name: 'n', and (group = "g", name = "n") in Kotlin
     private static final Pattern MAP_DEPENDENCY = Pattern.compile(
             /^\s*([A-Za-z][A-Za-z0-9]*)[ (]+(?:platform\()?\s*group\s*[:=]\s*["']([^:"'\s]+)["']\s*,\s*name\s*[:=]\s*["']([^:"'\s]+)["']/)

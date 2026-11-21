@@ -401,7 +401,9 @@ class ProjectMigrateCommand extends BaseCommand implements Callable<Integer>, Pr
      * The features the files of the project show: those the record of an earlier version names that
      * this version has, and those of Grails that add a dependency to a build which no other feature
      * adds, when the build file declares every such dependency of the feature. A dependency several
-     * features add says nothing of which of them the application has.
+     * features add says nothing of which of them the application has, except where the features are
+     * those of one group an application has one of and each of the others is told by a dependency of
+     * its own: the one that adds nothing of its own is then the one the build has.
      *
      * @return where each feature was found, by its name
      */
@@ -435,6 +437,31 @@ class ProjectMigrateCommand extends BaseCommand implements Callable<Integer>, Pr
                     .findAll { String each -> added.get(each) == 1 }
             if (!adds.isEmpty() && evidence.dependencies.containsAll(adds) && !found.containsKey(feature.getName())) {
                 found.put(feature.getName(), "${evidence.buildFile} declares ${adds.join(' and ')}".toString())
+            }
+        }
+        // A feature that is one of several an application has one of, and adds nothing the others of them do not
+        // add: the build declares what it adds, and what tells any of the others is not there. That is how the
+        // Geb feature for containers is told from the one for local browsers, which adds the drivers to it.
+        for (Feature feature : ofPacks.toSorted(FeatureContext.FEATURE_ORDER)) {
+            String group = ((PackFeature) feature).getPack().getDescriptor().oneOf
+            List<String> adds = ((PackFeature) feature).getPack().getDescriptor().dependencies
+                    .findAll { PackDependency each -> each.scope != null && each.when == PackCondition.ALWAYS }
+                    .collect { PackDependency each -> "${each.groupId}:${each.artifactId}".toString() }.unique()
+            if (group == null || adds.isEmpty() || found.containsKey(feature.getName()) || !evidence.dependencies.containsAll(adds)) {
+                continue
+            }
+            List<Feature> others = ofPacks.findAll { Feature each -> !each.is(feature) && ((PackFeature) each).getPack().getDescriptor().oneOf == group }
+            boolean sharedInGroupOnly = adds.every { String dependency ->
+                ofPacks.findAll { Feature each ->
+                    ((PackFeature) each).getPack().getDescriptor().dependencies.any { PackDependency it -> "${it.groupId}:${it.artifactId}".toString() == dependency }
+                }.every { Feature each -> each.is(feature) || others.contains(each) }
+            }
+            boolean othersTold = !others.isEmpty() && others.every { Feature each ->
+                ((PackFeature) each).getPack().getDescriptor().dependencies.any { PackDependency it -> added.get("${it.groupId}:${it.artifactId}".toString()) == 1 }
+            }
+            if (sharedInGroupOnly && othersTold && others.every { Feature each -> !found.containsKey(each.getName()) }) {
+                found.put(feature.getName(), ("${evidence.buildFile} declares ${adds.join(' and ')}, and nothing that ${others.size() == 1 ? 'the feature' : 'the features'} " +
+                        "${others*.getName().join(', ')} would add to it").toString())
             }
         }
         return found
