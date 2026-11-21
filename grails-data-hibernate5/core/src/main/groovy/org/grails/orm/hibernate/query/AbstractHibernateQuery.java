@@ -762,6 +762,12 @@ public abstract class AbstractHibernateQuery extends Query {
     private void applyOrder(Order order) {
         String property = order.getProperty();
         int i = property.indexOf('.');
+        String rootAlias = criteria != null ? criteria.getAlias() : detachedCriteria.getAlias();
+        if (i > 0 && property.substring(0, i).equals(rootAlias)) {
+            // Strip the root alias once: the remaining path can start with a property of the same name.
+            property = property.substring(i + 1);
+            i = property.indexOf('.');
+        }
         if (i < 0) {
             addSimpleOrder(order, property);
             return;
@@ -771,14 +777,6 @@ public abstract class AbstractHibernateQuery extends Query {
         if (!createdAssociationPaths.containsKey(sortHead)) {
             PersistentProperty persistentProperty = entity.getPropertyByName(sortHead);
             if (persistentProperty == null) {
-                String rootAlias = criteria != null ? criteria.getAlias() : detachedCriteria.getAlias();
-                if (sortHead.equals(rootAlias)) {
-                    // the alias of the queried class, as in new DetachedCriteria(Book, 'b'): the rest of the path
-                    // starts from the queried class
-                    Order relative = new Order(property.substring(i + 1), order.getDirection());
-                    applyOrder(order.isIgnoreCase() ? relative.ignoreCase() : relative);
-                    return;
-                }
                 // neither an alias of this query nor a property of the entity, so there is nothing to sort by: the sort is ignored
                 return;
             }

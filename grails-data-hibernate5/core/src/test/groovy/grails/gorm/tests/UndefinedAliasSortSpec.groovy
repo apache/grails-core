@@ -68,6 +68,20 @@ class UndefinedAliasSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckMa
         results.totalCount == 3
     }
 
+    void 'a root alias named #alias takes precedence over a property with the same name'() {
+        given:
+        final criteria = new DetachedCriteria(Team, alias)
+
+        expect:
+        criteria.list(sort: property, order: 'desc')*.name == expected
+        criteria.sort(property, 'desc').list()*.name == expected
+
+        where:
+        alias  | property         | expected
+        'club' | 'club.club.name' | ['Manchester United First Team', 'Chelsea First Team', 'Arsenal First Team']
+        'name' | 'name.name'      | ['Manchester United First Team', 'Chelsea First Team', 'Arsenal First Team']
+    }
+
     void 'a sort through an association after the alias of the queried class keeps a team without the association'() {
         given:
         new Team(name: 'Unattached First Team').save(failOnError: true, flush: true)
