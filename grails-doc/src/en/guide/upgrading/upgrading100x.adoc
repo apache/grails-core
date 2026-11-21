@@ -21,7 +21,7 @@ under the License.
 
 This guide outlines the changes introduced in Grails 10 and the steps required to upgrade your application.
 
-Grails 10 is in development. It does not differ from Grails 9 yet, so there is nothing to change in an application today. Each change that an application has to act on is added to this guide, and to the `grails-upgrade` agent skill, with the pull request that makes it.
+Grails 10 is in development. Each change that an application has to act on is added to this guide, and to the `grails-upgrade` agent skill, with the pull request that makes it.
 
 [TIP]
 ====
@@ -43,7 +43,7 @@ Upgrade the application to the last Grails 9 release before moving to Grails 10,
 
 ==== 2. Defaults That Grails 9 Announced for Grails 10
 
-Grails 9 added settings that keep the Grails 8 behavior by default, and its upgrade guide announces which defaults Grails 10 changes. None of them has changed on Grails 10 yet. Set each one explicitly while the application is on Grails 9, so that the upgrade changes nothing unannounced:
+Grails 9 added settings that keep the Grails 8 behavior by default, and its upgrade guide announces which defaults Grails 10 changes. Of them, only `grails.mime.negotiation.spring` has changed on Grails 10 yet, as <<upgradingSpringFormatNegotiationDefault,section 3>> describes. Set each one explicitly while the application is on Grails 9, so that the upgrade changes nothing unannounced:
 
 [options="header",cols="2,3,1,1"]
 |===
@@ -76,6 +76,52 @@ Grails 9 added settings that keep the Grails 8 behavior by default, and its upgr
 | The values of actions annotated `@ResponseBody`, written by Spring MVC as the body
 | `false`
 | `true`
+
+| `grails.mime.negotiation.spring`
+| `request.format`, `response.format`, `withFormat` and the format `respond` writes in, resolved with Spring MVC's content negotiation manager
+| `false`
+| `true`, changed (see <<upgradingSpringFormatNegotiationDefault,section 3>>)
 |===
 
 The Grails 9 guide also announces that the web starter and `grails-web-boot` stop bringing `org.apache.grails:grails-xml` in Grails 10, and that `@Resource` then defaults to JSON only. An application that serves or reads XML declares the module itself.
+
+[[upgradingSpringFormatNegotiationDefault]]
+==== 3. Grails Formats Are Resolved with Spring MVC Content Negotiation
+
+`grails.mime.negotiation.spring` is now `true` by default. `request.format`, `response.format`, `withFormat` and the
+format `respond` writes in are resolved with Spring MVC's content negotiation manager, so that the
+`spring.mvc.contentnegotiation.*` settings apply to them, and the `format` parameter, URL extensions and the `grails.mime`
+settings of the `Accept` header decide what Spring MVC writes for an action too, such as a `ResponseEntity` it returns
+(see <<springFormatNegotiation,Resolving Formats with Spring MVC Content Negotiation>>). An application that does not set
+the setting answers some requests differently than on Grails 9, among them:
+
+* `Accept: */*, application/json` is the `json` format, where it was `all`, since Spring MVC takes a more specific type
+ahead of a less specific one of equal quality.
+* A request that accepts no configured type, such as one that sends only `Accept: image/png`, or whose `Accept` header
+Spring cannot read, has no format: `response.format` and `response.mimeType` are `null`, and `respond` answers
+`406 Not Acceptable`, where Grails 9 answered as for a client that accepts any type.
+* A `format` parameter or URL extension no type is configured for is not acceptable, where Grails 9 answered in the
+first configured format.
+* `/book/show/1.json` of an action that returns a `ResponseEntity` is answered in JSON whatever the `Accept` header asks
+for, and `/book/show/1.html` of an action that returns a map with `406`, since no message converter writes a map as HTML.
+
+<<upgradingSpringFormatNegotiation,Opt Into Spring MVC Content Negotiation for Grails Formats>>, in the guide to
+upgrading from Grails 8 to Grails 9, lists every kind of answer that changes. A Spring MVC endpoint, and Spring
+Security's filters before a URL mapping has matched a request, negotiate as before.
+
+===== Required Actions
+
+* An application that set `grails.mime.negotiation.spring: true` on Grails 9 answers as it did, and can remove the
+setting.
+* An application that did not set it checks the answers above, and code that reads `response.format` or
+`response.mimeType` allows for `null`.
+* To keep the Grails rules, set the setting to `false`:
++
+[source,yaml]
+.grails-app/conf/application.yml
+----
+grails:
+    mime:
+        negotiation:
+            spring: false
+----
