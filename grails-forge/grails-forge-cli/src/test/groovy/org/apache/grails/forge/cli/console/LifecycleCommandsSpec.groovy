@@ -31,6 +31,7 @@ import org.grails.forge.cli.CommandFixture
 import org.grails.forge.cli.CommandSpec
 import org.grails.forge.cli.ForgeCli
 import org.grails.forge.cli.ForkedCli
+import org.opentest4j.TestAbortedException
 import spock.lang.IgnoreIf
 import spock.lang.Unroll
 import spock.util.concurrent.PollingConditions
@@ -819,6 +820,198 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
         other?.waitFor()
     }
 
+    void "stop-app ends nothing for a record that names a process of another user, by its number and the instant it began"() {
+        given: 'the oldest process of another user that the system shows, which is none that started this command'
+        scriptedProject('serve')
+        String user = ProcessHandle.current().info().user().orElse(null)
+        Set<Long> above = [] as Set<Long>
+        for (Optional<ProcessHandle> each = Optional.of(ProcessHandle.current()); each.present; each = each.get().parent()) {
+            above.add(each.get().pid())
+        }
+        ProcessHandle other = ProcessHandle.allProcesses()
+                .filter { ProcessHandle each -> each.pid() > 1 && !(each.pid() in above) }
+                .filter { ProcessHandle each -> each.info().user().present && each.info().user().get() != user && each.info().startInstant().present }
+                .min { ProcessHandle one, ProcessHandle two -> one.info().startInstant().get() <=> two.info().startInstant().get() }
+                .orElse(null)
+        if (user == null || other == null) {
+            throw new TestAbortedException('this system shows no process of another user with the instant it began')
+        }
+        writeRecord(pid: other.pid(), started: other.info().startInstant().get().toEpochMilli())
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'stop-app')
+
+        then: 'the record says what the system says of that process, and it is still no process to end'
+        exit == 1
+        errors() == ["| Error No application that run-app started is running for this project: process ${other.pid()} is not a process of the user who runs the command. " +
+                'Nothing was stopped, and the record was removed']
+        !out.toString().contains('Stopping')
+        other.alive
+        !new File(dir, '.grails/run/app.json').exists()
+    }
+
+    void "run-app --detach stops what it started when it cannot record it for stop-app"() {
+        given: 'a wrapper that says which process it is and stays, and a directory where the record is to be'
+        stayingProject()
+        new File(dir, '.grails/run/app.json/kept').mkdirs()
+        Files.setPosixFilePermissions(new File(dir, '.grails/run').toPath(), PosixFilePermissions.fromString('rwx------'))
+        int port = freePort()
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'run-app', '--detach', '--port', port as String)
+        noteStarted(new File(dir, 'server.pid'))
+
+        then: 'the command fails, and what it had started is ended: nothing runs that stop-app would not find'
+        exit == 1
+        errors() == ['| Error The application was stopped again, because it could not be recorded for stop-app: .grails/run/app.json cannot be written: it is a directory']
+        !out.toString().contains('Application answers')
+        started.every { Long pid -> !alive(pid) }
+
+        and: 'what was in the way is as it was, and nothing was left beside it'
+        new File(dir, '.grails/run/app.json/kept').isDirectory()
+        new File(dir, '.grails/run').list().toList().sort() == ['.gitignore', 'app.json', 'app.log']
+    }
+
+    void "a run-app that stays with the application says so when it cannot record it, and ending the command ends the application all the same"() {
+        given:
+        stayingProject()
+        new File(dir, '.grails/run/app.json/kept').mkdirs()
+        Files.setPosixFilePermissions(new File(dir, '.grails/run').toPath(), PosixFilePermissions.fromString('rwx------'))
+        AtomicInteger exit = new AtomicInteger(-1)
+        Thread command = new Thread({ exit.set(ForgeCli.execute(beanContext, 'run-app', '--port', freePort() as String)) })
+
+        when:
+        command.start()
+        long server = pid('server.pid')
+        new PollingConditions(timeout: 60, delay: 0.1).eventually {
+            assert out.toString().contains('stop-app will not find it')
+        }
+
+        then: 'the application runs, and the command says how it is stopped'
+        alive(server)
+        command.alive
+        out.toString().readLines().findAll { String line -> line.contains('Warning') } ==
+                ['| Warning .grails/run/app.json cannot be written: it is a directory. The application runs, and stop-app will not find it: end this command to stop it']
+
+        when: 'stop-app from elsewhere'
+        int stopped = ForgeCli.execute(beanContext, 'stop-app')
+
+        then: 'it ends nothing, as it was told'
+        stopped == 1
+        errors().size() == 1
+        errors()[0].contains('.grails/run/app.json cannot be used, it is not a file. Nothing was stopped')
+        alive(server)
+        new File(dir, '.grails/run/app.json/kept').isDirectory()
+
+        when:
+        out.reset()
+        command.interrupt()
+        command.join(60_000)
+
+        then:
+        !command.alive
+        exit.get() == 1
+        errors() == ['| Error Gradle was stopped before it finished, because the command was cancelled']
+        !alive(server)
+
+        cleanup:
+        command?.interrupt()
+        command?.join(60_000)
+    }
+
+    @Unroll
+    void "a run-app that stays with a wrapper that ends at once #what leaves no record of it"() {
+        given:
+        new File(dir, 'grails-app').mkdirs()
+        File wrapper = new File(dir, 'gradlew')
+        wrapper.text = content
+        wrapper.setExecutable(true, false)
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'run-app', '--port', freePort() as String)
+
+        then: 'the command ends as Gradle did'
+        exit == expected
+        errors() == said
+        !out.toString().contains('stop-app will not find it')
+
+        and: 'and nothing says that an application runs'
+        new File(dir, '.grails/run').list().toList() == ['.gitignore']
+
+        when:
+        out.reset()
+        int stopped = ForgeCli.execute(beanContext, 'stop-app')
+
+        then:
+        stopped == 1
+        errors() == ['| Error No application that run-app started is running for this project: there is no record of one, .grails/run/app.json. Nothing was stopped']
+
+        where:
+        what                 | content                  | expected | said
+        'with a failure'     | '#!/bin/sh\nexit 3\n'    | 1        | ['| Error Gradle did not succeed: it ended with exit code 3']
+        'without a failure'  | '#!/bin/sh\nexit 0\n'    | 0        | []
+    }
+
+    void "stop-app ends nothing for a record of a process that has ended, and removes the record"() {
+        given:
+        scriptedProject('serve')
+        Process ended = new ProcessBuilder('true').start()
+        long began = ended.info().startInstant().map { it.toEpochMilli() }.orElse(System.currentTimeMillis())
+        ended.waitFor()
+        writeRecord(pid: ended.pid(), started: began)
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'stop-app')
+
+        then: 'whether the number is free or another process has it by now, it is not the one that was recorded'
+        exit == 1
+        errors().size() == 1
+        errors()[0].startsWith("| Error No application that run-app started is running for this project: process ${ended.pid()}")
+        errors()[0].endsWith('Nothing was stopped, and the record was removed')
+        !out.toString().contains('Stopping')
+        !new File(dir, '.grails/run/app.json').exists()
+    }
+
+    @Unroll
+    void "run-app --detach records nothing and says that Gradle ended when the wrapper #what"() {
+        given:
+        new File(dir, 'grails-app').mkdirs()
+        File wrapper = new File(dir, 'gradlew')
+        wrapper.text = content
+        wrapper.setExecutable(executable, false)
+        int port = freePort()
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'run-app', '--detach', '--port', port as String, '--ready-timeout', '60')
+
+        then: 'which of the two lines it is depends on whether the process was still there when the command looked'
+        exit == 1
+        errors().size() == 1
+        errors()[0] == "| Error The Gradle wrapper ${new File(dir.canonicalFile, 'gradlew').path} ended as soon as it was started" ||
+                errors()[0] == "| Error Gradle ended before the application answered on port ${port}"
+        !out.toString().contains('Application answers')
+
+        and: 'what the wrapper wrote is shown, and there is no record of an application'
+        wrote == null || out.toString().contains('The last lines of .grails/run/app.log:')
+        wrote == null || out.toString().readLines().contains("  ${wrote}".toString())
+        new File(dir, '.grails/run').list().toList().sort() == ['.gitignore', 'app.log']
+
+        when:
+        out.reset()
+        int stopped = ForgeCli.execute(beanContext, 'stop-app')
+
+        then:
+        stopped == 1
+        errors() == ['| Error No application that run-app started is running for this project: there is no record of one, .grails/run/app.json. Nothing was stopped']
+
+        where:
+        what                                  | content                              | executable | wrote
+        'names a program that is not there'   | '#!/nonexistent/interpreter\n'       | true       | null
+        'ends at once with a failure'         | '#!/bin/sh\necho gone\nexit 3\n'    | true       | 'gone'
+        'ends at once without one'            | '#!/bin/sh\nexit 0\n'               | true       | null
+        'is empty and cannot be executed'     | ''                                   | false      | null
+    }
+
     @Unroll
     void "nothing is read, written or stopped through #what that is a link"() {
         given: 'a place outside the project with a record of a process of the user'
@@ -1519,6 +1712,14 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
         new File(dir, 'mode.txt').text = mode + '\n'
         File wrapper = new File(dir, 'gradlew')
         wrapper.text = "#!/bin/sh\n\"${System.getProperty('java.home')}/bin/java\" \"${dir.canonicalPath}/Server.java\" \"\$@\"\n"
+        wrapper.setExecutable(true, false)
+    }
+
+    // A wrapper that becomes the one process it names in server.pid and stays, so that ending it leaves nothing behind
+    private void stayingProject() {
+        new File(dir, 'grails-app').mkdirs()
+        File wrapper = new File(dir, 'gradlew')
+        wrapper.text = '#!/bin/sh\necho $$ > server.pid\nexec sleep 300\n'
         wrapper.setExecutable(true, false)
     }
 

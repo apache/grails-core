@@ -22,7 +22,6 @@ import java.nio.file.Files
 import java.nio.file.LinkOption
 import java.nio.file.Path
 import java.nio.file.attribute.PosixFilePermissions
-import java.time.Instant
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
@@ -292,11 +291,14 @@ class RunAppCommand extends GradleEnvironmentCommand {
         out('| Running application...')
         int exit = runner.run(project, arguments, { ProcessHandle started ->
             try {
-                RunningApplication.record(directory, started, answersOn, false)
+                // the instant as it was recorded: of a process that has ended by now the system says none
+                recorded[1] = RunningApplication.record(directory, started, answersOn, false)
                 recorded[0] = started.pid()
-                recorded[1] = started.info().startInstant().map { Instant instant -> instant.toEpochMilli() }.orElse(0L)
             } catch (IOException e) {
-                warning("${GradleRunner.line(e.getMessage())}. The application runs, and stop-app will not find it: end this command to stop it")
+                // a build that has ended by now is none to record, and says itself how it ended
+                if (started.isAlive()) {
+                    warning("${GradleRunner.line(e.getMessage())}. The application runs, and stop-app will not find it: end this command to stop it")
+                }
             }
         } as Consumer<ProcessHandle>)
         boolean asked = recorded[0] != 0L && RunningApplication.wasAskedToStop(directory, recorded[0], recorded[1])
@@ -364,10 +366,16 @@ class RunAppCommand extends GradleEnvironmentCommand {
                 return 1
             }
             try {
-                RunningApplication.record(directory, started, answersOn, true)
+                // the instant as it was recorded: of a process that has ended by now the system says none
+                recorded[1] = RunningApplication.record(directory, started, answersOn, true)
                 recorded[0] = started.pid()
-                recorded[1] = started.info().startInstant().map { Instant instant -> instant.toEpochMilli() }.orElse(0L)
             } catch (IOException e) {
+                if (!started.isAlive()) {
+                    // nothing is there to record: the build has ended already, which is what there is to say
+                    err("Gradle ended before the application answered on port ${answersOn}")
+                    said(log)
+                    return 1
+                }
                 GradleRunner.stop(started, STOP_SECONDS)
                 err("The application was stopped again, because it could not be recorded for stop-app: ${GradleRunner.line(e.getMessage())}")
                 return 1

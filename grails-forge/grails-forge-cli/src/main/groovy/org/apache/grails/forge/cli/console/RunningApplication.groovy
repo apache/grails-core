@@ -173,9 +173,11 @@ final class RunningApplication {
      * @param process the process
      * @param port the port the application was started for, or 0
      * @param detached whether {@code run-app} does not stay with the application
+     * @return the instant the process began as the record has it, in milliseconds: what the record is
+     * found by again when it is to be removed, which the system no longer says of a process that has ended
      * @throws IOException with one line, when the record cannot be written
      */
-    static void record(Path run, ProcessHandle process, int port, boolean detached) throws IOException {
+    static long record(Path run, ProcessHandle process, int port, boolean detached) throws IOException {
         Optional<Instant> began = process.info().startInstant()
         if (!began.isPresent()) {
             throw new IOException("${RunDirectory.LOCATION}/${RECORD} cannot be written: the system does not say when process ${process.pid()} began, and without that it cannot be told from another one later")
@@ -190,6 +192,7 @@ final class RunningApplication {
                 throw new IOException('it is a directory')
             }
             Files.move(written, record, StandardCopyOption.REPLACE_EXISTING)
+            return began.get().toEpochMilli()
         } catch (IOException e) {
             Files.deleteIfExists(written)
             throw new IOException("${RunDirectory.LOCATION}/${RECORD} cannot be written: ${GradleRunner.line(e.getMessage())}")
