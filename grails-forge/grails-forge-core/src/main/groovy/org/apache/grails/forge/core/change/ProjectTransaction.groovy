@@ -503,11 +503,10 @@ final class ProjectTransaction {
     /**
      * What a journal names has to be what the generator writes: the three files of the state, which
      * are read as they were before the change and as they are after it and have to be a state each,
-     * the files of the two baselines, their copies, and the record beside the state.
+     * the files of the two baselines, and their copies.
      */
     private static void permitted(Path project, Path directory, Journal change, Path journal) {
         Set<String> paths = new HashSet<>(STATE)
-        paths.add(ProjectState.EARLIER_RECORD)
         try {
             for (boolean after : [false, true]) {
                 List<byte[]> state = []

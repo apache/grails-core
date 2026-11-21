@@ -268,16 +268,8 @@ final class FeatureAddition {
                 writes << new Write(copy, after.content(copy), null, generated == null ? null : generated.sha256)
             }
         }
-        // the record the tools of earlier versions read is written beside the state and is no part of
-        // the baseline: what it was generated as is what was generated again. A project without it stays without
-        byte[] earlier = before.content(ProjectState.EARLIER_RECORD)
-        if (earlier != null && after.content(ProjectState.EARLIER_RECORD) != null &&
-                Files.exists(projectDirectory.resolve(ProjectState.EARLIER_RECORD), LinkOption.NOFOLLOW_LINKS)) {
-            PlannedFile planned = planned(projectDirectory, ProjectState.EARLIER_RECORD, earlier, false, after.content(ProjectState.EARLIER_RECORD), false, false, posix)
-            if (planned != null) {
-                files << planned
-            }
-        }
+        // the record the tools of earlier versions read, which a project can have beside its state, is
+        // no file the generator writes: it is not looked at, and stays as it is
         writes << new Write(ProjectState.BASELINE_INDEX, after.content(ProjectState.BASELINE_INDEX), null, ProjectTransaction.sha256(indexBytes))
         writes << new Write(ProjectState.LOCK, after.content(ProjectState.LOCK), null, ProjectTransaction.sha256(lockBytes))
         // the manifest last, as when the application was generated

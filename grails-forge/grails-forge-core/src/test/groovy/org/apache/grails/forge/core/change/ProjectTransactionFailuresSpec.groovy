@@ -414,6 +414,41 @@ class ProjectTransactionFailuresSpec extends AbstractFeatureAdditionSpec {
         journals() == []
     }
 
+    void "a journal that names the record of an earlier version, which no change writes, undoes nothing"() {
+        given:
+        ProjectGenerator generator = generator()
+        Path project = create(generator, 'app', [])
+        Path earlier = Files.writeString(project.resolve(ProjectState.EARLIER_RECORD), 'applicationType: web\ndefaultPackage: com.acme\nfeatures: [spock]\n')
+        Map<String, String> before = tree(project)
+        try {
+            planOf(generator, project).apply { String path ->
+                if (path == 'build.gradle') {
+                    throw new Stopped()
+                }
+            }
+        } catch (Stopped ignored) {
+        }
+        Path journal = journals().first()
+        String written = journal.toFile().text
+        Map<String, String> interrupted = tree(project)
+
+        when: 'a line more, which says the change added the file, so that undoing the change would remove it'
+        journal.toFile().text = written.replace('\nend\n', "\nput 99 - ${sha(earlier)} ${ProjectState.EARLIER_RECORD}\nend\n")
+        addition(generator).recover(project)
+
+        then:
+        ProjectChangeException e = thrown()
+        e.message.startsWith('The record of the change that was interrupted names what is no file of the generated application (grails-forge-cli.yml); nothing was put back.')
+        tree(project) == interrupted
+
+        when: 'the journal as it was written'
+        journal.toFile().text = written
+
+        then:
+        addition(generator).recover(project).undone
+        tree(project) == before
+    }
+
     @Requires({ ProjectTransactionFailuresSpec.rootIsOfAnother() })
     void "a home directory of another user keeps no record: nothing is looked for in it, and nothing is changed"() {
         given: 'the root of the file system, which is a directory and absolute and not of whoever runs the tests'
