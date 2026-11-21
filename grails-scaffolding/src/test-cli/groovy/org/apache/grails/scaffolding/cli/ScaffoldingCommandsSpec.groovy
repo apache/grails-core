@@ -20,10 +20,13 @@ package org.apache.grails.scaffolding.cli
 
 import spock.lang.Specification
 import spock.lang.TempDir
+import spock.lang.Unroll
 
+import grails.build.logging.GrailsConsole
 import org.apache.grails.core.cli.ExecutionContext
 import org.apache.grails.core.cli.GrailsApplicationCommand
 import org.apache.grails.core.cli.io.FileSystemInteractionImpl
+import org.apache.grails.core.cli.script.ScriptConsole
 import org.apache.grails.core.cli.template.TemplateRendererImpl
 import org.grails.build.parsing.CommandLineParser
 
@@ -36,10 +39,18 @@ import org.grails.build.parsing.CommandLineParser
  */
 class ScaffoldingCommandsSpec extends Specification {
 
+    private static final List<String> WRITTEN_TO = ['grails-app/controllers', 'grails-app/services', 'grails-app/views', 'src/test', 'src/integration-test']
+
     @TempDir
     File project
 
+    ByteArrayOutputStream errors = new ByteArrayOutputStream()
+    GrailsConsole console
+
     def setup() {
+        // the commands that are made in a feature say their errors where the feature reads them
+        console = GrailsConsole.getInstance()
+        GrailsConsole.setInstance(new ScriptConsole(new PrintStream(new ByteArrayOutputStream(), true), new PrintStream(errors, true)))
         File domain = new File(project, 'grails-app/domain/com/example/Book.groovy')
         domain.parentFile.mkdirs()
         domain.text = 'package com.example\n\nclass Book {\n    String title\n}\n'
@@ -48,6 +59,10 @@ class ScaffoldingCommandsSpec extends Specification {
         new File('src/main/templates/scaffolding').eachFile { File template ->
             new File(templates, template.name).bytes = template.bytes
         }
+    }
+
+    def cleanup() {
+        GrailsConsole.setInstance(console)
     }
 
     def "generate-controller writes the service spec, an integration spec, to the integration tests"() {
@@ -137,6 +152,165 @@ class ScaffoldingCommandsSpec extends Specification {
         }
     }
 
+    def "generate-async-controller writes an asynchronous controller and its spec, and no service"() {
+        when:
+        boolean result = run(new GenerateAsyncControllerCommand(), 'generate-async-controller com.example.Book')
+
+        then:
+        result
+        written('grails-app/controllers/com/example/BookController.groovy').contains('package com.example')
+        written('grails-app/controllers/com/example/BookController.groovy').contains('Book.async.task {')
+        written('src/test/groovy/com/example/BookControllerSpec.groovy').contains('class BookControllerSpec')
+        generated() == ['grails-app/controllers/com/example/BookController.groovy', 'src/test/groovy/com/example/BookControllerSpec.groovy']
+        errors.toString() == ''
+    }
+
+    def "generate-async-controller generates for a class that is found although another class is not, and fails"() {
+        when:
+        boolean result = run(new GenerateAsyncControllerCommand(), 'generate-async-controller Missing com.example.Book')
+
+        then:
+        !result
+        errors.toString().contains('Domain class not found for name: Missing')
+        generated() == ['grails-app/controllers/com/example/BookController.groovy', 'src/test/groovy/com/example/BookControllerSpec.groovy']
+    }
+
+    @Unroll
+    def "#name without a domain class fails, says so and writes nothing"() {
+        when:
+        boolean result = run(command.getDeclaredConstructor().newInstance(), name)
+
+        then:
+        !result
+        errors.toString().contains('No domain-class specified')
+        generated() == []
+
+        where:
+        name                         | command
+        'generate-controller'        | GenerateControllerCommand
+        'generate-async-controller'  | GenerateAsyncControllerCommand
+        'generate-views'             | GenerateViewsCommand
+        'generate-all'               | GenerateAllCommand
+        'generate-service'           | GenerateServiceCommand
+        'create-scaffold-controller' | CreateScaffoldControllerCommand
+        'create-scaffold-service'    | CreateScaffoldServiceCommand
+        'generate-scaffold-all'      | GenerateScaffoldAllCommand
+    }
+
+    @Unroll
+    def "#name names the domain class that is not found, fails and writes nothing"() {
+        when:
+        boolean result = run(command.getDeclaredConstructor().newInstance(), "${name} Missing")
+
+        then:
+        !result
+        errors.toString().contains(said)
+        generated() == []
+
+        where:
+        name                        | command                        | said
+        'generate-controller'       | GenerateControllerCommand      | 'Domain class not found for name: Missing'
+        'generate-async-controller' | GenerateAsyncControllerCommand | 'Domain class not found for name: Missing'
+        'generate-views'            | GenerateViewsCommand           | 'Domain class not found for name: Missing'
+        'generate-all'              | GenerateAllCommand             | 'Domain class not found for name: Missing'
+        'generate-service'          | GenerateServiceCommand         | 'No domain-class found for name: Missing'
+    }
+
+    @Unroll
+    def "#name keeps the files that are there, and writes them again with --force"() {
+        given: 'what the command generated, edited since'
+        assert run(command.getDeclaredConstructor().newInstance(), "${name} com.example.Book")
+        List<String> files = generated()
+        files.each { String path -> new File(project, path).text = 'edited' }
+
+        when:
+        boolean kept = run(command.getDeclaredConstructor().newInstance(), "${name} com.example.Book")
+
+        then: 'a file that is there is passed over, which is no failure'
+        kept
+        files.size() == count
+        files.every { String path -> new File(project, path).text == 'edited' }
+        generated() == files
+
+        when:
+        boolean forced = run(command.getDeclaredConstructor().newInstance(), "${name} com.example.Book --force")
+
+        then:
+        forced
+        files.every { String path -> new File(project, path).text != 'edited' }
+        generated() == files
+
+        where:
+        name                         | command                         | count
+        'generate-controller'        | GenerateControllerCommand       | 4
+        'generate-async-controller'  | GenerateAsyncControllerCommand  | 2
+        'generate-views'             | GenerateViewsCommand            | 4
+        'generate-all'               | GenerateAllCommand              | 8
+        'generate-service'           | GenerateServiceCommand          | 2
+        'create-scaffold-controller' | CreateScaffoldControllerCommand | 1
+        'create-scaffold-service'    | CreateScaffoldServiceCommand    | 1
+        'generate-scaffold-all'      | GenerateScaffoldAllCommand      | 2
+    }
+
+    def "generate-service writes the data service of a domain class and its spec"() {
+        expect:
+        run(new GenerateServiceCommand(), 'generate-service com.example.Book')
+        written('grails-app/services/com/example/BookService.groovy').contains('package com.example')
+        written('src/test/groovy/com/example/BookServiceSpec.groovy').contains('BookService')
+    }
+
+    @Unroll
+    def "#line writes #path with what its flags ask for"() {
+        when:
+        boolean result = run(command.getDeclaredConstructor().newInstance(), line)
+
+        then:
+        result
+        expected.every { String each -> written(path).contains(each) }
+
+        where:
+        command                         | line                                                                         | path                                                        | expected
+        CreateScaffoldControllerCommand | 'create-scaffold-controller com.example.Book'                                | 'grails-app/controllers/com/example/BookController.groovy'       | ['package com.example\n', '@Scaffold(Book)']
+        CreateScaffoldControllerCommand | 'create-scaffold-controller com.example.Book --service'                      | 'grails-app/controllers/com/example/BookController.groovy'       | ['import grails.plugin.scaffolding.RestfulServiceController', '@Scaffold(RestfulServiceController<Book>)']
+        CreateScaffoldControllerCommand | 'create-scaffold-controller com.example.Book --namespace=admin'              | 'grails-app/controllers/com/example/admin/BookController.groovy' | ['package com.example.admin\n', 'import com.example.Book\n', "static namespace = 'admin'"]
+        CreateScaffoldControllerCommand | 'create-scaffold-controller com.example.Book --extends=org.base.Base'        | 'grails-app/controllers/com/example/BookController.groovy'       | ['import org.base.Base\n', '@Scaffold(Base<Book>)']
+        CreateScaffoldServiceCommand    | 'create-scaffold-service com.example.Book --extends=org.base.BaseService'    | 'grails-app/services/com/example/BookService.groovy'             | ['import org.base.BaseService\n', '@Scaffold(BaseService<Book>)']
+        GenerateScaffoldAllCommand      | 'generate-scaffold-all com.example.Book --serviceExtends=org.base.BaseService --controllerExtends=org.base.Base --namespace=admin' | 'grails-app/services/com/example/BookService.groovy' | ['@Scaffold(BaseService<Book>)']
+        GenerateScaffoldAllCommand      | 'generate-scaffold-all com.example.Book --serviceExtends=org.base.BaseService --controllerExtends=org.base.Base --namespace=admin' | 'grails-app/controllers/com/example/admin/BookController.groovy' | ['@Scaffold(Base<Book>)', "static namespace = 'admin'"]
+        GenerateScaffoldAllCommand      | 'generate-scaffold-all com.example.Book'                                     | 'grails-app/controllers/com/example/BookController.groovy'       | ['@Scaffold(RestfulServiceController<Book>)']
+    }
+
+    def "install-templates into a directory that has templates writes each of them again, and keeps what is no template of the plugin"() {
+        given: 'a template that was edited, and a file of the project'
+        File edited = new File(project, 'src/main/templates/scaffolding/index.gsp')
+        edited.text = 'edited'
+        File own = new File(project, 'src/main/templates/scaffolding/own.gsp')
+        own.text = 'of the project'
+
+        when:
+        boolean result = run(new InstallTemplatesCommand(), 'install-templates')
+
+        then:
+        result
+        edited.text == new File('src/main/templates/scaffolding/index.gsp').text
+        own.text == 'of the project'
+    }
+
+    def "install-templates fails when the directory of the templates cannot be made"() {
+        given: 'a file where the directory would be'
+        File templates = new File(project, 'src/main/templates')
+        templates.deleteDir()
+        templates.text = 'a file'
+
+        when:
+        boolean result = run(new InstallTemplatesCommand(), 'install-templates')
+
+        then:
+        !result
+        errors.toString().contains('| Error ')
+        templates.text == 'a file'
+    }
+
     /**
      * Runs a command in the project of the spec. A command that the Gradle task starts gets the directory of
      * the project from the build settings of the JVM, which a spec cannot set.
@@ -146,6 +320,24 @@ class ScaffoldingCommandsSpec extends Specification {
         command.templateRenderer = new TemplateRendererImpl(project)
         command.fileSystemInteraction = new FileSystemInteractionImpl(project)
         command.handle()
+    }
+
+    /**
+     * @return the files the commands write, as paths in the project, in order
+     */
+    private List<String> generated() {
+        List<String> paths = []
+        WRITTEN_TO.each { String directory ->
+            File at = new File(project, directory)
+            if (at.isDirectory()) {
+                at.eachFileRecurse { File file ->
+                    if (file.isFile()) {
+                        paths.add(project.toPath().relativize(file.toPath()).toString().replace(File.separator, '/'))
+                    }
+                }
+            }
+        }
+        paths.sort()
     }
 
     private String written(String path) {
