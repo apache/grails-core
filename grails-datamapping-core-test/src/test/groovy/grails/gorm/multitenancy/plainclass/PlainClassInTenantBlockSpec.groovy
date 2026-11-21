@@ -19,6 +19,8 @@
 package grails.gorm.multitenancy.plainclass
 
 import org.springframework.transaction.IllegalTransactionStateException
+import org.springframework.transaction.support.AbstractPlatformTransactionManager
+import org.springframework.transaction.support.TransactionTemplate
 import spock.lang.AutoCleanup
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -60,11 +62,12 @@ class PlainClassInTenantBlockSpec extends Specification {
                         (Settings.SETTING_MULTI_TENANCY_MODE)   : mode,
                         (Settings.SETTING_MULTI_TENANT_RESOLVER): new SystemPropertyTenantResolver()
                 ]),
-                schema ? [ConnectionSource.DEFAULT] : [ConnectionSource.DEFAULT, 'foo'],
+                schema ? [ConnectionSource.DEFAULT] : [ConnectionSource.DEFAULT, 'foo', 'bar'],
                 TenantNote, PlainNote
         )
         if (schema) {
             datastore.addTenantForSchema('foo')
+            datastore.addTenantForSchema('bar')
         }
         seed = PlainNote.withTransaction { new PlainNote(text: 'seed').save(flush: true) }
     }
@@ -104,9 +107,10 @@ class PlainClassInTenantBlockSpec extends Specification {
     }
 
     @Unroll
-    void 'with #mode multi-tenancy, #write of a plain class inside a tenant\'s transaction fails and writes nothing'() {
+    void 'with #mode multi-tenancy and synchronization=#synchronization, #write of a plain class inside a tenant\'s transaction fails and writes nothing'() {
         given:
         startDatastore(mode)
+        ((SimpleMapDatastore) datastore.getDatastoreForConnection('foo')).transactionManager.transactionSynchronization = synchronization
 
         when:
         Tenants.withId('foo') { new TransactionalPlainNoteWriter().run { WRITES[write].call(this) } }
@@ -115,20 +119,27 @@ class PlainClassInTenantBlockSpec extends Specification {
         IllegalTransactionStateException e = thrown()
         e.message.contains(PlainNote.name)
         e.message.contains('PlainNote.withTransaction { }')
+        e.message.contains('Flushing does not replace a transaction.')
         PlainNote.withTransaction { PlainNote.list()*.text } == ['seed']
 
         where:
-        [mode, write] << [MODES, WRITES.keySet().toList()].combinations()
+        [mode, write, synchronization] << [MODES, WRITES.keySet().toList(), SYNCHRONIZATION_MODES].combinations()
     }
 
     @Unroll
-    void 'with #mode multi-tenancy, a save of a plain class inside a tenant\'s transaction fails while a session of its datastore is bound, as in a web request'() {
+    void 'with #mode multi-tenancy and synchronization=#synchronization, a save with flush=#flush fails while a session of its datastore is bound, as in a web request'() {
         given:
         startDatastore(mode)
+        ((SimpleMapDatastore) datastore.getDatastoreForConnection('foo')).transactionManager.transactionSynchronization = synchronization
 
         when:
         PlainNote.withSession {
-            Tenants.withId('foo') { new TransactionalPlainNoteWriter().run { new PlainNote(text: 'pending').save() } }
+            Tenants.withId('foo') {
+                new TransactionalPlainNoteWriter().run {
+                    new PlainNote(text: 'inner').save(flush: flush)
+                    throw new IllegalStateException('tenant failed')
+                }
+            }
         }
 
         then:
@@ -136,13 +147,14 @@ class PlainClassInTenantBlockSpec extends Specification {
         PlainNote.withTransaction { PlainNote.list()*.text } == ['seed']
 
         where:
-        mode << MODES
+        [mode, flush, synchronization] << [MODES, [false, true], SYNCHRONIZATION_MODES].combinations()
     }
 
     @Unroll
-    void 'with #mode multi-tenancy, #write inside a tenant\'s transaction that #outcome writes the plain class'() {
+    void 'with #mode multi-tenancy and synchronization=#synchronization, #write inside a tenant\'s transaction that #outcome writes the plain class'() {
         given:
         startDatastore(mode)
+        ((SimpleMapDatastore) datastore.getDatastoreForConnection('foo')).transactionManager.transactionSynchronization = synchronization
 
         when:
         boolean failed = false
@@ -165,14 +177,15 @@ class PlainClassInTenantBlockSpec extends Specification {
         PlainNote.withTransaction { PlainNote.list()*.text.sort() } == ['inner', 'seed']
 
         where:
-        [mode, write, fails] << [MODES, OWN_TRANSACTION_WRITES.keySet().toList(), [false, true]].combinations()
+        [mode, write, fails, synchronization] << [MODES, OWN_TRANSACTION_WRITES.keySet().toList(), [false, true], SYNCHRONIZATION_MODES].combinations()
         outcome = fails ? 'fails' : 'commits'
     }
 
     @Unroll
-    void 'with #mode multi-tenancy, a multi-tenant class is still written by the tenant\'s transaction'() {
+    void 'with #mode multi-tenancy and synchronization=#synchronization, a multi-tenant class is still written by the tenant\'s transaction'() {
         given:
         startDatastore(mode)
+        ((SimpleMapDatastore) datastore.getDatastoreForConnection('foo')).transactionManager.transactionSynchronization = synchronization
 
         when:
         Tenants.withId('foo') { new TransactionalPlainNoteWriter().run { new TenantNote(text: 'tenant').save() } }
@@ -181,7 +194,7 @@ class PlainClassInTenantBlockSpec extends Specification {
         Tenants.withId('foo') { TenantNote.withTransaction { TenantNote.list()*.text } } == ['tenant']
 
         where:
-        mode << MODES
+        [mode, synchronization] << [MODES, SYNCHRONIZATION_MODES].combinations()
     }
 
     @Unroll
@@ -199,11 +212,77 @@ class PlainClassInTenantBlockSpec extends Specification {
         mode << MODES
     }
 
+    @Unroll
+    void 'with #mode multi-tenancy, a flushed save with tenant #tenantId and boundSession=#boundSession needs no tenant transaction'() {
+        given:
+        startDatastore(mode)
+        PlainNote saved
+        Closure write = {
+            Tenants.withTenant(PlainNote, tenantId) {
+                saved = new PlainNote(text: 'flushed').save(flush: true)
+            }
+        }
+
+        when:
+        if (boundSession) {
+            PlainNote.withSession { write.call() }
+        }
+        else {
+            write.call()
+        }
+
+        then:
+        holder(PlainNote, saved.id).is(datastore)
+        PlainNote.withTransaction { PlainNote.list()*.text.sort() } == ['flushed', 'seed']
+
+        where:
+        [mode, tenantId, boundSession] << [MODES, ['foo', 'unregistered'], [false, true]].combinations()
+    }
+
+    @Unroll
+    void 'with #mode multi-tenancy and synchronization=#synchronization, a flushed save with tenant #tenantId ignores another transaction and boundSession=#boundSession'() {
+        given:
+        startDatastore(mode)
+        def other = (SimpleMapDatastore) datastore.getDatastoreForConnection('bar')
+        other.transactionManager.transactionSynchronization = synchronization
+        Closure write = {
+            Tenants.withTenant(PlainNote, tenantId) {
+                new PlainNote(text: 'flushed').save(flush: true)
+            }
+        }
+
+        when:
+        new TransactionTemplate(other.transactionManager).execute { status ->
+            if (boundSession) {
+                PlainNote.withSession { write.call() }
+            }
+            else {
+                write.call()
+            }
+            status.setRollbackOnly()
+        }
+
+        then:
+        PlainNote.withTransaction { PlainNote.list()*.text.sort() } == ['flushed', 'seed']
+
+        where:
+        [mode, tenantId, boundSession, synchronization] << [MODES, ['foo', 'unregistered'], [false, true], SYNCHRONIZATION_MODES].combinations()
+    }
+
+    static final List<Integer> SYNCHRONIZATION_MODES = [
+            AbstractPlatformTransactionManager.SYNCHRONIZATION_ALWAYS,
+            AbstractPlatformTransactionManager.SYNCHRONIZATION_NEVER
+    ]
+
     static final List<MultiTenancySettings.MultiTenancyMode> MODES = [
             MultiTenancySettings.MultiTenancyMode.DATABASE, MultiTenancySettings.MultiTenancyMode.SCHEMA
     ]
 
     static final Map<String, Closure> WRITES = [
+            'a flushed save': { PlainClassInTenantBlockSpec spec -> new PlainNote(text: 'inner').save(flush: true) },
+            'a flushed insert': { PlainClassInTenantBlockSpec spec -> new PlainNote(text: 'inner').insert(flush: true) },
+            'a flushed delete': { PlainClassInTenantBlockSpec spec -> PlainNote.get(spec.seed.id).delete(flush: true) },
+            'a flushed deleteAll': { PlainClassInTenantBlockSpec spec -> PlainNote.deleteAll([flush: true], [PlainNote.get(spec.seed.id)]) },
             'a save'     : { PlainClassInTenantBlockSpec spec -> new PlainNote(text: 'pending').save() },
             'an insert'  : { PlainClassInTenantBlockSpec spec -> new PlainNote(text: 'pending').insert() },
             'a delete'   : { PlainClassInTenantBlockSpec spec -> PlainNote.get(spec.seed.id).delete() },
@@ -212,7 +291,9 @@ class PlainClassInTenantBlockSpec extends Specification {
     ]
 
     static final Map<String, Closure> OWN_TRANSACTION_WRITES = [
-            'a save with flush: true'     : { PlainClassInTenantBlockSpec spec -> new PlainNote(text: 'inner').save(flush: true) },
+            'a flushed save in withTransaction': { PlainClassInTenantBlockSpec spec ->
+                PlainNote.withTransaction { new PlainNote(text: 'inner').save(flush: true) }
+            },
             'a save in withTransaction'   : { PlainClassInTenantBlockSpec spec ->
                 PlainNote.withTransaction { new PlainNote(text: 'inner').save() }
             },
