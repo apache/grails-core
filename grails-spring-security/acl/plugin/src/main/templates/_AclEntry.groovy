@@ -19,7 +19,13 @@
 
 package grails.plugin.springsecurity.acl
 
-class AclEntry {
+import groovy.transform.EqualsAndHashCode
+
+@EqualsAndHashCode(includes = ['aclObjectIdentity', 'aceOrder', 'sid', 'mask',
+        'granting', 'auditSuccess', 'auditFailure'])
+class AclEntry implements Serializable {
+
+    private static final long serialVersionUID = 1
 
     AclObjectIdentity aclObjectIdentity
     int aceOrder
