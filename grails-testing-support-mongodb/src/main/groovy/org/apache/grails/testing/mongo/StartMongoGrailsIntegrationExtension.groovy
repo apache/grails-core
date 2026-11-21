@@ -68,7 +68,8 @@ class StartMongoGrailsIntegrationExtension extends AbstractMongoGrailsExtension 
     @Override
     void stop() {
         if (dbContainer) {
-            dbContainer.start()
+            dbContainer.stop()
+            dbContainer = null
         }
     }
 }
