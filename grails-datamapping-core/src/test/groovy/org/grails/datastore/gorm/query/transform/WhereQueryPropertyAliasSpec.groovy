@@ -235,7 +235,8 @@ class AliasFieldLeakBook {
         when:
         ClassNode classNode = compileToClassNode(source, 'AliasFieldLeakBook')
 
-        then: 'the method compares with the value of its local variable, not with a property'
+        then: 'the field still compares the properties, the method compares with the value of its local variable'
+        methodCallsIn(classNode.getField('q').initialExpression).any { it.methodAsString == 'eqProperty' && constantArg(it, 1) == 't.nested.whatever' }
         methodCallsNamed(classNode, 'eqProperty', 'usesTAsAMap').isEmpty()
         methodCallsNamed(classNode, 'eq', 'usesTAsAMap').any { constantArg(it, 0) == 'otherProperty' }
     }
@@ -271,7 +272,8 @@ class AliasCapturedLocalBook {
         when:
         ClassNode classNode = compileToClassNode(source, 'AliasCapturedLocalBook')
 
-        then: 'the captured local is not read as the property title, the property itself is'
+        then: 'the captured local is not read as the property title (the comparison itself is dropped when the alias path is written first, the latent issue 17110), the property itself is'
+        methodCallsNamed(classNode, 'setAlias', 'findCaptured').size() == 1
         methodCallsNamed(classNode, 'eqProperty', 'findCaptured').isEmpty()
         methodCallsNamed(classNode, 'eqProperty', 'findProperty').any { constantArg(it, 0) == 'title' && constantArg(it, 1) == 't.nested.whatever' }
     }
