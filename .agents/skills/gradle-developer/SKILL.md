@@ -435,8 +435,6 @@ Use the **fully qualified** plugin IDs in `plugins { id '…' }` blocks. Most ar
 | `org.apache.grails.gradle.grails-gsp` |
 | `org.apache.grails.gradle.grails-gson` |
 | `org.apache.grails.gradle.grails-markup` |
-| `org.apache.grails.gradle.grails-profile` |
-| `org.apache.grails.gradle.grails-publish-profile` |
 | `org.apache.grails.gradle.grails-cli` |
 | `org.apache.grails.gradle.grails-plugin-cli` |
 | `org.apache.grails.gradle.grails-cli-library` |

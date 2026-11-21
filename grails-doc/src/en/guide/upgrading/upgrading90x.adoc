@@ -1621,10 +1621,10 @@ Not changed: `grails.codegen.defaultPackage` is still written to `grails-app/con
 
 ===== Required Actions
 
-None for an application that exists: its build and its `grails-forge-cli.yml` are left as they are, and nothing has to be removed from them for this change.
+None for the `grails-forge-cli.yml` of an application that exists: it is left as it is. The `profile` line of its `build.gradle` has to be removed, because the build fails with it: see note 39, "The Grails Shell and the Profiles Are Not Published, and a Build Cannot Declare a Profile".
 
 * A tool or script of your own that reads `grails-forge-cli.yml` of a newly generated application reads `.grails/project.yml` (application type, default package, options) and `.grails/forge.lock.yml` (features) instead. There is no option that writes the old file. To have one for such a tool all the same, write it yourself with the keys the tool reads; the Grails Forge CLI then warns when it does not say the same default package and features as `.grails`, and goes by `.grails`.
-* Do not add the `profile` line back to a newly generated application: the `grails` command and the Grails wrapper do not start the Grails shell any more (see note 37), and nothing else reads it.
+* Do not add the `profile` line back to a newly generated application: nothing reads it, and the build fails with it (see note 39).
 * When the files of `.grails` cannot be used, because one was changed by hand or is missing, the `create-*` code generation commands of a newly generated application are not there until the directory is as it was: restore it from version control. An application that has a `grails-forge-cli.yml` goes by that file then, as before.
 * A feature pack of your own that writes a file named `grails-forge-cli.yml` or `grails-cli.yml` to the root of the application is refused when the application is generated, because the command line would read that file as the record of a project. Give the file another name.
 * An application that a snapshot of Grails 9 generated before this change cannot have a feature added with `feature add` by a later build of the same version: the command says that the application cannot be generated again as it was and names `build.gradle`. Add the dependencies and the configuration of the feature by hand, or generate the application again.
@@ -1736,3 +1736,32 @@ Scripts inside a project are not affected: `run-script` runs a Groovy script wit
 
 * *A script that was started with `grails run`.* Make it a project: create an application with the features it needs and move the code of the script into it, or run the code inside an existing application with `run-script`.
 * *Code that names `GormCompilerAutoConfiguration`.* Remove it. Nothing takes its place, because nothing compiles a script outside a project.
+
+==== 39. The Grails Shell and the Profiles Are Not Published, and a Build Cannot Declare a Profile
+
+Grails 9 does not build the Grails shell or the profiles, so these artifacts have no Grails 9 version in any repository:
+
+* `org.apache.grails:grails-shell-cli`
+* `org.apache.grails.profiles:base`, `plugin`, `profile`, `rest-api`, `rest-api-plugin`, `web` and `web-plugin`
+
+What goes with them:
+
+* *The Grails BOMs manage no version for them.* A dependency on one of these artifacts without a version is not resolved. The BOMs do not manage `org.springframework.boot:spring-boot-cli` either, which they managed for the shell.
+* *The Gradle plugins `org.apache.grails.gradle.grails-profile` and `org.apache.grails.gradle.grails-publish-profile` are removed.* They compiled a profile into a jar and published it, and nothing reads such a jar.
+* *A `profile` dependency fails the build.* The Grails Gradle plugins used to resolve the `profile` configuration for the shell, with the `web` profile, or `web-plugin` in a plugin, when the build declared none; the `grails.profile` system property that named another default is not read. In Grails 9 the configuration only refuses what is put into it. A build that declares a dependency in it, in the `dependencies` block or with `dependencies.add('profile', ...)`, fails while it is configured, Gradle names the line of the build script, and the message is this one, with the dependency and the project of the build:
+
+[source]
+----
+Grails 9 has no profiles: remove the 'profile' dependency 'org.apache.grails.profiles:web' from the build of root project 'myapp'. Nothing reads it, and the profiles are not published for Grails 9. See "The Grails Shell and the Profiles Are Not Published, and a Build Cannot Declare a Profile" in the Grails 9 upgrade notes: https://grails.apache.org/docs/latest/guide/upgrading.html
+----
+
+Nothing is downloaded for that configuration, and it cannot be resolved or used for dependencies of your own. A build without the line is not changed.
+
+===== Required Actions
+
+* *Remove every `profile ...` line* from the `dependencies` block of `build.gradle`, in every project of the build, and every `dependencies.add('profile', ...)` of build logic of your own. Nothing takes its place. This is also the line that note 35 says a generated application no longer has.
+* *Remove dependencies on `org.apache.grails:grails-shell-cli` and on `org.apache.grails.profiles:*`*, in every configuration. Code of your own that used classes of the shell (`org.grails.cli`) has to be written without them; a command of your own is an application command or a script of the project, as notes 32 to 34 describe.
+* *Give a dependency on `org.springframework.boot:spring-boot-cli` a version, or remove it.* The Grails shell was what used it.
+* *A profile of your own becomes a plugin with a feature pack*: see note 37.
+* *A build that applied `org.apache.grails.gradle.grails-profile` or `org.apache.grails.gradle.grails-publish-profile`* removes both plugin ids. There is nothing to apply in their place; the plugin that holds the feature pack is built and published as any other plugin.
+* *Build logic of your own that named `BuildSettings.PROFILE` or `BuildSettings.PROFILE_REPOSITORIES`* (`grails.util.BuildSettings` of `grails-gradle-model`) removes the reference: the constants are removed and nothing reads the two system properties. The `GrailsClasspath` tooling model of the Grails Gradle plugin, which the shell asked for the class path of a project, is removed with its `profile` part; a subclass of `GrailsGradlePlugin`, `GrailsWebGradlePlugin` or `GrailsPluginGradlePlugin` no longer passes a `ToolingModelBuilderRegistry` to the constructor.

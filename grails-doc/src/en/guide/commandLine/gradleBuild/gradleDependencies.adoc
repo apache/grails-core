@@ -57,7 +57,7 @@ dependencies {
 
 Note that version numbers are not present in the majority of the dependencies. This is thanks to the Grails Gradle Plugin, which adds `grails-bom` as a managed dependency platform. The BOM defines the default versions for most commonly used Grails dependencies and plugins.
 
-The platform is contributed lazily to eligible declarable configurations when their dependencies are observed, for example through resolution, publication, or `incoming.dependencies`. It therefore does not interfere with configurations populated on demand through `defaultDependencies`, such as the Grails `profile` configuration. Dedicated tool and annotation-processor classpaths, including the `jacoco` plugin's `jacocoAgent` and `jacocoAnt` configurations, are excluded so the application BOM does not change their transitive dependency versions.
+The platform is contributed lazily to eligible declarable configurations when their dependencies are observed, for example through resolution, publication, or `incoming.dependencies`. It therefore does not interfere with configurations populated on demand through `defaultDependencies`. Dedicated tool and annotation-processor classpaths, including the `jacoco` plugin's `jacocoAgent` and `jacocoAnt` configurations, are excluded so the application BOM does not change their transitive dependency versions.
 
 ==== Overriding Managed Versions
 

@@ -57,5 +57,3 @@ Many of these are built-in plugins provided by Gradle or third-party plugins. Th
 * `org.apache.grails.gradle.grails-plugin-cli` - Publishes a Grails plugin's CLI commands as a companion `-cli` artifact, keeping command code off application runtime classpaths
 * `org.apache.grails.gradle.grails-web` - Adds the web URL mappings report to the Gradle project
 * `org.apache.grails.gradle.grails-publish` - Assists in publishing to Maven or Nexus repositories
-* `org.apache.grails.gradle.grails-profile` - Marks the project as a Grails profile
-* `org.apache.grails.gradle.grails-publish-profile` - Adds support for publishing Grails Profiles

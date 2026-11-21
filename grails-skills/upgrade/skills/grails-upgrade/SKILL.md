@@ -643,7 +643,7 @@ spring:
   A profile asked for this way is a real one: it also registers `@Profile('web')` beans and reads `application-web.yml`, which the profile the framework added did not. Check that the application has none it does not want before adding it.
 - Delete `def profiles = [...]` from a plugin class of the project. Grails has not read the property since 7.1.0 and a plugin is enabled whatever it declares. A plugin that should contribute beans only for a Spring profile asks `applicationContext.environment.acceptsProfiles(Profiles.of('name'))` in `doWithSpring`; one that needs a web application uses a condition such as `@ConditionalOnWebApplication` on its auto-configuration.
 - Delete `grails.profile` from `application.yml` when nothing of the project reads it, and remove a "Profile" row from a welcome page that shows it. Replace `grails.config.Settings.PROFILE`, which is removed, with the literal `'grails.profile'` in code that still reads the key. `GrailsPlugin.PROFILES` is deprecated for removal.
-- Do not add `grails.profile` or a `profile` dependency to make something work: neither has an effect at run time.
+- Do not add `grails.profile` or a `profile` dependency to make something work: the key has no effect at run time, and the dependency fails the build (see "The Grails Shell and the Profiles Are Not Published").
 
 ## The `grails` Command and the Grails Wrapper
 
@@ -682,6 +682,20 @@ Outside a project, `grails run app.groovy` compiled a loose Groovy script and st
 - Scripts inside a project are unaffected: `run-script` and the script commands run through `runScriptCommand` work as before. `HibernateGormAutoConfiguration` is unchanged.
 - A script that was started with `grails run` becomes a project: create an application with the features it needs and move the code into it, or run it in an existing application with `run-script`.
 - Remove code that names `GormCompilerAutoConfiguration`. Nothing takes its place.
+
+## The Grails Shell and the Profiles Are Not Published
+
+Grails 9 publishes no `org.apache.grails:grails-shell-cli` and no `org.apache.grails.profiles:base`, `plugin`, `profile`, `rest-api`, `rest-api-plugin`, `web` or `web-plugin`. The Grails BOMs manage no version for them or for `org.springframework.boot:spring-boot-cli`, and the Gradle plugins `org.apache.grails.gradle.grails-profile` and `org.apache.grails.gradle.grails-publish-profile` are removed. The `profile` configuration of the Grails Gradle plugins only refuses what is declared in it: a build with a `profile` dependency fails while it is configured, at the line that declares it, with
+
+```
+Grails 9 has no profiles: remove the 'profile' dependency 'org.apache.grails.profiles:web' from the build of root project 'myapp'. Nothing reads it, and the profiles are not published for Grails 9. See "The Grails Shell and the Profiles Are Not Published, and a Build Cannot Declare a Profile" in the Grails 9 upgrade notes: https://grails.apache.org/docs/latest/guide/upgrading.html
+```
+
+- Remove every `profile ...` line from the `dependencies` block of each `build.gradle`, and every `dependencies.add('profile', ...)` of the project's build logic. Nothing replaces it.
+- Remove dependencies on `org.apache.grails:grails-shell-cli` and `org.apache.grails.profiles:*` from every configuration.
+- Give a dependency on `org.springframework.boot:spring-boot-cli` an explicit version, or remove it when only the shell needed it.
+- Remove the plugin ids `org.apache.grails.gradle.grails-profile` and `org.apache.grails.gradle.grails-publish-profile`; there is nothing to apply in their place. A profile of the project's own becomes a plugin with a feature pack.
+- Remove references to `BuildSettings.PROFILE` and `BuildSettings.PROFILE_REPOSITORIES`, which are removed. A subclass of `GrailsGradlePlugin`, `GrailsWebGradlePlugin` or `GrailsPluginGradlePlugin` no longer passes a `ToolingModelBuilderRegistry` to the constructor.
 
 # After the Upgrade
 
@@ -734,6 +748,7 @@ Outside a project, `grails run app.groovy` compiled a loose Groovy script and st
 - [ ] Domain classes saved through a data source other than the default one are checked for auditor properties, given timestamps and, with Neo4j, events that were expected to be left alone
 - [ ] Code that uses JLine compiles against JLine 4, and no build file declares `org.jline:jline-terminal-jna` or `org.jline:jline-terminal-jansi`
 - [ ] Commands that read an option followed by an empty argument, or quoted arguments with spaces at their ends, expect the Grails 9 values, and no command works around a value cut at its second `=`
+- [ ] No build file declares a `profile` dependency, depends on `grails-shell-cli` or `org.apache.grails.profiles`, applies `grails-profile` or `grails-publish-profile`, or declares `spring-boot-cli` without a version
 - [ ] The full test suite passes on Groovy 6
 
 ## Pitfalls to Avoid

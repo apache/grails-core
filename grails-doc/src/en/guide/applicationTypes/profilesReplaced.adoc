@@ -48,7 +48,7 @@ Until Grails 8 a project was created from a _profile_: an artifact with a skelet
 |Removed. `grails help` lists the `create-` commands, and each of them lists its features with `--list-features`.
 
 |The `profile "org.apache.grails.profiles:web"` dependency in `build.gradle`
-|Not written by the `create-` commands. Nothing of the build or of the running application used it.
+|Not written by the `create-` commands. Nothing of the build or of the running application used it. A build that still has the line fails and says to remove it.
 
 |`grails.profile` in `application.yml`
 |Not written and not read: no Spring profile is active because of the type of an application.
