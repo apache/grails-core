@@ -1893,7 +1893,7 @@ The Grails shell ran the build of a project through the Gradle Tooling API. The 
 
 * *A project needs a Gradle wrapper.* In a project that has no `gradlew`, and none in a directory above it that has a `settings.gradle`, the commands that are a build run nothing, say so and end with exit code 1. No other Gradle is used.
 * *`gradle`* gives every argument to Gradle as it is and has no options of its own: `grails gradle --help` is the help of Gradle, and `grails help gradle` that of the command.
-* *`test-app`* runs `test` and, in a project with a `src/integration-test` directory, `integrationTest`. A test that is named, as in `test-app BookControllerSpec`, is a filter of both tasks, and Gradle fails a test task that has no test of that name, so name the task too: `test-app --unit BookControllerSpec`. `--continuous` is the continuous build of Gradle. `--integration` in a project without `src/integration-test` ends with exit code 1.
+* *`test-app`* runs `test` and, in a project with a `src/integration-test` directory, `integrationTest`. A test that is named, as in `test-app BookControllerSpec`, is looked for in both tasks and runs where it is found (see note 53). `--continuous` is the continuous build of Gradle. `--integration` in a project without `src/integration-test` ends with exit code 1.
 * *`run-app`* takes `--port`, `--host`, `--https`, `--debug-jvm` and `--query-tail`, also with one dash as the shell spelt them, and no Gradle task or argument after its name: what is for Gradle follows `--`. New are `--detach`, which returns once the application answers and leaves it running until `stop-app`, `--foreground` and `--ready-timeout`.
 * *`stop-app`* stops what `run-app` of this command line started for the project, by the record in `.grails/run`. It does not read `build/run-app.pid`, has no `--port` or `--host`, and does not stop an application that was started with `./gradlew bootRun` or by the Grails shell.
 * *`shell`* runs the Groovy shell of the application. In the Grails shell the command only said to run `gradle shell -q`.
@@ -1903,7 +1903,6 @@ The Grails shell ran the build of a project through the Gradle Tooling API. The 
 ===== Required Actions
 
 * Commit the Gradle wrapper (`gradlew`, `gradlew.bat`, `gradle/wrapper`) to a project that has none: `gradle wrapper`, run with an installed Gradle of the version Grails 9 needs, creates it.
-* Replace `grails test-app <test>` in jobs with `grails test-app --unit <test>` or `--integration <test>`, where the test is in one of the two source sets only.
 * Replace `grails run-app <Gradle arguments>` with `grails run-app -- <Gradle arguments>`.
 * A job that starts the application with one tool and stops it with `grails stop-app` starts it with `grails run-app --detach`.
 

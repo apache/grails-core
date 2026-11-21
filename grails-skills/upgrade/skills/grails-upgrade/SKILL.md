@@ -769,7 +769,7 @@ Kept under their names: `create-app`, `create-plugin`, `create-web-plugin`, the 
 The shell ran builds through the Gradle Tooling API. `grails` runs `./gradlew` of the project (in a multi-project build, the wrapper of the root) and no other Gradle.
 
 - Check that `gradlew`, `gradlew.bat` and `gradle/wrapper/` are committed. Without them `compile`, `test-app`, `run-app` and the other build commands run nothing and exit 1.
-- `grails test-app <test>` filters both `test` and `integrationTest`, and Gradle fails the task that has no such test. Replace it with `grails test-app --unit <test>` or `grails test-app --integration <test>`.
+- `grails test-app <test>` looks for the test in both `test` and `integrationTest` and runs it where it is found; nothing to change (see the `test-app` entry below for a build with an earlier Grails Gradle plugin).
 - `grails run-app` takes no Gradle arguments after its name: use `grails run-app -- <gradle arguments>`. Options: `--port`, `--host`, `--https`, `--debug-jvm`, `--query-tail`, `--detach`, `--foreground`, `--ready-timeout`.
 - `grails stop-app` only stops what `grails run-app` of Grails 9 started (record in `.grails/run`); it does not read `build/run-app.pid` and does not stop `./gradlew bootRun`. In jobs start the application with `grails run-app --detach` and stop it with `grails stop-app`.
 - `grails shell` now runs the Groovy shell of the application; `grails assemble --clean` now cleans first.
