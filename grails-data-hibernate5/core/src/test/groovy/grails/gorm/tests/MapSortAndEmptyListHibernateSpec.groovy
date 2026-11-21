@@ -213,28 +213,31 @@ class MapSortAndEmptyListHibernateSpec extends GrailsDataTckSpec<GrailsDataHiber
 
     void "a map sort on a criteria builder constructed on its own sorts like the one of the domain class"() {
         given:
-        List<String> wrong = []
-        List<Map> sorts = [
-                [title: 'asc'],
-                [title: 'desc'],
-                [title: 'DESC'],
-                [title: 'asc', id: 'desc'],
-                [id: 'desc', title: 'asc']
+        Map<Map, List<String>> expectedBySort = [
+                ([title: 'asc'])             : ['alpha', 'beta', 'zeta'],
+                ([title: 'desc'])            : ['zeta', 'beta', 'alpha'],
+                ([title: 'DESC'])            : ['zeta', 'beta', 'alpha'],
+                ([title: 'asc', id: 'desc']) : ['alpha', 'beta', 'zeta'],
+                ([id: 'desc', title: 'asc']) : ['alpha', 'beta', 'zeta']
         ]
+        List<String> wrong = []
 
         when:
-        sorts.each { Map sort ->
+        expectedBySort.each { Map sort, List<String> expected ->
             Closure block = { ne('title', 'omega') }
-            List expected = MsBook.createCriteria().list(sort: sort, block)*.title
             List standalone = new HibernateCriteriaBuilder(MsBook, manager.sessionFactory).list(sort: sort, block)*.title
-            if (standalone != expected) {
-                wrong << "$sort: expected $expected, standalone $standalone".toString()
+            List ofClass = MsBook.createCriteria().list(sort: sort, block)*.title
+            if (standalone != expected || ofClass != expected) {
+                wrong << "$sort: expected $expected, standalone $standalone, of the class $ofClass".toString()
             }
         }
+        List byIdFirst = new HibernateCriteriaBuilder(MsBook, manager.sessionFactory).list(sort: [id: 'desc', title: 'asc']) { }*.title
         List allTitles = new HibernateCriteriaBuilder(MsBook, manager.sessionFactory).list(sort: [title: 'desc']) { }*.title
 
         then:
         wrong == []
+        byIdFirst == MsBook.createCriteria().list(sort: [id: 'desc']) { }*.title
+        byIdFirst != allTitles
         allTitles == ['zeta', 'omega', 'beta', 'alpha']
     }
 
