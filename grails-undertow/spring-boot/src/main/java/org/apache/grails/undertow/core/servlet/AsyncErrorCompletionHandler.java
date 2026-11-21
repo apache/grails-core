@@ -32,6 +32,10 @@ import io.undertow.servlet.spec.AsyncContextImpl;
  * so its listeners are never told it completed: {@code ServerHttpObservationFilter} never stops its observation of
  * the request, and a {@code DeferredResult} is never resolved. Tomcat leaves such processing to time out, and so does
  * Undertow when no error page maps to the error.
+ * <p>
+ * A dispatch that completes the processing itself after sending the error would otherwise have its listeners told
+ * before the error page runs, since Undertow completes it once the dispatch has returned and only then sends the
+ * error. The error is sent here first in that case, so the listeners are told once it has been answered.
  */
 final class AsyncErrorCompletionHandler implements HttpHandler {
 
@@ -50,7 +54,16 @@ final class AsyncErrorCompletionHandler implements HttpHandler {
         }
         this.next.handleRequest(exchange);
         AsyncContextImpl asyncContext = context.getOriginalRequest().getAsyncContextInternal();
-        if (context.getErrorCode() > 0 && asyncContext != null && !asyncContext.isCompletedBeforeInitialRequestDone()) {
+        if (context.getErrorCode() <= 0 || asyncContext == null) {
+            return;
+        }
+        if (asyncContext.isCompletedBeforeInitialRequestDone()) {
+            // Undertow tells the listeners as soon as this returns, and sends the error after them. Send it now, and
+            // clear it so that Undertow does not send it again
+            context.getOriginalResponse().doErrorDispatch(context.getErrorCode(), context.getErrorMessage());
+            context.setError(-1, null);
+        }
+        else {
             exchange.addExchangeCompleteListener((completed, nextListener) -> {
                 try {
                     asyncContext.complete();
