@@ -92,4 +92,4 @@ The remember-me cookie is very secure, but for an even stronger solution you can
 
 Persistent login is also useful for authentication schemes like Facebook, where you do not manage passwords in your database, but most of the other user information is stored locally. Without a password you cannot use the standard cookie format, so persistent logins enable remember-me cookies in these scenarios.
 
-To use this feature, run the <<core-s2-create-persistent-token>> script. This will create the domain class, and register its name in `grails-app/conf/application.groovy`. It will also enable persistent logins by setting `rememberMe.persistent` to `true`.
+To use this feature, run the <<core-s2-create-persistent-token>> command. This will create the domain class, and register its name in the configuration of the project, `grails-app/conf/application.groovy` or `grails-app/conf/application.yml`. It will also enable persistent logins by setting `rememberMe.persistent` to `true`.

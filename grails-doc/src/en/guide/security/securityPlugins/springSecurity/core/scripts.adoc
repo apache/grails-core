@@ -18,7 +18,24 @@ under the License.
 ////
 
 [[core-scripts]]
-== Scripts
+== Commands
+
+The plugin has three commands that create domain classes and add their settings to the configuration of the project. They are commands of the plugin that run in the application: the Gradle task `runCommand` starts the application and calls the command, so the application has to be able to start, which an application that has the plugin and no security settings yet does.
+
+A command is run in one of three ways, here for `s2-quickstart`:
+
+[source,bash]
+----
+grails run-command s2-quickstart com.yourapp User Role
+./gradlew runCommand -Pargs="s2-quickstart com.yourapp User Role"
+grails s2-quickstart com.yourapp User Role
+----
+
+The first two work as soon as the plugin is a dependency of the project. `grails` has the commands under their own names, as in the third line, once the build of the project has listed the commands of the application and its plugins, which `grails gradle grailsCommandCatalog` does.
+
+The settings are appended to `grails-app/conf/application.groovy` when the project has that file. A project without it that has `grails-app/conf/application.yml` gets them there, as one more YAML document at the end of the file, and a project with neither file gets `application.groovy`. A domain class that already exists is kept as it is; the settings are appended again when a command is run again.
+
+NOTE: Before Grails 9 the three were also script commands of the plugin, run with `./grailsw s2-quickstart` or `./gradlew runScriptCommand`. The scripts are removed; the commands have the same names and arguments.
 
 include::scripts/s2-quickstart.adoc[]
 
