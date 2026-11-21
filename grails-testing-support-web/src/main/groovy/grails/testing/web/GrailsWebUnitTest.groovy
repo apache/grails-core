@@ -24,9 +24,11 @@ import groovy.transform.CompileStatic
 
 import org.springframework.mock.web.MockHttpSession
 import org.springframework.mock.web.MockServletContext
+import org.springframework.web.servlet.HandlerMapping
 
 import grails.artefact.Controller
 import grails.artefact.TagLibrary
+import grails.config.Settings
 import grails.core.GrailsClass
 import grails.core.GrailsControllerClass
 import grails.core.gsp.GrailsTagLibClass
@@ -44,6 +46,7 @@ import org.grails.plugins.testing.GrailsMockHttpServletRequest
 import org.grails.plugins.testing.GrailsMockHttpServletResponse
 import org.grails.taglib.TagLibraryLookup
 import org.grails.taglib.TagLibraryMetaUtils
+import org.grails.web.mapping.ForwardUrlMappingInfo
 import org.grails.testing.GrailsUnitTest
 import org.grails.web.servlet.mvc.GrailsWebRequest
 import org.grails.web.util.GrailsApplicationAttributes
@@ -148,6 +151,13 @@ trait GrailsWebUnitTest implements GrailsUnitTest {
 
         webRequest.request.setAttribute(GrailsApplicationAttributes.CONTROLLER, controller)
         webRequest.controllerName = GrailsNameUtils.getLogicalPropertyName(controller.class.name, ControllerArtefactHandler.TYPE)
+        if (grailsApplication.config.getProperty(Settings.MIME_NEGOTIATION_SPRING, Boolean,
+                Boolean.valueOf(Settings.MIME_NEGOTIATION_SPRING_DEFAULT))) {
+            // A URL mapping handles the request, as the URL mappings mark it in an application with the setting, so that
+            // what Spring MVC writes for the action is negotiated as there
+            webRequest.request.setAttribute(HandlerMapping.BEST_MATCHING_HANDLER_ATTRIBUTE,
+                    new ForwardUrlMappingInfo(controllerName: webRequest.controllerName))
+        }
 
         controller as T
     }

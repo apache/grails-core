@@ -247,6 +247,8 @@ public class UndertowServletWebServerFactory extends UndertowWebServerFactory
         deployment.setTempDir(tempDirs.createTempDir("undertow"));
         deployment.setEagerFilterInit(this.eagerFilterInit);
         deployment.setPreservePathOnForward(this.preservePathOnForward);
+        deployment.addInnerHandlerChainWrapper(ForwardDispatcherTypeHandler::new);
+        deployment.addInnerHandlerChainWrapper(AsyncErrorCompletionHandler::new);
         configureMimeMappings(deployment);
         configureWebListeners(deployment);
         for (UndertowDeploymentInfoCustomizer customizer : this.deploymentInfoCustomizers) {

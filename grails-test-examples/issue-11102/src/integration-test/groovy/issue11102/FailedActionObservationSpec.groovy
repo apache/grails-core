@@ -95,9 +95,31 @@ class FailedActionObservationSpec extends Specification implements HttpClientSup
         'the error view, for an Error'                                       | '/failing/answeredByViewForAnError'               | '/failing/answeredByViewForAnError'               | 'An error has occurred'            || 'AssertionError'
         'an error controller, for an Error'                                  | '/failing/answeredByControllerForAnError'         | '/failing/answeredByControllerForAnError'         | 'Answered by the error controller' || 'StackOverflowError'
         'an error controller that forwards'                                  | '/failing/answeredByForwardingController'         | '/failing/answeredByForwardingController'         | 'Answered by the error controller' || 'ArithmeticException'
+        'an error controller that fails'                                     | '/failing/answeredByFailingController'            | '/failing/answeredByFailingController'            | 'An error has occurred'            || 'IndexOutOfBoundsException'
         'the error view, after an include'                                   | '/failing/failsAfterInclude'                      | '/failing/failsAfterInclude'                      | 'An error has occurred'            || 'IllegalStateException'
         'an error controller, after an include'                              | '/failing/failsAfterIncludeAnsweredByController'  | '/failing/failsAfterIncludeAnsweredByController'  | 'Answered by the error controller' || 'UnsupportedOperationException'
         'an error controller, after an interceptor failed'                   | '/failing/failsInInterceptor'                     | '/failing/failsInInterceptor'                     | 'Answered by the error controller' || 'UnsupportedOperationException'
+    }
+
+    void 'a failed action is reported once with its own exception when its error controller fails with a server error Spring MVC resolves, #when'() {
+        when:
+        def response = http([(REQUEST_HEADER): path], path)
+
+        then: 'Spring MVC answered the failure of the error controller'
+        response.assertStatus(503)
+
+        and: 'the observation stopped with what the action threw, and the handlers heard of it once'
+        // Not its route: the container's error page that answers the 503 of an asynchronous request is dispatched to
+        // before the observation stops, and sets its own (spring-projects/spring-framework#37675)
+        new PollingConditions(timeout: 30).eventually {
+            assert STOPPED[path]?.last() == 'IllegalMonitorStateException'
+        }
+        NOTIFIED[path] == ['IllegalMonitorStateException']
+
+        where:
+        when                             | path
+        'on a request dispatch'          | '/failing/answeredByControllerFailingWithServerError'
+        'after the action started async' | '/failing/answeredByControllerFailingWithServerErrorAfterStartingAsync'
     }
 
     void 'a failure #handler answers inside an include is not the failure of the page that included it'() {

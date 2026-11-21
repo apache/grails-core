@@ -212,7 +212,8 @@ class ReflectionUtils {
         // the mapping for a different action than the one about to execute - and authorize that one instead.
         // Under the servlet filter the request already reports the overridden method and this resolves to it.
         String method = HiddenHttpMethod.resolveOverride(grailsRequest.request) ?: grailsRequest.request.method
-        String version = grailsRequest.getHeader(ACCEPT_VERSION) ?: extension.getMimeTypeForRequest(grailsRequest).version
+        // none where the request accepts no configured type, as with grails.mime.negotiation.spring
+        String version = grailsRequest.getHeader(ACCEPT_VERSION) ?: extension.getMimeTypeForRequest(grailsRequest)?.version
         urlMappingsHolder.matchAll requestUrl, method, version == null ? UrlMapping.ANY_VERSION : version
     }
 
