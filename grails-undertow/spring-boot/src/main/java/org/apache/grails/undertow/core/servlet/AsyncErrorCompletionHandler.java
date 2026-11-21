@@ -27,10 +27,11 @@ import io.undertow.servlet.spec.AsyncContextImpl;
 
 /**
  * Completes the asynchronous processing a request dispatch started once the error that dispatch sent has been
- * answered, as Tomcat and Jetty do. Undertow sends the error, through the error page that maps to it, once the dispatch
- * has returned, and ends the exchange with it. The asynchronous processing is then never completed and never times
- * out, so its listeners are never told it completed: {@code ServerHttpObservationFilter} never stops its observation
- * of the request, and a {@code DeferredResult} is never resolved.
+ * answered, as Jetty does. Undertow sends the error, through the error page that maps to it, once the dispatch has
+ * returned, and ends the exchange with it. The asynchronous processing is then never completed and never times out,
+ * so its listeners are never told it completed: {@code ServerHttpObservationFilter} never stops its observation of
+ * the request, and a {@code DeferredResult} is never resolved. Tomcat leaves such processing to time out, and so does
+ * Undertow when no error page maps to the error.
  */
 final class AsyncErrorCompletionHandler implements HttpHandler {
 
