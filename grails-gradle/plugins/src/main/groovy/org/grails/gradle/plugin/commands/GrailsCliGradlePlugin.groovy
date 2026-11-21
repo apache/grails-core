@@ -18,6 +18,7 @@
  */
 package org.grails.gradle.plugin.commands
 
+import java.util.concurrent.Callable
 import java.util.jar.JarFile
 
 import groovy.transform.CompileDynamic
@@ -44,6 +45,7 @@ import org.gradle.api.tasks.JavaExec
 import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.TaskContainer
 import org.gradle.api.tasks.TaskProvider
+import org.gradle.api.tasks.testing.Test
 import org.gradle.api.tasks.util.PatternFilterable
 
 import grails.util.BuildSettings
@@ -51,6 +53,7 @@ import grails.util.Environment
 import grails.util.GrailsNameUtils
 import org.grails.gradle.plugin.core.GrailsExtension
 import org.grails.gradle.plugin.core.GrailsGradlePlugin
+import org.grails.gradle.plugin.core.TestPhaseNames
 import org.grails.gradle.plugin.util.ClasspathUtils
 import org.grails.gradle.plugin.util.SourceSets
 import org.grails.io.support.FactoriesLoaderSupport
@@ -190,6 +193,8 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
                     task.originsByPath.putAll(artifacts.resolvedArtifacts.map(new GrailsCommandCatalogTask.OriginsByPath()))
                 }
                 task.origins.set(task.originsByPath.map(new GrailsCommandCatalogTask.Origins()))
+                // the names of the Test tasks there are when the task is about to run: none is created for them
+                task.testPhases.set(project.provider({ TestPhaseNames.phases(project.tasks.withType(Test).names) } as Callable<Map<String, String>>))
                 task.catalogFile.convention(project.layout.buildDirectory.file(GrailsCommandCatalogTask.CATALOG_LOCATION))
             }
         }

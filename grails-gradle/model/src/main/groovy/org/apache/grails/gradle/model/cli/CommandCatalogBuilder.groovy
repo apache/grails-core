@@ -94,6 +94,12 @@ class CommandCatalogBuilder {
     /** The most characters a diagnostic has. */
     public static final int MAX_DIAGNOSTIC_LENGTH = 600
 
+    /** The most test phases a catalog lists. */
+    public static final int MAX_TEST_PHASES = 64
+
+    /** The most characters the name of a test phase, and of its task, has. */
+    public static final int MAX_TEST_PHASE_LENGTH = 64
+
     /** How many of the classes or origins that share something a diagnostic names; it counts the rest. */
     public static final int MAX_NAMED = 3
 
@@ -102,6 +108,8 @@ class CommandCatalogBuilder {
     private static final String PROVIDER_KEY = 'org.apache.grails.core.cli.ApplicationCommandProvider'
     private static final String LEGACY_PROVIDER = 'org.apache.grails.core.cli.compat.LegacyApplicationCommandProvider'
     private static final String LEGACY_PROVIDER_CLASS = 'org/apache/grails/core/cli/compat/LegacyApplicationCommandProvider.class'
+    private static final String TEST_PHASE_NAME = '[a-z][a-z0-9]*(-[a-z0-9]+)*'
+    private static final String TEST_TASK_NAME = '[A-Za-z][A-Za-z0-9_-]*'
     private static final List<String> ARCHIVES = ['.jar', '.zip'].asImmutable()
 
     // class name -> where it is registered, in the order of the class path
@@ -109,6 +117,8 @@ class CommandCatalogBuilder {
     private final Map<String, String> legacy = new LinkedHashMap<String, String>()
     private final Set<String> diagnostics = new TreeSet<String>()
     private boolean legacySupport
+    // the task of each test phase by the name of the phase; null when the phases of the project were not given
+    private Map<String, String> testPhases
 
     /**
      * Reads the commands of one element of the class path. Elements are added in the order of the class path.
@@ -153,6 +163,27 @@ class CommandCatalogBuilder {
                 source.close()
             }
         }
+    }
+
+    /**
+     * Gives the test phases of the project, which the document then lists as {@code testPhases}: the
+     * name of each, which is the switch {@code grails test-app} selects it with, and its Gradle task.
+     * A phase is listed in the order it is given in. One whose name cannot be a switch (lower-case
+     * letters and digits in words joined by single hyphens, starting with a letter), or whose task
+     * has a name that is not letters, digits, hyphens and underscores, is not listed: it is run by
+     * its task. A document without {@code testPhases} says nothing of the phases of the project.
+     *
+     * @param phases the Gradle task of each phase, by the name of the phase
+     */
+    void testPhases(Map<String, String> phases) {
+        Map<String, String> listed = new LinkedHashMap<String, String>()
+        for (Map.Entry<String, String> phase : phases) {
+            if (listed.size() < MAX_TEST_PHASES && phase.key.length() <= MAX_TEST_PHASE_LENGTH && phase.key ==~ TEST_PHASE_NAME &&
+                    phase.value.length() <= MAX_TEST_PHASE_LENGTH && phase.value ==~ TEST_TASK_NAME) {
+                listed.put(phase.key, phase.value)
+            }
+        }
+        testPhases = listed
     }
 
     /**
@@ -231,6 +262,16 @@ class CommandCatalogBuilder {
         document.complete = lines.isEmpty()
         document.diagnostics = lines
         document.commands = commands
+        if (testPhases != null) {
+            List<Map<String, Object>> phases = []
+            for (Map.Entry<String, String> phase : testPhases) {
+                Map<String, Object> entry = new LinkedHashMap<String, Object>()
+                entry.name = phase.key
+                entry.task = phase.value
+                phases << entry
+            }
+            document.testPhases = phases
+        }
         document
     }
 

@@ -75,6 +75,7 @@ class CommandCatalogSpec extends CommandProjectSpecification {
                         command('runtime', 'In the jar of the plugin itself', 'org.example:hello-plugin:1.2.3'),
                         command('sibling', 'Of a project of this build', 'org.example.test:companion:1.0.0'),
                 ],
+                testPhases : [[name: 'unit', task: 'test'], [name: 'integration', task: 'integrationTest']],
         ]) + '\n'
 
         and: 'the file is ASCII on one line and says nothing of this machine'

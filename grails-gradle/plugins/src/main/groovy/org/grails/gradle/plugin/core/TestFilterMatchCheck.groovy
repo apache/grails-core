@@ -56,13 +56,21 @@ abstract class TestFilterMatchCheck extends DefaultTask {
 
     @TaskAction
     void check() {
-        List<String> patterns = getPatterns().get()
-        List<String> tasks = getTestTasks().get()
+        check(getPatterns().get(), getTestTasks().get(), getCounts().files)
+    }
+
+    /**
+     * @param patterns the filter that was given
+     * @param tasks the paths of the test tasks it was given to
+     * @param counts the files those tasks wrote the number of tests they ran to
+     * @throws GradleException when there is a filter and no task ran a test
+     */
+    static void check(List<String> patterns, List<String> tasks, Set<File> counts) {
         if (patterns.isEmpty() || tasks.isEmpty()) {
             return
         }
         long tests = 0
-        for (File count : getCounts().files) {
+        for (File count : counts) {
             // a task without test classes writes nothing, and Gradle removes what it wrote before
             if (count.isFile()) {
                 String text = count.getText('UTF-8').trim()

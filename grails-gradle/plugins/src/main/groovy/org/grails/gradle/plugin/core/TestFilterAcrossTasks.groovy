@@ -58,8 +58,7 @@ class TestFilterAcrossTasks {
     private static final String TESTS_OPTION = '--tests'
 
     static void apply(Project project) {
-        Provider<String> asked = project.providers.gradleProperty(PROPERTY)
-        if (!asked.isPresent() || asked.get() == 'false') {
+        if (!isAsked(project)) {
             return
         }
         TaskProvider<TestFilterMatchCheck> check = project.tasks.register(CHECK_TASK_NAME, TestFilterMatchCheck) { TestFilterMatchCheck task ->
@@ -68,11 +67,7 @@ class TestFilterAcrossTasks {
             task.patterns.set(patterns(project.gradle.startParameter.taskRequests))
         }
         project.tasks.withType(Test).configureEach { Test test ->
-            test.filter.failOnNoMatchingTests = false
-            Provider<RegularFile> count = countFile(project, test.name)
-            // an output, so that a task that is up to date or taken from the build cache has the count of the run its results are of
-            test.outputs.file(count).withPropertyName('grailsTestFilterCount')
-            test.addTestListener(new TestCount(count.get().asFile))
+            count(test, countFile(project, test.name))
             test.finalizedBy(check)
         }
         // the test tasks that are part of this build, and no others: a count that an earlier build left says nothing of this one
@@ -91,7 +86,22 @@ class TestFilterAcrossTasks {
         }
     }
 
-    private static Provider<RegularFile> countFile(Project project, String taskName) {
+    /** Whether the project property is given, with any value but {@code false}. */
+    static boolean isAsked(Project project) {
+        Provider<String> asked = project.providers.gradleProperty(PROPERTY)
+        return asked.isPresent() && asked.get() != 'false'
+    }
+
+    /** Lets a test task pass that has no test for its filter, and has it write the number of tests it ran to a file. */
+    static void count(Test test, Provider<RegularFile> count) {
+        test.filter.failOnNoMatchingTests = false
+        // an output, so that a task that is up to date or taken from the build cache has the count of the run its results are of
+        test.outputs.file(count).withPropertyName('grailsTestFilterCount')
+        test.addTestListener(new TestCount(count.get().asFile))
+    }
+
+    /** The file a test task of the project writes the number of tests it ran to. */
+    static Provider<RegularFile> countFile(Project project, String taskName) {
         return project.layout.buildDirectory.file("grails/test-filter/${taskName}.count".toString())
     }
 

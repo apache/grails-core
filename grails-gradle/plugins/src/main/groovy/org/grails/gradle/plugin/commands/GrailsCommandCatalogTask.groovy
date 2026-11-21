@@ -51,7 +51,8 @@ import org.apache.grails.gradle.model.cli.CommandCatalogBuilder
  *
  * <p>The catalog is one JSON document, {@link CommandCatalogBuilder#FORMAT format 1} of the document
  * {@code help --json} of the command line writes, in {@link #CATALOG_LOCATION} of the build
- * directory. The task reads registrations and descriptors and loads no class, so it starts no
+ * directory, which also lists the test phases of the project, its {@code Test} tasks, by the names
+ * {@code grails test-app} selects them with. The task reads registrations and descriptors and loads no class, so it starts no
  * application and runs no code of a dependency. The document has no time and no path of this
  * machine in it: the same commands give the same bytes.</p>
  *
@@ -105,6 +106,13 @@ abstract class GrailsCommandCatalogTask extends DefaultTask {
     @Input
     abstract ListProperty<String> getOrigins()
 
+    /**
+     * The test phases of the project, which {@code grails test-app} selects with a switch each: the
+     * Gradle task of each phase by the name of the phase.
+     */
+    @Input
+    abstract MapProperty<String, String> getTestPhases()
+
     @OutputFile
     abstract RegularFileProperty getCatalogFile()
 
@@ -118,6 +126,16 @@ abstract class GrailsCommandCatalogTask extends DefaultTask {
         for (File file : commandClasspath.files) {
             catalog.add(origins.get(file.absolutePath) ?: "file:${file.name}".toString(), file)
         }
+        // in the order of the phases: the unit tests, the integration tests, the others by name
+        Map<String, String> phases = testPhases.get()
+        Map<String, String> ordered = new LinkedHashMap<String, String>()
+        for (String first : ['unit', 'integration']) {
+            if (phases.containsKey(first)) {
+                ordered.put(first, phases.get(first))
+            }
+        }
+        ordered.putAll(new TreeMap<String, String>(phases).findAll { String name, String task -> !ordered.containsKey(name) })
+        catalog.testPhases(ordered)
         File target = catalogFile.get().asFile
         target.parentFile.mkdirs()
         target.setBytes(catalog.toJson().getBytes(StandardCharsets.US_ASCII))
