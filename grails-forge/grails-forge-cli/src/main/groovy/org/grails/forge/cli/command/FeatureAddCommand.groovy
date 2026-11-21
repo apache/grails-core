@@ -50,7 +50,8 @@ import java.util.function.Supplier
         'Adds features to the application in the current directory: its files and its record become those of an application that was created with them. ' +
                 'A feature the application already has is left as it is.',
         'A feature takes the place of one the application has by default, as postgres takes that of h2, and the command says which it replaces; ' +
-                'a feature that was asked for when the application was created is not replaced, and neither is an option it was created with.',
+                'a feature that was asked for by name, when the application was created or added to, is replaced only with --replace, ' +
+                'and an option the application was created with is never replaced.',
         'The files you changed keep your changes. When a feature changes or takes out what you changed too, or a file it writes is there already, ' +
                 'nothing is written and the files are named.'])
 @Component
@@ -69,6 +70,11 @@ class FeatureAddCommand extends BaseCommand implements Callable<Integer>, Projec
 
     @CommandLine.Option(names = ['--dry-run'], description = 'Say which files would be added, changed and removed, which features would be replaced, and which conflicts there are, and change nothing.')
     boolean dryRun
+
+    @CommandLine.Option(names = ['--replace'], description = 'Replace a feature that was asked for by name with the feature that takes its place, ' +
+            'as mysql takes that of a postgres the application was created with. Without it only a feature the application has by default is replaced. ' +
+            'It changes nothing when no such feature is in the way.')
+    boolean replace
 
     @CommandLine.Option(names = ['--diff'], description = 'Show the changes that would be made to the files, as a diff, and change nothing.')
     boolean diff
@@ -106,7 +112,7 @@ class FeatureAddCommand extends BaseCommand implements Callable<Integer>, Projec
             for (String message : (preview ? Collections.<String>emptyList() : addition.recover(directory).getMessages())) {
                 out("@|blue ||@ ${message}")
             }
-            ChangePlan plan = addition.plan(directory, features, getOperatingSystem(), this)
+            ChangePlan plan = addition.plan(directory, features, getOperatingSystem(), this, replace)
             return apply(plan, preview)
         } catch (FeatureSelectionException e) {
             // features an application cannot have are a mistake in the command line, as they are when it is created

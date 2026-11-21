@@ -483,10 +483,38 @@ Afterwards the project is the one `create-app --features postgres` makes: the H2
 
 `--dry-run` and `--diff` show the replacement and the lines and files that would go, and change nothing.
 
-Two things an application was created with by name are never replaced by adding a feature:
+Two things an application was created with by name are not replaced by adding a feature alone:
 
-* *A feature that was asked for.* For an application created with `create-app --features h2`, `h2` is a choice and no default. `feature add postgres` is refused with exit code 2, names both features and their group, and changes nothing. There is no option that forces the replacement, so that a command that adds never takes out what was chosen: create the application with the other feature, or change this one by hand.
-* *An option.* `gorm-hibernate7` would change `--data`, a servlet container `--servlet`, a reloading agent `--reloading`. These are refused with exit code 1; `--diff` shows what the change would come to.
+* *A feature that was asked for.* For an application created with `create-app --features h2`, `h2` is a choice and no default, and so is a feature that an earlier `feature add` named. `feature add postgres` is refused with exit code 2, names both features, their group and the `--replace` option, and changes nothing. See "Replacing a feature that was asked for" below.
+* *An option.* `gorm-hibernate7` would change `--data`, a servlet container `--servlet`, a reloading agent `--reloading`. These are refused with exit code 1, with `--replace` too; `--diff` shows what the change would come to.
+
+==== Replacing a feature that was asked for
+
+`--replace` says that a feature you asked for by name is to make way for the feature that is added:
+
+[source,console]
+----
+$ ./grailsw feature add mysql
+| Error The application has the feature postgres, which was asked for by name, and mysql would take the place of postgres (both are of the group database-driver): an application has one feature of such a group. A feature that was asked for is replaced only with --replace: feature add mysql --replace takes postgres out of the application and its record, as if the application had been created without it, and what you changed in the lines that go is a conflict. Nothing was changed
+$ ./grailsw feature add mysql --replace
+| Adding the feature mysql
+    mysql replaces postgres, which was asked for by name, in the group database-driver
+    update   build.gradle
+    update   grails-app/conf/application.yml
+    update   src/test/resources/application-test.yml
+| Feature mysql added, in the place of postgres. Commit the changes together with the directory .grails
+----
+
+The replacement is made the way a default is replaced, and by the same merge:
+
+* Afterwards the project is the one `create-app --features mysql` makes. `.grails/project.yml` names `mysql` among the features that were asked for and no longer `postgres`, the lock and the baseline are those of that application, `project show` prints the `create-` command with `mysql`, and `project regenerate --diff` finds nothing.
+* The other features that were asked for stay, and several features can be replaced by one command: `feature add mysql,geb-with-testcontainers --replace`. A feature that only the replaced one brought with it goes too, and is listed.
+* The lines of the replaced feature that you changed, the URL of its database for example, are a conflict, reported like every other conflict, and nothing is written. Your changes elsewhere in the same files are kept.
+* A feature that another feature of the application requires is not replaced: `grails-spring-security` stays while the application has `grails-spring-security-ui`, which requires it. The command names the feature that requires it, ends with exit code 2 and changes nothing, with `--replace` or without.
+* `--replace` replaces features of an exclusive group. It does not change an option the application was created with.
+* Where no feature that was asked for is in the way, `--replace` changes nothing of what the command does: a default is replaced as without it, and a feature that takes no place is added.
+
+`--dry-run` and `--diff` can be given with `--replace`, and show the replacement and change nothing.
 
 ==== The order of the keys in the configuration
 
@@ -576,7 +604,8 @@ The command changes a project only when it can do so safely, and otherwise says 
 * The features cannot be had together with those the application has. The rules are those of the `create-` commands, with the same messages and exit code 2: a feature that does not exist for the type of application, two features of one exclusive group, a feature that was left out with `--exclude-features` when the project was created.
 * The feature is that of a plugin outside Grails (a feature pack given by coordinates or with `--feature-pack-dir`), or the application has such a feature. Only features that are part of Grails can be added in this version.
 * The application already has the feature. The command says so, changes nothing and ends with exit code 0, so running the same command twice is harmless.
-* The feature would take the place of a feature that was asked for by name when the application was created. Only a default is replaced, see "A feature that takes the place of a default" above. Exit code 2.
+* The feature would take the place of a feature that was asked for by name, when the application was created or with an earlier `feature add`, and `--replace` was not given. Without the option only a default is replaced, see "Replacing a feature that was asked for" above. Exit code 2.
+* The feature would take the place of a feature that another feature of the application requires. Exit code 2, with `--replace` too.
 * The feature would change an option the application was created with: `gorm-hibernate7` takes the place of Hibernate 5 (`--data`), a servlet container or a reloading agent that of the one the application was created with (`--servlet`, `--reloading`). The command does not change options, so it refuses these with exit code 1.
 
 For a feature that would change an option, `--diff` and `--dry-run` show what it would come to: the options that would change, the features that would go, and every file with what would be added to it and what would be removed. Nothing is changed.

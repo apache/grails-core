@@ -615,7 +615,7 @@ class FeatureAddCommandSpec extends CommandSpec implements CommandFixture {
     }
 
     @Unroll
-    void "#added does not take the place of #asked, which was asked for when the application was created"() {
+    void "#added does not take the place of #asked, which was asked for when the application was created, unless --replace is given"() {
         given:
         create(dir, CreateAppCommand, ['--features=' + asked])
         Map<String, String> before = tree(dir)
@@ -626,11 +626,12 @@ class FeatureAddCommandSpec extends CommandSpec implements CommandFixture {
         when:
         int exit = add(added)
 
-        then: 'the message names both, and nothing is changed'
+        then: 'the message names both and the option that replaces the one by the other, and nothing is changed'
         exit == 2
-        err.toString().contains("The application was created with the feature ${asked}, which was asked for by name, and ${added} would take its place: " +
-                "both are of the group ${group}, of which an application has one. A feature that was asked for is not replaced by adding another; only one the " +
-                "application has by default is. An application has ${added} when it is created with it (--features ${added}). Nothing was changed")
+        err.toString().contains("The application has the feature ${asked}, which was asked for by name, and ${added} would take the place of ${asked} " +
+                "(both are of the group ${group}): an application has one feature of such a group. A feature that was asked for is replaced only with --replace: " +
+                "feature add ${added} --replace takes ${asked} out of the application and its record, as if the application had been created without it, " +
+                'and what you changed in the lines that go is a conflict. Nothing was changed')
         tree(dir) == before
         !new File(dir, '.grails/transactions').exists()
 
@@ -640,14 +641,309 @@ class FeatureAddCommandSpec extends CommandSpec implements CommandFixture {
 
         then:
         shown == 2
-        err.toString().contains("The application was created with the feature ${asked}, which was asked for by name")
+        err.toString().contains("The application has the feature ${asked}, which was asked for by name")
+        err.toString().contains("feature add ${added} --replace")
         tree(dir) == before
+
+        when: 'the command is told to replace it'
+        create(with, CreateAppCommand, ['--features=' + added])
+        out.reset()
+        err.reset()
+        int replacing = add(added, '--replace')
+
+        then: 'it says what it replaced'
+        replacing == 0
+        err.toString().isEmpty()
+        out.toString().contains("    ${added} replaces ${asked}, which was asked for by name, in the group ${group}\n")
+        out.toString().contains("Feature ${added} added, in the place of ${asked}")
+
+        and: 'every file is the file of the application that was created with the one and not the other, and so is the record'
+        tree(dir) == tree(with)
+        ProjectState.read(dir.toPath()).verifyBaseline(dir.toPath())
+        ProjectState.read(dir.toPath()).manifest.requestedFeatures*.name == [added]
+        !ProjectState.read(dir.toPath()).lock.featureNames.contains(asked)
+        new File(dir, '.grails/transactions').list() as List == ['lock']
+        !new File(home, '.grails/forge/transactions').list()
+
+        when: 'the application is generated again from its record and compared with what it is'
+        out.reset()
+        int regenerated = CliRunner.run(ProjectRegenerateCommand, beanContext, '--diff')
+
+        then:
+        regenerated == 0
+        err.toString().isEmpty()
+
+        when: 'the record is shown'
+        out.reset()
+        int show = CliRunner.run(ProjectShowCommand, beanContext)
+
+        then: 'the command line it gives creates the application with the feature that was added'
+        show == 0
+        out.toString().readLines().last().endsWith("create-app com.example.shop --features ${added}")
+        !out.toString().contains(asked)
 
         where:
         asked                     | added                     || group
         'h2'                      | 'postgres'                || 'database-driver'
         'postgres'                | 'mysql'                   || 'database-driver'
         'geb-with-local-browsers' | 'geb-with-testcontainers' || 'geb'
+    }
+
+    void "a feature that was added by name is replaced with --replace only"() {
+        given:
+        create(dir, CreateAppCommand, [])
+        create(with, CreateAppCommand, ['--features', 'mysql'])
+
+        expect: 'the default makes way without the option'
+        add('postgres') == 0
+        ProjectState.read(dir.toPath()).manifest.requestedFeatures*.name == ['postgres']
+
+        when:
+        Map<String, String> before = tree(dir)
+        int exit = add('mysql')
+
+        then:
+        exit == 2
+        err.toString().contains('The application has the feature postgres, which was asked for by name')
+        err.toString().contains('feature add mysql --replace')
+        tree(dir) == before
+
+        when:
+        err.reset()
+        int replacing = add('mysql', '--replace')
+
+        then:
+        replacing == 0
+        err.toString().isEmpty()
+        out.toString().contains('Feature mysql added, in the place of postgres')
+        tree(dir) == tree(with)
+    }
+
+    void "several features that were asked for are replaced at once, and the others that were asked for stay"() {
+        given:
+        create(dir, CreateAppCommand, ['--features=postgres,geb-with-local-browsers,grails-quartz'])
+        create(with, CreateAppCommand, ['--features=mysql,geb-with-testcontainers,grails-quartz,asciidoctor'])
+        Map<String, String> before = tree(dir)
+
+        when:
+        int exit = add('mysql,geb-with-testcontainers,asciidoctor')
+
+        then: 'each is named with what would take its place'
+        exit == 2
+        err.toString().contains('The application has the features geb-with-local-browsers, postgres, which were asked for by name, and ' +
+                'geb-with-testcontainers would take the place of geb-with-local-browsers (both are of the group geb), ' +
+                'mysql would take the place of postgres (both are of the group database-driver): an application has one feature of such a group.')
+        err.toString().contains('feature add mysql,geb-with-testcontainers,asciidoctor --replace takes geb-with-local-browsers, postgres out of the application')
+        tree(dir) == before
+
+        when:
+        err.reset()
+        int replacing = add('mysql,geb-with-testcontainers,asciidoctor', '--replace')
+
+        then:
+        replacing == 0
+        err.toString().isEmpty()
+        out.toString().contains('    mysql replaces postgres, which was asked for by name, in the group database-driver\n')
+        out.toString().contains('    geb-with-testcontainers replaces geb-with-local-browsers, which was asked for by name, in the group geb\n')
+        tree(dir) == tree(with)
+        ProjectState.read(dir.toPath()).manifest.requestedFeatures*.name == ['asciidoctor', 'geb-with-testcontainers', 'grails-quartz', 'mysql']
+    }
+
+    void "what the application had with the feature that is replaced, and does not have with the other, goes with it and is said"() {
+        given:
+        create(dir, CreateAppCommand, ['--features', 'postgres'])
+        create(with, CreateAppCommand, ['--features', 'h2'])
+
+        expect:
+        ProjectState.read(dir.toPath()).lock.featureNames.contains('testcontainers')
+        new File(dir, 'src/test/resources/application-test.yml').exists()
+
+        when:
+        int exit = add('h2', '--replace')
+
+        then:
+        exit == 0
+        err.toString().isEmpty()
+        out.toString().contains('    h2 replaces postgres, which was asked for by name, in the group database-driver\n')
+        out.toString().contains('    h2 takes out testcontainers, which the application does not have with it in the place of postgres\n')
+        out.toString().contains('    remove   src/test/resources/application-test.yml\n')
+        !new File(dir, 'src/test/resources/application-test.yml').exists()
+        !ProjectState.read(dir.toPath()).lock.featureNames.contains('testcontainers')
+        ProjectState.read(dir.toPath()).manifest.requestedFeatures*.name == ['h2']
+        tree(dir) == tree(with)
+    }
+
+    void "a feature that another feature of the application requires is not replaced, with --replace or without"() {
+        given:
+        create(dir, CreateAppCommand, ['--features=grails-spring-security,grails-spring-security-ui'])
+        Map<String, String> before = tree(dir)
+
+        expect:
+        ProjectState.read(dir.toPath()).manifest.requestedFeatures*.name == ['grails-spring-security', 'grails-spring-security-ui']
+
+        when:
+        int exit = add('spring-boot-starter-security', '--replace')
+
+        then: 'the feature that requires it is named, and nothing is changed'
+        exit == 2
+        err.toString().contains('The feature grails-spring-security is not replaced: the feature grails-spring-security-ui, which the application has or gets, requires it ' +
+                '(grails-spring-security-ui requires grails-spring-security), and an application has one feature of the group spring-security. ' +
+                'An application without grails-spring-security-ui can have another feature in the place of grails-spring-security. Nothing was changed')
+        tree(dir) == before
+        !new File(dir, '.grails/transactions').exists()
+
+        when: 'the option is not named as the way when it is none'
+        err.reset()
+        int without = add('spring-boot-starter-security')
+
+        then:
+        without == 2
+        err.toString().contains('The feature grails-spring-security is not replaced: the feature grails-spring-security-ui')
+        !err.toString().contains('--replace takes')
+        tree(dir) == before
+
+        when:
+        err.reset()
+        int shown = add('spring-boot-starter-security', '--replace', '--dry-run')
+
+        then:
+        shown == 2
+        tree(dir) == before
+    }
+
+    void "lines of a feature that was asked for and that were changed in the application are a conflict when it is replaced, and what was changed elsewhere is kept"() {
+        given:
+        create(dir, CreateAppCommand, ['--features', 'postgres'])
+        create(with, CreateAppCommand, ['--features', 'mysql'])
+        File config = new File(dir, 'grails-app/conf/application.yml')
+        String generated = config.text
+        config.text = generated.replace('jdbc:postgresql://localhost:5432/devDb', 'jdbc:postgresql://db.example.org:5432/ourDevDb')
+        File build = new File(dir, 'build.gradle')
+        build.text = '// our build\n' + build.text
+        Map<String, String> before = tree(dir)
+
+        expect:
+        config.text != generated
+
+        when:
+        int exit = add('mysql', '--replace')
+
+        then: 'the conflict is said as any other, and nothing is written'
+        exit == 1
+        out.toString().contains('    mysql replaces postgres, which was asked for by name, in the group database-driver')
+        out.toString().contains('    conflict grails-app/conf/application.yml: the feature changes')
+        out.toString().contains('jdbc:postgresql://db.example.org:5432/ourDevDb')
+        out.toString().contains('    merge    build.gradle (your changes are kept)')
+        err.toString().contains('The feature was not added: 1 file cannot be written without losing what the application has. Nothing was changed.')
+        tree(dir) == before
+        !new File(dir, '.grails/transactions').exists()
+
+        when: 'the line is what it was generated as again'
+        config.text = generated
+        out.reset()
+        err.reset()
+        int again = add('mysql', '--replace')
+
+        then:
+        again == 0
+        err.toString().isEmpty()
+        config.text == new File(with, 'grails-app/conf/application.yml').text
+        build.text == '// our build\n' + new File(with, 'build.gradle').text
+        tree(dir).findAll { it.key.startsWith('.grails/') } == tree(with).findAll { it.key.startsWith('.grails/') }
+    }
+
+    void "what replacing a feature that was asked for comes to is said with --dry-run and shown with --diff, and nothing is changed"() {
+        given:
+        create(dir, CreateAppCommand, ['--features', 'postgres'])
+        Map<String, String> before = tree(dir)
+
+        when:
+        int exit = add('mysql', '--replace', '--dry-run')
+
+        then:
+        exit == 0
+        err.toString().isEmpty()
+        out.toString().contains('To add the feature mysql\n' +
+                '    mysql replaces postgres, which was asked for by name, in the group database-driver\n' +
+                '    update   build.gradle\n' +
+                '    update   grails-app/conf/application.yml\n' +
+                '    update   src/test/resources/application-test.yml\n')
+        out.toString().contains('Nothing was changed')
+        !out.toString().contains('+++')
+        tree(dir) == before
+        !new File(dir, '.grails/transactions').exists()
+
+        when:
+        out.reset()
+        int shown = add('mysql', '--diff', '--replace')
+
+        then: 'the lines that go are in the diff like those that come'
+        shown == 0
+        out.toString().contains('-    runtimeOnly "org.postgresql:postgresql"')
+        out.toString().contains('-  driverClassName: org.postgresql.Driver')
+        out.toString() =~ /(?m)^\+.*mysql/
+        tree(dir) == before
+        !new File(dir, '.grails/transactions').exists()
+    }
+
+    @Unroll
+    void "--replace changes nothing of adding #added to what create-app #created made, where no feature that was asked for is in the way"() {
+        given:
+        create(dir, CreateAppCommand, created)
+        create(with, CreateAppCommand, ['--features', (asked + [added]).join(',')])
+
+        when:
+        int exit = add(added, '--replace')
+
+        then:
+        exit == 0
+        err.toString().isEmpty()
+        out.toString().contains(said)
+        tree(dir) == tree(with)
+
+        when: 'the application has the feature'
+        out.reset()
+        Map<String, String> before = tree(dir)
+        int again = add(added, '--replace')
+
+        then:
+        again == 0
+        out.toString().contains("The application already has the feature ${added}")
+        out.toString().contains('Nothing was changed')
+        tree(dir) == before
+
+        where:
+        created                         | asked             | added           || said
+        []                              | []                | 'grails-quartz' || 'Feature grails-quartz added. Commit'
+        ['--features', 'grails-quartz'] | ['grails-quartz'] | 'asciidoctor'   || 'Feature asciidoctor added. Commit'
+        []                              | []                | 'postgres'      || 'postgres replaces h2, the default of the group database-driver'
+    }
+
+    void "the help of the command names --replace and says what is replaced without it"() {
+        when:
+        int exit = CliRunner.run(ForgeCommand, beanContext, 'help', 'feature', 'add')
+        String help = out.toString().replaceAll(/\s+/, ' ')
+
+        then:
+        exit == 0
+        help.contains('--replace')
+        help.contains('Replace a feature that was asked for by name with the feature that takes its place')
+        help.contains('a feature that was asked for by name, when the application was created or added to, is replaced only with --replace')
+    }
+
+    void "an option the application was created with is not replaced with --replace"() {
+        given:
+        create(dir, CreateAppCommand, [])
+        Map<String, String> before = tree(dir)
+
+        when:
+        int exit = add('gorm-hibernate7', '--replace')
+
+        then:
+        exit == 1
+        err.toString().contains('Adding gorm-hibernate7 would change what the application was created with (--data hibernate7 in the place of hibernate5)')
+        tree(dir) == before
+        !new File(dir, '.grails/transactions').exists()
     }
 
     void "a feature puts its keys into the configuration and moves no line of it"() {

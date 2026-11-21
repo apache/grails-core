@@ -81,8 +81,9 @@ import java.util.function.Consumer
  * driver takes that of the default one: what the default wrote is taken out of the files, as a
  * difference like any other, so that lines of it that were changed in the project are a conflict, and
  * a file only it wrote is removed when the project has it as it was generated. A feature that was
- * asked for by name when the application was created is not replaced, and neither is an option the
- * application was created with: adding a feature that would is refused.</p>
+ * asked for by name, when the application was created or when it was added, is replaced in the same
+ * way when the caller says so and is refused otherwise; an option the application was created with is
+ * never replaced: adding a feature that would is refused.</p>
  *
  * <p>The keys of the YAML configuration files are written in an order that does not depend on the
  * features, see {@link YamlKeyOrder}. A project that has the keys of such a file in another order,
@@ -167,6 +168,19 @@ final class FeatureAddition {
      * @throws ProjectChangeException when features cannot be added to this project, or not these
      */
     ChangePlan plan(Path projectDirectory, List<String> names, @Nullable OperatingSystem operatingSystem, ConsoleOutput console) {
+        return plan(projectDirectory, names, operatingSystem, console, false)
+    }
+
+    /**
+     * @param replace whether a feature that was asked for by name makes way for a feature of its
+     * exclusive group that is added, as a default does. The application and its record are then those
+     * of an application that was created with the one in the place of the other. Without it, such an
+     * addition is refused. It changes nothing when no feature that was asked for is in the way
+     * @throws FeatureSelectionException also when a feature that would make way is required by a
+     * feature the application keeps or gets
+     * @see #plan(Path, List, OperatingSystem, ConsoleOutput)
+     */
+    ChangePlan plan(Path projectDirectory, List<String> names, @Nullable OperatingSystem operatingSystem, ConsoleOutput console, boolean replace) {
         ProjectState state = replayable(projectDirectory)
         ProjectManifest manifest = state.manifest
         ProjectLock lock = state.lock
@@ -198,13 +212,21 @@ final class FeatureAddition {
         byte[] lockBytes = bytes(projectDirectory, ProjectState.LOCK)
         byte[] indexBytes = bytes(projectDirectory, ProjectState.BASELINE_INDEX)
         List<String> recorded = manifest.requestedFeatures*.name
-        notInThePlaceOfOneAskedFor(available, recorded, toAdd)
+        // a feature that was asked for by name makes way when that was said, and is no more one that was asked for
+        Map<String, String> inThePlace = inThePlaceOfOnesAskedFor(available, recorded, toAdd)
+        List<String> making = inThePlace.keySet().toList()
+        List<String> selected = recorded.findAll { String name -> !making.contains(name) } + toAdd
+        // before the option is named as the way: it is none for a feature that cannot make way
+        notRequiredByWhatStays(available, selected, making)
+        if (!making.isEmpty() && !replace) {
+            throw new FeatureSelectionException(notReplaced(available, inThePlace, toAdd))
+        }
         Set<String> inAnotherOrder = new TreeSet<>()
         RenderedProject before = replayed(projectDirectory, state, manifestBytes, lockBytes, indexBytes, operatingSystem, inAnotherOrder)
 
         RenderedProject after
         try {
-            after = render(manifest, recorded + toAdd, operatingSystem, console, true)
+            after = render(manifest, selected, operatingSystem, console, true)
         } catch (FeatureSelectionException e) {
             if (e.getOption() == null) {
                 throw e
@@ -213,7 +235,7 @@ final class FeatureAddition {
             // would be with the feature in the place of that option is worked out all the same, to
             // show it: it is refused below, because it takes away what the application has
             try {
-                after = render(manifest, recorded + toAdd, operatingSystem, ConsoleOutput.NOOP, false)
+                after = render(manifest, selected, operatingSystem, ConsoleOutput.NOOP, false)
             } catch (FeatureSelectionException ignored) {
                 throw e
             }
@@ -225,8 +247,8 @@ final class FeatureAddition {
         List<String> lostFiles = state.baseline.files.findAll { BaselineFile file -> proposed.baseline.find(file.path) == null }*.path
         // A feature the application has without having been asked for it, by default, makes way for
         // the feature that is added. What the application was created with by name does not: an
-        // option, and a feature that was asked for, which the selection refuses before this
-        List<String> askedFor = lostFeatures.findAll { String name -> recorded.contains(name) }
+        // option, and a feature that was asked for, unless it is one of those that were to be replaced
+        List<String> askedFor = lostFeatures.findAll { String name -> recorded.contains(name) && !making.contains(name) }
         String refusal = !changedOptions.isEmpty() ? refusal(toAdd, changedOptions, lostFeatures) : askedFor.isEmpty() ? null : refusal(toAdd, [], askedFor)
         List<String> had = lock.featureNames
         List<String> gained = proposed.lock.featureNames.findAll { String name -> !had.contains(name) }
@@ -279,35 +301,88 @@ final class FeatureAddition {
         List<String> replaced = refusal == null ? lostFeatures : Collections.<String>emptyList()
         return new ChangePlan(projectDirectory, home, toAdd, alreadyThere.unique(), gained,
                 files.sort(false) { PlannedFile file -> file.path }, writes, refusal, refusal == null ? Collections.<String>emptyList() : lostFeatures, changedOptions,
-                replaced, replaced.collect { String name -> replacement(available, name, gained, toAdd) })
+                replaced, replaced.collect { String name -> replacement(available, name, gained, toAdd, making) })
     }
 
     /**
-     * A feature that was asked for by name when the application was created is not replaced by one
-     * that is added: of an exclusive group, the application keeps the one it was created with.
+     * The features that were asked for by name, when the application was created or when they were
+     * added, whose place a feature that is added would take: of an exclusive group, an application
+     * has one.
+     *
+     * @return the feature that would make way and the one that would take its place, in the order of the record
      */
-    private static void notInThePlaceOfOneAskedFor(AvailableFeatures available, List<String> recorded, List<String> toAdd) {
-        for (String name : toAdd) {
-            // a name that is no feature that can be asked for is refused by the selection, in the words it has for it
-            Feature feature = available.findFeature(name).orElse(null)
-            if (!(feature instanceof OneOfFeature)) {
+    private static Map<String, String> inThePlaceOfOnesAskedFor(AvailableFeatures available, List<String> recorded, List<String> toAdd) {
+        Map<String, String> inThePlace = new LinkedHashMap<>()
+        for (String asked : recorded) {
+            Feature other = available.findFeature(asked, true).orElse(null)
+            if (!(other instanceof OneOfFeature)) {
                 continue
             }
-            String group = ((OneOfFeature) feature).getGroup()
-            String asked = recorded.find { String each ->
-                Feature other = available.findFeature(each, true).orElse(null)
-                other instanceof OneOfFeature && other.getName() != feature.getName() && ((OneOfFeature) other).getGroup() == group
+            String group = ((OneOfFeature) other).getGroup()
+            // a name that is no feature that can be asked for is refused by the selection, in the words it has for it
+            String by = toAdd.find { String name ->
+                Feature feature = available.findFeature(name).orElse(null)
+                feature instanceof OneOfFeature && feature.getName() != other.getName() && ((OneOfFeature) feature).getGroup() == group
             }
-            if (asked != null) {
-                throw new FeatureSelectionException("The application was created with the feature ${asked}, which was asked for by name, and ${name} would take its place: " +
-                        "both are of the group ${group}, of which an application has one. A feature that was asked for is not replaced by adding another; only one the " +
-                        "application has by default is. An application has ${name} when it is created with it (--features ${name}). Nothing was changed")
+            if (by != null) {
+                inThePlace.put(asked, by)
+            }
+        }
+        return inThePlace
+    }
+
+    // A feature that was asked for by name is replaced when that is said, and not by adding another alone
+    private static String notReplaced(AvailableFeatures available, Map<String, String> inThePlace, List<String> toAdd) {
+        List<String> asked = inThePlace.keySet().toList()
+        boolean one = asked.size() == 1
+        List<String> each = inThePlace.collect { String name, String by -> "${by} would take the place of ${name} (both are of the group ${groupOf(available, name)})".toString() }
+        return "The application has the ${one ? 'feature' : 'features'} ${named(asked)}, which ${one ? 'was' : 'were'} asked for by name, and " +
+                "${named(each)}: an application has one feature of such a group. A feature that was asked for is replaced only with --replace: " +
+                "feature add ${toAdd.join(',')} --replace takes ${named(asked)} out of the application and its record, as if the application had been created without " +
+                "${one ? 'it' : 'them'}, and what you changed in the lines that go is a conflict. Nothing was changed"
+    }
+
+    /**
+     * A feature that makes way cannot be one that a feature of the application requires: the
+     * selection would bring it back, beside the feature that was to take its place.
+     */
+    private static void notRequiredByWhatStays(AvailableFeatures available, List<String> selected, List<String> making) {
+        if (making.isEmpty()) {
+            return
+        }
+        for (String from : selected) {
+            Map<String, String> requiredBy = new HashMap<>()
+            Deque<String> pending = new ArrayDeque<>([from])
+            while (!pending.isEmpty()) {
+                String name = pending.pop()
+                Feature feature = available.findFeature(name, true).orElse(null)
+                for (String required : (feature == null ? Collections.<String>emptyList() : feature.getDependentFeatures())) {
+                    if (required == from || requiredBy.containsKey(required)) {
+                        continue
+                    }
+                    requiredBy.put(required, name)
+                    if (making.contains(required)) {
+                        List<String> way = []
+                        for (String step = required; step != null; step = requiredBy.get(step)) {
+                            way.add(0, step)
+                        }
+                        throw new FeatureSelectionException("The feature ${required} is not replaced: the feature ${from}, which the application has or gets, requires it " +
+                                "(${FeatureSelectionException.chain(way)}), and an application has one feature of the group ${groupOf(available, required)}. " +
+                                "An application without ${from} can have another feature in the place of ${required}. Nothing was changed")
+                    }
+                    pending.push(required)
+                }
             }
         }
     }
 
+    private static String groupOf(AvailableFeatures available, String name) {
+        Feature feature = available.findFeature(name, true).orElse(null)
+        return feature instanceof OneOfFeature ? ((OneOfFeature) feature).getGroup() : ''
+    }
+
     // what is said of a feature that makes way: which feature takes its place, when one does
-    private static String replacement(AvailableFeatures available, String name, List<String> gained, List<String> toAdd) {
+    private static String replacement(AvailableFeatures available, String name, List<String> gained, List<String> toAdd, List<String> askedFor) {
         Feature feature = available.findFeature(name, true).orElse(null)
         if (feature instanceof OneOfFeature) {
             String group = ((OneOfFeature) feature).getGroup()
@@ -316,10 +391,15 @@ final class FeatureAddition {
                 other instanceof OneOfFeature && ((OneOfFeature) other).getGroup() == group
             }
             if (by != null) {
-                return "${by} replaces ${name}, the default of the group ${group}".toString()
+                return askedFor.contains(name) ? "${by} replaces ${name}, which was asked for by name, in the group ${group}".toString() :
+                        "${by} replaces ${name}, the default of the group ${group}".toString()
             }
         }
-        return "${named(toAdd)} ${toAdd.size() == 1 ? 'takes' : 'take'} out ${name}, which the application had by default and does not have with ${toAdd.size() == 1 ? 'it' : 'them'}".toString()
+        String does = "${named(toAdd)} ${toAdd.size() == 1 ? 'takes' : 'take'} out ${name}"
+        if (!askedFor.isEmpty()) {
+            return "${does}, which the application does not have with ${toAdd.size() == 1 ? 'it' : 'them'} in the place of ${named(askedFor)}".toString()
+        }
+        return "${does}, which the application had by default and does not have with ${toAdd.size() == 1 ? 'it' : 'them'}".toString()
     }
 
     /**
