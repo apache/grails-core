@@ -216,6 +216,10 @@ entry_points:
     attacker_controllable: false
     trusted_role: developer
     notes: "CLI-only; the generator runs the templates of a downloaded feature pack."
+  - surface: PluginIndex
+    parameter: plugin_index_and_plugin_metadata
+    attacker_controllable: true
+    notes: "CLI-only (list-plugins, plugin-info); read over https within size and time limits and shown as sanitised text, never executed."
 
 # §7 - adversary model summary.
 adversaries:

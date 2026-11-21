@@ -178,6 +178,11 @@ include::ref/Command Line/help.adoc[]
 
 include::ref/Command Line/install-templates.adoc[]
 
+[[ref-command-line-list-plugins]]
+==== list-plugins
+
+include::ref/Command Line/list-plugins.adoc[]
+
 [[ref-command-line-package-plugin]]
 ==== package-plugin
 
@@ -202,6 +207,11 @@ include::ref/Command Line/feature-add.adoc[]
 ==== gradle
 
 include::ref/Command Line/gradle.adoc[]
+
+[[ref-command-line-plugin-info]]
+==== plugin-info
+
+include::ref/Command Line/plugin-info.adoc[]
 
 [[ref-command-line-project-regenerate]]
 ==== project regenerate
