@@ -25,7 +25,8 @@ import grails.testing.mixin.integration.Integration
 import org.apache.grails.testing.http.client.HttpClientSupport
 
 /**
- * With {@code grails.mime.negotiation.spring}, which this application's configuration sets, Grails formats are resolved with Spring MVC's content negotiation, and
+ * With {@code grails.mime.negotiation.spring}, the default this application keeps, Grails formats are resolved with
+ * Spring MVC's content negotiation, and
  * what Spring MVC writes for an action is negotiated with the format the request names, while a Spring MVC endpoint is
  * negotiated as before.
  */

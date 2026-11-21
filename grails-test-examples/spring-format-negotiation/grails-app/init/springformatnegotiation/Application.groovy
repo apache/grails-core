@@ -27,7 +27,7 @@ import grails.boot.config.GrailsAutoConfiguration
 
 /**
  * An application that resolves Grails formats with Spring MVC's content negotiation, as
- * {@code grails.mime.negotiation.spring} in its {@code application.yml} says.
+ * {@code grails.mime.negotiation.spring} does by default.
  */
 @CompileStatic
 class Application extends GrailsAutoConfiguration {
