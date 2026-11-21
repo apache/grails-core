@@ -842,6 +842,15 @@ features: []                # add grails-quartz when the application uses the Qu
 - A tool that resolves `org.apache.grails:grails-shell-cli` and starts `org.grails.cli.GrailsCli` cannot run Grails 9 commands. Use `org.apache.grails:grails-cli` and `org.apache.grails.cli.GrailsCli` with `--plain-output --non-interactive`, and read the commands of a directory from `help --json` instead of a built-in list.
 - Until the Grails support of an IDE handles Grails 9, run the Gradle tasks (`bootRun`, `test`, `integrationTest`, `runCommand`, `runScriptCommand`) from the IDE.
 
+## `feature add` and the Order of Generated YAML
+
+Generated YAML configuration has a fixed key order (`info`, `dataSource`, `environments`, `hibernate`, `grails`, then alphabetical; alphabetical below the top level).
+
+- Do not reorder an existing `application.yml` to match: `grails feature add` keeps the order a file has and only inserts the new keys.
+- To switch a default feature, run `grails feature add <feature>` (for example `postgres` for the default `h2`); it removes the default's dependency and configuration and updates `.grails`.
+- If the project was created with the feature it would replace named in `--features`, the command refuses: change it by hand.
+- If lines of the default were edited (for example the H2 URL), the command reports a conflict and writes nothing: restore the generated line, add the feature, then reapply the edit.
+
 # After the Upgrade
 
 ## Verification Checklist
