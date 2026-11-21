@@ -1239,7 +1239,11 @@ class ConsoleCommandsSpec extends CommandSpec implements CommandFixture {
         // with the debug log of Gradle the line has the time and the level before it
         List<String> lines = out.toString().readLines().findAll { String line -> line.startsWith(start) || line.contains(' ' + start) }
         assert lines.size() == 1
-        return lines[0].substring(lines[0].indexOf(start) + start.length())
+        // A task of the project of these specifications is named as that of the root of its build, :classes for
+        // classes, because the project has the settings of a build: MultiProjectBuildSpec holds that, and here
+        // the task is read without the mark
+        String line = lines[0].substring(lines[0].indexOf(start) + start.length())
+        return start == 'requested=' ? line.replaceAll(/<:([A-Za-z]+)>/, '<$1>') : line
     }
 
     private List<String> errors() {

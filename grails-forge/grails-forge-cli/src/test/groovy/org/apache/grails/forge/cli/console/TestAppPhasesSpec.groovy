@@ -328,7 +328,11 @@ class TestAppPhasesSpec extends CommandSpec implements CommandFixture {
     private String lineOf(String start) {
         List<String> lines = out.toString().readLines().findAll { String line -> line.startsWith(start) }
         assert lines.size() == 1
-        return lines[0].substring(start.length())
+        // A task of the project of these specifications is named as that of the root of its build, :classes for
+        // classes, because the project has the settings of a build: MultiProjectBuildSpec holds that, and here
+        // the task is read without the mark
+        String line = lines[0].substring(start.length())
+        return start == 'requested=' ? line.replaceAll(/<:([A-Za-z]+)>/, '<$1>') : line
     }
 
     private List<String> errors() {

@@ -299,11 +299,18 @@ final class ConsoleProject {
     /**
      * @param name the name of a task of the project, as {@code bootRun}
      * @return the task as a command gives it to Gradle: by the path of the project where the project is
-     * a part of a larger build, so that it is the task of this project and of no project below or
-     * beside it, and by its name alone otherwise
+     * a part of a larger build, and as the task of the root where the project is the root of a build,
+     * which the settings of a build in its directory make it, so that it is the task of this project
+     * and of no project below or beside it: Gradle runs a task that is named without a path in every
+     * project of the build that has one of the name, a plugin that is included in the build of an
+     * application for one. By its name alone otherwise, where nothing says what the project is in
+     * the build Gradle finds for it
      */
     String task(String name) {
         String path = getGradlePath()
+        if (path == null && getBuildRoot() == null && SETTINGS.any { String settings -> Files.isRegularFile(directory.resolve(settings), LinkOption.NOFOLLOW_LINKS) }) {
+            return ":${name}".toString()
+        }
         return path == null ? name : "${path}:${name}".toString()
     }
 

@@ -158,11 +158,45 @@ class MultiProjectBuildSpec extends CommandSpec implements CommandFixture {
         when:
         int exit = run('tools/site/grails-app', 'compile')
 
-        then: 'the tasks have no path: the project is the root of its own build'
+        then: 'the task is that of the root: the project is the root of its own build'
         exit == 0
-        lineOf('requested=') == '<classes>'
+        lineOf('requested=') == '<:classes>'
         lineOf('in=') == ''
         ran() == [':classes']
+    }
+
+    void "a project that is the root of a build which includes a plugin beside its sources is run alone, and not the plugin with it"() {
+        given: 'an application with settings of its own that include a plugin, which has the tasks the application has'
+        new File(root, 'tools/site/settings.gradle').text = "rootProject.name = 'site'\ninclude 'inline'\n"
+        new File(root, 'tools/site/inline/src/main/groovy').mkdirs()
+        new File(root, 'tools/site/inline/build.gradle').text = PROJECT
+
+        when: 'a command of the application'
+        int exit = run('tools/site/grails-app', 'compile')
+
+        then: 'Gradle is asked for the task of the root, which a task that is named without a path is not'
+        exit == 0
+        lineOf('requested=') == '<:classes>'
+        ran() == [':classes']
+
+        when: 'a command of the application and its plugins'
+        out.reset()
+        exit = run('tools/site', 'run-command', 'say')
+
+        then:
+        exit == 0
+        lineOf('requested=').startsWith('<:runCommand>')
+        ran().size() == 1
+        ran()[0].startsWith(':runCommand ')
+
+        when: 'Gradle itself is asked, as it is typed'
+        out.reset()
+        exit = run('tools/site', 'gradle', 'classes')
+
+        then: 'for every project, as Gradle does'
+        exit == 0
+        lineOf('requested=') == '<classes>'
+        ran() as Set<String> == [':classes', ':inline:classes'] as Set<String>
     }
 
     void "the wrapper of the build is the one that is run, also where the project has one of its own"() {
