@@ -861,6 +861,8 @@ The guide gives no setting that restores encrypted JWTs without a signature.
 
 `count` on a where query or a detached criteria that has a sort, as in `Book.where { ... }.sort('title').count()` or `count(sort: 'title')`, failed with a `SQLGrammarException` on a database that rejects an order in a query that counts its rows, such as H2. As of 7.0.18 the count is made without the sort, and it returns the number of instances that `list` returns for the same query.
 
+This includes a query that selects only a `count()` projection and orders added by a `PreQueryEvent` listener. The joins of those orders are kept.
+
 - Nothing needs to change. Search for code that catches the exception or builds a second query without the sort to count: it can call `count` on the sorted query.
 
 ## GORM for Hibernate: setting for a sort by an association
