@@ -31,10 +31,19 @@ public class GrailsWrapperRepo {
 
     private static final Pattern URL_SCHEME_PREFIX = Pattern.compile("[A-Za-z][A-Za-z0-9+.-]*://.*");
 
+    private static final String LOCAL_METADATA_NAME = "maven-metadata-local.xml";
+    private static final String DEPLOYED_METADATA_NAME = "maven-metadata.xml";
+
     private String baseUrl;
     private String repoPath;
     private String metadataName;
     boolean isFile;
+
+    /**
+     * Whether the repository was named with {@code grails.repo.url} or {@code GRAILS_REPO_URL}, and so is one the
+     * user expects the command line to come from.
+     */
+    boolean overridden;
 
     private GrailsWrapperRepo() {
     }
@@ -52,7 +61,7 @@ public class GrailsWrapperRepo {
      * @return the url to the root metadata-maven.xml file
      */
     String getRootMetadataUrl() {
-        return join(getUrl(), metadataName);
+        return metadataIn(getUrl());
     }
 
     /**
@@ -62,7 +71,24 @@ public class GrailsWrapperRepo {
      * @return the url to the version specific metadata-maven.xml file
      */
     String getMetadataUrl(GrailsVersion version) {
-        return join(getUrl(), version.version, metadataName);
+        return metadataIn(join(getUrl(), version.version));
+    }
+
+    /**
+     * The metadata file of a directory of the repository. A directory on disk is either a local Maven repository,
+     * which {@code publishToMavenLocal} and {@code mvn install} write and whose metadata is
+     * {@code maven-metadata-local.xml}, or a repository that a build published to as it would to a remote one, whose
+     * metadata is {@code maven-metadata.xml}. The first is preferred; the second is used when only it exists.
+     */
+    private String metadataIn(String directory) {
+        String metadata = join(directory, metadataName);
+        if (isFile && !new File(metadata).exists()) {
+            String deployed = join(directory, DEPLOYED_METADATA_NAME);
+            if (new File(deployed).exists()) {
+                return deployed;
+            }
+        }
+        return metadata;
     }
 
     /**
@@ -91,7 +117,9 @@ public class GrailsWrapperRepo {
         for (String overRepoUrl : getOverriddenMavenRepos()) {
             if (overRepoUrl != null) {
                 System.out.println("...Update Repository is overridden to prefer [" + overRepoUrl + "].");
-                repos.add(createGrailsWrapperRepo(overRepoUrl));
+                GrailsWrapperRepo overriddenRepo = createGrailsWrapperRepo(overRepoUrl);
+                overriddenRepo.overridden = true;
+                repos.add(overriddenRepo);
             }
         }
 
@@ -121,7 +149,7 @@ public class GrailsWrapperRepo {
             repo.baseUrl = repo.baseUrl.substring(0, repo.baseUrl.length() - 1);
         }
 
-        repo.metadataName = repo.isFile ? "maven-metadata-local.xml" : "maven-metadata.xml";
+        repo.metadataName = repo.isFile ? LOCAL_METADATA_NAME : DEPLOYED_METADATA_NAME;
         return repo;
     }
 

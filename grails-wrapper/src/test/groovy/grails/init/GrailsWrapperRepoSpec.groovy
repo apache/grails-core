@@ -71,6 +71,42 @@ class GrailsWrapperRepoSpec extends Specification {
         repo.getRootMetadataUrl().endsWith([GrailsWrapperHome.CLI_COMBINED_PROJECT_NAME, 'maven-metadata-local.xml'].join(File.separator))
     }
 
+    def 'a local repository that a build published to is read by its maven-metadata.xml'() {
+        given: 'a directory with the metadata a publication to a repository writes, and none of a local Maven repository'
+        Path localRepo = tempDir.resolve('deployed-repo')
+        File artifact = new File(localRepo.toFile(), ['org', 'apache', 'grails', GrailsWrapperHome.CLI_COMBINED_PROJECT_NAME].join(File.separator))
+        File version = new File(artifact, '9.0.0-SNAPSHOT')
+        version.mkdirs()
+        new File(artifact, 'maven-metadata.xml').text = '<metadata/>'
+        new File(version, 'maven-metadata.xml').text = '<metadata/>'
+
+        when:
+        GrailsWrapperRepo repo = GrailsWrapperRepo.createGrailsWrapperRepo(localRepo.toString())
+
+        then:
+        repo.getRootMetadataUrl() == new File(artifact, 'maven-metadata.xml').path
+        repo.getMetadataUrl(new GrailsVersion('9.0.0-SNAPSHOT')) == new File(version, 'maven-metadata.xml').path
+
+        when: 'the directory also has the metadata of a local Maven repository'
+        new File(artifact, 'maven-metadata-local.xml').text = '<metadata/>'
+        new File(version, 'maven-metadata-local.xml').text = '<metadata/>'
+
+        then: 'that one is preferred, as before'
+        repo.getRootMetadataUrl() == new File(artifact, 'maven-metadata-local.xml').path
+        repo.getMetadataUrl(new GrailsVersion('9.0.0-SNAPSHOT')) == new File(version, 'maven-metadata-local.xml').path
+    }
+
+    def 'only the repositories of the override are marked as overridden'() {
+        given:
+        System.setProperty('grails.repo.url', tempDir.resolve('local-repo').toString())
+
+        when:
+        List<GrailsWrapperRepo> repos = GrailsWrapperRepo.getSelectedRepos()
+
+        then:
+        repos*.overridden == [true, false, false]
+    }
+
     def 'HTTP scheme repo override is rejected regardless of case'() {
         when:
         GrailsWrapperRepo.createGrailsWrapperRepo('HTTP://localhost/releases/')

@@ -130,6 +130,7 @@ public class GrailsUpdater {
                 try {
                     selectedVersion = getRootVersion(repo);
                 } catch (GrailsReleaseNotFoundException e) {
+                    reportSkippedOverride(repo, e);
                     continue;
                 } catch (Exception e) {
                     System.err.println("Unable to fetch latest Grails CLI from [" + repo.getUrl() + "].");
@@ -143,6 +144,7 @@ public class GrailsUpdater {
                 try {
                     detailedVersion = fetchSnapshotForVersion(repo, selectedVersion);
                 } catch (GrailsReleaseNotFoundException e) {
+                    reportSkippedOverride(repo, e);
                     continue;
                 } catch (Exception e) {
                     System.err.println("Could not parse snapshot version from maven metadata.");
@@ -168,6 +170,17 @@ public class GrailsUpdater {
             .map(GrailsWrapperRepo::getUrl)
             .collect(Collectors.joining(","));
         throw new IllegalStateException("Could not find the Grails Repo in any repository: " + repoUrls);
+    }
+
+    /**
+     * Says that a repository the user named does not have the command line, before the next repository is tried.
+     * Without it a command line from Maven Central or the ASF repository looks like the one of the named repository.
+     */
+    private static void reportSkippedOverride(GrailsWrapperRepo repo, GrailsReleaseNotFoundException reason) {
+        if (repo.overridden) {
+            System.out.println("...The Grails CLI was not found in the overridden repository [" + repo.getUrl() + "]: " + reason.getMessage());
+            System.out.println("...Trying the next repository.");
+        }
     }
 
     private boolean updateJar(GrailsWrapperRepo repo, GrailsVersion version, String snapshotVersion) {
@@ -298,7 +311,7 @@ public class GrailsUpdater {
         if (repo.isFile) {
             File metadataFile = new File(metadataUrl);
             if (!metadataFile.exists()) {
-                throw new GrailsReleaseNotFoundException("Could not determine local metadata file from local maven repository: " + metadataFile.getAbsolutePath() + " does not exist");
+                throw new GrailsReleaseNotFoundException("Could not determine local metadata file from local maven repository: neither " + metadataFile.getAbsolutePath() + " nor a maven-metadata.xml beside it exists");
             }
             return Files.newInputStream(metadataFile.toPath());
         } else {

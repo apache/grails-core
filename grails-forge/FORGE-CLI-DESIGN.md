@@ -18,7 +18,7 @@ limitations under the License.
 > Each section says under "Implemented" and "Not done" what the code does; where those and the design text differ, the code is what they describe.
 > Imported on 2026-10-26 from [issue #16348, comment 6150508865](https://github.com/apache/grails-core/issues/16348#issuecomment-6150508865),
 > revision 10 (last updated 2026-10-13T17:07:30Z).
-> The verbatim import is preserved in the first commit of this branch ("Document the Forge and CLI unification proposal"); this is revision 30.
+> The verbatim import is preserved in the first commit of this branch ("Document the Forge and CLI unification proposal"); this is revision 31.
 > Implementation target: **9.0.x**. The Grails-application conversion landed in 8.1.x;
 > profiles and the existing command behavior remain on that line.
 > Reviewed code baseline: `8.1.x` at `abd7ea720d0e3db96a48a89ee82ce7e79e069524`,
@@ -1220,6 +1220,7 @@ Earlier entries describe earlier proposals, including release assignments supers
 
 | Revision | Date | Change |
 | --- | --- | --- |
+| 31 | 2026-11-21 | The Grails wrapper reads a directory named by `GRAILS_REPO_URL` or `grails.repo.url` in either layout: `maven-metadata-local.xml` of a local Maven repository first, and `maven-metadata.xml` of a directory a build published to when only that exists. When a repository of the override does not have the command line, the wrapper says so and that it tries the next one. Before, a snapshot in a published directory was passed over without a word and the command line came from the ASF repository; the third end-to-end run met this. |
 | 30 | 2026-11-20 | The second configuration the deleted profile had for each token storage is a test example too: `gorm-minimal`, `grailscache-minimal`, `memcached-minimal` and `redis-minimal` under `grails-test-examples/spring-security/rest`, which configure no OAuth provider and no security event listener and keep the remember-me filter in the stateless chains. They run the shared specs but the OAuth one. The paragraph on slice e says ten applications. |
 | 29 | 2026-11-20 | The two faults the REST test examples of revision 28 found in the plugin are fixed, and the three features that were pending for them run: `RedisTokenStorageService.removeToken` and `GrailsCacheTokenStorageService.removeToken` throw `TokenNotFoundException` for a token they do not have, so logout answers 404, and `MemcachedTokenStorageService` treats a token that memcached refuses as a key as not found, so validation answers 401 where it answered 500. Upgrade note 40 and its skill entry. |
 | 28 | 2026-11-20 | The functional specs of the Spring Security REST plugin, deleted with `rest/testapp-profile` in slice c, are test examples that the build runs: six applications under `grails-test-examples/spring-security/rest` (`jwt`, `jwt-bearer`, `gorm`, `grailscache`, `memcached`, `redis`) with shared specs in the test fixtures of `common`, an Ersatz server as the OAuth provider and containers for memcached and Redis. The paragraphs on slices e and c and the status row say so. |
