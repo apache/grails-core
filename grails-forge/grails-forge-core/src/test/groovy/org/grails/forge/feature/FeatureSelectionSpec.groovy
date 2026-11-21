@@ -754,8 +754,9 @@ class FeatureSelectionSpec extends ApplicationContextSpec {
         mapped.every { String view -> views.keySet().any { it.startsWith("grails-app/views/${view}.") } }
         !mappings.contains('/assets/') || features.contains('asset-pipeline-grails')
 
-        and: 'a web application has the pages its mappings name'
-        type in [ApplicationType.PLUGIN] || !mapped.isEmpty()
+        and: 'a web application has the pages its mappings name, and a REST API plugin maps nothing'
+        type in [ApplicationType.PLUGIN, ApplicationType.REST_API_PLUGIN] || !mapped.isEmpty()
+        type != ApplicationType.REST_API_PLUGIN || (mapped.isEmpty() && views.isEmpty())
 
         where:
         [type, excluded] << ApplicationType.values().toList().collectMany { ApplicationType each ->

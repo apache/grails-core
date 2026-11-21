@@ -34,7 +34,10 @@ class UrlMappings {
         "/favicon.ico"(redirect: [uri: '/assets/favicon.ico', permanent: true])
         <% } %>
         <% } %>
-        <% if (applicationType == 'rest-api' || applicationType == 'rest-api-plugin') { %>
+        <% if (applicationType == 'rest-api-plugin') { %>
+        // provide plugin url mappings here
+        <% } %>
+        <% if (applicationType == 'rest-api') { %>
         delete "/$controller/$id(.$format)?"(action:"delete")
         get "/$controller(.$format)?"(action:"index")
         get "/$controller/$id(.$format)?"(action:"show")
@@ -43,8 +46,10 @@ class UrlMappings {
         patch "/$controller/$id(.$format)?"(action:"patch")
         "/"(controller: 'application', action:'index')
         <% } %>
+        <% if (applicationType != 'rest-api-plugin') { %>
         "500"(view:'/error')
         "404"(view:'/notFound')
+        <% } %>
 
     }
 }

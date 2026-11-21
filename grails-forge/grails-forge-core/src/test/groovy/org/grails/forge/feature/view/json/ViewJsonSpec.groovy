@@ -69,7 +69,15 @@ class ViewJsonSpec extends ApplicationContextSpec implements CommandOutputFixtur
         output.containsKey("grails-app/views/object/_object.gson")
 
         where:
-        applicationType << [ApplicationType.REST_API, ApplicationType.REST_API_PLUGIN]
+        applicationType << [ApplicationType.REST_API]
+    }
+
+    void "a REST API plugin has no gson views of its own, which would be those of the applications that use it"() {
+        when:
+        final def output = generate(ApplicationType.REST_API_PLUGIN, new Options(DevelopmentReloading.DEVTOOLS))
+
+        then:
+        !output.keySet().any { it.startsWith('grails-app/views/') }
     }
 
     void "test views-json gradle plugins and dependencies are present for a REST API plugin, which is built as a plugin"() {

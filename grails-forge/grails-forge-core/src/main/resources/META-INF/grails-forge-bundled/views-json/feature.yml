@@ -45,11 +45,16 @@ dependencies:
 files:
   - from: index.gson.gsp
     to: grails-app/views/application/index.gson
+    when: { not: { applicationType: rest-api-plugin } }
   - from: _errors.gson.gsp
     to: grails-app/views/errors/_errors.gson
+    when: { not: { applicationType: rest-api-plugin } }
   - from: _object.gson.gsp
     to: grails-app/views/object/_object.gson
+    when: { not: { applicationType: rest-api-plugin } }
   - from: error.gson.gsp
     to: grails-app/views/error.gson
+    when: { not: { applicationType: rest-api-plugin } }
   - from: notFound.gson.gsp
     to: grails-app/views/notFound.gson
+    when: { not: { applicationType: rest-api-plugin } }

@@ -681,10 +681,11 @@ class ForgeApiIntegrationSpec extends Specification {
         !defaults.features*.name.contains('gsp')
         !available.features*.name.any { it in ['scaffolding', 'asset-pipeline-grails', 'openapi', 'grails-spring-security'] }
 
-        and: 'what is created is a plugin with JSON views'
+        and: 'what is created is a plugin for JSON views, with none of its own'
         created.status == 201
         entries.contains('forge-rest-plugin/src/main/groovy/com/example/ForgeRestPluginGrailsPlugin.groovy')
-        entries.contains('forge-rest-plugin/grails-app/views/application/index.gson')
+        !entries.any { it.contains('/grails-app/views/') }
+        zipText(zip, 'forge-rest-plugin/build.gradle').contains('org.apache.grails.gradle.grails-gson')
         !entries.any { it.endsWith('.gsp') }
         zipText(zip, 'forge-rest-plugin/build.gradle').contains('apply plugin: "org.apache.grails.gradle.grails-plugin"')
         zipText(zip, 'forge-rest-plugin/.grails/project.yml').contains('applicationType: rest-api-plugin\n')

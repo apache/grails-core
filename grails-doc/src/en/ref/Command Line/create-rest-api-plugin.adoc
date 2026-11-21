@@ -21,7 +21,7 @@ under the License.
 
 === Purpose
 
-The `create-rest-api-plugin` command creates a Grails plugin project with the content of a REST API application, for plugins that provide REST endpoints: controllers, JSON views and the REST URL mappings, and nothing for HTML. The project has the `views-json` feature in place of GSP, the asset pipeline and scaffolding.
+The `create-rest-api-plugin` command creates a Grails plugin project for plugins that provide REST endpoints: it is set up for controllers and JSON views, and has nothing for HTML. The project has the `views-json` feature in place of GSP, the asset pipeline and scaffolding. Its `UrlMappings` class is empty, and it has no controller and no views of its own, because everything in a plugin becomes part of the applications that use it: add the mappings, controllers and views the plugin is to provide.
 
 === Usage
 

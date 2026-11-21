@@ -696,14 +696,4 @@ dependentFeatures: []
 + 
 + xmlDeclaration()
 + g.render(object)
-== grails-app/views/application/index.gson
-(not written)
-== grails-app/views/error.gson
-(not written)
-== grails-app/views/errors/_errors.gson
-(not written)
-== grails-app/views/notFound.gson
-(not written)
-== grails-app/views/object/_object.gson
-(not written)
 

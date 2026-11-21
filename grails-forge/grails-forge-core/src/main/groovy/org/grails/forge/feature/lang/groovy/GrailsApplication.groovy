@@ -58,7 +58,8 @@ class GrailsApplication implements GrailsApplicationFeature, DefaultFeature {
             generatorContext.addBuildPlugin(GradlePlugin.builder().id('war').build())
             generatorContext.addTemplate('application', new GspTemplate(getPath(),
                     GspView.of('/forge/feature/lang/groovy/templates/application.gsp', [applicationType: applicationType, project: generatorContext.getProject(), features: generatorContext.getFeatures()])))
-            if (applicationType.isRestApi()) {
+            // a plugin brings no controller of its own into the applications that use it
+            if (applicationType == ApplicationType.REST_API) {
                 generatorContext.addTemplate('applicationController', new GspTemplate('grails-app/controllers/{packagePath}/ApplicationController.groovy',
                         GspView.of('/forge/feature/grails/templates/applicationController.gsp', [project: generatorContext.getProject()])))
             }

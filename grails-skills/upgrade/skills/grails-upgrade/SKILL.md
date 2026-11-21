@@ -855,7 +855,7 @@ Generated YAML configuration has a fixed key order (`info`, `dataSource`, `envir
 
 - **`test-app` with a test name**: `grails test-app <name>` passes `-Pgrails.test.filter.lenient=true` to Gradle when the name goes to both `test` and `integrationTest`. It needs the Grails 9 Grails Gradle plugin in the project's build (task `checkTestFilterMatched`). If the build fails with `No tests found for given includes`, the build still has an older Grails Gradle plugin: upgrade it, or run with `--unit` / `--integration`. In a build's own scripts the same is `./gradlew test --tests X integrationTest --tests X -Pgrails.test.filter.lenient=true`.
 - **`project show`**: prints every `create-` option with its recorded value and `default` / `differs from the current default` / `not recorded`; use it after an upgrade to see which recorded values are no longer defaults. JSON: `effectiveOptions`, `addedFeatures` (format 1).
-- **REST API plugins**: `create-app NAME --profile rest-api-plugin` becomes `grails create-rest-api-plugin NAME` (application type `rest-api-plugin`: a plugin built with `org.apache.grails.gradle.grails-plugin` and `grails-gson`, with `views-json` by default and no GSP). Unlike the profile, it generates the REST `UrlMappings`, `ApplicationController` and the `.gson` views; delete those the plugin should not ship.
+- **REST API plugins**: `create-app NAME --profile rest-api-plugin` becomes `grails create-rest-api-plugin NAME` (application type `rest-api-plugin`: a plugin built with `org.apache.grails.gradle.grails-plugin` and `grails-gson`, with `views-json` by default and no GSP). As with the profile, its `UrlMappings` is empty and it has no controller and no views of its own.
 
 # After the Upgrade
 

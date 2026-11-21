@@ -71,12 +71,14 @@ class GrailsApplicationSpec extends ApplicationContextSpec implements CommandOut
         output.containsKey("grails-app/controllers/example/grails/ApplicationController.groovy")
     }
 
-    void "REST-API plugin should have ApplicationController"() {
+    void "REST-API plugin has no controller, no views and no excludes for them"() {
         when:
         def output = generate(ApplicationType.REST_API_PLUGIN)
 
         then:
-        output.containsKey("grails-app/controllers/example/grails/ApplicationController.groovy")
+        !output.containsKey("grails-app/controllers/example/grails/ApplicationController.groovy")
+        !output.keySet().any { it.startsWith('grails-app/views/') }
+        !output.get('src/main/groovy/example/grails/FooGrailsPlugin.groovy').contains('grails-app/views')
     }
 
     void "PluginDescriptor is generated for #applicationType application type"() {
@@ -97,13 +99,21 @@ class GrailsApplicationSpec extends ApplicationContextSpec implements CommandOut
 
         then:
         descriptor.contains("def pluginExcludes = [\n           \"grails-app/views/${view}\"\n       ]")
-        descriptor.contains('.gsp') == (view == 'error.gsp')
 
         where:
-        applicationType                 | view
-        ApplicationType.PLUGIN          | 'error.gsp'
-        ApplicationType.WEB_PLUGIN      | 'error.gsp'
-        ApplicationType.REST_API_PLUGIN | 'error.gson'
+        applicationType            | view
+        ApplicationType.PLUGIN     | 'error.gsp'
+        ApplicationType.WEB_PLUGIN | 'error.gsp'
+    }
+
+    void "the plugin descriptor of a REST API plugin excludes nothing, as the project has no view"() {
+        when:
+        def descriptor = generate(ApplicationType.REST_API_PLUGIN).get('src/main/groovy/example/grails/FooGrailsPlugin.groovy')
+
+        then:
+        descriptor.contains('def pluginExcludes = []')
+        !descriptor.contains('.gsp')
+        !descriptor.contains('.gson')
     }
 
     void "PluginDescriptor is NOT generated for #applicationType application type"() {

@@ -36,14 +36,14 @@ You should consider whether the plugin you create requires a web environment or 
 $ grails create-web-plugin <<PLUGIN NAME>>
 ----
 
-A plugin that provides REST endpoints and no HTML is created with link:{commandLineRef}create-rest-api-plugin.html[create-rest-api-plugin]. It is a web plugin with the content of a REST API application: JSON views and the REST URL mappings in place of GSP views, the asset pipeline and scaffolding:
+A plugin that provides REST endpoints and no HTML is created with link:{commandLineRef}create-rest-api-plugin.html[create-rest-api-plugin]. It is a web plugin set up as a REST API application is: JSON views in place of GSP views, the asset pipeline and scaffolding:
 
 [source,console]
 ----
 $ grails create-rest-api-plugin <<PLUGIN NAME>>
 ----
 
-Like a web plugin, a REST API plugin is created with what it takes to run it by itself: a `UrlMappings` class with the REST mappings and a mapping of `/` to the generated `ApplicationController`, and the JSON views of the index and the error responses. All of it is packaged with the plugin, so remove the mappings, the controller and the views that the applications using the plugin should not get; see xref:plugins#providingBasicArtefacts[Providing Basic Artefacts].
+Unlike a REST API application, a REST API plugin is created with an empty `UrlMappings` class and without a controller or JSON views of its own, because all of it would be packaged with the plugin and become part of the applications that use it. Add the mappings, controllers and views the plugin is to provide; see xref:plugins#providingBasicArtefacts[Providing Basic Artefacts].
 
 Make sure the plugin name does not contain more than one capital letter in a row, or it won't work. Camel case is fine, though.
 

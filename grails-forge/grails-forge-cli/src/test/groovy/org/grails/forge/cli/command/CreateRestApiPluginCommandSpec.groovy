@@ -60,7 +60,7 @@ class CreateRestApiPluginCommandSpec extends CommandSpec {
         home.deleteDir()
     }
 
-    void "create-rest-api-plugin creates a plugin with JSON views and the REST URL mappings, and nothing for HTML"() {
+    void "create-rest-api-plugin creates a plugin set up for JSON views, with no mappings, controller or views of its own, and nothing for HTML"() {
         when:
         int exit = ForgeCli.execute(beanContext, 'create-rest-api-plugin', 'com.example.shopApi')
         File project = new File(dir, 'shopApi')
@@ -81,14 +81,17 @@ class CreateRestApiPluginCommandSpec extends CommandSpec {
         files.contains('grails-app/i18n/shop-api.properties')
         !files.contains('grails-app/i18n/messages.properties')
 
-        and: 'with the content of a REST API application'
+        and: 'set up as a REST API application is'
         build.contains('apply plugin: "org.apache.grails.gradle.grails-gson"')
         build.contains('implementation "org.apache.grails:grails-views-gson"')
         build.contains('implementation "org.springframework.boot:spring-boot-starter-tomcat"')
-        mappings.contains('get "/$controller(.$format)?"(action:"index")')
-        mappings.contains('"/"(controller: \'application\', action:\'index\')')
-        files.containsAll(['grails-app/controllers/com/example/ApplicationController.groovy', 'grails-app/views/application/index.gson',
-                           'grails-app/views/error.gson', 'grails-app/views/notFound.gson'])
+
+        and: 'with nothing that would reach the applications that use the plugin'
+        mappings.contains('// provide plugin url mappings here')
+        !mappings.contains('action:')
+        !mappings.contains('view:')
+        !files.contains('grails-app/controllers/com/example/ApplicationController.groovy')
+        !files.any { it.startsWith('grails-app/views/') }
 
         and: 'nothing of GSP, the asset pipeline or scaffolding'
         !files.any { it.endsWith('.gsp') || it.startsWith('grails-app/assets/') || it.startsWith('grails-app/taglib/') }

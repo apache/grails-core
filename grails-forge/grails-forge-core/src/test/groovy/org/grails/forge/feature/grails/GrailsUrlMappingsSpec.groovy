@@ -80,6 +80,18 @@ class GrailsUrlMappingsSpec extends ApplicationContextSpec implements CommandOut
         !urlMappings.contains('$namespace')
 
         where:
-        applicationType << [ApplicationType.REST_API, ApplicationType.REST_API_PLUGIN]
+        applicationType << [ApplicationType.REST_API]
+    }
+
+    void 'a REST API plugin has a UrlMappings class with no mapping, as nothing of it is to reach the applications that use the plugin'() {
+        when:
+        def urlMappings = generate(ApplicationType.REST_API_PLUGIN, new Options(DevelopmentReloading.DEVTOOLS))['grails-app/controllers/example/grails/UrlMappings.groovy']
+
+        then:
+        urlMappings.contains('package example.grails')
+        urlMappings.contains('// provide plugin url mappings here')
+        urlMappings.findAll(/(?m)^\s*(get|post|put|patch|delete|"[^"]*")\s*[ (]/).empty
+        !urlMappings.contains('view:')
+        !urlMappings.contains('controller:')
     }
 }

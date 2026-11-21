@@ -8,6 +8,11 @@ dependency: implementation org.apache.grails:grails-views-gson without a version
 dependency: implementation org.apache.grails:grails-data-mongodb-gson-templates without a version
 dependency: testImplementation org.apache.grails:grails-testing-support-views-gson without a version
 build plugin: org.apache.grails.gradle.grails-gson without a version, applied
+file: grails-app/views/application/index.gson when not applicationType=rest-api-plugin
+file: grails-app/views/errors/_errors.gson when not applicationType=rest-api-plugin
+file: grails-app/views/object/_object.gson when not applicationType=rest-api-plugin
+file: grails-app/views/error.gson when not applicationType=rest-api-plugin
+file: grails-app/views/notFound.gson when not applicationType=rest-api-plugin
 
 # web
 title: JSON Views
@@ -487,100 +492,4 @@ in an application without being named: the default options
 + apply plugin: "org.apache.grails.gradle.grails-gson"
 +     implementation "org.apache.grails:grails-data-mongodb-gson-templates"
 +     implementation "org.apache.grails:grails-views-gson"
-== grails-app/views/application/index.gson
-+ import grails.core.*
-+ import grails.util.*
-+ import grails.plugins.*
-+ import org.grails.core.artefact.*
-+ 
-+ model {
-+ 	GrailsApplication grailsApplication
-+ 	GrailsPluginManager pluginManager
-+ }
-+ 
-+ json {
-+ 	message "Welcome to Grails!"
-+     environment Environment.current.name
-+     appversion grailsApplication.metadata.getApplicationVersion()
-+     grailsversion GrailsUtil.grailsVersion
-+     groovyversion GroovySystem.getVersion()
-+     jvmversion System.getProperty('java.version')
-+     reloadingagentenabled Environment.reloadingAgentEnabled
-+     artefacts (
-+         controllers: grailsApplication.getArtefactInfo(ControllerArtefactHandler.TYPE).classesByName.size(),
-+         domains: grailsApplication.getArtefactInfo(DomainClassArtefactHandler.TYPE).classesByName.size(),
-+         services: grailsApplication.getArtefactInfo(ServiceArtefactHandler.TYPE).classesByName.size()
-+     )
-+     controllers grailsApplication.getArtefacts(ControllerArtefactHandler.TYPE), { GrailsClass c ->
-+         name c.fullName
-+         logicalPropertyName c.logicalPropertyName
-+     }
-+     plugins pluginManager.allPlugins, { GrailsPlugin plugin ->
-+     	name plugin.name
-+     	version plugin.version
-+     }
-+ }
-== grails-app/views/error.gson
-+ response.status 500
-+ 
-+ json {
-+     message "Internal server error"
-+     error 500
-+ }
-== grails-app/views/errors/_errors.gson
-+ import org.springframework.validation.*
-+ 
-+ /**
-+  * Renders validation errors according to vnd.error: https://github.com/blongden/vnd.error
-+  */
-+ model {
-+     Errors errors
-+ }
-+ 
-+ response.status UNPROCESSABLE_ENTITY
-+ 
-+ json {
-+     Errors errorsObject = (Errors)this.errors
-+     def allErrors = errorsObject.allErrors
-+     int errorCount = allErrors.size()
-+     def resourcePath = g.link(resource:request.uri, absolute:false)
-+     def resourceLink = g.link(resource:request.uri, absolute:true)
-+     if(errorCount == 1) {
-+         def error = allErrors.iterator().next()
-+         message messageSource.getMessage(error, locale)
-+         path resourcePath
-+         _links {
-+             self {
-+                 href resourceLink
-+             }
-+         }
-+     }
-+     else {
-+         total errorCount
-+         _embedded {
-+             errors(allErrors) { ObjectError error ->
-+                 message messageSource.getMessage(error, locale)
-+                 path resourcePath
-+                 _links {
-+                     self {
-+                         href resourceLink
-+                     }
-+                 }
-+             }
-+         }
-+     }
-+ }
-== grails-app/views/notFound.gson
-+ response.status 404
-+ 
-+ json {
-+ 	message "Not Found"
-+ 	error 404
-+ }
-== grails-app/views/object/_object.gson
-+ import groovy.transform.*
-+ 
-+ @Field Object object
-+ 
-+ json g.render(object)
 

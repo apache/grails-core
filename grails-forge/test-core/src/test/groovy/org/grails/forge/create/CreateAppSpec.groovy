@@ -162,7 +162,7 @@ class CreateAppSpec extends CommandSpec {
 
         and:
         new File(dir, 'src/main/groovy/example/grails/FooGrailsPlugin.groovy').exists()
-        new File(dir, 'grails-app/views/application/index.gson').exists()
+        !new File(dir, 'grails-app/views').exists()
         !new File(dir, 'grails-app/views/index.gsp').exists()
     }
 
