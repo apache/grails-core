@@ -336,6 +336,29 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckM
         AssociationJoinTypePost.list()*.title.sort() == ['Untagged post', 'Updated post']
     }
 
+    void 'deleteAll applies a requested join of basic values before deleting their collection rows'() {
+        given:
+        new AssociationJoinTypePost(title: 'First tagged post', tags: ['x', 'y']).save(failOnError: true)
+        new AssociationJoinTypePost(title: 'First untagged post').save(failOnError: true)
+        new AssociationJoinTypePost(title: 'Other post', tags: ['z']).save(failOnError: true, flush: true)
+        manager.session.clear()
+        final query = AssociationJoinTypePost.where { title ==~ 'First%' }.join('tags', joinType)
+
+        when:
+        final listed = query.list()*.title
+        final deleted = query.deleteAll()
+        manager.session.clear()
+
+        then:
+        listed == ['First tagged post']
+        deleted == 1
+        AssociationJoinTypePost.list(sort: 'title')*.title == ['First untagged post', 'Other post']
+        AssociationJoinTypePost.findByTitle('Other post').tags as Set == ['z'] as Set
+
+        where:
+        joinType << [JoinType.INNER, JoinType.RIGHT]
+    }
+
     void '#api joins and fetches the associations before a collection on a path that it requests an inner join for'() {
         given:
         saveTeamWithAPlayerWithoutContract()

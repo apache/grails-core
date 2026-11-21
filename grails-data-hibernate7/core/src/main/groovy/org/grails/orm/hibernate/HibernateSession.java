@@ -389,6 +389,9 @@ public class HibernateSession extends AbstractAttributeStoringSession implements
                 continue;
             }
             String association = requestedJoin.getKey().split("\\.")[0];
+            if (criteria.getPersistentEntity().getPropertyByName(association) instanceof Basic) {
+                return true;
+            }
             if (!(criteria.getPersistentEntity().getPropertyByName(association) instanceof ToMany)) {
                 continue;
             }
