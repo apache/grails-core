@@ -23,6 +23,7 @@ import spock.util.concurrent.PollingConditions
 import spock.util.environment.OperatingSystem
 
 import java.nio.file.Files
+import java.util.concurrent.TimeUnit
 
 class CommandSpec extends Specification {
 
@@ -119,13 +120,20 @@ class CommandSpec extends Specification {
                         "without producing the expected output [${value}].\nBuild output:\n${finalOutput}" as Object)
             }
             if (BUILD_END_MARKERS.any { output.toString().contains(it) }) {
-                sleep(OUTPUT_DRAIN_MILLIS)
+                // The last line of a build is written a moment before its process ends. The process is
+                // given that moment, so that a build that has ended is reported with its exit code, as
+                // it is when the process is seen to have ended first.
+                boolean exited = process == null || process.waitFor(OUTPUT_DRAIN_MILLIS, TimeUnit.MILLISECONDS)
+                if (process == null || !exited) {
+                    sleep(OUTPUT_DRAIN_MILLIS)
+                }
                 String finalOutput = output.toString()
                 if (finalOutput.contains(value)) {
                     return
                 }
-                throw new AssertionError("The generated build ended without producing the expected output " +
-                        "[${value}].\nBuild output:\n${finalOutput}" as Object)
+                throw new AssertionError((exited && process != null ? "The generated build exited with code ${process.exitValue()} " +
+                        "without producing the expected output" : 'The generated build ended without producing the expected output') +
+                        " [${value}].\nBuild output:\n${finalOutput}" as Object)
             }
             if (System.currentTimeMillis() >= deadline) {
                 throw new AssertionError("Timed out after ${POLL_TIMEOUT_SECONDS}s waiting for the generated " +
