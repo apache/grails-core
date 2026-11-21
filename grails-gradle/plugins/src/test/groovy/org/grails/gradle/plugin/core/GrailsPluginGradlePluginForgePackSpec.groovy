@@ -175,6 +175,43 @@ class GrailsPluginGradlePluginForgePackSpec extends GradleSpecification {
         'a descriptor that is not YAML'      | { File pack -> new File(pack, 'feature.yml').text = 'name: [\n' }   || 'src/main/forge/feature.yml cannot be read as YAML'
     }
 
+    def "a directory of the pack that is a link fails #task, and nothing from where it leads is staged or in a jar"() {
+        given: 'the pack somewhere else, and a link to it where the pack of the plugin is looked for'
+        GradleRunner runner = setupTestResourceProject('plugin-forge-pack')
+        File pack = new File(runner.projectDir, 'src/main/forge')
+        File elsewhere = new File(runner.projectDir, 'pack-elsewhere')
+        assert pack.renameTo(elsewhere)
+        java.nio.file.Files.createSymbolicLink(pack.toPath(), elsewhere.toPath())
+
+        when:
+        def result = runner.withArguments([task] + arguments).buildAndFail()
+
+        then:
+        result.output.contains('src/main/forge is a link, which the directory of a feature pack cannot be')
+        !new File(runner.projectDir, 'build/libs').exists()
+        !new File(runner.projectDir, 'build/published').exists()
+        !new File(runner.projectDir, 'build').exists() || !allFiles(new File(runner.projectDir, 'build')).any { String path -> path.contains('/META-INF/grails-forge/') }
+
+        and: 'the directory the link leads to is as it was'
+        new File(elsewhere, 'feature.yml').getText('UTF-8').contains('name: acme-audit')
+
+        where:
+        task      | arguments
+        'jar'     | []
+        'check'   | []
+        'publish' | ['-Ppublished']
+    }
+
+    private static List<String> allFiles(File directory) {
+        List<String> paths = []
+        directory.eachFileRecurse { File file ->
+            if (file.isFile()) {
+                paths << file.path.replace(File.separator, '/')
+            }
+        }
+        paths
+    }
+
     def "a descriptor that does not name the pack fails the build"() {
         given:
         GradleRunner runner = setupTestResourceProject('plugin-forge-pack')
