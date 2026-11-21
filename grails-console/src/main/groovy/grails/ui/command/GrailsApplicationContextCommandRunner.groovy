@@ -24,6 +24,7 @@ import org.springframework.context.ConfigurableApplicationContext
 import grails.config.Settings
 import org.apache.grails.core.cli.ApplicationContextCommandRegistry
 import org.apache.grails.core.cli.ExecutionContext
+import org.apache.grails.core.cli.StandaloneCommand
 import org.apache.grails.core.cli.ApplicationCommandTargetAware
 import grails.ui.support.DevelopmentGrailsApplication
 import org.apache.grails.gradle.model.cli.CommandArgumentsFile
@@ -31,6 +32,11 @@ import org.grails.build.parsing.CommandLine
 import org.grails.build.parsing.CommandLineParser
 
 /**
+ * Runs a command of the application or of one of its plugins, as the {@code runCommand} task of a
+ * build starts it. The application is started around the command, which is given its application
+ * context, unless the command is a {@link StandaloneCommand}: that one is run without the
+ * application, and nothing of it is started.
+ *
  * @since 3.0
  */
 @CompileStatic
@@ -49,6 +55,18 @@ class GrailsApplicationContextCommandRunner extends DevelopmentGrailsApplication
         def command = commandRegistry.findCommand(commandName)
         if (command) {
             Object autowireTarget = resolveAutowireTarget(command)
+
+            // a command that says it needs no application is run as it is: nothing is started for it
+            if (autowireTarget instanceof StandaloneCommand) {
+                try {
+                    def result = command.handle(new ExecutionContext(new CommandLineParser().parse(args)))
+                    result ? System.exit(0) : System.exit(1)
+                } catch (Throwable e) {
+                    System.err.println("Command execution error: $e.message")
+                    System.exit(1)
+                }
+                return null
+            }
 
             Boolean skipBootstrap = resolveSkipBootstrap(command)
             if (skipBootstrap != null && !System.getProperty(Settings.SETTING_SKIP_BOOTSTRAP)) {
