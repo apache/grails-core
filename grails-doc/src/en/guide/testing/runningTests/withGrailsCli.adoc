@@ -30,6 +30,8 @@ Tests are run with the link:{commandLineRef}test-app.html[test-app] command:
 grails test-app
 ----
 
+The command runs every test phase of the project: the unit tests, the integration tests, and every phase the project adds (see <<testPhases>>). A phase is a `Test` task of the Gradle build, so a `functionalTest` phase, a test suite of Gradle or a `Test` task of a build plugin is run as well, after the unit tests and the integration tests.
+
 The command will produce output such as:
 
 [source,groovy]
@@ -45,7 +47,7 @@ Tests failed: 0 errors, 1 failures
 
 whilst showing the reason for each test failure.
 
-NOTE: You can force a clean before running tests by passing `-clean` to the `test-app` command.
+NOTE: You can run every test again, also where nothing changed since the last run, by passing `--clean` to the `test-app` command.
 
 Grails writes HTML test reports to the `build/reports/tests` directory and JUnit XML test reports to the `build/test-results` directory. The HTML reports are generally the best ones to look at.
 
@@ -64,7 +66,7 @@ For a local edit-and-test loop, start continuous testing:
 $ grails test-app --continuous
 ----
 
-`--continuous` is the continuous build of Gradle: the tests are run when the command starts, and again whenever a file they depend on changes, until the command is cancelled. Combine it with test name patterns or `--unit` and `--integration` to keep the run small.
+`--continuous` is the continuous build of Gradle: the tests are run when the command starts, and again whenever a file they depend on changes, until the command is cancelled. Combine it with test name patterns or with the switch of a phase, such as `--unit`, to keep the run small.
 
 ==== Targeting Tests
 
@@ -118,7 +120,7 @@ This will run the `testLogin` test in the `SimpleController` tests. You can spec
 grails test-app some.org.* SimpleController.testLogin BookController
 ----
 
-The names are looked for among the unit tests and among the integration tests, and the tests are run where they are found: a name that only a unit test has runs that unit test, and the integration tests pass without running one. The command fails when neither has a test of the name, and Gradle then names the filter:
+The names are looked for in every test phase that is run, and the tests are run where they are found: a name that only a unit test has runs that unit test, and the other phases pass without running one. The command fails when no phase has a test of the name, and Gradle then names the filter:
 
 [source,console]
 ----
@@ -127,7 +129,7 @@ $ grails test-app BookControllerSpex
 > No tests found for the given filter (BookControllerSpex) in any of the test tasks :test, :integrationTest: ...
 ----
 
-For this the command gives Gradle the project property `grails.test.filter.lenient` when a name goes to both test tasks, and the Grails Gradle plugin then lets a test task pass that has no test for the filter and checks, in the task `checkTestFilterMatched`, that one of them ran a test. Gradle alone fails every test task that has no test for its filter (`No tests found for given includes`), which is what you see when you give both tasks one filter with `./gradlew test integrationTest --tests ...` without the property, and in a project whose build has an earlier Grails Gradle plugin; there, say which tests are meant with `--unit` or `--integration`.
+This is the work of the Gradle task `testApp` of the Grails Gradle plugin, which the command runs: it gives the names to every test task it runs, lets a test task pass that has no test for them, and fails when none of them ran a test. Gradle alone fails every test task that has no test for its filter (`No tests found for given includes`), which is what you see when you give two test tasks one filter with `./gradlew test integrationTest --tests ...` (the section on running tests with Gradle describes the task and its options).
 
 NOTE: In Grails 2.x, adding `-rerun` as an argument would only run those tests which failed in the previous test-app run. This argument is no longer supported.
 
@@ -145,13 +147,21 @@ grails test-app --debug-jvm
 
 This will open the default Java remote debugging port, 5005, for you to attach a remote debugger from your editor / IDE of choice.
 
+Every test phase has a JVM of its own. With `--debug-jvm` the phases are run one at a time, and the JVM of each phase that has tests to run waits for a debugger in its turn, on the same port. Name the test or the phase that is to be debugged, so that one JVM waits:
+
+[source,groovy]
+----
+grails test-app --debug-jvm BookControllerSpec
+grails test-app --debug-jvm --integration
+----
+
 NOTE: This differs from Grails 2.3 and previous, where the `grails-debug` command existed.
 
 
 ==== Targeting Test Phases
 
 
-In addition to targeting certain tests, you can also target test _phases._ By default Grails has two testing phases `unit` and `integration.`
+In addition to targeting certain tests, you can also target test _phases._ By default Grails has two testing phases `unit` and `integration`, and a project can add more (see <<testPhases>>). Without a phase, `test-app` runs all of them.
 
 NOTE: Grails 2.x uses `phase:type` syntax. In Grails 3.0 it was removed, because it made no sense in Gradle context.
 
@@ -168,6 +178,21 @@ To run `integration` tests you would run...
 ----
 grails test-app -integration
 ----
+
+A phase the project adds has a switch of its name: the name of its Gradle task without the ending `Test`, in lower case, with a hyphen where the name of the task has a capital letter. With two dashes, as `--unit` and `--integration` are written too:
+
+[source,groovy]
+----
+grails test-app --functional
+grails test-app --end-to-end
+grails test-app --unit --functional
+----
+
+The first runs the task `functionalTest`, the second the task `endToEndTest`, and the third the unit tests and the functional tests. A `Test` task whose name does not end in `Test`, such as `smoke`, has the switch of its own name, `--smoke`. An option of the command is not the switch of a phase: a phase whose task is `cleanTest` is run with `grails gradle cleanTest`, as any Gradle task can be.
+
+When the project has no phase of the name, Gradle fails and names the phases the project has. `grails gradle grailsCommandCatalog` lists the phases of the project for the command line, which then shows their switches in `grails help test-app` and refuses a switch that is none of them before Gradle is started. The link:{commandLineRef}test-app.html[reference of the command] has the details.
+
+NOTE: Before Grails 9, `test-app` ran the unit tests and the integration tests, and a phase the project added was run with Gradle. It is now run by `test-app` as well. To leave a slow phase out of a run, name the phases that are wanted (`grails test-app --unit --integration`), or leave its task out: `grails test-app -- -x functionalTest`.
 
 
 ==== Targeting Tests When Using Phases

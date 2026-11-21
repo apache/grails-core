@@ -74,6 +74,8 @@ final class ApplicationCommands {
         }
         ApplicationCommands commands = new ApplicationCommands(ApplicationCommandFile.read(project.getDirectory()), ScriptCommandFiles.list(project.getDirectory()))
         commands.add(root)
+        // the build lists the test phases of the project in the same file
+        TestAppCommand.phasesOf(root, commands.file)
         OF.put(root, commands)
     }
 

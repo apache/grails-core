@@ -75,6 +75,9 @@ final class ApplicationCommandFile {
     /** How many characters the name of a command has, at most. */
     public static final int MAX_NAME = 64
 
+    /** How many test phases of the file are used, at most: as many as the task writes. */
+    public static final int MAX_TEST_PHASES = 64
+
     /** How many other names a command has, at most. */
     public static final int MAX_ALIASES = 16
 
@@ -104,6 +107,7 @@ final class ApplicationCommandFile {
     private static final int MAX_VALUES = 100_000
     private static final int MAX_TEXT = 4096
     private static final Pattern NAME = Pattern.compile('[a-z][a-z0-9]*(-[a-z0-9]+)*')
+    private static final Pattern TASK_NAME = Pattern.compile('[A-Za-z][A-Za-z0-9_-]*')
     private static final List<String> REGISTRATIONS = ['descriptor', 'factories', 'legacy']
     private static final List<String> OTHER_TARGETS = ['console', 'gradle', 'session']
     private static final List<Integer> NOT_SHOWN = [(int) Character.CONTROL, (int) Character.FORMAT, (int) Character.LINE_SEPARATOR,
@@ -154,7 +158,16 @@ final class ApplicationCommandFile {
     /** The commands of the file that are not used, and why: one line each, with nothing of the file in it. */
     final List<String> leftOut
 
-    private ApplicationCommandFile(State state, String reason, List<Entry> commands, boolean complete, List<String> diagnostics, List<String> leftOut) {
+    /**
+     * The test phases of the project, as the file says: the Gradle task of each by the name of the
+     * phase, which is the switch of {@code test-app} for it, in the order of the file. {@code null}
+     * when the file is not used or says nothing of the phases.
+     */
+    final Map<String, String> testPhases
+
+    private ApplicationCommandFile(State state, String reason, List<Entry> commands, boolean complete, List<String> diagnostics, List<String> leftOut,
+                                   Map<String, String> testPhases = null) {
+        this.testPhases = testPhases
         this.state = state
         this.reason = reason
         this.commands = commands
@@ -204,7 +217,7 @@ final class ApplicationCommandFile {
             }
             ApplicationCommandFile read = parse(bytes)
             String changed = read.state == State.CURRENT ? changedSince(project, attributes.lastModifiedTime()) : null
-            return changed == null ? read : new ApplicationCommandFile(State.STALE, changed, read.commands, read.complete, read.diagnostics, read.leftOut)
+            return changed == null ? read : new ApplicationCommandFile(State.STALE, changed, read.commands, read.complete, read.diagnostics, read.leftOut, read.testPhases)
         } catch (IOException | RuntimeException ignored) {
             return refused('cannot be read')
         }
@@ -310,7 +323,30 @@ final class ApplicationCommandFile {
         if (notUsed > MAX_LEFT_OUT) {
             leftOut.add(MAX_LEFT_OUT, "${notUsed - MAX_LEFT_OUT} more commands of ${LOCATION} are not used, for reasons like these".toString())
         }
-        return new ApplicationCommandFile(State.CURRENT, null, commands.asImmutable(), (Boolean) members.get('complete'), ((List<String>) said).asImmutable(), leftOut.asImmutable())
+        return new ApplicationCommandFile(State.CURRENT, null, commands.asImmutable(), (Boolean) members.get('complete'), ((List<String>) said).asImmutable(), leftOut.asImmutable(),
+                testPhases(members.get('testPhases')))
+    }
+
+    // The phases a file lists, each as the task writes one: a phase that is not is left out, since it
+    // is then run by its task and not by a switch. null for a file that lists none at all.
+    private static Map<String, String> testPhases(Object listed) {
+        if (!(listed instanceof List)) {
+            return null
+        }
+        Map<String, String> phases = new LinkedHashMap<>()
+        for (Object each : (List) listed) {
+            if (phases.size() == MAX_TEST_PHASES) {
+                break
+            }
+            if (each instanceof Map) {
+                Object name = ((Map) each).get('name')
+                Object task = ((Map) each).get('task')
+                if (isName(name) && task instanceof String && ((String) task).length() <= MAX_NAME && TASK_NAME.matcher((String) task).matches()) {
+                    phases.putIfAbsent((String) name, (String) task)
+                }
+            }
+        }
+        return Collections.unmodifiableMap(phases)
     }
 
     // what a command of the file has that the task does not write, as what is said of the command; null when there is nothing

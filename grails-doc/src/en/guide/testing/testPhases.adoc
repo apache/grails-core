@@ -49,6 +49,8 @@ This single declaration creates:
 * A `functionalTest` Gradle task wired into the `check` lifecycle
 * IntelliJ IDEA integration marking the source folder as test sources
 
+The new phase is run by `grails test-app` together with the unit tests and the integration tests, after them. `grails test-app --functional` runs it alone: the switch of a phase is the name of its task without the ending `Test`. With Gradle it is `./gradlew functionalTest`, or `./gradlew testApp --phase functional`.
+
 You can then add dependencies specific to that phase:
 
 [source,groovy]

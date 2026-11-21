@@ -72,6 +72,20 @@ class ConsoleCommandsSpec extends CommandSpec implements CommandFixture {
             }
         }
 
+        abstract class RecordedPhases extends Recorded {
+
+            @Input @Optional @Option(option = 'phase', description = 'A phase to run')
+            List<String> phases = []
+
+            @Input @Option(option = 'rerun-tests', description = 'Run the tests again')
+            boolean rerunTests = false
+
+            @TaskAction
+            void phases() {
+                println "phases=${phases.collect { '<' + it + '>' }.join('')} rerunTests=${rerunTests}"
+            }
+        }
+
         def start = gradle.startParameter
         println 'requested=' + start.taskNames.collect { '<' + it + '>' }.join('')
         // Gradle puts these there itself
@@ -79,12 +93,12 @@ class ConsoleCommandsSpec extends CommandSpec implements CommandFixture {
         println 'system=' + start.systemPropertiesArgs.findAll { !(it.key in own) }.sort().collect { name, value -> '<' + name + '=' + value + '>' }.join('')
         println "stacktrace=${start.showStacktrace} level=${start.logLevel} continuous=${start.continuous} offline=${start.offline}"
         println "given=[${providers.gradleProperty('given').getOrElse('(none)')}] in ${project.projectDir.name}"
-        println "lenientFilter=${providers.gradleProperty('grails.test.filter.lenient').getOrElse('(not given)')}"
 
         configurations.create('runtimeClasspath')
         ['test', 'integrationTest', 'cleanTest', 'cleanIntegrationTest', 'classes', 'clean', 'assemble', 'jar', 'publish'].each { String name ->
             tasks.register(name, Recorded)
         }
+        tasks.register('testApp', RecordedPhases)
         '''.stripIndent()
 
     PrintStream originalOut
@@ -134,16 +148,16 @@ class ConsoleCommandsSpec extends CommandSpec implements CommandFixture {
         ['assemble', '-clean', '-D', 'other=1']                                   | '<clean><assemble>'                                                           | '<grails.env=production><other=1>'            | null
         ['dependency-report']                                                     | '<dependencies>'                                                              | '<grails.env=development>'                    | 'runtimeClasspath'
         ['dependency-report', 'runtimeClasspath', '-Dgrails.env=test']            | '<dependencies><--configuration><runtimeClasspath>'                           | '<grails.env=test>'                           | 'runtimeClasspath'
-        ['test-app']                                                              | '<test><integrationTest>'                                                     | '<grails.env=test>'                           | '| Tests PASSED'
-        ['test-app', '--unit']                                                    | '<test>'                                                                      | '<grails.env=test>'                           | null
-        ['test-app', '--integration']                                             | '<integrationTest>'                                                           | '<grails.env=test>'                           | null
-        ['test-app', '-integration']                                              | '<integrationTest>'                                                           | '<grails.env=test>'                           | null
-        ['test-app', '--unit', '--integration']                                   | '<test><integrationTest>'                                                     | '<grails.env=test>'                           | null
-        ['test-app', 'example.BookSpec', '--tests', '*Other*', 'Third']           | '<test><--tests><example.BookSpec><--tests><Third><--tests><*Other*><integrationTest><--tests><example.BookSpec><--tests><Third><--tests><*Other*>' | '<grails.env=test>' | 'ran integrationTest tests=<example.BookSpec><Third><*Other*> debugJvm=false'
-        ['test-app', '--clean', '--debug-jvm']                                    | '<cleanTest><test><--debug-jvm><cleanIntegrationTest><integrationTest><--debug-jvm>' | '<grails.env=test>'                    | 'ran test tests= debugJvm=true'
-        ['test-app', '-clean', '-debug-jvm', '-unit']                             | '<cleanTest><test><--debug-jvm>'                                              | '<grails.env=test>'                           | null
-        ['test-app', '-Dgrails.env=ci', '-Dserver.port=0', '-Dflag']              | '<test><integrationTest>'                                                     | '<flag=><grails.env=ci><server.port=0>'       | null
-        ['test-app', '--', '--tests', 'Later']                                    | '<test><integrationTest><--tests><Later>'                                     | '<grails.env=test>'                           | 'ran integrationTest tests=<Later> debugJvm=false'
+        ['test-app']                                                              | '<testApp>'                                                                   | '<grails.env=test>'                           | '| Tests PASSED'
+        ['test-app', '--unit']                                                    | '<testApp><--phase><unit>'                                                    | '<grails.env=test>'                           | 'phases=<unit> rerunTests=false'
+        ['test-app', '--integration']                                             | '<testApp><--phase><integration>'                                             | '<grails.env=test>'                           | 'phases=<integration> rerunTests=false'
+        ['test-app', '-integration']                                              | '<testApp><--phase><integration>'                                             | '<grails.env=test>'                           | null
+        ['test-app', '--unit', '--integration']                                   | '<testApp><--phase><unit><--phase><integration>'                              | '<grails.env=test>'                           | 'phases=<unit><integration> rerunTests=false'
+        ['test-app', 'example.BookSpec', '--tests', '*Other*', 'Third']           | '<testApp><--tests><example.BookSpec><--tests><Third><--tests><*Other*>'      | '<grails.env=test>'                           | 'ran testApp tests=<example.BookSpec><Third><*Other*> debugJvm=false'
+        ['test-app', '--clean', '--debug-jvm']                                    | '<testApp><--rerun-tests><--debug-jvm>'                                       | '<grails.env=test>'                           | 'ran testApp tests= debugJvm=true'
+        ['test-app', '-clean', '-debug-jvm', '-unit']                             | '<testApp><--phase><unit><--rerun-tests><--debug-jvm>'                        | '<grails.env=test>'                           | 'phases=<unit> rerunTests=true'
+        ['test-app', '-Dgrails.env=ci', '-Dserver.port=0', '-Dflag']              | '<testApp>'                                                                   | '<flag=><grails.env=ci><server.port=0>'       | 'phases= rerunTests=false'
+        ['test-app', '--', '--tests', 'Later']                                    | '<testApp><--tests><Later>'                                                   | '<grails.env=test>'                           | 'ran testApp tests=<Later> debugJvm=false'
     }
 
     @Unroll
@@ -164,11 +178,11 @@ class ConsoleCommandsSpec extends CommandSpec implements CommandFixture {
         where:
         line                                 | requested   | system                                                | start
         ['compile', '--stacktrace']          | '<classes>' | '<grails.full.stacktrace=true>'                       | 'ALWAYS level=LIFECYCLE continuous=false offline=false'
-        ['test-app', '-x']                   | '<test>'    | '<grails.env=test><grails.full.stacktrace=true>'      | 'ALWAYS level=LIFECYCLE continuous=false offline=false'
+        ['test-app', '-x']                   | '<testApp>' | '<grails.env=test><grails.full.stacktrace=true>'      | 'ALWAYS level=LIFECYCLE continuous=false offline=false'
         ['clean', '--verbose']               | '<clean>'   | ''                                                    | 'INTERNAL_EXCEPTIONS level=INFO continuous=false offline=false'
         ['-v', 'clean']                      | '<clean>'   | ''                                                    | 'INTERNAL_EXCEPTIONS level=INFO continuous=false offline=false'
         ['-x', 'compile']                    | '<classes>' | '<grails.full.stacktrace=true>'                       | 'ALWAYS level=LIFECYCLE continuous=false offline=false'
-        ['-xv', 'test-app', '--unit']        | '<test>'    | '<grails.env=test><grails.full.stacktrace=true>'      | 'ALWAYS level=INFO continuous=false offline=false'
+        ['-xv', 'test-app', '--unit']        | '<testApp><--phase><unit>' | '<grails.env=test><grails.full.stacktrace=true>' | 'ALWAYS level=INFO continuous=false offline=false'
         ['compile', '-Dfoo=bar', '-Dflag']   | '<classes>' | '<flag=><foo=bar>'                                    | 'INTERNAL_EXCEPTIONS level=LIFECYCLE continuous=false offline=false'
         ['clean', '-D', 'grails.env=test']   | '<clean>'   | '<grails.env=test>'                                   | 'INTERNAL_EXCEPTIONS level=LIFECYCLE continuous=false offline=false'
         ['clean', '--', '--debug']           | '<clean>'   | ''                                                    | 'INTERNAL_EXCEPTIONS level=DEBUG continuous=false offline=false'
@@ -186,13 +200,13 @@ class ConsoleCommandsSpec extends CommandSpec implements CommandFixture {
 
         then:
         exit == 0
-        lineOf('requested=') == '<test><--tests><*BookSpec.saves a "new" book>'
+        lineOf('requested=') == '<testApp><--tests><*BookSpec.saves a "new" book>'
         lineOf('system=') == '<grails.env=test><note=it\'s  $HOME *>'
         out.toString().contains('given=[two  words "double" \'single\' \\ -x end]')
-        out.toString().contains('ran test tests=<*BookSpec.saves a "new" book> debugJvm=false')
+        out.toString().contains('ran testApp tests=<*BookSpec.saves a "new" book> debugJvm=false')
     }
 
-    void "a project without integration tests has its unit tests run, and is told when the integration tests alone are asked for"() {
+    void "a project without integration tests has every phase of its build run, and is told when the integration tests alone are asked for"() {
         given:
         plainProject(dir)
 
@@ -201,7 +215,7 @@ class ConsoleCommandsSpec extends CommandSpec implements CommandFixture {
 
         then:
         exit == 0
-        lineOf('requested=') == '<test>'
+        lineOf('requested=') == '<testApp>'
 
         when:
         out.reset()
@@ -234,7 +248,7 @@ class ConsoleCommandsSpec extends CommandSpec implements CommandFixture {
     }
 
     @Unroll
-    void "when #line fails, it is #said what a failure can have to do with the names of the tests"() {
+    void "when #line fails, nothing is said after the line of the failure: the names of tests are looked for in every phase by the build"() {
         given: 'a project with integration tests, whose build fails'
         plainProject(dir)
         new File(dir, 'src/integration-test/groovy').mkdirs()
@@ -242,50 +256,14 @@ class ConsoleCommandsSpec extends CommandSpec implements CommandFixture {
         when:
         int exit = ForgeCli.execute(beanContext, (line + ['-Dfail=true']) as String[])
 
-        then: 'the failure is the one line it was, and the note is another kind of line, which names the filter'
+        then:
         exit == 1
         errors() == ['| Error Gradle did not succeed: it ended with exit code 1']
-        out.toString().readLines().findAll { String each -> each.startsWith('| Note') } == (said == 'said' ? [
-                "| Note The tests were named (${named}) and looked for among the unit tests and the integration tests. If Gradle said that no tests were found " +
-                        'for the filter, neither has a test of that name: it is the name of a test class or a pattern for it, such as example.BookSpec or *BookSpec. ' +
-                        'If Gradle said "No tests found for given includes" for one of the two tasks, the build of the project does not have the Grails Gradle plugin ' +
-                        'of Grails 9, which lets the task without such a test pass: say which tests are meant with --unit or with --integration'] : [])
+        out.toString().readLines().findAll { String each -> each.startsWith('| Note') } == []
 
         where:
-        line                                                    | said       | named
-        ['test-app', '*BookControllerSpec']                     | 'said'     | '*BookControllerSpec'
-        ['test-app', '--tests', '*BookControllerSpec', 'Other'] | 'said'     | 'Other, *BookControllerSpec'
-        ['test-app', '--unit', 'BookControllerSpec']            | 'not said' | null
-        ['test-app', '--integration', 'BookSpec']               | 'not said' | null
-        ['test-app']                                            | 'not said' | null
-    }
-
-    @Unroll
-    void "#line #gives the Grails Gradle plugin the property that lets a test task without a test of the name pass"() {
-        given:
-        plainProject(dir)
-        if (integrationTests) {
-            new File(dir, 'src/integration-test/groovy').mkdirs()
-        }
-
-        when:
-        int exit = ForgeCli.execute(beanContext, line as String[])
-
-        then: 'only where one filter goes to both tasks: a task that is run alone fails without a match, as Gradle has it'
-        exit == 0
-        lineOf('requested=') == requested
-        lineOf('lenientFilter=') == (gives == 'gives' ? 'true' : '(not given)')
-
-        where:
-        line                                          | integrationTests | gives            | requested
-        ['test-app', 'BookSpec']                      | true             | 'gives'          | '<test><--tests><BookSpec><integrationTest><--tests><BookSpec>'
-        ['test-app', '--tests', '*BookSpec']          | true             | 'gives'          | '<test><--tests><*BookSpec><integrationTest><--tests><*BookSpec>'
-        ['test-app', '--unit', '--integration', 'A']  | true             | 'gives'          | '<test><--tests><A><integrationTest><--tests><A>'
-        ['test-app']                                  | true             | 'does not give'  | '<test><integrationTest>'
-        ['test-app', '--unit', 'BookSpec']            | true             | 'does not give'  | '<test><--tests><BookSpec>'
-        ['test-app', '--integration', 'BookSpec']     | true             | 'does not give'  | '<integrationTest><--tests><BookSpec>'
-        ['test-app', 'BookSpec']                      | false            | 'does not give'  | '<test><--tests><BookSpec>'
-        ['test-app', '--', '--tests', 'Later']        | true             | 'does not give'  | '<test><integrationTest><--tests><Later>'
+        line << [['test-app', '*BookControllerSpec'], ['test-app', '--tests', '*BookControllerSpec', 'Other'], ['test-app', '--unit', 'BookControllerSpec'],
+                 ['test-app', '--integration', 'BookSpec'], ['test-app']]
     }
 
     @Unroll
@@ -386,7 +364,7 @@ class ConsoleCommandsSpec extends CommandSpec implements CommandFixture {
         line                              | said
         ['compile', 'classes']            | 'compile takes no argument classes'
         ['clean', '--offline']            | 'clean has no option --offline'
-        ['test-app', '--rerun']           | 'test-app has no option --rerun'
+        ['test-app', '--cleen']           | 'test-app has no option --cleen. Did you mean: --clean?'
         ['test-app', '--tests']           | "Missing required parameter for option '--tests'"
         ['dependency-report', 'a', 'b']   | 'dependency-report takes no argument b'
         ['stats', 'now']                  | 'stats takes no argument now'
@@ -585,7 +563,7 @@ class ConsoleCommandsSpec extends CommandSpec implements CommandFixture {
         then:
         !command.alive
         exit.get() == 1
-        lineOf('requested=') == '<test>'
+        lineOf('requested=') == '<testApp>'
         lineOf('stacktrace=') == 'INTERNAL_EXCEPTIONS level=LIFECYCLE continuous=true offline=false'
         errors() == ['| Error Gradle was stopped before it finished, because the command was cancelled']
         !out.toString().contains('Tests PASSED')

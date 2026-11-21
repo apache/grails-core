@@ -55,6 +55,9 @@ class MultiProjectBuildSpec extends CommandSpec implements CommandFixture {
             @Input @Optional @Option(option = 'tests', description = 'The tests to run')
             List<String> tests = []
 
+            @Input @Option(option = 'rerun-tests', description = 'Run the tests again')
+            boolean rerunTests = false
+
             @Input @Optional @Option(option = 'args-file', description = 'The arguments of a command')
             String argsFile
 
@@ -65,7 +68,7 @@ class MultiProjectBuildSpec extends CommandSpec implements CommandFixture {
         }
 
         configurations.create('runtimeClasspath')
-        ['test', 'cleanTest', 'classes', 'clean', 'assemble', 'bootRun', 'console', 'shell', 'runCommand', 'runScriptCommand'].each { String name ->
+        ['test', 'cleanTest', 'testApp', 'classes', 'clean', 'assemble', 'bootRun', 'console', 'shell', 'runCommand', 'runScriptCommand'].each { String name ->
             tasks.register(name, Recorded)
         }
         '''.stripIndent()
@@ -131,7 +134,7 @@ class MultiProjectBuildSpec extends CommandSpec implements CommandFixture {
         ['compile']                            | 'apps/web/shop'                            | 'apps/web/shop' | '<:apps:web:shop:classes>'                                     | [':apps:web:shop:classes']
         ['compile']                            | 'apps/web/shop/grails-app/controllers'     | 'apps/web/shop' | '<:apps:web:shop:classes>'                                     | [':apps:web:shop:classes']
         ['compile']                            | 'apps/admin'                               | 'apps/admin'    | '<:apps:admin:classes>'                                        | [':apps:admin:classes']
-        ['test-app', '--clean', 'BookSpec']    | 'apps/admin/src'                           | 'apps/admin'    | '<:apps:admin:cleanTest><:apps:admin:test><--tests><BookSpec>' | [':apps:admin:cleanTest', ':apps:admin:test']
+        ['test-app', '--clean', 'BookSpec']    | 'apps/admin/src'                           | 'apps/admin'    | '<:apps:admin:testApp><--tests><BookSpec><--rerun-tests>'      | [':apps:admin:testApp']
         ['war', '--clean']                     | 'apps/admin'                               | 'apps/admin'    | '<:apps:admin:clean><:apps:admin:assemble>'                    | [':apps:admin:clean', ':apps:admin:assemble']
         ['run-app']                            | 'apps/web/shop'                            | 'apps/web/shop' | '<:apps:web:shop:bootRun>'                                     | [':apps:web:shop:bootRun']
         ['run-command', 'say', 'a b']          | 'apps/admin/grails-app'                    | 'apps/admin'    | '<:apps:admin:runCommand><--args-file=.grails/run/command-args-0.json>' | [':apps:admin:runCommand with ["say","a b"]']
