@@ -75,6 +75,6 @@ class DynamicFinderTextAfterOperatorSpec extends GrailsDataTckSpec {
 
         then: 'Equal is the operator a finder has without writing it, so the text is read as the name of a property: a datastore that refuses an unknown field names it, one that allows it finds nothing'
         found == null
-        refused == null || refused.message.contains('nameEqualIgnoreCasex')
+        refused == null || refused.message?.contains('nameEqualIgnoreCasex')
     }
 }
