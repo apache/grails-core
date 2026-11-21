@@ -202,22 +202,6 @@ class XmlProblemDetailSpec extends Specification implements ControllerUnitTest<P
         response.contentAsString == ''
     }
 
-    void 'the page respond names for a problem renders it for a client whose Accept header Spring MVC cannot read'() {
-        given: 'the HTML page of the name, and a header Grails reads as Grails 8 read it'
-        views['/problemXml/conflict.gsp'] = '<p>${problemDetail.detail}</p>'
-        request.addHeader('Accept', 'text/html;q=2')
-        request.addHeader('User-Agent', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko)')
-
-        when:
-        controller.respond(ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, 'taken'), view: 'conflict',
-                formats: ['html', 'xml', 'json'])
-
-        then:
-        response.status == 409
-        view == 'conflict'
-        model.problemDetail.detail == 'taken'
-    }
-
     void 'a problem whose status is not an error status fails as Spring MVC fails it for a client whose Accept header Spring MVC cannot read'() {
         given:
         request.addHeader('Accept', 'application/json;q=2')
@@ -542,6 +526,33 @@ class XmlProblemDetailSpec extends Specification implements ControllerUnitTest<P
             content << node(child)
         }
         [name.localPart, name.namespaceURI, nil, children ? content : element.text()]
+    }
+}
+
+/**
+ * With {@code grails.mime.negotiation.spring: false}, Grails reads an {@code Accept} header Spring MVC cannot read
+ * leniently, as Grails 8 read it, so the page {@code respond} names for a problem renders.
+ */
+class XmlProblemDetailGrailsRulesSpec extends Specification implements ControllerUnitTest<ProblemXmlController> {
+
+    Closure doWithConfig() {{ config ->
+        config.grails.mime.negotiation.spring = false
+    }}
+
+    void 'the page respond names for a problem renders it for a client whose Accept header Spring MVC cannot read, as Grails 8 read it'() {
+        given: 'the HTML page of the name, and a header Grails reads as Grails 8 read it'
+        views['/problemXml/conflict.gsp'] = '<p>${problemDetail.detail}</p>'
+        request.addHeader('Accept', 'text/html;q=2')
+        request.addHeader('User-Agent', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko)')
+
+        when:
+        controller.respond(ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, 'taken'), view: 'conflict',
+                formats: ['html', 'xml', 'json'])
+
+        then:
+        response.status == 409
+        view == 'conflict'
+        model.problemDetail.detail == 'taken'
     }
 }
 

@@ -18,9 +18,6 @@ grails:
     profile: web
     codegen:
         defaultPackage: springformatnegotiation
-    mime:
-        negotiation:
-            spring: true
 info:
     app:
         name: '@info.app.name@'

@@ -38,9 +38,14 @@ import spock.lang.Specification
 /**
  * A problem is written in the type Spring MVC's content negotiation selects for it, as the application configures it: a
  * strategy of its own, the format parameter spring.mvc.contentnegotiation.favor-parameter reads, the Accept header and a
- * default content type, in the order Spring MVC asks them.
+ * default content type, in the order Spring MVC asks them. With {@code grails.mime.negotiation.spring: false}, which
+ * leaves the application's manager as it is; by default, Grails reads the format parameter in its place.
  */
 class ProblemDetailContentNegotiationSpec extends Specification implements ControllerUnitTest<ProblemNegotiationController> {
+
+    Closure doWithConfig() {{ config ->
+        config.grails.mime.negotiation.spring = false
+    }}
 
     @Configuration
     static class Negotiation {

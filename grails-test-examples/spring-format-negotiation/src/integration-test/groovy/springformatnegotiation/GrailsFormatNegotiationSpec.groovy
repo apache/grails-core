@@ -16,8 +16,9 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package functionaltests.contentneg
+package springformatnegotiation
 
+import org.springframework.test.context.TestPropertySource
 import spock.lang.Specification
 import spock.lang.Tag
 
@@ -25,11 +26,12 @@ import grails.testing.mixin.integration.Integration
 import org.apache.grails.testing.http.client.HttpClientSupport
 
 /**
- * Without {@code grails.mime.negotiation.spring}, Grails resolves formats with its own rules, and Spring MVC writes the
- * values of actions as the {@code Accept} header asks.
+ * With {@code grails.mime.negotiation.spring: false}, Grails resolves formats with its own rules, and Spring MVC writes
+ * the values of actions as the {@code Accept} header asks, as in Grails 9 by default.
  */
 @Integration
 @Tag('http-client')
+@TestPropertySource(properties = 'grails.mime.negotiation.spring=false')
 class GrailsFormatNegotiationSpec extends Specification implements HttpClientSupport {
 
     void 'a value Spring MVC writes for an action is in the type the Accept header asks for, whatever its URL extension'() {
