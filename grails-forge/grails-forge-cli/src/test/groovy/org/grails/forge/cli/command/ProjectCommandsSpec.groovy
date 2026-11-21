@@ -27,12 +27,14 @@ import java.util.zip.ZipOutputStream
 import groovy.json.JsonSlurper
 import org.apache.grails.forge.core.state.ProjectLock
 import org.apache.grails.forge.core.state.ProjectState
+import org.apache.grails.forge.core.state.StateLimits
 import org.grails.forge.cli.CommandLineCompleter
 import org.grails.forge.cli.CommandSpec
 import org.grails.forge.cli.ForgeCli
 import org.grails.forge.util.VersionInfo
 import org.jline.reader.Candidate
 import org.jline.reader.impl.DefaultParser
+import spock.lang.IgnoreIf
 import spock.lang.Unroll
 
 /**
@@ -733,6 +735,149 @@ class ProjectCommandsSpec extends CommandSpec {
         exit == 1
         err.toString().readLines() == ["| Error The application was written to ${new File(other, 'again').canonicalPath}, and its record is not that of the project: " +
                                                '.grails/.gitattributes differs']
+    }
+
+    void "a file the record of the project has and the application that was written has not is named"() {
+        given:
+        create(dir, ['create-app', 'com.example.shop'])
+        File project = new File(dir, 'shop')
+        new File(project, '.grails/baseline/extra.txt').text = 'x'
+        File output = new File(other, 'again')
+
+        when:
+        int exit = run('project', 'regenerate', '--output', output.canonicalPath)
+
+        then:
+        exit == 1
+        err.toString().readLines() == ["| Error The application was written to ${output.canonicalPath}, and its record is not that of the project: " +
+                                               '.grails/baseline/extra.txt is a file of the project only']
+    }
+
+    void "with -x a record that cannot be used is said with where it failed, by both commands"() {
+        given:
+        create(dir, ['create-app', 'com.example.shop'])
+        new File(dir, 'shop/.grails/forge.lock.yml').delete()
+
+        when:
+        int exit = run((command + ['-x']) as String[])
+
+        then:
+        exit == 1
+        err.toString().readLines().first().startsWith('| Error The state of the project is not complete: .grails/forge.lock.yml is missing')
+        err.toString().contains('ProjectStateException')
+        err.toString().contains('\tat ')
+
+        when: 'and without it, in one line'
+        err.reset()
+        exit = run(command as String[])
+
+        then:
+        exit == 1
+        err.toString().readLines().size() == 1
+        err.toString().startsWith('| Error The state of the project is not complete: .grails/forge.lock.yml is missing')
+
+        where:
+        command << [['project', 'show'], ['project', 'regenerate', '--diff']]
+    }
+
+    void "what a .gitignore leaves out: a name anywhere, a path from the root, a directory with all it has, and what a later line takes back"() {
+        given:
+        ProjectRegenerateCommand.IgnoreRules rules = new ProjectRegenerateCommand.IgnoreRules(
+                '# a comment\n\nbuild/\r\n.idea\n*.iml  \n/dist/\ndocs/**/draft-?.txt\n**/generated\nlogs/**\n!logs/keep.txt\n!\n/\n[Bb]in/\nwith\\\\slash\n' + ('x' * 1001) + '\n')
+
+        expect: 'a file in a directory that is left out is left out with it, however deep'
+        rules.ignoresWithin(path) == ignored
+
+        where:
+        path                                 || ignored
+        'build/libs/shop.jar'                || true
+        'sub/build/classes/A.class'          || true
+        'build'                              || false
+        'build.gradle'                       || false
+        '.idea/workspace.xml'                || true
+        'grails-app/.idea'                   || true
+        'shop.iml'                           || true
+        'sub/shop.iml'                       || true
+        'dist/shop.zip'                      || true
+        'sub/dist/shop.zip'                  || false
+        'docs/draft-1.txt'                   || true
+        'docs/a/b/draft-2.txt'               || true
+        'docs/a/draft-10.txt'                || false
+        'src/generated/A.groovy'             || true
+        'generated'                          || true
+        'logs/app.log'                       || true
+        'logs/keep.txt'                      || false
+        'bin/tool'                           || false
+        'Bin/tool'                           || false
+        'x' * 1001                           || false
+        'src/main/groovy/A.groovy'           || false
+    }
+
+    void "a file that a later line of a .gitignore takes back is one again where its directory is not left out"() {
+        given:
+        ProjectRegenerateCommand.IgnoreRules rules = new ProjectRegenerateCommand.IgnoreRules('*.log\n!keep.log\nout/\n')
+
+        expect:
+        rules.ignoresWithin('a.log')
+        !rules.ignoresWithin('keep.log')
+        !rules.ignoresWithin('sub/keep.log')
+        rules.ignoresWithin('out/keep.log')
+        rules.ignores('out', true)
+        !rules.ignores('out', false)
+    }
+
+    void "the options of an application that is one project of a build, and the repositories its lock names, are shown and are on the command line"() {
+        given:
+        File repository = new File(other, 'repository')
+        File jar = publish(repository, 'com.acme:acme-audit-grails:2.3.0')
+        String address = repository.toPath().toAbsolutePath().normalize().toUri().toString()
+        new File(dir, 'settings.gradle').text = "rootProject.name = 'build'\n"
+        assert create(dir, ['create-app', 'com.example.shop', '--subproject', '--features', 'com.acme:acme-audit-grails:2.3.0', '--feature-pack-repository', address]) == 0
+        File project = new File(dir, 'shop')
+        ProjectLock lock = ProjectState.read(project.toPath()).lock
+        // the lock as it is when the plugin came from a repository at an address, and the build was generated with more repositories than a lock names
+        List<ProjectLock.LockedRepository> repositories = (1..StateLimits.MAX_REPOSITORIES).collect { new ProjectLock.LockedRepository(ProjectLock.LockedRepository.REMOTE, "https://repo${it}.example.org/maven".toString()) }
+        repositories[1] = new ProjectLock.LockedRepository(ProjectLock.LockedRepository.MAVEN_LOCAL)
+        new File(project, '.grails/forge.lock.yml').bytes = new ProjectLock(lock.manifestSha256, lock.generatorName, lock.generatorVersion, lock.grailsVersion, lock.templateApi,
+                lock.applicationType, lock.options, lock.lineEndings, repositories, 3,
+                lock.features.collect { ProjectLock.LockedFeature each ->
+                    each.coordinates == null ? each : new ProjectLock.LockedFeature(each.name, each.source, 'https://plugins.example.org/maven', each.coordinates, each.version, each.sha256)
+                }, lock.parameters, lock.baselineIndexSha256).toBytes()
+        out.reset()
+
+        when:
+        int exit = run('project', 'show')
+        List<String> lines = out.toString().readLines()
+
+        then:
+        exit == 0
+        lines.contains('    repository    remote https://repo1.example.org/maven')
+        lines.contains('    repository    maven-local')
+        lines.contains('    repository    and 3 more')
+        lines.contains("    acme-audit (pack, com.acme:acme-audit-grails:2.3.0, sha256 ${sha(jar.bytes)}, from https://plugins.example.org/maven)".toString())
+        lines.any { it ==~ / +--subproject +yes +\(differs from the current default: no\)/ }
+        lines.any { it ==~ / +--feature-pack-repository +https:\/\/plugins\.example\.org\/maven +\(differs from the current default: \(none\)\)/ }
+        !lines.any { it.contains('does not name the repository') }
+        lines.contains('| The application was generated with the repositories of the environment variable GRAILS_REPO_URL, which are written into its build: ' +
+                'set the variable to the same repositories for the command')
+        words(lines[-1]) == ['grails-forge-cli', 'create-app', 'com.example.shop', '--subproject', '--features', 'com.acme:acme-audit-grails:2.3.0',
+                             '--feature-pack-repository', 'https://plugins.example.org/maven',
+                             '--feature-pack-sha256', "com.acme:acme-audit-grails:2.3.0=${sha(jar.bytes)}".toString()]
+
+        when:
+        out.reset()
+        exit = run('project', 'show', '--json')
+        Map document = (Map) new JsonSlurper().parseText(out.toString())
+
+        then:
+        exit == 0
+        document.repositories.size() == StateLimits.MAX_REPOSITORIES
+        document.repositories[0] == [kind: 'remote', url: 'https://repo1.example.org/maven']
+        document.repositories[1] == [kind: 'maven-local']
+        document.repositoriesNotNamed == 3
+        document.features.find { it.name == 'acme-audit' }.origin == 'https://plugins.example.org/maven'
+        document.effectiveOptions.find { it.name == 'subproject' } == [name: 'subproject', option: '--subproject', value: true, default: false, status: 'differs']
+        document.effectiveOptions.find { it.name == 'feature-pack-repository' }.value == ['https://plugins.example.org/maven']
     }
 
     void "the commands are shown by help, described for a tool and completed"() {
