@@ -33,6 +33,7 @@ class FormerCommandsSpec extends CommandSpec {
 
     static final String CLI = 'grails-forge-cli'
     static final String RECORD = '/former-commands-grails-8.tsv'
+    static final Set<String> TEST_TOOLING = ['generate-unit-test', 'generate-functional-test', 'generate-resource-controller'] as Set
     static final String MISSING = 'The commands of the application and its plugins are not listed yet. To list them: grails-forge-cli gradle grailsCommandCatalog'
     static final Map<String, List<String>> PROJECTS = [
             web        : ['create-app', 'example.web'],
@@ -89,7 +90,6 @@ class FormerCommandsSpec extends CommandSpec {
         'list-profiles'            | 'list-profiles listed the profiles of the Grails shell. Profiles are replaced by application types and features: grails-forge-cli help lists the create commands, and each lists its features with --list-features'
         'open'                     | 'open opened a file with the program the desktop has for it in the Grails shell. It has no replacement in grails-forge-cli'
         'create-profile'           | 'create-profile created a profile for the Grails shell. Profiles are replaced by application types, features and feature packs, and no command creates any of these'
-        'generate-functional-test' | 'generate-functional-test was a command of the REST API profile of the Grails shell. It has no replacement in grails-forge-cli; create-functional-test writes a test of the home page, in a REST API project and in a project with a Geb feature'
     }
 
     @Unroll
@@ -401,7 +401,10 @@ class FormerCommandsSpec extends CommandSpec {
         and: 'none of them is typed without an answer: it is a command somewhere, or the table has a line for it'
         (ofShell + ofProfiles).findAll { String name ->
             FormerCommands.find(name) == null && !(['outside'] + PROJECTS.keySet()).any { String kind -> isCommand(kind, name) }
-        } == [] as Set
+        } == TEST_TOOLING
+
+        and: 'but for three that were there to test the REST API profiles themselves and not for an application: the table and the guide leave them out'
+        TEST_TOOLING.every { String name -> name in ofProfiles }
 
         and: 'sh, which was another name of shell, is what is short for shell'
         FormerCommands.find('sh') == null

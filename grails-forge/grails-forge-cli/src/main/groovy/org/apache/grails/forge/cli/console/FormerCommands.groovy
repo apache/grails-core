@@ -157,14 +157,6 @@ final class FormerCommands {
                 'query-tail is a command of Grails Data (grails-datamapping-core), which the build of a project runs without starting the application: ' +
                 'where the application has GORM, {cli} gradle grailsCommandCatalog makes it a command here, and {cli} run-command query-tail runs it before that')
 
-        add('generate-resource-controller', 'rest-api profile, another name of generate-all and generate-controller', Status.NO_REPLACEMENT,
-                'generate-resource-controller was a command of the REST API profile of the Grails shell. It has no replacement in {cli}; ' +
-                'create-restful-controller writes a controller for a domain class in a REST API application')
-        add('generate-unit-test', 'rest-api profile', Status.NO_REPLACEMENT,
-                'generate-unit-test was a command of the REST API profile of the Grails shell. It has no replacement in {cli}; create-unit-test writes an empty test')
-        add('generate-functional-test', 'rest-api profile', Status.NO_REPLACEMENT,
-                'generate-functional-test was a command of the REST API profile of the Grails shell. It has no replacement in {cli}; ' +
-                'create-functional-test writes a test of the home page, in a REST API project and in a project with a Geb feature')
         add('open', 'shell', Status.NO_REPLACEMENT,
                 'open opened a file with the program the desktop has for it in the Grails shell. It has no replacement in {cli}')
         add('!', 'shell, interactive mode', Status.NO_REPLACEMENT,

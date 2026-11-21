@@ -924,8 +924,8 @@ Not done: adding the feature of an external pack (by coordinates, `--feature-pac
 | `dependency-report` | base profile | `dependency-report` | retained | `ConsoleCommandsSpec` |
 | `exit`, `quit` | shell, interactive mode | `exit` in the interactive mode; `quit` nowhere | `exit` retained, `quit` replaced by it | the lines of the table; the interactive mode itself is covered by no spec |
 | `generate-all`, `generate-controller`, `generate-views` | rest-api profile (scripts with JSON views) | the commands of these names of the scaffolding plugin, for GSP views, once the build lists them | a command of a plugin; the JSON views output has no replacement (section 3: removal gate) | `ApplicationCommandsSpec` for the route; the lines of the table; end-to-end run for the listing |
-| `generate-functional-test`, `generate-unit-test` | rest-api profile | nothing | no replacement recorded (section 3 names no command) | the lines of the table |
-| `generate-resource-controller` | rest-api profile, another name of `generate-all` and of `generate-controller` | nothing | no replacement recorded | the line of the table |
+| `generate-functional-test`, `generate-unit-test` | rest-api profile | nothing | no replacement, and no line: they were there to test the REST API profiles themselves and were not meant for an application, so the table, the record of the commands of Grails 8 and the guide leave them out, and they are answered as any name that is no command | none |
+| `generate-resource-controller` | rest-api profile, another name of `generate-all` and of `generate-controller` | nothing | no replacement, and no line, as `generate-unit-test` | none |
 | `gradle` | shell | `gradle` | retained, changed (every argument reaches Gradle as it is) | `GradleCommandSpec`; end-to-end run |
 | `help` | shell | `help`, `help --json` | retained, changed | `CommandCatalogSpec`; end-to-end run |
 | `install` | plugin profile, profile profile | a hidden command that runs nothing, names `gradle publishToMavenLocal` and ends with 1 | replaced by a Gradle task | `ConsoleCommandsSpec`, `FormerCommandsSpec` |

@@ -574,18 +574,6 @@ Outside a project these commands are not mistakes: `create-controller`, `install
 |the REST API profile
 |a command of a plugin: `generate-controller` of the scaffolding plugin; as `generate-all`.
 
-|`generate-functional-test`
-|the REST API profile
-|no replacement: removed with the REST API profile. `create-functional-test` writes a test of the home page, in a REST API project and in a project with a Geb feature.
-
-|`generate-resource-controller`
-|the REST API profile, another name of `generate-all` and `generate-controller`
-|no replacement: removed with the REST API profile. `create-restful-controller` writes a controller for a domain class in a REST API application.
-
-|`generate-unit-test`
-|the REST API profile
-|no replacement: removed with the REST API profile. `create-unit-test` writes an empty test.
-
 |`generate-views`
 |the REST API profile
 |a command of a plugin: `generate-views` of the scaffolding plugin; as `generate-all`.
