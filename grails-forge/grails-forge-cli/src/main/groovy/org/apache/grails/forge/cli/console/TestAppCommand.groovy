@@ -199,14 +199,6 @@ class TestAppCommand extends GradleEnvironmentCommand {
                     "of the project: the task ${taskOf(taken.get(0))} for ${switches.get(0)}. If Gradle said that the project has no such phase, it named the phases there are; " +
                     "an option of Gradle is given after --, as in ${cli} test-app -- --info")
         }
-        try {
-            if (EarlierGrailsProject.guidance(project.directory) != null) {
-                note("test-app runs the Gradle task ${TASK}, which the Grails Gradle plugin of Grails 9 adds. If Gradle said that there is no such task, " +
-                        'the build of this project does not have that plugin: the project is to be upgraded to Grails 9 first')
-            }
-        } catch (IOException ignored) {
-            // nothing is said of a project that cannot be read
-        }
     }
 
     private void note(String text) {

@@ -292,7 +292,7 @@ class TestAppPhasesSpec extends CommandSpec implements CommandFixture {
         notes() == []
     }
 
-    void "in a project whose build has no task for the phases, Gradle says so, and for a project that names an earlier Grails a note says what the task is of"() {
+    void "in a project whose build has no task for the phases, Gradle says so, and a project that names an earlier Grails is not run at all"() {
         given: 'a build as one with the Grails Gradle plugin of an earlier version: it has the test tasks and no testApp'
         File build = new File(dir, 'build.gradle')
         build.text = build.text.replace("tasks.register('testApp', RecordedPhases)", '')
@@ -307,16 +307,16 @@ class TestAppPhasesSpec extends CommandSpec implements CommandFixture {
         errors() == ['| Error Gradle did not succeed: it ended with exit code 1']
         notes() == []
 
-        when:
+        when: 'the project says that it is on an earlier Grails'
         out.reset()
         new File(dir, 'gradle.properties') << 'grailsVersion=7.0.5\n'
         exit = ForgeCli.execute(beanContext, 'test-app', '--unit')
 
-        then:
+        then: 'Gradle is not started, and the one line says which version the command line is for'
         exit == 1
-        out.toString().contains("'testApp' not found")
-        notes() == ['| Note test-app runs the Gradle task testApp, which the Grails Gradle plugin of Grails 9 adds. If Gradle said that there is no such task, ' +
-                            'the build of this project does not have that plugin: the project is to be upgraded to Grails 9 first']
+        !out.toString().contains("'testApp' not found")
+        errors().size() == 1
+        errors()[0].startsWith('| Error This project is on Grails 7.0.5 (gradle.properties), and the command line of Grails ')
     }
 
     private void catalog(List phases) {
