@@ -70,11 +70,7 @@ class BundledPackCompileSpec extends CommandSpec {
      * The packs no compiled application has, each with the reason. A pack named here is not selected;
      * the specification fails when one of them is no pack any more or is compiled after all.
      */
-    static final Map<String, String> NOT_COMPILED = [
-            'cache-ehcache': 'Forge gives the application org.grails.plugins:cache-ehcache:3.0.0, which is in none of the ' +
-                    'repositories a generated application reads: Maven Central has only 5.0.0-RC1, a release for Grails 7. ' +
-                    'The build of the application fails when it resolves its dependencies, before anything is compiled'
-    ]
+    static final Map<String, String> NOT_COMPILED = [:]
 
     private static final Project PROJECT = NameUtils.parse('example.grails.foo')
 

@@ -46,7 +46,7 @@ class EHCacheSpec extends ApplicationContextSpec implements CommandOutputFixture
                 .render()
 
         then:
-        template.contains('implementation "org.grails.plugins:cache-ehcache:3.0.0"')
+        template.contains('implementation "org.grails.plugins:cache-ehcache:5.0.0-RC1"')
 
     }
 
