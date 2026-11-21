@@ -68,10 +68,11 @@ final class ServerErrorObservation {
      * leaves its own failure to reach the observation.
      * <p>
      * The failure an error controller answered is left on the request, where the filter that observes the request reads
-     * it once the exchange completes. A container also finds it there once a dispatch that started asynchronous
-     * processing has returned, and Tomcat then reports it to the listeners of that processing, the observation's among
-     * them, so it is not recorded a second time, and what was recorded after it is taken back once the processing
-     * completes.
+     * it once the exchange completes. Spring Framework 7.1.1 stops reading it there once asynchronous processing
+     * completes, and reads only what was recorded as handled (spring-projects/spring-framework#37731). A container also
+     * finds it there once a dispatch that started asynchronous processing has returned, and Tomcat then reports it to
+     * the listeners of that processing, the observation's among them, so it is not recorded a second time, and what was
+     * recorded after it is taken back once the processing completes.
      *
      * @param request the request that failed
      * @param failure what failed, as the observation reports it
@@ -104,8 +105,8 @@ final class ServerErrorObservation {
      * Leaves the observation of a request that started asynchronous processing with the failure recorded first once the
      * processing completes, which is when the observation reads what failed. A listener of the observation reported it
      * already when the container did, so it is taken off the request, together with whatever was recorded after it;
-     * otherwise it is recorded again, over what failed after it. This listener is added before the observation's, which the filter adds once the dispatch has returned,
-     * so it is told first.
+     * otherwise it is recorded again, over what failed after it. This listener is added before the observation's, which
+     * the filter adds once the dispatch has returned, so it is told first.
      */
     private static final class FirstFailureListener implements AsyncListener {
 
@@ -137,8 +138,12 @@ final class ServerErrorObservation {
         @Override
         void onComplete(AsyncEvent event) {
             if (reportedByContainer) {
+                // Only Spring Framework 7.1.0 reads this attribute once the processing completes; 7.1.1 reads
+                // only what was recorded as handled (spring-projects/spring-framework#37731), so this can go then
                 request.removeAttribute(RequestDispatcher.ERROR_EXCEPTION)
-                // Setting a request attribute to null removes it, so this takes back what was recorded after it
+                // Spring declares the error non-null, so this steps outside its contract: it relies on setting a
+                // request attribute to null removing it, which takes back what was recorded after the failure.
+                // Spring offers no public way to clear it, and ServerErrorObservationSpec fails if it rejects null
                 ServerHttpObservationFilter.recordHandledException(request, null)
             }
             else {
