@@ -245,6 +245,21 @@ class ProjectCommandsSpec extends CommandSpec {
         lines[-1] == 'grails-forge-cli create-app com.example.shop --features grails-quartz'
     }
 
+    void "an option a create command has that project show knows nothing of is shown as one the record does not have"() {
+        given:
+        create(dir, ['create-app', 'com.example.shop'])
+        ProjectState state = ProjectState.read(new File(dir, 'shop').toPath())
+
+        when: 'the options of a create command of a later version, one of them new and one that says nothing of the application'
+        List<ProjectShowCommand.Setting> settings = ProjectShowCommand.settings(state, ['--jdk', '--zeta', '--alpha-option', '--offline'])
+
+        then: 'the known one has its value, the new ones follow in the order of their names without one, and the one that says nothing is left out'
+        settings*.name == ['application-type', 'name', 'package', 'grails-version', 'jdk', 'alpha-option', 'zeta', 'test-framework', 'build-tool']
+        settings.find { it.name == 'zeta' }.toMap() == [name: 'zeta', option: '--zeta', status: 'not-recorded']
+        settings.find { it.name == 'zeta' }.remark() == 'not recorded'
+        settings.find { it.name == 'zeta' }.label() == '--zeta'
+    }
+
     void "an option of a create command is shown by project show, or is one that says nothing of the application"() {
         given:
         create(dir, [command, 'com.example.shop'])
@@ -809,6 +824,16 @@ class ProjectCommandsSpec extends CommandSpec {
         exit == 1
         out.toString().isEmpty()
         err.toString().readLines() == ['| Error The files of the project cannot be read: src/main/groovy/closed cannot be opened']
+
+        when: 'with -x, where it failed is said after it'
+        err.reset()
+        exit = run('project', 'regenerate', '--diff', '-x')
+
+        then:
+        exit == 1
+        err.toString().readLines().first() == '| Error The files of the project cannot be read: src/main/groovy/closed cannot be opened'
+        err.toString().contains('AccessDeniedException')
+        err.toString().contains('\tat ')
 
         cleanup:
         Files.setPosixFilePermissions(new File(dir, 'shop/src/main/groovy/closed').toPath(), PosixFilePermissions.fromString('rwxr-xr-x'))
