@@ -43,7 +43,7 @@ application {
         artefact(type: "domains") {
             count grailsApplication.getArtefactInfo(DomainClassArtefactHandler.TYPE).classesByName.size()
         }
-        arefact(type: "services") {
+        artefact(type: "services") {
             count grailsApplication.getArtefactInfo(ServiceArtefactHandler.TYPE).classesByName.size()
         }
     }

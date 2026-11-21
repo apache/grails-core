@@ -39,8 +39,6 @@ files:
     to: grails-app/views/application/index.gml
   - from: _errors.gml.gsp
     to: grails-app/views/errors/_errors.gml
-  - from: _object.gml.gsp
-    to: grails-app/views/object/_object.gml
   - from: error.gml.gsp
     to: grails-app/views/error.gml
   - from: notFound.gml.gsp

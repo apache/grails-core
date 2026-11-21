@@ -26,18 +26,17 @@ model {
 }
 
 xmlDeclaration()
-response { status UNPROCESSABLE_ENTITY }
-
+this.response.status 422
 'errors' {
     Errors errorsObject = (Errors)this.errors
-    def allErrors = errorsObject.allErrors
+    List<ObjectError> allErrors = errorsObject.allErrors
     int errorCount = allErrors.size()
-    def resourcePath = g.link(resource:request.uri, absolute:false)
-    def resourceLink = g.link(resource:request.uri, absolute:true)
+    String resourcePath = this.g.link(resource:this.request.uri, absolute:false)
+    String resourceLink = this.g.link(resource:this.request.uri, absolute:true)
     if(errorCount == 1) {
-        def error = allErrors.iterator().next()
+        ObjectError only = allErrors.iterator().next()
         'error' {
-            message messageSource.getMessage(error, locale)
+            message this.messageSource.getMessage(only, this.locale)
             path resourcePath
             _links {
                 self {
@@ -49,12 +48,14 @@ response { status UNPROCESSABLE_ENTITY }
     else {
         total errorCount
         _embedded {
-            errors(allErrors) { ObjectError error ->
-                message messageSource.getMessage(error, locale)
-                path resourcePath
-                _links {
-                    self {
-                        href resourceLink
+            allErrors.each { ObjectError each ->
+                'error' {
+                    message this.messageSource.getMessage(each, this.locale)
+                    path resourcePath
+                    _links {
+                        self {
+                            href resourceLink
+                        }
                     }
                 }
             }

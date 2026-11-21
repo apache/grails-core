@@ -50,7 +50,7 @@ dependentFeatures: []
 +         artefact(type: "domains") {
 +             count grailsApplication.getArtefactInfo(DomainClassArtefactHandler.TYPE).classesByName.size()
 +         }
-+         arefact(type: "services") {
++         artefact(type: "services") {
 +             count grailsApplication.getArtefactInfo(ServiceArtefactHandler.TYPE).classesByName.size()
 +         }
 +     }
@@ -72,7 +72,7 @@ dependentFeatures: []
 +     }
 + }
 == grails-app/views/error.gml
-+ response.status 500
++ this.response.status 500
 + 
 + xmlDeclaration()
 + error {
@@ -90,18 +90,17 @@ dependentFeatures: []
 + }
 + 
 + xmlDeclaration()
-+ response { status UNPROCESSABLE_ENTITY }
-+ 
++ this.response.status 422
 + 'errors' {
 +     Errors errorsObject = (Errors)this.errors
-+     def allErrors = errorsObject.allErrors
++     List<ObjectError> allErrors = errorsObject.allErrors
 +     int errorCount = allErrors.size()
-+     def resourcePath = g.link(resource:request.uri, absolute:false)
-+     def resourceLink = g.link(resource:request.uri, absolute:true)
++     String resourcePath = this.g.link(resource:this.request.uri, absolute:false)
++     String resourceLink = this.g.link(resource:this.request.uri, absolute:true)
 +     if(errorCount == 1) {
-+         def error = allErrors.iterator().next()
++         ObjectError only = allErrors.iterator().next()
 +         'error' {
-+             message messageSource.getMessage(error, locale)
++             message this.messageSource.getMessage(only, this.locale)
 +             path resourcePath
 +             _links {
 +                 self {
@@ -113,12 +112,14 @@ dependentFeatures: []
 +     else {
 +         total errorCount
 +         _embedded {
-+             errors(allErrors) { ObjectError error ->
-+                 message messageSource.getMessage(error, locale)
-+                 path resourcePath
-+                 _links {
-+                     self {
-+                         href resourceLink
++             allErrors.each { ObjectError each ->
++                 'error' {
++                     message this.messageSource.getMessage(each, this.locale)
++                     path resourcePath
++                     _links {
++                         self {
++                             href resourceLink
++                         }
 +                     }
 +                 }
 +             }
@@ -126,20 +127,13 @@ dependentFeatures: []
 +     }
 + }
 == grails-app/views/notFound.gml
-+ response.status 404
++ this.response.status 404
 + 
 + xmlDeclaration()
 + error {
 + 	status 404
 + 	message "Not Found"
 + }
-== grails-app/views/object/_object.gml
-+ import groovy.transform.*
-+ 
-+ @Field Object object
-+ 
-+ xmlDeclaration()
-+ g.render(object)
 
 # rest_api
 title: Markup Views
@@ -188,7 +182,7 @@ dependentFeatures: []
 +         artefact(type: "domains") {
 +             count grailsApplication.getArtefactInfo(DomainClassArtefactHandler.TYPE).classesByName.size()
 +         }
-+         arefact(type: "services") {
++         artefact(type: "services") {
 +             count grailsApplication.getArtefactInfo(ServiceArtefactHandler.TYPE).classesByName.size()
 +         }
 +     }
@@ -210,7 +204,7 @@ dependentFeatures: []
 +     }
 + }
 == grails-app/views/error.gml
-+ response.status 500
++ this.response.status 500
 + 
 + xmlDeclaration()
 + error {
@@ -228,18 +222,17 @@ dependentFeatures: []
 + }
 + 
 + xmlDeclaration()
-+ response { status UNPROCESSABLE_ENTITY }
-+ 
++ this.response.status 422
 + 'errors' {
 +     Errors errorsObject = (Errors)this.errors
-+     def allErrors = errorsObject.allErrors
++     List<ObjectError> allErrors = errorsObject.allErrors
 +     int errorCount = allErrors.size()
-+     def resourcePath = g.link(resource:request.uri, absolute:false)
-+     def resourceLink = g.link(resource:request.uri, absolute:true)
++     String resourcePath = this.g.link(resource:this.request.uri, absolute:false)
++     String resourceLink = this.g.link(resource:this.request.uri, absolute:true)
 +     if(errorCount == 1) {
-+         def error = allErrors.iterator().next()
++         ObjectError only = allErrors.iterator().next()
 +         'error' {
-+             message messageSource.getMessage(error, locale)
++             message this.messageSource.getMessage(only, this.locale)
 +             path resourcePath
 +             _links {
 +                 self {
@@ -251,12 +244,14 @@ dependentFeatures: []
 +     else {
 +         total errorCount
 +         _embedded {
-+             errors(allErrors) { ObjectError error ->
-+                 message messageSource.getMessage(error, locale)
-+                 path resourcePath
-+                 _links {
-+                     self {
-+                         href resourceLink
++             allErrors.each { ObjectError each ->
++                 'error' {
++                     message this.messageSource.getMessage(each, this.locale)
++                     path resourcePath
++                     _links {
++                         self {
++                             href resourceLink
++                         }
 +                     }
 +                 }
 +             }
@@ -264,20 +259,13 @@ dependentFeatures: []
 +     }
 + }
 == grails-app/views/notFound.gml
-+ response.status 404
++ this.response.status 404
 + 
 + xmlDeclaration()
 + error {
 + 	status 404
 + 	message "Not Found"
 + }
-== grails-app/views/object/_object.gml
-+ import groovy.transform.*
-+ 
-+ @Field Object object
-+ 
-+ xmlDeclaration()
-+ g.render(object)
 == grails-app/views/application/index.gson
 (not written)
 == grails-app/views/error.gson
@@ -333,7 +321,7 @@ dependentFeatures: []
 +         artefact(type: "domains") {
 +             count grailsApplication.getArtefactInfo(DomainClassArtefactHandler.TYPE).classesByName.size()
 +         }
-+         arefact(type: "services") {
++         artefact(type: "services") {
 +             count grailsApplication.getArtefactInfo(ServiceArtefactHandler.TYPE).classesByName.size()
 +         }
 +     }
@@ -355,7 +343,7 @@ dependentFeatures: []
 +     }
 + }
 == grails-app/views/error.gml
-+ response.status 500
++ this.response.status 500
 + 
 + xmlDeclaration()
 + error {
@@ -373,18 +361,17 @@ dependentFeatures: []
 + }
 + 
 + xmlDeclaration()
-+ response { status UNPROCESSABLE_ENTITY }
-+ 
++ this.response.status 422
 + 'errors' {
 +     Errors errorsObject = (Errors)this.errors
-+     def allErrors = errorsObject.allErrors
++     List<ObjectError> allErrors = errorsObject.allErrors
 +     int errorCount = allErrors.size()
-+     def resourcePath = g.link(resource:request.uri, absolute:false)
-+     def resourceLink = g.link(resource:request.uri, absolute:true)
++     String resourcePath = this.g.link(resource:this.request.uri, absolute:false)
++     String resourceLink = this.g.link(resource:this.request.uri, absolute:true)
 +     if(errorCount == 1) {
-+         def error = allErrors.iterator().next()
++         ObjectError only = allErrors.iterator().next()
 +         'error' {
-+             message messageSource.getMessage(error, locale)
++             message this.messageSource.getMessage(only, this.locale)
 +             path resourcePath
 +             _links {
 +                 self {
@@ -396,12 +383,14 @@ dependentFeatures: []
 +     else {
 +         total errorCount
 +         _embedded {
-+             errors(allErrors) { ObjectError error ->
-+                 message messageSource.getMessage(error, locale)
-+                 path resourcePath
-+                 _links {
-+                     self {
-+                         href resourceLink
++             allErrors.each { ObjectError each ->
++                 'error' {
++                     message this.messageSource.getMessage(each, this.locale)
++                     path resourcePath
++                     _links {
++                         self {
++                             href resourceLink
++                         }
 +                     }
 +                 }
 +             }
@@ -409,20 +398,13 @@ dependentFeatures: []
 +     }
 + }
 == grails-app/views/notFound.gml
-+ response.status 404
++ this.response.status 404
 + 
 + xmlDeclaration()
 + error {
 + 	status 404
 + 	message "Not Found"
 + }
-== grails-app/views/object/_object.gml
-+ import groovy.transform.*
-+ 
-+ @Field Object object
-+ 
-+ xmlDeclaration()
-+ g.render(object)
 
 # plugin
 title: Markup Views
@@ -468,7 +450,7 @@ dependentFeatures: []
 +         artefact(type: "domains") {
 +             count grailsApplication.getArtefactInfo(DomainClassArtefactHandler.TYPE).classesByName.size()
 +         }
-+         arefact(type: "services") {
++         artefact(type: "services") {
 +             count grailsApplication.getArtefactInfo(ServiceArtefactHandler.TYPE).classesByName.size()
 +         }
 +     }
@@ -490,7 +472,7 @@ dependentFeatures: []
 +     }
 + }
 == grails-app/views/error.gml
-+ response.status 500
++ this.response.status 500
 + 
 + xmlDeclaration()
 + error {
@@ -508,18 +490,17 @@ dependentFeatures: []
 + }
 + 
 + xmlDeclaration()
-+ response { status UNPROCESSABLE_ENTITY }
-+ 
++ this.response.status 422
 + 'errors' {
 +     Errors errorsObject = (Errors)this.errors
-+     def allErrors = errorsObject.allErrors
++     List<ObjectError> allErrors = errorsObject.allErrors
 +     int errorCount = allErrors.size()
-+     def resourcePath = g.link(resource:request.uri, absolute:false)
-+     def resourceLink = g.link(resource:request.uri, absolute:true)
++     String resourcePath = this.g.link(resource:this.request.uri, absolute:false)
++     String resourceLink = this.g.link(resource:this.request.uri, absolute:true)
 +     if(errorCount == 1) {
-+         def error = allErrors.iterator().next()
++         ObjectError only = allErrors.iterator().next()
 +         'error' {
-+             message messageSource.getMessage(error, locale)
++             message this.messageSource.getMessage(only, this.locale)
 +             path resourcePath
 +             _links {
 +                 self {
@@ -531,12 +512,14 @@ dependentFeatures: []
 +     else {
 +         total errorCount
 +         _embedded {
-+             errors(allErrors) { ObjectError error ->
-+                 message messageSource.getMessage(error, locale)
-+                 path resourcePath
-+                 _links {
-+                     self {
-+                         href resourceLink
++             allErrors.each { ObjectError each ->
++                 'error' {
++                     message this.messageSource.getMessage(each, this.locale)
++                     path resourcePath
++                     _links {
++                         self {
++                             href resourceLink
++                         }
 +                     }
 +                 }
 +             }
@@ -544,20 +527,13 @@ dependentFeatures: []
 +     }
 + }
 == grails-app/views/notFound.gml
-+ response.status 404
++ this.response.status 404
 + 
 + xmlDeclaration()
 + error {
 + 	status 404
 + 	message "Not Found"
 + }
-== grails-app/views/object/_object.gml
-+ import groovy.transform.*
-+ 
-+ @Field Object object
-+ 
-+ xmlDeclaration()
-+ g.render(object)
 
 # rest_api_plugin
 title: Markup Views
@@ -606,7 +582,7 @@ dependentFeatures: []
 +         artefact(type: "domains") {
 +             count grailsApplication.getArtefactInfo(DomainClassArtefactHandler.TYPE).classesByName.size()
 +         }
-+         arefact(type: "services") {
++         artefact(type: "services") {
 +             count grailsApplication.getArtefactInfo(ServiceArtefactHandler.TYPE).classesByName.size()
 +         }
 +     }
@@ -628,7 +604,7 @@ dependentFeatures: []
 +     }
 + }
 == grails-app/views/error.gml
-+ response.status 500
++ this.response.status 500
 + 
 + xmlDeclaration()
 + error {
@@ -646,18 +622,17 @@ dependentFeatures: []
 + }
 + 
 + xmlDeclaration()
-+ response { status UNPROCESSABLE_ENTITY }
-+ 
++ this.response.status 422
 + 'errors' {
 +     Errors errorsObject = (Errors)this.errors
-+     def allErrors = errorsObject.allErrors
++     List<ObjectError> allErrors = errorsObject.allErrors
 +     int errorCount = allErrors.size()
-+     def resourcePath = g.link(resource:request.uri, absolute:false)
-+     def resourceLink = g.link(resource:request.uri, absolute:true)
++     String resourcePath = this.g.link(resource:this.request.uri, absolute:false)
++     String resourceLink = this.g.link(resource:this.request.uri, absolute:true)
 +     if(errorCount == 1) {
-+         def error = allErrors.iterator().next()
++         ObjectError only = allErrors.iterator().next()
 +         'error' {
-+             message messageSource.getMessage(error, locale)
++             message this.messageSource.getMessage(only, this.locale)
 +             path resourcePath
 +             _links {
 +                 self {
@@ -669,12 +644,14 @@ dependentFeatures: []
 +     else {
 +         total errorCount
 +         _embedded {
-+             errors(allErrors) { ObjectError error ->
-+                 message messageSource.getMessage(error, locale)
-+                 path resourcePath
-+                 _links {
-+                     self {
-+                         href resourceLink
++             allErrors.each { ObjectError each ->
++                 'error' {
++                     message this.messageSource.getMessage(each, this.locale)
++                     path resourcePath
++                     _links {
++                         self {
++                             href resourceLink
++                         }
 +                     }
 +                 }
 +             }
@@ -682,18 +659,11 @@ dependentFeatures: []
 +     }
 + }
 == grails-app/views/notFound.gml
-+ response.status 404
++ this.response.status 404
 + 
 + xmlDeclaration()
 + error {
 + 	status 404
 + 	message "Not Found"
 + }
-== grails-app/views/object/_object.gml
-+ import groovy.transform.*
-+ 
-+ @Field Object object
-+ 
-+ xmlDeclaration()
-+ g.render(object)
 
