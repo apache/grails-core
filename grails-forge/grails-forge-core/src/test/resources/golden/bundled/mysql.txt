@@ -178,6 +178,6 @@ dependentFeatures: []
 +       url: jdbc:mysql://localhost:3306/prodDb?tcpKeepAlive=true
 == src/test/resources/application-test.yml
 + dataSource:
-+   url: jdbc:tc:mysql:8:///db
 +   driverClassName: org.testcontainers.jdbc.ContainerDatabaseDriver
++   url: jdbc:tc:mysql:8:///db
 

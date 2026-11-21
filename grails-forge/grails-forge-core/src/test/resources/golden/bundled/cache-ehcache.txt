@@ -124,10 +124,10 @@ dependentFeatures: []
 == grails-app/conf/application.yml
 - grails.codegen.defaultPackage: example.grails
 + grails:
++   cache:
 +     ehcache:
 +       ehcacheXmlLocation: classpath:ehcache.xml
 +       lockTimeout: 200
 +   codegen:
 +     defaultPackage: example.grails
-+   cache:
 

@@ -81,7 +81,7 @@ in an application without being named: the default options
 == grails-app/conf/application.yml
 + info:
 +   app:
++     grailsVersion: '@info.app.grailsVersion@'
 +     name: '@info.app.name@'
 +     version: '@info.app.version@'
-+     grailsVersion: '@info.app.grailsVersion@'
 

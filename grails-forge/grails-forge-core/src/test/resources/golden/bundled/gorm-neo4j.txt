@@ -122,9 +122,9 @@ in an application without being named: gorm neo4j
 == grails-app/conf/application.yml
 - grails.codegen.defaultPackage: example.grails
 + grails:
-+   neo4j:
-+     type: embedded
-+     location: build/data/neo4j
 +   codegen:
 +     defaultPackage: example.grails
++   neo4j:
++     location: build/data/neo4j
++     type: embedded
 

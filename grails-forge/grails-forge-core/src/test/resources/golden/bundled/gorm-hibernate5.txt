@@ -175,10 +175,10 @@ in an application without being named: the default options
 == grails-app/conf/application.yml
 + dataSource:
 +   driverClassName: org.h2.Driver
-+   username: sa
++   jmxExport: true
 +   password: ''
 +   pooled: true
-+   jmxExport: true
++   username: sa
 + environments:
 +   development:
 +     dataSource:
@@ -195,6 +195,6 @@ in an application without being named: the default options
 + hibernate:
 +   cache:
 +     queries: false
-+     use_second_level_cache: false
 +     use_query_cache: false
++     use_second_level_cache: false
 

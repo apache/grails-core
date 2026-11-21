@@ -159,11 +159,6 @@ in an application without being named: gorm mongodb
 +     testImplementation "org.testcontainers:testcontainers-mongodb"
 == grails-app/conf/application.yml
 - grails.codegen.defaultPackage: example.grails
-+ grails:
-+   mongodb:
-+     url: mongodb://${MONGO_HOST:localhost}:${MONGO_PORT:27017}/prodDb
-+   codegen:
-+     defaultPackage: example.grails
 + environments:
 +   development:
 +     grails:
@@ -173,4 +168,9 @@ in an application without being named: gorm mongodb
 +     grails:
 +       mongodb:
 +         url: mongodb://embedded/testDb
++ grails:
++   codegen:
++     defaultPackage: example.grails
++   mongodb:
++     url: mongodb://${MONGO_HOST:localhost}:${MONGO_PORT:27017}/prodDb
 

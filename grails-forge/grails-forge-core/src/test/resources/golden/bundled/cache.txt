@@ -114,10 +114,10 @@ dependentFeatures: []
 == grails-app/conf/application.yml
 - grails.codegen.defaultPackage: example.grails
 + grails:
-+     enabled: true
-+     cleanAtStartup: false
++   cache:
 +     cacheManager: grails.plugin.cache.GrailsConcurrentMapCacheManager
++     cleanAtStartup: false
++     enabled: true
 +   codegen:
 +     defaultPackage: example.grails
-+   cache:
 

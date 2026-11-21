@@ -7367,9 +7367,9 @@ dependentFeatures: []
 +     defaultPackage: example.grails
 +   views:
 +     gsp:
-+       encoding: UTF-8
 +       codecs:
 +         scriptlet: html
++       encoding: UTF-8
 == grails-app/views/error.gsp
 + <!doctype html>
 + <html>
