@@ -263,15 +263,88 @@ class MultiDataSourceSessionSpec extends Specification {
         when:
         interceptor.preHandle(webRequest())
 
-        then: "the failure is thrown, and the default session is closed and not bound"
+        then: "the failure is thrown as it is, and the default session is closed and not bound"
         def thrownFailure = thrown(Throwable)
         thrownFailure.is(failure)
         refused != null
         !refused.open
         !TransactionSynchronizationManager.hasResource(datastore.sessionFactory)
 
-        where: "a checked exception too, which a Groovy override can throw without declaring it"
-        failure << [new IllegalStateException('flush mode refused'), new IOException('flush mode refused')]
+        where: "a checked exception too, which a Groovy override can throw without declaring it, and a HibernateException, which is not wrapped"
+        failure << [new IllegalStateException('flush mode refused'), new IOException('flush mode refused'), new HibernateException('flush mode refused')]
+    }
+
+    def "an interceptor whose applyFlushMode leaves the flush mode alone opens its default session in MANUAL mode, as the parent class does"() {
+        given: "an override that does not set the flush mode"
+        def interceptor = new GrailsOpenSessionInViewInterceptor() {
+            @Override
+            protected void applyFlushMode(Session session) {
+            }
+        }
+        interceptor.setHibernateDatastore(datastore)
+        WebRequest webRequest = webRequest()
+
+        when:
+        interceptor.preHandle(webRequest)
+
+        then:
+        boundSession(datastore.sessionFactory).hibernateFlushMode == FlushMode.MANUAL
+
+        cleanup:
+        interceptor.afterCompletion(webRequest, null)
+    }
+
+    def "a session bound for the default factory while its new session is set up is left bound, and the new one is closed"() {
+        given: "a default factory whose opening of a session binds another one for it first"
+        FakeSession boundMeanwhile = new FakeSession()
+        FakeSession opened = new FakeSession()
+        FakeSessionFactory defaultSf = new FakeSessionFactory()
+        defaultSf.onOpen = { ->
+            TransactionSynchronizationManager.bindResource(defaultSf, new SessionHolder(boundMeanwhile))
+            opened
+        }
+        def interceptor = new GrailsOpenSessionInViewInterceptor()
+        interceptor.setHibernateDatastore(datastoreWith([:], defaultSf))
+
+        when:
+        interceptor.preHandle(webRequest())
+
+        then: "the request fails, and the session bound meanwhile stays bound and open"
+        thrown(IllegalStateException)
+        boundSession(defaultSf).is(boundMeanwhile)
+        boundMeanwhile.closeCount == 0
+        opened.closeCount == 1
+
+        cleanup:
+        unbindIfBound(defaultSf)
+    }
+
+    def "a session bound for another datasource while its new session is set up is left bound, and the new one is closed"() {
+        given: "after the secondary datasource, one whose opening of a session binds another one for it first"
+        FakeSession boundMeanwhile = new FakeSession()
+        FakeSession opened = new FakeSession()
+        FakeSessionFactory meddlingSf = new FakeSessionFactory()
+        meddlingSf.onOpen = { ->
+            TransactionSynchronizationManager.bindResource(meddlingSf, new SessionHolder(boundMeanwhile))
+            opened
+        }
+        SessionFactory secondarySf = datastore.getDatastoreForConnection('secondary').sessionFactory
+        def interceptor = new GrailsOpenSessionInViewInterceptor()
+        interceptor.setHibernateDatastore(datastoreWith(datastore.sessionFactory, secondary: secondarySf, meddling: meddlingSf))
+
+        when:
+        interceptor.preHandle(webRequest())
+
+        then: "the request fails, the session bound meanwhile stays bound and open, and the others are released"
+        thrown(IllegalStateException)
+        boundSession(meddlingSf).is(boundMeanwhile)
+        boundMeanwhile.closeCount == 0
+        opened.closeCount == 1
+        !TransactionSynchronizationManager.hasResource(secondarySf)
+        !TransactionSynchronizationManager.hasResource(datastore.sessionFactory)
+
+        cleanup:
+        unbindIfBound(meddlingSf)
     }
 
     def "a request whose default session refuses its flush mode as it is opened closes it, failing with #expected.simpleName"() {
@@ -1035,13 +1108,15 @@ class FakeSession implements Session {
 
 /**
  * A session factory that hands out the session it is given, or throws the failure it is given, a checked exception too,
- * and prints as it is told to, as two factories can: {@code Object.toString()} is not unique.
+ * and prints as it is told to, as two factories can: {@code Object.toString()} is not unique. When given
+ * {@code onOpen}, opening a session runs it instead.
  */
 @AutoImplement
 class FakeSessionFactory implements SessionFactory {
     Session session
     Throwable failure
     String printed
+    Closure<Session> onOpen
 
     @Override
     String toString() {
@@ -1050,6 +1125,9 @@ class FakeSessionFactory implements SessionFactory {
 
     @Override
     Session openSession() {
+        if (onOpen != null) {
+            return onOpen()
+        }
         if (failure != null) {
             throw failure
         }

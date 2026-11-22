@@ -99,11 +99,14 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
     }
 
     /**
-     * Opens the default session and applies {@link #applyFlushMode its flush mode}. The session is not bound yet, so
-     * when applying the flush mode fails, it is closed here, before the failure is thrown on: any failure, as an
-     * override written in Groovy can throw a checked exception it does not declare. A {@link HibernateException} from
-     * either step is wrapped, as the parent class does, and a failure to close the session is attached to the failure
-     * that is thrown.
+     * Opens the default session as the parent class does, setting its flush mode to MANUAL, then applies
+     * {@link #applyFlushMode its flush mode}. A {@link HibernateException} from opening it or setting MANUAL is
+     * wrapped, as the parent class does; a failure of {@link #applyFlushMode} is thrown on as it is.
+     *
+     * <p>The session is not bound yet, so when a step fails, it is closed here, before the failure is thrown on: any
+     * failure, as code written in Groovy can throw a checked exception it does not declare. A failure to close it is
+     * attached to the failure that is thrown. A session bound for the factory while this one was set up is left as
+     * it is, and this one is closed with an {@link IllegalStateException}, instead of being bound over it.
      */
     @Override
     protected Session openSession() throws DataAccessResourceFailureException {
@@ -116,7 +119,7 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
             throw new DataAccessResourceFailureException("Could not open Hibernate Session", ex);
         }
         try {
-            applyFlushMode(session);
+            session.setHibernateFlushMode(FlushMode.MANUAL);
         } catch (HibernateException ex) {
             DataAccessResourceFailureException failure = new DataAccessResourceFailureException("Could not open Hibernate Session", ex);
             // not bound yet, so afterCompletion would not find it
@@ -126,7 +129,26 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
             closeSession(session, ex);
             throw ex;
         }
+        try {
+            applyFlushMode(session);
+            checkNotBoundDuringSetup(sf, "the default datasource");
+        } catch (Throwable ex) {
+            closeSession(session, ex);
+            throw ex;
+        }
         return session;
+    }
+
+    /**
+     * Spring's {@code bindResource} replaces a holder it finds bound before it throws, so a holder bound for the
+     * factory while a new session was set up for it, by code that setup ran, is looked for before the new one is
+     * bound, and left as it is.
+     */
+    private static void checkNotBoundDuringSetup(SessionFactory sf, String datasource) {
+        if (TransactionSynchronizationManager.hasResource(sf)) {
+            throw new IllegalStateException("A Hibernate Session was bound for " + datasource +
+                    " while a new one was opened for it: the new one is closed, and the bound one is left as it is");
+        }
     }
 
     protected void applyFlushMode(Session session) {
@@ -151,6 +173,7 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
                     Session session = sf.openSession();
                     try {
                         session.setHibernateFlushMode(config.flushMode);
+                        checkNotBoundDuringSetup(sf, "datasource '" + config.connectionName + "'");
                         TransactionSynchronizationManager.bindResource(sf, new SessionHolder(session));
                     } catch (Throwable ex) {
                         // not bound yet, so the release below would not find it
