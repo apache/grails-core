@@ -207,6 +207,74 @@ class AliasLeakBook {
         methodCallsNamed(classNode, 'eq', 'usesTAsAMap').any { constantArg(it, 0) == 'otherProperty' }
     }
 
+    void "an alias declared in one where query is not an alias in a later where query of the same method"() {
+        given:
+        String source = '''
+import grails.gorm.annotation.Entity
+import org.grails.datastore.gorm.query.transform.ApplyDetachedCriteriaTransform
+
+@ApplyDetachedCriteriaTransform
+@Entity
+class AliasSameMethodBook {
+    String otherProperty
+
+    static twoQueries() {
+        AliasSameMethodBook.where {
+            def t = AliasSameMethodBook
+            otherProperty == t.nested.whatever
+        }.list()
+        Map t = [nested: [whatever: 'x']]
+        AliasSameMethodBook.where {
+            otherProperty == t.nested.whatever
+        }.list()
+    }
+}
+'''
+
+        when:
+        ClassNode classNode = compileToClassNode(source, 'AliasSameMethodBook')
+
+        then: 'the first query compares properties, the second compares with the value of its local variable'
+        methodCallsNamed(classNode, 'setAlias', 'twoQueries').size() == 1
+        methodCallsNamed(classNode, 'eqProperty', 'twoQueries').size() == 1
+        methodCallsNamed(classNode, 'eq', 'twoQueries').any { constantArg(it, 0) == 'otherProperty' }
+    }
+
+    void "comparing a property of an alias with the identifier of the queried class keeps the comparison, in either order"() {
+        given:
+        String source = '''
+import grails.gorm.annotation.Entity
+import org.grails.datastore.gorm.query.transform.ApplyDetachedCriteriaTransform
+
+@ApplyDetachedCriteriaTransform
+@Entity
+class AliasPropertyIdBook {
+    String otherProperty
+
+    static aliasFirst() {
+        AliasPropertyIdBook.where {
+            def t = AliasPropertyIdBook
+            t.club == id
+        }
+    }
+
+    static idFirst() {
+        AliasPropertyIdBook.where {
+            def t = AliasPropertyIdBook
+            id == t.club
+        }
+    }
+}
+'''
+
+        when:
+        ClassNode classNode = compileToClassNode(source, 'AliasPropertyIdBook')
+
+        then: 'both write the comparison of id with t.club'
+        methodCallsNamed(classNode, 'eqProperty', 'aliasFirst').any { constantArg(it, 0) == 'id' && constantArg(it, 1) == 't.club' }
+        methodCallsNamed(classNode, 'eqProperty', 'idFirst').any { constantArg(it, 0) == 'id' && constantArg(it, 1) == 't.club' }
+    }
+
     void "an alias declared in a static where field is not an alias in a method of the class"() {
         given:
         String source = '''

@@ -57,4 +57,33 @@ class SubqueryAliasSpec extends Specification {
         then:
         t != null
     }
+
+    @Rollback
+    void "a subquery that compares the club of the enclosing alias with its own identifier keeps that comparison, in either order"() {
+        given:
+        Club united = new Club(name: "Manchester United").save()
+        Club arsenal = new Club(name: "Arsenal").save()
+        new Team(name: "United First Team", club: united).save()
+        new Team(name: "Arsenal First Team", club: arsenal).save(flush: true)
+
+        when:
+        List<String> aliasFirst = Team.where {
+            def t = Team
+            exists(Club.where {
+                name == "Manchester United"
+                t.club == id
+            }.property('name'))
+        }.list()*.name
+        List<String> idFirst = Team.where {
+            def t = Team
+            exists(Club.where {
+                name == "Manchester United"
+                id == t.club
+            }.property('name'))
+        }.list()*.name
+
+        then:
+        aliasFirst == ['United First Team']
+        idFirst == ['United First Team']
+    }
 }

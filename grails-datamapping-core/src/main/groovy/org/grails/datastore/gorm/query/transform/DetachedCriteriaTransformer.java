@@ -438,8 +438,34 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
         return newClosureExpression;
     }
 
+    /** How many where calls enclose the expression being visited; a subquery is visited inside the call of its enclosing query. */
+    private int whereCallDepth;
+
     @Override
     public void visitMethodCallExpression(MethodCallExpression call) {
+        boolean whereCall = isCandidateWhereMethod(call.getMethod(), call.getArguments());
+        if (!whereCall) {
+            visitMethodCallExpressionInScope(call);
+            return;
+        }
+        // an alias belongs to the query that declares it, and to the subqueries inside it: a later query in the same method may use the name for a local variable
+        Map<String, Object> previousAliases = whereCallDepth == 0 ? new HashMap<>(aliases) : null;
+        Set<Expression> previousAliasExpressions = whereCallDepth == 0 ? new HashSet<>(aliasExpressions) : null;
+        whereCallDepth++;
+        try {
+            visitMethodCallExpressionInScope(call);
+        } finally {
+            whereCallDepth--;
+            if (whereCallDepth == 0) {
+                aliases.clear();
+                aliases.putAll(previousAliases);
+                aliasExpressions.clear();
+                aliasExpressions.addAll(previousAliasExpressions);
+            }
+        }
+    }
+
+    private void visitMethodCallExpressionInScope(MethodCallExpression call) {
         Expression objectExpression = call.getObjectExpression();
         Expression method = call.getMethod();
         Expression arguments = call.getArguments();
@@ -939,8 +965,8 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
         Expression leftExpression = be.getLeftExpression();
         Expression rightExpression = be.getRightExpression();
         String swappedOperator = SWAPPED_COMPARISON_OPERATORS.get(operator);
-        if (swappedOperator != null && isNestedAliasPath(leftExpression) &&
-                (isAliasProperty(rightExpression) || isPropertyOfQueriedClass(rightExpression, propertyNames, variableScope))) {
+        if (swappedOperator != null && (isNestedAliasPath(leftExpression) && (isAliasProperty(rightExpression) || isPropertyOfQueriedClass(rightExpression, propertyNames, variableScope)) ||
+                isAliasProperty(leftExpression) && isPropertyOfQueriedClass(rightExpression, propertyNames, variableScope))) {
             // t.club.id == c.id or t.club.id == id: a nested path of an alias is handled on the right of the comparison, so
             // the sides change places, and the operator with them
             BinaryExpression swapped = new BinaryExpression(rightExpression, Token.newSymbol(swappedOperator, operation.getStartLine(), operation.getStartColumn()), leftExpression);
