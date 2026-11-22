@@ -19,7 +19,10 @@
 package org.grails.plugin.hibernate.support;
 
 import java.util.ArrayList;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.hibernate.FlushMode;
 import org.hibernate.HibernateException;
@@ -52,7 +55,10 @@ import org.grails.orm.hibernate.support.hibernate7.support.OpenSessionInViewInte
  * that finds a session already bound, such as an include within a request that
  * opened one, uses that session and leaves it to the one that opened it, and a
  * request that goes asynchronous closes the sessions it opened, so that they do
- * not stay bound to the thread for the next request that thread serves.
+ * not stay bound to the thread for the next request that thread serves. Which
+ * sessions a request found bound is recorded by the identity of their factory,
+ * and for the default factory by this interceptor, not by how the factory prints:
+ * {@code Object.toString()} is not unique, and a proxy prints as its target.
  *
  * @author Graeme Rocher
  * @since 0.5
@@ -61,6 +67,19 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
 
     /** The value of {@code GrailsApplicationAttributes.ASYNC_STARTED}, which is in a module this plugin does not use. */
     private static final String GRAILS_ASYNC_STARTED = "org.grails.ASYNC_STARTED";
+
+    /**
+     * The request attribute that holds, for each factory of another datasource whose session the request found bound,
+     * how many times it did, keyed by the identity of the factory.
+     */
+    private static final String PARTICIPATE_COUNTS =
+            GrailsOpenSessionInViewInterceptor.class.getName() + ".PARTICIPATE_COUNTS";
+
+    private static final AtomicLong INSTANCE_COUNT = new AtomicLong();
+
+    /** Unique to this interceptor, where the parent class uses how its factory prints. */
+    private final String participateAttributeName =
+            GrailsOpenSessionInViewInterceptor.class.getName() + '.' + INSTANCE_COUNT.incrementAndGet() + PARTICIPATE_SUFFIX;
 
     protected FlushMode hibernateFlushMode = FlushMode.MANUAL;
 
@@ -335,10 +354,22 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
                 session.getSessionFactory().getSessionFactoryOptions().isAllowOutOfTransactionUpdateOperations();
     }
 
+    /**
+     * @return the name of the request attribute that records whether the request found the default session bound,
+     * unique to this interceptor, so that another one whose factory prints the same way does not share it
+     */
+    @Override
+    protected String getParticipateAttributeName() {
+        return participateAttributeName;
+    }
+
     private static void incrementParticipateCount(WebRequest request, SessionFactory sf) {
-        String participateAttributeName = participateAttributeName(sf);
-        Integer count = (Integer) request.getAttribute(participateAttributeName, WebRequest.SCOPE_REQUEST);
-        request.setAttribute(participateAttributeName, count != null ? count + 1 : 1, WebRequest.SCOPE_REQUEST);
+        Map<SessionFactory, Integer> counts = participateCounts(request);
+        if (counts == null) {
+            counts = new IdentityHashMap<>();
+            request.setAttribute(PARTICIPATE_COUNTS, counts, WebRequest.SCOPE_REQUEST);
+        }
+        counts.merge(sf, 1, Integer::sum);
     }
 
     /**
@@ -346,21 +377,25 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
      * then left as it is
      */
     private static boolean decrementParticipateCount(WebRequest request, SessionFactory sf) {
-        String participateAttributeName = participateAttributeName(sf);
-        Integer count = (Integer) request.getAttribute(participateAttributeName, WebRequest.SCOPE_REQUEST);
+        Map<SessionFactory, Integer> counts = participateCounts(request);
+        Integer count = counts != null ? counts.get(sf) : null;
         if (count == null) {
             return false;
         }
         if (count > 1) {
-            request.setAttribute(participateAttributeName, count - 1, WebRequest.SCOPE_REQUEST);
+            counts.put(sf, count - 1);
         } else {
-            request.removeAttribute(participateAttributeName, WebRequest.SCOPE_REQUEST);
+            counts.remove(sf);
+            if (counts.isEmpty()) {
+                request.removeAttribute(PARTICIPATE_COUNTS, WebRequest.SCOPE_REQUEST);
+            }
         }
         return true;
     }
 
-    private static String participateAttributeName(SessionFactory sf) {
-        return sf.toString() + PARTICIPATE_SUFFIX;
+    @SuppressWarnings("unchecked")
+    private static Map<SessionFactory, Integer> participateCounts(WebRequest request) {
+        return (Map<SessionFactory, Integer>) request.getAttribute(PARTICIPATE_COUNTS, WebRequest.SCOPE_REQUEST);
     }
 
     public void setHibernateDatastore(HibernateDatastore hibernateDatastore) {

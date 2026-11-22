@@ -207,8 +207,8 @@ class MultiDataSourceSessionSpec extends Specification {
         interceptor.setHibernateDatastore(datastore)
         SessionFactory secondarySf = datastore.getDatastoreForConnection('secondary').sessionFactory
         // Groovy classes, not Spock mocks or coerced maps, whose proxies would wrap a checked exception
-        RefusingSession refusingSession = new RefusingSession(failure: failure)
-        SessionFactory refusingSf = new FailingSessionFactory(session: refusingSession)
+        FakeSession refusingSession = new FakeSession(failure: failure)
+        SessionFactory refusingSf = new FakeSessionFactory(session: refusingSession)
         addAdditionalSessionFactory(interceptor, 'refusing', refusingSf)
 
         when:
@@ -233,7 +233,7 @@ class MultiDataSourceSessionSpec extends Specification {
         SessionFactory secondarySf = datastore.getDatastoreForConnection('secondary').sessionFactory
         IOException failure = new IOException('cannot open')
         // a Groovy class, not a Spock stub or a coerced map, whose proxy would wrap a checked exception
-        SessionFactory failingSf = new FailingSessionFactory(failure: failure)
+        SessionFactory failingSf = new FakeSessionFactory(failure: failure)
         addAdditionalSessionFactory(interceptor, 'failing', failingSf)
 
         when:
@@ -300,6 +300,95 @@ class MultiDataSourceSessionSpec extends Specification {
         failure                                          || expected
         new IllegalStateException('flush mode refused')  || IllegalStateException
         new HibernateException('flush mode refused')     || DataAccessResourceFailureException
+    }
+
+    def "a request that fails after joining one factory's session and opening another's, that prints the same, releases only the one it opened"() {
+        given: "a session bound before the request, a factory that prints as its factory does, and one after them that cannot open"
+        def interceptor = new GrailsOpenSessionInViewInterceptor()
+        interceptor.setHibernateDatastore(datastore)
+        FakeSession boundBefore = new FakeSession()
+        SessionFactory boundSf = new FakeSessionFactory(printed: 'sessionFactory')
+        FakeSession opened = new FakeSession()
+        SessionFactory lookalikeSf = new FakeSessionFactory(session: opened, printed: 'sessionFactory')
+        SessionFactory failingSf = new FakeSessionFactory(failure: new IllegalStateException('cannot open'))
+        addAdditionalSessionFactory(interceptor, 'bound', boundSf)
+        addAdditionalSessionFactory(interceptor, 'lookalike', lookalikeSf)
+        addAdditionalSessionFactory(interceptor, 'failing', failingSf)
+        TransactionSynchronizationManager.bindResource(boundSf, new SessionHolder(boundBefore))
+
+        when:
+        interceptor.preHandle(webRequest())
+
+        then: "the session bound before is left bound and open, and the one the request opened is closed and unbound"
+        thrown(IllegalStateException)
+        boundSession(boundSf).is(boundBefore)
+        boundBefore.closeCount == 0
+        opened.closeCount == 1
+        !TransactionSynchronizationManager.hasResource(lookalikeSf)
+        !TransactionSynchronizationManager.hasResource(datastore.sessionFactory)
+
+        cleanup:
+        unbindIfBound(boundSf, lookalikeSf)
+    }
+
+    def "a request that joins one factory's session and opens another's, that prints the same, closes only the one it opened"() {
+        given: "a session bound before the request, and a factory that prints as its factory does"
+        def interceptor = new GrailsOpenSessionInViewInterceptor()
+        interceptor.setHibernateDatastore(datastore)
+        WebRequest webRequest = webRequest()
+        FakeSession boundBefore = new FakeSession()
+        SessionFactory boundSf = new FakeSessionFactory(printed: 'sessionFactory')
+        FakeSession opened = new FakeSession()
+        SessionFactory lookalikeSf = new FakeSessionFactory(session: opened, printed: 'sessionFactory')
+        addAdditionalSessionFactory(interceptor, 'bound', boundSf)
+        addAdditionalSessionFactory(interceptor, 'lookalike', lookalikeSf)
+        TransactionSynchronizationManager.bindResource(boundSf, new SessionHolder(boundBefore))
+
+        when:
+        interceptor.preHandle(webRequest)
+
+        then: "it uses the session bound before, and opens one for the other factory"
+        boundSession(boundSf).is(boundBefore)
+        boundSession(lookalikeSf).is(opened)
+
+        when:
+        interceptor.afterCompletion(webRequest, null)
+
+        then: "the session bound before is left bound and open, and the one the request opened is closed and unbound"
+        boundSession(boundSf).is(boundBefore)
+        boundBefore.closeCount == 0
+        opened.closeCount == 1
+        !TransactionSynchronizationManager.hasResource(lookalikeSf)
+
+        cleanup:
+        unbindIfBound(boundSf, lookalikeSf)
+    }
+
+    def "two interceptors whose default factories print the same each close only the default session they opened"() {
+        given: "one interceptor whose default session is bound before the request, and one whose default factory prints the same"
+        FakeSession boundBefore = new FakeSession()
+        SessionFactory boundSf = new FakeSessionFactory(printed: 'sessionFactory')
+        FakeSession opened = new FakeSession()
+        SessionFactory lookalikeSf = new FakeSessionFactory(session: opened, printed: 'sessionFactory')
+        def joining = new GrailsOpenSessionInViewInterceptor(sessionFactory: boundSf)
+        def opening = new GrailsOpenSessionInViewInterceptor(sessionFactory: lookalikeSf)
+        WebRequest webRequest = webRequest()
+        TransactionSynchronizationManager.bindResource(boundSf, new SessionHolder(boundBefore))
+
+        when: "the request passes both, and completes in the reverse order"
+        joining.preHandle(webRequest)
+        opening.preHandle(webRequest)
+        opening.afterCompletion(webRequest, null)
+        joining.afterCompletion(webRequest, null)
+
+        then: "the session bound before is left bound and open, and the one the request opened is closed and unbound"
+        boundSession(boundSf).is(boundBefore)
+        boundBefore.closeCount == 0
+        opened.closeCount == 1
+        !TransactionSynchronizationManager.hasResource(lookalikeSf)
+
+        cleanup:
+        unbindIfBound(boundSf, lookalikeSf)
     }
 
     def "an include uses the sessions of the request for every datasource and leaves them open"() {
@@ -620,6 +709,14 @@ class MultiDataSourceSessionSpec extends Specification {
         }
     }
 
+    private static void unbindIfBound(SessionFactory... sessionFactories) {
+        sessionFactories.each { SessionFactory sessionFactory ->
+            if (TransactionSynchronizationManager.hasResource(sessionFactory)) {
+                TransactionSynchronizationManager.unbindResource(sessionFactory)
+            }
+        }
+    }
+
     private static Session boundSession(SessionFactory sessionFactory) {
         ((SessionHolder) TransactionSynchronizationManager.getResource(sessionFactory))?.session
     }
@@ -699,9 +796,9 @@ class BrokenOsivAuthor {
     String name
 }
 
-/** A session that refuses its flush mode, throwing whatever it is given, a checked exception too. */
+/** A session that counts its closes, and refuses its flush mode with the failure it is given, a checked exception too. */
 @AutoImplement
-class RefusingSession implements Session {
+class FakeSession implements Session {
     Throwable failure
     int closeCount
 
@@ -712,7 +809,9 @@ class RefusingSession implements Session {
 
     @Override
     void setHibernateFlushMode(FlushMode flushMode) {
-        throw failure
+        if (failure != null) {
+            throw failure
+        }
     }
 
     @Override
@@ -721,11 +820,20 @@ class RefusingSession implements Session {
     }
 }
 
-/** A session factory that hands out the session it is given, or throws whatever it is given, a checked exception too. */
+/**
+ * A session factory that hands out the session it is given, or throws the failure it is given, a checked exception too,
+ * and prints as it is told to, as two factories can: {@code Object.toString()} is not unique.
+ */
 @AutoImplement
-class FailingSessionFactory implements SessionFactory {
+class FakeSessionFactory implements SessionFactory {
     Session session
     Throwable failure
+    String printed
+
+    @Override
+    String toString() {
+        printed ?: super.toString()
+    }
 
     @Override
     Session openSession() {
