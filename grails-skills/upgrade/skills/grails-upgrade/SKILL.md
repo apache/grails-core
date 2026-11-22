@@ -636,7 +636,7 @@ The line a GSP error names was wrong for many pages and is now the line of the p
 - What follows a `<%-- --%>` or `%{-- --}%` comment, also one of a single line, could be reported on an earlier line.
 - After an expression, scriptlet or tag attribute of several lines, compile errors and mapped stack trace lines were too late; in a page with more than 1,000 generated lines they could be on another line, and near the end of the page on line 1.
 - An expression that is never closed is reported on the line it starts on, not on the line the text before it starts on.
-- A line ends with a line feed; a carriage return by itself ends no line, as for the Groovy compiler.
+- A line ends with a line feed; a carriage return by itself ends no line of a page.
 - What is found only at the end of a page, such as a tag that is never closed, is reported on the last line of the page.
 - What a page renders is not changed, but for an escaped expression `\${` about 64,000 characters after the last expression, scriptlet or tag, which was written with its backslash and is now written as `${`. Precompiled pages carry the lines, so they differ from those of Grails 8 and are compiled again by the build.
 - No action for an application. A test that asserts the earlier line of such an error asserts the line of the page instead. No setting restores the earlier numbers.

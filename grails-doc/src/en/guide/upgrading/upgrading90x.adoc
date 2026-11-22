@@ -1561,7 +1561,7 @@ The line an error in a GSP names was wrong for many pages, and is now the line o
 
 This is the line in the message of a `GroovyPagesException` and of a `GrailsTagException` (`on line [12]`, `[/book/show.gsp:12]`) and what their `getLineNumber()` returns. What a page renders is not changed, with the one exception below. A precompiled page carries these lines, as arguments in its class and in the table of lines beside it, so the compiled pages of an application differ from those of Grails 8 for the same source; they are compiled again when the application is built.
 
-A line of a page ends with a line feed, as a line of the Groovy class it is compiled to does for the Groovy compiler. A carriage return by itself ends no line, so a page that has carriage returns and no line feeds is one line, and every error in it is on line 1.
+A line of a page ends with a line feed. A carriage return by itself ends no line of a page, so a page that has carriage returns and no line feeds is one line, and every error in it is on line 1. The lines of the class a page is compiled to are counted as the Groovy compiler on the class path counts them, which differs between versions of Groovy for a carriage return by itself; the line of the page that is named does not depend on it.
 
 The exception: an escaped expression, `\${`, that came 63,998 or 63,999 characters after the last expression, scriptlet or tag in front of it, or that many and a multiple of 64,000 more, was written with its backslash, as `\${`. It is written as `${`, as it is anywhere else.
 
