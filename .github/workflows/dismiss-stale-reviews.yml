@@ -212,6 +212,27 @@ jobs:
             reason=${reasons[$key]} accepted=${resolutions[$key]}
             return "${answers[$key]}"
           }
+          # Whether an approval whose commit has the very tree of the head was given at the same place on the base
+          # branch: whether the approved commit and the head have the same merge bases with it. The same files then
+          # make the same changes, as after a reworded commit or a rebase onto the same commit. When the head has
+          # taken in commits of the base branch that the approved commit had not, through a merge or a rebase, the
+          # same files undo what those commits changed, which is a change of the pull request, so the approval goes
+          # to the check of the merges instead. The answer is worked out once per run for the same commits.
+          declare -A forks=()
+          same_fork() {
+            local base=$1 approved=$2 head=$3 key="$1 $2 $3" deadline=$(( SECONDS + 120 )) before after
+            (( deadline <= checks_end )) || deadline=$checks_end
+            if [[ -z "${forks[$key]+set}" ]]; then
+              forks[$key]=1
+              if fetched "$approved" "$head" "$base" < /dev/null \
+                && before=$(bounded git -C merges.git merge-base --all "$approved" "$base" | sort) \
+                && after=$(bounded git -C merges.git merge-base --all "$head" "$base" | sort) \
+                && [[ -n "$before" && "$before" == "$after" ]]; then
+                forks[$key]=0
+              fi
+            fi
+            return "${forks[$key]}"
+          }
           # A conflict resolution that keeps an approval was not reviewed, so the pull request says which files each
           # merge resolved, once for each merge: every comment of this workflow names its merges in a hidden marker,
           # and the markers are read once per pull request and run, before the first comment.
@@ -249,9 +270,9 @@ jobs:
           # is the pushed commit. A review dismissed earlier is no longer an approval. GitHub has already moved an
           # approval to the head when the push left the diff of the pull request as it was, so an approval still at
           # another commit was given to other changes. Only two of those are kept: an approval whose commit has the
-          # very tree of the head, which holds the content, the name and the mode of every file, and an approval
-          # that only merges of the base branch separate from the head (see only_merges_base). Every other one is
-          # dismissed, also when a tree is unknown. One query serves a hundred pull requests, so that the hourly run
+          # very tree of the head, which holds the content, the name and the mode of every file, at the same place on
+          # the base branch (see same_fork), and an approval that only merges of the base branch separate from the
+          # head (see only_merges_base). Every other one is dismissed, also when a tree is unknown. One query serves a hundred pull requests, so that the hourly run
           # does not spend a request of the token's rate limit on each.
           gh api graphql --paginate -f owner="${REPO%/*}" -f name="${REPO#*/}" -f query='
             query($owner: String!, $name: String!, $endCursor: String) {
@@ -274,7 +295,7 @@ jobs:
                   $pull.baseRef.target.oid // "-"] | @tsv' > stale.tsv
           while IFS=$'\t' read -r number head review login commit tree base; do
             reason="the pull request changed after this approval" accepted=
-            if [[ "$tree" == same ]]; then
+            if [[ "$tree" == same && "$base" != - ]] && same_fork "$base" "$commit" "$head"; then
               echo "#$number: approval of $login at ${commit:0:10} kept, ${head:0:10} has the same files"
             elif [[ "$commit" != - && "$base" != - ]] && checked_merges "$base" "$commit" "$head"; then
               echo "#$number: approval of $login at ${commit:0:10} kept, ${head:0:10} only merges the base branch$(
