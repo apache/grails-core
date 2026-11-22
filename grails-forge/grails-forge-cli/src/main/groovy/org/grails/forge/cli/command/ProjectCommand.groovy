@@ -99,6 +99,13 @@ class ProjectCommand extends BaseCommand implements Callable<Integer> {
 
     @Override
     Integer call() throws Exception {
+        String missing = missingRequiredArgument()
+        if (missing != null) {
+            CommandLine commandLine = commandSpec.commandLine()
+            commandLine.err.println("Missing required parameter: '${missing}'")
+            commandLine.usage(commandLine.err)
+            return CommandLine.ExitCode.USAGE
+        }
         List<String> commandArguments = [name]
         commandArguments.addAll(givenArguments())
         // only its owner can read it, where the file system allows that, since the arguments can hold a password
@@ -111,6 +118,61 @@ class ProjectCommand extends BaseCommand implements Callable<Integer> {
         finally {
             Files.deleteIfExists(argumentsFile)
         }
+    }
+
+    /**
+     * The first required argument the command will not get, though picocli matched a word to it: with
+     * no options declared, picocli cannot know that the command line parser of {@code runCommand} reads
+     * the word after an option without a value, as {@code json} in {@code --format json}, as that
+     * option's value rather than as an argument. With options declared, picocli parses as the command will.
+     */
+    private String missingRequiredArgument() {
+        if (declaresOptions) {
+            return null
+        }
+        List<PositionalParamSpec> required = commandSpec.positionalParameters().findAll { PositionalParamSpec positional ->
+            positional.required() && positional.paramLabel() != PASS_THROUGH_LABEL
+        }
+        int read = argumentsAsRunCommandReadsThem(typedArguments(commandSpec.commandLine().parseResult.originalArgs()))
+        read < required.size() ? required[read].paramLabel() : null
+    }
+
+    /**
+     * How many arguments the command line parser of {@code runCommand} reads from the words after the
+     * command's name: a word that does not start with {@code -}, unless it follows an option given
+     * without a value, whose value it then is. A word is trimmed, and a pair of double quotes around it
+     * removed, as the parser does.
+     */
+    private static int argumentsAsRunCommandReadsThem(List<String> words) {
+        int arguments = 0
+        boolean optionWithoutValue = false
+        for (String word : words) {
+            String trimmed = word == null ? '' : word.trim()
+            if (trimmed.length() > 1 && trimmed.startsWith('"') && trimmed.endsWith('"')) {
+                trimmed = trimmed.substring(1, trimmed.length() - 1).trim()
+            }
+            if (trimmed.isEmpty()) {
+                optionWithoutValue = false
+            }
+            else if (trimmed.startsWith('-')) {
+                optionWithoutValue = takesNextWord(trimmed)
+            }
+            else if (optionWithoutValue) {
+                optionWithoutValue = false
+            }
+            else {
+                arguments++
+            }
+        }
+        arguments
+    }
+
+    /** Whether the parser reads the word after this option as its value: when it has none of its own */
+    private static boolean takesNextWord(String option) {
+        if (option.length() < 2 || (option.charAt(1) == ('D' as char) && option.contains('='))) {
+            return false
+        }
+        !option.contains('=')
     }
 
     private List<String> givenSystemProperties() {

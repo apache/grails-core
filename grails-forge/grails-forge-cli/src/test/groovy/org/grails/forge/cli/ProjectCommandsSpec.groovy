@@ -762,6 +762,24 @@ class ProjectCommandsSpec extends Specification {
         gradleInvocations() == []
     }
 
+    void "a project command named like a code generation command that does not apply runs as it is offered, without the build"() {
+        given: 'a project without the configuration the code generation commands need, whose plugin has a create-job'
+        Map createJob = [name: 'create-job', description: 'Creates a job of the scheduling plugin', arguments: [], options: []]
+        writeManifest(createJob)
+
+        expect: 'it is offered'
+        ForgeCli.createCommandLine(context, false).subcommands.containsKey('create-job')
+
+        when:
+        forgetInvocations()
+        int exitCode = ForgeCli.execute(context, 'create-job', 'Nightly')
+
+        then: 'it runs, and the build that lists the commands does not'
+        exitCode == 0
+        gradleInvocations()*.get(5) == ['runCommand']
+        commandArguments() == ['create-job', 'Nightly']
+    }
+
     void 'no command follows --, so it runs no build'() {
         given:
         buildWrites(URL_MAPPINGS_REPORT)
@@ -981,6 +999,53 @@ class ProjectCommandsSpec extends Specification {
 
         where:
         arguments << [['s2-create-persistent-token'], ['s2-quickstart', '--unknown']]
+    }
+
+    void "with options undeclared, a required argument the option before it takes as its value is reported missing: #typed"() {
+        given: 'a command with a required argument and no options described, whose parser reads --format json as an option'
+        Map greet = [name: 'greet', description: 'Greets', arguments: [[name: 'name', description: 'Who', required: true, values: []]],
+                     options: []]
+        writeManifest(greet)
+
+        when:
+        int exitCode = ForgeCli.execute(context, (['greet'] + typed) as String[])
+
+        then:
+        (exitCode == 0) == (passed != null)
+        passed != null ? commandArguments() == ['greet'] + passed : gradleInvocations() == []
+        passed != null || output.toString().contains("Missing required parameter: 'name'")
+
+        where:
+        typed                               || passed
+        ['--format', 'json']                || null
+        ['"--format"', ' json ']            || null
+        ['--format', 'json', 'Alice']       || ['--format', 'json', 'Alice']
+        ['--format=json', 'Alice']          || ['--format=json', 'Alice']
+        ['-Dgrails.env=test', 'Alice']      || ['-Dgrails.env=test', 'Alice']
+        ['-D', 'grails.env=test', 'Alice']  || ['-Dgrails.env=test', 'Alice']
+        ['--verbose', '', 'Alice']          || ['--verbose', '', 'Alice']
+        ['Alice', '--format', 'json']       || ['Alice', '--format', 'json']
+    }
+
+    void 'a response file names the command and its arguments as if they were typed: #given'() {
+        given:
+        writeManifest(URL_MAPPINGS_REPORT)
+        forgetInvocations()
+        File response = new File(dir, 'options.txt')
+        response.text = given
+
+        when:
+        int exitCode = ForgeCli.execute(context, "@${response.absolutePath}".toString())
+
+        then:
+        exitCode == 0
+        gradleInvocations()*.get(5) == tasks
+        tasks.empty || commandArguments() == passed
+
+        where:
+        given                                      || tasks          | passed
+        'create-app --help'                        || []             | []
+        'url-mappings-report --verbose "two words"' || ['runCommand'] | ['url-mappings-report', '--verbose', 'two words']
     }
 
     void 'the help of a project command shows what it declares'() {

@@ -25,7 +25,9 @@ import org.jline.terminal.Terminal
 import org.springframework.context.ApplicationContext
 import org.springframework.context.ConfigurableApplicationContext
 import picocli.CommandLine
+import picocli.CommandLine.Model.CommandSpec
 import picocli.CommandLine.Model.OptionSpec
+import picocli.CommandLine.Model.PositionalParamSpec
 import org.grails.forge.cli.command.AddPropertyCommand
 import org.grails.forge.cli.command.BaseCommand
 import org.grails.forge.cli.command.CodeGenCommand
@@ -117,8 +119,11 @@ final class ForgeCli {
      * Executes one command line on a running context, which stays open for the next one.
      */
     static int execute(ApplicationContext context, String... args) {
+        // the words of a response file, @file, choose the command and reach it as the words typed would
+        args = expandAtFiles(args)
         boolean noOpConsole = args.length > 0 && args[0].startsWith('update-cli-config')
         CommandLine commandLine = createForgeCommandLine(context, noOpConsole)
+        commandLine.expandAtFiles = false
         // the project's build runs only when the command line names a command that is not the Forge CLI's:
         // its own commands never wait for the build, and its options alone, such as --help, list the
         // project's commands from a manifest the build already wrote
@@ -128,10 +133,26 @@ final class ForgeCli {
                 addProjectCommands(commandLine, false)
             }
         }
-        else if (!commandLine.subcommands.containsKey(command) && !CODE_GEN_COMMAND_NAMES.contains(command)) {
-            addProjectCommands(commandLine, true)
+        else if (!commandLine.subcommands.containsKey(command)) {
+            // a code generation command that does not apply here never runs the build, but a project
+            // command of its name, which the prompt and --help offer, runs from the manifest there is
+            addProjectCommands(commandLine, !CODE_GEN_COMMAND_NAMES.contains(command))
         }
         return commandLine.execute(args)
+    }
+
+    /**
+     * The command line with each response file, {@code @file}, replaced by its words, as picocli reads
+     * them: once, so a word of the file that starts with {@code @}, as {@code @@name} gives, stays a word.
+     */
+    private static String[] expandAtFiles(String... args) {
+        if (!args.any { String arg -> arg?.startsWith('@') }) {
+            return args
+        }
+        CommandSpec words = CommandSpec.create()
+        words.addPositional(PositionalParamSpec.builder().index('0..*').arity('0..*').type(String[]).build())
+        words.parser().unmatchedArgumentsAllowed(true).unmatchedOptionsArePositionalParams(true)
+        new CommandLine(words).parseArgs(args).expandedArgs() as String[]
     }
 
     /**
