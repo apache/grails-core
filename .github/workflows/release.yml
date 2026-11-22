@@ -23,8 +23,6 @@ env:
   # to prevent throttling of the github api, include the github token in an environment variable since the build will check for it
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   GRAILS_PUBLISH_RELEASE: 'true'
-  JAVA_DISTRIBUTION: liberica
-  JAVA_VERSION: 21.0.12 # this must be a specific version for reproducible builds, keep it synced with .sdkmanrc and verification container
   PROJECT_DESC: >
     Grails is a powerful Groovy-based web application framework for the JVM,
     built on top of Spring Boot, and supported by a rich ecosystem of plugins
@@ -92,11 +90,14 @@ jobs:
         run: |
           echo "${GPG_KEY}" | gpg --batch --import
           gpg --list-keys
+      - name: "☕️ Determine Java version from .sdkmanrc"
+        id: sdkmanrc
+        uses: ./.github/actions/sdkmanrc-java
       - name: "☕️ Setup JDK"
         uses: actions/setup-java@v6.1.0
         with:
-          distribution: ${{ env.JAVA_DISTRIBUTION }}
-          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ steps.sdkmanrc.outputs.java-distribution }}
+          java-version: ${{ steps.sdkmanrc.outputs.java-version }}
       - name: "🗄️ Decide the Gradle cache mode"
         id: gradle-cache-policy
         uses: ./.github/actions/gradle-cache-policy
@@ -713,11 +714,14 @@ jobs:
         uses: actions/checkout@v7.0.1
         with:
           ref: ${{ env.TAG }}
+      - name: "☕️ Determine Java version from .sdkmanrc"
+        id: sdkmanrc
+        uses: ./.github/actions/sdkmanrc-java
       - name: "☕️ Setup JDK"
         uses: actions/setup-java@v6.1.0
         with:
-          distribution: ${{ env.JAVA_DISTRIBUTION }}
-          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ steps.sdkmanrc.outputs.java-distribution }}
+          java-version: ${{ steps.sdkmanrc.outputs.java-version }}
       - name: "🗄️ Decide the Gradle cache mode"
         id: gradle-cache-policy
         uses: ./.github/actions/gradle-cache-policy

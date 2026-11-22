@@ -131,6 +131,26 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManag
         Team.findWhere([name: 'Unattached First Team'], [sort: 'club.name'])?.name == 'Unattached First Team'
     }
 
+    void 'a criteria page counts the rows selected by its association sort in either setting mode'() {
+        when:
+        final page = Team.createCriteria().list(max: 2, sort: 'club.name') { like('name', '%First%') }
+
+        then:
+        page.size() == 2
+        page.totalCount == (leftJoinSort ? 4 : 3)
+    }
+
+    void '#api retains the association sort joins when counting'() {
+        expect:
+        query.call() == (leftJoinSort ? 4 : 3)
+
+        where:
+        api              | query
+        'where'          | { Team.where { name ==~ '%First%' }.sort('club.name').count() }
+        'count arguments' | { Team.where { name ==~ '%First%' }.count(sort: 'club.name') }
+        'nested path'    | { Player.where { name ==~ '%' }.sort('team.club.name').count() }
+    }
+
     @Requires({ instance.leftJoinSort })
     void 'a criteria query with pagination arguments sorted by an association property keeps a team without a club'() {
         when:

@@ -40,7 +40,8 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckM
         manager.registerDomainClasses(Club, Team, Player, Contract, AssociationJoinTypeCategory, AssociationJoinTypeShelf, AssociationJoinTypeTag,
                                       AssociationJoinTypeFace, AssociationJoinTypeNose, AssociationJoinTypePost, AssociationJoinTypeAuthor,
                                       AssociationJoinTypeBook, AssociationJoinTypeSquad, AssociationJoinTypeSquadMember, AssociationJoinTypeTrophy, AssociationJoinTypeMedal,
-                                      AssociationJoinTypePrize, AssociationJoinTypeRibbon)
+                                       AssociationJoinTypePrize, AssociationJoinTypeRibbon,
+                                       RequestedJoinBagTeam, RequestedJoinBagMember, RequestedJoinBagTrophy)
     }
 
     void setup() {
@@ -68,6 +69,117 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckM
         savePlayer('Squad Player B', squad)
         new Player(name: 'Squad Player without contract', team: squad).save(validate: false, flush: true)
         manager.session.clear()
+    }
+
+    void 'a bulk #operation honors a subquery requested join inside a junction'() {
+        given:
+        new Team(name: 'Bulk linked', club: Club.findByName('Arsenal')).save(failOnError: true)
+        new Team(name: 'Bulk unlinked').save(failOnError: true, flush: true)
+        manager.session.clear()
+        final subquery = Team.where { name ==~ 'Bulk%' }.join('club', JoinType.INNER).id()
+        final query = new DetachedCriteria(Team).build {
+            or {
+                inList('id', subquery)
+                eq('name', 'No matching team')
+            }
+        }
+
+        expect:
+        query.list()*.name == ['Bulk linked']
+
+        when:
+        final changed = operation == 'update' ? query.updateAll(name: 'Bulk updated') : query.deleteAll()
+        manager.session.clear()
+
+        then:
+        changed == 1
+        Team.findByName('Bulk unlinked') != null
+        Team.findByName('Bulk linked') == null
+
+        where:
+        operation << ['update', 'delete']
+    }
+
+    void 'a copied query retains its replacement fetch mode when the original requests an inner join'() {
+        given:
+        final original = new DetachedCriteria(Team).join('club', JoinType.INNER).join('club')
+        final copy = original.clone()
+
+        when:
+        original.join('club', JoinType.INNER)
+
+        then:
+        copy.list()*.name.sort() == ALL_TEAMS
+        copy.count() == ALL_TEAMS.size()
+        original.list()*.name.sort() == TEAMS_WITH_A_CLUB
+        original.count() == TEAMS_WITH_A_CLUB.size()
+    }
+
+    void 'a join requested inside an association block uses the complete path'() {
+        expect:
+        Player.createCriteria().list {
+            team { join('club', JoinType.INNER) }
+        }*.name.sort() == ['Arsenal Player', 'Chelsea Player', 'MU Player']
+    }
+
+    void 'a requested left join keeps its type when supplied #request the association block'() {
+        when:
+        final arguments = request == 'fetch' ? [fetch: [club: JoinType.LEFT]] : [:]
+        final results = Team.createCriteria().list(arguments) {
+            if (request == 'before') {
+                join('club', JoinType.LEFT)
+            }
+            or {
+                club { eq('name', 'Chelsea') }
+                eq('name', 'Unattached First Team')
+            }
+            if (request == 'after') {
+                join('club', JoinType.LEFT)
+            }
+        }
+
+        then:
+        results*.name.sort() == ['Chelsea First Team', 'Unattached First Team']
+
+        where:
+        request << ['before', 'after', 'fetch']
+    }
+
+    void 'static list fetches a nested collection together with its owner'() {
+        given:
+        saveTeamWithAPlayerWithoutContract()
+
+        when:
+        final results = Player.list(fetch: ['team.players': 'join'], max: 2, sort: 'name', order: 'desc')
+        final squad = results.find { it.team.name == 'Squad Team' }.team
+
+        then:
+        results.size() == 2
+        Hibernate.isInitialized(squad.players)
+        squad.players*.name.sort() == ['Squad Player A', 'Squad Player B', 'Squad Player without contract']
+    }
+
+    void '#api fetches a complete bag without multiplying its elements by another collection'() {
+        given:
+        final team = new RequestedJoinBagTeam(name: 'Full team')
+        team.addToMembers(name: 'Member A').addToMembers(name: 'Member B')
+        team.addToTrophies(name: 'Trophy A').addToTrophies(name: 'Trophy B')
+        team.save(failOnError: true, flush: true)
+        manager.session.clear()
+
+        when:
+        final results = query.call()
+
+        then:
+        results*.name == ['Full team']
+        Hibernate.isInitialized(results.first().members)
+        results.first().members*.name.sort() == ['Member A', 'Member B']
+        results.first().trophies*.name.sort() == ['Trophy A', 'Trophy B']
+
+        where:
+        api        | query
+        'criteria' | { RequestedJoinBagTeam.where { members { name == 'Member A' } }.join('members', JoinType.LEFT).join('trophies').list() }
+        'list'     | { RequestedJoinBagTeam.list(sort: 'trophies.name', fetch: [members: 'join']) }
     }
 
     void 'a where query joins an association with the join type that fetch requests'() {
@@ -1323,6 +1435,25 @@ class AssociationJoinTypeBook {
     static constraints = {
         author nullable: true
     }
+}
+
+@Entity
+class RequestedJoinBagTeam {
+    String name
+    Collection<RequestedJoinBagMember> members
+    static hasMany = [members: RequestedJoinBagMember, trophies: RequestedJoinBagTrophy]
+}
+
+@Entity
+class RequestedJoinBagMember {
+    String name
+    static belongsTo = [team: RequestedJoinBagTeam]
+}
+
+@Entity
+class RequestedJoinBagTrophy {
+    String name
+    static belongsTo = [team: RequestedJoinBagTeam]
 }
 
 @Entity

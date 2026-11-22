@@ -16,6 +16,7 @@
 package org.grails.orm.hibernate.query;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -46,6 +47,7 @@ import org.hibernate.query.criteria.JpaSubQuery;
 import org.springframework.core.convert.ConversionService;
 
 import grails.gorm.DetachedCriteria;
+import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.model.types.Basic;
@@ -72,6 +74,7 @@ public class JpaCriteriaQueryCreator<T> {
     private JpaQueryContext parentContext;
     private JpaQueryContext context;
     private boolean distinctInMemory;
+    private final Set<String> deferredCollectionFetches = new HashSet<>();
     // the restrictions of the join types that the query requests for a path through a collection
     private final List<Predicate> requestedJoinRestrictions = new ArrayList<>();
 
@@ -166,14 +169,19 @@ public class JpaCriteriaQueryCreator<T> {
      */
     private void applyRequestedJoins(AbstractQuery<?> query, Root<?> root, boolean entitySelect) {
         requestedJoinRestrictions.clear();
-        Map<String, JoinType> joinTypes = detachedCriteria.getJoinTypes();
+        deferredCollectionFetches.clear();
         // a fetch mode that is requested after a join type replaces it, so the fetch strategies say what is joined
         Map<String, JoinType> requested = new LinkedHashMap<>();
-        detachedCriteria.getFetchStrategies().forEach((path, fetchType) -> {
-            if (fetchType == FetchType.EAGER) {
-                requested.put(path, joinTypes.getOrDefault(path, JoinType.LEFT));
+        collectRequestedFetches(detachedCriteria, "", requested);
+        Set<String> joinedCollections = new HashSet<>();
+        requested.keySet().forEach(path -> collectCollectionPaths(path, joinedCollections));
+        boolean singleBag = requested.keySet().stream().map(this::bagOnPath).filter(Objects::nonNull).distinct().count() == 1;
+        for (Query.Order order : detachedCriteria.getOrders()) {
+            int dot = order.getProperty().lastIndexOf('.');
+            if (dot > 0) {
+                collectCollectionPaths(order.getProperty().substring(0, dot), joinedCollections);
             }
-        });
+        }
 
         Set<String> aliasedPaths = new HashSet<>();
         for (Query.Criterion criterion : detachedCriteria.getCriteria()) {
@@ -197,6 +205,11 @@ public class JpaCriteriaQueryCreator<T> {
                 requestedJoinRestrictions.add(joinedInSubquery(query, root, tokens));
             }
             if (entitySelect) {
+                String bag = bagOnPath(path);
+                if (singleBag && bag != null && joinedCollections.stream().anyMatch(collectionPath -> !collectionPath.equals(bag))) {
+                    deferredCollectionFetches.add(path);
+                    return;
+                }
                 // a path through a collection is fetched with left joins, so that the collection holds all of its
                 // elements; the subquery decides which instances the query returns
                 fetchPath(root, tokens, restricts && collection < 0 ? joinType : JoinType.LEFT, fetches);
@@ -208,6 +221,59 @@ public class JpaCriteriaQueryCreator<T> {
     }
 
     private static final int NOT_AN_ASSOCIATION_PATH = -2;
+
+    private static void collectRequestedFetches(DetachedCriteria<?> owner, String prefix, Map<String, JoinType> requested) {
+        CriteriaVisitor.walk(owner.getCriteria(), new CriteriaVisitor() {
+            @Override
+            public void block(DetachedAssociationCriteria<?> block) {
+                collectRequestedFetches(block, prefix + block.getAssociationPath() + '.', requested);
+            }
+        });
+        owner.getFetchStrategies().forEach((path, fetchType) -> {
+            String wholePath = prefix + path;
+            if (fetchType == FetchType.EAGER) {
+                requested.put(wholePath, owner.getJoinTypes().getOrDefault(path, JoinType.LEFT));
+            }
+            else {
+                requested.remove(wholePath);
+            }
+        });
+    }
+
+    Set<String> getDeferredCollectionFetches() {
+        return Collections.unmodifiableSet(deferredCollectionFetches);
+    }
+
+    private void collectCollectionPaths(String path, Set<String> paths) {
+        PersistentEntity current = entity;
+        String prefix = "";
+        for (String token : path.split("\\.")) {
+            if (current == null || !(current.getPropertyByName(token) instanceof Association<?> association)) {
+                return;
+            }
+            prefix = prefix.isEmpty() ? token : prefix + '.' + token;
+            if (association instanceof ToMany) {
+                paths.add(prefix);
+            }
+            current = association.getAssociatedEntity();
+        }
+    }
+
+    private String bagOnPath(String path) {
+        PersistentEntity current = entity;
+        String prefix = "";
+        for (String token : path.split("\\.")) {
+            if (current == null || !(current.getPropertyByName(token) instanceof Association<?> association)) {
+                return null;
+            }
+            prefix = prefix.isEmpty() ? token : prefix + '.' + token;
+            if (association instanceof ToMany && association.getType() == Collection.class) {
+                return prefix;
+            }
+            current = association.getAssociatedEntity();
+        }
+        return null;
+    }
 
     /**
      * Returns the index of the first collection on a path of associations from the entity, {@code -1} when the
@@ -378,16 +444,12 @@ public class JpaCriteriaQueryCreator<T> {
 
     @SuppressWarnings("unchecked")
     private void assignOrderBy(CriteriaQuery<?> cq, JpaQueryContext context) {
-        if (isCountOnly()) {
-            // a count returns one row whatever the order, and an ORDER BY on a column that is not aggregated fails
-            // on H2 and most other databases, so a count query leaves the criteria's orders out
-            return;
-        }
+        boolean countOnly = isCountOnly();
         // the orders that are still in an association block come after the orders of the criteria
         List<Query.Order> orders = new ArrayList<>(detachedCriteria.getOrders());
         orders.addAll(AssociationOrders.inBlocks(detachedCriteria.getCriteria()));
         boolean distinctEntities = isDistinctEntities();
-        boolean orderedBySelection = !distinctEntities && isOrderedBySelection();
+        boolean orderedBySelection = !countOnly && !distinctEntities && isOrderedBySelection();
         List<jakarta.persistence.criteria.Order> jpaOrders = new ArrayList<>();
         for (Query.Order order : orders) {
             var propertyName = order.getProperty();
@@ -428,6 +490,10 @@ public class JpaCriteriaQueryCreator<T> {
                 expression = blockContext.getSortExpression(property, endsWithForeignKey(associated, property));
             } else {
                 expression = context.getSortExpression(propertyName, endsWithForeignKey(entity, propertyName));
+            }
+            if (countOnly) {
+                // Keep the joins of the sort, which can restrict the rows, without ordering the aggregate.
+                continue;
             }
             if (expression == null) {
                 if (blockOrder != null) {

@@ -342,9 +342,12 @@ public class HibernateSession extends AbstractAttributeStoringSession implements
             builder.setConversionService(getMappingContext().getConversionService());
             builder.setHibernateCompatible(true);
             JpaQueryInfo built = builder.buildDelete();
+            if (hasRequestedSubqueryJoin(criteria.getCriteria())) {
+                return modifyByIdentifiers(session, criteria, null);
+            }
             JpaQueryInfo jpaQueryInfo = new JpaQueryInfo(applyRequestedJoins(built.getQuery(), criteria), built.getParameters());
             if (!jpaQueryInfo.getQuery().equals(built.getQuery()) && restrictsThroughJoinTable(criteria)) {
-                return deleteByIdentifiers(session, criteria.getPersistentEntity(), jpaQueryInfo);
+                return modifyByIdentifiers(session, criteria, null);
             }
 
             var query = createMutationQuery(session, jpaQueryInfo);
@@ -376,7 +379,7 @@ public class HibernateSession extends AbstractAttributeStoringSession implements
      * Whether a join type that the criteria request is applied through a collection of the queried class that has
      * a join table. Hibernate deletes the rows of the join tables of the instances before it deletes the instances,
      * with the same restriction, which then no longer finds the instances: see
-     * {@link #deleteByIdentifiers(Session, PersistentEntity, JpaQueryInfo)}.
+     * {@link #modifyByIdentifiers(Session, QueryableCriteria, Map)}.
      */
     private boolean restrictsThroughJoinTable(QueryableCriteria criteria) {
         if (!(criteria instanceof AbstractDetachedCriteria<?> detachedCriteria)) {
@@ -408,34 +411,67 @@ public class HibernateSession extends AbstractAttributeStoringSession implements
      * first, with the restriction of the delete, so that the restriction is evaluated before Hibernate deletes
      * the rows of the join tables of the instances.
      */
-    private int deleteByIdentifiers(Session session, PersistentEntity entity, JpaQueryInfo delete) {
-        String alias = entity.getDecapitalizedName();
-        String prefix = JpaQueryBuilder.DELETE_CLAUSE + entity.getName() + ' ' + alias;
-        String identifier = alias + '.' + entity.getIdentity().getName();
-        var select = session.createSelectionQuery(
-                "SELECT " + identifier + " FROM " + entity.getName() + ' ' + alias + delete.getQuery().substring(prefix.length()), Object.class);
-        List<?> parameters = delete.getParameters();
-        if (parameters != null) {
-            for (int i = 0; i < parameters.size(); i++) {
-                select.setParameter(JpaQueryBuilder.PARAMETER_NAME_PREFIX + (i + 1), parameters.get(i));
-            }
+    private int modifyByIdentifiers(Session session, QueryableCriteria source, Map<String, Object> properties) {
+        PersistentEntity entity = source.getPersistentEntity();
+        HibernateQuery selection = new HibernateQuery(this, (GrailsHibernatePersistentEntity) entity);
+        for (Object criterion : source.getCriteria()) {
+            selection.add((Query.Criterion) criterion);
         }
-        List<Object> identifiers = select.getResultList();
-
+        if (source instanceof AbstractDetachedCriteria<?> detached) {
+            detached.getJoinTypes().forEach(selection::join);
+        }
+        selection.projections().id();
+        List<?> identifiers = selection.list();
         ApplicationEventPublisher applicationEventPublisher = datastore.getApplicationEventPublisher();
-        String deleteByIdentifier = prefix + " WHERE " + identifier + " IN (:identifiers)";
-        int deleted = 0;
+        int changed = 0;
         for (int from = 0; from < identifiers.size(); from += IDENTIFIER_BATCH_SIZE) {
-            MutationQuery query = session.createMutationQuery(deleteByIdentifier);
-            query.setParameterList("identifiers", identifiers.subList(from, Math.min(from + IDENTIFIER_BATCH_SIZE, identifiers.size())));
-            HqlQueryContext ctx = HqlQueryContext.prepare(entity, deleteByIdentifier, null, null, null, new HashMap<>(), false, true);
+            List<?> batch = identifiers.subList(from, Math.min(from + IDENTIFIER_BATCH_SIZE, identifiers.size()));
+            JpaQueryBuilder builder = new JpaQueryBuilder(entity, Collections.singletonList(new Query.In(entity.getIdentity().getName(), batch)));
+            builder.setConversionService(getMappingContext().getConversionService());
+            builder.setHibernateCompatible(true);
+            JpaQueryInfo info = properties == null ? builder.buildDelete() : builder.buildUpdate(properties);
+            MutationQuery query = createMutationQuery(session, info);
+            HqlQueryContext ctx = HqlQueryContext.prepare(entity, info.getQuery(), null, null, null, new HashMap<>(), false, true);
             MutationHqlQuery hqlQuery = (MutationHqlQuery) HibernateHqlQueryCreator.createHqlQuery((HibernateDatastore) getDatastore(), hibernateTemplate.getSessionFactory(), entity, ctx);
             applicationEventPublisher.publishEvent(new PreQueryEvent(datastore, hqlQuery));
             int result = query.executeUpdate();
             applicationEventPublisher.publishEvent(new PostQueryEvent(datastore, hqlQuery, Collections.singletonList(result)));
-            deleted += result;
+            changed += result;
         }
-        return deleted;
+        return changed;
+    }
+
+    private boolean hasRequestedSubqueryJoin(List<Query.Criterion> criteria) {
+        for (Query.Criterion criterion : criteria) {
+            if (criterion instanceof Query.Junction junction && hasRequestedSubqueryJoin(junction.getCriteria())) {
+                return true;
+            }
+            QueryableCriteria<?> subquery = null;
+            if (criterion instanceof Query.In in) {
+                subquery = in.getSubquery();
+            }
+            else if (criterion instanceof Query.NotIn notIn) {
+                subquery = notIn.getSubquery();
+            }
+            else if (criterion instanceof Query.Exists exists) {
+                subquery = exists.getSubquery();
+            }
+            else if (criterion instanceof Query.NotExists notExists) {
+                subquery = notExists.getSubquery();
+            }
+            else if (criterion instanceof Query.PropertyCriterion property && property.getValue() instanceof QueryableCriteria<?> value) {
+                subquery = value;
+            }
+            if (subquery != null) {
+                if (subquery instanceof AbstractDetachedCriteria<?> detached && detached.getJoinTypes().values().stream().anyMatch(type -> type != null && type != JoinType.LEFT)) {
+                    return true;
+                }
+                if (hasRequestedSubqueryJoin(subquery.getCriteria())) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     /**
@@ -579,6 +615,9 @@ public class HibernateSession extends AbstractAttributeStoringSession implements
             }
 
             JpaQueryInfo built = builder.buildUpdate(properties);
+            if (hasRequestedSubqueryJoin(criteria.getCriteria())) {
+                return modifyByIdentifiers(session, criteria, properties);
+            }
             JpaQueryInfo jpaQueryInfo = new JpaQueryInfo(applyRequestedJoins(built.getQuery(), criteria), built.getParameters());
 
             var query = createMutationQuery(session, jpaQueryInfo);

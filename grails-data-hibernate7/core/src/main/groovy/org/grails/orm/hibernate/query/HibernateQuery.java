@@ -19,6 +19,7 @@
 package org.grails.orm.hibernate.query;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Deque;
 import java.util.HashMap;
@@ -37,6 +38,7 @@ import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.ParameterExpression;
 
 import org.hibernate.FlushMode;
+import org.hibernate.Hibernate;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.query.QueryFlushMode;
@@ -488,6 +490,7 @@ public class HibernateQuery extends Query {
     public List list(Session session) {
         var creator = createJpaCriteriaQueryCreator();
         List results = getHibernateQueryExecutor().list(session, creator.createQuery(), creator.getParameterValues());
+        initializeDeferredCollections(results, creator.getDeferredCollectionFetches());
         if (!creator.isDistinctInMemory()) {
             return results;
         }
@@ -542,7 +545,32 @@ public class HibernateQuery extends Query {
 
     public Object singleResult(Session session) {
         var creator = createJpaCriteriaQueryCreator();
-        return getHibernateQueryExecutor().singleResult(session, creator.createQuery(), creator.getParameterValues());
+        Object result = getHibernateQueryExecutor().singleResult(session, creator.createQuery(), creator.getParameterValues());
+        initializeDeferredCollections(Collections.singletonList(result), creator.getDeferredCollectionFetches());
+        return result;
+    }
+
+    private void initializeDeferredCollections(Collection<?> results, Set<String> paths) {
+        for (String path : paths) {
+            String[] tokens = path.split("\\.");
+            for (Object result : results) {
+                initializeCollectionPath(entity, result, tokens, 0);
+            }
+        }
+    }
+
+    private static void initializeCollectionPath(PersistentEntity entity, Object owner, String[] path, int index) {
+        if (owner == null || index == path.length) {
+            return;
+        }
+        Object value = entity.getReflector().getProperty(Hibernate.unproxy(owner), path[index]);
+        Hibernate.initialize(value);
+        PersistentEntity associated = ((Association<?>) entity.getPropertyByName(path[index])).getAssociatedEntity();
+        Collection<?> values = value instanceof Map<?, ?> map ? map.values() :
+                value instanceof Collection<?> collection ? collection : Collections.singletonList(value);
+        for (Object next : values) {
+            initializeCollectionPath(associated, next, path, index + 1);
+        }
     }
 
     @Override

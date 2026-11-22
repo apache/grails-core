@@ -66,6 +66,9 @@ import org.grails.datastore.gorm.internal.RefreshLockArguments
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.proxy.ProxyHandler
 import org.grails.datastore.mapping.model.PersistentProperty
+import org.grails.datastore.mapping.model.PersistentEntity
+import org.grails.datastore.mapping.model.types.Association
+import org.grails.datastore.mapping.model.types.ToMany
 import org.grails.datastore.mapping.query.api.BuildableCriteria as GrailsCriteria
 import org.grails.datastore.mapping.query.event.PostQueryEvent
 import org.grails.datastore.mapping.query.event.PreQueryEvent
@@ -643,7 +646,7 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
 
     @Override
     List<D> list(Map params = Collections.emptyMap()) {
-        if (requestsJoinType(params)) {
+        if (requestsJoinType(params) || requiresCriteriaFetch(params)) {
             return new DetachedCriteria<D>(persistentClass).list(params)
         }
         firePreQueryEvent()
@@ -662,6 +665,33 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
         List<D> result = (List<D>) hqlQuery.list()
         firePostQueryEvent(result)
         result
+    }
+
+    private boolean requiresCriteriaFetch(Map params) {
+        Object fetch = params.get(HibernateQueryArgument.FETCH.value())
+        if (!(fetch instanceof Map)) {
+            return false
+        }
+        for (Object item : ((Map) fetch).entrySet()) {
+            Map.Entry entry = (Map.Entry) item
+            String mode = entry.value?.toString()
+            if (!('join'.equalsIgnoreCase(mode) || 'eager'.equalsIgnoreCase(mode))) {
+                continue
+            }
+            PersistentEntity current = persistentEntity
+            String path = entry.key.toString()
+            for (String token : path.split('\\.')) {
+                PersistentProperty property = current?.getPropertyByName(token)
+                if (!(property instanceof Association)) {
+                    break
+                }
+                if (path.contains('.') || property instanceof ToMany && property.type == Collection && params.containsKey(HibernateQueryArgument.SORT.value())) {
+                    return true
+                }
+                current = ((Association) property).associatedEntity
+            }
+        }
+        false
     }
 
     @Override

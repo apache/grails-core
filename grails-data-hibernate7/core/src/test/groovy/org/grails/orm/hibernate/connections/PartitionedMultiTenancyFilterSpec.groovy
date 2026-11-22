@@ -25,6 +25,8 @@ import spock.lang.AutoCleanup
 import spock.lang.Shared
 import spock.lang.Specification
 
+import jakarta.persistence.criteria.JoinType
+
 import grails.gorm.MultiTenant
 import grails.gorm.annotation.Entity
 import grails.gorm.multitenancy.Tenants
@@ -61,6 +63,37 @@ class PartitionedMultiTenancyFilterSpec extends Specification {
 
     Session getSession() {
         datastore.sessionFactory.currentSession
+    }
+
+    void 'bulk #operation through a join table changes only roots with members of the current tenant'() {
+        given:
+        final first = new FilteredGroup(name: 'First group').save(failOnError: true)
+        final second = new FilteredGroup(name: 'Second group').save(failOnError: true)
+        new FilteredGroup(name: 'Empty group').save(failOnError: true)
+        Tenants.withId(datastore, 'alice') {
+            first.addToMembers(new FilteredMember(name: 'First member').save(failOnError: true)).save(failOnError: true, flush: true)
+        }
+        Tenants.withId(datastore, 'bob') {
+            second.addToMembers(new FilteredMember(name: 'Second member').save(failOnError: true)).save(failOnError: true, flush: true)
+        }
+        session.clear()
+        FilterSpecTenantResolver.tenantId = 'alice'
+        final query = FilteredGroup.where { name ==~ '%group' }.join('members', JoinType.INNER)
+
+        expect:
+        query.list()*.name == ['First group']
+
+        when:
+        final changed = operation == 'delete' ? query.deleteAll() : query.updateAll(name: 'Updated group')
+        session.clear()
+
+        then:
+        changed == 1
+        FilteredGroup.findByName('Second group') != null
+        FilteredGroup.findByName('Empty group') != null
+
+        where:
+        operation << ['update', 'delete']
     }
 
     void 'a lazy collection of an entity that is not multi-tenant holds the instances of the current tenant only'() {

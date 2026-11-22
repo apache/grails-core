@@ -238,6 +238,7 @@ public class CriteriaMethodInvoker {
                 Class<?> oldTargetClass = builder.getTargetClass();
                 Class<?> associationClass = builder.getClassForAssociationType(attribute);
                 builder.setTargetClass(associationClass);
+                DetachedCriteria<?> oldDetachedCriteria = hibernateQuery.getDetachedCriteria();
                 if (!embedded) {
                     JoinType joinType;
                     if (hasMoreThanOneArg) {
@@ -248,10 +249,11 @@ public class CriteriaMethodInvoker {
                         joinType = builder.convertFromInt(0);
                     }
 
-                    hibernateQuery.join(name, joinType);
+                    if (hasMoreThanOneArg || !oldDetachedCriteria.getJoinTypes().containsKey(name)) {
+                        hibernateQuery.join(name, joinType);
+                    }
                 }
 
-                DetachedCriteria<?> oldDetachedCriteria = hibernateQuery.getDetachedCriteria();
                 // inside the block of an embedded component the entity is the one of the component, which the
                 // mapping context does not know by the class of the component
                 PersistentEntity parentEntity = oldDetachedCriteria instanceof DetachedAssociationCriteria<?> enclosing ?
