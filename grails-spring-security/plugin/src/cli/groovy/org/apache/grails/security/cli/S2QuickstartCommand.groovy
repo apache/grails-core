@@ -231,6 +231,11 @@ Example: ./grailsw s2-quickstart --uiOnly
             if (pluginClassFile != null) {
                 addBeansToPlugin(beans, pluginClassFile)
             }
+            else {
+                // an application without resources.groovy gets one, or the listener that encodes the
+                // passwords would be registered nowhere
+                addBeans(beans, 'grails-app/conf/spring/resources.groovy')
+            }
         }
 
         generateFile('Authority', roleModel.packagePath, roleModel.simpleName)
@@ -307,20 +312,20 @@ Example: ./grailsw s2-quickstart --uiOnly
                 writer.writeLine("                authorityJoinClassName: '${packageName}.$userClassName$roleClassName'")
             }
             if (!uiOnly || useRoleGroups) {
-                writer.writeLine('        authority:')
+                writer.writeLine('            authority:')
                 if (!uiOnly) {
-                    writer.writeLine("            className: '${packageName}.$roleClassName'")
+                    writer.writeLine("                className: '${packageName}.$roleClassName'")
                 }
                 if (useRoleGroups) {
-                    writer.writeLine('            groupAuthorityNameField: authorities')
+                    writer.writeLine('                groupAuthorityNameField: authorities')
                 }
             }
-
             if (useRoleGroups) {
-                writer.writeLine('        useRoleGroups: true')
+                writer.writeLine('            useRoleGroups: true')
             }
             if (requestmapClassName) {
-                writer.writeLine("            requestMap.className: '${packageName}.$requestmapClassName'")
+                writer.writeLine('            requestMap:')
+                writer.writeLine("                className: '${packageName}.$requestmapClassName'")
                 writer.writeLine('            securityConfigType: Requestmap')
             }
             writer.writeLine('            controllerAnnotations:')
@@ -373,6 +378,7 @@ Example: ./grailsw s2-quickstart --uiOnly
 
     private void addBeans(List<Map<String, String>> beans, String resourceConfigFilePath) {
         final File resourceConfig = file(resourceConfigFilePath)
+        resourceConfig.parentFile.mkdirs()
         List<String> lines = []
         beans.forEach(bean -> lines.add(bean.import))
         if (resourceConfig.exists()) {

@@ -20,6 +20,8 @@ package org.apache.grails.security.cli
 
 import java.nio.file.Files
 
+import org.yaml.snakeyaml.Yaml
+
 import org.apache.grails.core.cli.ExecutionContext
 import org.grails.build.parsing.CommandLineParser
 import spock.lang.Specification
@@ -74,12 +76,47 @@ class S2QuickstartCommandSpec extends Specification {
         new File(project, 'grails-app/domain/com/example/User.groovy').isFile()
         new File(project, 'grails-app/domain/com/example/Role.groovy').isFile()
         new File(project, 'grails-app/domain/com/example/Requestmap.groovy').isFile() == !requestmap.empty
-        String config = new File(project, 'grails-app/conf/application.yml').text
-        config.contains('com.example.User')
-        config.contains('com.example.Requestmap') == !requestmap.empty
+
+        and: 'the settings are where the plugin reads them'
+        Map security = securityConfig()
+        security.userLookup == [userDomainClassName: 'com.example.User', authorityJoinClassName: 'com.example.UserRole']
+        security.authority == [className: 'com.example.Role']
+        security.requestMap == (requestmap ? [className: 'com.example.Requestmap'] : null)
+        security.securityConfigType == (requestmap ? 'Requestmap' : null)
+        security.controllerAnnotations.staticRules.size() > 0
+        security.filterChain.chainMap.size() > 0
+
+        and: 'the listener that encodes the passwords is registered, in a resources.groovy the application did not have'
+        new File(project, 'grails-app/conf/spring/resources.groovy').text.contains('userPasswordEncoderListener(UserPasswordEncoderListener)')
 
         where:
         requestmap << [[], ['Requestmap']]
+    }
+
+    void 'with role groups the settings of the groups are where the plugin reads them'() {
+        when:
+        boolean succeeded = run('s2-quickstart', 'com.example', 'User', 'Role', '--groupClassName=RoleGroup')
+
+        then:
+        succeeded
+        Map security = securityConfig()
+        security.authority == [className: 'com.example.Role', groupAuthorityNameField: 'authorities']
+        security.useRoleGroups == true
+        security.controllerAnnotations.staticRules.size() > 0
+    }
+
+    void 'the listener is added to a resources.groovy the application has'() {
+        given:
+        File resources = new File(project, 'grails-app/conf/spring/resources.groovy')
+        resources.parentFile.mkdirs()
+        resources.text = 'beans = {\n}\n'
+
+        when:
+        run('s2-quickstart', 'com.example', 'User', 'Role')
+
+        then:
+        resources.text.contains('userPasswordEncoderListener(UserPasswordEncoderListener)')
+        resources.text.contains('import com.example.UserPasswordEncoderListener')
     }
 
     void 'without the classes named the usage is reported, and nothing is written'() {
@@ -90,6 +127,12 @@ class S2QuickstartCommandSpec extends Specification {
         !succeeded
         !new File(project, 'grails-app/domain').exists()
         !new File(project, 'grails-app/conf/application.yml').text.contains('springsecurity')
+    }
+
+    /** The settings of the plugin in the document quickstart adds to application.yml, parsed as YAML */
+    private Map securityConfig() {
+        List<Object> documents = new Yaml().loadAll(new File(project, 'grails-app/conf/application.yml').text).toList()
+        ((Map) documents.last()).grails.plugin.springsecurity as Map
     }
 
     private boolean run(String... commandLine) {
