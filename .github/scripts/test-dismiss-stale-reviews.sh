@@ -33,6 +33,7 @@ if command -v ruby > /dev/null; then
 else
   python3 -c 'import sys, yaml; print(yaml.safe_load(open(sys.argv[1]))["jobs"]["dismiss"]["steps"][0]["run"])' "$workflow" > "$work/step.sh"
 fi
+bash -n "$work/step.sh" || { echo "the step's script in $workflow does not parse"; exit 1; }
 # The functions of the step: everything before it creates its repository.
 sed '/^git init --quiet --bare merges.git$/,$d' "$work/step.sh" > "$work/functions.sh"
 grep -q '^only_merges_base()' "$work/functions.sh" || { echo "the step's functions were not found in $workflow"; exit 1; }
@@ -165,6 +166,19 @@ merge_case newline-added f 'a\nx\n' 'a\nours' 'a\ntheirs\n' 'a\nours\n' dismisse
 merge_case empty-side-newline-added f 'a\nx\n' 'a\n' 'a\ny' 'a\ny\n' dismissed "$changed"
 merge_case empty-side-newline-kept f 'a\nx\n' 'a\n' 'a\ny' 'a\ny' kept
 merge_case empty-side-dropped f 'a\nx\n' 'a\n' 'a\ny' 'a\n' kept
+# The file ends in a conflict, and a side has no newline at its end: keeping that side as it is keeps the approval.
+merge_case theirs-without-newline f 'a\nx\n' 'a\nours\n' 'a\ntheirs' 'a\ntheirs' kept
+merge_case theirs-without-newline-added f 'a\nx\n' 'a\nours\n' 'a\ntheirs' 'a\ntheirs\n' dismissed "$changed"
+merge_case both-without-newline-ours f 'a\nx' 'a\nours' 'a\ntheirs' 'a\nours' kept
+merge_case both-without-newline-theirs f 'a\nx' 'a\nours' 'a\ntheirs' 'a\ntheirs' kept
+merge_case common-without-newline f 'a\nx' 'a\nours\n' 'a\ntheirs' 'a\ntheirs' kept
+merge_case ours-then-theirs-without-newline f 'a\nx\n' 'a\nours\n' 'a\ntheirs' 'a\nours\ntheirs' kept
+merge_case theirs-then-ours-without-newline f 'a\nx\n' 'a\nours' 'a\ntheirs\n' 'a\ntheirs\nours' kept
+merge_case crlf-without-newline f 'a\r\nx\r\n' 'a\r\nours\r\n' 'a\r\ntheirs' 'a\r\ntheirs' kept
+merge_case crlf-without-newline-added f 'a\r\nx\r\n' 'a\r\nours\r\n' 'a\r\ntheirs' 'a\r\ntheirs\r\n' dismissed "$changed"
+merge_case crlf-without-newline-then-other f 'a\r\nx\r\n' 'a\r\nours' 'a\r\ntheirs\r\n' 'a\r\nours\r\ntheirs\r\n' kept
+merge_case crlf-other-then-without-newline f 'a\r\nx\r\n' 'a\r\nours\r\n' 'a\r\ntheirs' 'a\r\nours\r\ntheirs' kept
+merge_case crlf-without-newline-bare-cr f 'a\r\nx\r\n' 'a\r\nours\r\n' 'a\r\ntheirs' 'a\r\ntheirs\r' dismissed "$changed"
 merge_case crlf f 'a\r\nx\r\nb\r\n' 'a\r\nours\r\nb\r\n' 'a\r\ntheirs\r\nb\r\n' 'a\r\ntheirs\r\nb\r\n' kept
 merge_case crlf-to-lf f 'a\r\nx\r\nb\r\n' 'a\r\nours\r\nb\r\n' 'a\r\ntheirs\r\nb\r\n' 'a\r\ntheirs\nb\r\n' dismissed "$changed"
 echo "== lines like conflict markers"

@@ -150,8 +150,21 @@ jobs:
                 for (j = a; j <= b; j++) if ((resolved[p + j - a] "") != (merged[j] "")) return 0
                 return 1
               }
+              # The lines of the side s (ours or theirs) of conflict k from the pushed line p on: the position
+              # after them, or 0. When they end the file, their last line is compared with the last line of the
+              # side as it is, as git ends a last line that has no line end with the line end of the file in a
+              # conflict, \r\n in a file of Windows line ends, which the side itself does not have.
+              function side(p, s, ends_file,   a, b) {
+                a = s == "ours" ? open[k] + 1 : split_at[k] + 1; b = s == "ours" ? split_at[k] - 1 : shut[k] - 1
+                if (a > b) return p
+                if (!ends_file) return same(p, a, b) ? p + b - a + 1 : 0
+                if (!same(p, a, b - 1) || p + b - a != lines) return 0
+                return (resolved[lines] "") == ((s == "ours" ? ours_last : theirs_last) "") ? lines + 1 : 0
+              }
               FILENAME == ARGV[1] { merged[FNR] = $0; total = FNR; next }
-              { resolved[FNR] = $0; lines = FNR }
+              FILENAME == ARGV[2] { resolved[FNR] = $0; lines = FNR; next }
+              FILENAME == ARGV[3] { ours_last = $0; next }
+              FILENAME == ARGV[4] { theirs_last = $0; next }
               END {
                 opening = run("<", size) " " first; closing = run(">", size) " " second; separator = run("=", size)
                 for (j = 1; j <= total; j++) {
@@ -169,15 +182,17 @@ jobs:
                 reach[1] = "file"; done_to = 0
                 for (k = 1; k <= conflicts; k++) {
                   delete next_reach
+                  # Whether this conflict ends the file, so that the last side a choice writes ends it too.
+                  eof = k == conflicts && shut[k] == total
+                  o = split_at[k] - open[k] - 1; t = shut[k] - split_at[k] - 1
                   for (p in reach) {
                     if (!same(p + 0, done_to + 1, open[k] - 1)) continue
                     q = p + open[k] - 1 - done_to
-                    o = split_at[k] - open[k] - 1; t = shut[k] - split_at[k] - 1
-                    if (same(q, open[k] + 1, split_at[k] - 1)) next_reach[q + o] = next_reach[q + o] " ours"
-                    if (same(q, split_at[k] + 1, shut[k] - 1)) next_reach[q + t] = next_reach[q + t] " theirs"
+                    if (e = side(q, "ours", eof)) next_reach[e] = next_reach[e] " ours"
+                    if (e = side(q, "theirs", eof)) next_reach[e] = next_reach[e] " theirs"
                     # Both sides one after the other end the file as the second one does, unless it has no lines.
-                    if (same(q, open[k] + 1, split_at[k] - 1) && same(q + o, split_at[k] + 1, shut[k] - 1)) next_reach[q + o + t] = next_reach[q + o + t] (t ? " theirs" : " ours")
-                    if (same(q, split_at[k] + 1, shut[k] - 1) && same(q + t, open[k] + 1, split_at[k] - 1)) next_reach[q + o + t] = next_reach[q + o + t] (o ? " ours" : " theirs")
+                    if ((e = side(q, "ours", eof && !t)) && (e = side(e, "theirs", eof))) next_reach[e] = next_reach[e] (t ? " theirs" : " ours")
+                    if ((e = side(q, "theirs", eof && !o)) && (e = side(e, "ours", eof))) next_reach[e] = next_reach[e] (o ? " ours" : " theirs")
                   }
                   delete reach; for (p in next_reach) reach[p] = next_reach[p]; done_to = shut[k]
                 }
@@ -191,7 +206,7 @@ jobs:
                   if (index(reach[p], "theirs") && resolved_nl == theirs_nl) exit 0
                 }
                 exit 1
-              }' conflicted.file resolved.file
+              }' conflicted.file resolved.file ours.file theirs.file
             case $? in 0) return 0 ;; 1) return 1 ;; *) return 2 ;; esac
           }
           # Whether every commit from the approved one to the head is a merge of the base branch that changes nothing
