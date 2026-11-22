@@ -105,7 +105,7 @@ class UrlMappingsGrailsPluginSpec extends Specification {
         !registry.containsBeanDefinition('urlMappingsTargetSource')
     }
 
-    void "the handler mapping marks the requests its mappings handle only with grails.mime.negotiation.spring: #setting"() {
+    void "the handler mapping marks the requests its mappings handle unless grails.mime.negotiation.spring is false: #setting"() {
         given:
         def beanFactory = new DefaultListableBeanFactory()
         def config = new PropertySourcesConfig(setting == null ? [:] : [(Settings.MIME_NEGOTIATION_SPRING): setting])
@@ -125,7 +125,7 @@ class UrlMappingsGrailsPluginSpec extends Specification {
 
         where:
         setting || marks
-        null    || null
+        null    || true
         false   || null
         true    || true
     }

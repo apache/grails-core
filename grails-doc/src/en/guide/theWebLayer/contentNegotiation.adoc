@@ -217,6 +217,12 @@ where the action responds in XML (see link:{controllersRef}respond.html[respond]
 
 
 
+NOTE: The `Accept` header rules above are the Grails rules, which `grails.mime.negotiation.spring: false` keeps. By
+default, Grails resolves the `Accept` header with Spring MVC's content negotiation manager: `*/*` is still the `all`
+format, but a header that contains no configured type, or that Spring cannot read, results in no format, which
+`respond` answers with `406 Not Acceptable`, and the types are taken in Spring MVC's order. See
+<<springFormatNegotiation,Resolving Formats with Spring MVC Content Negotiation>> for every rule that changes.
+
 ==== Request format vs. Response format
 
 
@@ -266,12 +272,12 @@ Note the inclusion of the `format` variable in the path. If you do not wish to u
 [[springFormatNegotiation]]
 ==== Resolving Formats with Spring MVC Content Negotiation
 
-Grails resolves `request.format`, `response.format`, `withFormat` and the format `respond` writes in by the rules this
-section describes, while Spring MVC's content negotiation manager decides the type of what Spring MVC writes for an
-action: a `ResponseEntity`, a `ProblemDetail` or another value an action returns (see
-<<springResponses,Returning Spring MVC Responses>>), a problem `respond` writes, and the JSON `respond` writes with
-Spring MVC. The two can answer one request differently. Set `grails.mime.negotiation.spring` to `true` to resolve the
-Grails formats with Spring MVC's manager too:
+Spring MVC's content negotiation manager decides the type of what Spring MVC writes for an action: a `ResponseEntity`,
+a `ProblemDetail` or another value an action returns (see <<springResponses,Returning Spring MVC Responses>>), a problem
+`respond` writes, and the JSON `respond` writes with Spring MVC. By default, Grails resolves `request.format`,
+`response.format`, `withFormat` and the format `respond` writes in with that manager too, so that the two answer a
+request alike. Set `grails.mime.negotiation.spring` to `false` to resolve the Grails formats by the Grails rules the
+sections above describe, as Grails 9 does by default, and leave Spring MVC's manager as Spring MVC configures it:
 
 [source,yaml]
 .grails-app/conf/application.yml
@@ -279,11 +285,10 @@ Grails formats with Spring MVC's manager too:
 grails:
     mime:
         negotiation:
-            spring: true
+            spring: false
 ----
 
-Grails {grailsMajorVersion} keeps the Grails rules by default, and Grails 10 makes the setting the default. With the
-setting:
+With the setting, which is `true` from Grails 10:
 
 * The `Accept` header is read by Spring MVC's manager, with its strategies, so the `spring.mvc.contentnegotiation.*`
 properties apply to the Grails formats as they do to Spring MVC, and its media types are taken in the order Spring MVC
@@ -351,7 +356,9 @@ type is configured for in the first configured format
 |===
 
 <<upgradingSpringFormatNegotiation,Opt Into Spring MVC Content Negotiation for Grails Formats>>, in the guide to
-upgrading from Grails 8 to Grails 9, lists how each answer changes.
+upgrading from Grails 8 to Grails 9, lists how each answer changes, and
+<<upgradingSpringFormatNegotiationDefault,Grails Formats Are Resolved with Spring MVC Content Negotiation>>, in the guide
+to upgrading from Grails 9 to Grails 10, how to keep the Grails rules.
 
 ==== Testing Content Negotiation
 

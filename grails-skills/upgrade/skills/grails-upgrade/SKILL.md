@@ -1,6 +1,6 @@
 ---
 name: grails-upgrade
-description: Guide for upgrading Grails applications from Grails 9.x to Grails 10 and from one Grails 10 release to a later one, covering the changes of each Grails 10 release and the defaults that Grails 9 announced for Grails 10 for Spring JSON rendering, the JSON converter, Jackson request binding, Spring MVC exception handlers, response bodies, and the grails-xml module
+description: Guide for upgrading Grails applications from Grails 9.x to Grails 10 and from one Grails 10 release to a later one, covering the changes of each Grails 10 release, Grails formats resolved with Spring MVC content negotiation, and the defaults that Grails 9 announced for Grails 10 for Spring JSON rendering, the JSON converter, Jackson request binding, Spring MVC exception handlers, response bodies, and the grails-xml module
 license: Apache-2.0
 ---
 
@@ -26,6 +26,7 @@ Activate this skill when:
 - Updating a Grails 10 application to a later Grails 10 release.
 - Reviewing a Grails 10 upgrade branch or pull request.
 - Fixing tests, build failures, runtime failures, or behavior changes after moving from Grails 9.x to Grails 10.
+- Fixing a request answered `406 Not Acceptable`, or in another format than on Grails 9, now that `grails.mime.negotiation.spring` resolves Grails formats with Spring MVC's content negotiation by default.
 - Setting `grails.web.rendering.json.spring`, `grails.converters.json.legacy`, `grails.databinding.json.jackson`, `grails.exceptionresolver.springHandlers` or `grails.controllers.responseBody` explicitly ahead of the upgrade.
 - Deciding whether an application declares `grails-xml` itself.
 
@@ -59,7 +60,7 @@ Do not assume `https://grails.apache.org/docs/latest/` points at Grails 10. Chec
 
 ## Upgrade Baseline
 
-Grails 10 is in development and does not differ from Grails 9 yet: the upgrade guide lists no change an application has to act on. Read the guide of the target version before relying on that, since each change is added to it, and to this skill, with the pull request that makes it.
+Grails 10 is in development. Read the upgrade guide of the target version, since each change an application has to act on is added to it, and to this skill, with the pull request that makes it.
 
 Verify these before touching application code:
 
@@ -76,7 +77,7 @@ Verify these before touching application code:
 
 ## Defaults Grails 9 Announced for Grails 10
 
-The Grails 9 upgrade guide announces these defaults for Grails 10. The Grails 10 guide of the target version says which of them have changed; until it lists a setting, its default is the Grails 9 one.
+The Grails 9 upgrade guide announces these defaults for Grails 10. The Grails 10 guide of the target version says which of them have changed; until it lists a setting, its default is the Grails 9 one. `grails.mime.negotiation.spring` has changed: see [Grails Formats Resolved with Spring MVC Content Negotiation](#grails-formats-resolved-with-spring-mvc-content-negotiation).
 
 | Setting | What it governs | Grails 9 default | Announced for Grails 10 |
 |---------|-----------------|------------------|-------------------------|
@@ -85,6 +86,7 @@ The Grails 9 upgrade guide announces these defaults for Grails 10. The Grails 10
 | `grails.databinding.json.jackson` | JSON request bodies bound to command objects and domain classes | `false` | `true` |
 | `grails.exceptionresolver.springHandlers` | Exceptions actions throw, resolved by Spring MVC `@ExceptionHandler` methods | `false` | `true` |
 | `grails.controllers.responseBody` | The values of actions annotated `@ResponseBody`, written by Spring MVC as the body | `false` | `true` |
+| `grails.mime.negotiation.spring` | `request.format`, `response.format`, `withFormat` and the format `respond` writes in, resolved with Spring MVC's content negotiation manager | `false` | `true`, changed in Grails 10 |
 
 - Search `application.yml` and `application.groovy` for each setting. One that is set keeps its value through the upgrade. One that is missing takes the new default once Grails 10 changes it.
 - The three JSON settings change together, so that `respond`, `render ... as JSON`, `request.JSON` and data binding write and read JSON with the same mapper. Test them together.
@@ -99,11 +101,34 @@ The Grails 9 upgrade guide announces these defaults for Grails 10. The Grails 10
 
 The `grails-upgrade` skill of the last Grails 9 release describes what each setting changes and how to check an application with it.
 
+## Grails Formats Resolved with Spring MVC Content Negotiation
+
+`grails.mime.negotiation.spring` is `true` by default from Grails 10. `request.format`, `response.format`, `withFormat` and the format `respond` writes in are resolved with Spring MVC's content negotiation manager, so the `spring.mvc.contentnegotiation.*` settings apply to them, and the `format` parameter, URL extensions and the `grails.mime` settings of the `Accept` header decide what Spring MVC writes for an action too, such as a `ResponseEntity`. A Spring MVC endpoint, and Spring Security's filters before a URL mapping has matched a request, negotiate as before.
+
+- Search `application.yml` and `application.groovy` for `grails.mime.negotiation.spring`. An application that set it to `true` on Grails 9 answers as it did; remove the setting. One that set it to `false` keeps the Grails rules.
+- Where it is not set, check these answers, which change:
+  - `Accept: */*, application/json` is the `json` format, where it was `all`: Spring MVC takes a more specific type ahead of a less specific one of equal quality, so `withFormat` runs the `json` block rather than its first.
+  - A request that accepts no configured type, such as `Accept: image/png`, or whose `Accept` header Spring cannot read, such as `application/json;q=abc`, has no format: `response.format` and `response.mimeType` are `null`, and `respond` answers `406`. Code that reads either must allow for `null`.
+  - A `format` parameter or URL extension no type is configured for is not acceptable, where Grails 9 answered in the first configured format.
+  - A type with the `+json` or `+xml` suffix no configured type names, such as `application/merge-patch+json`, is the `json` or `xml` format, in `Accept` and in `Content-Type`, so data binding reads such a body as JSON.
+  - The URL extension decides what Spring MVC writes for an action: `/book/show/1.json` of an action that returns a `ResponseEntity` is JSON whatever the `Accept` header asks for, and `/book/show/1.html` of one that returns a map is `406`.
+- To keep the Grails 9 answers, set the setting to `false`:
+
+  ```yaml
+  grails:
+      mime:
+          negotiation:
+              spring: false
+  ```
+
+The section "Opt Into Spring MVC Content Negotiation for Grails Formats" of the Grails 9 upgrade guide lists every kind of answer that changes.
+
 ## Verification Checklist
 
 - [ ] The application was on the last Grails 9 release, with its tests passing, before the upgrade.
 - [ ] Every announced setting the application depends on is set explicitly.
 - [ ] `grails-xml` is declared if the application serves or reads XML.
+- [ ] Requests answered `406` or in another format than on Grails 9 have been checked against Spring MVC content negotiation, or `grails.mime.negotiation.spring: false` keeps the Grails rules.
 - [ ] The test suite passes on the target Grails 10 version.
 - [ ] The upgrade guide of the target version has been read section by section.
 
