@@ -43,11 +43,17 @@ class ForkedCli {
     static ProcessBuilder builder(File directory, List<String> jvm, String... args) {
         List<String> command = [new File(System.getProperty('java.home'), 'bin/java').path]
         command.addAll(jvm)
+        // Not an argument and not a variable of the environment: the class path of a build is longer than
+        // either can be on Windows, where each ends at 32767 characters. Java reads it from a file, in
+        // which a backslash between quotes is written twice.
+        File classPath = File.createTempFile('grails-cli-class-path', '.txt')
+        classPath.deleteOnExit()
+        classPath.setText('-cp\n"' + System.getProperty('java.class.path').replace('\\', '\\\\') + '"\n', 'UTF-8')
+        command.add('@' + classPath.path)
         command.add(Application.name)
         command.addAll(args.toList())
         ProcessBuilder builder = new ProcessBuilder(command).directory(directory)
-        // not an argument: the class path of a build is longer than a command line can be on some systems
-        builder.environment().put('CLASSPATH', System.getProperty('java.class.path'))
+        builder.environment().remove('CLASSPATH')
         return builder
     }
 }

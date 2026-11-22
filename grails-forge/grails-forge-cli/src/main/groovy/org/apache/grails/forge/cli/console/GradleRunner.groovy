@@ -46,9 +46,33 @@ import org.grails.forge.feature.FeatureSelectionException
 @CompileStatic
 final class GradleRunner extends GradleBuild {
 
-    // what cmd.exe reads as its own in the command line of a batch file
-    private static final String NOT_FOR_A_BATCH_FILE = '"%&|<>^'
+    // What cmd.exe reads as its own in the command line of a batch file. The JVM hands a batch file to
+    // the system as it hands a program: the system starts cmd.exe /c with the whole command line, which
+    // cmd.exe reads once, and the batch file gives its arguments to Java as %*, which cmd.exe reads again.
+    // By default the JVM puts an argument between quotes only where it has white space, and takes nothing
+    // away or out (jdk.lang.Process.allowAmbiguousCommands, which is true unless it is set to false), so
+    // what must not reach cmd.exe is refused here:
+    //   "      begins and ends what cmd.exe takes literally, and cannot stand in what it is to take so
+    //   %      names a variable of the environment, which is put in its place, also between quotes
+    //   & |    end a command and begin the next one
+    //   < >    redirect what the command reads and writes
+    //   ^      is taken out, and makes the character after it one that is not read
+    //   !      names a variable where delayed expansion is on, which the registry can make it for every
+    //          cmd.exe, and is taken out then; between quotes too
+    // Not refused, since %* is the arguments as they were typed and Java splits them at white space alone:
+    //   , ; =  divide the arguments a batch file numbers (%1, %2), which the wrapper of Gradle does not use,
+    //          so that -Dname=value is one argument for Gradle
+    //   ( )    open and close a block, and the wrapper of Gradle starts Java in none
+    //   space  the JVM puts the argument between quotes, and cmd.exe and Java both keep it one argument
+    private static final String NOT_FOR_A_BATCH_FILE = '"%&|<>^!'
+    // The JVM puts the path of the batch file between quotes only where it has white space. Without them
+    // cmd.exe ends the name of the command at any of these, and would start another program: C:\a for
+    // C:\a,b\gradlew.bat. A block is looked for where a command begins, so a parenthesis is refused as well.
+    private static final String NOT_IN_A_PATH_WITHOUT_QUOTES = ',;=()'
     private static final int STOP_SECONDS = 10
+    /** What is said after an application was stopped where {@link #asksToEnd} is false. */
+    static final String ENDED_AT_ONCE = 'Its processes were ended at once: on Windows an application is not asked to shut down, ' +
+            'so what it does when it is asked (its shutdown hooks, the graceful shutdown of its server) was not done.'
     private static final int OUTPUT_SECONDS = 10
     private static final int FORCED_SECONDS = 5
     // $1 is the file the output is added to, the rest the command. A signal that is ignored stays ignored
@@ -74,6 +98,7 @@ final class GradleRunner extends GradleBuild {
 
     private static volatile String shell = SHELL
     private static volatile String shellPath
+    private static volatile Boolean asked
 
     private final Consumer<String> failure
     private final boolean windows
@@ -107,12 +132,49 @@ final class GradleRunner extends GradleBuild {
     }
 
     /**
+     * @return whether a process that this command line ends is asked to end, and can do what it does
+     * before it ends: so it is where the system has signals. On Windows there is no such request that
+     * a program without a window receives from another process: a process is ended at once, as it is
+     * by force, and neither it nor the application below it runs its shutdown hooks
+     */
+    static boolean asksToEnd() {
+        Boolean replaced = asked
+        return replaced != null ? replaced.booleanValue() : ProcessHandle.current().supportsNormalTermination()
+    }
+
+    /**
+     * Replaces what the system says of how a process is ended, for a specification.
+     *
+     * @param asks what {@link #asksToEnd} is taken to be; {@code null} for what the system says
+     */
+    static void setAsksToEnd(Boolean asks) {
+        asked = asks
+    }
+
+    /**
+     * @param path a path, as the system writes it
+     * @return whether it names a directory or a file of another computer by the name of that computer
+     * and of the share (a UNC path, as {@code \\server\share\app}), and not through a drive letter
+     */
+    static boolean isOfAShare(String path) {
+        return path.startsWith('\\\\') || path.startsWith('//')
+    }
+
+    /**
      * Starts Gradle in the directory of the project and does not wait for it: the build goes on when
      * the command has ended, and when the CLI has. It reads nothing, and what it writes is added to a
      * file. Where the system has process groups, the interrupt of the terminal the CLI runs in is not
      * an interrupt of the build, and the build is not ended with the terminal: it is in a session or a
      * process group of its own where the system has {@code setsid} or the shell grants job control,
      * and ignores the interrupt where neither is so.
+     *
+     * <p>On Windows the interrupt and the end of a console go to the processes that are attached to
+     * it, and the build is attached to another one: none of the three streams of the process that is
+     * started is that of the CLI, and the JVM starts such a process without a console window
+     * ({@code CREATE_NO_WINDOW} in {@code ProcessImpl_md.c} of the JDK, for every process whose
+     * streams are all redirected), which gives it a console of its own that has no window. So the
+     * build is not sent Ctrl-C of the console the CLI runs in and does not end when that console is
+     * closed, and nothing is shown. No other program is needed for it, and none is started.</p>
      *
      * @param project the project
      * @param arguments the arguments of Gradle, each given to it as the one argument it is
@@ -128,6 +190,8 @@ final class GradleRunner extends GradleBuild {
         List<String> command = command(wrapper, arguments)
         ProcessBuilder builder
         if (windows) {
+            // every stream is redirected, and has to be: with one of them inherited the JVM would start
+            // the build in the console of the CLI, whose interrupt and whose end would then be its own
             builder = new ProcessBuilder(command)
                     .redirectInput(ProcessBuilder.Redirect.from(new File('NUL')))
                     .redirectErrorStream(true)
@@ -167,7 +231,10 @@ final class GradleRunner extends GradleBuild {
 
     /**
      * Ends a process with every process it started in turn: first the processes below it, then the
-     * process, and after a while by force whatever of them is left.
+     * process, and after a while by force whatever of them is left. Where a process cannot be asked to
+     * end, see {@link #asksToEnd}, all of them are ended at once and there is nothing to wait for: the
+     * processes below are found before any is ended, since a process whose parent has ended is below
+     * nothing any more.
      *
      * @param process the process
      * @param seconds how long the processes are given to end by themselves
@@ -178,7 +245,8 @@ final class GradleRunner extends GradleBuild {
         Collections.reverse(started)
         started.add(process)
         started.each { ProcessHandle each -> each.destroy() }
-        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(seconds)
+        // where a process is not asked, it has been ended: the wait is for the system to say so
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(asksToEnd() ? seconds : Math.min(seconds, FORCED_SECONDS))
         try {
             for (ProcessHandle each : started) {
                 each.onExit().get(Math.max(0L, deadline - System.nanoTime()), TimeUnit.NANOSECONDS)
@@ -214,10 +282,23 @@ final class GradleRunner extends GradleBuild {
                         "the Gradle wrapper of Windows is a batch file, which would not get as it is an argument that is empty, has one of ${NOT_FOR_A_BATCH_FILE} or a control character, " +
                         'or has a space and ends with a backslash. Run gradlew.bat with it yourself')
             }
+            Path share = [wrapper, project.directory].find { Path path -> isOfAShare(path.toString()) }
+            if (share != null) {
+                failed("Gradle cannot be run from here for ${line(share)}: the Gradle wrapper of Windows is a batch file, and the command interpreter that runs it " +
+                        'takes no path that begins with the name of a computer (a UNC path) for its current directory, and would run Gradle in the directory of Windows instead. ' +
+                        'Gradle was not run; give the share a drive letter (net use) and run the command in the project on that drive')
+                return null
+            }
             Path named = [wrapper, project.directory].find { Path path -> hasWhatABatchFileReads(path.toString()) }
             if (named != null) {
                 failed("Gradle cannot be run from here for ${line(named)}: the Gradle wrapper of Windows is a batch file, and a path with one of ${NOT_FOR_A_BATCH_FILE} " +
                         'or a control character is not read as it is where the batch file is started. Gradle was not run; run gradlew.bat yourself, or move the project')
+                return null
+            }
+            if (notAPathWithoutQuotes(wrapper.toString())) {
+                failed("Gradle cannot be run from here for ${line(wrapper)}: the Gradle wrapper of Windows is a batch file, and where its path has no space it is given to the " +
+                        "command interpreter without quotes, which ends the name of a command at any of ${NOT_IN_A_PATH_WITHOUT_QUOTES}. " +
+                        'Gradle was not run; run gradlew.bat yourself, or move the project')
                 return null
             }
         }
@@ -242,6 +323,24 @@ final class GradleRunner extends GradleBuild {
         }
         // such an argument is put between quotes, and the backslash would then stand before the closing one
         return argument.endsWith('\\') && (argument.contains(' ') || argument.contains('\t'))
+    }
+
+    /**
+     * @param path the path of the Gradle wrapper of Windows
+     * @return whether the JVM gives it to the command interpreter without quotes, as it does a path
+     * that has no white space, and the command interpreter would not read all of it as the name of
+     * the command
+     */
+    static boolean notAPathWithoutQuotes(String path) {
+        boolean quoted = false
+        boolean divided = false
+        for (int i = 0; i < path.length(); i++) {
+            char character = path.charAt(i)
+            // as the JVM decides it
+            quoted = quoted || Character.isSpaceChar(character) || Character.isWhitespace(character)
+            divided = divided || NOT_IN_A_PATH_WITHOUT_QUOTES.indexOf((int) character) > -1
+        }
+        return divided && !quoted
     }
 
     private void failed(String message) {

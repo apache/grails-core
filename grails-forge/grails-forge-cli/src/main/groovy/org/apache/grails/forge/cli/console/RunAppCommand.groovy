@@ -324,7 +324,7 @@ class RunAppCommand extends GradleEnvironmentCommand {
             RunningApplication.forget(directory, recorded[0], recorded[1])
         }
         if (asked.get()) {
-            out('| Application stopped')
+            out(GradleRunner.asksToEnd() ? '| Application stopped' : "| Application stopped. ${GradleRunner.ENDED_AT_ONCE}")
             return 0
         }
         failures.each { String message -> err(message) }

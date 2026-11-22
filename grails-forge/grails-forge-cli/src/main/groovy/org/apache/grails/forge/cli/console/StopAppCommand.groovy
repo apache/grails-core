@@ -155,7 +155,7 @@ class StopAppCommand extends InProjectCommand {
                     'an application that was starting is ended with its build.')
             return 0
         }
-        out('| Application stopped.')
+        out(GradleRunner.asksToEnd() ? '| Application stopped.' : "| Application stopped. ${GradleRunner.ENDED_AT_ONCE}")
         return 0
     }
 
