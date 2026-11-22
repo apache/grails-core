@@ -378,6 +378,34 @@ class GrailsCacheManagerFallbackMatrixSpec extends Specification {
         }
     }
 
+    void 'a prototype cache manager that makes nothing keeps the injection empty, as in 8.0.0'() {
+        when: 'a prototype cache-aware bean is injected three times beside a prototype cache manager that makes nothing twice'
+        Map<String, Object> was = emptyFirst(false)
+        Map<String, Object> now = emptyFirst(true)
+
+        then: 'Spring asks twice for the first injection, getting nothing, which stays the injection, and once for each later one'
+        was == [got: [null, 'made 3', 'made 4'], asked: 4]
+        now == was
+    }
+
+    /** Injects a prototype cache-aware bean three times beside a prototype cache manager that makes nothing the first two times. */
+    private Map<String, Object> emptyFirst(boolean withFallback) {
+        int asked = 0
+        GenericApplicationContext context = context([:], [:], [], withFallback) { GenericApplicationContext it ->
+            it.registerBean('sometimes', CacheManager, { ->
+                asked++
+                asked <= 2 ? null : new NamedCacheManager("made ${asked}".toString())
+            } as Supplier<CacheManager>, { BeanDefinition definition -> definition.scope = BeanDefinition.SCOPE_PROTOTYPE } as BeanDefinitionCustomizer)
+        }
+        try {
+            List<String> got = (1..3).collect { ((NamedCacheManager) ((CacheAware) context.getBean('prototype')).grailsCacheManager)?.label }
+            return [got: got, asked: asked]
+        }
+        finally {
+            context.close()
+        }
+    }
+
     void 'a cache manager injected anywhere else is left as Spring resolves it'() {
         given: 'two cache managers Spring cannot choose between, and a bean of the application\'s own that injects one'
         GenericApplicationContext context = context([(NAMED): 'plain', first: 'plain'], [:], [], true) { GenericApplicationContext it ->
@@ -534,6 +562,15 @@ class GrailsCacheManagerFallbackMatrixSpec extends Specification {
 
     @Priority(1)
     static class HighPriorityCacheManager extends ConcurrentMapCacheManager {
+    }
+
+    /** A cache manager that says which time it was made. */
+    static class NamedCacheManager extends ConcurrentMapCacheManager {
+        final String label
+
+        NamedCacheManager(String label) {
+            this.label = label
+        }
     }
 
     /** A cache manager made for the injection point it is injected into. */

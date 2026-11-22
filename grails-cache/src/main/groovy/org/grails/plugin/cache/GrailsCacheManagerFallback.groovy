@@ -64,6 +64,11 @@ import org.springframework.core.ResolvableType
  * did. Where the cache manager remembered fails, the field is resolved again, as Spring resolves it
  * again.</p>
  *
+ * <p>Where the field resolves to nothing, the resolver cannot answer with that, and Spring resolves the
+ * field once more. That resolution finds no candidate, as the resolver answers that none is one for the
+ * injection point it has just resolved, so nothing is created again and the field stays empty, as with
+ * Spring's own single resolution.</p>
+ *
  * @since 8.0.1
  */
 @CompileStatic
@@ -109,6 +114,14 @@ class GrailsCacheManagerFallback implements BeanFactoryPostProcessor {
 
         private final ReferenceQueue<Object> forgotten = new ReferenceQueue<Object>()
 
+        /**
+         * The injection point this thread has just resolved to nothing, which Spring resolves once more:
+         * no bean is a candidate for it then, until Spring asks whether it is required, which ends that
+         * resolution.
+         */
+        private final ThreadLocal<WeakReference<DependencyDescriptor>> resolvedToNothing =
+                new ThreadLocal<WeakReference<DependencyDescriptor>>()
+
         CandidateResolver(AutowireCandidateResolver delegate) {
             this.delegate = delegate
         }
@@ -128,6 +141,7 @@ class GrailsCacheManagerFallback implements BeanFactoryPostProcessor {
                     descriptor instanceof RememberedDescriptor || !isTraitField(descriptor)) {
                 return proxy
             }
+            resolvedToNothing.remove()
             Object shortcut = descriptor.resolveShortcut(beanFactory)
             if (shortcut != null) {
                 // as the first step of Spring's resolution, for an injection point resolved in advance
@@ -138,7 +152,8 @@ class GrailsCacheManagerFallback implements BeanFactoryPostProcessor {
             String rememberedName = remembered.get(injectionPoint)
             if (rememberedName != null) {
                 try {
-                    return beanFactory.doResolveDependency(new RememberedDescriptor(descriptor, rememberedName), beanName, null, null)
+                    return keepNothing(descriptor,
+                            beanFactory.doResolveDependency(new RememberedDescriptor(descriptor, rememberedName), beanName, null, null))
                 }
                 catch (BeansException ignored) {
                     // as the injection, which resolves the field again where the bean it remembers fails
@@ -165,7 +180,23 @@ class GrailsCacheManagerFallback implements BeanFactoryPostProcessor {
                     remembered.put(new InjectionPointKey(descriptor, forgotten), autowiredBeanName)
                 }
             }
-            return value
+            return keepNothing(descriptor, value)
+        }
+
+        /** Where the resolution found nothing, makes Spring's resolution after it find nothing too. */
+        private Object keepNothing(DependencyDescriptor descriptor, Object value) {
+            if (value == null) {
+                resolvedToNothing.set(new WeakReference<DependencyDescriptor>(descriptor))
+            }
+            value
+        }
+
+        /** Whether the dependency is the one this thread has just resolved to nothing, or Spring's fallback match of it. */
+        private boolean resolvedToNothing(DependencyDescriptor descriptor) {
+            DependencyDescriptor nothing = resolvedToNothing.get()?.get()
+            nothing != null && (nothing.is(descriptor) ||
+                    (descriptor.fallbackMatchAllowed() && descriptor.field != null && descriptor.field == nothing.field &&
+                            descriptor.dependencyType == nothing.dependencyType))
         }
 
         /** Drops what was remembered for injection points Spring no longer holds. */
@@ -178,11 +209,15 @@ class GrailsCacheManagerFallback implements BeanFactoryPostProcessor {
 
         @Override
         boolean isAutowireCandidate(BeanDefinitionHolder bdHolder, DependencyDescriptor descriptor) {
-            delegate.isAutowireCandidate(bdHolder, descriptor)
+            !resolvedToNothing(descriptor) && delegate.isAutowireCandidate(bdHolder, descriptor)
         }
 
         @Override
         boolean isRequired(DependencyDescriptor descriptor) {
+            if (resolvedToNothing.get()?.get()?.is(descriptor)) {
+                // the end of Spring's resolution after the resolver's, which found no candidate
+                resolvedToNothing.remove()
+            }
             delegate.isRequired(descriptor)
         }
 
