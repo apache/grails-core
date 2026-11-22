@@ -33,6 +33,11 @@ on:
       - '.github/workflows/dismiss-stale-reviews-test.yml'
       - '.github/scripts/test-dismiss-stale-reviews.sh'
   workflow_dispatch:
+    inputs:
+      run-tests:
+        description: "Run the test where the branch rule would skip it (a release branch below the default); a [skip tests] head commit still skips it"
+        type: boolean
+        default: false
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}

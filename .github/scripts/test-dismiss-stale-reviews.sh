@@ -60,9 +60,14 @@ case $method:$path in
   GET:graphql) cat "$FAKE/stale.tsv" ;;
   GET:repos/*/pulls/*/reviews/*) awk -v id="${path##*/}" '$1 == id { print $2 " " $3 }' "$FAKE/reviews" ;;
   GET:repos/*/pulls/*) awk -v n="${path##*/}" '$1 == n { print "open " $2 " " $3 }' "$FAKE/heads" ;;
+  GET:repos/*/git/ref/heads/*) awk -v ref="${path#*/git/ref/heads/}" '$1 == ref { print $2 }' "$FAKE/bases" ;;
   PUT:repos/*/dismissals) echo "${path%/dismissals} $message" >> "$FAKE/dismissed" ;;
-  GET:repos/*/issues/*/comments) jq -r "$jq" "$FAKE/comments.json" ;;
+  GET:repos/*/issues/*/comments)
+    jq -r "$jq" "$FAKE/comments.json"
+    # A push while the comments are read: the head of pull request 1 moves.
+    if [[ -e "$FAKE/move-on-list" ]]; then awk '$1 == 1 { $2 = "moved" } 1' "$FAKE/heads" > "$FAKE/h" && mv "$FAKE/h" "$FAKE/heads"; rm "$FAKE/move-on-list"; fi ;;
   POST:repos/*/issues/*/comments)
+    if [[ -e "$FAKE/fail-post" ]]; then rm "$FAKE/fail-post"; exit 1; fi
     # Another run that writes the same comment at the same time: its comment comes first.
     if [[ -e "$FAKE/race" ]]; then
       jq --arg b "$body" '. + [{id: ((map(.id) | max // 0) + 1), user: {login: "github-actions[bot]"}, body: $b}]' "$FAKE/comments.json" > "$FAKE/c" && mv "$FAKE/c" "$FAKE/comments.json"
@@ -178,6 +183,8 @@ merge_case crlf-without-newline f 'a\r\nx\r\n' 'a\r\nours\r\n' 'a\r\ntheirs' 'a\
 merge_case crlf-without-newline-added f 'a\r\nx\r\n' 'a\r\nours\r\n' 'a\r\ntheirs' 'a\r\ntheirs\r\n' dismissed "$changed"
 merge_case crlf-without-newline-then-other f 'a\r\nx\r\n' 'a\r\nours' 'a\r\ntheirs\r\n' 'a\r\nours\r\ntheirs\r\n' kept
 merge_case crlf-other-then-without-newline f 'a\r\nx\r\n' 'a\r\nours\r\n' 'a\r\ntheirs' 'a\r\nours\r\ntheirs' kept
+merge_case crlf-ours-without-newline f 'a\r\nx\r\n' 'a\r\nours' 'a\r\ntheirs\r\n' 'a\r\nours' kept
+merge_case crlf-ours-without-newline-added f 'a\r\nx\r\n' 'a\r\nours' 'a\r\ntheirs\r\n' 'a\r\nours\r\n' dismissed "$changed"
 merge_case crlf-without-newline-bare-cr f 'a\r\nx\r\n' 'a\r\nours\r\n' 'a\r\ntheirs' 'a\r\ntheirs\r' dismissed "$changed"
 merge_case crlf f 'a\r\nx\r\nb\r\n' 'a\r\nours\r\nb\r\n' 'a\r\ntheirs\r\nb\r\n' 'a\r\ntheirs\r\nb\r\n' kept
 merge_case crlf-to-lf f 'a\r\nx\r\nb\r\n' 'a\r\nours\r\nb\r\n' 'a\r\ntheirs\r\nb\r\n' 'a\r\ntheirs\nb\r\n' dismissed "$changed"
@@ -221,6 +228,32 @@ g checkout -q -B base-split "$start"; echo new > "$src/d/new"; g add -A; g commi
 g checkout -q -B pr-split "$start"; mkdir -p "$src/x" "$src/y"; g mv d/a x/a; g mv d/b y/b; g commit -q -m pr; approved=$(g rev-parse HEAD)
 g merge -q --no-edit base-split > /dev/null 2>&1; g add -A; g commit -q -m merge > /dev/null 2>&1
 check directory-split-without-a-file "$approved" "$(g rev-parse HEAD)" "$tip" dismissed "$unchecked"
+
+# Conflicts that tie several paths together are not checked file by file. The pull request renames old to left,
+# the base branch renames it to right: keeping one name, both, or none leaves the commits unchecked.
+rename_case() {
+  local name=$1 keep=$2 start approved tip
+  g checkout -q -B "common-$name" "$root"; seq -f 'line %g' 20 > "$src/old"; g add -A; g commit -q -m common; start=$(g rev-parse HEAD)
+  g checkout -q -B "base-$name" "$start"; g mv old right; g commit -q -m base; tip=$(g rev-parse HEAD)
+  g checkout -q -B "pr-$name" "$start"; g mv old left; g commit -q -m pr; approved=$(g rev-parse HEAD)
+  g merge -q --no-edit "base-$name" > /dev/null 2>&1
+  g rm -q --cached -f old left right > /dev/null 2>&1; rm -f "$src/old" "$src/left" "$src/right"
+  for f in $keep; do seq -f 'line %g' 20 > "$src/$f"; done
+  g add -A; g commit -q -m merge > /dev/null 2>&1
+  check "$name" "$approved" "$(g rev-parse HEAD)" "$tip" dismissed "$unchecked"
+}
+rename_case rename-rename-keeps-left left
+rename_case rename-rename-keeps-both 'left right'
+rename_case rename-rename-keeps-none ''
+# A directory split in two and, in the same merge, a conflict of a file's lines resolved with one side.
+g checkout -q -B common-split2 "$root"; mkdir -p "$src/d"; echo a > "$src/d/a"; echo b > "$src/d/b"; write t.txt "$lines"; g add -A; g commit -q -m common; start=$(g rev-parse HEAD)
+g checkout -q -B base-split2 "$start"; echo new > "$src/d/new"; write t.txt 'a\nBASE\nc\nd\ne\nf\ng\nh\n'; g add -A; g commit -q -m base; tip=$(g rev-parse HEAD)
+g checkout -q -B pr-split2 "$start"; mkdir -p "$src/x" "$src/y"; g mv d/a x/a; g mv d/b y/b; write t.txt 'a\nPR\nc\nd\ne\nf\ng\nh\n'; g add -A; g commit -q -m pr; approved=$(g rev-parse HEAD)
+g merge -q --no-edit base-split2 > /dev/null 2>&1; write t.txt 'a\nPR\nc\nd\ne\nf\ng\nh\n'; g add -A; g commit -q -m merge > /dev/null 2>&1
+check directory-split-and-a-file "$approved" "$(g rev-parse HEAD)" "$tip" dismissed "$unchecked"
+# A head whose history of merges ends without the approved commit, at a commit without parents.
+orphan=$(g commit-tree "$(g rev-parse "$approved^{tree}")" -m orphan)
+check history-without-the-approved-commit "$approved" "$orphan" "$tip" dismissed "$changed"
 
 echo "== a submodule"
 # Commits whose tree holds a submodule at sub, made from trees directly, as no checkout is needed for one.
@@ -324,10 +357,15 @@ echo "== the whole step"
 # history cannot be fetched; and one whose commit GraphQL does not know.
 odd_name=' `odd` name '
 marker_name="note <!-- kept-resolution:$(printf '1%.0s' {1..40}) -->.md"
-g checkout -q -B step-base "$root"; for f in 'a file.md' "$odd_name" "$marker_name"; do write "$f" "$lines"; done; g add -A; g commit -q -m common; start=$(g rev-parse HEAD)
-g checkout -q step-base; for f in 'a file.md' "$odd_name" "$marker_name"; do write "$f" 'a\nBASE\nc\nd\ne\nf\ng\nh\n'; done; g commit -q -am base; tip=$(g rev-parse HEAD)
-g checkout -q -B step-kept "$start"; for f in 'a file.md' "$odd_name" "$marker_name"; do write "$f" 'a\nPR\nc\nd\ne\nf\ng\nh\n'; done; g commit -q -am pr; kept_approved=$(g rev-parse HEAD)
-g merge -q --no-edit step-base > /dev/null 2>&1; for f in 'a file.md' "$odd_name" "$marker_name"; do write "$f" 'a\nPR\nc\nd\ne\nf\ng\nh\n'; done; g commit -q -am merge; kept_head=$(g rev-parse HEAD)
+cr_name=$'cr\rname.md'
+step_files=('a file.md' "$odd_name" "$marker_name" a '`a`' "$cr_name")
+g checkout -q -B step-base "$root"; for f in "${step_files[@]}" second.md; do write "$f" "$lines"; done; g add -A; g commit -q -m common; start=$(g rev-parse HEAD)
+g checkout -q step-base; for f in "${step_files[@]}"; do write "$f" 'a\nBASE\nc\nd\ne\nf\ng\nh\n'; done; g commit -q -am base
+g checkout -q -B step-kept "$start"; for f in "${step_files[@]}" second.md; do write "$f" 'a\nPR\nc\nd\ne\nf\ng\nh\n'; done; g commit -q -am pr; kept_approved=$(g rev-parse HEAD)
+g merge -q --no-edit step-base > /dev/null 2>&1; for f in "${step_files[@]}"; do write "$f" 'a\nPR\nc\nd\ne\nf\ng\nh\n'; done; g commit -q -am merge; first_merge=$(g rev-parse HEAD)
+# A second merge, of a second change of the base branch, resolved with the pull request's side too.
+g checkout -q step-base; write second.md 'a\nBASE\nc\nd\ne\nf\ng\nh\n'; g commit -q -am "base again"; tip=$(g rev-parse HEAD)
+g checkout -q step-kept; g merge -q --no-edit step-base > /dev/null 2>&1; write second.md 'a\nPR\nc\nd\ne\nf\ng\nh\n'; g commit -q -am "merge again"; kept_head=$(g rev-parse HEAD)
 g checkout -q -B step-changed "$kept_approved"; echo own > "$src/own"; g add -A; g commit -q -m own; changed_head=$(g rev-parse HEAD)
 unknown=0000000000000000000000000000000000000001
 step() {
@@ -345,6 +383,7 @@ printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' 1 "$kept_head" 11 reviewer "$kept_appr
   4 "$changed_head" 41 reviewer - changed "$tip" step-base > "$FAKE/stale.tsv"
 printf '11 APPROVED %s\n21 APPROVED %s\n31 APPROVED %s\n41 APPROVED\n' "$kept_approved" "$kept_approved" "$unknown" > "$FAKE/reviews"
 printf '1 %s step-base\n2 %s step-base\n3 %s step-base\n4 %s step-base\n' "$kept_head" "$changed_head" "$changed_head" "$changed_head" > "$FAKE/heads"
+printf 'step-base %s\n' "$tip" > "$FAKE/bases"
 echo '[]' > "$FAKE/comments.json"; : > "$FAKE/dismissed"; : > "$FAKE/summary"; : > "$FAKE/race"; : > "$FAKE/requests"
 step
 expect "the kept approval is not dismissed" '! grep -q "/pulls/1/" "$FAKE/dismissed"'
@@ -352,12 +391,14 @@ expect "the summary names the file with a space" 'grep -q "resolved .*a file.md"
 expect "an ordinary commit dismisses the approval as a change" 'grep -q "/pulls/2/reviews/21 Dismissed automatically: $changed" "$FAKE/dismissed"'
 expect "the same files whose history cannot be read are not called a change" 'grep -q "/pulls/3/reviews/31 Dismissed automatically: $unchecked" "$FAKE/dismissed"'
 expect "an approval whose commit GraphQL does not know is dismissed" 'grep -q "/pulls/4/reviews/41 Dismissed automatically" "$FAKE/dismissed"'
-expect "one comment is left for the kept merge when another run wrote it too" '[[ $(jq length "$FAKE/comments.json") == 1 ]]'
+expect "one comment is left for each kept merge when another run wrote it too" '[[ $(jq length "$FAKE/comments.json") == 2 ]]'
 expect "the comment names the file with a space" 'jq -r ".[].body" "$FAKE/comments.json" | grep -qF "\`a file.md\`"'
 expect "the comment names the file with a backtick and spaces at its ends as it is" 'jq -r ".[].body" "$FAKE/comments.json" | grep -qF "\`\`  \`odd\` name  \`\`"'
-expect "the marker is the last line of the comment" '[[ $(jq -r ".[0].body" "$FAKE/comments.json" | tail -n 1) == "<!-- kept-resolution:$kept_head -->" ]]'
+expect "the marker is the last line of the comment" '[[ $(jq -r ".[] | select(.body | contains(\"kept-resolution:$first_merge\")) | .body" "$FAKE/comments.json" | tail -n 1) == "<!-- kept-resolution:$first_merge -->" ]]'
+expect "the comment names the files a and \`a\` both" 'jq -r ".[] | select(.body | contains(\"kept-resolution:$first_merge\")) | .body" "$FAKE/comments.json" | grep -qF ", \`a\`, " && jq -r ".[] | select(.body | contains(\"kept-resolution:$first_merge\")) | .body" "$FAKE/comments.json" | grep -qF "\`\` \`a\` \`\`"'
+expect "the comment writes a carriage return in a name as an escape" 'jq -r ".[] | select(.body | contains(\"kept-resolution:$first_merge\")) | .body" "$FAKE/comments.json" | grep -qF "\`cr\\rname.md\`"'
 # The step's own reading of the markers: the text like one in a file name is not taken for one.
-expect "a name like a marker is not read as one" '[[ $(cd "$work" && source functions.sh && job_end=$(( SECONDS + 60 )) && comment_markers 1 | cut -d " " -f 1) == "$kept_head" ]]'
+expect "a name like a marker is not read as one" '[[ $(cd "$work" && source functions.sh && job_end=$(( SECONDS + 60 )) && comment_markers 1 | cut -d " " -f 1 | sort | tr "\n" " ") == "$(printf "%s\n" "$first_merge" "$kept_head" | sort | tr "\n" " ")" ]]'
 # The approval is moved to a new head while the step checks it, and a comment left over by a stopped run repeats
 # the kept merge's.
 printf '11 APPROVED %s\n21 APPROVED %s\n31 APPROVED %s\n41 APPROVED\n' "$kept_approved" "$changed_head" "$unknown" > "$FAKE/reviews"; : > "$FAKE/dismissed"; : > "$FAKE/requests"
@@ -365,12 +406,42 @@ jq '. + [.[0] | .id = 9]' "$FAKE/comments.json" > "$FAKE/c" && mv "$FAKE/c" "$FA
 step
 expect "the second run read the review again" 'grep -q "pulls/2/reviews/21" "$FAKE/requests"'
 expect "an approval moved while it was checked is not dismissed" '! grep -q "/pulls/2/" "$FAKE/dismissed"'
-expect "a second run writes no second comment and takes away the one left over" '[[ $(jq length "$FAKE/comments.json") == 1 && $(jq ".[0].id" "$FAKE/comments.json") != 9 ]]'
+expect "a second run writes no second comment and takes away the one left over" '[[ $(jq length "$FAKE/comments.json") == 2 && $(jq "[.[].id] | index(9)" "$FAKE/comments.json") == null ]]'
 # The base branch of the pull request is changed while the step checks it.
 printf '11 APPROVED %s\n21 APPROVED %s\n31 APPROVED %s\n41 APPROVED\n' "$kept_approved" "$kept_approved" "$unknown" > "$FAKE/reviews"
 printf '1 %s step-base\n2 %s other-base\n3 %s step-base\n4 %s step-base\n' "$kept_head" "$changed_head" "$changed_head" "$changed_head" > "$FAKE/heads"; : > "$FAKE/dismissed"
 step
 expect "an approval whose pull request was retargeted while it was checked is not dismissed" '! grep -q "/pulls/2/" "$FAKE/dismissed"'
+# The base branch gets a new commit while the step checks.
+printf '1 %s step-base\n2 %s step-base\n3 %s step-base\n4 %s step-base\n' "$kept_head" "$changed_head" "$changed_head" "$changed_head" > "$FAKE/heads"
+printf 'step-base %s\n' "$start" > "$FAKE/bases"; : > "$FAKE/dismissed"
+step
+expect "an approval whose base branch moved while it was checked is not dismissed" '! grep -q "/pulls/2/" "$FAKE/dismissed"'
+# The approval is moved to another commit that is not the head.
+printf 'step-base %s\n' "$tip" > "$FAKE/bases"
+printf '11 APPROVED %s\n21 APPROVED %s\n31 APPROVED %s\n41 APPROVED\n' "$kept_approved" "$first_merge" "$unknown" > "$FAKE/reviews"; : > "$FAKE/dismissed"
+step
+expect "an approval moved to another commit while it was checked is not dismissed" '! grep -q "/pulls/2/" "$FAKE/dismissed"'
+# A push while the comments are read, then a comment that fails: no comment is written for a moved pull request,
+# and one that fails leaves the other merge's to be written.
+echo '[]' > "$FAKE/comments.json"; : > "$FAKE/move-on-list"
+step
+expect "no comment is written when the pull request moves while its comments are read" '[[ $(jq length "$FAKE/comments.json") == 0 ]]'
+printf '1 %s step-base\n2 %s step-base\n3 %s step-base\n4 %s step-base\n' "$kept_head" "$changed_head" "$changed_head" "$changed_head" > "$FAKE/heads"; : > "$FAKE/fail-post"
+step
+expect "a comment that fails leaves the other merge's to be written" '[[ $(jq length "$FAKE/comments.json") == 1 ]] && grep -q "Resolution not noted" "$FAKE/output"'
+# Two names whose code contains the other's, in both orders: each is named.
+for order in 'a:`a`' '`a`:a'; do
+  echo '[]' > "$FAKE/comments.json"
+  ( cd "$work" && source functions.sh && job_end=$(( SECONDS + 60 )) && declare -A pull_heads=([1]="$kept_head") pull_bases=([1]="step-base $tip") \
+    && note_resolutions 1 "$kept_head ${order%%:*}"$'\n'"$kept_head ${order#*:}" ) > "$FAKE/output" 2>&1
+  expect "the names ${order/:/ and } are both named, in that order" 'jq -r ".[0].body" "$FAKE/comments.json" | grep -qF ": \`${order%%:*}\`, \`\` \`a\` \`\`" || jq -r ".[0].body" "$FAKE/comments.json" | grep -qF ": \`\` \`a\` \`\`, \`a\`"'
+done
+# A merge with more names than a comment holds: the comment stays within GitHub's limit and says how many more.
+long_names=$(for i in $(seq 1 400); do printf "%s %s\n" "$kept_head" "$(printf "f%03d-%0190d.md" "$i" 0)"; done)
+echo '[]' > "$FAKE/comments.json"
+( cd "$work" && source functions.sh && job_end=$(( SECONDS + 60 )) && declare -A pull_heads=([1]="$kept_head") pull_bases=([1]="step-base $tip") && note_resolutions 1 "$long_names" ) > "$FAKE/output" 2>&1
+expect "a comment with more names than fit stays within the limit and says how many more" '(( $(jq ".[0].body | length" "$FAKE/comments.json") < 65536 )) && jq -r ".[0].body" "$FAKE/comments.json" | grep -q "and [0-9]* more, named in the step summary"'
 
 echo
 echo "$((checks - failures)) of $checks checks passed"
