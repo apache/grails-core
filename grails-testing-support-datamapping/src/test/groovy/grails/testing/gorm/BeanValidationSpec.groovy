@@ -19,8 +19,20 @@
 
 package grails.testing.gorm
 
+import java.lang.annotation.ElementType
+import java.lang.annotation.Retention
+import java.lang.annotation.RetentionPolicy
+import java.lang.annotation.Target
+
+import jakarta.validation.Constraint
+import jakarta.validation.ConstraintValidator
+import jakarta.validation.ConstraintValidatorContext
+import jakarta.validation.Payload
 import spock.lang.Specification
 
+import org.springframework.beans.factory.annotation.Autowired
+
+import grails.gorm.annotation.Entity
 import grails.gorm.validation.ConstrainedEntity
 
 /**
@@ -30,7 +42,31 @@ import grails.gorm.validation.ConstrainedEntity
 class BeanValidationSpec extends Specification implements DataTest {
 
     Class[] getDomainClassesToMock() {
-        [BeanValidationRecord, BeanValidationParent, BeanValidationChild, BeanValidationGroupedRecord, BeanValidationShelf, BeanValidationShelfBook]
+        [BeanValidationRecord, BeanValidationParent, BeanValidationChild, BeanValidationGroupedRecord, BeanValidationShelf, BeanValidationShelfBook, BeanValidationInjectedRecord]
+    }
+
+    Closure doWithSpring() {
+        { ->
+            beanValidationCodeService(BeanValidationCodeService)
+        }
+    }
+
+    void 'a custom annotation validator uses a bean from the test application context'() {
+        given:
+        final record = new BeanValidationInjectedRecord(code: 'OK')
+
+        expect:
+        record.validate()
+        record.save(flush: true)
+
+        when:
+        record.code = 'invalid'
+
+        then:
+        !record.validate()
+        record.errors.errorCount == 1
+        record.errors.getFieldError('code').code == 'AcceptedTestCode'
+        record.save() == null
     }
 
     void 'the annotations and the constraints block are validated, each violation once'() {
@@ -106,5 +142,39 @@ class BeanValidationSpec extends Specification implements DataTest {
         shelf.errors.errorCount == 1
         shelf.errors.getFieldError('book.title').code == 'NotBlank'
         shelf.save() == null
+    }
+}
+
+@Entity
+class BeanValidationInjectedRecord {
+
+    @AcceptedTestCode
+    String code
+}
+
+@Retention(RetentionPolicy.RUNTIME)
+@Target([ElementType.FIELD])
+@Constraint(validatedBy = [AcceptedTestCodeValidator])
+@interface AcceptedTestCode {
+    String message() default 'The code is not accepted'
+    Class<?>[] groups() default []
+    Class<? extends Payload>[] payload() default []
+}
+
+class AcceptedTestCodeValidator implements ConstraintValidator<AcceptedTestCode, String> {
+
+    @Autowired(required = false)
+    BeanValidationCodeService beanValidationCodeService
+
+    @Override
+    boolean isValid(String value, ConstraintValidatorContext context) {
+        beanValidationCodeService?.accepts(value) ?: false
+    }
+}
+
+class BeanValidationCodeService {
+
+    boolean accepts(String value) {
+        value == 'OK'
     }
 }

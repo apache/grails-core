@@ -74,7 +74,7 @@ class DataTestSetupSpecInterceptor implements IMethodInterceptor {
                 "${BEAN_NAME}"(constraintsEvaluator, constraintRegistry, grailsDomainClassMappingContext,
                         ConstraintEvalUtils.getDefaultConstraints(application.config), true, ConstraintEvalUtils.getDefaultNullable(application.config))
                 if (JakartaValidatorRegistry.isAvailable()) {
-                    "${VALIDATOR_FACTORY_BEAN_NAME}"(JakartaValidatorRegistry, grailsDomainClassMappingContext, ref('messageSource')) { bean ->
+                    "${VALIDATOR_FACTORY_BEAN_NAME}"(JakartaValidatorRegistry, grailsDomainClassMappingContext, application.mainContext) { bean ->
                         bean.factoryMethod = 'createValidatorFactory'
                     }
                 }
