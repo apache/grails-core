@@ -25,6 +25,7 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 
 import org.codehaus.groovy.control.CompilationFailedException;
 import org.codehaus.groovy.runtime.InvokerInvocationException;
@@ -35,7 +36,6 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
-import io.micrometer.observation.Observation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,7 +44,6 @@ import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.web.context.ServletContextAware;
 import org.springframework.web.context.request.async.AsyncRequestTimeoutException;
-import org.springframework.web.filter.ServerHttpObservationFilter;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.View;
 import org.springframework.web.servlet.ViewResolver;
@@ -83,19 +82,6 @@ public class GrailsExceptionResolver extends SimpleMappingExceptionResolver impl
     /** Marks a request that is currently inside a forward to a status-code controller mapping. */
     private static final String ERROR_HANDLER_FORWARD_IN_PROGRESS_ATTRIBUTE =
             "org.grails.web.errors.ERROR_HANDLER_FORWARD_IN_PROGRESS";
-
-    /**
-     * Where {@link ServerHttpObservationFilter} keeps the observation of a request. The filter only offers its context,
-     * which cannot tell the handlers of an error, and a registry cannot be relied on to find it, because a filter can be
-     * built with a registry the application does not know. A public way to get it is requested in
-     * <a href="https://github.com/spring-projects/spring-framework/issues/37658">spring-framework#37658</a>.
-     */
-    private static final String SERVER_OBSERVATION_ATTRIBUTE =
-            ServerHttpObservationFilter.class.getName() + ".observation";
-
-    /** Where a dispatch holds the exception left on its request until it returns. */
-    private static final String FAILURE_LEFT_ON_REQUEST_ATTRIBUTE =
-            GrailsExceptionResolver.class.getName() + ".FAILURE_LEFT_ON_REQUEST";
 
     protected static final Logger LOG = LoggerFactory.getLogger(GrailsExceptionResolver.class);
     protected static final String LINE_SEPARATOR = System.getProperty("line.separator");
@@ -138,99 +124,28 @@ public class GrailsExceptionResolver extends SimpleMappingExceptionResolver impl
         }
 
         UrlMappingsHolder urlMappings = lookupUrlMappings();
-        if (urlMappings != null) {
-            mv = resolveViewOrForward(ex, urlMappings, request, response, mv);
-        }
+        Exception resolved = ex;
+        ModelAndView view = mv;
+        Supplier<ModelAndView> errorHandler = () -> urlMappings == null ? view :
+                resolveViewOrForward(resolved, urlMappings, request, response, view);
 
-        recordServerError(request, reportedFailure(ex), dispatchedAs);
-
-        return mv;
+        return answerServerError(request, reportedFailure(ex), dispatchedAs, errorHandler);
     }
 
     /**
-     * Holds the exception this resolver leaves on the request until the dispatch has returned, because only then does
-     * the request read as the filter that observes it will read it. Inside a forward it does not yet: Tomcat and Jetty
-     * restore a request when a forward returns, and Undertow leaves it reading as the forward.
-     * {@link org.grails.web.servlet.mvc.GrailsDispatcherServlet} calls this when a dispatch enters it, and runs what
-     * this returns when the dispatch returns.
-     *
-     * @param request the request of the dispatch
-     * @return what records the exception left on the request, unless the filter will; it does nothing for a forward or
-     * include within a dispatch that already holds it
-     */
-    public static Runnable holdFailureLeftOnRequest(HttpServletRequest request) {
-        if (request.getAttribute(FAILURE_LEFT_ON_REQUEST_ATTRIBUTE) != null) {
-            return () -> { };
-        }
-        FailureLeftOnRequest held = new FailureLeftOnRequest(request.getDispatcherType());
-        request.setAttribute(FAILURE_LEFT_ON_REQUEST_ATTRIBUTE, held);
-        return () -> {
-            request.removeAttribute(FAILURE_LEFT_ON_REQUEST_ATTRIBUTE);
-            if (held.failure != null) {
-                recordUnlessRecordedFromRequest(request, held.failure, held.dispatchedAs);
-            }
-        };
-    }
-
-    /**
-     * Every exception this resolves is a server error, and resolving it hides it from the observation of the request,
-     * whose metrics would otherwise say there was no error and whose trace would not be marked as failed. Only
-     * {@link Observation#error(Throwable)} tells the observation's handlers, one of which marks the span.
-     * <p>
-     * An exception left in {@link WebUtils#ERROR_EXCEPTION_ATTRIBUTE} is not recorded here when it is recorded from there
-     * once the dispatch returns, so that the handlers hear of it once. A dispatch that holds it decides when it returns.
-     * <p>
+     * Every exception this resolves is a server error, which resolving it hides from the observation of the request.
+     * It is recorded around the error handler, so that what fails while the handler answers it does not take its place.
      * A failure inside an include is not recorded: its error page is rendered inside the page that included it, which
      * goes on to answer the request.
      *
      * @param dispatchedAs how the request was dispatched before an error handler was forwarded to
      */
-    private static void recordServerError(HttpServletRequest request, Throwable ex, DispatcherType dispatchedAs) {
+    private static ModelAndView answerServerError(HttpServletRequest request, Throwable ex, DispatcherType dispatchedAs,
+            Supplier<ModelAndView> errorHandler) {
         if (dispatchedAs == DispatcherType.INCLUDE) {
-            return;
+            return errorHandler.get();
         }
-        if (request.getAttribute(WebUtils.ERROR_EXCEPTION_ATTRIBUTE) == ex &&
-                request.getAttribute(FAILURE_LEFT_ON_REQUEST_ATTRIBUTE) instanceof FailureLeftOnRequest held) {
-            held.failure = ex;
-        }
-        else {
-            recordUnlessRecordedFromRequest(request, ex, dispatchedAs);
-        }
-    }
-
-    private static void recordUnlessRecordedFromRequest(HttpServletRequest request, Throwable ex,
-            DispatcherType dispatchedAs) {
-        if (request.getAttribute(WebUtils.ERROR_EXCEPTION_ATTRIBUTE) == ex && recordedFromRequest(request, dispatchedAs)) {
-            return;
-        }
-        if (request.getAttribute(SERVER_OBSERVATION_ATTRIBUTE) instanceof Observation observation) {
-            observation.error(ex);
-        }
-        else {
-            ServerHttpObservationFilter.findObservationContext(request).ifPresent(context -> context.setError(ex));
-        }
-    }
-
-    /**
-     * Whether the exception left in {@link WebUtils#ERROR_EXCEPTION_ATTRIBUTE} is recorded from there once the dispatch
-     * returns, judged from how the request reads now.
-     * <ul>
-     * <li>The filter that observes the request records it at the end of a plain dispatch. It does not look at the end of
-     * an asynchronous dispatch, which {@link WebUtils#isAsync} tells even inside a forward.</li>
-     * <li>A dispatch that has started asynchronous processing leaves stopping the observation to a listener of the filter.
-     * Tomcat reports the exception to that listener when the dispatch returns. Jetty does not, but the request already
-     * reads as asynchronous there, so the exception is recorded here.</li>
-     * <li>Undertow leaves a request that was forwarded reading as a forward, so the filter takes it for a plain dispatch
-     * and records the exception however the request was dispatched. A request that reads as a forward although the
-     * dispatch did not begin as one was left that way.</li>
-     * </ul>
-     *
-     * @param dispatchedAs how the dispatch began
-     */
-    private static boolean recordedFromRequest(HttpServletRequest request, DispatcherType dispatchedAs) {
-        boolean forwardLeftOnRequest = dispatchedAs != DispatcherType.FORWARD &&
-                request.getDispatcherType() == DispatcherType.FORWARD;
-        return forwardLeftOnRequest || !WebUtils.isAsync(request);
+        return ServerErrorObservation.recordServerError(request, ex, errorHandler);
     }
 
     /**
@@ -245,7 +160,7 @@ public class GrailsExceptionResolver extends SimpleMappingExceptionResolver impl
     /**
      * What the action threw, as the observation of the request reports it. {@code DispatcherServlet} wraps an
      * {@link Error}, such as a failed {@code assert}, in a {@link ServletException}, which
-     * {@link ServerHttpObservationFilter} takes off an exception that reaches it, and
+     * {@link org.springframework.web.filter.ServerHttpObservationFilter} takes off an exception that reaches it, and
      * {@link #findWrappedException(Exception)} leaves a Groovy wrapper around an {@code Error}, since it resolves
      * exceptions only.
      */
@@ -733,17 +648,6 @@ public class GrailsExceptionResolver extends SimpleMappingExceptionResolver impl
                 true :
                 config.getProperty(Settings.SETTING_LOG_FULL_STACKTRACE_ON_FILTER, Boolean.class, true);
             ((DefaultStackTraceFilterer) stackFilterer).setLogFullStackTraceOnFilter(logOnFilter);
-        }
-    }
-
-    /** The exception left on the request of a dispatch, held until the dispatch returns. */
-    private static final class FailureLeftOnRequest {
-
-        private final DispatcherType dispatchedAs;
-        private Throwable failure;
-
-        private FailureLeftOnRequest(DispatcherType dispatchedAs) {
-            this.dispatchedAs = dispatchedAs;
         }
     }
 }
