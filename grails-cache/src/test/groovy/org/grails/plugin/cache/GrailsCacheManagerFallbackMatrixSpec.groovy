@@ -46,6 +46,8 @@ import org.springframework.beans.factory.NoUniqueBeanDefinitionException
 import org.springframework.beans.factory.ObjectFactory
 import org.springframework.beans.factory.UnsatisfiedDependencyException
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.annotation.Value
+import org.springframework.beans.factory.config.AutowireCapableBeanFactory
 import org.springframework.beans.factory.config.BeanDefinition
 import org.springframework.beans.factory.config.BeanDefinitionCustomizer
 import org.springframework.beans.factory.support.AbstractBeanDefinition
@@ -67,6 +69,9 @@ import spock.lang.Specification
 
 import grails.plugin.cache.CustomCacheKeyGenerator
 import grails.plugin.cache.GrailsCacheKeyGenerator
+
+import org.apache.grails.core.aot.GeneratedArtifactsAutowiredAnnotationBeanPostProcessor
+import org.apache.grails.core.aot.GeneratedArtifactsCommonAnnotationBeanPostProcessor
 
 /**
  * Which cache manager a cache-aware class is injected with, with the fallback to {@code grailsCacheManager},
@@ -353,7 +358,9 @@ class GrailsCacheManagerFallbackMatrixSpec extends Specification {
         AwareAgain    | [other: OtherCacheManager, primary: OtherCacheManager] || [seen: 'primary', got: 'primary', copies: [null, 'primary'], dependencies: [NAMED, 'other', 'primary']] || wasExpected
     }
 
-    private Map<String, Object> aheadOfTime(Class<? extends MethodInClass> subject, Map<String, Class<?>> others, boolean withFallback) {
+    private Map<String, Object> aheadOfTime(Class<? extends MethodInClass> subject, Map<String, Class<?>> others, boolean withFallback,
+                                            boolean withGrailsProcessors = false,
+                                            Closure<Map<String, Object>> afterStart = null) {
         Path dir = Files.createTempDirectory('grails-cache-aot')
         try {
             GenericApplicationContext processed = new GenericApplicationContext()
@@ -390,11 +397,24 @@ class GrailsCacheManagerFallbackMatrixSpec extends Specification {
             try {
                 ((ApplicationContextInitializer<GenericApplicationContext>) loader.loadClass(initializer.reflectionName())
                         .getDeclaredConstructor().newInstance()).initialize(started)
+                if (withGrailsProcessors) {
+                    // as Grails registers them again where it runs on generated code, for what that code did not inject
+                    started.registerBean(AnnotationConfigUtils.AUTOWIRED_ANNOTATION_PROCESSOR_BEAN_NAME,
+                            GeneratedArtifactsAutowiredAnnotationBeanPostProcessor)
+                    started.registerBean(AnnotationConfigUtils.COMMON_ANNOTATION_PROCESSOR_BEAN_NAME,
+                            GeneratedArtifactsCommonAnnotationBeanPostProcessor)
+                    started.registerBean('late', MethodInClass,
+                            { BeanDefinition definition -> definition.scope = BeanDefinition.SCOPE_PROTOTYPE } as BeanDefinitionCustomizer)
+                }
                 started.refresh()
                 Map<String, CacheManager> instances = ([NAMED] + others.keySet()).collectEntries { String name ->
                     [(name): started.getBean(name, CacheManager)]
                 }
                 MethodInClass probe = started.getBean('probe', MethodInClass)
+                assert probe.initCalls == 1
+                if (afterStart != null) {
+                    result.afterStart = afterStart(started, instances)
+                }
                 List<Field> copies = copiesOfTheField(subject)
                 copies.each { Field copy -> copy.accessible = true }
                 result.result = [seen: nameOf(probe.seen, instances), got: nameOf(probe.grailsCacheManager, instances),
@@ -759,6 +779,14 @@ return CachedSubclass
                         { BeanDefinition definition -> definition.scope = BeanDefinition.SCOPE_PROTOTYPE } as BeanDefinitionCustomizer)
             }
             List<Object> beans = (1..2).collect { started.getBean('subject') }
+            // each initializer ran once on each instance
+            beans.each { Object bean ->
+                ['initCalls', 'calls'].each { String count ->
+                    if (bean.hasProperty(count)) {
+                        assert bean.getProperty(count) == 1
+                    }
+                }
+            }
             Map<String, Object> result = [seen: beans.collect { Object bean -> nameOf(((Seeing) bean).seen, instances) },
                     got: nameOf(((GrailsCacheManagerAware) beans.last()).grailsCacheManager, instances)]
             // a superclass's copy of the field, where the class implements the trait again, gets the same
@@ -772,6 +800,199 @@ return CachedSubclass
         }
         finally {
             started?.close()
+        }
+    }
+
+    void 'run from generated code with Grails\' processors, a bean registered as it starts keeps the cache manager it remembers, as in 8.0.0'() {
+        when: 'a prototype registered beside the generated beans is injected, a cache manager marked primary is added, and it is injected again'
+        Closure<Map<String, Object>> addPrimary = { GenericApplicationContext started, Map<String, CacheManager> instances ->
+            MethodInClass first = started.getBean('late', MethodInClass)
+            started.registerBean('addedPrimary', OtherCacheManager,
+                    { BeanDefinition definition -> definition.primary = true } as BeanDefinitionCustomizer)
+            instances.addedPrimary = started.getBean('addedPrimary', CacheManager)
+            MethodInClass second = started.getBean('late', MethodInClass)
+            [first: nameOf(first.grailsCacheManager, instances), second: nameOf(second.grailsCacheManager, instances),
+             calls: [first.initCalls, second.initCalls]]
+        }
+        Map<String, Object> was = aheadOfTime(MethodInClass, [:], false, true, addPrimary)
+        Map<String, Object> now = aheadOfTime(MethodInClass, [:], true, true, addPrimary)
+
+        then: 'Grails\' injection remembers the cache manager by name, and the generated bean is injected once'
+        was.afterStart == [first: NAMED, second: NAMED, calls: [1, 1]]
+        now.afterStart == was.afterStart
+        now.result.got == NAMED
+    }
+
+    void 'a prototype whose supplier makes instances of other classes is injected once each, as in 8.0.0, beside #others'() {
+        when:
+        Map<String, Object> was = shifting(others, false)
+        Map<String, Object> now = shifting(others, true)
+
+        then: 'Spring finds the members again for each class, and the fallback with it'
+        was == wasExpected
+        now == [got: [NAMED, null, NAMED], calls: [1, 1, 1]]
+
+        where:
+        others                             || wasExpected
+        [(NAMED): 'plain']                 || [got: [NAMED, null, NAMED], calls: [1, 1, 1]]
+        [(NAMED): 'plain', first: 'plain'] || [failed: true]
+    }
+
+    private Map<String, Object> shifting(Map<String, String> others, boolean withFallback) {
+        Map<String, CacheManager> instances = [:]
+        List<Class<?>> classes = [MethodInClass, OtherWithMethod, MethodInClass]
+        int made = 0
+        GenericApplicationContext started = null
+        try {
+            started = context(others, instances, [], withFallback) { GenericApplicationContext it ->
+                it.registerBean('shifting', Object, { -> classes[made++ % classes.size()].getDeclaredConstructor().newInstance() } as Supplier<Object>,
+                        { BeanDefinition definition -> definition.scope = BeanDefinition.SCOPE_PROTOTYPE } as BeanDefinitionCustomizer)
+            }
+            List<Object> beans = (1..3).collect { started.getBean('shifting') }
+            return [got: beans.collect { Object bean -> bean instanceof GrailsCacheManagerAware ? nameOf(bean.grailsCacheManager, instances) : null },
+                    calls: beans*.getProperty('initCalls')]
+        }
+        catch (BeansException ignored) {
+            return [failed: true]
+        }
+        finally {
+            started?.close()
+        }
+    }
+
+    void 'an instance the bean factory autowires, as GORM autowires a data service, falls back as a bean does: #how beside #others'() {
+        when:
+        Map<String, Object> was = autowired(how, others, false)
+        Map<String, Object> now = autowired(how, others, true)
+
+        then:
+        was == wasExpected
+        now == [seen: [NAMED] * 2, got: [NAMED] * 2, calls: [1, 1]]
+
+        where:
+        how                      | others                             || wasExpected
+        'autowireBean'           | [(NAMED): 'plain']                 || [seen: [NAMED] * 2, got: [NAMED] * 2, calls: [1, 1]]
+        'autowireBean'           | [(NAMED): 'plain', first: 'plain'] || [failed: true]
+        'autowireBeanProperties' | [(NAMED): 'plain']                 || [seen: [NAMED] * 2, got: [NAMED] * 2, calls: [1, 1]]
+        'autowireBeanProperties' | [(NAMED): 'plain', first: 'plain'] || [failed: true]
+    }
+
+    private Map<String, Object> autowired(String how, Map<String, String> others, boolean withFallback) {
+        Map<String, CacheManager> instances = [:]
+        GenericApplicationContext started = null
+        try {
+            started = context(others, instances, [], withFallback)
+            List<MethodInClass> beans = (1..2).collect {
+                MethodInClass bean = new MethodInClass()
+                if (how == 'autowireBean') {
+                    started.autowireCapableBeanFactory.autowireBean(bean)
+                }
+                else {
+                    started.autowireCapableBeanFactory.autowireBeanProperties(bean, AutowireCapableBeanFactory.AUTOWIRE_NO, false)
+                }
+                bean
+            }
+            return [seen: beans.collect { MethodInClass bean -> nameOf(bean.seen, instances) },
+                    got: beans.collect { MethodInClass bean -> nameOf(bean.grailsCacheManager, instances) }, calls: beans*.initCalls]
+        }
+        catch (BeansException ignored) {
+            return [failed: true]
+        }
+        finally {
+            started?.close()
+        }
+    }
+
+    void 'Spring\'s injection keeps the members its own configuration ignores, and gives a member it injects without @Resource\'s processor its place: #subject.simpleName'() {
+        when:
+        Map<String, Object> was = configured(subject, others, false)
+        Map<String, Object> now = configured(subject, others, true)
+
+        then:
+        was == wasExpected
+        now == nowExpected
+
+        where:
+        subject             | others                             || wasExpected                        || nowExpected
+        ValueAfterTheField  | [(NAMED): 'plain']                 || [seen: NAMED, valued: null]        || wasExpected
+        ValueAfterTheField  | [(NAMED): 'plain', first: 'plain'] || [failed: true]                     || [seen: NAMED, valued: null]
+        ResourceAndAutowired | [(NAMED): 'plain']                || [seen: NAMED, valued: null]        || wasExpected
+        ResourceAndAutowired | [(NAMED): 'plain', first: 'plain'] || [failed: true]                    || [seen: NAMED, valued: null]
+    }
+
+    /**
+     * Spring's injection configured for {@code @Autowired} only, for a class with a {@code @Value} method, and
+     * without the post-processor for {@code @Resource}, for a class with a method annotated for both.
+     */
+    private Map<String, Object> configured(Class<?> subject, Map<String, String> others, boolean withFallback) {
+        Map<String, CacheManager> instances = [:]
+        GenericApplicationContext started = null
+        try {
+            started = context(others, instances, [], withFallback) { GenericApplicationContext it ->
+                if (subject == ValueAfterTheField) {
+                    it.getBeanDefinition(AnnotationConfigUtils.AUTOWIRED_ANNOTATION_PROCESSOR_BEAN_NAME).propertyValues
+                            .add('autowiredAnnotationTypes', [Autowired] as Set)
+                }
+                else {
+                    it.removeBeanDefinition(AnnotationConfigUtils.COMMON_ANNOTATION_PROCESSOR_BEAN_NAME)
+                }
+                it.registerBean('subject', (Class<Object>) subject,
+                        { BeanDefinition definition -> definition.lazyInit = true } as BeanDefinitionCustomizer)
+            }
+            Object bean = started.getBean('subject')
+            assert bean.getProperty('initCalls') == 1
+            return [seen: nameOf((CacheManager) bean.getProperty('seen'), instances), valued: bean.getProperty('valued')]
+        }
+        catch (BeansException ignored) {
+            return [failed: true]
+        }
+        finally {
+            started?.close()
+        }
+    }
+
+    void 'the bean named grailsCacheManager is the one a child bean factory sees by that name: #where'() {
+        when:
+        Map<String, Object> was = parentAndChild(shadowed, false)
+        Map<String, Object> now = parentAndChild(shadowed, true)
+
+        then: 'where the child names another bean so, its parent\'s alias is not the bean of that name'
+        was == [failed: true]
+        now == nowExpected
+
+        where:
+        where                                    | shadowed || nowExpected
+        'the parent\'s alias'                    | false    || [got: 'parentCache']
+        'shadowed by a bean of the child\'s own' | true     || [failed: true]
+    }
+
+    private Map<String, Object> parentAndChild(boolean shadowed, boolean withFallback) {
+        GenericApplicationContext parent = new GenericApplicationContext()
+        parent.registerBean('parentCache', ConcurrentMapCacheManager)
+        parent.registerAlias('parentCache', NAMED)
+        parent.refresh()
+        GenericApplicationContext child = new GenericApplicationContext(parent)
+        try {
+            AnnotationConfigUtils.registerAnnotationConfigProcessors(child)
+            if (withFallback) {
+                child.addBeanFactoryPostProcessor(new GrailsCacheManagerFallback())
+            }
+            child.registerBean('other', ConcurrentMapCacheManager)
+            if (shadowed) {
+                child.registerBean(NAMED, ConcurrentMapCacheManager,
+                        { BeanDefinition definition -> definition.autowireCandidate = false } as BeanDefinitionCustomizer)
+            }
+            child.registerBean('probe', CacheAware, { BeanDefinition definition -> definition.lazyInit = true } as BeanDefinitionCustomizer)
+            child.refresh()
+            CacheManager got = child.getBean('probe', CacheAware).grailsCacheManager
+            return [got: got.is(parent.getBean('parentCache')) ? 'parentCache' : (got.is(child.getBean('other')) ? 'other' : NAMED)]
+        }
+        catch (BeansException ignored) {
+            return [failed: true]
+        }
+        finally {
+            child.close()
+            parent.close()
         }
     }
 
@@ -919,9 +1140,11 @@ return CachedSubclass
     /** A cache-aware class with an autowired method that reads its cache manager. */
     static class MethodInClass implements GrailsCacheManagerAware, Seeing {
         CacheManager seen
+        int initCalls
 
         @Autowired
         void init(BeanFactory beanFactory) {
+            initCalls++
             seen = grailsCacheManager
         }
     }
@@ -929,9 +1152,11 @@ return CachedSubclass
     /** The subclass of a cache-aware class, with an autowired method that reads its cache manager. */
     static class MethodInSubclass extends CacheAware implements Seeing {
         CacheManager seen
+        int initCalls
 
         @Autowired
         void init(BeanFactory beanFactory) {
+            initCalls++
             seen = grailsCacheManager
         }
     }
@@ -966,9 +1191,11 @@ return CachedSubclass
     /** A class with an autowired method, whose subclass is cache-aware. */
     static class MethodAbove implements Seeing {
         CacheManager seen
+        int initCalls
 
         @Autowired
         void init(BeanFactory beanFactory) {
+            initCalls++
             seen = ((GrailsCacheManagerAware) this).grailsCacheManager
         }
     }
@@ -997,6 +1224,48 @@ return CachedSubclass
     }
 
     static class OwnDependency {
+    }
+
+    /** A class that is not cache-aware, with an autowired method. */
+    static class OtherWithMethod {
+        int initCalls
+
+        @Autowired
+        void init(BeanFactory beanFactory) {
+            initCalls++
+        }
+    }
+
+    /** A cache-aware class with a {@code @Value} method after the field, and an autowired method that reads it. */
+    static class ValueAfterTheField implements GrailsCacheManagerAware {
+        CacheManager seen
+        String valued
+        int initCalls
+
+        @Autowired
+        void init(BeanFactory beanFactory) {
+            initCalls++
+            seen = grailsCacheManager
+        }
+
+        @Value('a value')
+        void valued(String value) {
+            valued = value
+        }
+    }
+
+    /** A cache-aware class with a method annotated for both {@code @Resource} and {@code @Autowired}, reading the field. */
+    static class ResourceAndAutowired implements GrailsCacheManagerAware {
+        CacheManager seen
+        String valued
+        int initCalls
+
+        @Resource
+        @Autowired
+        void init(BeanFactory beanFactory) {
+            initCalls++
+            seen = grailsCacheManager
+        }
     }
 
     /** A cache-aware class with a method both injected by name with {@code @Resource} and autowired. */

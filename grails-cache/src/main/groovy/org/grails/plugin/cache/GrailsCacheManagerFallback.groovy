@@ -18,8 +18,6 @@
  */
 package org.grails.plugin.cache
 
-import java.lang.annotation.Annotation
-import java.lang.reflect.AnnotatedElement
 import java.lang.reflect.Field
 import java.lang.reflect.Member
 import java.util.concurrent.ConcurrentHashMap
@@ -33,6 +31,7 @@ import org.springframework.beans.PropertyValues
 import org.springframework.beans.TypeConverter
 import org.springframework.beans.factory.BeanFactory
 import org.springframework.beans.factory.BeanFactoryAware
+import org.springframework.beans.factory.HierarchicalBeanFactory
 import org.springframework.beans.factory.InjectionPoint
 import org.springframework.beans.factory.UnsatisfiedDependencyException
 import org.springframework.beans.factory.annotation.Autowired
@@ -52,7 +51,10 @@ import org.springframework.cache.CacheManager
 import org.springframework.core.Ordered
 import org.springframework.core.PriorityOrdered
 import org.springframework.core.ResolvableType
+import org.springframework.core.SimpleAliasRegistry
 import org.springframework.util.ReflectionUtils
+
+import org.apache.grails.core.aot.GeneratedBeanDefinitions
 
 /**
  * Gives a cache-aware class the cache manager named {@code grailsCacheManager} where Spring cannot choose
@@ -67,12 +69,18 @@ import org.springframework.util.ReflectionUtils
  * which leaves alone a member another post-processor has registered on the bean definition, as it does for
  * {@code @Resource}. A class has the field once for each class of its hierarchy that implements the trait:
  * the cache transformations leave it to the first, but a subclass may implement it again. A post-processor
- * added first registers on each bean definition every copy of the field and every member Spring injects
- * after the first: the autowired methods of the class that has it, and the fields and methods of its
- * subclasses. A post-processor ordered right after Spring's then injects them, once Spring has injected
- * the members before them: each copy of the field, and after it, with an injection of Spring's own, the
- * members up to the next copy, so that each member is injected in the order Spring injected it, and an
- * autowired method sees the field of its class set.
+ * added first registers on each bean definition every copy of the field Spring's injection would inject, and
+ * every member it would inject after the first: the autowired methods of the class that has it, and the
+ * fields and methods of its subclasses. Which those are it learns from Spring's injection as the application
+ * configured it, after the post-processors before it, such as the one for {@code @Resource}, and Grails'
+ * marking of what code generated ahead of time injects, have taken their members, each replayed on a copy
+ * of the definition. A post-processor ordered right after Spring's then injects them, once Spring has
+ * injected the members before them: each copy of the field, and after it, with an injection of Spring's own,
+ * the members up to the next copy, so that each member is injected in the order Spring injected it, and an
+ * autowired method sees the field of its class set. Where Spring injects an instance without its
+ * definition processed for that instance's class, as {@code autowireBean} does, as GORM does for a data
+ * service, or as it does for a prototype whose instances are of another class, it finds the members afresh;
+ * the first post-processor then gives it, right before, the members to leave out.
  * It injects the field as Spring's does: with one resolution of the field by the bean factory, for the
  * bean being injected, registering the bean as depending on what it took, remembering that for the bean's
  * next injection until the bean's definition is reset, and resolving it again once where what it remembers
@@ -82,12 +90,15 @@ import org.springframework.util.ReflectionUtils
  * it did. Any other injection of a cache manager is left alone.</p>
  *
  * <p>The injection that Spring's AOT processing generates injects every member, the field included, in
- * that order, whatever is registered on the bean definition. Where the application runs that generated
- * code, the bean factory's autowire candidate resolver answers the field's resolution instead, with the
- * same resolution, which falls back where Spring cannot choose; the generated code resolves the field each
- * time, so nothing is remembered. One difference remains there: where that resolution finds no cache
- * manager, Spring resolves the field once more, which creates again only a prototype cache manager whose
- * factory method returns null.</p>
+ * that order, whatever is registered on the bean definition, resolving each with a plain descriptor. Where
+ * the application runs that generated code, the bean factory's autowire candidate resolver answers that
+ * descriptor's resolution of the field with the same resolution, which falls back where Spring cannot
+ * choose; the generated code resolves the field each time, so nothing is remembered. What Grails' injection
+ * injects there, which the generated code did not, is taken over as above. One difference remains in the
+ * generated code: the resolver cannot answer that the field is empty, so where the resolution finds no
+ * cache manager, Spring resolves the field once more. Only a cache manager that answers nothing is asked
+ * again: a prototype one whose factory method returns null, or a resolvable dependency registered for
+ * {@code CacheManager} whose factory returns null.</p>
  *
  * @since 8.0.1
  */
@@ -99,13 +110,6 @@ class GrailsCacheManagerFallback implements BeanFactoryPostProcessor {
     /** The bean that injects the trait's field, among Spring's own post-processors. */
     static final String INJECTION_BEAN_NAME = 'org.grails.plugin.cache.internalTraitFieldInjection'
 
-    /**
-     * The annotations whose members Spring's own post-processors that run before its autowiring, for
-     * {@code @Resource} and for persistence, take before it; a member with one is left to them.
-     */
-    private static final Set<String> TAKEN_BEFORE_AUTOWIRING = ['jakarta.annotation.Resource', 'jakarta.ejb.EJB',
-            'jakarta.xml.ws.WebServiceRef', 'jakarta.persistence.PersistenceContext', 'jakarta.persistence.PersistenceUnit'] as Set<String>
-
     /** The name the trait's field has in each class that implements it. */
     static final String FIELD_NAME = "${GrailsCacheManagerAware.name.replace('.', '_')}__${CACHE_MANAGER_BEAN_NAME}".toString()
 
@@ -113,12 +117,9 @@ class GrailsCacheManagerFallback implements BeanFactoryPostProcessor {
     void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
         if (beanFactory instanceof DefaultListableBeanFactory) {
             DefaultListableBeanFactory listable = (DefaultListableBeanFactory) beanFactory
-            if (AotDetector.useGeneratedArtifacts()) {
-                // the generated code injects the bean, and resolves the field through the resolver
-                if (!(listable.autowireCandidateResolver instanceof GeneratedInjectionFallback)) {
-                    listable.autowireCandidateResolver = new GeneratedInjectionFallback(listable.autowireCandidateResolver)
-                }
-                return
+            if (AotDetector.useGeneratedArtifacts() && !(listable.autowireCandidateResolver instanceof GeneratedInjectionFallback)) {
+                // the generated code injects what it generated, and resolves the field through the resolver
+                listable.autowireCandidateResolver = new GeneratedInjectionFallback(listable.autowireCandidateResolver)
             }
             if (!listable.beanPostProcessors.any { BeanPostProcessor processor -> processor instanceof TraitFieldRegistrar }) {
                 // added before Spring registers its own, so that it registers the field on the bean definition first
@@ -130,6 +131,21 @@ class GrailsCacheManagerFallback implements BeanFactoryPostProcessor {
                 listable.registerBeanDefinition(INJECTION_BEAN_NAME, injection)
             }
         }
+    }
+
+    /**
+     * The name of the bean the name {@code grailsCacheManager} stands for, seen from the bean factory: the
+     * bean of that name or with that alias in the nearest factory of its hierarchy that has one.
+     */
+    static String namedBean(BeanFactory beanFactory) {
+        for (BeanFactory current = beanFactory; current != null;
+                current = current instanceof HierarchicalBeanFactory ? ((HierarchicalBeanFactory) current).parentBeanFactory : null) {
+            if (current instanceof HierarchicalBeanFactory && ((HierarchicalBeanFactory) current).containsLocalBean(CACHE_MANAGER_BEAN_NAME)) {
+                return current instanceof SimpleAliasRegistry ? ((SimpleAliasRegistry) current).canonicalName(CACHE_MANAGER_BEAN_NAME) :
+                        CACHE_MANAGER_BEAN_NAME
+            }
+        }
+        null
     }
 
     /** The trait's cache manager field in the class, or null if the class does not have it. */
@@ -158,14 +174,18 @@ class GrailsCacheManagerFallback implements BeanFactoryPostProcessor {
 
     /**
      * Registers each copy of the trait's field, and the members Spring injects after the first, on each bean
-     * definition that has it, before Spring's injection sees them.
+     * definition that has it, before Spring's injection sees them; and, right before Spring's injection of an
+     * instance its definition was not processed for, gives Spring's injection those members to leave out.
      */
     @CompileStatic
-    static class TraitFieldRegistrar implements MergedBeanDefinitionPostProcessor {
+    static class TraitFieldRegistrar implements MergedBeanDefinitionPostProcessor, InstantiationAwareBeanPostProcessor {
 
         private final DefaultListableBeanFactory beanFactory
 
-        /** The injection of each bean's copies of the field, as Spring keeps the injection metadata of each bean. */
+        /**
+         * The injection of each bean's copies of the field, for the class it was found for, as Spring keeps the
+         * injection metadata of each bean.
+         */
         final Map<String, TraitFieldInjections> elements = new ConcurrentHashMap<String, TraitFieldInjections>()
 
         /**
@@ -180,47 +200,129 @@ class GrailsCacheManagerFallback implements BeanFactoryPostProcessor {
 
         @Override
         void postProcessMergedBeanDefinition(RootBeanDefinition beanDefinition, Class<?> beanType, String beanName) {
-            List<Field> fields = traitFields(beanType).findAll { Field field -> !beanDefinition.isExternallyManagedConfigMember(field) }
-            if (fields.empty) {
-                return
-            }
-            // the members Spring injects, in the order it injects them, as it registers them on a definition
-            RootBeanDefinition all = new RootBeanDefinition()
-            afterField(0).postProcessMergedBeanDefinition(all, beanType, beanName)
-            List<Member> members = new ArrayList<Member>(all.externallyManagedConfigMembers)
-            List<Field> injected = fields.findAll { Field field -> field in members }.sort { Field field -> members.indexOf(field) }
-            List<TraitFieldInjection.Step> steps = []
-            injected.eachWithIndex { Field field, int index ->
-                int end = index + 1 < injected.size() ? members.indexOf(injected[index + 1]) : members.size()
-                List<Member> after = members.subList(members.indexOf(field) + 1, end).findAll { Member member ->
-                    !beanDefinition.isExternallyManagedConfigMember(member) && !takenBeforeAutowiring(member)
+            elements.put(beanName, plan(beanDefinition, beanType, beanName, takenBefore(beanDefinition, beanType, beanName)))
+        }
+
+        /**
+         * Where Spring injects an instance without its definition processed for that instance's class, as for
+         * {@code autowireBean}, {@code configureBean} of a bean not yet created, or another class than the one
+         * its definition was processed for, Spring's injection finds the members afresh and injects every one;
+         * this gives it, right before, the members it is to leave out.
+         */
+        @Override
+        PropertyValues postProcessProperties(PropertyValues pvs, Object bean, String beanName) throws BeansException {
+            TraitFieldInjections injections = beanName == null ? null : elements.get(beanName)
+            if (beanName != null && (injections == null || bean.getClass() != injections.beanType) &&
+                    !GeneratedBeanDefinitions.isAnotherInstanceOfGeneratedBean(beanFactory, beanName, bean)) {
+                RootBeanDefinition unprocessed = new RootBeanDefinition(bean.getClass())
+                unprocessed.scope = BeanDefinition.SCOPE_PROTOTYPE
+                TraitFieldInjections found = plan(unprocessed, bean.getClass(), beanName, [] as Set<Member>)
+                if (!found.steps.empty) {
+                    springAutowiring()?.postProcessMergedBeanDefinition(unprocessed, bean.getClass(), beanName)
                 }
-                AutowiredAnnotationBeanPostProcessor afterThisField = null
-                if (!after.empty) {
-                    // Spring's injection of only those, for this bean
-                    afterThisField = afterField(index)
-                    RootBeanDefinition onlyAfter = new RootBeanDefinition()
-                    members.each { Member member ->
-                        if (!(member in after)) {
-                            onlyAfter.registerExternallyManagedConfigMember(member)
-                        }
-                    }
-                    afterThisField.postProcessMergedBeanDefinition(onlyAfter, beanType, beanName)
-                }
-                Autowired autowired = field.getAnnotation(Autowired)
-                steps << new TraitFieldInjection.Step(new TraitFieldElement(field, autowired.required(), beanFactory), afterThisField)
-                beanDefinition.registerExternallyManagedConfigMember(field)
-                after.each { Member member -> beanDefinition.registerExternallyManagedConfigMember(member) }
+                elements.put(beanName, found)
             }
-            if (!steps.empty) {
-                elements.put(beanName, new TraitFieldInjections(beanType, steps))
-            }
+            pvs
         }
 
         @Override
         void resetBeanDefinition(String beanName) {
             elements.remove(beanName)
             afterFields.each { AutowiredAnnotationBeanPostProcessor afterField -> afterField.resetBeanDefinition(beanName) }
+        }
+
+        /**
+         * Finds the copies of the field Spring's injection would inject, registers them, and the members it
+         * would inject after the first that this can inject in its place, on the definition, and returns how
+         * to inject them.
+         *
+         * @param takenBefore the members the post-processors before Spring's injection take from it
+         */
+        private TraitFieldInjections plan(RootBeanDefinition beanDefinition, Class<?> beanType, String beanName,
+                                          Set<Member> takenBefore) {
+            List<Field> copies = traitFields(beanType)
+            AutowiredAnnotationBeanPostProcessor autowiring = copies.empty ? null : springAutowiring()
+            if (autowiring == null) {
+                // without Spring's injection, nothing injects the field, as before
+                return new TraitFieldInjections(beanType, [])
+            }
+            // the members Spring's own injection finds, in the order it injects them, and those it injects itself
+            List<Member> members = membersOf(autowiring, beanDefinition, beanType, beanName)
+            List<Member> injected = members.findAll { Member member ->
+                !(member in takenBefore) && !beanDefinition.isExternallyManagedConfigMember(member)
+            }
+            // the members this can inject in its place, which it does with a processor of Spring's own
+            List<Member> injectable = membersOf(afterField(0), beanDefinition, beanType, beanName)
+            List<Field> taken = copies.findAll { Field copy -> copy in injected }.sort { Field copy -> injected.indexOf(copy) }
+            List<TraitFieldInjection.Step> steps = []
+            taken.eachWithIndex { Field copy, int index ->
+                int end = index + 1 < taken.size() ? injected.indexOf(taken[index + 1]) : injected.size()
+                List<Member> after = injected.subList(injected.indexOf(copy) + 1, end).findAll { Member member ->
+                    member in injectable && !(member instanceof Field && isTraitField((Field) member))
+                }
+                AutowiredAnnotationBeanPostProcessor afterThisField = null
+                if (!after.empty) {
+                    afterThisField = afterField(index)
+                    RootBeanDefinition onlyAfter = new RootBeanDefinition()
+                    onlyAfter.scope = beanDefinition.scope
+                    // every member that processor finds but those, which it so leaves out
+                    injectable.each { Member member ->
+                        if (!(member in after)) {
+                            onlyAfter.registerExternallyManagedConfigMember(member)
+                        }
+                    }
+                    afterThisField.postProcessMergedBeanDefinition(onlyAfter, beanType, beanName)
+                }
+                Autowired autowired = copy.getAnnotation(Autowired)
+                steps << new TraitFieldInjection.Step(new TraitFieldElement(copy, autowired.required(), beanFactory), afterThisField)
+                beanDefinition.registerExternallyManagedConfigMember(copy)
+                after.each { Member member -> beanDefinition.registerExternallyManagedConfigMember(member) }
+            }
+            new TraitFieldInjections(beanType, steps)
+        }
+
+        /**
+         * The members the post-processors between this one and Spring's injection take for the definition, and
+         * those the code generated ahead of time injects, which Grails' injection leaves to that code: found on
+         * a copy of the definition, as each would register them on it.
+         */
+        private Set<Member> takenBefore(RootBeanDefinition beanDefinition, Class<?> beanType, String beanName) {
+            if (traitFields(beanType).empty) {
+                return [] as Set<Member>
+            }
+            RootBeanDefinition copy = new RootBeanDefinition(beanDefinition)
+            beanDefinition.externallyManagedConfigMembers.each { Member member -> copy.registerExternallyManagedConfigMember(member) }
+            List<BeanPostProcessor> processors = beanFactory.beanPostProcessors
+            AutowiredAnnotationBeanPostProcessor autowiring = springAutowiring()
+            int from = processors.indexOf(this) + 1
+            int to = autowiring == null ? from : processors.indexOf(autowiring)
+            if (from > 0 && to > from) {
+                processors.subList(from, to).each { BeanPostProcessor processor ->
+                    if (processor instanceof MergedBeanDefinitionPostProcessor) {
+                        ((MergedBeanDefinitionPostProcessor) processor).postProcessMergedBeanDefinition(copy, beanType, beanName)
+                    }
+                }
+            }
+            AutowiredAnnotationBeanPostProcessor generating = new AutowiredAnnotationBeanPostProcessor()
+            generating.beanFactory = beanFactory
+            GeneratedBeanDefinitions.markMembersInjectedByGeneratedCode(copy, beanType, generating)
+            new LinkedHashSet<Member>(copy.externallyManagedConfigMembers)
+        }
+
+        /** The members the processor injects, in the order it injects them, as it registers them on a definition. */
+        private static List<Member> membersOf(AutowiredAnnotationBeanPostProcessor processor, RootBeanDefinition beanDefinition,
+                                            Class<?> beanType, String beanName) {
+            RootBeanDefinition all = new RootBeanDefinition()
+            all.scope = beanDefinition.scope
+            processor.postProcessMergedBeanDefinition(all, beanType, beanName)
+            new ArrayList<Member>(all.externallyManagedConfigMembers)
+        }
+
+        /** Spring's injection of the bean factory, as the application configured it, or null if there is none. */
+        private AutowiredAnnotationBeanPostProcessor springAutowiring() {
+            (AutowiredAnnotationBeanPostProcessor) beanFactory.beanPostProcessors.find { BeanPostProcessor processor ->
+                processor instanceof AutowiredAnnotationBeanPostProcessor
+            }
         }
 
         /** Spring's injection of the members after the copy of the field at that place in a class's hierarchy. */
@@ -231,13 +333,6 @@ class GrailsCacheManagerFallback implements BeanFactoryPostProcessor {
                 afterFields << afterField
             }
             afterFields[index]
-        }
-
-        /** Whether a post-processor of Spring's that sees the definition after this one takes the member first. */
-        private static boolean takenBeforeAutowiring(Member member) {
-            ((AnnotatedElement) member).annotations.any { Annotation annotation ->
-                annotation.annotationType().name in TAKEN_BEFORE_AUTOWIRING
-            }
         }
     }
 
@@ -289,8 +384,9 @@ class GrailsCacheManagerFallback implements BeanFactoryPostProcessor {
                 processor instanceof TraitFieldRegistrar
             }
             TraitFieldInjections injections = registrar == null || beanName == null ? null : registrar.elements.get(beanName)
-            // for another class Spring builds its injection again and injects every member itself
-            if (injections != null && bean.getClass() == injections.beanType) {
+            // Grails' injection injects in full another instance of a bean the generated code contributed
+            if (injections != null && bean.getClass() == injections.beanType &&
+                    !GeneratedBeanDefinitions.isAnotherInstanceOfGeneratedBean(beanFactory, beanName, bean)) {
                 for (Step step : injections.steps) {
                     step.field.inject(bean, beanName)
                     step.afterField?.postProcessProperties(pvs, bean, beanName)
@@ -440,7 +536,9 @@ class GrailsCacheManagerFallback implements BeanFactoryPostProcessor {
         Object getLazyResolutionProxyIfNecessary(DependencyDescriptor descriptor, String beanName) {
             Object proxy = delegate.getLazyResolutionProxyIfNecessary(descriptor, beanName)
             Field field = descriptor.field
-            if (proxy != null || beanFactory == null || descriptor instanceof FallbackDescriptor || !isTraitField(field)) {
+            // only the plain descriptor the generated code resolves the field with: a shortcut, this class's own
+            // or Spring's, resolves the bean it names as Spring resolves it
+            if (proxy != null || beanFactory == null || descriptor.getClass() != DependencyDescriptor || !isTraitField(field)) {
                 return proxy
             }
             FallbackDescriptor fallback = new FallbackDescriptor(descriptor, beanFactory)
@@ -541,9 +639,8 @@ class GrailsCacheManagerFallback implements BeanFactoryPostProcessor {
 
         @Override
         Object resolveNotUnique(ResolvableType type, Map<String, Object> matchingBeans) throws BeansException {
-            String name = matchingBeans.keySet().find { String candidate ->
-                candidate == CACHE_MANAGER_BEAN_NAME || CACHE_MANAGER_BEAN_NAME in beanFactory.getAliases(candidate)
-            }
+            String named = namedBean(beanFactory)
+            String name = named != null && matchingBeans.containsKey(named) ? named : null
             if (name == null) {
                 return super.resolveNotUnique(type, matchingBeans)
             }
