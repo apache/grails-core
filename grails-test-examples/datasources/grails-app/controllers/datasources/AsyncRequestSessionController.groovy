@@ -18,10 +18,13 @@
  */
 package datasources
 
+import static grails.async.web.WebPromises.task
+
 import grails.async.web.AsyncController
 
 /**
- * An action that starts asynchronous handling itself and never completes it, so that the container times it out.
+ * Actions that start asynchronous handling without returning a promise: one never completes it, so that the container
+ * times it out, and one starts a task that completes it, without a dispatch.
  */
 class AsyncRequestSessionController implements AsyncController {
 
@@ -29,5 +32,16 @@ class AsyncRequestSessionController implements AsyncController {
         RequestSessions.asyncDefaultSession = RequestSessions.defaultSession()
         RequestSessions.asyncSecondarySession = RequestSessions.secondary()
         startAsync().timeout = 3000
+    }
+
+    def completesFromTask() {
+        RequestSessions.asyncDefaultSession = RequestSessions.defaultSession()
+        RequestSessions.asyncSecondarySession = RequestSessions.secondary()
+        task {
+            sleep(500)
+            render(text: [RequestSessions.asyncDefaultSession, RequestSessions.asyncSecondarySession]*.open.join(','))
+            request.asyncContext.complete()
+        }
+        null
     }
 }
