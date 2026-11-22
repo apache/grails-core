@@ -39,13 +39,21 @@ concurrency:
 permissions:
   contents: read
 jobs:
-  # A pull request labelled "no ci", or a draft without the "run ci" label, skips every job of this workflow.
-  test:
-    name: "Test the dismissal of stale reviews"
+  policy:
+    name: "CI policy"
+    # A pull request labelled "no ci", or a draft without the "run ci" label, skips this job; the test needs
+    # it, so nothing runs for such a pull request.
     if: >-
       github.event_name != 'pull_request'
       || (!contains(github.event.pull_request.labels.*.name, 'no ci')
           && (!github.event.pull_request.draft || contains(github.event.pull_request.labels.*.name, 'run ci')))
+    uses: ./.github/workflows/ci-policy.yml
+  test:
+    name: "Test the dismissal of stale reviews"
+    needs: [ policy ]
+    # As every test of the repository: on a release branch below the default, and so on a pull request into
+    # one, only on request (the "run ci" label, a commit starting with [run tests], or a manual run).
+    if: ${{ needs.policy.outputs.run-tests == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
