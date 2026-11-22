@@ -140,6 +140,12 @@ merge_case edit-outside f "$lines" 'a\nPR\nc\nd\ne\nf\ng\nh\n' 'a\nBASE\nc\nd\ne
 merge_case markers-left f "$lines" 'a\nPR\nc\nd\ne\nf\ng\nh\n' 'a\nBASE\nc\nd\ne\nf\ng\nh\n' - dismissed "$changed"
 merge_case two-conflicts f "$lines" 'a\nPR\nc\nd\ne\nf\nPR\nh\n' 'a\nBASE\nc\nd\ne\nf\nBASE\nh\n' 'a\nPR\nc\nd\ne\nf\nBASE\nh\n' kept
 merge_case two-conflicts-edit f "$lines" 'a\nPR\nc\nd\ne\nf\nPR\nh\n' 'a\nBASE\nc\nd\ne\nf\nBASE\nh\n' 'a\nPR\nc\nD\ne\nf\nBASE\nh\n' dismissed "$changed"
+echo "== lines that look like numbers"
+numbers='a\n42\nc\nd\ne\nf\ng\nh\n'
+merge_case number-outside f "$numbers" 'a\n42\nc\nd\ne\nf\nPR\nh\n' 'a\n42\nc\nd\ne\nf\nBASE\nh\n' 'a\n042\nc\nd\ne\nf\nPR\nh\n' dismissed "$changed"
+merge_case number-forms f 'a\n 42\n+42\n1e2\n4.20\n0x10\nx\nh\n' 'a\n 42\n+42\n1e2\n4.20\n0x10\nPR\nh\n' 'a\n 42\n+42\n1e2\n4.20\n0x10\nBASE\nh\n' 'a\n42\n42\n100\n4.2\n16\nPR\nh\n' dismissed "$changed"
+merge_case number-in-side f "$lines" 'a\n42\nc\nd\ne\nf\ng\nh\n' 'a\n43\nc\nd\ne\nf\ng\nh\n' 'a\n042\nc\nd\ne\nf\ng\nh\n' dismissed "$changed"
+merge_case number-side-kept f "$lines" 'a\n42\nc\nd\ne\nf\ng\nh\n' 'a\n43\nc\nd\ne\nf\ng\nh\n' 'a\n42\nc\nd\ne\nf\ng\nh\n' kept
 echo "== the end of the file"
 merge_case newline-dropped f 'a\nx\n' 'a\nours\n' 'a\ntheirs\n' 'a\nours' dismissed "$changed"
 merge_case newline-kept f 'a\nx\n' 'a\nours\n' 'a\ntheirs\n' 'a\nours\n' kept

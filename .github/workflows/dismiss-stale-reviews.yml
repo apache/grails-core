@@ -78,7 +78,9 @@ jobs:
           # end the job at its timeout, and with it the dismissals of every pull request after that one, on each run.
           # What comes after the checks, the dismissals and then the comments on the pull requests, has until a
           # minute before the job's timeout, and each request of it a minute at most.
-          export GIT_LITERAL_PATHSPECS=1
+          # Paths are taken literally, and awk compares and counts bytes, whatever awk the runner has and in
+          # whatever locale.
+          export GIT_LITERAL_PATHSPECS=1 LC_ALL=C
           checks_end=$(( SECONDS + 420 )) job_end=$(( SECONDS + 540 ))
           before_job_end() {
             local left=$(( job_end - SECONDS ))
@@ -133,10 +135,12 @@ jobs:
               -v resolved_nl="$(ends resolved.file)" -v ours_nl="$(ends ours.file)" -v theirs_nl="$(ends theirs.file)" '
               # c repeated n times, by doubling, so that a long marker takes no time to build.
               function run(c, n,   s) { s = c; while (2 * length(s) <= n) s = s s; return s substr(s, 1, n - length(s)) }
-              # Whether the pushed lines from p on are the merged lines from a to b.
+              # Whether the pushed lines from p on are the merged lines from a to b. The lines are compared as
+              # text: awk takes two lines read from files that look like numbers, such as 42 and 042, for
+              # numbers and compares their values.
               function same(p, a, b,   j) {
                 if (p - 1 + (b - a + 1) > lines) return 0
-                for (j = a; j <= b; j++) if (resolved[p + j - a] != merged[j]) return 0
+                for (j = a; j <= b; j++) if ((resolved[p + j - a] "") != (merged[j] "")) return 0
                 return 1
               }
               FILENAME == ARGV[1] { merged[FNR] = $0; total = FNR; next }
