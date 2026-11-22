@@ -41,8 +41,8 @@ import jakarta.persistence.criteria.JoinType
  * </pre>
  *
  * Every club has a team, so a right join returns the same teams as an inner join. A where query, a dynamic finder
- * and {@code list} return each team once. A criteria query and a query by example return a team once for each
- * element of a collection that they fetch, as they do for a fetch of a collection with {@code join}.
+ * and {@code list} return each team once. An unpaged criteria query and a query by example return a team once
+ * for each fetched collection element. A paged criteria query loads the collection separately.
  */
 class FetchJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
 
@@ -78,7 +78,8 @@ class FetchJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager
             'a paged list'                           : { Map fetch -> Team.list(fetch: fetch, max: 100) },
     ]
 
-    private static final List<String> RETURN_EACH_TEAM_ONCE = ['a where query with the fetch argument', 'a where query with join', 'a dynamic finder', 'list', 'a paged list']
+    private static final List<String> RETURN_EACH_TEAM_ONCE = ['a where query with the fetch argument', 'a where query with join', 'a dynamic finder',
+                                                            'a criteria query with the fetch argument', 'list', 'a paged list']
 
     private static final List<Map> CHART = [
             [fetch: [players: JoinType.INNER], teams: TEAMS_WITH_PLAYERS, loaded: 'players'],
@@ -127,8 +128,8 @@ class FetchJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager
         and: 'each team once, or once for each element of a fetched collection'
         results.size() == (api in RETURN_EACH_TEAM_ONCE || loaded != 'players' ? teams.size() : teams.sum { Math.max(1, PLAYERS[it].size()) })
 
-        and: 'the association is fetched'
-        initialized.values().every()
+        and: 'only a paged criteria collection is loaded separately'
+        initialized.values().every { it == (loaded != 'players' || api != 'a criteria query with the fetch argument') }
 
         and: 'a fetched collection holds all of its elements'
         loaded != 'players' || results.every { it.players*.name.sort() == PLAYERS[it.name] }

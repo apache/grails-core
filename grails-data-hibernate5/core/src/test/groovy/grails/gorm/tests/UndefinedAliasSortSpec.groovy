@@ -24,9 +24,13 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 class UndefinedAliasSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
 
+    protected boolean isLeftJoinSort() {
+        true
+    }
+
     void setupSpec() {
         // a sort through an association keeps the instances without it with this setting
-        manager.configuration['grails.gorm.leftJoinAssociationSort'] = true
+        manager.configuration['grails.gorm.leftJoinAssociationSort'] = leftJoinSort
         manager.domainClasses.addAll([Club, Team, Player, Contract])
     }
 
@@ -68,7 +72,7 @@ class UndefinedAliasSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckMa
         results.totalCount == 3
     }
 
-    void 'a root alias named #alias takes precedence over a property with the same name'() {
+    void 'a root alias named #alias is used when the path does not resolve through a property'() {
         given:
         final criteria = new DetachedCriteria(Team, alias)
 
@@ -82,7 +86,21 @@ class UndefinedAliasSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckMa
         'name' | 'name.name'      | ['Manchester United First Team', 'Chelsea First Team', 'Arsenal First Team']
     }
 
-    void 'a sort through an association after the alias of the queried class keeps a team without the association'() {
+    void 'an association path keeps its meaning when the root alias has the same name'() {
+        given:
+        new Team(name: 'Alias Z', club: Club.findByName('Arsenal')).save(failOnError: true)
+        new Team(name: 'Alias A', club: Club.findByName('Chelsea')).save(failOnError: true)
+        new Team(name: 'Alias M').save(failOnError: true, flush: true)
+        manager.session.clear()
+        final criteria = new DetachedCriteria(Team, 'club').like('name', 'Alias%')
+
+        expect:
+        criteria.list(sort: 'club.name')*.name - 'Alias M' == ['Alias Z', 'Alias A']
+        criteria.sort('club.name').list()*.name - 'Alias M' == ['Alias Z', 'Alias A']
+        criteria.list(sort: 'club.name', max: 10).totalCount == (leftJoinSort ? 3 : 2)
+    }
+
+    void 'a root-alias sort through an association follows the compatibility setting'() {
         given:
         new Team(name: 'Unattached First Team').save(failOnError: true, flush: true)
         manager.session.clear()
@@ -91,7 +109,7 @@ class UndefinedAliasSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckMa
         final results = new DetachedCriteria(Team, 't').list(sort: 't.club.name', order: 'desc')
 
         then:
-        'Unattached First Team' in results*.name
+        ('Unattached First Team' in results*.name) == leftJoinSort
         results*.name - 'Unattached First Team' == ['Manchester United First Team', 'Chelsea First Team', 'Arsenal First Team']
     }
 

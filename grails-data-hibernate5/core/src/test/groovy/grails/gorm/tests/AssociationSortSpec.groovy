@@ -18,8 +18,6 @@
  */
 package grails.gorm.tests
 
-import spock.lang.IgnoreIf
-import spock.lang.Requires
 import grails.gorm.DetachedCriteria
 import grails.gorm.annotation.Entity
 import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
@@ -28,6 +26,8 @@ import org.grails.datastore.mapping.query.Query
 import org.hibernate.FetchMode
 import org.hibernate.Hibernate
 import org.hibernate.criterion.Order
+import spock.lang.IgnoreIf
+import spock.lang.Requires
 
 import jakarta.persistence.criteria.JoinType
 
@@ -49,7 +49,7 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManag
         manager.configuration['grails.gorm.leftJoinAssociationSort'] = leftJoinSort
         manager.domainClasses.addAll([Club, Team, Player, Contract, AssociationSortLeague, AssociationSortEmployee, AssociationSortDepartment,
                                       AssociationSortSquad, AssociationSortMember, AssociationSortBagSquad, AssociationSortBagMember,
-                                      AssociationSortMixedSquad, AssociationSortMixedMember,
+                                      AssociationSortMixedSquad, AssociationSortMixedMember, AssociationSortTrophy,
                                       AssociationSortAuthor, AssociationSortBook, AssociationSortPublisher, AssociationSortAward, AssociationSortCategory,
                                       AssociationSortMappedAuthor, AssociationSortMappedBook, AssociationSortEagerAuthor, AssociationSortEagerBook,
                                       AssociationSortMappedPublisher, AssociationSortMappedAward, AssociationSortMappedNode, AssociationSortMappedLeaf,
@@ -130,7 +130,7 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManag
         results*.name - 'Unattached Player' == ['MU Player', 'Chelsea Player', 'Arsenal Player']
     }
 
-    void 'list sorted by a map sorts by every entry of the map'() {
+    void 'list sorted by a map sorts by every entry of the map before paging'() {
         given:
         new Team(club: Club.findByName('Arsenal'), name: 'Arsenal Second Team').save(failOnError: true, flush: true)
 
@@ -139,6 +139,9 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManag
 
         then:
         results*.name - 'Unattached First Team' == ['Arsenal Second Team', 'Arsenal First Team', 'Chelsea First Team', 'MU First Team']
+
+        and:
+        Team.list(sort: ['club.name': 'asc', name: 'desc'], max: 2, offset: 1)*.name == results[1..2]*.name
     }
 
     @Requires({ instance.leftJoinSort })
@@ -473,6 +476,49 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManag
         results.totalCount == 2
     }
 
+    @Requires({ instance.leftJoinSort })
+    void '#api can sort an unfetched bag beside a fetched set of another class'() {
+        given:
+        final squad = new AssociationSortMixedSquad(name: 'Full squad')
+        squad.addToRegulars(name: 'Member A').addToRegulars(name: 'Member B')
+        squad.addToTrophies(title: 'Trophy A').addToTrophies(title: 'Trophy B')
+        squad.save(failOnError: true, flush: true)
+        manager.session.clear()
+
+        when:
+        final results = query.call()
+
+        then:
+        results*.name.unique() == ['Full squad']
+        results.every { Hibernate.isInitialized(it.trophies) }
+        results.every { it.regulars*.name.sort() == ['Member A', 'Member B'] }
+        results.every { it.trophies*.title.sort() == ['Trophy A', 'Trophy B'] }
+
+        where:
+        api        | query
+        'list'     | { AssociationSortMixedSquad.list(sort: 'regulars.name', fetch: [trophies: 'join']) }
+        'where'    | { AssociationSortMixedSquad.where { name == 'Full squad' }.join('trophies').sort('regulars.name').list() }
+        'criteria' | { AssociationSortMixedSquad.createCriteria().list { join('trophies'); order('regulars.name') } }
+        'finder'   | { AssociationSortMixedSquad.findAllByName('Full squad', [sort: 'regulars.name', fetch: [trophies: 'join']]) }
+    }
+
+    void 'static list rejects a fetched bag multiplied by another collection sort in either setting mode'() {
+        given:
+        final squad = new AssociationSortMixedSquad(name: 'Full squad')
+        squad.addToRegulars(name: 'Member A').addToRegulars(name: 'Member B')
+        squad.addToTrophies(title: 'Trophy A').addToTrophies(title: 'Trophy B')
+        squad.save(failOnError: true, flush: true)
+        manager.session.clear()
+
+        when:
+        AssociationSortMixedSquad.list(sort: 'trophies.title', fetch: [regulars: 'join'])
+
+        then:
+        final error = thrown(UnsupportedOperationException)
+        error.message.contains('regulars')
+        error.message.contains('trophies')
+    }
+
     protected void saveEmployees() {
         final departmentA = new AssociationSortDepartment(name: 'A dept').save(failOnError: true)
         final departmentB = new AssociationSortDepartment(name: 'B dept').save(failOnError: true)
@@ -587,7 +633,7 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManag
      * | a list              | a set             | every squad, and the fetched set holds its own elements once    |
      * | a set               | a bag             | UnsupportedOperationException: the rows repeat, the bag cannot tell |
      * | a bag               | nothing           | every squad, also one whose bag is empty                        |
-     * | a bag               | a set             | UnsupportedOperationException: the rows repeat, the bag cannot tell |
+     * | a bag               | a set             | legacy criteria reject the extra fetch; static list keeps it unfetched |
      * | a bag               | another bag       | UnsupportedOperationException: the rows repeat, the bag cannot tell |
      * </pre>
      */
@@ -624,7 +670,7 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManag
         outcome == 'rejected' || fetched == 'nothing' || results.find { it.name == 'Full squad' }."$fetched"*.name.sort() == FETCHED_ELEMENTS[fetched]
 
         where:
-        [api, sort, fetched, outcome] << [
+        [api, sort, fetched, criteriaOutcome] << [
                 ['a where query', 'order in a criteria query', 'a list'],
                 [
                         ['reserves.name', 'nothing', 'kept'],
@@ -637,6 +683,7 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManag
                         ['regulars.name', 'substitutes', 'rejected'],
                 ]
         ].combinations().collect { List row -> [row[0]] + row[1] }
+        outcome = api == 'a list' && sort == 'regulars.name' && fetched == 'reserves' ? 'kept' : criteriaOutcome
         query = MIXED_QUERIES[api]
     }
 
@@ -1443,12 +1490,18 @@ class AssociationSortMixedSquad {
     List<AssociationSortMixedMember> lineup
     AssociationSortLeague league
     static hasMany = [regulars: AssociationSortMixedMember, substitutes: AssociationSortMixedMember, reserves: AssociationSortMixedMember,
-                      benched: AssociationSortMixedMember, lineup: AssociationSortMixedMember]
+                      benched: AssociationSortMixedMember, lineup: AssociationSortMixedMember, trophies: AssociationSortTrophy]
     static mappedBy = [regulars: 'squad', substitutes: 'substituteSquad', reserves: 'reserveSquad', benched: 'benchSquad', lineup: 'lineupSquad']
 
     static constraints = {
         league nullable: true
     }
+}
+
+@Entity
+class AssociationSortTrophy {
+    String title
+    static belongsTo = [squad: AssociationSortMixedSquad]
 }
 
 @Entity

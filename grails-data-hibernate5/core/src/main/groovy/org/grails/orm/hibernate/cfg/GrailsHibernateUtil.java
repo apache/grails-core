@@ -18,11 +18,9 @@
  */
 package org.grails.orm.hibernate.cfg;
 
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Deque;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -37,7 +35,6 @@ import groovy.lang.MetaClass;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Fetch;
 import jakarta.persistence.criteria.FetchParent;
-import jakarta.persistence.criteria.From;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.Root;
 import jakarta.persistence.metamodel.Attribute;
@@ -389,24 +386,13 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
      * @param associationPath The path of the association from the root entity
      * @return Whether a join fetch is requested for the association
      */
-    public static boolean isFetchRequested(Criteria root, String associationPath) {
+    private static boolean isFetchRequested(Criteria root, String associationPath) {
         return getRequestedFetchMode(root, associationPath) == FetchMode.JOIN;
-    }
-
-    private static FetchMode getRequestedFetchMode(Criteria root, String associationPath) {
-        CriteriaImpl criteria = getRootCriteria(root);
-        if (criteria == null) {
-            return null;
-        }
-        // Hibernate records a fetch mode under the path from the alias of the root criteria
-        String rootAlias = criteria.getAlias();
-        String path = rootAlias != null && !associationPath.startsWith(rootAlias + '.') ? rootAlias + '.' + associationPath : associationPath;
-        return criteria.getFetchMode(path);
     }
 
     /**
      * Throws an {@link UnsupportedOperationException} when a query sorts by a property of one collection
-     * while it fetches another, and either of them is a bag. A bag is a collection without an order of
+     * while it fetches another, and the additional join would multiply a fetched bag. A bag is a collection without an order of
      * its own, such as one declared as a {@code Collection}. The join for the sort and the fetch repeat
      * each other's rows, and a bag cannot tell a repeated row from a repeated element, so a bag that is
      * read from those rows would hold its elements more than once. That is why Hibernate does not
@@ -416,7 +402,7 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
      *
      * @param criteria The criteria of the query
      * @param associationPath The path, from the root entity, of the collection that the query sorts by
-     * @throws UnsupportedOperationException if either collection is a bag
+     * @throws UnsupportedOperationException if a fetched bag would be read from repeated rows
      */
     public static void checkSortedCollection(Criteria criteria, String associationPath) {
         CriteriaImpl root = getRootCriteria(criteria);
@@ -432,7 +418,7 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
     /**
      * Throws an {@link UnsupportedOperationException} when a JPA criteria query, which is what
      * {@code list} runs, makes a join to sort by a property of one collection while it fetches another,
-     * and either of them is a bag: see {@link #checkSortedCollection(Criteria, String)}.
+     * and the fetched collection is a bag: see {@link #checkSortedCollection(Criteria, String)}.
      * <p>
      * Such a query does not fetch what the mapping fetches, so it joins a collection that the mapping
      * fetches for the sort as well, but it does not read the collection from the rows of that join. A
@@ -444,16 +430,15 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
      * @param fetchArguments The {@code fetch} argument of the query, or null
      * @param query The query
      * @param sortJoin The join that the query makes for the sort
-     * @throws UnsupportedOperationException if either collection is a bag
+     * @throws UnsupportedOperationException if a fetched bag would be read from repeated rows
      */
     public static void checkSortedCollection(SessionFactory sessionFactory, Map<?, ?> fetchArguments, CriteriaQuery<?> query, Join<?, ?> sortJoin) {
         Attribute<?, ?> sorted = sortJoin.getAttribute();
         if (!(sorted instanceof PluralAttribute)) {
             return;
         }
-        boolean sortedBag = isBag(sorted) && !isFetchedByMapping(sessionFactory, fetchArguments, sortJoin);
         for (Root<?> root : query.getRoots()) {
-            String fetched = findFetchNextToSortedCollection(root, "", sortedBag);
+            String fetched = findFetchNextToSortedCollection(root, "");
             if (fetched != null) {
                 throw new UnsupportedOperationException(sortedCollectionMessage(sorted.getName(), root.getJavaType().getName(), fetched));
             }
@@ -462,70 +447,22 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
 
     /**
      * Returns the path of a collection that the given parent fetches, at any depth, that a query cannot
-     * fetch next to a sort by a collection, or null: any bag, or any collection if the sorted one is a bag
-     * that the mapping does not fetch.
+     * fetch next to a sort by a collection, or null. Only a fetched bag is read from repeated rows;
+     * a bag used just for sorting stays unfetched.
      */
-    private static String findFetchNextToSortedCollection(FetchParent<?, ?> parent, String prefix, boolean sortedBag) {
+    private static String findFetchNextToSortedCollection(FetchParent<?, ?> parent, String prefix) {
         for (Fetch<?, ?> fetch : parent.getFetches()) {
             Attribute<?, ?> attribute = fetch.getAttribute();
             String path = prefix + attribute.getName();
-            if (attribute instanceof PluralAttribute && (sortedBag || isBag(attribute))) {
+            if (attribute instanceof PluralAttribute && isBag(attribute)) {
                 return path;
             }
-            String nested = findFetchNextToSortedCollection(fetch, path + '.', sortedBag);
+            String nested = findFetchNextToSortedCollection(fetch, path + '.');
             if (nested != null) {
                 return nested;
             }
         }
         return null;
-    }
-
-    /**
-     * Whether a query that applies the fetches of the mapping, such as a where query, would fetch the
-     * collection that the given join joins for a sort: the query or the mapping fetches each association
-     * on its path, the query does not ask for another fetch mode, and a fetch from the mapping does not
-     * repeat an association that is already on the path, as for a criteria query.
-     */
-    private static boolean isFetchedByMapping(SessionFactory sessionFactory, Map<?, ?> fetchArguments, Join<?, ?> sortJoin) {
-        if (sessionFactory == null) {
-            return false;
-        }
-        Deque<Join<?, ?>> joins = new ArrayDeque<>();
-        From<?, ?> from = sortJoin;
-        while (from instanceof Join) {
-            joins.push((Join<?, ?>) from);
-            from = ((Join<?, ?>) from).getParent();
-        }
-        SessionFactoryImplementor factory = sessionFactory.unwrap(SessionFactoryImplementor.class);
-        EntityPersister persister = factory.getMetamodel().entityPersister(from.getJavaType());
-        Set<String> mappedFetches = new HashSet<>();
-        String associationPath = "";
-        for (Join<?, ?> join : joins) {
-            String name = join.getAttribute().getName();
-            associationPath = associationPath.isEmpty() ? name : associationPath + '.' + name;
-            if (persister == null) {
-                return false;
-            }
-            if (!from.getFetches().contains(join)) {
-                boolean requested = fetchArguments != null && fetchArguments.get(associationPath) != null;
-                if (requested || !isFetchedByMapping(persister, name) || !mappedFetches.add(persister.getEntityName() + '.' + name)) {
-                    return false;
-                }
-            }
-            persister = getAssociatedPersister(factory, persister.getPropertyType(name));
-            from = join;
-        }
-        return true;
-    }
-
-    private static boolean isFetchedByMapping(EntityPersister persister, String propertyName) {
-        String[] propertyNames = persister.getPropertyNames();
-        for (int i = 0; i < propertyNames.length; i++) {
-            if (propertyNames[i].equals(propertyName)) {
-                return persister instanceof OuterJoinLoadable && ((OuterJoinLoadable) persister).getFetchMode(i) == FetchMode.JOIN;
-            }
-        }
-        return false;
     }
 
     private static boolean isBag(Attribute<?, ?> attribute) {
@@ -547,7 +484,7 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
      * then lacks those elements. A sort must not change what a query fetches either. Such a join is
      * therefore kept from fetching the collection, unless the query asks to fetch it.
      * <p>
-     * It is fetched as well when the query fetches another collection, because Hibernate then reads
+     * It is fetched as well when the query fetches another collection of the same element type, because Hibernate then reads
      * the elements of the collection that it fetches from the columns of the join that it does not
      * fetch, when both collections hold elements of the same table. That is not possible when either
      * collection is a bag: see {@link #checkSortedCollection(Criteria, String)}.
@@ -569,7 +506,7 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
      * @param associationPath The path of the collection from the root entity
      * @return Whether another collection is fetched
      */
-    public static boolean fetchesAnotherCollection(Criteria criteria, String associationPath) {
+    private static boolean fetchesAnotherCollection(Criteria criteria, String associationPath) {
         return findOtherFetchedCollection(criteria, associationPath, false) != null;
     }
 
@@ -632,12 +569,12 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
         }
         SessionFactoryImplementor factory = root.getSession().getFactory();
         EntityPersister persister = factory.getMetamodel().entityPersister(root.getEntityOrClassName());
+        String sortedRole = getCollectionRole(factory, persister, associationPath);
+        if (sortedRole == null) {
+            return null;
+        }
         boolean sortedBag = false;
         if (bagInvolved) {
-            String sortedRole = getCollectionRole(factory, persister, associationPath);
-            if (sortedRole == null) {
-                return null;
-            }
             sortedBag = isBag(factory, sortedRole);
         }
         Map<String, String> fetched = new LinkedHashMap<>();
@@ -648,7 +585,11 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
                 continue;
             }
             boolean otherBag = bagInvolved && isBag(factory, collection.getValue());
-            if (!bagInvolved || (sortedFetched ? sortedBag && otherBag : sortedBag || otherBag)) {
+            Type sortedElement = factory.getMetamodel().collectionPersister(sortedRole).getElementType();
+            Type fetchedElement = factory.getMetamodel().collectionPersister(collection.getValue()).getElementType();
+            boolean sameElements = sortedElement instanceof EntityType && fetchedElement instanceof EntityType &&
+                    ((EntityType) sortedElement).getAssociatedEntityName(factory).equals(((EntityType) fetchedElement).getAssociatedEntityName(factory));
+            if (bagInvolved ? (sortedFetched ? sortedBag && otherBag : otherBag || sortedBag && sameElements) : sameElements) {
                 return collection.getKey();
             }
         }
@@ -763,23 +704,11 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
     }
 
     /**
-     * Returns the criteria of the join that a query has for an association path, whichever part of
-     * the query made the join.
-     *
-     * @param criteria The root criteria of the query, or the criteria of one of its joins
-     * @param associationPath The path of the association from the root entity
-     * @return The criteria of the join, or null when the query does not join the association
-     */
-    public static Criteria findJoinCriteria(Criteria criteria, String associationPath) {
-        return findCriteria(getRootCriteria(criteria), associationPath);
-    }
-
-    /**
      * Returns the criteria that the root criteria have for an association path, or null.
      */
     private static CriteriaImpl.Subcriteria findCriteria(Criteria root, String associationPath) {
-        if (root instanceof CriteriaImpl) {
-            CriteriaImpl criteria = (CriteriaImpl) root;
+        CriteriaImpl criteria = getRootCriteria(root);
+        if (criteria != null) {
             Iterator<CriteriaImpl.Subcriteria> subcriteria = criteria.iterateSubcriteria();
             while (subcriteria.hasNext()) {
                 CriteriaImpl.Subcriteria existing = subcriteria.next();
@@ -791,10 +720,6 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
         return null;
     }
 
-    /**
-     * Returns the path of a criteria from the root criteria. The path that a criteria is created with
-     * is relative to the criteria it is created from, or starts with the alias of another criteria.
-     */
     private static String getWholePath(CriteriaImpl root, CriteriaImpl.Subcriteria subcriteria) {
         String path = subcriteria.getPath();
         Criteria parent = subcriteria.getParent();
@@ -824,6 +749,17 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
         return null;
     }
 
+    private static FetchMode getRequestedFetchMode(Criteria root, String associationPath) {
+        CriteriaImpl criteria = getRootCriteria(root);
+        if (criteria == null) {
+            return null;
+        }
+        // Hibernate records a fetch mode under the path from the alias of the root criteria
+        String rootAlias = criteria.getAlias();
+        String path = rootAlias != null && !associationPath.startsWith(rootAlias + '.') ? rootAlias + '.' + associationPath : associationPath;
+        return criteria.getFetchMode(path);
+    }
+
     /**
      * Whether a sort by a property of an association joins the association with a left join, so that the
      * sort keeps the instances whose association is null. That is the case when the
@@ -843,8 +779,7 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
      * Applies the join type that a criteria query requests for an association, with the {@code fetch}
      * argument or with {@code join(String, JoinType)}. The association is fetched, as it is for the
      * {@code 'join'} fetch mode. A fetch mode alone always joins with an outer join, so a join type
-     * is applied by joining each to-one association on the path that the criteria do
-     * not join already; one that they join keeps its join.
+     * is applied to the existing join of the association as well as to a new join.
      * <p>
      * Hibernate fetches a collection only through a left join, and a join through a collection
      * returns an instance once for each element of the collection. A path that ends in a collection,
@@ -893,17 +828,22 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
             currentEntity = associations[i].getAssociatedEntity();
         }
         fetchAssociationsBefore(root, associationPath);
-        if (joinType == null) {
-            return;
-        }
-        if (joinType == jakarta.persistence.criteria.JoinType.LEFT) {
-            for (Association association : associations) {
-                if (association instanceof ToMany || association instanceof Basic) {
-                    return;
+        CriteriaImpl rootCriteria = getRootCriteria(root);
+        if (rootCriteria != null && (rootCriteria.getMaxResults() != null ||
+                rootCriteria.getFirstResult() != null && rootCriteria.getFirstResult() > 0)) {
+            boolean collection = false;
+            String path = "";
+            for (int i = 0; i < tokens.length; i++) {
+                path = i == 0 ? tokens[i] : path + '.' + tokens[i];
+                collection |= associations[i] instanceof ToMany;
+                if (collection) {
+                    root.setFetchMode(path, FetchMode.SELECT);
                 }
             }
         }
-
+        if (joinType == null) {
+            return;
+        }
         String[] paths = new String[tokens.length];
         CriteriaImpl.Subcriteria[] joined = new CriteriaImpl.Subcriteria[tokens.length];
         int unjoinedCollection = -1;
@@ -914,7 +854,7 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
                 unjoinedCollection = i;
             }
         }
-        if (unjoinedCollection >= 0) {
+        if (unjoinedCollection >= 0 && joinType != jakarta.persistence.criteria.JoinType.LEFT) {
             root.add(joinedInSubquery(entity.getName(), root.getAlias(), associationPath));
         }
 
@@ -925,6 +865,17 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
         String parentAlias = null;
         for (int i = 0; i < joinedCount; i++) {
             if (joined[i] != null) {
+                if (i == last && joined[i].getJoinType() != lastJoinType) {
+                    CriteriaImpl.Subcriteria existing = joined[i];
+                    Iterator<CriteriaImpl.Subcriteria> subcriteria = rootCriteria.iterateSubcriteria();
+                    while (subcriteria.hasNext()) {
+                        if (subcriteria.next() == existing) {
+                            subcriteria.remove();
+                            break;
+                        }
+                    }
+                    existing.getParent().createAlias(existing.getPath(), existing.getAlias(), lastJoinType, existing.getWithClause());
+                }
                 parentAlias = joined[i].getAlias();
                 continue;
             }
