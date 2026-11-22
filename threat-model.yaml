@@ -220,6 +220,11 @@ entry_points:
     parameter: plugin_index_and_plugin_metadata
     attacker_controllable: true
     notes: "CLI-only (list-plugins, plugin-info); read over https within size and time limits and shown as sanitised text, never executed."
+  - surface: GrailsWrapperDownload
+    parameter: downloaded_command_line_jar
+    attacker_controllable: false
+    trusted_role: operator
+    notes: "grailsw only; the jar is compared with the checksum file the same repository serves (or the checksums inside the jar) and installed only when whole - protection against truncation and corruption, not against a compromised repository."
   - surface: ConsoleProject
     parameter: project_directory_and_gradle_wrapper
     attacker_controllable: false
