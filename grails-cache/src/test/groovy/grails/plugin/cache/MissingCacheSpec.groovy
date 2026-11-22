@@ -141,6 +141,79 @@ class MissingCacheSpec extends Specification {
         log?.close()
     }
 
+    @Unroll
+    void 'a method whose parameters are named like what the generated code declares or reads still caches, compiled #mode'() {
+        given: 'parameters named like each local the generated code declares, and like the cache manager and key generator'
+        CacheManager cacheManager = new ConcurrentMapCacheManager('configured')
+        GenericApplicationContext context = new GenericApplicationContext()
+        AnnotationConfigUtils.registerAnnotationConfigProcessors(context)
+        context.addBeanFactoryPostProcessor(new GrailsCacheManagerFallback())
+        context.registerBean('grailsCacheManager', CacheManager, { -> cacheManager } as Supplier<CacheManager>)
+        context.registerBean('service', (Class<Object>) compileNamedLikeTheGeneratedCode(mode))
+        context.refresh()
+        def service = context.getBean('service')
+        CacheManager passed = new ConcurrentMapCacheManager('configured')
+
+        when: 'each method is called twice'
+        List<Object> results = [service.cached(1, 2, 3, 4, 5, 6, 7), service.cached(1, 2, 3, 4, 5, 6, 7),
+                                service.shadowing(1, passed, null), service.shadowing(1, passed, null)]
+        service.put(1, 2, 3, 4, 5)
+        service.evict(1, 2, 3, 4, 5)
+
+        then: 'they cached in the bean\'s cache manager, with the bean\'s key generator, and not the parameters\''
+        results == [28, 28, 1, 1]
+        service.calls == 4
+        ((Map) passed.getCache('configured').nativeCache).isEmpty()
+
+        cleanup:
+        context?.close()
+
+        where:
+        mode << ['statically', 'dynamically']
+    }
+
+    /** Parameters named like each local the generated code declares, and like the properties it reads. */
+    private static Class<?> compileNamedLikeTheGeneratedCode(String mode) {
+        new GroovyShell().evaluate("""
+import grails.plugin.cache.*
+import groovy.transform.CompileStatic
+import org.springframework.cache.CacheManager
+
+${mode == 'statically' ? '@CompileStatic' : ''}
+class NamedLikeTheGeneratedCode {
+    int calls
+
+    @Cacheable('configured')
+    int cached(int \$_cache_cacheManager, int \$_cache_cacheVariable, int \$_cache_cacheKey, int \$_method_parameter_map,
+               int \$_cache_valueWrapper, int \$_cache_originalMethodReturnValue, int \$_cache_cacheManager_) {
+        calls++
+        \$_cache_cacheManager + \$_cache_cacheVariable + \$_cache_cacheKey + \$_method_parameter_map +
+                \$_cache_valueWrapper + \$_cache_originalMethodReturnValue + \$_cache_cacheManager_
+    }
+
+    @Cacheable('configured')
+    int shadowing(int x, CacheManager grailsCacheManager, GrailsCacheKeyGenerator customCacheKeyGenerator) {
+        calls++
+        x
+    }
+
+    @CachePut('configured')
+    int put(int \$_cache_cacheManager, int \$_cache_cacheVariable, int \$_cache_cacheKey, int \$_method_parameter_map,
+            int \$_cache_originalMethodReturnValue) {
+        calls++
+        0
+    }
+
+    @CacheEvict('configured')
+    void evict(int \$_cache_cacheManager, int \$_cache_cacheVariable, int \$_cache_cacheKey, int \$_method_parameter_map,
+               int \$_cache_originalMethodReturnValue) {
+        calls++
+    }
+}
+return NamedLikeTheGeneratedCode
+""") as Class<?>
+    }
+
     /** A class whose cache manager is the one set, at the first read of each call only, which counts its reads. */
     private static Class<?> compileReadCounting(String mode) {
         new GroovyShell().evaluate("""

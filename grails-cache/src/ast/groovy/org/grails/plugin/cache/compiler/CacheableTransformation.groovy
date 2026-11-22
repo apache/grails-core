@@ -75,7 +75,7 @@ class CacheableTransformation extends AbstractCacheTransformation {
             return originalMethodCallExpr
         }
 
-        VariableExpression cacheManagerVariableExpression = cacheManagerVariable()
+        VariableExpression cacheManagerVariableExpression = cacheManagerVariable(methodNode)
         handleCacheCondition(sourceUnit, annotationNode,  methodNode, originalMethodCallExpr, newMethodBody)
 
         BlockStatement cachingBlock = block()
@@ -83,7 +83,7 @@ class CacheableTransformation extends AbstractCacheTransformation {
         // Generated logic looks like:
         //
         // Cache $_cache_cacheVariable = this.grailsCacheManager.getCache("...");
-        VariableExpression cacheDeclaration = declareCache(annotationNode, cacheManagerVariableExpression, cachingBlock)
+        VariableExpression cacheDeclaration = declareCache(annotationNode, methodNode, cacheManagerVariableExpression, cachingBlock)
 
         // if($_cache_cacheVariable != null) { ... } else { report the missing cache }
         BlockStatement cacheBlock = whereCacheExists(annotationNode, classNode, cacheManagerVariableExpression, cacheDeclaration, cachingBlock)
@@ -95,7 +95,7 @@ class CacheableTransformation extends AbstractCacheTransformation {
         VariableExpression cacheKeyDeclaration = declareCacheKey(sourceUnit, annotationNode, classNode, methodNode , cacheBlock)
 
         // ValueWrapper $_cache_valueWrapper = $_cache_cacheVariable.get($_cache_cacheKey);
-        VariableExpression cacheValueWrapper = varX(CACHE_VALUE_WRAPPER_LOCAL_VARIABLE_NAME, make(Cache.ValueWrapper))
+        VariableExpression cacheValueWrapper = varX(localName(methodNode, CACHE_VALUE_WRAPPER_LOCAL_VARIABLE_NAME), make(Cache.ValueWrapper))
         cacheBlock.addStatement(
             declS(cacheValueWrapper, callD(cacheDeclaration, 'get', cacheKeyDeclaration))
         )
@@ -107,7 +107,7 @@ class CacheableTransformation extends AbstractCacheTransformation {
         //    $_cache_cacheVariable.put($_cache_cacheKey, $_cache_originalMethodReturnValue);
         //    return $_cache_originalMethodReturnValue;
         // }
-        VariableExpression originalValueExpr = varX(CACHE_ORIGINAL_METHOD_RETURN_VALUE_LOCAL_VARIABLE_NAME)
+        VariableExpression originalValueExpr = varX(localName(methodNode, CACHE_ORIGINAL_METHOD_RETURN_VALUE_LOCAL_VARIABLE_NAME))
         cacheBlock.addStatement(
             ifElseS(notNullX(cacheValueWrapper),
                 returnS(callD(cacheValueWrapper, 'get')),

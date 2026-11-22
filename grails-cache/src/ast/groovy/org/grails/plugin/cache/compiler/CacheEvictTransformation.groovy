@@ -56,13 +56,13 @@ class CacheEvictTransformation extends AbstractCacheTransformation {
     @Override
     protected Expression buildDelegatingMethodCall(SourceUnit sourceUnit, AnnotationNode annotationNode, ClassNode classNode, MethodNode methodNode, MethodCallExpression originalMethodCallExpr, BlockStatement newMethodBody) {
 
-        VariableExpression cacheManagerVariableExpression = cacheManagerVariable()
+        VariableExpression cacheManagerVariableExpression = cacheManagerVariable(methodNode)
         handleCacheCondition(sourceUnit, annotationNode,  methodNode, originalMethodCallExpr, newMethodBody)
 
         BlockStatement cachingBlock = block()
 
         // Cache $_cache_cacheVariable = this.grailsCacheManager.getCache("...");
-        VariableExpression cacheDeclaration = declareCache(annotationNode, cacheManagerVariableExpression, cachingBlock)
+        VariableExpression cacheDeclaration = declareCache(annotationNode, methodNode, cacheManagerVariableExpression, cachingBlock)
 
         // if($_cache_cacheVariable != null) { ... } else { report the missing cache }
         BlockStatement cacheBlock = whereCacheExists(annotationNode, classNode, cacheManagerVariableExpression, cacheDeclaration, cachingBlock)

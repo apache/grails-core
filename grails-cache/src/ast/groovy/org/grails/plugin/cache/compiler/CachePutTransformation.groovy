@@ -57,11 +57,11 @@ class CachePutTransformation extends AbstractCacheTransformation {
 
     @Override
     protected Expression buildDelegatingMethodCall(SourceUnit sourceUnit, AnnotationNode annotationNode, ClassNode classNode, MethodNode methodNode, MethodCallExpression originalMethodCallExpr, BlockStatement newMethodBody) {
-        VariableExpression cacheManagerVariableExpression = cacheManagerVariable()
+        VariableExpression cacheManagerVariableExpression = cacheManagerVariable(methodNode)
         BlockStatement cachingBlock = block()
 
         // Cache $_cache_cacheVariable = this.grailsCacheManager.getCache("...");
-        VariableExpression cacheDeclaration = declareCache(annotationNode, cacheManagerVariableExpression, cachingBlock)
+        VariableExpression cacheDeclaration = declareCache(annotationNode, methodNode, cacheManagerVariableExpression, cachingBlock)
 
         // if($_cache_cacheVariable != null) { ... } else { report the missing cache }
         BlockStatement cacheBlock = whereCacheExists(annotationNode, classNode, cacheManagerVariableExpression, cacheDeclaration, cachingBlock)
@@ -72,7 +72,7 @@ class CachePutTransformation extends AbstractCacheTransformation {
         // def $_cache_cacheKey = customCacheKeyGenerator.generate(className, methodName, hashCode, $_method_parameter_map)
         VariableExpression cacheKeyDeclaration = declareCacheKey(sourceUnit, annotationNode, classNode, methodNode , cacheBlock)
 
-        VariableExpression originalValueExpr = varX(CACHE_ORIGINAL_METHOD_RETURN_VALUE_LOCAL_VARIABLE_NAME)
+        VariableExpression originalValueExpr = varX(localName(methodNode, CACHE_ORIGINAL_METHOD_RETURN_VALUE_LOCAL_VARIABLE_NAME))
         cacheBlock.addStatement(
             block(
                 declS(originalValueExpr, originalMethodCallExpr),
