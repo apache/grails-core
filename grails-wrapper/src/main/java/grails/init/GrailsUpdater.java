@@ -225,7 +225,14 @@ public class GrailsUpdater {
      */
     private void requireWritableHome() {
         File directory = grailsWrapperHome.wrapperDirectory;
-        if ((!directory.isDirectory() && !directory.mkdirs()) || !Files.isWritable(directory.toPath())) {
+        try {
+            // createDirectories and not mkdirs: of two wrappers that start at once, mkdirs fails in the one
+            // that finds the directory made by the other between its two steps
+            Files.createDirectories(directory.toPath());
+        } catch (IOException e) {
+            throw unwritableHome(directory, null);
+        }
+        if (!Files.isWritable(directory.toPath())) {
             throw unwritableHome(directory, null);
         }
     }

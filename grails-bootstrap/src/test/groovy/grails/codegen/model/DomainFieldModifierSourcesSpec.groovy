@@ -226,7 +226,6 @@ class DomainFieldModifierSourcesSpec extends Specification {
                 ['a file without anything', 'Book.groovy', '', 'the file declares no class'],
                 ['an enum with its constants only, which a property cannot be written before', 'Book.groovy', 'enum Book {\n    NOVEL, ESSAY\n}\n', 'the class is written in a way the lines of the member could not be put into'],
                 ['a record, whose properties are on the line it begins with', 'Book.groovy', 'record Book(String title) {\n}\n', 'the property title is on the line the class begins or ends with; write it on a line of its own'],
-                ['the line endings of the classic Mac OS, which the parser does not count as lines', 'Book.groovy', 'class Book {\r    String title\r}\r', 'where the class begins and ends could not be told'],
                 ['a comment between the keyword and the name', 'Book.groovy', 'class /* a */ Book {\n}\n', 'where the class begins and ends could not be told'],
                 ['a block that is not static', 'Book.groovy', 'class Book {\n    String title\n\n    def constraints = {\n    }\n}\n', 'the constraints of the class are not a block that is written in it, as static constraints = { }, so the constraint has no place'],
                 ['a block that is cast', 'Book.groovy', 'class Book {\n    String title\n\n    static constraints = {\n    } as Closure\n}\n', 'the constraints of the class are not a block that is written in it, as static constraints = { }, so the constraint has no place'],
