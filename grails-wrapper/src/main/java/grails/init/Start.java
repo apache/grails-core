@@ -22,6 +22,10 @@ public class Start {
         try {
             GrailsWrapper wrapper = new GrailsWrapper();
             wrapper.execute(args);
+        } catch (GrailsWrapperException e) {
+            // the message says what is wrong and what to do about it
+            System.out.println("Unable to execute Grails Wrapper: " + e.getMessage());
+            System.exit(1);
         } catch (Exception e) {
             System.out.println("Unable to execute Grails Wrapper: " + e.getMessage());
             e.printStackTrace();

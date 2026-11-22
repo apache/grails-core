@@ -64,6 +64,28 @@ public final class StartClass {
     }
 
     /**
+     * Says why a file cannot be started as a {@code grails-cli} jar: it is not there, it does not open as a jar
+     * (which a file that was cut off does not, since the directory of a jar is at its end), or it does not have
+     * the class it would be started with.
+     *
+     * @param cliJar a {@code grails-cli} jar
+     * @return what is wrong with the file, or null when it can be started
+     */
+    public static String defect(File cliJar) {
+        if (!cliJar.isFile()) {
+            return "it is not a file";
+        }
+        try (JarFile jar = new JarFile(cliJar)) {
+            String declared = declaredMainClass(jar.getManifest());
+            String name = declared != null && isBinaryName(declared) && jar.getEntry(declared.replace('.', '/') + ".class") != null ? declared : DEFAULT;
+            return jar.getEntry(name.replace('.', '/') + ".class") != null ? null : "it has no start class [" + name + "]";
+        } catch (IOException | RuntimeException e) {
+            // the text of the JDK, and never content of the file
+            return "it does not open as a jar: " + e.getClass().getSimpleName();
+        }
+    }
+
+    /**
      * Loads the start class of a {@code grails-cli} jar from a class loader of that jar.
      *
      * @param cliJar a {@code grails-cli} jar

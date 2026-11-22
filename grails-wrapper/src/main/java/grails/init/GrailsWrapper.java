@@ -51,11 +51,17 @@ public class GrailsWrapper {
 
         boolean updated = false;
         String[] adjustedArgs = args;
-        if (forceUpdate || updater.needsUpdating()) {
+        // A file that is installed and is no jar that can be started is what an interrupted download left with a
+        // wrapper that did not look into what it downloaded. It is downloaded again, once.
+        String installedDefect = updater.getInstalledDefect();
+        if (installedDefect != null) {
+            System.out.println("The installed Grails command line at [" + updater.getExecutedJarFile().getAbsolutePath() + "] cannot be started (" + installedDefect + "). Downloading it again.");
+        }
+        if (installedDefect != null || forceUpdate || updater.needsUpdating()) {
             String allowTypesString = allowedTypes.stream().map(GrailsReleaseType::name).collect(Collectors.joining(","));
             System.out.printf("Updating Grails wrapper, allowed versions to update to are [%s]...%n", allowTypesString);
 
-            updated = updater.update();
+            updated = installedDefect != null ? updater.repair() : updater.update();
 
             // The command line of Grails 9 and later has the command update-wrapper, which replaces the wrapper
             // that is committed in the project by the one of its version: it is given the argument. An earlier
@@ -67,6 +73,13 @@ public class GrailsWrapper {
 
         if (updated) {
             System.out.println("Updated wrapper to version: " + updater.getSelectedVersion().toString());
+        }
+
+        // every download is verified before it is installed, so this is a file no download of this run replaced
+        String defect = updater.getInstalledDefect();
+        if (defect != null) {
+            throw new GrailsWrapperException("The Grails command line at [" + updater.getExecutedJarFile().getAbsolutePath() + "] cannot be started (" + defect + ")" +
+                    (installedDefect != null ? ", and downloading it again did not replace it" : "") + ". Delete the file and run the command again.");
         }
 
         // the downloaded jar names its start class, so a wrapper committed in an application starts

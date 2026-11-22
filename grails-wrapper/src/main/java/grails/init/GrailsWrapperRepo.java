@@ -30,6 +30,7 @@ import java.util.regex.Pattern;
 public class GrailsWrapperRepo {
 
     private static final Pattern URL_SCHEME_PREFIX = Pattern.compile("[A-Za-z][A-Za-z0-9+.-]*://.*");
+    private static final Pattern URL_CREDENTIALS = Pattern.compile("([A-Za-z][A-Za-z0-9+.-]*://)[^/?#@\\s]*@");
 
     private static final String LOCAL_METADATA_NAME = "maven-metadata-local.xml";
     private static final String DEPLOYED_METADATA_NAME = "maven-metadata.xml";
@@ -53,6 +54,24 @@ public class GrailsWrapperRepo {
      */
     String getUrl() {
         return join(baseUrl, repoPath);
+    }
+
+    /**
+     * @return the url of the repository as a message names it, without the user and password it may carry
+     */
+    String getDisplayUrl() {
+        return withoutCredentials(getUrl());
+    }
+
+    /**
+     * A URL can carry a user and a password ({@code https://user:password@host/}), and what the wrapper prints
+     * ends in the logs of build servers.
+     *
+     * @param url a URL or a path, or a text that has URLs
+     * @return the same without the user and password of each URL
+     */
+    static String withoutCredentials(String url) {
+        return url == null ? null : URL_CREDENTIALS.matcher(url).replaceAll("$1***@");
     }
 
     /**
@@ -116,7 +135,7 @@ public class GrailsWrapperRepo {
         // Prefer the override repo first
         for (String overRepoUrl : getOverriddenMavenRepos()) {
             if (overRepoUrl != null) {
-                System.out.println("...Update Repository is overridden to prefer [" + overRepoUrl + "].");
+                System.out.println("...Update Repository is overridden to prefer [" + withoutCredentials(overRepoUrl) + "].");
                 GrailsWrapperRepo overriddenRepo = createGrailsWrapperRepo(overRepoUrl);
                 overriddenRepo.overridden = true;
                 repos.add(overriddenRepo);
@@ -173,10 +192,11 @@ public class GrailsWrapperRepo {
         try {
             URI uri = new URI(url);
             if (!"https".equalsIgnoreCase(uri.getScheme())) {
-                throw new IllegalArgumentException("Grails wrapper remote repository URLs must use HTTPS: " + url);
+                throw new IllegalArgumentException("Grails wrapper remote repository URLs must use HTTPS: " + withoutCredentials(url));
             }
         } catch (URISyntaxException e) {
-            throw new IllegalArgumentException("Invalid Grails wrapper remote repository URL: " + url, e);
+            // without the cause: its message is the URL as it was given
+            throw new IllegalArgumentException("Invalid Grails wrapper remote repository URL: " + withoutCredentials(url));
         }
     }
 

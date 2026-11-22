@@ -192,6 +192,10 @@ class GrailsUpdaterSpec extends Specification {
         then:
         connection.responseCode == HttpURLConnection.HTTP_OK
         connection.inputStream.text == 'ok'
+
+        and: 'a repository that stops answering does not hold the wrapper for ever'
+        connection.connectTimeout == 30000
+        connection.readTimeout == 60000
         server.verify()
     }
 
@@ -279,7 +283,7 @@ class GrailsUpdaterSpec extends Specification {
               </versioning>
             </metadata>
             """.stripIndent()
-        new File(versionDirectory, 'grails-cli-9.0.0-20261120.101112-3-all.jar').bytes = 'the command line'.bytes
+        new File(versionDirectory, 'grails-cli-9.0.0-20261120.101112-3-all.jar').bytes = CliJars.jar('the command line')
         File home = new File(dir, 'home')
         home.mkdirs()
         System.setProperty('grails.repo.url', repository.absolutePath)
@@ -292,7 +296,7 @@ class GrailsUpdaterSpec extends Specification {
 
         then: 'the jar of that repository is the one in the wrapper home, and no other repository was asked'
         updated
-        new File(home, 'wrapper/9.0.0-SNAPSHOT/grails-cli-9.0.0-SNAPSHOT-all.jar').text == 'the command line'
+        CliJars.marker(new File(home, 'wrapper/9.0.0-SNAPSHOT/grails-cli-9.0.0-SNAPSHOT-all.jar')) == 'the command line'
 
         cleanup:
         System.clearProperty('grails.repo.url')
@@ -318,7 +322,7 @@ class GrailsUpdaterSpec extends Specification {
               </versioning>
             </metadata>
             """.stripIndent()
-        new File(versionDirectory, 'grails-cli-9.0.0-SNAPSHOT-all.jar').bytes = 'the command line'.bytes
+        new File(versionDirectory, 'grails-cli-9.0.0-SNAPSHOT-all.jar').bytes = CliJars.jar('the command line')
         File home = new File(dir, 'home')
         home.mkdirs()
         System.setProperty('grails.repo.url', "${empty.absolutePath};${repository.absolutePath}")

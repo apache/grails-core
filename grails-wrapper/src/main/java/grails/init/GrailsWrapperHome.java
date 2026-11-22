@@ -76,30 +76,6 @@ public class GrailsWrapperHome {
         return new File(implDirectory, CLI_COMBINED_PROJECT_NAME + "-" + version.version + "-all.jar");
     }
 
-    void cleanupOtherVersions(GrailsVersion toKeep) {
-        File[] children = wrapperDirectory.listFiles();
-        if (children == null) {
-            return;
-        }
-
-        for (File child : children) {
-            if (!child.isDirectory()) {
-                continue;
-            }
-
-            try {
-                GrailsVersion version = new GrailsVersion(child.getName());
-                if (version.equals(toKeep)) {
-                    continue;
-                }
-            } catch (Exception ignored) {
-                // Ignore invalid versions
-            }
-
-            child.delete();
-        }
-    }
-
     /**
      * The versions are sorted as {@link GrailsVersion} orders them, the latest first.
      */
