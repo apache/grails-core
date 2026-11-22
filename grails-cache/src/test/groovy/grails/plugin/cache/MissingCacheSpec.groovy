@@ -18,6 +18,7 @@
  */
 package grails.plugin.cache
 
+import java.util.concurrent.CountDownLatch
 import java.util.function.Supplier
 
 import ch.qos.logback.classic.Level
@@ -170,6 +171,32 @@ class MissingCacheSpec extends Specification {
 
         where:
         mode << ['statically', 'dynamically']
+    }
+
+    void 'a missing cache is reported once when the first calls for it come at once'() {
+        given:
+        LogCapture log = new LogCapture(MissingCacheReporter, Level.WARN)
+        int managers = 300
+
+        when: 'eight threads report each new cache manager\'s missing cache at the same moment'
+        managers.times {
+            CacheManager cacheManager = new ConcurrentMapCacheManager()
+            CountDownLatch start = new CountDownLatch(1)
+            List<Thread> threads = (1..8).collect {
+                Thread.start {
+                    start.await()
+                    MissingCacheReporter.report(cacheManager, 'raced', MissingCacheSpec)
+                }
+            }
+            start.countDown()
+            threads*.join()
+        }
+
+        then: 'each was reported once'
+        log.events.size() == managers
+
+        cleanup:
+        log?.close()
     }
 
     /** Parameters named like each local the generated code declares, and like the properties it reads. */

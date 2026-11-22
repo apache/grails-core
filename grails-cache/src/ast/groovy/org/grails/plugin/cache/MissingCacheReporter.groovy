@@ -63,7 +63,9 @@ final class MissingCacheReporter {
         Set<String> reported = REPORTED.get(new CacheManagerKey(cacheManager, null))
         if (reported == null) {
             Set<String> created = ConcurrentHashMap.<String> newKeySet()
-            reported = REPORTED.putIfAbsent(new CacheManagerKey(cacheManager, COLLECTED), created) ?: created
+            // the set another call published first, empty as it may still be, is the one to add to
+            Set<String> published = REPORTED.putIfAbsent(new CacheManagerKey(cacheManager, COLLECTED), created)
+            reported = published != null ? published : created
         }
         if (reported.add(cacheName)) {
             log.warn('{} does not cache with {}: its cache manager, {}, has no cache of that name, so the methods ' +
