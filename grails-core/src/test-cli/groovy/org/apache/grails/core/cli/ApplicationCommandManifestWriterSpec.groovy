@@ -104,6 +104,35 @@ class ApplicationCommandManifestWriterSpec extends Specification {
         described.options == [[name: 'force', description: '', flag: true, values: []]]
     }
 
+    void 'a direct declaration and an explicit container are read together, in the order they are declared: #type.simpleName'() {
+        given:
+        declareCommands(type)
+
+        when:
+        Map described = command(writeManifest(), name)
+
+        then:
+        described.arguments*.name == arguments
+        described.options*.name == options
+
+        where:
+        type                                || name                           | arguments           | options
+        DirectFirstManifestCommand          || 'direct-first-manifest'        | ['a', 'b', 'c']     | ['x', 'y', 'z']
+        ContainerFirstManifestCommand       || 'container-first-manifest'     | ['b', 'c', 'a']     | ['y', 'z', 'x']
+    }
+
+    void 'a command whose description cannot be read is listed with its name for a description, and the others as they are'() {
+        given: 'a command whose description needs the application context, which the writer does not start'
+        declareCommands(ContextDescriptionManifestCommand, DescribedManifestCommand)
+
+        when:
+        Map manifest = writeManifest()
+
+        then:
+        command(manifest, 'context-description-manifest').description == 'context-description-manifest'
+        command(manifest, 'described-manifest').description == 'Sets up the users of the application'
+    }
+
     void 'the directory of the manifest is created when it does not exist'() {
         given:
         declareCommands(UndescribedManifestCommand)
@@ -173,6 +202,43 @@ class DescribedManifestCommand implements ApplicationCommand {
 @CommandParameter(name = 'domain-class', values = ['Book', 'Author'])
 @CommandOption(name = 'force', flag = true)
 class SingleDeclarationManifestCommand implements ApplicationCommand {
+
+    @Override
+    boolean handle(ExecutionContext executionContext) {
+        true
+    }
+}
+
+@CommandParameter(name = 'a')
+@CommandParameters([@CommandParameter(name = 'b'), @CommandParameter(name = 'c')])
+@CommandOption(name = 'x')
+@CommandOptions([@CommandOption(name = 'y'), @CommandOption(name = 'z')])
+class DirectFirstManifestCommand implements ApplicationCommand {
+
+    @Override
+    boolean handle(ExecutionContext executionContext) {
+        true
+    }
+}
+
+@CommandParameters([@CommandParameter(name = 'b'), @CommandParameter(name = 'c')])
+@CommandParameter(name = 'a')
+@CommandOptions([@CommandOption(name = 'y'), @CommandOption(name = 'z')])
+@CommandOption(name = 'x')
+class ContainerFirstManifestCommand implements ApplicationCommand {
+
+    @Override
+    boolean handle(ExecutionContext executionContext) {
+        true
+    }
+}
+
+class ContextDescriptionManifestCommand implements ApplicationCommand {
+
+    @Override
+    String getDescription() {
+        throw new IllegalStateException('The description needs the application context')
+    }
 
     @Override
     boolean handle(ExecutionContext executionContext) {

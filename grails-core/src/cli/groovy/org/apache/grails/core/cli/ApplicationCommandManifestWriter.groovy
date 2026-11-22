@@ -18,6 +18,8 @@
  */
 package org.apache.grails.core.cli
 
+import java.lang.annotation.Annotation
+
 import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
 
@@ -71,6 +73,17 @@ final class ApplicationCommandManifestWriter {
 
     private static Map<String, Object> describe(ApplicationCommand command) {
         Class<?> type = command.class
+        // the registry has read the name already
+        String name = command.name
+        // a description may need the application context, which runCommand starts and this does not
+        String description
+        try {
+            description = command.description
+        }
+        catch (RuntimeException e) {
+            System.err.println("The command ${name} is listed with its name for a description, as its description could not be read: ${e.message}")
+            description = name
+        }
         List<Map<String, Object>> arguments = declaredArguments(type).collect { CommandParameter argument ->
             [name: argument.name(), description: argument.description(), required: argument.required(),
              values: argument.values().toList()] as Map<String, Object>
@@ -80,20 +93,37 @@ final class ApplicationCommandManifestWriter {
              values: option.values().toList()] as Map<String, Object>
         }
         // the class lets a build tool find the command's source, whose changes may change this description
-        [name: command.name, description: command.description ?: '', className: type.name, arguments: arguments,
+        [name: name, description: description ?: '', className: type.name, arguments: arguments,
          options: options] as Map<String, Object>
     }
 
-    // Class#getAnnotationsByType would read both forms at once, but the static compiler links it with an
-    // Object[] return type, which the JDK method does not have, so the call fails with NoSuchMethodError.
-    // getAnnotation returns a single annotation and links correctly (GROOVY-12793).
+    // The annotations are read in the order they are declared, a direct one and those of an explicit
+    // container alike, which a class may have together. Class#getAnnotationsByType would read both forms,
+    // but the static compiler links it with an Object[] return type, which the JDK method does not have,
+    // so the call fails with NoSuchMethodError (GROOVY-12793).
     private static List<CommandParameter> declaredArguments(Class<?> type) {
-        CommandParameter single = type.getAnnotation(CommandParameter)
-        single ? [single] : (type.getAnnotation(CommandParameters)?.value()?.toList() ?: [])
+        List<CommandParameter> declared = []
+        for (Annotation annotation : type.annotations) {
+            if (annotation instanceof CommandParameter) {
+                declared << (CommandParameter) annotation
+            }
+            else if (annotation instanceof CommandParameters) {
+                declared.addAll(((CommandParameters) annotation).value().toList())
+            }
+        }
+        declared
     }
 
     private static List<CommandOption> declaredOptions(Class<?> type) {
-        CommandOption single = type.getAnnotation(CommandOption)
-        single ? [single] : (type.getAnnotation(CommandOptions)?.value()?.toList() ?: [])
+        List<CommandOption> declared = []
+        for (Annotation annotation : type.annotations) {
+            if (annotation instanceof CommandOption) {
+                declared << (CommandOption) annotation
+            }
+            else if (annotation instanceof CommandOptions) {
+                declared.addAll(((CommandOptions) annotation).value().toList())
+            }
+        }
+        declared
     }
 }
