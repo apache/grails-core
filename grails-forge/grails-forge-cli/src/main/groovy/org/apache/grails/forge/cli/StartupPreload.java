@@ -80,6 +80,9 @@ public final class StartupPreload {
             "create-rest-api-plugin", "create-restapi");
 
     private static final String GROOVY_RUNTIME = "groovy.lang.GroovySystem";
+    // Reported to Groovy as GROOVY-9646 (https://issues.apache.org/jira/browse/GROOVY-9646): the static
+    // initializer of this class starts a scan of the JDK image and of the Groovy jar that formatting does
+    // not use. When a Groovy that Grails requires no longer does that, the thread that initializes it can go.
     private static final String FORMATTING = "org.codehaus.groovy.runtime.FormatHelper";
 
     private StartupPreload() {
