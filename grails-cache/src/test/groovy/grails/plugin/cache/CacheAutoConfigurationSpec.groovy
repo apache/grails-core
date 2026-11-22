@@ -268,6 +268,29 @@ class CacheAutoConfigurationSpec extends Specification {
         service.stoppedWhileCacheManagerRan
     }
 
+    void 'a cache manager the application names grailsCacheManager by an alias is used beside another cache manager'() {
+        given: 'a cache provider\'s manager under a name of its own, aliased grailsCacheManager, and Spring Security\'s beside it'
+        AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext()
+        GrailsCacheManager provider = Mock(GrailsCacheManager)
+        context.registerBean('providerCacheManager', GrailsCacheManager, { -> provider } as Supplier<GrailsCacheManager>)
+        context.registerAlias('providerCacheManager', 'grailsCacheManager')
+        context.registerBean('cacheManager', CacheManager, { -> new ConcurrentMapCacheManager() } as Supplier<CacheManager>)
+        context.registerBean(CacheAware)
+        context.register(CacheAutoConfiguration)
+
+        when:
+        context.refresh()
+
+        then: 'the plugin\'s default backs off, and where Spring cannot choose, the cache-aware beans get the aliased one'
+        context.getBeanNamesForType(GrailsConcurrentMapCacheManager).length == 0
+        context.getBean(CacheAware).grailsCacheManager.is(provider)
+        context.getBean(GrailsCacheAdminService).grailsCacheManager.is(provider)
+        'cacheAutoConfigurationSpec.CacheAware' in context.beanFactory.getDependentBeans('providerCacheManager')
+
+        cleanup:
+        context.close()
+    }
+
     void 'another cache manager in the context, such as the one Spring Security caches users with, is not taken for the Grails one'() {
         given: 'Spring Security defines cacheManager when cacheUsers is set'
         CacheManager other = new ConcurrentMapCacheManager()
