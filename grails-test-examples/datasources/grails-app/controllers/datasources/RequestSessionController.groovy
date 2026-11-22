@@ -18,13 +18,19 @@
  */
 package datasources
 
+import static grails.async.web.WebPromises.task
+
 import java.util.concurrent.TimeUnit
 
+import ds1.Shelf
+import ds1.Volume
+import ds2.Book as SecondaryBook
 import grails.async.Promises
 
 /**
  * Actions that show which session of the secondary datasource a request reads through: a page that includes
- * another action, and an action that returns a promise, so that the request goes asynchronous.
+ * another action, and an action that returns a promise, so that the request goes asynchronous. The lazy actions
+ * return a task that loads an association of an entity the action loaded, once the request has gone asynchronous.
  */
 class RequestSessionController {
 
@@ -45,6 +51,30 @@ class RequestSessionController {
         Promises.task {
             RequestSessions.release.await(30, TimeUnit.SECONDS)
             'done'
+        }
+    }
+
+    def lazyVolumes(String name) {
+        final shelf = Shelf.findByName(name)
+        task {
+            sleep(500)
+            render(text: shelf.volumes*.title.sort().join(','))
+        }
+    }
+
+    def lazyShelf(String title) {
+        final volume = Volume.findByTitle(title)
+        task {
+            sleep(500)
+            render(text: volume.shelf.name)
+        }
+    }
+
+    def lazyChapters(String title) {
+        final book = SecondaryBook.findByTitle(title)
+        task {
+            sleep(500)
+            render(text: book.chapters*.title.sort().join(','))
         }
     }
 }
