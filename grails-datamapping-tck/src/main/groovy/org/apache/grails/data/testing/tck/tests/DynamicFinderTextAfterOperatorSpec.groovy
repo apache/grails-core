@@ -135,5 +135,6 @@ class DynamicFinderTextAfterOperatorSpec extends GrailsDataTckSpec {
 
 @Entity
 class OperatorNamedItem {
+
     String nameOrTitle
 }
