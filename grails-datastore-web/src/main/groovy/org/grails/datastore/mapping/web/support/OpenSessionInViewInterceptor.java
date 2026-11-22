@@ -26,8 +26,8 @@ import org.apache.commons.logging.LogFactory;
 
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.ui.ModelMap;
+import org.springframework.web.context.request.AsyncWebRequestInterceptor;
 import org.springframework.web.context.request.WebRequest;
-import org.springframework.web.context.request.WebRequestInterceptor;
 
 import org.grails.datastore.mapping.core.Datastore;
 import org.grails.datastore.mapping.core.DatastoreUtils;
@@ -36,11 +36,18 @@ import org.grails.datastore.mapping.transactions.SessionHolder;
 
 /**
  * A {@link org.springframework.web.context.request.WebRequestInterceptor} instance that
- * handles opening a Datastore session within the scope of a request
+ * handles opening a Datastore session within the scope of a request.
+ *
+ * <p>A request that finds a session already bound, such as an include within a request that opened one, uses that
+ * session and leaves it to the one that opened it. When a request goes asynchronous, the session it opened is
+ * flushed and closed as when the request completes, so that it does not stay bound to the thread for the next
+ * request that thread serves.</p>
  */
-public class OpenSessionInViewInterceptor implements WebRequestInterceptor {
+public class OpenSessionInViewInterceptor implements AsyncWebRequestInterceptor {
 
     private static final Log LOG = LogFactory.getLog(OpenSessionInViewInterceptor.class);
+
+    private static final String PARTICIPATE_SUFFIX = ".PARTICIPATE";
 
     Datastore datastore;
     FlushModeType flushMode = FlushModeType.AUTO;
@@ -55,6 +62,8 @@ public class OpenSessionInViewInterceptor implements WebRequestInterceptor {
 
     public void preHandle(WebRequest webRequest) throws Exception {
         if (hasSessionBound()) {
+            // a session is already open for this request: use it, and leave it to the one that opened it
+            incrementParticipateCount(webRequest);
             return;
         }
 
@@ -63,7 +72,12 @@ public class OpenSessionInViewInterceptor implements WebRequestInterceptor {
 
         Session session = DatastoreUtils.getSession(datastore, true);
         session.setFlushMode(flushMode);
-        if (!hasSessionBound()) {
+        if (hasSessionBound()) {
+            // transaction synchronization is active, so getSession bound the session and closes it when the
+            // transaction completes: leave it to the transaction
+            incrementParticipateCount(webRequest);
+        }
+        else {
             DatastoreUtils.bindSession(session);
         }
     }
@@ -77,13 +91,7 @@ public class OpenSessionInViewInterceptor implements WebRequestInterceptor {
         SessionHolder sessionHolder =
                 (SessionHolder) TransactionSynchronizationManager.getResource(getDatastore());
         LOG.debug("Flushing single Datastore Session in OpenSessionInViewInterceptor");
-        final Session session = sessionHolder.getSession();
-
-        if (session.getFlushMode() == FlushModeType.AUTO) {
-            if (session.hasTransaction()) {
-                session.flush();
-            }
-        }
+        flushIfNecessary(sessionHolder.getSession());
     }
 
     protected boolean hasSessionBound() {
@@ -91,7 +99,7 @@ public class OpenSessionInViewInterceptor implements WebRequestInterceptor {
     }
 
     public void afterCompletion(WebRequest webRequest, Exception e) throws Exception {
-        if (!hasSessionBound()) {
+        if (decrementParticipateCount(webRequest) || !hasSessionBound()) {
             return;
         }
 
@@ -100,5 +108,63 @@ public class OpenSessionInViewInterceptor implements WebRequestInterceptor {
                 (SessionHolder) TransactionSynchronizationManager.unbindResource(getDatastore());
         LOG.debug("Closing single Datastore Session in OpenSessionInViewInterceptor");
         DatastoreUtils.closeSession(sessionHolder.getSession());
+    }
+
+    /**
+     * Called instead of {@link #postHandle} and {@link #afterCompletion} on the thread that started asynchronous
+     * handling. Flushes the session this interceptor opened, as {@link #postHandle} would, and closes it, so that the
+     * thread goes back to its pool without a session bound.
+     */
+    public void afterConcurrentHandlingStarted(WebRequest webRequest) {
+        if (decrementParticipateCount(webRequest) || !hasSessionBound()) {
+            return;
+        }
+
+        SessionHolder sessionHolder =
+                (SessionHolder) TransactionSynchronizationManager.getResource(getDatastore());
+        Session session = sessionHolder.getSession();
+        try {
+            LOG.debug("Flushing single Datastore Session in OpenSessionInViewInterceptor as asynchronous handling starts");
+            flushIfNecessary(session);
+        }
+        finally {
+            TransactionSynchronizationManager.unbindResource(getDatastore());
+            LOG.debug("Closing single Datastore Session in OpenSessionInViewInterceptor as asynchronous handling starts");
+            DatastoreUtils.closeSession(session);
+        }
+    }
+
+    private void flushIfNecessary(Session session) {
+        if (session.getFlushMode() == FlushModeType.AUTO && session.hasTransaction()) {
+            session.flush();
+        }
+    }
+
+    private void incrementParticipateCount(WebRequest webRequest) {
+        String participateAttributeName = getParticipateAttributeName();
+        Integer count = (Integer) webRequest.getAttribute(participateAttributeName, WebRequest.SCOPE_REQUEST);
+        webRequest.setAttribute(participateAttributeName, count != null ? count + 1 : 1, WebRequest.SCOPE_REQUEST);
+    }
+
+    /**
+     * @return {@code true} when this request used a session that was already open, which is then left as it is
+     */
+    private boolean decrementParticipateCount(WebRequest webRequest) {
+        String participateAttributeName = getParticipateAttributeName();
+        Integer count = (Integer) webRequest.getAttribute(participateAttributeName, WebRequest.SCOPE_REQUEST);
+        if (count == null) {
+            return false;
+        }
+        if (count > 1) {
+            webRequest.setAttribute(participateAttributeName, count - 1, WebRequest.SCOPE_REQUEST);
+        }
+        else {
+            webRequest.removeAttribute(participateAttributeName, WebRequest.SCOPE_REQUEST);
+        }
+        return true;
+    }
+
+    private String getParticipateAttributeName() {
+        return OpenSessionInViewInterceptor.class.getName() + '.' + System.identityHashCode(getDatastore()) + PARTICIPATE_SUFFIX;
     }
 }
