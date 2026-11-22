@@ -23,10 +23,9 @@ RUN apt-get update && apt-get install -y ca-certificates curl unzip coreutils li
 
 # The JDK is the archive actions/setup-java installs for the release (see "Setup JDK" in
 # .github/workflows/release.yml), so the release is verified with the JDK build it was built with.
-# The Liberica JDK images are not: the 21.0.12 image is the later 21.0.12.1 build, and the images
-# leave out the JDK sources (lib/src.zip).
-# Keep the version synced with .sdkmanrc and .github/workflows/release.yml ($JAVA_VERSION), and
-# update both checksums with it.
+# Liberica's JDK images are not used: an image tag can be a later build of the same version, and the
+# images leave out the JDK sources (lib/src.zip).
+# The version and both checksums change with the java version in .sdkmanrc; its comment says how.
 ARG LIBERICA_VERSION=21.0.12+10
 ARG LIBERICA_SHA256_AMD64=23b48e59f47099597f84378c0a765c83588dcad7f6987eb2fef0d08e7ee19f96
 ARG LIBERICA_SHA256_AARCH64=4d3c0090153dc74cadf40eee57ce6f8efdbe10b28e1420103c6cbe86982f039d
