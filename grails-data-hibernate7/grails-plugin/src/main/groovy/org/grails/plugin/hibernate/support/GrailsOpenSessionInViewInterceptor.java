@@ -383,9 +383,11 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
      * {@code hibernate.allow_update_outside_transaction}.
      *
      * <p>The parent class only unbinds the default session, and leaves closing it to the interceptors it registers for
-     * a {@code Callable} or {@code DeferredResult}. A promise or {@code startAsync()} in a Grails controller starts
-     * asynchronous handling without them, so the default session this interceptor opened is unbound here too, and
-     * closed when the asynchronous request completes.
+     * a {@code Callable} or {@code DeferredResult}, which close it in the dispatch that the result starts. A promise or
+     * {@code startAsync()} in a Grails controller starts asynchronous handling without them, so the default session
+     * this interceptor opened is unbound here too, and closed when the asynchronous request completes. So is the
+     * default session the parent class unbinds, unless it is closed by then: a request can complete without that
+     * dispatch.
      *
      * <p>When a flush fails, that failure is thrown once every session is taken off the thread, and a failure to
      * release one is attached to it. Without an asynchronous request to wait for, the sessions are closed here, and a
