@@ -52,12 +52,28 @@ final class GradleRunner extends GradleBuild {
     private static final int OUTPUT_SECONDS = 10
     private static final int FORCED_SECONDS = 5
     // $1 is the file the output is added to, the rest the command. A signal that is ignored stays ignored
-    // in what is started; with job control the command is in a process group of its own, and a shell
-    // that has none without a terminal starts it with the interrupt ignored instead.
-    private static final String IN_THE_BACKGROUND = 'log=$1; shift; trap "" HUP; set -m 2>/dev/null; "$@" </dev/null >>"$log" 2>&1 & echo $!'
+    // in what is started. The command is to be in no process group of the terminal the CLI runs in, so
+    // that the interrupt of that terminal is not sent to it, and there are three ways to that, in this order:
+    // - setsid, where the system has the program, which Linux does and macOS does not: the command is in a
+    //   session of its own, and so in a process group of its own, whatever the shell is. A shell without
+    //   job control starts what it starts in the background as a process that leads no group, which is
+    //   what setsid needs to become the command without starting another process, so that $! is the command.
+    // - the job control of the shell: with it the command is in a process group of its own. bash, the sh of
+    //   macOS, grants it without a terminal. dash, the sh of Debian and Ubuntu, grants it only with a
+    //   terminal it can open, and says so; that is why it is not the first choice.
+    // - neither: a shell without job control starts what it starts in the background with the interrupt
+    //   and the quit of the terminal ignored, which the command inherits. It is then in the process group
+    //   of the CLI and is sent the interrupt of its terminal, and ignores it.
+    private static final String IN_THE_BACKGROUND = 'log=$1; shift; trap "" HUP; ' +
+            'if command -v setsid >/dev/null 2>&1; then setsid "$@" </dev/null >>"$log" 2>&1 & ' +
+            'else set -m 2>/dev/null; "$@" </dev/null >>"$log" 2>&1 & fi; echo $!'
+    private static final String SHELL = '/bin/sh'
     private static final int SIGNAL_MILLIS = 1000
     private static final int SIGNAL_STEP_MILLIS = 50
     private static final int WINDOWS_CONTROL_C = -1073741510
+
+    private static volatile String shell = SHELL
+    private static volatile String shellPath
 
     private final Consumer<String> failure
     private final boolean windows
@@ -78,11 +94,25 @@ final class GradleRunner extends GradleBuild {
     }
 
     /**
+     * Replaces the shell that starts a build which is left running, and the {@code PATH} it looks for
+     * programs in, for a specification: which shell {@code /bin/sh} is, and whether there is a
+     * {@code setsid}, is the system's to say.
+     *
+     * @param program the shell, {@code null} for {@code /bin/sh}
+     * @param path the {@code PATH} of the shell and of what it starts, {@code null} for the one of the CLI
+     */
+    static void setShell(String program, String path) {
+        shell = program == null ? SHELL : program
+        shellPath = path
+    }
+
+    /**
      * Starts Gradle in the directory of the project and does not wait for it: the build goes on when
      * the command has ended, and when the CLI has. It reads nothing, and what it writes is added to a
-     * file. Where the system has process groups it is in one of its own, so that the interrupt of
-     * the terminal the CLI runs in is not an interrupt of the build, and it is not ended with the
-     * terminal.
+     * file. Where the system has process groups, the interrupt of the terminal the CLI runs in is not
+     * an interrupt of the build, and the build is not ended with the terminal: it is in a session or a
+     * process group of its own where the system has {@code setsid} or the shell grants job control,
+     * and ignores the interrupt where neither is so.
      *
      * @param project the project
      * @param arguments the arguments of Gradle, each given to it as the one argument it is
@@ -103,9 +133,12 @@ final class GradleRunner extends GradleBuild {
                     .redirectErrorStream(true)
                     .redirectOutput(ProcessBuilder.Redirect.appendTo(log.toFile()))
         } else {
-            builder = new ProcessBuilder(['/bin/sh', '-c', IN_THE_BACKGROUND, 'grails', log.toString()] + command)
+            builder = new ProcessBuilder([shell, '-c', IN_THE_BACKGROUND, 'grails', log.toString()] + command)
                     .redirectInput(ProcessBuilder.Redirect.from(new File('/dev/null')))
                     .redirectError(ProcessBuilder.Redirect.appendTo(log.toFile()))
+            if (shellPath != null) {
+                builder.environment().put('PATH', shellPath)
+            }
         }
         builder.directory(project.directory.toFile())
         try {

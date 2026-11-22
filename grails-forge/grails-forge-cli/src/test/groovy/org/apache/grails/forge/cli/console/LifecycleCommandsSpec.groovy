@@ -434,8 +434,8 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
         new File(dir, '.grails/run/.gitignore').text == '*\n'
         new File(dir, '.grails/run/app.log').text.contains("listening on ${port}")
 
-        and: 'it is in a process group of its own, so the interrupt of the terminal of the CLI is not its'
-        processGroup(record.pid as long) != processGroup(ProcessHandle.current().pid())
+        and: 'the interrupt of the terminal of the CLI is not its: it is in a process group of its own, or ignores it where the shell could not give it one'
+        isSparedTheInterrupt(record.pid as long)
 
         when: 'a second one is asked for, either way'
         out.reset()
@@ -1795,6 +1795,18 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
 
     private String permissions(String path) {
         return PosixFilePermissions.toString(Files.getPosixFilePermissions(new File(dir, path).toPath()))
+    }
+
+    // What the system has decides which: setsid or the job control of the shell put the build in a process
+    // group of its own, which the terminal of the CLI sends nothing; a shell that has neither starts it with
+    // the interrupt ignored. DetachedBuildSpec holds each of the three to what it is.
+    private static boolean isSparedTheInterrupt(long pid) {
+        if (processGroup(pid) != processGroup(ProcessHandle.current().pid())) {
+            return true
+        }
+        new ProcessBuilder('kill', '-INT', pid as String).start().waitFor()
+        Thread.sleep(500)
+        return alive(pid)
     }
 
     private static String processGroup(long pid) {
