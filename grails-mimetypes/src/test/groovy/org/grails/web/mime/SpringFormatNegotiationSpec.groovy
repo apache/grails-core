@@ -354,16 +354,23 @@ class SpringFormatNegotiationSpec extends Specification {
         manager().resolveMediaTypes(new ServletWebRequest(request))*.toString() == ['application/problem+xml', 'application/atom+xml']
     }
 
-    void "a problem type only Spring MVC's media types map is the XML type a +xml type comes ahead of, as Grails reads it as XML"() {
+    void "a problem type only Spring MVC's media types map is one of the XML types, which a +xml type comes ahead of and which is not moved itself: #accept"() {
         given: 'problem mapped to application/problem+xml in Spring MVC only, as spring.mvc.contentnegotiation.media-types.problem maps it'
         start((Settings.MIME_NEGOTIATION_SPRING): true, (ParameterConfiguration.PROBLEM): true)
-        def request = request('Accept': 'application/problem+xml, application/atom+xml')
+        def request = request('Accept': accept)
         handledBy(request, urlMapping())
 
-        expect:
-        GrailsWebRequest.lookup().currentResponse.mimeTypes*.extension == ['atom', 'xml']
-        GrailsWebRequest.lookup().currentResponse.format == 'atom'
-        manager().resolveMediaTypes(new ServletWebRequest(request))*.toString() == ['application/atom+xml', 'application/problem+xml']
+        expect: 'the format and the type Spring MVC writes agree, as the Grails rules read the header'
+        GrailsWebRequest.lookup().currentResponse.format == format
+        manager().resolveMediaTypes(new ServletWebRequest(request))*.toString() == resolved
+
+        where:
+        accept                                                             || format | resolved
+        'application/problem+xml, application/atom+xml'                    || 'atom' | ['application/atom+xml', 'application/problem+xml']
+        'application/xml, application/atom+xml, application/problem+xml'   || 'atom' | ['application/atom+xml', 'application/xml', 'application/problem+xml']
+        'text/xml, application/atom+xml, application/problem+xml'          || 'atom' | ['application/atom+xml', 'text/xml', 'application/problem+xml']
+        'application/xml, application/problem+xml'                         || 'xml'  | ['application/xml', 'application/problem+xml']
+        'application/problem+xml, application/xml, application/atom+xml'   || 'atom' | ['application/atom+xml', 'application/problem+xml', 'application/xml']
     }
 
     void 'a wildcard is of the all format, which withFormat answers with the first block compatible with it: #result for #accept'() {
