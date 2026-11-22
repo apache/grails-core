@@ -344,20 +344,21 @@ class AwaitablePromiseFactorySpec extends Specification {
     void 'single and aggregate error callbacks receive the same original failure'() {
         given:
         def original = checked ? new IOException('outer') : new IllegalStateException('outer')
-        def promise = Promises.createPromise { throw original }
+        def promise = Promises.createPromise { Thread.sleep(50); throw original }
         Throwable single
         Throwable aggregate
 
-        when:
-        promise.onError { single = it }
+        when: 'the work fails once both callbacks are registered, and the single one is slow'
+        def recovered = promise.onError { Thread.sleep(100); single = it }
         def observed = Promises.onError([promise]) { aggregate = it }
 
         and:
         observed.get()
 
-        then:
+        then: 'the single callback runs in its own stage, which the aggregate does not wait for'
         def failure = thrown(ExecutionException)
         failure.cause.is(original)
+        recovered.get().is(original)
         single.is(original)
         aggregate.is(original)
 
