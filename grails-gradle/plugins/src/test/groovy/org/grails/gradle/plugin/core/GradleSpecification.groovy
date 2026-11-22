@@ -27,6 +27,7 @@ import java.nio.file.FileVisitResult
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.SimpleFileVisitor
+import java.nio.file.StandardOpenOption
 import java.nio.file.attribute.BasicFileAttributes
 
 /**
@@ -66,6 +67,17 @@ abstract class GradleSpecification extends Specification {
             org.gradle.configuration-cache.problems=fail
             org.gradle.vfs.watch=false
             '''.stripIndent())
+        // A coverage run names the JaCoCo agent and the file it writes (see the build file of this module): the
+        // builds run in daemons of their own, which the agent of the test JVM does not see, so the daemons
+        // are started with it. The heap is the one the test projects ask for in their own gradle.properties,
+        // which these arguments replace because the Gradle user home is read after the project.
+        String coverageAgent = System.getProperty('grails.testkit.coverage.agent')
+        if (coverageAgent) {
+            String destination = System.getProperty('grails.testkit.coverage.destfile')
+            Files.writeString(testKitDir.resolve('gradle.properties'),
+                    "org.gradle.jvmargs=-Xmx1g -javaagent:${coverageAgent}=destfile=${destination},append=true\n",
+                    StandardOpenOption.APPEND)
+        }
         gradleRunner = GradleRunner.create()
                 .withPluginClasspath()
                 .withTestKitDir(testKitDir.toFile())

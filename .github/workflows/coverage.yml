@@ -125,9 +125,56 @@ jobs:
           path: grails-gradle/build/reports/jacoco/aggregate/jacocoAggregateReport.xml
           if-no-files-found: warn
 
+  coverage-forge:
+    name: "Coverage - grails-forge (${{ matrix.os }})"
+    needs: [ policy ]
+    if: ${{ needs.policy.outputs.run-tests == 'true' }}
+    # Twice the slowest of the Forge builds of the CI workflow that finished over 2026-11-21 and 2026-11-22
+    # (83 min), rounded up to the half hour: this job runs the same specs, less those of test-core.
+    timeout-minutes: 180 # slowest run: none yet
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: "📥 Checkout repository"
+        uses: actions/checkout@v7.0.1
+      - name: "☕️ Setup JDK"
+        uses: actions/setup-java@v6.1.0
+        with:
+          distribution: liberica
+          java-version: 21
+      - name: "🗄️ Decide the Gradle cache mode"
+        id: gradle-cache-policy
+        uses: ./.github/actions/gradle-cache-policy
+      - name: "🐘 Setup Gradle"
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+        with:
+          # Decided by the step above; see .github/actions/gradle-cache-policy.
+          cache-read-only: ${{ steps.gradle-cache-policy.outputs.read-only }}
+          develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
+      - name: "🌡️ Run tests with coverage"
+        # Forge measures coverage only when this task is asked for, see grails-forge/gradle/test-config.gradle.
+        # The specs of test-core are left out: they build generated applications, which run in JVMs of their
+        # own that are not measured, and the generator they start is what the specs of grails-forge-core cover.
+        working-directory: grails-forge
+        run: >
+          ./gradlew jacocoAggregateReport
+          --continue
+          --stacktrace
+          -PskipCodeStyle
+          -x :test-core:test
+      - name: "📤 Upload coverage artifact"
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: coverage-forge-${{ matrix.os }}
+          path: grails-forge/build/reports/jacoco/aggregate/jacocoAggregateReport.xml
+          if-no-files-found: warn
+
   upload-coverage:
     name: "Upload Coverage to Codecov"
-    needs: [ policy, coverage-core, coverage-gradle ]
+    needs: [ policy, coverage-core, coverage-gradle, coverage-forge ]
     # Run even if some matrix legs fail so partial coverage is still uploaded, but not on a run that skipped the tests
     if: ${{ always() && needs.policy.outputs.run-tests == 'true' }}
     runs-on: ubuntu-24.04

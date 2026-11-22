@@ -76,3 +76,19 @@ tasks.withType(Test).configureEach { Test testTask ->
 
     useJUnitPlatform()
 }
+
+// Coverage is measured only when it is asked for. The JaCoCo plugin puts its agent into every test JVM and
+// the convention plugin writes three reports after every Test task, which an ordinary build of Forge has no
+// use for, so the plugin is applied only when a coverage task is requested by its full name (an abbreviation
+// such as `jAR` is not recognised), as gradle/dependency-analysis.settings.gradle does for its plugin.
+// `./gradlew jacocoAggregateReport` runs the tests of every module and writes
+// build/reports/jacoco/aggregate/jacocoAggregateReport.xml, the file the Coverage workflow uploads;
+// `./gradlew :grails-forge-core:test :grails-forge-core:jacocoTestReport` reports one module.
+// A JVM the specs start themselves (a generated build, the forked command line) carries no agent and is not counted.
+Set<String> coverageTasks = ['jacocoAggregateReport', 'jacocoTestReport'] as Set
+boolean coverageRequested = gradle.startParameter.taskNames.any { String requested ->
+    coverageTasks.contains(requested.substring(requested.lastIndexOf(':') + 1))
+}
+if (coverageRequested) {
+    pluginManager.apply('org.apache.grails.gradle.grails-jacoco')
+}
