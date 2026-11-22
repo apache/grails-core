@@ -515,17 +515,17 @@ class ProjectCommandsSpec extends Specification {
         manifestState = namesInputs ? 'with a manifest naming its directory' : 'with no manifest yet'
     }
 
-    void "a file of another project of the build, #path, that broke the build with no manifest yet, runs it again once fixed, #layout"() {
+    void "a file of another project of the build in #pluginDir, #path, that broke the build with no manifest yet, runs it again once fixed, #layout"() {
         given: 'a build with a plugin project next to the application, and no manifest yet'
         File project = dir
         if (appInSubproject) {
-            new File(dir, 'settings.gradle').text = "include 'app', 'plugins:audit'\n"
+            new File(dir, 'settings.gradle').text = "include 'app', 'audit'\nproject(':audit').projectDir = file('${pluginDir}')\n"
             project = moveProjectInto('app')
         }
-        File plugin = new File(dir, 'plugins/audit')
+        File plugin = new File(dir, pluginDir)
         plugin.mkdirs()
         new File(plugin, 'build.gradle').text = "plugins { id 'groovy' }\n"
-        File broken = new File(dir, path)
+        File broken = new File(plugin, path)
         broken.parentFile.mkdirs()
 
         when: 'the file is changed so that the build fails, and a plugin command is named'
@@ -550,11 +550,12 @@ class ProjectCommandsSpec extends Specification {
         gradleInvocations()*.get(5) == ['generateCommandManifest', 'runCommand']
 
         where:
-        [path, appInSubproject] << [['plugins/audit/src/main/groovy/com/acme/AuditService.groovy',
-                                     'plugins/audit/grails-app/services/com/acme/AuditService.groovy',
-                                     'plugins/audit/src/main/java/com/acme/AuditService.java',
-                                     'plugins/audit/build.gradle'],
-                                    [false, true]].combinations()
+        [pluginDir, path, appInSubproject] << [['plugins/audit', '.modules/audit', 'bin'],
+                                               ['src/main/groovy/com/acme/AuditService.groovy',
+                                                'grails-app/services/com/acme/AuditService.groovy',
+                                                'src/main/java/com/acme/AuditService.java',
+                                                'build.gradle'],
+                                               [false, true]].combinations()
         layout = appInSubproject ? 'with the application in a project of its own' : 'with the application at the root'
     }
 

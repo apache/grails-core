@@ -283,7 +283,8 @@ above changes, also after `./gradlew clean`. While the build fails, editing any 
 of the projects, such as a service in `grails-app/services` or a class in `src/main/groovy`, counts as a
 change too, so fixing what did not compile runs the build again. Before the build has written a file of
 commands, the Forge CLI finds the projects itself: every directory below the root of the build with a
-build file, main sources or a `grails-app` directory. Run `./gradlew generateCommandManifest` to see what
+build file, main sources or a `grails-app` directory, whatever it is named, also below a hidden directory
+such as `.modules`, but not below what builds and tools write, such as `build` or `node_modules`. Run `./gradlew generateCommandManifest` to see what
 went wrong; once a failure no source explains is fixed, such as a dependency that could not
 be downloaded, running it also makes the Forge CLI read the commands again. A command of the file that
 the Forge CLI cannot offer, such as one declaring an option named `help`, is reported and left out, and

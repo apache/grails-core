@@ -332,9 +332,10 @@ class ProjectCommands {
 
     /**
      * Adds the directories below the given one that look like projects of the build, with a build file,
-     * main sources or a {@code grails-app} directory: without a manifest, the build has not said which
-     * projects it has. What builds and tools write, {@code buildSrc}, hidden directories and the inside
-     * of a source tree are not searched.
+     * main sources or a {@code grails-app} directory, whatever they are named: without a manifest, the
+     * build has not said which projects it has, and a project can be anywhere, such as below a hidden
+     * directory. What builds and tools write, {@code buildSrc}, which is watched whole, and the inside of
+     * a source tree are not searched; links are not followed.
      */
     private static void projectsBelow(File dir, List<File> projects) {
         File[] children = dir.listFiles()
@@ -342,16 +343,17 @@ class ProjectCommands {
             return
         }
         for (File child : children.sort(false) { File it -> it.name }) {
-            if (!child.isDirectory() || Files.isSymbolicLink(child.toPath()) || child.name.startsWith('.') ||
-                    child.name in OUTPUT_DIRS || child.name in TOOL_FILES || child.name in SOURCE_DIRS ||
-                    child.name in ['gradle', 'buildSrc']) {
+            if (!child.isDirectory() || Files.isSymbolicLink(child.toPath()) || child.name in SOURCE_DIRS ||
+                    child.name == 'buildSrc') {
                 continue
             }
             if (new File(child, 'build.gradle').isFile() || new File(child, 'build.gradle.kts').isFile() ||
                     new File(child, 'src/main').isDirectory() || new File(child, 'grails-app').isDirectory()) {
                 projects << child
             }
-            projectsBelow(child, projects)
+            if (!(child.name in OUTPUT_DIRS) && !(child.name in TOOL_FILES)) {
+                projectsBelow(child, projects)
+            }
         }
     }
 
