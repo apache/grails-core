@@ -247,12 +247,13 @@ public class UndertowServletWebServerFactory extends UndertowWebServerFactory
         deployment.setTempDir(tempDirs.createTempDir("undertow"));
         deployment.setEagerFilterInit(this.eagerFilterInit);
         deployment.setPreservePathOnForward(this.preservePathOnForward);
-        deployment.addInnerHandlerChainWrapper(AsyncErrorCompletionHandler::new);
         configureMimeMappings(deployment);
         configureWebListeners(deployment);
         for (UndertowDeploymentInfoCustomizer customizer : this.deploymentInfoCustomizers) {
             customizer.customize(deployment);
         }
+        // After the customizers and the servlet extensions they add, so that it wraps every handler they add
+        deployment.addServletExtension(AsyncErrorCompletionHandler::addTo);
         if (getSettings().getSession().isPersistent()) {
             File dir = getSettings().getSession().getSessionStoreDirectory().getValidDirectory(true);
             deployment.setSessionPersistenceManager(new FileSessionPersistence(dir));

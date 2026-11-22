@@ -19,9 +19,11 @@
 package org.apache.grails.undertow.core.servlet;
 
 import jakarta.servlet.DispatcherType;
+import jakarta.servlet.ServletContext;
 
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.servlet.spec.AsyncContextImpl;
 import io.undertow.servlet.spec.HttpServletRequestImpl;
@@ -34,25 +36,44 @@ import io.undertow.servlet.spec.HttpServletRequestImpl;
  * observation of the request, and a {@code DeferredResult} is never resolved. Tomcat leaves such processing to time
  * out, and so does Undertow when no error page maps to the error.
  * <p>
- * When the dispatch, or a handler outside this one, completes the processing after the error was sent, Undertow tells
- * its listeners once the dispatch has returned and only then sends the error, so they would be told before the error
- * page runs. The error is therefore sent here as soon as the servlet chain has returned, and the processing completed
- * after it, so its listeners are told once the error has been answered.
+ * When the dispatch, or a handler around it, completes the processing after an error was sent, Undertow tells its
+ * listeners once the dispatch has returned and only then sends the error, so they would be told before the error page
+ * runs. The error is therefore sent here once every handler that can send it, forward or complete the processing has
+ * returned, and the processing completed after it, so its listeners are told once the error has been answered.
+ * <p>
+ * {@link #addTo(DeploymentInfo, ServletContext)}, a servlet extension the factory adds after its customizers, puts the
+ * handler around every handler they and other servlet extensions add. Undertow runs outer handlers on a request
+ * dispatch only, so a request dispatch is handled by the outermost outer handler, and an asynchronous dispatch by the
+ * outermost inner one. Only Undertow's own handlers remain around them, and none of those sends an error, forwards or
+ * completes the processing once the handlers it wraps have returned.
  */
 final class AsyncErrorCompletionHandler implements HttpHandler {
 
     private final HttpHandler next;
 
-    AsyncErrorCompletionHandler(HttpHandler next) {
+    private final DispatcherType dispatcherType;
+
+    private AsyncErrorCompletionHandler(HttpHandler next, DispatcherType dispatcherType) {
         this.next = next;
+        this.dispatcherType = dispatcherType;
+    }
+
+    /**
+     * Adds the handlers around the handlers already added to a deployment.
+     *
+     * @param deployment the deployment, once its customizers and the servlet extensions before this one have run
+     * @param servletContext the servlet context of the deployment
+     */
+    static void addTo(DeploymentInfo deployment, ServletContext servletContext) {
+        deployment.addOuterHandlerChainWrapper((next) -> new AsyncErrorCompletionHandler(next, DispatcherType.REQUEST));
+        deployment.addInnerHandlerChainWrapper((next) -> new AsyncErrorCompletionHandler(next, DispatcherType.ASYNC));
     }
 
     @Override
     public void handleRequest(HttpServerExchange exchange) throws Exception {
         ServletRequestContext context = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
-        DispatcherType dispatcherType = context == null ? null : context.getDispatcherType();
         // Undertow sends the error a dispatch sent only once a request or an asynchronous dispatch has returned
-        if (dispatcherType != DispatcherType.REQUEST && dispatcherType != DispatcherType.ASYNC) {
+        if (context == null || context.getDispatcherType() != this.dispatcherType) {
             this.next.handleRequest(exchange);
             return;
         }

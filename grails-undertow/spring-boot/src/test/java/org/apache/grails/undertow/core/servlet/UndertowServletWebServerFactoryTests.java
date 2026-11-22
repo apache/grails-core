@@ -414,28 +414,111 @@ class UndertowServletWebServerFactoryTests {
         assertThat(events).containsExactly("errorPage", "onComplete");
     }
 
+    @Test
+    void processingCompletesOnceTheErrorPageHasAnsweredAnErrorAnOuterHandlerForwardedToAfterADispatch()
+            throws Exception {
+        List<String> events = new CopyOnWriteArrayList<>();
+        UndertowServletWebServerFactory factory = new UndertowServletWebServerFactory(0);
+        factory.addErrorPages(new ErrorPage("/errorPage"));
+        factory.addDeploymentInfoCustomizers((info) -> info.addOuterHandlerChainWrapper(
+            (next) -> forwardsAndCompletesAfter(next, DispatcherType.REQUEST, "/sendsErrorOnly")));
+        this.webServer = factory.getWebServer(recordingErrorPage(events), startsAsync(events), sendsError());
+        this.webServer.start();
+
+        assertThat(getResponse("http://localhost:" + this.webServer.getPort() + "/startsAsync"))
+            .isEqualTo("Error page");
+
+        Awaitility.await().untilAsserted(() -> assertThat(events).containsExactly("errorPage", "onComplete"));
+        Thread.sleep(200);
+        assertThat(events).containsExactly("errorPage", "onComplete");
+    }
+
+    @Test
+    void processingCompletesOnceTheErrorPageHasAnsweredAnErrorAHandlerForwardedToAfterAnAsyncDispatch()
+            throws Exception {
+        List<String> events = new CopyOnWriteArrayList<>();
+        UndertowServletWebServerFactory factory = new UndertowServletWebServerFactory(0);
+        factory.addErrorPages(new ErrorPage("/errorPage"));
+        factory.addDeploymentInfoCustomizers((info) -> info.addInnerHandlerChainWrapper(
+            (next) -> forwardsAndCompletesAfter(next, DispatcherType.ASYNC, "/sendsErrorOnly")));
+        this.webServer = factory.getWebServer(recordingErrorPage(events), dispatchesAsynchronously("/startsAsync"),
+            startsAsync(events), sendsError());
+        this.webServer.start();
+
+        assertThat(getResponse("http://localhost:" + this.webServer.getPort() + "/dispatches")).isEqualTo("Error page");
+
+        Awaitility.await().untilAsserted(() -> assertThat(events).containsExactly("errorPage", "onComplete"));
+        Thread.sleep(200);
+        assertThat(events).containsExactly("errorPage", "onComplete");
+    }
+
+    @Test
+    void processingCompletesOnceTheErrorPageHasAnsweredAnErrorAHandlerAServletExtensionAddedForwardedTo()
+            throws Exception {
+        List<String> events = new CopyOnWriteArrayList<>();
+        UndertowServletWebServerFactory factory = new UndertowServletWebServerFactory(0);
+        factory.addErrorPages(new ErrorPage("/errorPage"));
+        factory.addDeploymentInfoCustomizers((info) -> info.addServletExtension((deployed, servletContext) -> {
+            deployed.addOuterHandlerChainWrapper(
+                (next) -> forwardsAndCompletesAfter(next, DispatcherType.REQUEST, "/sendsErrorOnly"));
+            deployed.addInnerHandlerChainWrapper(
+                (next) -> forwardsAndCompletesAfter(next, DispatcherType.ASYNC, "/sendsErrorOnly"));
+        }));
+        this.webServer = factory.getWebServer(recordingErrorPage(events), dispatchesAsynchronously("/startsAsync"),
+            startsAsync(events), sendsError());
+        this.webServer.start();
+
+        assertThat(getResponse("http://localhost:" + this.webServer.getPort() + "/startsAsync"))
+            .isEqualTo("Error page");
+        Awaitility.await().untilAsserted(() -> assertThat(events).containsExactly("errorPage", "onComplete"));
+        events.clear();
+        assertThat(getResponse("http://localhost:" + this.webServer.getPort() + "/dispatches")).isEqualTo("Error page");
+
+        Awaitility.await().untilAsserted(() -> assertThat(events).containsExactly("errorPage", "onComplete"));
+        Thread.sleep(200);
+        assertThat(events).containsExactly("errorPage", "onComplete");
+    }
+
     /**
      * Completes the asynchronous processing a dispatch of the given type left started, once the handlers it wraps
      * have returned.
      */
     private static HttpHandler completesAfter(HttpHandler next, DispatcherType completedAfter) {
+        return forwardsAndCompletesAfter(next, completedAfter, null);
+    }
+
+    /**
+     * Forwards a dispatch of the given type to {@code /startsAsync} that left asynchronous processing started to a
+     * path, if there is one, once the handlers it wraps have returned, and then completes the processing. A dispatch to
+     * {@code /dispatches} has dispatched its processing, which is not completed then.
+     */
+    private static HttpHandler forwardsAndCompletesAfter(HttpHandler next, DispatcherType completedAfter,
+            String forwardTo) {
         return (exchange) -> {
             ServletRequestContext context = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
             DispatcherType dispatcherType = context.getDispatcherType();
-            next.handleRequest(exchange);
             ServletRequest request = context.getServletRequest();
-            if (dispatcherType == completedAfter && request.isAsyncStarted()) {
+            boolean dispatched = "/dispatches".equals(((HttpServletRequest) request).getServletPath());
+            next.handleRequest(exchange);
+            if (dispatcherType == completedAfter && request.isAsyncStarted() && !dispatched) {
+                if (forwardTo != null) {
+                    request.getRequestDispatcher(forwardTo).forward(request, context.getServletResponse());
+                }
                 request.getAsyncContext().complete();
             }
         };
     }
 
     private ServletRegistrationBean<HttpServlet> dispatchesAsynchronously() {
+        return dispatchesAsynchronously("/sendsError");
+    }
+
+    private ServletRegistrationBean<HttpServlet> dispatchesAsynchronously(String path) {
         ServletRegistrationBean<HttpServlet> registration = new ServletRegistrationBean<>(new HttpServlet() {
 
             @Override
             protected void doGet(HttpServletRequest request, HttpServletResponse response) {
-                request.startAsync().dispatch("/sendsError");
+                request.startAsync().dispatch(path);
             }
 
         }, "/dispatches");
@@ -458,34 +541,66 @@ class UndertowServletWebServerFactoryTests {
         return registration;
     }
 
+    private static AsyncListener recordingListener(List<String> events) {
+        return new AsyncListener() {
+
+            @Override
+            public void onComplete(AsyncEvent event) {
+                events.add("onComplete");
+            }
+
+            @Override
+            public void onTimeout(AsyncEvent event) {
+                events.add("onTimeout");
+            }
+
+            @Override
+            public void onError(AsyncEvent event) {
+                events.add("onError");
+            }
+
+            @Override
+            public void onStartAsync(AsyncEvent event) {
+                events.add("onStartAsync");
+            }
+
+        };
+    }
+
+    private ServletRegistrationBean<HttpServlet> startsAsync(List<String> events) {
+        ServletRegistrationBean<HttpServlet> registration = new ServletRegistrationBean<>(new HttpServlet() {
+
+            @Override
+            protected void doGet(HttpServletRequest request, HttpServletResponse response) {
+                request.startAsync().addListener(recordingListener(events));
+            }
+
+        }, "/startsAsync");
+        registration.setName("startsAsync");
+        registration.setAsyncSupported(true);
+        return registration;
+    }
+
+    private ServletRegistrationBean<HttpServlet> sendsError() {
+        ServletRegistrationBean<HttpServlet> registration = new ServletRegistrationBean<>(new HttpServlet() {
+
+            @Override
+            protected void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
+                response.sendError(503);
+            }
+
+        }, "/sendsErrorOnly");
+        registration.setName("sendsErrorOnly");
+        registration.setAsyncSupported(true);
+        return registration;
+    }
+
     private ServletRegistrationBean<HttpServlet> sendsErrorAfterStartingAsync(List<String> events, boolean completes) {
         ServletRegistrationBean<HttpServlet> registration = new ServletRegistrationBean<>(new HttpServlet() {
 
             @Override
             protected void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
-                request.startAsync().addListener(new AsyncListener() {
-
-                    @Override
-                    public void onComplete(AsyncEvent event) {
-                        events.add("onComplete");
-                    }
-
-                    @Override
-                    public void onTimeout(AsyncEvent event) {
-                        events.add("onTimeout");
-                    }
-
-                    @Override
-                    public void onError(AsyncEvent event) {
-                        events.add("onError");
-                    }
-
-                    @Override
-                    public void onStartAsync(AsyncEvent event) {
-                        events.add("onStartAsync");
-                    }
-
-                });
+                request.startAsync().addListener(recordingListener(events));
                 response.sendError(503);
                 if (completes) {
                     request.getAsyncContext().complete();
