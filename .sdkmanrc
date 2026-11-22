@@ -1,5 +1,5 @@
-# When the java version changes, also update:
-# - $JAVA_VERSION in .github/workflows/release.yml and .github/workflows/release-publish-docs.yml
+# The release workflows read the java version from here (.github/actions/sdkmanrc-java). When it changes,
+# also update:
 # - LIBERICA_VERSION in etc/bin/Dockerfile: the version plus the build actions/setup-java installs for it,
 #   as the bell-sw/Liberica GitHub release names it (<version>+<build>)
 # - LIBERICA_SHA256_AMD64 and LIBERICA_SHA256_AARCH64 in etc/bin/Dockerfile: the sha256 of that release's
