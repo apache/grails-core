@@ -23,6 +23,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -32,8 +33,8 @@ import java.util.stream.Stream;
  * records what {@code GenerateScaffoldedViewsTask} hands it: for each domain class in the plan,
  * every template in each planned directory is copied to
  * {@code grails-scaffolded/<domain class>/<directory>/<template path>} under the output directory,
- * where each directory came from to {@code origins/<directory>}, and the page encoding to
- * {@code encoding.txt}; each page is reported as written, and a template whose text contains
+ * where each directory came from to {@code origins/<directory>}, the page encoding to
+ * {@code encoding.txt}, and the classpath it runs on, an entry a line, to {@code classpath.txt}; each page is reported as written, and a template whose text contains
  * {@code FAIL} as one that could not be expanded instead. How the real generator expands and names a page is tested in
  * grails-scaffolding.
  */
@@ -50,6 +51,8 @@ public final class ScaffoldedPagesGenerator {
         List<String> report = new ArrayList<>();
         Files.createDirectories(output.resolve("origins"));
         Files.write(output.resolve("encoding.txt"), args[3].getBytes(StandardCharsets.UTF_8));
+        Files.write(output.resolve("classpath.txt"), Arrays.asList(System.getProperty("java.class.path").split(File.pathSeparator)),
+                StandardCharsets.UTF_8);
         for (String line : Files.readAllLines(Paths.get(args[1]), StandardCharsets.UTF_8)) {
             String[] fields = line.split("\t", 2);
             Files.write(output.resolve("origins").resolve(Paths.get(fields[0]).getFileName()), fields[1].getBytes(StandardCharsets.UTF_8));

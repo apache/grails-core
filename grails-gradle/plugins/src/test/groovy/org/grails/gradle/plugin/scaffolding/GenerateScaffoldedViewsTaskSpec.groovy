@@ -775,6 +775,81 @@ class GenerateScaffoldedViewsTaskSpec extends Specification {
             handed(task)['com.example.User/show'] == ['show ${className}']
     }
 
+    /** The servlet API's marker class, as a plugin compiles against it and its container provides it. */
+    private static byte[] servletRequest() {
+        ClassWriter writer = new ClassWriter(0)
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC | Opcodes.ACC_INTERFACE | Opcodes.ACC_ABSTRACT, 'jakarta/servlet/ServletRequest', null,
+                'java/lang/Object', null)
+        writer.visitEnd()
+        writer.toByteArray()
+    }
+
+    private File servletApiJar(String name) {
+        File jar = new File(projectDir, name)
+        writeJar(jar, ['jakarta/servlet/ServletRequest.class': servletRequest()])
+        jar
+    }
+
+    /** The classpath the generator ran on, an entry a line as the stand-in records it. */
+    private static List<File> generatorClasspathOf(GenerateScaffoldedViewsTask task) {
+        new File(task.outputDirectory.get().asFile, 'classpath.txt').readLines('UTF-8').collect { String entry ->
+            new File(entry).canonicalFile
+        }
+    }
+
+    void 'the servlet API the pages are compiled against follows the runtime classpath when that has none, as a plugin\'s has none'() {
+        given:
+            writeController('UserController', 'User')
+            File notes = new File(projectDir, 'notes.txt')
+            notes.text = 'not an archive'
+            File library = new File(projectDir, 'library.jar')
+            writeJar(library, ['com/example/Library.class': plain('com/example/Library', 'java/lang/Object') {}])
+            File servletApi = servletApiJar('servlet-api.jar')
+            def task = task()
+            task.pageClasspath.from(notes, new File(projectDir, 'missing.jar'), library, servletApi, servletApiJar('tomcat-embed-core.jar'))
+
+        when:
+            task.generate()
+
+        then: 'the first copy of the API is added after every runtime entry, and nothing else from the page classpath'
+            generatorClasspathOf(task) == (task.runtimeClasspath.files.toList() + servletApi)*.canonicalFile
+
+        and: 'the pages are expanded as before'
+            handed(task)['com.example.User/show'] == ['show ${className}']
+    }
+
+    void 'a runtime classpath that has the servlet API is all the generator runs on'() {
+        given: 'the API in a classes directory on the runtime classpath, as well as on the page classpath'
+            writeController('UserController', 'User')
+            File container = new File(projectDir, 'container-classes')
+            writeClass(container, 'jakarta/servlet/ServletRequest', servletRequest())
+            def task = task()
+            task.runtimeClasspath.from(container)
+            task.pageClasspath.from(servletApiJar('servlet-api.jar'))
+
+        when:
+            task.generate()
+
+        then:
+            generatorClasspathOf(task) == task.runtimeClasspath.files*.canonicalFile
+    }
+
+    void 'with no servlet API on either classpath the generator runs on the runtime classpath'() {
+        given:
+            writeController('UserController', 'User')
+            File library = new File(projectDir, 'library.jar')
+            writeJar(library, ['com/example/Library.class': plain('com/example/Library', 'java/lang/Object') {}])
+            def task = task()
+            task.pageClasspath.from(library)
+
+        when:
+            task.generate()
+
+        then:
+            generatorClasspathOf(task) == task.runtimeClasspath.files*.canonicalFile
+            handed(task)['com.example.User/show'] == ['show ${className}']
+    }
+
     /**
      * A jar holding a generator that declares the given version of its exchange, or none, and has no
      * main method, so that running it would fail the build.
