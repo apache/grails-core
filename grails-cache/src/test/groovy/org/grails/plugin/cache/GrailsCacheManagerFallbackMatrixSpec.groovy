@@ -323,10 +323,10 @@ class GrailsCacheManagerFallbackMatrixSpec extends Specification {
         context?.close()
     }
 
-    void 'run from the code Spring\'s AOT processing generates, the field falls back as in a context that is not, beside #others'() {
+    void 'run from the code Spring\'s AOT processing generates, the field falls back as in a context that is not: #subject.simpleName beside #others'() {
         when: 'the context processed ahead of time, and the code it generates compiled and run'
-        Map<String, Object> was = aheadOfTime(others, false)
-        Map<String, Object> now = aheadOfTime(others, true)
+        Map<String, Object> was = aheadOfTime(subject, others, false)
+        Map<String, Object> now = aheadOfTime(subject, others, true)
 
         then: 'Spring\'s generated injection injects the field, after the trait\'s other field and before the class\'s method'
         now.injection.indexOf('__customCacheKeyGenerator') < now.injection.indexOf("forField(\"${GrailsCacheManagerFallback.FIELD_NAME}\")")
@@ -342,13 +342,18 @@ class GrailsCacheManagerFallbackMatrixSpec extends Specification {
         !was.resolver?.installed
 
         where:
-        others                                                 || wasExpected                                                       || nowExpected
-        [:]                                                    || [seen: NAMED, got: NAMED, dependencies: [NAMED]]                  || wasExpected
-        [other: OtherCacheManager]                             || [failed: true]                                                    || [seen: NAMED, got: NAMED, dependencies: [NAMED, 'other']]
-        [other: OtherCacheManager, primary: OtherCacheManager] || [seen: 'primary', got: 'primary', dependencies: [NAMED, 'other', 'primary']] || wasExpected
+        subject       | others                                                 || wasExpected                                                       || nowExpected
+        MethodInClass | [:]                                                    || [seen: NAMED, got: NAMED, copies: [NAMED], dependencies: [NAMED]]  || wasExpected
+        MethodInClass | [other: OtherCacheManager]                             || [failed: true] || [seen: NAMED, got: NAMED, copies: [NAMED], dependencies: [NAMED, 'other']]
+        MethodInClass | [other: OtherCacheManager, primary: OtherCacheManager] || [seen: 'primary', got: 'primary', copies: ['primary'], dependencies: [NAMED, 'other', 'primary']] || wasExpected
+        // the generated code finds a field by its name, so it sets the subclass's copy of it twice, the first time before
+        // the superclass's method, and never the superclass's copy, as in 8.0.0
+        AwareAgain    | [:]                                                    || [seen: NAMED, got: NAMED, copies: [null, NAMED], dependencies: [NAMED]] || wasExpected
+        AwareAgain    | [other: OtherCacheManager]                             || [failed: true] || [seen: NAMED, got: NAMED, copies: [null, NAMED], dependencies: [NAMED, 'other']]
+        AwareAgain    | [other: OtherCacheManager, primary: OtherCacheManager] || [seen: 'primary', got: 'primary', copies: [null, 'primary'], dependencies: [NAMED, 'other', 'primary']] || wasExpected
     }
 
-    private Map<String, Object> aheadOfTime(Map<String, Class<?>> others, boolean withFallback) {
+    private Map<String, Object> aheadOfTime(Class<? extends MethodInClass> subject, Map<String, Class<?>> others, boolean withFallback) {
         Path dir = Files.createTempDirectory('grails-cache-aot')
         try {
             GenericApplicationContext processed = new GenericApplicationContext()
@@ -361,7 +366,7 @@ class GrailsCacheManagerFallbackMatrixSpec extends Specification {
                 processed.registerBean(name, (Class<Object>) type,
                         { BeanDefinition definition -> definition.primary = name == 'primary' } as BeanDefinitionCustomizer)
             }
-            processed.registerBean('probe', MethodInClass)
+            processed.registerBean('probe', (Class<Object>) subject)
             RuntimeHints hints = new RuntimeHints()
             DefaultGenerationContext generation = new DefaultGenerationContext(new ClassNameGenerator(ClassName.get(GrailsCacheManagerFallbackMatrixSpec)),
                     new FileSystemGeneratedFiles(dir.resolve('sources')), hints)
@@ -376,8 +381,8 @@ class GrailsCacheManagerFallbackMatrixSpec extends Specification {
                     null, files.getJavaFileObjectsFromFiles(sources)).call()
             files.close()
             Map<String, Object> result = [
-                    injection: sources.find { File file -> file.name == 'GrailsCacheManagerFallbackMatrixSpec_MethodInClass__Autowiring.java' }.text,
-                    fieldHinted: RuntimeHintsPredicates.reflection().onField(GrailsCacheManagerFallback.traitField(MethodInClass)).test(hints)]
+                    injection: sources.find { File file -> file.name == "GrailsCacheManagerFallbackMatrixSpec_${subject.simpleName}__Autowiring.java".toString() }.text,
+                    fieldHinted: copiesOfTheField(subject).every { Field copy -> RuntimeHintsPredicates.reflection().onField(copy).test(hints) }]
             URLClassLoader loader = new URLClassLoader([classes.toUri().toURL()] as URL[], getClass().classLoader)
             GenericApplicationContext started = new GenericApplicationContext()
             started.classLoader = loader
@@ -390,7 +395,10 @@ class GrailsCacheManagerFallbackMatrixSpec extends Specification {
                     [(name): started.getBean(name, CacheManager)]
                 }
                 MethodInClass probe = started.getBean('probe', MethodInClass)
+                List<Field> copies = copiesOfTheField(subject)
+                copies.each { Field copy -> copy.accessible = true }
                 result.result = [seen: nameOf(probe.seen, instances), got: nameOf(probe.grailsCacheManager, instances),
+                        copies: copies.collect { Field copy -> nameOf((CacheManager) copy.get(probe), instances) },
                         dependencies: (started.beanFactory.getDependenciesForBean('probe') as List<String>).sort()]
                 // post-processed again, the resolver is not wrapped twice, and a copy of it falls back too
                 Object resolver = started.defaultListableBeanFactory.autowireCandidateResolver
@@ -640,6 +648,106 @@ class GrailsCacheManagerFallbackMatrixSpec extends Specification {
         OwnField         | [(NAMED): 'plain', first: 'createdByOwnField'] || [seen: [null] * 2, got: 'first'] || wasExpected
         FieldInSubclass  | [(NAMED): 'plain', first: 'createdByOwnField'] || [failed: true]                   || [seen: [null] * 2, got: NAMED]
         ByResourceName   | [(NAMED): 'plain', first: 'primary']           || [seen: [NAMED] * 2, got: 'first'] || wasExpected
+        InheritsMethod   | [(NAMED): 'plain']                             || [seen: [NAMED] * 2, got: NAMED]  || wasExpected
+        InheritsMethod   | [(NAMED): 'plain', first: 'plain']             || [failed: true]                   || [seen: [NAMED] * 2, got: NAMED]
+        AwareAgain       | [(NAMED): 'plain']                             || [seen: [null] * 2, got: NAMED]   || wasExpected
+        AwareAgain       | [(NAMED): 'plain', first: 'plain']             || [failed: true]                   || [seen: [null] * 2, got: NAMED]
+        AwareAgain       | [(NAMED): 'plain', first: 'primary']           || [seen: [null] * 2, got: 'first'] || wasExpected
+        AgainWithMethod  | [(NAMED): 'plain']                             || [seen: [NAMED] * 2, got: NAMED]  || wasExpected
+        AgainWithMethod  | [(NAMED): 'plain', first: 'plain']             || [failed: true]                   || [seen: [NAMED] * 2, got: NAMED]
+    }
+
+    void 'a cached subclass of a cached class, compiled #mode, inherits an autowired method that sees its cache manager, beside #others'() {
+        given: 'the cache transformations leave the trait to the superclass, so the class has the field once'
+        Class<?> subclass = compileCachedSubclass(mode)
+        assert copiesOfTheField(subclass)*.declaringClass*.simpleName == ['CachedBase']
+
+        when:
+        Map<String, Object> was = cachedSubclass(subclass, others, false)
+        Map<String, Object> now = cachedSubclass(subclass, others, true)
+
+        then: 'the inherited method runs after the field is set, and the methods of both classes cache with grailsCacheManager'
+        was == wasExpected
+        now == [copies: [NAMED], cachedIn: [base: NAMED, sub: NAMED], calls: 2, warmedWith: NAMED]
+
+        where:
+        mode          | others                  || wasExpected
+        'statically'  | [:]                     || [copies: [NAMED], cachedIn: [base: NAMED, sub: NAMED], calls: 2, warmedWith: NAMED]
+        'statically'  | [cacheManager: 'plain'] || [failed: true]
+        'dynamically' | [:]                     || [copies: [NAMED], cachedIn: [base: NAMED, sub: NAMED], calls: 2, warmedWith: NAMED]
+        'dynamically' | [cacheManager: 'plain'] || [failed: true]
+    }
+
+    /** Each copy of the trait's field in the class's hierarchy, a superclass's first. */
+    private static List<Field> copiesOfTheField(Class<?> type) {
+        List<Field> copies = []
+        for (Class<?> declaring = type; declaring != null; declaring = declaring.superclass) {
+            Field copy = declaring.declaredFields.find { Field field -> field.name == GrailsCacheManagerFallback.FIELD_NAME }
+            if (copy != null) {
+                copies.add(0, copy)
+            }
+        }
+        copies
+    }
+
+    private Map<String, Object> cachedSubclass(Class<?> subclass, Map<String, String> others, boolean withFallback) {
+        Map<String, CacheManager> instances = [:]
+        GenericApplicationContext started = null
+        try {
+            started = context([(NAMED): 'plain'] + others, instances, [], withFallback) { GenericApplicationContext it ->
+                it.registerBean('service', (Class<Object>) subclass)
+            }
+            Object service = started.getBean('service')
+            List<Field> copies = copiesOfTheField(subclass)
+            copies.each { Field copy -> copy.accessible = true }
+            2.times {
+                service.invokeMethod('base', 1)
+                service.invokeMethod('sub', 1)
+            }
+            return [copies: copies.collect { Field copy -> nameOf((CacheManager) copy.get(service), instances) },
+                    cachedIn: ['base', 'sub'].collectEntries { String cache ->
+                        [(cache): instances.find { String name, CacheManager manager -> manager.cacheNames.contains(cache) }?.key]
+                    },
+                    calls: service.getProperty('calls'),
+                    warmedWith: nameOf((CacheManager) service.getProperty('warmedWith'), instances)]
+        }
+        catch (BeansException ignored) {
+            return [failed: true]
+        }
+        finally {
+            started?.close()
+        }
+    }
+
+    private static Class<?> compileCachedSubclass(String mode) {
+        new GroovyShell().evaluate("""
+import grails.plugin.cache.Cacheable
+import groovy.transform.CompileStatic
+import org.springframework.beans.factory.BeanFactory
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.cache.CacheManager
+
+${mode == 'statically' ? '@CompileStatic' : ''}
+class CachedBase {
+    int calls
+    CacheManager warmedWith
+
+    @Autowired
+    void warm(BeanFactory beanFactory) {
+        warmedWith = grailsCacheManager
+    }
+
+    @Cacheable('base')
+    int base(int x) { calls++; x }
+}
+
+${mode == 'statically' ? '@CompileStatic' : ''}
+class CachedSubclass extends CachedBase {
+    @Cacheable('sub')
+    int sub(int x) { calls++; x }
+}
+return CachedSubclass
+""") as Class<?>
     }
 
     private Map<String, Object> ownInjection(Class<?> subject, Map<String, String> others, boolean withFallback) {
@@ -651,8 +759,13 @@ class GrailsCacheManagerFallbackMatrixSpec extends Specification {
                         { BeanDefinition definition -> definition.scope = BeanDefinition.SCOPE_PROTOTYPE } as BeanDefinitionCustomizer)
             }
             List<Object> beans = (1..2).collect { started.getBean('subject') }
-            return [seen: beans.collect { Object bean -> nameOf(((Seeing) bean).seen, instances) },
+            Map<String, Object> result = [seen: beans.collect { Object bean -> nameOf(((Seeing) bean).seen, instances) },
                     got: nameOf(((GrailsCacheManagerAware) beans.last()).grailsCacheManager, instances)]
+            // a superclass's copy of the field, where the class implements the trait again, gets the same
+            List<Field> copies = copiesOfTheField(subject)
+            copies.each { Field copy -> copy.accessible = true }
+            assert copies.collect { Field copy -> nameOf((CacheManager) copy.get(beans.last()), instances) }.unique() == [result.got]
+            result
         }
         catch (BeansException ignored) {
             return [failed: true]
@@ -820,6 +933,33 @@ class GrailsCacheManagerFallbackMatrixSpec extends Specification {
         @Autowired
         void init(BeanFactory beanFactory) {
             seen = grailsCacheManager
+        }
+    }
+
+    /** A subclass of a cache-aware class that inherits its autowired method. */
+    static class InheritsMethod extends MethodInClass {
+    }
+
+    /** A subclass of a cache-aware class that implements the trait again, so it has the field twice. */
+    static class AwareAgain extends MethodInClass implements GrailsCacheManagerAware {
+    }
+
+    /** Implementing the trait again, with an autowired method of its own after its copy of the field. */
+    static class AgainWithMethod extends MethodInClass implements GrailsCacheManagerAware {
+        CacheManager seenBySubclass
+        int calls
+
+        /** What the first call saw, as a method injected once sees it. */
+        @Autowired
+        void again(BeanFactory beanFactory) {
+            if (calls++ == 0) {
+                seenBySubclass = grailsCacheManager
+            }
+        }
+
+        @Override
+        CacheManager getSeen() {
+            seenBySubclass
         }
     }
 

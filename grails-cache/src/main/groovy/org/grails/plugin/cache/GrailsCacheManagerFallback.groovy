@@ -23,6 +23,7 @@ import java.lang.reflect.AnnotatedElement
 import java.lang.reflect.Field
 import java.lang.reflect.Member
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.CopyOnWriteArrayList
 
 import groovy.transform.CompileStatic
 
@@ -64,11 +65,14 @@ import org.springframework.util.ReflectionUtils
  *
  * <p>This injects the trait's field in place of Spring's {@code AutowiredAnnotationBeanPostProcessor},
  * which leaves alone a member another post-processor has registered on the bean definition, as it does for
- * {@code @Resource}. A post-processor added first registers on each bean definition the field and every
- * member Spring injects after it: the class's autowired methods, and the fields and methods of its
- * subclasses. A post-processor ordered right after Spring's then injects the field, once Spring has
- * injected the members before it, and the members after it with an injection of Spring's own, so that
- * each member is injected in the order Spring injected it, and an autowired method sees the field set.
+ * {@code @Resource}. A class has the field once for each class of its hierarchy that implements the trait:
+ * the cache transformations leave it to the first, but a subclass may implement it again. A post-processor
+ * added first registers on each bean definition every copy of the field and every member Spring injects
+ * after the first: the autowired methods of the class that has it, and the fields and methods of its
+ * subclasses. A post-processor ordered right after Spring's then injects them, once Spring has injected
+ * the members before them: each copy of the field, and after it, with an injection of Spring's own, the
+ * members up to the next copy, so that each member is injected in the order Spring injected it, and an
+ * autowired method sees the field of its class set.
  * It injects the field as Spring's does: with one resolution of the field by the bean factory, for the
  * bean being injected, registering the bean as depending on what it took, remembering that for the bean's
  * next injection until the bean's definition is reset, and resolving it again once where what it remembers
@@ -131,61 +135,102 @@ class GrailsCacheManagerFallback implements BeanFactoryPostProcessor {
     /** The trait's cache manager field in the class, or null if the class does not have it. */
     static Field traitField(Class<?> type) {
         Field field = type == null ? null : ReflectionUtils.findField(type, FIELD_NAME, CacheManager)
-        field != null && GrailsCacheManagerAware.isAssignableFrom(field.declaringClass) && field.isAnnotationPresent(Autowired) ?
-                field : null
+        isTraitField(field) ? field : null
+    }
+
+    /** Each copy of the trait's cache manager field the class has, a superclass's first. */
+    static List<Field> traitFields(Class<?> type) {
+        List<Field> fields = []
+        for (Class<?> declaring = type; declaring != null && declaring != Object; declaring = declaring.superclass) {
+            Field field = declaring.declaredFields.find { Field candidate -> candidate.name == FIELD_NAME }
+            if (isTraitField(field)) {
+                fields.add(0, field)
+            }
+        }
+        fields
+    }
+
+    /** Whether the field is a copy of the trait's cache manager field, in the class that declares it. */
+    static boolean isTraitField(Field field) {
+        field != null && field.type == CacheManager && GrailsCacheManagerAware.isAssignableFrom(field.declaringClass) &&
+                field.isAnnotationPresent(Autowired)
     }
 
     /**
-     * Registers the trait's field, and the members Spring injects after it, on each bean definition that has
-     * it, before Spring's injection sees them.
+     * Registers each copy of the trait's field, and the members Spring injects after the first, on each bean
+     * definition that has it, before Spring's injection sees them.
      */
     @CompileStatic
     static class TraitFieldRegistrar implements MergedBeanDefinitionPostProcessor {
 
         private final DefaultListableBeanFactory beanFactory
 
-        /** The field's injection for each bean, as Spring keeps the injection metadata of each bean. */
-        final Map<String, TraitFieldElement> elements = new ConcurrentHashMap<String, TraitFieldElement>()
+        /** The injection of each bean's copies of the field, as Spring keeps the injection metadata of each bean. */
+        final Map<String, TraitFieldInjections> elements = new ConcurrentHashMap<String, TraitFieldInjections>()
 
-        /** Spring's injection, of the members it injects after the field, for each bean whose field it has. */
-        final AutowiredAnnotationBeanPostProcessor afterField = new AutowiredAnnotationBeanPostProcessor()
+        /**
+         * Spring's injection, of the members it injects after each copy of the field up to the next: the
+         * first of them for the members after the first copy, and so on.
+         */
+        final List<AutowiredAnnotationBeanPostProcessor> afterFields = new CopyOnWriteArrayList<AutowiredAnnotationBeanPostProcessor>()
 
         TraitFieldRegistrar(DefaultListableBeanFactory beanFactory) {
             this.beanFactory = beanFactory
-            afterField.beanFactory = beanFactory
         }
 
         @Override
         void postProcessMergedBeanDefinition(RootBeanDefinition beanDefinition, Class<?> beanType, String beanName) {
-            Field field = traitField(beanType)
-            if (field != null && !beanDefinition.isExternallyManagedConfigMember(field)) {
-                // the members Spring injects, in the order it injects them, as it registers them on a definition
-                RootBeanDefinition all = new RootBeanDefinition()
-                afterField.postProcessMergedBeanDefinition(all, beanType, beanName)
-                List<Member> members = new ArrayList<Member>(all.externallyManagedConfigMembers)
-                int at = members.indexOf(field)
-                List<Member> after = at < 0 ? [] : members.subList(at + 1, members.size()).findAll { Member member ->
+            List<Field> fields = traitFields(beanType).findAll { Field field -> !beanDefinition.isExternallyManagedConfigMember(field) }
+            if (fields.empty) {
+                return
+            }
+            // the members Spring injects, in the order it injects them, as it registers them on a definition
+            RootBeanDefinition all = new RootBeanDefinition()
+            afterField(0).postProcessMergedBeanDefinition(all, beanType, beanName)
+            List<Member> members = new ArrayList<Member>(all.externallyManagedConfigMembers)
+            List<Field> injected = fields.findAll { Field field -> field in members }.sort { Field field -> members.indexOf(field) }
+            List<TraitFieldInjection.Step> steps = []
+            injected.eachWithIndex { Field field, int index ->
+                int end = index + 1 < injected.size() ? members.indexOf(injected[index + 1]) : members.size()
+                List<Member> after = members.subList(members.indexOf(field) + 1, end).findAll { Member member ->
                     !beanDefinition.isExternallyManagedConfigMember(member) && !takenBeforeAutowiring(member)
                 }
-                // Spring's injection of only those, for this bean
-                RootBeanDefinition onlyAfter = new RootBeanDefinition()
-                members.each { Member member ->
-                    if (!(member in after)) {
-                        onlyAfter.registerExternallyManagedConfigMember(member)
+                AutowiredAnnotationBeanPostProcessor afterThisField = null
+                if (!after.empty) {
+                    // Spring's injection of only those, for this bean
+                    afterThisField = afterField(index)
+                    RootBeanDefinition onlyAfter = new RootBeanDefinition()
+                    members.each { Member member ->
+                        if (!(member in after)) {
+                            onlyAfter.registerExternallyManagedConfigMember(member)
+                        }
                     }
+                    afterThisField.postProcessMergedBeanDefinition(onlyAfter, beanType, beanName)
                 }
-                afterField.postProcessMergedBeanDefinition(onlyAfter, beanType, beanName)
+                Autowired autowired = field.getAnnotation(Autowired)
+                steps << new TraitFieldInjection.Step(new TraitFieldElement(field, autowired.required(), beanFactory), afterThisField)
                 beanDefinition.registerExternallyManagedConfigMember(field)
                 after.each { Member member -> beanDefinition.registerExternallyManagedConfigMember(member) }
-                Autowired autowired = field.getAnnotation(Autowired)
-                elements.put(beanName, new TraitFieldElement(field, autowired.required(), beanFactory, beanType, !after.empty))
+            }
+            if (!steps.empty) {
+                elements.put(beanName, new TraitFieldInjections(beanType, steps))
             }
         }
 
         @Override
         void resetBeanDefinition(String beanName) {
             elements.remove(beanName)
-            afterField.resetBeanDefinition(beanName)
+            afterFields.each { AutowiredAnnotationBeanPostProcessor afterField -> afterField.resetBeanDefinition(beanName) }
+        }
+
+        /** Spring's injection of the members after the copy of the field at that place in a class's hierarchy. */
+        private synchronized AutowiredAnnotationBeanPostProcessor afterField(int index) {
+            while (afterFields.size() <= index) {
+                AutowiredAnnotationBeanPostProcessor afterField = new AutowiredAnnotationBeanPostProcessor()
+                afterField.beanFactory = beanFactory
+                afterFields << afterField
+            }
+            afterFields[index]
         }
 
         /** Whether a post-processor of Spring's that sees the definition after this one takes the member first. */
@@ -193,6 +238,21 @@ class GrailsCacheManagerFallback implements BeanFactoryPostProcessor {
             ((AnnotatedElement) member).annotations.any { Annotation annotation ->
                 annotation.annotationType().name in TAKEN_BEFORE_AUTOWIRING
             }
+        }
+    }
+
+    /** The injection of one bean's copies of the trait's field, each followed by the members after it. */
+    @CompileStatic
+    static class TraitFieldInjections {
+
+        /** The class the bean's injection was found for. */
+        final Class<?> beanType
+
+        final List<TraitFieldInjection.Step> steps
+
+        TraitFieldInjections(Class<?> beanType, List<TraitFieldInjection.Step> steps) {
+            this.beanType = beanType
+            this.steps = steps
         }
     }
 
@@ -228,15 +288,29 @@ class GrailsCacheManagerFallback implements BeanFactoryPostProcessor {
             TraitFieldRegistrar registrar = (TraitFieldRegistrar) beanFactory?.beanPostProcessors?.find { BeanPostProcessor processor ->
                 processor instanceof TraitFieldRegistrar
             }
-            TraitFieldElement element = registrar == null || beanName == null ? null : registrar.elements.get(beanName)
+            TraitFieldInjections injections = registrar == null || beanName == null ? null : registrar.elements.get(beanName)
             // for another class Spring builds its injection again and injects every member itself
-            if (element != null && bean.getClass() == element.beanType) {
-                element.inject(bean, beanName)
-                if (element.membersAfter) {
-                    registrar.afterField.postProcessProperties(pvs, bean, beanName)
+            if (injections != null && bean.getClass() == injections.beanType) {
+                for (Step step : injections.steps) {
+                    step.field.inject(bean, beanName)
+                    step.afterField?.postProcessProperties(pvs, bean, beanName)
                 }
             }
             return pvs
+        }
+
+        /** A copy of the trait's field, and Spring's injection of the members after it, if there are any. */
+        @CompileStatic
+        static class Step {
+
+            final TraitFieldElement field
+
+            final AutowiredAnnotationBeanPostProcessor afterField
+
+            Step(TraitFieldElement field, AutowiredAnnotationBeanPostProcessor afterField) {
+                this.field = field
+                this.afterField = afterField
+            }
         }
     }
 
@@ -250,12 +324,6 @@ class GrailsCacheManagerFallback implements BeanFactoryPostProcessor {
 
         final Field field
 
-        /** The class the bean's injection was found for. */
-        final Class<?> beanType
-
-        /** Whether Spring injects members of the bean after the field. */
-        final boolean membersAfter
-
         private final boolean required
 
         private final DefaultListableBeanFactory beanFactory
@@ -264,13 +332,10 @@ class GrailsCacheManagerFallback implements BeanFactoryPostProcessor {
 
         private volatile Object cachedFieldValue
 
-        TraitFieldElement(Field field, boolean required, DefaultListableBeanFactory beanFactory, Class<?> beanType,
-                          boolean membersAfter) {
+        TraitFieldElement(Field field, boolean required, DefaultListableBeanFactory beanFactory) {
             this.field = field
             this.required = required
             this.beanFactory = beanFactory
-            this.beanType = beanType
-            this.membersAfter = membersAfter
         }
 
         void inject(Object bean, String beanName) {
@@ -375,8 +440,7 @@ class GrailsCacheManagerFallback implements BeanFactoryPostProcessor {
         Object getLazyResolutionProxyIfNecessary(DependencyDescriptor descriptor, String beanName) {
             Object proxy = delegate.getLazyResolutionProxyIfNecessary(descriptor, beanName)
             Field field = descriptor.field
-            if (proxy != null || beanFactory == null || descriptor instanceof FallbackDescriptor || field == null ||
-                    traitField(field.declaringClass) != field) {
+            if (proxy != null || beanFactory == null || descriptor instanceof FallbackDescriptor || !isTraitField(field)) {
                 return proxy
             }
             FallbackDescriptor fallback = new FallbackDescriptor(descriptor, beanFactory)
