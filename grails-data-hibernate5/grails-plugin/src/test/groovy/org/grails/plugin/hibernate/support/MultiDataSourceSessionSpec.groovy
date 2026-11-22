@@ -25,8 +25,11 @@ import org.hibernate.FlushMode
 import org.hibernate.Session
 import org.hibernate.SessionFactory
 import org.hibernate.dialect.H2Dialect
+import org.springframework.mock.web.MockHttpServletRequest
+import org.springframework.mock.web.MockHttpServletResponse
 import org.springframework.orm.hibernate5.SessionHolder
 import org.springframework.transaction.support.TransactionSynchronizationManager
+import org.springframework.web.context.request.ServletWebRequest
 import org.springframework.web.context.request.WebRequest
 import spock.lang.AutoCleanup
 import spock.lang.Shared
@@ -189,7 +192,7 @@ class MultiDataSourceSessionSpec extends Specification {
         !secondarySession.open
     }
 
-    def "a request that goes asynchronous closes the sessions it opened and leaves the thread without them"() {
+    def "a request that goes asynchronous without an asynchronous context closes the sessions it opened at once and leaves the thread without them"() {
         given: "the request has opened its sessions"
         def interceptor = new GrailsOpenSessionInViewInterceptor()
         interceptor.setHibernateDatastore(datastore)
@@ -235,7 +238,7 @@ class MultiDataSourceSessionSpec extends Specification {
         when: "the request goes asynchronous"
         interceptor.afterConcurrentHandlingStarted(webRequest)
 
-        then: "the change is written, as postHandle would write it, and the session is closed"
+        then: "the change is written, as postHandle would write it, and the session is closed at once, without an asynchronous context"
         titleOf(secondarySf, OutsideTransactionBook, bookId) == 'After'
         !secondarySession.open
         !TransactionSynchronizationManager.hasResource(secondarySf)
@@ -265,7 +268,7 @@ class MultiDataSourceSessionSpec extends Specification {
         when: "the request goes asynchronous"
         interceptor.afterConcurrentHandlingStarted(webRequest)
 
-        then: "nothing is flushed or thrown, and the session is closed"
+        then: "nothing is flushed or thrown, and the session is closed at once, without an asynchronous context"
         notThrown(Exception)
         titleOf(secondarySf, InsideTransactionBook, bookId) == 'Before'
         !secondarySession.open
@@ -304,7 +307,7 @@ class MultiDataSourceSessionSpec extends Specification {
         when: "the request goes asynchronous"
         interceptor.afterConcurrentHandlingStarted(webRequest)
 
-        then: "every session the request opened is unbound and closed"
+        then: "every session the request opened is unbound and, without an asynchronous context, closed at once"
         AssertionError failure = thrown()
         [autoFlush.sessionFactory, secondarySf, thirdSf].every { !TransactionSynchronizationManager.hasResource(it) }
         !defaultSession.open
@@ -319,7 +322,7 @@ class MultiDataSourceSessionSpec extends Specification {
         autoFlush?.close()
     }
 
-    def "a request that Grails makes asynchronous closes its default session too"() {
+    def "a request that Grails makes asynchronous without an asynchronous context closes its default session at once too"() {
         given: "the request has opened its sessions"
         def interceptor = new GrailsOpenSessionInViewInterceptor()
         interceptor.setHibernateDatastore(datastore)
@@ -341,7 +344,78 @@ class MultiDataSourceSessionSpec extends Specification {
         }
     }
 
-    def "a request that Spring makes asynchronous leaves its default session open for Spring to close"() {
+    def "a request that Grails makes asynchronous closes its sessions when the asynchronous request completes"() {
+        given: 'a servlet request that has opened its sessions'
+        var webRequest = new ServletWebRequest(new MockHttpServletRequest(asyncSupported: true), new MockHttpServletResponse())
+        final interceptor = new GrailsOpenSessionInViewInterceptor(hibernateDatastore: datastore).tap {
+            preHandle(webRequest)
+        }
+        final secondarySf = datastore.getDatastoreForConnection('secondary').sessionFactory
+        final defaultSession = boundSession(datastore.sessionFactory)
+        final secondarySession = boundSession(secondarySf)
+
+        when: 'the action returns a promise, so that the request goes asynchronous'
+        final asyncContext = webRequest.request.startAsync()
+        webRequest.setAttribute('org.grails.ASYNC_STARTED', true, WebRequest.SCOPE_REQUEST)
+        interceptor.afterConcurrentHandlingStarted(webRequest)
+
+        then: 'the sessions are unbound, and open for the work the request continues with'
+        !TransactionSynchronizationManager.hasResource(datastore.sessionFactory)
+        !TransactionSynchronizationManager.hasResource(secondarySf)
+        defaultSession.open
+        secondarySession.open
+
+        when: 'the asynchronous request completes'
+        asyncContext.complete()
+
+        then: 'they are closed'
+        !defaultSession.open
+        !secondarySession.open
+
+        cleanup:
+        [defaultSession, secondarySession].each { session ->
+            if (session?.open) {
+                session.close()
+            }
+        }
+    }
+
+    def "a request that Spring makes asynchronous closes its sessions when the asynchronous request completes without a dispatch"() {
+        given: 'a servlet request that has opened its sessions'
+        var webRequest = new ServletWebRequest(new MockHttpServletRequest(asyncSupported: true), new MockHttpServletResponse())
+        final interceptor = new GrailsOpenSessionInViewInterceptor(hibernateDatastore: datastore).tap {
+            preHandle(webRequest)
+        }
+        final secondarySf = datastore.getDatastoreForConnection('secondary').sessionFactory
+        final defaultSession = boundSession(datastore.sessionFactory)
+        final secondarySession = boundSession(secondarySf)
+
+        when: 'the request goes asynchronous without Grails marking it, as for a Callable, a DeferredResult or a task the action does not return'
+        final asyncContext = webRequest.request.startAsync()
+        interceptor.afterConcurrentHandlingStarted(webRequest)
+
+        then: 'the sessions are unbound, and open for the work the request continues with'
+        !TransactionSynchronizationManager.hasResource(datastore.sessionFactory)
+        !TransactionSynchronizationManager.hasResource(secondarySf)
+        defaultSession.open
+        secondarySession.open
+
+        when: 'the asynchronous request completes without the dispatch in which Spring closes the default session'
+        asyncContext.complete()
+
+        then: 'both sessions are closed'
+        !secondarySession.open
+        !defaultSession.open
+
+        cleanup:
+        [defaultSession, secondarySession].each { session ->
+            if (session?.open) {
+                session.close()
+            }
+        }
+    }
+
+    def "a request that Spring makes asynchronous without an asynchronous context leaves its default session open for Spring to close"() {
         given: "the request has opened its sessions"
         def interceptor = new GrailsOpenSessionInViewInterceptor()
         interceptor.setHibernateDatastore(datastore)
@@ -387,7 +461,7 @@ class MultiDataSourceSessionSpec extends Specification {
         defaultSession?.close()
     }
 
-    def "a request that goes asynchronous closes the session of another datasource without a flush"() {
+    def "a request that goes asynchronous without an asynchronous context closes the session of another datasource at once, without a flush"() {
         given: "a book of the other datasource"
         OsivBook.withTransaction { new OsivBook(title: 'Before').save() }
 
