@@ -21,21 +21,23 @@ A fix that changes the result of a call that works today can ship behind a setti
 
 This page lists every such setting. The upgrade notes of the release that adds a setting describe the change in detail.
 
-[cols="3,5,2,2,2,2", options="header"]
+[cols="3,5,2,2,2,2,2", options="header"]
 |===
-| Setting | What it changes | Added in | Default in Grails 7 and 8.0 | New result by default from | Removed in
+| Setting | What it changes | Added in | Grails 7 default | Grails 8.0 default | Grails 8.1 default (planned) | Removed in
 
 | `grails.gorm.leftJoinAssociationSort`
-| With `true`, a sort by a property of an association, such as `Book.list(sort: 'author.name')`, joins the association with a left join, so the sort keeps the instances whose association is `null`. With `false`, it joins the association with an inner join, which leaves those instances out. Applies to GORM for Hibernate. See link:upgrading60x.html#grails-7-0-18[Grails 7.0.18].
+| With `true`, a sort by a property of an association, such as `Book.list(sort: 'author.name')`, joins the association with a left join, so the sort keeps the instances whose association is `null`. With `false`, it joins the association with an inner join, which leaves those instances out. Applies to GORM for Hibernate. Explicit `false` logs a startup warning naming Grails 9. See link:upgrading.html#grails-7-0-18[Grails 7.0.18].
 | 7.0.18
 | `false`
-| 8.1.0
+| `false`
+| `true`
 | 9.0.0
 
 | `grails.converters.json.enum.format` and `grails.converters.xml.enum.format`
-| With `simple`, an enum is rendered as its name, as in `"stage": "SUBMIT"`, which is the form that data binding accepts. Without it, an enum is rendered as an object with its type and its name. See link:upgrading60x.html#grails-7-0-2[Grails 7.0.2].
+| With `simple`, an enum is rendered as its name, as in `"stage": "SUBMIT"`, which is the form that data binding accepts. Without it, an enum is rendered as an object with its type and its name. See link:upgrading.html#grails-7-0-2[Grails 7.0.2].
 | 7.0.2
 | not set
-| 8.0.0
+| not applicable; enums use their names
+| not applicable; enums use their names
 | 8.0.0 removes the legacy format
 |===

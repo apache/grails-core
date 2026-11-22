@@ -24,7 +24,9 @@ import grails.gorm.DetachedCriteria
 import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.hibernate.Hibernate
+import spock.lang.IgnoreIf
 import spock.lang.Issue
+import spock.lang.Requires
 
 import jakarta.persistence.criteria.JoinType
 
