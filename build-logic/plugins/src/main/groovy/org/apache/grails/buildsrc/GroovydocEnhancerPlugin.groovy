@@ -102,6 +102,7 @@ class GroovydocEnhancerPlugin implements Plugin<Project> {
         Provider<String> javaVersion = extension.javaVersionEnabled.flatMap { boolean enabled ->
             enabled ? extension.javaVersion : project.providers.provider { (String) null }
         }
+        Provider<Boolean> requireJdkSources = extension.requireJdkSources
 
         project.tasks.withType(Groovydoc).configureEach { gdoc ->
             if (!extension.useAntBuilder.get()) {
@@ -173,7 +174,9 @@ class GroovydocEnhancerPlugin implements Plugin<Project> {
                         task.temporaryDir,
                         antArgs,
                         groovydocLinks.get(),
-                        task.logger.infoEnabled
+                        task.logger.infoEnabled,
+                        new File(System.getProperty('java.home')),
+                        requireJdkSources.get()
                 )
             }
         }
