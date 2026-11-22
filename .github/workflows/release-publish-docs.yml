@@ -25,7 +25,7 @@ permissions: { }
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   JAVA_DISTRIBUTION: liberica
-  JAVA_VERSION: 21.0.12
+  JAVA_VERSION: 21.0.12 # keep it synced with .sdkmanrc
   VERSION: ${{ inputs.version }}
 jobs:
   docs:
