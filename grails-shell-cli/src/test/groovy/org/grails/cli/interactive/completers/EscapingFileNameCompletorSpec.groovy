@@ -33,7 +33,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 /**
- * Tests for EscapingFileNameCompletor which extends JLine 3's FileNameCompleter
+ * Tests for EscapingFileNameCompletor which extends JLine's FileNameCompleter
  * and escapes whitespace in file path completions.
  */
 class EscapingFileNameCompletorSpec extends Specification {

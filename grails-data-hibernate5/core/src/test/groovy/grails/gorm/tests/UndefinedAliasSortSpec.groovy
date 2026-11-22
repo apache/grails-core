@@ -61,6 +61,12 @@ class UndefinedAliasSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckMa
         'a detached criteria that names the team'     | { new DetachedCriteria(Team, 't').list(sort: 'c1.name') }
         'findAll by example'                          | { Team.findAll(new Team(), [sort: 'c1.name']) }
         'the sort argument of a criteria query'       | { Team.createCriteria().list(sort: 'c1.name') { } }
+        'a count with a stored sort'                  | { Team.where { name != null }.sort('c1.name').count() }
+        'a get with a stored sort'                    | { Team.where { name != null }.sort('c1.name').get() }
+        'a descending paged list'                     | { Team.list(sort: 'c1.name', order: 'desc', max: 2) }
+        'a map of sorts'                             | { Team.list(sort: ['c1.name': 'desc']) }
+        'an invalid association property'            | { new DetachedCriteria(Team).list(sort: 'club.unknown') }
+        'an invalid nested association path'         | { new DetachedCriteria(Team).list(sort: 'club.x.name') }
     }
 
     void 'a sort by an alias that the query defines still sorts'() {

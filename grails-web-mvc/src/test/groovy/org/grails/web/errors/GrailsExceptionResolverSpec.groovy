@@ -45,6 +45,8 @@ import org.springframework.beans.factory.BeanNotOfRequiredTypeException
 import org.springframework.beans.factory.NoSuchBeanDefinitionException
 import org.springframework.context.ApplicationContext
 import org.springframework.context.support.StaticApplicationContext
+import org.springframework.core.Ordered
+import org.springframework.http.HttpStatus
 import org.springframework.http.server.observation.ServerRequestObservationContext
 import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.mock.web.MockHttpServletResponse
@@ -58,15 +60,20 @@ import org.springframework.web.filter.ServerHttpObservationFilter
 import org.springframework.web.util.WebUtils
 import org.springframework.web.context.WebApplicationContext
 import org.springframework.web.context.support.StaticWebApplicationContext
+import org.springframework.web.servlet.HandlerExceptionResolver
 import org.springframework.web.servlet.ModelAndView
 import org.springframework.web.servlet.ViewResolver
 import org.springframework.web.servlet.handler.SimpleUrlHandlerMapping
 import org.springframework.web.servlet.mvc.Controller
 import org.springframework.web.servlet.mvc.SimpleControllerHandlerAdapter
+import org.springframework.web.server.ResponseStatusException
+import org.springframework.web.servlet.mvc.annotation.ResponseStatusExceptionResolver
+import org.springframework.web.servlet.mvc.support.DefaultHandlerExceptionResolver
 import org.springframework.web.servlet.view.InternalResourceView
 import spock.lang.Issue
 import spock.lang.Specification
 
+import jakarta.servlet.AsyncEvent
 import jakarta.servlet.DispatcherType
 import jakarta.servlet.FilterChain
 import jakarta.servlet.RequestDispatcher
@@ -128,20 +135,6 @@ class GrailsExceptionResolverSpec extends Specification {
         'that is an Error Groovy wrapped'            | new InvokerInvocationException(TOO_DEEP)                                       | TOO_DEEP      | 500
     }
 
-    void 'an exception is still the error of a context that comes without its observation'() {
-        given:
-        def request = new MockHttpServletRequest('GET', '/failing')
-        def response = new MockHttpServletResponse()
-        def context = new ServerRequestObservationContext(request, response)
-        request.setAttribute(ServerHttpObservationFilter.CURRENT_OBSERVATION_CONTEXT_ATTRIBUTE, context)
-
-        when:
-        observedResolver().resolveException(request, response, null, FAILURE)
-
-        then:
-        context.error.is(FAILURE)
-    }
-
     void 'the exception an error handler answers stays the error of the HTTP server observation'() {
         given: 'the filter a running application has around its requests, and an error handler to forward to'
         ServerRequestObservationContext observed = null
@@ -168,28 +161,27 @@ class GrailsExceptionResolverSpec extends Specification {
         notified.first().is(original)
     }
 
-    void 'the handlers hear of an exception an error handler answers on an asynchronous dispatch, #where'() {
-        given: 'the filter, which on that dispatch does not read the exception left on the request'
+    void 'the handlers hear once of an exception an error handler answers on an asynchronous dispatch, #where'() {
+        given: 'the filter, around a request whose first dispatch started asynchronous processing'
+        ServerRequestObservationContext observed = null
         List<Throwable> notified = []
-        def registry = registryReporting({ }, { notified << it })
+        def registry = registryReporting({ observed = it }, { notified << it })
         def resolver = resolverFor({ '500'(controller: 'errors', action: 'serverError') }, true)
         def request = new MockHttpServletRequest(servletContext, 'GET', '/fail')
-        request.dispatcherType = DispatcherType.ASYNC
-        request.setAttribute(GrailsWebUtils.ASYNC_REQUEST_URI_ATTRIBUTE, '/fail')
         def response = new MockHttpServletResponse()
         bind(GRAILS, request, response)
         def original = new IllegalStateException('original')
-        FilterChain application = { req, res ->
+
+        when: 'the asynchronous dispatch fails, the error controller answers, and the processing completes'
+        observeAsynchronousExchange(registry, request, response, { req, res ->
             request.dispatcherType = resolvedOn
             resolver.resolveException((HttpServletRequest) req, (HttpServletResponse) res, null, original)
             request.dispatcherType = DispatcherType.ASYNC
-        } as FilterChain
+        } as FilterChain)
 
-        when:
-        new ServerHttpObservationFilter(registry).doFilter(request, response, application)
-
-        then:
+        then: 'the filter reads it once the processing has completed, so the resolver does not report it as well'
         response.forwardedUrl == '/errors/serverError'
+        observed.error.is(original)
         notified.size() == 1
         notified.first().is(original)
 
@@ -199,16 +191,12 @@ class GrailsExceptionResolverSpec extends Specification {
         'in an action forwarded to' | DispatcherType.FORWARD
     }
 
-    void 'the handlers hear once of an exception an error handler answers on #dispatch, when the request still reads as a forward afterwards'() {
-        given: 'a container that leaves a forwarded request reading as a forward, as Undertow does, so the filter reads the exception left on it'
+    void 'the handlers hear once of an exception an error handler answers on a request dispatch, when the request still reads as a forward afterwards'() {
+        given: 'a container that leaves a forwarded request reading as a forward, so the filter reads the exception left on it'
         List<Throwable> notified = []
         def registry = registryReporting({ }, { notified << it })
         def resolver = resolverFor({ '500'(controller: 'errors', action: 'serverError') }, true)
         def request = new ForwardLeftOnRequest(servletContext, 'GET', '/fail')
-        request.dispatcherType = dispatch
-        if (dispatch == DispatcherType.ASYNC) {
-            request.setAttribute(GrailsWebUtils.ASYNC_REQUEST_URI_ATTRIBUTE, '/fail')
-        }
         def response = new MockHttpServletResponse()
         bind(GRAILS, request, response)
         def original = new IllegalStateException('original')
@@ -224,12 +212,9 @@ class GrailsExceptionResolverSpec extends Specification {
         request.dispatcherType == DispatcherType.FORWARD
         notified.size() == 1
         notified.first().is(original)
-
-        where:
-        dispatch << [DispatcherType.REQUEST, DispatcherType.ASYNC]
     }
 
-    void 'the handlers hear once of an exception an error controller answers in a forward from #dispatch, when #container'() {
+    void 'the handlers hear once of an exception an error controller answers in a forward from a request dispatch, when #container'() {
         given: 'the Grails dispatcher servlet behind the filter, and a handler that forwards to one that fails'
         List<Throwable> notified = []
         def registry = registryReporting({ }, { notified << it })
@@ -240,10 +225,6 @@ class GrailsExceptionResolverSpec extends Specification {
                 '/failing'   : { req, res -> throw original } as Controller])
         def request = new ForwardingRequest(servletContext, '/forwarding', servlet, ['/forwarding', '/failing'] as Set,
                 restoresForward)
-        request.dispatcherType = dispatch
-        if (dispatch == DispatcherType.ASYNC) {
-            request.setAttribute(GrailsWebUtils.ASYNC_REQUEST_URI_ATTRIBUTE, '/forwarding')
-        }
         def response = new MockHttpServletResponse()
 
         when:
@@ -253,16 +234,174 @@ class GrailsExceptionResolverSpec extends Specification {
 
         then:
         response.forwardedUrl == '/errors/serverError'
-        request.dispatcherType == (restoresForward ? dispatch : DispatcherType.FORWARD)
+        request.dispatcherType == (restoresForward ? DispatcherType.REQUEST : DispatcherType.FORWARD)
         notified.size() == 1
         notified.first().is(original)
 
         where:
-        dispatch               | restoresForward | container
-        DispatcherType.REQUEST | true            | 'the container restores the request, as Tomcat and Jetty do'
-        DispatcherType.REQUEST | false           | 'the request still reads as the forward, as on Undertow'
-        DispatcherType.ASYNC   | true            | 'the container restores the request, as Tomcat and Jetty do'
-        DispatcherType.ASYNC   | false           | 'the request still reads as the forward, as on Undertow'
+        restoresForward | container
+        true            | 'the container restores the request, as Tomcat and Jetty do'
+        false           | 'the request still reads as the forward'
+    }
+
+    void 'the exception of an action stays the error of the observation when its error controller fails as well, and #resolvedBy resolves that'() {
+        given: 'the Grails dispatcher servlet behind the filter, and an error controller that fails'
+        ServerRequestObservationContext observed = null
+        List<Throwable> notified = []
+        def registry = registryReporting({ observed = it }, { notified << it })
+        def resolver = resolverFor({ '500'(controller: 'errors', action: 'serverError') }, true)
+        def original = new IllegalStateException('original')
+        def servlet = dispatcherServletWith(resolver, [
+                '/failing'           : { req, res -> throw original } as Controller,
+                '/errors/serverError': { req, res -> throw later } as Controller],
+                springResolves ? [new ResponseStatusExceptionResolver(order: Ordered.HIGHEST_PRECEDENCE)] : [])
+        def request = new ForwardingRequest(servletContext, '/failing', servlet, ['/failing', '/errors/serverError'] as Set,
+                true)
+        def response = new MockHttpServletResponse()
+
+        when:
+        new ServerHttpObservationFilter(registry).doFilter(request, response, { req, res ->
+            servlet.service(req, res)
+        } as FilterChain)
+
+        then: 'the request failed with what the action threw, not with what failed while answering it'
+        observed.error.is(original)
+        notified.size() == 1
+        notified.first().is(original)
+
+        where:
+        resolvedBy    | springResolves | later
+        'Grails'      | false          | new UnsupportedOperationException('error controller failed')
+        'Spring MVC'  | true           | new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, 'error controller failed')
+    }
+
+    void 'the exception of an action stays the error of the observation when #handler answers it, and #resolvedBy resolves a later failure'() {
+        given: 'the Grails dispatcher servlet behind the filter, and an error page that includes a handler that fails'
+        ServerRequestObservationContext observed = null
+        List<Throwable> notified = []
+        def registry = registryReporting({ observed = it }, { notified << it })
+        def resolver = resolverFor(mappings, controllerMappings)
+        def original = new IllegalStateException('original')
+        def servlet = dispatcherServletWith(resolver, [
+                '/failing': { req, res -> throw original } as Controller,
+                (page)    : { req, res -> includeUnlessIncluded(req, res, '/later') } as Controller,
+                '/later'  : { req, res -> throw later } as Controller],
+                springResolves ? [new ResponseStatusExceptionResolver(order: Ordered.HIGHEST_PRECEDENCE)] : [])
+        def request = new ForwardingRequest(servletContext, '/failing', servlet, ['/failing', page, '/later'] as Set, true)
+        def response = new MockHttpServletResponse()
+
+        when:
+        new ServerHttpObservationFilter(registry).doFilter(request, response, { req, res ->
+            servlet.service(req, res)
+        } as FilterChain)
+
+        then: 'the request failed with what the action threw, not with what failed once the error page answered it'
+        observed.error.is(original)
+        notified.size() == 1
+        notified.first().is(original)
+
+        where:
+        handler               | mappings                                               | controllerMappings | page                  | resolvedBy   | springResolves | later
+        'the error view'      | { '500'(view: '/error') }                              | false              | '/error'              | 'Grails'     | false          | new UnsupportedOperationException('later')
+        'the error view'      | { '500'(view: '/error') }                              | false              | '/error'              | 'Spring MVC' | true           | new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, 'later')
+        'an error controller' | { '500'(controller: 'errors', action: 'serverError') } | true               | '/errors/serverError' | 'Grails'     | false          | new UnsupportedOperationException('later')
+        'an error controller' | { '500'(controller: 'errors', action: 'serverError') } | true               | '/errors/serverError' | 'Spring MVC' | true           | new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, 'later')
+    }
+
+    void 'the handlers hear once of an exception an error controller answers in a forward from an asynchronous dispatch'() {
+        given: 'the Grails dispatcher servlet behind the filter, and a handler that forwards to one that fails'
+        ServerRequestObservationContext observed = null
+        List<Throwable> notified = []
+        def registry = registryReporting({ observed = it }, { notified << it })
+        def resolver = resolverFor({ '500'(controller: 'errors', action: 'serverError') }, true)
+        def original = new IllegalStateException('original')
+        def servlet = dispatcherServletWith(resolver, [
+                '/forwarding': { req, res -> req.getRequestDispatcher('/failing').forward(req, res); null } as Controller,
+                '/failing'   : { req, res -> throw original } as Controller])
+        def request = new ForwardingRequest(servletContext, '/forwarding', servlet, ['/forwarding', '/failing'] as Set, true)
+        def response = new MockHttpServletResponse()
+
+        when:
+        observeAsynchronousExchange(registry, request, response, { req, res -> servlet.service(req, res) } as FilterChain)
+
+        then:
+        response.forwardedUrl == '/errors/serverError'
+        observed.error.is(original)
+        notified.size() == 1
+        notified.first().is(original)
+    }
+
+    void 'the handlers hear once of the exception of an action that started asynchronous processing, when #container'() {
+        given: 'the filter, and an action that starts asynchronous processing before it fails'
+        ServerRequestObservationContext observed = null
+        List<Throwable> notified = []
+        def registry = registryReporting({ observed = it }, { notified << it })
+        def resolver = resolverFor({ '500'(controller: 'errors', action: 'serverError') }, true)
+        def request = new MockHttpServletRequest(servletContext, 'GET', '/fail')
+        request.asyncSupported = true
+        def response = new MockHttpServletResponse()
+        bind(GRAILS, request, response)
+        def original = new IllegalStateException('original')
+
+        when: 'the error controller answers, and the request dispatch returns with the exception left on the request'
+        new ServerHttpObservationFilter(registry).doFilter(request, response, { req, res ->
+            req.startAsync()
+            resolver.resolveException((HttpServletRequest) req, (HttpServletResponse) res, null, original)
+        } as FilterChain)
+
+        and: 'the container reports it or not, a later failure follows, and the processing completes'
+        if (reportsLeftException) {
+            request.asyncContext.listeners.each { it.onError(new AsyncEvent(request.asyncContext, request, response, original)) }
+        }
+        if (springResolvesLater) {
+            new DefaultHandlerExceptionResolver().resolveException(request, response, null, new AsyncRequestTimeoutException())
+        }
+        else {
+            request.setAttribute(RequestDispatcher.ERROR_EXCEPTION, new IllegalStateException('response not usable'))
+        }
+        request.asyncContext.complete()
+
+        then: 'what the action threw, once'
+        response.forwardedUrl == '/errors/serverError'
+        observed.error.is(original)
+        notified.size() == 1
+        notified.first().is(original)
+
+        where:
+        reportsLeftException | springResolvesLater | container
+        true                 | false               | 'the container reports the exception left on the request, as Tomcat does'
+        false                | false               | 'the container does not, as Jetty does'
+        true                 | true                | 'the container reports it, and Spring MVC resolves a later failure to a server error'
+        false                | true                | 'the container does not, and Spring MVC resolves a later failure to a server error'
+    }
+
+    void 'a failure that follows the one an error handler answered does not replace it, when #resolvedBy resolves it'() {
+        given: 'the filter, and an action that starts asynchronous processing before it fails'
+        ServerRequestObservationContext observed = null
+        List<Throwable> notified = []
+        def registry = registryReporting({ observed = it }, { notified << it })
+        def resolver = resolverFor({ '500'(view: '/error') }, false)
+        def request = new MockHttpServletRequest(servletContext, 'GET', '/fail')
+        def response = new MockHttpServletResponse()
+        bind(GRAILS, request, response)
+        HandlerExceptionResolver timeoutResolver = resolvedBy == 'Spring MVC' ? new DefaultHandlerExceptionResolver() : resolver
+
+        when: 'the error view answers, and the processing the action started times out afterwards'
+        observeAsynchronousExchange(registry, request, response, { req, res ->
+            timeoutResolver.resolveException((HttpServletRequest) req, (HttpServletResponse) res, null,
+                    new AsyncRequestTimeoutException())
+        } as FilterChain, { req, res ->
+            resolver.resolveException((HttpServletRequest) req, (HttpServletResponse) res, null, FAILURE)
+        } as FilterChain)
+
+        then: 'the request failed with what the action threw'
+        response.status == 503
+        observed.error.is(FAILURE)
+        notified.size() == 1
+        notified.first().is(FAILURE)
+
+        where:
+        resolvedBy << ['Spring MVC', 'Grails']
     }
 
     void 'a filter can read the exception an error handler answered once the chain has returned, with no observation, when #description'() {
@@ -324,6 +463,35 @@ class GrailsExceptionResolverSpec extends Specification {
 
         then:
         response.status == 500
+    }
+
+    /**
+     * Runs an exchange as a container runs one whose first dispatch starts asynchronous processing: that dispatch
+     * through the filter, which adds its listener once the dispatch returns, then the asynchronous dispatch, and then
+     * the completion its listeners are told of.
+     */
+    private static void observeAsynchronousExchange(ObservationRegistry registry, MockHttpServletRequest request,
+            MockHttpServletResponse response, FilterChain asyncDispatch,
+            FilterChain requestDispatch = { req, res -> } as FilterChain) {
+        def filter = new ServerHttpObservationFilter(registry)
+        request.asyncSupported = true
+        filter.doFilter(request, response, { req, res ->
+            req.startAsync()
+            requestDispatch.doFilter(req, res)
+        } as FilterChain)
+        request.asyncStarted = false
+        request.dispatcherType = DispatcherType.ASYNC
+        request.setAttribute(GrailsWebUtils.ASYNC_REQUEST_URI_ATTRIBUTE, request.requestURI)
+        filter.doFilter(request, response, asyncDispatch)
+        request.asyncContext.complete()
+    }
+
+    /** Includes a page, unless this is the include of an error page that answers a failure of that page. */
+    private static ModelAndView includeUnlessIncluded(HttpServletRequest request, HttpServletResponse response, String page) {
+        if (request.dispatcherType != DispatcherType.INCLUDE) {
+            request.getRequestDispatcher(page).include(request, response)
+        }
+        null
     }
 
     private static ObservationRegistry registryReporting(Closure stopped, Closure errored) {
@@ -1028,12 +1196,16 @@ class GrailsExceptionResolverSpec extends Specification {
         resolver
     }
 
-    private GrailsDispatcherServlet dispatcherServletWith(GrailsExceptionResolver resolver, Map<String, Controller> handlers) {
+    private GrailsDispatcherServlet dispatcherServletWith(GrailsExceptionResolver resolver, Map<String, Controller> handlers,
+            List<HandlerExceptionResolver> springResolvers = []) {
         def handlerMapping = new SimpleUrlHandlerMapping(handlers)
         handlerMapping.applicationContext = webContext
         webContext.beanFactory.registerSingleton('handlerMapping', handlerMapping)
         webContext.beanFactory.registerSingleton('handlerAdapter', new SimpleControllerHandlerAdapter())
         webContext.beanFactory.registerSingleton('exceptionResolver', resolver)
+        springResolvers.eachWithIndex { HandlerExceptionResolver springResolver, int i ->
+            webContext.beanFactory.registerSingleton("springExceptionResolver$i", springResolver)
+        }
         def servlet = new GrailsDispatcherServlet(webContext)
         servlet.init(new MockServletConfig(servletContext, 'grails'))
         servlet

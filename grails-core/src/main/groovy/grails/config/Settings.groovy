@@ -213,6 +213,24 @@ interface Settings {
     String MIME_DISABLE_ACCEPT_HEADER_FOR_USER_AGENTS_XHR = 'grails.mime.disable.accept.header.userAgentsXhr'
 
     /**
+     * Whether {@code request.format}, {@code response.format}, {@code withFormat} and the format {@code respond} writes
+     * in are resolved with Spring MVC's content negotiation manager, which also applies the {@code grails.mime} rules
+     * Grails keeps to what Spring MVC writes for the requests a URL mapping handles, rather than by Grails' own rules.
+     * Defaults to {@link #MIME_NEGOTIATION_SPRING_DEFAULT}.
+     *
+     * @since 9.0
+     */
+    String MIME_NEGOTIATION_SPRING = 'grails.mime.negotiation.spring'
+
+    /**
+     * The default of {@link #MIME_NEGOTIATION_SPRING}, as a property placeholder reads it: {@code false} in Grails 9,
+     * and {@code true} from Grails 10.
+     *
+     * @since 9.0
+     */
+    String MIME_NEGOTIATION_SPRING_DEFAULT = 'false'
+
+    /**
      * The default scope for controllers
      */
     String CONTROLLERS_DEFAULT_SCOPE = 'grails.controllers.defaultScope'

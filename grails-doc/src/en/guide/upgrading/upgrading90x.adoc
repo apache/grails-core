@@ -131,6 +131,11 @@ The route is now set before the Grails interceptors run, so that a failure in on
 An interceptor whose `before()` returns `false`, to render a 403 or to redirect, stopped the request before its route was set, so the request was reported with a `uri` of `UNKNOWN`, or `REDIRECTION` for a redirect.
 It is now reported under the route of the action, so a dashboard or alert keyed on those `uri` values sees those requests move.
 
+* *On Undertow, a request reads as its own dispatch again once a forward returns.*
+Undertow left a request reading as a forward once a forward to a path had returned, as Tomcat and Jetty do not.
+Spring Framework 7.1's observation filter then took an asynchronous request that had forwarded, for example to an error controller, for a plain one, and reported its failure twice.
+`grails-undertow` now restores the dispatcher type when the forward returns, so a filter that reads `getDispatcherType()` once its chain has returned sees `REQUEST` or `ASYNC` rather than `FORWARD`, as it does on Tomcat and Jetty.
+
 * *`http.server.requests.active` is no longer registered by default.*
 Spring Boot 4.2 makes this long task timer opt-in.
 A dashboard or alert that reads it sets `management.metrics.observations.include-active-long-task-timer` to `true`, which replaces `management.metrics.observations.ignored-meters`.
@@ -1484,8 +1489,129 @@ With GORM for MongoDB, a class that is not multi-tenant and was saved inside a t
 
 Data services choose their transaction manager in code generated at compile time, so a data service compiled against an earlier release keeps following the tenant until it is compiled again.
 
-==== 26. A Sort by an Alias That the Query Does Not Define Is Rejected
+==== 26. Unit Tests Run Domain Class Events for Every Data Source and Tenant
 
-With GORM for Hibernate 5, a sort whose path starts with a name that is neither a property of the queried class nor an alias that the query defines, as in `Book.list(sort: 'a.name')`, now throws an `IllegalArgumentException` with the message `Invalid sort property`, as any other invalid sort property does. The query ignored such a sort and returned its results unsorted. This applies to where queries, detached criteria, `list`, dynamic finders, `find` and `findAll` with an example, and the `sort` argument of the `list` of a criteria query.
+In a unit test that implements `DataTest` or `DomainUnitTest`, a save through a data source other than the default one, as `book.secondary.save()` makes, and a save for a tenant with a database or a schema of its own, now run the domain class's events, such as `beforeInsert`, and set its `dateCreated` and `lastUpdated` properties, as they do in the application. In Grails 8 they ran neither. Unit tests still do not set the `@CreatedBy` and `@LastModifiedBy` properties, on any data source, even when the test defines an `AuditorAware` bean, as in Grails 8: the in-memory datastore is not given the application context, so note 28 does not apply to them.
 
-To get the results without a sort, as before, remove the sort, or define the alias in the query, as in `Book.where { def a = author; a.name ==~ 'S%' }.list(sort: 'a.name')`. When the same sort is applied to queries with different criteria, for example from a sortable table with optional filters, sort by the association path, such as `author.name`, which does not depend on an alias.
+===== Required Actions
+
+* A test that expected such a save to keep the `dateCreated` and `lastUpdated` it was given saves inside a `withoutTimestamps { }` block of that data source's listener, such as `Book.secondary.autoTimestampEventListener`.
+* A test that expected a domain class event not to run on such a save expects what the event does.
+* The in-memory datastore of unit tests now follows `grails.gorm.events.autoTimestampInsertOverwrite` and `grails.gorm.autoTimestampCacheAnnotations` on every data source, the default one included, as the application does. In an application whose configuration sets `autoTimestampInsertOverwrite: false`, a unit test that expected a save to overwrite the `dateCreated` or `lastUpdated` it was given expects them kept.
+
+==== 27. A Domain Class Has an `autoTimestampEventListener` Property
+
+Every domain class now has a static `autoTimestampEventListener` property, the listener that sets its timestamp and auditor properties (see the Events and Auto Timestamping section of the GORM for link:{hibernate7Guide}index.html#eventsAutoTimestamping[Hibernate 7] guide). A domain class that declares a property of that name of another type no longer compiles: the compiler reports that the return type of its `getAutoTimestampEventListener()` is incompatible with the one in `GormEntity`. A property of that name typed `AutoTimestampEventListener`, such as an injected bean, compiles but hides the static property, so `Book.autoTimestampEventListener` throws `MissingPropertyException`.
+
+===== Required Actions
+
+* Rename a property of a domain class named `autoTimestampEventListener`. Code that used an injected `autoTimestampEventListener` bean in a domain class reads `Book.autoTimestampEventListener` instead, which is the listener of the data source the class's saves go to.
+
+==== 28. Every Data Source Sets the Auditor Properties and Follows the Auto-Timestamp Settings
+
+In an application with several data sources, or with a database or a schema per tenant, a save through a data source other than the default one:
+
+* sets the `@CreatedBy` and `@LastModifiedBy` properties from the application's `AuditorAware`. In Grails 8 only a save through the default data source set them.
+* follows `grails.gorm.events.autoTimestampInsertOverwrite` and `grails.gorm.autoTimestampCacheAnnotations`. In Grails 8 it overwrote a `dateCreated` or `lastUpdated` that an instance was saved with, whatever `autoTimestampInsertOverwrite` said.
+* with GORM for Neo4j, runs the domain class's events, such as `beforeInsert`, and sets `dateCreated` and `lastUpdated`. In Grails 8 a save through another Neo4j connection ran neither.
+
+===== Required Actions
+
+For most applications **no changes are required**. Check the domain classes saved through a data source other than the default one whose auditor properties, given timestamps or, with Neo4j, events were expected to be left alone.
+
+==== 29. JLine 4
+
+Grails 9 manages JLine 4 (`org.jline:jline`), the line Groovy 6's `groovysh` is built on, in place of JLine 3. The link:{versionsRef}Grails%20BOM.html[Grails BOM dependency table] has the exact version. JLine is the terminal library behind the interactive prompts of the `grails` command line tools and of `grails shell`, and behind `GrailsConsole`, which application and plugin commands write to. The line reader, terminal and completer APIs keep their `org.jline` packages.
+
+===== Required Actions
+
+* Recompile code of your own that uses JLine, such as an `org.jline.reader.Completer` for a command, against JLine 4. JLine 4 removed APIs that JLine 3 had deprecated, so code that uses them no longer compiles. For example, use `org.jline.builtins.Completers.FileNameCompleter` in place of `org.jline.reader.impl.completer.FileNameCompleter`, and `Terminal.inputEncoding()` and `outputEncoding()` in place of `stdinEncoding()`, `stdoutEncoding()` and `stderrEncoding()`. `TerminalBuilder.codepage(int)` and the `TerminalBuilder.PROP_JNA` and `PROP_JANSI` constants are gone too.
+* JLine 4 has no JNA or Jansi terminal provider. Remove a dependency on `org.jline:jline-terminal-jna` or `org.jline:jline-terminal-jansi`: neither has a JLine 4 version, and JLine finds the terminal through its remaining providers.
+
+picocli's `info.picocli:picocli-shell-jline3` runs on JLine 4, but picocli has no JLine 4 version of it, and its `PicocliCommands` implements `org.jline.console.CommandRegistry`, which JLine 4 deprecates. JLine's own picocli bridge, `org.jline:jline-picocli`, is built for JLine 4. To move to it, use it at the JLine version the Grails BOM manages.
+
+==== 30. Command Lines of Application Commands
+
+The command line parser of the `grails` command line tool and of `runCommand`, which reads the command line of an application or plugin command, reads two kinds of input differently:
+
+* An empty argument after an option without a value is that option's value, an empty one. `--name "" value` used to give the option `name` the value `value`; now `name` is empty, and `value` is an argument.
+* The text inside a pair of double quotes is trimmed, as an argument without quotes always was. `" a "` used to reach the command as ` a `, and now reaches it as `a`.
+
+It also reads three kinds of input it used to fail on or cut short:
+
+* `--name=`, an option with an empty value, threw an `ArrayIndexOutOfBoundsException`, and is now the option `name` with an empty value.
+* An argument that is a single `"` threw a `StringIndexOutOfBoundsException`, and is now passed on as it is.
+* The value of an option is everything after the first `=`: `--filter=status=active` used to give `status`, and now gives `status=active`.
+
+===== Required Actions
+
+* Check commands that read an option followed by an empty argument, or arguments with spaces inside quotes, and expect the values above.
+* Remove workarounds for the three failures, such as passing `--filter=status%3Dactive` and decoding it in the command.
+
+[[upgradingSpringFormatNegotiation]]
+==== 31. Opt Into Spring MVC Content Negotiation for Grails Formats
+
+Set `grails.mime.negotiation.spring: true` to resolve `request.format`, `response.format`, `withFormat` and the format
+`respond` writes in with Spring MVC's content negotiation manager, and to have the `format` parameter, URL extensions and
+the `grails.mime` settings of the `Accept` header decide what Spring MVC writes for an action too (see
+<<springFormatNegotiation,Resolving Formats with Spring MVC Content Negotiation>>). Grails 9 keeps its own rules by
+default, and Grails 10 makes the setting the default, so an application should check these answers before then.
+
+[source,yaml]
+.grails-app/conf/application.yml
+----
+grails:
+    mime:
+        negotiation:
+            spring: true
+----
+
+The setting changes these answers, which the framework's tests record by running the same requests both ways:
+
+* *The order of the `Accept` header.* Spring MVC takes a more specific type ahead of a less specific one of equal
+quality, where the Grails rules keep the order of the header: `Accept: */*, application/json` is the `json` format,
+where it is `all` without the setting, and `withFormat` runs the `json` block rather than its first. A type with the
+`+xml` suffix still comes ahead of the XML type of equal quality: `Accept: application/xml, application/atom+xml` is
+`atom` either way, and Spring MVC now writes what an action returns in that order too.
+* *Types with the `+json` and `+xml` suffixes.* A type no configured type names, such as `application/merge-patch+json`,
+`application/soap+xml` or, without a `hal` format, `application/hal+json`, is the `json` or `xml` format, where the
+Grails rules read only the problem types of RFC 9457 so and answer any other as `all`. In `Content-Type` too: a body sent
+as such a type is of the `json` format, where its `request.format` is otherwise `null`, and data binding reads it as JSON.
+* *A request that accepts no configured type.* Such a request, as one that sends only `Accept: image/png`, and one whose
+`Accept` header Spring cannot read, such as `Accept: application/json;q=abc`, is not acceptable: `response.format` and
+`response.mimeType` are `null`, `respond` answers `406 Not Acceptable` and `withFormat` runs its `*` block, or no block,
+where the Grails rules answer as for a client that accepts any type, with the `all` format, or read the header
+leniently. Code that reads `response.format` or `response.mimeType` must allow for `null`.
+* *The `format` parameter and URL extensions.* A format no type is configured for is not acceptable, to `respond`, which
+answers `406`, and to what Spring MVC writes, where the Grails rules answer in the first configured format;
+`withFormat` answers it from the `Accept` header, as for a format it has no block for. A format that
+`spring.mvc.contentnegotiation.media-types` maps, such as `plain: text/plain`, decides what Spring MVC writes, as
+without the setting where `spring.mvc.contentnegotiation.favor-parameter` is on, while `respond` still answers `406`
+for it. The `all` format leaves the format to the `Accept` header: `?format=all` with `Accept: application/json` is `json`, where it is otherwise `all`. The
+first value of the parameter counts.
+* *What Spring MVC writes for an action.* The `format` parameter and URL extensions now decide the type of a
+`ResponseEntity`, a `ProblemDetail` or another value Spring MVC writes for a request a URL mapping handles, where Spring
+MVC read only the `Accept` header: `/book/show/1.json` is answered in JSON whatever the `Accept` header asks for, and
+`/book/show/1.html` of an action that returns a map with `406`, since no message converter writes a map as HTML.
+`grails.mime.use.accept.header: false` and `grails.mime.disable.accept.header.*` now ignore the `Accept` header for it
+too.
+* *Without the `all` format.* Where `grails.mime.types` does not list `all`, a request without an `Accept` header is of
+the `all` format, as one that sends `Accept: */*` is, where the Grails rules give the first configured format, so
+`withFormat` runs its `*` block, or its first block, rather than the block of that format. A type of quality `0` comes
+after any other, so `Accept: application/json;q=0, */*;q=0.1` is `all`, where it is otherwise `json`. `?format=all`
+leaves the format to the `Accept` header there too, where the Grails rules give the first configured format.
+* *Wildcards.* A wildcard such as `text/*` is the `all` format as before, but `withFormat` runs the first block of a
+format with a type compatible with it, and `respond` answers in the first such format of the action, where the Grails
+rules run the first block and answer in the first format: `withFormat { pdf {...}; html {...} }` runs the `html` block for
+`Accept: text/*`.
+* *A `Content-Type` Spring cannot read.* A `Content-Type` Spring rejects, such as `application/json;charset=` or a list
+of types, is of no format, where the Grails rules read it leniently as `json`.
+
+Other requests resolve as before, among them those of browsers and those that name one configured type. A Spring MVC
+endpoint, and Spring Security's filters before a URL mapping has matched a request, negotiate as before.
+
+==== 32. A Sort by an Alias That the Query Does Not Define Is Rejected
+
+With GORM for Hibernate 5 and Hibernate 7, a sort whose path starts with a name that is neither a property of the queried class nor an alias that the query defines, as in `Book.list(sort: 'a.name')`, throws an `IllegalArgumentException` with the message `Invalid sort property`. Hibernate 5 ignored such a sort and returned its results unsorted. Hibernate 7 rejected it inconsistently, sometimes with a `NullPointerException` or an `AssertionError`, and sometimes ignored it. The exception now applies to where queries, detached criteria, `list`, dynamic finders, `find` and `findAll` with an example, and the sort argument or `order` of a criteria query. A stored sort is validated for `count()` and `get()` too: `Book.where { ... }.sort('a.name').count()` throws even though a count does not order its result. An empty example with an invalid sort also throws; with a valid sort it keeps Hibernate 7's existing `null` result.
+
+To get the results without a sort, remove the sort, or define the alias in the query, as in `Book.where { def a = author; a.name ==~ 'S%' }.list(sort: 'a.name')`. When the same sort is applied to queries with different criteria, for example from a sortable table with optional filters, sort by the association path, such as `author.name`, which does not depend on an alias. Check the count query as well when reusing the table's sort parameter.

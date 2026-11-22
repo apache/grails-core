@@ -24,13 +24,9 @@ import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 
 import org.springframework.context.ApplicationContext
-import org.springframework.web.context.support.WebApplicationContextUtils
 
-import grails.config.Config
-import grails.core.GrailsApplication
 import grails.web.mime.MimeType
 import grails.web.mime.MimeUtility
-import org.grails.config.PropertySourcesConfig
 import org.grails.plugins.web.api.MimeTypesApiSupport
 import org.grails.web.servlet.mvc.GrailsWebRequest
 import org.grails.web.util.GrailsApplicationAttributes
@@ -71,7 +67,13 @@ class HttpServletResponseExtension {
             final mimeType = getMimeType(response)
             if (mimeType) {
                 result = mimeType.extension
-                request.setAttribute(GrailsApplicationAttributes.RESPONSE_FORMAT, result)
+                // A wildcard such as text/*, which grails.mime.negotiation.spring resolves to a type of the all format,
+                // is not saved as the format: withFormat and respond answer it with the formats compatible with it, and
+                // the all format the saved format stands for would answer with any
+                if (!(mimeType.extension == 'all' && mimeType.name != MimeType.ALL.name &&
+                        GrailsContentNegotiationStrategy.forRequest(request).springNegotiation)) {
+                    request.setAttribute(GrailsApplicationAttributes.RESPONSE_FORMAT, result)
+                }
             }
         }
         return result
@@ -93,14 +95,15 @@ class HttpServletResponseExtension {
         HttpServletRequest request = webRequest.getRequest()
         MimeType result = (MimeType) request.getAttribute(GrailsApplicationAttributes.RESPONSE_MIME_TYPE)
         if (!result) {
-            def formatOverride = webRequest?.params?.format
+            GrailsContentNegotiationStrategy strategy = GrailsContentNegotiationStrategy.forRequest(request)
+            def formatOverride = strategy.requestedFormat(webRequest)
             if (!formatOverride) {
                 formatOverride = request.getAttribute(GrailsApplicationAttributes.RESPONSE_FORMAT)
             }
             if (formatOverride) {
-                def allMimes = getMimeTypes()
-                MimeType mime = allMimes?.find { MimeType it -> it.extension == formatOverride }
-                result = mime ? mime : allMimes?.find { it }
+                // the configured type of the format, or, for a format that is not configured, the first configured
+                // type, or, with grails.mime.negotiation.spring, none
+                result = strategy.resolveFormat(formatOverride)
 
                 // Save the evaluated format as a request attribute.
                 // This is a blatant hack because we should to this
@@ -115,7 +118,9 @@ class HttpServletResponseExtension {
                 //   - so the saved format is wrong
                 request.setAttribute(GrailsApplicationAttributes.RESPONSE_MIME_TYPE, result)
             } else {
-                result = getMimeTypesInternal(request)[0]
+                // none where the request accepts no configured type, as with grails.mime.negotiation.spring
+                MimeType[] accepted = getMimeTypesInternal(request)
+                result = accepted ? accepted[0] : null
             }
 
         }
@@ -142,15 +147,17 @@ class HttpServletResponseExtension {
         GrailsWebRequest webRequest = GrailsWebRequest.lookup()
         HttpServletRequest request = webRequest.getRequest()
         MimeType[] result = (MimeType[]) request.getAttribute(GrailsApplicationAttributes.RESPONSE_MIME_TYPES)
-        if (!result) {
-            def formatOverride = webRequest?.params?.format
+        if (result == null) {
+            GrailsContentNegotiationStrategy strategy = GrailsContentNegotiationStrategy.forRequest(request)
+            def formatOverride = strategy.requestedFormat(webRequest)
             if (!formatOverride) {
                 formatOverride = request.getAttribute(GrailsApplicationAttributes.RESPONSE_FORMAT)
             }
             if (formatOverride) {
-                def allMimes = getMimeTypes()
-                MimeType mime = allMimes.find { MimeType it -> it.extension == formatOverride }
-                result = [ mime ? mime : getMimeTypes()[0] ] as MimeType[]
+                // with grails.mime.negotiation.spring, none for a format that is not configured, which the request
+                // accepts no configured type in
+                MimeType mime = strategy.resolveFormat(formatOverride)
+                result = mime != null ? [mime] as MimeType[] : new MimeType[0]
 
                 // Save the evaluated format as a request attribute.
                 // This is a blatant hack because we should to this
@@ -185,21 +192,8 @@ class HttpServletResponseExtension {
 
     private static MimeType[] getMimeTypesInternal(HttpServletRequest request) {
         MimeType[] result = (MimeType[]) request.getAttribute(GrailsApplicationAttributes.RESPONSE_FORMATS)
-        if (!result) {
-            ApplicationContext applicationContext = GrailsWebRequest.lookup()?.applicationContext
-            if (applicationContext == null && request.servletContext != null) {
-                applicationContext = WebApplicationContextUtils.getWebApplicationContext(request.servletContext)
-            }
-            GrailsContentNegotiationStrategy strategy = applicationContext?.getBeanProvider(
-                    GrailsMimeTypesWebMvcConfigurer
-            )?.getIfAvailable()?.contentNegotiationStrategy
-            if (strategy == null) {
-                // A context without MimeTypesConfiguration, such as one a test builds by hand, has no
-                // configurer: the strategy is built for the request from the application's settings
-                Config config = applicationContext?.getBeanProvider(GrailsApplication)?.getIfAvailable()?.config
-                strategy = new GrailsContentNegotiationStrategy(getMimeTypes(), config ?: new PropertySourcesConfig())
-            }
-            result = strategy.resolveAcceptedMimeTypes(request)
+        if (result == null) {
+            result = GrailsContentNegotiationStrategy.forRequest(request).resolveAcceptedMimeTypes(request)
             request.setAttribute(GrailsApplicationAttributes.RESPONSE_FORMATS, result)
         }
         return result

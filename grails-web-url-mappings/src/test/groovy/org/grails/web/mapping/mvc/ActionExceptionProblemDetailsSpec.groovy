@@ -80,6 +80,8 @@ import spock.lang.Specification
  */
 class ActionExceptionProblemDetailsSpec extends Specification {
 
+    private static final IllegalStateException SERVER_ERROR = new IllegalStateException('secret')
+
     private GenericWebApplicationContext context
 
     private MockHttpServletRequest request
@@ -305,24 +307,21 @@ class ActionExceptionProblemDetailsSpec extends Specification {
     }
 
     void 'a server error is recorded on the HTTP server observation, and a client error is not'() {
-        given:
+        given: 'the filter a running application has around its requests'
         def resolver = resolver([problemDetails: true])
-        def observation = new ServerRequestObservationContext(request, response)
-        request.setAttribute(ServerHttpObservationFilter.CURRENT_OBSERVATION_CONTEXT_ATTRIBUTE, observation)
-        def serverError = new IllegalStateException('secret')
 
         when:
-        resolver.resolveException(request, response, action(new ProblemController()), new ResponseStatusException(HttpStatus.GONE))
+        def observed = observedError { req, res ->
+            resolver.resolveException(req, res, action(new ProblemController()), thrown)
+        }
 
         then:
-        observation.error == null
+        observed.is(recorded)
 
-        when:
-        response = new MockHttpServletResponse()
-        resolver.resolveException(request, response, action(new ProblemController()), serverError)
-
-        then:
-        observation.error.is(serverError)
+        where:
+        thrown                                         | recorded
+        new ResponseStatusException(HttpStatus.GONE)   | null
+        SERVER_ERROR                                   | SERVER_ERROR
     }
 
     void 'the handlers of the observation, one of which marks the span, are told of a server error and not of a client error'() {
@@ -359,18 +358,18 @@ class ActionExceptionProblemDetailsSpec extends Specification {
     }
 
     void 'an Error an action threw is recorded on the HTTP server observation as itself, when #wrapper wrapped it'() {
-        given:
+        given: 'the filter a running application has around its requests'
         def resolver = resolver([problemDetails: true])
-        def observation = new ServerRequestObservationContext(request, response)
-        request.setAttribute(ServerHttpObservationFilter.CURRENT_OBSERVATION_CONTEXT_ATTRIBUTE, observation)
 
         when:
-        resolver.resolveException(request, response, action(new ProblemController()), thrown)
+        def observed = observedError { req, res ->
+            resolver.resolveException(req, res, action(new ProblemController()), thrown)
+        }
 
         then: 'as the filter that observes the request reports one that reaches it'
         response.status == 500
         problem().status == 500
-        observation.error.is(error)
+        observed.is(error)
 
         where:
         wrapper                   | error                            | thrown
@@ -550,6 +549,27 @@ class ActionExceptionProblemDetailsSpec extends Specification {
         then:
         response.status == 503
         problem().status == 503
+    }
+
+    /** What the observation of a request whose chain runs the given closure carried when it stopped. */
+    private Throwable observedError(Closure chain) {
+        Throwable observed = null
+        def registry = ObservationRegistry.create()
+        registry.observationConfig().observationHandler(new ObservationHandler<Observation.Context>() {
+            @Override
+            boolean supportsContext(Observation.Context context) {
+                context instanceof ServerRequestObservationContext
+            }
+
+            @Override
+            void onStop(Observation.Context context) {
+                observed = context.error
+            }
+        })
+        new ServerHttpObservationFilter(registry).doFilter(request, response, { req, res ->
+            chain.call((HttpServletRequest) req, (HttpServletResponse) res)
+        } as FilterChain)
+        observed
     }
 
     private Map problem() {

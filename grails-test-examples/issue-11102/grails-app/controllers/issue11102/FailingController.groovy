@@ -19,9 +19,11 @@
 
 package issue11102
 
+import org.springframework.http.HttpStatus
 import org.springframework.web.context.request.async.DeferredResult
 import org.springframework.web.context.request.async.WebAsyncManager
 import org.springframework.web.context.request.async.WebAsyncUtils
+import org.springframework.web.server.ResponseStatusException
 import org.springframework.web.servlet.ModelAndView
 import org.springframework.web.servlet.view.InternalResourceView
 
@@ -62,6 +64,19 @@ class FailingController {
 
     def answeredByControllerForAnError() {
         throw new StackOverflowError('answered by the error controller')
+    }
+
+    def answeredByFailingController() {
+        throw new IndexOutOfBoundsException('answered by an error controller that fails')
+    }
+
+    def answeredByControllerFailingWithServerError() {
+        throw new IllegalMonitorStateException('answered by an error controller that fails with a server error')
+    }
+
+    def answeredByControllerFailingWithServerErrorAfterStartingAsync() {
+        startAsyncThatTimesOut()
+        throw new IllegalMonitorStateException('answered by an error controller that fails with a server error')
     }
 
     def answeredByForwardingController() {
@@ -139,6 +154,14 @@ class FailingController {
 
     def errorHandler() {
         render status: 500, text: 'Answered by the error controller'
+    }
+
+    def failingErrorHandler() {
+        throw new IllegalArgumentException('the error controller failed as well')
+    }
+
+    def errorHandlerFailingWithServerError() {
+        throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, 'the error controller failed with a server error')
     }
 
     def forwardingErrorHandler() {

@@ -1,6 +1,6 @@
 ---
 name: grails-upgrade
-description: "Upgrades a Grails application to Grails 9.0 (release 9.0.0-M1). Base version: Grails 8; use it for an application on Grails 8 or on an earlier Grails 9.0 release. An application on Grails 7 or earlier first upgrades to the last Grails 8 release. Covers Groovy 6, Spring Boot 4.2 and Spring Framework 7.1, graphql-java 26, the GPars deprecation in favour of groovy.concurrent, invokedynamic compilation, the separate grails-xml module, the opt-in settings for Spring JSON rendering, Jackson request binding, Spring MVC exception handlers and response bodies, the Jackson-backed JSON converter and domain class rendering, RFC 9457 validation problems, format resolution, web unit tests, generated GORM id and version properties, RxGORM on RxJava 3, the deprecated RxJava 1 and 2 modules, the character encoding filter, and configuration keys below a value that is not a map"
+description: "Upgrades a Grails application to Grails 9.0 (release 9.0.0-M1). Base version: Grails 8; use it for an application on Grails 8 or on an earlier Grails 9.0 release. An application on Grails 7 or earlier first upgrades to the last Grails 8 release. Covers Groovy 6, Spring Boot 4.2 and Spring Framework 7.1, graphql-java 26, the GPars deprecation in favour of groovy.concurrent, invokedynamic compilation, the separate grails-xml module, the opt-in settings for Spring JSON rendering, Jackson request binding, Spring MVC exception handlers and response bodies, the Jackson-backed JSON converter and domain class rendering, RFC 9457 validation problems, format resolution, web unit tests, generated GORM id and version properties, RxGORM on RxJava 3, the deprecated RxJava 1 and 2 modules, the character encoding filter, configuration keys below a value that is not a map, JLine 4, and the command lines of application commands"
 license: Apache-2.0
 ---
 
@@ -15,7 +15,7 @@ Licensed to the Apache Software Foundation (ASF) under one or more contributor l
 - Guide upgrades of Grails applications from Grails 8.x to Grails 9.
 - Guide upgrades from one Grails 9 release to a later one, with the changes of each release listed under that release.
 - Turn the Grails 9 upgrade guide into a practical migration checklist.
-- Identify the Groovy 6, Spring Boot 4.2, Spring Framework 7.1, graphql-java 26, GPars, invokedynamic, XML, JSON rendering and binding, REST error, content negotiation, unit test, GORM, RxGORM, RxJava, and character encoding changes that can break an application.
+- Identify the Groovy 6, Spring Boot 4.2, Spring Framework 7.1, graphql-java 26, GPars, invokedynamic, XML, JSON rendering and binding, REST error, content negotiation, unit test, GORM, RxGORM, RxJava, character encoding, JLine and command line changes that can break an application.
 - Prepare an application for the defaults Grails 10 changes, by checking each Grails 9 opt-in setting while the Grails 8 behaviour is still the default.
 - Keep migration work focused on public application behavior, not internal Grails framework implementation details.
 
@@ -30,7 +30,7 @@ Activate this skill when:
 - Fixing what Spring Boot 4.2 and Spring Framework 7.1 change: forwarded headers behind a reverse proxy, relative redirect locations, `TestRestTemplate`, the `instance` of a problem, `bootBuildImage`, HTTP server metrics, the RabbitMQ starter, and the Spring Security plugin's saved requests, Digest authentication and `fii.alwaysReauthenticate`.
 - Fixing GraphQL queries that fail with `MaxQueryDepthExceeded` or `MaxQueryFieldsExceeded`, or a schema that fails validation, in an application using `grails-data-graphql`.
 - Deciding whether an application keeps or excludes `grails-xml`.
-- Turning on `grails.web.rendering.json.spring`, `grails.converters.json.legacy: false`, `grails.databinding.json.jackson`, `grails.exceptionresolver.springHandlers` or `grails.controllers.responseBody`, and checking what changes.
+- Turning on `grails.web.rendering.json.spring`, `grails.converters.json.legacy: false`, `grails.databinding.json.jackson`, `grails.exceptionresolver.springHandlers`, `grails.controllers.responseBody` or `grails.mime.negotiation.spring`, and checking what changes.
 - Replacing `JSON.createNamedConfig(...)`, `JSON.use(...)` or marshallers that customize `respond` with Jackson serializers and the `NamedJsonConfigurationRegistry`.
 - Fixing web unit tests (`ControllerUnitTest`, `TagLibUnitTest`, `UrlMappingsUnitTest`, `JsonViewUnitTest`) that fail after the upgrade.
 - Porting code that uses RxGORM, `grails-async-rxjava`, `grails-async-rxjava2`, `grails-events-rxjava`, or `grails-events-rxjava2` to RxJava 3.
@@ -123,6 +123,7 @@ Grails 9 moves from Spring Boot 4.1 and Spring Framework 7.0, which Grails 8 use
 - **Nested `@Configuration` classes in tests.** The Spring TestContext Framework now adds a static nested `@Configuration` class of a test's superclasses and enclosing classes to the test's application context, where it ignored such a class unless its class hierarchy declared `@ContextConfiguration`. Grails 8 already logs a warning for each one it ignores, so a test run on Grails 8 shows the affected tests. Remove the `@Configuration` annotation, or move the class to a top-level class, if the test should not load it.
 - **`bootBuildImage` builds on Ubuntu 26.04.** The default builder is `paketobuildpacks/ubuntu-resolute-builder`, in place of `paketobuildpacks/builder-noble-java-tiny`, and images are based on Ubuntu 26.04 instead of 24.04. With no `builder` configured, the run image is `paketobuildpacks/ubuntu-resolute-run-tiny:latest`, which still has no shell; with one configured, it is the run image of the builder, which for `ubuntu-resolute-builder` has a shell. The builder no longer pins the version of the run image, so set both `builder` and `runImage` to specific versions for repeatable images, or set `builder` to `paketobuildpacks/builder-noble-java-tiny` to keep the previous one.
 - **An exception an action throws is recorded as an error on the HTTP server observation.** When an error view answered, as the `"500"(view: '/error')` mapping of a generated application does, `http.server.requests` tagged the 500 with `error` and `exception` values of `none`, and tracing did not see a failure. A `500` mapping to a controller tagged it with `GrailsWrappedRuntimeException` and with the `uri` of that controller. Both now report the exception the action threw, an `Error` such as a failed `assert` included, and the route of the action, and the span of the request is marked as failed. These requests were already counted with `outcome=SERVER_ERROR`, but an alert that counts a non-`none` `error` value sees more server errors than before, and a dashboard that reads the `uri` of an error controller finds those failures under the routes of the actions. A client error is not recorded, and neither is a failure inside `g:include`. After a forward to an error controller, the `jakarta.servlet.error.exception` request attribute holds the exception the action threw rather than a `GrailsWrappedRuntimeException`, for a filter that reads it once the chain has returned; inside the error controller it still holds the wrapper. The route is now set before the Grails interceptors run, so a request an interceptor's `before()` stops by returning `false`, to render a 403 or to redirect, is reported under the route of the action, where it was reported with a `uri` of `UNKNOWN`, or `REDIRECTION` for a redirect; a dashboard or alert keyed on those `uri` values sees those requests move.
+- **On Undertow, a request reads as its own dispatch again once a forward returns.** Undertow left a request reading as a forward once a forward to a path had returned, so Spring Framework 7.1's observation filter took an asynchronous request that had forwarded, for example to an error controller, for a plain one and reported its failure twice. `grails-undertow` now restores the dispatcher type when the forward returns, as Tomcat and Jetty do: a filter that reads `getDispatcherType()` once its chain has returned sees `REQUEST` or `ASYNC` rather than `FORWARD`.
 - **`http.server.requests.active` is no longer registered by default.** Spring Boot 4.2 makes this long task timer opt-in. A dashboard or alert that reads it sets `management.metrics.observations.include-active-long-task-timer` to `true`, which replaces `management.metrics.observations.ignored-meters`.
 - **`spring-boot-starter-amqp` no longer means RabbitMQ.** It is now the starter for generic AMQP 1.0. An application that uses RabbitMQ through `spring-boot-starter-amqp` or `spring-boot-starter-amqp-test` changes to `spring-boot-starter-rabbitmq` or `spring-boot-starter-rabbitmq-test`, and any import of `org.springframework.boot.amqp.autoconfigure` to `org.springframework.boot.rabbitmq.autoconfigure`. RabbitMQ over AMQP 1.0 has `spring-boot-starter-amqp-rabbitmq`.
 - **The Spring Security plugin no longer saves the requests browsers send on their own.** A denied request for `/apple-touch-icon.png`, `/manifest.json` or the `/.well-known/appspecific/com.chrome.devtools.json` that Chrome DevTools sends used to be saved, so a login redirected to it instead of to the page the user asked for. The plugin now ignores these paths, with `grails.plugin.springsecurity.requestCache.ignoredPatterns`. An application that secures a page at one of these paths and wants a login to return to it leaves the path out of that list.
@@ -245,6 +246,7 @@ XML conversion, XML request-body binding, and the XML, Atom, HAL XML and Vnd.Err
 | `grails.web.rendering.xml.spring` | XML that `respond` writes for ordinary beans | `false` | unchanged until Grails 11 removes legacy XML conversion |
 | `grails.exceptionresolver.springHandlers` | Exceptions actions throw, resolved by Spring MVC `@ExceptionHandler` methods | `false` | `true` in Grails 10 |
 | `grails.controllers.responseBody` | The values of actions annotated `@ResponseBody`, written by Spring MVC as the body | `false` | `true` in Grails 10 |
+| `grails.mime.negotiation.spring` | `request.format`, `response.format`, `withFormat` and the format `respond` writes in, resolved with Spring MVC's content negotiation manager | `false` | `true` in Grails 10 |
 
 - Grails 10 changes the three JSON settings together, so that `respond`, `render ... as JSON`, `request.JSON` and data binding write and read JSON with the same mapper. Test them together. At the least, set `grails.converters.json.legacy: false` and `grails.databinding.json.jackson: true` together, or `request.JSON` and data binding accept different JSON.
 - Grails 9 logs a warning while a legacy path is used: once when the legacy `respond` path renders, at startup for `JsonSlurper` request binding, and at startup while `grails.converters.json.legacy` is unset. Setting `grails.converters.json.legacy` to either value turns its warning off.
@@ -440,6 +442,17 @@ The Grails HAL JSON renderers remain available through explicit renderer registr
 - A renderer or binding source creator registered for an interface of `java.lang.Class`, such as `Serializable`, no longer matches every class.
 - The MIME types and the `grails.mime.use.accept.header` and `grails.mime.disable.accept.header.*` settings live in the application context instead of static fields. Remove test code that reset those fields or called `HttpServletResponseExtension.loadMimeTypeConfig`, and set the settings in a spec's `doWithConfig`, since they are read once for each application context. A subclass of `DefaultAcceptHeaderParser` that overrode `createMimeTypeAndAddToList` must take the requested `MimeType` now.
 
+### Opt Into Spring MVC Content Negotiation for Grails Formats
+
+With `grails.mime.negotiation.spring: true`, which Grails 10 makes the default, Grails formats are resolved with Spring MVC's content negotiation manager, and the `format` parameter, URL extensions and the `grails.mime` `Accept` settings also decide what Spring MVC writes for an action. Before turning it on, check these in functional tests:
+
+- `Accept: */*, application/json` is `json`, where it is `all` without the setting: a more specific type comes ahead of a wildcard of equal quality. A `+xml` type still comes ahead of the XML type of equal quality.
+- A type with the `+json` or `+xml` suffix that no configured type names, such as `application/merge-patch+json`, is the `json` or `xml` format, in `Accept` and in `Content-Type`, so data binding reads such a body as JSON.
+- A request that accepts no configured type, such as `Accept: image/png` alone, or whose `Accept` header Spring cannot read, has no format: `response.format` and `response.mimeType` are `null`, `respond` answers `406` and `withFormat` runs its `*` block, or none. Make code that reads them allow for `null`.
+- A format parameter or URL extension no type is configured for is not acceptable, where it was answered in the first configured format. A format only `spring.mvc.contentnegotiation.media-types` maps still decides what Spring MVC writes for an action, such as a `ResponseEntity`, but `respond` answers it with `406`. `?format=all` leaves the format to the `Accept` header.
+- A `ResponseEntity`, `ProblemDetail` or other value Spring MVC writes for an action follows the URL extension and the format parameter: `/book/show/1.json` is JSON whatever the `Accept` header says, and a map at `/book/show/1.html` answers `406`.
+- A wildcard such as `text/*` selects the first `withFormat` block, or the first format of the action, with a type compatible with it.
+
 ## Web Unit Tests
 
 - `ControllerUnitTest`, `TagLibUnitTest` and the other web test traits always include the `restResponder` plugin, even when a spec overrides `getIncludePlugins()`. They also register JSON conversion beans with Boot's Jackson configuration, Spring MVC's message converters, the `mvcContentNegotiationManager` and `requestMappingHandlerAdapter` beans unless the spec declares beans of those names, and the `grails-xml` beans when that module is on the test classpath. Update specs that assert on the beans of their context.
@@ -571,13 +584,54 @@ With a database or a schema per tenant, a domain class that does not implement `
 - With GORM for MongoDB, documents of such a class saved inside a tenant block in Grails 8 are in the tenant's database, which Grails 9 no longer reads for it. A class whose instances belong to one tenant implements `MultiTenant` before the upgrade. A class that a multi-tenant class references is loaded from the tenant's database, so it implements `MultiTenant` too. Only shared instances that no multi-tenant class references move to the default database.
 - A data service compiled against an earlier release keeps following the tenant until it is compiled again.
 
+## Unit Tests Run Domain Class Events for Every Data Source and Tenant
+
+In a `DataTest` or `DomainUnitTest` spec, a save through a data source other than the default one, such as `book.secondary.save()`, and a save for a tenant with a database or a schema of its own, now run the domain class's events, such as `beforeInsert`, and set `dateCreated` and `lastUpdated`, as in the application. Grails 8 ran neither. Unit tests still do not set `@CreatedBy` and `@LastModifiedBy`, even with an `AuditorAware` bean in the test.
+
+- A test that expected such a save to keep the timestamps it was given saves inside `withoutTimestamps { }` of that data source's listener, such as `Book.secondary.autoTimestampEventListener`.
+- A test that expected a domain class event not to run on such a save expects what the event does.
+- The in-memory datastore follows `grails.gorm.events.autoTimestampInsertOverwrite` and `grails.gorm.autoTimestampCacheAnnotations` on every data source, the default one included. With `autoTimestampInsertOverwrite: false`, a test that expected a given `dateCreated` or `lastUpdated` to be overwritten expects it kept.
+
+## A Domain Class Has an `autoTimestampEventListener` Property
+
+Every domain class has a static `autoTimestampEventListener` property: the listener that sets its timestamp and auditor properties, for the data source its saves go to.
+
+- A domain class that declares a property named `autoTimestampEventListener` of another type no longer compiles, as its `getAutoTimestampEventListener()` return type is incompatible with the one in `GormEntity`. One typed `AutoTimestampEventListener`, such as an injected bean, compiles but hides the static property, so `Book.autoTimestampEventListener` throws `MissingPropertyException`. Rename the property.
+- Code that used an injected `autoTimestampEventListener` bean in a domain class reads `Book.autoTimestampEventListener` instead.
+
+## Every Data Source Sets the Auditor Properties and Follows the Auto-Timestamp Settings
+
+With several data sources, or a database or a schema per tenant, a save through a data source other than the default one:
+
+- sets `@CreatedBy` and `@LastModifiedBy` from the application's `AuditorAware`; Grails 8 set them only on the default data source.
+- follows `grails.gorm.events.autoTimestampInsertOverwrite` and `grails.gorm.autoTimestampCacheAnnotations`; Grails 8 overwrote a given `dateCreated` or `lastUpdated` whatever the setting said.
+- with GORM for Neo4j, runs the domain class's events and sets `dateCreated` and `lastUpdated`; Grails 8 ran neither on another Neo4j connection.
+
+Most applications need no change. Check the domain classes saved through another data source whose auditor properties, given timestamps or, with Neo4j, events were expected to be left alone.
+
+## JLine 4
+
+Grails 9 manages JLine 4 (`org.jline:jline`), the line Groovy 6's `groovysh` is built on, in place of JLine 3. It is the terminal library behind the prompts of the `grails` command line tools and `grails shell`, and behind `GrailsConsole`. The `org.jline` packages are unchanged.
+
+- Recompile code that uses JLine, such as an `org.jline.reader.Completer` of a command, against JLine 4, which removed APIs JLine 3 had deprecated: use `org.jline.builtins.Completers.FileNameCompleter` for `org.jline.reader.impl.completer.FileNameCompleter`, and `Terminal.inputEncoding()`/`outputEncoding()` for `stdinEncoding()`, `stdoutEncoding()` and `stderrEncoding()`; `TerminalBuilder.codepage(int)`, `PROP_JNA` and `PROP_JANSI` are gone.
+- Remove dependencies on `org.jline:jline-terminal-jna` and `org.jline:jline-terminal-jansi`, which have no JLine 4 version.
+- `info.picocli:picocli-shell-jline3` still runs, but its `PicocliCommands` implements the deprecated `org.jline.console.CommandRegistry`; `org.jline:jline-picocli`, at the JLine version the Grails BOM manages, is the JLine 4 bridge to move to.
+
+## Command Lines of Application Commands
+
+The command line parser of the `grails` tool and of `runCommand`, which application and plugin commands read their command line through, changed in Grails 9:
+
+- An empty argument after an option without a value is that option's empty value: `--name "" value` gives an empty `name` and the argument `value`, where it used to give `name=value`.
+- The text inside a pair of double quotes is trimmed: `" a "` reaches the command as `a`, where it used to be ` a `.
+- `--name=` gives an empty `name` (it threw `ArrayIndexOutOfBoundsException`), a lone `"` argument is passed on (it threw `StringIndexOutOfBoundsException`), and an option's value is everything after the first `=`: `--filter=status=active` gives `status=active`, where it gave `status`. Remove workarounds for these.
+
 ## A Sort by an Alias That the Query Does Not Define Is Rejected
 
-With GORM for Hibernate 5, a sort whose path starts with a name that is neither a property of the queried class nor an alias that the query defines, as in `Book.list(sort: 'a.name')`, throws an `IllegalArgumentException` with the message `Invalid sort property`. The query ignored such a sort and returned its results unsorted. This applies to where queries, detached criteria, `list`, dynamic finders, `find` and `findAll` with an example, and the `sort` argument of the `list` of a criteria query.
+With GORM for Hibernate 5 and Hibernate 7, a sort whose path starts with a name that is neither a property of the queried class nor an alias that the query defines throws `IllegalArgumentException: Invalid sort property`. Hibernate 5 ignored it; Hibernate 7 either ignored it or failed inconsistently. This applies to where queries, detached criteria, static list, dynamic finders, example queries and criteria sorts. Stored sorts are validated for `count()` and `get()` too, even though a count does not order its result. An empty example rejects an invalid sort; with a valid sort Hibernate 7 still returns `null`.
 
-- Search for sorts whose property contains a `.`, such as `sort: 'a.name'`, also where the sort comes from a request parameter, and check that the part before the first `.` is a property of the queried class or an alias that the same query defines.
-- To get the results without a sort, as before, remove the sort, or define the alias in the query, as in `Book.where { def a = author; a.name ==~ 'S%' }.list(sort: 'a.name')`.
-- When the same sort is applied to queries with different criteria, sort by the association path, such as `author.name`, which does not depend on an alias.
+- Check dotted sort paths, including those from request parameters, against properties or aliases defined by the same query.
+- Remove the sort or declare its alias, as in `Book.where { def a = author; a.name ==~ 'S%' }.list(sort: 'a.name')`.
+- Prefer an association path such as `author.name` when optional filters change the aliases available. Check the count query too when it shares a table's sort parameter.
 
 # After the Upgrade
 
@@ -623,6 +677,11 @@ With GORM for Hibernate 5, a sort whose path starts with a name that is neither 
 - [ ] No typed read with a default, such as `getProperty('x.y.enabled', Boolean, true)`, names a key below a configuration value that is not a map
 - [ ] With a database or a schema per tenant, every domain class saved inside a tenant block whose instances belong to a tenant, or that a multi-tenant class references, implements `MultiTenant`
 - [ ] Every write of a class that is not multi-tenant inside a tenant's transaction runs in the class's data service or its own `withTransaction`, or uses `flush: true`
+- [ ] No domain class declares a property named `autoTimestampEventListener`
+- [ ] Unit tests that save through another data source or a tenant expect the domain class events to run and the timestamps to be set, or save inside `withoutTimestamps { }`
+- [ ] Domain classes saved through a data source other than the default one are checked for auditor properties, given timestamps and, with Neo4j, events that were expected to be left alone
+- [ ] Code that uses JLine compiles against JLine 4, and no build file declares `org.jline:jline-terminal-jna` or `org.jline:jline-terminal-jansi`
+- [ ] Commands that read an option followed by an empty argument, or quoted arguments with spaces at their ends, expect the Grails 9 values, and no command works around a value cut at its second `=`
 - [ ] The full test suite passes on Groovy 6
 
 ## Pitfalls to Avoid

@@ -86,6 +86,7 @@ import org.grails.datastore.gorm.GormEnhancer;
 import org.grails.datastore.gorm.GormInstanceApi;
 import org.grails.datastore.gorm.GormValidationApi;
 import org.grails.datastore.gorm.events.AutoTimestampEventListener;
+import org.grails.datastore.gorm.events.AutoTimestampingDatastore;
 import org.grails.datastore.gorm.events.ConfigurableApplicationEventPublisher;
 import org.grails.datastore.gorm.events.DefaultApplicationEventPublisher;
 import org.grails.datastore.gorm.events.DomainEventListener;
@@ -147,7 +148,7 @@ import org.grails.datastore.mapping.validation.ValidatorRegistry;
  * @author Graeme Rocher
  * @since 1.0
  */
-public class MongoDatastore extends AbstractDatastore implements MappingContext.Listener, Closeable, StatelessDatastore, MultipleConnectionSourceCapableDatastore, MultiTenantCapableDatastore<MongoClient, MongoConnectionSourceSettings>, TransactionCapableDatastore, SmartLifecycle {
+public class MongoDatastore extends AbstractDatastore implements MappingContext.Listener, Closeable, StatelessDatastore, MultipleConnectionSourceCapableDatastore, MultiTenantCapableDatastore<MongoClient, MongoConnectionSourceSettings>, TransactionCapableDatastore, SmartLifecycle, AutoTimestampingDatastore {
 
     public static final String SETTING_DATABASE_NAME = MongoSettings.SETTING_DATABASE_NAME;
     public static final String SETTING_CONNECTION_STRING = MongoSettings.SETTING_CONNECTION_STRING;
@@ -3102,6 +3103,7 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
         }
     }
 
+    @Override
     public AutoTimestampEventListener getAutoTimestampEventListener() {
         return this.autoTimestampEventListener;
     }

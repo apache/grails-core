@@ -26,15 +26,12 @@ import jakarta.servlet.ServletException
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 
-import io.micrometer.observation.Observation
-
 import org.springframework.context.ApplicationContext
 import org.springframework.context.ApplicationContextAware
 import org.springframework.core.Ordered
 import org.springframework.http.HttpStatus
 import org.springframework.http.HttpStatusCode
 import org.springframework.http.MediaType
-import org.springframework.http.server.observation.ServerRequestObservationContext
 import org.springframework.web.ErrorResponse
 import org.springframework.web.HttpMediaTypeNotAcceptableException
 import org.springframework.web.accept.ContentNegotiationManager
@@ -56,6 +53,7 @@ import grails.web.mapping.UrlMappingsHolder
 import grails.web.mime.MimeType
 import grails.web.mime.MimeTypeResolver
 import org.grails.exceptions.ExceptionUtils
+import org.grails.web.errors.ServerErrorObservation
 import org.grails.web.servlet.mvc.GrailsWebRequest
 import org.grails.web.servlet.mvc.exceptions.GrailsMVCException
 import org.grails.web.util.GrailsApplicationAttributes
@@ -79,14 +77,6 @@ import org.grails.web.util.WebUtils
 @CompileStatic
 @Slf4j
 class ActionExceptionHandlerResolver implements HandlerExceptionResolver, Ordered, ApplicationContextAware {
-
-    /**
-     * Where {@link ServerHttpObservationFilter} keeps the observation of a request. The filter only offers its context,
-     * which cannot tell the handlers of an error, and a registry cannot be relied on to find it, because a filter can be
-     * built with a registry the application does not know. A public way to get it is requested in
-     * <a href="https://github.com/spring-projects/spring-framework/issues/37658">spring-framework#37658</a>.
-     */
-    private static final String SERVER_OBSERVATION_ATTRIBUTE = ServerHttpObservationFilter.name + '.observation'
 
     /** The name of the bean Spring MVC's content negotiation manager is. */
     private static final String MVC_CONTENT_NEGOTIATION_MANAGER = 'mvcContentNegotiationManager'
@@ -277,20 +267,9 @@ class ActionExceptionHandlerResolver implements HandlerExceptionResolver, Ordere
         return failure
     }
 
-    /**
-     * As Spring MVC records an exception it translates to a server error, which the observation would not see otherwise.
-     * Only the observation tells its handlers, one of which marks the span.
-     */
+    /** As Spring MVC records an exception it translates to a server error, which the observation would not see otherwise. */
     private static void recordServerError(HttpServletRequest request, Throwable ex) {
-        Object observation = request.getAttribute(SERVER_OBSERVATION_ATTRIBUTE)
-        if (observation instanceof Observation) {
-            ((Observation) observation).error(ex)
-        }
-        else {
-            ServerHttpObservationFilter.findObservationContext(request).ifPresent { ServerRequestObservationContext context ->
-                context.error = ex
-            }
-        }
+        ServerErrorObservation.recordServerError(request, ex)
     }
 
     /** The action as a handler method: the controller that handles the request, and its method of the action. */
