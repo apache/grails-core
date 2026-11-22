@@ -63,6 +63,18 @@ class MappedKeyIsEmptySpec extends GrailsDataTckSpec {
         MappedKeyHolder.createCriteria().list { isNotEmpty('note') }*.name == ['filled']
     }
 
+    void "a block on an association stored under another key reads it there, for every kind of criterion"() {
+        given:
+        seed()
+
+        expect:
+        MappedKeyOwner.createCriteria().list { holder { eq('name', 'filled') } }*.label == ['with filled']
+        MappedKeyOwner.createCriteria().list { holder { ne('name', 'filled') } }*.label.sort() == ['with bare', 'with none']
+        MappedKeyOwner.createCriteria().list { holder { isNotNull('name') } }*.label.sort() == ['with bare', 'with filled', 'with none']
+        MappedKeyOwner.createCriteria().list { holder { like('name', 'fi%') } }*.label == ['with filled']
+        MappedKeyOwner.createCriteria().list { holder { isNull('note') } }*.label == ['with none']
+    }
+
     void "isEmpty and isNotEmpty on a property stored under another key, inside a block"() {
         given:
         seed()
@@ -97,4 +109,8 @@ class MappedKeyHolder {
 class MappedKeyOwner {
     String label
     MappedKeyHolder holder
+
+    static mapping = {
+        holder key: 'stored_holder'
+    }
 }

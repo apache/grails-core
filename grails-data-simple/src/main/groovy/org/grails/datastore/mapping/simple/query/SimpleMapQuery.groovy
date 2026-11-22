@@ -311,7 +311,8 @@ class SimpleMapQuery extends Query {
             def propertyName = association.name
             if (association instanceof ToOne) {
 
-                def id = it.value[propertyName]
+                // the association is stored under the key of its mapping, as any other property is
+                def id = it.value[storedKey(association)]
 
                 // If the entity isn't mocked properly this will happen and can cause a NPE.
                 PersistentEntity associatedEntity = association.associatedEntity
