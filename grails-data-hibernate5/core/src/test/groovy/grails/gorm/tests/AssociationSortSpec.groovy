@@ -18,8 +18,6 @@
  */
 package grails.gorm.tests
 
-import spock.lang.IgnoreIf
-import spock.lang.Requires
 import grails.gorm.DetachedCriteria
 import grails.gorm.annotation.Entity
 import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
@@ -28,6 +26,8 @@ import org.grails.datastore.mapping.query.Query
 import org.hibernate.FetchMode
 import org.hibernate.Hibernate
 import org.hibernate.criterion.Order
+import spock.lang.IgnoreIf
+import spock.lang.Requires
 
 import jakarta.persistence.criteria.JoinType
 
@@ -130,7 +130,7 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManag
         results*.name - 'Unattached Player' == ['MU Player', 'Chelsea Player', 'Arsenal Player']
     }
 
-    void 'list sorted by a map sorts by every entry of the map'() {
+    void 'list sorted by a map sorts by every entry of the map before paging'() {
         given:
         new Team(club: Club.findByName('Arsenal'), name: 'Arsenal Second Team').save(failOnError: true, flush: true)
 
@@ -139,6 +139,9 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManag
 
         then:
         results*.name - 'Unattached First Team' == ['Arsenal Second Team', 'Arsenal First Team', 'Chelsea First Team', 'MU First Team']
+
+        and:
+        Team.list(sort: ['club.name': 'asc', name: 'desc'], max: 2, offset: 1)*.name == results[1..2]*.name
     }
 
     @Requires({ instance.leftJoinSort })

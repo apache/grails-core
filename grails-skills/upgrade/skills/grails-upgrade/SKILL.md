@@ -1,6 +1,6 @@
 ---
 name: grails-upgrade
-description: "Upgrades a Grails application to Grails 7.0 (releases 7.0.0 to 7.0.18). Base version: Grails 6; use it for an application on Grails 6 or on an earlier Grails 7.0 release. An application on Grails 5 or earlier first upgrades to the last Grails 6 release. Covers Java 17, Groovy 4, Spring Boot 3, Spring Framework 6, Jakarta EE packages, Apache coordinates, the Grails BOM, Gradle plugin changes, Micronaut, Spring Security, Quartz, layouts, JSON rendering, data binding, interceptors and multi-tenancy."
+description: "Upgrades a Grails application to Grails 7.0 (releases 7.0.0 to 7.0.18). Base version: Grails 6; use it for an application on Grails 6 or on an earlier Grails 7.0 release. An application on Grails 5 or earlier first upgrades to the last Grails 6 release. Covers Java 17, Groovy 4, Spring Boot 3, Spring Framework 6, Jakarta EE packages, Apache coordinates, the Grails BOM, Gradle plugin changes, Micronaut, Spring Security, Quartz, layouts, JSON rendering, data binding, interceptors, multi-tenancy and the encoding of GSP tag attributes."
 license: Apache-2.0
 ---
 
@@ -853,17 +853,46 @@ The guide gives no setting that restores encrypted JWTs without a signature.
 
 `list` with a `Map` of sort properties, such as `Book.list(sort: [title: 'asc', 'author.name': 'desc'])`, sorted by the last entry of the map only. As of 7.0.18 it sorts by every entry, in the order of the map. The same applies to a default sort that the mapping declares for more than one property, as in `sort author: 'asc', title: 'desc'`.
 
-- Search for `sort: [` in calls to `list`, and for a `sort` with more than one property in a `static mapping` block. The results of these calls are now sorted by every property.
+- Search for `sort: [` in calls to `list`, and for a `sort` with more than one property in a `static mapping` block. The results of these calls are now sorted by every property, so the rows selected by `max` and `offset` can change.
 - To sort by one property, as before, pass that property alone.
 - An association is joined once for all the entries that sort by it. `find` and `findAll` with an example, `findWhere` and `findAllWhere` failed with `duplicate association path` for such a sort and now work.
+- Sorting by two properties of the same collection returns fewer duplicate rows. A book with three chapters occurs three times for `Book.list(sort: ['chapters.title': 'asc', 'chapters.id': 'asc'])`, rather than nine times. Update assertions that relied on the repeated joins. No compatibility setting restores them.
 
-## GORM for Hibernate: `count` with a sort
+## GSP tag attributes
 
-`count` on a where query or a detached criteria that has a sort, as in `Book.where { ... }.sort('title').count()` or `count(sort: 'title')`, failed with a `SQLGrammarException` on a database that rejects an order in a query that counts its rows, such as H2. As of 7.0.18 the count is made without the sort, and it returns the number of instances that `list` returns for the same query.
+More GSP tags HTML-encode the attribute values they write.
 
-This includes a query that selects only a `count()` projection and orders added by a `PreQueryEvent` listener. The joins of those orders are kept.
+As of 7.0.18, these tags HTML-encode the values they write into attributes, as `<g:link>` and `<g:textField>` already did:
 
-- Nothing needs to change. Search for code that catches the exception or builds a second query without the sort to count: it can call `count` on the sorted query.
+- `<g:form>`, `<g:uploadForm>` and `<g:formActionSubmit>`: the URL in `action` and `formaction`, and the hidden fields that a `RequestDataValueProcessor` adds to a form.
+- `<g:checkBox>`: `name`, `value`, `form`, and the `id` taken from the name, on the checkbox and on its hidden field.
+- `<g:actionSubmit>` and `<g:actionSubmitImage>`: `value`, the `action` in the button's name, and `src`.
+- `<g:datePicker>`: `name`, `id` and `selectDateClass`.
+- `<g:radio>` and `<g:radioGroup>`: `name`, and on `<g:radio>` the `id` taken from it.
+- `<g:select>`: the key of `noSelection`.
+- `<g:field>`: `type`.
+- `<g:withTag>`: the values of `attrs` that are not closures.
+- `<g:external>`: `uri`, and `<g:javascript>`: `src`.
+- `<g:paginate>`: `class`, on the current step.
+- `<g:sortableColumn>`: `title`, which it writes as the text of the column's link. A text from `titleKey` is written as the message source returns it.
+- `<g:renderException>`: `detailsClass`, `stackClass`, `filenameClass`, `snippetClass`, `lineClass`, `lineNumberClass` and `lineErrorClass`.
+
+The browser decodes the attribute, so a value without a character reference reaches it unchanged. A value encoded with `encodeAsHTML()` before it reaches the tag is written once, and so are a value captured from a GSP body with `<g:set>` and the output of `fieldValue()`, also when a `RequestDataValueProcessor` returns the value unchanged.
+
+Search the GSP views, layouts and tag libraries for these tags. Then check:
+
+- A character reference written in the page, as in `name="a&amp;b"`, is now encoded as well. Write the character itself.
+- `<g:form>` and `<g:formActionSubmit>` build their URL from `uri`, `base`, `controller` and their other link attributes and only then encode it, so a value encoded beforehand is encoded twice there, as it already was in the `href` of `<g:link>`. Pass those values unencoded. A `url` attribute that the tag writes as it is given is written once.
+- When a `RequestDataValueProcessor` changes a value, the tag encodes what the processor returns, so a value encoded beforehand is encoded twice, as `<g:textField>` already did.
+- A `title` of `<g:sortableColumn>` that holds markup must be marked with `raw()`.
+- A value marked with `raw()`, and the text and `default` of `message()`, which comes back marked raw, are still written as given by the tags that wrote them so before. Do not pass request data through `raw()` or as the `default` of `message()`.
+- Tests that compare rendered markup: an `&` in the URL of a form is now written as `&amp;`, as `<g:link>` writes it in an `href`.
+
+These bugs are fixed, which changes what the browser submits or what the page contains:
+
+- `<g:radio>` encodes its `value` once. It encoded it twice, so a value with `&`, `<`, `>`, `"` or `'` was submitted with character references in it, such as `R&amp;D` for `R&D`. Remove any code that decoded the submitted value to undo this.
+- A value encoded beforehand is no longer encoded twice in the `value` of `<g:textField>`, `<g:hiddenField>` and the other field tags when a `RequestDataValueProcessor` returns it unchanged, nor in an option of `<g:select>`.
+- `<g:paginate>` and `<g:sortableColumn>` write a `class` that was encoded beforehand once next to the classes they add, such as `step` and `sortable`. They encoded it twice.
 
 ## GORM for Hibernate: setting for a sort by an association
 
@@ -873,21 +902,24 @@ A sort by a property of an association, such as `Book.list(sort: 'author.name')`
 - Search for `sort:` arguments and `.sort(` calls whose property contains a `.`, such as `sort: 'author.name'`. If the application expects every instance from such a query, set `grails.gorm.leftJoinAssociationSort: true` in `application.yml`.
 - With the setting, the instances without the association come first or last, depending on how the database sorts nulls. To leave them out of one query, add a criterion that the association is not `null`.
 - A sort by a property of a collection, such as `sort: 'books.title'`, joins the collection with an inner join with or without the setting.
-- The setting is enabled by default as of Grails 8.1 and removed in Grails 9.
+- Explicitly setting it to `false` logs a startup warning naming Grails 9, which removes the setting. The planned default in Grails 8.1 is `true`; check the target release's compatibility settings before upgrading.
 
 ## GORM for Hibernate: a join type requested for an association is always applied
 
 With GORM for Hibernate, a where query, a detached criteria or a dynamic finder can request the type of the join of an association, with the `fetch` argument, as in `Book.where { ... }.list(fetch: [author: JoinType.INNER])`, with `join('author', JoinType.INNER)`, or, on a data service method that queries by its parameters, such as `Book find(String title)`, with `@Join(value = 'author', type = JoinType.INNER)`. The requested join type was only used when the query also had criteria on the association. The association was otherwise fetched with an outer join, whatever join type was requested, so the query also returned the instances whose association is `null`. As of Grails 7.0.18, a requested join type other than `JoinType.LEFT` is applied whether or not anything else in the query uses the association.
 
-- Search for `JoinType.` in `fetch:` arguments, in `join(` calls and in `@Join` annotations. Each of these queries now applies the join type that it requests.
+- Search for `JoinType.` in `fetch:` arguments, in `join(` calls and in `@Join` annotations on data service methods that query by their parameters. Methods named as dynamic finders, such as `findByTitle` or `findAllByTitleLike`, still treat `@Join` as a fetch mode and ignore its join type.
 - With `JoinType.INNER`, the instances whose association is `null`, or whose collection is empty, are no longer returned by `list`, `get` and `find`, and no longer counted by `count` or by the `totalCount` of a paged list. The association is still fetched. This also applies to a collection of a basic type, such as `static hasMany = [tags: String]`, for which the requested join type was ignored. To return these instances as before, request `JoinType.LEFT` or `'join'`.
-- `JoinType.RIGHT` is applied as well. It leaves out the same instances as `JoinType.INNER` and still fetches the association. For an association to a single instance, a right join also has a row for each associated instance that none of the queried instances refers to, such as an author without a book, unless the criteria of the query exclude it: `list` contains `null` once for all such rows, and `count` counts each of them. For a collection, a right join returns the same instances as an inner join. This now also applies when a where query or a detached criteria has criteria on the collection, as in `Author.where { books { title ==~ 'The%' } }.join('books', JoinType.RIGHT)`: such a query returned `null` for each element that no instance has, and counted it.
+- `JoinType.RIGHT` is applied as well. For a to-one association, `list` keeps one `null` for each associated instance that no queried instance refers to, unless the criteria exclude that row; `count` and `totalCount` count each. For a collection, a right join returns the same instances as an inner join, including when criteria use the collection.
 - A query that is used as a subquery applies the join type that it requests as well, so a subquery with `join('author', JoinType.INNER)` no longer selects the instances without an author.
 - A join type requested for a path through more than one association, such as `fetch: ['author.publisher': JoinType.INNER]`, was ignored unless the query had criteria on the path. Every association on the path is now joined and fetched, with the requested join type for the last one, so `JoinType.INNER` leaves out the instances without an author as well as those whose author has no publisher. When the path passes through a collection, such as `books` in `fetch: ['books.publisher': JoinType.INNER]`, the query is restricted to the instances for which the join returns a row, and counts each of them once. The collection and the other associations on the path are fetched as well, with outer joins, so the collection holds all of its elements, also the books without a publisher: a join type decides which instances a query returns, and never leaves elements out of a fetched collection. A where query and a dynamic finder return each author once. A `JoinType.LEFT` requested for such a path, as in `fetch: ['books.publisher': JoinType.LEFT]`, now fetches the associations on the path as well: it fetched none of them.
 - A query with a property projection applies the requested join type too.
+- A paged query loads collections on a requested join path separately when accessed, so the limited SQL rows cannot initialize an incomplete collection. The join type still restricts the root instances and their count.
+- Check `select('author')` after a requested left join: the left join is kept for the criteria, which can now return a book without an author. A fetch mode that replaces an inner join also applies to property projections, which can now include `null`.
 - A join type that the `fetch` argument requests is now also used for an association that the where query or the detached criteria itself has criteria or a projection on. Such an association was joined before the argument was read: with an inner join for criteria and with a left join for a projection, whatever the argument requested. `Book.where { author.name == 'Stephen King' || title == 'Anonymous' }.list(fetch: [author: JoinType.LEFT])` now also returns the book without an author that matches the title, as it already did when the join type was requested with `join('author', JoinType.LEFT)`.
 - A join type for a nested association is requested by its path. `join('author.publisher', JoinType.LEFT)` is now used for the join that criteria on `author.publisher` make, which was an inner join whatever was requested. A join type requested for an association of the queried class, such as `publisher`, is no longer used for a nested association of the same name.
 - To keep the previous result of a query, remove the join type that it requests, or request `JoinType.LEFT`.
+- Check queries that store a sort with `sort()` before passing a `fetch` argument to `list` or `find`. `Book.where { ... }.sort('author.name').list(fetch: [author: JoinType.LEFT])` now also returns books without an author. Request `JoinType.INNER` to keep leaving them out; nested paths follow the same rule.
 
 # After the Upgrade
 

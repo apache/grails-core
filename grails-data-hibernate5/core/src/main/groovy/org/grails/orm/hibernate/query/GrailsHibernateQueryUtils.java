@@ -20,6 +20,7 @@
 package org.grails.orm.hibernate.query;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -37,6 +38,7 @@ import org.hibernate.FetchMode;
 import org.hibernate.FlushMode;
 import org.hibernate.LockMode;
 import org.hibernate.criterion.Order;
+import org.hibernate.internal.CriteriaImpl;
 import org.hibernate.query.Query;
 
 import org.springframework.core.convert.ConversionService;
@@ -292,7 +294,7 @@ public class GrailsHibernateQueryUtils {
                 PersistentEntity associatedEntity = a.getAssociatedEntity();
                 String sortPath = associationPath == null ? sortHead : associationPath + '.' + sortHead;
                 // a join that the query already has for the association, such as the one of a requested join type
-                Criteria subCriteria = GrailsHibernateUtil.findJoinCriteria(c, sortPath);
+                Criteria subCriteria = findJoinCriteria(c, sortPath);
                 if (subCriteria == null) {
                     // with the leftJoinAssociationSort setting, a left join, so that the sort keeps the rows where
                     // the association is null; a collection is joined with an inner join, since Hibernate would
@@ -304,6 +306,56 @@ public class GrailsHibernateQueryUtils {
                 addOrderPossiblyNested(subCriteria, sortPath, associatedEntity, sortTail, order, ignoreCase); // Recurse on nested sort
             }
         }
+    }
+
+    private static Criteria findJoinCriteria(Criteria criteria, String associationPath) {
+        Criteria root = criteria;
+        while (root instanceof CriteriaImpl.Subcriteria) {
+            root = ((CriteriaImpl.Subcriteria) root).getParent();
+        }
+        if (root instanceof CriteriaImpl) {
+            CriteriaImpl rootCriteria = (CriteriaImpl) root;
+            Iterator<CriteriaImpl.Subcriteria> subcriteria = rootCriteria.iterateSubcriteria();
+            while (subcriteria.hasNext()) {
+                CriteriaImpl.Subcriteria existing = subcriteria.next();
+                if (associationPath.equals(getWholePath(rootCriteria, existing))) {
+                    return existing;
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * The path is relative to the parent criteria, or starts with the alias of another criteria.
+     */
+    private static String getWholePath(CriteriaImpl root, CriteriaImpl.Subcriteria subcriteria) {
+        String path = subcriteria.getPath();
+        Criteria parent = subcriteria.getParent();
+        int firstDotPos = path.indexOf('.');
+        if (firstDotPos > 0) {
+            String qualifier = path.substring(0, firstDotPos);
+            Criteria qualified = qualifier.equals(subcriteria.getAlias()) ? null : findCriteriaByAlias(root, qualifier);
+            if (qualified != null) {
+                parent = qualified;
+                path = path.substring(firstDotPos + 1);
+            }
+        }
+        return parent instanceof CriteriaImpl.Subcriteria ? getWholePath(root, (CriteriaImpl.Subcriteria) parent) + '.' + path : path;
+    }
+
+    private static Criteria findCriteriaByAlias(CriteriaImpl root, String alias) {
+        if (alias.equals(root.getAlias())) {
+            return root;
+        }
+        Iterator<CriteriaImpl.Subcriteria> subcriteria = root.iterateSubcriteria();
+        while (subcriteria.hasNext()) {
+            CriteriaImpl.Subcriteria existing = subcriteria.next();
+            if (alias.equals(existing.getAlias())) {
+                return existing;
+            }
+        }
+        return null;
     }
 
     /**

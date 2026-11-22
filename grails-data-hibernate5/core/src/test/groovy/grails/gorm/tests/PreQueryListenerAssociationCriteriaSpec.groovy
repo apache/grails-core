@@ -67,7 +67,7 @@ class PreQueryListenerAssociationCriteriaSpec extends Specification {
 
         expect:
         ListenerTeam.withTransaction {
-            def criteria = ListenerTeam.where { league == 'Premier' }.sort('name')
+            final criteria = ListenerTeam.where { league == 'Premier' }.sort('name')
             query.call(criteria)
         } == expected
 
