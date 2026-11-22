@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -32,7 +33,9 @@ import javax.net.ssl.SSLContext;
 import io.undertow.Undertow.Builder;
 import io.undertow.server.HttpHandler;
 import io.undertow.servlet.api.Deployment;
+import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.handlers.ServletRequestContext;
+import io.undertow.servlet.spec.ServletContextImpl;
 
 import jakarta.servlet.AsyncEvent;
 import jakarta.servlet.AsyncListener;
@@ -59,6 +62,8 @@ import org.awaitility.Awaitility;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import org.apache.grails.undertow.core.UndertowBuilderCustomizer;
 
@@ -414,69 +419,143 @@ class UndertowServletWebServerFactoryTests {
         assertThat(events).containsExactly("errorPage", "onComplete");
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = { "/startsAsync", "/dispatches" })
+    void processingCompletesOnceTheErrorPageHasAnsweredAnErrorAHandlerACustomizerAddedForwardedTo(String path)
+            throws Exception {
+        assertCompletesOnceTheErrorPageHasAnswered(path,
+            UndertowServletWebServerFactoryTests::addHandlersThatForwardToAnErrorAndComplete);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = { "/startsAsync", "/dispatches" })
+    void processingCompletesOnceTheErrorPageHasAnsweredAnErrorAHandlerAServletExtensionAddedForwardedTo(String path)
+            throws Exception {
+        assertCompletesOnceTheErrorPageHasAnswered(path, (info) -> info.addServletExtension(
+            (deployment, servletContext) -> addHandlersThatForwardToAnErrorAndComplete(deployment)));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = { "/startsAsync", "/dispatches" })
+    void processingCompletesOnceTheErrorPageHasAnsweredAnErrorAHandlerAnInitializerAddedForwardedTo(String path)
+            throws Exception {
+        assertCompletesOnceTheErrorPageHasAnswered(path, null, (servletContext) ->
+            addHandlersThatForwardToAnErrorAndComplete(deploymentInfoOf(servletContext)));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = { "/startsAsync", "/dispatches" })
+    void processingCompletesOnceTheErrorPageHasAnsweredAnErrorAHandlerAContextListenerAddedForwardedTo(String path)
+            throws Exception {
+        assertCompletesOnceTheErrorPageHasAnswered(path, null, (servletContext) -> servletContext.addListener(
+            new ServletContextListener() {
+
+                @Override
+                public void contextInitialized(ServletContextEvent event) {
+                    addHandlersThatForwardToAnErrorAndComplete(deploymentInfoOf(event.getServletContext()));
+                }
+
+            }));
+    }
+
     @Test
-    void processingCompletesOnceTheErrorPageHasAnsweredAnErrorAnOuterHandlerForwardedToAfterADispatch()
+    void asynchronousProcessingADispatchDispatchesAfterSendingAnErrorIsCompletedOnceTheDispatchItAskedForHasRun()
+            throws Exception {
+        List<String> events = new CopyOnWriteArrayList<>();
+        UndertowServletWebServerFactory factory = new UndertowServletWebServerFactory(0);
+        this.webServer = factory.getWebServer(dispatchesAfterSendingAnError(events));
+        this.webServer.start();
+
+        assertThat(getStatus("http://localhost:" + this.webServer.getPort() + "/dispatchesAfterSendingAnError"))
+            .isEqualTo(503);
+
+        Awaitility.await().untilAsserted(() -> assertThat(events).containsExactly("dispatched", "onComplete"));
+        Thread.sleep(200);
+        assertThat(events).containsExactly("dispatched", "onComplete");
+    }
+
+    /**
+     * Undertow's error dispatch completes the processing once the error page has run, which tells the listeners before
+     * the dispatch the request asked for runs. That is Undertow's own, with or without the handler, which only keeps
+     * the error from being sent a second time by that dispatch.
+     */
+    @Test
+    void asynchronousProcessingADispatchDispatchesAfterSendingAnErrorAnErrorPageAnswersCompletesOnce()
             throws Exception {
         List<String> events = new CopyOnWriteArrayList<>();
         UndertowServletWebServerFactory factory = new UndertowServletWebServerFactory(0);
         factory.addErrorPages(new ErrorPage("/errorPage"));
-        factory.addDeploymentInfoCustomizers((info) -> info.addOuterHandlerChainWrapper(
-            (next) -> forwardsAndCompletesAfter(next, DispatcherType.REQUEST, "/sendsErrorOnly")));
-        this.webServer = factory.getWebServer(recordingErrorPage(events), startsAsync(events), sendsError());
+        this.webServer = factory.getWebServer(recordingErrorPage(events), dispatchesAfterSendingAnError(events));
         this.webServer.start();
 
-        assertThat(getResponse("http://localhost:" + this.webServer.getPort() + "/startsAsync"))
+        assertThat(getResponse("http://localhost:" + this.webServer.getPort() + "/dispatchesAfterSendingAnError"))
             .isEqualTo("Error page");
+
+        Awaitility.await().untilAsserted(() -> assertThat(events)
+            .containsExactlyInAnyOrder("errorPage", "dispatched", "onComplete"));
+        Thread.sleep(200);
+        assertThat(events).containsExactlyInAnyOrder("errorPage", "dispatched", "onComplete");
+    }
+
+    /**
+     * Requests a path with handlers around it that forward to {@code /sendsErrorOnly} and then complete the processing
+     * the dispatch to {@code /startsAsync} left started, and asserts that the listeners hear of it once, after the
+     * error page has answered. {@code /startsAsync} is requested directly, or dispatched to from {@code /dispatches}.
+     */
+    private void assertCompletesOnceTheErrorPageHasAnswered(String path, UndertowDeploymentInfoCustomizer customizer,
+            ServletContextInitializer... initializers) throws Exception {
+        List<String> events = new CopyOnWriteArrayList<>();
+        UndertowServletWebServerFactory factory = new UndertowServletWebServerFactory(0);
+        factory.addErrorPages(new ErrorPage("/errorPage"));
+        if (customizer != null) {
+            factory.addDeploymentInfoCustomizers(customizer);
+        }
+        List<ServletContextInitializer> all = new ArrayList<>(List.of(recordingErrorPage(events),
+            dispatchesAsynchronously("/startsAsync"), startsAsync(events), sendsError()));
+        all.addAll(Arrays.asList(initializers));
+        this.webServer = factory.getWebServer(all.toArray(new ServletContextInitializer[0]));
+        this.webServer.start();
+
+        assertThat(getResponse("http://localhost:" + this.webServer.getPort() + path)).isEqualTo("Error page");
 
         Awaitility.await().untilAsserted(() -> assertThat(events).containsExactly("errorPage", "onComplete"));
         Thread.sleep(200);
         assertThat(events).containsExactly("errorPage", "onComplete");
     }
 
-    @Test
-    void processingCompletesOnceTheErrorPageHasAnsweredAnErrorAHandlerForwardedToAfterAnAsyncDispatch()
-            throws Exception {
-        List<String> events = new CopyOnWriteArrayList<>();
-        UndertowServletWebServerFactory factory = new UndertowServletWebServerFactory(0);
-        factory.addErrorPages(new ErrorPage("/errorPage"));
-        factory.addDeploymentInfoCustomizers((info) -> info.addInnerHandlerChainWrapper(
-            (next) -> forwardsAndCompletesAfter(next, DispatcherType.ASYNC, "/sendsErrorOnly")));
-        this.webServer = factory.getWebServer(recordingErrorPage(events), dispatchesAsynchronously("/startsAsync"),
-            startsAsync(events), sendsError());
-        this.webServer.start();
-
-        assertThat(getResponse("http://localhost:" + this.webServer.getPort() + "/dispatches")).isEqualTo("Error page");
-
-        Awaitility.await().untilAsserted(() -> assertThat(events).containsExactly("errorPage", "onComplete"));
-        Thread.sleep(200);
-        assertThat(events).containsExactly("errorPage", "onComplete");
+    /**
+     * Adds an outer handler, which runs on a request dispatch, and an inner one, which also runs on an asynchronous
+     * dispatch, that forward to {@code /sendsErrorOnly} and then complete the processing.
+     */
+    private static void addHandlersThatForwardToAnErrorAndComplete(DeploymentInfo deployment) {
+        deployment.addOuterHandlerChainWrapper(
+            (next) -> forwardsAndCompletesAfter(next, DispatcherType.REQUEST, "/sendsErrorOnly"));
+        deployment.addInnerHandlerChainWrapper(
+            (next) -> forwardsAndCompletesAfter(next, DispatcherType.ASYNC, "/sendsErrorOnly"));
     }
 
-    @Test
-    void processingCompletesOnceTheErrorPageHasAnsweredAnErrorAHandlerAServletExtensionAddedForwardedTo()
-            throws Exception {
-        List<String> events = new CopyOnWriteArrayList<>();
-        UndertowServletWebServerFactory factory = new UndertowServletWebServerFactory(0);
-        factory.addErrorPages(new ErrorPage("/errorPage"));
-        factory.addDeploymentInfoCustomizers((info) -> info.addServletExtension((deployed, servletContext) -> {
-            deployed.addOuterHandlerChainWrapper(
-                (next) -> forwardsAndCompletesAfter(next, DispatcherType.REQUEST, "/sendsErrorOnly"));
-            deployed.addInnerHandlerChainWrapper(
-                (next) -> forwardsAndCompletesAfter(next, DispatcherType.ASYNC, "/sendsErrorOnly"));
-        }));
-        this.webServer = factory.getWebServer(recordingErrorPage(events), dispatchesAsynchronously("/startsAsync"),
-            startsAsync(events), sendsError());
-        this.webServer.start();
+    private static DeploymentInfo deploymentInfoOf(ServletContext servletContext) {
+        return ((ServletContextImpl) servletContext).getDeployment().getDeploymentInfo();
+    }
 
-        assertThat(getResponse("http://localhost:" + this.webServer.getPort() + "/startsAsync"))
-            .isEqualTo("Error page");
-        Awaitility.await().untilAsserted(() -> assertThat(events).containsExactly("errorPage", "onComplete"));
-        events.clear();
-        assertThat(getResponse("http://localhost:" + this.webServer.getPort() + "/dispatches")).isEqualTo("Error page");
+    private ServletRegistrationBean<HttpServlet> dispatchesAfterSendingAnError(List<String> events) {
+        ServletRegistrationBean<HttpServlet> registration = new ServletRegistrationBean<>(new HttpServlet() {
 
-        Awaitility.await().untilAsserted(() -> assertThat(events).containsExactly("errorPage", "onComplete"));
-        Thread.sleep(200);
-        assertThat(events).containsExactly("errorPage", "onComplete");
+            @Override
+            protected void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
+                if (request.getDispatcherType() == DispatcherType.ASYNC) {
+                    events.add("dispatched");
+                    return;
+                }
+                request.startAsync().addListener(recordingListener(events));
+                response.sendError(503);
+                request.getAsyncContext().dispatch();
+            }
+
+        }, "/dispatchesAfterSendingAnError");
+        registration.setName("dispatchesAfterSendingAnError");
+        registration.setAsyncSupported(true);
+        return registration;
     }
 
     /**

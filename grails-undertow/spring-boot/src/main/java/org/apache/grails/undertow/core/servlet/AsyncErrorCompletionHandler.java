@@ -18,15 +18,22 @@
  */
 package org.apache.grails.undertow.core.servlet;
 
+import java.util.Collections;
+
 import jakarta.servlet.DispatcherType;
+import jakarta.servlet.ServletContainerInitializer;
 import jakarta.servlet.ServletContext;
+import jakarta.servlet.ServletContextEvent;
+import jakarta.servlet.ServletContextListener;
 
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.servlet.api.DeploymentInfo;
+import io.undertow.servlet.api.ServletContainerInitializerInfo;
 import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.servlet.spec.AsyncContextImpl;
 import io.undertow.servlet.spec.HttpServletRequestImpl;
+import io.undertow.servlet.util.ImmediateInstanceFactory;
 
 /**
  * Completes the asynchronous processing a request or asynchronous dispatch started once the error that dispatch sent
@@ -42,10 +49,14 @@ import io.undertow.servlet.spec.HttpServletRequestImpl;
  * returned, and the processing completed after it, so its listeners are told once the error has been answered.
  * <p>
  * {@link #addTo(DeploymentInfo, ServletContext)}, a servlet extension the factory adds after its customizers, puts the
- * handler around every handler they and other servlet extensions add. Undertow runs outer handlers on a request
- * dispatch only, so a request dispatch is handled by the outermost outer handler, and an asynchronous dispatch by the
- * outermost inner one. Only Undertow's own handlers remain around them, and none of those sends an error, forwards or
- * completes the processing once the handlers it wraps have returned.
+ * handler around every handler the deployment has once it has started: those its customizers, its servlet extensions,
+ * its servlet container initializers, such as Spring Boot's, and its context listeners add. Undertow runs outer
+ * handlers on a request dispatch only, so a request dispatch is handled by the outermost outer handler, and an
+ * asynchronous dispatch by the outermost inner one. Only Undertow's own handlers remain around them, and none of those
+ * sends an error, forwards or completes the processing once the handlers it wraps have returned.
+ * <p>
+ * A dispatch that dispatches the processing after sending the error leaves its completion to the dispatch it asked
+ * for.
  */
 final class AsyncErrorCompletionHandler implements HttpHandler {
 
@@ -59,14 +70,29 @@ final class AsyncErrorCompletionHandler implements HttpHandler {
     }
 
     /**
-     * Adds the handlers around the handlers already added to a deployment.
+     * Adds the handlers to a deployment once every other handler has been added to it. A servlet container initializer
+     * this adds as the last servlet extension runs after every other one, and a listener that initializer adds is told
+     * the context was initialized after every other listener, which Undertow does just before it builds the handler
+     * chains.
      *
      * @param deployment the deployment, once its customizers and the servlet extensions before this one have run
      * @param servletContext the servlet context of the deployment
      */
     static void addTo(DeploymentInfo deployment, ServletContext servletContext) {
-        deployment.addOuterHandlerChainWrapper((next) -> new AsyncErrorCompletionHandler(next, DispatcherType.REQUEST));
-        deployment.addInnerHandlerChainWrapper((next) -> new AsyncErrorCompletionHandler(next, DispatcherType.ASYNC));
+        ServletContextListener addsHandlers = new ServletContextListener() {
+
+            @Override
+            public void contextInitialized(ServletContextEvent event) {
+                deployment.addOuterHandlerChainWrapper(
+                    (next) -> new AsyncErrorCompletionHandler(next, DispatcherType.REQUEST));
+                deployment.addInnerHandlerChainWrapper(
+                    (next) -> new AsyncErrorCompletionHandler(next, DispatcherType.ASYNC));
+            }
+
+        };
+        ServletContainerInitializer initializer = (classes, context) -> context.addListener(addsHandlers);
+        deployment.addServletContainerInitializer(new ServletContainerInitializerInfo(
+            ServletContainerInitializer.class, new ImmediateInstanceFactory<>(initializer), Collections.emptySet()));
     }
 
     @Override
@@ -87,7 +113,7 @@ final class AsyncErrorCompletionHandler implements HttpHandler {
         // Sent now, and cleared so that Undertow does not send it again
         context.getOriginalResponse().doErrorDispatch(context.getErrorCode(), context.getErrorMessage());
         context.setError(-1, null);
-        if (!asyncContext.isCompletedBeforeInitialRequestDone()) {
+        if (!asyncContext.isCompletedBeforeInitialRequestDone() && !asyncContext.isDispatched()) {
             // On the thread of the dispatch, completing only marks the processing as completed, and Undertow tells
             // the listeners once the dispatch has returned. A handler outside this one completing it later is ignored
             asyncContext.complete();
