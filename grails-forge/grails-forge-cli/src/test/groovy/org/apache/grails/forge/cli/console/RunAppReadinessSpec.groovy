@@ -414,12 +414,12 @@ class RunAppReadinessSpec extends CommandSpec {
         stage('page CREATING_BEANS')
         int port = freePort()
 
-        when:
-        int exit = ForgeCli.execute(beanContext, 'run-app', '--detach', '--port', port as String, '--ready-timeout', '3')
+        when: 'the time given is one in which the application has started on a slow computer too, so that it holds the port when the time is over'
+        int exit = ForgeCli.execute(beanContext, 'run-app', '--detach', '--port', port as String, '--ready-timeout', '15')
 
         then:
         exit == 1
-        errors() == ["| Error The application did not answer on port ${port} of this computer within 3 seconds: its startup progress answers there still, and the web server of the application has not taken the port. ".toString() +
+        errors() == ["| Error The application did not answer on port ${port} of this computer within 15 seconds: its startup progress answers there still, and the web server of the application has not taken the port. ".toString() +
                 'The build was still running, and was stopped. If the application answers on another port, give that with --port; if it needs longer, give it longer with --ready-timeout']
         !new File(dir, '.grails/run/app.json').exists()
     }
