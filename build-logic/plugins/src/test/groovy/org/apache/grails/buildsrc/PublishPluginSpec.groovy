@@ -314,6 +314,130 @@ class PublishPluginSpec extends Specification {
         new File(local, 'org/example/lib/1.0.0-SNAPSHOT').list().any { String name -> name.endsWith('-sources.jar') }
     }
 
+    void "the jar that is published to the repository of the tests carries its SBOM unless the property asks for it without"() {
+        given:
+        library(true)
+
+        when: 'the publish of what a build resolves, as the specifications of Forge ask for it'
+        BuildResult result = run('publishAllPublicationsToTestCaseMavenRepoRepository')
+
+        then: 'the jar is the jar of a release'
+        ranTasks(result).contains(':lib:cyclonedxDirectBom')
+        sbomOf(publishedJar()) == [true, 'META-INF/sbom.json']
+
+        when: 'the property is set to false'
+        result = run('publishAllPublicationsToTestCaseMavenRepoRepository', '-PtestRepositoryWithoutSbom=false')
+
+        then:
+        sbomOf(publishedJar()) == [true, 'META-INF/sbom.json']
+        !result.output.contains('is ignored')
+    }
+
+    void "the property leaves the SBOM out of the jars of a build that publishes to the repository of the tests only"() {
+        given:
+        library(true)
+
+        when:
+        BuildResult result = run('publishAllPublicationsToTestCaseMavenRepoRepository', '-PtestRepositoryWithoutSbom=true')
+
+        then: 'neither the file nor the attributes of the manifest that name it are in the jar, and no SBOM was built'
+        sbomOf(publishedJar()) == [false, null]
+        ranTasks(result).contains(':lib:jar')
+        !result.tasks*.path.contains(':lib:cyclonedxDirectBom')
+        !result.output.contains('is ignored')
+
+        when: 'the same again, from the configuration cache'
+        BuildResult reused = run('publishAllPublicationsToTestCaseMavenRepoRepository', '-PtestRepositoryWithoutSbom=true')
+
+        then:
+        reused.output.contains('Configuration cache entry reused')
+        !reused.tasks*.path.contains(':lib:cyclonedxDirectBom')
+        sbomOf(publishedJar()) == [false, null]
+
+        when: 'the next build does not set the property'
+        new File(tmp, 'build/local-maven').deleteDir()
+        result = run('publishAllPublicationsToTestCaseMavenRepoRepository')
+
+        then: 'the jar is built again, with its SBOM'
+        ranTasks(result).contains(':lib:cyclonedxDirectBom')
+        sbomOf(publishedJar()) == [true, 'META-INF/sbom.json']
+    }
+
+    void "the property is ignored, and the build says so, when the build publishes anywhere else or everything: #tasks"() {
+        given:
+        library(true)
+        File local = new File(tmp, 'm2')
+
+        when:
+        BuildResult result = run((tasks + ["-Dmaven.repo.local=${local.absolutePath}".toString(), '-PtestRepositoryWithoutSbom=true']) as String[])
+        File jar = new File(tmp, "${repository}/org/example/lib/1.0.0-SNAPSHOT").listFiles().find { File file -> file.name ==~ /lib-1\.0\.0-[^a-z]*(SNAPSHOT)?\.jar/ }
+
+        then: 'the jar carries its SBOM and the publish is complete'
+        result.output.contains("-PtestRepositoryWithoutSbom=true is ignored in the build ':'")
+        result.output.count('-PtestRepositoryWithoutSbom=true is ignored') == 1
+        ranTasks(result).containsAll([':lib:cyclonedxDirectBom', ':lib:sourcesJar', ':lib:javadocJar', ':lib:publishedChecksums'])
+        sbomOf(jar) == [true, 'META-INF/sbom.json']
+
+        where:
+        tasks                                                                                   | repository
+        ['publishToMavenLocal']                                                                 | 'm2'
+        ['publishAllPublicationsToTestCaseMavenRepoRepository', 'publishToMavenLocal']          | 'm2'
+        ['publishAllPublicationsToTestCaseMavenRepoRepository', 'assemble']                     | 'build/local-maven'
+        ['publishAllPublicationsToTestCaseMavenRepoRepository', '-PcompleteTestRepository=true'] | 'build/local-maven'
+    }
+
+    void "the property reaches a build that is included, and a publish to another place of that build fails rather than publish a jar without its SBOM"() {
+        given: 'a build that depends on the publish of the library for its tests, as the build of Forge does, and one that installs it'
+        library(true)
+        writeFile('consumer/settings.gradle', """
+            rootProject.name = 'consumer'
+            includeBuild('../library') { name = 'framework' }
+        """)
+        writeFile('consumer/build.gradle', """
+            tasks.register('specs') {
+                dependsOn gradle.includedBuild('framework').task(':publishAllPublicationsToTestCaseMavenRepoRepository')
+            }
+            tasks.register('install') {
+                dependsOn gradle.includedBuild('framework').task(':lib:publishToMavenLocal')
+            }
+        """)
+        File local = new File(tmp, 'm2')
+
+        when: 'the property is given to the build that includes it'
+        BuildResult result = run(new File(tmp, 'consumer'), 'specs', '-PtestRepositoryWithoutSbom=true')
+
+        then:
+        sbomOf(publishedJar()) == [false, null]
+        !result.tasks*.path.contains(':framework:lib:cyclonedxDirectBom')
+
+        when: 'without it'
+        new File(tmp, 'build/local-maven').deleteDir()
+        result = run(new File(tmp, 'consumer'), 'specs')
+
+        then:
+        sbomOf(publishedJar()) == [true, 'META-INF/sbom.json']
+        ranTasks(result).contains(':framework:lib:cyclonedxDirectBom')
+
+        when: 'a publish to another place that the command line does not name'
+        result = GradleRunner.create()
+                .withProjectDir(new File(tmp, 'consumer'))
+                .withArguments('install', "-Dmaven.repo.local=${local.absolutePath}", '-PtestRepositoryWithoutSbom=true', '--configuration-cache')
+                .withPluginClasspath()
+                .buildAndFail()
+
+        then:
+        result.output.contains('the publications are without their sources and javadoc jars and, with -PtestRepositoryWithoutSbom=true, the jars without their SBOM')
+        !new File(local, 'org/example/lib').exists()
+
+        when: 'the command line names it: the property is ignored for that build'
+        result = run(new File(tmp, 'consumer'), ':framework:lib:publishToMavenLocal', "-Dmaven.repo.local=${local.absolutePath}", '-PtestRepositoryWithoutSbom=true')
+
+        then:
+        result.output.contains("-PtestRepositoryWithoutSbom=true is ignored in the build ':framework'")
+        sbomOf(new File(local, 'org/example/lib/1.0.0-SNAPSHOT/lib-1.0.0-SNAPSHOT.jar')) == [true, 'META-INF/sbom.json']
+        new File(local, 'org/example/lib/1.0.0-SNAPSHOT/lib-1.0.0-SNAPSHOT-sources.jar').exists()
+    }
+
     void "the tasks of a command line are a publish for the tests only when each of them is: #requested"() {
         expect:
         TestRepositoryPublish.isAllThatIsAsked(requested, ':') == own
@@ -339,7 +463,7 @@ class PublishPluginSpec extends Specification {
 
     // A build of two projects, as the builds of Grails are: the project that is published, and above it the
     // one whose task of that name the Grails publish plugin has depend on the publish of every project.
-    private void library() {
+    private void library(boolean withSbom = false) {
         new File(tmp, '.asf.yaml').text = ''
         writeFile('licenses/LICENSE-Apache-2.0.txt', 'Apache License')
         writeFile('grails-core/src/main/resources/META-INF/NOTICE', 'Apache Grails')
@@ -351,12 +475,27 @@ class PublishPluginSpec extends Specification {
                 id 'java-library'
                 id 'org.apache.grails.gradle.grails-publish'
                 id 'org.apache.grails.buildsrc.publish'
+                ${withSbom ? "id 'org.apache.grails.buildsrc.sbom'" : ''}
             }
             group = 'org.example'
             version = projectVersion
         """)
         writeFile('library/lib/src/main/java/org/example/Library.java', 'package org.example; /** A library. */ public class Library {}')
         writeFile('library/lib/src/test/java/org/example/LibraryCheck.java', 'package org.example; public class LibraryCheck {}')
+    }
+
+    // the jar of the library in the repository of the tests, which names a snapshot by its timestamp
+    private File publishedJar() {
+        new File(tmp, 'build/local-maven/org/example/lib/1.0.0-SNAPSHOT').listFiles().find { File file ->
+            file.name.endsWith('.jar') && !file.name.contains('-sources') && !file.name.contains('-javadoc')
+        }
+    }
+
+    // whether a jar holds the SBOM, and where its manifest says it is
+    private static List sbomOf(File file) {
+        new JarFile(file).withCloseable { JarFile jar ->
+            [jar.getEntry('META-INF/sbom.json') != null, jar.manifest.mainAttributes.getValue('Sbom-Location')]
+        }
     }
 
     private BuildResult run(String... arguments) {

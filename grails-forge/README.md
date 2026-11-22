@@ -47,7 +47,15 @@ The framework it consumes is substituted from the root build (`includeBuild('..'
 framework is visible here without publishing. Specs that build generated applications publish the framework to
 `build/local-maven` first, which is why a first `test` run takes a while. That publish holds what a generated
 build resolves: the jars, the POMs and the Gradle module metadata, without the sources and javadoc jars and
-the checksums of a release (pass `-PcompleteTestRepository=true` for those). To start the hosted generator locally
+the checksums of a release (pass `-PcompleteTestRepository=true` for those). The jars are the jars of a release.
+To shorten the publish further, `-PtestRepositoryWithoutSbom=true` (or the environment variable
+`ORG_GRADLE_PROJECT_testRepositoryWithoutSbom=true`) leaves the SBOM out of them, which spares the CycloneDX
+task of every module (156 tasks, about a tenth of the summed task time of the publish from a clean tree; little wall
+time on a machine with many cores, more on one with few). That is opt-in because the SBOM is packed into the jar: the
+specs then run against jars that differ from the released ones (no `META-INF/sbom.json`, no `Sbom-Location`
+manifest attribute), and the license check the SBOM tasks make does not run. The property reaches the
+included framework builds from the Forge command line, and it is ignored, with a message, by any build that
+is asked for more than the publish for the tests. To start the hosted generator locally
 run `./gradlew :grails-forge-web:bootRun`; to run the CLI from this build, `./gradlew :grails-cli:installDist`
 and use `grails-cli/build/install/apache-grails-bin/bin/grails`.
 

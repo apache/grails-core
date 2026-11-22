@@ -159,7 +159,9 @@ Publish Grails to the repository this build resolves from. Both builds publish i
 directory and both are needed — the BOM constrains `org.apache.grails.gradle` artifacts too.
 Asked for alone, as here, the publish holds the jars, the POMs and the Gradle module metadata, and
 neither the sources and javadoc jars nor the checksums of a release (`-PcompleteTestRepository=true`
-publishes those as well):
+publishes those as well). The jars are the jars of a release; adding `-PtestRepositoryWithoutSbom=true`
+to both commands builds them without their SBOM (`META-INF/sbom.json`), which is faster but no longer
+what is released, so it is off unless you ask for it:
 
 ```shell
 (cd grails-gradle && ./gradlew publishAllPublicationsToTestCaseMavenRepoRepository)

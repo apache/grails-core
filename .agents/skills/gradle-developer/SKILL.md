@@ -391,8 +391,8 @@ Plugin IDs (implementation under `build-logic/plugins/…/buildsrc/`):
 | `org.apache.grails.buildsrc.compile` | Java 21 `--release`, UTF-8, fork memory, parameters, sources/javadoc jars, reproducible archives, Groovy config script, isolated build, per-project `base.dir` |
 | `org.apache.grails.buildsrc.dependency-validator` | `validateDependencyVersions` |
 | `org.apache.grails.buildsrc.bom-property-validator` | `validateBomProperties` (BOM projects only) |
-| `org.apache.grails.buildsrc.publish` | Publishing conventions (grails-publish integration). When the command line asks for nothing but `publish...ToTestCaseMavenRepoRepository` tasks, or the build is an included build none of whose other tasks the command line names (the Forge specs), the publications are slimmed to what a consuming build resolves: no sources or javadoc jars (so no Groovydoc) and no release checksums after the publish (so no `testClasses`). Any other invocation publishes everything; `-PcompleteTestRepository=true` forces that (`TestRepositoryPublish`) |
-| `org.apache.grails.buildsrc.sbom` | CycloneDX / SBOM reproducibility |
+| `org.apache.grails.buildsrc.publish` | Publishing conventions (grails-publish integration). When the command line asks for nothing but `publish...ToTestCaseMavenRepoRepository` tasks, or the build is an included build none of whose other tasks the command line names (the Forge specs), the publications are slimmed to what a consuming build resolves: no sources or javadoc jars (so no Groovydoc) and no release checksums after the publish (so no `testClasses`). Any other invocation publishes everything; `-PcompleteTestRepository=true` forces that (`TestRepositoryPublish`). The jars stay the jars of a release, SBOM included, unless `-PtestRepositoryWithoutSbom=true` (or `ORG_GRADLE_PROJECT_testRepositoryWithoutSbom=true`) opts in to jars without `META-INF/sbom.json` and its manifest attributes, which takes the CycloneDX tasks out of the chain (156 tasks, 124-161 s of the 1090-1471 s summed task time of the Forge specs' publish chain from a clean tree, about a tenth; little wall time on a many-core machine, where they run beside the compilation). It is off by default because it changes what is inside the jars the specs test against, it works only with the slim publish (any other invocation ignores it and says so), and a publish task for another repository fails in a slimmed build. Do not set it in a lane that publishes or verifies a release |
+| `org.apache.grails.buildsrc.sbom` | CycloneDX / SBOM reproducibility; packs each module's SBOM into its jar (`META-INF/sbom.json`), except in a slim test-repository publish that opted out with `-PtestRepositoryWithoutSbom=true` |
 | `org.apache.grails.buildsrc.vulnerability-scan` | `vulnerabilityScan`: looks up the resolved `runtimeClasspath` and `compileClasspath` in OSV and, when `SONATYPE_GUIDE_USERNAME`/`SONATYPE_GUIDE_TOKEN` are set, Sonatype Guide (read at execution, never stored in the configuration cache); answers cached for an hour in the Gradle user home (`vulnerabilityScan.cacheTtl`) since Sonatype lookups cost credits; exclusions need a reason |
 | `org.apache.grails.buildsrc.vulnerability-scan-report` | Root only: `vulnerabilityScanReport` collects every project's scan into `build/reports/vulnerability-scan/summary.md` |
 | `org.apache.grails.buildsrc.groovydoc` | Groovydoc |
@@ -604,7 +604,8 @@ For importing an entire external plugin repository, use **`mono-repo-integration
 
 # Publish to build/local-maven for end-to-end (and forge TestCaseMavenRepo consumers)
 # Asked for alone, this publishes jars, POMs and module metadata only (no sources/javadoc jars, no checksums);
-# add -PcompleteTestRepository=true for the complete publications
+# add -PcompleteTestRepository=true for the complete publications.
+# Opt in to jars without their SBOM (faster, but no longer the released jars) with -PtestRepositoryWithoutSbom=true
 (cd grails-gradle && ./gradlew publishAllPublicationsToTestCaseMavenRepoRepository)
 ./gradlew publishAllPublicationsToTestCaseMavenRepoRepository
 

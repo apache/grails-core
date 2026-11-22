@@ -412,7 +412,10 @@ class SbomPlugin implements Plugin<Project> {
 
             project.tasks.named('build').configure { it.dependsOn('cyclonedxCliBom') }
 
-            publishSbomForCliJar(project, cliSbomOutputLocation)
+            // see TestRepositoryPublish.WITHOUT_SBOM_PROPERTY
+            if (!TestRepositoryPublish.isWithoutSbom(project)) {
+                publishSbomForCliJar(project, cliSbomOutputLocation)
+            }
         }
     }
 
@@ -535,6 +538,12 @@ class SbomPlugin implements Plugin<Project> {
     }
 
     private static void publishSbomForJarProjects(Project project, Provider<RegularFile> sbomOutputLocation) {
+        // A build that only fills the repository of the tests, and was asked for jars without their SBOM,
+        // packs none and so runs no CycloneDX task for its jars: see TestRepositoryPublish.WITHOUT_SBOM_PROPERTY.
+        // Every other build, and every build that does not set that property, packs the SBOM.
+        if (TestRepositoryPublish.isWithoutSbom(project)) {
+            return
+        }
         def initialized = new AtomicBoolean(false)
         ['java', 'java-library'].each {
             project.plugins.withId(it) {
