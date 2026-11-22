@@ -76,6 +76,9 @@ Example: ./grailsw s2-quickstart --uiOnly
 
     @Override
     boolean handle() {
+        // read before choosing what to do, as --uiOnly alone takes no arguments
+        uiOnly = isFlagPresent('uiOnly')
+        salt = isFlagPresent('salt')
 
         if (uiOnly) {
             consoleLogger.addStatus('\nConfiguring Spring Security; not generating domain classes')
@@ -88,7 +91,7 @@ Example: ./grailsw s2-quickstart --uiOnly
             initializeTemplateAttributes()
             createDomains(userModel, roleModel, requestmapModel, roleGroupModel)
         }
-        if (new File('grails-app/conf/application.yml').exists()) {
+        if (file('grails-app/conf/application.yml').exists()) {
             consoleLogger.addStatus('\nConfiguring Spring Security; Updating YAML Application Config')
             updateYmlConfig(userModel?.simpleName, roleModel?.simpleName, requestmapModel?.simpleName, userModel?.packageName, roleGroupModel != null)
         } else {
@@ -133,9 +136,6 @@ Example: ./grailsw s2-quickstart --uiOnly
     }
 
     private void initialize() {
-        uiOnly = isFlagPresent('uiOnly')
-        salt = flagValue('salt')
-
         packageName = args[0]
         userModel = model(packageName + '.' + args[1])
         if (userModel) {
@@ -144,6 +144,10 @@ Example: ./grailsw s2-quickstart --uiOnly
         roleModel = model(packageName + '.' + args[2])
         if (roleModel) {
             consoleLogger.addStatus('\nCreating Role class ' + roleModel.simpleName + ' in package ' + packageName)
+        }
+        requestmapModel = args.size() > 3 ? model(packageName + '.' + args[3]) : null
+        if (requestmapModel) {
+            consoleLogger.addStatus('\nCreating Requestmap class ' + requestmapModel.simpleName + ' in package ' + packageName)
         }
         final String groupClassName = flagValue('groupClassName')
         roleGroupModel = groupClassName ? model(packageName + '.' + groupClassName) : null
@@ -202,9 +206,6 @@ Example: ./grailsw s2-quickstart --uiOnly
                                Model requestmapModel,
                                Model groupModel) {
 
-        final Properties props = new Properties()
-        file('gradle.properties')?.withInputStream { props.load(it) }
-        
         generateFile('PersonWithoutInjection', userModel.packagePath, userModel.simpleName)
         if (salt) {
             generateFile('PersonPasswordEncoderListenerWithSalt',
@@ -222,7 +223,7 @@ Example: ./grailsw s2-quickstart --uiOnly
         beans.add([import: "import ${userModel.packageName}.${userModel.simpleName}PasswordEncoderListener".toString(),
                    definition: "${userModel.propertyName}PasswordEncoderListener(${userModel.simpleName}PasswordEncoderListener)".toString()])
 
-        if (new File('grails-app/conf/spring/resources.groovy').exists()) {
+        if (file('grails-app/conf/spring/resources.groovy').exists()) {
             addBeans(beans, 'grails-app/conf/spring/resources.groovy')
         } else {
             //we could be generating this in a plugin... we should look for a Plugin class
@@ -371,7 +372,7 @@ Example: ./grailsw s2-quickstart --uiOnly
     }
 
     private void addBeans(List<Map<String, String>> beans, String resourceConfigFilePath) {
-        final File resourceConfig = new File(resourceConfigFilePath)
+        final File resourceConfig = file(resourceConfigFilePath)
         List<String> lines = []
         beans.forEach(bean -> lines.add(bean.import))
         if (resourceConfig.exists()) {
@@ -423,7 +424,11 @@ Example: ./grailsw s2-quickstart --uiOnly
 
     private File findPluginClass() {
         File pluginClass = null
-        new File('src/main/groovy').eachFileRecurse { fl ->
+        File sources = file('src/main/groovy')
+        if (!sources.isDirectory()) {
+            return null
+        }
+        sources.eachFileRecurse { fl ->
             if (fl.isFile() && fl.name.endsWith('GrailsPlugin.groovy')) {
                 pluginClass = fl
             }
