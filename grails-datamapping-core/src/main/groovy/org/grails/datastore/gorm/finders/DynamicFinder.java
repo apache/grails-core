@@ -201,12 +201,6 @@ public abstract class DynamicFinder extends AbstractFinder implements QueryBuild
                             return null;
                         }
                         queryParameters = querySequence.split(operatorInUse);
-                        for (String queryParameter : queryParameters) {
-                            if (endsWithOperator(queryParameter, DEFAULT_OPERATORS)) {
-                                // the other operator ends an expression, as at run time where the finder is refused
-                                return null;
-                            }
-                        }
                         // loop through query parameters and create expressions
                         // calculating the number of arguments required for the expression
                         for (String queryParameter : queryParameters) {
@@ -327,7 +321,7 @@ public abstract class DynamicFinder extends AbstractFinder implements QueryBuild
                     operatorInUse = operators[i];
 
                     queryParameters = querySequence.split(operatorInUse);
-                    rejectTrailingOperator(querySequence, queryParameters, operatorInUse, operators, methodName);
+                    rejectTrailingOperator(querySequence, operatorInUse, methodName);
 
                     // loop through query parameters and create expressions
                     // calculating the number of arguments required for the expression
@@ -780,18 +774,10 @@ public abstract class DynamicFinder extends AbstractFinder implements QueryBuild
      * {@code And} or {@code Or}, so the finder would run as if the operator were not there; and an expression that ends with
      * the other operator would name a property that is not there.
      */
-    private static void rejectTrailingOperator(String querySequence, String[] queryParameters, String operator, String[] operators, String methodName) {
+    private static void rejectTrailingOperator(String querySequence, String operator, String methodName) {
         if (querySequence.endsWith(operator)) {
             throw new IllegalArgumentException("The dynamic finder [" + methodName + "] ends with the [" + operator +
                     "] operator, and no expression follows it. Remove the operator or name the property after it.");
-        }
-        for (String queryParameter : queryParameters) {
-            for (String other : operators) {
-                if (queryParameter.endsWith(other)) {
-                    throw new IllegalArgumentException("The dynamic finder [" + methodName + "] has an expression that ends with the [" + other +
-                            "] operator, and no expression follows it. Remove the operator or name the property after it.");
-                }
-            }
         }
     }
 
@@ -802,25 +788,17 @@ public abstract class DynamicFinder extends AbstractFinder implements QueryBuild
      */
     private void rejectMixedOperators(Class clazz, MethodExpression expression, String operatorInUse, String methodName) {
         for (int i = 0; i < DEFAULT_OPERATORS.length; i++) {
-            if (DEFAULT_OPERATORS[i].equals(operatorInUse) || !defaultOperationPatterns[i].matcher(expression.propertyName).find()) {
+            if (DEFAULT_OPERATORS[i].equals(operatorInUse) ||
+                    !(defaultOperationPatterns[i].matcher(expression.propertyName).find() || expression.propertyName.endsWith(DEFAULT_OPERATORS[i]))) {
                 continue;
             }
             PersistentEntity entity = mappingContext.getPersistentEntity(clazz.getName());
             if (entity == null || entity.getPropertyByName(expression.propertyName) == null) {
                 throw new IllegalArgumentException("The dynamic finder [" + methodName + "] joins its expressions with [" + operatorInUse +
-                        "] and also has [" + DEFAULT_OPERATORS[i] + "] inside the expression [" + expression.propertyName +
+                        "] and also has [" + DEFAULT_OPERATORS[i] + "] in the expression [" + expression.propertyName +
                         "], which is not a property. A finder takes one operator: use only And or only Or, or a where query.");
             }
         }
-    }
-
-    private static boolean endsWithOperator(String text, String[] operators) {
-        for (String operator : operators) {
-            if (text.endsWith(operator)) {
-                return true;
-            }
-        }
-        return false;
     }
 
     private static String calcPropertyName(String queryParameter, String clause) {

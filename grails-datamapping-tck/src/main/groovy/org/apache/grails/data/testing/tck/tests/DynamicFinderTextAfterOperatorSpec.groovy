@@ -96,10 +96,12 @@ class DynamicFinderTextAfterOperatorSpec extends GrailsDataTckSpec {
 
     void "a property whose name holds an operator keeps its finders"() {
         given:
-        new OperatorNamedItem(nameOrTitle: 'x').save(flush: true, failOnError: true)
+        new OperatorNamedItem(nameOrTitle: 'x', bitwiseOr: 3).save(flush: true, failOnError: true)
 
         expect:
         OperatorNamedItem.findAllByNameOrTitleAndNameOrTitle('x', 'x').size() == 1
+        OperatorNamedItem.findAllByNameOrTitleAndBitwiseOr('x', 3).size() == 1
+        OperatorNamedItem.countByBitwiseOr(3) == 1
     }
 
     void "the sort and order parameters sort a dynamic finder"() {
@@ -137,4 +139,5 @@ class DynamicFinderTextAfterOperatorSpec extends GrailsDataTckSpec {
 class OperatorNamedItem {
 
     String nameOrTitle
+    Integer bitwiseOr
 }

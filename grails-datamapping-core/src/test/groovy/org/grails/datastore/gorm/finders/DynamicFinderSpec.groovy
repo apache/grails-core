@@ -52,7 +52,5 @@ class DynamicFinderSpec extends Specification {
         "findBy" | "findByTitleAndAuthorAnd"       | 2
         "findBy" | "findByTitleOrAuthorOr"         | 2
         "findBy" | "findByTitleAndAuthorInListAnd" | 2
-        "findBy" | "findByTitleAndAuthorOr"        | 2
-        "findBy" | "findByTitleOrAuthorAnd"        | 2
     }
 }

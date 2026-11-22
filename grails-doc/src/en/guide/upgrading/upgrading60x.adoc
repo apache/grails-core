@@ -1318,7 +1318,7 @@ arguments, which is how a finder is sorted: `findAllByAgeGreaterThan(18, [sort: 
 finders that carry an `OrderBy` or other trailing text and move the sort into the arguments. A name that ends with
 `And` or `Or` after another expression, such as `findAllByNameAndAgeInListAnd`, ran as if the last operator were
 absent, and one that ends with the other operator, such as `findAllByNameAndAgeOr`, searched a property named `ageOr`;
-both are refused now, and in a data service interface they no longer match a finder. Remove the operator. A finder that
+both are refused now, unless the entity has a property with that name, such as `bitwiseOr`, and a name that ends with the operator the finder joins with no longer matches a finder in a data service interface. Remove the operator. A finder that
 joins with one operator and has the other inside an expression, such as `findAllByNameAndAgeOrTitle`, searched a property named
 `ageOrTitle`; it is refused now unless the entity has a property of that name. Use only `And` or only `Or`, or a `where`
 query. Finder names without trailing text or a second operator are unchanged.
