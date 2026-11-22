@@ -65,6 +65,13 @@ class ProjectGradle {
     }
 
     /**
+     * @return the wrapper the build runs through, or none when it has none
+     */
+    File getWrapper() {
+        wrapper
+    }
+
+    /**
      * Runs Gradle in the project quietly, with its output shown.
      *
      * @param arguments the tasks and arguments to run

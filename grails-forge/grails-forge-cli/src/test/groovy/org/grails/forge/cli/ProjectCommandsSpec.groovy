@@ -517,12 +517,13 @@ class ProjectCommandsSpec extends Specification {
 
     void "a file of another project of the build in #pluginDir, #path, that broke the build with no manifest yet, runs it again once fixed, #layout"() {
         given: 'a build with a plugin project next to the application, and no manifest yet'
+        String pluginPath = pluginDir == OUTSIDE_THE_BUILD ? "../${dir.name}-audit" : pluginDir
         File project = dir
         if (appInSubproject) {
-            new File(dir, 'settings.gradle').text = "include 'app', 'audit'\nproject(':audit').projectDir = file('${pluginDir}')\n"
+            new File(dir, 'settings.gradle').text = "include 'app', 'audit'\nproject(':audit').projectDir = file('${pluginPath}')\n"
             project = moveProjectInto('app')
         }
-        File plugin = new File(dir, pluginDir)
+        File plugin = new File(dir, pluginPath).canonicalFile
         plugin.mkdirs()
         new File(plugin, 'build.gradle').text = "plugins { id 'groovy' }\n"
         File broken = new File(plugin, path)
@@ -549,23 +550,38 @@ class ProjectCommandsSpec extends Specification {
         exitCode == 0
         gradleInvocations()*.get(5) == ['generateCommandManifest', 'runCommand']
 
-        where:
-        [pluginDir, path, appInSubproject] << [['plugins/audit', '.modules/audit', 'bin', 'src', 'src/plugins/audit', 'plugins/buildSrc'],
-                                               ['src/main/groovy/com/acme/AuditService.groovy',
-                                                'grails-app/services/com/acme/AuditService.groovy',
-                                                'src/main/java/com/acme/AuditService.java',
-                                                'build.gradle'],
-                                               [false, true]].combinations()
-        layout = appInSubproject ? 'with the application in a project of its own' : 'with the application at the root'
+        cleanup:
+        if (pluginDir == OUTSIDE_THE_BUILD) {
+            plugin.deleteDir()
+        }
+
+        where: 'the settings file names the plugin, wherever it is, or the plugin is found by its files below the root'
+        [pluginDir, path, appInSubproject] << siblingProjectCases()
+        layout = appInSubproject ? 'named in the settings file' : 'found by its files, with the application at the root'
     }
 
-    void 'the settings file of an included build that broke the build with no manifest yet runs it again once fixed'() {
-        given: 'an included build whose directory holds only its settings file'
-        File settings = new File(dir, 'included/settings.gradle')
-        settings.parentFile.mkdirs()
+    private static final String OUTSIDE_THE_BUILD = 'outside the root of the build'
 
-        when: 'its settings file is changed so that the build fails'
-        settings.text = "include 'broken"
+    private static List<List<Object>> siblingProjectCases() {
+        List<String> files = ['src/main/groovy/com/acme/AuditService.groovy', 'grails-app/services/com/acme/AuditService.groovy',
+                              'src/main/java/com/acme/AuditService.java', 'build.gradle']
+        List<String> found = ['plugins/audit', '.modules/audit', 'bin', 'src', 'plugins/buildSrc']
+        List<String> named = found + ['src/plugins/audit', 'bin/audit', OUTSIDE_THE_BUILD]
+        [named, files, [true]].combinations() + [found, files, [false]].combinations()
+    }
+
+    void "a file of an included build, #path, that broke the build with no manifest yet runs it again once fixed, #how"() {
+        given: 'an included build, whose directory holds its settings file and its build logic'
+        File included = new File(dir, location)
+        new File(included, 'settings.gradle').with { parentFile.mkdirs(); text = "rootProject.name = 'shared'\n" }
+        if (namedByTheBuild) {
+            new File(dir, 'settings.gradle').text = "includeBuild '${location}'\n"
+        }
+        File broken = new File(included, path)
+        broken.parentFile.mkdirs()
+
+        when: 'the file is changed so that the build fails'
+        broken.text = 'broken = ['
         new File(dir, 'gradle-exit-code').text = '1'
         ForgeCli.createCommandLine(context, false)
         ForgeCli.createCommandLine(context, false)
@@ -573,14 +589,105 @@ class ProjectCommandsSpec extends Specification {
         then: 'the failed build runs once'
         gradleInvocations() == [prefix() + MANIFEST_TASK]
 
-        when: 'the settings file is fixed'
+        when: 'the file is fixed'
         forgetInvocations()
-        settings.text = "include 'fixed'"
+        broken.text = 'fixed = []'
         new File(dir, 'gradle-exit-code').delete()
         buildWrites(SECURITY_QUICKSTART)
         CommandLine commandLine = ForgeCli.createCommandLine(context, false)
 
         then: 'the build runs again'
+        gradleInvocations() == [prefix() + MANIFEST_TASK]
+        commandLine.subcommands.containsKey('s2-quickstart')
+
+        where:
+        [path, namedByTheBuild] << [['settings.gradle', 'gradle/libs.versions.toml', 'buildSrc/src/main/kotlin/Conventions.kt',
+                                     'src/main/kotlin/Shared.kt'], [true, false]].combinations()
+        location = namedByTheBuild ? 'build-logic' : 'included'
+        how = namedByTheBuild ? 'named with includeBuild' : 'found by its settings file'
+    }
+
+    void "a build file of a test fixture in the application's sources runs no build while the build fails"() {
+        given: 'a fixture with a build of its own, which is no project of the build'
+        File fixture = new File(dir, 'src/test/resources/fixtures/sample/build.gradle')
+        fixture.parentFile.mkdirs()
+        fixture.text = "plugins { id 'java' }\n"
+        new File(dir, 'gradle-exit-code').text = '1'
+        ForgeCli.createCommandLine(context, false)
+
+        when:
+        fixture.text = "plugins { id 'groovy' }\n"
+        ForgeCli.createCommandLine(context, false)
+
+        then:
+        gradleInvocations() == [prefix() + MANIFEST_TASK]
+    }
+
+    void 'a project added after the last manifest that breaks the build runs it again once fixed'() {
+        given: 'a manifest naming the projects of the build at the time'
+        Map inputs = [buildDirectories: [dir.path], sourceDirectories: [new File(dir, 'grails-app/commands').path],
+                      commandFileDirectories: [new File(dir, 'src/main/groovy').path]]
+        buildWritesWithInputs(inputs, URL_MAPPINGS_REPORT)
+        ForgeCli.createCommandLine(context, false)
+
+        and: 'a plugin project added to the build, whose source does not compile'
+        File source = new File(dir, 'plugins/audit/src/main/groovy/com/acme/AuditService.groovy')
+        source.parentFile.mkdirs()
+        source.text = 'class AuditService { broken'
+        new File(dir, 'plugins/audit/build.gradle').text = "plugins { id 'groovy' }\n"
+        new File(dir, 'settings.gradle').text = "include 'plugins:audit'\n"
+        new File(dir, 'gradle-exit-code').text = '1'
+        forgetInvocations()
+
+        when:
+        ForgeCli.createCommandLine(context, false)
+        ForgeCli.createCommandLine(context, false)
+
+        then: 'the failed build runs once'
+        gradleInvocations() == [prefix() + MANIFEST_TASK]
+
+        when: 'the source is fixed'
+        forgetInvocations()
+        source.text = 'class AuditService { /* fixed */ }'
+        new File(dir, 'gradle-exit-code').delete()
+        buildWritesWithInputs(inputs, URL_MAPPINGS_REPORT, AUDIT)
+        CommandLine commandLine = ForgeCli.createCommandLine(context, false)
+
+        then:
+        gradleInvocations() == [prefix() + MANIFEST_TASK]
+        commandLine.subcommands.containsKey('audit')
+    }
+
+    void 'a manifest written with Gradle after a failed build, naming the same inputs, makes the build run again once'() {
+        given: 'a manifest naming its inputs, and a failed refresh'
+        Map inputs = [buildDirectories: [dir.path], sourceDirectories: [new File(dir, 'grails-app/commands').path]]
+        buildWritesWithInputs(inputs, URL_MAPPINGS_REPORT)
+        ForgeCli.createCommandLine(context, false)
+        new File(dir, 'build.gradle') << '// changed\n'
+        new File(dir, 'gradle-exit-code').text = '1'
+        ForgeCli.createCommandLine(context, false)
+        File failed = new File(dir, '.gradle/grails/commands.failed')
+        assert failed.isFile()
+        failed.setLastModified(System.currentTimeMillis() - 60_000)
+
+        when: './gradlew generateCommandManifest writes the manifest once the build works again'
+        new File(dir, 'gradle-exit-code').delete()
+        buildWritesWithInputs(inputs, URL_MAPPINGS_REPORT, SECURITY_QUICKSTART)
+        manifest.text = JsonOutput.toJson([version: 1, commands: [URL_MAPPINGS_REPORT, SECURITY_QUICKSTART], inputs: inputs])
+        forgetInvocations()
+        CommandLine commandLine = ForgeCli.createCommandLine(context, false)
+
+        then: 'the build runs once more and the failure is forgotten'
+        gradleInvocations() == [prefix() + MANIFEST_TASK]
+        commandLine.subcommands.containsKey('s2-quickstart')
+        !failed.exists()
+
+        when: 'the build is cleaned'
+        forgetInvocations()
+        new File(dir, 'build').deleteDir()
+        commandLine = ForgeCli.createCommandLine(context, false)
+
+        then: 'the commands are read again, not left out for a failure that is over'
         gradleInvocations() == [prefix() + MANIFEST_TASK]
         commandLine.subcommands.containsKey('s2-quickstart')
     }
@@ -1160,6 +1267,16 @@ class ProjectCommandsSpec extends Specification {
         output.toString().contains('Could not read the commands of the project: ')
         commandLine.subcommands.containsKey('create-app')
         commandLine.subcommands.containsKey('url-mappings-report')
+
+        when: 'the wrapper can be started again'
+        Files.setPosixFilePermissions(new File(dir, 'gradlew').toPath(), [PosixFilePermission.OWNER_READ, PosixFilePermission.OWNER_WRITE,
+                                                                       PosixFilePermission.OWNER_EXECUTE] as Set)
+        buildWrites(SECURITY_QUICKSTART)
+        commandLine = ForgeCli.createCommandLine(context, false)
+
+        then: 'the build runs, and its commands are offered'
+        gradleInvocations() == [prefix() + MANIFEST_TASK]
+        commandLine.subcommands.containsKey('s2-quickstart')
     }
 
     void 'a build whose manifest task is up to date is not run again'() {

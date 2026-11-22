@@ -20,6 +20,8 @@ package org.grails.forge.cli.command
 
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.regex.Matcher
+import java.util.regex.Pattern
 
 import groovy.json.JsonException
 import groovy.json.JsonOutput
@@ -83,8 +85,16 @@ class ProjectCommands {
     private static final List<String> COMMAND_FILE_SUFFIXES = ['Command.groovy', 'Command.java']
 
     /** What makes a directory a project or an included build of the build, when no manifest says which they are */
-    private static final List<String> PROJECT_MARKERS = ['build.gradle', 'build.gradle.kts', 'settings.gradle',
-                                                         'settings.gradle.kts', 'src/main', 'grails-app']
+    private static final List<String> PROJECT_FILES = ['build.gradle', 'build.gradle.kts', 'settings.gradle',
+                                                       'settings.gradle.kts']
+
+    /** What makes a directory a project of the build too, when no manifest says which they are */
+    private static final List<String> PROJECT_DIRECTORIES = ['src/main', 'grails-app']
+
+    private static final List<String> SETTINGS_FILES = ['settings.gradle', 'settings.gradle.kts']
+
+    /** A string in quotes, in Groovy or Kotlin, which a settings file names a project's path or directory with */
+    private static final Pattern STRING_LITERAL = Pattern.compile(/(['"])((?:\\.|(?!\1)[^\\\r\n])*)\1/)
 
     /** What tools write anywhere, sources included */
     private static final List<String> TOOL_FILES = ['node_modules', '.DS_Store']
@@ -146,10 +156,10 @@ class ProjectCommands {
     private void update(File manifest, ConsoleOutput console) {
         // the files are recorded before the build runs, so one changed while it runs counts next time
         Inputs before = inputsOf(manifest)
-        List<String> recorded = snapshotOrNull(before, false)
+        List<String> recorded = stateOrNull(before, false)
         // a failed build is recorded with every file of the main sources, so fixing the one that did not
         // compile runs the build again, while nothing changing still does not
-        List<String> recordedWhole = snapshotOrNull(before, true)
+        List<String> recordedWhole = stateOrNull(withDiscovered(before), true)
         console.out('Reading the commands of the project from its build...')
         String problem
         try {
@@ -166,8 +176,8 @@ class ProjectCommands {
             // a manifest naming other files is recorded as they are now, unless one of the files known
             // before the build changed while it ran: then the record from before makes the build run again
             Inputs after = inputsOf(manifest)
-            boolean changedDuringBuild = after != before && snapshotOrNull(before, false) != recorded
-            save(after == before || changedDuringBuild ? recorded : snapshotOrNull(after, false), null, console)
+            boolean changedDuringBuild = after != before && stateOrNull(before, false) != recorded
+            save(after == before || changedDuringBuild ? recorded : stateOrNull(after, false), null, console)
             keepInputs(manifest)
             return
         }
@@ -268,8 +278,16 @@ class ProjectCommands {
         try {
             // without a record, as when the project's own build wrote the manifest, a file deleted since
             // cannot be told from one that was never there
-            boolean failedLast = new File(projectDir, FAILED_PATH).isFile()
-            return !record.isFile() || Files.readAllLines(record.toPath()) != snapshot(inputsOf(manifest), failedLast)
+            File failed = new File(projectDir, FAILED_PATH)
+            boolean failedLast = failed.isFile()
+            // a manifest written since the build failed, as by ./gradlew generateCommandManifest, says it works
+            // again: the build runs once more, to record what the commands depend on and forget the failure
+            if (failedLast && manifest.isFile() && manifest.lastModified() > failed.lastModified()) {
+                return true
+            }
+            Inputs inputs = inputsOf(manifest)
+            return !record.isFile() || Files.readAllLines(record.toPath()) !=
+                    state(failedLast ? withDiscovered(inputs) : inputs, failedLast)
         }
         catch (IOException | RuntimeException ignored) {
             return true
@@ -317,15 +335,28 @@ class ProjectCommands {
                 return named
             }
         }
+        discoveredInputs()
+    }
+
+    /**
+     * The inputs of the projects of the build as the Forge CLI finds them without a manifest: those the
+     * settings files name, and the directories below the root of the build that look like projects. An
+     * included build, which has a settings file of its own, is watched whole, as the manifest names it.
+     */
+    private Inputs discoveredInputs() {
         File rootDir = gradle.rootDir
         List<File> projects = []
         projects << projectDir << rootDir
         projectsBelow(rootDir, rootDir, projects)
+        declaredProjects(rootDir, projects, new HashSet<File>())
         projects = projects.unique()
         List<File> sourceDirectories = [new File(rootDir, 'gradle'), new File(rootDir, 'buildSrc')]
         List<File> commandDirectories = []
         List<File> commandFileDirectories = []
         for (File project : projects) {
+            if (project != rootDir && SETTINGS_FILES.any { String name -> new File(project, name).isFile() }) {
+                sourceDirectories << project
+            }
             sourceDirectories << new File(project, 'grails-app/commands') << new File(project, 'src/main/resources/META-INF')
             commandDirectories << new File(project, 'src/cli')
             commandFileDirectories << new File(project, 'grails-app') << new File(project, 'src/main/groovy') <<
@@ -335,12 +366,25 @@ class ProjectCommands {
     }
 
     /**
+     * The inputs, and those the Forge CLI finds now: while the build fails, a project added since the
+     * last manifest, which that manifest does not name, may be what broke it.
+     */
+    private Inputs withDiscovered(Inputs inputs) {
+        Inputs discovered = discoveredInputs()
+        new Inputs((inputs.buildDirectories + discovered.buildDirectories).unique(),
+                (inputs.sourceDirectories + discovered.sourceDirectories).unique(),
+                (inputs.commandDirectories + discovered.commandDirectories).unique(),
+                (inputs.commandFileDirectories + discovered.commandFileDirectories).unique(),
+                inputs.sourceFiles)
+    }
+
+    /**
      * Adds the directories below the given one that look like projects or included builds of the build,
      * with a build or settings file, main sources or a {@code grails-app} directory, whatever they are
-     * named: without a manifest, the build has not said which projects it has, and a project can be
-     * anywhere, such as below a hidden directory or in one named {@code src}. What builds and tools write
-     * and the {@code buildSrc} of the root, which is watched whole, are not searched; links are not
-     * followed.
+     * named, such as below a hidden directory or one named {@code src}: a settings file may name its
+     * projects through code. What builds and tools write, the inside of a source tree, such as a test
+     * fixture with a build file of its own, and the {@code buildSrc} of the root, which is watched whole,
+     * are not searched; links are not followed.
      */
     private static void projectsBelow(File dir, File rootDir, List<File> projects) {
         File[] children = dir.listFiles()
@@ -352,11 +396,59 @@ class ProjectCommands {
                     (dir == rootDir && child.name == 'buildSrc')) {
                 continue
             }
-            if (PROJECT_MARKERS.any { String marker -> new File(child, marker).exists() }) {
+            boolean project = isProject(child)
+            if (project) {
                 projects << child
             }
-            if (!(child.name in OUTPUT_DIRS) && !(child.name in TOOL_FILES)) {
+            boolean sources = !project && child.name in SOURCE_DIRS
+            if (!sources && !(child.name in OUTPUT_DIRS) && !(child.name in TOOL_FILES)) {
                 projectsBelow(child, rootDir, projects)
+            }
+        }
+    }
+
+    private static boolean isProject(File dir) {
+        PROJECT_FILES.any { String name -> new File(dir, name).isFile() } ||
+                PROJECT_DIRECTORIES.any { String name -> new File(dir, name).isDirectory() }
+    }
+
+    /**
+     * Adds the directories a settings file names as paths in quotes, as {@code projectDir = file('bin/audit')}
+     * or {@code includeBuild('../shared')} do, or as project paths, as {@code include ':plugins:audit'} does,
+     * wherever they are, and those the settings files of the included builds among them name.
+     */
+    private static void declaredProjects(File settingsDir, List<File> projects, Set<File> visited) {
+        if (!visited.add(settingsDir.absoluteFile.toPath().normalize().toFile())) {
+            return
+        }
+        for (String name : SETTINGS_FILES) {
+            File settings = new File(settingsDir, name)
+            String text
+            try {
+                text = settings.isFile() ? new String(Files.readAllBytes(settings.toPath()), 'UTF-8') : null
+            }
+            catch (IOException ignored) {
+                text = null
+            }
+            if (text == null) {
+                continue
+            }
+            Matcher literals = STRING_LITERAL.matcher(text)
+            while (literals.find()) {
+                String literal = literals.group(2)
+                if (!literal || literal.contains('$')) {
+                    continue
+                }
+                for (String path : [literal, literal.replaceFirst(/^:/, '').replace(':', '/')].unique()) {
+                    File candidate = new File(path).isAbsolute() ? new File(path) : new File(settingsDir, path)
+                    candidate = candidate.absoluteFile.toPath().normalize().toFile()
+                    if (candidate.isDirectory() && !(candidate in projects)) {
+                        projects << candidate
+                        if (SETTINGS_FILES.any { String settingsName -> new File(candidate, settingsName).isFile() }) {
+                            declaredProjects(candidate, projects, visited)
+                        }
+                    }
+                }
             }
         }
     }
@@ -464,10 +556,22 @@ class ProjectCommands {
         lines
     }
 
-    /** The record of the files, or none when they cannot be read, such as one of a path the system refuses */
-    private static List<String> snapshotOrNull(Inputs inputs, boolean wholeSources) {
+    /**
+     * What the commands depend on now: the files of {@link #snapshot}, and the wrapper the build runs
+     * through, with whether it can run, so repairing a wrapper that could not start runs the build again.
+     */
+    private List<String> state(Inputs inputs, boolean wholeSources) {
+        List<String> lines = snapshot(inputs, wholeSources)
+        File wrapper = gradle.wrapper
+        lines << (wrapper == null ? 'wrapper\tnone' :
+                "wrapper\t${wrapper.absolutePath}\t${wrapper.lastModified()}\t${wrapper.length()}\t${wrapper.canExecute()}".toString())
+        lines
+    }
+
+    /** What the commands depend on now, or none when it cannot be read, such as a path the system refuses */
+    private List<String> stateOrNull(Inputs inputs, boolean wholeSources) {
         try {
-            return snapshot(inputs, wholeSources)
+            return state(inputs, wholeSources)
         }
         catch (RuntimeException ignored) {
             return null
