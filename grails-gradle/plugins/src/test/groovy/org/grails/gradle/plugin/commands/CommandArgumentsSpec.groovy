@@ -111,16 +111,18 @@ class CommandArgumentsSpec extends Specification {
         List<Object> arguments = GrailsCliGradlePlugin.commandTaskArguments(task, project)
 
         then: 'the file is handed to the command by its path, so its arguments are not on the command line of the JVM'
-        arguments == [GrailsCliGradlePlugin.ARGS_FILE_ARGUMENT + project.file('arguments.json').absolutePath]
+        arguments == []
+        task.systemProperties[GrailsCliGradlePlugin.ARGS_FILE_SYSTEM_PROPERTY] == project.file('arguments.json').absolutePath
 
-        and: 'nothing is set while the build is configured, where a setting for every JavaExec task could replace it'
-        task.systemProperties == ['grails.env': 'development']
+        and: 'nothing else is set while the build is configured, where a setting for every JavaExec task could replace it'
+        task.systemProperties.findAll { it.key != GrailsCliGradlePlugin.ARGS_FILE_SYSTEM_PROPERTY } == ['grails.env': 'development']
 
         when: 'the task starts'
         task.actions.first().execute(task)
 
         then:
-        task.systemProperties == ['grails.env': 'test', query: 'a=b', trimmed: 'yes', quoted: 'yes']
+        task.systemProperties.findAll { it.key != GrailsCliGradlePlugin.ARGS_FILE_SYSTEM_PROPERTY } ==
+                ['grails.env': 'test', query: 'a=b', trimmed: 'yes', quoted: 'yes']
         task.onlyIf.isSatisfiedBy(task)
     }
 
@@ -131,8 +133,22 @@ class CommandArgumentsSpec extends Specification {
         JavaExec task = project.tasks.register('commandTask', JavaExec).get()
 
         expect:
-        GrailsCliGradlePlugin.commandTaskArguments(task, project) ==
-                ['dbm-update', '--verbose', GrailsCliGradlePlugin.ARGS_FILE_ARGUMENT + project.file('arguments.json').absolutePath]
+        GrailsCliGradlePlugin.commandTaskArguments(task, project) == ['dbm-update', '--verbose']
+        task.systemProperties[GrailsCliGradlePlugin.ARGS_FILE_SYSTEM_PROPERTY] == project.file('arguments.json').absolutePath
+    }
+
+    void 'an args file that is not JSON is reported without what it holds, which can be a password'() {
+        given:
+        new File(projectDir, 'arguments.json').text = '["dbm-update", "--password", "s3cr3t" oops]'
+
+        when:
+        GrailsCliGradlePlugin.commandArguments(project(argsFile: 'arguments.json'))
+
+        then:
+        GradleException e = thrown()
+        e.message.contains('is not JSON')
+        !e.message.contains('s3cr3t')
+        e.cause == null
     }
 
     void 'a command task of a project the grailsCommandProject property does not name does not read the args file'() {
@@ -147,6 +163,7 @@ class CommandArgumentsSpec extends Specification {
         noExceptionThrown()
         arguments == []
         !task.onlyIf.isSatisfiedBy(task)
+        !task.systemProperties.containsKey(GrailsCliGradlePlugin.ARGS_FILE_SYSTEM_PROPERTY)
     }
 
     void 'arguments the command line parser refuses set no system property'() {
@@ -180,7 +197,7 @@ class CommandArgumentsSpec extends Specification {
         System.getProperty('grails.env') == 'development'
 
         and: 'the command JVM gets the one it names'
-        task.systemProperties == properties
+        task.systemProperties.findAll { it.key != GrailsCliGradlePlugin.ARGS_FILE_SYSTEM_PROPERTY } == properties
 
         where:
         given                                   || properties

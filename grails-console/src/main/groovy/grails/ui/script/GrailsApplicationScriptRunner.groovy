@@ -128,7 +128,8 @@ class GrailsApplicationScriptRunner extends DevelopmentGrailsApplication {
                 System.err.println("runScript: Application class ${className} not found")
                 System.exit(1)
             }
-            String[] scriptNames = args.init() as String[]
+            // the system properties of the arguments were set on the JVM, and name no script
+            String[] scriptNames = CommandArguments.withoutSystemProperties(args.init().toList()) as String[]
             List<File> scripts = []
             scriptNames.each { String scriptName ->
                 File script = new File(scriptName)

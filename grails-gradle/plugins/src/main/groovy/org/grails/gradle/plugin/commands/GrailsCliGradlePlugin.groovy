@@ -138,12 +138,13 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
     public static final String ARGS_FILE_PROPERTY = 'argsFile'
 
     /**
-     * The argument with which a command task hands the file of {@link #ARGS_FILE_PROPERTY} to the
+     * The system property with which a command task hands the file of {@link #ARGS_FILE_PROPERTY} to the
      * command's JVM, which reads the file itself, so the arguments in it, a password among them, are
-     * neither on that JVM's command line nor stored with the task by the configuration cache. The
-     * command runners of {@code grails-console} know the same argument.
+     * neither on that JVM's command line nor stored with the task by the configuration cache. It is no
+     * argument, so no argument of the command can be taken for it. The command runners of
+     * {@code grails-console} read the same property.
      */
-    public static final String ARGS_FILE_ARGUMENT = '--grails-args-file='
+    public static final String ARGS_FILE_SYSTEM_PROPERTY = 'grails.cli.argsFile'
 
     /**
      * Set this project property to the directory of a project, absolute or relative to the root of the
@@ -462,8 +463,9 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
         try {
             parsed = new JsonSlurper().parseText(content)
         }
-        catch (JsonException | IllegalArgumentException e) {
-            throw new GradleException("${described} is not JSON: ${e.message}", e)
+        catch (JsonException | IllegalArgumentException ignored) {
+            // the parser's message quotes the file, which can hold a password, so it is left out
+            throw new GradleException("${described} is not JSON.")
         }
         // the parser stops at the end of the first value, and would pass over anything after it
         if (!onlyWhitespaceAfterFirstValue(content)) {
@@ -522,7 +524,7 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
      * {@code -Dname=value} are set on the command's JVM when the task runs, after every other setting,
      * so {@code -Dgrails.env=test} among them chooses the environment. The arguments of
      * {@link #ARGS_PROPERTY} are passed as they are, and the file of {@link #ARGS_FILE_PROPERTY} by its
-     * path, with {@link #ARGS_FILE_ARGUMENT}, for the command's JVM to read.
+     * path, in {@link #ARGS_FILE_SYSTEM_PROPERTY}, for the command's JVM to read and put after them.
      *
      * @param task the command task
      * @param project the project the task belongs to
@@ -543,11 +545,10 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
         }
         // the file's arguments reach the command through the file, read by the command's JVM
         File argsFile = argumentsFile(project)
-        List<Object> taskArguments = new ArrayList<Object>(propertyArguments(project))
         if (argsFile != null) {
-            taskArguments << (ARGS_FILE_ARGUMENT + argsFile.absolutePath)
+            task.systemProperty(ARGS_FILE_SYSTEM_PROPERTY, argsFile.absolutePath)
         }
-        taskArguments
+        new ArrayList<Object>(propertyArguments(project))
     }
 
     /**
@@ -595,7 +596,7 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
      * Returns whether the commands of the project run: when {@link #COMMAND_PROJECT_PROPERTY} is unset,
      * or names the directory of the project, either absolute or relative to the root of the build.
      */
-    private static boolean isNamedCommandProject(Project project) {
+    static boolean isNamedCommandProject(Project project) {
         def named = project.findProperty(COMMAND_PROJECT_PROPERTY)
         !named || project.rootProject.file(named as String).canonicalFile == project.projectDir.canonicalFile
     }
@@ -666,6 +667,10 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
                         it.command = commandName
                         it.systemProperty(Environment.KEY, System.getProperty(Environment.KEY, Environment.DEVELOPMENT.getName()))
                         List<Object> args = GrailsCliGradlePlugin.commandTaskArguments(it, project)
+                        if (!GrailsCliGradlePlugin.isNamedCommandProject(project)) {
+                            // skipped here, so nothing more is looked up, such as a main class it may not have
+                            return
+                        }
 
                         def appClassProvider = GrailsGradlePlugin.getMainClassProvider(project)
 
@@ -798,6 +803,10 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
                     it.systemProperty('spring.devtools.restart.enabled', 'false')
 
                     List<Object> args = GrailsCliGradlePlugin.commandTaskArguments(it, project)
+                    if (!GrailsCliGradlePlugin.isNamedCommandProject(project)) {
+                        // skipped here, so nothing more is looked up, such as a main class it may not have
+                        return
+                    }
 
                     def appClassProvider = GrailsGradlePlugin.getMainClassProvider(project)
 
@@ -827,6 +836,10 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
                     it.systemProperty('spring.devtools.restart.enabled', 'false')
 
                     List<Object> args = GrailsCliGradlePlugin.commandTaskArguments(it, project)
+                    if (!GrailsCliGradlePlugin.isNamedCommandProject(project)) {
+                        // skipped here, so nothing more is looked up, such as a main class it may not have
+                        return
+                    }
 
                     def appClassProvider = GrailsGradlePlugin.getMainClassProvider(project)
 
@@ -870,11 +883,16 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
                 List<File> includedBuildDirs = gradle.includedBuilds*.projectDir
                 List<String> buildDirectories = ([root.projectDir] + projectDirs)
                         .collect { File dir -> dir.absolutePath }.unique().sort()
-                // the hand-written registrations in either META-INF are merged into the generated ones
+                // the hand-written registrations in either META-INF are merged into the generated ones, in that
+                // of each main resource directory a project has, not only the conventional one
                 List<String> sourceDirectories = ([new File(root.projectDir, 'gradle'), new File(root.projectDir, 'buildSrc')] +
-                        projectDirs.collectMany { File dir ->
-                            [new File(dir, 'grails-app/commands'), new File(dir, 'src/main/resources/META-INF'),
-                             new File(dir, 'src/cli/resources/META-INF')]
+                        root.allprojects.collectMany { Project each ->
+                            def sourceSets = each.extensions.findByType(org.gradle.api.tasks.SourceSetContainer)
+                            SourceSet main = sourceSets?.findByName(SourceSet.MAIN_SOURCE_SET_NAME)
+                            List<File> resources = main ? main.resources.srcDirs.toList() : []
+                            [new File(each.projectDir, 'grails-app/commands'), new File(each.projectDir, 'src/main/resources/META-INF'),
+                             new File(each.projectDir, 'src/cli/resources/META-INF')] +
+                                    resources.collect { File dir -> new File(dir, 'META-INF') }
                         } + includedBuildDirs)
                         .collect { File dir -> dir.absolutePath }.unique().sort()
                 // a command compiled from the cli source set registers itself, so a new one adds a command

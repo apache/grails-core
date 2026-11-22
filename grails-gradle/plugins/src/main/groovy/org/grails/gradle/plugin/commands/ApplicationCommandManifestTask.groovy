@@ -146,7 +146,7 @@ abstract class ApplicationCommandManifestTask extends JavaExec {
         // written and completed next to the file, then put in its place at once, so a tool reading the
         // file meanwhile finds the whole manifest before or after, and a failure leaves the one before
         file.parentFile.mkdirs()
-        File written = File.createTempFile(file.name, '.tmp', file.parentFile)
+        File written = File.createTempFile('grails-command-manifest-', '.tmp', file.parentFile)
         try {
             args(written.absolutePath)
             super.exec()

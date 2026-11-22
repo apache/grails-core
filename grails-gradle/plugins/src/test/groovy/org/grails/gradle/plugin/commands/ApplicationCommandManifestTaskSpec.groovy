@@ -102,6 +102,18 @@ class ApplicationCommandManifestTaskSpec extends GradleSpecification {
         !runner.projectDir.toPath().resolve('app/build/grails/commands.json').toFile().exists()
     }
 
+    void 'a manifest with a short name is written too'() {
+        given:
+        def runner = setupTestResourceProject('command-manifest')
+
+        when:
+        def result = executeTask(':app:generateCommandManifest', ['-PgrailsCommandManifest=out/c'])
+
+        then:
+        assertTaskSuccess('generateCommandManifest', result)
+        read(runner.projectDir.toPath().resolve('app/out/c')).runtimeMarker == 'from the application'
+    }
+
     void 'the manifest names the directories whose files decide the commands and the build'() {
         given:
         def runner = setupTestResourceProject('command-manifest')
@@ -119,7 +131,7 @@ class ApplicationCommandManifestTaskSpec extends GradleSpecification {
         inputs.sourceDirectories.collect { new File(it).canonicalFile }.containsAll([
                 new File(root, 'gradle'), new File(root, 'buildSrc'),
                 new File(root, 'app/grails-app/commands'), new File(root, 'app/src/main/resources/META-INF'),
-                new File(root, 'app/src/cli/resources/META-INF'),
+                new File(root, 'app/src/cli/resources/META-INF'), new File(root, 'app/config/META-INF'),
                 new File(root, 'manifest-writer/grails-app/commands'),
                 new File(root, 'manifest-writer/src/cli/resources/META-INF')])
 
@@ -181,10 +193,8 @@ class ApplicationCommandManifestTaskSpec extends GradleSpecification {
         manifest.task(':app:broken:generateCommandManifest').outcome == TaskOutcome.SKIPPED
         !manifest.tasks*.path.contains(':app:broken:compileJava')
 
-        when: 'a command of the application is planned the same way'
-        ['app', 'app/broken'].each {
-            new File(root, "${it}/build.gradle") << "\ntasks.register('findMainClass', org.grails.gradle.plugin.run.FindMainClassTask)\n"
-        }
+        when: 'a command of the application is planned the same way, the project below having no main class to find'
+        new File(root, 'app/build.gradle') << "\ntasks.register('findMainClass', org.grails.gradle.plugin.run.FindMainClassTask)\n"
         def command = executeTask('runCommand', ['-m', '-p', 'app', '-PgrailsCommandProject=app'])
         List<String> planned = command.output.readLines().findAll { it.startsWith(':') }*.tokenize(' ')*.first()
 
