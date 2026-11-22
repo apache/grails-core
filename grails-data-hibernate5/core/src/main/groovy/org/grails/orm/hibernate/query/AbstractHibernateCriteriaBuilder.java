@@ -141,6 +141,8 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
     protected Map<String, String> aliasMap = new HashMap<>();
     /** The aliases of association blocks that are branches of an "or", which join the association with a left join. */
     protected Set<String> leftBlockAliases = new HashSet<>();
+    /** The aliases of a left join that a block on an association of its own class got by default, and no other block asked for. */
+    protected Set<String> defaultLeftBlockAliases = new HashSet<>();
     protected static final String ALIAS = "_alias";
     protected ResultTransformer resultTransformer;
     protected int aliasCount;
@@ -1909,6 +1911,11 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
                     final String blockAlias = getLastAlias();
                     final boolean namedLeftJoin = hasMoreThanOneArg &&
                             joinType == org.hibernate.sql.JoinType.LEFT_OUTER_JOIN.getJoinTypeValue();
+                    if (!branchOfOr && !namedLeftJoin && !hasMoreThanOneArg && targetClass.equals(oldTargetClass) && !aliasExisted) {
+                        // the left join of a block on an association of its own class: a later block that names an inner join
+                        // has to ask for the associated entity, as the join it reuses is not an inner join
+                        defaultLeftBlockAliases.add(blockAlias);
+                    }
                     if ((branchOfOr || namedLeftJoin) && !aliasExisted) {
                         // a later block that asks for the association reuses this left join, so it has to ask for the
                         // associated entity itself, as a block that joined it first would have
@@ -1921,7 +1928,8 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
                     final boolean explicitInnerJoin = hasMoreThanOneArg &&
                             joinType == org.hibernate.sql.JoinType.INNER_JOIN.getJoinTypeValue();
                     final boolean requiresAssociated = branchOfOr ||
-                            (leftBlockAliases.contains(blockAlias) && (!hasMoreThanOneArg || explicitInnerJoin));
+                            (leftBlockAliases.contains(blockAlias) && (!hasMoreThanOneArg || explicitInnerJoin)) ||
+                            (explicitInnerJoin && defaultLeftBlockAliases.contains(blockAlias));
                     // the criteria within an association node are grouped with an implicit AND
                     logicalExpressionStack.add(new LogicalExpression(AND));
                     invokeClosureNode(callable);

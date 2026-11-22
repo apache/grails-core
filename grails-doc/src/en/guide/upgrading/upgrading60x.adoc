@@ -1335,3 +1335,12 @@ A value marked with `raw()` is still written as given by the tags that wrote it 
 `<g:radio>` now encodes its `value` once. It encoded it twice, so a value with `&`, `<`, `>`, `"` or `'` was submitted with character references in it, such as `+R&amp;D+` for `R&D`.
 
 A value encoded beforehand is no longer encoded twice in the `value` of `<g:textField>`, `<g:hiddenField>` and the other field tags when a `RequestDataValueProcessor` returns it unchanged, nor in an option of `<g:select>`, with or without a processor. `<g:paginate>` and `<g:sortableColumn>` write a `class` that was encoded beforehand once next to the classes they add, such as `step` and `sortable`; they encoded it twice.
+
+==== GORM for Hibernate 5: an association block inside `or` is one branch of the `or`
+
+An association block written inside `or { }`, such as `or { child { eq('name', 'kid') }; eq('name', 'orphan') }`, was an inner join, so an entity without the association was dropped before the other branch could match it (issue https://github.com/apache/grails-core/issues/16924[#16924]). The block is a left join now, as the criteria guide describes the `or`, and the entities without the association are found by the other branches.
+
+* A criteria query with such a block can return more rows: search the criteria closures for an association block inside `or`.
+* A block that names its join type keeps it: `child(JoinType.INNER_JOIN) { }` still asks for an entity that has a child, also when it follows another block on the same association, and also for an association of the entity's own class. That last case used to return the entities without the association when an earlier block on it had been left-joined by default.
+* `createAlias` is unchanged: it is an inner join unless a join type is given.
+
