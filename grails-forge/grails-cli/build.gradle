@@ -16,6 +16,7 @@
  */
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import com.github.jengelman.gradle.plugins.shadow.transformers.PropertiesFileTransformer
+import org.apache.grails.buildsrc.CommandLineStartScripts
 import org.apache.grails.forge.buildlogic.shadowjar.GrailsGroovyExtensionTransformer
 import org.apache.grails.forge.buildlogic.shadowjar.GrailsShadowLicenseTransform
 import org.apache.grails.forge.buildlogic.shadowjar.GrailsShadowNoticeTransform
@@ -185,6 +186,16 @@ cliStartScripts.configure { CreateStartScripts t ->
     t.mainClass = project.findProperty('startMainClass') as String
     t.classpath = files(shadowJarTask)
     t.defaultJvmOpts = nativeAccessJvmOpts
+    // -XX:TieredStopAtLevel=1 when grails is started with a command: why it is there, what it costs and how it
+    // is overridden is said in CommandLineStartScripts, and in the scripts
+    CommandLineStartScripts.compileForShortRuns(t, 'GRAILS_OPTS')
+}
+
+// StartScriptsSpec starts the scripts this build generates. Their content is the input; where they are is not.
+tasks.named('test', Test).configure { Test it ->
+    it.inputs.files(cliStartScripts).withPropertyName('cliScripts').withPathSensitivity(PathSensitivity.NONE)
+    Provider<String> scriptsPath = cliStartScripts.map { CreateStartScripts scripts -> scripts.outputDir.absolutePath }
+    it.jvmArgumentProviders.add({ ["-Dgrails.cli.scripts=${scriptsPath.get()}".toString()] } as CommandLineArgumentProvider)
 }
 
 project.extensions.getByType(DistributionContainer).configureEach {

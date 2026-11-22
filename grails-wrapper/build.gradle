@@ -15,6 +15,8 @@
  *  limitations under the License.
  */
 
+import org.apache.grails.buildsrc.CommandLineStartScripts
+
 plugins {
     id 'groovy'
     id 'distribution'
@@ -81,6 +83,10 @@ startScripts.configure { CreateStartScripts t ->
     // warns on every launch and a future JDK will refuse the call
     t.defaultJvmOpts = ['--enable-native-access=ALL-UNNAMED']
 
+    // -XX:TieredStopAtLevel=1 when the wrapper is started with a command, which then runs in this JVM: why it is
+    // there, what it costs and how it is overridden is said in CommandLineStartScripts, and in the scripts
+    CommandLineStartScripts.compileForShortRuns(t, 'GRAILSW_OPTS')
+
     // See gradle tickets such as for lib https://github.com/gradle/gradle/issues/7033
     doLast {
         t.unixScript.text = t.unixScript.text
@@ -112,6 +118,13 @@ startScripts.configure { CreateStartScripts t ->
                 'if exist "%~dp0grails-wrapper.jar.new" move /y "%~dp0grails-wrapper.jar.new" "%~dp0grails-wrapper.jar" >NUL 2>&1' + windowsLineEnd +
                 windowsLineEnd + localScope)
     }
+}
+
+// WrapperScriptsSpec starts the scripts this build generates. Their content is the input; where they are is not.
+tasks.named('test', Test).configure { Test it ->
+    it.inputs.files(startScripts).withPropertyName('wrapperScripts').withPathSensitivity(PathSensitivity.NONE)
+    Provider<String> scriptsPath = startScripts.map { CreateStartScripts scripts -> scripts.outputDir.absolutePath }
+    it.jvmArgumentProviders.add({ ["-Dgrails.wrapper.scripts=${scriptsPath.get()}".toString()] } as CommandLineArgumentProvider)
 }
 
 project.extensions.getByType(DistributionContainer).configureEach {
