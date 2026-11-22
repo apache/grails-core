@@ -27,6 +27,11 @@ KEYS           text eol=lf
 Dockerfile     text eol=lf
 *.properties   text eol=lf
 
+# The descriptor of a command that is written by hand goes into a jar as it is checked out, and is
+# the bytes the compiler writes for a command it describes: one line that ends with LF. With CRLF a
+# jar built on Windows differs from one built elsewhere.
+**/META-INF/grails-commands/*.json text eol=lf
+
 # Files that MUST be CRLF (Windows scripts).
 *.bat          text eol=crlf
 *.cmd          text eol=crlf
