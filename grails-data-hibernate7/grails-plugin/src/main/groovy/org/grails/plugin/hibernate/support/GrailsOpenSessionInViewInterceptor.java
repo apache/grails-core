@@ -20,9 +20,11 @@ package org.grails.plugin.hibernate.support;
 
 import java.lang.reflect.UndeclaredThrowableException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.WeakHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.hibernate.FlushMode;
@@ -58,8 +60,8 @@ import org.grails.orm.hibernate.support.hibernate7.support.OpenSessionInViewInte
  * request that goes asynchronous closes the sessions it opened, so that they do
  * not stay bound to the thread for the next request that thread serves. Which
  * sessions a request found bound is recorded by the identity of their factory,
- * and for the default factory by this interceptor, not by how the factory prints:
- * {@code Object.toString()} is not unique, and a proxy prints as its target.
+ * not by how the factory prints: {@code Object.toString()} is not unique, and a
+ * proxy prints as its target.
  *
  * @author Graeme Rocher
  * @since 0.5
@@ -76,11 +78,15 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
     private static final String PARTICIPATE_COUNTS =
             GrailsOpenSessionInViewInterceptor.class.getName() + ".PARTICIPATE_COUNTS";
 
-    private static final AtomicLong INSTANCE_COUNT = new AtomicLong();
+    /**
+     * For each default factory, the name of the request attribute that records whether the request found its session
+     * bound, which the parent class also registers the request's asynchronous interceptors under. It is shared by every
+     * interceptor using that factory, as the parent's name is, and unique to the factory, which Hibernate's compares by
+     * identity. The keys are weak, so that a factory that is closed and dropped is not kept.
+     */
+    private static final Map<SessionFactory, String> PARTICIPATE_ATTRIBUTE_NAMES = Collections.synchronizedMap(new WeakHashMap<>());
 
-    /** Unique to this interceptor, where the parent class uses how its factory prints. */
-    private final String participateAttributeName =
-            GrailsOpenSessionInViewInterceptor.class.getName() + '.' + INSTANCE_COUNT.incrementAndGet() + PARTICIPATE_SUFFIX;
+    private static final AtomicLong FACTORY_COUNT = new AtomicLong();
 
     protected FlushMode hibernateFlushMode = FlushMode.MANUAL;
 
@@ -527,12 +533,16 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
     }
 
     /**
-     * @return the name of the request attribute that records whether the request found the default session bound,
-     * unique to this interceptor, so that another one whose factory prints the same way does not share it
+     * @return the name of the request attribute that records whether the request found the default session bound, and
+     * that the parent class registers the request's asynchronous interceptors under: shared by the interceptors using
+     * the same factory, as the parent's name is, and not by those whose factory only prints the same way
      */
     @Override
     protected String getParticipateAttributeName() {
-        return participateAttributeName;
+        SessionFactory sf = getSessionFactory();
+        Assert.state(sf != null, "No SessionFactory set");
+        return PARTICIPATE_ATTRIBUTE_NAMES.computeIfAbsent(sf, factory ->
+                GrailsOpenSessionInViewInterceptor.class.getName() + '.' + FACTORY_COUNT.incrementAndGet() + PARTICIPATE_SUFFIX);
     }
 
     private static void incrementParticipateCount(WebRequest request, SessionFactory sf) {

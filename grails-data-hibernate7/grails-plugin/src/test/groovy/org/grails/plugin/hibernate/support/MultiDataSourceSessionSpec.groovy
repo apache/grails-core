@@ -19,6 +19,7 @@
 package org.grails.plugin.hibernate.support
 
 import java.lang.reflect.UndeclaredThrowableException
+import java.util.concurrent.Callable
 
 import grails.gorm.annotation.Entity
 import groovy.transform.AutoImplement
@@ -34,9 +35,16 @@ import org.hibernate.dialect.H2Dialect
 import org.hibernate.engine.spi.SessionFactoryImplementor
 import org.hibernate.engine.spi.SessionImplementor
 import org.grails.orm.hibernate.support.hibernate7.SessionHolder
+import org.springframework.core.task.AsyncTaskExecutor
 import org.springframework.dao.DataAccessResourceFailureException
+import org.springframework.mock.web.MockHttpServletRequest
+import org.springframework.mock.web.MockHttpServletResponse
 import org.springframework.transaction.support.TransactionSynchronizationManager
+import org.springframework.web.context.request.ServletWebRequest
 import org.springframework.web.context.request.WebRequest
+import org.springframework.web.context.request.async.StandardServletAsyncWebRequest
+import org.springframework.web.context.request.async.WebAsyncManager
+import org.springframework.web.context.request.async.WebAsyncUtils
 import spock.lang.AutoCleanup
 import spock.lang.Shared
 import spock.lang.Specification
@@ -833,6 +841,90 @@ class MultiDataSourceSessionSpec extends Specification {
         cleanup:
         interceptor.afterCompletion(webRequest, null)
         unbindIfBound(firstSf, secondSf)
+    }
+
+    def "an include that fails in preHandle gives up its part in the default session, so the request that opened it closes it"() {
+        given: "a request that opened its sessions, and another datasource whose factory cannot open a second one"
+        int opens = 0
+        FakeSessionFactory flakySf = new FakeSessionFactory()
+        flakySf.onOpen = { ->
+            if (opens++ > 0) {
+                throw new IllegalStateException('cannot open')
+            }
+            new FakeSession()
+        }
+        def interceptor = new GrailsOpenSessionInViewInterceptor()
+        interceptor.setHibernateDatastore(datastoreWith(datastore.sessionFactory, flaky: flakySf))
+        WebRequest webRequest = webRequest()
+        interceptor.preHandle(webRequest)
+        Session defaultSession = boundSession(datastore.sessionFactory)
+
+        and: "includes within it, the last of which finds the other datasource's session gone and fails to open one"
+        includes.times { interceptor.preHandle(webRequest) }
+        unbindIfBound(flakySf)
+
+        when:
+        interceptor.preHandle(webRequest)
+
+        then: "the include fails, and the default session stays bound and open"
+        thrown(IllegalStateException)
+        boundSession(datastore.sessionFactory).is(defaultSession)
+        defaultSession.open
+
+        when: "the includes that succeeded complete"
+        includes.times { interceptor.afterCompletion(webRequest, null) }
+
+        then: "the default session still belongs to the request"
+        boundSession(datastore.sessionFactory).is(defaultSession)
+        defaultSession.open
+
+        when: "the request completes"
+        interceptor.afterCompletion(webRequest, null)
+
+        then: "it unbinds and closes the default session"
+        !TransactionSynchronizationManager.hasResource(datastore.sessionFactory)
+        !defaultSession.open
+
+        cleanup:
+        unbindIfBound(flakySf)
+
+        where: "the failed include is the only one, or one of two"
+        includes << [0, 1]
+    }
+
+    def "a request that Spring redispatches after its Callable rebinds its default session through another interceptor using the same factory"() {
+        given: "a request that supports asynchronous processing, whose Callable runs when the test runs it"
+        MockHttpServletRequest servletRequest = new MockHttpServletRequest()
+        servletRequest.asyncSupported = true
+        MockHttpServletResponse servletResponse = new MockHttpServletResponse()
+        ServletWebRequest webRequest = new ServletWebRequest(servletRequest, servletResponse)
+        WebAsyncManager asyncManager = WebAsyncUtils.getAsyncManager(webRequest)
+        asyncManager.asyncWebRequest = new StandardServletAsyncWebRequest(servletRequest, servletResponse)
+        List<Runnable> tasks = []
+        asyncManager.taskExecutor = { Runnable task -> tasks << task } as AsyncTaskExecutor
+
+        and: "one interceptor for the first dispatch, and another for the default factory, for the redispatch"
+        def dispatching = new GrailsOpenSessionInViewInterceptor(sessionFactory: datastore.sessionFactory)
+        def redispatching = new GrailsOpenSessionInViewInterceptor(sessionFactory: datastore.sessionFactory)
+
+        when: "the action returns a Callable, which Spring runs, then redispatches the request"
+        dispatching.preHandle(webRequest)
+        Session opened = boundSession(datastore.sessionFactory)
+        asyncManager.startCallableProcessing({ -> 'done' } as Callable)
+        dispatching.afterConcurrentHandlingStarted(webRequest)
+        tasks*.run()
+        redispatching.preHandle(webRequest)
+
+        then: "the redispatch uses the session the first dispatch opened"
+        asyncManager.hasConcurrentResult()
+        boundSession(datastore.sessionFactory).is(opened)
+
+        cleanup:
+        redispatching.afterCompletion(webRequest, null)
+        unbindIfBound(datastore.sessionFactory)
+        if (opened?.open) {
+            opened.close()
+        }
     }
 
     def "an include uses the sessions of the request for every datasource and leaves them open"() {
