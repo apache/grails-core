@@ -236,7 +236,9 @@ class WrapperOfTheSystemSpec extends CommandSpec implements CommandFixture {
 
         then:
         assert exit == 2: said()
-        assert errors().size() == 1 && errors()[0].contains('cannot be given to Gradle from here'): said()
+        // a mistake of the command line, and said as one: the line, how the command is used, and no error of a run
+        assert out.toString().contains(' cannot be given to Gradle from here: the Gradle wrapper of Windows is a batch file'): said()
+        assert out.toString().contains('Usage: ') && errors() == []: said()
         !new File(dir, 'invoked.txt').exists()
 
         where:
@@ -276,9 +278,6 @@ class WrapperOfTheSystemSpec extends CommandSpec implements CommandFixture {
 
     void "run-app --detach leaves an application that outlives the command line, and stop-app ends it with every process below it"() {
         given:
-        if (!ForkedCli.available()) {
-            throw new TestAbortedException('the class path of this JVM is none another can be started with')
-        }
         int port = freePort()
         File forked = new File(dir, 'forked.txt')
 
@@ -288,6 +287,12 @@ class WrapperOfTheSystemSpec extends CommandSpec implements CommandFixture {
         boolean ended = cli.waitFor(240, TimeUnit.SECONDS)
         if (!ended) {
             cli.destroyForcibly()
+        }
+        // Where the class path of a build is too long for a command line, as on Windows, Gradle gives the JVM of
+        // the specs a jar that names it. Another JVM is started with the same; where that is not a class path
+        // it finds the command line in, there is no command line of its own to start, and it is said here.
+        if (ended && cli.exitValue() != 0 && forked.text.contains('Could not find or load main class')) {
+            throw new TestAbortedException("the class path of this JVM is none another can be started with: ${System.getProperty('java.class.path').take(300)}")
         }
 
         then:
