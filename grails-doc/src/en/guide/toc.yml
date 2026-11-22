@@ -34,6 +34,7 @@ gettingStarted:
   creatingArtefacts: Creating Artefacts
   generatingAnApplication: Generating an Application
   developmentReloading: Development Reloading
+  agentSkills: Agent Skills
 upgrading:
   title: Upgrading from the previous versions
   upgrading60x: Upgrading from Grails 6 to Grails 7
