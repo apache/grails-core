@@ -391,7 +391,7 @@ Plugin IDs (implementation under `build-logic/plugins/…/buildsrc/`):
 | `org.apache.grails.buildsrc.compile` | Java 21 `--release`, UTF-8, fork memory, parameters, sources/javadoc jars, reproducible archives, Groovy config script, isolated build, per-project `base.dir` |
 | `org.apache.grails.buildsrc.dependency-validator` | `validateDependencyVersions` |
 | `org.apache.grails.buildsrc.bom-property-validator` | `validateBomProperties` (BOM projects only) |
-| `org.apache.grails.buildsrc.publish` | Publishing conventions (grails-publish integration) |
+| `org.apache.grails.buildsrc.publish` | Publishing conventions (grails-publish integration). When the command line asks for nothing but `publish...ToTestCaseMavenRepoRepository` tasks, or the build is an included build none of whose other tasks the command line names (the Forge specs), the publications are slimmed to what a consuming build resolves: no sources or javadoc jars (so no Groovydoc) and no release checksums after the publish (so no `testClasses`). Any other invocation publishes everything; `-PcompleteTestRepository=true` forces that (`TestRepositoryPublish`) |
 | `org.apache.grails.buildsrc.sbom` | CycloneDX / SBOM reproducibility |
 | `org.apache.grails.buildsrc.vulnerability-scan` | `vulnerabilityScan`: looks up the resolved `runtimeClasspath` and `compileClasspath` in OSV and, when `SONATYPE_GUIDE_USERNAME`/`SONATYPE_GUIDE_TOKEN` are set, Sonatype Guide (read at execution, never stored in the configuration cache); answers cached for an hour in the Gradle user home (`vulnerabilityScan.cacheTtl`) since Sonatype lookups cost credits; exclusions need a reason |
 | `org.apache.grails.buildsrc.vulnerability-scan-report` | Root only: `vulnerabilityScanReport` collects every project's scan into `build/reports/vulnerability-scan/summary.md` |
@@ -603,6 +603,8 @@ For importing an entire external plugin repository, use **`mono-repo-integration
 ./gradlew publishAllToMavenLocal   # grails-gradle → root → forge
 
 # Publish to build/local-maven for end-to-end (and forge TestCaseMavenRepo consumers)
+# Asked for alone, this publishes jars, POMs and module metadata only (no sources/javadoc jars, no checksums);
+# add -PcompleteTestRepository=true for the complete publications
 (cd grails-gradle && ./gradlew publishAllPublicationsToTestCaseMavenRepoRepository)
 ./gradlew publishAllPublicationsToTestCaseMavenRepoRepository
 

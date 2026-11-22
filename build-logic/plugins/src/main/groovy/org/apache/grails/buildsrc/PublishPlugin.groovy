@@ -106,7 +106,13 @@ class PublishPlugin implements Plugin<Project> {
 
             def artifactsTask = configurePublishedArtifacts(project)
 
-            configureChecksums(project, artifactsTask)
+            // A build that only fills the repository the tests resolve from publishes what a build resolves:
+            // see TestRepositoryPublish. Every other build publishes all of it, with the checksums of a release.
+            boolean forTestsOnly = TestRepositoryPublish.isAllThatIsAsked(project)
+            configureChecksums(project, artifactsTask, !forTestsOnly)
+            if (forTestsOnly) {
+                TestRepositoryPublish.publishWhatIsResolved(project)
+            }
         }
     }
 
@@ -160,7 +166,7 @@ class PublishPlugin implements Plugin<Project> {
         coordinates
     }
 
-    private static void configureChecksums(Project project, TaskProvider<Task> artifactsTask) {
+    private static void configureChecksums(Project project, TaskProvider<Task> artifactsTask, boolean afterEveryPublish) {
         project.pluginManager.apply(ChecksumPlugin)
 
         def publishing = project.extensions.getByType(PublishingExtension)
@@ -174,8 +180,10 @@ class PublishPlugin implements Plugin<Project> {
             check.inputFiles.from(project.provider { collectChecksumInputFiles(project, publishing) })
         }
 
-        project.tasks.withType(AbstractPublishToMaven).configureEach {
-            it.finalizedBy(checksumTask)
+        if (afterEveryPublish) {
+            project.tasks.withType(AbstractPublishToMaven).configureEach {
+                it.finalizedBy(checksumTask)
+            }
         }
     }
 

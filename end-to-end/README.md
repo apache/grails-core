@@ -156,7 +156,10 @@ neither the core build nor a contributor's default environment inherits a second
 Three steps, in order. Each fails with an actionable message if a prior one was skipped.
 
 Publish Grails to the repository this build resolves from. Both builds publish into the same
-directory and both are needed — the BOM constrains `org.apache.grails.gradle` artifacts too:
+directory and both are needed — the BOM constrains `org.apache.grails.gradle` artifacts too.
+Asked for alone, as here, the publish holds the jars, the POMs and the Gradle module metadata, and
+neither the sources and javadoc jars nor the checksums of a release (`-PcompleteTestRepository=true`
+publishes those as well):
 
 ```shell
 (cd grails-gradle && ./gradlew publishAllPublicationsToTestCaseMavenRepoRepository)

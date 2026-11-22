@@ -45,7 +45,9 @@ $ ./gradlew build
 
 The framework it consumes is substituted from the root build (`includeBuild('..')`), so a change to the
 framework is visible here without publishing. Specs that build generated applications publish the framework to
-`build/local-maven` first, which is why a first `test` run takes a while. To start the hosted generator locally
+`build/local-maven` first, which is why a first `test` run takes a while. That publish holds what a generated
+build resolves: the jars, the POMs and the Gradle module metadata, without the sources and javadoc jars and
+the checksums of a release (pass `-PcompleteTestRepository=true` for those). To start the hosted generator locally
 run `./gradlew :grails-forge-web:bootRun`; to run the CLI from this build, `./gradlew :grails-cli:installDist`
 and use `grails-cli/build/install/apache-grails-bin/bin/grails`.
 
