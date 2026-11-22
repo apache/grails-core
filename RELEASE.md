@@ -287,7 +287,9 @@ However, it if manually verifying, these are the minimum suggested steps:
 
 * Testing `grailsw`:
     * set GRAILS_REPO_URL to the staging repository (https://repository.apache.org/content/groups/staging)
-    * run `grailsw` and ensure it downloads the correct jars to `.grails` (verify the checksums of the jars)
+    * run `grailsw` and ensure it downloads the correct jars to `.grails` (verify the checksums of the jars; the
+      wrapper compares a download only with the checksum file of the repository it came from, which finds a damaged
+      download and does not replace this check)
   * Please note that the Grails Wrapper (`grailsw`) writes to the `.grails` directory in the user's home directory. If
     not run in an isolated environment, it may attempt to use already downloaded artifacts. If the wrapper fails, try
     removing the `.grails` directory to confirm it isn't a transient state issue.

@@ -98,4 +98,17 @@ The wrapper downloads the command line of the version of Grails the project is o
 The environment variable `GRAILS_WRAPPER_HOME` names another directory than `~/.grails` for the downloads. Unless it is told to, the wrapper keeps nothing in the project. If you name the `.grails` directory of a project, which also holds the record of how the project was generated, the downloads are in `.grails/wrapper`: add that directory to `.gitignore` to keep them out of version control.
 It is meant to be a lightweight option if SDKMAN is not available, and it gives everyone who works on the project the command line of the same version.
 
+The command line is looked for in the repositories that the `GRAILS_REPO_URL` environment variable (or the `grails.repo.url` system property) names, then in Maven Central and then in the ASF repository. A download is installed only when it is whole:
+
+* it is compared with the strongest checksum file the repository has beside the jar (`.sha512`, `.sha256`, `.sha1`, `.md5`). Where the repository has none, as a local Maven repository does not, every entry of the jar is read and compared with the CRC the jar records for it;
+* it opens as a jar and has the class the command line starts with.
+
+The checksum file comes from the repository the jar comes from. The comparison finds a download that was cut off or damaged on the way; it does not tell whether the repository is to be trusted. Name only repositories you trust.
+
+A repository that does not have the command line, whose `maven-metadata.xml` cannot be read, or whose download fails or is not whole is passed over, and the next one is tried. For a repository you named, and for every failure that is more than the command line not being there, one line says which repository and why. When no repository gave the command line, the wrapper ends with exit code 1 and lists each repository with its reason. A user name and password in the address of a repository are not printed.
+
+The download is written to a file beside the place of the jar and moved there in one step, so a wrapper that is interrupted, or that runs at the same time as another one with the same home, as jobs of a build server do, leaves no part of a jar where the next run would start it. A jar in the home that cannot be started, which an interrupted download of an earlier wrapper can have left, is said in one line and downloaded again, once. The versions that were downloaded are all kept, so that projects of different versions do not download again; delete a directory under `~/.grails/wrapper` to remove one.
+
+When the home cannot be written to, the wrapper says which directory and ends with exit code 1 without asking a repository: make the directory writable or name another one with `GRAILS_WRAPPER_HOME`.
+
 The three files of the wrapper are replaced by those of another version of Grails with `./grailsw update-wrapper`, after `grailsVersion` in `gradle.properties` is changed to that version. The wrapper downloads the command line of that version, which writes its `grailsw`, `grailsw.bat` and `grails-wrapper.jar` over the ones of the project where they differ and names the files to commit. The wrapper of a project of Grails 7 or 8 is replaced in the same way when the project is upgraded to Grails 9. On Windows two of the files are in use while the wrapper runs: the command writes the new ones beside them and names the step that is left. See `update-wrapper` in the reference of the command line.
