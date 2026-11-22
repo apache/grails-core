@@ -38,10 +38,7 @@ import org.apache.grails.common.compiler.GroovyTransformOrder
 import static org.codehaus.groovy.ast.ClassHelper.make
 import static org.codehaus.groovy.ast.tools.GeneralUtils.block
 import static org.codehaus.groovy.ast.tools.GeneralUtils.callX
-import static org.codehaus.groovy.ast.tools.GeneralUtils.ifS
-import static org.codehaus.groovy.ast.tools.GeneralUtils.notNullX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.stmt
-import static org.codehaus.groovy.ast.tools.GeneralUtils.varX
 
 /**
  * Implementation of {@link CacheEvict}
@@ -59,7 +56,7 @@ class CacheEvictTransformation extends AbstractCacheTransformation {
     @Override
     protected Expression buildDelegatingMethodCall(SourceUnit sourceUnit, AnnotationNode annotationNode, ClassNode classNode, MethodNode methodNode, MethodCallExpression originalMethodCallExpr, BlockStatement newMethodBody) {
 
-        VariableExpression cacheManagerVariableExpression = varX(GRAILS_CACHE_MANAGER_PROPERTY_NAME)
+        VariableExpression cacheManagerVariableExpression = cacheManagerVariable()
         handleCacheCondition(sourceUnit, annotationNode,  methodNode, originalMethodCallExpr, newMethodBody)
 
         BlockStatement cachingBlock = block()
@@ -68,7 +65,7 @@ class CacheEvictTransformation extends AbstractCacheTransformation {
         VariableExpression cacheDeclaration = declareCache(annotationNode, cacheManagerVariableExpression, cachingBlock)
 
         // if($_cache_cacheVariable != null) { ... } else { report the missing cache }
-        BlockStatement cacheBlock = whereCacheExists(annotationNode, classNode, cacheDeclaration, cachingBlock)
+        BlockStatement cacheBlock = whereCacheExists(annotationNode, classNode, cacheManagerVariableExpression, cacheDeclaration, cachingBlock)
 
         Statement statement
 
@@ -96,12 +93,7 @@ class CacheEvictTransformation extends AbstractCacheTransformation {
 
         cacheBlock.addStatement(statement)
 
-        newMethodBody.addStatement(
-                // if(grailsCacheManager != null)
-                ifS(notNullX(varX(GRAILS_CACHE_MANAGER_PROPERTY_NAME)),
-                        cachingBlock
-                )
-        )
+        ifCacheManager(cacheManagerVariableExpression, cachingBlock, newMethodBody)
         return originalMethodCallExpr
     }
 

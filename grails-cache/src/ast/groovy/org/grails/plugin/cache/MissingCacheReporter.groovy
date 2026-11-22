@@ -18,6 +18,9 @@
  */
 package org.grails.plugin.cache
 
+import java.lang.ref.Reference
+import java.lang.ref.ReferenceQueue
+import java.lang.ref.WeakReference
 import java.util.concurrent.ConcurrentHashMap
 
 import groovy.transform.CompileStatic
@@ -30,7 +33,8 @@ import org.springframework.cache.CacheManager
  *
  * <p>A cache manager answers null for a name it has no cache of, as {@code JCacheCacheManager} does
  * for a cache it was not configured with. The annotated method then runs as it does without a cache
- * manager, and this says so once for each cache manager and name.</p>
+ * manager, and this says so once for each cache manager and name. A cache manager is told apart from
+ * another by its identity, as two may be equal, and is not kept from being collected.</p>
  *
  * @since 8.0.1
  */
@@ -39,8 +43,9 @@ import org.springframework.cache.CacheManager
 final class MissingCacheReporter {
 
     /** The names of the caches reported missing, for each cache manager. */
-    private static final Map<CacheManager, Set<String>> REPORTED = Collections.synchronizedMap(
-            new WeakHashMap<CacheManager, Set<String>>())
+    private static final Map<CacheManagerKey, Set<String>> REPORTED = new ConcurrentHashMap<CacheManagerKey, Set<String>>()
+
+    private static final ReferenceQueue<CacheManager> COLLECTED = new ReferenceQueue<CacheManager>()
 
     private MissingCacheReporter() {
     }
@@ -51,12 +56,47 @@ final class MissingCacheReporter {
      * @param owner the class of the annotated method
      */
     static void report(CacheManager cacheManager, String cacheName, Class<?> owner) {
-        Set<String> reported = REPORTED.computeIfAbsent(cacheManager) { CacheManager ignored ->
-            ConcurrentHashMap.<String> newKeySet()
+        Reference<?> collected
+        while ((collected = COLLECTED.poll()) != null) {
+            REPORTED.remove(collected)
+        }
+        Set<String> reported = REPORTED.get(new CacheManagerKey(cacheManager, null))
+        if (reported == null) {
+            Set<String> created = ConcurrentHashMap.<String> newKeySet()
+            reported = REPORTED.putIfAbsent(new CacheManagerKey(cacheManager, COLLECTED), created) ?: created
         }
         if (reported.add(cacheName)) {
             log.warn('{} does not cache with {}: its cache manager, {}, has no cache of that name, so the methods ' +
                     'run uncached. Configure the cache in that cache manager.', owner.name, cacheName, cacheManager.getClass().name)
+        }
+    }
+
+    /** A cache manager by its identity, held weakly. */
+    @CompileStatic
+    private static final class CacheManagerKey extends WeakReference<CacheManager> {
+
+        private final int hash
+
+        CacheManagerKey(CacheManager cacheManager, ReferenceQueue<CacheManager> queue) {
+            super(cacheManager, queue)
+            this.hash = System.identityHashCode(cacheManager)
+        }
+
+        @Override
+        int hashCode() {
+            hash
+        }
+
+        @Override
+        boolean equals(Object other) {
+            if (this.is(other)) {
+                return true
+            }
+            if (!(other instanceof CacheManagerKey)) {
+                return false
+            }
+            CacheManager cacheManager = get()
+            cacheManager != null && cacheManager.is(((CacheManagerKey) other).get())
         }
     }
 }

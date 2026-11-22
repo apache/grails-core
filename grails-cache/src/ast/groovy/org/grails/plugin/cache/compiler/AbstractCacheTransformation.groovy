@@ -89,6 +89,7 @@ abstract class AbstractCacheTransformation extends AbstractMethodDecoratingTrans
     public static final String CACHE_KEY_LOCAL_VARIABLE_NAME = '$_cache_cacheKey'
     public static final String METHOD_PARAMETER_MAP_LOCAL_VARIABLE_NAME = '$_method_parameter_map'
     public static final String CACHE_VARIABLE_LOCAL_VARIABLE_NAME = '$_cache_cacheVariable'
+    public static final String CACHE_MANAGER_LOCAL_VARIABLE_NAME = '$_cache_cacheManager'
     public static final String GRAILS_CACHE_KEY_GENERATOR_PROPERTY_NAME = 'customCacheKeyGenerator'
 
     private static final Object APPLIED_MARKER = new Object()
@@ -167,6 +168,30 @@ abstract class AbstractCacheTransformation extends AbstractMethodDecoratingTrans
         return parameterMapVar
     }
 
+    /**
+     * The cache manager the method caches with, read once into a local, so that the check for one, the
+     * cache lookup and the report of a missing cache all use the same one.
+     *
+     * @return the local, which {@link #ifCacheManager} declares
+     */
+    protected VariableExpression cacheManagerVariable() {
+        varX(CACHE_MANAGER_LOCAL_VARIABLE_NAME, make(CacheManager))
+    }
+
+    /**
+     * Adds to the method body the read of the cache manager into its local, and the caching block,
+     * which runs where there is one.
+     *
+     * @param cacheManagerVariableExpression the local from {@link #cacheManagerVariable}
+     * @param cachingBlock the caching block
+     * @param newMethodBody the method body
+     */
+    protected void ifCacheManager(VariableExpression cacheManagerVariableExpression, BlockStatement cachingBlock, BlockStatement newMethodBody) {
+        newMethodBody.addStatement(declS(cacheManagerVariableExpression, varX(GRAILS_CACHE_MANAGER_PROPERTY_NAME)))
+        // if($_cache_cacheManager != null)
+        newMethodBody.addStatement(ifS(notNullX(cacheManagerVariableExpression), cachingBlock))
+    }
+
     protected VariableExpression declareCache(AnnotationNode annotationNode, VariableExpression cacheManagerVariableExpression, BlockStatement cacheBlock) {
         VariableExpression cacheVariableExpression = varX(CACHE_VARIABLE_LOCAL_VARIABLE_NAME, make(Cache))
         Expression cacheNameExpression = (ConstantExpression) annotationNode.getMember('value')
@@ -188,16 +213,17 @@ abstract class AbstractCacheTransformation extends AbstractMethodDecoratingTrans
      *
      * @param annotationNode the cache annotation, whose {@code value} names the cache
      * @param classNode the class the method is in, which the report names
+     * @param cacheManagerVariableExpression the cache manager the cache was looked up in
      * @param cacheVariableExpression the cache declared by {@link #declareCache}
      * @param cacheBlock the caching block
      * @return the block that runs where there is a cache
      */
-    protected BlockStatement whereCacheExists(AnnotationNode annotationNode, ClassNode classNode,
+    protected BlockStatement whereCacheExists(AnnotationNode annotationNode, ClassNode classNode, VariableExpression cacheManagerVariableExpression,
                                               VariableExpression cacheVariableExpression, BlockStatement cacheBlock) {
         BlockStatement whereCacheExists = block()
         Object cacheName = ((ConstantExpression) annotationNode.getMember('value')).value
         MethodCallExpression report = callX(classX(MISSING_CACHE_REPORTER_CLASS_NODE), 'report',
-                args(varX(GRAILS_CACHE_MANAGER_PROPERTY_NAME), constX(cacheName), classX(classNode.plainNodeReference)))
+                args(cacheManagerVariableExpression, constX(cacheName), classX(classNode.plainNodeReference)))
         report.methodTarget = REPORT_MISSING_CACHE_METHOD_NODE
         cacheBlock.addStatement(ifElseS(notNullX(cacheVariableExpression), whereCacheExists, stmt(report)))
         return whereCacheExists

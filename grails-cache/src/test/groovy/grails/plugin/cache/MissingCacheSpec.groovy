@@ -56,7 +56,7 @@ class MissingCacheSpec extends Specification {
         expect: 'it is injected with grailsCacheManager'
         service.grailsCacheManager.is(cacheManager)
 
-        when: 'every annotation is used twice with a cache that is missing'
+        when: 'every annotation is used twice, each with a missing cache of its own'
         List<Object> results = [service.cached(1), service.cached(1), service.cachedByKey(1), service.cachedByKey(1),
                                 service.put(1), service.put(1)]
         service.evict(1)
@@ -68,13 +68,14 @@ class MissingCacheSpec extends Specification {
         results == [2, 2, 2, 2, 2, 2]
         service.calls == 10
 
-        and: 'each missing cache is reported once'
-        log.events*.formattedMessage == [
-                "CachedService does not cache with missing: its cache manager, ${ConcurrentMapCacheManager.name}, " +
-                        'has no cache of that name, so the methods run uncached. Configure the cache in that cache manager.',
-                "CachedService does not cache with gone: its cache manager, ${ConcurrentMapCacheManager.name}, " +
-                        'has no cache of that name, so the methods run uncached. Configure the cache in that cache manager.',
-        ] as List<String>
+        and: 'no key was made for a cache that is missing'
+        service.getClass().getField('keysMade').get(null) == 0
+
+        and: 'each missing cache is reported once, by each annotation'
+        log.events*.formattedMessage == ['missingCached', 'missingKeyed', 'missingPut', 'goneEvict', 'goneAll'].collect { String name ->
+            "CachedService does not cache with ${name}: its cache manager, ${ConcurrentMapCacheManager.name}, ".toString() +
+                    'has no cache of that name, so the methods run uncached. Configure the cache in that cache manager.'
+        }
 
         when: 'caches the cache manager does have, with the default key and with a key closure'
         service.calls = 0
@@ -93,6 +94,116 @@ class MissingCacheSpec extends Specification {
         mode << ['statically', 'dynamically']
     }
 
+    @Unroll
+    void 'a method reads its cache manager once a call, compiled #mode'() {
+        given: 'a class whose cache manager is there at the first read of each call only'
+        def service = compileReadCounting(mode).getDeclaredConstructor().newInstance()
+        service.manager = new ConcurrentMapCacheManager('configured')
+        LogCapture log = new LogCapture(MissingCacheReporter, Level.WARN)
+
+        when: 'each annotation is used once'
+        service.cached(1)
+        service.cachedByKey(1)
+        service.put(1)
+        service.evict(1)
+        service.evictAll()
+
+        then: 'each ran, with one read of the cache manager, which the missing caches are reported for'
+        service.calls == 5
+        service.reads == 5
+        log.events.size() == 5
+
+        cleanup:
+        log?.close()
+
+        where:
+        mode << ['statically', 'dynamically']
+    }
+
+    void 'two cache managers that are equal are each reported for a cache they do not have'() {
+        given: 'two instances of the class, with distinct cache managers that are equal'
+        Class<?> type = compileReadCounting('statically')
+        def first = type.getDeclaredConstructor().newInstance()
+        def second = type.getDeclaredConstructor().newInstance()
+        first.manager = new EqualCacheManager()
+        second.manager = new EqualCacheManager()
+        LogCapture log = new LogCapture(MissingCacheReporter, Level.WARN)
+
+        when:
+        first.cached(1)
+        second.cached(1)
+        first.cached(1)
+
+        then: 'once for each of them'
+        log.events.size() == 2
+
+        cleanup:
+        log?.close()
+    }
+
+    /** A class whose cache manager is the one set, at the first read of each call only, which counts its reads. */
+    private static Class<?> compileReadCounting(String mode) {
+        new GroovyShell().evaluate("""
+import grails.plugin.cache.*
+import groovy.transform.CompileStatic
+import org.springframework.cache.CacheManager
+
+${mode == 'statically' ? '@CompileStatic' : ''}
+class ReadCountingService {
+    int calls
+    int reads
+    CacheManager manager
+    private int readsThisCall
+
+    @Override
+    CacheManager getGrailsCacheManager() {
+        reads++
+        readsThisCall++
+        readsThisCall == 1 ? manager : null
+    }
+
+    private void called() {
+        calls++
+        readsThisCall = 0
+    }
+
+    @Cacheable('missingCached')
+    int cached(int x) { called(); x * 2 }
+
+    @Cacheable(value = 'missingKeyed', key = { x })
+    int cachedByKey(int x) { called(); x * 2 }
+
+    @CachePut('missingPut')
+    int put(int x) { called(); x * 2 }
+
+    @CacheEvict('goneEvict')
+    void evict(int x) { called() }
+
+    @CacheEvict(value = 'goneAll', allEntries = true)
+    void evictAll() { called() }
+}
+return ReadCountingService
+""") as Class<?>
+    }
+
+    /** A cache manager equal to every other of its class. */
+    static class EqualCacheManager extends ConcurrentMapCacheManager {
+
+        EqualCacheManager() {
+            super('configured')
+        }
+
+        @Override
+        boolean equals(Object other) {
+            other instanceof EqualCacheManager
+        }
+
+        @Override
+        int hashCode() {
+            1
+        }
+    }
+
     private static Class<?> compile(String mode) {
         new GroovyShell().evaluate("""
 import grails.plugin.cache.*
@@ -102,26 +213,38 @@ ${mode == 'statically' ? '@CompileStatic' : ''}
 class CachedService {
     int calls
 
-    @Cacheable('missing')
-    int cached(int x) { calls++; x * 2 }
+    /** Keys made by a key closure. */
+    public static int keysMade
 
-    @Cacheable(value = 'missing', key = { x })
-    int cachedByKey(int x) { calls++; x * 2 }
+    static Object made(Object key) {
+        keysMade++
+        key
+    }
+
+    private void called() {
+        calls++
+    }
+
+    @Cacheable('missingCached')
+    int cached(int x) { called(); x * 2 }
+
+    @Cacheable(value = 'missingKeyed', key = { CachedService.made(x) })
+    int cachedByKey(int x) { called(); x * 2 }
 
     @Cacheable('configured')
-    int cachedWhereConfigured(int x) { calls++; x * 3 }
+    int cachedWhereConfigured(int x) { called(); x * 3 }
 
     @Cacheable(value = 'configured', key = { x + 100 })
-    int cachedByKeyWhereConfigured(int x) { calls++; x * 4 }
+    int cachedByKeyWhereConfigured(int x) { called(); x * 4 }
 
-    @CachePut('missing')
-    int put(int x) { calls++; x * 2 }
+    @CachePut('missingPut')
+    int put(int x) { called(); x * 2 }
 
-    @CacheEvict('gone')
-    void evict(int x) { calls++ }
+    @CacheEvict('goneEvict')
+    void evict(int x) { called() }
 
-    @CacheEvict(value = 'gone', allEntries = true)
-    void evictAll() { calls++ }
+    @CacheEvict(value = 'goneAll', allEntries = true)
+    void evictAll() { called() }
 }
 return CachedService
 """) as Class<?>

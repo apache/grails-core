@@ -37,8 +37,6 @@ import static org.codehaus.groovy.ast.ClassHelper.make
 import static org.codehaus.groovy.ast.tools.GeneralUtils.args
 import static org.codehaus.groovy.ast.tools.GeneralUtils.block
 import static org.codehaus.groovy.ast.tools.GeneralUtils.declS
-import static org.codehaus.groovy.ast.tools.GeneralUtils.ifS
-import static org.codehaus.groovy.ast.tools.GeneralUtils.notNullX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.returnS
 import static org.codehaus.groovy.ast.tools.GeneralUtils.stmt
 import static org.codehaus.groovy.ast.tools.GeneralUtils.varX
@@ -59,14 +57,14 @@ class CachePutTransformation extends AbstractCacheTransformation {
 
     @Override
     protected Expression buildDelegatingMethodCall(SourceUnit sourceUnit, AnnotationNode annotationNode, ClassNode classNode, MethodNode methodNode, MethodCallExpression originalMethodCallExpr, BlockStatement newMethodBody) {
-        VariableExpression cacheManagerVariableExpression = varX(GRAILS_CACHE_MANAGER_PROPERTY_NAME)
+        VariableExpression cacheManagerVariableExpression = cacheManagerVariable()
         BlockStatement cachingBlock = block()
 
         // Cache $_cache_cacheVariable = this.grailsCacheManager.getCache("...");
         VariableExpression cacheDeclaration = declareCache(annotationNode, cacheManagerVariableExpression, cachingBlock)
 
         // if($_cache_cacheVariable != null) { ... } else { report the missing cache }
-        BlockStatement cacheBlock = whereCacheExists(annotationNode, classNode, cacheDeclaration, cachingBlock)
+        BlockStatement cacheBlock = whereCacheExists(annotationNode, classNode, cacheManagerVariableExpression, cacheDeclaration, cachingBlock)
 
         // def $_method_parameter_map = [name:value]
         declareAndInitializeParameterValueMap(annotationNode, methodNode, cacheBlock)
@@ -83,12 +81,7 @@ class CachePutTransformation extends AbstractCacheTransformation {
             )
         )
 
-        newMethodBody.addStatement(
-            // if(grailsCacheManager != null)
-            ifS(notNullX(varX(GRAILS_CACHE_MANAGER_PROPERTY_NAME)),
-                    cachingBlock
-            )
-        )
+        ifCacheManager(cacheManagerVariableExpression, cachingBlock, newMethodBody)
         return originalMethodCallExpr
     }
 

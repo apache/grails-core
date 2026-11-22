@@ -42,7 +42,6 @@ import static org.codehaus.groovy.ast.tools.GeneralUtils.args
 import static org.codehaus.groovy.ast.tools.GeneralUtils.block
 import static org.codehaus.groovy.ast.tools.GeneralUtils.declS
 import static org.codehaus.groovy.ast.tools.GeneralUtils.ifElseS
-import static org.codehaus.groovy.ast.tools.GeneralUtils.ifS
 import static org.codehaus.groovy.ast.tools.GeneralUtils.notNullX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.returnS
 import static org.codehaus.groovy.ast.tools.GeneralUtils.stmt
@@ -76,7 +75,7 @@ class CacheableTransformation extends AbstractCacheTransformation {
             return originalMethodCallExpr
         }
 
-        VariableExpression cacheManagerVariableExpression = varX(GRAILS_CACHE_MANAGER_PROPERTY_NAME)
+        VariableExpression cacheManagerVariableExpression = cacheManagerVariable()
         handleCacheCondition(sourceUnit, annotationNode,  methodNode, originalMethodCallExpr, newMethodBody)
 
         BlockStatement cachingBlock = block()
@@ -87,7 +86,7 @@ class CacheableTransformation extends AbstractCacheTransformation {
         VariableExpression cacheDeclaration = declareCache(annotationNode, cacheManagerVariableExpression, cachingBlock)
 
         // if($_cache_cacheVariable != null) { ... } else { report the missing cache }
-        BlockStatement cacheBlock = whereCacheExists(annotationNode, classNode, cacheDeclaration, cachingBlock)
+        BlockStatement cacheBlock = whereCacheExists(annotationNode, classNode, cacheManagerVariableExpression, cacheDeclaration, cachingBlock)
 
         // def $_method_parameter_map = [name:value]
         declareAndInitializeParameterValueMap(annotationNode, methodNode, cacheBlock)
@@ -120,12 +119,7 @@ class CacheableTransformation extends AbstractCacheTransformation {
             )
         )
 
-        newMethodBody.addStatement(
-            // if(grailsCacheManager != null)
-            ifS(notNullX(varX(GRAILS_CACHE_MANAGER_PROPERTY_NAME)),
-                    cachingBlock
-            )
-        )
+        ifCacheManager(cacheManagerVariableExpression, cachingBlock, newMethodBody)
         return originalMethodCallExpr
     }
 
