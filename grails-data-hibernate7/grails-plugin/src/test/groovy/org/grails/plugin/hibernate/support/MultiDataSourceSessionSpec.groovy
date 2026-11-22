@@ -34,9 +34,13 @@ import org.hibernate.SessionFactory
 import org.hibernate.dialect.H2Dialect
 import org.hibernate.engine.spi.SessionFactoryImplementor
 import org.hibernate.engine.spi.SessionImplementor
+import org.grails.orm.hibernate.support.hibernate7.LocalSessionFactoryBuilder
 import org.grails.orm.hibernate.support.hibernate7.SessionHolder
+import org.springframework.core.InfrastructureProxy
 import org.springframework.core.task.AsyncTaskExecutor
+import org.springframework.core.task.SimpleAsyncTaskExecutor
 import org.springframework.dao.DataAccessResourceFailureException
+import org.springframework.jdbc.datasource.DriverManagerDataSource
 import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.mock.web.MockHttpServletResponse
 import org.springframework.transaction.support.TransactionSynchronizationManager
@@ -925,6 +929,59 @@ class MultiDataSourceSessionSpec extends Specification {
         if (opened?.open) {
             opened.close()
         }
+    }
+
+    def "a request that Spring redispatches after its Callable rebinds its default session when one interceptor has the bootstrap proxy of the factory and the other #redispatchVia"() {
+        given: "a session factory bootstrapped in the background, whose proxy and target are one resource to Spring"
+        def bootstrapExecutor = new SimpleAsyncTaskExecutor()
+        SessionFactory proxy = new LocalSessionFactoryBuilder(new DriverManagerDataSource('jdbc:h2:mem:bootstrapProxyDb;LOCK_TIMEOUT=10000'))
+                .setProperty('hibernate.dialect', H2Dialect.name)
+                .buildSessionFactory(bootstrapExecutor)
+        SessionFactory target = (SessionFactory) ((InfrastructureProxy) proxy).wrappedObject
+        Map<String, SessionFactory> factories = [proxy: proxy, target: target]
+
+        and: "a request that supports asynchronous processing, whose Callable runs when the test runs it"
+        MockHttpServletRequest servletRequest = new MockHttpServletRequest()
+        servletRequest.asyncSupported = true
+        MockHttpServletResponse servletResponse = new MockHttpServletResponse()
+        ServletWebRequest webRequest = new ServletWebRequest(servletRequest, servletResponse)
+        WebAsyncManager asyncManager = WebAsyncUtils.getAsyncManager(webRequest)
+        asyncManager.asyncWebRequest = new StandardServletAsyncWebRequest(servletRequest, servletResponse)
+        List<Runnable> tasks = []
+        asyncManager.taskExecutor = { Runnable task -> tasks << task } as AsyncTaskExecutor
+        def dispatching = new GrailsOpenSessionInViewInterceptor(sessionFactory: factories[dispatchVia])
+        def redispatching = new GrailsOpenSessionInViewInterceptor(sessionFactory: factories[redispatchVia])
+
+        when: "the action returns a Callable, which Spring runs, then redispatches the request"
+        dispatching.preHandle(webRequest)
+        Session opened = boundSession(target)
+        asyncManager.startCallableProcessing({ -> 'done' } as Callable)
+        dispatching.afterConcurrentHandlingStarted(webRequest)
+        tasks*.run()
+        redispatching.preHandle(webRequest)
+
+        then: "the redispatch uses the session the first dispatch opened, still open"
+        boundSession(target).is(opened)
+        opened.open
+
+        when: "the redispatch completes"
+        redispatching.afterCompletion(webRequest, null)
+
+        then: "that session is unbound and closed"
+        !TransactionSynchronizationManager.hasResource(target)
+        !opened.open
+
+        cleanup:
+        unbindIfBound(target)
+        if (opened?.open) {
+            opened.close()
+        }
+        target?.close()
+
+        where:
+        dispatchVia | redispatchVia
+        'proxy'     | 'target'
+        'target'    | 'proxy'
     }
 
     def "an include uses the sessions of the request for every datasource and leaves them open"() {

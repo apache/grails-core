@@ -40,6 +40,7 @@ import org.hibernate.engine.spi.SharedSessionContractImplementor;
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.transaction.support.TransactionSynchronizationUtils;
 import org.springframework.ui.ModelMap;
 import org.springframework.util.Assert;
 import org.springframework.util.ReflectionUtils;
@@ -65,9 +66,10 @@ import org.grails.orm.hibernate.support.hibernate7.support.OpenSessionInViewInte
  * request that goes asynchronous takes the sessions it opened off the thread, so
  * that they do not stay bound to it for the next request that thread serves, and
  * they are closed when the asynchronous request completes. Which sessions a
- * request found bound is recorded by the identity of their factory, not by how
- * the factory prints: {@code Object.toString()} is not unique, and a proxy prints
- * as its target.
+ * request found bound is recorded by the identity of their factory, taken as
+ * Spring's TransactionSynchronizationManager takes it, the target of an
+ * InfrastructureProxy, not by how the factory prints: {@code Object.toString()}
+ * is not unique.
  *
  * @author Graeme Rocher
  * @since 0.5
@@ -79,7 +81,7 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
 
     /**
      * The request attribute that holds, for each factory of another datasource whose session the request found bound,
-     * how many times it did, keyed by the identity of the factory.
+     * how many times it did, keyed by the identity of the factory as {@link #resourceKey} takes it.
      */
     private static final String PARTICIPATE_COUNTS =
             GrailsOpenSessionInViewInterceptor.class.getName() + ".PARTICIPATE_COUNTS";
@@ -88,9 +90,10 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
      * For each default factory, the name of the request attribute that records whether the request found its session
      * bound, which the parent class also registers the request's asynchronous interceptors under. It is shared by every
      * interceptor using that factory, as the parent's name is, and unique to the factory, which Hibernate's compares by
-     * identity. The keys are weak, so that a factory that is closed and dropped is not kept.
+     * identity, keyed as {@link #resourceKey} keys it, so that a proxy and its target share it. The keys are weak, so
+     * that a factory that is closed and dropped is not kept.
      */
-    private static final Map<SessionFactory, String> PARTICIPATE_ATTRIBUTE_NAMES = Collections.synchronizedMap(new WeakHashMap<>());
+    private static final Map<Object, String> PARTICIPATE_ATTRIBUTE_NAMES = Collections.synchronizedMap(new WeakHashMap<>());
 
     private static final AtomicLong FACTORY_COUNT = new AtomicLong();
 
@@ -646,17 +649,17 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
     protected String getParticipateAttributeName() {
         SessionFactory sf = getSessionFactory();
         Assert.state(sf != null, "No SessionFactory set");
-        return PARTICIPATE_ATTRIBUTE_NAMES.computeIfAbsent(sf, factory ->
+        return PARTICIPATE_ATTRIBUTE_NAMES.computeIfAbsent(resourceKey(sf), factory ->
                 GrailsOpenSessionInViewInterceptor.class.getName() + '.' + FACTORY_COUNT.incrementAndGet() + PARTICIPATE_SUFFIX);
     }
 
     private static void incrementParticipateCount(WebRequest request, SessionFactory sf) {
-        Map<SessionFactory, Integer> counts = participateCounts(request);
+        Map<Object, Integer> counts = participateCounts(request);
         if (counts == null) {
             counts = new IdentityHashMap<>();
             request.setAttribute(PARTICIPATE_COUNTS, counts, WebRequest.SCOPE_REQUEST);
         }
-        counts.merge(sf, 1, Integer::sum);
+        counts.merge(resourceKey(sf), 1, Integer::sum);
     }
 
     /**
@@ -664,15 +667,16 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
      * then left as it is
      */
     private static boolean decrementParticipateCount(WebRequest request, SessionFactory sf) {
-        Map<SessionFactory, Integer> counts = participateCounts(request);
-        Integer count = counts != null ? counts.get(sf) : null;
+        Map<Object, Integer> counts = participateCounts(request);
+        Object key = resourceKey(sf);
+        Integer count = counts != null ? counts.get(key) : null;
         if (count == null) {
             return false;
         }
         if (count > 1) {
-            counts.put(sf, count - 1);
+            counts.put(key, count - 1);
         } else {
-            counts.remove(sf);
+            counts.remove(key);
             if (counts.isEmpty()) {
                 request.removeAttribute(PARTICIPATE_COUNTS, WebRequest.SCOPE_REQUEST);
             }
@@ -681,8 +685,17 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
     }
 
     @SuppressWarnings("unchecked")
-    private static Map<SessionFactory, Integer> participateCounts(WebRequest request) {
-        return (Map<SessionFactory, Integer>) request.getAttribute(PARTICIPATE_COUNTS, WebRequest.SCOPE_REQUEST);
+    private static Map<Object, Integer> participateCounts(WebRequest request) {
+        return (Map<Object, Integer>) request.getAttribute(PARTICIPATE_COUNTS, WebRequest.SCOPE_REQUEST);
+    }
+
+    /**
+     * @return the factory as Spring's {@code TransactionSynchronizationManager} keys the sessions bound for it: the
+     * target of an {@code InfrastructureProxy}, such as the proxy {@code LocalSessionFactoryBuilder} returns for a
+     * factory bootstrapped in the background, so that the proxy and its target count as one factory here too
+     */
+    private static Object resourceKey(SessionFactory sf) {
+        return TransactionSynchronizationUtils.unwrapResourceIfNecessary(sf);
     }
 
     public void setHibernateDatastore(HibernateDatastore hibernateDatastore) {
