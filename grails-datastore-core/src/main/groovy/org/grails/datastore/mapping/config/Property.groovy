@@ -368,8 +368,11 @@ class Property implements Cloneable {
     static void refuseInvalidCascadeValidate(DataBinder dataBinder) {
         FieldError error = dataBinder.bindingResult.getFieldError('cascadeValidate')
         if (error != null) {
-            CascadeValidateType.fromMappedName(error.rejectedValue == null ? null : String.valueOf(error.rejectedValue))
-            throw new IllegalArgumentException("cascadeValidate could not be set: ${error.defaultMessage}")
+            String name = error.rejectedValue == null ? null : String.valueOf(error.rejectedValue)
+            CascadeValidateType.fromMappedName(name)
+            // the value names a mode but is not a String, such as a GString or an enum constant, which the binder does not
+            // convert: it is applied by name, as plain assignment applies it
+            ((Property) dataBinder.target).setCascadeValidate(name)
         }
     }
 }

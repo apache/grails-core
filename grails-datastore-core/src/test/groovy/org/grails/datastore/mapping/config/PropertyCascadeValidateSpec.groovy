@@ -19,6 +19,7 @@
 package org.grails.datastore.mapping.config
 
 import org.grails.datastore.mapping.config.groovy.DefaultMappingConfigurationBuilder
+import org.grails.datastore.mapping.validation.CascadeValidateType
 import spock.lang.Issue
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -113,6 +114,55 @@ class PropertyCascadeValidateSpec extends Specification {
 
         where:
         mode << ['default', 'none', 'owned', 'DIRTY']
+    }
+
+    @Unroll
+    void "a mapping map that names a mode as #kind is kept when it is read through configureExisting"() {
+        expect:
+        Property.configureExisting(new Property(), [cascadeValidate: value]).cascadeValidate.toLowerCase() == 'owned'
+
+        where:
+        kind                     | value
+        'a GString'              | "${'owned'}"
+        'an enum constant'       | CascadeValidateType.OWNED
+    }
+
+    @Unroll
+    void "a mapping block that names a mode as #kind is kept by the mapping builder"() {
+        given:
+        DefaultMappingConfigurationBuilder builder = new DefaultMappingConfigurationBuilder(new Entity(), Property)
+
+        when:
+        builder.parts(cascadeValidate: value)
+
+        then:
+        builder.properties.get('parts').cascadeValidate.toLowerCase() == 'owned'
+
+        where:
+        kind                     | value
+        'a GString'              | "${'owned'}"
+        'an enum constant'       | CascadeValidateType.OWNED
+    }
+
+    @Unroll
+    void "a mapping map that names '#value' as #kind is still refused when it is read through configureExisting"() {
+        when:
+        Property.configureExisting(new Property(), [cascadeValidate: value])
+
+        then:
+        IllegalArgumentException e = thrown()
+        e.message.contains('cascadeValidate')
+
+        where:
+        kind                       | value
+        'a GString that is no mode' | "${'sometimes'}"
+        'a Boolean'                 | true
+        'an empty GString'          | "${''}"
+    }
+
+    void "a mapping map that names a mode in capitals as a GString is kept"() {
+        expect:
+        Property.configureExisting(new Property(), [cascadeValidate: "${'OWNED'}"]).cascadeValidate.toLowerCase() == 'owned'
     }
 
     void "a refused value leaves the earlier mode in place"() {

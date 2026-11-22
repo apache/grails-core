@@ -20,9 +20,11 @@ package grails.gorm.tests
 
 import grails.gorm.annotation.Entity
 import org.grails.datastore.mapping.core.DatastoreUtils
+import org.grails.datastore.mapping.validation.CascadeValidateType
 import org.grails.orm.hibernate.HibernateDatastore
 import org.grails.orm.hibernate.cfg.Settings
 import grails.gorm.hibernate.mapping.MappingBuilder
+import org.grails.orm.hibernate.cfg.HibernateMappingBuilder
 import org.grails.orm.hibernate.cfg.Mapping
 import org.grails.orm.hibernate.cfg.PropertyConfig
 import spock.lang.Issue
@@ -69,6 +71,19 @@ class CascadeValidateRefusedSpec extends Specification {
         'a property config built from a map' | 'sometimes' | { -> PropertyConfig.configureNew([cascadeValidate: 'sometimes']) }
         'a property config built from a block' | 'sometimes' | { -> PropertyConfig.configureNew { cascadeValidate = 'sometimes' } }
         'the default of every property'    | 'sometimes' | { -> MappingBuilder.define { '*'(cascadeValidate: 'sometimes') }.build() }
+    }
+
+    @Unroll
+    void "the Hibernate readers keep a mode that is named as #kind"() {
+        expect:
+        PropertyConfig.configureNew([cascadeValidate: value]).cascadeValidate.toLowerCase() == 'owned'
+        MappingBuilder.define { parts cascadeValidate: value }.build().getPropertyConfig('parts').cascadeValidate.toLowerCase() == 'owned'
+        new HibernateMappingBuilder('Foo').evaluate { parts cascadeValidate: value }.getPropertyConfig('parts').cascadeValidate.toLowerCase() == 'owned'
+
+        where:
+        kind               | value
+        'a GString'        | "${'owned'}"
+        'an enum constant' | CascadeValidateType.OWNED
     }
 
     @Unroll
