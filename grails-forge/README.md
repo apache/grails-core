@@ -75,7 +75,8 @@ A file of a pack whose name ends with `.gsp` is a template. The templates of the
 Forge is built, not each time the command line generates an application: the task
 `:grails-forge-core:compilePackPages` compiles every template of every pack `packs` names, with the code that
 compiles a template when Forge runs, and the jar of `grails-forge-core` (and with it the jar of the `grails`
-command) has the classes, named `PackPage_` and a SHA-256 of the feature and the text of the template, and
+command) has the classes, in the package `org.apache.grails.forge.core.pack.pages`, which holds nothing else, each
+named `PackPage_` and a SHA-256 of the feature and the text of the template, and
 the index `META-INF/grails-forge-pages/index`. Whoever adds or changes a template has nothing to do for
 this: the next build compiles it, a template that does not compile fails the build, and
 `PrecompiledPackPagesSpec` fails when a template has no compiled page or writes anything else from it than

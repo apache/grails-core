@@ -19,6 +19,7 @@
 package org.grails.forge.cli
 
 import grails.util.Environment
+import java.util.jar.JarFile
 import org.apache.grails.forge.core.pack.BundledPackFeatures
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.application.OperatingSystem
@@ -73,5 +74,24 @@ class PrecompiledPackPagesOfCliSpec extends Specification {
         output.project['.github/workflows/gradle.yml']
         packs.precompiledTemplates >= 6
         packs.compiledTemplates == 0
+    }
+
+    void "the jar of Forge has the pages in a package of their own: the only classes without a package are the compiled views of the generator"() {
+        given: 'the jar the command line has Forge from'
+        File forge = new File(BundledPackFeatures.protectionDomain.codeSource.location.toURI())
+        Set<String> entries
+        new JarFile(forge).withCloseable { JarFile jar -> entries = jar.entries().toList()*.name as Set<String> }
+        String pages = 'org/apache/grails/forge/core/pack/pages/'
+        List<String> withoutPackage = entries.findAll { it.endsWith('.class') && !it.contains('/') }.toList()
+
+        expect:
+        forge.name.startsWith('grails-forge-core') && forge.name.endsWith('.jar')
+        entries.count { it.startsWith(pages) && it.endsWith('.class') } > 20
+
+        and: 'a jar that is a module of Java can have no class without a package: the pages add none'
+        withoutPackage.findAll { !it.startsWith('gsp_grails_forge_core_') } == []
+
+        and: 'the package of the pages has the pages and nothing else'
+        entries.findAll { it.startsWith(pages) && !it.endsWith('/') }.every { it.substring(pages.length()) ==~ /PackPage_[0-9a-f]{64}(\$[\w$]+)?\.class/ }
     }
 }

@@ -626,9 +626,20 @@ final class PackPages {
 
         @Override
         Class parseClass(String text, String fileName) {
-            source = digest([compiler, text])
-            if (expected == null) {
+            if (expected == null && kept == null) {
+                // a page that is compiled in this run and is in no jar: as the engine writes it
+                source = digest([compiler, text])
                 return super.parseClass(text, fileName)
+            }
+            // A page of the build is of a package that only this module has: the engine writes the
+            // source of a page without one, and a jar that is a module can have no class without. The
+            // package is said in front of the first line, so that the lines stay the ones the page
+            // has for the lines of its template. The build compiles this source and a run takes the
+            // digest of this source: what is taken is what the run would have compiled from it.
+            String ofPackage = "package ${PrecompiledPackPages.PACKAGE}; ${text}"
+            source = digest([compiler, ofPackage])
+            if (expected == null) {
+                return super.parseClass(ofPackage, fileName)
             }
             given = precompiled.load(expected, source)
             if (given == null) {

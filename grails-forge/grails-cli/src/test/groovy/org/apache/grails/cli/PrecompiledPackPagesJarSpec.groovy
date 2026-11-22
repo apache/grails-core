@@ -33,6 +33,7 @@ import spock.lang.TempDir
 class PrecompiledPackPagesJarSpec extends Specification {
 
     private static final String INDEX = 'META-INF/grails-forge-pages/index'
+    private static final String PAGES = 'org/apache/grails/forge/core/pack/pages/'
 
     @Shared
     File allJar = new File(System.getProperty('grails.cli.all.jar'))
@@ -51,14 +52,30 @@ class PrecompiledPackPagesJarSpec extends Specification {
 
         expect: 'a line for each template: its key, the digest of its source and the name of its class'
         lines.size() > 20
-        lines.every { String line -> line ==~ /[0-9a-f]{64}\t[0-9a-f]{64}\tPackPage_[0-9a-f]{64}/ }
+        lines.every { String line -> line ==~ /[0-9a-f]{64}\t[0-9a-f]{64}\torg\.apache\.grails\.forge\.core\.pack\.pages\.PackPage_[0-9a-f]{64}/ }
 
         and: 'the class is there under that name: putting the jars into one renamed nothing'
-        lines.findAll { String line -> !entries.contains(line.split('\t')[2] + '.class') } == []
+        lines.findAll { String line -> !entries.contains(line.split('\t')[2].replace('.', '/') + '.class') } == []
 
         and: 'and there is no class of a page the index does not name'
-        entries.findAll { it.startsWith('PackPage_') }.collect { it.substring(0, 'PackPage_'.length() + 64) }.toSet() ==
+        entries.findAll { it.startsWith(PAGES) && it.endsWith('.class') }.collect { it.substring(0, PAGES.length() + 'PackPage_'.length() + 64).replace('/', '.') }.toSet() ==
                 lines.collect { String line -> line.split('\t')[2] }.toSet()
+    }
+
+    void "the pages are of a package of their own, and the only classes without a package are the compiled views of the generator"() {
+        given:
+        Set<String> entries
+        new JarFile(allJar).withCloseable { JarFile jar -> entries = jar.entries().toList()*.name as Set<String> }
+        List<String> withoutPackage = entries.findAll { it.endsWith('.class') && !it.contains('/') }.toList()
+
+        expect: 'a jar that is a module of Java can have no class without a package: the pages add none'
+        withoutPackage.findAll { it.contains('PackPage_') } == []
+
+        and: 'what is left without one are the views of the generator, which the GSP compiler of the build names so'
+        withoutPackage.findAll { !it.startsWith('gsp_grails_forge_') } == []
+
+        and: 'the package of the pages has the pages and nothing else'
+        entries.findAll { it.startsWith(PAGES) && !it.endsWith('/') }.every { it.substring(PAGES.length()) ==~ /PackPage_[0-9a-f]{64}(\$[\w$]+)?\.class/ }
     }
 
     void "the command line in the jar creates an application with the pages of the jar, and compiles no template of a pack"() {
@@ -83,7 +100,7 @@ class PrecompiledPackPagesJarSpec extends Specification {
 
         when:
         List<String> loaded = classes.readLines()
-        List<String> pages = loaded.findAll { it.contains('[class,load] PackPage_') }
+        List<String> pages = loaded.findAll { it.contains('[class,load] org.apache.grails.forge.core.pack.pages.PackPage_') }
 
         then: 'the pages of the templates of the default features and of the one that was asked for, from the jar'
         pages.size() >= 5

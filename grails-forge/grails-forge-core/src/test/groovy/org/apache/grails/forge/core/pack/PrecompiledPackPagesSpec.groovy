@@ -95,7 +95,7 @@ class PrecompiledPackPagesSpec extends ApplicationContextSpec {
         and: 'the index is what the build writes: a line for each, in the order of the keys'
         List<String> lines = new String(FORGE.getResourceAsStream(PrecompiledPackPages.INDEX).readAllBytes(), StandardCharsets.UTF_8).readLines()
         lines*.split('\t')*.getAt(0) == keys.toSorted()
-        lines.every { String line -> line.split('\t')[2] == PrecompiledPackPages.CLASS_PREFIX + line.split('\t')[0] }
+        lines.every { String line -> line.split('\t')[2] == "${PrecompiledPackPages.PACKAGE}.${PrecompiledPackPages.CLASS_PREFIX}${line.split('\t')[0]}" }
     }
 
     void "every template of every pack of Forge is taken from the build and not compiled"() {
@@ -340,7 +340,7 @@ class PrecompiledPackPagesSpec extends ApplicationContextSpec {
     void "compiling the templates again gives the classes and the index the build wrote"() {
         given: 'the Java the build compiled for, which the first class of the build names'
         String index = new String(FORGE.getResourceAsStream(PrecompiledPackPages.INDEX).readAllBytes(), StandardCharsets.UTF_8)
-        byte[] first = FORGE.getResourceAsStream(index.readLines().first().split('\t')[2] + '.class').readAllBytes()
+        byte[] first = FORGE.getResourceAsStream(index.readLines().first().split('\t')[2].replace('.', '/') + '.class').readAllBytes()
         int java = (((first[6] & 0xFF) << 8) | (first[7] & 0xFF)) - 44
         String targetBefore = System.getProperty('groovy.target.bytecode')
         System.setProperty('groovy.target.bytecode', java as String)
@@ -355,35 +355,102 @@ class PrecompiledPackPagesSpec extends ApplicationContextSpec {
         again.keySet() == andAgain.keySet()
         again.every { String key, PackPages.Precompiled page ->
             page.classes.size() > 0 && page.classes.keySet() == andAgain[key].classes.keySet() && page.classes.every { String name, byte[] bytes ->
-                Arrays.equals(bytes, FORGE.getResourceAsStream(name + '.class')?.readAllBytes()) && Arrays.equals(bytes, andAgain[key].classes[name])
+                Arrays.equals(bytes, FORGE.getResourceAsStream(name.replace('.', '/') + '.class')?.readAllBytes()) && Arrays.equals(bytes, andAgain[key].classes[name])
             }
         }
 
-        and: 'every class is of a page: its name is made of the key of its template'
+        and: 'every class is of a page, the closures of a page with it: its name is made of the key of its template, in the package of the pages'
         again.every { String key, PackPages.Precompiled page ->
-            page.classes.keySet().every { it == PrecompiledPackPages.CLASS_PREFIX + key || it.startsWith(PrecompiledPackPages.CLASS_PREFIX + key + '$') }
+            String name = "${PrecompiledPackPages.PACKAGE}.${PrecompiledPackPages.CLASS_PREFIX}${key}"
+            page.classes.keySet().every { it == name || it.startsWith(name + '$') }
         }
 
         cleanup:
         restore('groovy.target.bytecode', targetBefore)
     }
 
+    void "no class of a page is without a package: a jar with one could not be a module of Java"() {
+        given:
+        String index = new String(FORGE.getResourceAsStream(PrecompiledPackPages.INDEX).readAllBytes(), StandardCharsets.UTF_8)
+        List<Class<?>> classes = index.readLines().collect { String line -> Class.forName(line.split('\t')[2], false, FORGE) }
+        Path written = directory.resolve('pages')
+        PackPagesCompiler.write(PackPagesCompiler.compile(FORGE), written)
+
+        expect: 'the classes the index names are of the one package, which is of this module alone and has nothing else'
+        classes.size() == templates.collect { PackPages.key(it.owner as String, it.text as String) }.toSet().size()
+        classes.every { it.packageName == 'org.apache.grails.forge.core.pack.pages' && it.packageName == PrecompiledPackPages.PACKAGE }
+        PackPages.packageName != PrecompiledPackPages.PACKAGE
+
+        and: 'what the build writes has every class under the directory of that package, and none beside it'
+        Files.walk(written).withCloseable { it.filter { Path file -> file.toString().endsWith('.class') }.toList() }.every { Path file ->
+            written.relativize(file.parent).toString().replace(File.separator, '/') == PrecompiledPackPages.PACKAGE.replace('.', '/')
+        }
+        Files.list(written.resolve(PrecompiledPackPages.PACKAGE.replace('.', '/'))).withCloseable { it.count() } == classes.size()
+    }
+
+    void "the closures of a template are classes of the package with its page, and a page taken with them writes and fails as when it is compiled"() {
+        given: 'a template with closures, one of them failing on its third line for one model: no template of Forge has a closure as the build compiles it'
+        String text = 'first\n<% 3.times { i -> %>${project.name}${i};<% } %>\n<% [1].each { %>${fails ? project.nothing.at.all : \'fine\'}<% } %>\nlast\n'
+        PackPages.Precompiled page = PackPages.precompile(FORGE, 'acme-closures', text)
+        Path root = directory.resolve('pages')
+        PackPagesCompiler.write(new TreeMap<String, PackPages.Precompiled>([(page.key): page]), root)
+        // a class loader that has the index and the classes itself, as the one of Forge has those of its packs
+        URLClassLoader loader = new URLClassLoader([root.toUri().toURL()] as URL[], FORGE) {
+
+            @Override
+            InputStream getResourceAsStream(String name) {
+                return findResource(name)?.openStream()
+            }
+        }
+        PackPages taking = new PackPages(FORGE, PrecompiledPackPages.of(loader))
+        PackPages compiling = new PackPages(FORGE)
+        Map<String, Object> template = [owner: 'acme-closures', from: 'closures.txt.gsp', text: text, descriptor: templates.first().descriptor]
+        Map<String, Object> fine = [project: [name: 'shop'], fails: false]
+        Map<String, Object> failing = [project: [name: 'shop'], fails: true]
+
+        expect: 'the page and its closures, each of the package and named for the page'
+        page.classes.size() == 3
+        page.classes.keySet().every { it.startsWith("${PrecompiledPackPages.PACKAGE}.${PrecompiledPackPages.CLASS_PREFIX}${page.key}") }
+        page.classes.keySet().count { it.contains('$') } == 2
+
+        and: 'taken, it writes what the compiled one writes'
+        failure(taking, template, fine) == 'rendered'
+        new String(taking.render('acme-closures', text, 'a template', 1, fine, PackLoader.MAX_FILE_BYTES), StandardCharsets.UTF_8) == 'first\nshop0;shop1;shop2;\nfine\nlast\n'
+        Arrays.equals(taking.render('acme-closures', text, 'a template', 1, fine, PackLoader.MAX_FILE_BYTES),
+                compiling.render('acme-closures', text, 'a template', 1, fine, PackLoader.MAX_FILE_BYTES))
+
+        and: 'and fails as the compiled one does, on the line of the template the closure is on'
+        failure(taking, template, failing) == failure(compiling, template, failing)
+        failure(taking, template, failing).contains('cannot be rendered: line 3: ')
+        !failure(taking, template, failing).contains(PrecompiledPackPages.CLASS_PREFIX)
+
+        and:
+        taking.precompiled == 1 && taking.compiled == 0
+        compiling.compiled == 1
+
+        cleanup:
+        loader?.close()
+    }
+
     void "what an earlier build wrote for a template that is no more is deleted, and nothing else in the directory"() {
         given:
-        Path pages = Files.createDirectories(directory.resolve('pages'))
+        Path root = Files.createDirectories(directory.resolve('pages'))
+        Path pages = Files.createDirectories(root.resolve(PrecompiledPackPages.PACKAGE.replace('.', '/')))
         Path stale = Files.writeString(pages.resolve(PrecompiledPackPages.CLASS_PREFIX + ('0' * 64) + '.class'), 'of an earlier build')
+        Path withoutPackage = Files.writeString(root.resolve(PrecompiledPackPages.CLASS_PREFIX + ('1' * 64) + '.class'), 'of an earlier form of the build')
         Path other = Files.writeString(pages.resolve('Other.class'), 'not of this')
         Map<String, Object> template = templates.first()
         PackPages.Precompiled page = PackPages.precompile(FORGE, template.owner as String, template.text as String)
 
         when:
-        PackPagesCompiler.write(new TreeMap<String, PackPages.Precompiled>([(page.key): page]), pages)
+        PackPagesCompiler.write(new TreeMap<String, PackPages.Precompiled>([(page.key): page]), root)
 
         then:
         !Files.exists(stale)
+        !Files.exists(withoutPackage)
         Files.exists(other)
         Files.exists(pages.resolve(PrecompiledPackPages.CLASS_PREFIX + page.key + '.class'))
-        Files.readString(pages.resolve(PrecompiledPackPages.INDEX)).readLines().size() == 1
+        Files.readString(root.resolve(PrecompiledPackPages.INDEX)).readLines().size() == 1
     }
 
     // the first two templates with the class of each other

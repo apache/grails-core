@@ -31,7 +31,7 @@ import org.grails.gsp.GroovyPage
  * classes an index, the resource {@link #INDEX}: a line for each template, with the key
  * {@code PackPages} keeps a page by, which is a SHA-256 of the name of the feature, the directives and
  * the text of the template, the SHA-256 of what the page was compiled from, and the name of its
- * class, which is {@link #CLASS_PREFIX} and the key.</p>
+ * class, which is {@link #CLASS_PREFIX} and the key, in the package {@link #PACKAGE}.</p>
  *
  * <p>The text of a template is not all its class comes of. The parser of the pages writes an
  * expression one way for the environments of development and test and another way for every other,
@@ -58,7 +58,13 @@ final class PrecompiledPackPages {
     /** The resource that names the class of each template the build compiled. */
     public static final String INDEX = 'META-INF/grails-forge-pages/index'
 
-    /** What the name of the class of a template starts with, in front of its key. */
+    /**
+     * The package of the classes of the pages, which no other module has and which holds nothing else:
+     * a jar that is a module of Java can have no class without a package.
+     */
+    public static final String PACKAGE = 'org.apache.grails.forge.core.pack.pages'
+
+    /** What the simple name of the class of a template starts with, in front of its key. */
     public static final String CLASS_PREFIX = 'PackPage_'
 
     private static final Pattern DIGEST = Pattern.compile('[0-9a-f]{64}')
@@ -107,10 +113,10 @@ final class PrecompiledPackPages {
 
     /**
      * @param key the key of a template
-     * @return the name of the class the build compiles the template to
+     * @return the name of the class the build compiles the template to, in {@link #PACKAGE}
      */
     static String className(String key) {
-        return CLASS_PREFIX + key
+        return "${PACKAGE}.${CLASS_PREFIX}${key}".toString()
     }
 
     /**

@@ -85,21 +85,29 @@ final class PackPagesCompiler {
      * it and this one does not is deleted
      */
     static void write(SortedMap<String, PackPages.Precompiled> pages, Path directory) throws IOException {
-        Files.createDirectories(directory)
+        // the classes are all of the one package of the pages
+        String prefix = "${PrecompiledPackPages.PACKAGE}."
+        Path ofPackage = Files.createDirectories(directory.resolve(PrecompiledPackPages.PACKAGE.replace('.', '/')))
         Set<String> written = new HashSet<>()
         Map<String, String> sources = new TreeMap<>()
         pages.each { String key, PackPages.Precompiled page ->
             sources.put(key, page.source)
             page.classes.each { String name, byte[] bytes ->
-                String file = "${name}.class"
-                Files.write(directory.resolve(file), bytes)
+                if (!name.startsWith(prefix) || name.substring(prefix.length()).contains('.')) {
+                    throw new IllegalStateException("The class ${name} of a page is not of the package ${PrecompiledPackPages.PACKAGE}")
+                }
+                String file = "${name.substring(prefix.length())}.class"
+                Files.write(ofPackage.resolve(file), bytes)
                 written << file
             }
         }
-        try (DirectoryStream<Path> earlier = Files.newDirectoryStream(directory, "${PrecompiledPackPages.CLASS_PREFIX}*.class")) {
-            for (Path each : earlier) {
-                if (!written.contains(each.fileName.toString())) {
-                    Files.delete(each)
+        // in the package, and in the directory itself, where an earlier form of this wrote its classes
+        for (Path place : [ofPackage, directory]) {
+            try (DirectoryStream<Path> earlier = Files.newDirectoryStream(place, "${PrecompiledPackPages.CLASS_PREFIX}*.class")) {
+                for (Path each : earlier) {
+                    if (place != ofPackage || !written.contains(each.fileName.toString())) {
+                        Files.delete(each)
+                    }
                 }
             }
         }
