@@ -364,7 +364,7 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
 
     /**
      * Applies the join types requested with {@link #join(String, JoinType)}. This happens once the
-     * criteria are built, so that an association that the criteria join themselves keeps that join.
+     * criteria are built, so that the requested type also applies to a join created by a block or alias.
      */
     private void applyRequestedJoinTypes() {
         for (Map.Entry<String, JoinType> requestedJoinType : requestedJoinTypes.entrySet()) {
@@ -1906,6 +1906,12 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
                 orderEntries = new ArrayList<>();
                 invokeClosureNode(args[1]);
                 listArguments = applyFetchArgument((Map) args[0]);
+                if (listArguments.containsKey(HibernateQueryConstants.ARGUMENT_MAX)) {
+                    criteria.setMaxResults(conversionService.convert(listArguments.get(HibernateQueryConstants.ARGUMENT_MAX), Integer.class));
+                }
+                if (listArguments.containsKey(HibernateQueryConstants.ARGUMENT_OFFSET)) {
+                    criteria.setFirstResult(conversionService.convert(listArguments.get(HibernateQueryConstants.ARGUMENT_OFFSET), Integer.class));
+                }
             }
             else {
                 invokeClosureNode(args[0]);

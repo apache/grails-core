@@ -31,7 +31,6 @@ import org.hibernate.FlushMode
 import org.hibernate.LockMode
 import org.hibernate.Session
 import org.hibernate.SessionFactory
-
 import org.hibernate.query.Query
 
 import org.springframework.core.convert.ConversionService
