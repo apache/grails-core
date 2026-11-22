@@ -21,6 +21,8 @@ package org.grails.plugin.hibernate.support
 import grails.gorm.annotation.Entity
 import groovy.transform.AutoImplement
 import org.grails.datastore.mapping.core.DatastoreUtils
+import org.grails.datastore.mapping.core.connections.ConnectionSource
+import org.grails.datastore.mapping.core.connections.ConnectionSources
 import org.grails.orm.hibernate.HibernateDatastore
 import org.hibernate.FlushMode
 import org.hibernate.HibernateException
@@ -204,12 +206,11 @@ class MultiDataSourceSessionSpec extends Specification {
     def "a request whose session for a later datasource fails to be set up with #failure.class.simpleName closes it, and the sessions opened before"() {
         given: "after the secondary datasource, one whose new session refuses its flush mode"
         def interceptor = new GrailsOpenSessionInViewInterceptor()
-        interceptor.setHibernateDatastore(datastore)
         SessionFactory secondarySf = datastore.getDatastoreForConnection('secondary').sessionFactory
         // Groovy classes, not Spock mocks or coerced maps, whose proxies would wrap a checked exception
         FakeSession refusingSession = new FakeSession(failure: failure)
         SessionFactory refusingSf = new FakeSessionFactory(session: refusingSession)
-        addAdditionalSessionFactory(interceptor, 'refusing', refusingSf)
+        interceptor.setHibernateDatastore(datastoreWith(datastore.sessionFactory, secondary: datastore.getDatastoreForConnection('secondary').sessionFactory, refusing: refusingSf))
 
         when:
         interceptor.preHandle(webRequest())
@@ -229,12 +230,11 @@ class MultiDataSourceSessionSpec extends Specification {
     def "a request whose session for a later datasource fails to open with a checked exception releases the sessions opened before"() {
         given: "after the secondary datasource, one whose session factory throws a checked exception as it opens a session"
         def interceptor = new GrailsOpenSessionInViewInterceptor()
-        interceptor.setHibernateDatastore(datastore)
         SessionFactory secondarySf = datastore.getDatastoreForConnection('secondary').sessionFactory
         IOException failure = new IOException('cannot open')
         // a Groovy class, not a Spock stub or a coerced map, whose proxy would wrap a checked exception
         SessionFactory failingSf = new FakeSessionFactory(failure: failure)
-        addAdditionalSessionFactory(interceptor, 'failing', failingSf)
+        interceptor.setHibernateDatastore(datastoreWith(datastore.sessionFactory, secondary: datastore.getDatastoreForConnection('secondary').sessionFactory, failing: failingSf))
 
         when:
         interceptor.preHandle(webRequest())
@@ -305,15 +305,12 @@ class MultiDataSourceSessionSpec extends Specification {
     def "a request that fails after joining one factory's session and opening another's, that prints the same, releases only the one it opened"() {
         given: "a session bound before the request, a factory that prints as its factory does, and one after them that cannot open"
         def interceptor = new GrailsOpenSessionInViewInterceptor()
-        interceptor.setHibernateDatastore(datastore)
         FakeSession boundBefore = new FakeSession()
         SessionFactory boundSf = new FakeSessionFactory(printed: 'sessionFactory')
         FakeSession opened = new FakeSession()
         SessionFactory lookalikeSf = new FakeSessionFactory(session: opened, printed: 'sessionFactory')
         SessionFactory failingSf = new FakeSessionFactory(failure: new IllegalStateException('cannot open'))
-        addAdditionalSessionFactory(interceptor, 'bound', boundSf)
-        addAdditionalSessionFactory(interceptor, 'lookalike', lookalikeSf)
-        addAdditionalSessionFactory(interceptor, 'failing', failingSf)
+        interceptor.setHibernateDatastore(datastoreWith(datastore.sessionFactory, secondary: datastore.getDatastoreForConnection('secondary').sessionFactory, bound: boundSf, lookalike: lookalikeSf, failing: failingSf))
         TransactionSynchronizationManager.bindResource(boundSf, new SessionHolder(boundBefore))
 
         when:
@@ -334,14 +331,12 @@ class MultiDataSourceSessionSpec extends Specification {
     def "a request that joins one factory's session and opens another's, that prints the same, closes only the one it opened"() {
         given: "a session bound before the request, and a factory that prints as its factory does"
         def interceptor = new GrailsOpenSessionInViewInterceptor()
-        interceptor.setHibernateDatastore(datastore)
         WebRequest webRequest = webRequest()
         FakeSession boundBefore = new FakeSession()
         SessionFactory boundSf = new FakeSessionFactory(printed: 'sessionFactory')
         FakeSession opened = new FakeSession()
         SessionFactory lookalikeSf = new FakeSessionFactory(session: opened, printed: 'sessionFactory')
-        addAdditionalSessionFactory(interceptor, 'bound', boundSf)
-        addAdditionalSessionFactory(interceptor, 'lookalike', lookalikeSf)
+        interceptor.setHibernateDatastore(datastoreWith(datastore.sessionFactory, secondary: datastore.getDatastoreForConnection('secondary').sessionFactory, bound: boundSf, lookalike: lookalikeSf))
         TransactionSynchronizationManager.bindResource(boundSf, new SessionHolder(boundBefore))
 
         when:
@@ -394,16 +389,13 @@ class MultiDataSourceSessionSpec extends Specification {
     def "a request that fails after opening a session that fails to close reports both failures"() {
         given: "a session bound before the request, then a factory whose session fails to close, then one that cannot open"
         def interceptor = new GrailsOpenSessionInViewInterceptor()
-        interceptor.setHibernateDatastore(datastore)
         FakeSession boundBefore = new FakeSession()
         SessionFactory boundSf = new FakeSessionFactory()
         IOException closeFailure = new IOException('cannot close')
         FakeSession unclosable = new FakeSession(closeFailure: closeFailure)
         SessionFactory unclosableSf = new FakeSessionFactory(session: unclosable)
         IllegalStateException failure = new IllegalStateException('cannot open')
-        addAdditionalSessionFactory(interceptor, 'bound', boundSf)
-        addAdditionalSessionFactory(interceptor, 'unclosable', unclosableSf)
-        addAdditionalSessionFactory(interceptor, 'failing', new FakeSessionFactory(failure: failure))
+        interceptor.setHibernateDatastore(datastoreWith(datastore.sessionFactory, secondary: datastore.getDatastoreForConnection('secondary').sessionFactory, bound: boundSf, unclosable: unclosableSf, failing: new FakeSessionFactory(failure: failure)))
         TransactionSynchronizationManager.bindResource(boundSf, new SessionHolder(boundBefore))
 
         when:
@@ -430,9 +422,9 @@ class MultiDataSourceSessionSpec extends Specification {
         IOException closeFailure = new IOException('cannot close')
         FakeSession unclosable = new FakeSession(closeFailure: closeFailure)
         SessionFactory defaultSf = new FakeSessionFactory(session: unclosable)
-        def interceptor = new GrailsOpenSessionInViewInterceptor(sessionFactory: defaultSf)
+        def interceptor = new GrailsOpenSessionInViewInterceptor()
         IllegalStateException failure = new IllegalStateException('cannot open')
-        addAdditionalSessionFactory(interceptor, 'failing', new FakeSessionFactory(failure: failure))
+        interceptor.setHibernateDatastore(datastoreWith(defaultSf, failing: new FakeSessionFactory(failure: failure)))
 
         when:
         interceptor.preHandle(webRequest())
@@ -452,8 +444,8 @@ class MultiDataSourceSessionSpec extends Specification {
         given: "a default session bound before the request, and another datasource whose factory cannot open"
         FakeSession boundBefore = new FakeSession()
         SessionFactory defaultSf = new FakeSessionFactory()
-        def interceptor = new GrailsOpenSessionInViewInterceptor(sessionFactory: defaultSf)
-        addAdditionalSessionFactory(interceptor, 'failing', new FakeSessionFactory(failure: new IllegalStateException('cannot open')))
+        def interceptor = new GrailsOpenSessionInViewInterceptor()
+        interceptor.setHibernateDatastore(datastoreWith(defaultSf, failing: new FakeSessionFactory(failure: new IllegalStateException('cannot open'))))
         TransactionSynchronizationManager.bindResource(defaultSf, new SessionHolder(boundBefore))
 
         when:
@@ -471,11 +463,10 @@ class MultiDataSourceSessionSpec extends Specification {
     def "a request whose session for a later datasource fails to be set up and then to close reports both failures"() {
         given: "after the secondary datasource, one whose new session refuses its flush mode, then fails to close"
         def interceptor = new GrailsOpenSessionInViewInterceptor()
-        interceptor.setHibernateDatastore(datastore)
         IllegalStateException failure = new IllegalStateException('flush mode refused')
         FakeSession refusing = new FakeSession(failure: failure, closeFailure: closeFailure ?: failure)
         SessionFactory refusingSf = new FakeSessionFactory(session: refusing)
-        addAdditionalSessionFactory(interceptor, 'refusing', refusingSf)
+        interceptor.setHibernateDatastore(datastoreWith(datastore.sessionFactory, secondary: datastore.getDatastoreForConnection('secondary').sessionFactory, refusing: refusingSf))
 
         when:
         interceptor.preHandle(webRequest())
@@ -519,11 +510,10 @@ class MultiDataSourceSessionSpec extends Specification {
     def "a request that completes with a session that fails to close does not throw, and leaves it unbound"() {
         given: "another datasource whose session fails to close"
         def interceptor = new GrailsOpenSessionInViewInterceptor()
-        interceptor.setHibernateDatastore(datastore)
         WebRequest webRequest = webRequest()
         FakeSession unclosable = new FakeSession(closeFailure: new IOException('cannot close'))
         SessionFactory unclosableSf = new FakeSessionFactory(session: unclosable)
-        addAdditionalSessionFactory(interceptor, 'unclosable', unclosableSf)
+        interceptor.setHibernateDatastore(datastoreWith(datastore.sessionFactory, secondary: datastore.getDatastoreForConnection('secondary').sessionFactory, unclosable: unclosableSf))
         interceptor.preHandle(webRequest)
 
         when:
@@ -560,9 +550,7 @@ class MultiDataSourceSessionSpec extends Specification {
 
         and: "a request, made asynchronous by Grails, whose change to the secondary book fails its flush"
         def interceptor = new GrailsOpenSessionInViewInterceptor()
-        interceptor.setHibernateDatastore(autoFlush)
-        interceptor.setSessionFactory(defaultSf)
-        addAdditionalSessionFactory(interceptor, 'unclosable', unclosableSf)
+        interceptor.setHibernateDatastore(datastoreWith(defaultSf, secondary: secondarySf, unclosable: unclosableSf))
         WebRequest webRequest = webRequest()
         interceptor.preHandle(webRequest)
         boundSession(secondarySf).get(RefusedSecondaryBook, secondaryId).title = 'Refused'
@@ -887,11 +875,30 @@ class MultiDataSourceSessionSpec extends Specification {
         }
     }
 
-    private static void addAdditionalSessionFactory(GrailsOpenSessionInViewInterceptor interceptor, String name, SessionFactory sessionFactory) {
-        def configClass = Class.forName(GrailsOpenSessionInViewInterceptor.name + '$AdditionalSessionFactoryConfig')
-        def constructor = configClass.getDeclaredConstructor(String, SessionFactory, FlushMode)
-        constructor.accessible = true
-        interceptor.@additionalSessionFactories << constructor.newInstance(name, sessionFactory, FlushMode.AUTO)
+    /**
+     * A datastore whose default session factory and other datasources, in the order given, are the ones given, so that
+     * a fake factory reaches the interceptor through setHibernateDatastore, as a real datasource's does. Each other
+     * datasource flushes in AUTO mode.
+     */
+    private HibernateDatastore datastoreWith(Map<String, SessionFactory> others, SessionFactory defaultFactory) {
+        List<ConnectionSource> stubbedSources = [Stub(ConnectionSource) { getName() >> ConnectionSource.DEFAULT }]
+        Map<String, HibernateDatastore> stubbedChildren = [:]
+        others.each { String childName, SessionFactory childFactory ->
+            stubbedSources << Stub(ConnectionSource) { getName() >> childName }
+            stubbedChildren[childName] = Stub(HibernateDatastore) {
+                isOsivReadOnly() >> false
+                getDefaultFlushModeName() >> 'AUTO'
+                getSessionFactory() >> childFactory
+            }
+        }
+        ConnectionSources stubbedConnectionSources = Stub(ConnectionSources) { getAllConnectionSources() >> stubbedSources }
+        Stub(HibernateDatastore) {
+            isOsivReadOnly() >> false
+            getDefaultFlushModeName() >> 'COMMIT'
+            getSessionFactory() >> defaultFactory
+            getConnectionSources() >> stubbedConnectionSources
+            getDatastoreForConnection(_ as String) >> { String childName -> stubbedChildren[childName] }
+        }
     }
 
     private WebRequest webRequest() {
