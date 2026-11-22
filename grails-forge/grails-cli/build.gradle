@@ -191,6 +191,17 @@ cliStartScripts.configure { CreateStartScripts t ->
     CommandLineStartScripts.compileForShortRuns(t, 'GRAILS_OPTS')
 }
 
+// PreloadClassesSpec holds the lists of the classes the command line loads ahead, which are files of the sources of
+// grails-forge-cli, to what the jar loads; with FORGE_UPDATE_PRELOAD=true it writes them anew.
+tasks.named('test', Test).configure { Test it ->
+    Directory resources = rootProject.project(':grails-forge-cli').layout.projectDirectory.dir('src/main/resources')
+    it.inputs.files(resources.dir('META-INF/grails-forge-cli').asFileTree.matching { include 'preload-classes*' })
+            .withPropertyName('preloadClasses').withPathSensitivity(PathSensitivity.RELATIVE)
+    it.inputs.property('updatePreloadClasses', providers.environmentVariable('FORGE_UPDATE_PRELOAD').orElse(''))
+    String resourcesPath = resources.asFile.absolutePath
+    it.jvmArgumentProviders.add({ ["-Dgrails.cli.preload.sources=${resourcesPath}".toString()] } as CommandLineArgumentProvider)
+}
+
 // StartScriptsSpec starts the scripts this build generates. Their content is the input; where they are is not.
 tasks.named('test', Test).configure { Test it ->
     it.inputs.files(cliStartScripts).withPropertyName('cliScripts').withPathSensitivity(PathSensitivity.NONE)

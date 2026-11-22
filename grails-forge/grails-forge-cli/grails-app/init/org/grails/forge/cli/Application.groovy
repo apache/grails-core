@@ -30,6 +30,7 @@ import grails.boot.config.GrailsAutoConfiguration
 import grails.util.Environment
 import org.apache.grails.core.plugins.DefaultPluginDiscovery
 import org.apache.grails.core.plugins.PluginDiscovery
+import org.apache.grails.forge.cli.StartupPreload
 import org.apache.grails.forge.cli.console.GradleBuild
 import org.grails.forge.ForgeGrailsPlugin
 import org.grails.plugins.CoreGrailsPlugin
@@ -49,6 +50,8 @@ import org.grails.plugins.CoreGrailsPlugin
 class Application extends GrailsAutoConfiguration {
 
     static void main(String[] args) {
+        // first: the classes the command is about to load are loaded beside it from here on, see StartupPreload
+        StartupPreload.start(Application.classLoader, args)
         // Gradle is given the output of the process for as long as it is the output of the CLI
         GradleBuild.outputOfProcess(System.out, System.err)
         System.exit(ForgeCli.run(args))
