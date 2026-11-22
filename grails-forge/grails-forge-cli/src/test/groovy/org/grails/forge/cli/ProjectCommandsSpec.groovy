@@ -550,7 +550,7 @@ class ProjectCommandsSpec extends Specification {
         gradleInvocations()*.get(5) == ['generateCommandManifest', 'runCommand']
 
         where:
-        [pluginDir, path, appInSubproject] << [['plugins/audit', '.modules/audit', 'bin'],
+        [pluginDir, path, appInSubproject] << [['plugins/audit', '.modules/audit', 'bin', 'src', 'src/plugins/audit'],
                                                ['src/main/groovy/com/acme/AuditService.groovy',
                                                 'grails-app/services/com/acme/AuditService.groovy',
                                                 'src/main/java/com/acme/AuditService.java',
