@@ -460,7 +460,8 @@ class RunAppReadinessSpec extends CommandSpec {
 
         then: 'what it ended is said, and what it could not see is not claimed'
         stopped == 0
-        out.toString().readLines().take(2) == ['| Stopping application...',
+        // of what the command says: the shell of the wrapper may say between the lines that its child was ended
+        out.toString().readLines().findAll { String line -> line.startsWith('| ') }.take(2) == ['| Stopping application...',
                 "| Gradle was stopped. Nothing took connections on port ${port} yet, so the end of the application was not seen there: an application that was starting is ended with its build.".toString()]
         !command.alive
         exit.get() == 0
