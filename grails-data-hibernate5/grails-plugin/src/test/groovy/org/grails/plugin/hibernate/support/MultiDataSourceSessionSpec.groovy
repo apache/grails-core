@@ -24,9 +24,11 @@ import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.core.connections.ConnectionSources
 import org.grails.orm.hibernate.HibernateDatastore
 import org.hibernate.FlushMode
+import org.hibernate.HibernateException
 import org.hibernate.Session
 import org.hibernate.SessionFactory
 import org.hibernate.dialect.H2Dialect
+import org.springframework.dao.DataAccessResourceFailureException
 import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.mock.web.MockHttpServletResponse
 import org.springframework.orm.hibernate5.SessionHolder
@@ -233,6 +235,28 @@ class MultiDataSourceSessionSpec extends Specification {
         !TransactionSynchronizationManager.hasResource(refusingSf)
         !TransactionSynchronizationManager.hasResource(secondarySf)
         !TransactionSynchronizationManager.hasResource(datastore.sessionFactory)
+    }
+
+    def "a request whose default session refuses the flush mode the parent class sets closes it"() {
+        given: "a default session factory whose new session refuses the MANUAL flush mode"
+        Session refusingSession = Mock(Session) {
+            isOpen() >> true
+            setHibernateFlushMode(FlushMode.MANUAL) >> { throw new HibernateException('flush mode refused') }
+        }
+        SessionFactory refusingSf = Stub(SessionFactory) {
+            openSession() >> refusingSession
+        }
+        def interceptor = new GrailsOpenSessionInViewInterceptor()
+        interceptor.setHibernateDatastore(datastoreWith(refusingSf, [:]))
+
+        when:
+        interceptor.preHandle(webRequest())
+
+        then: "the failure is thrown as the parent class throws it, and the session is closed and not bound"
+        DataAccessResourceFailureException failure = thrown()
+        failure.cause instanceof HibernateException
+        1 * refusingSession.close()
+        !TransactionSynchronizationManager.hasResource(refusingSf)
     }
 
     def "a request whose default session fails to be set up closes it"() {

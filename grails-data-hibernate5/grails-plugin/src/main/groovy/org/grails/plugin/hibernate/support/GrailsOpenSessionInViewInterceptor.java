@@ -26,6 +26,7 @@ import jakarta.servlet.AsyncListener;
 import jakarta.servlet.http.HttpServletRequest;
 
 import org.hibernate.FlushMode;
+import org.hibernate.HibernateException;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.engine.spi.SharedSessionContractImplementor;
@@ -37,6 +38,7 @@ import org.springframework.orm.hibernate5.SessionHolder;
 import org.springframework.orm.hibernate5.support.OpenSessionInViewInterceptor;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.ui.ModelMap;
+import org.springframework.util.Assert;
 import org.springframework.util.ReflectionUtils;
 import org.springframework.web.context.request.NativeWebRequest;
 import org.springframework.web.context.request.WebRequest;
@@ -87,10 +89,29 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
         }
     }
 
+    /**
+     * Opens the default session as the parent class does, then applies the flush mode configured for the request. The
+     * parent class's own does not close the session it opened when setting its flush mode fails, so this one does not
+     * call it.
+     */
     @Override
     protected Session openSession() throws DataAccessResourceFailureException {
-        Session session = super.openSession();
+        SessionFactory sessionFactory = getSessionFactory();
+        Assert.state(sessionFactory != null, "No SessionFactory set");
+        Session session;
         try {
+            session = sessionFactory.openSession();
+        }
+        catch (HibernateException ex) {
+            throw new DataAccessResourceFailureException("Could not open Hibernate Session", ex);
+        }
+        try {
+            try {
+                session.setHibernateFlushMode(FlushMode.MANUAL);
+            }
+            catch (HibernateException ex) {
+                throw new DataAccessResourceFailureException("Could not open Hibernate Session", ex);
+            }
             applyFlushMode(session);
         }
         catch (RuntimeException | Error ex) {
