@@ -416,7 +416,9 @@ class GrailsContentNegotiationStrategy {
      * {@code application/problem+xml} where no configured type names it, since Grails reads that problem type as
      * {@code application/xml}: they come ahead of it, as the more specific types, each one later in the header in front
      * of those before it, as Grails 9 orders them. Such an unconfigured {@code application/problem+xml} is one of the
-     * XML types, so it is not moved ahead of another, and the order is the same however often it is applied.
+     * XML types, so it is not moved ahead of another. A type the header lists more than once is moved from its own
+     * place, so no {@code +xml} type of the quality of the XML type is left behind it, and the order is the same however
+     * often it is applied.
      *
      * @param mediaTypes the media types in Spring MVC's order
      * @return the media types in the order Grails reads them
@@ -432,10 +434,12 @@ class GrailsContentNegotiationStrategy {
         }
         double quality = mediaTypes[xml].qualityValue
         List<MediaType> ordered = new ArrayList<>(mediaTypes)
-        for (MediaType mediaType in mediaTypes.subList(xml + 1, mediaTypes.size())) {
+        for (int i = xml + 1; i < mediaTypes.size(); i++) {
+            MediaType mediaType = mediaTypes[i]
             if (mediaType.subtypeSuffix?.equalsIgnoreCase('xml') && mediaType.qualityValue >= quality &&
                     !isXmlType(mediaType, problemXmlAsXml)) {
-                ordered.remove(mediaType)
+                // still at i: each type moved before it was taken from between the XML type and i and put at the XML type
+                ordered.removeAt(i)
                 ordered.add(xml, mediaType)
             }
         }

@@ -339,6 +339,8 @@ class SpringFormatNegotiationSpec extends Specification {
         'application/json, application/atom+xml'                  || ['json', 'atom']           | ['application/json', 'application/atom+xml']
         'application/problem+xml, application/atom+xml'           || ['atom', 'xml']            | ['application/atom+xml', 'application/problem+xml']
         'application/problem+xml;q=0.5, application/atom+xml;q=0.4' || ['xml', 'atom']          | ['application/problem+xml;q=0.5', 'application/atom+xml;q=0.4']
+        'application/atom+xml, application/xml, application/atom+xml' || ['atom', 'xml']        | ['application/atom+xml', 'application/atom+xml', 'application/xml']
+        'application/xml, application/atom+xml, application/atom+xml' || ['atom', 'xml']        | ['application/atom+xml', 'application/atom+xml', 'application/xml']
     }
 
     void 'a problem type grails.mime.types names keeps the order of the header, as a format of its own, for Grails and for what Spring MVC writes'() {
@@ -371,6 +373,8 @@ class SpringFormatNegotiationSpec extends Specification {
         'text/xml, application/atom+xml, application/problem+xml'          || 'atom' | ['application/atom+xml', 'text/xml', 'application/problem+xml']
         'application/xml, application/problem+xml'                         || 'xml'  | ['application/xml', 'application/problem+xml']
         'application/problem+xml, application/xml, application/atom+xml'   || 'atom' | ['application/atom+xml', 'application/problem+xml', 'application/xml']
+        'application/atom+xml, application/problem+xml, application/atom+xml' || 'atom' | ['application/atom+xml', 'application/atom+xml', 'application/problem+xml']
+        'application/problem+xml, application/atom+xml, application/atom+xml' || 'atom' | ['application/atom+xml', 'application/atom+xml', 'application/problem+xml']
     }
 
     void 'a wildcard is of the all format, which withFormat answers with the first block compatible with it: #result for #accept'() {
