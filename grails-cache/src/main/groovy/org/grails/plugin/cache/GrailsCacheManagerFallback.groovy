@@ -21,12 +21,14 @@ package org.grails.plugin.cache
 import java.lang.ref.Reference
 import java.lang.ref.ReferenceQueue
 import java.lang.ref.WeakReference
+import java.lang.reflect.Field
 import java.util.concurrent.ConcurrentHashMap
 
 import groovy.transform.CompileStatic
 
 import org.springframework.beans.BeansException
 import org.springframework.beans.factory.BeanFactory
+import org.springframework.beans.factory.BeanFactoryUtils
 import org.springframework.beans.factory.BeanFactoryAware
 import org.springframework.beans.factory.config.BeanDefinitionHolder
 import org.springframework.beans.factory.config.BeanFactoryPostProcessor
@@ -36,6 +38,7 @@ import org.springframework.beans.factory.support.AutowireCandidateResolver
 import org.springframework.beans.factory.support.DefaultListableBeanFactory
 import org.springframework.cache.CacheManager
 import org.springframework.core.ResolvableType
+import org.springframework.util.ReflectionUtils
 
 /**
  * Gives a cache-aware class the cache manager named {@code grailsCacheManager} where Spring cannot choose
@@ -47,8 +50,15 @@ import org.springframework.core.ResolvableType
  * the class that implements it, so no bean matched, and the application failed to start.</p>
  *
  * <p>This wraps the bean factory's autowire candidate resolver. Spring asks the resolver, before it
- * resolves a dependency, for a proxy to inject in its place; for the trait's field the resolver answers
- * with the field's resolution itself. It is Spring's own, for the bean being injected, with one change:
+ * resolves a dependency, for a proxy to inject in its place. For the trait's field, where Spring would
+ * find both {@code grailsCacheManager} and another cache manager bean it may inject, which is the only
+ * arrangement in which it can fail to choose with {@code grailsCacheManager} among them, the resolver
+ * answers with the field's resolution itself; everywhere else it leaves the resolution, and all that goes
+ * with it, to Spring. Telling the two apart reads the bean names and definitions that Spring's own lookup
+ * of candidates reads first, and creates nothing that lookup does not. Where a cache manager is
+ * registered as a resolvable dependency, which no bean definition shows and which Spring asks for in
+ * every lookup, the field is left to Spring too, as in 8.0.0. The resolution is Spring's own, for the bean
+ * being injected, with one change:
  * where Spring would fail because it cannot choose, and {@code grailsCacheManager} is one of the cache
  * managers it cannot choose between, it takes {@code grailsCacheManager}, unless that resolves to null.
  * Everywhere else Spring chooses as it did: the only cache manager, the one marked primary or the one
@@ -64,10 +74,10 @@ import org.springframework.core.ResolvableType
  * did. Where the cache manager remembered fails, the field is resolved again, as Spring resolves it
  * again.</p>
  *
- * <p>Where the field resolves to nothing, the resolver cannot answer with that, and Spring resolves the
- * field once more. That resolution finds no candidate, as the resolver answers that none is one for the
- * injection point it has just resolved, so nothing is created again and the field stays empty, as with
- * Spring's own single resolution.</p>
+ * <p>Where the field the resolver resolved resolves to nothing, the resolver cannot answer with that, and
+ * Spring resolves the field once more. That resolution finds no bean, as the resolver answers that none is
+ * a candidate for the injection point it has just resolved, so no bean is created again and the field
+ * stays empty, as with Spring's own single resolution.</p>
  *
  * @since 8.0.1
  */
@@ -86,6 +96,23 @@ class GrailsCacheManagerFallback implements BeanFactoryPostProcessor {
             if (!(listable.autowireCandidateResolver instanceof CandidateResolver)) {
                 listable.autowireCandidateResolver = new CandidateResolver(listable.autowireCandidateResolver)
             }
+        }
+    }
+
+    /** The dependencies a bean factory has registered as resolvable, by the type they are registered for. */
+    private static final Field RESOLVABLE_DEPENDENCIES = resolvableDependenciesField()
+
+    private static Field resolvableDependenciesField() {
+        try {
+            Field field = ReflectionUtils.findField(DefaultListableBeanFactory, 'resolvableDependencies', Map)
+            if (field != null) {
+                ReflectionUtils.makeAccessible(field)
+            }
+            return field
+        }
+        catch (RuntimeException ignored) {
+            // where the field cannot be read, no resolvable cache manager is taken to be registered
+            return null
         }
     }
 
@@ -137,16 +164,12 @@ class GrailsCacheManagerFallback implements BeanFactoryPostProcessor {
         @Override
         Object getLazyResolutionProxyIfNecessary(DependencyDescriptor descriptor, String beanName) {
             Object proxy = delegate.getLazyResolutionProxyIfNecessary(descriptor, beanName)
-            if (proxy != null || beanFactory == null || descriptor instanceof FallbackDescriptor ||
-                    descriptor instanceof RememberedDescriptor || !isTraitField(descriptor)) {
+            // Spring's own kinds of injection point, such as the shortcut its field injection keeps for a
+            // field it resolved, are left to it, and so is every injection point but the trait's field
+            if (proxy != null || beanFactory == null || descriptor.class != DependencyDescriptor || !isTraitField(descriptor)) {
                 return proxy
             }
             resolvedToNothing.remove()
-            Object shortcut = descriptor.resolveShortcut(beanFactory)
-            if (shortcut != null) {
-                // as the first step of Spring's resolution, for an injection point resolved in advance
-                return shortcut
-            }
             forgetCollected()
             InjectionPointKey injectionPoint = new InjectionPointKey(descriptor, null)
             String rememberedName = remembered.get(injectionPoint)
@@ -159,6 +182,9 @@ class GrailsCacheManagerFallback implements BeanFactoryPostProcessor {
                     // as the injection, which resolves the field again where the bean it remembers fails
                     remembered.remove(injectionPoint, rememberedName)
                 }
+            }
+            if (!mayFallBack(descriptor, beanName)) {
+                return null
             }
             FallbackDescriptor fallback = new FallbackDescriptor(descriptor, beanFactory)
             Set<String> autowiredBeanNames = new LinkedHashSet<String>()
@@ -197,6 +223,50 @@ class GrailsCacheManagerFallback implements BeanFactoryPostProcessor {
             nothing != null && (nothing.is(descriptor) ||
                     (descriptor.fallbackMatchAllowed() && descriptor.field != null && descriptor.field == nothing.field &&
                             descriptor.dependencyType == nothing.dependencyType))
+        }
+
+        /**
+         * Whether Spring would find {@code grailsCacheManager} and another bean among the candidates for the
+         * field, where it can fail to choose with {@code grailsCacheManager} among them, and no cache manager
+         * is registered as a resolvable dependency. Spring asks for a resolvable dependency in every lookup of
+         * candidates, also in the one it makes after the resolver's where that found nothing, so the field is
+         * left to Spring alone wherever one may be injected. Reads the bean names and definitions that
+         * Spring's own lookup reads first, and the types the resolvable dependencies are registered for. A
+         * bean that a factory method of the bean being injected makes is counted, which Spring leaves out;
+         * the resolver then resolves the field, as Spring would.
+         */
+        private boolean mayFallBack(DependencyDescriptor descriptor, String beanName) {
+            boolean grails = false
+            boolean other = false
+            String[] names = BeanFactoryUtils.beanNamesForTypeIncludingAncestors(
+                    beanFactory, descriptor.dependencyType, true, descriptor.eager)
+            for (String name : names) {
+                if (name != beanName && beanFactory.isAutowireCandidate(name, descriptor)) {
+                    if (name == CACHE_MANAGER_BEAN_NAME) {
+                        grails = true
+                    }
+                    else {
+                        other = true
+                    }
+                }
+            }
+            grails && other && !resolvableFor(descriptor.dependencyType)
+        }
+
+        /**
+         * Whether a dependency registered as resolvable may be injected as the type, which Spring checks first
+         * when it looks for candidates, and keeps no public record of. Its types are read, and no value is
+         * asked for. Where they cannot be read, none is taken to be: those Spring registers itself are never
+         * cache managers.
+         */
+        private boolean resolvableFor(Class<?> type) {
+            Object registered = RESOLVABLE_DEPENDENCIES == null ? null : ReflectionUtils.getField(RESOLVABLE_DEPENDENCIES, beanFactory)
+            if (!(registered instanceof Map)) {
+                return false
+            }
+            ((Map<?, ?>) registered).keySet().any { Object autowiringType ->
+                autowiringType instanceof Class && ((Class<?>) autowiringType).isAssignableFrom(type)
+            }
         }
 
         /** Drops what was remembered for injection points Spring no longer holds. */
