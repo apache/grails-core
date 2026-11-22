@@ -109,7 +109,7 @@ class PackTemplateApiSpec extends ApplicationContextSpec {
         String table = guide.substring(guide.indexOf('|Name |Value'))
         table = table.substring(0, table.indexOf('|==='))
         // a row is the names, then what they are, with an empty line before it
-        Set<String> ofGuide = table.split(/\n\n/).drop(1)
+        Set<String> ofGuide = table.split(/\r?\n\r?\n/).drop(1)
                 .collectMany { String row -> (row.readLines()[0] =~ /`([\w.]+)`/).collect { List<String> match -> match[1] } } as Set<String>
 
         and: 'the names of the applications that are made up for the check of a pack'

@@ -303,7 +303,8 @@ class CreateSubprojectSpec extends CommandSpec {
 
         then:
         exit == 0
-        out.toString().contains("\"projectDirectory\":\"${shop.path}\"")
+        // as JSON writes it: the backslash of a path of Windows is written twice
+        out.toString().contains("\"projectDirectory\":\"${shop.path.replace('\\', '\\\\')}\"")
     }
 
     private int run(File directory, String... arguments) {

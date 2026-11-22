@@ -714,10 +714,11 @@ class FeatureAdditionSpec extends AbstractFeatureAdditionSpec {
         tree(project) == before
 
         where:
-        where                                    || reason
-        Path.of('?')                             || 'it is not an absolute path'
-        Path.of('')                              || 'it is not an absolute path'
-        Path.of('/no/such/home/directory/there') || 'there is no such directory'
+        // Windows has no path of the name ?, and a path is absolute there only with its drive
+        where                                                      || reason
+        Path.of(File.separator == '/' ? '?' : 'none')              || 'it is not an absolute path'
+        Path.of('')                                                || 'it is not an absolute path'
+        Path.of('/no/such/home/directory/there').toAbsolutePath()  || 'there is no such directory'
     }
 
     @IgnoreIf({ os.windows })

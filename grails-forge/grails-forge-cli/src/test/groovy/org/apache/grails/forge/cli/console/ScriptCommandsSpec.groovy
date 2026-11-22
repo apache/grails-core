@@ -512,7 +512,10 @@ class ScriptCommandsSpec extends CommandSpec implements CommandFixture {
         given:
         catalog([])
         script('report.groovy')
-        new File(dir, 'src/main/scripts/@|red x|@.groovy').text = MARKER
+        // where a file can have the name: Windows has no file with a | in its name
+        if (File.separatorChar != ('\\' as char)) {
+            new File(dir, 'src/main/scripts/@|red x|@.groovy').text = MARKER
+        }
 
         when:
         int exit = ForgeCli.execute(beanContext, 'create-app', '--help')

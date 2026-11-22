@@ -1533,10 +1533,12 @@ class ArtefactCommandsSpec extends CommandSpec implements CommandFixture {
     // everything the directory holds, the record of the project too: what each entry is, its mode, its size and its content
     private Map<String, List> tree() {
         Map<String, List> tree = new TreeMap<>()
+        // a file system without modes, as that of Windows, has none to compare
+        boolean posix = dir.toPath().fileSystem.supportedFileAttributeViews().contains('posix')
         dir.eachFileRecurse { File each ->
             String path = dir.toPath().relativize(each.toPath()).toString().replace(File.separator, '/')
             tree[path] = [each.directory ? 'directory' : Files.isSymbolicLink(each.toPath()) ? 'link' : 'file',
-                          PosixFilePermissions.toString(Files.getPosixFilePermissions(each.toPath())),
+                          posix ? PosixFilePermissions.toString(Files.getPosixFilePermissions(each.toPath())) : '',
                           each.directory ? 0L : each.length(), each.directory ? 0 : Arrays.hashCode(each.bytes)]
         }
         return tree

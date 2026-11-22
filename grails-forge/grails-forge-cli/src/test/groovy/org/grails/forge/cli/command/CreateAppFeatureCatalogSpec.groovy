@@ -18,8 +18,10 @@
  */
 package org.grails.forge.cli.command
 
+import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.attribute.FileAttribute
 import java.nio.file.attribute.FileTime
 import java.nio.file.attribute.PosixFilePermissions
 import java.security.MessageDigest
@@ -91,6 +93,12 @@ class CreateAppFeatureCatalogSpec extends CommandSpec implements CommandFixture 
         System.setErr(originalErr)
         repository.deleteDir()
         work.deleteDir()
+    }
+
+    // the directory of the copies as the command makes it: for the user alone, where the file system has modes
+    private void ownCopies() {
+        boolean posix = FileSystems.default.supportedFileAttributeViews().contains('posix')
+        Files.createDirectories(copies, (posix ? [PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString('rwx------'))] : []) as FileAttribute<?>[])
     }
 
     void "an application is created with the feature a catalog has a plugin for, as it is with the coordinates of the plugin"() {
@@ -202,7 +210,7 @@ class CreateAppFeatureCatalogSpec extends CommandSpec implements CommandFixture 
         given:
         File jar = publish(COORDINATES)
         byte[] document = json([plugin(PLUGIN, ['2.3.0': pack(jar)])]).getBytes('UTF-8')
-        Files.createDirectories(copies, PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString('rwx------')))
+        ownCopies()
         Path copy = copies.resolve(digest(HOSTED.getBytes('UTF-8')) + '.json')
         Files.write(copy, document)
         Files.setLastModifiedTime(copy, FileTime.from(Instant.parse('2026-01-02T03:04:05Z')))
@@ -241,7 +249,7 @@ class CreateAppFeatureCatalogSpec extends CommandSpec implements CommandFixture 
         asked.isEmpty()
 
         when:
-        Files.createDirectories(copies, PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString('rwx------')))
+        ownCopies()
         Path copy = copies.resolve(digest(HOSTED.getBytes('UTF-8')) + '.json')
         Files.write(copy, document)
         Files.setLastModifiedTime(copy, FileTime.from(Instant.parse('2026-01-02T03:04:05Z')))
@@ -275,7 +283,7 @@ class CreateAppFeatureCatalogSpec extends CommandSpec implements CommandFixture 
         given:
         File jar = publish(COORDINATES)
         byte[] document = json([plugin(PLUGIN, ['2.3.0': pack(jar)])]).getBytes('UTF-8')
-        Files.createDirectories(copies, PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString('rwx------')))
+        ownCopies()
         Path copy = copies.resolve(digest(HOSTED.getBytes('UTF-8')) + '.json')
         Files.write(copy, '[[[[[[[[[[[[[[[['.getBytes('UTF-8'))
         answers[HOSTED] = { new Reply(200, null, new ByteArrayInputStream(document)) }
@@ -1654,7 +1662,7 @@ class CreateAppFeatureCatalogSpec extends CommandSpec implements CommandFixture 
         File jar = publish(COORDINATES)
         byte[] document = json([plugin(PLUGIN, ['2.3.0': pack(jar)])]).getBytes('UTF-8')
         answers[HOSTED] = { new Reply(200, null, new ByteArrayInputStream(document)) }
-        Files.createDirectories(copies, PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString('rwx------')))
+        ownCopies()
         Path old = Files.write(copies.resolve('catalog123.tmp'), 'half'.bytes)
         Files.setLastModifiedTime(old, FileTime.from(Instant.now() - Duration.ofHours(2)))
         Path fresh = Files.write(copies.resolve('catalog456.tmp'), 'half'.bytes)
@@ -1678,7 +1686,7 @@ class CreateAppFeatureCatalogSpec extends CommandSpec implements CommandFixture 
         given: 'a copy of the catalog, under a .grails that the group of the user can write to, as a umask of 002 leaves it'
         File jar = publish(COORDINATES)
         byte[] document = json([plugin(PLUGIN, ['2.3.0': pack(jar)])]).getBytes('UTF-8')
-        Files.createDirectories(copies, PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString('rwx------')))
+        ownCopies()
         Files.write(copies.resolve(digest(HOSTED.getBytes('UTF-8')) + '.json'), document)
         Files.setPosixFilePermissions(copies.parent.parent, PosixFilePermissions.fromString('rwxrwxr-x'))
 

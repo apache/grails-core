@@ -223,7 +223,7 @@ class FeatureAddCommandSpec extends CommandSpec implements CommandFixture {
 
         then:
         exit == 1
-        out.toString().contains('    conflict build.gradle: the feature changes lines of this file that were changed in the project too, or lines next to them\n' +
+        out.toString().normalize().contains('    conflict build.gradle: the feature changes lines of this file that were changed in the project too, or lines next to them\n' +
                 "             at line ${where + 1} the generated file had no lines\n" +
                 '             the project has 1 line there:\n' +
                 '                     implementation "com.acme:mine:1.0"\n' +
@@ -462,7 +462,7 @@ class FeatureAddCommandSpec extends CommandSpec implements CommandFixture {
         then: 'the command says what it replaced'
         exit == 0
         err.toString().isEmpty()
-        out.toString().contains("    ${added} replaces ${replaced}, the default of the group ${group}\n")
+        out.toString().normalize().contains("    ${added} replaces ${replaced}, the default of the group ${group}\n")
         out.toString().contains("Feature ${added} added, in the place of ${replaced}")
         out.toString().contains('. Commit the changes together with the directory .grails')
 
@@ -523,7 +523,7 @@ class FeatureAddCommandSpec extends CommandSpec implements CommandFixture {
 
         then:
         exit == 0
-        out.toString().contains('Adding the feature postgres, and with it testcontainers\n' +
+        out.toString().normalize().contains('Adding the feature postgres, and with it testcontainers\n' +
                 '    postgres replaces h2, the default of the group database-driver\n' +
                 '    update   README.md\n' +
                 '    update   build.gradle\n' +
@@ -655,7 +655,7 @@ class FeatureAddCommandSpec extends CommandSpec implements CommandFixture {
         then: 'it says what it replaced'
         replacing == 0
         err.toString().isEmpty()
-        out.toString().contains("    ${added} replaces ${asked}, which was asked for by name, in the group ${group}\n")
+        out.toString().normalize().contains("    ${added} replaces ${asked}, which was asked for by name, in the group ${group}\n")
         out.toString().contains("Feature ${added} added, in the place of ${asked}")
 
         and: 'every file is the file of the application that was created with the one and not the other, and so is the record'
@@ -744,8 +744,8 @@ class FeatureAddCommandSpec extends CommandSpec implements CommandFixture {
         then:
         replacing == 0
         err.toString().isEmpty()
-        out.toString().contains('    mysql replaces postgres, which was asked for by name, in the group database-driver\n')
-        out.toString().contains('    geb-with-testcontainers replaces geb-with-local-browsers, which was asked for by name, in the group geb\n')
+        out.toString().normalize().contains('    mysql replaces postgres, which was asked for by name, in the group database-driver\n')
+        out.toString().normalize().contains('    geb-with-testcontainers replaces geb-with-local-browsers, which was asked for by name, in the group geb\n')
         tree(dir) == tree(with)
         ProjectState.read(dir.toPath()).manifest.requestedFeatures*.name == ['asciidoctor', 'geb-with-testcontainers', 'grails-quartz', 'mysql']
     }
@@ -765,9 +765,9 @@ class FeatureAddCommandSpec extends CommandSpec implements CommandFixture {
         then:
         exit == 0
         err.toString().isEmpty()
-        out.toString().contains('    h2 replaces postgres, which was asked for by name, in the group database-driver\n')
-        out.toString().contains('    h2 takes out testcontainers, which the application does not have with it in the place of postgres\n')
-        out.toString().contains('    remove   src/test/resources/application-test.yml\n')
+        out.toString().normalize().contains('    h2 replaces postgres, which was asked for by name, in the group database-driver\n')
+        out.toString().normalize().contains('    h2 takes out testcontainers, which the application does not have with it in the place of postgres\n')
+        out.toString().normalize().contains('    remove   src/test/resources/application-test.yml\n')
         !new File(dir, 'src/test/resources/application-test.yml').exists()
         !ProjectState.read(dir.toPath()).lock.featureNames.contains('testcontainers')
         ProjectState.read(dir.toPath()).manifest.requestedFeatures*.name == ['h2']
@@ -864,7 +864,7 @@ class FeatureAddCommandSpec extends CommandSpec implements CommandFixture {
         then:
         exit == 0
         err.toString().isEmpty()
-        out.toString().contains('To add the feature mysql\n' +
+        out.toString().normalize().contains('To add the feature mysql\n' +
                 '    mysql replaces postgres, which was asked for by name, in the group database-driver\n' +
                 '    update   build.gradle\n' +
                 '    update   grails-app/conf/application.yml\n' +
@@ -1124,7 +1124,8 @@ class FeatureAddCommandSpec extends CommandSpec implements CommandFixture {
         given:
         create(dir, CreateAppCommand, [])
         Map<String, String> before = tree(dir)
-        System.setProperty('user.home', '?')
+        // the ? of a user without an entry, where a path can have one: Windows takes no path with a ? in it
+        System.setProperty('user.home', File.separatorChar == ('\\' as char) ? 'no-home' : '?')
 
         when: 'what would be done is still said'
         int preview = add('grails-quartz', '--dry-run')

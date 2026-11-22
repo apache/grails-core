@@ -381,7 +381,8 @@ class PackFixturesSpec extends Specification {
         and: 'the applications resolve from the repositories of the environment, as one of the create commands does'
         ['web', 'plugin'].every { String fixture ->
             String build = Files.readString(output.resolve(fixture).resolve('build.gradle'))
-            build.contains(repository.toString()) && build.contains('https://repo.example.org/maven')
+            // a backslash of the path is written escaped into the string of the build file
+            build.contains(repository.toString().replace('\\', '\\\\')) && build.contains('https://repo.example.org/maven')
         }
 
         and:

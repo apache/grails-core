@@ -910,6 +910,7 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
         line << [['hello-world', 'x'], ['run-command', 'hello-world'], ['gradle', 'build'], ['compile'], ['test-app', '--unit'], ['run-script', 'one.groovy']]
     }
 
+    @IgnoreIf({ os.windows })
     void "after the name of a command of the application --non-interactive is the command's, and console is refused with it as shell is"() {
         given:
         saying()
