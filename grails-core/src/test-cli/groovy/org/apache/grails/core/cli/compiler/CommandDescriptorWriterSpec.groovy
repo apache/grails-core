@@ -18,7 +18,11 @@
  */
 package org.apache.grails.core.cli.compiler
 
+import java.lang.reflect.Modifier
+
 import groovy.json.JsonSlurper
+import org.codehaus.groovy.ast.ClassHelper
+import org.codehaus.groovy.ast.ClassNode
 import org.codehaus.groovy.control.CompilationUnit
 import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.Phases
@@ -115,6 +119,7 @@ class CommandDescriptorWriterSpec extends Specification {
         'more than a constant'       | "String getDescription() { String who = 'someone'; 'Greets ' + who }"
         'a property without a value' | 'String description'
         'a property that is worked out' | "String description = 'Greets ' + System.getProperty('user.name')"
+        'a property that is null'    | 'String description = null'
     }
 
     @Unroll
@@ -305,6 +310,80 @@ class CommandDescriptorWriterSpec extends Specification {
         'on a Grails command'         | "class TailCommand implements org.apache.grails.core.cli.GrailsApplicationCommand, ${STANDALONE} { String description = 'Follows a file'; boolean handle() { true } }"
         'on an interface it has'      | "interface FileCommand extends ${STANDALONE} {}\nclass TailCommand implements ${CONTRACT}, FileCommand { String description = 'Follows a file'; ${HANDLE} }"
         'on a class it extends'       | "abstract class FileCommand implements ${CONTRACT}, ${STANDALONE} { String description = 'Follows a file' }\nclass TailCommand extends FileCommand { ${HANDLE} }"
+    }
+
+    @Unroll
+    def "a name the class can change when an instance is made is not known: #how"() {
+        when:
+        compile('GreetCommand', "class GreetCommand implements ${CONTRACT} { String name = 'say-hello'; GreetCommand() { ${statement} }; ${HANDLE} }")
+
+        then:
+        !descriptorFile('example.GreetCommand').exists()
+        registered() == ['example.GreetCommand']
+
+        where:
+        how                            | statement
+        'its setter is called'         | "setName('other')"
+        'it is assigned through this'  | "this.name = 'other'"
+        'it is added to'               | "name += '-loudly'"
+        'it is assigned in a closure'  | "[1].each { name = 'other' }"
+    }
+
+    @Unroll
+    def "what a constructor does to something else leaves the name what it starts as: #how"() {
+        when:
+        compile('GreetCommand', "class GreetCommand implements ${CONTRACT} { String name = 'say-hello'; String other; List<String> words = ['a']; " +
+                "GreetCommand() { ${statement} }; ${HANDLE} }")
+
+        then:
+        descriptor('example.GreetCommand') == [format: 1, class: 'example.GreetCommand', name: 'say-hello',
+                                               description: 'say-hello', target: 'application']
+
+        where:
+        how                                          | statement
+        'another property is assigned'               | "other = 'x'"
+        'another property is assigned through this'  | "this.other = 'x'"
+        'an element of a list is assigned'           | "words[0] = 'name'"
+        'the setter of another property is called'   | "setOther('name')"
+        'the name is read'                           | "other = name"
+    }
+
+    def "a class whose name a descriptor cannot have gets none, and loses nothing when it is no command any more"() {
+        when: 'a name that is not ASCII, which the reader of a descriptor refuses'
+        compile('GrüßeCommand', "class GrüßeCommand implements ${CONTRACT} { ${HANDLE} }")
+
+        then:
+        registered() == ['example.GrüßeCommand']
+        !new File(targetDirectory, 'META-INF/grails-commands').exists()
+
+        when:
+        compile('GrüßeCommand', 'class GrüßeCommand { }')
+
+        then:
+        noExceptionThrown()
+        !new File(targetDirectory, 'META-INF/grails-commands').exists()
+    }
+
+    def "a class that declares nothing, and has nothing of the command contract in it, is described by the name its class gives"() {
+        given: 'a class as the compiler has it before anything is woven into it'
+        ClassNode plain = new ClassNode('example.ArchiveReportCommand', Modifier.PUBLIC, ClassHelper.OBJECT_TYPE)
+
+        expect:
+        CommandDescriptorWriter.write(plain, targetDirectory)
+        descriptor('example.ArchiveReportCommand') == [format: 1, class: 'example.ArchiveReportCommand', name: 'archive-report',
+                                                       description: 'archive-report', target: 'application']
+
+        when:
+        CommandDescriptorWriter.remove('example.ArchiveReportCommand', targetDirectory)
+
+        then:
+        !descriptorFile('example.ArchiveReportCommand').exists()
+
+        when: 'there is none to remove'
+        CommandDescriptorWriter.remove('example.ArchiveReportCommand', targetDirectory)
+
+        then:
+        noExceptionThrown()
     }
 
     private static final String STANDALONE = 'org.apache.grails.core.cli.StandaloneCommand'
