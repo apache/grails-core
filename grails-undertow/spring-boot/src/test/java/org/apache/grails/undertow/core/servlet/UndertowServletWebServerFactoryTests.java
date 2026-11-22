@@ -328,6 +328,64 @@ class UndertowServletWebServerFactoryTests {
         assertThat(events).containsExactly("errorPage", "onComplete");
     }
 
+    @Test
+    void asynchronousProcessingCompletesOnceAnErrorItsAsynchronousDispatchSentIsAnswered() throws Exception {
+        List<String> events = new CopyOnWriteArrayList<>();
+        UndertowServletWebServerFactory factory = new UndertowServletWebServerFactory(0);
+        this.webServer = factory.getWebServer(dispatchesAsynchronously(), sendsErrorAfterStartingAsync(events, false));
+        this.webServer.start();
+
+        assertThat(getStatus("http://localhost:" + this.webServer.getPort() + "/dispatches")).isEqualTo(503);
+
+        Awaitility.await().untilAsserted(() -> assertThat(events).containsExactly("onComplete"));
+    }
+
+    @Test
+    void asynchronousProcessingCompletesOnceTheErrorPageHasAnsweredAnErrorItsAsynchronousDispatchSent()
+            throws Exception {
+        List<String> events = new CopyOnWriteArrayList<>();
+        UndertowServletWebServerFactory factory = new UndertowServletWebServerFactory(0);
+        factory.addErrorPages(new ErrorPage("/errorPage"));
+        this.webServer = factory.getWebServer(recordingErrorPage(events), dispatchesAsynchronously(),
+            sendsErrorAfterStartingAsync(events, false));
+        this.webServer.start();
+
+        assertThat(getResponse("http://localhost:" + this.webServer.getPort() + "/dispatches")).isEqualTo("Error page");
+
+        Awaitility.await().untilAsserted(() -> assertThat(events).containsExactly("errorPage", "onComplete"));
+    }
+
+    @Test
+    void processingAnAsynchronousDispatchCompletesAfterSendingAnErrorCompletesOnceTheErrorPageHasAnsweredIt()
+            throws Exception {
+        List<String> events = new CopyOnWriteArrayList<>();
+        UndertowServletWebServerFactory factory = new UndertowServletWebServerFactory(0);
+        factory.addErrorPages(new ErrorPage("/errorPage"));
+        this.webServer = factory.getWebServer(recordingErrorPage(events), dispatchesAsynchronously(),
+            sendsErrorAfterStartingAsync(events, true));
+        this.webServer.start();
+
+        assertThat(getResponse("http://localhost:" + this.webServer.getPort() + "/dispatches")).isEqualTo("Error page");
+
+        Awaitility.await().untilAsserted(() -> assertThat(events).containsExactly("errorPage", "onComplete"));
+        Thread.sleep(200);
+        assertThat(events).containsExactly("errorPage", "onComplete");
+    }
+
+    private ServletRegistrationBean<HttpServlet> dispatchesAsynchronously() {
+        ServletRegistrationBean<HttpServlet> registration = new ServletRegistrationBean<>(new HttpServlet() {
+
+            @Override
+            protected void doGet(HttpServletRequest request, HttpServletResponse response) {
+                request.startAsync().dispatch("/sendsError");
+            }
+
+        }, "/dispatches");
+        registration.setName("dispatches");
+        registration.setAsyncSupported(true);
+        return registration;
+    }
+
     private ServletRegistrationBean<HttpServlet> recordingErrorPage(List<String> events) {
         ServletRegistrationBean<HttpServlet> registration = new ServletRegistrationBean<>(new HttpServlet() {
 
