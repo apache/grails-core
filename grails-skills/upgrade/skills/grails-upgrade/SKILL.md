@@ -928,6 +928,7 @@ The shell ran builds through the Gradle Tooling API with a Gradle it chose. `gra
 ## Projects Above the Current Directory, and Multi-Project Builds
 
 - A project found above the current directory is used only when the user who runs `grails` owns it and the directory is not world-writable; otherwise the command exits 1 naming the path. In containers, CI jobs that run as another user, and under `sudo`, either `cd` to the project directory first or set `GRAILS_SAFE_DIRECTORY` to the absolute path of the project (a `PATH`-style list; add the directory of the Gradle wrapper when it is above the project).
+- On Windows only the owner is checked (no access control list is read). Files owned by the Administrators group, as everything created in an elevated prompt is, count as the user's own only in an elevated process of an administrator; from a prompt that is not elevated, `cd` to the project, run elevated, or take ownership (`takeown /r /f <dir>`).
 - In a multi-project Gradle build, run project commands in the directory of the application: `cd apps/shop && grails test-app`. At the root of the build such a command lists the Grails projects and exits 1; there is no option that names the project. `grails gradle <tasks>` works at the root.
 - To add an application to an existing build use `grails create-app <name> --subproject` and add the `include` line it prints to the settings of the build.
 

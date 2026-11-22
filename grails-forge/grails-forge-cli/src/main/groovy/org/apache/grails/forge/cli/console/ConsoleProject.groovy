@@ -44,7 +44,9 @@ import org.apache.grails.forge.core.state.ProjectState
  * owner of the file it is another name of). The same holds for a Gradle wrapper that is not in the
  * directory the command is run in, with the settings beside it and the jar and properties it runs.
  * Owners, modes and link counts are what is looked at: not access control lists, and nothing is held
- * between the look and the run.</p>
+ * between the look and the run. Windows has no modes, and there the owner alone is looked at, as git
+ * does there: whom the access control list of a directory lets write to it is not read, and
+ * {@link ProcessUser} says when what the group of the administrators owns is the user's own.</p>
  *
  * <p>A project can be a part of a larger Gradle build: its directory then has no settings of its own,
  * and the nearest directory above it that has them is the root of the build, which is where Gradle
@@ -527,7 +529,8 @@ final class ConsoleProject {
         } catch (IOException | UnsupportedOperationException | SecurityException ignored) {
             return "the owner of ${GradleRunner.line(path)} cannot be read, so it is not known to be the user who runs the command"
         }
-        return "${GradleRunner.line(path)} is owned by ${GradleRunner.line(owner)}, not by the user who runs the command"
+        String compared = ownedByUser.is(OWNED_BY_USER) ? GradleRunner.line(ProcessUser.current().comparedWith(path)) : ''
+        return "${GradleRunner.line(path)} is owned by ${GradleRunner.line(owner)}, not by the user who runs the command${compared}"
     }
 
     private static boolean isProject(Path directory) {

@@ -71,7 +71,7 @@ final class RunDirectory {
         }
         check(run, LOCATION)
         if (!ConsoleProject.isOwnedByUser(run, project)) {
-            throw new IOException("${LOCATION} is not owned by the user who runs the command")
+            throw new IOException("${LOCATION} is not owned by the user who runs the command${GradleRunner.line(ProcessUser.current().comparedWith(run))}")
         }
         // the command creates it for its owner alone: where others can write, what is in it is not the command's
         if (run.getFileSystem().supportedFileAttributeViews().contains('posix')) {
