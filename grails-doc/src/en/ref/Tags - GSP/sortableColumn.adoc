@@ -57,8 +57,8 @@ Attributes
 
 * `property` - name of the property relating to the field
 * `defaultOrder` (optional) - default order for the property; choose between 'asc' (default if not provided) and 'desc'
-* `title` (optional) - title caption for the column
-* `titleKey` (optional) - title key to use for the column, resolved against the message source
+* `title` (optional) - title caption for the column. It is HTML-encoded; mark a caption that holds markup with `raw()`.
+* `titleKey` (optional) - title key to use for the column, resolved against the message source. The message is written as the message source returns it.
 * `params` (optional) - a Map containing request parameters
 * `action` (optional) - the name of the action to use in the link; if not specified the `list` action will be used
 * `mapping` (optional) - The link:{guidePath}/theWebLayer.html#namedMappings[named URL mapping] to use to rewrite the link
