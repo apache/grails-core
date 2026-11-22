@@ -32,7 +32,7 @@ class MyUserDetails extends User {
 
     MyUserDetails(String username, String password, boolean enabled, boolean accountNonExpired,
                   boolean credentialsNonExpired, boolean accountNonLocked,
-                  Collection<GrantedAuthority> authorities, String email, String telephone) {
+                  Collection<? extends GrantedAuthority> authorities, String email, String telephone) {
 
         super(username, password, enabled, accountNonExpired, credentialsNonExpired,
                 accountNonLocked, authorities)
