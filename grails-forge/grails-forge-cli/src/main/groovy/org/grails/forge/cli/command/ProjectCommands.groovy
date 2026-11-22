@@ -82,6 +82,10 @@ class ProjectCommands {
     /** How the file of a command is named, after the class whose name gives the command its own */
     private static final List<String> COMMAND_FILE_SUFFIXES = ['Command.groovy', 'Command.java']
 
+    /** What makes a directory a project or an included build of the build, when no manifest says which they are */
+    private static final List<String> PROJECT_MARKERS = ['build.gradle', 'build.gradle.kts', 'settings.gradle',
+                                                         'settings.gradle.kts', 'src/main', 'grails-app']
+
     /** What tools write anywhere, sources included */
     private static final List<String> TOOL_FILES = ['node_modules', '.DS_Store']
 
@@ -316,7 +320,7 @@ class ProjectCommands {
         File rootDir = gradle.rootDir
         List<File> projects = []
         projects << projectDir << rootDir
-        projectsBelow(rootDir, projects)
+        projectsBelow(rootDir, rootDir, projects)
         projects = projects.unique()
         List<File> sourceDirectories = [new File(rootDir, 'gradle'), new File(rootDir, 'buildSrc')]
         List<File> commandDirectories = []
@@ -331,27 +335,28 @@ class ProjectCommands {
     }
 
     /**
-     * Adds the directories below the given one that look like projects of the build, with a build file,
-     * main sources or a {@code grails-app} directory, whatever they are named: without a manifest, the
-     * build has not said which projects it has, and a project can be anywhere, such as below a hidden
-     * directory or in one named {@code src}. What builds and tools write and {@code buildSrc}, which is
-     * watched whole, are not searched; links are not followed.
+     * Adds the directories below the given one that look like projects or included builds of the build,
+     * with a build or settings file, main sources or a {@code grails-app} directory, whatever they are
+     * named: without a manifest, the build has not said which projects it has, and a project can be
+     * anywhere, such as below a hidden directory or in one named {@code src}. What builds and tools write
+     * and the {@code buildSrc} of the root, which is watched whole, are not searched; links are not
+     * followed.
      */
-    private static void projectsBelow(File dir, List<File> projects) {
+    private static void projectsBelow(File dir, File rootDir, List<File> projects) {
         File[] children = dir.listFiles()
         if (children == null) {
             return
         }
         for (File child : children.sort(false) { File it -> it.name }) {
-            if (!child.isDirectory() || Files.isSymbolicLink(child.toPath()) || child.name == 'buildSrc') {
+            if (!child.isDirectory() || Files.isSymbolicLink(child.toPath()) ||
+                    (dir == rootDir && child.name == 'buildSrc')) {
                 continue
             }
-            if (new File(child, 'build.gradle').isFile() || new File(child, 'build.gradle.kts').isFile() ||
-                    new File(child, 'src/main').isDirectory() || new File(child, 'grails-app').isDirectory()) {
+            if (PROJECT_MARKERS.any { String marker -> new File(child, marker).exists() }) {
                 projects << child
             }
             if (!(child.name in OUTPUT_DIRS) && !(child.name in TOOL_FILES)) {
-                projectsBelow(child, projects)
+                projectsBelow(child, rootDir, projects)
             }
         }
     }

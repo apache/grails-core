@@ -550,13 +550,39 @@ class ProjectCommandsSpec extends Specification {
         gradleInvocations()*.get(5) == ['generateCommandManifest', 'runCommand']
 
         where:
-        [pluginDir, path, appInSubproject] << [['plugins/audit', '.modules/audit', 'bin', 'src', 'src/plugins/audit'],
+        [pluginDir, path, appInSubproject] << [['plugins/audit', '.modules/audit', 'bin', 'src', 'src/plugins/audit', 'plugins/buildSrc'],
                                                ['src/main/groovy/com/acme/AuditService.groovy',
                                                 'grails-app/services/com/acme/AuditService.groovy',
                                                 'src/main/java/com/acme/AuditService.java',
                                                 'build.gradle'],
                                                [false, true]].combinations()
         layout = appInSubproject ? 'with the application in a project of its own' : 'with the application at the root'
+    }
+
+    void 'the settings file of an included build that broke the build with no manifest yet runs it again once fixed'() {
+        given: 'an included build whose directory holds only its settings file'
+        File settings = new File(dir, 'included/settings.gradle')
+        settings.parentFile.mkdirs()
+
+        when: 'its settings file is changed so that the build fails'
+        settings.text = "include 'broken"
+        new File(dir, 'gradle-exit-code').text = '1'
+        ForgeCli.createCommandLine(context, false)
+        ForgeCli.createCommandLine(context, false)
+
+        then: 'the failed build runs once'
+        gradleInvocations() == [prefix() + MANIFEST_TASK]
+
+        when: 'the settings file is fixed'
+        forgetInvocations()
+        settings.text = "include 'fixed'"
+        new File(dir, 'gradle-exit-code').delete()
+        buildWrites(SECURITY_QUICKSTART)
+        CommandLine commandLine = ForgeCli.createCommandLine(context, false)
+
+        then: 'the build runs again'
+        gradleInvocations() == [prefix() + MANIFEST_TASK]
+        commandLine.subcommands.containsKey('s2-quickstart')
     }
 
     void 'the directories the manifest names are watched, such as those of the other projects of the build'() {
