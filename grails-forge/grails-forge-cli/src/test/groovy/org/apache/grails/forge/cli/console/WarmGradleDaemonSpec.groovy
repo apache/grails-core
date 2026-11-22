@@ -19,7 +19,6 @@
 package org.apache.grails.forge.cli.console
 
 import java.nio.file.Files
-import java.nio.file.StandardCopyOption
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import groovy.json.JsonSlurper
@@ -39,13 +38,12 @@ import spock.util.concurrent.PollingConditions
  * not only by its port.
  *
  * <p>The build needs nothing of Grails: its {@code bootRun} starts a program of one file that
- * answers on the port. The wrapper is the one of this build. The daemon is no daemon of whoever runs
- * the specification: the project keeps its daemons in a registry of its own
- * ({@code org.gradle.daemon.registry.base}), where {@code --status} and {@code --stop} see no other,
- * and gives them a JVM argument no other build has, so no other build is given this daemon and this
- * build no other. The Gradle user home is the one there is, as for the other feature that runs Gradle
- * itself: a user home of its own would have Gradle download its distribution, and a link from one
- * to the distributions there are has the cleanup of that Gradle delete the ones it has not used.</p>
+ * answers on the port. The wrapper is the one of this build, and the daemon is no daemon of whoever
+ * runs the specification: see {@link IsolatedGradle}. The commands run the Gradle wrapper as a process
+ * here, as the build has them do for the tests: what is held to is the Gradle that {@code run-app}
+ * starts and records, which is there when the application is left running and when the environment
+ * variable {@code GRAILS_GRADLE_RUNNER} asks for the wrapper. {@code ToolingApiRunAppSpec} has the same
+ * for a {@code run-app} that stays with the application through the Tooling API.</p>
  */
 @IgnoreIf({ os.windows })
 @Timeout(600)
@@ -89,7 +87,8 @@ class WarmGradleDaemonSpec extends CommandSpec {
     PrintStream originalOut
     PrintStream originalErr
     ByteArrayOutputStream out = new ByteArrayOutputStream()
-    File registry
+    IsolatedGradle isolated = new IsolatedGradle()
+    File registry = isolated.registry
     long daemon
 
     void setup() {
@@ -97,21 +96,9 @@ class WarmGradleDaemonSpec extends CommandSpec {
         originalErr = System.err
         System.setOut(new PrintStream(out, true))
         System.setErr(new PrintStream(out, true))
-        File build = new File(previousUsrDir, '..')
-        Files.copy(new File(build, 'gradlew').toPath(), new File(dir, 'gradlew').toPath(), StandardCopyOption.COPY_ATTRIBUTES)
-        new File(dir, 'gradle/wrapper').mkdirs()
-        new File(build, 'gradle/wrapper').eachFile { File file ->
-            Files.copy(file.toPath(), new File(dir, "gradle/wrapper/${file.name}").toPath())
-        }
-        new File(dir, 'settings.gradle').text = "rootProject.name = 'plain'\n"
-        // a registry of its own, a daemon no other build is given, and one that ends by itself soon when it is left behind all the same
-        registry = Files.createTempDirectory('grailsdaemons').toFile()
-        new File(dir, 'gradle.properties').text = "org.gradle.daemon.registry.base=${registry.canonicalPath}\n" +
-                "org.gradle.jvmargs=-Xmx256m -Dgrails.spec.daemon=${UUID.randomUUID()}\n" +
-                'org.gradle.daemon.idletimeout=120000\n'
+        isolated.project(dir, new File(previousUsrDir, '..'))
         new File(dir, 'build.gradle').text = BUILD
         new File(dir, 'Application.java').text = APPLICATION
-        new File(dir, 'grails-app').mkdirs()
 
         assert gradle('--daemon', 'warm', '-q').exit == 0
         daemon = new File(dir, 'warm-daemon.pid').text.trim() as long
@@ -237,15 +224,7 @@ class WarmGradleDaemonSpec extends CommandSpec {
     }
 
     private Map gradle(String... arguments) {
-        File output = Files.createTempFile(registry.toPath(), 'gradle', '.log').toFile()
-        Process process = new ProcessBuilder([new File(dir, 'gradlew').path] + arguments.toList())
-                .directory(dir).redirectErrorStream(true).redirectOutput(output)
-                .redirectInput(ProcessBuilder.Redirect.from(new File('/dev/null'))).start()
-        if (!process.waitFor(300, TimeUnit.SECONDS)) {
-            process.destroyForcibly()
-            return [exit: -1, output: output.text]
-        }
-        return [exit: process.exitValue(), output: output.text]
+        return isolated.gradle(dir, arguments)
     }
 
     private long pid(String name) {

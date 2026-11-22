@@ -20,6 +20,7 @@ package org.apache.grails.forge.cli.console
 
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.function.Consumer
+import java.util.function.Supplier
 import groovy.transform.CompileStatic
 
 /**
@@ -41,6 +42,19 @@ abstract class GradleBuild {
     /** What a command of the application or a script reads to know that nothing may wait for what a user types. */
     public static final String NON_INTERACTIVE = 'GRAILS_NON_INTERACTIVE'
 
+    /**
+     * The environment variable that says how the commands run Gradle: {@link #PROCESS} for the Gradle
+     * wrapper of the project as a process, every time; {@link #TOOLING_API}, or nothing, for what
+     * {@link #of} decides.
+     */
+    public static final String RUNNER = 'GRAILS_GRADLE_RUNNER'
+
+    /** The value of {@link #RUNNER} that has every command run the Gradle wrapper as a process. */
+    public static final String PROCESS = 'process'
+
+    /** The value of {@link #RUNNER} that says what is the case without it. */
+    public static final String TOOLING_API = 'tooling-api'
+
     /** What Gradle is run for. */
     enum Purpose {
 
@@ -55,6 +69,9 @@ abstract class GradleBuild {
 
     private static final AtomicInteger RUNNING = new AtomicInteger()
 
+    private static final Supplier<String> ENVIRONMENT = { System.getenv(RUNNER) } as Supplier<String>
+
+    private static volatile Supplier<String> runner = ENVIRONMENT
     private static volatile boolean nonInteractive
     private static volatile PrintStream processOut
     private static volatile PrintStream processErr
@@ -62,13 +79,57 @@ abstract class GradleBuild {
     /**
      * The one place that decides what runs Gradle for a command that waits for it.
      *
+     * <ul>
+     * <li>A {@linkplain Purpose#BUILD build the command line asks for itself}, which is {@code compile},
+     * {@code clean}, {@code assemble}, {@code war} and {@code package}, {@code test-app},
+     * {@code dependency-report}, {@code package-plugin}, {@code publish-plugin}, {@code run-command}, a
+     * command of the application by its name, {@code run-script} and a script by its name,
+     * {@code console}, {@code shell} and a {@code run-app} that stays with the application, is run
+     * through the Tooling API of Gradle, see {@link ToolingApiRunner}.</li>
+     * <li>{@linkplain Purpose#PASSED_ON What the user typed for Gradle}, {@code grails gradle ...}, is
+     * run by the Gradle wrapper of the project as a process, see {@link GradleRunner}: it is to be to
+     * Gradle what it is on a command line of its own, and the Tooling API does not take what the
+     * program {@code gradle} reads itself, as {@code --stop}, {@code --status} or {@code --no-daemon}.</li>
+     * <li>Where the environment variable {@link #RUNNER} is {@code process}, the wrapper is run as a
+     * process for every purpose: the way out where a build does not run through the Tooling API.</li>
+     * </ul>
+     *
+     * <p>A build that is left running is no purpose here: see {@link #leftRunning}.</p>
+     *
      * @param purpose what the command runs Gradle for
      * @param failure given the one line that says why the command failed, when it did
      * @param windows whether the project is built on Windows
      * @return what runs the build
      */
     static GradleBuild of(Purpose purpose, Consumer<String> failure, boolean windows) {
-        return new GradleRunner(failure, windows)
+        GradleRunner wrapper = new GradleRunner(failure, windows)
+        String asked = runner.get()
+        if (asked != null && !asked.trim().isEmpty() && !(asked.trim() in [PROCESS, TOOLING_API])) {
+            return new GradleBuild() {
+
+                @Override
+                int run(ConsoleProject project, List<String> arguments, Consumer<GradleBuild.Running> started) {
+                    failure.accept("The environment variable ${RUNNER} says how Gradle is run, and is ${PROCESS} or ${TOOLING_API}: ".toString() +
+                            "${GradleRunner.line(asked.trim())} is neither. Gradle was not run".toString())
+                    return 1
+                }
+            }
+        }
+        if (purpose == Purpose.PASSED_ON || asked?.trim() == PROCESS) {
+            return wrapper
+        }
+        return new ToolingApiRunner(failure, windows, wrapper)
+    }
+
+    /**
+     * Replaces what the environment says of how Gradle is run, for a specification, which cannot
+     * change the environment it runs in.
+     *
+     * @param value what {@link #RUNNER} is taken to be, empty for nothing; {@code null} for what the
+     * environment says
+     */
+    static void setRunner(String value) {
+        runner = value == null ? ENVIRONMENT : ({ value } as Supplier<String>)
     }
 
     /**

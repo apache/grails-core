@@ -133,6 +133,10 @@ tasks.named('test', Test).configure { Test test ->
     test.environment('GRAILS_FORGE_CATALOG', 'none')
     // and so do the specs of list-plugins and plugin-info name their plugin index
     test.environment('GRAILS_PLUGIN_INDEX', 'none')
+    // The specs of the commands hold a command to what it asks of Gradle with a wrapper script that writes down what it
+    // was given, so they have the commands run the wrapper, whatever the environment of whoever runs them says. The specs
+    // of the Tooling API ask for it themselves (GradleBuild.setRunner) and run a build of Gradle itself.
+    test.environment('GRAILS_GRADLE_RUNNER', 'process')
     // BundledPluginsSpec holds the list of the plugins of this release to the plugin classes in the sources of the framework:
     // a project that is added to its build, which is where a new plugin comes from, runs the spec again
     test.inputs.files(rootProject.layout.projectDirectory.file('../settings.gradle'), rootProject.layout.projectDirectory.file('../gradle/publish-root-config.gradle'))
