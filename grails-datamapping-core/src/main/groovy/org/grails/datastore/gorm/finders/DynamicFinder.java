@@ -201,6 +201,12 @@ public abstract class DynamicFinder extends AbstractFinder implements QueryBuild
                             return null;
                         }
                         queryParameters = querySequence.split(operatorInUse);
+                        for (String queryParameter : queryParameters) {
+                            if (endsWithOperator(queryParameter, DEFAULT_OPERATORS)) {
+                                // the other operator ends an expression, as at run time where the finder is refused
+                                return null;
+                            }
+                        }
                         // loop through query parameters and create expressions
                         // calculating the number of arguments required for the expression
                         for (String queryParameter : queryParameters) {
@@ -321,7 +327,7 @@ public abstract class DynamicFinder extends AbstractFinder implements QueryBuild
                     operatorInUse = operators[i];
 
                     queryParameters = querySequence.split(operatorInUse);
-                    rejectTrailingOperator(querySequence, operatorInUse, methodName);
+                    rejectTrailingOperator(querySequence, queryParameters, operatorInUse, operators, methodName);
 
                     // loop through query parameters and create expressions
                     // calculating the number of arguments required for the expression
@@ -770,13 +776,31 @@ public abstract class DynamicFinder extends AbstractFinder implements QueryBuild
 
     /**
      * An operator that joins two expressions needs one after it: {@code split} drops the empty text that follows a last
-     * {@code And} or {@code Or}, so the finder would run as if the operator were not there.
+     * {@code And} or {@code Or}, so the finder would run as if the operator were not there; and an expression that ends with
+     * the other operator would name a property that is not there.
      */
-    private static void rejectTrailingOperator(String querySequence, String operator, String methodName) {
+    private static void rejectTrailingOperator(String querySequence, String[] queryParameters, String operator, String[] operators, String methodName) {
         if (querySequence.endsWith(operator)) {
             throw new IllegalArgumentException("The dynamic finder [" + methodName + "] ends with the [" + operator +
                     "] operator, and no expression follows it. Remove the operator or name the property after it.");
         }
+        for (String queryParameter : queryParameters) {
+            for (String other : operators) {
+                if (queryParameter.endsWith(other)) {
+                    throw new IllegalArgumentException("The dynamic finder [" + methodName + "] has an expression that ends with the [" + other +
+                            "] operator, and no expression follows it. Remove the operator or name the property after it.");
+                }
+            }
+        }
+    }
+
+    private static boolean endsWithOperator(String text, String[] operators) {
+        for (String operator : operators) {
+            if (text.endsWith(operator)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static String calcPropertyName(String queryParameter, String clause) {

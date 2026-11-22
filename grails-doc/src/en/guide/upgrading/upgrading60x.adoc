@@ -1317,5 +1317,6 @@ unsorted, with no error. The finder now throws an `IllegalArgumentException` who
 arguments, which is how a finder is sorted: `findAllByAgeGreaterThan(18, [sort: 'name'])`. Search the application for
 finders that carry an `OrderBy` or other trailing text and move the sort into the arguments. A name that ends with
 `And` or `Or` after another expression, such as `findAllByNameAndAgeInListAnd`, ran as if the last operator were
-absent; it is refused now, and in a data service interface it no longer matches a finder. Remove the operator. Finder
+absent, and one that ends with the other operator, such as `findAllByNameAndAgeOr`, searched a property named `ageOr`;
+both are refused now, and in a data service interface they no longer match a finder. Remove the operator. Finder
 names without trailing text are unchanged.

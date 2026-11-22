@@ -66,6 +66,10 @@ class DynamicFinderTextAfterOperatorSpec extends GrailsDataTckSpec {
         'findAllByNameAndAgeAnd'        | ['Ada', 30]
         'findAllByNameOrAgeOr'          | ['Ada', 30]
         'countByNameAndAgeInListAnd'    | ['Ada', [30]]
+        'findAllByNameAndAgeOr'         | ['Ada', 30]
+        'findAllByNameOrAgeAnd'         | ['Ada', 30]
+        'findAllByNameOrAndAge'         | ['Ada', 30]
+        'countByNameAndAgeOr'           | ['Ada', 30]
     }
 
     void "the sort and order parameters sort a dynamic finder"() {
