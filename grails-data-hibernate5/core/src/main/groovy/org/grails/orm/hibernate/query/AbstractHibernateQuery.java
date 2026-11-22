@@ -41,6 +41,7 @@ import org.hibernate.criterion.CriteriaSpecification;
 import org.hibernate.criterion.DetachedCriteria;
 import org.hibernate.criterion.Projections;
 import org.hibernate.criterion.Restrictions;
+import org.hibernate.criterion.RowCountProjection;
 import org.hibernate.criterion.SimpleExpression;
 import org.hibernate.dialect.Dialect;
 import org.hibernate.dialect.function.SQLFunction;
@@ -819,30 +820,19 @@ public abstract class AbstractHibernateQuery extends Query {
      * the path does not consist of associations only.
      */
     private PersistentEntity getAssociatedEntity(String associationPath) {
-        Association association = getAssociation(associationPath);
-        return association != null ? association.getAssociatedEntity() : null;
-    }
-
-    /**
-     * Returns the association at the end of an association path from the root entity, or null when
-     * the path does not consist of associations only.
-     */
-    private Association getAssociation(String associationPath) {
         String path = associationPath;
         if (alias != null && path.startsWith(alias + '.')) {
             path = path.substring(alias.length() + 1);
         }
         PersistentEntity currentEntity = entity;
-        Association association = null;
         for (String token : path.split("\\.")) {
             PersistentProperty persistentProperty = currentEntity != null ? currentEntity.getPropertyByName(token) : null;
             if (!(persistentProperty instanceof Association)) {
                 return null;
             }
-            association = (Association) persistentProperty;
-            currentEntity = association.getAssociatedEntity();
+            currentEntity = ((Association) persistentProperty).getAssociatedEntity();
         }
-        return association;
+        return currentEntity;
     }
 
     private void addAliasedOrder(Order order, String aliasedProperty) {
@@ -1037,7 +1027,7 @@ public abstract class AbstractHibernateQuery extends Query {
      */
     private void removeOrdersOfRowCount() {
         if (hibernateProjectionList == null || hibernateProjectionList.getHibernateProjectionList().getLength() != 1 ||
-                !(hibernateProjectionList.getHibernateProjectionList().getProjection(0) instanceof org.hibernate.criterion.RowCountProjection) ||
+                !(hibernateProjectionList.getHibernateProjectionList().getProjection(0) instanceof RowCountProjection) ||
                 !(criteria instanceof CriteriaImpl)) {
             return;
         }
