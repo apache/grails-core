@@ -20,6 +20,8 @@ package org.grails.plugin.hibernate.support
 
 import grails.gorm.annotation.Entity
 import org.grails.datastore.mapping.core.DatastoreUtils
+import org.grails.datastore.mapping.core.connections.ConnectionSource
+import org.grails.datastore.mapping.core.connections.ConnectionSources
 import org.grails.orm.hibernate.HibernateDatastore
 import org.hibernate.FlushMode
 import org.hibernate.Session
@@ -205,7 +207,6 @@ class MultiDataSourceSessionSpec extends Specification {
     def "a request whose session for a later datasource fails to be set up closes it, and the sessions opened before"() {
         given: "after the secondary datasource, one whose new session refuses its flush mode"
         def interceptor = new GrailsOpenSessionInViewInterceptor()
-        interceptor.setHibernateDatastore(datastore)
         SessionFactory secondarySf = datastore.getDatastoreForConnection('secondary').sessionFactory
         Session refusingSession = Mock(Session) {
             isOpen() >> true
@@ -214,10 +215,14 @@ class MultiDataSourceSessionSpec extends Specification {
         SessionFactory refusingSf = Stub(SessionFactory) {
             openSession() >> refusingSession
         }
-        def configClass = Class.forName(GrailsOpenSessionInViewInterceptor.name + '$AdditionalSessionFactoryConfig')
-        def constructor = configClass.getDeclaredConstructor(String, SessionFactory, FlushMode)
-        constructor.accessible = true
-        interceptor.@additionalSessionFactories << constructor.newInstance('refusing', refusingSf, FlushMode.AUTO)
+        HibernateDatastore refusingDatastore = Stub(HibernateDatastore) {
+            getSessionFactory() >> refusingSf
+            getDefaultFlushModeName() >> FlushMode.AUTO.name()
+        }
+        interceptor.setHibernateDatastore(datastoreWith(datastore.sessionFactory, [
+                secondary: datastore.getDatastoreForConnection('secondary'),
+                refusing: refusingDatastore,
+        ]))
 
         when:
         interceptor.preHandle(webRequest())
@@ -631,6 +636,27 @@ class MultiDataSourceSessionSpec extends Specification {
             getAttribute(_ as String, WebRequest.SCOPE_REQUEST) >> { String name, int scope -> attributes[name] }
             setAttribute(_ as String, _, WebRequest.SCOPE_REQUEST) >> { String name, Object value, int scope -> attributes[name] = value }
             removeAttribute(_ as String, WebRequest.SCOPE_REQUEST) >> { String name, int scope -> attributes.remove(name) }
+        }
+    }
+
+    /**
+     * A datastore whose default connection uses the given session factory, and whose other connections are the given
+     * datastores, in the given order.
+     */
+    private HibernateDatastore datastoreWith(SessionFactory defaultSessionFactory, Map<String, HibernateDatastore> others) {
+        List<ConnectionSource> sources = ([ConnectionSource.DEFAULT] + others.keySet()).collect { String name ->
+            Stub(ConnectionSource) {
+                getName() >> name
+            }
+        }
+        ConnectionSources connectionSources = Stub(ConnectionSources) {
+            getAllConnectionSources() >> sources
+        }
+        Stub(HibernateDatastore) {
+            getSessionFactory() >> defaultSessionFactory
+            getDefaultFlushModeName() >> FlushMode.COMMIT.name()
+            getConnectionSources() >> connectionSources
+            getDatastoreForConnection(_ as String) >> { String name -> others[name] }
         }
     }
 
