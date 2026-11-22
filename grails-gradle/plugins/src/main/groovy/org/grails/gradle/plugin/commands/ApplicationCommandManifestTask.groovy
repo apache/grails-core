@@ -18,6 +18,10 @@
  */
 package org.grails.gradle.plugin.commands
 
+import java.nio.file.AtomicMoveNotSupportedException
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
+
 import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
 import groovy.transform.CompileStatic
@@ -139,12 +143,27 @@ abstract class ApplicationCommandManifestTask extends JavaExec {
         // the file is the task's output, so it is given to the writer here rather than as an
         // argument input, which would make the absolute path part of the task's inputs
         File file = manifestFile.get().asFile
-        args(file.absolutePath)
-        super.exec()
-        Map<String, Object> manifest = (Map<String, Object>) new JsonSlurper().parse(file, 'UTF-8')
-        manifest.inputs = [buildDirectories: buildDirectories.get(), sourceDirectories: sourceDirectories.get(),
-                           commandDirectories: commandDirectories.get(),
-                           commandFileDirectories: commandFileDirectories.get(), sourceFiles: commandSources(manifest.commands)]
-        file.setText(JsonOutput.prettyPrint(JsonOutput.toJson(manifest)), 'UTF-8')
+        // written and completed next to the file, then put in its place at once, so a tool reading the
+        // file meanwhile finds the whole manifest before or after, and a failure leaves the one before
+        file.parentFile.mkdirs()
+        File written = File.createTempFile(file.name, '.tmp', file.parentFile)
+        try {
+            args(written.absolutePath)
+            super.exec()
+            Map<String, Object> manifest = (Map<String, Object>) new JsonSlurper().parse(written, 'UTF-8')
+            manifest.inputs = [buildDirectories: buildDirectories.get(), sourceDirectories: sourceDirectories.get(),
+                               commandDirectories: commandDirectories.get(),
+                               commandFileDirectories: commandFileDirectories.get(), sourceFiles: commandSources(manifest.commands)]
+            written.setText(JsonOutput.prettyPrint(JsonOutput.toJson(manifest)), 'UTF-8')
+            try {
+                Files.move(written.toPath(), file.toPath(), StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
+            }
+            catch (AtomicMoveNotSupportedException ignored) {
+                Files.move(written.toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING)
+            }
+        }
+        finally {
+            Files.deleteIfExists(written.toPath())
+        }
     }
 }

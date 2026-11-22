@@ -34,15 +34,23 @@ public final class ApplicationCommandManifestWriter {
     }
 
     public static void main(String[] args) throws IOException {
-        String runtimeMarker;
-        try (InputStream input = ApplicationCommandManifestWriter.class.getClassLoader().getResourceAsStream("runtime-marker.txt")) {
-            runtimeMarker = input == null ? "absent" : new String(input.readAllBytes(), StandardCharsets.UTF_8).trim();
-        }
+        String runtimeMarker = marker("runtime-marker.txt");
         Path file = Path.of(args[0]);
         Files.createDirectories(file.getParent());
+        // a writer that fails part way, as one whose output cannot be written
+        if (Files.exists(Path.of("fail-writing"))) {
+            Files.writeString(file, "{\"version\": 1, \"comm");
+            System.exit(1);
+        }
         // JSON, as the real writer writes, with what the spec checks in place of the commands
         Files.writeString(file, "{\"version\": 1, \"commands\": [{\"name\": \"fake\", \"className\": \"org.example.FakeCommand\"},"
                 + " {\"name\": \"elsewhere\", \"className\": \"org.example.NotInTheBuild\"}], \"arguments\": \"" + args.length + "\", \"file\": \""
                 + file.toString().replace("\\", "\\\\") + "\", \"runtimeMarker\": \"" + runtimeMarker + "\"}\n");
+    }
+
+    private static String marker(String resource) throws IOException {
+        try (InputStream input = ApplicationCommandManifestWriter.class.getClassLoader().getResourceAsStream(resource)) {
+            return input == null ? "absent" : new String(input.readAllBytes(), StandardCharsets.UTF_8).trim();
+        }
     }
 }

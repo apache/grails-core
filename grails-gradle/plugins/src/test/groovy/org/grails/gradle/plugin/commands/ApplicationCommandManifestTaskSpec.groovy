@@ -38,13 +38,33 @@ class ApplicationCommandManifestTaskSpec extends GradleSpecification {
         then:
         assertTaskSuccess('generateCommandManifest', result)
 
-        and: 'the writer was given only the file to write, which is in the build directory'
+        and: 'the writer was given only the file to write, next to the manifest, which takes its place once it is whole'
         Map<String, String> written = read(manifest)
         written.arguments == '1'
-        Path.of(written.file).toRealPath() == manifest.toRealPath()
+        Path.of(written.file).parent.toRealPath() == manifest.parent.toRealPath()
+        Path.of(written.file).fileName != manifest.fileName
+        manifest.parent.toFile().list().toList() == ['commands.json']
 
         and: "the application's own classes and resources are on the classpath next to its grailsCli dependencies"
         written.runtimeMarker == 'from the application'
+    }
+
+    void 'a writer that fails leaves the manifest of the build before'() {
+        given:
+        def runner = setupTestResourceProject('command-manifest')
+        Path manifest = runner.projectDir.toPath().resolve('app/build/grails/commands.json')
+        executeTask(':app:generateCommandManifest')
+        String before = manifest.toFile().text
+
+        when: 'the writer fails part way through a build that has to run it'
+        runner.projectDir.toPath().resolve('app/fail-writing').toFile().text = ''
+        runner.projectDir.toPath().resolve('app/src/main/resources/runtime-marker.txt').toFile().text = 'changed'
+        def result = runner.withArguments(':app:generateCommandManifest').buildAndFail()
+
+        then:
+        result.task(':app:generateCommandManifest').outcome == TaskOutcome.FAILED
+        manifest.toFile().text == before
+        manifest.parent.toFile().list().toList() == ['commands.json']
     }
 
     void 'the manifest is up to date until the classpath changes'() {
@@ -77,7 +97,8 @@ class ApplicationCommandManifestTaskSpec extends GradleSpecification {
 
         then:
         assertTaskSuccess('generateCommandManifest', result)
-        Path.of(read(manifest).file).toRealPath() == manifest.toRealPath()
+        manifest.toFile().isFile()
+        Path.of(read(manifest).file).parent.toRealPath() == manifest.parent.toRealPath()
         !runner.projectDir.toPath().resolve('app/build/grails/commands.json').toFile().exists()
     }
 
