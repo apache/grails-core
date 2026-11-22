@@ -21,6 +21,10 @@ package org.grails.plugin.hibernate.support;
 import java.util.ArrayList;
 import java.util.List;
 
+import jakarta.servlet.AsyncEvent;
+import jakarta.servlet.AsyncListener;
+import jakarta.servlet.http.HttpServletRequest;
+
 import org.hibernate.FlushMode;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
@@ -34,6 +38,7 @@ import org.springframework.orm.hibernate5.support.OpenSessionInViewInterceptor;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.ui.ModelMap;
 import org.springframework.util.ReflectionUtils;
+import org.springframework.web.context.request.NativeWebRequest;
 import org.springframework.web.context.request.WebRequest;
 
 import org.grails.datastore.mapping.core.connections.ConnectionSource;
@@ -49,9 +54,10 @@ import org.grails.orm.hibernate.connections.HibernateConnectionSourceSettings;
  * subclass, which opens and closes sessions for each one alongside the
  * default session. As the parent class does for the default session, a request
  * that finds a session already bound, such as an include within a request that
- * opened one, uses that session and leaves it to the one that opened it, and a
- * request that goes asynchronous closes the sessions it opened, so that they do
- * not stay bound to the thread for the next request that thread serves.
+ * opened one, uses that session and leaves it to the one that opened it. A
+ * request that goes asynchronous takes the sessions it opened off the thread, so
+ * that they do not stay bound to it for the next request that thread serves, and
+ * they are closed when the asynchronous request completes.
  *
  * @author Graeme Rocher
  * @since 0.5
@@ -227,31 +233,134 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
 
     /**
      * Called instead of {@link #postHandle} and {@link #afterCompletion} on the thread that started asynchronous
-     * handling. The sessions this interceptor opened for the other datasources are closed here, so that the thread
-     * goes back to its pool without them. Each is flushed first when {@link #postHandle} would flush it and Hibernate
-     * allows the flush: inside a transaction, or with {@code hibernate.allow_update_outside_transaction}.
+     * handling. The sessions this interceptor opened for the other datasources are unbound here, so that the thread
+     * goes back to its pool without them, and closed when the asynchronous request completes, whether a promise,
+     * {@code startAsync()}, a {@code Callable} or a {@code DeferredResult} started it. Each is flushed first
+     * when {@link #postHandle} would flush it and Hibernate allows the flush: inside a transaction, or with
+     * {@code hibernate.allow_update_outside_transaction}.
      *
      * <p>The parent class only unbinds the default session, and leaves closing it to the interceptors it registers for
-     * a {@code Callable} or {@code DeferredResult}. A promise or {@code startAsync()} in a Grails controller starts
-     * asynchronous handling without them, so the default session this interceptor opened is closed here too.
+     * a {@code Callable} or {@code DeferredResult}, which close it in the dispatch that the result starts. A promise or
+     * {@code startAsync()} in a Grails controller starts asynchronous handling without them, so the default session
+     * this interceptor opened is unbound here too, and closed when the asynchronous request completes. So is the
+     * default session the parent class unbinds, unless it is closed by then: a request can complete without that
+     * dispatch, such as one that a task the action started, and did not return, completes.
      */
     @Override
     public void afterConcurrentHandlingStarted(WebRequest request) {
+        List<Session> released = new ArrayList<>();
         try {
-            closeAdditionalSessions(request, additionalSessionFactories.size(), true);
+            releaseAdditionalSessions(request, additionalSessionFactories.size(), true, released);
         }
         finally {
-            if (isGrailsAsync(request) && !isParticipating(request) &&
-                    TransactionSynchronizationManager.hasResource(getSessionFactory())) {
-                SessionHolder sessionHolder =
-                        (SessionHolder) TransactionSynchronizationManager.unbindResource(getSessionFactory());
-                if (logger.isDebugEnabled()) {
-                    logger.debug("Closing Hibernate Session in OpenSessionInViewInterceptor as asynchronous handling starts");
+            try {
+                if (isGrailsAsync(request) && !isParticipating(request) &&
+                        TransactionSynchronizationManager.hasResource(getSessionFactory())) {
+                    SessionHolder sessionHolder =
+                            (SessionHolder) TransactionSynchronizationManager.unbindResource(getSessionFactory());
+                    released.add(sessionHolder.getSession());
                 }
-                SessionFactoryUtils.closeSession(sessionHolder.getSession());
+                else {
+                    SessionHolder sessionHolder = isParticipating(request) ? null :
+                            (SessionHolder) TransactionSynchronizationManager.getResource(getSessionFactory());
+                    super.afterConcurrentHandlingStarted(request);
+                    if (sessionHolder != null) {
+                        closeIfLeftOpenWhenAsynchronousRequestCompletes(request, sessionHolder.getSession());
+                    }
+                }
             }
-            else {
-                super.afterConcurrentHandlingStarted(request);
+            finally {
+                closeWhenAsynchronousRequestCompletes(request, released);
+            }
+        }
+    }
+
+    /**
+     * Closes the default session that the parent class took off the thread when the asynchronous request completes,
+     * unless it is closed by then. Without an asynchronous context to listen to, it is left to the parent class.
+     */
+    private void closeIfLeftOpenWhenAsynchronousRequestCompletes(WebRequest request, Session session) {
+        AsynchronousCompletion.onComplete(request, () -> {
+            if (session.isOpen()) {
+                closeSessions(List.of(session));
+            }
+        });
+    }
+
+    /**
+     * Closes the sessions taken off the thread when the asynchronous request completes, so that the work the request
+     * continues with, such as a task that lazily loads an association of an entity the action loaded, can still use
+     * them. Without an asynchronous context to listen to, they are closed now.
+     */
+    private void closeWhenAsynchronousRequestCompletes(WebRequest request, List<Session> sessions) {
+        if (sessions.isEmpty()) {
+            return;
+        }
+        if (AsynchronousCompletion.onComplete(request, () -> closeSessions(sessions))) {
+            if (logger.isDebugEnabled()) {
+                logger.debug("Closing " + sessions.size() + " Hibernate Session(s) in OpenSessionInViewInterceptor when the asynchronous request completes");
+            }
+            return;
+        }
+        closeSessions(sessions);
+    }
+
+    private void closeSessions(List<Session> sessions) {
+        for (Session session : sessions) {
+            if (logger.isDebugEnabled()) {
+                logger.debug("Closing Hibernate Session in OpenSessionInViewInterceptor after asynchronous handling");
+            }
+            try {
+                SessionFactoryUtils.closeSession(session);
+            }
+            catch (RuntimeException closeEx) {
+                logger.error("Unexpected exception on closing Hibernate Session after asynchronous handling", closeEx);
+            }
+        }
+    }
+
+    /**
+     * Uses the Servlet API, which this module only needs where a request goes asynchronous.
+     */
+    private static final class AsynchronousCompletion {
+
+        /**
+         * @return whether the action runs when the asynchronous request of the given web request completes, including
+         * after a timeout or an error
+         */
+        static boolean onComplete(WebRequest request, Runnable action) {
+            if (!(request instanceof NativeWebRequest nativeRequest)) {
+                return false;
+            }
+            HttpServletRequest servletRequest = nativeRequest.getNativeRequest(HttpServletRequest.class);
+            if (servletRequest == null || !servletRequest.isAsyncStarted()) {
+                return false;
+            }
+            try {
+                servletRequest.getAsyncContext().addListener(new AsyncListener() {
+
+                    @Override
+                    public void onComplete(AsyncEvent event) {
+                        action.run();
+                    }
+
+                    @Override
+                    public void onTimeout(AsyncEvent event) {
+                    }
+
+                    @Override
+                    public void onError(AsyncEvent event) {
+                    }
+
+                    @Override
+                    public void onStartAsync(AsyncEvent event) {
+                        event.getAsyncContext().addListener(this);
+                    }
+                });
+                return true;
+            }
+            catch (IllegalStateException ex) {
+                return false;
             }
         }
     }
@@ -277,6 +386,14 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
      * joined. With {@code flushFirst}, flushes each it opened first when Hibernate allows it.
      */
     private void closeAdditionalSessions(WebRequest request, int count, boolean flushFirst) {
+        releaseAdditionalSessions(request, count, flushFirst, null);
+    }
+
+    /**
+     * Unbinds the sessions this request opened for the first {@code count} other datasources, and closes them, or adds
+     * them to the given list for the caller to close, and counts down those it joined.
+     */
+    private void releaseAdditionalSessions(WebRequest request, int count, boolean flushFirst, List<Session> released) {
         Throwable firstFlushFailure = null;
         for (int i = count - 1; i >= 0; i--) {
             AdditionalSessionFactoryConfig config = additionalSessionFactories.get(i);
@@ -305,6 +422,10 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
                     }
                 }
                 TransactionSynchronizationManager.unbindResource(sf);
+                if (released != null) {
+                    released.add(session);
+                    continue;
+                }
                 if (logger.isDebugEnabled()) {
                     logger.debug("Closing additional Hibernate Session for datasource '" + config.connectionName + "' in OpenSessionInViewInterceptor");
                 }
