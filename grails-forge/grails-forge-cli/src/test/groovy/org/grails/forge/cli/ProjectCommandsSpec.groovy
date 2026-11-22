@@ -828,6 +828,9 @@ class ProjectCommandsSpec extends Specification {
         gradleInvocations().first().take(6) == prefix() + 'runCommand'
         commandArguments() == ['s2-quickstart', 'com.example', 'User', 'Role', '--groupClassName=RoleGroup', '--uiOnly']
 
+        and: 'an args property the build sets, as in gradle.properties, is overridden with nothing, so it adds no words'
+        gradleInvocations().first().contains('-Pargs=')
+
         and: 'the file of the arguments is gone once the command has run'
         !new File(argumentsFile()).exists()
     }
@@ -933,7 +936,7 @@ class ProjectCommandsSpec extends Specification {
         ForgeCli.execute(context, typed as String[])
 
         then:
-        gradleInvocations().first().take(7) == prefix() + ['runCommand', "-PargsFile=${argumentsFile()}".toString()]
+        gradleInvocations().first().take(8) == prefix() + ['runCommand', '-Pargs=', "-PargsFile=${argumentsFile()}".toString()]
         gradleInvocations().first().count { it.startsWith('-D') } == 0
         commandArguments() == passed
 

@@ -55,6 +55,12 @@ class ProjectCommand extends BaseCommand implements Callable<Integer> {
     /** The project property {@code runCommand} reads the arguments of the command from */
     static final String ARGS_FILE_PROPERTY = 'argsFile'
 
+    /**
+     * The project property {@code runCommand} reads a command line from, before the file's arguments: it
+     * is passed empty, so a value the build sets, as in {@code gradle.properties}, adds no words
+     */
+    static final String ARGS_PROPERTY = 'args'
+
     private static final String PASS_THROUGH_LABEL = 'ARGS'
 
     private static final String SYSTEM_PROPERTY_OPTION = '-D'
@@ -99,7 +105,8 @@ class ProjectCommand extends BaseCommand implements Callable<Integer> {
         Path argumentsFile = Files.createTempFile('grails-command-arguments', '.json')
         try {
             Files.writeString(argumentsFile, JsonOutput.toJson(commandArguments), StandardCharsets.UTF_8)
-            return gradle.run([RUN_COMMAND_TASK, "-P${ARGS_FILE_PROPERTY}=${argumentsFile.toAbsolutePath()}".toString()])
+            return gradle.run([RUN_COMMAND_TASK, "-P${ARGS_PROPERTY}=".toString(),
+                               "-P${ARGS_FILE_PROPERTY}=${argumentsFile.toAbsolutePath()}".toString()])
         }
         finally {
             Files.deleteIfExists(argumentsFile)
