@@ -62,7 +62,10 @@ abstract class GradleBuild {
         BUILD,
 
         /** What the user typed for Gradle, which is Gradle's to read: {@code grails gradle ...}. */
-        PASSED_ON
+        PASSED_ON,
+
+        /** A build that is a session at the terminal, which reads what is typed until it is left: {@code shell}. */
+        TERMINAL_SESSION
     }
 
     protected static final String STOPPED = 'Gradle was stopped before it finished, because the command was cancelled'
@@ -84,12 +87,17 @@ abstract class GradleBuild {
      * {@code clean}, {@code assemble}, {@code war} and {@code package}, {@code test-app},
      * {@code dependency-report}, {@code package-plugin}, {@code publish-plugin}, {@code run-command}, a
      * command of the application by its name, {@code run-script} and a script by its name,
-     * {@code console}, {@code shell} and a {@code run-app} that stays with the application, is run
-     * through the Tooling API of Gradle, see {@link ToolingApiRunner}.</li>
+     * {@code console} and a {@code run-app} that stays with the application, is run through the
+     * Tooling API of Gradle, see {@link ToolingApiRunner}.</li>
      * <li>{@linkplain Purpose#PASSED_ON What the user typed for Gradle}, {@code grails gradle ...}, is
      * run by the Gradle wrapper of the project as a process, see {@link GradleRunner}: it is to be to
      * Gradle what it is on a command line of its own, and the Tooling API does not take what the
      * program {@code gradle} reads itself, as {@code --stop}, {@code --status} or {@code --no-daemon}.</li>
+     * <li>{@linkplain Purpose#TERMINAL_SESSION A session at the terminal}, {@code shell}, is run by the
+     * wrapper as a process too. A process is given the terminal itself, and ends with all that read it.
+     * The Tooling API is given a stream, which it reads from as soon as a build starts, whether the
+     * build reads or not, in a thread that goes on waiting for what is typed when the build has ended:
+     * in the interactive console that thread would take the next line from the prompt.</li>
      * <li>Where the environment variable {@link #RUNNER} is {@code process}, the wrapper is run as a
      * process for every purpose: the way out where a build does not run through the Tooling API.</li>
      * </ul>
@@ -115,7 +123,7 @@ abstract class GradleBuild {
                 }
             }
         }
-        if (purpose == Purpose.PASSED_ON || asked?.trim() == PROCESS) {
+        if (purpose != Purpose.BUILD || asked?.trim() == PROCESS) {
             return wrapper
         }
         return new ToolingApiRunner(failure, windows, wrapper)
@@ -176,6 +184,14 @@ abstract class GradleBuild {
     }
 
     /**
+     * @return whether the command line was started as a program, whose JVM ends with it, and not in
+     * the JVM of a caller, which goes on
+     */
+    protected static boolean isProgram() {
+        return processOut != null
+    }
+
+    /**
      * @return whether the output of the command line is, now, the output the process was started with
      */
     protected static boolean isOutputOfProcess() {
@@ -189,6 +205,14 @@ abstract class GradleBuild {
      */
     static boolean isRunning() {
         return RUNNING.get() > 0
+    }
+
+    /**
+     * Closes what was kept open between the builds of the interactive console, which is the
+     * connection to the Gradle of the project. The console does it when it is left.
+     */
+    static void closeConnections() {
+        ToolingApiRunner.closeConnections()
     }
 
     /** Called by what runs a build when a command begins to wait for it. */

@@ -52,6 +52,9 @@ class GradleBuildSpec extends Specification {
         GradleBuild.Purpose.PASSED_ON | ''            | GradleRunner
         GradleBuild.Purpose.PASSED_ON | 'tooling-api' | GradleRunner
         GradleBuild.Purpose.PASSED_ON | 'process'     | GradleRunner
+        GradleBuild.Purpose.TERMINAL_SESSION | ''     | GradleRunner
+        GradleBuild.Purpose.TERMINAL_SESSION | 'tooling-api' | GradleRunner
+        GradleBuild.Purpose.TERMINAL_SESSION | 'process' | GradleRunner
         said = value ? "set to ${value}" : 'not set'
     }
 

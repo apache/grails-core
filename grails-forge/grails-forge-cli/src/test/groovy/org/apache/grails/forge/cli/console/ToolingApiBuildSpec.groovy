@@ -126,6 +126,7 @@ class ToolingApiBuildSpec extends CommandSpec {
     void cleanup() {
         GradleBuild.setRunner(null)
         GradleBuild.setNonInteractive(false)
+        GradleBuild.outputOfProcess(null, null)
         System.setOut(originalOut)
         System.setErr(originalErr)
         System.setIn(originalIn)
@@ -166,8 +167,17 @@ class ToolingApiBuildSpec extends CommandSpec {
         ['publish-plugin']                                                                      | 'requested=<:publish> system=[:] project=[:] log=LIFECYCLE stacktrace=INTERNAL_EXCEPTIONS console=Auto'                                                      | 'publish phase=[] tests=[] rerun=false debug=false argsFile=false env=null'
         ['run-command', '-Dgrails.env=test', 'migrate', '--to', 'x y']                          | 'requested=<:runCommand><--args-file=FILE> system=[grails.env:test] project=[:] log=LIFECYCLE stacktrace=INTERNAL_EXCEPTIONS console=Auto'                   | 'runCommand phase=[] tests=[] rerun=false debug=false argsFile=true env=test'
         ['console', '--debug-jvm']                                                              | 'requested=<:console><--debug-jvm> system=[grails.env:development] project=[:] log=QUIET stacktrace=INTERNAL_EXCEPTIONS console=Auto'                        | 'console phase=[] tests=[] rerun=false debug=true argsFile=false env=development'
-        ['shell']                                                                               | 'requested=<:shell> system=[grails.env:development] project=[:] log=QUIET stacktrace=INTERNAL_EXCEPTIONS console=Auto'                                       | 'shell phase=[] tests=[] rerun=false debug=false argsFile=false env=development'
         ['run-app', '--foreground', '--debug-jvm', '--port', '8081', '-Pa=b', '--plain-output'] | 'requested=<:bootRun><--debug-jvm> system=[grails.env:development, grails.server.port:8081] project=[a:b] log=QUIET stacktrace=INTERNAL_EXCEPTIONS console=Plain' | 'bootRun phase=[] tests=[] rerun=false debug=true argsFile=false env=development'
+    }
+
+    void "shell is a session at the terminal, and runs the Gradle wrapper as a process for it"() {
+        when:
+        int exit = ForgeCli.execute(beanContext, 'shell', '--debug-jvm')
+
+        then:
+        exit == 0
+        new File(dir, 'wrapper-was-run.txt').text == '<:shell><--debug-jvm><--quiet><-Dgrails.env=development>\n'
+        !new File(dir, 'requested.txt').exists()
     }
 
     void "a script is run through the Tooling API by run-script, with its path as the project property the task reads"() {
@@ -277,6 +287,8 @@ class ToolingApiBuildSpec extends CommandSpec {
         given:
         System.setIn(new ByteArrayInputStream('typed by the user\n'.bytes))
         System.setProperty('grails.spec.ofTheCommandLine', 'set in the JVM of the command line')
+        // as a program, whose JVM ends with the command
+        GradleBuild.outputOfProcess(originalOut, originalErr)
 
         when:
         int exit = ForgeCli.execute(beanContext, 'compile', '-Dgrails.spec.given=given', '--', 'reads')
@@ -287,9 +299,45 @@ class ToolingApiBuildSpec extends CommandSpec {
         said('read.txt') == 'line=typed by the user variable=null ofTheCommandLine=null given=given'
     }
 
+    void "in the interactive console a build reads an input that has ended, since what is typed there is the console's"() {
+        given:
+        System.setIn(new ByteArrayInputStream('typed for the console\n'.bytes))
+        GradleBuild.outputOfProcess(originalOut, originalErr)
+        ConsoleCommands.setInteractive(true)
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'compile', '--', 'reads')
+
+        then:
+        exit == 0
+        errors() == []
+        said('read.txt') == 'line=null variable=null ofTheCommandLine=null given=null'
+
+        and: 'nothing of it was read for the build'
+        System.in.newReader().readLine() == 'typed for the console'
+
+        cleanup:
+        ConsoleCommands.setInteractive(false)
+        GradleBuild.closeConnections()
+    }
+
+    void "where the command line is run in the JVM of a caller a build reads an input that has ended, since the input is the caller's"() {
+        given:
+        System.setIn(new ByteArrayInputStream('typed for the caller\n'.bytes))
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'compile', '--', 'reads')
+
+        then:
+        exit == 0
+        said('read.txt') == 'line=null variable=null ofTheCommandLine=null given=null'
+        System.in.newReader().readLine() == 'typed for the caller'
+    }
+
     void "with --non-interactive the build reads an input that has ended and is told so in its environment"() {
         given:
         System.setIn(new ByteArrayInputStream('typed by the user\n'.bytes))
+        GradleBuild.outputOfProcess(originalOut, originalErr)
 
         when:
         int exit = ForgeCli.execute(beanContext, '--non-interactive', 'compile', '--', 'reads')

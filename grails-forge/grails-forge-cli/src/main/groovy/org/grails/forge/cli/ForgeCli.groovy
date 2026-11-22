@@ -384,6 +384,8 @@ final class ForgeCli {
             return shell.start()
         } finally {
             ConsoleCommands.setInteractive(false)
+            // the builds of the console were asked of one connection to the Gradle of the project, which ends with the console
+            GradleBuild.closeConnections()
         }
     }
 

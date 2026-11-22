@@ -68,6 +68,12 @@ class ShellCommand extends GradleEnvironmentCommand {
     }
 
     @Override
+    protected GradleBuild.Purpose purpose() {
+        // what is typed is the shell's until it is left
+        return GradleBuild.Purpose.TERMINAL_SESSION
+    }
+
+    @Override
     protected List<String> gradleArguments(ConsoleProject project) {
         List<String> arguments = [project.task('shell')]
         if (debugJvm || debugJvmOfShell) {

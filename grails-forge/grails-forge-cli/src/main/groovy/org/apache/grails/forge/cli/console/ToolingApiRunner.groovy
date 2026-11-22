@@ -18,6 +18,7 @@
  */
 package org.apache.grails.forge.cli.console
 
+import java.nio.charset.StandardCharsets
 import java.nio.file.DirectoryStream
 import java.nio.file.Files
 import java.nio.file.Path
@@ -57,11 +58,26 @@ import picocli.CommandLine
  * arguments that the program {@code gradle} reads itself before there is a build, as {@code --no-daemon}
  * and {@code --gradle-user-home}, the build is handed to the {@link GradleRunner} this was given.</p>
  *
+ * <p><strong>The connection.</strong> A command line that runs one command makes a connection for its
+ * build and closes it. The interactive console keeps one, for the project it is in: every build after
+ * the first is asked of it, which spares what making one costs each time, and it is closed when the
+ * console is left. It is replaced when a command is run for another project, and when the file that
+ * names the Gradle of the project has changed, as after {@code update-wrapper}. The checks of the
+ * wrapper are made before every build all the same, and a build that failed or was cancelled leaves
+ * the connection as it was.</p>
+ *
  * <p><strong>What the build is given.</strong> The arguments as the command put them together, tasks
  * and options alike, in their order. Of the system properties of this JVM none: a build has those that
- * are given to it with {@code -D}. The environment of this JVM, and its input unless nothing may wait
- * for what a user types. The JVM options of the build are no arguments here: they are those of the
- * Gradle daemon, which {@code org.gradle.jvmargs} sets.</p>
+ * are given to it with {@code -D}. The environment of this JVM. The JVM options of the build are no
+ * arguments here: they are those of the Gradle daemon, which {@code org.gradle.jvmargs} sets.</p>
+ *
+ * <p><strong>What the build reads.</strong> The input of this JVM, where the command line is a program
+ * that runs one command and ends, and nothing says that no one may be waited for. An input that has
+ * ended in the interactive console, and where the command line is run in the JVM of a caller: the
+ * Tooling API reads the stream it is given as soon as a build starts, whether or not the build reads,
+ * and the thread that does goes on waiting for what is typed after the build has ended, so it would
+ * take the next line from the prompt of the console, or from the caller. A build that is a session at the
+ * terminal, {@code shell}, is for that reason not run here at all, see {@link GradleBuild#of}.</p>
  *
  * @since 9.0
  */
@@ -79,6 +95,11 @@ final class ToolingApiRunner extends GradleBuild {
                                                         '-g', '--gradle-user-home', '-p', '--project-dir', '-b', '--build-file', '-c', '--settings-file']
     private static final List<String> OF_THE_PROGRAM_WITH_VALUE = ['--gradle-user-home=', '--project-dir=', '--build-file=', '--settings-file=',
                                                                    '-Dorg.gradle.', '-Dgradle.user.home=']
+
+    private static final Object KEPT = new Object()
+    private static ProjectConnection kept
+    private static String keptFor
+    private static int connectionsMade
 
     private final Consumer<String> failure
     private final boolean windows
@@ -113,15 +134,88 @@ final class ToolingApiRunner extends GradleBuild {
         }
         ProjectConnection connection
         try {
-            connection = GradleConnector.newConnector().forProjectDirectory(project.directory.toFile()).useBuildDistribution().connect()
-        } catch (GradleConnectionException | IllegalStateException e) {
+            connection = connect(project, properties)
+        } catch (GradleConnectionException | IllegalStateException | IOException e) {
             failure.accept("Gradle could not be run for the project in ${GradleRunner.line(project.directory)}: ${reason(e)}".toString())
             return 1
         }
         try {
             return run(connection, arguments, started)
         } finally {
-            close(connection)
+            if (!isKept(connection)) {
+                close(connection)
+            }
+        }
+    }
+
+    /**
+     * Closes the connection the interactive console kept, when there is one. The console does it when it is left.
+     */
+    static void closeConnections() {
+        ProjectConnection closed
+        synchronized (KEPT) {
+            closed = kept
+            kept = null
+            keptFor = null
+        }
+        if (closed != null) {
+            close(closed)
+        }
+    }
+
+    /**
+     * @return how many connections were made in this JVM, for a specification
+     */
+    static int getConnectionsMade() {
+        synchronized (KEPT) {
+            return connectionsMade
+        }
+    }
+
+    /**
+     * @return whether a connection is kept for the next build, for a specification
+     */
+    static boolean isConnectionKept() {
+        synchronized (KEPT) {
+            return kept != null
+        }
+    }
+
+    // The connection for a build: in the interactive console the one that is kept, when it is for this
+    // project and for what names its Gradle now, and otherwise a new one, which is kept in its place there.
+    private static ProjectConnection connect(ConsoleProject project, Path properties) throws IOException {
+        if (!ConsoleCommands.isInteractive()) {
+            ProjectConnection made = GradleConnector.newConnector().forProjectDirectory(project.directory.toFile()).useBuildDistribution().connect()
+            synchronized (KEPT) {
+                connectionsMade++
+            }
+            return made
+        }
+        String wanted = "${project.directory.toRealPath()}\n${new String(Files.readAllBytes(properties), StandardCharsets.ISO_8859_1)}".toString()
+        ProjectConnection replaced = null
+        try {
+            synchronized (KEPT) {
+                if (kept != null && keptFor == wanted) {
+                    return kept
+                }
+                replaced = kept
+                kept = null
+                keptFor = null
+                kept = GradleConnector.newConnector().forProjectDirectory(project.directory.toFile()).useBuildDistribution().connect()
+                keptFor = wanted
+                connectionsMade++
+                return kept
+            }
+        } finally {
+            if (replaced != null) {
+                close(replaced)
+            }
+        }
+    }
+
+    private static boolean isKept(ProjectConnection connection) {
+        synchronized (KEPT) {
+            return connection.is(kept)
         }
     }
 
@@ -201,6 +295,9 @@ final class ToolingApiRunner extends GradleBuild {
             Map<String, String> environment = new LinkedHashMap<String, String>(System.getenv())
             environment.put(NON_INTERACTIVE, 'true')
             launcher.setEnvironmentVariables(environment)
+        } else if (ConsoleCommands.isInteractive() || !isProgram()) {
+            // the input is the console's, or the caller's: whatever reads it for a build would still read it when the build has ended
+            launcher.setStandardInput(new ByteArrayInputStream(new byte[0]))
         } else {
             launcher.setStandardInput(System.in)
         }

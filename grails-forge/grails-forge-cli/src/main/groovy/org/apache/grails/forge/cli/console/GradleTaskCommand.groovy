@@ -65,7 +65,7 @@ abstract class GradleTaskCommand extends InProjectCommand {
             arguments.addAll(verboseArguments())
         }
         arguments.addAll(passedOn)
-        GradleBuild runner = GradleBuild.of(GradleBuild.Purpose.BUILD, { String message -> err(message) } as Consumer<String>, getOperatingSystem() == OperatingSystem.WINDOWS)
+        GradleBuild runner = GradleBuild.of(purpose(), { String message -> err(message) } as Consumer<String>, getOperatingSystem() == OperatingSystem.WINDOWS)
         int exit
         try {
             exit = runner.run(project, arguments)
@@ -94,6 +94,13 @@ abstract class GradleTaskCommand extends InProjectCommand {
      * command cannot be run in this project, which the command has then said
      */
     protected abstract List<String> gradleArguments(ConsoleProject project)
+
+    /**
+     * @return what the command runs Gradle for, which decides what runs it: see {@link GradleBuild#of}
+     */
+    protected GradleBuild.Purpose purpose() {
+        return GradleBuild.Purpose.BUILD
+    }
 
     /**
      * @return what {@code --verbose} of the command is for Gradle
