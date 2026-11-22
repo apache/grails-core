@@ -515,6 +515,49 @@ class ProjectCommandsSpec extends Specification {
         manifestState = namesInputs ? 'with a manifest naming its directory' : 'with no manifest yet'
     }
 
+    void "a file of another project of the build, #path, that broke the build with no manifest yet, runs it again once fixed, #layout"() {
+        given: 'a build with a plugin project next to the application, and no manifest yet'
+        File project = dir
+        if (appInSubproject) {
+            new File(dir, 'settings.gradle').text = "include 'app', 'plugins:audit'\n"
+            project = moveProjectInto('app')
+        }
+        File plugin = new File(dir, 'plugins/audit')
+        plugin.mkdirs()
+        new File(plugin, 'build.gradle').text = "plugins { id 'groovy' }\n"
+        File broken = new File(dir, path)
+        broken.parentFile.mkdirs()
+
+        when: 'the file is changed so that the build fails, and a plugin command is named'
+        broken.text = 'class AuditService { broken'
+        new File(dir, 'gradle-exit-code').text = '1'
+        int rejected = ForgeCli.execute(context, 's2-quickstart')
+        ForgeCli.createCommandLine(context, false)
+
+        then: 'the failed build runs once, not again while nothing changes'
+        rejected != 0
+        gradleInvocations() == [prefix(project) + MANIFEST_TASK]
+
+        when: 'the file is fixed'
+        forgetInvocations()
+        broken.text = 'class AuditService { /* fixed */ }'
+        new File(dir, 'gradle-exit-code').delete()
+        buildWrites(SECURITY_QUICKSTART)
+        int exitCode = ForgeCli.execute(context, 's2-quickstart')
+
+        then: 'the build runs again, and the command runs'
+        exitCode == 0
+        gradleInvocations()*.get(5) == ['generateCommandManifest', 'runCommand']
+
+        where:
+        [path, appInSubproject] << [['plugins/audit/src/main/groovy/com/acme/AuditService.groovy',
+                                     'plugins/audit/grails-app/services/com/acme/AuditService.groovy',
+                                     'plugins/audit/src/main/java/com/acme/AuditService.java',
+                                     'plugins/audit/build.gradle'],
+                                    [false, true]].combinations()
+        layout = appInSubproject ? 'with the application in a project of its own' : 'with the application at the root'
+    }
+
     void 'the directories the manifest names are watched, such as those of the other projects of the build'() {
         given: 'a manifest naming a plugin project next to the application'
         File plugin = new File(dir, 'plugins/audit')

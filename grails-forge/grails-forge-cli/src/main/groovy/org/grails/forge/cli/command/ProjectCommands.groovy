@@ -295,8 +295,8 @@ class ProjectCommands {
 
     /**
      * The directories the commands depend on: those the manifest names; without a manifest, as after
-     * cleaning the build, those the last manifest named; or else those of the project and the root of
-     * its build.
+     * cleaning the build, those the last manifest named; or else those of the root of the build and of
+     * every project found below it, as a first build has nothing else to go by.
      */
     private Inputs inputsOf(File manifest) {
         if (manifest.isFile()) {
@@ -314,12 +314,45 @@ class ProjectCommands {
             }
         }
         File rootDir = gradle.rootDir
-        new Inputs([projectDir, rootDir].unique(),
-                [new File(rootDir, 'gradle'), new File(rootDir, 'buildSrc'),
-                 new File(projectDir, 'grails-app/commands'), new File(projectDir, 'src/main/resources/META-INF')],
-                [new File(projectDir, 'src/cli')],
-                [new File(projectDir, 'grails-app'), new File(projectDir, 'src/main/groovy'),
-                 new File(projectDir, 'src/main/java')], [])
+        List<File> projects = []
+        projects << projectDir << rootDir
+        projectsBelow(rootDir, projects)
+        projects = projects.unique()
+        List<File> sourceDirectories = [new File(rootDir, 'gradle'), new File(rootDir, 'buildSrc')]
+        List<File> commandDirectories = []
+        List<File> commandFileDirectories = []
+        for (File project : projects) {
+            sourceDirectories << new File(project, 'grails-app/commands') << new File(project, 'src/main/resources/META-INF')
+            commandDirectories << new File(project, 'src/cli')
+            commandFileDirectories << new File(project, 'grails-app') << new File(project, 'src/main/groovy') <<
+                    new File(project, 'src/main/java')
+        }
+        new Inputs(projects, sourceDirectories, commandDirectories, commandFileDirectories, [])
+    }
+
+    /**
+     * Adds the directories below the given one that look like projects of the build, with a build file,
+     * main sources or a {@code grails-app} directory: without a manifest, the build has not said which
+     * projects it has. What builds and tools write, {@code buildSrc}, hidden directories and the inside
+     * of a source tree are not searched.
+     */
+    private static void projectsBelow(File dir, List<File> projects) {
+        File[] children = dir.listFiles()
+        if (children == null) {
+            return
+        }
+        for (File child : children.sort(false) { File it -> it.name }) {
+            if (!child.isDirectory() || Files.isSymbolicLink(child.toPath()) || child.name.startsWith('.') ||
+                    child.name in OUTPUT_DIRS || child.name in TOOL_FILES || child.name in SOURCE_DIRS ||
+                    child.name in ['gradle', 'buildSrc']) {
+                continue
+            }
+            if (new File(child, 'build.gradle').isFile() || new File(child, 'build.gradle.kts').isFile() ||
+                    new File(child, 'src/main').isDirectory() || new File(child, 'grails-app').isDirectory()) {
+                projects << child
+            }
+            projectsBelow(child, projects)
+        }
     }
 
     private static Object parseOrNull(File file) {
