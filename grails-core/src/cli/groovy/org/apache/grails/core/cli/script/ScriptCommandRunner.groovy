@@ -151,8 +151,10 @@ class ScriptCommandRunner {
             err.println("A script command is started with ${VECTOR} and then its name and its arguments, or with ${CommandArgumentsFile.ARGUMENT} and the path of a file that holds them.")
             return 1
         }
-        // Gradle is no terminal: what the script says through the console is whole lines of plain text
-        GrailsConsole console = GrailsConsole.getInstance()
+        // Gradle is no terminal: what the script says through the console is whole lines of plain text.
+        // The console there was is put back afterwards; when there was none, none is made to be put back,
+        // which would open a terminal and the history file of the user for a JVM that has neither.
+        GrailsConsole console = GrailsConsole.hasInstance() ? GrailsConsole.getInstance() : null
         try {
             GrailsConsole.setInstance(new ScriptConsole(out, err))
             int ended = run(vector)
@@ -183,7 +185,11 @@ class ScriptCommandRunner {
         } catch (Throwable e) {
             failed(e)
         } finally {
-            GrailsConsole.setInstance(console)
+            if (console == null) {
+                GrailsConsole.removeInstance()
+            } else {
+                GrailsConsole.setInstance(console)
+            }
         }
         return 1
     }

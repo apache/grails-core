@@ -25,6 +25,7 @@ import java.util.jar.JarOutputStream
 
 import groovy.json.JsonOutput
 
+import grails.build.logging.GrailsConsole
 import spock.lang.IgnoreIf
 import spock.lang.Specification
 import spock.lang.TempDir
@@ -594,6 +595,45 @@ class ScriptCommandRunnerSpec extends Specification {
         'absent'       | null
     }
 
+    def 'a script that asks is asked once and has no answer: the build gives it nothing to read'() {
+        given:
+        script('ask', '''
+            file('answers.txt').text = [console.userInput('Name?'), console.userInput('Sure?', ['y', 'n'] as String[]),
+                                        console.secureUserInput('Password?'), console.showPrompt()].inspect()
+        ''')
+
+        expect:
+        run('ask') == 0
+        new File(project, 'answers.txt').text == '[null, null, null, null]'
+        out.toString().readLines() == ['Name?', 'Sure?[y,n]', 'Password?']
+        said() == ''
+    }
+
+    def 'the console there was is the console again after a script, and none is made when there was none'() {
+        given:
+        script('quiet', 'console.addStatus "said"')
+
+        when: 'there is none'
+        GrailsConsole.removeInstance()
+        int exit = run('quiet')
+
+        then:
+        exit == 0
+        !GrailsConsole.hasInstance()
+
+        when: 'there is one'
+        GrailsConsole mine = new ScriptConsole(null, null)
+        GrailsConsole.setInstance(mine)
+        exit = run('quiet')
+
+        then:
+        exit == 0
+        GrailsConsole.getInstance().is(mine)
+
+        cleanup:
+        GrailsConsole.removeInstance()
+    }
+
     @Unroll
     def 'the JVM the build starts for a script ends with #status when the script #what, and writes where the JVM writes'() {
         given:
@@ -608,10 +648,13 @@ class ScriptCommandRunnerSpec extends Specification {
         File stderr = new File(plugin, 'stderr.txt')
         File options = new File(plugin, 'java.options')
         options.setText("-cp\n\"${System.getProperty('java.class.path').replace('\\', '\\\\')}\"\n", 'UTF-8')
+        File home = new File(plugin, 'home')
+        home.mkdirs()
 
         when:
         Process process = new ProcessBuilder(new File(System.getProperty('java.home'), 'bin/java').path, "@${options.path}".toString(),
-                "-Dbase.dir=${project.path}".toString(), ScriptCommandRunner.name, '--', 'talk', 'two words', 'three')
+                "-Dbase.dir=${project.path}".toString(), "-Duser.home=${home.path}".toString(),
+                ScriptCommandRunner.name, '--', 'talk', 'two words', 'three')
                 .directory(plugin)
                 .redirectOutput(stdout)
                 .redirectError(stderr)
@@ -622,8 +665,13 @@ class ScriptCommandRunnerSpec extends Specification {
         ended
         process.exitValue() == status
         new File(project, 'given.txt').text == "['two words', 'three']"
-        stdout.readLines().findAll { String line -> line } == ['| a status', 'printed']
-        stderr.readLines().findAll { String line -> !line.startsWith('OpenJDK') && !line.startsWith('WARNING') } == ['| Error an error'] + said
+        stdout.readLines() == ['| a status', 'printed']
+
+        and: 'beside what the JVM itself warns of, and the empty line it ends a warning with'
+        stderr.readLines().findAll { String line -> line && !line.startsWith('OpenJDK') && !line.startsWith('WARNING') } == ['| Error an error'] + said
+
+        and: 'no terminal was opened for it, so no history of one is in the home directory of the user'
+        home.list().toList() == []
 
         cleanup:
         process?.destroyForcibly()?.waitFor()

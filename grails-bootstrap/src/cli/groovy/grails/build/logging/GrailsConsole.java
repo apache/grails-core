@@ -366,6 +366,16 @@ public class GrailsConsole implements ConsoleLogger {
         return instance;
     }
 
+    /**
+     * @return whether there is a console: {@link #getInstance()} creates one when there is none, with
+     * the terminal, the line reader and the history file of an interactive console, which is not
+     * what a caller wants that only asks in order to put the console back afterwards
+     * @since 9.0
+     */
+    public static synchronized boolean hasInstance() {
+        return instance != null;
+    }
+
     public static synchronized void removeInstance() {
         if (instance != null) {
             instance.removeShutdownHook();
