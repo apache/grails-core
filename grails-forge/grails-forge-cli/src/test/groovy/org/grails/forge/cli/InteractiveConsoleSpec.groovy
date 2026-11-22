@@ -156,11 +156,14 @@ class InteractiveConsoleSpec extends Specification {
 
     @Unroll
     void "with --plain-output and no command the console is entered and writes nothing a terminal reads, and ends with its input: #input"() {
-        given: 'an output that is taken for a terminal'
+        given: 'an output that is taken for a terminal that has colours, by what writes the messages and by what writes the prompt'
         project()
+        // The prompt is written by JLine, to an output that is a file here and so no terminal for it: whether it
+        // then keeps the colours is a matter of the environment (COLORTERM), unless it is told.
+        List<String> asATerminal = ['-Dpicocli.ansi=true', '-Dorg.jline.terminal.dumb.color=true']
 
         when: 'without the option'
-        program = command(true, ['-Dpicocli.ansi=true'], []).redirectInput(typed(input)).start()
+        program = command(true, asATerminal, []).redirectInput(typed(input)).start()
         boolean ended = program.waitFor(SECONDS, TimeUnit.SECONDS)
         String marked = written.text
 
@@ -170,7 +173,7 @@ class InteractiveConsoleSpec extends Specification {
         marked.contains(ESCAPE)
 
         when:
-        program = command(true, ['-Dpicocli.ansi=true'], ['--plain-output']).redirectInput(typed(input)).start()
+        program = command(true, asATerminal, ['--plain-output']).redirectInput(typed(input)).start()
         ended = program.waitFor(SECONDS, TimeUnit.SECONDS)
         String plain = written.text
 
