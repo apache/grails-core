@@ -76,7 +76,7 @@ class BuildIndexesFailureSummarySpec extends AutoStartedMongoSpec {
         recreated.insertMany([new Document('code', 'same'), new Document('code', 'same')])
         recreated.createIndex(new Document('code', 1))
 
-        log = new CapturedLog('org.grails.datastore.mapping', Level.INFO)
+        log = new CapturedLog('org.grails.datastore.mapping', Level.DEBUG)
 
         datastore = new MongoDatastore(['grails.mongodb.url': url] as Map, ConflictingThing, RejectedThing,
                 DuplicatedThing, RecreatedOverDuplicatesThing)
@@ -140,6 +140,13 @@ class BuildIndexesFailureSummarySpec extends AutoStartedMongoSpec {
             it.level == Level.ERROR && it.formattedMessage.startsWith('Dropped index [code_1] on entity [') &&
                     it.formattedMessage.contains('RecreatedOverDuplicatesThing') &&
                     it.formattedMessage.contains('but it could not be built again')
+        }
+
+        and: 'each failure has a concise ERROR event and its stack trace at DEBUG'
+        [ConflictingThing, RejectedThing, DuplicatedThing, RecreatedOverDuplicatesThing].every { entity ->
+            def errors = log.events.findAll { it.level == Level.ERROR && it.formattedMessage.contains(entity.name) }
+            errors.size() == 1 && errors.every { it.throwableProxy == null } &&
+                    log.events.any { it.level == Level.DEBUG && it.formattedMessage.contains(entity.name) && it.throwableProxy != null }
         }
     }
 }

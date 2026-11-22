@@ -102,6 +102,36 @@ property-with_mixed.symbols: from-yml
         removeVariable('STRASSE_X')
     }
 
+    @Issue('#16765')
+    void 'on Windows two names that the JVM keeps distinct stay distinct in the index'() {
+        given: 'a configuration that reads the environment as the JVM of Windows holds it'
+        def config = configFor('config.id: from-yml')
+        config.refreshSystemEnvironment(['CONFIG_ID': 'plain', 'CONFIG_\u0130D': 'dotted'], true)
+
+        expect: 'each name finds its own value, as System.getenv does, instead of one dropping the other'
+        config.getProperty('CONFIG_ID') == 'plain'
+        config.getProperty('CONFIG_\u0130D') == 'dotted'
+    }
+
+    @Issue('#16765')
+    void 'on Windows a variable still matches the key in any case'() {
+        given: 'a mixed-case variable and a lower-case key'
+        def config = configFor('property.with.period: from-yml')
+        config.refreshSystemEnvironment(['Property_With_Period': 'from-env'], true)
+
+        expect: 'the variable overrides the configured value'
+        config.getProperty('property.with.period') == 'from-env'
+    }
+
+    void 'elsewhere a variable matches the key only in the spellings that are probed'() {
+        given: 'a mixed-case variable and a lower-case key'
+        def config = configFor('property.with.period: from-yml')
+        config.refreshSystemEnvironment(['Property_With_Period': 'from-env'], false)
+
+        expect: 'names are compared exactly, so the configured value stands'
+        config.getProperty('property.with.period') == 'from-yml'
+    }
+
     void 'a null key resolves to the default value'() {
         given: 'any configuration'
         def config = configFor(YAML)
