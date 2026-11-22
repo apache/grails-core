@@ -26,6 +26,7 @@ import org.grails.forge.cli.CommandSpec
 import org.grails.forge.cli.ForgeCli
 import picocli.AutoComplete
 import picocli.CommandLine
+import spock.lang.Shared
 import spock.lang.Unroll
 
 /**
@@ -35,6 +36,16 @@ import spock.lang.Unroll
  * {@link ConsoleCommandsSpec}, whose task {@code testApp} says what it was asked for.
  */
 class TestAppPhasesSpec extends CommandSpec implements CommandFixture {
+
+    // One Gradle daemon, of this specification alone, runs the builds of its features: they have nothing to
+    // compile, and without it every one of them would wait for a JVM of Gradle to start. A feature that looks
+    // at the process a build runs in asks for a build without a daemon.
+    @Shared
+    IsolatedGradle daemon = new IsolatedGradle()
+
+    void cleanupSpec() {
+        daemon.close()
+    }
 
     static final List<Map> PHASES = [[name: 'unit', task: 'test'], [name: 'integration', task: 'integrationTest'], [name: 'end-to-end', task: 'endToEndTest'],
                                      [name: 'functional', task: 'functionalTest'], [name: 'smoke', task: 'smoke'], [name: 'clean', task: 'cleanTest'],
@@ -356,9 +367,9 @@ class TestAppPhasesSpec extends CommandSpec implements CommandFixture {
                 file.directory ? file.deleteDir() : file.delete()
             }
         }
-        new File(dir, 'settings.gradle').text = "rootProject.name = 'plain'\n"
-        // a daemon would keep the system properties of one build for the next
-        new File(dir, 'gradle.properties').text = 'org.gradle.daemon=false\n'
+        // the daemon of the specification is given the system properties of each build anew
+        new File(dir, 'settings.gradle').text = daemon.settingsOf(true)
+        new File(dir, 'gradle.properties').text = daemon.propertiesOf(true)
         new File(dir, 'build.gradle').text = ConsoleCommandsSpec.BUILD
         new File(dir, 'grails-app').mkdirs()
     }

@@ -26,6 +26,7 @@ import org.grails.forge.cli.CommandFixture
 import org.grails.forge.cli.CommandSpec
 import org.grails.forge.cli.ForgeCli
 import spock.lang.IgnoreIf
+import spock.lang.Shared
 import spock.lang.Unroll
 
 /**
@@ -73,6 +74,16 @@ class MultiProjectBuildSpec extends CommandSpec implements CommandFixture {
         }
         '''.stripIndent()
 
+    // One Gradle daemon, of this specification alone, runs the builds of its features: they have nothing to
+    // compile, and without it every one of them would wait for a JVM of Gradle to start. A feature that looks
+    // at the process a build runs in asks for a build without a daemon.
+    @Shared
+    IsolatedGradle daemon = new IsolatedGradle()
+
+    void cleanupSpec() {
+        daemon.close()
+    }
+
     PrintStream originalOut
     PrintStream originalErr
     ByteArrayOutputStream out = new ByteArrayOutputStream()
@@ -91,14 +102,17 @@ class MultiProjectBuildSpec extends CommandSpec implements CommandFixture {
                 file.directory ? file.deleteDir() : file.delete()
             }
         }
-        new File(root, 'settings.gradle').text = "rootProject.name = 'acme'\ninclude 'apps:admin', 'apps:web:shop', 'libs:core'\nincludeBuild 'tools/site'\n"
-        // a daemon would be left behind by every case
-        new File(root, 'gradle.properties').text = 'org.gradle.daemon=false\n'
+        new File(root, 'settings.gradle').text = "rootProject.name = 'acme'\ninclude 'apps:admin', 'apps:web:shop', 'libs:core'\nincludeBuild 'tools/site'\n" +
+                daemon.recordingOf(true)
+        // the daemon of the specification, which ends with it: no daemon is left behind by a case
+        new File(root, 'gradle.properties').text = daemon.propertiesOf(true)
         new File(root, 'build.gradle').text = ROOT
         ['apps/admin', 'apps/web/shop', 'apps/extra', 'tools/site'].each { String project -> grailsProject(project) }
         new File(root, 'libs/core/src/main/groovy').mkdirs()
         new File(root, 'libs/core/build.gradle').text = PROJECT
-        new File(root, 'tools/site/settings.gradle').text = "rootProject.name = 'site'\n"
+        new File(root, 'tools/site/settings.gradle').text = "rootProject.name = 'site'\n" + daemon.recordingOf(true)
+        // a build of its own where Gradle is started in it, which is then run by the daemon of the specification too
+        new File(root, 'tools/site/gradle.properties').text = daemon.propertiesOf(true)
         String option = 'import org.gradle.api.tasks.options.Option\n'
         new File(root, 'tools/site/build.gradle').text = option + ROOT + PROJECT.replace(option, '')
     }
@@ -297,7 +311,8 @@ class MultiProjectBuildSpec extends CommandSpec implements CommandFixture {
     }
 
     void "run-app --detach and stop-app are of the project they are given in, and of no other project of the build"() {
-        given: 'a project whose bootRun answers on the port it is given'
+        given: 'a project whose bootRun answers on the port it is given, in a build without a daemon: what answers ends with the Gradle that is stopped'
+        new File(root, 'gradle.properties').text = daemon.propertiesOf(false)
         new File(root, 'apps/admin/build.gradle').text = LifecycleCommandsSpec.BUILD
         int port = new ServerSocket(0, 1, InetAddress.getLoopbackAddress()).withCloseable { ServerSocket socket -> socket.localPort }
 

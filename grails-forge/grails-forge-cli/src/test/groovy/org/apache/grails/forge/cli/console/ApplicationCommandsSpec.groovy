@@ -35,6 +35,7 @@ import org.grails.forge.cli.CommandSpec
 import org.grails.forge.cli.ForgeCli
 import picocli.CommandLine
 import spock.lang.IgnoreIf
+import spock.lang.Shared
 import spock.lang.Timeout
 import spock.lang.Unroll
 import spock.util.concurrent.PollingConditions
@@ -89,6 +90,16 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
     static final Map HELLO = [name: 'hello-world', aliases: [], description: 'Says hello', origin: 'org.example:hello-cli:1.2.3', target: 'application', registration: 'descriptor']
     static final String MISSING = 'The commands of the application and its plugins are not listed yet. To list them: grails-forge-cli gradle grailsCommandCatalog'
     static final String REFUSED = 'The commands of the application and its plugins are not listed: build/grails/command-catalog.json '
+
+    // One Gradle daemon, of this specification alone, runs the builds of its features: they have nothing to
+    // compile, and without it every one of them would wait for a JVM of Gradle to start. A feature that looks
+    // at the process a build runs in asks for a build without a daemon.
+    @Shared
+    IsolatedGradle daemon = new IsolatedGradle()
+
+    void cleanupSpec() {
+        daemon.close()
+    }
 
     PrintStream originalOut
     PrintStream originalErr
@@ -1115,8 +1126,8 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
 
     @IgnoreIf({ os.windows })
     void "cancelling a command stops Gradle, and the file of the arguments is gone"() {
-        given:
-        plainProject()
+        given: 'a build without a daemon, which ends with the Gradle that is stopped'
+        plainProject(false)
         catalog([HELLO])
         File started = new File(dir, 'started.txt')
         AtomicInteger exit = new AtomicInteger(-1)
@@ -1307,7 +1318,7 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
     }
 
     // the wrapper of a generated application, and around it a build that needs nothing of Grails
-    private void plainProject() {
+    private void plainProject(boolean withDaemon = true) {
         generateProject(ApplicationType.WEB)
         dir.eachFile { File file ->
             if (!(file.name in ['gradlew', 'gradlew.bat', 'gradle'])) {
@@ -1319,8 +1330,8 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
                 file.directory ? file.deleteDir() : file.delete()
             }
         }
-        new File(dir, 'settings.gradle').text = "rootProject.name = 'plain'\n"
-        new File(dir, 'gradle.properties').text = 'org.gradle.daemon=false\n'
+        new File(dir, 'settings.gradle').text = daemon.settingsOf(withDaemon)
+        new File(dir, 'gradle.properties').text = daemon.propertiesOf(withDaemon)
         new File(dir, 'build.gradle').text = BUILD
         new File(dir, 'grails-app').mkdirs()
     }

@@ -43,6 +43,8 @@ final class IsolatedGradle {
     /** What a daemon ends by itself after, in milliseconds, when it is left behind all the same. */
     static final int IDLE_MILLIS = 120_000
 
+    private static final boolean WINDOWS = System.getProperty('os.name').toLowerCase(Locale.ROOT).contains('windows')
+
     final File registry = Files.createTempDirectory('grailsdaemons').toFile()
 
     /** The JVM argument that the daemons of the projects have and no other process has. */
@@ -50,8 +52,48 @@ final class IsolatedGradle {
 
     /** What the settings of a project begin with: its name, and the line that writes down which process reads them. */
     String getSettings() {
-        return "rootProject.name = 'plain'\n" +
-                "new File('${new File(registry, 'daemons.txt').canonicalPath}') << (ProcessHandle.current().pid() + '\\n')\n"
+        return "rootProject.name = 'plain'\n" + recording
+    }
+
+    /** The line of the settings of a project that writes down which process reads them, for settings that have a name of their own. */
+    String getRecording() {
+        return "new File('${new File(registry, 'daemons.txt').canonicalPath}') << (ProcessHandle.current().pid() + '\\n')\n"
+    }
+
+    /**
+     * The {@code settings.gradle} of a project named {@code plain} whose builds have nothing to compile, in a
+     * specification that makes such a project for every feature: with a daemon, one daemon of this fixture runs
+     * the builds of all of them, and only the first waits for a JVM of Gradle to start. Without one, and on
+     * Windows, where this fixture was not run, every build has a JVM of its own that ends with it.
+     *
+     * @param withDaemon whether the builds of the project may be run by a daemon
+     */
+    String settingsOf(boolean withDaemon) {
+        return "rootProject.name = 'plain'\n" + recordingOf(withDaemon)
+    }
+
+    /**
+     * The line {@link #getRecording} for a project whose builds may be run by a daemon, and nothing for any other.
+     */
+    String recordingOf(boolean withDaemon) {
+        return withDaemon && !WINDOWS ? recording : ''
+    }
+
+    /**
+     * The {@code gradle.properties} that goes with {@link #settingsOf}.
+     */
+    String propertiesOf(boolean withDaemon) {
+        return withDaemon && !WINDOWS ? properties : 'org.gradle.daemon=false\n'
+    }
+
+    /**
+     * What the {@code gradle.properties} of a project has so that its builds are run by a daemon of this fixture:
+     * the registry, the JVM argument and the time after which a daemon that is left behind ends.
+     */
+    String getProperties() {
+        return "org.gradle.daemon.registry.base=${registry.canonicalPath}\n" +
+                "org.gradle.jvmargs=-Xmx256m ${marker}\n" +
+                "org.gradle.daemon.idletimeout=${IDLE_MILLIS}\n"
     }
 
     /**
@@ -68,9 +110,7 @@ final class IsolatedGradle {
             Files.copy(file.toPath(), new File(dir, "gradle/wrapper/${file.name}").toPath())
         }
         new File(dir, 'settings.gradle').text = settings
-        new File(dir, 'gradle.properties').text = "org.gradle.daemon.registry.base=${registry.canonicalPath}\n" +
-                "org.gradle.jvmargs=-Xmx256m ${marker}\n" +
-                "org.gradle.daemon.idletimeout=${IDLE_MILLIS}\n" + properties
+        new File(dir, 'gradle.properties').text = getProperties() + properties
         new File(dir, 'grails-app').mkdirs()
     }
 

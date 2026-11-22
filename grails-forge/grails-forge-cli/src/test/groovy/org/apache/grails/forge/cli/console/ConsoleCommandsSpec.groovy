@@ -36,6 +36,7 @@ import org.grails.forge.cli.command.BaseCommand
 import org.opentest4j.TestAbortedException
 import picocli.CommandLine
 import spock.lang.IgnoreIf
+import spock.lang.Shared
 import spock.lang.Unroll
 import spock.util.concurrent.PollingConditions
 
@@ -100,6 +101,16 @@ class ConsoleCommandsSpec extends CommandSpec implements CommandFixture {
         }
         tasks.register('testApp', RecordedPhases)
         '''.stripIndent()
+
+    // One Gradle daemon, of this specification alone, runs the builds of its features: they have nothing to
+    // compile, and without it every one of them would wait for a JVM of Gradle to start. A feature that looks
+    // at the process a build runs in asks for a build without a daemon.
+    @Shared
+    IsolatedGradle daemon = new IsolatedGradle()
+
+    void cleanupSpec() {
+        daemon.close()
+    }
 
     PrintStream originalOut
     PrintStream originalErr
@@ -545,8 +556,8 @@ class ConsoleCommandsSpec extends CommandSpec implements CommandFixture {
 
     @IgnoreIf({ os.windows })
     void "continuous testing is the continuous build of Gradle, and cancelling the command stops Gradle and the build"() {
-        given:
-        plainProject(dir)
+        given: 'a build without a daemon: the JVM the task runs in is then one that ends with the build'
+        plainProject(dir, false)
         File started = new File(dir, 'started.txt')
         AtomicInteger exit = new AtomicInteger(-1)
         Thread command = new Thread({ exit.set(ForgeCli.execute(beanContext, 'test-app', '--continuous', '-Dhang=true')) })
@@ -1272,7 +1283,7 @@ class ConsoleCommandsSpec extends CommandSpec implements CommandFixture {
     }
 
     // the wrapper of a generated application, and around it a build that needs nothing of Grails
-    private void plainProject(File directory) {
+    private void plainProject(File directory, boolean withDaemon = true) {
         generateProject(ApplicationType.WEB)
         directory.eachFile { File file ->
             if (!(file.name in ['gradlew', 'gradlew.bat', 'gradle'])) {
@@ -1284,9 +1295,10 @@ class ConsoleCommandsSpec extends CommandSpec implements CommandFixture {
                 file.directory ? file.deleteDir() : file.delete()
             }
         }
-        new File(directory, 'settings.gradle').text = "rootProject.name = 'plain'\n"
-        // a daemon would keep the system properties of one build for the next
-        new File(directory, 'gradle.properties').text = 'org.gradle.daemon=false\n'
+        // the daemon of the specification is given the system properties of each build anew: the builds say what
+        // the command line of Gradle had, which is of one build
+        new File(directory, 'settings.gradle').text = daemon.settingsOf(withDaemon)
+        new File(directory, 'gradle.properties').text = daemon.propertiesOf(withDaemon)
         new File(directory, 'build.gradle').text = BUILD
         new File(directory, 'grails-app').mkdirs()
     }
