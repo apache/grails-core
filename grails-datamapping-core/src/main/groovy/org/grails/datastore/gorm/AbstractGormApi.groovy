@@ -26,6 +26,8 @@ import groovy.transform.CompileStatic
 
 import org.grails.datastore.gorm.utils.ReflectionUtils
 import org.grails.datastore.mapping.core.Datastore
+import org.grails.datastore.mapping.core.connections.ConnectionSource
+import org.grails.datastore.mapping.core.connections.ConnectionSourcesProvider
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
 
@@ -61,6 +63,48 @@ abstract class AbstractGormApi<D> extends AbstractDatastoreApi {
     protected PersistentEntity persistentEntity
     private List<Method> methods
     private List<Method> extendedMethods
+
+    private static final ThreadLocal<String> VALIDATION_CONNECTION = new ThreadLocal<>()
+
+    /**
+     * The connection the save or validation running on this thread names, such as {@code book.third.save()}, or
+     * {@code null} when it names none. For the internal use of the {@code unique} constraint, which has to check the
+     * connection that the instance is saved on.
+     */
+    static String validationConnection() {
+        return VALIDATION_CONNECTION.get()
+    }
+
+    /**
+     * Runs the callable with the connection this API names as that of the validation, so that the {@code unique}
+     * constraint checks the connection a save or a validation names and not the default connection. An API of the
+     * default connection leaves it as it is.
+     */
+    protected <T1> T1 inConnection(Closure<T1> callable) {
+        String connection = connectionName()
+        if (connection == null || ConnectionSource.DEFAULT == connection) {
+            return callable.call()
+        }
+        String previous = VALIDATION_CONNECTION.get()
+        VALIDATION_CONNECTION.set(connection)
+        try {
+            return callable.call()
+        } finally {
+            if (previous == null) {
+                VALIDATION_CONNECTION.remove()
+            } else {
+                VALIDATION_CONNECTION.set(previous)
+            }
+        }
+    }
+
+    private String connectionName() {
+        Datastore current = getDatastore()
+        if (current instanceof ConnectionSourcesProvider) {
+            return ((ConnectionSourcesProvider) current).getConnectionSources()?.getDefaultConnectionSource()?.getName()
+        }
+        return null
+    }
 
     AbstractGormApi(Class<D> persistentClass, Datastore datastore) {
         super(datastore)

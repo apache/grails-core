@@ -42,6 +42,8 @@ username unique: true
 
 Set to `true` if the property must be unique. This is a persistent call and will query the database.
 
+For a domain class mapped to several data sources, a `save()` that names a connection, such as `book.third.save()`, checks that connection, and any other call checks the default one. The same value can therefore be stored once on each connection.
+
 WARNING: It is possible (though unlikely in practice) for uniqueness validation to pass but for the subsequent save to fail. If another save or update happens to update the database between the Grails check and the actual save of your instance, the call will fail. The only way to prevent this would be to use a transaction at the `SERIALIZABLE` isolation level, but this is very bad for performance.
 
 You can also define multi-column `unique` constraints by declaring the other field(s) to be included as the parameter value. If there is one other field, specify its name, but if there are more than one use a List, for example:

@@ -885,6 +885,14 @@ These bugs are fixed, which changes what the browser submits or what the page co
 - A value encoded beforehand is no longer encoded twice in the `value` of `<g:textField>`, `<g:hiddenField>` and the other field tags when a `RequestDataValueProcessor` returns it unchanged, nor in an option of `<g:select>`.
 - `<g:paginate>` and `<g:sortableColumn>` write a `class` that was encoded beforehand once next to the classes they add, such as `step` and `sortable`. They encoded it twice.
 
+## `unique` constraint and a save that names a connection
+
+For a domain class mapped to several data sources, a `save()` that names a connection (`book.second.save()`, `Book.second.save(book)`, `Book.second.insert(book)`) checked the `unique` constraint against the default data source, whichever connection it named. As of 7.0.19 the check runs on the connection the save names, and on the default connection for a save that names none.
+
+- A value that existed only on the default data source is no longer reported as a duplicate while saving to the second, and one that existed only on the second is now found, where the save used to fail at the unique index or, with MongoDB, store a second copy.
+- Unqualified calls inside a connection block, such as `Book.second.withTransaction { }`, still go to the default connection on 7.0.x, so their check does too.
+- Search for code that relied on one value being unique across every data source and enforce that yourself, for example with a check in a service that queries each connection.
+
 # After the Upgrade
 
 ## Verification Checklist

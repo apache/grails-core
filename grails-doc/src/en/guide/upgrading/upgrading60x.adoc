@@ -1335,3 +1335,13 @@ A value marked with `raw()` is still written as given by the tags that wrote it 
 `<g:radio>` now encodes its `value` once. It encoded it twice, so a value with `&`, `<`, `>`, `"` or `'` was submitted with character references in it, such as `+R&amp;D+` for `R&D`.
 
 A value encoded beforehand is no longer encoded twice in the `value` of `<g:textField>`, `<g:hiddenField>` and the other field tags when a `RequestDataValueProcessor` returns it unchanged, nor in an option of `<g:select>`, with or without a processor. `<g:paginate>` and `<g:sortableColumn>` write a `class` that was encoded beforehand once next to the classes they add, such as `step` and `sortable`; they encoded it twice.
+
+==== A `unique` Constraint Checks the Connection a Save Names
+
+For a domain class mapped to several data sources, a `save()` that names a connection, such as `book.second.save()`, `Book.second.save(book)` or `Book.second.insert(book)`, checked the `unique` constraint against the *default* data source, whichever connection it named.
+
+* A value that existed only on the default data source was reported as a duplicate while saving to the second, and one that existed only on the second was not found, so the save failed at the unique index with a `DuplicateKeyException` (or, with MongoDB, stored a second copy).
+* `validate()` called through the API of a connection was checked on the default data source in the same way.
+
+The check now runs on the connection the save names, and on the default connection for a save that names none. Unqualified calls inside a connection block, such as `Book.second.withTransaction { }`, still go to the default connection on 7.0.x, so the check does too. If you relied on one value being unique across every data source, enforce that yourself, for example with a check in a service that queries each connection.
+

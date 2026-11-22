@@ -138,9 +138,11 @@ class GormInstanceApi<D> extends AbstractGormApi<D> implements GormInstanceOpera
      * @return Returns the instance
      */
     D insert(D instance, Map params) {
-        execute({ Session session ->
-            doSave(instance, params, session, true)
-        } as SessionCallback)
+        inConnection {
+            execute({ Session session ->
+                doSave(instance, params, session, true)
+            } as SessionCallback)
+        }
     }
 
     /**
@@ -180,9 +182,11 @@ class GormInstanceApi<D> extends AbstractGormApi<D> implements GormInstanceOpera
      * @return The instance
      */
     D save(D instance, Map params) {
-        execute({ Session session ->
-            doSave(instance, params, session)
-        } as SessionCallback)
+        inConnection {
+            execute({ Session session ->
+                doSave(instance, params, session)
+            } as SessionCallback)
+        }
     }
 
     /**
