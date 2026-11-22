@@ -1308,3 +1308,9 @@ As of Grails 7.0.18, with `grails.plugin.springsecurity.rest.token.storage.jwt.u
 * For an encrypted JWT, `JwtService.parse` and the `accessTokenJwt` property of an `AccessToken` now return a `grails.plugin.springsecurity.rest.token.generation.jwt.NestedJwt` instead of a `com.nimbusds.jwt.EncryptedJWT`. Its claims are those of the signed JWT inside, its header is that of the encrypted JWT, and it serializes to the token.
 * With encrypted JWTs enabled, a signed JWT is rejected as an invalid token, and with signed JWTs, an encrypted JWT is. Previously such a token failed with a `NullPointerException`.
 * An encrypted JWT whose content encryption key is encrypted with `RSA1_5` is rejected unless `grails.plugin.springsecurity.rest.token.generation.jwt.jweAlgorithm` is `RSA1_5`. The plugin passes that setting to the new `jweAlgorithm` property of `JwtService`. A `jwtService` bean that an application defines itself accepts `RSA1_5` as before, unless the application sets that property too.
+
+==== A `where` query that compares a property of an alias the query cannot write is refused
+
+A comparison in a `where` query that names an alias, such as `def t = Team` with `t.club.id == c.id`, now keeps the criterion for a property of the queried class and for another alias on the other side, in either order. A comparison the query cannot write, such as a path of an alias compared with a local variable, used to be left out of the query without a message, so the query returned more rows. It now stops compilation with `Cannot write the comparison`.
+
+Search the `where` queries that declare an alias (`def t = Team`) for a comparison against a local variable or another expression, and compare with a property of the queried class or write the condition in a subquery.

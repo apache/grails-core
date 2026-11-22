@@ -870,3 +870,10 @@ Run verification through public application behavior, not only compilation.
 - Run the functional tests with a container runtime available when they extend `ContainerGebSpec`.
 - With the Spring Security REST plugin, exercise an OAuth login that passes a `callback` parameter, and with encrypted JWTs a login, a token refresh and a request with a token issued before the upgrade, which must be rejected.
 - With Micronaut, confirm that the build applies `grails-micronaut-bom` as `enforcedPlatform` and that `java -jar` starts the packaged application.
+
+## A `where` query that compares a property of an alias the query cannot write
+
+A comparison that names an alias (`def t = Team`), such as `t.club.id == id`, now keeps the criterion in either order. One the query cannot write, such as `t.club.id == someLocal`, used to be left out of the query without a message and now stops compilation with `Cannot write the comparison`.
+
+- Search the `where` queries that declare an alias for a comparison of an alias path with a local variable, and compare with a property of the queried class or move the condition into a subquery.
+

@@ -27,6 +27,7 @@ import org.codehaus.groovy.ast.expr.ConstantExpression
 import org.codehaus.groovy.ast.expr.Expression
 import org.codehaus.groovy.ast.expr.MethodCallExpression
 import org.codehaus.groovy.control.CompilationUnit
+import org.codehaus.groovy.control.MultipleCompilationErrorsException
 import org.codehaus.groovy.control.Phases
 
 import spock.lang.Specification
@@ -309,9 +310,9 @@ class AliasFieldLeakBook {
         methodCallsNamed(classNode, 'eq', 'usesTAsAMap').any { constantArg(it, 0) == 'otherProperty' }
     }
 
-    void "a captured local variable named like a property of the queried class is a value on the right of a nested alias path"() {
+    void "a nested alias path compared with a captured local variable is refused, and the property of the same name is compared"() {
         given:
-        String source = '''
+        String captured = '''
 import grails.gorm.annotation.Entity
 import org.grails.datastore.gorm.query.transform.ApplyDetachedCriteriaTransform
 
@@ -327,10 +328,20 @@ class AliasCapturedLocalBook {
             t.nested.whatever == title
         }
     }
+}
+'''
+        String property = '''
+import grails.gorm.annotation.Entity
+import org.grails.datastore.gorm.query.transform.ApplyDetachedCriteriaTransform
+
+@ApplyDetachedCriteriaTransform
+@Entity
+class AliasPropertyBook {
+    String title
 
     static findProperty() {
-        AliasCapturedLocalBook.where {
-            def t = AliasCapturedLocalBook
+        AliasPropertyBook.where {
+            def t = AliasPropertyBook
             t.nested.whatever == title
         }
     }
@@ -338,11 +349,17 @@ class AliasCapturedLocalBook {
 '''
 
         when:
-        ClassNode classNode = compileToClassNode(source, 'AliasCapturedLocalBook')
+        compileToClassNode(captured, 'AliasCapturedLocalBook')
 
-        then: 'the captured local is not read as the property title (the comparison itself is dropped when the alias path is written first, the latent issue 17110), the property itself is'
-        methodCallsNamed(classNode, 'setAlias', 'findCaptured').size() == 1
-        methodCallsNamed(classNode, 'eqProperty', 'findCaptured').isEmpty()
+        then: 'the comparison with a local variable is refused at compile time instead of being dropped from the query'
+        MultipleCompilationErrorsException e = thrown()
+        e.message.contains('Cannot write the comparison')
+        e.message.contains('t.nested.whatever == title')
+
+        when:
+        ClassNode classNode = compileToClassNode(property, 'AliasPropertyBook')
+
+        then: 'the property of the queried class is compared with the alias path'
         methodCallsNamed(classNode, 'eqProperty', 'findProperty').any { constantArg(it, 0) == 'title' && constantArg(it, 1) == 't.nested.whatever' }
     }
 

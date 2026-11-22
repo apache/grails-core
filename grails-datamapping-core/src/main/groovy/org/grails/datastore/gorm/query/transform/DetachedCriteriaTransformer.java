@@ -957,7 +957,27 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
                 !variableScope.isReferencedLocalVariable(((VariableExpression) expression).getName());
     }
 
+    /** Whether the expression is a property of an alias, or a path from one, such as {@code t.club} or {@code t.club.id}. */
+    private boolean isAliasPath(Expression expression) {
+        if (!(expression instanceof PropertyExpression)) {
+            return false;
+        }
+        String root = aliasRootName(expression);
+        return root != null && aliases.containsKey(root);
+    }
+
     private void addBinaryExpressionToNewBody(List<String> propertyNames, BlockStatement newCode, BinaryExpression be, boolean addAll, VariableScope variableScope) {
+        int statementsBefore = newCode.getStatements().size();
+        addBinaryExpressionToNewBodyUnchecked(propertyNames, newCode, be, addAll, variableScope);
+        // a comparison that names an alias must produce a criterion: one the transform cannot write is refused, not dropped from the query
+        if (newCode.getStatements().size() == statementsBefore && SWAPPED_COMPARISON_OPERATORS.containsKey(be.getOperation().getRootText()) &&
+                (isAliasPath(be.getLeftExpression()) || isAliasPath(be.getRightExpression())) &&
+                !aliasExpressions.contains(be.getLeftExpression()) && !aliasExpressions.contains(be.getRightExpression())) {
+            sourceUnit.getErrorCollector().addError(new LocatedMessage("Cannot write the comparison [" + be.getText() + "] in a where query: it compares a property of an alias with an expression this query form does not support. Write the property of the queried class on the left and the alias path on the right, or use a subquery property comparison", be.getOperation(), sourceUnit));
+        }
+    }
+
+    private void addBinaryExpressionToNewBodyUnchecked(List<String> propertyNames, BlockStatement newCode, BinaryExpression be, boolean addAll, VariableScope variableScope) {
         Token operation = be.getOperation();
 
         String operator = operation.getRootText();
