@@ -22,6 +22,7 @@ import java.lang.reflect.Field
 import java.util.function.Supplier
 
 import jakarta.annotation.Priority
+import jakarta.annotation.Resource
 
 import org.springframework.aot.generate.ClassNameGenerator
 import org.springframework.aot.generate.DefaultGenerationContext
@@ -29,6 +30,7 @@ import org.springframework.aot.generate.InMemoryGeneratedFiles
 import org.springframework.aot.hint.RuntimeHints
 import org.springframework.aot.hint.predicate.RuntimeHintsPredicates
 import org.springframework.beans.BeansException
+import org.springframework.beans.factory.BeanFactory
 import org.springframework.beans.factory.FactoryBean
 import org.springframework.beans.factory.InjectionPoint
 import org.springframework.beans.factory.NoUniqueBeanDefinitionException
@@ -544,6 +546,49 @@ class GrailsCacheManagerFallbackMatrixSpec extends Specification {
         context?.close()
     }
 
+    void 'a cache-aware class\'s own injection runs where it ran in 8.0.0 around its cache manager: #subject.simpleName beside #others'() {
+        when:
+        Map<String, Object> was = ownInjection(subject, others, false)
+        Map<String, Object> now = ownInjection(subject, others, true)
+
+        then: 'what the class\'s own injection sees of the cache manager, in two instances of it, and what the class gets'
+        was == wasExpected
+        now == nowExpected
+
+        where:
+        subject          | others                                         || wasExpected               || nowExpected
+        MethodInClass    | [(NAMED): 'plain']                             || [seen: [NAMED] * 2, got: NAMED]  || wasExpected
+        MethodInClass    | [(NAMED): 'plain', first: 'plain']             || [failed: true]                   || [seen: [NAMED] * 2, got: NAMED]
+        MethodInClass    | [(NAMED): 'plain', first: 'primary']           || [seen: ['first'] * 2, got: 'first'] || wasExpected
+        MethodInSubclass | [(NAMED): 'plain']                             || [seen: [NAMED] * 2, got: NAMED]  || wasExpected
+        MethodInSubclass | [(NAMED): 'plain', first: 'plain']             || [failed: true]                   || [seen: [NAMED] * 2, got: NAMED]
+        TraitBelowMethod | [(NAMED): 'plain']                             || [seen: [null] * 2, got: NAMED]   || wasExpected
+        TraitBelowMethod | [(NAMED): 'plain', first: 'plain']             || [failed: true]                   || [seen: [null] * 2, got: NAMED]
+        OwnField         | [(NAMED): 'plain', first: 'createdByOwnField'] || [seen: [null] * 2, got: 'first'] || wasExpected
+        FieldInSubclass  | [(NAMED): 'plain', first: 'createdByOwnField'] || [failed: true]                   || [seen: [null] * 2, got: NAMED]
+        ByResourceName   | [(NAMED): 'plain', first: 'primary']           || [seen: [NAMED] * 2, got: 'first'] || wasExpected
+    }
+
+    private Map<String, Object> ownInjection(Class<?> subject, Map<String, String> others, boolean withFallback) {
+        Map<String, CacheManager> instances = [:]
+        GenericApplicationContext started = null
+        try {
+            started = context(others, instances, [], withFallback) { GenericApplicationContext it ->
+                it.registerBean('subject', (Class<Object>) subject,
+                        { BeanDefinition definition -> definition.scope = BeanDefinition.SCOPE_PROTOTYPE } as BeanDefinitionCustomizer)
+            }
+            List<Object> beans = (1..2).collect { started.getBean('subject') }
+            return [seen: beans.collect { Object bean -> nameOf(((Seeing) bean).seen, instances) },
+                    got: nameOf(((GrailsCacheManagerAware) beans.last()).grailsCacheManager, instances)]
+        }
+        catch (BeansException ignored) {
+            return [failed: true]
+        }
+        finally {
+            started?.close()
+        }
+    }
+
     void 'the injection is installed once'() {
         given:
         GenericApplicationContext context = context([(NAMED): 'plain'], [:], [], true)
@@ -617,7 +662,7 @@ class GrailsCacheManagerFallbackMatrixSpec extends Specification {
                 context.registerBean(name, String, { -> 'not a cache manager' } as Supplier<String>)
                 return
             }
-            Class<? extends CacheManager> type = kind in ['priority', 'priorityOnObject', 'factoryBean', 'createdByKeyGenerator'] ?
+            Class<? extends CacheManager> type = kind in ['priority', 'priorityOnObject', 'factoryBean', 'createdByKeyGenerator', 'createdByOwnField'] ?
                     HighPriorityCacheManager : (kind == 'cacheAware' ? CacheAwareCacheManager : ConcurrentMapCacheManager)
             Supplier<CacheManager> supplier = { ->
                 if (kind == 'cyclic') {
@@ -635,11 +680,11 @@ class GrailsCacheManagerFallbackMatrixSpec extends Specification {
                 return
             }
             // declared as a plain CacheManager, as a factory method would declare it, so only the object has the priority
-            Class<? extends CacheManager> declared = kind in ['priorityOnObject', 'createdByKeyGenerator'] ? CacheManager : type
+            Class<? extends CacheManager> declared = kind in ['priorityOnObject', 'createdByKeyGenerator', 'createdByOwnField'] ? CacheManager : type
             BeanDefinitionCustomizer customizer = { BeanDefinition definition ->
                 AbstractBeanDefinition bean = (AbstractBeanDefinition) definition
                 bean.primary = kind == 'primary'
-                bean.lazyInit = kind in ['lazy', 'createdByKeyGenerator']
+                bean.lazyInit = kind in ['lazy', 'createdByKeyGenerator', 'createdByOwnField']
                 bean.autowireCandidate = kind != 'notCandidate'
                 bean.fallback = kind == 'fallback'
                 bean.defaultCandidate = kind != 'notDefault'
@@ -647,6 +692,11 @@ class GrailsCacheManagerFallbackMatrixSpec extends Specification {
             context.registerBean(name, (Class<CacheManager>) declared, supplier, customizer)
         }
         BeanDefinitionCustomizer lazy = { BeanDefinition definition -> definition.lazyInit = true } as BeanDefinitionCustomizer
+        List<String> forOwnField = row.findAll { String name, String kind -> kind == 'createdByOwnField' }*.key
+        context.registerBean('ownDependency', OwnDependency, { ->
+            forOwnField.each { String name -> context.getBean(name) }
+            new OwnDependency()
+        } as Supplier<OwnDependency>, lazy)
         List<String> forKeyGenerator = row.findAll { String name, String kind -> kind == 'createdByKeyGenerator' }*.key
         if (forKeyGenerator) {
             // injected into the cache-aware bean before its cache manager, and creating cache managers when it is
@@ -673,6 +723,78 @@ class GrailsCacheManagerFallbackMatrixSpec extends Specification {
     }
 
     static class CacheAware implements GrailsCacheManagerAware {
+    }
+
+    /** What a class's own injection saw of its cache manager. */
+    interface Seeing {
+        CacheManager getSeen()
+    }
+
+    /** A cache-aware class with an autowired method that reads its cache manager. */
+    static class MethodInClass implements GrailsCacheManagerAware, Seeing {
+        CacheManager seen
+
+        @Autowired
+        void init(BeanFactory beanFactory) {
+            seen = grailsCacheManager
+        }
+    }
+
+    /** The subclass of a cache-aware class, with an autowired method that reads its cache manager. */
+    static class MethodInSubclass extends CacheAware implements Seeing {
+        CacheManager seen
+
+        @Autowired
+        void init(BeanFactory beanFactory) {
+            seen = grailsCacheManager
+        }
+    }
+
+    /** A class with an autowired method, whose subclass is cache-aware. */
+    static class MethodAbove implements Seeing {
+        CacheManager seen
+
+        @Autowired
+        void init(BeanFactory beanFactory) {
+            seen = ((GrailsCacheManagerAware) this).grailsCacheManager
+        }
+    }
+
+    static class TraitBelowMethod extends MethodAbove implements GrailsCacheManagerAware {
+    }
+
+    /** A cache-aware class with an autowired field of its own, whose bean creates a cache manager. */
+    static class OwnField implements GrailsCacheManagerAware, Seeing {
+        @Autowired
+        OwnDependency ownDependency
+
+        CacheManager getSeen() {
+            null
+        }
+    }
+
+    /** The subclass of a cache-aware class, with an autowired field of its own, whose bean creates a cache manager. */
+    static class FieldInSubclass extends CacheAware implements Seeing {
+        @Autowired
+        OwnDependency ownDependency
+
+        CacheManager getSeen() {
+            null
+        }
+    }
+
+    static class OwnDependency {
+    }
+
+    /** A cache-aware class with a method both injected by name with {@code @Resource} and autowired. */
+    static class ByResourceName implements GrailsCacheManagerAware, Seeing {
+        CacheManager seen
+
+        @Resource(name = 'grailsCacheManager')
+        @Autowired
+        void named(CacheManager cacheManager) {
+            seen = cacheManager
+        }
     }
 
     /** A bean of the application's own that injects a cache manager by type, as the trait does. */

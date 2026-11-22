@@ -24,7 +24,9 @@ import groovy.transform.CompileStatic
 
 import jakarta.annotation.Priority
 
+import org.springframework.beans.factory.BeanFactory
 import org.springframework.beans.factory.FactoryBean
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.config.BeanDefinition
 import org.springframework.beans.factory.config.BeanDefinitionCustomizer
 import org.springframework.cache.CacheManager
@@ -304,6 +306,28 @@ class CacheAutoConfigurationSpec extends Specification {
         context.close()
     }
 
+    void 'an autowired method of a cache-aware bean has its cache manager #others, as Spring injects the field before the method'() {
+        given: 'a service that uses its cache manager from an autowired method, as when it warms its caches at startup'
+        AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext()
+        if (others == 'beside another one') {
+            context.registerBean('cacheManager', CacheManager, { -> new ConcurrentMapCacheManager() } as Supplier<CacheManager>)
+        }
+        context.registerBean(WarmedOnStartup)
+        context.register(CacheAutoConfiguration)
+
+        when:
+        context.refresh()
+
+        then:
+        context.getBean(WarmedOnStartup).warmedWith.is(context.getBean('grailsCacheManager'))
+
+        cleanup:
+        context.close()
+
+        where:
+        others << ['alone', 'beside another one']
+    }
+
     void 'with caching disabled, the one cache manager the context has is used, as before'() {
         given:
         CacheManager only = new ConcurrentMapCacheManager()
@@ -436,6 +460,16 @@ class CacheAutoConfigurationSpec extends Specification {
         @Override
         int getPhase() {
             0
+        }
+    }
+
+    /** A cache-aware service that uses its cache manager from an autowired method. */
+    static class WarmedOnStartup implements GrailsCacheManagerAware {
+        CacheManager warmedWith
+
+        @Autowired
+        void warmUp(BeanFactory beanFactory) {
+            warmedWith = grailsCacheManager
         }
     }
 
