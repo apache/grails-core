@@ -93,87 +93,100 @@ jobs:
             sleep 5
             bounded git -C merges.git fetch --quiet --filter=tree:0 origin "$@"
           }
-          # Whether a merge commit changed a conflicted file only inside its conflicts. The file git merges by itself
-          # holds each conflict between markers labelled with the two parents, and the pushed file has to keep every
-          # line outside them as it is, with the same mode. Answers 1 when it does not, also for a conflict git
-          # writes without markers, such as one of a binary file or of a file deleted on one side, which leaves no
-          # line to tell the resolution by; and 2 when a git command fails.
+          # Whether a merge commit changed a conflicted file only inside its conflicts, and resolved each of them as
+          # a whole. The file git merges by itself holds each conflict between markers labelled with the two
+          # parents, and the pushed file has to be that file with every line outside the conflicts as git wrote it
+          # and each conflict replaced by what git offers for one: the lines of the pull request's side, those of
+          # the base branch's side, or both sides one after the other, in either order. Conflict markers left in the
+          # file are no resolution. The pushed file is matched against those choices line by line from the start, so the answer does
+          # not depend on how a diff would line the two files up; lines are compared with their line ends, and the
+          # end of the file has to end, or not, with a newline as the choice that ends it does. Lines picked from
+          # the sides, repeated, reordered or written by hand are a change nobody reviewed, even when each line
+          # looks like one of a side. Answers 1 when the file is not such a resolution, also for a conflict git
+          # writes without markers, such as one of a binary file or of a file deleted on one side, and when the
+          # mode differs; and 2 when a command fails or runs out of time.
           resolved_within_conflicts() {
-            local tree=$1 commit=$2 path=$3 first=$4 second=$5 size=$6 entry pushed regions hunks opening separator closing
-            opening=$(printf '%*s' "$size" '' | tr ' ' '<')
-            separator=$(printf '%*s' "$size" '' | tr ' ' '=')
-            closing=$(printf '%*s' "$size" '' | tr ' ' '>')
+            local tree=$1 commit=$2 path=$3 first=$4 second=$5 size=$6 ours=$7 theirs=$8 entry pushed
             entry=$(bounded git -C merges.git ls-tree --format='%(objectmode) %(objecttype)' "$tree" -- "$path") || return 2
             [[ "$entry" == 100*' blob' ]] || return 1
             pushed=$(bounded git -C merges.git ls-tree --format='%(objectmode) %(objecttype)' "$commit" -- "$path") || return 2
             [[ "$pushed" == "$entry" ]] || return 1
+            [[ -n "$ours" && -n "$theirs" ]] || return 1
             bounded git -C merges.git cat-file blob "$tree:$path" > conflicted.file || return 2
             bounded git -C merges.git cat-file blob "$commit:$path" > resolved.file || return 2
-            # The first and last line of each conflict. The markers are longer than any run of their characters
-            # that starts a line of either side (see only_merges_base), and the first and last are matched with
-            # their labels, the ids of the parents, so that no line of the file can be taken for one.
-            regions=$(awk -v opening="$opening $first" -v closing="$closing $second" '
-              { sub(/\r$/, "") }
-              $0 == opening || index($0, opening ":") == 1 { if (start) exit 1; start = NR; next }
-              $0 == closing || index($0, closing ":") == 1 { if (!start) exit 1; printf "%d %d ", start, NR; start = 0 }
-              END { if (start) exit 1 }' conflicted.file) || return 2
-            [[ -n "$regions" ]] || return 1
-            # Every line the merge commit removed or replaced lies in a conflict, markers included, and every line it
-            # only inserted lands between the markers of one: git reports an insertion after an old line, so that
-            # line has to be the opening marker or a line after it, before the closing marker. Each conflict is then
-            # resolved as a whole, by what git offers for one: the lines of the pull request's side, those of the
-            # base branch's side, or both sides one after the other, in either order. Lines picked from the sides,
-            # repeated, reordered or written by hand are a change nobody reviewed, even when each line looks like
-            # one of a side. A conflict left as git wrote it, markers and all, is no change either. --text makes git
-            # compare a file it takes for binary line by line too, rather than only say that it differs.
-            hunks=$(bounded git -C merges.git diff -U0 --text --no-ext-diff --no-textconv --no-color "$tree:$path" "$commit:$path") || return 2
-            awk -v regions="$regions" -v separator="$separator" '
-              BEGIN { n = split(regions, r, " ") }
-              FILENAME == ARGV[1] { merged[FNR] = $0; next }
-              FILENAME == ARGV[2] { resolved[FNR] = $0; next }
-              /^@@ / {
-                split(substr($2, 2), h, ","); at = h[1] + 0; count = (2 in h) ? h[2] + 0 : 1
-                split(substr($3, 2), g, ","); written = (2 in g) ? g[2] + 0 : 1; conflict = 0
-                for (i = 1; i < n; i += 2)
-                  if (count > 0 ? (r[i] <= at && at + count - 1 <= r[i + 1]) : (r[i] <= at && at < r[i + 1])) conflict = i
-                if (!conflict) { outside = 1; exit 1 }
-                grown[conflict] += written - count
+            bounded git -C merges.git cat-file blob "$ours" > ours.file || return 2
+            bounded git -C merges.git cat-file blob "$theirs" > theirs.file || return 2
+            # Whether a file ends with a newline: its last byte is one.
+            ends() { [[ "$(tail -c 1 "$1" | od -An -tx1 | tr -d ' ')" == 0a ]] && echo 1 || echo 0; }
+            bounded awk -v size="$size" -v first="$first" -v second="$second" -v merged_nl="$(ends conflicted.file)" \
+              -v resolved_nl="$(ends resolved.file)" -v ours_nl="$(ends ours.file)" -v theirs_nl="$(ends theirs.file)" '
+              # c repeated n times, by doubling, so that a long marker takes no time to build.
+              function run(c, n,   s) { s = c; while (2 * length(s) <= n) s = s s; return s substr(s, 1, n - length(s)) }
+              # Whether the pushed lines from p on are the merged lines from a to b.
+              function same(p, a, b,   j) {
+                if (p - 1 + (b - a + 1) > lines) return 0
+                for (j = a; j <= b; j++) if (resolved[p + j - a] != merged[j]) return 0
+                return 1
               }
-              # The resolution of each conflict is where its lines moved to in the pushed file, as far as the
-              # changes before it and in it have shifted them.
+              FILENAME == ARGV[1] { merged[FNR] = $0; total = FNR; next }
+              { resolved[FNR] = $0; lines = FNR }
               END {
-                if (outside) exit 1
-                for (i = 1; i < n; i += 2) {
-                  from = r[i] + shift; to = r[i + 1] + shift + grown[i]; shift += grown[i]
-                  resolution = ""; for (j = from; j <= to; j++) resolution = resolution resolved[j] "\n"
-                  conflict = ""; ours = ""; theirs = ""; separators = 0
-                  for (j = r[i]; j <= r[i + 1]; j++) conflict = conflict merged[j] "\n"
-                  for (j = r[i] + 1; j < r[i + 1]; j++) {
-                    line = merged[j]; sub(/\r$/, "", line)
-                    if (line == separator) separators++
-                    else if (separators) theirs = theirs merged[j] "\n"
-                    else ours = ours merged[j] "\n"
+                opening = run("<", size) " " first; closing = run(">", size) " " second; separator = run("=", size)
+                for (j = 1; j <= total; j++) {
+                  line = merged[j]; sub(/\r$/, "", line)
+                  if (line == opening || index(line, opening ":") == 1) { if (start) exit 1; start = j; seps = 0; at = 0 }
+                  else if (start && line == separator) { seps++; at = j }
+                  else if (line == closing || index(line, closing ":") == 1) {
+                    if (!start) exit 1
+                    if (seps != 1) exit 1
+                    conflicts++; open[conflicts] = start; shut[conflicts] = j; split_at[conflicts] = at; start = 0
                   }
-                  if (resolution == conflict) continue
-                  if (separators != 1) exit 1
-                  if (resolution != ours && resolution != theirs && resolution != ours theirs && resolution != theirs ours) exit 1
                 }
-              }' conflicted.file resolved.file - <<< "$hunks" || return 1
+                if (start || !conflicts) exit 1
+                # Every place in the pushed file the lines matched so far can end at, with the choice that ended it.
+                reach[1] = "file"; done_to = 0
+                for (k = 1; k <= conflicts; k++) {
+                  delete next_reach
+                  for (p in reach) {
+                    if (!same(p + 0, done_to + 1, open[k] - 1)) continue
+                    q = p + open[k] - 1 - done_to
+                    o = split_at[k] - open[k] - 1; t = shut[k] - split_at[k] - 1
+                    if (same(q, open[k] + 1, split_at[k] - 1)) next_reach[q + o] = next_reach[q + o] " ours"
+                    if (same(q, split_at[k] + 1, shut[k] - 1)) next_reach[q + t] = next_reach[q + t] " theirs"
+                    if (same(q, open[k] + 1, split_at[k] - 1) && same(q + o, split_at[k] + 1, shut[k] - 1)) next_reach[q + o + t] = next_reach[q + o + t] " theirs"
+                    if (same(q, split_at[k] + 1, shut[k] - 1) && same(q + t, open[k] + 1, split_at[k] - 1)) next_reach[q + o + t] = next_reach[q + o + t] " ours"
+                  }
+                  delete reach; for (p in next_reach) reach[p] = next_reach[p]; done_to = shut[k]
+                }
+                for (p in reach) {
+                  if (!same(p + 0, done_to + 1, total) || p - 1 + total - done_to != lines) continue
+                  # The newline at the end is that of the merged file, unless the last conflict ends the file: then
+                  # it is that of the side the resolution ends with, as git takes it from that side.
+                  if (lines == 0) exit 0
+                  if (done_to < total) { if (resolved_nl == merged_nl) exit 0; continue }
+                  if (index(reach[p], "ours") && resolved_nl == ours_nl) exit 0
+                  if (index(reach[p], "theirs") && resolved_nl == theirs_nl) exit 0
+                }
+                exit 1
+              }' conflicted.file resolved.file
+            case $? in 0) return 0 ;; 1) return 1 ;; *) return 2 ;; esac
           }
           # Whether every commit from the approved one to the head is a merge of the base branch that changes nothing
           # by hand outside the conflicts git could not merge. Each commit on the way has to have two parents, the
           # second one a commit of the base branch, and its tree is compared with the one git merges from those
-          # parents: the files that differ have to be conflicted ones, changed only inside their conflicts. The head
-          # and the base branch are fetched with their history, so that git finds the merge bases of each merge as a
+          # parents: the files that differ have to be conflicted ones, resolved as described above. The head and
+          # the base branch are fetched with their history, so that git finds the merge bases of each merge as a
           # merge of its own would, also when there are more than one, and answers from the history whether a
           # commit is on the base branch; it fetches the trees and the contents of the files a merge needs only when
-          # it merges. Sets the reason of a dismissal, and lists the files whose conflicts were resolved by hand,
-          # one line with the merge and the file each. A commit that is not such a merge answers no, and so does
-          # anything that keeps the check from finishing: a fetch that fails twice, or a git command that fails or
-          # runs out of time. The number of merges is not limited, only the time: GitHub does not move an approval
-          # kept this way, so each hourly run walks its merges again, and the time limit is what bounds that cost.
+          # it merges. Paths are read as git writes them with -z, unquoted, so that any name can be looked up. Sets
+          # the reason of a dismissal, and lists the files whose conflicts were resolved by hand, one line with the
+          # merge and the file each. A commit that is not such a merge answers no, and so does anything that keeps
+          # the check from finishing: a fetch that fails twice, or a command that fails or runs out of time. The
+          # number of merges is not limited, only the time: GitHub does not move an approval kept this way, so each
+          # hourly run walks its merges again, and the time limit is what bounds that cost.
           only_merges_base() {
-            local base=$1 approved=$2 commit=$3 deadline=$(( SECONDS + 120 )) parents first second other merged tree conflicts changed path size side entry longest
+            local base=$1 approved=$2 commit=$3 deadline=$(( SECONDS + 120 )) parents first second other tree record path size longest status blob run
+            local -A conflicted=() ours=() theirs=()
             (( deadline <= checks_end )) || deadline=$checks_end
             accepted=
             reason="the commits after this approval could not be checked"
@@ -189,43 +202,76 @@ jobs:
                 1) reason="the pull request changed after this approval"; return 1 ;;
                 *) return 1 ;;
               esac
-              # The first line is the merged tree, the lines after it name the conflicted files, which fail the command.
-              merged=$(bounded git -C merges.git -c merge.conflictStyle=merge merge-tree --write-tree --name-only --no-messages "$first" "$second") || [[ $? == 1 ]] || return 1
-              conflicts=$(tail -n +2 <<< "$merged")
               # git's markers are seven characters long, and a side may hold a line just like one, such as the seven
-              # equal signs that underline a heading. The markers are made one longer than the longest run of <, =
-              # or > that starts a line of either side of a conflicted file, and the merge is repeated with them, so
-              # that what lies between them can be told apart from them.
+              # equal signs that underline a heading. The merge is made once to learn the conflicted files and the
+              # two sides git took each from (stages 2 and 3), and when a side has a line that starts with seven or
+              # more <, = or >, once more with markers one longer than the longest such run, given for that merge
+              # alone, so that what lies between the markers can be told apart from them.
               size=7
-              while IFS= read -r path; do
-                [[ -n "$path" ]] || continue
-                for side in "$first" "$second"; do
-                  # A side without the file has no line to count; a git command that fails answers as one.
-                  entry=$(bounded git -C merges.git ls-tree --format='%(objecttype) %(objectname)' "$side" -- "$path") || return 1
-                  [[ "$entry" == 'blob '* ]] || continue
-                  longest=$(set -o pipefail; bounded git -C merges.git cat-file blob "${entry#blob }" | awk '
-                    { sub(/\r$/, ""); if (match($0, /^(<+|=+|>+)/) && RLENGTH > longest) longest = RLENGTH }
-                    END { print longest + 0 }') || return 1
-                  (( longest < size )) || size=$(( longest + 1 ))
+              rm -f marker.attributes || return 1
+              while :; do
+                bounded git -C merges.git -c merge.conflictStyle=merge -c core.attributesFile="$PWD/marker.attributes" \
+                  merge-tree --write-tree -z --no-messages "$first" "$second" > merged.z
+                status=$?
+                (( status <= 1 )) || return 1
+                conflicted=() ours=() theirs=() tree=
+                while IFS= read -r -d '' record; do
+                  [[ -n "$tree" ]] || { tree=$record; continue; }
+                  [[ -n "$record" ]] || break
+                  path=${record#*$'\t'}
+                  conflicted[$path]=1
+                  case ${record%%$'\t'*} in
+                    *' 2') ours[$path]=$(cut -d ' ' -f 2 <<< "${record%%$'\t'*}") ;;
+                    *' 3') theirs[$path]=$(cut -d ' ' -f 2 <<< "${record%%$'\t'*}") ;;
+                  esac
+                done < merged.z
+                [[ -n "$tree" ]] || return 1
+                (( size == 7 )) || break
+                longest=0
+                for path in "${!conflicted[@]}"; do
+                  for blob in ${ours[$path]:-} ${theirs[$path]:-}; do
+                    run=$(set -o pipefail; bounded git -C merges.git cat-file blob "$blob" | bounded awk '
+                      { sub(/\r$/, ""); if (match($0, /^(<+|=+|>+)/) && RLENGTH > longest) longest = RLENGTH }
+                      END { print longest + 0 }') || return 1
+                    (( run <= longest )) || longest=$run
+                  done
                 done
-              done <<< "$conflicts"
-              if (( size > 7 )); then
-                echo "* conflict-marker-size=$size" > merges.git/info/attributes
-                merged=$(bounded git -C merges.git -c merge.conflictStyle=merge merge-tree --write-tree --name-only --no-messages "$first" "$second") || [[ $? == 1 ]] || { : > merges.git/info/attributes; return 1; }
-                : > merges.git/info/attributes
-                conflicts=$(tail -n +2 <<< "$merged")
-              fi
-              tree=${merged%%$'\n'*}
-              changed=$(bounded git -C merges.git diff --name-only --no-renames "$tree" "$commit^{tree}") || return 1
-              while IFS= read -r path; do
-                [[ -n "$path" ]] || continue
-                grep -qxF -- "$path" <<< "$conflicts" || { reason="the pull request changed after this approval"; return 1; }
-                resolved_within_conflicts "$tree" "$commit" "$path" "$first" "$second" "$size" || {
+                (( longest >= 7 )) || break
+                size=$(( longest + 1 ))
+                printf '* conflict-marker-size=%d\n' "$size" > marker.attributes || return 1
+              done
+              rm -f marker.attributes || return 1
+              bounded git -C merges.git diff --name-only -z --no-renames "$tree" "$commit^{tree}" > changed.z || return 1
+              # A conflicted file the merge left as git wrote it still holds the conflict markers when git wrote
+              # them, which is no resolution. A conflict git writes without markers, such as one of a binary file,
+              # holds one side there, which may be kept.
+              for path in "${!conflicted[@]}"; do
+                grep -qzxF -- "$path" changed.z && continue
+                blob=$(bounded git -C merges.git ls-tree --format='%(objecttype) %(objectname)' "$tree" -- "$path") || return 1
+                [[ "$blob" == 'blob '* ]] || continue
+                bounded git -C merges.git cat-file blob "${blob#blob }" > conflicted.file || return 1
+                bounded awk -v size="$size" -v first="$first" '
+                  BEGIN { opening = "<"; while (2 * length(opening) <= size) opening = opening opening
+                    opening = opening substr(opening, 1, size - length(opening)) " " first }
+                  { sub(/\r$/, "") }
+                  $0 == opening || index($0, opening ":") == 1 { found = 1; exit }
+                  END { exit found ? 3 : 0 }' conflicted.file
+                case $? in
+                  0) ;;
+                  3) reason="the pull request changed after this approval"; return 1 ;;
+                  *) return 1 ;;
+                esac
+              done
+              while IFS= read -r -d '' path; do
+                [[ -n "${conflicted[$path]+set}" ]] || { reason="the pull request changed after this approval"; return 1; }
+                resolved_within_conflicts "$tree" "$commit" "$path" "$first" "$second" "$size" "${ours[$path]:-}" "${theirs[$path]:-}" || {
                   (( $? == 1 )) && reason="the pull request changed after this approval"
                   return 1
                 }
-                accepted+="$commit $path"$'\n'
-              done <<< "$changed"
+                # One line per file: a newline in a name is written as \n, so that the list keeps one file a line.
+                path=${path//\\/\\\\}
+                accepted+="$commit ${path//$'\n'/\\n}"$'\n'
+              done < changed.z
               commit=$first
             done
           }
