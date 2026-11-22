@@ -448,20 +448,18 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
             visitMethodCallExpressionInScope(call);
             return;
         }
-        // an alias belongs to the query that declares it, and to the subqueries inside it: a later query in the same method may use the name for a local variable
-        Map<String, Object> previousAliases = whereCallDepth == 0 ? new HashMap<>(aliases) : null;
-        Set<Expression> previousAliasExpressions = whereCallDepth == 0 ? new HashSet<>(aliasExpressions) : null;
+        // an alias belongs to the query that declares it, and to the subqueries inside it, not to the next query or the next subquery: that one may use the name for a local variable
+        Map<String, Object> previousAliases = new HashMap<>(aliases);
+        Set<Expression> previousAliasExpressions = new HashSet<>(aliasExpressions);
         whereCallDepth++;
         try {
             visitMethodCallExpressionInScope(call);
         } finally {
             whereCallDepth--;
-            if (whereCallDepth == 0) {
-                aliases.clear();
-                aliases.putAll(previousAliases);
-                aliasExpressions.clear();
-                aliasExpressions.addAll(previousAliasExpressions);
-            }
+            aliases.clear();
+            aliases.putAll(previousAliases);
+            aliasExpressions.clear();
+            aliasExpressions.addAll(previousAliasExpressions);
         }
     }
 

@@ -241,6 +241,41 @@ class AliasSameMethodBook {
         methodCallsNamed(classNode, 'eq', 'twoQueries').any { constantArg(it, 0) == 'otherProperty' }
     }
 
+    void "an alias declared in one subquery is not an alias in the next subquery of the same query"() {
+        given:
+        String source = '''
+import grails.gorm.annotation.Entity
+import org.grails.datastore.gorm.query.transform.ApplyDetachedCriteriaTransform
+
+@ApplyDetachedCriteriaTransform
+@Entity
+class AliasSiblingBook {
+    String otherProperty
+
+    static twoSubqueries() {
+        AliasSiblingBook.where {
+            exists(AliasSiblingBook.where {
+                def c = AliasSiblingBook
+                otherProperty == c.nested.whatever
+            }.property('otherProperty'))
+            exists(AliasSiblingBook.where {
+                Map c = [nested: [whatever: 'x']]
+                otherProperty == c.nested.whatever
+            }.property('otherProperty'))
+        }
+    }
+}
+'''
+
+        when:
+        ClassNode classNode = compileToClassNode(source, 'AliasSiblingBook')
+
+        then: 'the first subquery compares properties, the second compares with the value of its local variable'
+        methodCallsNamed(classNode, 'setAlias', 'twoSubqueries').size() == 1
+        methodCallsNamed(classNode, 'eqProperty', 'twoSubqueries').size() == 1
+        methodCallsNamed(classNode, 'eq', 'twoSubqueries').any { constantArg(it, 0) == 'otherProperty' }
+    }
+
     void "comparing a property of an alias with the identifier of the queried class keeps the comparison, in either order"() {
         given:
         String source = '''
