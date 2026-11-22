@@ -485,10 +485,9 @@ The Grails image is officially built on linux in a GitHub action using an Ubuntu
 locally, you can use the following command (substitute `<git-tag-of-release>` with the tag name):
 
 The verification container installs the Liberica JDK build pinned by `LIBERICA_VERSION` in `etc/bin/Dockerfile`, which is
-the archive `actions/setup-java` installs for the release. Keep that version synchronized with `$JAVA_VERSION` in
-`.github/workflows/release.yml`, and update its checksums with it. Liberica's JDK images are not used, because an image tag
-can be a later build of the same version (the `21.0.12` image is `21.0.12.1`) and the images leave out the JDK sources
-(`lib/src.zip`).
+the archive `actions/setup-java` installs for the release. It changes with the java version in `.sdkmanrc`, whose comment
+lists every file to update with it. Liberica's JDK images are not used, because an image tag can be a later build of the
+same version and the images leave out the JDK sources (`lib/src.zip`).
 
 **macOS/Linux**
 ```bash
