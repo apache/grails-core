@@ -141,9 +141,10 @@ public class GrailsHibernateQueryUtils {
             Mapping m = AbstractGrailsDomainBinder.getMapping(entity.getJavaClass());
             if (m != null) {
                 Map sortMap = m.getSort().getNamesAndDirections();
+                Map<String, Criteria> joined = new HashMap<>();
                 for (Object sort : sortMap.keySet()) {
                     final String order = DynamicFinder.ORDER_DESC.equalsIgnoreCase((String) sortMap.get(sort)) ? DynamicFinder.ORDER_DESC : DynamicFinder.ORDER_ASC;
-                    addOrderPossiblyNested(c, entity, (String) sort, order, true);
+                    addOrderPossiblyNested(c, entity, (String) sort, order, true, joined, "");
                 }
             }
         }
@@ -188,8 +189,9 @@ public class GrailsHibernateQueryUtils {
             }
             if (sortObj instanceof Map) {
                 Map sortMap = (Map) sortObj;
+                Map<String, Join> joined = new HashMap<>();
                 for (Object sort : sortMap.keySet()) {
-                    addOrderPossiblyNested(query, queryRoot, criteriaBuilder, entity, (String) sort, sortDirection(sort, sortMap.get(sort)), ignoreCase);
+                    addOrderPossiblyNested(query, queryRoot, criteriaBuilder, entity, (String) sort, sortDirection(sort, sortMap.get(sort)), ignoreCase, joined, "");
                 }
             } else {
                 final String sort = (String) sortObj;
@@ -200,9 +202,10 @@ public class GrailsHibernateQueryUtils {
             Mapping m = AbstractGrailsDomainBinder.getMapping(entity.getJavaClass());
             if (m != null) {
                 Map sortMap = m.getSort().getNamesAndDirections();
+                Map<String, Join> joined = new HashMap<>();
                 for (Object sort : sortMap.keySet()) {
                     final String order = DynamicFinder.ORDER_DESC.equalsIgnoreCase((String) sortMap.get(sort)) ? DynamicFinder.ORDER_DESC : DynamicFinder.ORDER_ASC;
-                    addOrderPossiblyNested(query, queryRoot, criteriaBuilder, entity, (String) sort, order, true);
+                    addOrderPossiblyNested(query, queryRoot, criteriaBuilder, entity, (String) sort, order, true, joined, "");
                 }
             }
         }
@@ -319,6 +322,18 @@ public class GrailsHibernateQueryUtils {
                                                String sort,
                                                String order,
                                                boolean ignoreCase) {
+        addOrderPossiblyNested(query, queryRoot, criteriaBuilder, entity, sort, order, ignoreCase, new HashMap<>(), "");
+    }
+
+    private static void addOrderPossiblyNested(CriteriaQuery query,
+                                               From queryRoot,
+                                               CriteriaBuilder criteriaBuilder,
+                                               PersistentEntity entity,
+                                               String sort,
+                                               String order,
+                                               boolean ignoreCase,
+                                               Map<String, Join> joined,
+                                               String path) {
         int firstDotPos = sort.indexOf(".");
         if (firstDotPos == -1) {
             final PersistentProperty<? extends Property> property = entity.getPropertyByName(sort);
@@ -335,10 +350,14 @@ public class GrailsHibernateQueryUtils {
                 addOrder(entity, query, queryRoot, criteriaBuilder, sort, order, ignoreCase);
             } else if (property instanceof Association) {
                 final Association<? extends Property> a = (Association<? extends Property>) property;
-                final Join join = queryRoot.join(sortHead);
+                String associationPath = path + sortHead;
+                Join join = joined.get(associationPath);
+                if (join == null) {
+                    join = queryRoot.join(sortHead);
+                    joined.put(associationPath, join);
+                }
                 PersistentEntity associatedEntity = a.getAssociatedEntity();
-                Class<?> propertyTargetClass = associatedEntity.getJavaClass();
-                addOrderPossiblyNested(query, join, criteriaBuilder, associatedEntity, sortTail, order, ignoreCase); // Recurse on nested sort
+                addOrderPossiblyNested(query, join, criteriaBuilder, associatedEntity, sortTail, order, ignoreCase, joined, associationPath + "."); // Recurse on nested sort
             }
         }
     }

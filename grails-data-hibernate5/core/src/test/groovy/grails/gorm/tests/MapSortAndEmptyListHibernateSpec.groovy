@@ -34,7 +34,7 @@ import spock.lang.Unroll
 class MapSortAndEmptyListHibernateSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
 
     void setupSpec() {
-        manager.domainClasses.addAll([MsPublisher, MsAuthor, MsBook, MsHomeAuthor, MsHomeBook])
+        manager.domainClasses.addAll([MsPublisher, MsAuthor, MsBook, MsHomeAuthor, MsHomeBook, MsMappedSortBook])
     }
 
     void setup() {
@@ -106,6 +106,19 @@ class MapSortAndEmptyListHibernateSpec extends GrailsDataTckSpec<GrailsDataHiber
         MsBook.findAll(new MsBook(), [sort: nested])*.title == ['zeta', 'alpha', 'beta', 'omega']
         MsBook.findWhere([author: ann], [sort: nested]).title == 'alpha'
         MsBook.find(new MsBook(), [sort: nested]).title == 'zeta'
+    }
+
+    void "a default sort of the mapping on two properties of one association joins it once, for the finders and for list"() {
+        given:
+        MsAuthor ann = MsAuthor.findByName('ann')
+        new MsMappedSortBook(title: 'two', author: MsAuthor.findByName('bob')).save(failOnError: true)
+        new MsMappedSortBook(title: 'one', author: ann).save(flush: true, failOnError: true)
+        manager.session.clear()
+
+        expect:
+        MsMappedSortBook.list()*.title == ['one', 'two']
+        MsMappedSortBook.findAllWhere([author: ann])*.title == ['one']
+        MsMappedSortBook.findAll(new MsMappedSortBook())*.title == ['one', 'two']
     }
 
     void "a map sort of two properties of the same association joins it once"() {
@@ -341,4 +354,15 @@ class MsHomeAuthor {
 class MsHomeBook {
     String title
     MsHomeAuthor author
+}
+
+@Entity
+class MsMappedSortBook {
+
+    String title
+    MsAuthor author
+
+    static mapping = {
+        sort 'author.name': 'asc', 'author.active': 'desc'
+    }
 }
