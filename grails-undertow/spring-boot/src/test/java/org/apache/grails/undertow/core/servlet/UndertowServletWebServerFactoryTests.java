@@ -32,10 +32,14 @@ import javax.net.ssl.SSLContext;
 
 import io.undertow.Undertow.Builder;
 import io.undertow.server.HttpHandler;
+import io.undertow.servlet.ServletExtension;
 import io.undertow.servlet.api.Deployment;
 import io.undertow.servlet.api.DeploymentInfo;
+import io.undertow.servlet.api.ListenerInfo;
+import io.undertow.servlet.core.ServletExtensionHolder;
 import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.servlet.spec.ServletContextImpl;
+import io.undertow.servlet.util.ImmediateInstanceFactory;
 
 import jakarta.servlet.AsyncEvent;
 import jakarta.servlet.AsyncListener;
@@ -433,6 +437,38 @@ class UndertowServletWebServerFactoryTests {
             throws Exception {
         assertCompletesOnceTheErrorPageHasAnswered(path, (info) -> info.addServletExtension(
             (deployment, servletContext) -> addHandlersThatForwardToAnErrorAndComplete(deployment)));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = { "/startsAsync", "/dispatches" })
+    void processingCompletesOnceTheErrorPageHasAnsweredAnErrorAHandlerAHeldServletExtensionAddedForwardedTo(String path)
+            throws Exception {
+        ServletExtension extension = (deployment, servletContext) ->
+            addHandlersThatForwardToAnErrorAndComplete(deployment);
+        ServletExtensionHolder.getServletExtensions().add(extension);
+        try {
+            assertCompletesOnceTheErrorPageHasAnswered(path, null);
+        }
+        finally {
+            ServletExtensionHolder.getServletExtensions().remove(extension);
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = { "/startsAsync", "/dispatches" })
+    void processingCompletesOnceTheErrorPageHasAnsweredAnErrorAHandlerAServletExtensionListenerAddedForwardedTo(
+            String path) throws Exception {
+        ServletContextListener addsHandlers = new ServletContextListener() {
+
+            @Override
+            public void contextInitialized(ServletContextEvent event) {
+                addHandlersThatForwardToAnErrorAndComplete(deploymentInfoOf(event.getServletContext()));
+            }
+
+        };
+        assertCompletesOnceTheErrorPageHasAnswered(path, (info) -> info.addServletExtension(
+            (deployment, servletContext) -> deployment.addListener(new ListenerInfo(ServletContextListener.class,
+                new ImmediateInstanceFactory<>(addsHandlers)))));
     }
 
     @ParameterizedTest
