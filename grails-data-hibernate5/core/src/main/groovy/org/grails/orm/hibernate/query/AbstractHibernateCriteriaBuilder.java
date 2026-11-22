@@ -141,6 +141,8 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
     protected Map<String, String> aliasMap = new HashMap<>();
     /** The aliases of association blocks that are branches of an "or", which join the association with a left join. */
     protected Set<String> leftBlockAliases = new HashSet<>();
+    /** The aliases of a left join that a block on an association of its own class got by default, and no other block asked for. */
+    protected Set<String> defaultLeftBlockAliases = new HashSet<>();
     protected static final String ALIAS = "_alias";
     protected ResultTransformer resultTransformer;
     protected int aliasCount;
@@ -1907,7 +1909,16 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
                     final boolean aliasExisted = aliasMap.containsKey(associationPath);
                     createAliasIfNeccessary(name, associationPath, joinType);
                     final String blockAlias = getLastAlias();
-                    if (branchOfOr && !aliasExisted) {
+                    final boolean namedLeftJoin = hasMoreThanOneArg &&
+                            joinType == org.hibernate.sql.JoinType.LEFT_OUTER_JOIN.getJoinTypeValue();
+                    if (!branchOfOr && !namedLeftJoin && !hasMoreThanOneArg && targetClass.equals(oldTargetClass) && !aliasExisted) {
+                        // the left join of a block on an association of its own class: a later block that names an inner join
+                        // has to ask for the associated entity, as the join it reuses is not an inner join
+                        defaultLeftBlockAliases.add(blockAlias);
+                    }
+                    if ((branchOfOr || namedLeftJoin) && !aliasExisted) {
+                        // a later block that asks for the association reuses this left join, so it has to ask for the
+                        // associated entity itself, as a block that joined it first would have
                         leftBlockAliases.add(blockAlias);
                     }
                     // a block that is a branch of an "or" asks for an associated entity, and so does a block that
@@ -1917,7 +1928,8 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
                     final boolean explicitInnerJoin = hasMoreThanOneArg &&
                             joinType == org.hibernate.sql.JoinType.INNER_JOIN.getJoinTypeValue();
                     final boolean requiresAssociated = branchOfOr ||
-                            (leftBlockAliases.contains(blockAlias) && (!hasMoreThanOneArg || explicitInnerJoin));
+                            (leftBlockAliases.contains(blockAlias) && (!hasMoreThanOneArg || explicitInnerJoin)) ||
+                            (explicitInnerJoin && defaultLeftBlockAliases.contains(blockAlias));
                     // the criteria within an association node are grouped with an implicit AND
                     logicalExpressionStack.add(new LogicalExpression(AND));
                     invokeClosureNode(callable);
@@ -1926,9 +1938,11 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
                         aliasInstanceStack.remove(aliasInstanceStack.size() - 1);
                     }
                     LogicalExpression logicalExpression = logicalExpressionStack.remove(logicalExpressionStack.size() - 1);
-                    if (logicalExpression.args.isEmpty() && requiresAssociated) {
+                    if (requiresAssociated && (logicalExpression.args.isEmpty() || explicitInnerJoin)) {
                         // a block without criteria is not a branch of the "or": it asks for an associated entity of
-                        // the entity as a whole, as the inner join it was always given did
+                        // the entity as a whole, as the inner join it was always given did. So does a block that names an
+                        // inner join: it asks for the entity as a whole, also when it sits in an "or" whose other branches
+                        // do not need the association
                         criteria.add(Restrictions.isNotNull(blockAlias + ".id"));
                     }
                     else if (requiresAssociated) {

@@ -885,6 +885,14 @@ These bugs are fixed, which changes what the browser submits or what the page co
 - A value encoded beforehand is no longer encoded twice in the `value` of `<g:textField>`, `<g:hiddenField>` and the other field tags when a `RequestDataValueProcessor` returns it unchanged, nor in an option of `<g:select>`.
 - `<g:paginate>` and `<g:sortableColumn>` write a `class` that was encoded beforehand once next to the classes they add, such as `step` and `sortable`. They encoded it twice.
 
+## GORM for Hibernate 5: association block inside `or`
+
+An association block inside `or { }` was an inner join, so an entity without the association was dropped before the other branch could match it. As of 7.0.19 the block is a left join, and the entities without the association are found by the other branches.
+
+- Search the criteria closures for an association block inside `or`: the query can return more rows.
+- A block that names its join type keeps it. `child(JoinType.INNER_JOIN) { }` still asks for an entity that has a child, after another block on the same association and for an association of the entity's own class too.
+- `createAlias` is unchanged: an inner join unless a join type is given.
+
 # After the Upgrade
 
 ## Verification Checklist
