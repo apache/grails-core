@@ -100,7 +100,7 @@ public class HibernatePagedResultList extends grails.gorm.PagedResultList {
                     Query newQuery = (Query) clonedQuery;
                     newQuery.offset(0);
                     newQuery.max(-1);
-                    newQuery.clearOrders();
+                    // The count builder suppresses ORDER BY while retaining joins required by the sort.
                     newQuery.projections().count();
                     Number result = (Number) newQuery.singleResult();
                     totalCount = result == null ? 0 : result.intValue();

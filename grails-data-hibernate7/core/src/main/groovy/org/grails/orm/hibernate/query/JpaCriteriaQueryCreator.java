@@ -281,16 +281,12 @@ public class JpaCriteriaQueryCreator<T> {
 
     @SuppressWarnings("unchecked")
     private void assignOrderBy(CriteriaQuery<?> cq, JpaQueryContext context) {
-        if (isCountOnly()) {
-            // a count returns one row whatever the order, and an ORDER BY on a column that is not aggregated fails
-            // on H2 and most other databases, so a count query leaves the criteria's orders out
-            return;
-        }
+        boolean countOnly = isCountOnly();
         // the orders that are still in an association block come after the orders of the criteria
         List<Query.Order> orders = new ArrayList<>(detachedCriteria.getOrders());
         orders.addAll(AssociationOrders.inBlocks(detachedCriteria.getCriteria()));
         boolean distinctEntities = isDistinctEntities();
-        boolean orderedBySelection = !distinctEntities && isOrderedBySelection();
+        boolean orderedBySelection = !countOnly && !distinctEntities && isOrderedBySelection();
         List<jakarta.persistence.criteria.Order> jpaOrders = new ArrayList<>();
         for (Query.Order order : orders) {
             var propertyName = order.getProperty();
@@ -331,6 +327,10 @@ public class JpaCriteriaQueryCreator<T> {
                 expression = blockContext.getSortExpression(property, endsWithForeignKey(associated, property));
             } else {
                 expression = context.getSortExpression(propertyName, endsWithForeignKey(entity, propertyName));
+            }
+            if (countOnly) {
+                // Keep the joins of the sort, which can restrict the rows, without ordering the aggregate.
+                continue;
             }
             if (expression == null) {
                 if (blockOrder != null) {
