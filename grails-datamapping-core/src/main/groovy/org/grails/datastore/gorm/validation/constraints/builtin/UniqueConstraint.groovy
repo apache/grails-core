@@ -78,7 +78,8 @@ class UniqueConstraint extends AbstractConstraint {
 
         MappingContext mappingContext = detachedCriteria.getPersistentEntity()
                                                         .getMappingContext()
-        PersistentEntity targetEntity = mappingContext.getPersistentEntity(mappingContext.getProxyHandler().getProxiedClass(target).getName())
+        Class<?> targetClass = mappingContext.getProxyHandler().getProxiedClass(target)
+        PersistentEntity targetEntity = mappingContext.getPersistentEntity(targetClass.getName())
 
         // Determine the GORM class that actually defines this field
         Class<?> constraintClass = constraintOwningClass
@@ -94,9 +95,10 @@ class UniqueConstraint extends AbstractConstraint {
         }
 
         // Re-create the detached criteria based on the new constraint class
-        // The check runs on the connection the unqualified calls here are routed to: inside a connection block that of
-        // the block, else the default connection
-        detachedCriteria = new DetachedCriteria(constraintClass).withConnection(GormRegistry.currentConnection(constraintClass))
+        // The check runs on the connection the unqualified calls on the class of the validated instance are routed to: inside
+        // a connection block that of the block, else the default connection. The class that declares the property is queried,
+        // but a subclass may be routed where its parent is not.
+        detachedCriteria = new DetachedCriteria(constraintClass).withConnection(GormRegistry.currentConnection(targetClass))
 
         if (targetEntity == null) {
             throw new IllegalStateException("Cannot validate object [$target]. It is not a persistent entity")

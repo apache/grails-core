@@ -44,9 +44,13 @@ class UniqueConstraintConnectionScopeHibernate7Spec extends Specification {
             'dataSource.dialect'  : H2Dialect.name,
             'dataSources.second'  : [url: 'jdbc:h2:mem:uniqueScopeSecond;LOCK_TIMEOUT=10000'],
             'dataSources.third'   : [url: 'jdbc:h2:mem:uniqueScopeThird;LOCK_TIMEOUT=10000']
-    ]), UnqScopeEntity)
+    ]), UnqScopeEntity, UnqScopeAnimal, UnqScopeDog, UnqScopeAuthor, UnqScopeBook)
 
     void cleanup() {
+        [UnqScopeBook, UnqScopeAuthor, UnqScopeAnimal].each { Class type ->
+            type.withNewTransaction { type.executeUpdate("delete from ${type.simpleName}".toString()) }
+            type.second.withNewTransaction { type.second.executeUpdate("delete from ${type.simpleName}".toString()) }
+        }
         UnqScopeEntity.withNewTransaction { UnqScopeEntity.executeUpdate('delete from UnqScopeEntity') }
         UnqScopeEntity.second.withNewTransaction { UnqScopeEntity.second.executeUpdate('delete from UnqScopeEntity') }
         UnqScopeEntity.third.withNewTransaction { UnqScopeEntity.third.executeUpdate('delete from UnqScopeEntity') }
@@ -121,6 +125,49 @@ class UniqueConstraintConnectionScopeHibernate7Spec extends Specification {
         }
     }
 
+    void 'a subclass is checked on the connection of its own block, and of the block of its parent'() {
+        given: 'one tag on the second connection only and one on the default connection only'
+        UnqScopeAnimal.second.withNewTransaction {
+            new UnqScopeDog(tag: 'onSecondTag').second.save(validate: false, flush: true)
+        }
+        UnqScopeAnimal.withNewTransaction {
+            new UnqScopeDog(tag: 'onDefaultTag').save(validate: false, flush: true)
+        }
+
+        expect: 'the block of the subclass checks the second connection'
+        UnqScopeDog.withNewSession {
+            UnqScopeDog.second.withNewSession {
+                !new UnqScopeDog(tag: 'onSecondTag').validate() && new UnqScopeDog(tag: 'onDefaultTag').validate()
+            }
+        }
+
+        and: 'the block of the parent routes the parent only, so the subclass is checked where it is saved, on the default connection'
+        UnqScopeAnimal.withNewSession {
+            UnqScopeAnimal.second.withNewSession {
+                new UnqScopeDog(tag: 'onSecondTag').validate() && !new UnqScopeDog(tag: 'onDefaultTag').validate()
+            }
+        }
+    }
+
+    void 'a cascaded instance is checked on the connection of the save that names it'() {
+        given: 'a title on the second connection only'
+        UnqScopeBook.second.withNewTransaction {
+            new UnqScopeBook(title: 'onSecondTitle').second.save(validate: false, flush: true)
+        }
+
+        when: 'the author is validated through the API of the second connection, with a book that has the title'
+        UnqScopeAuthor author = new UnqScopeAuthor(name: 'a')
+        author.addToBooks(new UnqScopeBook(title: 'onSecondTitle'))
+        boolean validOnSecond = UnqScopeAuthor.withNewSession {
+            UnqScopeAuthor.second.withNewSession {
+                UnqScopeAuthor.second.save(author) != null
+            }
+        }
+
+        then: 'the book is checked on the second connection too, and refused'
+        !validOnSecond
+    }
+
     void 'a duplicate that exists only on the default connection is accepted inside the block of the second'() {
         given: 'a row on the default connection only'
         UnqScopeEntity.withNewTransaction {
@@ -146,6 +193,60 @@ class UnqScopeEntity {
 
     static constraints = {
         name(unique: true)
+    }
+
+    static mapping = {
+        version false
+        datasource(ConnectionSource.ALL)
+    }
+}
+
+@Entity
+class UnqScopeAnimal {
+
+    String tag
+
+    static constraints = {
+        tag(unique: true)
+    }
+
+    static mapping = {
+        version false
+        datasource(ConnectionSource.ALL)
+    }
+}
+
+@Entity
+class UnqScopeDog extends UnqScopeAnimal {
+
+    static mapping = {
+        datasource(ConnectionSource.ALL)
+    }
+}
+
+@Entity
+class UnqScopeAuthor {
+
+    String name
+
+    static hasMany = [books: UnqScopeBook]
+
+    static mapping = {
+        version false
+        datasource(ConnectionSource.ALL)
+    }
+}
+
+@Entity
+class UnqScopeBook {
+
+    String title
+
+    static belongsTo = [author: UnqScopeAuthor]
+
+    static constraints = {
+        title(unique: true)
+        author(nullable: true)
     }
 
     static mapping = {

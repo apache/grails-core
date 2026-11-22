@@ -92,7 +92,8 @@ abstract class AbstractGormApi<D> extends AbstractDatastoreApi {
         if (connection == null || ConnectionSource.DEFAULT == connection) {
             return callable.call()
         }
-        return GormRegistry.withConnectionScope(persistentClass, connection, callable)
+        // every class mapped to the connection, so that a cascaded instance is checked where it is saved
+        return GormRegistry.withConnectionScope(connection, callable)
     }
 
     /**

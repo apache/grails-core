@@ -174,6 +174,9 @@ class AbstractGormApiSpec extends Specification {
             }
         }
         MinimalGormApi api = new MinimalGormApi(AbstractGormApiThing, connectionDatastore, GormRegistry.instance)
+        // the scope covers every class mapped to the connection, so the class has to be mapped to it
+        GormRegistry.instance.registerEntityDatastore(AbstractGormApiThing.name, ConnectionSource.DEFAULT, datastore)
+        GormRegistry.instance.registerEntityDatastore(AbstractGormApiThing.name, 'third', connectionDatastore)
 
         expect: 'inside a block of another connection, and outside any block'
         GormRegistry.withConnectionScope(AbstractGormApiThing, 'second') {
@@ -189,6 +192,33 @@ class AbstractGormApiSpec extends Specification {
     }
 
     interface MixedDatastore extends MultiTenantCapableDatastore, Datastore {}
+    void "inConnection routes every class that is mapped to the connection, and leaves the others as they are"() {
+        given:
+        ConnectionDatastore connectionDatastore = Stub(ConnectionDatastore) {
+            getConnectionSources() >> Stub(ConnectionSources) {
+                getDefaultConnectionSource() >> Stub(ConnectionSource) {
+                    getName() >> 'third'
+                }
+            }
+        }
+        MinimalGormApi api = new MinimalGormApi(AbstractGormApiThing, connectionDatastore, GormRegistry.instance)
+        GormRegistry.instance.registerEntityDatastore(AbstractGormApiThing.name, ConnectionSource.DEFAULT, datastore)
+        GormRegistry.instance.registerEntityDatastore(AbstractGormApiThing.name, 'third', connectionDatastore)
+        GormRegistry.instance.registerEntityDatastore(AbstractGormApiMapped.name, ConnectionSource.DEFAULT, datastore)
+        GormRegistry.instance.registerEntityDatastore(AbstractGormApiMapped.name, 'third', connectionDatastore)
+        GormRegistry.instance.registerEntityDatastore(AbstractGormApiUnmapped.name, ConnectionSource.DEFAULT, datastore)
+
+        expect: 'a cascaded class mapped to the connection is routed with the class of the API, one that is not mapped is not'
+        api.inConnection {
+            [GormRegistry.currentConnection(AbstractGormApiThing), GormRegistry.currentConnection(AbstractGormApiMapped),
+             GormRegistry.currentConnection(AbstractGormApiUnmapped)]
+        } == ['third', 'third', ConnectionSource.DEFAULT]
+    }
+
+    static class AbstractGormApiMapped {}
+
+    static class AbstractGormApiUnmapped {}
+
     interface ConnectionDatastore extends Datastore, ConnectionSourcesProvider {}
 
     static class MinimalGormApi extends AbstractGormApi<AbstractGormApiTenantThing> {
