@@ -33,7 +33,7 @@
 # to the pull request. It reacts to the Code Style workflow being requested for one, which a push to a pull request
 # does, even for a draft or a pull request labelled "no ci", whose jobs are then skipped. A workflow_run run uses the
 # workflow file of the default branch and a token of this repository, and it never checks out or runs anything of the
-# pull request: it reads commit ids through the API and, to repeat a merge, fetches the trees of its commits and
+# pull request: it reads commit ids through the API and, to repeat a merge, fetches the history of its commits and
 # merges them in a bare repository, which runs no hook and no filter.
 #
 # Not every push requests the Code Style workflow: GitHub starts no pull_request workflow for a commit whose message
@@ -83,17 +83,15 @@ jobs:
             (( left > 0 )) || return 124
             timeout "$left" "$@"
           }
-          # A request of the check, asked again once after a pause when it fails, as long as the check has time left:
-          # an approval kept this way is checked again on every hourly run, and one passing error of the API should
-          # not dismiss it. Only the answer of the request that succeeds is printed, not the error body gh prints.
-          requested() {
-            local answer
-            answer=$(bounded gh api "$@") || {
-              (( deadline - SECONDS > 5 )) || return 124
-              sleep 5
-              answer=$(bounded gh api "$@") || return
-            }
-            printf '%s\n' "$answer"
+          # Fetches the commits named with their history, but without trees or file contents, which git fetches
+          # when a merge needs them. A failed fetch is tried once more after a pause, as long as the check has time
+          # left: an approval kept this way is checked again on every hourly run, and one passing error should not
+          # dismiss it.
+          fetched() {
+            bounded git -C merges.git fetch --quiet --filter=tree:0 origin "$@" && return
+            (( deadline - SECONDS > 5 )) || return 124
+            sleep 5
+            bounded git -C merges.git fetch --quiet --filter=tree:0 origin "$@"
           }
           # Whether a merge commit changed a conflicted file only inside its conflicts. The file git merges by itself
           # holds each conflict between markers labelled with the two parents, and the pushed file has to keep every
@@ -159,40 +157,34 @@ jobs:
           # Whether every commit from the approved one to the head is a merge of the base branch that changes nothing
           # by hand outside the conflicts git could not merge. Each commit on the way has to have two parents, the
           # second one a commit of the base branch, and its tree is compared with the one git merges from those
-          # parents: the files that differ have to be conflicted ones, changed only inside their conflicts. Three
-          # commits are fetched for a merge, its parents and their merge base, without history and without file
-          # contents; git then asks for the contents of the files changed on both sides, and of the conflicted files
-          # of the merge commit. The parents of the head are asked for, those of every merge after it are read from
-          # the commit already fetched, so a merge costs two requests. Sets the reason of a dismissal, and lists the
-          # files whose conflicts were resolved by hand, one line with the merge and the file each. A commit that is
-          # not such a merge answers no, and so does anything that keeps the check from finishing: a failed request,
-          # or a git command that fails or runs out of time. The number of merges is not limited, only the time:
-          # GitHub does not move an approval kept this way, so each hourly run walks its merges again, and the time
-          # limit is what bounds that cost.
+          # parents: the files that differ have to be conflicted ones, changed only inside their conflicts. The head
+          # and the base branch are fetched with their history, so that git finds the merge bases of each merge as a
+          # merge of its own would, also when there are more than one, and answers from the history whether a
+          # commit is on the base branch; it fetches the trees and the contents of the files a merge needs only when
+          # it merges. Sets the reason of a dismissal, and lists the files whose conflicts were resolved by hand,
+          # one line with the merge and the file each. A commit that is not such a merge answers no, and so does
+          # anything that keeps the check from finishing: a fetch that fails twice, or a git command that fails or
+          # runs out of time. The number of merges is not limited, only the time: GitHub does not move an approval
+          # kept this way, so each hourly run walks its merges again, and the time limit is what bounds that cost.
           only_merges_base() {
-            local base=$1 approved=$2 commit=$3 deadline=$(( SECONDS + 120 )) fork= parents first second other behind merged tree conflicts changed path
+            local base=$1 approved=$2 commit=$3 deadline=$(( SECONDS + 120 )) parents first second other merged tree conflicts changed path
             (( deadline <= checks_end )) || deadline=$checks_end
             accepted=
             reason="the commits after this approval could not be checked"
+            fetched "$commit" "$base" || return 1
             while [[ "$commit" != "$approved" ]]; do
-              # The parents are read into a variable first, so that a failed command answers as one: gh prints the
-              # body of a failed request, which split into words would look like a commit with more than two parents.
-              if [[ -n "$fork" ]]; then
-                # The commit was fetched as the first parent of the merge before it, so its parents are read from it.
-                parents=$(set -o pipefail; bounded env GIT_NO_LAZY_FETCH=1 git -C merges.git cat-file commit "$commit" | sed -n '1,/^$/s/^parent //p' | tr '\n' ' ') || return 1
-              else
-                parents=$(requested "repos/$REPO/commits/$commit" --jq '[.parents[].sha] | join(" ")') || return 1
-              fi
-              read -r first second other <<< "$parents"
+              parents=$(bounded git -C merges.git rev-list --parents -n 1 "$commit") || return 1
+              read -r _ first second other <<< "$parents"
               [[ -n "$first" ]] || return 1
               [[ -n "$second" && -z "$other" ]] || { reason="the pull request changed after this approval"; return 1; }
-              behind=$(requested "repos/$REPO/compare/$second...$base?per_page=1" --jq '.behind_by') || return 1
-              [[ "$behind" == 0 ]] || { reason="the pull request changed after this approval"; return 1; }
-              fork=$(requested "repos/$REPO/compare/$first...$second?per_page=1" --jq '.merge_base_commit.sha') || return 1
-              [[ -n "$fork" ]] || return 1
-              bounded git -C merges.git fetch --quiet --depth=1 --filter=blob:none origin "$commit" "$first" "$second" "$fork" || return 1
+              bounded git -C merges.git merge-base --is-ancestor "$second" "$base"
+              case $? in
+                0) ;;
+                1) reason="the pull request changed after this approval"; return 1 ;;
+                *) return 1 ;;
+              esac
               # The first line is the merged tree, the lines after it name the conflicted files, which fail the command.
-              merged=$(bounded git -C merges.git -c merge.conflictStyle=merge merge-tree --write-tree --name-only --no-messages --merge-base="$fork" "$first" "$second") || [[ $? == 1 ]] || return 1
+              merged=$(bounded git -C merges.git -c merge.conflictStyle=merge merge-tree --write-tree --name-only --no-messages "$first" "$second") || [[ $? == 1 ]] || return 1
               tree=${merged%%$'\n'*}
               conflicts=$(tail -n +2 <<< "$merged")
               changed=$(bounded git -C merges.git diff --name-only --no-renames "$tree" "$commit^{tree}") || return 1
