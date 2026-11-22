@@ -1311,7 +1311,7 @@ As of Grails 7.0.18, with `grails.plugin.springsecurity.rest.token.storage.jwt.u
 
 ==== A `where` query that compares a property of an alias the query cannot write is refused
 
-A comparison in a `where` query that names an alias, such as `def t = Team` with `t.club.id == c.id`, now keeps the criterion for a property of the queried class and for another alias on the other side, in either order. A comparison the query cannot write, such as a path of an alias compared with a local variable, used to be left out of the query without a message, so the query returned more rows. It now stops compilation with `Cannot write the comparison`.
+A comparison in a `where` query that names an alias of a class, such as `def t = Team` with `t.club.id == c.id`, now keeps the criterion for the identifier of the queried class and for another alias of a class on the other side, in either order. On Hibernate 5 only an identifier path, such as `id == t.club.id`, can be compared that way; `name == t.club.name` fails when the query runs. An alias of a property, `def c = club`, is written on the association as it always was. A comparison the query cannot write, such as a path of an alias compared with a local variable, used to be left out of the query without a message, so the query returned more rows. It now stops compilation with `Cannot write the comparison`.
 
 Search the `where` queries that declare an alias (`def t = Team`) for a comparison against a local variable or another expression, and compare with a property of the queried class or write the condition in a subquery.
 

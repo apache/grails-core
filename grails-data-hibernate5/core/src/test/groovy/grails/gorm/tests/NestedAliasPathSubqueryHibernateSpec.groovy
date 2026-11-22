@@ -197,7 +197,7 @@ class NestedAliasPathSubqueryHibernateSpec extends GrailsDataTckSpec<GrailsDataH
         teams*.name.sort() == ['Arsenal First Team']
     }
 
-    void "a subquery with the id of the subquery on the left and the nested path of the enclosing alias on the right keeps the comparison <"() {
+    void "a subquery with the id of the subquery on the left and the nested path of the enclosing alias on the right keeps the comparison >"() {
         when:
         def teams = Team.where {
             def t = Team
@@ -208,7 +208,7 @@ class NestedAliasPathSubqueryHibernateSpec extends GrailsDataTckSpec<GrailsDataH
         teams*.name.sort() == []
     }
 
-    void "a subquery with the id of the subquery on the left and the nested path of the enclosing alias on the right keeps the comparison <="() {
+    void "a subquery with the id of the subquery on the left and the nested path of the enclosing alias on the right keeps the comparison >="() {
         when:
         def teams = Team.where {
             def t = Team
@@ -219,7 +219,7 @@ class NestedAliasPathSubqueryHibernateSpec extends GrailsDataTckSpec<GrailsDataH
         teams*.name.sort() == ['United First Team', 'United Reserves']
     }
 
-    void "a subquery with the id of the subquery on the left and the nested path of the enclosing alias on the right keeps the comparison >"() {
+    void "a subquery with the id of the subquery on the left and the nested path of the enclosing alias on the right keeps the comparison <"() {
         when:
         def teams = Team.where {
             def t = Team
@@ -230,7 +230,7 @@ class NestedAliasPathSubqueryHibernateSpec extends GrailsDataTckSpec<GrailsDataH
         teams*.name.sort() == ['Arsenal First Team']
     }
 
-    void "a subquery with the id of the subquery on the left and the nested path of the enclosing alias on the right keeps the comparison >="() {
+    void "a subquery with the id of the subquery on the left and the nested path of the enclosing alias on the right keeps the comparison <="() {
         when:
         def teams = Team.where {
             def t = Team
@@ -329,7 +329,7 @@ class NestedAliasPathSubqueryHibernateSpec extends GrailsDataTckSpec<GrailsDataH
         teams*.name.sort() == ['Arsenal First Team']
     }
 
-    void "a subquery with the aliased id of the subquery on the left and the nested path of the enclosing alias on the right keeps the comparison <"() {
+    void "a subquery with the aliased id of the subquery on the left and the nested path of the enclosing alias on the right keeps the comparison >"() {
         when:
         def teams = Team.where {
             def t = Team
@@ -340,7 +340,7 @@ class NestedAliasPathSubqueryHibernateSpec extends GrailsDataTckSpec<GrailsDataH
         teams*.name.sort() == []
     }
 
-    void "a subquery with the aliased id of the subquery on the left and the nested path of the enclosing alias on the right keeps the comparison <="() {
+    void "a subquery with the aliased id of the subquery on the left and the nested path of the enclosing alias on the right keeps the comparison >="() {
         when:
         def teams = Team.where {
             def t = Team
@@ -351,7 +351,7 @@ class NestedAliasPathSubqueryHibernateSpec extends GrailsDataTckSpec<GrailsDataH
         teams*.name.sort() == ['United First Team', 'United Reserves']
     }
 
-    void "a subquery with the aliased id of the subquery on the left and the nested path of the enclosing alias on the right keeps the comparison >"() {
+    void "a subquery with the aliased id of the subquery on the left and the nested path of the enclosing alias on the right keeps the comparison <"() {
         when:
         def teams = Team.where {
             def t = Team
@@ -362,7 +362,7 @@ class NestedAliasPathSubqueryHibernateSpec extends GrailsDataTckSpec<GrailsDataH
         teams*.name.sort() == ['Arsenal First Team']
     }
 
-    void "a subquery with the aliased id of the subquery on the left and the nested path of the enclosing alias on the right keeps the comparison >="() {
+    void "a subquery with the aliased id of the subquery on the left and the nested path of the enclosing alias on the right keeps the comparison <="() {
         when:
         def teams = Team.where {
             def t = Team

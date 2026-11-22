@@ -272,6 +272,10 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
 
     @Override
     public void visitDeclarationExpression(DeclarationExpression expression) {
+        inAliasScope(() -> visitDeclarationExpressionInScope(expression));
+    }
+
+    private void visitDeclarationExpressionInScope(DeclarationExpression expression) {
         Expression initializationExpression = expression.getRightExpression();
         if (initializationExpression instanceof MethodCallExpression) {
             MethodCallExpression call = (MethodCallExpression) initializationExpression;
@@ -438,29 +442,27 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
         return newClosureExpression;
     }
 
-    /** How many where calls enclose the expression being visited; a subquery is visited inside the call of its enclosing query. */
-    private int whereCallDepth;
-
-    @Override
-    public void visitMethodCallExpression(MethodCallExpression call) {
-        boolean whereCall = isCandidateWhereMethod(call.getMethod(), call.getArguments());
-        if (!whereCall) {
-            visitMethodCallExpressionInScope(call);
-            return;
-        }
-        // an alias belongs to the query that declares it, and to the subqueries inside it, not to the next query or the next subquery: that one may use the name for a local variable
+    /**
+     * Runs the visit with the aliases the where queries inside it declare kept to it: an alias belongs to the query that
+     * declares it, and to the subqueries inside it, not to the next query or the next subquery, which may use the name
+     * for a local variable.
+     */
+    private void inAliasScope(Runnable visit) {
         Map<String, Object> previousAliases = new HashMap<>(aliases);
         Set<Expression> previousAliasExpressions = new HashSet<>(aliasExpressions);
-        whereCallDepth++;
         try {
-            visitMethodCallExpressionInScope(call);
+            visit.run();
         } finally {
-            whereCallDepth--;
             aliases.clear();
             aliases.putAll(previousAliases);
             aliasExpressions.clear();
             aliasExpressions.addAll(previousAliasExpressions);
         }
+    }
+
+    @Override
+    public void visitMethodCallExpression(MethodCallExpression call) {
+        inAliasScope(() -> visitMethodCallExpressionInScope(call));
     }
 
     private void visitMethodCallExpressionInScope(MethodCallExpression call) {
@@ -637,6 +639,10 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
 
     @Override
     public void visitStaticMethodCallExpression(StaticMethodCallExpression call) {
+        inAliasScope(() -> visitStaticMethodCallExpressionInScope(call));
+    }
+
+    private void visitStaticMethodCallExpressionInScope(StaticMethodCallExpression call) {
         String method = call.getMethod();
         Expression arguments = call.getArguments();
         if (isCandidateWhereMethod(method, arguments)) {
@@ -932,21 +938,25 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
     private static final Map<String, String> SWAPPED_COMPARISON_OPERATORS = Map.of(
             "==", "==", "!=", "!=", "<", ">", ">", "<", "<=", ">=", ">=", "<=");
 
-    /** Whether the expression is a path of more than one name from an alias, such as {@code t.club.id}. */
+    /**
+     * Whether the expression is a path of more than one name from an alias of a class, such as {@code t.club.id} for
+     * {@code def t = Team}. An alias of a property, {@code def c = club}, is not one: a comparison with it is written
+     * on the association, as it always was.
+     */
     private boolean isNestedAliasPath(Expression expression) {
         if (!(expression instanceof PropertyExpression) || !(((PropertyExpression) expression).getObjectExpression() instanceof PropertyExpression)) {
             return false;
         }
         String root = aliasRootName(expression);
-        return root != null && aliases.containsKey(root);
+        return root != null && aliases.get(root) instanceof ClassNode;
     }
 
-    /** Whether the expression is one property of an alias, such as {@code c.id}. */
+    /** Whether the expression is one property of an alias of a class, such as {@code c.id} for {@code def c = Club}. */
     private boolean isAliasProperty(Expression expression) {
         if (!(expression instanceof PropertyExpression) || !(((PropertyExpression) expression).getObjectExpression() instanceof VariableExpression)) {
             return false;
         }
-        return aliases.containsKey(((VariableExpression) ((PropertyExpression) expression).getObjectExpression()).getName());
+        return aliases.get(((VariableExpression) ((PropertyExpression) expression).getObjectExpression()).getName()) instanceof ClassNode;
     }
 
     /** Whether the expression is the name of a property of the class the query is on, such as {@code id}. */
@@ -971,7 +981,7 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
         if (newCode.getStatements().size() == statementsBefore && SWAPPED_COMPARISON_OPERATORS.containsKey(be.getOperation().getRootText()) &&
                 (isAliasPath(be.getLeftExpression()) || isAliasPath(be.getRightExpression())) &&
                 !aliasExpressions.contains(be.getLeftExpression()) && !aliasExpressions.contains(be.getRightExpression())) {
-            sourceUnit.getErrorCollector().addError(new LocatedMessage("Cannot write the comparison [" + be.getText() + "] in a where query: it compares a property of an alias with an expression this query form does not support. Write the property of the queried class on the left and the alias path on the right, or use a subquery property comparison", be.getOperation(), sourceUnit));
+            sourceUnit.getErrorCollector().addError(new LocatedMessage("Cannot write the comparison [" + be.getText() + "] in a where query: it compares a path of an alias with an expression this query form does not support. Only the identifier of an association, as in id == t.club.id, can be compared with a property of the queried class; write any other condition in a subquery", be.getOperation(), sourceUnit));
         }
     }
 

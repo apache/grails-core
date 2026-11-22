@@ -39,7 +39,7 @@ import spock.lang.Specification
  * a plain value comparison. The source is compiled to the CANONICALIZATION phase, the phase the transform runs in,
  * and the AST is inspected for the call it generated; the alias methods need a live entity that this module has none of.
  */
-class WhereQueryPropertyAliasSpec extends Specification {
+class WhereQueryNestedAliasPathSpec extends Specification {
 
     private static ClassNode compileToClassNode(String source, String className) {
         CompilationUnit unit = new CompilationUnit(new GroovyClassLoader())
@@ -274,6 +274,41 @@ class AliasSiblingBook {
         methodCallsNamed(classNode, 'setAlias', 'twoSubqueries').size() == 1
         methodCallsNamed(classNode, 'eqProperty', 'twoSubqueries').size() == 1
         methodCallsNamed(classNode, 'eq', 'twoSubqueries').any { constantArg(it, 0) == 'otherProperty' }
+    }
+
+    void "an alias of a property keeps writing its comparison on the association"() {
+        given:
+        String source = '''
+import grails.gorm.annotation.Entity
+import org.grails.datastore.gorm.query.transform.ApplyDetachedCriteriaTransform
+
+@ApplyDetachedCriteriaTransform
+@Entity
+class AliasOfPropertyBook {
+    String name
+    AliasOfPropertyClub club
+
+    static findByClubName() {
+        AliasOfPropertyBook.where {
+            def c = club
+            c.name == name
+        }
+    }
+}
+
+@Entity
+class AliasOfPropertyClub {
+    String name
+}
+'''
+
+        when:
+        ClassNode classNode = compileToClassNode(source, 'AliasOfPropertyBook')
+
+        then: 'the comparison is written inside the block of the association, as before, and not swapped to an alias path'
+        methodCallsNamed(classNode, 'createAlias', 'findByClubName').size() == 1
+        methodCallsNamed(classNode, 'eqProperty', 'findByClubName').any { constantArg(it, 0) == 'name' && constantArg(it, 1) == 'name' }
+        methodCallsNamed(classNode, 'eqProperty', 'findByClubName').every { constantArg(it, 1) != 'c.name' }
     }
 
     void "comparing a property of an alias with the identifier of the queried class keeps the comparison, in either order"() {
