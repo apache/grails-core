@@ -28,6 +28,7 @@ import jakarta.persistence.criteria.JoinType
 
 import org.grails.datastore.gorm.finders.FinderMethod
 import org.grails.datastore.mapping.core.connections.ConnectionSource
+import org.grails.datastore.mapping.core.connections.ConnectionSourcesSupport
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.model.types.Association
@@ -931,11 +932,22 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
     private static QueryableCriteria onConnection(QueryableCriteria subquery, String name) {
         if (subquery instanceof AbstractDetachedCriteria) {
             AbstractDetachedCriteria detached = (AbstractDetachedCriteria) subquery
-            if (!detached.connectionExplicit && detached.connectionName != name) {
+            // a subquery on a class that is not mapped to the connection keeps its own: a datastore that reads a collection
+            // per connection would otherwise read an empty one
+            if (!detached.connectionExplicit && detached.connectionName != name && mappedTo(detached, name)) {
                 return (QueryableCriteria) (Object) detached.switchConnection(name)
             }
         }
         return subquery
+    }
+
+    /** Whether the class of the criteria is mapped to the connection; a class that no datastore knows is taken to be. */
+    private static boolean mappedTo(AbstractDetachedCriteria detached, String name) {
+        try {
+            return ConnectionSourcesSupport.usesConnectionSource(detached.getPersistentEntity(), name)
+        } catch (IllegalArgumentException ignored) {
+            return true
+        }
     }
 
     @Override

@@ -56,6 +56,8 @@ class SubqueryConnectionSpec extends AutoStartedMongoSpec {
     void setup() {
         ConnSubPerson.DB.drop()
         ConnSubPerson.archive.DB.drop()
+        ConnSubCity.DB.drop()
+        new ConnSubCity(name: 'Springfield', mayor: 'Abe').save(flush: true)
         [['Bart', 10], ['Lisa', 20]].each { new ConnSubPerson(name: it[0], age: it[1]).save(flush: true) }
         [['Abe', 40], ['Mona', 60], ['Jasper', 80]].each {
             ConnSubPerson.archive.save(new ConnSubPerson(name: it[0], age: it[1]), [flush: true])
@@ -65,6 +67,7 @@ class SubqueryConnectionSpec extends AutoStartedMongoSpec {
     void cleanup() {
         ConnSubPerson.DB.drop()
         ConnSubPerson.archive.DB.drop()
+        ConnSubCity.DB.drop()
     }
 
     void "an aggregate subquery averages the rows of the connection the query is applied to"() {
@@ -121,6 +124,20 @@ class SubqueryConnectionSpec extends AutoStartedMongoSpec {
         found.isEmpty()
     }
 
+    void "a subquery on a class that is not mapped to the connection of the query keeps its own connection"() {
+        when:
+        List<ConnSubPerson> found = ConnSubPerson.where {
+            inList 'name', ConnSubCity.where { name == 'Springfield' }.property('mayor')
+        }.withConnection('archive').list(sort: 'name')
+        List<ConnSubPerson> viaDetached = ConnSubPerson.where {
+            inList 'name', new DetachedCriteria(ConnSubCity).build { eq 'name', 'Springfield' }.property('mayor')
+        }.withConnection('archive').list(sort: 'name')
+
+        then: "the cities exist on the default connection only, and the mayor is a person of the archive"
+        found*.name == ['Abe']
+        viaDetached*.name == ['Abe']
+    }
+
     void "a subquery built with its own connection keeps it"() {
         when:
         List<ConnSubPerson> found = new DetachedCriteria(ConnSubPerson).build {
@@ -132,7 +149,7 @@ class SubqueryConnectionSpec extends AutoStartedMongoSpec {
     }
 
     List getDomainClasses() {
-        [ConnSubPerson]
+        [ConnSubPerson, ConnSubCity]
     }
 }
 
@@ -145,4 +162,11 @@ class ConnSubPerson implements MongoEntity<ConnSubPerson> {
     static mapping = {
         connections 'default', 'archive'
     }
+}
+
+@Entity
+class ConnSubCity implements MongoEntity<ConnSubCity> {
+    ObjectId id
+    String name
+    String mayor
 }
