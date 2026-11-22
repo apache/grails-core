@@ -18,6 +18,8 @@
  */
 package grails.doc.asciidoc
 
+import java.util.regex.Pattern
+
 import groovy.transform.CompileStatic
 
 import org.asciidoctor.Asciidoctor
@@ -35,10 +37,17 @@ import org.asciidoctor.log.Severity
  * the source directory. The warnings and errors Asciidoctor reports are written to the standard
  * error stream, as the Asciidoctor command line does.
  *
+ * <p>An include that cannot be read fails the conversion once every document has been converted.
+ * Asciidoctor renders such an include as a line naming its target, which for the examples the
+ * guides include is an absolute path, so the page would depend on the directory it was built in
+ * and would not match a build of the same sources anywhere else.</p>
+ *
  * @since 8.0
  */
 @CompileStatic
 class AsciidocConverter {
+
+    private static final Pattern UNRESOLVED_INCLUDE = ~/^include (file|uri) not (found|readable)\b.*/
 
     /**
      * @param sourceDir the directory the documents are read from
@@ -50,7 +59,13 @@ class AsciidocConverter {
         Attributes documentAttributes = Attributes.builder().build()
         documentAttributes.setAttributes(new LinkedHashMap<String, Object>(attributes))
         Asciidoctor asciidoctor = Asciidoctor.Factory.create()
-        asciidoctor.registerLogHandler({ LogRecord record -> report(record) } as LogHandler)
+        List<String> unresolvedIncludes = []
+        asciidoctor.registerLogHandler({ LogRecord record ->
+            String reported = report(record)
+            if (reported && UNRESOLVED_INCLUDE.matcher(record.message ?: '').matches()) {
+                unresolvedIncludes << reported
+            }
+        } as LogHandler)
         try {
             for (String document : documents.toSorted()) {
                 File source = new File(sourceDir, document)
@@ -68,19 +83,32 @@ class AsciidocConverter {
                         .build()
                 asciidoctor.convertFile(source, options)
             }
+            if (unresolvedIncludes) {
+                throw new IllegalStateException(
+                        "Asciidoctor could not read ${unresolvedIncludes.size()} included file(s). An unresolved include is " +
+                        'rendered with its path, which makes the page depend on where it was built:\n  ' +
+                        unresolvedIncludes.join('\n  '))
+            }
         }
         finally {
             asciidoctor.shutdown()
         }
     }
 
-    private static void report(LogRecord record) {
+    /**
+     * Writes a warning or error to the standard error stream.
+     *
+     * @return the location and message written, or {@code null} for a record below a warning
+     */
+    private static String report(LogRecord record) {
         if (record.severity < Severity.WARN) {
-            return
+            return null
         }
         Cursor cursor = record.cursor
         String location = cursor?.file ? "${cursor.file}: line ${cursor.lineNumber}: " : ''
         String severity = record.severity == Severity.WARN ? 'WARNING' : record.severity.name()
-        System.err.println("asciidoctor: ${severity}: ${location}${record.message}")
+        String reported = "${location}${record.message}"
+        System.err.println("asciidoctor: ${severity}: ${reported}")
+        reported
     }
 }
