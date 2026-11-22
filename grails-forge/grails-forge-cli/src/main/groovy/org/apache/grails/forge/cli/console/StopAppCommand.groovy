@@ -50,7 +50,8 @@ class StopAppCommand extends InProjectCommand {
 
     private static final int STOP_SECONDS = 30
     private static final int PORT_SECONDS = 30
-    private static final int POLL_MILLIS = 250
+    // between two looks at whether the run-app that was asked has ended, or the port is free: a user waits half of it on average
+    private static final int POLL_MILLIS = 50
     private static final String RECORD = "${RunDirectory.LOCATION}/${RunningApplication.RECORD}"
     private static final String NOT_RUNNING = 'No application that run-app started is running for this project'
 

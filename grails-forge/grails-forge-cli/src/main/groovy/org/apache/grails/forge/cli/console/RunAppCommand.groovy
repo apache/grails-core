@@ -72,7 +72,11 @@ class RunAppCommand extends GradleEnvironmentCommand {
     private static final int DEFAULT_PORT = 8080
     private static final int DEFAULT_HTTPS_PORT = 8443
     private static final int STOP_SECONDS = 10
-    private static final int POLL_MILLIS = 250
+    // How long the command sleeps between two looks. A user waits half of it on average each time something is
+    // waited for, so both are short: a look for what stop-app says reads the attributes of one file, and a look
+    // for an answer of the application is one request to this computer.
+    private static final int STOP_POLL_MILLIS = 50
+    private static final int READY_POLL_MILLIS = 100
     private static final int TAIL_LINES = 20
     private static final int KEYTOOL_SECONDS = 60
     private static final int MAX_CONFIGURATION = 1024 * 1024
@@ -336,7 +340,7 @@ class RunAppCommand extends GradleEnvironmentCommand {
         Thread thread = new Thread({
             try {
                 while (!RunningApplication.wasAskedToStop(directory, pid, began)) {
-                    Thread.sleep(POLL_MILLIS)
+                    Thread.sleep(STOP_POLL_MILLIS)
                 }
                 asked.set(true)
                 build.cancel()
@@ -478,7 +482,7 @@ class RunAppCommand extends GradleEnvironmentCommand {
                         'If the application answers on another port, give that with --port; if it needs longer, give it longer with --ready-timeout'
             }
             try {
-                Thread.sleep(POLL_MILLIS)
+                Thread.sleep(READY_POLL_MILLIS)
             } catch (InterruptedException ignored) {
                 GradleRunner.stop(started, STOP_SECONDS)
                 Thread.currentThread().interrupt()
