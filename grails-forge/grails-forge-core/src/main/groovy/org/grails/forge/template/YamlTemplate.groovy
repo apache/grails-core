@@ -18,6 +18,7 @@
  */
 package org.grails.forge.template
 
+import java.nio.charset.StandardCharsets
 import groovy.transform.CompileStatic
 import org.yaml.snakeyaml.DumperOptions
 import org.yaml.snakeyaml.Yaml
@@ -55,11 +56,12 @@ class YamlTemplate implements Template {
     @Override
     void write(OutputStream outputStream) throws IOException {
         if (!config.isEmpty()) {
-            Writer writer = new OutputStreamWriter(outputStream)
+            // a generated file is the same bytes on every system, whatever the default charset of its JVM is
+            Writer writer = new OutputStreamWriter(outputStream, StandardCharsets.UTF_8)
             writer.write(dump(config))
             writer.flush()
         } else {
-            outputStream.write('# Place application configuration here'.getBytes())
+            outputStream.write('# Place application configuration here'.getBytes(StandardCharsets.UTF_8))
         }
     }
 

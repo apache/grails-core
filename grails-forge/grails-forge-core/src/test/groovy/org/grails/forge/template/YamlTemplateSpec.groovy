@@ -100,4 +100,16 @@ quartz.autoStartup: true
         expect:
         baos.toString() == "# Place application configuration here"
     }
+
+    void "what is written is UTF-8, whatever the default charset of the JVM that generates is"() {
+        given:
+        ByteArrayOutputStream baos = new ByteArrayOutputStream()
+
+        when: 'a value that is not ASCII, as the name of an application can have one'
+        new YamlTemplate("abc", ['info.app.name': 'caf\u00e9 \u2603'] as Map<String, Object>).write(baos)
+
+        then: 'the bytes are those of UTF-8, also on a JVM of Java 17 on Windows, whose default charset is another'
+        new String(baos.toByteArray(), 'UTF-8').contains('caf\u00e9 \u2603') || new String(baos.toByteArray(), 'UTF-8').contains('caf\\xE9 \\u2603')
+        !new String(baos.toByteArray(), 'ISO-8859-1').contains('caf\u00e9')
+    }
 }
