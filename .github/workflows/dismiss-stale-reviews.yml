@@ -221,6 +221,9 @@ jobs:
               size=7
               rm -f marker.attributes || return 1
               while :; do
+                # The merge answers 1 for conflicts, as a failed redirection would; without a file from an earlier
+                # merge, such a failure leaves nothing to read and answers as one.
+                rm -f merged.z || return 1
                 bounded git -C merges.git -c merge.conflictStyle=merge -c core.attributesFile="$PWD/marker.attributes" \
                   merge-tree --write-tree -z --no-messages "$first" "$second" > merged.z
                 status=$?
