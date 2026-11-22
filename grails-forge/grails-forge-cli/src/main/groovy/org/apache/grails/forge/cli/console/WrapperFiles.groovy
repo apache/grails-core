@@ -18,6 +18,7 @@
  */
 package org.apache.grails.forge.cli.console
 
+import java.nio.charset.StandardCharsets
 import java.nio.file.AtomicMoveNotSupportedException
 import java.nio.file.Files
 import java.nio.file.LinkOption
@@ -43,11 +44,17 @@ import org.grails.forge.util.VersionInfo
  * the file that was there is kept. A link is not followed and not replaced, and neither is a file
  * that cannot be written to: each is said, and the others are replaced all the same.</p>
  *
- * <p>A file that is in use is not replaced. On Windows that is {@code grails-wrapper.jar} when the
- * command line was started by it, which the system refuses to replace while it is open, and
- * {@code grailsw.bat} then, which the command interpreter is still reading. The new file is written
- * beside it, with {@link #BESIDE} after its name, and the user is told the one thing that is left
- * to do.</p>
+ * <p>A file that is in use is not replaced under what uses it. On Windows that is
+ * {@code grails-wrapper.jar} when the command line was started by it, which the system refuses to
+ * replace while it is open, and {@code grailsw.bat} then, which the command interpreter is still
+ * reading. The new file is written beside it, with {@link #BESIDE} after its name, and the wrapper
+ * replaces it by itself when it is next run: the scripts of this version move a jar that is written
+ * beside the one in the directory over it before they start Java. A batch file of this version is
+ * replaced while it is read, since what it does after Java has ended it finds by a label, in the
+ * file that is there then; a batch file of Grails 7 or 8 is replaced by one that ends the run where
+ * the command interpreter goes on reading, see {@link #betweenRuns}, and that puts the new wrapper
+ * in its place when it is next run. Only where neither can be done is the user told the one thing
+ * that is left to do.</p>
  *
  * @since 9.0
  */
@@ -75,6 +82,16 @@ final class WrapperFiles {
     private static final String RESOURCES = 'grails-wrapper/'
     private static final String START_CLASS = 'grails.init.Start'
     private static final long MAX_JAR = 16L * 1024 * 1024
+    private static final long MAX_SCRIPT = 1024L * 1024
+    private static final String LINE_END = '\r\n'
+    // the command interpreter reads a line of at most 8191 characters
+    private static final int MAX_FILL_LINE = 4000
+    // what the scripts of this version, and the batch file that stands in between two runs, have in the line that moves the jar
+    private static final String MOVES_THE_JAR = "move /y \"%~dp0${JAR}${BESIDE}\" \"%~dp0${JAR}\""
+    private static final String COMMAND_INTERPRETER = 'cmd.exe'
+    // the last command of the batch file: its exit code is then the one of the batch file also where the
+    // batch file is one side of an operator of the command interpreter, which is how the scripts of Gradle 9 end
+    private static final String ENDS_THE_RUN = '@"%COMSPEC%" /c exit %ERRORLEVEL%'
     private static final Mover MOVE = { Path from, Path to ->
         try {
             Files.move(from, to, StandardCopyOption.ATOMIC_MOVE)
@@ -96,7 +113,7 @@ final class WrapperFiles {
      */
     WrapperFiles(Path directory) {
         this.directory = directory
-        this.batchFileRuns = File.separatorChar == ('\\' as char) && startedBy(directory)
+        this.batchFileRuns = File.separatorChar == ('\\' as char) && startedBy(directory) && startedByCommandInterpreter()
     }
 
     /** Moves a file that was written over the one it replaces. */
@@ -159,6 +176,22 @@ final class WrapperFiles {
     }
 
     /**
+     * @return whether the process that started this JVM is the command interpreter of Windows, which is
+     * what reads a batch file, also for a batch file that is started from PowerShell; true as well where
+     * the system does not say what that process is. A wrapper that was started by its other script, as
+     * in a shell of Git for Windows, has no batch file that is being read
+     */
+    static boolean startedByCommandInterpreter() {
+        try {
+            Optional<ProcessHandle> parent = ProcessHandle.current().parent()
+            Optional<String> program = parent.isPresent() ? parent.get().info().command() : Optional.<String>empty()
+            return !program.isPresent() || program.get().toLowerCase(Locale.ROOT).endsWith(COMMAND_INTERPRETER)
+        } catch (RuntimeException ignored) {
+            return true
+        }
+    }
+
+    /**
      * Replaces the files of the wrapper that differ from those of this version of Grails.
      *
      * @return what was done
@@ -186,6 +219,8 @@ final class WrapperFiles {
         Path written = null
         try {
             if (there && Files.size(target) == content.length && Arrays.equals(Files.readAllBytes(target), content)) {
+                // what an earlier run wrote beside it would be moved over it by the scripts when the wrapper is next run
+                Files.deleteIfExists(beside(name))
                 return
             }
             if (there && !Files.isWritable(target)) {
@@ -195,18 +230,38 @@ final class WrapperFiles {
             written = Files.createTempFile(directory, name + '.', '.tmp')
             Files.write(written, content)
             mode(written, there ? target : null, name)
-            if (name == BATCH && batchFileRuns) {
+            if (name == BATCH && batchFileRuns && there && !endsByLabel(target, content)) {
                 Files.move(written, beside(name), StandardCopyOption.REPLACE_EXISTING)
-                result.beside.put(name, 'the command interpreter that started this command is reading it')
+                String reading = 'the command interpreter that started this command is reading it'
+                byte[] between = betweenRuns(target, result.version)
+                if (between != null) {
+                    written = Files.createTempFile(directory, name + '.', '.tmp')
+                    Files.write(written, between)
+                    try {
+                        mover.move(written, target)
+                        result.pending.put(name, reading)
+                        return
+                    } catch (IOException ignored) {
+                        // then the batch file stays the one it was, and the new one is beside it
+                        Files.deleteIfExists(written)
+                    }
+                }
+                result.beside.put(name, reading)
                 return
             }
             try {
                 mover.move(written, target)
                 result.replaced.add(name)
+                Files.deleteIfExists(beside(name))
             } catch (IOException refused) {
                 // the system does not replace a file that is open, as the jar of the wrapper that runs is on Windows
                 Files.move(written, beside(name), StandardCopyOption.REPLACE_EXISTING)
-                result.beside.put(name, "it could not be replaced (${reason(refused)})".toString())
+                String why = "it could not be replaced (${reason(refused)})".toString()
+                if (name == JAR && completesItself(result)) {
+                    result.pending.put(name, why)
+                } else {
+                    result.beside.put(name, why)
+                }
             }
         } catch (IOException e) {
             result.failed.put(name, reason(e))
@@ -222,6 +277,114 @@ final class WrapperFiles {
 
     private Path beside(String name) {
         return directory.resolve(name + BESIDE)
+    }
+
+    // Whether the scripts that are in the directory now move a jar that is written beside the one in use
+    // over it when the wrapper is next run, which the scripts of this version do before they start Java:
+    // the batch file is the one of this version or the one that stands in for it between two runs.
+    private boolean completesItself(Result result) {
+        if (result.failed.containsKey(BATCH) || result.beside.containsKey(BATCH)) {
+            return false
+        }
+        try {
+            Path batch = directory.resolve(BATCH)
+            return Files.isRegularFile(batch, LinkOption.NOFOLLOW_LINKS) && Files.size(batch) <= MAX_SCRIPT &&
+                    new String(Files.readAllBytes(batch), StandardCharsets.ISO_8859_1).contains(MOVES_THE_JAR)
+        } catch (IOException ignored) {
+            return false
+        }
+    }
+
+    // Whether the command interpreter comes to the end of the batch file it is reading by labels alone,
+    // which it looks for in the file that is there then: the scripts of Gradle 9, and so those of this
+    // version, end the line that starts Java with a call of a label and a jump to it, and say that the
+    // label is kept so that a script can be replaced while it runs. Such a file is replaced as any other.
+    private static boolean endsByLabel(Path running, byte[] content) throws IOException {
+        if (Files.size(running) > MAX_SCRIPT) {
+            return false
+        }
+        List<String> starts = new String(Files.readAllBytes(running), StandardCharsets.ISO_8859_1).readLines().findAll { String line -> line.contains(START_CLASS) }
+        return starts.size() == 1 && starts[0].trim() ==~ /.*& *call +:exitWithErrorLevel *& *goto +:?exitWithErrorLevel/ &&
+                new String(content, StandardCharsets.ISO_8859_1).readLines().any { String line -> line.trim() == ':exitWithErrorLevel' }
+    }
+
+    /**
+     * The batch file that stands in for the one the command interpreter is reading, until the wrapper is
+     * next run. The command interpreter reads a batch file a command at a time: it keeps how far into
+     * the file it has read, runs the command, and opens the file again at that place for the next one.
+     * While Java runs, that place is the end of the line that started it, as the scripts of Gradle 8 and
+     * earlier, and so the wrappers of Grails 7 and 8, have that line. So the file that is put there has,
+     * at that very place, a line that ends the batch file with the exit code of Java, which is all the
+     * rest of the earlier file did; and from its first line it is a wrapper: it moves the files that are
+     * written beside the ones in use over them and starts the batch file that is then there.
+     *
+     * @param running the batch file that is being read
+     * @param version the version of Grails the new wrapper is of
+     * @return the content, or {@code null} for a batch file whose line that starts Java is not found or
+     * is too near the beginning for what stands before it
+     */
+    static byte[] betweenRuns(Path running, String version) throws IOException {
+        if (Files.size(running) > MAX_SCRIPT) {
+            return null
+        }
+        Integer place = placeAfterStart(new String(Files.readAllBytes(running), StandardCharsets.ISO_8859_1))
+        if (place == null) {
+            return null
+        }
+        String first = [
+                "@rem The Grails wrapper of this project is being replaced by that of Grails ${version}: this file ended the run that",
+                '@rem replaced it, and puts the new wrapper in its place when grailsw.bat is next run. It is not to be committed.',
+                "@if exist \"%~dp0${JAR}${BESIDE}\" move /y \"%~dp0${JAR}${BESIDE}\" \"%~dp0${JAR}\" >NUL 2>&1",
+                "@if exist \"%~dp0${BATCH}${BESIDE}\" move /y \"%~dp0${BATCH}${BESIDE}\" \"%~dp0${BATCH}\" >NUL 2>&1 && \"%~dp0${BATCH}\" %*",
+                "@echo The Grails wrapper of this project is half replaced, and ${BATCH}${BESIDE}, which completes it, is not there or cannot be moved over ${BATCH}. 1>&2",
+                "@echo Run update-wrapper of an installed grails of Grails ${version} in this directory, or take ${BATCH} from an application that its create-app creates. 1>&2",
+                '@exit /b 1',
+        ].join(LINE_END) + LINE_END
+        // lines of spaces up to the place, which nothing reads: the run from the first line has ended above
+        int fill = place - first.length()
+        if (fill == 1 || fill < 0) {
+            return null
+        }
+        StringBuilder text = new StringBuilder(first)
+        while (fill > 0) {
+            int line = fill - MAX_FILL_LINE == 1 ? MAX_FILL_LINE - 1 : Math.min(fill, MAX_FILL_LINE)
+            text.append(' ' * (line - LINE_END.length())).append(LINE_END)
+            fill -= line
+        }
+        text.append(ENDS_THE_RUN).append(LINE_END)
+        return text.toString().getBytes(StandardCharsets.ISO_8859_1)
+    }
+
+    // Where the command interpreter goes on reading once Java has ended: after the one line that starts
+    // the class of the wrapper with the arguments of the batch file, which is a command by itself and in
+    // no block. Null where there is no such line, or more than one.
+    private static Integer placeAfterStart(String text) {
+        Integer place = null
+        int depth = 0
+        int at = 0
+        while (at < text.length()) {
+            int end = text.indexOf('\n', at)
+            int next = end < 0 ? text.length() : end + 1
+            String line = text.substring(at, end < 0 ? text.length() : end).trim()
+            String lower = line.toLowerCase(Locale.ROOT)
+            boolean comment = lower.startsWith('rem ') || lower.startsWith('@rem ') || lower == 'rem' || lower == '@rem' || line.startsWith('::')
+            if (!comment) {
+                if (line.contains(START_CLASS)) {
+                    if (place != null || depth != 0 || !line.endsWith('%*') || !line.startsWith('"')) {
+                        return null
+                    }
+                    place = next
+                }
+                if (line.endsWith('(')) {
+                    depth++
+                }
+                if (line.startsWith(')')) {
+                    depth--
+                }
+            }
+            at = next
+        }
+        return place
     }
 
     // the mode of the file that is replaced, and for a file that was not there the one a generated application has
@@ -279,7 +442,13 @@ final class WrapperFiles {
         /** The files that were replaced, or written where there was none. */
         final List<String> replaced = []
 
-        /** The files that are in use and whose replacement is written beside them, each with why. */
+        /**
+         * The files that are in use, whose replacement is written beside them and is moved over them by
+         * the wrapper itself when it is next run, each with why.
+         */
+        final Map<String, String> pending = [:]
+
+        /** The files that are in use and whose replacement is written beside them for the user to move, each with why. */
         final Map<String, String> beside = [:]
 
         /** The files that were not replaced and are not written anywhere, each with why. */
@@ -295,6 +464,14 @@ final class WrapperFiles {
          * @return whether the wrapper of the directory is that of this version of Grails now, in all its files
          */
         boolean isComplete() {
+            return pending.isEmpty() && beside.isEmpty() && failed.isEmpty()
+        }
+
+        /**
+         * @return whether nothing is left for the user to do but to commit the wrapper: every file is
+         * that of this version, or is made so by the wrapper when it is next run
+         */
+        boolean isSettled() {
             return beside.isEmpty() && failed.isEmpty()
         }
 
@@ -303,10 +480,19 @@ final class WrapperFiles {
          */
         String done() {
             String where = "The Grails wrapper of the project in ${GradleRunner.line(directory)}"
+            String was = former != null && former != version ? " was that of Grails ${former} and" : ''
+            if (!pending.isEmpty()) {
+                // one line for all of it: what was replaced, what the wrapper replaces itself, and when to commit
+                String names = pending.keySet().join(' and ')
+                String inUse = "${names} ${pending.size() == 1 ? 'is' : 'are'} in use by the wrapper that runs this command and ${pending.size() == 1 ? 'is' : 'are'} " +
+                        'replaced by the wrapper itself when it is next run'
+                String done = replaced.isEmpty() ? '' : "${replaced.join(', ')} ${replaced.size() == 1 ? 'was' : 'were'} replaced, and "
+                return "${where}${was} is being replaced by that of Grails ${version}: ${done}${inUse}. " +
+                        "Run the wrapper once more, and then commit ${NAMES.join(', ')}; the files named ${BESIDE} are gone by then."
+            }
             if (replaced.isEmpty()) {
                 return isComplete() ? "${where} is that of Grails ${version}: nothing was changed" : null
             }
-            String was = former != null && former != version ? " was that of Grails ${former} and" : ''
             return "${where}${was} is now that of Grails ${version}: ${replaced.join(', ')} ${replaced.size() == 1 ? 'was' : 'were'} replaced. " +
                     "Commit ${replaced.size() == 1 ? 'it' : 'them'}."
         }
@@ -328,7 +514,8 @@ final class WrapperFiles {
         }
 
         private static String moveCommand(String name) {
-            return File.separatorChar == ('\\' as char) ? "move /y ${name}${BESIDE} ${name}" : "mv -f ${name}${BESIDE} ${name}"
+            // as it is typed in the command interpreter and in PowerShell alike, where move is another command
+            return File.separatorChar == ('\\' as char) ? "cmd /c move /y ${name}${BESIDE} ${name}" : "mv -f ${name}${BESIDE} ${name}"
         }
     }
 }

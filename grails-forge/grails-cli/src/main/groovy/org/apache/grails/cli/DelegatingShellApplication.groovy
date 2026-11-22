@@ -40,8 +40,15 @@ import org.apache.grails.forge.cli.console.WrapperFiles
  * <p>The earlier wrapper takes {@code update-wrapper} from the front of the command line before it
  * starts this class, so a command line without arguments is what is left of
  * {@code ./grailsw update-wrapper}: where the wrapper was looked at, the JVM ends once that is
- * said, with exit code {@code 0} when the wrapper is that of this version in all its files and
- * {@code 1} otherwise, and the interactive console is not started.</p>
+ * said, with exit code {@code 0} when the wrapper is that of this version in all its files, or is
+ * made so by the wrapper itself when it is next run, and {@code 1} otherwise, and the interactive
+ * console is not started.</p>
+ *
+ * <p>On Windows this class is run with {@code grails-wrapper.jar} open in its JVM and
+ * {@code grailsw.bat} being read by the command interpreter, so neither is replaced under it:
+ * {@link WrapperFiles} writes the new ones beside them and leaves a batch file that moves them into
+ * place when the wrapper is next run. That run starts the wrapper of this version and does not come
+ * here again, so the step is taken once and not on every run.</p>
  *
  * @since 9.0
  * @see GrailsCli

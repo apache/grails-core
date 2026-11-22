@@ -18,10 +18,8 @@
  */
 package org.apache.grails.forge.cli.console
 
-import java.nio.file.FileSystemException
 import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.StandardCopyOption
 import java.nio.file.attribute.PosixFilePermissions
 import java.util.jar.Attributes
 import java.util.jar.JarOutputStream
@@ -254,47 +252,6 @@ class UpdateWrapperCommandSpec extends Specification {
 
         cleanup:
         project.setWritable(true)
-    }
-
-    void "a jar the system refuses to replace, as Windows does while the wrapper runs, is left and the new one is written beside it"() {
-        given: 'the system refuses to move anything over the jar, which the JVM of the wrapper has open'
-        earlierWrapper(project, '8.1.0')
-        byte[] jarBefore = new File(project, 'grails-wrapper.jar').bytes
-        WrapperFiles files = new WrapperFiles(project.toPath())
-        files.mover = { Path from, Path to ->
-            if (to.fileName.toString() == 'grails-wrapper.jar') {
-                throw new FileSystemException(to.toString(), null, 'The process cannot access the file because it is being used by another process')
-            }
-            Files.move(from, to, StandardCopyOption.REPLACE_EXISTING)
-        } as WrapperFiles.Mover
-
-        when:
-        WrapperFiles.Result result = files.update()
-
-        then: 'the jar that runs is whole, and the new one is beside it'
-        !result.complete
-        result.replaced == ['grailsw', 'grailsw.bat']
-        result.failed.isEmpty()
-        result.beside.keySet() == ['grails-wrapper.jar'] as Set
-        new File(project, 'grails-wrapper.jar').bytes == jarBefore
-        new File(project, 'grails-wrapper.jar.new').bytes == generated('grails-wrapper.jar')
-        project.list().sort() == ['gradle.properties', 'grails-app', 'grails-wrapper.jar', 'grails-wrapper.jar.new', 'grailsw', 'grailsw.bat', 'settings.gradle']
-
-        and: 'what is said names the one thing that is left to do'
-        result.done() == "The Grails wrapper of the project in ${project.path} was that of Grails 8.1.0 and is now that of Grails ${VersionInfo.grailsVersion}: grailsw, grailsw.bat were replaced. Commit them."
-        result.left().size() == 1
-        result.left()[0].startsWith('grails-wrapper.jar was not replaced: it could not be replaced (FileSystemException: ')
-        result.left()[0].contains("The one of Grails ${VersionInfo.grailsVersion} is written beside it as grails-wrapper.jar.new. Once this command has ended, move it over grails-wrapper.jar in ${project.path} (")
-        result.left()[0].endsWith('grails-wrapper.jar.new grails-wrapper.jar) and commit it')
-
-        when: 'the step is done by hand, and the command is run again'
-        Files.move(new File(project, 'grails-wrapper.jar.new').toPath(), new File(project, 'grails-wrapper.jar').toPath(), StandardCopyOption.REPLACE_EXISTING)
-        WrapperFiles.Result again = new WrapperFiles(project.toPath()).update()
-
-        then:
-        again.complete
-        again.replaced.isEmpty()
-        again.done().endsWith('nothing was changed')
     }
 
     void "a batch file the command interpreter is reading is not replaced under it: the new one is written beside it"() {

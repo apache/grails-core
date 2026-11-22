@@ -62,6 +62,6 @@ class UpdateWrapperCommand extends InProjectCommand {
         for (String line : result.left()) {
             err(line)
         }
-        return result.isComplete() ? 0 : 1
+        return result.isSettled() ? 0 : 1
     }
 }

@@ -156,9 +156,9 @@ class WrapperUpgradeSpec extends Specification {
 
         then:
         result.status == status
-        result.out.readLines()[0].startsWith("The Grails wrapper of the project in ${project.path} was that of Grails 8.1.0 and is now that of Grails ")
+        result.out.readLines()[0].startsWith("The Grails wrapper of the project in ${project.path} was that of Grails 8.1.0 and is ${nowOrBeing()} that of Grails ")
         result.out.contains(said) || result.err.contains(said)
-        WRAPPER.every { String name -> new File(project, name).bytes == inJar(name) }
+        isOfThisVersion(project)
 
         where:
         args                                  | status | said
@@ -179,8 +179,8 @@ class WrapperUpgradeSpec extends Specification {
         then:
         result.status == 0
         result.out.readLines().size() == 1
-        result.out.contains('grailsw, grailsw.bat, grails-wrapper.jar were replaced')
-        WRAPPER.every { String name -> new File(project, name).bytes == inJar(name) }
+        result.out.contains(jarIsInUse() ? 'grailsw, grailsw.bat were replaced, and grails-wrapper.jar is in use by the wrapper that runs this command' : 'grailsw, grailsw.bat, grails-wrapper.jar were replaced')
+        isOfThisVersion(project)
     }
 
     void "outside a project the earlier wrapper replaces nothing and the command line is run: #args"() {
@@ -318,6 +318,190 @@ class WrapperUpgradeSpec extends Specification {
         stats.status == 0
         stats.out.contains('| Totals ')
         !stats.out.contains('The Grails wrapper of')
+    }
+
+    @Requires({ os.windows })
+    void "on Windows the earlier wrapper, started by its batch file, is replaced in two runs without a step by hand, and each run ends with the exit code of its command"() {
+        given: 'the wrapper of Grails 8, with the batch file the release has'
+        earlierWrapperIn(project)
+        new File(project, 'grailsw.bat').setText(earlierBatchFile(), 'ISO-8859-1')
+        byte[] earlierBatch = new File(project, 'grailsw.bat').bytes
+
+        when: 'a command that ends with an exit code of its own: the command interpreter reads it from the batch file that was put under it'
+        Map first = batch(project, [(CLI_JAR_VARIABLE): allJar.path], 'no-such-command')
+
+        then:
+        assert first.status == 2: said(first, project)
+        assert first.out.contains('is being replaced by that of Grails ') &&
+                first.out.contains('grailsw was replaced, and grailsw.bat and grails-wrapper.jar are in use by the wrapper that runs this command'): said(first, project)
+        first.err.contains('There is no command no-such-command')
+
+        and: 'the new files are beside the two in use, and the batch file is the one that stands in until the next run'
+        assert new File(project, 'grailsw.bat.new').exists() && new File(project, 'grails-wrapper.jar.new').exists(): said(first, project)
+        new File(project, 'grailsw.bat.new').bytes == inJar('grailsw.bat')
+        new File(project, 'grails-wrapper.jar.new').bytes == inJar('grails-wrapper.jar')
+        new File(project, 'grails-wrapper.jar').bytes == earlierWrapperJar.bytes
+        new File(project, 'grailsw').bytes == inJar('grailsw')
+        new File(project, 'grailsw.bat').bytes != earlierBatch
+        new File(project, 'grailsw.bat').bytes != inJar('grailsw.bat')
+
+        when: 'the wrapper is run once more'
+        Map second = batch(project, [GRAILS_REPO_URL: repository.path, GRAILS_WRAPPER_HOME: new File(dir, 'home').path], 'stats')
+
+        then: 'it is the wrapper of this version in all its files, which runs the command and replaces nothing'
+        assert second.status == 0: said(second, project)
+        assert second.out.contains('| Totals '): said(second, project)
+        !second.out.contains('The Grails wrapper of')
+        assert WRAPPER.every { String name -> new File(project, name).bytes == inJar(name) }: said(second, project)
+        assert !project.list().any { String name -> name.endsWith('.new') || name.endsWith('.tmp') }: said(second, project)
+
+        when:
+        Map third = batch(project, [GRAILS_REPO_URL: repository.path, GRAILS_WRAPPER_HOME: new File(dir, 'home').path], 'update-wrapper')
+
+        then:
+        assert third.status == 0: said(third, project)
+        assert third.out.readLines().last() == "The Grails wrapper of the project in ${project.path} is that of Grails ${cliVersion()}: nothing was changed": said(third, project)
+    }
+
+    @Requires({ os.windows })
+    void "on Windows a jar that was written beside the one in use is moved over it by the batch file of this version before Java is started"() {
+        given: 'what update-wrapper leaves when the wrapper was not started by a batch file: the scripts of this version, and the new jar beside the earlier one'
+        earlierWrapperIn(project)
+        new File(project, 'grailsw.bat').bytes = inJar('grailsw.bat')
+        new File(project, 'grails-wrapper.jar.new').bytes = inJar('grails-wrapper.jar')
+
+        when:
+        Map result = batch(project, [GRAILS_REPO_URL: repository.path, GRAILS_WRAPPER_HOME: new File(dir, 'home').path, (CLI_JAR_VARIABLE): allJar.path], 'stats')
+
+        then: 'the wrapper that ran is the one of this version: the earlier one would have said that it replaces the wrapper'
+        assert result.status == 0: said(result, project)
+        assert result.out.contains('| Totals ') && !result.out.contains('The Grails wrapper of'): said(result, project)
+        assert new File(project, 'grails-wrapper.jar').bytes == inJar('grails-wrapper.jar') && !new File(project, 'grails-wrapper.jar.new').exists(): said(result, project)
+    }
+
+    @Requires({ os.windows })
+    void "on Windows the batch file of this version is replaced while the command interpreter reads it, and the run ends with its exit code"() {
+        given: 'the wrapper of this version, with a batch file of another release of it: every line is somewhere else'
+        WRAPPER.each { String name -> new File(project, name).bytes = inJar(name) }
+        String other = new String(inJar('grailsw.bat'), 'ISO-8859-1').replace('@rem  grailsw startup script for Windows', '@rem  grailsw startup script for Windows, of another release ' + ('x' * 700))
+        assert other != new String(inJar('grailsw.bat'), 'ISO-8859-1')
+        new File(project, 'grailsw.bat').setText(other, 'ISO-8859-1')
+        Map<String, String> environment = [GRAILS_REPO_URL: repository.path, GRAILS_WRAPPER_HOME: new File(dir, 'home').path]
+
+        when:
+        Map result = batch(project, environment, 'update-wrapper')
+
+        then:
+        assert result.status == 0: said(result, project)
+        assert result.out.readLines().last() == "The Grails wrapper of the project in ${project.path} is now that of Grails ${cliVersion()}: grailsw.bat was replaced. Commit it.": said(result, project)
+        assert result.err.isEmpty(): said(result, project)
+        new File(project, 'grailsw.bat').bytes == inJar('grailsw.bat')
+        !project.list().any { String name -> name.endsWith('.new') }
+
+        when: 'a command that fails, typed to a batch file that is replaced under it again'
+        new File(project, 'grailsw.bat').setText(other, 'ISO-8859-1')
+        Map failing = batch(project, environment, 'update-wrapper', 'stats')
+
+        then: 'the exit code is that of the command'
+        assert failing.status == 2: said(failing, project)
+        failing.err.contains('update-wrapper takes no argument stats')
+    }
+
+    // on Windows the JVM of the wrapper has its jar open, and the system replaces no file that is: the new one is beside it
+    private static boolean jarIsInUse() {
+        return File.separatorChar == ('\\' as char)
+    }
+
+    private static String nowOrBeing() {
+        return jarIsInUse() ? 'being replaced by' : 'now'
+    }
+
+    // the wrapper is that of this version, where the jar is in use with the new one beside it for the next run
+    private boolean isOfThisVersion(File directory) {
+        return WRAPPER.every { String name ->
+            File beside = new File(directory, name + '.new')
+            assert beside.exists() == (jarIsInUse() && name == 'grails-wrapper.jar'): "${beside} in ${directory.list().sort()}"
+            (beside.exists() ? beside : new File(directory, name)).bytes == inJar(name)
+        }
+    }
+
+    // what a run through a batch file said and left, for the message of an assertion
+    private static String said(Map result, File directory) {
+        return "exit code ${result.status}\n--- output\n${result.out}\n--- errors\n${result.err}\n--- ${directory}\n${directory.list().sort().join('\n')}\n" +
+                "--- grailsw.bat\n${new File(directory, 'grailsw.bat').exists() ? new File(directory, 'grailsw.bat').getText('ISO-8859-1') : 'is not there'}"
+    }
+
+    // runs grailsw.bat of the directory with the command interpreter, as a user who types grailsw does
+    private Map batch(File directory, Map<String, String> environment, String... args) {
+        File userHome = new File(dir, 'user-home')
+        userHome.mkdirs()
+        List<String> command = [System.getenv('ComSpec') ?: 'cmd.exe', '/d', '/c', 'grailsw.bat']
+        command.addAll(args)
+        File out = File.createTempFile('out', '.txt', dir)
+        File err = File.createTempFile('err', '.txt', dir)
+        ProcessBuilder builder = new ProcessBuilder(command).directory(directory).redirectOutput(out).redirectError(err)
+        ['GRAILS_REPO_URL', 'GRAILS_WRAPPER_HOME', 'PREFERRED_GRAILS_VERSION', 'GRAILS_WRAPPER_ALLOWED_TYPES', 'GRAILS_SAFE_DIRECTORY', 'JAVA_TOOL_OPTIONS', 'GRAILSW_OPTS', 'DEBUG'].each { String name ->
+            builder.environment().remove(name)
+        }
+        builder.environment().putAll(environment)
+        builder.environment().put('JAVA_HOME', System.getProperty('java.home'))
+        // no wrapper of these features asks the network for anything: one that did would be refused at once
+        builder.environment().put('JAVA_OPTS', "\"-Duser.home=${userHome.path}\" -Dhttps.proxyHost=127.0.0.1 -Dhttps.proxyPort=9 -Dhttp.proxyHost=127.0.0.1 -Dhttp.proxyPort=9".toString())
+        Process process = builder.start()
+        try {
+            assert process.waitFor(180, TimeUnit.SECONDS): "the wrapper did not end:\n${out.text}\n${err.text}"
+            return [status: process.exitValue(), out: out.text, err: err.text]
+        } finally {
+            process.descendants().forEach { ProcessHandle each -> each.destroyForcibly() }
+            process.destroyForcibly()
+        }
+    }
+
+    /**
+     * The batch file of the wrapper of Grails 7 and 8 in what matters here, as the start script template of
+     * Gradle 8 made it: the line that starts Java is a command of its own, and the command interpreter reads
+     * what follows it from the file once Java has ended.
+     */
+    private static String earlierBatchFile() {
+        List<String> lines = ['@rem'] + (1..16).collect { int number -> "@rem line ${number} of the licence header the release has, which is as long as this".toString() } +
+                ['',
+                 '@if "%DEBUG%"=="" @echo off',
+                 '@rem Set local scope for the variables with windows NT shell',
+                 'if "%OS%"=="Windows_NT" setlocal',
+                 '',
+                 'set DIRNAME=%~dp0',
+                 'if "%DIRNAME%"=="" set DIRNAME=.',
+                 'set APP_HOME=%DIRNAME%',
+                 'for %%i in ("%APP_HOME%") do set APP_HOME=%%~fi',
+                 'set DEFAULT_JVM_OPTS=',
+                 '',
+                 'set JAVA_HOME=%JAVA_HOME:"=%',
+                 'set JAVA_EXE=%JAVA_HOME%/bin/java.exe',
+                 '',
+                 ':execute',
+                 'set CLASSPATH=%APP_HOME%\\grails-wrapper.jar',
+                 '',
+                 '@rem Execute grailsw',
+                 '"%JAVA_EXE%" %DEFAULT_JVM_OPTS% %JAVA_OPTS% %GRAILSW_OPTS%  -classpath "%CLASSPATH%" grails.init.Start %*',
+                 '',
+                 ':end',
+                 '@rem End local scope for the variables with windows NT shell',
+                 'if %ERRORLEVEL% equ 0 goto mainEnd',
+                 '',
+                 ':fail',
+                 'rem Set variable GRAILSW_EXIT_CONSOLE if you need the _script_ return code instead of',
+                 'rem the _cmd.exe /c_ return code!',
+                 'set EXIT_CODE=%ERRORLEVEL%',
+                 'if %EXIT_CODE% equ 0 set EXIT_CODE=1',
+                 'if not ""=="%GRAILSW_EXIT_CONSOLE%" exit %EXIT_CODE%',
+                 'exit /b %EXIT_CODE%',
+                 '',
+                 ':mainEnd',
+                 'if "%OS%"=="Windows_NT" endlocal',
+                 '',
+                 ':omega',
+                 '']
+        return lines.join('\r\n')
     }
 
     // the version the command line says it is of, which is that of this build and not the one the repository of the test names

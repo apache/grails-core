@@ -91,6 +91,26 @@ startScripts.configure { CreateStartScripts t ->
                 .replace('%APP_HOME%\\lib\\', '%APP_HOME%\\')
                 .replace('"%APP_HOME%\\lib\\', '"%APP_HOME%\\')
                 .replace('%DIRNAME%..', '%DIRNAME%')
+
+        // On Windows update-wrapper cannot replace grails-wrapper.jar while the wrapper runs, since the JVM has
+        // it open: it writes the new jar beside it, and the scripts move it over the jar before they start Java.
+        // The batch file that stands in for an earlier one between two runs has the same line, and
+        // WrapperFiles of grails-forge-cli looks for it to know that the wrapper completes the update itself.
+        String jarClassPath = 'CLASSPATH=$APP_HOME/grails-wrapper.jar\n'
+        String localScope = '@rem Set local scope for the variables'
+        if (!t.unixScript.text.contains(jarClassPath) || !t.windowsScript.text.contains(localScope) || !t.windowsScript.text.contains(':exitWithErrorLevel')) {
+            throw new GradleException('The start scripts Gradle generates have changed: the lines that complete an update of the Grails wrapper have no place in them')
+        }
+        t.unixScript.text = t.unixScript.text.replace(jarClassPath, jarClassPath + '\n' +
+                '# A grails-wrapper.jar that update-wrapper wrote beside the one that was in use takes its place\n' +
+                'if [ -f "$APP_HOME/grails-wrapper.jar.new" ] ; then\n' +
+                '    mv -f "$APP_HOME/grails-wrapper.jar.new" "$APP_HOME/grails-wrapper.jar" 2>/dev/null || :\n' +
+                'fi\n')
+        String windowsLineEnd = t.windowsScript.text.contains('\r\n') ? '\r\n' : '\n'
+        t.windowsScript.text = t.windowsScript.text.replace(localScope,
+                '@rem A grails-wrapper.jar that update-wrapper wrote beside the one that was in use takes its place' + windowsLineEnd +
+                'if exist "%~dp0grails-wrapper.jar.new" move /y "%~dp0grails-wrapper.jar.new" "%~dp0grails-wrapper.jar" >NUL 2>&1' + windowsLineEnd +
+                windowsLineEnd + localScope)
     }
 }
 

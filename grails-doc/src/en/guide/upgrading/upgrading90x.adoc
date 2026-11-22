@@ -1714,7 +1714,7 @@ The Grails wrapper of the project in /home/me/shop was that of Grails 8.1.2 and 
 * Any other command is run after the replacement, and the exit code is that of the command. `./grailsw test-app` in a job of continuous integration replaces the files of its checkout, runs the tests, and does the same on the next run until the three files are committed.
 * A file is written beside the one it replaces and moved over it, and keeps the mode of the file it replaces, so `grailsw` can be executed by whom it could be before.
 * A file that cannot be replaced is named on the standard error, with the reason and what to do by hand, and the other files are replaced: a file that is a symbolic link, which is not followed, a file that is read-only, and every file of a directory that cannot be written to. The command that was typed is run all the same; `./grailsw update-wrapper` ends with exit code 1 then.
-* On Windows two of the files are in use while the wrapper runs and are not replaced: `grails-wrapper.jar`, which the JVM has open, and `grailsw.bat`, which the command interpreter is reading. The new ones are written beside them as `grails-wrapper.jar.new` and `grailsw.bat.new`, and the line on the standard error names the step that is left to do once the command has ended: `move /y grails-wrapper.jar.new grails-wrapper.jar` and `move /y grailsw.bat.new grailsw.bat`.
+* On Windows two of the files are in use while the wrapper runs: `grails-wrapper.jar`, which the JVM has open, and `grailsw.bat`, which the command interpreter is reading. The new ones are written beside them as `grails-wrapper.jar.new` and `grailsw.bat.new`, `grailsw.bat` is replaced by a short batch file that ends this run with the exit code of the command, and the line about the wrapper says that the wrapper completes the replacement when it is next run. The next `grailsw`, with any command, moves the two files into place before it starts Java, and is the wrapper of Grails 9. There is no step to do by hand, and the exit code is 0.
 * Nothing is replaced outside a Grails project, and nothing in a project whose `gradle.properties` names Grails 7 or 8, where the command line of Grails 9 says that it works with projects of Grails 9 and later.
 
 ===== Required Actions
@@ -1722,9 +1722,9 @@ The Grails wrapper of the project in /home/me/shop was that of Grails 8.1.2 and 
 * *Update the Grails wrapper of the application.* An application has one when the files `grailsw`, `grailsw.bat` and `grails-wrapper.jar` are at its root.
 . Set `grailsVersion` in `gradle.properties` to the Grails 9 version.
 . Run `./grailsw update-wrapper` in the application, `grailsw update-wrapper` on Windows. It downloads the command line of that version, replaces the three files and names them.
-. On Windows, do the step the command names: move `grails-wrapper.jar.new` over `grails-wrapper.jar` and `grailsw.bat.new` over `grailsw.bat`.
+. On Windows the command says that two of the files are replaced when the wrapper is next run. The next step is that run.
 . Run `./grailsw --version`. It prints `Grails Version:` with the version that `grailsVersion` names, and no line about the wrapper.
-. Commit the three files together with the change of `grailsVersion`.
+. Commit the three files together with the change of `grailsVersion`. No file named `.new` is left beside them by then; do not commit one.
 +
 [source,console]
 ----
