@@ -23,12 +23,16 @@ import spock.lang.Issue
 import spock.lang.Specification
 
 import org.springframework.security.core.Authentication
+import org.springframework.security.core.authority.SimpleGrantedAuthority
 import org.springframework.security.core.userdetails.User
 import org.springframework.security.core.userdetails.UserDetails
 import org.springframework.security.core.userdetails.UserDetailsService
 import org.springframework.security.provisioning.InMemoryUserDetailsManager
 
 import grails.plugin.springsecurity.rest.token.AccessToken
+import grails.plugin.springsecurity.rest.token.generation.jwt.DefaultRSAKeyProvider
+import grails.plugin.springsecurity.rest.token.generation.jwt.NestedJwt
+import grails.plugin.springsecurity.rest.token.generation.jwt.RSAKeyProvider
 import grails.plugin.springsecurity.rest.token.generation.jwt.SignedJwtTokenGenerator
 import grails.plugin.springsecurity.rest.token.storage.TokenNotFoundException
 import grails.plugin.springsecurity.rest.token.storage.jwt.JwtTokenStorageService
@@ -75,5 +79,45 @@ class RestAuthenticationProviderSpec extends Specification implements TokenGener
         then:
         def e = thrown(TokenNotFoundException)
         e.message =~ /Token .* is not valid/
+    }
+
+    void "an encrypted JWT authenticates the user it was generated for"() {
+        given:
+        final keyProvider = new DefaultRSAKeyProvider()
+        useEncryptedJwt(keyProvider)
+        final encryptedTokenGenerator = setupEncryptedJwtTokenGenerator(keyProvider)
+        final accessToken = encryptedTokenGenerator.generateAccessToken(new User('testUser', 'testPassword', [new SimpleGrantedAuthority('ROLE_USER')]))
+
+        when:
+        final result = this.restAuthenticationProvider.authenticate(new AccessToken(accessToken.accessToken)) as AccessToken
+
+        then:
+        result.authenticated
+        result.principal.username == 'testUser'
+        result.authorities*.authority == ['ROLE_USER']
+        result.expiration > 0
+        result.accessTokenJwt instanceof NestedJwt
+        result.accessTokenJwt.JWTClaimsSet.subject == 'testUser'
+    }
+
+    void "an encrypted JWT whose claims are not signed does not authenticate"() {
+        given:
+        final keyProvider = new DefaultRSAKeyProvider()
+        useEncryptedJwt(keyProvider)
+        final otherUser = new User('other', 'N/A', [new SimpleGrantedAuthority('ROLE_OTHER')])
+        final token = encryptClaims(accessTokenClaims(otherUser), keyProvider.publicKey)
+
+        when:
+        this.restAuthenticationProvider.authenticate(new AccessToken(token))
+
+        then:
+        final exception = thrown(TokenNotFoundException)
+        exception.message =~ /Token .* has an invalid signature/
+    }
+
+    private void useEncryptedJwt(RSAKeyProvider keyProvider) {
+        final jwtService = new JwtService(keyProvider: keyProvider)
+        this.restAuthenticationProvider.jwtService = jwtService
+        (this.restAuthenticationProvider.tokenStorageService as JwtTokenStorageService).jwtService = jwtService
     }
 }

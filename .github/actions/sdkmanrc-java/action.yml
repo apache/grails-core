@@ -1,0 +1,56 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: "Java version from .sdkmanrc"
+description: >-
+  Reads the JDK that .sdkmanrc pins and gives it in the form actions/setup-java takes, so a workflow that
+  must build with that exact JDK, such as a reproducible release, does not repeat its version.
+inputs:
+  directory:
+    description: "Directory of the checkout whose .sdkmanrc is read, relative to the workspace"
+    required: false
+    default: "."
+outputs:
+  java-version:
+    description: "The java version, for the java-version input of actions/setup-java"
+    value: ${{ steps.read.outputs.java-version }}
+  java-distribution:
+    description: "The actions/setup-java distribution of the sdkman vendor suffix, for its distribution input"
+    value: ${{ steps.read.outputs.java-distribution }}
+runs:
+  using: composite
+  steps:
+    - id: read
+      shell: bash
+      working-directory: ${{ inputs.directory }}
+      run: |
+        sdkman_java=$(sed -n 's/^java=//p' .sdkmanrc | tr -d '\r')
+        if [[ -z "${sdkman_java}" ]]; then
+          echo "❌ $(pwd)/.sdkmanrc has no java= line" >&2
+          exit 1
+        fi
+        java_version="${sdkman_java%-*}"
+        sdkman_vendor="${sdkman_java##*-}"
+        case "${sdkman_vendor}" in
+          librca) java_distribution=liberica ;;
+          tem)    java_distribution=temurin ;;
+          *)
+            echo "❌ No actions/setup-java distribution for the sdkman java vendor '${sdkman_vendor}' (java=${sdkman_java} in .sdkmanrc)" >&2
+            exit 1
+            ;;
+        esac
+        echo "Java ${java_version} (${java_distribution}) from .sdkmanrc"
+        echo "java-version=${java_version}" >> "${GITHUB_OUTPUT}"
+        echo "java-distribution=${java_distribution}" >> "${GITHUB_OUTPUT}"
