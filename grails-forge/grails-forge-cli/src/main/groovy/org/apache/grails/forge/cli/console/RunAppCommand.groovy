@@ -287,20 +287,20 @@ class RunAppCommand extends GradleEnvironmentCommand {
     private int stayWith(ConsoleProject project, boolean windows, Path directory, List<String> arguments, int answersOn) throws GradleRunner.RefusedArgumentException {
         List<String> failures = []
         long[] recorded = [0L, 0L] as long[]
-        GradleRunner runner = new GradleRunner({ String message -> failures.add(message) } as Consumer<String>, windows)
+        GradleBuild runner = GradleBuild.of(GradleBuild.Purpose.BUILD, { String message -> failures.add(message) } as Consumer<String>, windows)
         out('| Running application...')
-        int exit = runner.run(project, arguments, { ProcessHandle started ->
+        int exit = runner.run(project, arguments, { GradleBuild.Running started ->
             try {
                 // the instant as it was recorded: of a process that has ended by now the system says none
-                recorded[1] = RunningApplication.record(directory, started, answersOn, false)
-                recorded[0] = started.pid()
+                recorded[1] = RunningApplication.record(directory, started.process, answersOn, false)
+                recorded[0] = started.process.pid()
             } catch (IOException e) {
                 // a build that has ended by now is none to record, and says itself how it ended
-                if (started.isAlive()) {
+                if (started.process.isAlive()) {
                     warning("${GradleRunner.line(e.getMessage())}. The application runs, and stop-app will not find it: end this command to stop it")
                 }
             }
-        } as Consumer<ProcessHandle>)
+        } as Consumer<GradleBuild.Running>)
         boolean asked = recorded[0] != 0L && RunningApplication.wasAskedToStop(directory, recorded[0], recorded[1])
         if (recorded[0] != 0L) {
             RunningApplication.forget(directory, recorded[0], recorded[1])
@@ -331,7 +331,7 @@ class RunAppCommand extends GradleEnvironmentCommand {
             err("The application was not started: ${GradleRunner.line(e.getMessage())}")
             return 1
         }
-        GradleRunner runner = new GradleRunner({ String message -> err(message) } as Consumer<String>, windows)
+        GradleRunner runner = GradleBuild.leftRunning({ String message -> err(message) } as Consumer<String>, windows)
         // From here to the answer the build is this command's to end: also when the CLI is ended by a
         // signal, which interrupts no thread. The hook is there before the build is, and is told of it.
         AtomicBoolean ending = new AtomicBoolean()

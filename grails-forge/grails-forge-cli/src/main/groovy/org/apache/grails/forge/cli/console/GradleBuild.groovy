@@ -1,0 +1,194 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+package org.apache.grails.forge.cli.console
+
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.function.Consumer
+import groovy.transform.CompileStatic
+
+/**
+ * How a command has Gradle run a build of the project and waits for it. A command says what it runs
+ * Gradle for, a {@link Purpose}, and is given what runs it: which of the ways there are is used for
+ * which purpose is decided in {@link #of} and nowhere else.
+ *
+ * <p>Whatever runs the build, it runs the Gradle of the project and no other, after the checks of
+ * {@link ConsoleProject#gradleWrapper}; the arguments are a list from the command to Gradle, of which
+ * nothing is joined or split; the exit code is 0 for a build that succeeded and 1 otherwise, after one
+ * line that says why; and a build is cancelled when the thread that waits for it is interrupted, and
+ * when the JVM of the command line ends.</p>
+ *
+ * @since 9.0
+ */
+@CompileStatic
+abstract class GradleBuild {
+
+    /** What a command of the application or a script reads to know that nothing may wait for what a user types. */
+    public static final String NON_INTERACTIVE = 'GRAILS_NON_INTERACTIVE'
+
+    /** What Gradle is run for. */
+    enum Purpose {
+
+        /** A build, a test run or an application that the command line asks for itself and stays with. */
+        BUILD,
+
+        /** What the user typed for Gradle, which is Gradle's to read: {@code grails gradle ...}. */
+        PASSED_ON
+    }
+
+    protected static final String STOPPED = 'Gradle was stopped before it finished, because the command was cancelled'
+
+    private static final AtomicInteger RUNNING = new AtomicInteger()
+
+    private static volatile boolean nonInteractive
+    private static volatile PrintStream processOut
+    private static volatile PrintStream processErr
+
+    /**
+     * The one place that decides what runs Gradle for a command that waits for it.
+     *
+     * @param purpose what the command runs Gradle for
+     * @param failure given the one line that says why the command failed, when it did
+     * @param windows whether the project is built on Windows
+     * @return what runs the build
+     */
+    static GradleBuild of(Purpose purpose, Consumer<String> failure, boolean windows) {
+        return new GradleRunner(failure, windows)
+    }
+
+    /**
+     * What starts a build that goes on when the command has ended, and when the command line has:
+     * {@code run-app --detach}. Such a build is a process of its own, which the Gradle wrapper of the
+     * project is; nothing the JVM of the command line holds can outlive it.
+     *
+     * @param failure given the one line that says why the build was not started
+     * @param windows whether the project is built on Windows
+     * @return what starts the build
+     */
+    static GradleRunner leftRunning(Consumer<String> failure, boolean windows) {
+        return new GradleRunner(failure, windows)
+    }
+
+    /**
+     * Says whether nothing may wait for what a user types, as {@code --non-interactive} asks: Gradle
+     * is then not given the input of the CLI but an input that has ended, and what it runs is told
+     * through the environment variable {@link #NON_INTERACTIVE}.
+     *
+     * @param asked whether the command line asked for it
+     */
+    static void setNonInteractive(boolean asked) {
+        nonInteractive = asked
+    }
+
+    /**
+     * @return whether nothing may wait for what a user types
+     */
+    static boolean isNonInteractive() {
+        return nonInteractive
+    }
+
+    /**
+     * Tells which streams are the output the process was started with. While they are still the output
+     * of the CLI, Gradle writes to the terminal there is, as one; called once, when the CLI is started as a program.
+     *
+     * @param out the standard output of the process
+     * @param err the standard error of the process
+     */
+    static void outputOfProcess(PrintStream out, PrintStream err) {
+        processOut = out
+        processErr = err
+    }
+
+    /**
+     * @return whether the output of the command line is, now, the output the process was started with
+     */
+    protected static boolean isOutputOfProcess() {
+        return System.out.is(processOut) && System.err.is(processErr)
+    }
+
+    /**
+     * @return whether a command of this JVM waits for Gradle now, and so can be cancelled by
+     * interrupting its thread. A build that was started to be left running is not waited for and is none:
+     * it is not this command's to cancel, and goes on when the command is interrupted or the CLI ends
+     */
+    static boolean isRunning() {
+        return RUNNING.get() > 0
+    }
+
+    /** Called by what runs a build when a command begins to wait for it. */
+    protected static void waiting() {
+        RUNNING.incrementAndGet()
+    }
+
+    /** Called by what runs a build when the command no longer waits for it. */
+    protected static void waited() {
+        RUNNING.decrementAndGet()
+    }
+
+    /**
+     * Runs Gradle in the directory of the project and waits for it.
+     *
+     * @param project the project
+     * @param arguments the arguments of Gradle, each given to it as the one argument it is
+     * @return 0 when the build succeeded, and 1 otherwise, after the line that says why
+     * @throws GradleRunner.RefusedArgumentException for an argument that cannot be given to Gradle unchanged; nothing was run
+     */
+    int run(ConsoleProject project, List<String> arguments) throws GradleRunner.RefusedArgumentException {
+        return run(project, arguments, null)
+    }
+
+    /**
+     * Runs Gradle in the directory of the project and waits for it.
+     *
+     * @param project the project
+     * @param arguments the arguments of Gradle, each given to it as the one argument it is
+     * @param started given the build that was started, as soon as it is; can be {@code null}
+     * @return 0 when the build succeeded, and 1 otherwise, after the line that says why
+     * @throws GradleRunner.RefusedArgumentException for an argument that cannot be given to Gradle unchanged; nothing was run
+     */
+    abstract int run(ConsoleProject project, List<String> arguments, Consumer<Running> started) throws GradleRunner.RefusedArgumentException
+
+    /** A build that was started and is waited for. */
+    static final class Running {
+
+        /**
+         * The process that ends with the build and that the build ends with: the Gradle that was
+         * started for it, or the command line itself where the build is run from its own JVM.
+         */
+        final ProcessHandle process
+
+        /** Whether {@link #process} is the command line itself. */
+        final boolean commandLine
+
+        private final Runnable cancel
+
+        Running(ProcessHandle process, boolean commandLine, Runnable cancel) {
+            this.process = process
+            this.commandLine = commandLine
+            this.cancel = cancel
+        }
+
+        /**
+         * Asks for the end of the build. The command that waits for it is then told, as it is of every
+         * other end the build has.
+         */
+        void cancel() {
+            cancel.run()
+        }
+    }
+}

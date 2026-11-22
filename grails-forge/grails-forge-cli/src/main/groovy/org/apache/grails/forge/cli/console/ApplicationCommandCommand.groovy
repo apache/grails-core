@@ -174,7 +174,7 @@ class ApplicationCommandCommand extends InProjectCommand {
                         "${cli} run-command ${ENVIRONMENT_OPTION}production ${entry.name}")))
             }
             said.flush()
-            GradleRunner runner = new GradleRunner({ String message -> err(message) } as Consumer<String>, getOperatingSystem() == OperatingSystem.WINDOWS)
+            GradleBuild runner = GradleBuild.of(GradleBuild.Purpose.BUILD, { String message -> err(message) } as Consumer<String>, getOperatingSystem() == OperatingSystem.WINDOWS)
             return runner.run(project, gradleArguments(project, file))
         } catch (GradleRunner.RefusedArgumentException e) {
             throw new CommandLine.ParameterException(spec.commandLine(), e.getMessage())

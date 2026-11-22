@@ -23,6 +23,7 @@ import java.util.concurrent.Callable
 import java.util.function.Consumer
 import groovy.transform.CompileStatic
 import org.apache.grails.forge.cli.console.ConsoleProject
+import org.apache.grails.forge.cli.console.GradleBuild
 import org.apache.grails.forge.cli.console.GradleRunner
 import org.apache.grails.forge.cli.console.ProjectCommand
 import org.grails.forge.application.OperatingSystem
@@ -77,7 +78,8 @@ class GradleCommand extends BaseCommand implements Callable<Integer>, ProjectCom
         if (arguments.isEmpty()) {
             throw new CommandLine.ParameterException(spec.commandLine(), 'Say what Gradle is to do: the tasks to run or an option of Gradle, as in gradle build')
         }
-        GradleRunner runner = new GradleRunner({ String message -> err(message) } as Consumer<String>, getOperatingSystem() == OperatingSystem.WINDOWS)
+        // what follows the name of the command is Gradle's to read, so Gradle is run as it is on a command line of its own
+        GradleBuild runner = GradleBuild.of(GradleBuild.Purpose.PASSED_ON, { String message -> err(message) } as Consumer<String>, getOperatingSystem() == OperatingSystem.WINDOWS)
         try {
             return runner.run(project, arguments)
         } catch (GradleRunner.RefusedArgumentException e) {

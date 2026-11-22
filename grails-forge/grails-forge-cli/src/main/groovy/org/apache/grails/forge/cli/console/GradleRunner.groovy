@@ -25,16 +25,17 @@ import java.util.concurrent.ExecutionException
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.atomic.AtomicInteger
 import java.util.function.Consumer
 import groovy.transform.CompileStatic
 import org.grails.forge.feature.FeatureSelectionException
 
 /**
- * Runs the Gradle wrapper of a project, synchronously, for the commands of the CLI that are a Gradle
- * build: the one place that finds the wrapper, builds the command line, shows what Gradle writes,
- * turns the exit code of Gradle into the one of the command, and ends Gradle when the command is
- * cancelled. The arguments are a list from the command to Gradle; nothing is joined or split.
+ * Runs the Gradle wrapper of a project as a process: the one place that builds its command line, shows
+ * what it writes, turns the exit code of Gradle into the one of the command, and ends Gradle when the
+ * command is cancelled. The arguments are a list from the command to Gradle; nothing is joined or split.
+ *
+ * <p>It is what runs Gradle where Gradle is to be what it is on a command line of its own, see
+ * {@link GradleBuild#of}, and what starts a build that is left running, see {@link #start}.</p>
  *
  * <p>Gradle writes to the output of the CLI itself where that is the output the process was started
  * with, so that it sees the terminal there is, with its colours and its progress. Where the output
@@ -43,7 +44,7 @@ import org.grails.forge.feature.FeatureSelectionException
  * @since 9.0
  */
 @CompileStatic
-final class GradleRunner {
+final class GradleRunner extends GradleBuild {
 
     // what cmd.exe reads as its own in the command line of a batch file
     private static final String NOT_FOR_A_BATCH_FILE = '"%&|<>^'
@@ -57,15 +58,6 @@ final class GradleRunner {
     private static final int SIGNAL_MILLIS = 1000
     private static final int SIGNAL_STEP_MILLIS = 50
     private static final int WINDOWS_CONTROL_C = -1073741510
-    private static final AtomicInteger RUNNING = new AtomicInteger()
-    private static final String STOPPED = 'Gradle was stopped before it finished, because the command was cancelled'
-
-    /** What a command of the application or a script reads to know that nothing may wait for what a user types. */
-    public static final String NON_INTERACTIVE = 'GRAILS_NON_INTERACTIVE'
-
-    private static volatile boolean nonInteractive
-    private static volatile PrintStream processOut
-    private static volatile PrintStream processErr
 
     private final Consumer<String> failure
     private final boolean windows
@@ -79,51 +71,8 @@ final class GradleRunner {
         this.windows = windows
     }
 
-    /**
-     * Says whether nothing may wait for what a user types, as {@code --non-interactive} asks: Gradle
-     * is then not given the input of the CLI but an input that has ended, and what it runs is told
-     * through the environment variable {@link #NON_INTERACTIVE}.
-     *
-     * @param asked whether the command line asked for it
-     */
-    static void setNonInteractive(boolean asked) {
-        nonInteractive = asked
-    }
-
-    /**
-     * Tells which streams are the output the process was started with. While they are still the output
-     * of the CLI, Gradle is given them as they are; called once, when the CLI is started as a program.
-     *
-     * @param out the standard output of the process
-     * @param err the standard error of the process
-     */
-    static void outputOfProcess(PrintStream out, PrintStream err) {
-        processOut = out
-        processErr = err
-    }
-
-    /**
-     * Runs Gradle in the directory of the project and waits for it.
-     *
-     * @param project the project
-     * @param arguments the arguments of Gradle, each given to it as the one argument it is
-     * @return 0 when Gradle ended with 0, and 1 otherwise, after the line that says why
-     * @throws RefusedArgumentException on Windows, for an argument a batch file does not receive unchanged; nothing was run
-     */
-    int run(ConsoleProject project, List<String> arguments) throws RefusedArgumentException {
-        return run(project, arguments, null)
-    }
-
-    /**
-     * Runs Gradle in the directory of the project and waits for it.
-     *
-     * @param project the project
-     * @param arguments the arguments of Gradle, each given to it as the one argument it is
-     * @param started given the process that was started, as soon as it is; can be {@code null}
-     * @return 0 when Gradle ended with 0, and 1 otherwise, after the line that says why
-     * @throws RefusedArgumentException on Windows, for an argument a batch file does not receive unchanged; nothing was run
-     */
-    int run(ConsoleProject project, List<String> arguments, Consumer<ProcessHandle> started) throws RefusedArgumentException {
+    @Override
+    int run(ConsoleProject project, List<String> arguments, Consumer<GradleBuild.Running> started) throws RefusedArgumentException {
         Path wrapper = wrapperFor(project, arguments)
         return wrapper == null ? 1 : run(command(wrapper, arguments), wrapper, project.directory, started)
     }
@@ -288,10 +237,10 @@ final class GradleRunner {
         return command
     }
 
-    private int run(List<String> command, Path wrapper, Path directory, Consumer<ProcessHandle> started) {
+    private int run(List<String> command, Path wrapper, Path directory, Consumer<GradleBuild.Running> started) {
         PrintStream out = System.out
         PrintStream err = System.err
-        boolean inherited = out.is(processOut) && err.is(processErr)
+        boolean inherited = isOutputOfProcess()
         ProcessBuilder builder = new ProcessBuilder(command).directory(directory.toFile())
         if (inherited) {
             out.flush()
@@ -300,7 +249,7 @@ final class GradleRunner {
         } else {
             builder.redirectInput(ProcessBuilder.Redirect.INHERIT)
         }
-        if (nonInteractive) {
+        if (isNonInteractive()) {
             // Gradle and what it starts read the end of their input at once, and are told why
             builder.redirectInput(ProcessBuilder.Redirect.from(new File(windows ? 'NUL' : '/dev/null')))
             builder.environment().put(NON_INTERACTIVE, 'true')
@@ -313,10 +262,10 @@ final class GradleRunner {
             failed("The Gradle wrapper ${line(wrapper)} could not be started: ${line(e.getMessage())}")
             return 1
         }
-        if (started != null) {
-            started.accept(process.toHandle())
-        }
         AtomicBoolean stopped = new AtomicBoolean()
+        if (started != null) {
+            started.accept(new GradleBuild.Running(process.toHandle(), false, { stop(process, stopped) } as Runnable))
+        }
         AtomicBoolean said = new AtomicBoolean()
         // said once and by whoever comes first: this JVM can end before the thread of the command gets to say it
         Runnable sayStopped = {
@@ -332,7 +281,7 @@ final class GradleRunner {
             stop(process, stopped)
         } as Runnable, 'grails-gradle-stop')
         Runtime.getRuntime().addShutdownHook(whenEnded)
-        RUNNING.incrementAndGet()
+        waiting()
         Thread output = inherited ? null : copy(process.getInputStream(), out)
         Thread errors = inherited ? null : copy(process.getErrorStream(), err)
         try {
@@ -363,22 +312,13 @@ final class GradleRunner {
             Thread.currentThread().interrupt()
             return 1
         } finally {
-            RUNNING.decrementAndGet()
+            waited()
             try {
                 Runtime.getRuntime().removeShutdownHook(whenEnded)
             } catch (IllegalStateException ignored) {
                 // the JVM is shutting down, and the hook runs
             }
         }
-    }
-
-    /**
-     * @return whether a command of this JVM waits for Gradle now, and so can be cancelled by
-     * interrupting its thread. A build that {@link #start} started is not waited for and is none:
-     * it is not this command's to cancel, and goes on when the command is interrupted or the CLI ends
-     */
-    static boolean isRunning() {
-        return RUNNING.get() > 0
     }
 
     // 128 and the number of the signal is what a shell and the JVM give for a process a signal ended; the

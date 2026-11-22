@@ -29,7 +29,7 @@ import org.apache.grails.forge.cli.console.EarlierGrailsProject
 import org.apache.grails.forge.cli.console.PlainOutput
 import org.apache.grails.forge.cli.plugin.ListPluginsCommand
 import org.apache.grails.forge.cli.plugin.PluginInfoCommand
-import org.apache.grails.forge.cli.console.GradleRunner
+import org.apache.grails.forge.cli.console.GradleBuild
 import org.apache.grails.forge.cli.console.UsageHelp
 import org.springframework.context.ApplicationContext
 import picocli.CommandLine
@@ -496,11 +496,11 @@ final class ForgeCli {
             ((CodeGenCommand) command).err(UsageHelp.withoutProject(last.commandSpec()) ?: "${UsageHelp.typed(last.commandSpec())} is a command of a Grails project")
             return 1
         }
-        GradleRunner.setNonInteractive(root.nonInteractive)
+        GradleBuild.setNonInteractive(root.nonInteractive)
         try {
             return new CommandLine.RunLast().execute(parsed)
         } finally {
-            GradleRunner.setNonInteractive(false)
+            GradleBuild.setNonInteractive(false)
         }
     }
 

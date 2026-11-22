@@ -65,7 +65,7 @@ abstract class GradleTaskCommand extends InProjectCommand {
             arguments.addAll(verboseArguments())
         }
         arguments.addAll(passedOn)
-        GradleRunner runner = new GradleRunner({ String message -> err(message) } as Consumer<String>, getOperatingSystem() == OperatingSystem.WINDOWS)
+        GradleBuild runner = GradleBuild.of(GradleBuild.Purpose.BUILD, { String message -> err(message) } as Consumer<String>, getOperatingSystem() == OperatingSystem.WINDOWS)
         int exit
         try {
             exit = runner.run(project, arguments)

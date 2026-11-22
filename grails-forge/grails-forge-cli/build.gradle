@@ -97,6 +97,14 @@ dependencies {
     // relies on JLine's terminal for virtual-terminal processing. CommandLineCompleter connects it to
     // picocli's completion itself: picocli's own bridge, picocli-shell-jline3, is built for JLine 3.
     implementation 'org.jline:jline'
+    // What the commands that are a build of the project run Gradle with, see GradleBuild. It is published to the
+    // repository of Gradle and not to Maven Central; repo.grails.org, which this build resolves from, serves it.
+    // Its version is the Gradle of the wrappers: gradleToolingApiVersion in the gradle.properties of the root.
+    implementation("org.gradle:gradle-tooling-api:$gradleToolingApiVersion") {
+        // the logging API is the one the BOM manages
+        exclude group: 'org.slf4j', module: 'slf4j-api'
+    }
+    implementation 'org.slf4j:slf4j-api'
     implementation 'org.yaml:snakeyaml'
     runtimeOnly 'org.slf4j:slf4j-nop'
 

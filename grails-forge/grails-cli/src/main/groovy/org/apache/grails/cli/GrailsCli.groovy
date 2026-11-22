@@ -19,7 +19,7 @@
 package org.apache.grails.cli
 
 import groovy.transform.CompileStatic
-import org.apache.grails.forge.cli.console.GradleRunner
+import org.apache.grails.forge.cli.console.GradleBuild
 import org.grails.forge.cli.ForgeCli
 
 /**
@@ -76,7 +76,7 @@ final class GrailsCli {
      */
     static void main(String[] args) {
         // Gradle is given the output of the process for as long as it is the output of the command line
-        GradleRunner.outputOfProcess(System.out, System.err)
+        GradleBuild.outputOfProcess(System.out, System.err)
         System.exit(execute(args))
     }
 

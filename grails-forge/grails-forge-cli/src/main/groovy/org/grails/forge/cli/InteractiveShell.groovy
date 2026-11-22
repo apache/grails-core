@@ -19,7 +19,7 @@
 package org.grails.forge.cli
 
 import groovy.transform.CompileStatic
-import org.apache.grails.forge.cli.console.GradleRunner
+import org.apache.grails.forge.cli.console.GradleBuild
 import org.apache.grails.forge.cli.console.PlainOutput
 import org.jline.reader.Candidate
 import org.jline.reader.Completer
@@ -134,7 +134,7 @@ class InteractiveShell {
     void execute(Terminal terminal, String... arguments) {
         Thread running = Thread.currentThread()
         Terminal.SignalHandler before = terminal.handle(Terminal.Signal.INT, { Terminal.Signal signal ->
-            if (GradleRunner.isRunning()) {
+            if (GradleBuild.isRunning()) {
                 running.interrupt()
             } else if (endsJvm) {
                 interruptedOutsideGradle()

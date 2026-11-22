@@ -19,7 +19,7 @@
 package org.apache.grails.cli
 
 import groovy.transform.CompileStatic
-import org.apache.grails.forge.cli.console.GradleRunner
+import org.apache.grails.forge.cli.console.GradleBuild
 import org.apache.grails.forge.cli.console.PlainOutput
 import org.apache.grails.forge.cli.console.WrapperFiles
 
@@ -60,7 +60,7 @@ final class DelegatingShellApplication {
      */
     static void main(String[] args) {
         // Gradle is given the output of the process for as long as it is the output of the command line
-        GradleRunner.outputOfProcess(System.out, System.err)
+        GradleBuild.outputOfProcess(System.out, System.err)
         Integer updated = updateWrapper(args)
         if (updated != null && args.length == 0) {
             System.exit(updated)
