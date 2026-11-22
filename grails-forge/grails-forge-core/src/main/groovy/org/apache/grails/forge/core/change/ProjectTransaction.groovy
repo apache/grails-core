@@ -49,6 +49,7 @@ import java.nio.file.attribute.UserPrincipal
 import java.security.MessageDigest
 import java.security.SecureRandom
 import java.util.function.Consumer
+import java.util.function.Predicate
 import java.util.function.Supplier
 import java.util.regex.Matcher
 import java.util.regex.Pattern
@@ -251,7 +252,7 @@ final class ProjectTransaction {
                     if (digest(target) != write.before) {
                         failure = "${write.path} was changed while the project was being changed"
                     } else if (write.content == null) {
-                        Files.delete(target)
+                        remove(target)
                     } else {
                         Files.createDirectories(target.getParent())
                         move(directory.resolve('new').resolve(String.valueOf(index)), target)
@@ -441,7 +442,7 @@ final class ProjectTransaction {
             for (Put put : written.reverse()) {
                 Path target = target(project, put.path)
                 if (put.before == null) {
-                    Files.delete(target)
+                    remove(target)
                 } else {
                     // a file that was removed goes back where it was, also when its directory went since
                     Files.createDirectories(target.getParent())
@@ -752,6 +753,22 @@ final class ProjectTransaction {
     }
 
     private static UserPrincipal whoRuns
+    private static volatile Predicate<Path> ownedWithoutModes
+
+    /**
+     * Gives what tells whether a directory is the user's own where the file system has no POSIX
+     * attributes, as on Windows: there an owner is no user id, what an elevated administrator creates
+     * is owned by a group, and whose a file of that group is takes the access token of the process to
+     * say, which the command line reads and this library does not. The directories the records of
+     * changes are kept in are held to it; the home directory itself is not, which Windows gives to
+     * the system or to the administrators as often as to the user.
+     *
+     * @param owned given a directory, whether the user who runs the command owns it; {@code null}
+     * for no such check, which is how it is until a caller gives one
+     */
+    static void setOwnedWithoutModes(Predicate<Path> owned) {
+        ownedWithoutModes = owned
+    }
 
     // whose the files are that this program makes
     private static synchronized UserPrincipal self() throws IOException {
@@ -804,6 +821,12 @@ final class ProjectTransaction {
                     }
                     if (permissions.contains(PosixFilePermission.GROUP_WRITE) || permissions.contains(PosixFilePermission.OTHERS_WRITE)) {
                         throw new IOException("${home.relativize(directory).join('/')} can be written by others than the user")
+                    }
+                } else {
+                    // the owner alone: there are no modes, and no access control list is read
+                    Predicate<Path> owned = ownedWithoutModes
+                    if (owned != null && !owned.test(directory)) {
+                        throw new IOException("${home.relativize(directory).join('/')} is not a directory of the user who runs the command")
                     }
                 }
             }
@@ -920,11 +943,20 @@ final class ProjectTransaction {
         }
     }
 
+    // a file of the project that another program has open for a moment is tried again, see FilesInUse
     private static void move(Path from, Path to) throws IOException {
-        try {
-            Files.move(from, to, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
-        } catch (AtomicMoveNotSupportedException ignored) {
-            Files.move(from, to, StandardCopyOption.REPLACE_EXISTING)
+        FilesInUse.attempt(to) {
+            try {
+                Files.move(from, to, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
+            } catch (AtomicMoveNotSupportedException ignored) {
+                Files.move(from, to, StandardCopyOption.REPLACE_EXISTING)
+            }
+        }
+    }
+
+    private static void remove(Path file) throws IOException {
+        FilesInUse.attempt(file) {
+            Files.delete(file)
         }
     }
 

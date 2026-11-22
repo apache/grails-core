@@ -513,4 +513,33 @@ class ProjectTransactionFailuresSpec extends AbstractFeatureAdditionSpec {
             Files.delete(probe)
         }
     }
+
+    @Requires({ os.windows })
+    void "on Windows the directories the records of changes are kept in are the user's own as the caller says whose a directory is"() {
+        given:
+        ProjectGenerator generator = generator()
+        Path project = create(generator, 'app', [])
+        Map<String, String> before = tree(project)
+        List<Path> asked = []
+
+        when: 'no directory is the own of the user'
+        ProjectTransaction.setOwnedWithoutModes({ Path path -> asked.add(path); false } as java.util.function.Predicate<Path>)
+        planOf(generator, project).apply()
+
+        then: 'the first of them stops the change, and the home directory itself was not asked for'
+        ProjectChangeException e = thrown()
+        assert e.message.contains('.grails is not a directory of the user who runs the command. Nothing of the project was changed'): e.message
+        tree(project) == before
+        asked*.fileName*.toString() == ['.grails']
+
+        when: 'every directory is'
+        ProjectTransaction.setOwnedWithoutModes({ Path path -> true } as java.util.function.Predicate<Path>)
+        planOf(generator, project).apply()
+
+        then:
+        noExceptionThrown()
+
+        cleanup:
+        ProjectTransaction.setOwnedWithoutModes(null)
+    }
 }

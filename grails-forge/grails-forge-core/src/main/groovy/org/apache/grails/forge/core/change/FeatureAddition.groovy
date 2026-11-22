@@ -60,6 +60,7 @@ import java.text.Normalizer
 import java.util.regex.Matcher
 import java.util.regex.Pattern
 import java.util.function.Consumer
+import java.util.function.Predicate
 
 /**
  * Adds features to an application that was generated, from the state the generator left under
@@ -96,6 +97,20 @@ import java.util.function.Consumer
  */
 @CompileStatic
 final class FeatureAddition {
+
+    /**
+     * Gives what tells whether a directory is the user's own where the file system has no POSIX
+     * attributes, as on Windows, for the directories the records of changes are kept in below the home
+     * directory of the user. Whose a file is there takes the access token of the process to say, which
+     * the command line reads and this library does not; until a caller gives it, no owner is looked
+     * at on such a system, and on the others the owner and the modes are, whatever is given here.
+     *
+     * @param owned given a directory, whether the user who runs the command owns it; {@code null}
+     * for no such check
+     */
+    static void setOwnedWithoutModes(Predicate<Path> owned) {
+        ProjectTransaction.setOwnedWithoutModes(owned)
+    }
 
     private static final int MAX_NAMED = 10
     private static final int MAX_MESSAGE = 1000

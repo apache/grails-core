@@ -20,6 +20,7 @@ package org.grails.forge.cli
 
 import java.nio.file.Path
 import java.util.function.BiFunction
+import java.util.function.Predicate
 import java.util.function.Supplier
 import groovy.transform.CompileStatic
 import org.apache.grails.forge.cli.console.ApplicationCommands
@@ -28,6 +29,7 @@ import org.apache.grails.forge.cli.console.ConsoleProject
 import org.apache.grails.forge.cli.console.EarlierGrailsProject
 import org.apache.grails.forge.cli.console.PlainOutput
 import org.apache.grails.forge.cli.plugin.ListPluginsCommand
+import org.apache.grails.forge.core.change.FeatureAddition
 import org.apache.grails.forge.cli.plugin.PluginInfoCommand
 import org.apache.grails.forge.cli.console.GradleBuild
 import org.apache.grails.forge.cli.console.UsageHelp
@@ -66,6 +68,13 @@ import org.grails.forge.io.FileSystemOutputHandler
  */
 @CompileStatic
 final class ForgeCli {
+
+    static {
+        // Where the file system has no modes, as on Windows, the directories the records of changes are
+        // kept in are the user's own as the commands of a project tell whose a file is: by the owner,
+        // with what the group of the administrators owns for an elevated process (see ProcessUser).
+        FeatureAddition.setOwnedWithoutModes({ Path directory -> ConsoleProject.isOwnedByUser(directory) } as Predicate<Path>)
+    }
 
     /**
      * Registration point for code-gen commands: they take CodeGenConfig in their constructor and

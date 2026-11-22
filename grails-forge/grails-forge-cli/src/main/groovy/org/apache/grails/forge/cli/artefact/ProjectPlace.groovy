@@ -37,6 +37,7 @@ import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.attribute.FileTime
 import java.security.SecureRandom
 import java.time.Instant
+import org.apache.grails.forge.core.change.FilesInUse
 import org.grails.forge.feature.FeatureSelectionException
 
 /**
@@ -379,8 +380,12 @@ class ProjectPlace implements Closeable {
         if (leaf.secure != null) {
             leaf.secure.move(Path.of(from), leaf.secure, Path.of(to))
         } else {
+            // where the system has no directory that is held open, as on Windows, a file that an editor or
+            // a scanner has open for a moment is tried again
             Path directory = checked(leaf)
-            Files.move(directory.resolve(from), directory.resolve(to), StandardCopyOption.ATOMIC_MOVE)
+            FilesInUse.attempt(directory.resolve(to)) {
+                Files.move(checked(leaf).resolve(from), checked(leaf).resolve(to), StandardCopyOption.ATOMIC_MOVE)
+            }
         }
     }
 
@@ -389,7 +394,9 @@ class ProjectPlace implements Closeable {
         if (leaf.secure != null) {
             leaf.secure.deleteFile(Path.of(entry))
         } else {
-            Files.delete(checked(leaf).resolve(entry))
+            FilesInUse.attempt(checked(leaf).resolve(entry)) {
+                Files.delete(checked(leaf).resolve(entry))
+            }
         }
     }
 
