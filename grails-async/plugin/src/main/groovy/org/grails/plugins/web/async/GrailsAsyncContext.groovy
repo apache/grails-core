@@ -74,6 +74,9 @@ class GrailsAsyncContext implements AsyncContext {
                 } finally {
                     // Dispatch or completion may already have handed the servlet request back
                     // to the container. Only unbind this worker; do not change request attributes.
+                    // requestCompleted() above can still touch a recycled request: it runs the
+                    // request's destruction callbacks and updates the session attributes the worker
+                    // read, so this does not cover the request being recycled for those.
                     RequestContextHolder.resetRequestAttributes()
                 }
             }

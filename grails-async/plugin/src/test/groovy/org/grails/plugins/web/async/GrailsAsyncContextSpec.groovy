@@ -22,6 +22,7 @@ import jakarta.servlet.AsyncContext
 
 import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.mock.web.MockHttpServletResponse
+import org.springframework.web.context.request.RequestAttributes
 import org.springframework.web.context.request.RequestContextHolder
 
 import spock.lang.Specification
@@ -78,6 +79,29 @@ class GrailsAsyncContextSpec extends Specification {
 
         then:
         request.getAttribute(GrailsApplicationAttributes.WEB_REQUEST).is(dispatchedRequest)
+        RequestContextHolder.requestAttributes == null
+    }
+
+    void 'worker cleanup unbinds the worker when completing the request fails'() {
+        given:
+        final request = new MockHttpServletRequest()
+        final response = new MockHttpServletResponse()
+        final delegate = Stub(AsyncContext) {
+            getRequest() >> request
+            getResponse() >> response
+            start(_ as Runnable) >> { Runnable worker -> worker.run() }
+        }
+        final context = new GrailsAsyncContext(delegate, new GrailsWebRequest(request, response, request.servletContext))
+
+        when: 'a destruction callback of the request fails when the worker completes the request'
+        context.start {
+            RequestContextHolder.requestAttributes.registerDestructionCallback('failing', {
+                throw new IllegalStateException('The request object has been recycled')
+            } as Runnable, RequestAttributes.SCOPE_REQUEST)
+        }
+
+        then: 'the failure reaches the caller, and the worker is unbound'
+        thrown(IllegalStateException)
         RequestContextHolder.requestAttributes == null
     }
 
