@@ -484,8 +484,11 @@ Setup the key for validity:
 The Grails image is officially built on linux in a GitHub action using an Ubuntu container. To run a linux container
 locally, you can use the following command (substitute `<git-tag-of-release>` with the tag name):
 
-The verification container uses the Liberica JDK version pinned by the `FROM` instruction in `etc/bin/Dockerfile`.
-Keep that version synchronized with `$JAVA_VERSION` in `.github/workflows/release.yml`.
+The verification container installs the Liberica JDK build pinned by `LIBERICA_VERSION` in `etc/bin/Dockerfile`, which is
+the archive `actions/setup-java` installs for the release. Keep that version synchronized with `$JAVA_VERSION` in
+`.github/workflows/release.yml`, and update its checksums with it. Liberica's JDK images are not used, because an image tag
+can be a later build of the same version (the `21.0.12` image is `21.0.12.1`) and the images leave out the JDK sources
+(`lib/src.zip`).
 
 **macOS/Linux**
 ```bash
@@ -501,7 +504,7 @@ Keep that version synchronized with `$JAVA_VERSION` in `.github/workflows/releas
     verify.sh <git-tag-of-release> .
 ```
 
-Build the image from a checkout of the release tag (`git checkout <git-tag-of-release>`), because the image takes its verification scripts from `etc/bin` and its JDK from the `FROM` instruction in `etc/bin/Dockerfile` of the checkout it is built from; an image built from another branch can look for release files that the release does not have, or build the release with a different JDK.
+Build the image from a checkout of the release tag (`git checkout <git-tag-of-release>`), because the image takes its verification scripts from `etc/bin` and its JDK from `etc/bin/Dockerfile` of the checkout it is built from; an image built from another branch can look for release files that the release does not have, or build the release with a different JDK.
 
 Please note that the argument `-p 8080:8080` is used to expose the port 8080 of the container to the host machine's port 8080 (fromContainerPort:toHostPort). This allows you to access any running Grails application in the container from your host. If you have another application on port 8080, you can change the port mapping to avoid conflicts, e.g., `-p 8080:8081`. 
 
