@@ -72,8 +72,11 @@ class CommandSpec extends Specification {
     // 10% slower than average was enough to push it over and fail the lane on timing alone.
     protected static final int POLL_TIMEOUT_SECONDS = 600
 
-    private static final int POLL_INITIAL_DELAY_MILLIS = 3000
-    private static final int POLL_DELAY_MILLIS = 1000
+    // How long a wait sleeps before its first look at the output and between two looks. Both were whole seconds
+    // (three and one), which every wait paid although a look is a search of a string: a wait for a line that is
+    // there already took three seconds, and one for the last line of a build half a second longer than the build.
+    private static final int POLL_INITIAL_DELAY_MILLIS = 100
+    private static final int POLL_DELAY_MILLIS = 100
 
     // Once the process has exited the output can no longer grow, so allow the stdout and stderr
     // consumer threads started by consumeProcessOutput a moment to drain before deciding the
