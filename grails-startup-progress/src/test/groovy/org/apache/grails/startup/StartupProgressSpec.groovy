@@ -278,7 +278,7 @@ class StartupProgressSpec extends Specification {
         request('/app/hello').body == 'hello'
         request('/app/hello').phase == null
 
-        and: 'so does the HEAD request grails run-app makes to see whether the application is up'
+        and: 'so does a HEAD request for the root, which is why grails run-app asks the status path to see whether the application is ready'
         Response head = request('/app/', HTML, 'HEAD')
         head.status == 404
         head.phase == null
@@ -951,6 +951,133 @@ class StartupProgressSpec extends Specification {
         runFailure == null
         log.toString('UTF-8').contains('Not serving startup progress: the grails.startup.progress settings could not be read')
         request('/hello').body == 'hello'
+    }
+
+    void 'tells grails run-app the phase of the start and the path to ask for it, until the application is ready'() {
+        given: 'what the command line and this module agree on, and a start that takes its time twice'
+        Properties protocol = runAppProtocol()
+        List<String> starting = protocol.getProperty('phases.starting').split(',').toList()
+        Gates.beanCreation = new CountDownLatch(1)
+        Gates.startupHook = new CountDownLatch(1)
+
+        expect: 'the names this module answers with are the ones written down'
+        StartupProgress.PHASE_HEADER == protocol.getProperty('header.phase')
+        StartupProgress.STATUS_PATH_HEADER == protocol.getProperty('header.statusPath')
+        StartupProgressProperties.DEFAULT_STATUS_PATH == protocol.getProperty('statusPath.default')
+        StartupProgress.Phase.values()*.name() == starting + [protocol.getProperty('phase.ready'), protocol.getProperty('phase.failed')]
+
+        when: 'the application starts under a context path, and the command line asks for the root'
+        start('grails.startup.progress.enabled': true, 'server.servlet.context-path': '/app')
+        Map<String, String> first = awaitRunAppAnswer(protocol, '/', 'CREATING_BEANS')
+
+        then: 'the answer names the phase, which is one of a start that goes on, and the path to ask from then on'
+        first.phase in starting
+        first.statusPath == '/app/__grails/startup-progress'
+
+        and: 'so does the answer for the path the command line asks when it knows no other'
+        runAppAsks(protocol, protocol.getProperty('statusPath.default')).statusPath == '/app/__grails/startup-progress'
+
+        when: 'the web server has the port and a startup hook runs'
+        Gates.beanCreation.countDown()
+        conditions.eventually {
+            assert runAppAsks(protocol, first.statusPath)?.phase == 'INITIALIZING'
+        }
+
+        then: 'the root is the application\'s own, and says nothing of the start'
+        runAppAsks(protocol, '/').status == '404'
+        runAppAsks(protocol, '/').phase == null
+        runAppAsks(protocol, '/').statusPath == null
+
+        and: 'the status path still names a phase of a start that goes on'
+        runAppAsks(protocol, first.statusPath).phase in starting
+        runAppAsks(protocol, first.statusPath).statusPath == first.statusPath
+
+        when: 'the hook finishes'
+        Gates.startupHook.countDown()
+        runner.join(30_000)
+
+        then: 'the status path says the application is ready, for as long as it runs'
+        runFailure == null
+        runAppAsks(protocol, first.statusPath).status == '200'
+        runAppAsks(protocol, first.statusPath).phase == protocol.getProperty('phase.ready')
+        runAppAsks(protocol, first.statusPath).statusPath == first.statusPath
+        Gates.unmappedRequests == 0
+    }
+
+    void 'tells grails run-app that the start has failed before it releases the port'() {
+        given: 'a start that will fail'
+        Properties protocol = runAppProtocol()
+        Gates.beanCreation = new CountDownLatch(1)
+        Gates.beanFailure = 'database is down'
+
+        when: 'the application starts, and the command line asks as it does while it waits'
+        start('grails.startup.progress.enabled': true)
+        String statusPath = awaitRunAppAnswer(protocol, '/', 'CREATING_BEANS').statusPath
+        assert statusPath == protocol.getProperty('statusPath.default')
+        assert runAppAsks(protocol, statusPath).phase == 'CREATING_BEANS'
+
+        and: 'the start fails'
+        Gates.openAll()
+
+        then: 'the command line, which asked a moment ago, is told so: the failed start waits for it to ask again'
+        conditions.eventually {
+            assert runAppAsks(protocol, statusPath)?.phase == protocol.getProperty('phase.failed')
+        }
+
+        when:
+        runner.join(30_000)
+
+        then: 'and the start fails as it would have without anyone asking'
+        rootCause(runFailure) instanceof IllegalStateException
+        portIsFree()
+    }
+
+    /** What grails run-app and this module agree on, which the specification of the command line reads too. */
+    private static Properties runAppProtocol() {
+        Properties protocol = new Properties()
+        StartupProgressSpec.getResourceAsStream('run-app-protocol.properties').withCloseable { InputStream stream ->
+            protocol.load(stream)
+        }
+        protocol
+    }
+
+    private Map<String, String> awaitRunAppAnswer(Properties protocol, String path, String phase) {
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(30)
+        while (System.nanoTime() < deadline) {
+            Map<String, String> answer = runAppAsks(protocol, path)
+            if (answer?.phase == phase) {
+                return answer
+            }
+            Thread.sleep(50)
+        }
+        throw new AssertionError("No answer with the phase ${phase} for ${path} within 30 seconds")
+    }
+
+    /**
+     * Asks as grails run-app does, with the bytes it sends, and reads what it reads: the status line and the
+     * headers. The answer is {@code null} when nothing takes the connection.
+     */
+    private Map<String, String> runAppAsks(Properties protocol, String path) {
+        try (Socket socket = new Socket()) {
+            socket.connect(new InetSocketAddress(InetAddress.getByAddress([127, 0, 0, 1] as byte[]), port), 15_000)
+            socket.soTimeout = 30_000
+            String requestLine = protocol.getProperty('request.line').replace('{path}', path)
+            socket.outputStream.write("${requestLine}\r\nHost: localhost:${port}\r\n\r\n".getBytes('ISO-8859-1'))
+            socket.outputStream.flush()
+            List<String> lines = socket.inputStream.newReader('ISO-8859-1').readLines().takeWhile { String line -> line }
+            if (!lines) {
+                return null
+            }
+            Map<String, String> headers = lines.drop(1).collectEntries { String line ->
+                [line.substring(0, line.indexOf(':')).toLowerCase(Locale.ROOT), line.substring(line.indexOf(':') + 1).trim()]
+            }
+            return [status    : lines[0].split(' ')[1],
+                    phase     : headers[protocol.getProperty('header.phase').toLowerCase(Locale.ROOT)],
+                    statusPath: headers[protocol.getProperty('header.statusPath').toLowerCase(Locale.ROOT)]]
+        }
+        catch (IOException ignored) {
+            return null
+        }
     }
 
     /** How long Spring Boot logged that the application took to start. */
