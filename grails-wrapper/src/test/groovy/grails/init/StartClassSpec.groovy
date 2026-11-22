@@ -186,6 +186,10 @@ class StartClassSpec extends Specification {
                 .and('PREFERRED_GRAILS_VERSION', version)
                 .execute {
                     new GrailsWrapper().execute(['help'] as String[])
+                    // The wrapper is started anew for every command line, and the one before has ended and holds
+                    // nothing. Here both are in one JVM, and the class loader of the first still has the jar open,
+                    // which on Windows keeps the second from putting the download in its place.
+                    ((URLClassLoader) Thread.currentThread().contextClassLoader).close()
                     if (typed[0] == 'update-wrapper') {
                         new File(home, "wrapper/${version}/grails-cli-${version}-all.jar").text = 'what was downloaded before'
                     }
