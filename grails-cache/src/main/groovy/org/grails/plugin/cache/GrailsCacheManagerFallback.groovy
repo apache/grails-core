@@ -26,6 +26,7 @@ import java.util.concurrent.ConcurrentHashMap
 
 import groovy.transform.CompileStatic
 
+import org.springframework.aot.AotDetector
 import org.springframework.beans.BeansException
 import org.springframework.beans.PropertyValues
 import org.springframework.beans.TypeConverter
@@ -36,11 +37,13 @@ import org.springframework.beans.factory.UnsatisfiedDependencyException
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor
 import org.springframework.beans.factory.config.BeanDefinition
+import org.springframework.beans.factory.config.BeanDefinitionHolder
 import org.springframework.beans.factory.config.BeanFactoryPostProcessor
 import org.springframework.beans.factory.config.BeanPostProcessor
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory
 import org.springframework.beans.factory.config.DependencyDescriptor
 import org.springframework.beans.factory.config.InstantiationAwareBeanPostProcessor
+import org.springframework.beans.factory.support.AutowireCandidateResolver
 import org.springframework.beans.factory.support.DefaultListableBeanFactory
 import org.springframework.beans.factory.support.MergedBeanDefinitionPostProcessor
 import org.springframework.beans.factory.support.RootBeanDefinition
@@ -74,6 +77,14 @@ import org.springframework.util.ReflectionUtils
  * choose between, it takes that bean, unless it is Spring's null bean. Everywhere else Spring chooses as
  * it did. Any other injection of a cache manager is left alone.</p>
  *
+ * <p>The injection that Spring's AOT processing generates injects every member, the field included, in
+ * that order, whatever is registered on the bean definition. Where the application runs that generated
+ * code, the bean factory's autowire candidate resolver answers the field's resolution instead, with the
+ * same resolution, which falls back where Spring cannot choose; the generated code resolves the field each
+ * time, so nothing is remembered. One difference remains there: where that resolution finds no cache
+ * manager, Spring resolves the field once more, which creates again only a prototype cache manager whose
+ * factory method returns null.</p>
+ *
  * @since 8.0.1
  */
 @CompileStatic
@@ -98,6 +109,13 @@ class GrailsCacheManagerFallback implements BeanFactoryPostProcessor {
     void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
         if (beanFactory instanceof DefaultListableBeanFactory) {
             DefaultListableBeanFactory listable = (DefaultListableBeanFactory) beanFactory
+            if (AotDetector.useGeneratedArtifacts()) {
+                // the generated code injects the bean, and resolves the field through the resolver
+                if (!(listable.autowireCandidateResolver instanceof GeneratedInjectionFallback)) {
+                    listable.autowireCandidateResolver = new GeneratedInjectionFallback(listable.autowireCandidateResolver)
+                }
+                return
+            }
             if (!listable.beanPostProcessors.any { BeanPostProcessor processor -> processor instanceof TraitFieldRegistrar }) {
                 // added before Spring registers its own, so that it registers the field on the bean definition first
                 listable.addBeanPostProcessor(new TraitFieldRegistrar(listable))
@@ -329,6 +347,91 @@ class GrailsCacheManagerFallback implements BeanFactoryPostProcessor {
         }
     }
 
+    /**
+     * The bean factory's autowire candidate resolver, answering the resolution of the trait's field by the
+     * injection that Spring's AOT processing generates, with the resolution that falls back to
+     * {@code grailsCacheManager}. That code asks for the field each time, so the answer is not remembered.
+     */
+    @CompileStatic
+    static class GeneratedInjectionFallback implements AutowireCandidateResolver, BeanFactoryAware {
+
+        private final AutowireCandidateResolver delegate
+
+        private DefaultListableBeanFactory beanFactory
+
+        GeneratedInjectionFallback(AutowireCandidateResolver delegate) {
+            this.delegate = delegate
+        }
+
+        @Override
+        void setBeanFactory(BeanFactory beanFactory) throws BeansException {
+            this.beanFactory = beanFactory instanceof DefaultListableBeanFactory ? (DefaultListableBeanFactory) beanFactory : null
+            if (delegate instanceof BeanFactoryAware) {
+                ((BeanFactoryAware) delegate).beanFactory = beanFactory
+            }
+        }
+
+        @Override
+        Object getLazyResolutionProxyIfNecessary(DependencyDescriptor descriptor, String beanName) {
+            Object proxy = delegate.getLazyResolutionProxyIfNecessary(descriptor, beanName)
+            Field field = descriptor.field
+            if (proxy != null || beanFactory == null || descriptor instanceof FallbackDescriptor || field == null ||
+                    traitField(field.declaringClass) != field) {
+                return proxy
+            }
+            FallbackDescriptor fallback = new FallbackDescriptor(descriptor, beanFactory)
+            Set<String> autowiredBeanNames = new LinkedHashSet<String>(1)
+            // the generated code's resolution, but for the descriptor; it registers the beans that resolution took
+            Object value = beanFactory.doResolveDependency(fallback, beanName, autowiredBeanNames, beanFactory.typeConverter)
+            if (fallback.fellBackTo != null) {
+                autowiredBeanNames << fallback.fellBackTo
+            }
+            if (beanName != null) {
+                for (String autowiredBeanName : autowiredBeanNames) {
+                    if (beanFactory.containsBean(autowiredBeanName)) {
+                        beanFactory.registerDependentBean(autowiredBeanName, beanName)
+                    }
+                }
+            }
+            value
+        }
+
+        @Override
+        boolean isAutowireCandidate(BeanDefinitionHolder bdHolder, DependencyDescriptor descriptor) {
+            delegate.isAutowireCandidate(bdHolder, descriptor)
+        }
+
+        @Override
+        boolean isRequired(DependencyDescriptor descriptor) {
+            delegate.isRequired(descriptor)
+        }
+
+        @Override
+        boolean hasQualifier(DependencyDescriptor descriptor) {
+            delegate.hasQualifier(descriptor)
+        }
+
+        @Override
+        String getSuggestedName(DependencyDescriptor descriptor) {
+            delegate.getSuggestedName(descriptor)
+        }
+
+        @Override
+        Object getSuggestedValue(DependencyDescriptor descriptor) {
+            delegate.getSuggestedValue(descriptor)
+        }
+
+        @Override
+        Class<?> getLazyResolutionProxyClass(DependencyDescriptor descriptor, String beanName) {
+            delegate.getLazyResolutionProxyClass(descriptor, beanName)
+        }
+
+        @Override
+        AutowireCandidateResolver cloneIfNecessary() {
+            new GeneratedInjectionFallback(delegate.cloneIfNecessary())
+        }
+    }
+
     /** The trait's field resolved by the name of the bean it took before, as Spring's shortcut is. */
     @CompileStatic
     private static class ShortcutDescriptor extends DependencyDescriptor {
@@ -357,6 +460,12 @@ class GrailsCacheManagerFallback implements BeanFactoryPostProcessor {
 
         FallbackDescriptor(Field field, boolean required, DefaultListableBeanFactory beanFactory) {
             super(field, required)
+            this.beanFactory = beanFactory
+        }
+
+        /** The descriptor the generated code resolves, with the class it is resolved for. */
+        FallbackDescriptor(DependencyDescriptor original, DefaultListableBeanFactory beanFactory) {
+            super(original)
             this.beanFactory = beanFactory
         }
 

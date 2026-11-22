@@ -19,14 +19,23 @@
 package org.grails.plugin.cache
 
 import java.lang.reflect.Field
+import java.nio.file.Files
+import java.nio.file.Path
 import java.util.function.Supplier
+
+import javax.tools.JavaCompiler
+import javax.tools.StandardJavaFileManager
+import javax.tools.ToolProvider
+
+import groovy.io.FileType
 
 import jakarta.annotation.Priority
 import jakarta.annotation.Resource
 
+import org.springframework.aot.AotDetector
 import org.springframework.aot.generate.ClassNameGenerator
 import org.springframework.aot.generate.DefaultGenerationContext
-import org.springframework.aot.generate.InMemoryGeneratedFiles
+import org.springframework.aot.generate.FileSystemGeneratedFiles
 import org.springframework.aot.hint.RuntimeHints
 import org.springframework.aot.hint.predicate.RuntimeHintsPredicates
 import org.springframework.beans.BeansException
@@ -41,23 +50,23 @@ import org.springframework.beans.factory.config.BeanDefinition
 import org.springframework.beans.factory.config.BeanDefinitionCustomizer
 import org.springframework.beans.factory.support.AbstractBeanDefinition
 import org.springframework.beans.factory.support.DefaultListableBeanFactory
-import org.springframework.beans.factory.support.RegisteredBean
 import org.springframework.beans.factory.support.RootBeanDefinition
 import org.springframework.cache.CacheManager
 import org.springframework.cache.concurrent.ConcurrentMapCacheManager
+import org.springframework.context.ApplicationContextInitializer
 import org.springframework.context.annotation.AnnotationConfigApplicationContext
 import org.springframework.context.annotation.AnnotationConfigUtils
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.context.aot.ApplicationContextAotGenerator
 import org.springframework.context.annotation.Scope
 import org.springframework.context.support.GenericApplicationContext
+import org.springframework.core.SpringProperties
 import org.springframework.javapoet.ClassName
 import spock.lang.Specification
 
 import grails.plugin.cache.CustomCacheKeyGenerator
 import grails.plugin.cache.GrailsCacheKeyGenerator
-
-import org.grails.plugin.cache.aot.GrailsCacheManagerFallbackAotProcessor
 
 /**
  * Which cache manager a cache-aware class is injected with, with the fallback to {@code grailsCacheManager},
@@ -314,32 +323,96 @@ class GrailsCacheManagerFallbackMatrixSpec extends Specification {
         context?.close()
     }
 
-    void 'processed ahead of time, the field is left out of Spring\'s generated injection and registered for reflection'() {
-        given: 'a context processed ahead of time, as for an AOT build'
-        GenericApplicationContext context = new GenericApplicationContext()
-        AnnotationConfigUtils.registerAnnotationConfigProcessors(context)
-        context.addBeanFactoryPostProcessor(new GrailsCacheManagerFallback())
-        context.registerBean(NAMED, CacheManager, { -> new ConcurrentMapCacheManager() } as Supplier<CacheManager>)
-        context.registerBean('probe', CacheAware)
-        RuntimeHints hints = new RuntimeHints()
-        context.refreshForAotProcessing(hints)
-        Field field = GrailsCacheManagerFallback.traitField(CacheAware)
+    void 'run from the code Spring\'s AOT processing generates, the field falls back as in a context that is not, beside #others'() {
+        when: 'the context processed ahead of time, and the code it generates compiled and run'
+        Map<String, Object> was = aheadOfTime(others, false)
+        Map<String, Object> now = aheadOfTime(others, true)
 
-        when: 'the bean is processed for registration ahead of time'
-        DefaultGenerationContext generation = new DefaultGenerationContext(
-                new ClassNameGenerator(ClassName.get(Object)), new InMemoryGeneratedFiles(), hints)
-        new GrailsCacheManagerFallbackAotProcessor().processAheadOfTime(RegisteredBean.of(context.defaultListableBeanFactory, 'probe'))
-                .applyTo(generation, null)
+        then: 'Spring\'s generated injection injects the field, after the trait\'s other field and before the class\'s method'
+        now.injection.indexOf('__customCacheKeyGenerator') < now.injection.indexOf("forField(\"${GrailsCacheManagerFallback.FIELD_NAME}\")")
+        now.injection.indexOf("forField(\"${GrailsCacheManagerFallback.FIELD_NAME}\")") < now.injection.indexOf('"init"')
+        now.fieldHinted
 
-        then: 'Spring\'s own injection leaves the field to the fallback, which the image can set the field for'
-        context.defaultListableBeanFactory.getMergedBeanDefinition('probe').isExternallyManagedConfigMember(field)
-        RuntimeHintsPredicates.reflection().onField(field).test(hints)
+        and: 'the resolution of the field falls back where 8.0.0 failed, and is 8.0.0\'s elsewhere; the code generated for a bean depends on each candidate it gets from the bean factory'
+        was.result == wasExpected
+        now.result == nowExpected
 
-        and: 'a bean without the field contributes nothing'
-        new GrailsCacheManagerFallbackAotProcessor().processAheadOfTime(RegisteredBean.of(context.defaultListableBeanFactory, NAMED)) == null
+        and: 'the bean factory\'s resolver answers it, installed once'
+        now.resolver == [installed: true, once: true, copied: true]
+        !was.resolver?.installed
 
-        cleanup:
-        context?.close()
+        where:
+        others                                                 || wasExpected                                                       || nowExpected
+        [:]                                                    || [seen: NAMED, got: NAMED, dependencies: [NAMED]]                  || wasExpected
+        [other: OtherCacheManager]                             || [failed: true]                                                    || [seen: NAMED, got: NAMED, dependencies: [NAMED, 'other']]
+        [other: OtherCacheManager, primary: OtherCacheManager] || [seen: 'primary', got: 'primary', dependencies: [NAMED, 'other', 'primary']] || wasExpected
+    }
+
+    private Map<String, Object> aheadOfTime(Map<String, Class<?>> others, boolean withFallback) {
+        Path dir = Files.createTempDirectory('grails-cache-aot')
+        try {
+            GenericApplicationContext processed = new GenericApplicationContext()
+            AnnotationConfigUtils.registerAnnotationConfigProcessors(processed)
+            if (withFallback) {
+                processed.registerBean(GrailsCacheManagerFallback)
+            }
+            processed.registerBean(NAMED, ConcurrentMapCacheManager)
+            others.each { String name, Class<?> type ->
+                processed.registerBean(name, (Class<Object>) type,
+                        { BeanDefinition definition -> definition.primary = name == 'primary' } as BeanDefinitionCustomizer)
+            }
+            processed.registerBean('probe', MethodInClass)
+            RuntimeHints hints = new RuntimeHints()
+            DefaultGenerationContext generation = new DefaultGenerationContext(new ClassNameGenerator(ClassName.get(GrailsCacheManagerFallbackMatrixSpec)),
+                    new FileSystemGeneratedFiles(dir.resolve('sources')), hints)
+            ClassName initializer = new ApplicationContextAotGenerator().processAheadOfTime(processed, generation)
+            generation.writeGeneratedContent()
+            List<File> sources = []
+            dir.resolve('sources').toFile().eachFileRecurse(FileType.FILES) { File file -> if (file.name.endsWith('.java')) sources << file }
+            Path classes = Files.createDirectories(dir.resolve('classes'))
+            JavaCompiler compiler = ToolProvider.systemJavaCompiler
+            StandardJavaFileManager files = compiler.getStandardFileManager(null, null, null)
+            assert compiler.getTask(null, files, null, ['-d', classes.toString(), '-classpath', System.getProperty('java.class.path'), '-proc:none'],
+                    null, files.getJavaFileObjectsFromFiles(sources)).call()
+            files.close()
+            Map<String, Object> result = [
+                    injection: sources.find { File file -> file.name == 'GrailsCacheManagerFallbackMatrixSpec_MethodInClass__Autowiring.java' }.text,
+                    fieldHinted: RuntimeHintsPredicates.reflection().onField(GrailsCacheManagerFallback.traitField(MethodInClass)).test(hints)]
+            URLClassLoader loader = new URLClassLoader([classes.toUri().toURL()] as URL[], getClass().classLoader)
+            GenericApplicationContext started = new GenericApplicationContext()
+            started.classLoader = loader
+            SpringProperties.setProperty(AotDetector.AOT_ENABLED, 'true')
+            try {
+                ((ApplicationContextInitializer<GenericApplicationContext>) loader.loadClass(initializer.reflectionName())
+                        .getDeclaredConstructor().newInstance()).initialize(started)
+                started.refresh()
+                Map<String, CacheManager> instances = ([NAMED] + others.keySet()).collectEntries { String name ->
+                    [(name): started.getBean(name, CacheManager)]
+                }
+                MethodInClass probe = started.getBean('probe', MethodInClass)
+                result.result = [seen: nameOf(probe.seen, instances), got: nameOf(probe.grailsCacheManager, instances),
+                        dependencies: (started.beanFactory.getDependenciesForBean('probe') as List<String>).sort()]
+                // post-processed again, the resolver is not wrapped twice, and a copy of it falls back too
+                Object resolver = started.defaultListableBeanFactory.autowireCandidateResolver
+                new GrailsCacheManagerFallback().postProcessBeanFactory(started.beanFactory)
+                result.resolver = [installed: resolver instanceof GrailsCacheManagerFallback.GeneratedInjectionFallback,
+                        once: started.defaultListableBeanFactory.autowireCandidateResolver.is(resolver),
+                        copied: started.defaultListableBeanFactory.autowireCandidateResolver.cloneIfNecessary()
+                                instanceof GrailsCacheManagerFallback.GeneratedInjectionFallback]
+            }
+            catch (BeansException ignored) {
+                result.result = [failed: true]
+            }
+            finally {
+                SpringProperties.setProperty(AotDetector.AOT_ENABLED, null)
+                started.close()
+                loader.close()
+            }
+            result
+        }
+        finally {
+            dir.toFile().deleteDir()
+        }
     }
 
     void 'a prototype cache manager that makes nothing keeps the injection empty, as in 8.0.0, #arrangement'() {
@@ -801,6 +874,10 @@ class GrailsCacheManagerFallbackMatrixSpec extends Specification {
     static class OwnInjection {
         @Autowired(required = false)
         CacheManager someCacheManager
+    }
+
+    /** A second cache manager of a class of its own. */
+    static class OtherCacheManager extends ConcurrentMapCacheManager {
     }
 
     @Priority(1)
