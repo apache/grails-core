@@ -36,7 +36,6 @@ import org.gradle.tooling.GradleConnectionException
 import org.gradle.tooling.GradleConnector
 import org.gradle.tooling.ProjectConnection
 import org.gradle.tooling.ResultHandler
-import picocli.CommandLine
 
 /**
  * Runs a build of a project through the Tooling API of Gradle, from the JVM of the command line: no
@@ -70,6 +69,12 @@ import picocli.CommandLine
  * and options alike, in their order. Of the system properties of this JVM none: a build has those that
  * are given to it with {@code -D}. The environment of this JVM. The JVM options of the build are no
  * arguments here: they are those of the Gradle daemon, which {@code org.gradle.jvmargs} sets.</p>
+ *
+ * <p><strong>What the build writes.</strong> Plain text, to the output and the error output of the
+ * command line as they are when the build starts, each line when Gradle has written it: no colours and
+ * no display of progress, on a terminal too. The Tooling API can be told to write for a terminal, and
+ * then draws the progress of the build over what it wrote to the error output, which it does not
+ * write through the same console; the report of a build that failed loses its last lines that way.</p>
  *
  * <p><strong>What the build reads.</strong> The input of this JVM, where the command line is a program
  * that runs one command and ends, and nothing says that no one may be waited for. An input that has
@@ -285,10 +290,15 @@ final class ToolingApiRunner extends GradleBuild {
         launcher.withArguments(PlainOutput.forGradle(arguments) + arguments)
         launcher.withSystemProperties(Collections.<String, String>emptyMap())
         launcher.withCancellationToken(cancellation.token())
-        launcher.setStandardOutput(out)
-        launcher.setStandardError(err)
-        // Gradle draws its colours and its progress when it is told that a terminal reads them, which it cannot see for itself here
-        launcher.setColorOutput(isOutputOfProcess() && !PlainOutput.isOn() && CommandLine.Help.Ansi.AUTO.enabled())
+        // Gradle writes the two in the order they are to be read, and they are one terminal or one file as a rule:
+        // what is written to one is not kept back while the other goes on
+        launcher.setStandardOutput(new WrittenAtOnce(out))
+        launcher.setStandardError(new WrittenAtOnce(err))
+        // Plain text, on a terminal too. Told that a terminal reads its output, Gradle draws its progress below what it
+        // writes and moves the cursor up to draw it again, as if nothing else wrote there: but it writes the standard
+        // error beside that, not through it, so a line of an error, the report of a failed build among them, is
+        // drawn over. Given a terminal by the wrapper, Gradle writes both through the one console; here it cannot.
+        launcher.setColorOutput(false)
         if (isNonInteractive()) {
             // Gradle and what it starts read the end of their input at once, and are told why
             launcher.setStandardInput(new ByteArrayInputStream(new byte[0]))
@@ -372,6 +382,33 @@ final class ToolingApiRunner extends GradleBuild {
             } catch (IllegalStateException ignored) {
                 // the JVM is shutting down, and the hook runs
             }
+        }
+    }
+
+    /** Gives a stream what it is given and has it written before anything else is: the output of the JVM keeps what it is given for a while. */
+    private static final class WrittenAtOnce extends OutputStream {
+
+        private final OutputStream to
+
+        WrittenAtOnce(OutputStream to) {
+            this.to = to
+        }
+
+        @Override
+        void write(int b) throws IOException {
+            to.write(b)
+            to.flush()
+        }
+
+        @Override
+        void write(byte[] bytes, int offset, int length) throws IOException {
+            to.write(bytes, offset, length)
+            to.flush()
+        }
+
+        @Override
+        void flush() throws IOException {
+            to.flush()
         }
     }
 

@@ -204,6 +204,12 @@ class ToolingApiBuildSpec extends CommandSpec {
         out.toString().contains('this build fails as it is asked to')
         out.toString().contains('BUILD FAILED')
 
+        and: 'what Gradle wrote is in the order it wrote it, the two streams as one, and is plain text'
+        out.toString().indexOf('ran classes') < out.toString().indexOf('FAILURE: Build failed')
+        out.toString().indexOf('FAILURE: Build failed') < out.toString().indexOf('BUILD FAILED')
+        out.toString().indexOf('BUILD FAILED') < out.toString().indexOf('| Error Gradle did not succeed')
+        !out.toString().contains('\u001b[')
+
         when: 'the next build is none the worse for it'
         out.reset()
         int next = ForgeCli.execute(beanContext, 'compile')
