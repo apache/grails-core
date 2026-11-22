@@ -41,6 +41,9 @@ class InteractiveShell {
 
     static final String DEFAULT_PROMPT = '@|blue grails>|@ '
 
+    /** The line that leaves the prompt */
+    static final String EXIT = 'exit'
+
     private final CommandLine commandLine
     private final Supplier<CommandLine> offered
     private final Consumer<String[]> executor
@@ -124,7 +127,7 @@ class InteractiveShell {
                     if (line.matches('^\\s*#.*')) {
                         continue
                     }
-                    if (line.equals('exit')) {
+                    if (line.equals(EXIT)) {
                         return
                     }
                     ParsedLine pl = reader.getParser().parse(line, 0)

@@ -280,7 +280,8 @@ final class ForgeCli {
             return
         }
         for (ProjectCommand command : new ProjectCommands(projectDir).load(console, runBuild)) {
-            if (!commandLine.subcommands.containsKey(command.name)) {
+            // exit leaves the prompt, so a project command of that name could be offered but never run
+            if (!commandLine.subcommands.containsKey(command.name) && command.name != InteractiveShell.EXIT) {
                 commandLine.addSubcommand(command.name, command.commandSpec)
             }
         }

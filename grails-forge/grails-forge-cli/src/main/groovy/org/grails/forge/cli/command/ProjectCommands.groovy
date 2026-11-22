@@ -19,7 +19,9 @@
 package org.grails.forge.cli.command
 
 import java.nio.file.Files
+import java.nio.file.InvalidPathException
 import java.nio.file.Path
+import java.security.MessageDigest
 import java.util.regex.Matcher
 import java.util.regex.Pattern
 
@@ -92,6 +94,9 @@ class ProjectCommands {
     private static final List<String> PROJECT_DIRECTORIES = ['src/main', 'grails-app']
 
     private static final List<String> SETTINGS_FILES = ['settings.gradle', 'settings.gradle.kts']
+
+    /** The line of the failure that holds the digest of the manifest there was */
+    private static final String MANIFEST_LINE = 'manifest\t'
 
     /** A string in quotes, in Groovy or Kotlin, which a settings file names a project's path or directory with */
     private static final Pattern STRING_LITERAL = Pattern.compile(/(['"])((?:\\.|(?!\1)[^\\\r\n])*)\1/)
@@ -177,22 +182,23 @@ class ProjectCommands {
             // before the build changed while it ran: then the record from before makes the build run again
             Inputs after = inputsOf(manifest)
             boolean changedDuringBuild = after != before && stateOrNull(before, false) != recorded
-            save(after == before || changedDuringBuild ? recorded : stateOrNull(after, false), null, console)
+            save(after == before || changedDuringBuild ? recorded : stateOrNull(after, false), null, console, null)
             keepInputs(manifest)
             return
         }
-        save(recordedWhole, problem, console)
+        save(recordedWhole, problem, console, fingerprint(manifest))
         String kept = manifest.isFile() ? 'The commands it listed before are offered' : 'Its commands are not offered'
         console.warning("Could not read the commands of the project: ${problem}. ${kept}, and the build is not run " +
                 'for them again until a build file or a source changes. A project of Grails 9 or later lists them with its ' +
-                "${MANIFEST_TASK} Gradle task; run it to see what went wrong.")
+                "${MANIFEST_TASK} Gradle task; run ./gradlew ${MANIFEST_TASK} -P${MANIFEST_PROPERTY}=${MANIFEST_PATH} " +
+                'to see what went wrong, which also writes them where the Forge CLI reads them.')
     }
 
     /**
      * Records the files the commands depend on, and whether the build failed. When they cannot be
      * written, the build is run again next time, which is said.
      */
-    private void save(List<String> recorded, String problem, ConsoleOutput console) {
+    private void save(List<String> recorded, String problem, ConsoleOutput console, String manifestFingerprint) {
         File record = new File(projectDir, RECORD_PATH)
         File failed = new File(projectDir, FAILED_PATH)
         if (recorded == null) {
@@ -207,7 +213,8 @@ class ProjectCommands {
                 Files.deleteIfExists(failed.toPath())
             }
             else {
-                Files.write(failed.toPath(), (problem + '\n').getBytes('UTF-8'))
+                // the manifest there was, so one written since, the build working again, is told from it
+                Files.write(failed.toPath(), "${problem}\n${MANIFEST_LINE}${manifestFingerprint}\n".toString().getBytes('UTF-8'))
             }
         }
         catch (IOException e) {
@@ -280,9 +287,10 @@ class ProjectCommands {
             // cannot be told from one that was never there
             File failed = new File(projectDir, FAILED_PATH)
             boolean failedLast = failed.isFile()
-            // a manifest written since the build failed, as by ./gradlew generateCommandManifest, says it works
-            // again: the build runs once more, to record what the commands depend on and forget the failure
-            if (failedLast && manifest.isFile() && manifest.lastModified() > failed.lastModified()) {
+            // a manifest other than the one there was when the build failed, as ./gradlew generateCommandManifest
+            // writes, says it works again: the build runs once more, to record what the commands depend on and
+            // forget the failure; told by what it holds, as its time may be anything
+            if (failedLast && manifest.isFile() && fingerprint(manifest) != failedManifest(failed)) {
                 return true
             }
             Inputs inputs = inputsOf(manifest)
@@ -292,6 +300,26 @@ class ProjectCommands {
         catch (IOException | RuntimeException ignored) {
             return true
         }
+    }
+
+    /** What the manifest holds, as a digest, or {@code none} when there is none */
+    private static String fingerprint(File manifest) {
+        if (!manifest.isFile()) {
+            return 'none'
+        }
+        try {
+            MessageDigest digest = MessageDigest.getInstance('SHA-256')
+            return digest.digest(Files.readAllBytes(manifest.toPath())).encodeHex().toString()
+        }
+        catch (IOException ignored) {
+            return 'unreadable'
+        }
+    }
+
+    /** The digest of the manifest there was when the build failed, as the failure records it */
+    private static String failedManifest(File failed) {
+        String line = Files.readAllLines(failed.toPath()).find { String it -> it.startsWith(MANIFEST_LINE) }
+        line?.substring(MANIFEST_LINE.length())
     }
 
     /**
@@ -348,7 +376,14 @@ class ProjectCommands {
         List<File> projects = []
         projects << projectDir << rootDir
         projectsBelow(rootDir, rootDir, projects)
-        declaredProjects(rootDir, projects, new HashSet<File>())
+        Set<File> visited = new HashSet<File>()
+        declaredProjects(rootDir, projects, visited)
+        // an included build the walk found names projects in its settings too, also outside the root
+        for (File found : new ArrayList<File>(projects)) {
+            if (SETTINGS_FILES.any { String name -> new File(found, name).isFile() }) {
+                declaredProjects(found, projects, visited)
+            }
+        }
         projects = projects.unique()
         List<File> sourceDirectories = [new File(rootDir, 'gradle'), new File(rootDir, 'buildSrc')]
         List<File> commandDirectories = []
@@ -415,7 +450,8 @@ class ProjectCommands {
     /**
      * Adds the directories a settings file names as paths in quotes, as {@code projectDir = file('bin/audit')}
      * or {@code includeBuild('../shared')} do, or as project paths, as {@code include ':plugins:audit'} does,
-     * wherever they are, and those the settings files of the included builds among them name.
+     * wherever they are, and those the settings files of the included builds among them name. A comment
+     * names nothing, and a string that is no path on this system is passed over.
      */
     private static void declaredProjects(File settingsDir, List<File> projects, Set<File> visited) {
         if (!visited.add(settingsDir.absoluteFile.toPath().normalize().toFile())) {
@@ -433,24 +469,84 @@ class ProjectCommands {
             if (text == null) {
                 continue
             }
-            Matcher literals = STRING_LITERAL.matcher(text)
+            Matcher literals = STRING_LITERAL.matcher(withoutComments(text))
             while (literals.find()) {
                 String literal = literals.group(2)
                 if (!literal || literal.contains('$')) {
                     continue
                 }
-                for (String path : [literal, literal.replaceFirst(/^:/, '').replace(':', '/')].unique()) {
-                    File candidate = new File(path).isAbsolute() ? new File(path) : new File(settingsDir, path)
-                    candidate = candidate.absoluteFile.toPath().normalize().toFile()
-                    if (candidate.isDirectory() && !(candidate in projects)) {
+                // a project path first, as a colon is no part of a path on some systems
+                for (String path : [literal.replaceFirst(/^:/, '').replace(':', '/'), literal].unique()) {
+                    File candidate = directoryOrNull(settingsDir, path)
+                    if (candidate == null) {
+                        continue
+                    }
+                    if (!(candidate in projects)) {
                         projects << candidate
-                        if (SETTINGS_FILES.any { String settingsName -> new File(candidate, settingsName).isFile() }) {
-                            declaredProjects(candidate, projects, visited)
-                        }
+                    }
+                    if (SETTINGS_FILES.any { String settingsName -> new File(candidate, settingsName).isFile() }) {
+                        declaredProjects(candidate, projects, visited)
                     }
                 }
             }
         }
+    }
+
+    /** The directory a path names, relative to the given one, or none when it names none or is no path here */
+    private static File directoryOrNull(File base, String path) {
+        try {
+            File candidate = new File(path).isAbsolute() ? new File(path) : new File(base, path)
+            candidate = candidate.absoluteFile.toPath().normalize().toFile()
+            return candidate.isDirectory() ? candidate : null
+        }
+        catch (InvalidPathException ignored) {
+            return null
+        }
+    }
+
+    /** The text with its comments, // to the end of a line and /* to *\/, as blanks, leaving strings alone */
+    private static String withoutComments(String text) {
+        StringBuilder kept = new StringBuilder(text.length())
+        char quote = 0 as char
+        int i = 0
+        while (i < text.length()) {
+            char c = text.charAt(i)
+            if (quote != (0 as char)) {
+                kept.append(c)
+                if (c == ('\\' as char) && i + 1 < text.length()) {
+                    kept.append(text.charAt(i + 1))
+                    i++
+                }
+                else if (c == quote || c == ('\n' as char)) {
+                    quote = 0 as char
+                }
+                i++
+            }
+            else if (c == ('"' as char) || c == ("'" as char)) {
+                quote = c
+                kept.append(c)
+                i++
+            }
+            else if (text.startsWith('//', i)) {
+                while (i < text.length() && text.charAt(i) != ('\n' as char)) {
+                    kept.append(' ' as char)
+                    i++
+                }
+            }
+            else if (text.startsWith('/*', i)) {
+                int end = text.indexOf('*/', i + 2)
+                int stop = end < 0 ? text.length() : end + 2
+                while (i < stop) {
+                    kept.append(text.charAt(i) == ('\n' as char) ? ('\n' as char) : (' ' as char))
+                    i++
+                }
+            }
+            else {
+                kept.append(c)
+                i++
+            }
+        }
+        kept.toString()
     }
 
     private static Object parseOrNull(File file) {

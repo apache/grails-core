@@ -285,18 +285,22 @@ again. While the build fails, editing any file of the main sources of the projec
 compile runs the build again; that includes a project added to the build since the file was written.
 
 Until the build has written a file of commands, and while it fails, the Forge CLI finds the projects
-itself. It takes every directory the settings files name in quotes, as a project's path or directory or
-as an included build, wherever it is, and every directory below the root of the build with a build or
-settings file, main sources or a `grails-app` directory, whatever it is named, such as `src`, or below a
-hidden directory like `.modules`, but not below what builds and tools write, such as `build` or
-`node_modules`, nor inside a source tree, where a test fixture may have a build file of its own. An
-included build is watched whole, its build logic and `gradle/libs.versions.toml` included.
+itself. It takes every directory the settings files name in quotes, outside their comments, as a
+project's path or directory or as an included build, wherever it is, and every directory below the root
+of the build with a build or settings file, main sources or a `grails-app` directory, whatever it is
+named, such as `src`, or below a hidden directory like `.modules`, but not below what builds and tools
+write, such as `build` or `node_modules`, nor inside a source tree, where a test fixture may have a build
+file of its own. An included build is watched whole, its build logic and `gradle/libs.versions.toml`
+included.
 
-Run `./gradlew generateCommandManifest` to see what went wrong. Once the file it writes is newer than the
-failure, the Forge CLI runs the build once more to record what the commands depend on, so a failure no
-source explains, such as a dependency that could not be downloaded, is over once it is fixed and the file
-written. A command of the file that the Forge CLI cannot offer, such as one declaring an option named
-`help`, is reported and left out, and the others are offered.
+Run `./gradlew generateCommandManifest -PgrailsCommandManifest=build/grails/commands.json` to see what
+went wrong: it writes the file where the Forge CLI reads it, also in a build with a build directory of its
+own. Once there is a file other than the one there was when the build failed, the Forge CLI runs the build
+once more to record what the commands depend on, so a failure no source explains, such as a dependency
+that could not be downloaded, is over once it is fixed and the file written. A command of the file that
+the Forge CLI cannot offer, such as one declaring an option named `help` or values to complete that are
+not strings, is reported and left out, and the others are offered. A project command named `exit` is not
+offered, as `exit` leaves the prompt.
 
 The build runs through the Gradle wrapper of the project, or of the build it belongs to: the wrapper in
 the first directory above it with a `settings.gradle` or `settings.gradle.kts` file. A project whose build has no wrapper has no

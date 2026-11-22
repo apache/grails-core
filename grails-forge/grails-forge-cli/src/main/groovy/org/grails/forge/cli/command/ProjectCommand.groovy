@@ -71,6 +71,7 @@ class ProjectCommand extends BaseCommand implements Callable<Integer> {
     private final CommandSpec commandSpec
     private final OptionSpec systemProperties
     private final boolean declaresOptions
+    private PositionalParamSpec passThrough
 
     /**
      * @param command the command, as described in the manifest
@@ -121,20 +122,19 @@ class ProjectCommand extends BaseCommand implements Callable<Integer> {
     }
 
     /**
-     * The first required argument the command will not get, though picocli matched a word to it: with
-     * no options declared, picocli cannot know that the command line parser of {@code runCommand} reads
-     * the word after an option without a value, as {@code json} in {@code --format json}, as that
-     * option's value rather than as an argument. With options declared, picocli parses as the command will.
+     * The first required argument the command will not get, though picocli matched a word to it: the
+     * command line parser of {@code runCommand} reads the words passed on otherwise than picocli did.
+     * It leaves out an empty word, and with no options declared, it reads the word after an option
+     * without a value, as {@code json} in {@code --format json}, as that option's value rather than as an
+     * argument. The words are counted as that parser reads them, and each required argument by its place.
      */
     private String missingRequiredArgument() {
-        if (declaresOptions) {
-            return null
-        }
-        List<PositionalParamSpec> required = commandSpec.positionalParameters().findAll { PositionalParamSpec positional ->
-            positional.required() && positional.paramLabel() != PASS_THROUGH_LABEL
-        }
-        int read = argumentsAsRunCommandReadsThem(typedArguments(commandSpec.commandLine().parseResult.originalArgs()))
-        read < required.size() ? required[read].paramLabel() : null
+        int read = argumentsAsRunCommandReadsThem(givenArguments())
+        PositionalParamSpec missing = commandSpec.positionalParameters()
+                .findAll { PositionalParamSpec positional -> positional.required() && !positional.is(passThrough) }
+                .sort { PositionalParamSpec positional -> positional.index().min() }
+                .find { PositionalParamSpec positional -> positional.index().min() >= read }
+        missing?.paramLabel()
     }
 
     /**
@@ -251,13 +251,14 @@ class ProjectCommand extends BaseCommand implements Callable<Integer> {
                     .build())
         }
         if (!arguments) {
-            created.addPositional(PositionalParamSpec.builder()
+            passThrough = PositionalParamSpec.builder()
                     .index('0..*')
                     .paramLabel(PASS_THROUGH_LABEL)
                     .description('The arguments of the command')
                     .arity('0..*')
                     .type(String[])
-                    .build())
+                    .build()
+            created.addPositional(passThrough)
         }
 
         List<Map<String, Object>> options = (command.options ?: []) as List<Map<String, Object>>
@@ -277,8 +278,18 @@ class ProjectCommand extends BaseCommand implements Callable<Integer> {
         created
     }
 
+    /**
+     * The values to complete, which must be strings: picocli completes them long after the command is
+     * offered, where another value would fail the completion of every command.
+     */
     private static Iterable<String> candidates(Map<String, Object> declaration) {
-        List<String> values = (declaration.values ?: []) as List<String>
-        values ? values.asImmutable() : null
+        Object values = declaration.values
+        if (values == null) {
+            return null
+        }
+        if (!(values instanceof List) || ((List) values).any { Object value -> !(value instanceof String) }) {
+            throw new IllegalArgumentException("the values of ${declaration.name} are not a list of strings: ${values}")
+        }
+        values ? ((List<String>) values).asImmutable() : null
     }
 }

@@ -79,7 +79,10 @@ class ProjectGradle {
      * @throws IOException when the wrapper cannot be started
      */
     int run(List<String> arguments) {
-        start(arguments) { ProcessBuilder builder -> builder.inheritIO() }
+        start(arguments) { ProcessBuilder builder ->
+            builder.inheritIO()
+            false
+        }
     }
 
     /**
@@ -92,6 +95,7 @@ class ProjectGradle {
     int runSilently(List<String> arguments) {
         start(arguments) { ProcessBuilder builder ->
             builder.redirectOutput(ProcessBuilder.Redirect.DISCARD).redirectError(ProcessBuilder.Redirect.DISCARD)
+            true
         }
     }
 
@@ -103,9 +107,14 @@ class ProjectGradle {
                 "-P${COMMAND_PROJECT_PROPERTY}=${projectDir.path}".toString()]
         command.addAll(arguments)
         ProcessBuilder builder = new ProcessBuilder(command).directory(projectDir)
-        redirect.call(builder)
+        boolean silent = redirect.call(builder) as boolean
         try {
-            return builder.start().waitFor()
+            Process process = builder.start()
+            if (silent) {
+                // nobody sees a prompt of the build, as one for the password of a repository, nor answers it
+                process.outputStream.close()
+            }
+            return process.waitFor()
         }
         catch (IllegalArgumentException e) {
             // ProcessBuilder refuses some arguments of a batch file, such as one with a quote inside it

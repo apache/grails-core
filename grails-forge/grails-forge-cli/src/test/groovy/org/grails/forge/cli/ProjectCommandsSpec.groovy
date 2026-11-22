@@ -1135,8 +1135,10 @@ class ProjectCommandsSpec extends Specification {
     }
 
     void 'a response file names the command and its arguments as if they were typed: #given'() {
-        given:
-        writeManifest(URL_MAPPINGS_REPORT)
+        given: 'a manifest only where a project command is named, so naming another must not run the build'
+        if (!tasks.empty) {
+            writeManifest(URL_MAPPINGS_REPORT)
+        }
         forgetInvocations()
         File response = new File(dir, 'options.txt')
         response.text = given
@@ -1153,6 +1155,160 @@ class ProjectCommandsSpec extends Specification {
         given                                      || tasks          | passed
         'create-app --help'                        || []             | []
         'url-mappings-report --verbose "two words"' || ['runCommand'] | ['url-mappings-report', '--verbose', 'two words']
+    }
+
+    void "a required argument runCommand's parser would not get is reported missing: #command #typed"() {
+        given:
+        Map optionalThenRequired = [name: 'deploy', description: 'Deploys', options: [],
+                                    arguments: [[name: 'region', required: false, values: []], [name: 'target', required: true, values: []]]]
+        Map namedArgs = [name: 'pass', description: 'Passes', options: [], arguments: [[name: 'ARGS', required: true, values: []]]]
+        writeManifest(CREATE_TOKEN, optionalThenRequired, namedArgs)
+
+        when:
+        int exitCode = ForgeCli.execute(context, ([command] + typed) as String[])
+
+        then:
+        (exitCode == 0) == (missing == null)
+        missing == null ? gradleInvocations()*.get(5) == ['runCommand'] : gradleInvocations() == []
+        missing == null || output.toString().contains("Missing required parameter: '${missing}'")
+
+        where:
+        command                       | typed                              || missing
+        's2-create-persistent-token'  | ['', '--format=json']              || 'domain-class-name'
+        's2-create-persistent-token'  | ['Book', '--format=json']          || null
+        'deploy'                      | ['--format', 'json', 'one']        || 'target'
+        'deploy'                      | ['eu', 'one']                      || null
+        'pass'                        | ['--format', 'json']               || 'ARGS'
+        'pass'                        | ['value']                          || null
+    }
+
+    void 'a command whose values to complete are not strings is reported and left out, and the others complete'() {
+        given:
+        Map broken = [name: 'broken', description: 'Broken', options: [],
+                      arguments: [[name: 'kind', required: false, values: [123]]]]
+        writeManifest(broken, CREATE_TOKEN)
+
+        when:
+        CommandLine commandLine = ForgeCli.createCommandLine(context, false)
+
+        then:
+        !commandLine.subcommands.containsKey('broken')
+        output.toString().contains('The command broken of the project is not offered')
+        complete(commandLine, 's2-create-persistent-token --format=j').contains('--format=json')
+    }
+
+    void 'a project command named exit is not offered, as exit leaves the prompt'() {
+        given:
+        writeManifest([name: 'exit', description: 'Exits', arguments: [], options: []], URL_MAPPINGS_REPORT)
+
+        expect:
+        !ForgeCli.createCommandLine(context, false).subcommands.containsKey('exit')
+    }
+
+    @Timeout(60)
+    void 'the build that lists the commands gets no input, so a wrapper that waits for some does not hang the Forge CLI'() {
+        given:
+        new File(dir, 'read-input').text = ''
+        buildWrites(URL_MAPPINGS_REPORT)
+
+        expect:
+        ForgeCli.createCommandLine(context, false).subcommands.containsKey('url-mappings-report')
+    }
+
+    void 'a string of a settings file that is no path here is passed over'() {
+        given: 'a settings file with a string no file system takes, as a project path is on some'
+        new File(dir, 'settings.gradle').text = "include 'a\u0000b'\n"
+        buildWrites(URL_MAPPINGS_REPORT)
+
+        expect:
+        ForgeCli.createCommandLine(context, false).subcommands.containsKey('url-mappings-report')
+    }
+
+    void 'an included build the walk finds names its own projects, also one outside the root of the build'() {
+        given: 'a build that includes shared, whose settings include a build outside the root'
+        File outside = new File(dir.parentFile, "${dir.name}-elsewhere")
+        File source = new File(outside, 'src/main/groovy/com/acme/AuditService.groovy')
+        source.parentFile.mkdirs()
+        new File(outside, 'settings.gradle').text = ''
+        new File(dir, 'shared').mkdirs()
+        new File(dir, 'shared/settings.gradle').text = "includeBuild '../../${outside.name}'\n"
+        new File(dir, 'settings.gradle').text = "includeBuild 'shared'\n"
+        source.text = 'class AuditService { broken'
+        new File(dir, 'gradle-exit-code').text = '1'
+        ForgeCli.createCommandLine(context, false)
+
+        when: 'the source outside is fixed'
+        forgetInvocations()
+        source.text = 'class AuditService { /* fixed */ }'
+        new File(dir, 'gradle-exit-code').delete()
+        buildWrites(SECURITY_QUICKSTART)
+        CommandLine commandLine = ForgeCli.createCommandLine(context, false)
+
+        then:
+        gradleInvocations() == [prefix() + MANIFEST_TASK]
+        commandLine.subcommands.containsKey('s2-quickstart')
+
+        cleanup:
+        outside.deleteDir()
+    }
+
+    void 'a build file of a test fixture a settings file names #how is #watched while the build fails'() {
+        given:
+        File fixture = new File(dir, 'src/test/resources/fixtures/sample/build.gradle')
+        fixture.parentFile.mkdirs()
+        fixture.text = "plugins { id 'java' }\n"
+        new File(dir, 'settings.gradle').text = declaration
+        new File(dir, 'gradle-exit-code').text = '1'
+        ForgeCli.createCommandLine(context, false)
+        forgetInvocations()
+
+        when:
+        fixture.text = "plugins { id 'groovy' }\n"
+        ForgeCli.createCommandLine(context, false)
+
+        then:
+        gradleInvocations().size() == (watched == 'watched' ? 1 : 0)
+
+        where:
+        how                       | declaration                                                                   || watched
+        'in a line comment'       | "// includeBuild 'src/test/resources/fixtures/sample'\n"                      || 'not watched'
+        'in a block comment'      | "/* includeBuild 'src/test/resources/fixtures/sample' */\n"                   || 'not watched'
+        'in a string with //'     | "def url = 'https://example.com' // includeBuild 'src/test/resources/fixtures/sample'\n" || 'not watched'
+        'as an included build'    | "includeBuild 'src/test/resources/fixtures/sample'\n"                         || 'watched'
+    }
+
+    void 'a manifest kept from before a failure is not taken for a new one, whatever its time: #change'() {
+        given: 'a manifest naming its inputs, and a failed refresh that keeps it'
+        Map inputs = [buildDirectories: [dir.path], sourceDirectories: [new File(dir, 'grails-app/commands').path]]
+        buildWritesWithInputs(inputs, URL_MAPPINGS_REPORT)
+        ForgeCli.createCommandLine(context, false)
+        new File(dir, 'build.gradle') << '// changed\n'
+        new File(dir, 'gradle-exit-code').text = '1'
+        ForgeCli.createCommandLine(context, false)
+        long time = manifest.lastModified()
+        forgetInvocations()
+
+        when:
+        if (change == 'replaced at the same time') {
+            // the build works again, and ./gradlew generateCommandManifest wrote the manifest within the same tick
+            new File(dir, 'gradle-exit-code').delete()
+            buildWritesWithInputs(inputs, URL_MAPPINGS_REPORT, SECURITY_QUICKSTART)
+            manifest.text = JsonOutput.toJson([version: 1, commands: [URL_MAPPINGS_REPORT, SECURITY_QUICKSTART], inputs: inputs])
+            manifest.setLastModified(time)
+        }
+        else {
+            manifest.setLastModified(System.currentTimeMillis() + 86_400_000)
+        }
+        ForgeCli.createCommandLine(context, false)
+        ForgeCli.createCommandLine(context, false)
+
+        then:
+        gradleInvocations().size() == runs
+
+        where:
+        change                         || runs
+        'dated in the future, unchanged' || 0
+        'replaced at the same time'      || 1
     }
 
     void 'the help of a project command shows what it declares'() {
@@ -1182,7 +1338,9 @@ class ProjectCommandsSpec extends Specification {
         then:
         output.toString().contains('Could not read the commands of the project: its build failed with exit code 1. ' +
                 'Its commands are not offered, and the build is not run for them again until a build file or a source changes. ' +
-                'A project of Grails 9 or later lists them with its generateCommandManifest Gradle task; run it to see what went wrong.')
+                'A project of Grails 9 or later lists them with its generateCommandManifest Gradle task; run ' +
+                './gradlew generateCommandManifest -PgrailsCommandManifest=build/grails/commands.json to see what went wrong, ' +
+                'which also writes them where the Forge CLI reads them.')
         commandLine.subcommands.containsKey('create-app')
         !commandLine.subcommands.containsKey('s2-quickstart')
 
@@ -1553,6 +1711,7 @@ class ProjectCommandsSpec extends Specification {
         wrapper.text = '''\
             #!/bin/sh
             dir=$(cd "$(dirname "$0")" && pwd)
+            if [ -f "$dir/read-input" ]; then cat > /dev/null; fi
             project=$dir; previous=''
             for argument in "$@"; do [ "$previous" = '-p' ] && project=$argument; previous=$argument; done
             { for argument in "$@"; do
