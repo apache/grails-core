@@ -1,6 +1,6 @@
 ---
 name: grails-upgrade
-description: "Upgrades a Grails application to Grails 7.0 (releases 7.0.0 to 7.0.18). Base version: Grails 6; use it for an application on Grails 6 or on an earlier Grails 7.0 release. An application on Grails 5 or earlier first upgrades to the last Grails 6 release. Covers Java 17, Groovy 4, Spring Boot 3, Spring Framework 6, Jakarta EE packages, Apache coordinates, the Grails BOM, Gradle plugin changes, Micronaut, Spring Security, Quartz, layouts, JSON rendering, data binding, interceptors and multi-tenancy."
+description: "Upgrades a Grails application to Grails 7.0 (releases 7.0.0 to 7.0.18). Base version: Grails 6; use it for an application on Grails 6 or on an earlier Grails 7.0 release. An application on Grails 5 or earlier first upgrades to the last Grails 6 release. Covers Java 17, Groovy 4, Spring Boot 3, Spring Framework 6, Jakarta EE packages, Apache coordinates, the Grails BOM, Gradle plugin changes, Micronaut, Spring Security, Quartz, layouts, JSON rendering, data binding, interceptors, multi-tenancy and the encoding of GSP tag attributes."
 license: Apache-2.0
 ---
 
@@ -853,17 +853,46 @@ The guide gives no setting that restores encrypted JWTs without a signature.
 
 `list` with a `Map` of sort properties, such as `Book.list(sort: [title: 'asc', 'author.name': 'desc'])`, sorted by the last entry of the map only. As of 7.0.18 it sorts by every entry, in the order of the map. The same applies to a default sort that the mapping declares for more than one property, as in `sort author: 'asc', title: 'desc'`.
 
-- Search for `sort: [` in calls to `list`, and for a `sort` with more than one property in a `static mapping` block. The results of these calls are now sorted by every property.
+- Search for `sort: [` in calls to `list`, and for a `sort` with more than one property in a `static mapping` block. The results of these calls are now sorted by every property, so the rows selected by `max` and `offset` can change.
 - To sort by one property, as before, pass that property alone.
 - An association is joined once for all the entries that sort by it. `find` and `findAll` with an example, `findWhere` and `findAllWhere` failed with `duplicate association path` for such a sort and now work.
+- Sorting by two properties of the same collection returns fewer duplicate rows. A book with three chapters occurs three times for `Book.list(sort: ['chapters.title': 'asc', 'chapters.id': 'asc'])`, rather than nine times. Update assertions that relied on the repeated joins. No compatibility setting restores them.
 
-## GORM for Hibernate: `count` with a sort
+## GSP tag attributes
 
-`count` on a where query or a detached criteria that has a sort, as in `Book.where { ... }.sort('title').count()` or `count(sort: 'title')`, failed with a `SQLGrammarException` on a database that rejects an order in a query that counts its rows, such as H2. As of 7.0.18 the count is made without the sort, and it returns the number of instances that `list` returns for the same query.
+More GSP tags HTML-encode the attribute values they write.
 
-This includes a query that selects only a `count()` projection and orders added by a `PreQueryEvent` listener. The joins of those orders are kept.
+As of 7.0.18, these tags HTML-encode the values they write into attributes, as `<g:link>` and `<g:textField>` already did:
 
-- Nothing needs to change. Search for code that catches the exception or builds a second query without the sort to count: it can call `count` on the sorted query.
+- `<g:form>`, `<g:uploadForm>` and `<g:formActionSubmit>`: the URL in `action` and `formaction`, and the hidden fields that a `RequestDataValueProcessor` adds to a form.
+- `<g:checkBox>`: `name`, `value`, `form`, and the `id` taken from the name, on the checkbox and on its hidden field.
+- `<g:actionSubmit>` and `<g:actionSubmitImage>`: `value`, the `action` in the button's name, and `src`.
+- `<g:datePicker>`: `name`, `id` and `selectDateClass`.
+- `<g:radio>` and `<g:radioGroup>`: `name`, and on `<g:radio>` the `id` taken from it.
+- `<g:select>`: the key of `noSelection`.
+- `<g:field>`: `type`.
+- `<g:withTag>`: the values of `attrs` that are not closures.
+- `<g:external>`: `uri`, and `<g:javascript>`: `src`.
+- `<g:paginate>`: `class`, on the current step.
+- `<g:sortableColumn>`: `title`, which it writes as the text of the column's link. A text from `titleKey` is written as the message source returns it.
+- `<g:renderException>`: `detailsClass`, `stackClass`, `filenameClass`, `snippetClass`, `lineClass`, `lineNumberClass` and `lineErrorClass`.
+
+The browser decodes the attribute, so a value without a character reference reaches it unchanged. A value encoded with `encodeAsHTML()` before it reaches the tag is written once, and so are a value captured from a GSP body with `<g:set>` and the output of `fieldValue()`, also when a `RequestDataValueProcessor` returns the value unchanged.
+
+Search the GSP views, layouts and tag libraries for these tags. Then check:
+
+- A character reference written in the page, as in `name="a&amp;b"`, is now encoded as well. Write the character itself.
+- `<g:form>` and `<g:formActionSubmit>` build their URL from `uri`, `base`, `controller` and their other link attributes and only then encode it, so a value encoded beforehand is encoded twice there, as it already was in the `href` of `<g:link>`. Pass those values unencoded. A `url` attribute that the tag writes as it is given is written once.
+- When a `RequestDataValueProcessor` changes a value, the tag encodes what the processor returns, so a value encoded beforehand is encoded twice, as `<g:textField>` already did.
+- A `title` of `<g:sortableColumn>` that holds markup must be marked with `raw()`.
+- A value marked with `raw()`, and the text and `default` of `message()`, which comes back marked raw, are still written as given by the tags that wrote them so before. Do not pass request data through `raw()` or as the `default` of `message()`.
+- Tests that compare rendered markup: an `&` in the URL of a form is now written as `&amp;`, as `<g:link>` writes it in an `href`.
+
+These bugs are fixed, which changes what the browser submits or what the page contains:
+
+- `<g:radio>` encodes its `value` once. It encoded it twice, so a value with `&`, `<`, `>`, `"` or `'` was submitted with character references in it, such as `R&amp;D` for `R&D`. Remove any code that decoded the submitted value to undo this.
+- A value encoded beforehand is no longer encoded twice in the `value` of `<g:textField>`, `<g:hiddenField>` and the other field tags when a `RequestDataValueProcessor` returns it unchanged, nor in an option of `<g:select>`.
+- `<g:paginate>` and `<g:sortableColumn>` write a `class` that was encoded beforehand once next to the classes they add, such as `step` and `sortable`. They encoded it twice.
 
 # After the Upgrade
 

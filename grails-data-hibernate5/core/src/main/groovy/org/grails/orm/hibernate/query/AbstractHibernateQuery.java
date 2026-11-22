@@ -40,6 +40,7 @@ import org.hibernate.criterion.CriteriaSpecification;
 import org.hibernate.criterion.DetachedCriteria;
 import org.hibernate.criterion.Projections;
 import org.hibernate.criterion.Restrictions;
+import org.hibernate.criterion.RowCountProjection;
 import org.hibernate.criterion.SimpleExpression;
 import org.hibernate.dialect.Dialect;
 import org.hibernate.dialect.function.SQLFunction;
@@ -932,7 +933,7 @@ public abstract class AbstractHibernateQuery extends Query {
      */
     private void removeOrdersOfRowCount() {
         if (hibernateProjectionList == null || hibernateProjectionList.getHibernateProjectionList().getLength() != 1 ||
-                !(hibernateProjectionList.getHibernateProjectionList().getProjection(0) instanceof org.hibernate.criterion.RowCountProjection) ||
+                !(hibernateProjectionList.getHibernateProjectionList().getProjection(0) instanceof RowCountProjection) ||
                 !(criteria instanceof CriteriaImpl)) {
             return;
         }
