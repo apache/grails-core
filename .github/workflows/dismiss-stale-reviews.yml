@@ -99,16 +99,20 @@ jobs:
           # writes without markers, such as one of a binary file or of a file deleted on one side, which leaves no
           # line to tell the resolution by; and 2 when a git command fails.
           resolved_within_conflicts() {
-            local tree=$1 commit=$2 path=$3 first=$4 second=$5 entry pushed regions hunks
+            local tree=$1 commit=$2 path=$3 first=$4 second=$5 size=$6 entry pushed regions hunks opening separator closing
+            opening=$(printf '%*s' "$size" '' | tr ' ' '<')
+            separator=$(printf '%*s' "$size" '' | tr ' ' '=')
+            closing=$(printf '%*s' "$size" '' | tr ' ' '>')
             entry=$(bounded git -C merges.git ls-tree --format='%(objectmode) %(objecttype)' "$tree" -- "$path") || return 2
             [[ "$entry" == 100*' blob' ]] || return 1
             pushed=$(bounded git -C merges.git ls-tree --format='%(objectmode) %(objecttype)' "$commit" -- "$path") || return 2
             [[ "$pushed" == "$entry" ]] || return 1
             bounded git -C merges.git cat-file blob "$tree:$path" > conflicted.file || return 2
             bounded git -C merges.git cat-file blob "$commit:$path" > resolved.file || return 2
-            # The first and last line of each conflict. A marker is matched with its label, the id of a parent, so
-            # that a line of the file that merely looks like one does not open a conflict.
-            regions=$(awk -v opening="<<<<<<< $first" -v closing=">>>>>>> $second" '
+            # The first and last line of each conflict. The markers are longer than any run of their characters
+            # that starts a line of either side (see only_merges_base), and the first and last are matched with
+            # their labels, the ids of the parents, so that no line of the file can be taken for one.
+            regions=$(awk -v opening="$opening $first" -v closing="$closing $second" '
               { sub(/\r$/, "") }
               $0 == opening || index($0, opening ":") == 1 { if (start) exit 1; start = NR; next }
               $0 == closing || index($0, closing ":") == 1 { if (!start) exit 1; printf "%d %d ", start, NR; start = 0 }
@@ -123,7 +127,7 @@ jobs:
             # one of a side. A conflict left as git wrote it, markers and all, is no change either. --text makes git
             # compare a file it takes for binary line by line too, rather than only say that it differs.
             hunks=$(bounded git -C merges.git diff -U0 --text --no-ext-diff --no-textconv --no-color "$tree:$path" "$commit:$path") || return 2
-            awk -v regions="$regions" '
+            awk -v regions="$regions" -v separator="$separator" '
               BEGIN { n = split(regions, r, " ") }
               FILENAME == ARGV[1] { merged[FNR] = $0; next }
               FILENAME == ARGV[2] { resolved[FNR] = $0; next }
@@ -144,10 +148,12 @@ jobs:
                   resolution = ""; for (j = from; j <= to; j++) resolution = resolution resolved[j] "\n"
                   conflict = ""; ours = ""; theirs = ""; separators = 0
                   for (j = r[i]; j <= r[i + 1]; j++) conflict = conflict merged[j] "\n"
-                  for (j = r[i] + 1; j < r[i + 1]; j++)
-                    if (merged[j] ~ /^=======\r?$/) separators++
+                  for (j = r[i] + 1; j < r[i + 1]; j++) {
+                    line = merged[j]; sub(/\r$/, "", line)
+                    if (line == separator) separators++
                     else if (separators) theirs = theirs merged[j] "\n"
                     else ours = ours merged[j] "\n"
+                  }
                   if (resolution == conflict) continue
                   if (separators != 1) exit 1
                   if (resolution != ours && resolution != theirs && resolution != ours theirs && resolution != theirs ours) exit 1
@@ -167,7 +173,7 @@ jobs:
           # runs out of time. The number of merges is not limited, only the time: GitHub does not move an approval
           # kept this way, so each hourly run walks its merges again, and the time limit is what bounds that cost.
           only_merges_base() {
-            local base=$1 approved=$2 commit=$3 deadline=$(( SECONDS + 120 )) parents first second other merged tree conflicts changed path
+            local base=$1 approved=$2 commit=$3 deadline=$(( SECONDS + 120 )) parents first second other merged tree conflicts changed path size side longest
             (( deadline <= checks_end )) || deadline=$checks_end
             accepted=
             reason="the commits after this approval could not be checked"
@@ -185,13 +191,34 @@ jobs:
               esac
               # The first line is the merged tree, the lines after it name the conflicted files, which fail the command.
               merged=$(bounded git -C merges.git -c merge.conflictStyle=merge merge-tree --write-tree --name-only --no-messages "$first" "$second") || [[ $? == 1 ]] || return 1
-              tree=${merged%%$'\n'*}
               conflicts=$(tail -n +2 <<< "$merged")
+              # git's markers are seven characters long, and a side may hold a line just like one, such as the seven
+              # equal signs that underline a heading. The markers are made one longer than the longest run of <, =
+              # or > that starts a line of either side of a conflicted file, and the merge is repeated with them, so
+              # that what lies between them can be told apart from them.
+              size=7
+              while IFS= read -r path; do
+                [[ -n "$path" ]] || continue
+                for side in "$first" "$second"; do
+                  bounded git -C merges.git cat-file -e "$side:$path" 2> /dev/null || continue
+                  longest=$(set -o pipefail; bounded git -C merges.git cat-file blob "$side:$path" | awk '
+                    { sub(/\r$/, ""); if (match($0, /^(<+|=+|>+)/) && RLENGTH > longest) longest = RLENGTH }
+                    END { print longest + 0 }') || return 1
+                  (( longest < size )) || size=$(( longest + 1 ))
+                done
+              done <<< "$conflicts"
+              if (( size > 7 )); then
+                echo "* conflict-marker-size=$size" > merges.git/info/attributes
+                merged=$(bounded git -C merges.git -c merge.conflictStyle=merge merge-tree --write-tree --name-only --no-messages "$first" "$second") || [[ $? == 1 ]] || { : > merges.git/info/attributes; return 1; }
+                : > merges.git/info/attributes
+                conflicts=$(tail -n +2 <<< "$merged")
+              fi
+              tree=${merged%%$'\n'*}
               changed=$(bounded git -C merges.git diff --name-only --no-renames "$tree" "$commit^{tree}") || return 1
               while IFS= read -r path; do
                 [[ -n "$path" ]] || continue
                 grep -qxF -- "$path" <<< "$conflicts" || { reason="the pull request changed after this approval"; return 1; }
-                resolved_within_conflicts "$tree" "$commit" "$path" "$first" "$second" || {
+                resolved_within_conflicts "$tree" "$commit" "$path" "$first" "$second" "$size" || {
                   (( $? == 1 )) && reason="the pull request changed after this approval"
                   return 1
                 }
@@ -272,8 +299,8 @@ jobs:
           # another commit was given to other changes. Only two of those are kept: an approval whose commit has the
           # very tree of the head, which holds the content, the name and the mode of every file, at the same place on
           # the base branch (see same_fork), and an approval that only merges of the base branch separate from the
-          # head (see only_merges_base). Every other one is dismissed, also when a tree is unknown. One query serves a hundred pull requests, so that the hourly run
-          # does not spend a request of the token's rate limit on each.
+          # head (see only_merges_base). Every other one is dismissed, also when a tree is unknown. One query serves
+          # a hundred pull requests, so that the hourly run does not spend a request of the token's rate limit on each.
           gh api graphql --paginate -f owner="${REPO%/*}" -f name="${REPO#*/}" -f query='
             query($owner: String!, $name: String!, $endCursor: String) {
               repository(owner: $owner, name: $name) {
