@@ -201,8 +201,8 @@ class DomainFieldModifier {
      * @param source the source of the domain class
      * @param member the member definition to add
      * @return the source with the member
-     * @throws IllegalStateException when the source cannot be parsed, or is written in a way the
-     * member cannot be added to line by line; the message says which
+     * @throws IllegalStateException when the source cannot be parsed, is an interface, or is written
+     * in a way the member cannot be added to line by line; the message says which
      * @since 9.0
      */
     String withMember(String fileName, String source, AbstractMemberDefinition member) {
@@ -211,6 +211,10 @@ class DomainFieldModifier {
         ClassNode classNode = parseClass(fileName, source)
         if (classNode == null) {
             throw refused(member, fileName, 'the file declares no class')
+        }
+        if (classNode.isInterface()) {
+            // a property written into an interface is a constant that has no value, which does not compile
+            throw refused(member, fileName, "${classNode.nameWithoutPackage} is an interface, and an interface has no properties")
         }
         String separator = source.contains('\r\n') ? '\r\n' : source.contains('\n') ? '\n' : source.contains('\r') ? '\r' : '\n'
         List<String> lines = split(source)
@@ -257,7 +261,9 @@ class DomainFieldModifier {
             }
             memberAt = classStart + 1
             // the indentation of what the class has, of whatever kind, and four spaces in a class that has nothing
-            Integer first = (classNode.fields*.lineNumber + classNode.methods*.lineNumber).findAll { int number -> number - 1 > classStart && number - 1 < classEnd }.min()
+            List<Integer> written = classNode.fields*.lineNumber + classNode.methods*.lineNumber + classNode.declaredConstructors*.lineNumber
+            written.addAll(classNode.innerClasses.collect { ClassNode inner -> inner.lineNumber })
+            Integer first = written.findAll { int number -> number - 1 > classStart && number - 1 < classEnd }.min()
             indent = first == null ? classIndent + DEFAULT_INDENT : leading(lines[first - 1])
         }
         String step = indent.startsWith(classIndent) && indent.length() > classIndent.length() ? indent.substring(classIndent.length()) : DEFAULT_INDENT

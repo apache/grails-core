@@ -576,6 +576,39 @@ class Book {
         e.message == "The 'blank' constraint is only applicable to String properties"
     }
 
+    def "a member is not written into #what, which has no properties"() {
+        given:
+        def property = PropertyDefinition.builder().name('isbn').type('String').nullable(true).build()
+
+        when:
+        modifier.withMember('Book.groovy', source, property)
+
+        then:
+        def e = thrown(IllegalStateException)
+        e.message == "Cannot add 'isbn' to 'Book.groovy': Book is an interface, and an interface has no properties. The file was not changed."
+
+        where:
+        what                         | source
+        'an interface'               | 'interface Book {\n}\n'
+        'an interface with a method' | 'interface Book {\n    String label()\n}\n'
+        'an annotation type'         | '@interface Book {\n}\n'
+    }
+
+    def "a member that begins a class is indented as what the class has, of whatever kind: #what"() {
+        given:
+        def property = PropertyDefinition.builder().name('isbn').type('String').nullable(true).build()
+
+        expect:
+        modifier.withMember('Book.groovy', source, property) == expected
+
+        where:
+        what              | source                                                       || expected
+        'an inner enum'   | 'class Book {\n\tenum Kind { NOVEL, ESSAY }\n}\n'           || 'class Book {\n\tString isbn\n\n\tstatic constraints = {\n\t\tisbn nullable: true\n\t}\n\n\tenum Kind { NOVEL, ESSAY }\n}\n'
+        'an inner class'  | 'class Book {\n  static class Chapter {\n    String heading\n  }\n}\n' || 'class Book {\n  String isbn\n\n  static constraints = {\n    isbn nullable: true\n  }\n\n  static class Chapter {\n    String heading\n  }\n}\n'
+        'a constructor'   | 'class Book {\n\tBook() {\n\t}\n}\n'                      || 'class Book {\n\tString isbn\n\n\tstatic constraints = {\n\t\tisbn nullable: true\n\t}\n\n\tBook() {\n\t}\n}\n'
+        'a method'        | 'class Book {\n\tString label() {\n\t\t\'x\'\n\t}\n}\n'    || 'class Book {\n\tString isbn\n\n\tstatic constraints = {\n\t\tisbn nullable: true\n\t}\n\n\tString label() {\n\t\t\'x\'\n\t}\n}\n'
+    }
+
     // Helper methods
 
     private void createDomainDir() {
