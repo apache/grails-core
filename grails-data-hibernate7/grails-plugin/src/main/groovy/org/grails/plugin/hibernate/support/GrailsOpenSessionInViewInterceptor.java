@@ -190,9 +190,11 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
      * {@code hibernate.allow_update_outside_transaction}.
      *
      * <p>The parent class only unbinds the default session, and leaves closing it to the interceptors it registers for
-     * a {@code Callable} or {@code DeferredResult}. A promise or {@code startAsync()} in a Grails controller starts
-     * asynchronous handling without them, so the default session this interceptor opened is unbound here too, and
-     * closed when the asynchronous request completes.
+     * a {@code Callable} or {@code DeferredResult}, which close it in the dispatch that the result starts. A promise or
+     * {@code startAsync()} in a Grails controller starts asynchronous handling without them, so the default session
+     * this interceptor opened is unbound here too, and closed when the asynchronous request completes. So is the
+     * default session the parent class unbinds, unless it is closed by then: a request can complete without that
+     * dispatch, such as one that a task the action started, and did not return, completes.
      */
     @Override
     public void afterConcurrentHandlingStarted(WebRequest request) {
@@ -207,12 +209,29 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
                             (SessionHolder) TransactionSynchronizationManager.unbindResource(getSessionFactory());
                     released.add(sessionHolder.getSession());
                 } else {
+                    SessionHolder sessionHolder = isParticipating(request) ? null :
+                            (SessionHolder) TransactionSynchronizationManager.getResource(getSessionFactory());
                     super.afterConcurrentHandlingStarted(request);
+                    if (sessionHolder != null) {
+                        closeIfLeftOpenWhenAsynchronousRequestCompletes(request, sessionHolder.getSession());
+                    }
                 }
             } finally {
                 closeWhenAsynchronousRequestCompletes(request, released);
             }
         }
+    }
+
+    /**
+     * Closes the default session that the parent class took off the thread when the asynchronous request completes,
+     * unless it is closed by then. Without an asynchronous context to listen to, it is left to the parent class.
+     */
+    private void closeIfLeftOpenWhenAsynchronousRequestCompletes(WebRequest request, Session session) {
+        AsynchronousCompletion.onComplete(request, () -> {
+            if (session.isOpen()) {
+                closeSessions(List.of(session));
+            }
+        });
     }
 
     /**

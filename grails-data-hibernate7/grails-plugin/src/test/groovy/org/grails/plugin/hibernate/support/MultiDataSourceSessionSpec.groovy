@@ -379,7 +379,7 @@ class MultiDataSourceSessionSpec extends Specification {
         }
     }
 
-    def "a request that Spring makes asynchronous closes the session of another datasource when the asynchronous request completes, and leaves its default session to Spring"() {
+    def "a request that Spring makes asynchronous closes its sessions when the asynchronous request completes without a dispatch"() {
         given: 'a servlet request that has opened its sessions'
         var webRequest = new ServletWebRequest(new MockHttpServletRequest(asyncSupported: true), new MockHttpServletResponse())
         final interceptor = new GrailsOpenSessionInViewInterceptor(hibernateDatastore: datastore).tap {
@@ -389,7 +389,7 @@ class MultiDataSourceSessionSpec extends Specification {
         final defaultSession = boundSession(datastore.sessionFactory)
         final secondarySession = boundSession(secondarySf)
 
-        when: 'the action returns a Callable or DeferredResult, for which Spring starts the asynchronous request'
+        when: 'the request goes asynchronous without Grails marking it, as for a Callable, a DeferredResult or a task the action does not return'
         final asyncContext = webRequest.request.startAsync()
         interceptor.afterConcurrentHandlingStarted(webRequest)
 
@@ -399,14 +399,12 @@ class MultiDataSourceSessionSpec extends Specification {
         defaultSession.open
         secondarySession.open
 
-        when: 'the asynchronous request completes'
+        when: 'the asynchronous request completes without the dispatch in which Spring closes the default session'
         asyncContext.complete()
 
-        then: 'the session of the other datasource is closed'
+        then: 'both sessions are closed'
         !secondarySession.open
-
-        and: 'the default session is left to the interceptors Spring registers for the Callable or DeferredResult'
-        defaultSession.open
+        !defaultSession.open
 
         cleanup:
         [defaultSession, secondarySession].each { session ->

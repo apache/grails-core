@@ -146,6 +146,24 @@ class OsivRequestSessionSpec extends Specification implements HttpClientSupport 
         }
     }
 
+    void 'a task that the action starts and does not return finds the sessions open and has them closed when it completes the request'() {
+        given:
+        RequestSessions.asyncDefaultSession = null
+        RequestSessions.asyncSecondarySession = null
+
+        when: 'the task completes the request itself, without a dispatch'
+        final response = http('/asyncRequestSession/completesFromTask')
+
+        then: 'the task found both sessions open after the request had gone asynchronous'
+        response.assertEquals(200, 'true,true')
+
+        and: 'both are closed once the request has completed'
+        new PollingConditions(timeout: 10).eventually {
+            assert !RequestSessions.asyncDefaultSession.open
+            assert !RequestSessions.asyncSecondarySession.open
+        }
+    }
+
     private Map<String, String> pageLines(String path) {
         http(path).assertStatus(200).body().readLines()*.trim().findAll().collectEntries { String line ->
             final parts = line.split(':', 2)
