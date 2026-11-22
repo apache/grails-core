@@ -32,6 +32,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import javax.net.ssl.SSLContext;
 
 import io.undertow.Undertow.Builder;
+import io.undertow.security.handlers.SecurityInitialHandler;
+import io.undertow.security.impl.SecurityContextFactoryImpl;
+import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;
 import io.undertow.servlet.ServletExtension;
 import io.undertow.servlet.api.Deployment;
@@ -42,6 +45,7 @@ import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.servlet.spec.ServletContextImpl;
 import io.undertow.servlet.util.ImmediateInstanceFactory;
 
+import jakarta.servlet.AsyncContext;
 import jakarta.servlet.AsyncEvent;
 import jakarta.servlet.AsyncListener;
 import jakarta.servlet.DispatcherType;
@@ -493,6 +497,34 @@ class UndertowServletWebServerFactoryTests {
             })));
     }
 
+    /**
+     * Undertow wraps the security handlers, and then the initial security handler, between the inner handlers and the
+     * outer ones, so either can add an outer handler as it is wrapped.
+     */
+    @ParameterizedTest
+    @ValueSource(booleans = { false, true })
+    void processingCompletesOnceTheErrorPageHasAnsweredAnErrorAHandlerASecurityHandlerAddedForwardedTo(boolean initial)
+            throws Exception {
+        // Undertow builds the chains of the copy of the deployment it deploys, which a servlet extension is given
+        assertCompletesOnceTheErrorPageHasAnswered("/startsAsync", (info) -> info.addServletExtension(
+            (deployment, servletContext) -> {
+                HandlerWrapper addsForwardingHandler = (next) -> {
+                    deployment.addOuterHandlerChainWrapper(
+                        (outer) -> forwardsAndCompletesAfter(outer, DispatcherType.REQUEST, "/sendsErrorOnly"));
+                    return next;
+                };
+                if (initial) {
+                    // An initial security handler replaces Undertow's, which sets up the request's security
+                    deployment.setInitialSecurityWrapper((next) -> addsForwardingHandler.wrap(
+                        new SecurityInitialHandler(deployment.getAuthenticationMode(), deployment.getIdentityManager(),
+                            null, SecurityContextFactoryImpl.INSTANCE, next)));
+                }
+                else {
+                    deployment.addSecurityWrapper(addsForwardingHandler);
+                }
+            }));
+    }
+
     @ParameterizedTest
     @ValueSource(strings = { "/startsAsync", "/dispatches" })
     void processingCompletesOnceTheErrorPageHasAnsweredAnErrorAHandlerAnInitializerAddedForwardedTo(String path)
@@ -605,20 +637,24 @@ class UndertowServletWebServerFactoryTests {
 
         getResponse("http://localhost:" + this.webServer.getPort() + "/first");
 
-        List<String> expected = new ArrayList<>(List.of("first:onStartAsync", "onComplete", "first:onComplete"));
-        if (errorPage) {
-            expected.add(1, "errorPage");
-        }
+        // Undertow's error dispatch completes the processing once the error page has run, which completes the
+        // processing before it as well, before Undertow tells its listeners that the processing started again
+        List<String> expected = errorPage
+            ? List.of("errorPage", "first:onComplete", "onComplete", "first:onStartAsync")
+            : List.of("first:onStartAsync", "onComplete", "first:onComplete");
         Awaitility.await().untilAsserted(() -> assertThat(events).containsExactlyElementsOf(expected));
         Thread.sleep(200);
         assertThat(events).containsExactlyElementsOf(expected);
     }
 
-    @ParameterizedTest
-    @ValueSource(booleans = { false, true })
-    void asynchronousProcessingCompletesOnceAnErrorARequestListenerSentAfterTheDispatchIsAnswered(boolean errorPage)
+    /**
+     * An error sent once the dispatch has returned is answered by Undertow. Without an error page, Undertow leaves the
+     * processing to the asynchronous timeout, as it does for an error asynchronous work sends.
+     */
+    @Test
+    void asynchronousProcessingCompletesOnceTheErrorPageHasAnsweredAnErrorARequestListenerSentAfterTheDispatch()
             throws Exception {
-        assertCompletesOnceARequestListenerSentAnError(errorPage, new ServletRequestListener() {
+        assertCompletesOnceARequestListenerSentAnError(true, new ServletRequestListener() {
 
             @Override
             public void requestDestroyed(ServletRequestEvent event) {
@@ -649,6 +685,130 @@ class UndertowServletWebServerFactoryTests {
             }
 
         });
+    }
+
+    @Test
+    void theErrorPageAnsweringAnErrorAnAsynchronousDispatchSentRunsWithinThatDispatch() throws Exception {
+        List<String> events = new CopyOnWriteArrayList<>();
+        UndertowServletWebServerFactory factory = new UndertowServletWebServerFactory(0);
+        factory.addErrorPages(new ErrorPage("/errorPage"));
+        ServletRequestListener scopesAnAttribute = new ServletRequestListener() {
+
+            @Override
+            public void requestInitialized(ServletRequestEvent event) {
+                event.getServletRequest().setAttribute("inDispatch", Boolean.TRUE);
+            }
+
+            @Override
+            public void requestDestroyed(ServletRequestEvent event) {
+                event.getServletRequest().removeAttribute("inDispatch");
+            }
+
+        };
+        ServletRegistrationBean<HttpServlet> errorPage = new ServletRegistrationBean<>(new HttpServlet() {
+
+            @Override
+            protected void service(HttpServletRequest request, HttpServletResponse response) throws IOException {
+                events.add("errorPage in dispatch: " + (request.getAttribute("inDispatch") != null));
+                response.getWriter().write("Error page");
+            }
+
+        }, "/errorPage");
+        errorPage.setName("errorPage");
+        this.webServer = factory.getWebServer(errorPage, dispatchesAsynchronously(),
+            sendsErrorAfterStartingAsync(events, false), new ServletListenerRegistrationBean<>(scopesAnAttribute));
+        this.webServer.start();
+
+        assertThat(getResponse("http://localhost:" + this.webServer.getPort() + "/dispatches")).isEqualTo("Error page");
+
+        Awaitility.await().untilAsserted(() -> assertThat(events)
+            .containsExactly("errorPage in dispatch: true", "onComplete"));
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = { false, true })
+    void asynchronousProcessingARequestListenerStartsAndDispatchesAfterSendingAnErrorSendsItOnce(boolean errorPage)
+            throws Exception {
+        List<String> events = new CopyOnWriteArrayList<>();
+        UndertowServletWebServerFactory factory = new UndertowServletWebServerFactory(0);
+        if (errorPage) {
+            factory.addErrorPages(new ErrorPage("/errorPage"));
+        }
+        ServletRequestListener listener = new ServletRequestListener() {
+
+            @Override
+            public void requestInitialized(ServletRequestEvent event) {
+                ServletRequest request = event.getServletRequest();
+                if (isStartsAsync(request) && request.getAttribute("startedAsync") == null) {
+                    request.setAttribute("startedAsync", Boolean.TRUE);
+                    request.startAsync().addListener(recordingListener(events));
+                    sendError(request.getAsyncContext().getResponse());
+                    request.getAsyncContext().dispatch("/dispatched");
+                }
+            }
+
+        };
+        ServletRegistrationBean<HttpServlet> dispatched = new ServletRegistrationBean<>(new HttpServlet() {
+
+            @Override
+            protected void doGet(HttpServletRequest request, HttpServletResponse response) {
+                events.add("dispatched");
+            }
+
+        }, "/dispatched");
+        dispatched.setName("dispatched");
+        dispatched.setAsyncSupported(true);
+        this.webServer = factory.getWebServer(recordingErrorPage(events), startsAsync(events), dispatched,
+            new ServletListenerRegistrationBean<>(listener));
+        this.webServer.start();
+
+        getResponse("http://localhost:" + this.webServer.getPort() + "/startsAsync");
+
+        // With an error page, Undertow's error dispatch completes the processing once the page has run
+        List<String> expected = errorPage ? List.of("errorPage", "onComplete", "dispatched")
+            : List.of("dispatched", "onComplete");
+        Awaitility.await().untilAsserted(() -> assertThat(events).containsExactlyElementsOf(expected));
+        Thread.sleep(200);
+        assertThat(events).containsExactlyElementsOf(expected);
+    }
+
+    @Test
+    void asynchronousProcessingADispatchLeftOpenAfterWritingAnErrorStatusItselfIsLeftToTheApplication()
+            throws Exception {
+        List<String> events = new CopyOnWriteArrayList<>();
+        UndertowServletWebServerFactory factory = new UndertowServletWebServerFactory(0);
+        ServletRegistrationBean<HttpServlet> writesNotFound = new ServletRegistrationBean<>(new HttpServlet() {
+
+            @Override
+            protected void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
+                AsyncContext asyncContext = request.startAsync();
+                asyncContext.addListener(recordingListener(events));
+                response.setStatus(404);
+                response.getWriter().write("Not here");
+                response.getWriter().close();
+                new Thread(() -> {
+                    try {
+                        Thread.sleep(500);
+                    }
+                    catch (InterruptedException ex) {
+                        Thread.currentThread().interrupt();
+                    }
+                    events.add("completedByTheApplication");
+                    asyncContext.complete();
+                }).start();
+            }
+
+        }, "/writesNotFound");
+        writesNotFound.setName("writesNotFound");
+        writesNotFound.setAsyncSupported(true);
+        this.webServer = factory.getWebServer(writesNotFound);
+        this.webServer.start();
+
+        assertThat(getResponse("http://localhost:" + this.webServer.getPort() + "/writesNotFound"))
+            .isEqualTo("Not here");
+
+        Awaitility.await().untilAsserted(() -> assertThat(events)
+            .containsExactly("completedByTheApplication", "onComplete"));
     }
 
     /**
