@@ -27,6 +27,7 @@ import javax.net.ssl.SSLHandshakeException
 import org.apache.grails.forge.cli.pack.PackArtifacts.Reply
 import org.apache.grails.forge.cli.pack.PackArtifacts.Transport
 import org.apache.grails.forge.core.pack.Pack
+import spock.lang.Requires
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -35,6 +36,8 @@ import spock.lang.Unroll
  * asked of the network.
  */
 class PackArtifactsSpec extends Specification {
+
+    static final boolean WINDOWS = File.separatorChar == ('\\' as char)
 
     static final String DESCRIPTOR = 'format: 1\nkind: feature\ntemplateApi: 1\nname: acme-audit\n' +
             "compatibility:\n  grails: '[9.0.0,10.0.0)'\n  forge: '[9.0.0,10.0.0)'\n" +
@@ -474,9 +477,36 @@ class PackArtifactsSpec extends Specification {
         PackArtifacts.repositories(['https://private.invalid/maven'], 'https://nexus.invalid/releases', warnings)*.toString() == ['https://private.invalid/maven/']
 
         and: 'the local repository of Maven and a directory are addresses of files'
-        PackArtifacts.repositories([], 'mavenLocal();/srv/maven;file:///srv/more', warnings)*.scheme == ['file', 'file', 'file', 'https']
+        PackArtifacts.repositories([], WINDOWS ? 'mavenLocal();C:\\srv\\maven;file:///C:/srv/more' : 'mavenLocal();/srv/maven;file:///srv/more', warnings)*.scheme ==
+                ['file', 'file', 'file', 'https']
         PackArtifacts.repositories([], 'mavenLocal()', warnings)[0].toString().endsWith('/')
         warnings.isEmpty()
+    }
+
+    @Requires({ os.windows })
+    @Unroll
+    void "on Windows a path without a drive is not absolute, also as an address, and a share of another computer is a directory: #entry"() {
+        given:
+        List<String> warnings = []
+
+        when:
+        List<URI> repositories = PackArtifacts.repositories([], "https://nexus.invalid/releases;${entry}", warnings)
+
+        then:
+        repositories*.toString() == ['https://nexus.invalid/releases/'] + used + ['https://repo.maven.apache.org/maven2/']
+        warnings.size() == (used ? 0 : 1)
+        used || warnings[0].contains('is a path that is not absolute: it is one of the generated application, and is not read from where the command runs')
+
+        where:
+        entry                    || used
+        '/srv/maven'             || []
+        '\\srv\\maven'           || []
+        'file:///srv/more'       || []
+        'file:/srv/more'         || []
+        'C:\\srv\\maven'         || ['file:///C:/srv/maven/']
+        'file:///C:/srv/more'    || ['file:///C:/srv/more/']
+        'file://server/share'    || ['file://server/share/']
+        '\\\\server\\share\\m2'  || ['file://server/share/m2/']
     }
 
     @Unroll
@@ -520,7 +550,8 @@ class PackArtifactsSpec extends Specification {
         'http://nexus.invalid/releases'                || 'the address has to be https, or file: for a directory'
         'mailto:x'                                     || 'the address has to be https, or file: for a directory'
         'jar:file:/x.jar!/'                            || 'the address has to be https, or file: for a directory'
-        'file://server/share'                          || 'is not the address of a repository or of a directory'
+        // an address with the name of a computer is a share on Windows, where it is a directory, and nothing elsewhere
+        (WINDOWS ? 'file://server/share#part' : 'file://server/share') || 'is not the address of a repository or of a directory'
         'file:///srv/maven?secret=1'                   || 'is not the address of a repository or of a directory'
         'https://nexus.invalid:99999/releases'         || 'its host or port is not one a request can be made to'
     }

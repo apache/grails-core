@@ -467,13 +467,14 @@ final class ApplicationCommandFile {
 
                 @Override
                 FileVisitResult preVisitDirectory(Path directory, BasicFileAttributes attributes) {
-                    return look(attributes, true)
+                    return look(changedAt(directory, attributes), true)
                 }
 
                 @Override
                 FileVisitResult visitFile(Path file, BasicFileAttributes attributes) {
                     // at the depth that is the last looked at, a directory is given as a file
-                    return look(attributes, attributes.isDirectory() || (attributes.isRegularFile() && file.getFileName().toString().endsWith(ending)))
+                    boolean counts = attributes.isDirectory() || (attributes.isRegularFile() && file.getFileName().toString().endsWith(ending))
+                    return look(attributes.isDirectory() ? changedAt(file, attributes) : attributes.lastModifiedTime(), counts)
                 }
 
                 @Override
@@ -481,8 +482,19 @@ final class ApplicationCommandFile {
                     return FileVisitResult.CONTINUE
                 }
 
-                private FileVisitResult look(BasicFileAttributes attributes, boolean counts) {
-                    if (++seen[0] > MAX_WALKED || (counts && attributes.lastModifiedTime().compareTo(since) > 0)) {
+                // When a directory was changed is asked of the directory itself. What the walk has of it is
+                // what the directory above lists, and NTFS brings that up to date only later: a file that
+                // was deleted a moment ago would not be seen there on Windows.
+                private FileTime changedAt(Path directory, BasicFileAttributes listed) {
+                    try {
+                        return Files.getLastModifiedTime(directory, LinkOption.NOFOLLOW_LINKS)
+                    } catch (IOException ignored) {
+                        return listed.lastModifiedTime()
+                    }
+                }
+
+                private FileVisitResult look(FileTime modified, boolean counts) {
+                    if (++seen[0] > MAX_WALKED || (counts && modified.compareTo(since) > 0)) {
                         changed[0] = true
                         return FileVisitResult.TERMINATE
                     }

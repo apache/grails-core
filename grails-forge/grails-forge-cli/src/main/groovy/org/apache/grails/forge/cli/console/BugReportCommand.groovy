@@ -217,7 +217,7 @@ class BugReportCommand extends InProjectCommand {
                     if (attributes.isSymbolicLink()) {
                         collected.links++
                     } else if (attributes.isDirectory()) {
-                        collected.refusal = "The sources of the project are more than ${MAX_DEPTH} directories deep at ${GradleRunner.line(directory.relativize(file))}, which is more than a bug report holds"
+                        collected.refusal = "The sources of the project are more than ${MAX_DEPTH} directories deep at ${GradleRunner.line(directory.relativize(file).join('/'))}, which is more than a bug report holds"
                     } else if (!attributes.isRegularFile() || notSource(fileName)) {
                         return FileVisitResult.CONTINUE
                     } else if (secret(fileName)) {
@@ -238,7 +238,7 @@ class BugReportCommand extends InProjectCommand {
 
                 @Override
                 FileVisitResult visitFileFailed(Path file, IOException e) {
-                    collected.refusal = "${GradleRunner.line(directory.relativize(file))} cannot be read"
+                    collected.refusal = "${GradleRunner.line(directory.relativize(file).join('/'))} cannot be read"
                     return FileVisitResult.TERMINATE
                 }
             })

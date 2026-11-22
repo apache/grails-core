@@ -287,10 +287,11 @@ class PackArtifacts {
                     repositories << directory(Path.of(System.getProperty('maven.repo.local') ?: "${System.getProperty('user.home')}/.m2/repository".toString()))
                 } else if (!isLocal(address)) {
                     repositories << repository(address)
-                } else if (address.regionMatches(true, 0, 'file:', 0, 5)) {
-                    repositories << directory(Path.of(new URI(address)))
                 } else {
-                    Path path = Path.of(address)
+                    // On Windows a path is absolute with a drive or with the name of a computer and a share,
+                    // also where it is written as an address: file:///srv/maven is the directory \srv\maven of
+                    // whichever drive the command runs on there, and is left out as the path /srv/maven is.
+                    Path path = address.regionMatches(true, 0, 'file:', 0, 5) ? Path.of(new URI(address)) : Path.of(address)
                     if (!path.isAbsolute()) {
                         throw new Unusable("${described(address)} is a path that is not absolute: it is one of the generated application, and is " +
                                 'not read from where the command runs')
