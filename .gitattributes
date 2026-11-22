@@ -43,6 +43,12 @@ grails-forge/grails-forge-core/src/main/resources/META-INF/grails-forge-bundled/
 # written with the files under golden as text.
 grails-forge/grails-forge-cli/src/main/resources/META-INF/grails-forge-cli/templates/** text eol=lf
 grails-forge/grails-forge-cli/src/test/resources/golden/** text eol=lf
+# And for what the specs of the generator compare with as text: the views of the templates of a pack, the
+# files the bundled packs generate, and the reference of the merge of three texts. No `text` is set for the
+# directories, so what git takes for binary there stays as it is.
+grails-forge/grails-forge-core/src/test/resources/golden/** eol=lf
+grails-forge/grails-forge-core/src/test/resources/pack-template-views/** eol=lf
+grails-forge/grails-forge-core/src/test/resources/three-way-merge-reference.txt text eol=lf
 
 # Files that MUST be CRLF (Windows scripts).
 *.bat          text eol=crlf

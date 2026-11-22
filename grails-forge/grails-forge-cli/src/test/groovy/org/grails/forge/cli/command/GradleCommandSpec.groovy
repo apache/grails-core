@@ -193,7 +193,7 @@ class GradleCommandSpec extends CommandSpec implements CommandFixture {
         new File(dir, 'grails-app').deleteDir()
 
         when: 'the directory is the root of a build, as that of a build of several projects is'
-        int exit = ForgeCli.execute(beanContext, 'gradle', 'show')
+        int exit = ForgeCli.execute(beanContext, 'gradle', 'show', '--no-daemon')
 
         then:
         exit == 0
@@ -203,7 +203,10 @@ class GradleCommandSpec extends CommandSpec implements CommandFixture {
         when: 'a directory with a wrapper and no settings is no build'
         out.reset()
         new File(dir, 'settings.gradle').delete()
-        new File(dir, '.gradle').deleteDir()
+        // on Windows the Gradle that has just ended can hold a file of the directory for a moment longer
+        new PollingConditions(timeout: 30, delay: 0.5).eventually {
+            assert new File(dir, '.gradle').deleteDir() && !new File(dir, '.gradle').exists()
+        }
         exit = ForgeCli.execute(beanContext, 'gradle', 'show')
 
         then:

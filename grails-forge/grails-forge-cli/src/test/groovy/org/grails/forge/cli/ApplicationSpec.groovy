@@ -90,13 +90,10 @@ class ApplicationSpec extends Specification {
         File config = new File(projectDir, 'config')
         config.mkdirs()
         new File(config, 'application.yml').text = 'spring:\n  config:\n    import: file:missing-required-configuration.yml\n'
-        String classpath = System.getProperty('java.class.path')
         File output = new File(projectDir, 'cli.log')
 
-        when:
-        Process process = new ProcessBuilder(new File(System.getProperty('java.home'), 'bin/java').absolutePath,
-                '-cp', classpath, Application.name, '--help')
-                .directory(projectDir).redirectErrorStream(true).redirectOutput(output).start()
+        when: 'a command line of its own, with its class path in a file: as an argument it is longer than a command line of Windows can be'
+        Process process = ForkedCli.builder(projectDir, [], '--help').redirectErrorStream(true).redirectOutput(output).start()
 
         then:
         process.waitFor(90, TimeUnit.SECONDS)
