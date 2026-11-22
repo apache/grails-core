@@ -24,6 +24,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
@@ -44,6 +45,7 @@ import org.hibernate.criterion.CriteriaSpecification;
 import org.hibernate.criterion.DetachedCriteria;
 import org.hibernate.criterion.Projections;
 import org.hibernate.criterion.Restrictions;
+import org.hibernate.criterion.RowCountProjection;
 import org.hibernate.criterion.SimpleExpression;
 import org.hibernate.dialect.Dialect;
 import org.hibernate.dialect.function.SQLFunction;
@@ -933,6 +935,19 @@ public abstract class AbstractHibernateQuery extends Query {
         }
         if (criteria != null) {
             GrailsHibernateUtil.fetchAssociationsBefore(criteria, associationPath);
+            CriteriaImpl root = criteria instanceof CriteriaImpl ? (CriteriaImpl) criteria : null;
+            if (root != null && (root.getMaxResults() != null || root.getFirstResult() != null && root.getFirstResult() > 0)) {
+                boolean collection = false;
+                String path = "";
+                for (int i = 0; i < tokens.length; i++) {
+                    path = i == 0 ? tokens[i] : path + '.' + tokens[i];
+                    collection |= associations[i] instanceof ToMany;
+                    if (collection) {
+                        // SQL pagination limits joined rows, which would initialize a partial collection.
+                        criteria.setFetchMode(path, FetchMode.SELECT);
+                    }
+                }
+            }
         }
         if (joinType == JoinType.LEFT) {
             return;
@@ -965,10 +980,6 @@ public abstract class AbstractHibernateQuery extends Query {
         return association != null ? association.getAssociatedEntity() : null;
     }
 
-    /**
-     * Returns the association at the end of an association path from the root entity, or null when
-     * the path does not consist of associations only.
-     */
     private Association getAssociation(String associationPath) {
         String path = associationPath;
         if (alias != null && path.startsWith(alias + '.')) {
@@ -1178,7 +1189,23 @@ public abstract class AbstractHibernateQuery extends Query {
         }
 
         applyDeferredJoins();
+        boolean keepNullRows = joinTypes.containsValue(JoinType.RIGHT) &&
+                (hibernateProjectionList == null || hibernateProjectionList.isEmpty());
+        if (keepNullRows) {
+            criteria.setResultTransformer(CriteriaSpecification.ROOT_ENTITY);
+        }
         List results = criteria.list();
+        if (keepNullRows) {
+            Set<Object> seen = Collections.newSetFromMap(new IdentityHashMap<>());
+            List distinct = new ArrayList(results.size());
+            for (Object result : results) {
+                if (result == null || seen.add(result)) {
+                    distinct.add(result);
+                }
+            }
+            results = distinct;
+        }
+
         GrailsHibernateUtil.initializeCollections(entity, results, collectionsLoadedAfterQuery);
         if (publisher != null) {
             publisher.publishEvent(new PostQueryEvent(datastore, this, results));
@@ -1193,7 +1220,7 @@ public abstract class AbstractHibernateQuery extends Query {
      */
     private void removeOrdersOfRowCount() {
         if (hibernateProjectionList == null || hibernateProjectionList.getHibernateProjectionList().getLength() != 1 ||
-                !(hibernateProjectionList.getHibernateProjectionList().getProjection(0) instanceof org.hibernate.criterion.RowCountProjection) ||
+                !(hibernateProjectionList.getHibernateProjectionList().getProjection(0) instanceof RowCountProjection) ||
                 !(criteria instanceof CriteriaImpl)) {
             return;
         }

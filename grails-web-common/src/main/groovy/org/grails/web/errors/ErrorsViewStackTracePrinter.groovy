@@ -71,8 +71,8 @@ class ErrorsViewStackTracePrinter extends DefaultErrorsPrinter {
             path = resource.filename
         }
         """\
-<h2>Around line ${lineNumber} of <span class="${attrs['filenameClass'] ?: 'filename'}">${path}</span></h2>
-<pre class="${attrs['snippetClass'] ?: 'snippet'}">"""
+<h2>Around line ${lineNumber} of <span class="${(attrs['filenameClass'] ?: 'filename').encodeAsHTML()}">${path}</span></h2>
+<pre class="${(attrs['snippetClass'] ?: 'snippet').encodeAsHTML()}">"""
     }
 
     @Override
@@ -82,12 +82,12 @@ class ErrorsViewStackTracePrinter extends DefaultErrorsPrinter {
 
     @Override
     protected String formatCodeSnippetLine(int currentLineNumber, Object currentLine, Map attrs) {
-        """<code class="${attrs['lineClass'] ?: 'line'}"><span class="${attrs['lineNumberClass'] ?: 'lineNumber'}">${currentLineNumber}:</span>${currentLine.encodeAsHTML()}</code>"""
+        """<code class="${(attrs['lineClass'] ?: 'line').encodeAsHTML()}"><span class="${(attrs['lineNumberClass'] ?: 'lineNumber').encodeAsHTML()}">${currentLineNumber}:</span>${currentLine.encodeAsHTML()}</code>"""
     }
 
     @Override
     protected String formatCodeSnippetErrorLine(int currentLineNumber, Object currentLine, Map attrs) {
-        """<code class="${attrs['lineErrorClass'] ?: 'line error'}"><span class="${attrs['lineNumberClass'] ?: 'lineNumber'}">${currentLineNumber}:</span>${currentLine.encodeAsHTML()}</code>"""
+        """<code class="${(attrs['lineErrorClass'] ?: 'line error').encodeAsHTML()}"><span class="${(attrs['lineNumberClass'] ?: 'lineNumber').encodeAsHTML()}">${currentLineNumber}:</span>${currentLine.encodeAsHTML()}</code>"""
     }
 
     @Override
