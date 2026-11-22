@@ -173,7 +173,7 @@ jobs:
           # runs out of time. The number of merges is not limited, only the time: GitHub does not move an approval
           # kept this way, so each hourly run walks its merges again, and the time limit is what bounds that cost.
           only_merges_base() {
-            local base=$1 approved=$2 commit=$3 deadline=$(( SECONDS + 120 )) parents first second other merged tree conflicts changed path size side longest
+            local base=$1 approved=$2 commit=$3 deadline=$(( SECONDS + 120 )) parents first second other merged tree conflicts changed path size side entry longest
             (( deadline <= checks_end )) || deadline=$checks_end
             accepted=
             reason="the commits after this approval could not be checked"
@@ -200,8 +200,10 @@ jobs:
               while IFS= read -r path; do
                 [[ -n "$path" ]] || continue
                 for side in "$first" "$second"; do
-                  bounded git -C merges.git cat-file -e "$side:$path" 2> /dev/null || continue
-                  longest=$(set -o pipefail; bounded git -C merges.git cat-file blob "$side:$path" | awk '
+                  # A side without the file has no line to count; a git command that fails answers as one.
+                  entry=$(bounded git -C merges.git ls-tree --format='%(objecttype) %(objectname)' "$side" -- "$path") || return 1
+                  [[ "$entry" == 'blob '* ]] || continue
+                  longest=$(set -o pipefail; bounded git -C merges.git cat-file blob "${entry#blob }" | awk '
                     { sub(/\r$/, ""); if (match($0, /^(<+|=+|>+)/) && RLENGTH > longest) longest = RLENGTH }
                     END { print longest + 0 }') || return 1
                   (( longest < size )) || size=$(( longest + 1 ))
