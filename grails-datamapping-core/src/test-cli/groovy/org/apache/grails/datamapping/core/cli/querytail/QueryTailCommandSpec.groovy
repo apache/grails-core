@@ -207,6 +207,11 @@ class QueryTailCommandSpec extends Specification {
                                 '-cp', System.getProperty('java.class.path'),
                                 '-Dgrails.env=development', "-Dbase.dir=${baseDir.path}".toString()]
         command.addAll(jvmArguments)
+        // the JVM that is started is counted as tested: the build says how (the grails-jacoco convention plugin)
+        String coverage = System.getProperty('grails.test.fork.jacoco')
+        if (coverage) {
+            command.add(coverage.replace('@fork@', UUID.randomUUID().toString()))
+        }
         command.add(RUNNER)
         command.addAll(arguments.toList())
         command.add(QueryTailSpecApplication.name)

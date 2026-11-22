@@ -20,10 +20,14 @@ package grails.ui.script
 
 import java.util.concurrent.TimeUnit
 
+import org.springframework.context.annotation.Bean
+import org.springframework.context.annotation.Lazy
 import spock.lang.Specification
 import spock.lang.TempDir
 
 import grails.boot.config.GrailsAutoConfiguration
+import grails.persistence.support.PersistenceContextInterceptor
+import grails.ui.StartedJvmCoverage
 
 /**
  * {@link GrailsApplicationScriptRunner} as the {@code runScript} task of a build starts it: its
@@ -81,14 +85,35 @@ class GrailsApplicationScriptRunnerForkSpec extends Specification {
         result.exit == 1
     }
 
+    def "a failure before any script is run ends the JVM with a failure, and says so"() {
+        given:
+        File script = new File(dir, 'never.groovy')
+        script.text = 'println "NEVER RUN"'
+
+        when: 'what a script runs in cannot be made: an interceptor of the application fails when it is asked for'
+        Map result = run([], LateFailingScriptApplication, script.path)
+
+        then: 'the JVM does not wait for the thread that watches the sources of the application'
+        result.ended
+        result.output.contains('runScript: The scripts could not be run: ')
+        result.output.contains('this interceptor fails on purpose')
+        !result.output.contains('NEVER RUN')
+        result.exit == 1
+    }
+
     private Map run(List<String> jvmArguments, String... scripts) {
+        run(jvmArguments, ScriptRunnerApplication, scripts)
+    }
+
+    private Map run(List<String> jvmArguments, Class<?> application, String... scripts) {
         List<String> command = [new File(System.getProperty('java.home'), 'bin/java').path,
                                 '-cp', System.getProperty('java.class.path'),
                                 '-Dgrails.env=development', "-Dbase.dir=${dir.path}".toString()]
+        command.addAll(1, StartedJvmCoverage.jvmArguments())
         command.addAll(jvmArguments)
         command.add(GrailsApplicationScriptRunner.name)
         command.addAll(scripts.toList())
-        command.add(ScriptRunnerApplication.name)
+        command.add(application.name)
         File output = new File(dir, 'output.txt')
         Process process = new ProcessBuilder(command).directory(dir).redirectErrorStream(true).redirectOutput(output).start()
         boolean ended = process.waitFor(TIMEOUT_SECONDS, TimeUnit.SECONDS)
@@ -100,4 +125,13 @@ class GrailsApplicationScriptRunnerForkSpec extends Specification {
 }
 
 class ScriptRunnerApplication extends GrailsAutoConfiguration {
+}
+
+class LateFailingScriptApplication extends GrailsAutoConfiguration {
+
+    @Bean
+    @Lazy
+    PersistenceContextInterceptor failing() {
+        throw new IllegalStateException('this interceptor fails on purpose')
+    }
 }

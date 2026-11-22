@@ -648,13 +648,16 @@ class ScriptCommandRunnerSpec extends Specification {
         File stderr = new File(plugin, 'stderr.txt')
         File options = new File(plugin, 'java.options')
         options.setText("-cp\n\"${System.getProperty('java.class.path').replace('\\', '\\\\')}\"\n", 'UTF-8')
+        // the JVM that is started is counted as tested: the build says how (the grails-jacoco convention plugin)
+        String coverage = System.getProperty('grails.test.fork.jacoco')
+        List<String> counted = coverage ? [coverage.replace('@fork@', UUID.randomUUID().toString())] : []
         File home = new File(plugin, 'home')
         home.mkdirs()
 
         when:
-        Process process = new ProcessBuilder(new File(System.getProperty('java.home'), 'bin/java').path, "@${options.path}".toString(),
-                "-Dbase.dir=${project.path}".toString(), "-Duser.home=${home.path}".toString(),
-                ScriptCommandRunner.name, '--', 'talk', 'two words', 'three')
+        Process process = new ProcessBuilder([new File(System.getProperty('java.home'), 'bin/java').path, "@${options.path}".toString()] + counted +
+                ["-Dbase.dir=${project.path}".toString(), "-Duser.home=${home.path}".toString(),
+                 ScriptCommandRunner.name, '--', 'talk', 'two words', 'three'])
                 .directory(plugin)
                 .redirectOutput(stdout)
                 .redirectError(stderr)

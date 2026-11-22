@@ -26,6 +26,8 @@ import spock.lang.TempDir
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 
+import grails.ui.StartedJvmCoverage
+
 /**
  * {@link GrailsShell} as the {@code shell} task of a build starts it, in a JVM of its own: a shell
  * that cannot be started is a failure of that JVM, in whichever thread {@code main} runs.
@@ -67,10 +69,21 @@ class GrailsShellForkSpec extends Specification {
         none.exit == 1
     }
 
+    def "what ends the thread as the developer tools of Spring Boot end it, to start again in a thread of theirs, is left to them"() {
+        when:
+        Map result = run(GrailsShell.name, RestartingShellApplication.name)
+
+        then: 'it is not said to be a shell that could not be started, and the JVM is not ended for it: what was thrown is thrown on'
+        result.ended
+        !result.output.contains('shell: The shell could not be started')
+        result.output.contains(ShellSpecSilentExitException.name)
+    }
+
     private Map run(String mainClass, String... arguments) {
         List<String> command = [new File(System.getProperty('java.home'), 'bin/java').path,
                                 '-cp', System.getProperty('java.class.path'),
                                 '-Dgrails.env=development', "-Dbase.dir=${dir.path}".toString(), mainClass]
+        command.addAll(1, StartedJvmCoverage.jvmArguments())
         command.addAll(arguments.toList())
         File output = new File(dir, 'output.txt')
         // nothing to read: a shell that did start would end at once
@@ -99,4 +112,17 @@ class OtherThreadShellLauncher {
     static void main(String[] args) {
         new Thread({ GrailsShell.main(args) }, 'restartedMain').start()
     }
+}
+
+@Configuration
+class RestartingShellApplication {
+
+    @Bean
+    String restarting() {
+        throw new ShellSpecSilentExitException()
+    }
+}
+
+/** Named as the exception of the developer tools is, which is how it is known: they are not on the class path here. */
+class ShellSpecSilentExitException extends RuntimeException {
 }

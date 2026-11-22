@@ -27,6 +27,7 @@ import spock.lang.Unroll
 
 import grails.boot.config.GrailsAutoConfiguration
 import grails.core.GrailsApplication
+import grails.ui.StartedJvmCoverage
 import org.apache.grails.core.cli.ApplicationCommand
 import org.apache.grails.core.cli.ExecutionContext
 
@@ -129,6 +130,7 @@ class GrailsApplicationContextCommandRunnerForkSpec extends Specification {
                                 '-cp', System.getProperty('java.class.path'),
                                 '-Dgrails.env=development', "-Dbase.dir=${dir.path}".toString(),
                                 GrailsApplicationContextCommandRunner.name]
+        command.addAll(1, StartedJvmCoverage.jvmArguments())
         command.addAll(arguments.toList())
         File out = new File(dir, 'out.txt')
         File err = new File(dir, 'err.txt')

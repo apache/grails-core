@@ -23,12 +23,16 @@ import groovy.transform.CompileStatic
 import org.gradle.api.Action
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.Task
+import org.gradle.api.file.Directory
 import org.gradle.api.plugins.JavaPlugin
+import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.testing.Test
 import org.gradle.testing.jacoco.plugins.JacocoPlugin
 import org.gradle.testing.jacoco.plugins.JacocoPluginExtension
+import org.gradle.testing.jacoco.plugins.JacocoTaskExtension
 import org.gradle.testing.jacoco.tasks.JacocoReport
 import org.gradle.testing.jacoco.tasks.JacocoReportsContainer
 
@@ -39,6 +43,9 @@ import org.gradle.testing.jacoco.tasks.JacocoReportsContainer
  * jacocoAggregateReport task on the root project the first time it is applied, then wires
  * each subproject's exec data into that task. The aggregate produces a single XML report
  * at build/reports/jacoco/aggregate/jacocoAggregateReport.xml suitable for Codecov upload.
+ *
+ * A JVM that a test starts itself (a spec that runs a class the way a build runs it, as a process of
+ * its own) is counted as well: see {@link ForkedJvmCoverageArgumentProvider}.
  */
 @CompileStatic
 class GrailsJacocoPlugin implements Plugin<Project> {
@@ -47,6 +54,9 @@ class GrailsJacocoPlugin implements Plugin<Project> {
 
     /** The source set of a cli companion, the name GrailsCliArtifactGradlePlugin.CLI_SOURCE_SET_NAME in grails-gradle uses. */
     static final String CLI_SOURCE_SET_NAME = 'cli'
+
+    /** What the name of the directory with the execution data of the JVMs a test task's tests started ends with. */
+    static final String FORKS_DIRECTORY_SUFFIX = '-forks'
 
     @Override
     void apply(Project project) {
@@ -57,12 +67,19 @@ class GrailsJacocoPlugin implements Plugin<Project> {
             it.toolVersion = project.findProperty('jacocoVersion')
         }
 
-        project.tasks.withType(Test).configureEach {
-            it.finalizedBy('jacocoTestReport')
+        project.tasks.withType(Test).configureEach { Test test ->
+            test.finalizedBy('jacocoTestReport')
+            countStartedJvms(project, test)
         }
 
         project.tasks.withType(JacocoReport).configureEach {
             it.dependsOn(project.tasks.withType(Test))
+            if (it.name == 'jacocoTestReport') {
+                // the report of the test task has what the JVMs its tests started ran, as the aggregate has
+                it.executionData.from(project.fileTree(project.file("build/jacoco/test${FORKS_DIRECTORY_SUFFIX}")) {
+                    include('*.exec')
+                })
+            }
             it.reports({ JacocoReportsContainer reports ->
                 reports.xml.required.set(true)
                 reports.html.required.set(true)
@@ -71,6 +88,31 @@ class GrailsJacocoPlugin implements Plugin<Project> {
         }
 
         contributeToRootAggregateReport(project)
+    }
+
+    /**
+     * Has the JVMs that the tests of a task start themselves counted: see {@link ForkedJvmCoverageArgumentProvider}.
+     * Their execution data goes into {@code build/jacoco/<task>-forks}, one file for each JVM. The directory is an
+     * output of the task, so that a result taken from the build cache brings the data of its started JVMs with it,
+     * and is emptied before the tests run, so that the report has nothing of an earlier run.
+     */
+    private static void countStartedJvms(Project project, Test test) {
+        JacocoTaskExtension jacoco = test.extensions.findByType(JacocoTaskExtension)
+        if (jacoco == null) {
+            return
+        }
+        Provider<Directory> forks = project.layout.buildDirectory.dir("jacoco/${test.name}${FORKS_DIRECTORY_SUFFIX}".toString())
+        test.outputs.dir(forks).withPropertyName('jacocoStartedJvmExecutionData').optional()
+        test.jvmArgumentProviders.add(new ForkedJvmCoverageArgumentProvider(jacoco, forks))
+        test.doFirst(new Action<Task>() {
+
+            @Override
+            void execute(Task task) {
+                File directory = forks.get().asFile
+                directory.deleteDir()
+                directory.mkdirs()
+            }
+        })
     }
 
     private static void contributeToRootAggregateReport(Project project) {
@@ -109,6 +151,8 @@ class GrailsJacocoPlugin implements Plugin<Project> {
             task.executionData.from(
                 project.fileTree(project.file('build/jacoco')) {
                     include('*.exec')
+                    // what the JVMs that the tests started themselves ran
+                    include("*${FORKS_DIRECTORY_SUFFIX}/*.exec".toString())
                 }
             )
         }
