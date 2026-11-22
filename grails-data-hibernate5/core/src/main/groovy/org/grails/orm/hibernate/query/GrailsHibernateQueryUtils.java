@@ -20,6 +20,7 @@
 package org.grails.orm.hibernate.query;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -126,8 +127,10 @@ public class GrailsHibernateQueryUtils {
             }
             if (sortObj instanceof Map) {
                 Map sortMap = (Map) sortObj;
+                // the properties of one association are ordered through one join: a second createCriteria for the same path fails
+                Map<String, Criteria> joined = new HashMap<>();
                 for (Object sort : sortMap.keySet()) {
-                    addOrderPossiblyNested(c, entity, (String) sort, sortDirection(sort, sortMap.get(sort)), ignoreCase);
+                    addOrderPossiblyNested(c, entity, (String) sort, sortDirection(sort, sortMap.get(sort)), ignoreCase, joined, "");
                 }
             } else {
                 final String sort = (String) sortObj;
@@ -276,6 +279,11 @@ public class GrailsHibernateQueryUtils {
      * Add order to criteria, creating necessary subCriteria if nested sort property (ie. sort:'nested.property').
      */
     static void addOrderPossiblyNested(Criteria c, PersistentEntity entity, String sort, String order, boolean ignoreCase) {
+        addOrderPossiblyNested(c, entity, sort, order, ignoreCase, new HashMap<>(), "");
+    }
+
+    private static void addOrderPossiblyNested(Criteria c, PersistentEntity entity, String sort, String order, boolean ignoreCase,
+                                               Map<String, Criteria> joined, String path) {
         int firstDotPos = sort.indexOf(".");
         if (firstDotPos == -1) {
             addOrder(c, sort, order, ignoreCase);
@@ -288,11 +296,15 @@ public class GrailsHibernateQueryUtils {
                 addOrder(c, sort, order, ignoreCase);
             } else if (property instanceof Association) {
                 Association a = (Association) property;
-                Criteria subCriteria = c.createCriteria(sortHead);
+                String associationPath = path + sortHead;
                 PersistentEntity associatedEntity = a.getAssociatedEntity();
-                Class<?> propertyTargetClass = associatedEntity.getJavaClass();
-                cacheCriteriaByMapping(propertyTargetClass, subCriteria);
-                addOrderPossiblyNested(subCriteria, associatedEntity, sortTail, order, ignoreCase); // Recurse on nested sort
+                Criteria subCriteria = joined.get(associationPath);
+                if (subCriteria == null) {
+                    subCriteria = c.createCriteria(sortHead);
+                    cacheCriteriaByMapping(associatedEntity.getJavaClass(), subCriteria);
+                    joined.put(associationPath, subCriteria);
+                }
+                addOrderPossiblyNested(subCriteria, associatedEntity, sortTail, order, ignoreCase, joined, associationPath + "."); // Recurse on nested sort
             }
         }
     }

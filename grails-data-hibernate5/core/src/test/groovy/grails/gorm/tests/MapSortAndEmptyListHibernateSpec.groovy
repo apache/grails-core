@@ -93,6 +93,21 @@ class MapSortAndEmptyListHibernateSpec extends GrailsDataTckSpec<GrailsDataHiber
         MsHomeBook.createCriteria().list(sort: ['author.home.city': 'asc', title: 'asc']) { }*.title == ['three', 'two', 'one']
     }
 
+    void "a map sort of several properties of one association, given to a finder that takes an example or a map of properties, joins it once"() {
+        given:
+        MsAuthor ann = MsAuthor.findByName('ann')
+        Map byAuthor = ['author.name': 'asc', 'author.active': 'desc', title: 'desc']
+        Map nested = ['author.publisher.name': 'asc', 'author.publisher.country': 'asc', 'author.name': 'asc', title: 'asc']
+
+        expect:
+        MsBook.findAllWhere([author: ann], [sort: byAuthor])*.title == ['beta', 'alpha']
+        MsBook.findAllWhere([author: ann], [sort: nested])*.title == ['alpha', 'beta']
+        MsBook.findAll(new MsBook(), [sort: byAuthor])*.title == ['beta', 'alpha', 'zeta', 'omega']
+        MsBook.findAll(new MsBook(), [sort: nested])*.title == ['zeta', 'alpha', 'beta', 'omega']
+        MsBook.findWhere([author: ann], [sort: nested]).title == 'alpha'
+        MsBook.find(new MsBook(), [sort: nested]).title == 'zeta'
+    }
+
     void "a map sort of two properties of the same association joins it once"() {
         expect:
         MsBook.list(sort: ['author.name': 'asc', 'author.active': 'desc'])*.author*.name == ['ann', 'ann', 'bob', 'cat']
@@ -261,6 +276,12 @@ class MapSortAndEmptyListHibernateSpec extends GrailsDataTckSpec<GrailsDataHiber
     void "a negated empty list on a collection of strings matches the books without elements"() {
         expect:
         MsBook.createCriteria().list { not { inList('tags', []) }; order('title') }*.title == ['alpha', 'beta', 'omega', 'zeta']
+    }
+
+    void "a negated empty list on one side of a negated or matches nothing, and leaving the side out would change that"() {
+        expect:
+        MsBook.createCriteria().list { not { or { not { inList('title', []) }; eq('title', 'alpha') } } }*.title == []
+        MsBook.createCriteria().list { not { or { eq('title', 'alpha') } }; order('title') }*.title == ['beta', 'omega', 'zeta']
     }
 
     void "an empty list on a collection of strings matches nothing"() {
