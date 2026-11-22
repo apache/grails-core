@@ -1144,6 +1144,42 @@ class MultiDataSourceSessionSpec extends Specification {
         }
     }
 
+    def "a request that goes asynchronous with a failing flush keeps its sessions open until the asynchronous request completes, then closes every one"() {
+        given: "a servlet request whose default session, another datasource's failing flush and a third's failing close are open"
+        IllegalStateException failure = new IllegalStateException('cannot flush')
+        FakeSession defaultSession = new FakeSession()
+        FakeSession failing = new FakeSession(flushFailure: failure)
+        FakeSession unclosable = new FakeSession(closeFailure: new IOException('cannot close'))
+        SessionFactory defaultSf = new FakeSessionFactory(session: defaultSession)
+        SessionFactory failingSf = new FakeSessionFactory(session: failing)
+        SessionFactory unclosableSf = new FakeSessionFactory(session: unclosable)
+        def interceptor = new GrailsOpenSessionInViewInterceptor()
+        interceptor.setHibernateDatastore(datastoreWith(defaultSf, unclosable: unclosableSf, failing: failingSf))
+        ServletWebRequest webRequest = new ServletWebRequest(new MockHttpServletRequest(asyncSupported: true), new MockHttpServletResponse())
+        interceptor.preHandle(webRequest)
+
+        when: "the action returns a promise, and the flush as the request goes asynchronous fails"
+        def asyncContext = webRequest.request.startAsync()
+        webRequest.setAttribute('org.grails.ASYNC_STARTED', true, WebRequest.SCOPE_REQUEST)
+        interceptor.afterConcurrentHandlingStarted(webRequest)
+
+        then: "the flush failure is thrown, and the sessions are unbound but open for the work the request continues with"
+        def thrownFailure = thrown(IllegalStateException)
+        thrownFailure.is(failure)
+        [defaultSf, failingSf, unclosableSf].every { !TransactionSynchronizationManager.hasResource(it) }
+        [defaultSession, failing, unclosable].every { it.closeCount == 0 }
+
+        when: "the asynchronous request completes"
+        asyncContext.complete()
+
+        then: "every session is closed, the one that fails to close too, and nothing is thrown at the container"
+        noExceptionThrown()
+        [defaultSession, failing, unclosable].every { it.closeCount == 1 }
+
+        cleanup:
+        unbindIfBound(defaultSf, failingSf, unclosableSf)
+    }
+
     def "a request that Spring makes asynchronous closes the session of another datasource when the asynchronous request completes, and leaves its default session to Spring"() {
         given: 'a servlet request that has opened its sessions'
         var webRequest = new ServletWebRequest(new MockHttpServletRequest(asyncSupported: true), new MockHttpServletResponse())
