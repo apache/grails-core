@@ -67,6 +67,12 @@ import io.undertow.util.AttachmentKey;
  * A dispatch that dispatches the processing after sending the error leaves it to Undertow to send, once, and the
  * completion to the dispatch it asked for. Undertow's error dispatch completes the processing once the error page has
  * run, though, so with an error page its listeners are told before that dispatch runs.
+ * <p>
+ * A change to Undertow that sends a dispatch's error before it tells the listeners, and so also completes the
+ * processing an error page answered, is proposed in
+ * <a href="https://github.com/undertow-io/undertow/pull/2018">undertow-io/undertow#2018</a>. Once Grails uses an
+ * Undertow release with it, this handler is needed only for what that change leaves open, such as processing that no
+ * error page answered.
  */
 final class AsyncErrorCompletionHandler implements HttpHandler {
 
