@@ -75,7 +75,7 @@ jobs:
           printf 'version=%s\n' "${java_version}" >> "${GITHUB_OUTPUT}"
 
       - name: "Setup Corretto"
-        uses: actions/setup-java@v6.1.0
+        uses: actions/setup-java@v6.3.0
         with:
           distribution: corretto
           java-version: ${{ steps.jdk.outputs.version }}
