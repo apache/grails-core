@@ -53,6 +53,7 @@ import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.model.types.Basic;
 import org.grails.datastore.mapping.model.types.Embedded;
 import org.grails.datastore.mapping.model.types.ToMany;
+import org.grails.datastore.mapping.model.types.ToOne;
 import org.grails.datastore.mapping.proxy.ProxyHandler;
 import org.grails.datastore.mapping.query.Query;
 import org.grails.datastore.mapping.query.api.QueryableCriteria;
@@ -120,6 +121,9 @@ public class HibernateSession extends AbstractHibernateSession {
             builder.setConversionService(getMappingContext().getConversionService());
             builder.setHibernateCompatible(true);
             JpaQueryInfo jpaQueryInfo = builder.buildDelete();
+            if (hasRequestedSubqueryJoin(criteria.getCriteria())) {
+                return modifyByIdentifiers(session, criteria, null);
+            }
             String delete = applyRequestedJoins(jpaQueryInfo.getQuery(), criteria);
             if (!delete.equals(jpaQueryInfo.getQuery()) && restrictsThroughJoinTable(criteria)) {
                 return deleteByIdentifiers(session, criteria.getPersistentEntity(), delete, jpaQueryInfo.getParameters());
@@ -160,6 +164,9 @@ public class HibernateSession extends AbstractHibernateSession {
             }
 
             JpaQueryInfo jpaQueryInfo = builder.buildUpdate(properties);
+            if (hasRequestedSubqueryJoin(criteria.getCriteria())) {
+                return modifyByIdentifiers(session, criteria, properties);
+            }
 
             org.hibernate.query.Query query = session.createQuery(applyRequestedJoins(jpaQueryInfo.getQuery(), criteria));
             getHibernateTemplate().applySettings(query);
@@ -172,6 +179,79 @@ public class HibernateSession extends AbstractHibernateSession {
             applicationEventPublisher.publishEvent(new PostQueryEvent(datastore, hqlQuery, Collections.singletonList(result)));
             return result;
         });
+    }
+
+    private boolean hasRequestedSubqueryJoin(List<Query.Criterion> criteria) {
+        for (Query.Criterion criterion : criteria) {
+            if (criterion instanceof Query.Junction && hasRequestedSubqueryJoin(((Query.Junction) criterion).getCriteria())) {
+                return true;
+            }
+            QueryableCriteria subquery = null;
+            if (criterion instanceof Query.In) {
+                subquery = ((Query.In) criterion).getSubquery();
+            }
+            else if (criterion instanceof Query.NotIn) {
+                subquery = ((Query.NotIn) criterion).getSubquery();
+            }
+            else if (criterion instanceof Query.Exists) {
+                subquery = ((Query.Exists) criterion).getSubquery();
+            }
+            else if (criterion instanceof Query.NotExists) {
+                subquery = ((Query.NotExists) criterion).getSubquery();
+            }
+            else if (criterion instanceof Query.PropertyCriterion && ((Query.PropertyCriterion) criterion).getValue() instanceof QueryableCriteria) {
+                subquery = (QueryableCriteria) ((Query.PropertyCriterion) criterion).getValue();
+            }
+            if (subquery != null) {
+                if (subquery instanceof AbstractDetachedCriteria) {
+                    for (JoinType type : ((AbstractDetachedCriteria<?>) subquery).getJoinTypes().values()) {
+                        if (type != null && type != JoinType.LEFT) {
+                            return true;
+                        }
+                    }
+                }
+                if (hasRequestedSubqueryJoin(subquery.getCriteria())) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private int modifyByIdentifiers(Session session, QueryableCriteria source, Map<String, Object> properties) {
+        PersistentEntity entity = source.getPersistentEntity();
+        Criteria nativeSelection = source.getAlias() == null ? session.createCriteria(entity.getJavaClass()) :
+                session.createCriteria(entity.getJavaClass(), source.getAlias());
+        getHibernateTemplate().applySettings(nativeSelection);
+        HibernateQuery selection = new HibernateQuery(nativeSelection, this, entity);
+        for (Object criterion : source.getCriteria()) {
+            selection.add((Query.Criterion) criterion);
+        }
+        if (source instanceof AbstractDetachedCriteria) {
+            for (Map.Entry<String, JoinType> join : ((AbstractDetachedCriteria<?>) source).getJoinTypes().entrySet()) {
+                selection.join(join.getKey(), join.getValue());
+            }
+        }
+        selection.projections().id();
+        List identifiers = selection.list();
+        int changed = 0;
+        for (int from = 0; from < identifiers.size(); from += IDENTIFIER_BATCH_SIZE) {
+            List batch = identifiers.subList(from, Math.min(from + IDENTIFIER_BATCH_SIZE, identifiers.size()));
+            JpaQueryBuilder builder = new JpaQueryBuilder(entity, Collections.singletonList(new Query.In(entity.getIdentity().getName(), batch)));
+            builder.setConversionService(getMappingContext().getConversionService());
+            builder.setHibernateCompatible(true);
+            JpaQueryInfo info = properties == null ? builder.buildDelete() : builder.buildUpdate(properties);
+            org.hibernate.query.Query query = session.createQuery(info.getQuery());
+            getHibernateTemplate().applySettings(query);
+            setParameters(query, info.getParameters());
+            HibernateHqlQuery hqlQuery = new HibernateHqlQuery(this, entity, query);
+            ApplicationEventPublisher publisher = datastore.getApplicationEventPublisher();
+            publisher.publishEvent(new PreQueryEvent(datastore, hqlQuery));
+            int result = query.executeUpdate();
+            publisher.publishEvent(new PostQueryEvent(datastore, hqlQuery, Collections.singletonList(result)));
+            changed += result;
+        }
+        return changed;
     }
 
     private static void setParameters(org.hibernate.query.Query query, List parameters) {
@@ -336,7 +416,9 @@ public class HibernateSession extends AbstractHibernateSession {
                 Type type = persister.getPropertyType(tokens[i]);
                 String referencedProperty = type instanceof OneToOneType ? ((OneToOneType) type).getRHSUniqueKeyPropertyName() : null;
                 if (association instanceof ToMany) {
-                    correlation = joinAlias + " MEMBER OF " + rootAlias + '.' + tokens[i];
+                    Association inverse = association.getInverseSide();
+                    correlation = inverse instanceof ToOne ? joinAlias + '.' + inverse.getName() + " = " + rootAlias :
+                            joinAlias + " MEMBER OF " + rootAlias + '.' + tokens[i];
                 }
                 else if (referencedProperty != null) {
                     correlation = joinAlias + '.' + referencedProperty + " = " + rootAlias;
