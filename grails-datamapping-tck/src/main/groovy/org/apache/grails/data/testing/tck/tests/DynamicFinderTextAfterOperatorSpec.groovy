@@ -20,6 +20,7 @@
 package org.apache.grails.data.testing.tck.tests
 
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
+import grails.persistence.Entity
 import org.apache.grails.data.testing.tck.domains.TestEntity
 import spock.lang.Issue
 import spock.lang.Unroll
@@ -30,6 +31,11 @@ import spock.lang.Unroll
  */
 @Issue('https://github.com/apache/grails-core/issues/14605')
 class DynamicFinderTextAfterOperatorSpec extends GrailsDataTckSpec {
+
+    @Override
+    void setupSpec() {
+        manager.domainClasses.addAll([OperatorNamedItem])
+    }
 
     @Unroll
     void "a dynamic finder with text after its operator is refused: #finder"() {
@@ -72,6 +78,30 @@ class DynamicFinderTextAfterOperatorSpec extends GrailsDataTckSpec {
         'countByNameAndAgeOr'           | ['Ada', 30]
     }
 
+    @Unroll
+    void "a dynamic finder that joins with one operator and has the other inside an expression is refused: #finder"() {
+        when:
+        TestEntity."$finder"(*arguments)
+
+        then: 'the text between is not a property, so the finder does not search a property of that name'
+        IllegalArgumentException e = thrown()
+        e.message.contains('A finder takes one operator')
+
+        where:
+        finder                         | arguments
+        'findAllByNameAndAgeOrName'    | ['Ada', 30]
+        'findAllByNameOrAgeAndName'    | ['Ada', 30]
+        'countByNameAndAgeOrName'      | ['Ada', 30]
+    }
+
+    void "a property whose name holds an operator keeps its finders"() {
+        given:
+        new OperatorNamedItem(nameOrTitle: 'x').save(flush: true, failOnError: true)
+
+        expect:
+        OperatorNamedItem.findAllByNameOrTitleAndNameOrTitle('x', 'x').size() == 1
+    }
+
     void "the sort and order parameters sort a dynamic finder"() {
         given:
         new TestEntity(name: 'cat').save(failOnError: true)
@@ -101,4 +131,9 @@ class DynamicFinderTextAfterOperatorSpec extends GrailsDataTckSpec {
         found == null
         refused == null || refused.message?.contains('nameEqualIgnoreCasex')
     }
+}
+
+@Entity
+class OperatorNamedItem {
+    String nameOrTitle
 }

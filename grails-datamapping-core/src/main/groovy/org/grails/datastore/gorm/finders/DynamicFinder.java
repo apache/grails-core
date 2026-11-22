@@ -334,6 +334,7 @@ public abstract class DynamicFinder extends AbstractFinder implements QueryBuild
                     int argumentCursor = 0;
                     for (String queryParameter : queryParameters) {
                         MethodExpression currentExpression = findMethodExpression(clazz, queryParameter);
+                        rejectMixedOperators(clazz, currentExpression, operatorInUse, methodName);
                         final int requiredArgs = currentExpression.getArgumentsRequired();
                         // populate the arguments into the GrailsExpression from the argument list
                         Object[] currentArguments = new Object[requiredArgs];
@@ -790,6 +791,25 @@ public abstract class DynamicFinder extends AbstractFinder implements QueryBuild
                     throw new IllegalArgumentException("The dynamic finder [" + methodName + "] has an expression that ends with the [" + other +
                             "] operator, and no expression follows it. Remove the operator or name the property after it.");
                 }
+            }
+        }
+    }
+
+    /**
+     * A finder joins its expressions with one operator: the other operator inside an expression, as in
+     * {@code findByNameAndAgeOrTitle}, would name a property that is not there ({@code ageOrTitle}) and search it.
+     * An entity that has a property of that name keeps the finder.
+     */
+    private void rejectMixedOperators(Class clazz, MethodExpression expression, String operatorInUse, String methodName) {
+        for (int i = 0; i < DEFAULT_OPERATORS.length; i++) {
+            if (DEFAULT_OPERATORS[i].equals(operatorInUse) || !defaultOperationPatterns[i].matcher(expression.propertyName).find()) {
+                continue;
+            }
+            PersistentEntity entity = mappingContext.getPersistentEntity(clazz.getName());
+            if (entity == null || entity.getPropertyByName(expression.propertyName) == null) {
+                throw new IllegalArgumentException("The dynamic finder [" + methodName + "] joins its expressions with [" + operatorInUse +
+                        "] and also has [" + DEFAULT_OPERATORS[i] + "] inside the expression [" + expression.propertyName +
+                        "], which is not a property. A finder takes one operator: use only And or only Or, or a where query.");
             }
         }
     }
