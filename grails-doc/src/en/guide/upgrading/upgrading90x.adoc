@@ -1861,15 +1861,18 @@ What stands after `grails` is read by other rules than the Grails shell had.
 * Write out short forms that a script uses, or check them with `grails help <short form>`.
 * A script that went on after a `grails` command whatever it answered checks the exit code: 2 means that nothing was run.
 
-==== 44. The Commands That Build, Test and Run a Project Run Its Gradle Wrapper
+==== 44. The Commands That Build, Test and Run a Project Run the Gradle of Its Wrapper
 
-The Grails shell ran the build of a project through the Gradle Tooling API. The `grails` command runs the Gradle wrapper of the project, `gradlew` or `gradlew.bat`, as a process, with the arguments the command stands for, and what Gradle writes goes to the terminal as it is. See link:commandLine.html#gradleBuild[Building with Gradle].
+The Grails shell ran the build of a project through the Gradle Tooling API, with a Gradle the shell chose. The `grails` command runs the Gradle that the wrapper of the project names, with the arguments the command stands for. The commands that build, test and run a project (`compile`, `clean`, `assemble`, `war`, `package`, `test-app`, `dependency-report`, `package-plugin`, `publish-plugin`, `run-command`, the commands of the application and the scripts by their names, `run-script`, `console`, and a `run-app` that stays with the application) ask it for the build through the Tooling API. `grails gradle ...`, `run-app --detach` and `shell` start the wrapper, `gradlew` or `gradlew.bat`, as a process. See link:commandLine.html#howGradleIsRun[How the `grails` Command Runs Gradle].
 
-* *A project needs a Gradle wrapper.* In a project that has no `gradlew`, and none in a directory above it that has a `settings.gradle`, the commands that are a build run nothing, say so and end with exit code 1. No other Gradle is used.
+* *A project needs a Gradle wrapper.* In a project that has no `gradlew`, and none in a directory above it that has a `settings.gradle`, the commands that are a build run nothing, say so and end with exit code 1. The same holds for a wrapper without a `gradle/wrapper/gradle-wrapper.properties` that names a distribution. No other Gradle is used.
+* *What Gradle writes through the Tooling API is plain text*, without colors and without the display of progress, on a terminal too. `grails gradle <tasks>` and `./gradlew` show both, and so does every command where the environment variable `GRAILS_GRADLE_RUNNER` is `process`, which has all of them start the wrapper.
+* *A build that fails* is reported, after the report of Gradle, as `Gradle did not succeed: the build failed`; where the wrapper is started the line names the exit code of Gradle, as in `it ended with exit code 1`. The exit code of `grails` is 1 either way.
+* *System properties of the JVM of `grails`*, and those of `GRADLE_OPTS`, do not reach a build that is run through the Tooling API: give them with `-D` after the name of the command.
 * *`gradle`* gives every argument to Gradle as it is and has no options of its own: `grails gradle --help` is the help of Gradle, and `grails help gradle` that of the command.
 * *`test-app`* runs the Gradle task `testApp` of the Grails Gradle plugin, which runs every test phase of the project: every `Test` task of its build, and so also a phase the project adds, such as `functionalTest`, which the command did not run before (see note 53). A test that is named, as in `test-app BookControllerSpec`, is looked for in every phase that is run and runs where it is found. `--continuous` is the continuous build of Gradle. `--integration` alone in a project without `src/integration-test` ends with exit code 1.
 * *`run-app`* takes `--port`, `--host`, `--https` and `--debug-jvm`, also with one dash as the shell spelt them, and no Gradle task or argument after its name: what is for Gradle follows `--`. New are `--query-tail` (note 54), `--detach`, which returns once the application answers and leaves it running until `stop-app`, `--foreground` and `--ready-timeout`.
-* *`stop-app`* stops what `run-app` of this command line started for the project, by the record in `.grails/run`. It does not read `build/run-app.pid`, has no `--port` or `--host`, and does not stop an application that was started with `./gradlew bootRun` or by the Grails shell.
+* *`stop-app`* stops what `run-app` of this command line started for the project, by the record in `.grails/run`. It does not read `build/run-app.pid`, has no `--port` or `--host`, and does not stop an application that was started with `./gradlew bootRun` or by the Grails shell. A `run-app` that stays with the application in another terminal is asked to end it and does; of a `run-app --detach`, the Gradle it started is ended.
 * *`shell`* runs the Groovy shell of the application. In the Grails shell the command only said to run `gradle shell -q`.
 * *`assemble --clean`* runs `clean` first; the shell accepted the option and did nothing for it.
 * *`bug-report`* leaves out key files and files with secrets by their names, follows no links and writes `build/<name>-bug-report-<date>.zip`; it still contains `grails-app/conf` as it is.
@@ -1968,6 +1971,7 @@ The Grails shell found the commands of the plugins of an application itself, on 
 
 * *It starts in a project only.* Outside a project, `grails` without a command shows the help. With `--non-interactive` it shows the help everywhere.
 * *It is left with `exit`*, with Ctrl-D, or with Ctrl-C at the prompt. `quit` is no command.
+* *Its builds are asked of one connection to Gradle*, through the Tooling API, as those of the Grails shell were, so a build after the first begins at once. Such a build does not read what is typed at the terminal. `run-app` leaves the application running there and starts the Gradle wrapper for it, and `shell` starts the wrapper too (note 44).
 * *`!` and `open` are gone* (note 42).
 * *The prompt is `grails>`*, and the line `Enter a command name to run. Use TAB for completion:` is not printed before the first one.
 * *Commands are completed, with their options.* The commands are those of the current directory, the commands of the application and its plugins that the build has listed among them. The names of Gradle tasks after `gradle` are not completed.
@@ -2026,7 +2030,7 @@ None. A job that tests a command line of its own through `GRAILS_REPO_URL` looks
 An IDE integration or a tool that ran Grails commands by starting the class `org.grails.cli.GrailsCli` from the artifact `org.apache.grails:grails-shell-cli` of the version of the project finds no such artifact for Grails 9 (note 39), and a list of commands that is built into such a tool names commands that Grails 9 does not have (note 42).
 
 * The commands that are a build are Gradle tasks, which every IDE with Gradle support runs: `bootRun`, `test`, `integrationTest`, `testApp`, `assemble`, `runCommand`, `runScriptCommand`.
-* A tool that starts the command line uses the artifact `org.apache.grails:grails-cli` and its class `org.apache.grails.cli.GrailsCli` (note 37), with `--plain-output` and `--non-interactive`, and asks `help --json` for the commands of a directory instead of carrying a list of its own. See "Starting the Command Line from a Tool" in xref:commandLine[The Command Line].
+* A tool that starts the command line uses the artifact `org.apache.grails:grails-cli` and its class `org.apache.grails.cli.GrailsCli` (note 37), with `--plain-output` and `--non-interactive`, and asks `help --json` for the commands of a directory instead of carrying a list of its own. The commands that are a build are then run through the Gradle Tooling API in the JVM of the tool, with the Tooling API that is part of that artifact; a tool that would rather have the Gradle wrapper started sets `GRAILS_GRADLE_RUNNER=process` in the environment it starts the command line in (note 44). See "Starting the Command Line from a Tool" in xref:commandLine[The Command Line].
 * What tells a project that Grails 9 generated from an earlier one is its `.grails/project.yml`; the version a project is on is `grailsVersion` in `gradle.properties`.
 
 ===== Required Actions
@@ -2316,7 +2320,7 @@ Every command the Grails shell of Grails 8 had, of itself and of the profiles `b
 
 |`gradle`
 |the shell
-|Kept. Runs the Gradle wrapper of the project and gives it every argument as it is (44).
+|Kept. Starts the Gradle wrapper of the project and gives it every argument as it is (44).
 
 |`help`
 |the shell

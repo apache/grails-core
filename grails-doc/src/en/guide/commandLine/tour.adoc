@@ -23,7 +23,7 @@ Three ideas carry the whole command line:
 
 * A project is created from an _application type_ and a set of _features_.
 * A generated project keeps a _record_ of how it was generated, in its `.grails` directory. The record is what lets the command line add a feature to the project later.
-* Whatever needs the classes of the application (compiling, testing, running, the commands of the application and its plugins) runs in the Gradle build of the project. The `grails` command starts that build with the Gradle wrapper of the project, so `grails` and `./gradlew` always build the same thing.
+* Whatever needs the classes of the application (compiling, testing, running, the commands of the application and its plugins) runs in the Gradle build of the project. The `grails` command runs that build with the Gradle the wrapper of the project names, so `grails` and `./gradlew` always build the same thing. Most commands ask Gradle for the build through its Tooling API, which starts no process and makes a build in the interactive console begin at once; what Gradle writes is then plain text. `grails gradle ...` starts the wrapper itself.
 
 If you know the Grails shell and the profiles of Grails 8 and earlier, link:upgrading.html#upgrading90x[Upgrading from Grails 8 to Grails 9] and link:applicationTypes.html#profilesReplaced[What Became of Profiles] say what changed, and link:upgrading.html#cliMappingGrails8[note 55 of the upgrade notes] has every command of Grails 8 with what it is now.
 

@@ -46,4 +46,4 @@ Arguments:
 
 * `gradle arguments` - The tasks to run and the options of Gradle
 
-Everything after `gradle` is given to Gradle as it is, the options too. So `grails gradle --help` is the help of Gradle, and `grails help gradle` shows the help of this command. In a Gradle build of several projects the wrapper of the root of the build is run, in the directory of the project. See the user guide section on link:{guidePath}commandLine.html#gradleBuild[Building with Gradle] for the details.
+Everything after `gradle` is given to Gradle as it is, the options too, and Gradle is given the terminal, so it shows its colors and its progress. So `grails gradle --help` is the help of Gradle, and `grails help gradle` shows the help of this command. In a Gradle build of several projects the wrapper of the root of the build is run, in the directory of the project. See the user guide section on link:{guidePath}commandLine.html#gradleBuild[Building with Gradle] for the details.

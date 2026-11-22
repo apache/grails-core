@@ -46,7 +46,7 @@ Usage:
 grails run-app [--port=PORT] [--host=HOST] [--https] [--debug-jvm] [--query-tail] [--detach | --foreground] [--ready-timeout=SECONDS] [-Dname=value]... [-Pname=value]... [-- <<gradle arguments>>]
 ----
 
-`run-app` runs the Gradle task `bootRun` of the project for the development environment, or for the one `-Dgrails.env=NAME` after the command names. It stays with the application until it ends or the command is cancelled; in interactive mode it returns to the prompt when the application answers on its port and leaves it running until link:stop-app.html[stop-app].
+`run-app` runs the Gradle task `bootRun` of the project for the development environment, or for the one `-Dgrails.env=NAME` after the command names. It stays with the application until it ends or the command is cancelled, by Ctrl-C or by link:stop-app.html[stop-app] in another terminal; in interactive mode it returns to the prompt when the application answers on its port and leaves it running until link:stop-app.html[stop-app]. Where it stays, the build is run through the Gradle Tooling API; where it leaves the application running, as with `--detach`, it starts the Gradle wrapper of the project.
 
 Options:
 
