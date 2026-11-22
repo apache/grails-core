@@ -27,13 +27,19 @@ import org.hibernate.Session
 import org.springframework.transaction.support.TransactionSynchronizationManager
 
 /**
- * The session of the secondary datasource that the open session in view interceptor has bound to the current
- * thread, and the one an asynchronous action of the scenario controller ran with.
+ * The sessions that the open session in view interceptor has bound to the current thread, and the ones an
+ * asynchronous action of the scenario controllers ran with.
  */
 class RequestSessions {
 
     static volatile CountDownLatch release = new CountDownLatch(1)
     static volatile Session asyncSecondarySession
+    static volatile Session asyncDefaultSession
+
+    static Session defaultSession() {
+        final sessionFactory = Holders.applicationContext.getBean(HibernateDatastore).sessionFactory
+        ((SessionHolder) TransactionSynchronizationManager.getResource(sessionFactory))?.session
+    }
 
     static Session secondary() {
         final sessionFactory = Holders.applicationContext.getBean(HibernateDatastore)
