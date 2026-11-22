@@ -36,7 +36,8 @@ import picocli.CommandLine
                 'Stops the Grails application that run-app started for this project.',
                 'Ends the Gradle that run-app started, and with it every process below it. The application ends with them:',
                 'it is one of them, or it is ended by the Gradle daemon that runs the build, when the Gradle it worked for is gone.',
-                'The command then waits until nothing answers on the port of the application any more.',
+                'The command then waits until nothing takes connections on the port of the application any more,',
+                'and says so when the application had not taken its port yet: its end is then not seen.',
                 'Nothing else is ended: a process is ended only when it is the one run-app recorded in .grails/run.'
         ])
 @CompileStatic
@@ -92,18 +93,26 @@ class StopAppCommand extends InProjectCommand {
                 // then that run-app says that Gradle did not succeed
             }
         }
+        // what the port says afterwards is the end of the application only when it had the port before
+        boolean answered = running.port > 0 && ApplicationPort.isOpen(running.port)
         if (!GradleRunner.stop(running.process, STOP_SECONDS)) {
             err("Process ${running.pid}, or one it started, has not ended. The record was kept: run stop-app again")
             return 1
         }
         running.forget()
-        // A Gradle daemon that was there before run-app is not below what was ended: it cancels the build
-        // when the Gradle it worked for is gone, and ends the application then. That it did is seen at
-        // the port, and only there.
+        // A Gradle daemon is not below what was ended, whether it was there before run-app or was started
+        // for it: it cancels the build when the Gradle it worked for is gone, and ends the application
+        // then. That it did is seen at the port, and only there.
         if (running.port > 0 && !closed(running.port)) {
             err("Gradle was stopped, but something answers on port ${running.port} still after ${PORT_SECONDS} seconds: the application may take longer to end, or it is another one. " +
                     'Nothing else was stopped')
             return 1
+        }
+        if (running.port > 0 && !answered) {
+            // an application that was still starting: a port nothing had taken says nothing by being free
+            out("| Gradle was stopped. Nothing took connections on port ${running.port} yet, so the end of the application was not seen there: " +
+                    'an application that was starting is ended with its build.')
+            return 0
         }
         out('| Application stopped.')
         return 0

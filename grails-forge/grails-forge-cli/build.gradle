@@ -134,6 +134,9 @@ tasks.named('test', Test).configure { Test test ->
     if (providers.gradleProperty('pluginIndex').present) {
         test.systemProperty('forge.pluginIndex', providers.gradleProperty('pluginIndex').get())
     }
+    // RunAppReadinessSpec holds the command line to what it and grails-startup-progress agree on, which is written down there
+    test.inputs.file(rootProject.layout.projectDirectory.file('../grails-startup-progress/src/test/resources/org/apache/grails/startup/run-app-protocol.properties'))
+            .withPropertyName('runAppProtocol').withPathSensitivity(PathSensitivity.NONE)
     // FormerCommandsSpec holds the guide to the table of the commands of earlier versions
     test.inputs.file(rootProject.layout.projectDirectory.file('../grails-doc/src/en/guide/commandLine.adoc'))
             .withPropertyName('commandLineGuide').withPathSensitivity(PathSensitivity.NONE)

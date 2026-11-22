@@ -413,22 +413,31 @@ class RunAppCommand extends GradleEnvironmentCommand {
     // null when the application answers; otherwise why it does not, after what was started has ended
     private String waitFor(ProcessHandle started, int answersOn, AtomicBoolean ending) {
         long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(readyTimeout)
+        ApplicationPort.Start start = ApplicationPort.start(answersOn)
         while (!ending.get()) {
             if (!started.isAlive()) {
                 return "Gradle ended before the application answered on port ${answersOn}"
             }
             // an answer counts while what was started is still there: a port that another program took is not the application's
-            if (ApplicationPort.isReady(answersOn)) {
+            ApplicationPort.Started answer = start.ask()
+            if (answer == ApplicationPort.Started.READY) {
                 if (started.isAlive()) {
                     return null
                 }
                 continue
             }
+            if (answer == ApplicationPort.Started.FAILED && started.isAlive()) {
+                // said by the application itself, whose process need not end for it: one that is restarted on a change stays
+                GradleRunner.stop(started, STOP_SECONDS)
+                return "The application failed to start: its startup progress says so on port ${answersOn}. What was started was stopped"
+            }
             if (System.nanoTime() > deadline) {
                 boolean accepts = ApplicationPort.isOpen(answersOn)
                 GradleRunner.stop(started, STOP_SECONDS)
-                return "The application did not answer on port ${answersOn} of this computer within ${readyTimeout} seconds" +
-                        (accepts ? ': the port takes connections, and no answer to an HTTP request came from it' : '') +
+                String seen = !accepts ? '' : start.isReported() ?
+                        ': its startup progress answers there, and has not said that the application is ready' :
+                        ': the port takes connections, and no answer to an HTTP request came from it'
+                return "The application did not answer on port ${answersOn} of this computer within ${readyTimeout} seconds" + seen +
                         '. The build was still running, and was stopped. ' +
                         'If the application answers on another port, give that with --port; if it needs longer, give it longer with --ready-timeout'
             }
