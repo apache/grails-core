@@ -102,7 +102,8 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
      * Opens the default session and applies {@link #applyFlushMode its flush mode}. The session is not bound yet, so
      * when applying the flush mode fails, it is closed here, before the failure is thrown on: any failure, as an
      * override written in Groovy can throw a checked exception it does not declare. A {@link HibernateException} from
-     * either step is wrapped, as the parent class does.
+     * either step is wrapped, as the parent class does, and a failure to close the session is attached to the failure
+     * that is thrown.
      */
     @Override
     protected Session openSession() throws DataAccessResourceFailureException {
@@ -116,12 +117,13 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
         }
         try {
             applyFlushMode(session);
-        } catch (Throwable ex) {
+        } catch (HibernateException ex) {
+            DataAccessResourceFailureException failure = new DataAccessResourceFailureException("Could not open Hibernate Session", ex);
             // not bound yet, so afterCompletion would not find it
-            SessionFactoryUtils.closeSession(session);
-            if (ex instanceof HibernateException) {
-                throw new DataAccessResourceFailureException("Could not open Hibernate Session", ex);
-            }
+            closeSession(session, failure);
+            throw failure;
+        } catch (Throwable ex) {
+            closeSession(session, ex);
             throw ex;
         }
         return session;
@@ -152,7 +154,7 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
                         TransactionSynchronizationManager.bindResource(sf, new SessionHolder(session));
                     } catch (Throwable ex) {
                         // not bound yet, so the release below would not find it
-                        SessionFactoryUtils.closeSession(session);
+                        closeSession(session, ex);
                         throw ex;
                     }
                 }
@@ -168,18 +170,67 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
     /**
      * Releases what a {@link #preHandle} that failed partway acquired, since Spring calls {@link #afterCompletion}
      * only on interceptors whose preHandle completed: the sessions of the other datasources it opened or joined, then
-     * the default session. A failure to release one is attached to the original failure, which preHandle rethrows.
+     * the default session. A failure to release one, closing a session too, is attached to the original failure,
+     * which preHandle rethrows.
      */
     private void releaseAfterFailedPreHandle(WebRequest request, int acquired, Throwable failure) {
         try {
-            closeAdditionalSessions(request, acquired, false);
+            closeAdditionalSessions(request, acquired, false, failure);
         } catch (Throwable releaseEx) {
-            failure.addSuppressed(releaseEx);
+            attach(failure, releaseEx);
         }
         try {
-            super.afterCompletion(request, null);
+            releaseDefaultSession(request, failure);
         } catch (Throwable releaseEx) {
-            failure.addSuppressed(releaseEx);
+            attach(failure, releaseEx);
+        }
+    }
+
+    /**
+     * Releases the default session as the parent's {@link #afterCompletion} does, except that a failure to close it is
+     * attached to {@code failure} rather than logged: counts it down when the request found it bound, and otherwise
+     * unbinds and closes it.
+     */
+    private void releaseDefaultSession(WebRequest request, Throwable failure) {
+        String participateAttributeName = getParticipateAttributeName();
+        Integer count = (Integer) request.getAttribute(participateAttributeName, WebRequest.SCOPE_REQUEST);
+        if (count != null) {
+            if (count > 1) {
+                request.setAttribute(participateAttributeName, count - 1, WebRequest.SCOPE_REQUEST);
+            } else {
+                request.removeAttribute(participateAttributeName, WebRequest.SCOPE_REQUEST);
+            }
+            return;
+        }
+        SessionHolder sessionHolder =
+                (SessionHolder) TransactionSynchronizationManager.unbindResourceIfPossible(getSessionFactory());
+        if (sessionHolder != null) {
+            closeSession(sessionHolder.getSession(), failure);
+        }
+    }
+
+    /**
+     * Closes a session this interceptor opened. A failure to close it is attached to {@code failure}, the failure the
+     * caller is about to throw, so that it is not lost; without one, it is logged, as the parent class does.
+     */
+    private void closeSession(Session session, Throwable failure) {
+        if (failure == null) {
+            SessionFactoryUtils.closeSession(session);
+            return;
+        }
+        try {
+            if (session.isOpen()) {
+                session.close();
+            }
+        } catch (Throwable closeEx) {
+            attach(failure, closeEx);
+        }
+    }
+
+    /** Attaches {@code other} to {@code failure} as suppressed, unless it is that very failure. */
+    private static void attach(Throwable failure, Throwable other) {
+        if (other != failure) {
+            failure.addSuppressed(other);
         }
     }
 
@@ -243,7 +294,7 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
     @Override
     public void afterCompletion(WebRequest request, Exception ex) throws DataAccessException {
         try {
-            closeAdditionalSessions(request, additionalSessionFactories.size(), false);
+            closeAdditionalSessions(request, additionalSessionFactories.size(), false, null);
         } finally {
             super.afterCompletion(request, ex);
         }
@@ -258,11 +309,18 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
      * <p>The parent class only unbinds the default session, and leaves closing it to the interceptors it registers for
      * a {@code Callable} or {@code DeferredResult}. A promise or {@code startAsync()} in a Grails controller starts
      * asynchronous handling without them, so the default session this interceptor opened is closed here too.
+     *
+     * <p>When a flush fails, that failure is thrown once every session is released, and a failure to close one is
+     * attached to it.
      */
     @Override
     public void afterConcurrentHandlingStarted(WebRequest request) {
+        Throwable flushFailure = null;
         try {
-            closeAdditionalSessions(request, additionalSessionFactories.size(), true);
+            closeAdditionalSessions(request, additionalSessionFactories.size(), true, null);
+        } catch (Throwable ex) {
+            flushFailure = ex;
+            throw ex;
         } finally {
             if (isGrailsAsync(request) && !isParticipating(request) &&
                     TransactionSynchronizationManager.hasResource(getSessionFactory())) {
@@ -271,7 +329,7 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
                 if (logger.isDebugEnabled()) {
                     logger.debug("Closing Hibernate Session in OpenSessionInViewInterceptor as asynchronous handling starts");
                 }
-                SessionFactoryUtils.closeSession(sessionHolder.getSession());
+                closeSession(sessionHolder.getSession(), flushFailure);
             } else {
                 super.afterConcurrentHandlingStarted(request);
             }
@@ -296,10 +354,15 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
 
     /**
      * Closes the sessions this request opened for the first {@code count} other datasources, and counts down those it
-     * joined. With {@code flushFirst}, flushes each it opened first when Hibernate allows it.
+     * joined. With {@code flushFirst}, flushes each it opened first when Hibernate allows it, and throws the first
+     * flush that failed once every session is released.
+     *
+     * <p>A failure to close a session is attached to {@code failure}, the failure the caller is about to throw, or
+     * else to the flush failure this throws; with neither, it is logged, as the parent class does.
      */
-    private void closeAdditionalSessions(WebRequest request, int count, boolean flushFirst) {
+    private void closeAdditionalSessions(WebRequest request, int count, boolean flushFirst, Throwable failure) {
         Throwable firstFlushFailure = null;
+        List<Map.Entry<String, Throwable>> closeFailures = new ArrayList<>();
         for (int i = count - 1; i >= 0; i--) {
             AdditionalSessionFactoryConfig config = additionalSessionFactories.get(i);
             SessionFactory sf = config.sessionFactory;
@@ -329,10 +392,20 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
                     logger.debug("Closing additional Hibernate Session for datasource '" + config.connectionName + "' in OpenSessionInViewInterceptor");
                 }
                 try {
-                    SessionFactoryUtils.closeSession(session);
-                } catch (RuntimeException closeEx) {
-                    logger.error("Unexpected exception on closing additional Hibernate Session for datasource '" + config.connectionName + "'", closeEx);
+                    if (session.isOpen()) {
+                        session.close();
+                    }
+                } catch (Throwable closeEx) {
+                    closeFailures.add(Map.entry(config.connectionName, closeEx));
                 }
+            }
+        }
+        Throwable reportTo = failure != null ? failure : firstFlushFailure;
+        for (Map.Entry<String, Throwable> closeFailure : closeFailures) {
+            if (reportTo != null) {
+                attach(reportTo, closeFailure.getValue());
+            } else {
+                logger.error("Unexpected exception on closing additional Hibernate Session for datasource '" + closeFailure.getKey() + "'", closeFailure.getValue());
             }
         }
         if (firstFlushFailure != null) {
