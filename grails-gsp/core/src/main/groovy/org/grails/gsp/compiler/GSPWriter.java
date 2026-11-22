@@ -37,10 +37,21 @@ public class GSPWriter extends PrintWriter {
     private int[] lineNumbers = new int[1000];
     //private static final Pattern LINE_BREAK = Pattern.compile("\\r\\n|\\n|\\r");
     private GroovyPageParser parse;
+    private final boolean carriageReturnEndsLine;
+    private boolean afterCarriageReturn;
 
     public GSPWriter(Writer out, GroovyPageParser parse) {
+        this(out, parse, GroovyCompilerLines.carriageReturnEndsLine());
+    }
+
+    /**
+     * @param carriageReturnEndsLine whether the compiler of the generated source takes a carriage
+     * return that no line feed follows for the end of a line, which is what {@link GroovyCompilerLines} asks it
+     */
+    GSPWriter(Writer out, GroovyPageParser parse, boolean carriageReturnEndsLine) {
         super(out);
         this.parse = parse;
+        this.carriageReturnEndsLine = carriageReturnEndsLine;
     }
 
     @Override
@@ -69,12 +80,22 @@ public class GSPWriter extends PrintWriter {
      * What is printed can have line breaks of its own, an expression or a scriptlet of several lines
      * has: each ends a line of the generated source as {@link #println()} does, and is recorded as one.
      * A line is what the Groovy compiler counts as one when it names the line of an error or of a
-     * frame, and it counts line feeds and nothing else: a carriage return, alone or in front of a line
-     * feed, ends no line for it, and neither does any other character.
+     * frame. Every version of it counts a line feed, and a carriage return in front of a line feed
+     * ends no line of its own. A carriage return that no line feed follows ends a line for some
+     * versions and none for others, so the compiler that is there is asked. No other character ends a line.
      */
     private void written(char c) {
         if (c == '\n') {
+            // after a carriage return that was counted, the line feed is the rest of the same line break
+            if (!afterCarriageReturn) {
+                addLineNumber();
+            }
+            afterCarriageReturn = false;
+        } else if (c == '\r' && carriageReturnEndsLine) {
             addLineNumber();
+            afterCarriageReturn = true;
+        } else {
+            afterCarriageReturn = false;
         }
     }
 
@@ -105,7 +126,10 @@ public class GSPWriter extends PrintWriter {
     @Override
     public void println() {
         // the line separator goes to the target as it is, and not through the methods that count
-        addLineNumber();
+        if (!(afterCarriageReturn && System.lineSeparator().startsWith("\n"))) {
+            addLineNumber();
+        }
+        afterCarriageReturn = false;
         super.println();
     }
 

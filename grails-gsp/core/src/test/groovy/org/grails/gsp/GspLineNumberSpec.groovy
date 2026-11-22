@@ -101,27 +101,23 @@ class GspLineNumberSpec extends Specification {
     }
 
     @Unroll
-    void "the Groovy compiler, whose lines the table of a page is of, takes #what for #lines"() {
-        when: 'a class there is not is named after a comment that has the characters in it'
-        new GroovyShell().parse("/* a${separator}b */ new no.such.Thing()")
+    void "the Groovy compiler, whose lines the table of a page is of, takes #what for #lines, or for #withCarriageReturns where a carriage return by itself ends a line"() {
+        expect: 'a class there is not is named after a comment that has the characters in it, on the line the compiler counts'
+        linesTheCompilerCounts(separator) == (linesTheCompilerCounts('\r') == 1 ? withCarriageReturns : lines)
 
-        then:
-        MultipleCompilationErrorsException e = thrown()
-        ExceptionUtils.extractLineNumber(e) == lines + 1
-
-        where:
-        what                                  | separator    || lines
-        'a line feed'                         | '\n'         || 1
-        'a carriage return and a line feed'   | '\r\n'       || 1
-        'a carriage return by itself'         | '\r'         || 0
-        'two carriage returns'                | '\r\r'       || 0
-        'a line feed and a carriage return'   | '\n\r'       || 1
-        'two carriage returns and a line feed' | '\r\r\n'    || 1
-        'a form feed'                         | '\f'         || 0
-        'a vertical tab'                      | '\u000B'     || 0
-        'a next line character'               | '\u0085'     || 0
-        'a line separator'                    | '\u2028'     || 0
-        'a paragraph separator'               | '\u2029'     || 0
+        where: 'a line feed is a line and a carriage return in front of it is none of its own for every compiler; Groovy up to 6.0.0 counts nothing else, and later versions count a carriage return by itself'
+        what                                   | separator || lines | withCarriageReturns
+        'a line feed'                          | '\n'      || 1     | 1
+        'a carriage return and a line feed'    | '\r\n'    || 1     | 1
+        'a carriage return by itself'          | '\r'      || 0     | 1
+        'two carriage returns'                 | '\r\r'    || 0     | 2
+        'a line feed and a carriage return'    | '\n\r'    || 1     | 2
+        'two carriage returns and a line feed' | '\r\r\n'  || 1     | 2
+        'a form feed'                          | '\f'      || 0     | 0
+        'a vertical tab'                       | '\u000B'  || 0     | 0
+        'a next line character'                | '\u0085'  || 0     | 0
+        'a line separator'                     | '\u2028'  || 0     | 0
+        'a paragraph separator'                | '\u2029'  || 0     | 0
     }
 
     @Unroll
@@ -195,6 +191,15 @@ class GspLineNumberSpec extends Specification {
     void "a comment is still left out of what a page writes"() {
         expect:
         render('one\n<%-- a\n b --%>two\n%{-- c\n d --}%\nthree') == 'one\ntwo\n\nthree'
+    }
+
+    private static int linesTheCompilerCounts(String separator) {
+        try {
+            new GroovyShell().parse("/* a${separator}b */ new no.such.Thing()")
+        } catch (MultipleCompilationErrorsException e) {
+            return ExceptionUtils.extractLineNumber(e) - 1
+        }
+        throw new IllegalStateException('a class there is not was compiled')
     }
 
     private String render(String source) {
