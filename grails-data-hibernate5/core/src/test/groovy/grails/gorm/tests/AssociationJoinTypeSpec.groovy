@@ -18,12 +18,12 @@
  */
 package grails.gorm.tests
 
-import spock.lang.IgnoreIf
 import grails.gorm.DetachedCriteria
 import grails.gorm.annotation.Entity
 import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.hibernate.Hibernate
+import spock.lang.IgnoreIf
 
 import jakarta.persistence.criteria.JoinType
 
@@ -98,6 +98,56 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
         manager.session.clear()
     }
 
+    void 'a requested left join applies to an existing criteria #associationForm regardless of #request'() {
+        when:
+        final arguments = request == 'fetch' ? [fetch: [club: JoinType.LEFT]] : [:]
+        final results = Team.createCriteria().list(arguments) {
+            if (request == 'before') {
+                join('club', JoinType.LEFT)
+            }
+            if (associationForm == 'alias') {
+                createAlias('club', 'c')
+                or {
+                    eq('c.name', 'Chelsea')
+                    eq('name', 'Unattached First Team')
+                }
+            }
+            else {
+                or {
+                    club { eq('name', 'Chelsea') }
+                    eq('name', 'Unattached First Team')
+                }
+            }
+            if (request == 'after') {
+                join('club', JoinType.LEFT)
+            }
+        }
+
+        then:
+        results*.name.sort() == ['Chelsea First Team', 'Unattached First Team']
+
+        where:
+        [associationForm, request] << [['block', 'alias'], ['before', 'after', 'fetch']].combinations()
+    }
+
+    void 'a paged criteria requested join keeps every element of a collection on its path'() {
+        given:
+        saveTeamWithAPlayerWithoutContract()
+
+        when:
+        final results = Team.createCriteria().list(max: 2, offset: offset, fetch: ['players.contract': joinType]) {
+            order('name', 'desc')
+        }
+        final squad = results.find { it.name == 'Squad Team' }
+
+        then:
+        squad != null
+        squad.players*.name.sort() == ['Squad Player A', 'Squad Player B', 'Squad Player without contract']
+
+        where:
+        [joinType, offset] << [[JoinType.LEFT, JoinType.INNER], [0, 1]].combinations()
+    }
+
     void 'a paged detached criteria keeps the alias of the queried class when the total is read'() {
         when:
         final results = new DetachedCriteria(Team, 't').eq('t.name', 'Arsenal First Team').list(max: 2)
@@ -165,6 +215,38 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
         expect:
         query.list()*.name.sort() == TEAMS_WITH_A_CLUB
         query.count() == 4
+    }
+
+    void 'a bulk #operation applies the join requested by a subquery inside a junction'() {
+        given:
+        new Team(name: 'Bulk linked', club: Club.findByName('Arsenal')).save(failOnError: true)
+        new Team(name: 'Bulk unlinked').save(failOnError: true, flush: true)
+        manager.session.clear()
+        final subquery = Team.where { name ==~ 'Bulk%' }.join('club', JoinType.INNER).id()
+        final query = {
+            new DetachedCriteria(Team).build {
+                or {
+                    inList('id', subquery)
+                    eq('name', 'No matching team')
+                }
+            }
+        }
+
+        expect:
+        query.call().list()*.name == ['Bulk linked']
+
+        when:
+        final changed = operation == 'update' ? query.call().updateAll(name: 'Bulk updated') : query.call().deleteAll()
+        manager.session.clear()
+
+        then:
+        changed == 1
+        Team.findByName('Bulk unlinked') != null
+        Team.findByName('Bulk linked') == null
+        (Team.findByName('Bulk updated') != null) == (operation == 'update')
+
+        where:
+        operation << ['update', 'delete']
     }
 
     void 'updateAll updates the teams that list returns when the query requests #description'() {
@@ -252,8 +334,9 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
         Player.list()*.name == ['Unattached Player']
     }
 
-    void 'a right join has a row without a team for a club that no team refers to'() {
+    void 'a right join keeps one null row for each club that no team refers to'() {
         given:
+        new Club(name: 'Another teamless club').save()
         new Club(name: 'Teamless').save(flush: true)
         manager.session.clear()
 
@@ -263,8 +346,31 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
 
         then: 'the team without a club is left out, and the club without a team adds a row without a team'
         results.findAll { it != null }*.name.sort() == TEAMS_WITH_A_CLUB
-        results.count { it == null } == 1
-        query.count() == 5
+        results.count { it == null } == 2
+        query.count() == 6
+
+        and:
+        query.list(max: 10).count { it == null } == 2
+        query.list(max: 10).totalCount == 6
+    }
+
+    void 'a paged #api with a requested #joinType join through a collection keeps its elements'() {
+        given:
+        saveTeamWithAPlayerWithoutContract()
+
+        when:
+        final arguments = [max: 2, offset: offset, sort: 'name', order: 'desc']
+        final results = api == 'nested' ? Player.where { name ==~ '%' }.list(arguments + [fetch: ['team.players': joinType]]) :
+                api == 'detached' ? new DetachedCriteria(Team).join('players.contract', joinType).list(arguments) :
+                        Team.where { name ==~ '%' }.list(arguments + [fetch: ['players.contract': joinType]])
+        final squad = api == 'nested' ? results.find { it.team.name == 'Squad Team' }.team : results.find { it.name == 'Squad Team' }
+
+        then:
+        squad != null
+        squad.players*.name.sort() == ['Squad Player A', 'Squad Player B', 'Squad Player without contract']
+
+        where:
+        [joinType, offset, api] << [[JoinType.INNER, JoinType.LEFT], [0, 1], ['where', 'detached', 'nested']].combinations()
     }
 
     void 'a fetch mode that list requests replaces a join type that the query requested before'() {
@@ -310,6 +416,21 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
         then:
         updated == 1
         AssociationJoinTypeShelf.list().collect { "${it.name}: ${it.tags*.name.sort()}" }.sort() == ['First untagged shelf: []', 'Other shelf: [y]', 'Updated shelf: [x]']
+    }
+
+    void 'a copied query keeps its replacement fetch mode when the original requests another join type'() {
+        given:
+        final original = new DetachedCriteria(Team).join('club', JoinType.INNER).join('club')
+        final copy = original.clone()
+
+        when:
+        original.join('club', JoinType.INNER)
+
+        then:
+        copy.list()*.name.sort() == ALL_TEAMS
+        copy.count() == ALL_TEAMS.size()
+        original.list()*.name.sort() == TEAMS_WITH_A_CLUB
+        original.count() == TEAMS_WITH_A_CLUB.size()
     }
 
     protected void saveShelves() {
@@ -554,7 +675,8 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
         then:
         results.size() == 2
         results.totalCount == 4
-        results.every { Hibernate.isInitialized(it.players) }
+        results.every { !Hibernate.isInitialized(it.players) }
+        results.every { it.players.size() == 1 }
         query.join('players', joinType).count() == 4
 
         where:
@@ -999,8 +1121,9 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
         results.size() == 2
         results.totalCount == expectedTotal
 
-        and: 'the collection is fetched'
-        results.every { Hibernate.isInitialized(it.players) }
+        and: 'the limited rows do not initialize a partial collection'
+        results.every { !Hibernate.isInitialized(it.players) }
+        results.every { it.players.size() == 1 }
 
         where:
         joinType       || expectedTotal
@@ -1064,14 +1187,16 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
 
         and: 'returned once for each of its players, as a criteria query returns an instance for a fetched collection'
         results.size() == 7
-        paged.size() == 7
+
+        and: 'the paged query loads the collection separately and returns each root once'
+        paged.size() == 5
 
         and: 'the inner join does not leave the player without a contract out of the fetched collection'
         Hibernate.isInitialized(squad.players)
         squad.players*.name.sort() == ['Squad Player A', 'Squad Player B', 'Squad Player without contract']
     }
 
-    void 'an association that a criteria query joins through an alias keeps its join when join requests a join type'() {
+    void 'a requested inner join reuses the alias of a criteria query'() {
         when:
         final results = Player.createCriteria().list {
             createAlias('team', 't')
@@ -1084,7 +1209,7 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
         results*.name.sort() == ['Arsenal Player', 'Chelsea Player', 'MU Player']
     }
 
-    void 'an association that a criteria query has criteria on keeps its join when join requests a join type'() {
+    void 'criteria on an association use its requested inner join'() {
         when:
         final results = Team.createCriteria().list {
             join('club', JoinType.INNER)

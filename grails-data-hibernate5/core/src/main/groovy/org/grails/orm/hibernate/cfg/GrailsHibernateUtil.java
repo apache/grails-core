@@ -339,17 +339,6 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
         return root instanceof CriteriaImpl ? (CriteriaImpl) root : null;
     }
 
-    private static FetchMode getRequestedFetchMode(Criteria root, String associationPath) {
-        CriteriaImpl criteria = getRootCriteria(root);
-        if (criteria == null) {
-            return null;
-        }
-        // Hibernate records a fetch mode under the path from the alias of the root criteria
-        String rootAlias = criteria.getAlias();
-        String path = rootAlias != null && !associationPath.startsWith(rootAlias + '.') ? rootAlias + '.' + associationPath : associationPath;
-        return criteria.getFetchMode(path);
-    }
-
     /**
      * Returns the alias of the join that the criteria have for an association path, whichever part
      * of the query made the join.
@@ -364,23 +353,11 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
     }
 
     /**
-     * Returns the criteria of the join that a query has for an association path, whichever part of
-     * the query made the join.
-     *
-     * @param criteria The root criteria of the query, or the criteria of one of its joins
-     * @param associationPath The path of the association from the root entity
-     * @return The criteria of the join, or null when the query does not join the association
-     */
-    public static Criteria findJoinCriteria(Criteria criteria, String associationPath) {
-        return findCriteria(getRootCriteria(criteria), associationPath);
-    }
-
-    /**
      * Returns the criteria that the root criteria have for an association path, or null.
      */
     private static CriteriaImpl.Subcriteria findCriteria(Criteria root, String associationPath) {
-        if (root instanceof CriteriaImpl) {
-            CriteriaImpl criteria = (CriteriaImpl) root;
+        CriteriaImpl criteria = getRootCriteria(root);
+        if (criteria != null) {
             Iterator<CriteriaImpl.Subcriteria> subcriteria = criteria.iterateSubcriteria();
             while (subcriteria.hasNext()) {
                 CriteriaImpl.Subcriteria existing = subcriteria.next();
@@ -392,10 +369,6 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
         return null;
     }
 
-    /**
-     * Returns the path of a criteria from the root criteria. The path that a criteria is created with
-     * is relative to the criteria it is created from, or starts with the alias of another criteria.
-     */
     private static String getWholePath(CriteriaImpl root, CriteriaImpl.Subcriteria subcriteria) {
         String path = subcriteria.getPath();
         Criteria parent = subcriteria.getParent();
@@ -425,6 +398,17 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
         return null;
     }
 
+    private static FetchMode getRequestedFetchMode(Criteria root, String associationPath) {
+        CriteriaImpl criteria = getRootCriteria(root);
+        if (criteria == null) {
+            return null;
+        }
+        // Hibernate records a fetch mode under the path from the alias of the root criteria
+        String rootAlias = criteria.getAlias();
+        String path = rootAlias != null && !associationPath.startsWith(rootAlias + '.') ? rootAlias + '.' + associationPath : associationPath;
+        return criteria.getFetchMode(path);
+    }
+
     /**
      * Whether a sort by a property of an association joins the association with a left join, so that the
      * sort keeps the instances whose association is null. That is the case when the
@@ -444,8 +428,7 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
      * Applies the join type that a criteria query requests for an association, with the {@code fetch}
      * argument or with {@code join(String, JoinType)}. The association is fetched, as it is for the
      * {@code 'join'} fetch mode. A fetch mode alone always joins with an outer join, so a join type
-     * is applied by joining each to-one association on the path that the criteria do
-     * not join already; one that they join keeps its join.
+     * is applied to the existing join of the association as well as to a new join.
      * <p>
      * Hibernate fetches a collection only through a left join, and a join through a collection
      * returns an instance once for each element of the collection. A path that ends in a collection,
@@ -494,17 +477,22 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
             currentEntity = associations[i].getAssociatedEntity();
         }
         fetchAssociationsBefore(root, associationPath);
-        if (joinType == null) {
-            return;
-        }
-        if (joinType == jakarta.persistence.criteria.JoinType.LEFT) {
-            for (Association association : associations) {
-                if (association instanceof ToMany || association instanceof Basic) {
-                    return;
+        CriteriaImpl rootCriteria = getRootCriteria(root);
+        if (rootCriteria != null && (rootCriteria.getMaxResults() != null ||
+                rootCriteria.getFirstResult() != null && rootCriteria.getFirstResult() > 0)) {
+            boolean collection = false;
+            String path = "";
+            for (int i = 0; i < tokens.length; i++) {
+                path = i == 0 ? tokens[i] : path + '.' + tokens[i];
+                collection |= associations[i] instanceof ToMany;
+                if (collection) {
+                    root.setFetchMode(path, FetchMode.SELECT);
                 }
             }
         }
-
+        if (joinType == null) {
+            return;
+        }
         String[] paths = new String[tokens.length];
         CriteriaImpl.Subcriteria[] joined = new CriteriaImpl.Subcriteria[tokens.length];
         int unjoinedCollection = -1;
@@ -515,7 +503,7 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
                 unjoinedCollection = i;
             }
         }
-        if (unjoinedCollection >= 0) {
+        if (unjoinedCollection >= 0 && joinType != jakarta.persistence.criteria.JoinType.LEFT) {
             root.add(joinedInSubquery(entity.getName(), root.getAlias(), associationPath));
         }
 
@@ -526,6 +514,17 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
         String parentAlias = null;
         for (int i = 0; i < joinedCount; i++) {
             if (joined[i] != null) {
+                if (i == last && joined[i].getJoinType() != lastJoinType) {
+                    CriteriaImpl.Subcriteria existing = joined[i];
+                    Iterator<CriteriaImpl.Subcriteria> subcriteria = rootCriteria.iterateSubcriteria();
+                    while (subcriteria.hasNext()) {
+                        if (subcriteria.next() == existing) {
+                            subcriteria.remove();
+                            break;
+                        }
+                    }
+                    existing.getParent().createAlias(existing.getPath(), existing.getAlias(), lastJoinType, existing.getWithClause());
+                }
                 parentAlias = joined[i].getAlias();
                 continue;
             }
