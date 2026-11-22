@@ -18,6 +18,7 @@
  */
 package org.grails.plugin.hibernate.support;
 
+import java.lang.reflect.UndeclaredThrowableException;
 import java.util.ArrayList;
 import java.util.IdentityHashMap;
 import java.util.List;
@@ -210,9 +211,9 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
     }
 
     /**
-     * Releases the default session as the parent's {@link #afterCompletion} does, except that a failure to close it is
-     * attached to {@code failure} rather than logged: counts it down when the request found it bound, and otherwise
-     * unbinds and closes it.
+     * Releases the default session as the parent's {@link #afterCompletion} does: counts it down when the request found
+     * it bound, and otherwise unbinds and closes it. A failure to close it is attached to {@code failure} when there
+     * is one, and logged otherwise, as the parent class does.
      */
     private void releaseDefaultSession(WebRequest request, Throwable failure) {
         String participateAttributeName = getParticipateAttributeName();
@@ -250,11 +251,24 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
         }
     }
 
-    /** Attaches {@code other} to {@code failure} as suppressed, unless it is that very failure. */
-    private static void attach(Throwable failure, Throwable other) {
-        if (other != failure) {
-            failure.addSuppressed(other);
+    /**
+     * Attaches {@code other} to {@code failure} as suppressed, unless it is that very failure. When {@code failure}
+     * does not keep suppressed exceptions, {@code other} is logged instead, so that it is not lost.
+     */
+    private void attach(Throwable failure, Throwable other) {
+        if (other == failure) {
+            return;
         }
+        failure.addSuppressed(other);
+        Throwable[] suppressed = failure.getSuppressed();
+        if (suppressed.length == 0 || suppressed[suppressed.length - 1] != other) {
+            logger.error("Unexpected exception on releasing a Hibernate Session in OpenSessionInViewInterceptor", other);
+        }
+    }
+
+    /** @return {@code failure}, or an {@link UndeclaredThrowableException} around it when it is a checked exception */
+    private static Throwable asUnchecked(Throwable failure) {
+        return failure instanceof RuntimeException || failure instanceof Error ? failure : new UndeclaredThrowableException(failure);
     }
 
     @Override
@@ -301,7 +315,7 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
                             if (logger.isDebugEnabled()) {
                                 logger.debug("Additional flush exception for datasource '" + config.connectionName + "'", ex);
                             }
-                            firstFlushException.addSuppressed(ex);
+                            attach(firstFlushException, ex);
                         }
                     }
                 } finally {
@@ -314,12 +328,34 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
         }
     }
 
+    /**
+     * Closes the sessions this request opened, and counts down those it found bound. When the request failed, Spring
+     * passes the failure here and throws it on afterwards, so a failure to release a session is attached to it; without
+     * one, a failure to close a session is logged, as the parent class does.
+     */
     @Override
     public void afterCompletion(WebRequest request, Exception ex) throws DataAccessException {
+        Throwable releaseFailure = null;
         try {
-            closeAdditionalSessions(request, additionalSessionFactories.size(), false, null);
-        } finally {
-            super.afterCompletion(request, ex);
+            closeAdditionalSessions(request, additionalSessionFactories.size(), false, ex);
+        } catch (Throwable releaseEx) {
+            releaseFailure = releaseEx;
+        }
+        try {
+            releaseDefaultSession(request, ex);
+        } catch (Throwable releaseEx) {
+            if (releaseFailure == null) {
+                releaseFailure = releaseEx;
+            } else {
+                attach(releaseFailure, releaseEx);
+            }
+        }
+        if (releaseFailure != null) {
+            if (ex != null) {
+                attach(ex, releaseFailure);
+            } else {
+                ReflectionUtils.rethrowRuntimeException(releaseFailure);
+            }
         }
     }
 
@@ -333,7 +369,7 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
      * a {@code Callable} or {@code DeferredResult}. A promise or {@code startAsync()} in a Grails controller starts
      * asynchronous handling without them, so the default session this interceptor opened is closed here too.
      *
-     * <p>When a flush fails, that failure is thrown once every session is released, and a failure to close one is
+     * <p>When a flush fails, that failure is thrown once every session is released, and a failure to release one is
      * attached to it.
      */
     @Override
@@ -345,17 +381,29 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
             flushFailure = ex;
             throw ex;
         } finally {
-            if (isGrailsAsync(request) && !isParticipating(request) &&
-                    TransactionSynchronizationManager.hasResource(getSessionFactory())) {
-                SessionHolder sessionHolder =
-                        (SessionHolder) TransactionSynchronizationManager.unbindResource(getSessionFactory());
-                if (logger.isDebugEnabled()) {
-                    logger.debug("Closing Hibernate Session in OpenSessionInViewInterceptor as asynchronous handling starts");
+            try {
+                releaseDefaultSessionAsAsyncStarts(request, flushFailure);
+            } catch (Throwable releaseEx) {
+                // the flush failure is on its way out: a release failure is attached to it, not thrown in its place
+                if (flushFailure == null) {
+                    throw releaseEx;
                 }
-                closeSession(sessionHolder.getSession(), flushFailure);
-            } else {
-                super.afterConcurrentHandlingStarted(request);
+                attach(flushFailure, releaseEx);
             }
+        }
+    }
+
+    private void releaseDefaultSessionAsAsyncStarts(WebRequest request, Throwable failure) {
+        if (isGrailsAsync(request) && !isParticipating(request) &&
+                TransactionSynchronizationManager.hasResource(getSessionFactory())) {
+            SessionHolder sessionHolder =
+                    (SessionHolder) TransactionSynchronizationManager.unbindResource(getSessionFactory());
+            if (logger.isDebugEnabled()) {
+                logger.debug("Closing Hibernate Session in OpenSessionInViewInterceptor as asynchronous handling starts");
+            }
+            closeSession(sessionHolder.getSession(), failure);
+        } else {
+            super.afterConcurrentHandlingStarted(request);
         }
     }
 
@@ -378,61 +426,89 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
     /**
      * Closes the sessions this request opened for the first {@code count} other datasources, and counts down those it
      * joined. With {@code flushFirst}, flushes each it opened first when Hibernate allows it, and throws the first
-     * flush that failed once every session is released.
+     * flush that failed once every session is released, in an {@link UndeclaredThrowableException} when it is a
+     * checked exception.
      *
-     * <p>A failure to close a session is attached to {@code failure}, the failure the caller is about to throw, or
-     * else to the flush failure this throws; with neither, it is logged, as the parent class does.
+     * <p>A failure to release one session does not keep the others from being released. It is attached to
+     * {@code failure}, the failure the caller is about to throw, or else to the exception this throws, as are the flush
+     * failures after the first; with neither, it is logged, as the parent class does for a failure to close.
      */
     private void closeAdditionalSessions(WebRequest request, int count, boolean flushFirst, Throwable failure) {
-        Throwable firstFlushFailure = null;
-        List<Map.Entry<String, Throwable>> closeFailures = new ArrayList<>();
+        List<Throwable> flushFailures = new ArrayList<>();
+        List<Map.Entry<String, Throwable>> releaseFailures = new ArrayList<>();
         for (int i = count - 1; i >= 0; i--) {
             AdditionalSessionFactoryConfig config = additionalSessionFactories.get(i);
-            SessionFactory sf = config.sessionFactory;
-            if (decrementParticipateCount(request, sf)) {
-                continue;
-            }
-            SessionHolder sessionHolder = (SessionHolder) TransactionSynchronizationManager.getResource(sf);
-            if (sessionHolder != null) {
-                Session session = sessionHolder.getSession();
-                try {
-                    if (flushFirst && isFlushAllowed(session)) {
-                        if (logger.isDebugEnabled()) {
-                            logger.debug("Flushing additional Hibernate session for datasource '" + config.connectionName + "' as asynchronous handling starts");
-                        }
-                        session.flush();
-                    }
-                } catch (Throwable flushFailure) {
-                    // an Error too, such as a failed assert in a domain's beforeUpdate: every session is released first
-                    if (firstFlushFailure == null) {
-                        firstFlushFailure = flushFailure;
-                    } else {
-                        firstFlushFailure.addSuppressed(flushFailure);
-                    }
-                }
-                TransactionSynchronizationManager.unbindResource(sf);
-                if (logger.isDebugEnabled()) {
-                    logger.debug("Closing additional Hibernate Session for datasource '" + config.connectionName + "' in OpenSessionInViewInterceptor");
-                }
-                try {
-                    if (session.isOpen()) {
-                        session.close();
-                    }
-                } catch (Throwable closeEx) {
-                    closeFailures.add(Map.entry(config.connectionName, closeEx));
-                }
+            try {
+                releaseAdditionalSession(request, config, flushFirst, flushFailures, releaseFailures);
+            } catch (Throwable releaseEx) {
+                releaseFailures.add(Map.entry(config.connectionName, releaseEx));
             }
         }
-        Throwable reportTo = failure != null ? failure : firstFlushFailure;
-        for (Map.Entry<String, Throwable> closeFailure : closeFailures) {
+        Throwable outgoing = failure == null && !flushFailures.isEmpty() ? asUnchecked(flushFailures.remove(0)) : null;
+        Throwable reportTo = failure != null ? failure : outgoing;
+        for (Throwable flushFailure : flushFailures) {
+            attach(reportTo, flushFailure);
+        }
+        for (Map.Entry<String, Throwable> releaseFailure : releaseFailures) {
             if (reportTo != null) {
-                attach(reportTo, closeFailure.getValue());
+                attach(reportTo, releaseFailure.getValue());
             } else {
-                logger.error("Unexpected exception on closing additional Hibernate Session for datasource '" + closeFailure.getKey() + "'", closeFailure.getValue());
+                logger.error("Unexpected exception on closing additional Hibernate Session for datasource '" + releaseFailure.getKey() + "'", releaseFailure.getValue());
             }
         }
-        if (firstFlushFailure != null) {
-            ReflectionUtils.rethrowRuntimeException(firstFlushFailure);
+        if (outgoing instanceof RuntimeException) {
+            throw (RuntimeException) outgoing;
+        }
+        if (outgoing != null) {
+            throw (Error) outgoing;
+        }
+    }
+
+    /**
+     * Releases the session of one other datasource: counts it down when the request found it bound, and otherwise
+     * flushes it first when asked to, unbinds the holder this request bound, unless something has already taken it
+     * off, and closes the session. A flush failure, an Error too, such as a failed assert in a domain's beforeUpdate,
+     * and a failure to unbind or close are collected, so that every step still runs.
+     */
+    private void releaseAdditionalSession(WebRequest request, AdditionalSessionFactoryConfig config, boolean flushFirst,
+            List<Throwable> flushFailures, List<Map.Entry<String, Throwable>> releaseFailures) {
+        SessionFactory sf = config.sessionFactory;
+        if (decrementParticipateCount(request, sf)) {
+            return;
+        }
+        SessionHolder sessionHolder = (SessionHolder) TransactionSynchronizationManager.getResource(sf);
+        if (sessionHolder == null) {
+            return;
+        }
+        Session session = sessionHolder.getSession();
+        if (flushFirst) {
+            try {
+                if (isFlushAllowed(session)) {
+                    if (logger.isDebugEnabled()) {
+                        logger.debug("Flushing additional Hibernate session for datasource '" + config.connectionName + "' as asynchronous handling starts");
+                    }
+                    session.flush();
+                }
+            } catch (Throwable flushFailure) {
+                flushFailures.add(flushFailure);
+            }
+        }
+        try {
+            if (TransactionSynchronizationManager.getResource(sf) == sessionHolder) {
+                TransactionSynchronizationManager.unbindResource(sf);
+            }
+        } catch (Throwable unbindEx) {
+            releaseFailures.add(Map.entry(config.connectionName, unbindEx));
+        }
+        if (logger.isDebugEnabled()) {
+            logger.debug("Closing additional Hibernate Session for datasource '" + config.connectionName + "' in OpenSessionInViewInterceptor");
+        }
+        try {
+            if (session.isOpen()) {
+                session.close();
+            }
+        } catch (Throwable closeEx) {
+            releaseFailures.add(Map.entry(config.connectionName, closeEx));
         }
     }
 

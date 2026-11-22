@@ -18,6 +18,8 @@
  */
 package org.grails.plugin.hibernate.support
 
+import java.lang.reflect.UndeclaredThrowableException
+
 import grails.gorm.annotation.Entity
 import groovy.transform.AutoImplement
 import org.grails.datastore.mapping.core.DatastoreUtils
@@ -29,6 +31,8 @@ import org.hibernate.HibernateException
 import org.hibernate.Session
 import org.hibernate.SessionFactory
 import org.hibernate.dialect.H2Dialect
+import org.hibernate.engine.spi.SessionFactoryImplementor
+import org.hibernate.engine.spi.SessionImplementor
 import org.grails.orm.hibernate.support.hibernate7.SessionHolder
 import org.springframework.dao.DataAccessResourceFailureException
 import org.springframework.transaction.support.TransactionSynchronizationManager
@@ -646,6 +650,191 @@ class MultiDataSourceSessionSpec extends Specification {
         autoFlush?.close()
     }
 
+    def "a request that goes asynchronous with two flushes failing with the same exception throws it once, and releases every session"() {
+        given: "two other datasources whose sessions fail their flush with one and the same exception"
+        IllegalStateException failure = new IllegalStateException('cannot flush')
+        FakeSession first = new FakeSession(flushFailure: failure)
+        FakeSession second = new FakeSession(flushFailure: failure)
+        SessionFactory firstSf = new FakeSessionFactory(session: first)
+        SessionFactory secondSf = new FakeSessionFactory(session: second)
+        def interceptor = new GrailsOpenSessionInViewInterceptor()
+        interceptor.setHibernateDatastore(datastoreWith(datastore.sessionFactory, first: firstSf, second: secondSf))
+        WebRequest webRequest = webRequest()
+        interceptor.preHandle(webRequest)
+        webRequest.setAttribute('org.grails.ASYNC_STARTED', true, WebRequest.SCOPE_REQUEST)
+
+        when:
+        interceptor.afterConcurrentHandlingStarted(webRequest)
+
+        then: "the failure is thrown, not attached to itself, and every session is unbound and closed"
+        def thrownFailure = thrown(IllegalStateException)
+        thrownFailure.is(failure)
+        thrownFailure.suppressed.length == 0
+        first.closeCount == 1
+        second.closeCount == 1
+        [firstSf, secondSf, datastore.sessionFactory].every { !TransactionSynchronizationManager.hasResource(it) }
+
+        cleanup:
+        unbindIfBound(firstSf, secondSf)
+    }
+
+    def "a request that goes asynchronous releases every session when a flush takes its own session off the thread and fails"() {
+        given: "two other datasources, the later one's flush unbinding its own session before it fails"
+        IllegalStateException failure = new IllegalStateException('cannot flush')
+        FakeSession first = new FakeSession()
+        SessionFactory firstSf = new FakeSessionFactory(session: first)
+        FakeSessionFactory secondSf = new FakeSessionFactory()
+        FakeSession second = new FakeSession(flushFailure: failure, onFlush: { -> TransactionSynchronizationManager.unbindResource(secondSf) })
+        secondSf.session = second
+        def interceptor = new GrailsOpenSessionInViewInterceptor()
+        interceptor.setHibernateDatastore(datastoreWith(datastore.sessionFactory, first: firstSf, second: secondSf))
+        WebRequest webRequest = webRequest()
+        interceptor.preHandle(webRequest)
+        webRequest.setAttribute('org.grails.ASYNC_STARTED', true, WebRequest.SCOPE_REQUEST)
+
+        when:
+        interceptor.afterConcurrentHandlingStarted(webRequest)
+
+        then: "the flush failure is thrown, and every session is unbound and closed"
+        def thrownFailure = thrown(IllegalStateException)
+        thrownFailure.is(failure)
+        first.closeCount == 1
+        second.closeCount == 1
+        [firstSf, secondSf, datastore.sessionFactory].every { !TransactionSynchronizationManager.hasResource(it) }
+
+        cleanup:
+        unbindIfBound(firstSf, secondSf)
+    }
+
+    def "a request that goes asynchronous throws the flush failure when the default session cannot be released after it"() {
+        given: "another datasource whose flush takes the default session off the thread before it fails"
+        IllegalStateException failure = new IllegalStateException('cannot flush')
+        FakeSession defaultSession = new FakeSession()
+        SessionFactory defaultSf = new FakeSessionFactory(session: defaultSession)
+        FakeSession other = new FakeSession(flushFailure: failure, onFlush: { -> TransactionSynchronizationManager.unbindResource(defaultSf) })
+        SessionFactory otherSf = new FakeSessionFactory(session: other)
+        def interceptor = new GrailsOpenSessionInViewInterceptor()
+        interceptor.setHibernateDatastore(datastoreWith(defaultSf, other: otherSf))
+        WebRequest webRequest = webRequest()
+        interceptor.preHandle(webRequest)
+
+        when: "the request goes asynchronous, and the parent class finds no default session to unbind"
+        interceptor.afterConcurrentHandlingStarted(webRequest)
+
+        then: "the flush failure is thrown, with the failure to release the default session attached"
+        def thrownFailure = thrown(IllegalStateException)
+        thrownFailure.is(failure)
+        thrownFailure.suppressed.length == 1
+        thrownFailure.suppressed[0] instanceof IllegalStateException
+        other.closeCount == 1
+        !TransactionSynchronizationManager.hasResource(otherSf)
+
+        cleanup:
+        unbindIfBound(defaultSf, otherSf)
+    }
+
+    def "a request that goes asynchronous with a checked flush failure throws it wrapped, with every failure to close attached to the wrapper"() {
+        given: "another datasource whose flush fails with a checked exception, and sessions that fail to close"
+        IOException failure = new IOException('cannot flush')
+        IOException defaultCloseFailure = new IOException('cannot close the default session')
+        IOException otherCloseFailure = new IOException('cannot close another session')
+        FakeSession defaultSession = new FakeSession(closeFailure: defaultCloseFailure)
+        SessionFactory defaultSf = new FakeSessionFactory(session: defaultSession)
+        FakeSession unclosable = new FakeSession(closeFailure: otherCloseFailure)
+        SessionFactory unclosableSf = new FakeSessionFactory(session: unclosable)
+        FakeSession failing = new FakeSession(flushFailure: failure)
+        SessionFactory failingSf = new FakeSessionFactory(session: failing)
+        def interceptor = new GrailsOpenSessionInViewInterceptor()
+        interceptor.setHibernateDatastore(datastoreWith(defaultSf, unclosable: unclosableSf, failing: failingSf))
+        WebRequest webRequest = webRequest()
+        interceptor.preHandle(webRequest)
+        webRequest.setAttribute('org.grails.ASYNC_STARTED', true, WebRequest.SCOPE_REQUEST)
+
+        when:
+        interceptor.afterConcurrentHandlingStarted(webRequest)
+
+        then: "the wrapper that is thrown carries every failure to close"
+        def thrownFailure = thrown(UndeclaredThrowableException)
+        thrownFailure.cause.is(failure)
+        thrownFailure.suppressed.toList() as Set == [otherCloseFailure, defaultCloseFailure] as Set
+        [defaultSf, unclosableSf, failingSf].every { !TransactionSynchronizationManager.hasResource(it) }
+
+        cleanup:
+        unbindIfBound(defaultSf, unclosableSf, failingSf)
+    }
+
+    def "a request that fails in its handler gets the failures to close its sessions attached to that failure"() {
+        given: "a default session and another datasource's session that both fail to close"
+        IOException defaultCloseFailure = new IOException('cannot close the default session')
+        IOException otherCloseFailure = new IOException('cannot close another session')
+        SessionFactory defaultSf = new FakeSessionFactory(session: new FakeSession(closeFailure: defaultCloseFailure))
+        SessionFactory otherSf = new FakeSessionFactory(session: new FakeSession(closeFailure: otherCloseFailure))
+        def interceptor = new GrailsOpenSessionInViewInterceptor()
+        interceptor.setHibernateDatastore(datastoreWith(defaultSf, other: otherSf))
+        WebRequest webRequest = webRequest()
+        interceptor.preHandle(webRequest)
+        IllegalStateException handlerFailure = new IllegalStateException('the action failed')
+
+        when: "Spring completes the request with the failure it throws on afterwards"
+        interceptor.afterCompletion(webRequest, handlerFailure)
+
+        then: "both failures to close are attached to it, and the sessions are unbound"
+        noExceptionThrown()
+        handlerFailure.suppressed.toList() as Set == [otherCloseFailure, defaultCloseFailure] as Set
+        !TransactionSynchronizationManager.hasResource(defaultSf)
+        !TransactionSynchronizationManager.hasResource(otherSf)
+
+        cleanup:
+        unbindIfBound(defaultSf, otherSf)
+    }
+
+    def "a failure to close that cannot be attached to the failure being thrown is logged"() {
+        given: "another datasource whose session fails to close, then one that cannot open, with a failure that keeps no suppressed exceptions"
+        SessionFactory unclosableSf = new FakeSessionFactory(session: new FakeSession(closeFailure: new IOException('cannot close the unclosable session')))
+        UnsuppressibleFailure failure = new UnsuppressibleFailure('cannot open')
+        def interceptor = new GrailsOpenSessionInViewInterceptor()
+        interceptor.setHibernateDatastore(datastoreWith(datastore.sessionFactory, unclosable: unclosableSf, failing: new FakeSessionFactory(failure: failure)))
+        PrintStream systemErr = System.err
+        ByteArrayOutputStream logged = new ByteArrayOutputStream()
+        System.err = new PrintStream(logged, true)
+
+        when:
+        interceptor.preHandle(webRequest())
+
+        then: "the failure is thrown, and the failure to close is logged instead of attached"
+        def thrownFailure = thrown(UnsuppressibleFailure)
+        thrownFailure.is(failure)
+        logged.toString().contains('cannot close the unclosable session')
+        !TransactionSynchronizationManager.hasResource(unclosableSf)
+
+        cleanup:
+        System.err = systemErr
+        unbindIfBound(unclosableSf)
+    }
+
+    def "postHandle throws a flush failure of two datasources' sessions once when it is one and the same exception"() {
+        given: "two other datasources whose sessions fail their flush with one and the same exception"
+        IllegalStateException failure = new IllegalStateException('cannot flush')
+        SessionFactory firstSf = new FakeSessionFactory(session: new FakeSession(flushFailure: failure))
+        SessionFactory secondSf = new FakeSessionFactory(session: new FakeSession(flushFailure: failure))
+        def interceptor = new GrailsOpenSessionInViewInterceptor()
+        interceptor.setHibernateDatastore(datastoreWith(datastore.sessionFactory, first: firstSf, second: secondSf))
+        WebRequest webRequest = webRequest()
+        interceptor.preHandle(webRequest)
+
+        when:
+        interceptor.postHandle(webRequest, null)
+
+        then: "the failure is thrown, not attached to itself"
+        def thrownFailure = thrown(IllegalStateException)
+        thrownFailure.is(failure)
+        thrownFailure.suppressed.length == 0
+
+        cleanup:
+        interceptor.afterCompletion(webRequest, null)
+        unbindIfBound(firstSf, secondSf)
+    }
+
     def "an include uses the sessions of the request for every datasource and leaves them open"() {
         given: "the request has opened its sessions"
         def interceptor = new GrailsOpenSessionInViewInterceptor()
@@ -1071,13 +1260,17 @@ class BrokenOsivAuthor {
 }
 
 /**
- * A session that never flushes, counts its closes, refuses its flush mode with the failure it is given, and fails to
- * close with the close failure it is given, a checked exception too.
+ * A session inside a transaction that counts its closes, keeps the flush mode it is given unless it refuses it with the
+ * failure it is given, runs {@code onFlush} and then fails with the flush failure it is given when flushed, and fails to
+ * close with the close failure it is given: a checked exception too, for each.
  */
 @AutoImplement
-class FakeSession implements Session {
+class FakeSession implements SessionImplementor {
     Throwable failure
+    Throwable flushFailure
     Throwable closeFailure
+    Closure<?> onFlush
+    FlushMode flushMode = FlushMode.MANUAL
     int closeCount
 
     @Override
@@ -1086,15 +1279,34 @@ class FakeSession implements Session {
     }
 
     @Override
+    boolean isTransactionInProgress() {
+        true
+    }
+
+    @Override
+    SessionFactoryImplementor getSessionFactory() {
+        null
+    }
+
+    @Override
     void setHibernateFlushMode(FlushMode flushMode) {
         if (failure != null) {
             throw failure
         }
+        this.flushMode = flushMode
     }
 
     @Override
     FlushMode getHibernateFlushMode() {
-        FlushMode.MANUAL
+        flushMode
+    }
+
+    @Override
+    void flush() {
+        onFlush?.call()
+        if (flushFailure != null) {
+            throw flushFailure
+        }
     }
 
     @Override
@@ -1132,5 +1344,13 @@ class FakeSessionFactory implements SessionFactory {
             throw failure
         }
         session
+    }
+}
+
+/** A failure that keeps no suppressed exceptions, as a Throwable built with suppression disabled does not. */
+class UnsuppressibleFailure extends RuntimeException {
+
+    UnsuppressibleFailure(String message) {
+        super(message, null, false, true)
     }
 }
