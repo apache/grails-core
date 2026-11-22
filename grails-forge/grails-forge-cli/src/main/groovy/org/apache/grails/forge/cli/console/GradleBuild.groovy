@@ -25,8 +25,9 @@ import groovy.transform.CompileStatic
 
 /**
  * How a command has Gradle run a build of the project and waits for it. A command says what it runs
- * Gradle for, a {@link Purpose}, and is given what runs it: which of the ways there are is used for
- * which purpose is decided in {@link #of} and nowhere else.
+ * Gradle for, a {@link Purpose}, and is given what runs it: which of the two ways there are is used
+ * is decided in {@link #of} and nowhere else. The two are the Gradle wrapper of the project as a
+ * process, {@link GradleRunner}, and the Tooling API of Gradle, {@link ToolingApiRunner}.
  *
  * <p>Whatever runs the build, it runs the Gradle of the project and no other, after the checks of
  * {@link ConsoleProject#gradleWrapper}; the arguments are a list from the command to Gradle, of which
@@ -43,16 +44,23 @@ abstract class GradleBuild {
     public static final String NON_INTERACTIVE = 'GRAILS_NON_INTERACTIVE'
 
     /**
-     * The environment variable that says how the commands run Gradle: {@link #PROCESS} for the Gradle
-     * wrapper of the project as a process, every time; {@link #TOOLING_API}, or nothing, for what
-     * {@link #of} decides.
+     * The environment variable that says how the commands run Gradle: {@link #AUTO}, or nothing, for
+     * what {@link #of} decides by where the command is run; {@link #PROCESS} for the Gradle wrapper of
+     * the project as a process, every time; {@link #TOOLING_API} for the Tooling API wherever a
+     * command can be run through it.
      */
     public static final String RUNNER = 'GRAILS_GRADLE_RUNNER'
+
+    /** The value of {@link #RUNNER} that says what is the case without it. */
+    public static final String AUTO = 'auto'
 
     /** The value of {@link #RUNNER} that has every command run the Gradle wrapper as a process. */
     public static final String PROCESS = 'process'
 
-    /** The value of {@link #RUNNER} that says what is the case without it. */
+    /**
+     * The value of {@link #RUNNER} that has the builds the command line asks for itself run through the
+     * Tooling API, also by a command line that runs one command.
+     */
     public static final String TOOLING_API = 'tooling-api'
 
     /** What Gradle is run for. */
@@ -82,25 +90,40 @@ abstract class GradleBuild {
     /**
      * The one place that decides what runs Gradle for a command that waits for it.
      *
+     * <p><strong>A command line that runs one command</strong> starts the Gradle wrapper of the
+     * project as a process, see {@link GradleRunner}, whatever the command: Gradle is given the terminal,
+     * and shows its colours and its progress there; it reads what the command line reads; and how it
+     * ended is its exit code. Not starting it would spare a tenth of a second.</p>
+     *
+     * <p><strong>In the interactive console</strong>, which is the session {@code ForgeCli.interactive}
+     * runs and {@link ConsoleCommands#isInteractive} tells of, the purpose decides. A command line that
+     * is run in the JVM of a caller, as {@code GrailsCli.execute} is, is not the console.</p>
+     *
      * <ul>
      * <li>A {@linkplain Purpose#BUILD build the command line asks for itself}, which is {@code compile},
      * {@code clean}, {@code assemble}, {@code war} and {@code package}, {@code test-app},
      * {@code dependency-report}, {@code package-plugin}, {@code publish-plugin}, {@code run-command}, a
      * command of the application by its name, {@code run-script} and a script by its name,
      * {@code console} and a {@code run-app} that stays with the application, is run through the
-     * Tooling API of Gradle, see {@link ToolingApiRunner}.</li>
-     * <li>{@linkplain Purpose#PASSED_ON What the user typed for Gradle}, {@code grails gradle ...}, is
-     * run by the Gradle wrapper of the project as a process, see {@link GradleRunner}: it is to be to
-     * Gradle what it is on a command line of its own, and the Tooling API does not take what the
-     * program {@code gradle} reads itself, as {@code --stop}, {@code --status} or {@code --no-daemon}.</li>
+     * Tooling API of Gradle, see {@link ToolingApiRunner}: the console is one JVM that runs many
+     * builds, and asks each of one connection that is there already, which takes a seventh of the
+     * time that starting the wrapper takes.</li>
+     * <li>{@linkplain Purpose#PASSED_ON What the user typed for Gradle}, {@code gradle ...}, is run by
+     * the wrapper as a process there too: it is to be to Gradle what it is on a command line of its
+     * own, and the Tooling API does not take what the program {@code gradle} reads itself, as
+     * {@code --stop}, {@code --status} or {@code --no-daemon}.</li>
      * <li>{@linkplain Purpose#TERMINAL_SESSION A session at the terminal}, {@code shell}, is run by the
      * wrapper as a process too. A process is given the terminal itself, and ends with all that read it.
      * The Tooling API is given a stream, which it reads from as soon as a build starts, whether the
      * build reads or not, in a thread that goes on waiting for what is typed when the build has ended:
-     * in the interactive console that thread would take the next line from the prompt.</li>
-     * <li>Where the environment variable {@link #RUNNER} is {@code process}, the wrapper is run as a
-     * process for every purpose: the way out where a build does not run through the Tooling API.</li>
+     * in the console that thread would take the next line from the prompt.</li>
      * </ul>
+     *
+     * <p><strong>The environment variable {@link #RUNNER}</strong> says otherwise: with {@code process}
+     * the wrapper is run as a process in the console too, which is the way out where a build does not
+     * run through the Tooling API; with {@code tooling-api} a build the command line asks for itself is
+     * run through the Tooling API by a command line that runs one command as well. {@code auto} is the
+     * rule above. With any other value nothing is run.</p>
      *
      * <p>A build that is left running is no purpose here: see {@link #leftRunning}.</p>
      *
@@ -111,19 +134,21 @@ abstract class GradleBuild {
      */
     static GradleBuild of(Purpose purpose, Consumer<String> failure, boolean windows) {
         GradleRunner wrapper = new GradleRunner(failure, windows)
-        String asked = runner.get()
-        if (asked != null && !asked.trim().isEmpty() && !(asked.trim() in [PROCESS, TOOLING_API])) {
+        String said = runner.get()
+        String asked = said == null || said.trim().isEmpty() ? AUTO : said.trim()
+        if (!(asked in [AUTO, PROCESS, TOOLING_API])) {
             return new GradleBuild() {
 
                 @Override
                 int run(ConsoleProject project, List<String> arguments, Consumer<GradleBuild.Running> started) {
-                    failure.accept("The environment variable ${RUNNER} says how Gradle is run, and is ${PROCESS} or ${TOOLING_API}: ".toString() +
-                            "${GradleRunner.line(asked.trim())} is neither. Gradle was not run".toString())
+                    failure.accept("The environment variable ${RUNNER} says how Gradle is run, and is ${AUTO}, ${PROCESS} or ${TOOLING_API}: ".toString() +
+                            "${GradleRunner.line(asked)} is none of them. Gradle was not run".toString())
                     return 1
                 }
             }
         }
-        if (purpose != Purpose.BUILD || asked?.trim() == PROCESS) {
+        boolean throughToolingApi = asked == TOOLING_API || (asked == AUTO && ConsoleCommands.isInteractive())
+        if (purpose != Purpose.BUILD || !throughToolingApi) {
             return wrapper
         }
         return new ToolingApiRunner(failure, windows, wrapper)

@@ -850,13 +850,12 @@ Never run a script of the framework's plugins with `runScriptCommand` in Grails 
 
 ## The Gradle Wrapper Is What the Commands Run
 
-The shell ran builds through the Gradle Tooling API with a Gradle it chose. `grails` runs the Gradle that the wrapper of the project names (in a multi-project build, the wrapper of the root) and no other. The build commands (`compile`, `clean`, `assemble`, `war`, `package`, `test-app`, `dependency-report`, `package-plugin`, `publish-plugin`, `run-command`, application commands and scripts by name, `run-script`, `console`, foreground `run-app`) run it through the Tooling API; `grails gradle ...`, `run-app --detach` and `shell` start `./gradlew` as a process.
+The shell ran builds through the Gradle Tooling API with a Gradle it chose. `grails` runs `./gradlew` of the project (in a multi-project build, the wrapper of the root) and no other Gradle.
 
-- Check that `gradlew`, `gradlew.bat` and `gradle/wrapper/` (with `gradle-wrapper.properties`) are committed. Without them `compile`, `test-app`, `run-app` and the other build commands run nothing and exit 1.
-- Through the Tooling API Gradle writes plain text (no colors, no progress display), and a failed build ends with the line `Gradle did not succeed: the build failed` and exit code 1. A job that greps for `it ended with exit code N` only finds it where the wrapper is started.
-- `GRAILS_GRADLE_RUNNER=process` makes every command start `./gradlew`, as earlier builds of Grails 9 did. Use it when a build misbehaves through the Tooling API, and say so in the bug report.
-- System properties of the JVM of `grails` (`GRAILS_OPTS`) and of `GRADLE_OPTS` do not reach a build run through the Tooling API: pass them with `-D` after the command name. The memory of the build is `org.gradle.jvmargs`, as before.
-- In the interactive console builds share one Gradle connection and do not read what is typed; run a command that prompts as `grails run-command ...` on its own.
+- Check that `gradlew`, `gradlew.bat` and `gradle/wrapper/` are committed. Without them `compile`, `test-app`, `run-app` and the other build commands run nothing and exit 1.
+- A command line that runs one command (`grails compile`, every CI job) starts `./gradlew` as a process: Gradle's own output, and on failure the line `Gradle did not succeed: it ended with exit code N`.
+- Only the interactive console (`grails` without a command) runs its builds through the Tooling API, with the Gradle the wrapper names: plain text output, no input for the build, and `Gradle did not succeed: the build failed` on failure. `gradle`, `shell` and `run-app` start `./gradlew` there too.
+- `GRAILS_GRADLE_RUNNER` overrides this: `process` starts `./gradlew` everywhere (use it when a build misbehaves in the console, and say so in the bug report), `tooling-api` uses the Tooling API for one-shot build commands as well, `auto` or unset is the rule above.
 - `grails test-app` now runs every `Test` task of the project, not only `test` and `integrationTest`, and `grails test-app <test>` looks for the test in every phase it runs (see the `test-app` entry below). Check the build for added `Test` tasks before leaving a job as it is.
 - `grails run-app` takes no Gradle arguments after its name: use `grails run-app -- <gradle arguments>`. Options: `--port`, `--host`, `--https`, `--debug-jvm`, `--query-tail`, `--detach`, `--foreground`, `--ready-timeout`.
 - `grails stop-app` only stops what `grails run-app` of Grails 9 started (record in `.grails/run`); it does not read `build/run-app.pid` and does not stop `./gradlew bootRun`. In jobs start the application with `grails run-app --detach` and stop it with `grails stop-app`.

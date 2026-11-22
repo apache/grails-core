@@ -54,7 +54,8 @@ class ToolingApiConsoleSpec extends CommandSpec {
         System.setOut(new PrintStream(out, true))
         System.setErr(new PrintStream(out, true))
         project(dir)
-        GradleBuild.setRunner(GradleBuild.TOOLING_API)
+        // what the console does by itself
+        GradleBuild.setRunner(GradleBuild.AUTO)
     }
 
     void cleanup() {
@@ -116,6 +117,7 @@ class ToolingApiConsoleSpec extends CommandSpec {
         !ToolingApiRunner.connectionKept
 
         when: 'and entered again'
+        ConsoleCommands.setInteractive(true)
         int again = ForgeCli.execute(beanContext, 'compile')
 
         then:
@@ -161,8 +163,9 @@ class ToolingApiConsoleSpec extends CommandSpec {
         other.deleteDir()
     }
 
-    void "a command line that runs one command makes a connection for its build and keeps none"() {
+    void "a command line that runs one command through the Tooling API makes a connection for its build and keeps none"() {
         given:
+        GradleBuild.setRunner(GradleBuild.TOOLING_API)
         int before = ToolingApiRunner.connectionsMade
 
         when:

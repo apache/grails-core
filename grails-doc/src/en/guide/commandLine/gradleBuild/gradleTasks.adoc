@@ -17,7 +17,7 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-As mentioned previously, the commands of `grails` that build, test or run a project run the Gradle that the wrapper of the project names. The following table shows which Gradle tasks a command runs:
+As mentioned previously, the commands of `grails` that build, test or run a project run the Gradle wrapper of the project. The following table shows which Gradle tasks a command runs:
 
 [format="csv", options="header"]
 |===

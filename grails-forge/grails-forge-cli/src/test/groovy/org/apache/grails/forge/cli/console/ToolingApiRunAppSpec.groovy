@@ -30,8 +30,9 @@ import spock.lang.Timeout
 import spock.util.concurrent.PollingConditions
 
 /**
- * A {@code run-app} that stays with its application, which runs the build through the Tooling API of
- * Gradle from its own JVM, and {@code stop-app} for it: there is no Gradle that {@code run-app}
+ * A {@code run-app} that stays with its application and runs the build through the Tooling API of
+ * Gradle from its own JVM, as it does where {@code GRAILS_GRADLE_RUNNER} is {@code tooling-api} and in
+ * the interactive console with {@code --foreground}, and {@code stop-app} for it: there is no Gradle that {@code run-app}
  * started, so the record names the command line itself, which is asked to end its build and is never
  * ended. The command line is a JVM of its own here, as it is for a user, since what is held to is what
  * happens between two processes and when one of them is gone.
@@ -338,11 +339,11 @@ class ToolingApiRunAppSpec extends CommandSpec {
         }
     }
 
-    // run-app as a user runs it: a command line of its own, which runs Gradle as it does when nothing says how
+    // run-app as a user runs it who asked for the Tooling API: a command line of its own
     private void runApp(int port) {
         ProcessBuilder builder = ForkedCli.builder(dir, [], 'run-app', '--port', port as String).redirectErrorStream(true).redirectOutput(said)
                 .redirectInput(ProcessBuilder.Redirect.from(new File('/dev/null')))
-        builder.environment().remove(GradleBuild.RUNNER)
+        builder.environment().put(GradleBuild.RUNNER, GradleBuild.TOOLING_API)
         commandLine = builder.start()
         new PollingConditions(timeout: 300, delay: 0.1).eventually {
             assert commandLine.alive

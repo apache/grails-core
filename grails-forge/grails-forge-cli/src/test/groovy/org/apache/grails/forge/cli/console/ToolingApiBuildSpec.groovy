@@ -37,6 +37,9 @@ import spock.util.concurrent.PollingConditions
  * to the arguments it builds. This one holds the other way of running Gradle to the same: the build
  * writes down what it was asked, as Gradle read it, and each task what its options were. The wrapper
  * script of the project here writes down that it was run, and is not, unless a feature says so.
+ * The features ask for the Tooling API ({@code GRAILS_GRADLE_RUNNER=tooling-api}), which a command
+ * line that runs one command is not run through otherwise: {@code GradleRunnerChoiceSpec} holds which
+ * way is taken where.
  *
  * <p>The build needs nothing of Grails. Its daemon is no daemon of whoever runs the specification,
  * see {@link IsolatedGradle}; the features share one.</p>
@@ -352,30 +355,6 @@ class ToolingApiBuildSpec extends CommandSpec {
         exit == 0
         errors() == []
         said('read.txt') == 'line=null variable=true ofTheCommandLine=null given=null'
-    }
-
-    @Unroll
-    void "with GRAILS_GRADLE_RUNNER=#value #what"() {
-        given:
-        GradleBuild.setRunner(value)
-
-        when:
-        int exit = ForgeCli.execute(beanContext, 'test-app', '--unit')
-
-        then:
-        exit == code
-        errors() == said
-        new File(dir, 'wrapper-was-run.txt').exists() == wrapper
-        new File(dir, 'requested.txt').exists() == toolingApi
-        !wrapper || new File(dir, 'wrapper-was-run.txt').text == '<:testApp><--phase><unit><-Dgrails.env=test>\n'
-
-        where:
-        value         | what                                                 | code | wrapper | toolingApi | said
-        'process'     | 'every command runs the Gradle wrapper as a process' | 0    | true    | false      | []
-        ' process '   | 'the value is read without the spaces around it'     | 0    | true    | false      | []
-        'tooling-api' | 'the commands run Gradle as they do without it'      | 0    | false   | true       | []
-        ''            | 'the commands run Gradle as they do without it'      | 0    | false   | true       | []
-        'wrapper'     | 'the command says which values there are, and runs nothing' | 1 | false | false   | ['| Error The environment variable GRAILS_GRADLE_RUNNER says how Gradle is run, and is process or tooling-api: wrapper is neither. Gradle was not run']
     }
 
     void "grails gradle runs the Gradle wrapper as a process, whatever else is run through the Tooling API"() {

@@ -40,12 +40,14 @@ import picocli.CommandLine
  * unless another one is given.
  *
  * <p>The command either stays with the application until it ends, or starts it, waits until it
- * answers on its port and returns, leaving it running for {@code stop-app}. Where it stays, it runs
- * the build through the Tooling API of Gradle, from its own JVM, and records itself in
- * {@code .grails/run} of the project: {@code stop-app} asks it to end the build, and it looks for
- * that. Where it leaves the application running, it starts the Gradle wrapper of the project as a
- * process that goes on without it, and records that process, which {@code stop-app} ends. Which of
- * the two runs Gradle is decided in {@link GradleBuild}.</p>
+ * answers on its port and returns, leaving it running for {@code stop-app}. Either way it writes a
+ * record to {@code .grails/run} of the project, which is what {@code stop-app} goes by. As a rule it
+ * starts the Gradle wrapper of the project as a process and records that process, which
+ * {@code stop-app} ends. Where it stays with the application and runs the build through the Tooling
+ * API of Gradle, from its own JVM, which it does in the interactive console with {@code --foreground}
+ * and where the environment asks for the Tooling API, there is no such process: it records itself,
+ * {@code stop-app} asks it to end the build, and it looks for that. Which of the two runs Gradle is
+ * decided in {@link GradleBuild}.</p>
  *
  * @since 9.0
  */

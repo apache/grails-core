@@ -41,6 +41,8 @@ import org.gradle.tooling.ResultHandler
  * Runs a build of a project through the Tooling API of Gradle, from the JVM of the command line: no
  * process is started for it, which is what a run of the Gradle wrapper costs each time, and in the
  * interactive console every build after the first is asked of a connection that is there already.
+ * It is what runs the builds of the interactive console, and those of a command line that runs one
+ * command only where the environment asks for it: see {@link GradleBuild#of}.
  *
  * <p><strong>Which Gradle.</strong> The one the Gradle wrapper of the project names, in
  * {@code gradle/wrapper/gradle-wrapper.properties} beside the wrapper script, and no other: the

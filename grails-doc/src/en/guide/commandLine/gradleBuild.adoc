@@ -30,7 +30,7 @@ The commands of `grails` that build, test or run a project run the Gradle of tha
 $ grails compile
 ----
 
-The `grails` command has no Gradle of its own and does not use a Gradle that is installed on the computer: a project without a Gradle wrapper is not built by it. Most commands ask that Gradle for the build through the Gradle Tooling API, and some start the wrapper as a process: <<howGradleIsRun,How the `grails` Command Runs Gradle>> says which, and what differs. Before Grails 9 the Grails shell ran the build through the Tooling API too, with a version of Gradle the shell chose.
+The `grails` command has no Gradle of its own and does not use a Gradle that is installed on the computer: a project without a Gradle wrapper is not built by it. A command line starts the wrapper as a process. The interactive console asks that Gradle for its builds through the Gradle Tooling API: <<howGradleIsRun,How the `grails` Command Runs Gradle>> says which commands, and what differs there. Before Grails 9 the Grails shell ran every build through the Tooling API, with a version of Gradle the shell chose.
 
 You can always run the wrapper yourself:
 
@@ -82,45 +82,57 @@ On Windows the wrapper is a batch file, and a batch file does not receive an arg
 [[howGradleIsRun]]
 === How the `grails` Command Runs Gradle
 
-The Gradle that builds a project is the one its Gradle wrapper names, in `gradle/wrapper/gradle-wrapper.properties`, and no other. The `grails` command runs it in one of two ways, and each command has its way:
+The Gradle that builds a project is the one its Gradle wrapper names, in `gradle/wrapper/gradle-wrapper.properties`, and no other. The `grails` command runs it in one of two ways, and where a command is run decides which:
 
 [cols="2,3,4"]
 |===
-|How |Which commands |Why
+|Where |How Gradle is run |Why
 
-|Through the https://docs.gradle.org/current/userguide/tooling_api.html[Gradle Tooling API], from the JVM of `grails`
-|`compile`, `clean`, `assemble`, `war`, `package`, `test-app`, `dependency-report`, `package-plugin`, `publish-plugin`, `run-command`, a command of the application and a script run by its name, `run-script`, `console`, and a `run-app` that stays with the application
-|No process is started for the build. In the link:commandLine.html#interactiveMode[interactive console] every build after the first is asked of a connection that is there already, which takes a few hundredths of a second before Gradle begins, where starting the wrapper takes about a third of a second each time. A command line that runs one command gains little: it makes its connection first.
+|A command line that runs one command, as in `grails compile`
+|Every command starts the Gradle wrapper (`gradlew`, or `gradlew.bat` on Windows) as a process, as described for the `gradle` command below.
+|Gradle is given the terminal, so it shows its colors and its progress, reads what you type, and ends with its exit code. Running the build without starting the wrapper would spare about a tenth of a second.
 
-|By starting the Gradle wrapper (`gradlew`, or `gradlew.bat` on Windows) as a process
-|`gradle`; `run-app --detach`, and `run-app` in the interactive console, which leaves the application running too; `shell`
-|What follows `gradle` has to mean what it means to Gradle, and the Tooling API does not take what the program `gradle` reads itself, such as `--stop`, `--status` and `--no-daemon`. An application that is left running has to go on when `grails` has ended, so its build cannot belong to the JVM of `grails`. `shell` reads what you type until you leave it, and a process is given the terminal itself.
+|The link:commandLine.html#interactiveMode[interactive console], `grails` without a command
+|`compile`, `clean`, `assemble`, `war`, `package`, `test-app`, `dependency-report`, `package-plugin`, `publish-plugin`, `run-command`, a command of the application and a script run by its name, `run-script`, `console`, and `run-app --foreground` are run through the https://docs.gradle.org/current/userguide/tooling_api.html[Gradle Tooling API], from the JVM of `grails`.
+
+`gradle`, `shell`, and `run-app` where it leaves the application running, which it does there unless `--foreground` is given, start the wrapper as a process.
+|The console is one program that runs many builds. It asks each of them of one connection to Gradle, which is made for the first and closed when the console is left: a build that Gradle has little to do for is back at the prompt in about 50 milliseconds, where starting the wrapper takes 350 each time.
+
+What follows `gradle` has to mean what it means to Gradle, and the Tooling API does not take what the program `gradle` reads itself, such as `--stop`, `--status` and `--no-daemon`. An application that is left running has to go on when `grails` has ended. `shell` reads what you type until you leave it, and a process is given the terminal itself.
 |===
 
-The build is the same either way: the same Gradle distribution, the same `gradle.properties`, a Gradle daemon with the JVM options of `org.gradle.jvmargs`, and the arguments the tables below show, in that order, tasks and their options alike. What differs is this:
+The environment variable `GRAILS_GRADLE_RUNNER` says otherwise:
+
+[cols="1,4"]
+|===
+|Value |How Gradle is run
+
+|`auto`, or not set
+|As the table above has it.
+
+|`process`
+|Every command starts the wrapper as a process, in the interactive console too. This is the way out when a build does not run through the Tooling API, and what to say in a bug report then.
+
+|`tooling-api`
+|The commands the console runs through the Tooling API are run through it by a command line that runs one command as well, as in `GRAILS_GRADLE_RUNNER=tooling-api grails test-app --unit`. `gradle`, `shell` and a `run-app` that leaves the application running start the wrapper all the same.
+|===
+
+With any other value nothing is run: the command says which values there are and ends with exit code 1.
+
+A build that is run through the Tooling API is the same build: the same Gradle distribution, the same `gradle.properties`, a Gradle daemon with the JVM options of `org.gradle.jvmargs`, and the arguments the tables below show, in that order, tasks and their options alike. What differs from a build the wrapper starts is this:
 
 * *The wrapper is checked, and not started.* The project and its wrapper are found and trusted as described above, before a connection is made, and a project without a wrapper is refused in the same words. Through the Tooling API the wrapper script and `gradle-wrapper.jar` are not run: the Tooling API reads `gradle/wrapper/gradle-wrapper.properties` beside the script, as the wrapper does, for the distribution, its checksum and where it is kept. A wrapper that has no such file, or whose file has no `distributionUrl`, is not used: the command says so and ends with exit code 1, and no Gradle is chosen in its place.
 * *Where the wrapper is started all the same.* The Tooling API looks for that file in one place, the root of the build. For a wrapper script that is a link, and for a wrapper that stands above a project with a `settings.gradle` of its own, the command starts the wrapper as before. It does so too when an argument after `--` is one the program `gradle` reads itself: `--daemon`, `--no-daemon`, `--foreground`, `--status`, `--stop`, `-g` or `--gradle-user-home`, `-p` or `--project-dir`, and a `-Dorg.gradle.` property such as `-Dorg.gradle.jvmargs`.
 * *System properties.* The build has the system properties that `-D` after the name of the command gives it, and none of the JVM of `grails`. `GRADLE_OPTS`, which the wrapper script reads for the JVM it starts, is not read: a property that was set there is given with `-D`, and the memory of the build is `org.gradle.jvmargs`, as it is for the wrapper. Gradle keeps the two ways apart in its configuration cache: a build that the wrapper has run before is configured once more when it is first run through the Tooling API, and is taken from the cache from then on.
 * *Output.* Gradle writes plain text to the output of `grails`, line by line as the build goes on: no colors and no display of progress, on a terminal too, and a line for every task, as its plain console has it. The wrapper is given the terminal itself and draws both there; the Tooling API is given two streams, and when it is told that a terminal reads them it draws its progress over what it wrote to the error stream, the report of a failed build for one. `--verbose` shows what the build does task by task, as before. What `grails` itself writes, such as the line of an error, has its colors as before.
-* *Input.* A command line that runs one command gives the build its input, as the wrapper does. In the interactive console a build reads an input that has ended, and so does a build of a command line that is run in the JVM of another program: the Tooling API takes what is typed as soon as a build starts, whether the build reads it or not, and would still take it when the build has ended, which there is the next line at the prompt. A command of the application that asks a question is run as a command line of its own (`grails run-command ...`), or with the wrapper (below). With `--non-interactive` every build reads an input that has ended, as before.
+* *Input.* In the interactive console a build reads an input that has ended, and so does a build of a command line that is run in the JVM of another program; a command line that runs one command with `GRAILS_GRADLE_RUNNER=tooling-api` gives the build its input, as the wrapper does. The reason: the Tooling API takes what is typed as soon as a build starts, whether the build reads it or not, and would still take it when the build has ended, which there is the next line at the prompt. A command of the application that asks a question is run as a command line of its own (`grails run-command ...`), which starts the wrapper. With `--non-interactive` every build reads an input that has ended, as before.
 * *Failure and cancelling.* The exit codes are the same. There is no exit code of Gradle to name, so after the report of Gradle the command says `Gradle did not succeed: the build failed`. When the command is cancelled, or `grails` is ended while the build runs, the build is cancelled: the Gradle daemon ends what the build started, the application or the tests, and stays for the next build; the command says in one line that Gradle was stopped. When `grails` is killed, the daemon sees that it is gone and cancels the build too.
 * *Windows.* No batch file is run, so the arguments and the paths that a batch file cannot be given (below, for `gradle`) are not refused.
 * *Versions.* The Tooling API is of the Gradle version this release of Grails is built with ({GradleVersion}), and runs the builds of every Gradle from 4.0 on, also of a version that is newer than itself: which Gradle builds the project is the wrapper's to say.
 
-To have every command start the wrapper as a process, set the environment variable `GRAILS_GRADLE_RUNNER` to `process`:
-
-[source,console]
-----
-$ GRAILS_GRADLE_RUNNER=process grails test-app --unit
-----
-
-That is the way out when a build does not run through the Tooling API, and what to say in a bug report then. The value `tooling-api` is what the command does without the variable; with any other value nothing is run, and the command says which values there are and ends with exit code 1.
-
-
 === Building and Testing with the `grails` Command
 
-The `grails` command has the commands of the Grails shell that are a Gradle build. Each of them is a build of the project the current directory is in, by the Gradle its wrapper names: the project and the wrapper are found and trusted as for the `gradle` command above, and the exit codes are the same (0 when the build succeeds, 1 with one line when it fails, when there is no project or no wrapper, and 2 with the usage of the command for a mistake in its use). They run Gradle through its Tooling API and do not start the wrapper; the table shows the arguments Gradle is given as the command line of the wrapper that does the same. See <<howGradleIsRun,How the `grails` Command Runs Gradle>>.
+The `grails` command has the commands of the Grails shell that are a Gradle build. Each of them runs the Gradle wrapper of the project the current directory is in, exactly as the `gradle` command above does: the project and the wrapper are found and trusted in the same way, what Gradle writes goes to the terminal in the same way, cancelling stops Gradle in the same way, and the exit codes are the same (0 when the build succeeds, 1 with one line when it fails, when there is no project or no wrapper, and 2 with the usage of the command for a mistake in its use). In the interactive console they are run through the Gradle Tooling API, with the same arguments and the same exit codes: see <<howGradleIsRun,How the `grails` Command Runs Gradle>>.
 
 [cols="2,3,4"]
 |===
@@ -198,7 +210,7 @@ It follows no link, so nothing from outside the project is read. It says how man
 
 === Running the Application with the `grails` Command
 
-The `grails` command has the commands of the Grails shell that run the application of the project, or a session with it. They run the Gradle of the project as the commands above do, with the same rules for the project, the wrapper and the exit codes: through the Tooling API, except `run-app` where it leaves the application running, and `shell`, which start the wrapper as a process. See <<howGradleIsRun,How the `grails` Command Runs Gradle>>.
+The `grails` command has the commands of the Grails shell that run the application of the project, or a session with it. They run the Gradle wrapper of the project as the commands above do, with the same rules for the project, the wrapper, the output and the exit codes; in the interactive console `console`, `run-command`, `run-script` and `run-app --foreground` are run through the Gradle Tooling API, as the commands above are there. See <<howGradleIsRun,How the `grails` Command Runs Gradle>>.
 
 [cols="2,3,4"]
 |===
@@ -242,7 +254,7 @@ $ grails run-script src/main/scripts/load.groovy
 
 ==== The two ways run-app runs
 
-Without `--detach`, `run-app` stays with the application: its output is on the terminal, and the command ends when the application does. It runs the build through the Tooling API, so no Gradle is started for it. Ctrl-C, or ending `grails`, cancels the build, and the Gradle daemon that runs it ends the application.
+Without `--detach`, `run-app` stays with the application: its output is on the terminal, and the command ends when the application does. Ctrl-C, or ending `grails`, ends Gradle and every process it started, the application among them. Where such a `run-app` runs the build through the Tooling API (`run-app --foreground` in the interactive console, and with `GRAILS_GRADLE_RUNNER=tooling-api`), no Gradle is started for it: Ctrl-C then cancels the build, and the Gradle daemon that runs it ends the application.
 
 With `--detach`, `run-app` starts the application, waits until it answers on its port, says so and returns with exit code 0. The application then runs until `stop-app`, also when `grails` and the terminal have ended, and what it and the build write is in `.grails/run/app.log` of the project. In the interactive shell this is what `run-app` does without `--detach`, so that it returns to the prompt, and an application started that way is stopped when the shell ends; give `--detach` there to leave it running, or `--foreground` to stay with it.
 
@@ -261,11 +273,9 @@ When the command does not stay with the application:
 
 ==== What stop-app stops
 
-`run-app`, in either way, writes a record to `.grails/run/app.json` of the project: the number of a process, the instant it began and the port. Nothing of the command line is recorded, so no value of a `-D` option is kept on disk.
+`run-app`, in either way, records the process it started in `.grails/run/app.json` of the project: its number, the instant it began and the port. Nothing of the command line is recorded, so no value of a `-D` option is kept on disk. `stop-app` ends that process, which is the Gradle that `run-app` started, and every process below it, first by asking and after 30 seconds by force. The application ends with them: either it is one of those processes, or, when the build runs in a Gradle daemon, as it does unless the daemon is turned off, the daemon is not below what is ended and is not ended; it cancels the build when the Gradle it worked for is gone, and ends the application then. `stop-app` therefore waits, for up to 30 seconds, until nothing takes connections on the recorded port any more, and only then says `Application stopped` and ends with exit code 0; when the port still answers after that time it says so and ends with exit code 1. What it sees is the port, not the process of the application: an application closes its port before it has ended, so its process can still be there for a moment after `Application stopped`. When nothing took connections on the port before `stop-app` ended Gradle, as for an application that was still starting, a free port says nothing, and `stop-app` says that instead: that Gradle, or the build, was stopped, and that it did not see the end of the application, which is ended with its build. A `run-app` that stays with the application in another terminal says `Application stopped` and ends with exit code 0 when it was its application that `stop-app` ended.
 
-A `run-app` that stays with the application has started no Gradle, so the process it records is `grails` itself, and the record says so (`"commandLine": true`). `stop-app` does not end that process: it writes `.grails/run/app.stopping`, which names the process it is for, and the `run-app`, which looks for that file while the build runs, cancels its build and ends with `Application stopped` and exit code 0. `stop-app` gives it 30 seconds; when the record is still there after that, it takes its request back, says that the `run-app` has not ended the application, and ends with exit code 1 without ending anything: end that `run-app` where it runs, with Ctrl-C. Since nothing is ended on this way, the process is held to its number, the instant it began and its user, and not to a command line.
-
-A `run-app` that left the application running, and every `run-app` where `GRAILS_GRADLE_RUNNER` is `process`, records the Gradle it started. `stop-app` ends that process and every process below it, first by asking and after 30 seconds by force. The application ends with them: either it is one of those processes, or, when the build runs in a Gradle daemon, as it does unless the daemon is turned off, the daemon is not below what is ended and is not ended; it cancels the build when the Gradle it worked for is gone, and ends the application then. `stop-app` therefore waits, for up to 30 seconds, until nothing takes connections on the recorded port any more, and only then says `Application stopped` and ends with exit code 0; when the port still answers after that time it says so and ends with exit code 1. What it sees is the port, not the process of the application: an application closes its port before it has ended, so its process can still be there for a moment after `Application stopped`. When nothing took connections on the port before `stop-app` ended Gradle, as for an application that was still starting, a free port says nothing, and `stop-app` says that instead: that Gradle, or the build, was stopped, and that it did not see the end of the application, which is ended with its build. A `run-app` that stays with the application in another terminal says `Application stopped` and ends with exit code 0 when it was its application that `stop-app` ended.
+A `run-app` that stays with the application and runs its build through the Tooling API has started no Gradle. That is `run-app --foreground` in the interactive console, and a `run-app` without `--detach` where `GRAILS_GRADLE_RUNNER` is `tooling-api`. The process it records is `grails` itself, and the record says so (`"commandLine": true`). `stop-app` does not end that process: it writes `.grails/run/app.stopping`, which names the process it is for, and the `run-app`, which looks for that file while the build runs, cancels its build and ends with `Application stopped` and exit code 0. `stop-app` gives it 30 seconds; when the record is still there after that, it takes its request back, says that the `run-app` has not ended the application, and ends with exit code 1 without ending anything: end that `run-app` where it runs, with Ctrl-C. Since nothing is ended on this way, the process is held to its number, the instant it began and its user, and not to a command line.
 
 `stop-app` stops only that. The record is a file in the project, and a project can come from anywhere, so the record alone is not believed. A process is ended, or asked, only when the record is a file of your own; and a process is ended only when it has the recorded number and began at the recorded instant (the number of a process that has ended is given to another one sooner or later), is a process of the user who runs the command, is not the command itself or a process that started it, and, where the system shows the command line of a process, is the Gradle wrapper of this project running `bootRun`: the wrapper script itself, or Java with the `gradle/wrapper/gradle-wrapper.jar` of this project, compared as the files they are and not as text that contains their path. Otherwise nothing is ended, and the command says why and ends with exit code 1; a record of a process that has ended, or one that cannot be read, is removed. When the process is the recorded one by number, instant and user but its command line is another, it is not ended and the record is kept: end it yourself if it is the application. `stop-app` never looks for whatever listens on a port, and it has no `--port` or `--host` option. When there is no record it says that no application is running and ends with exit code 1, as the shell does. A second `run-app` while the recorded application runs starts nothing and ends with exit code 1.
 

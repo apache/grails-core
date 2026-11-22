@@ -37,25 +37,39 @@ class GradleBuildSpec extends Specification {
     }
 
     @Unroll
-    void "for #purpose with GRAILS_GRADLE_RUNNER #said, Gradle is run by #runner"() {
+    void "for #purpose #where with GRAILS_GRADLE_RUNNER #said, Gradle is run by #runner.simpleName"() {
         given:
         GradleBuild.setRunner(value)
+        ConsoleCommands.setInteractive(console)
 
         expect:
         GradleBuild.of(purpose, failure, false).getClass() == runner
 
+        cleanup:
+        ConsoleCommands.setInteractive(false)
+
         where:
-        purpose                       | value         | runner
-        GradleBuild.Purpose.BUILD     | ''            | ToolingApiRunner
-        GradleBuild.Purpose.BUILD     | 'tooling-api' | ToolingApiRunner
-        GradleBuild.Purpose.BUILD     | 'process'     | GradleRunner
-        GradleBuild.Purpose.PASSED_ON | ''            | GradleRunner
-        GradleBuild.Purpose.PASSED_ON | 'tooling-api' | GradleRunner
-        GradleBuild.Purpose.PASSED_ON | 'process'     | GradleRunner
-        GradleBuild.Purpose.TERMINAL_SESSION | ''     | GradleRunner
-        GradleBuild.Purpose.TERMINAL_SESSION | 'tooling-api' | GradleRunner
-        GradleBuild.Purpose.TERMINAL_SESSION | 'process' | GradleRunner
+        purpose                              | console | value         | runner
+        GradleBuild.Purpose.BUILD            | false   | ''            | GradleRunner
+        GradleBuild.Purpose.BUILD            | false   | 'auto'        | GradleRunner
+        GradleBuild.Purpose.BUILD            | false   | 'process'     | GradleRunner
+        GradleBuild.Purpose.BUILD            | false   | 'tooling-api' | ToolingApiRunner
+        GradleBuild.Purpose.BUILD            | true    | ''            | ToolingApiRunner
+        GradleBuild.Purpose.BUILD            | true    | 'auto'        | ToolingApiRunner
+        GradleBuild.Purpose.BUILD            | true    | 'process'     | GradleRunner
+        GradleBuild.Purpose.BUILD            | true    | 'tooling-api' | ToolingApiRunner
+        GradleBuild.Purpose.PASSED_ON        | false   | ''            | GradleRunner
+        GradleBuild.Purpose.PASSED_ON        | false   | 'tooling-api' | GradleRunner
+        GradleBuild.Purpose.PASSED_ON        | true    | ''            | GradleRunner
+        GradleBuild.Purpose.PASSED_ON        | true    | 'tooling-api' | GradleRunner
+        GradleBuild.Purpose.PASSED_ON        | true    | 'process'     | GradleRunner
+        GradleBuild.Purpose.TERMINAL_SESSION | false   | ''            | GradleRunner
+        GradleBuild.Purpose.TERMINAL_SESSION | false   | 'tooling-api' | GradleRunner
+        GradleBuild.Purpose.TERMINAL_SESSION | true    | ''            | GradleRunner
+        GradleBuild.Purpose.TERMINAL_SESSION | true    | 'tooling-api' | GradleRunner
+        GradleBuild.Purpose.TERMINAL_SESSION | true    | 'process'     | GradleRunner
         said = value ? "set to ${value}" : 'not set'
+        where = console ? 'in the interactive console' : 'on a command line that runs one command'
     }
 
     void "a build that is left running is started by the wrapper as a process, whatever the environment says"() {
@@ -66,11 +80,11 @@ class GradleBuildSpec extends Specification {
         GradleBuild.leftRunning(failure, false).getClass() == GradleRunner
 
         where:
-        value << ['', 'tooling-api', 'process', 'something else']
+        value << ['', 'auto', 'tooling-api', 'process', 'something else']
     }
 
     @Unroll
-    void "a value of GRAILS_GRADLE_RUNNER that is none, #value, runs nothing for #purpose and says which values there are"() {
+    void "a value of GRAILS_GRADLE_RUNNER that is none of the three, #value, runs nothing for #purpose and says which values there are"() {
         given:
         GradleBuild.setRunner(value)
         File dir = Files.createTempDirectory('grailsbuild').toFile()
@@ -81,7 +95,7 @@ class GradleBuildSpec extends Specification {
 
         then:
         exit == 1
-        failures == ["The environment variable GRAILS_GRADLE_RUNNER says how Gradle is run, and is process or tooling-api: ${shown} is neither. Gradle was not run".toString()]
+        failures == ["The environment variable GRAILS_GRADLE_RUNNER says how Gradle is run, and is auto, process or tooling-api: ${shown} is none of them. Gradle was not run".toString()]
 
         cleanup:
         dir.deleteDir()
@@ -90,6 +104,7 @@ class GradleBuildSpec extends Specification {
         value            | purpose                       | shown
         'Process'        | GradleBuild.Purpose.BUILD     | 'Process'
         'toolingapi'     | GradleBuild.Purpose.PASSED_ON | 'toolingapi'
+        'Auto'           | GradleBuild.Purpose.BUILD     | 'Auto'
         'a\u001b[31mb\n' | GradleBuild.Purpose.BUILD     | 'a?[31mb'
     }
 
