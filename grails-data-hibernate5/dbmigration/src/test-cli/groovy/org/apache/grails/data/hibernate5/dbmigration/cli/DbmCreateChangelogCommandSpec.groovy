@@ -80,6 +80,26 @@ class DbmCreateChangelogCommandSpec extends ApplicationContextDatabaseMigrationC
             command.changeLogFile.text.contains("include file: 'added.groovy'")
     }
 
+    def "creates the file in a directory that is not there yet"() {
+        when:
+            command.handle(getExecutionContext('releases/2026/empty.groovy'))
+
+        then:
+            new File(changeLogLocation, 'releases/2026/empty.groovy').text.replaceAll(/\s/, '') == 'databaseChangeLog={}'
+    }
+
+    def "does not add the new file to the changelog of the application unless it is asked to"() {
+        given:
+            command.changeLogFile.text = 'databaseChangeLog = {\n}\n'
+
+        when:
+            command.handle(getExecutionContext('quiet.groovy'))
+
+        then:
+            new File(changeLogLocation, 'quiet.groovy').isFile()
+            command.changeLogFile.text == 'databaseChangeLog = {\n}\n'
+    }
+
     def "needs the name of the file"() {
         when:
             command.handle(getExecutionContext())

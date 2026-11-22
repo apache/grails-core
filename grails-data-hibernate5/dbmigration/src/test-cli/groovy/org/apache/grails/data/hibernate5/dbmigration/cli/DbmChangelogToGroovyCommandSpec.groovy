@@ -88,6 +88,59 @@ databaseChangeLog:
             new File(changeLogLocation, 'there.groovy').text == 'kept'
     }
 
+    def "overwrites a destination that is there when it is told to"() {
+        given:
+            def there = new File(changeLogLocation, 'there.groovy')
+            there.text = 'to be replaced'
+
+        when:
+            command.handle(getExecutionContext('changelog.yml', 'there.groovy', '--force'))
+
+        then:
+            there.text.replaceAll(/\s/, '').startsWith('databaseChangeLog={changeSet(author:"JohnSmith",id:"1"')
+            !there.text.contains('to be replaced')
+    }
+
+    def "writes into a directory that is not there yet"() {
+        when:
+            command.handle(getExecutionContext('changelog.yml', 'converted/2026/books.groovy'))
+
+        then:
+            new File(changeLogLocation, 'converted/2026/books.groovy').text.replaceAll(/\s/, '').contains('createTable(tableName:"book")')
+    }
+
+    def "adds the converted file to the changelog of the application when asked to, and not otherwise"() {
+        given:
+            command.changeLogFile.text = 'databaseChangeLog = {\n}\n'
+
+        when:
+            command.handle(getExecutionContext('changelog.yml', 'quiet.groovy'))
+
+        then:
+            new File(changeLogLocation, 'quiet.groovy').isFile()
+            !command.changeLogFile.text.contains('include')
+
+        when:
+            command.handle(getExecutionContext('changelog.yml', 'added.groovy', '--add'))
+
+        then:
+            new File(changeLogLocation, 'added.groovy').isFile()
+            command.changeLogFile.text.contains("include file: 'added.groovy'")
+            !command.changeLogFile.text.contains('quiet.groovy')
+    }
+
+    def "has nothing to add to the changelog of the application when the changelog goes to the standard output"() {
+        given:
+            command.changeLogFile.text = 'databaseChangeLog = {\n}\n'
+
+        when:
+            command.handle(getExecutionContext('changelog.yml', '--add'))
+
+        then:
+            extractOutput(output).contains('createTable(tableName:"book")')
+            command.changeLogFile.text == 'databaseChangeLog = {\n}\n'
+    }
+
     def "needs the name of the changelog to convert"() {
         when:
             command.handle(getExecutionContext())
