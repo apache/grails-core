@@ -81,8 +81,9 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
 
     /**
      * Opens the default session and applies {@link #applyFlushMode its flush mode}. The session is not bound yet, so
-     * when applying the flush mode fails, it is closed here, before the failure is thrown on. A
-     * {@link HibernateException} from either step is wrapped, as the parent class does.
+     * when applying the flush mode fails, it is closed here, before the failure is thrown on: any failure, as an
+     * override written in Groovy can throw a checked exception it does not declare. A {@link HibernateException} from
+     * either step is wrapped, as the parent class does.
      */
     @Override
     protected Session openSession() throws DataAccessResourceFailureException {
@@ -96,7 +97,7 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
         }
         try {
             applyFlushMode(session);
-        } catch (RuntimeException | Error ex) {
+        } catch (Throwable ex) {
             // not bound yet, so afterCompletion would not find it
             SessionFactoryUtils.closeSession(session);
             if (ex instanceof HibernateException) {
@@ -130,7 +131,7 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
                     try {
                         session.setHibernateFlushMode(config.flushMode);
                         TransactionSynchronizationManager.bindResource(sf, new SessionHolder(session));
-                    } catch (RuntimeException | Error ex) {
+                    } catch (Throwable ex) {
                         // not bound yet, so the release below would not find it
                         SessionFactoryUtils.closeSession(session);
                         throw ex;
@@ -138,7 +139,8 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
                 }
                 acquired++;
             }
-        } catch (RuntimeException | Error ex) {
+        } catch (Throwable ex) {
+            // any failure: code written in Groovy can throw a checked exception it does not declare
             releaseAfterFailedPreHandle(request, acquired, ex);
             throw ex;
         }
@@ -152,12 +154,12 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
     private void releaseAfterFailedPreHandle(WebRequest request, int acquired, Throwable failure) {
         try {
             closeAdditionalSessions(request, acquired, false);
-        } catch (RuntimeException | Error releaseEx) {
+        } catch (Throwable releaseEx) {
             failure.addSuppressed(releaseEx);
         }
         try {
             super.afterCompletion(request, null);
-        } catch (RuntimeException | Error releaseEx) {
+        } catch (Throwable releaseEx) {
             failure.addSuppressed(releaseEx);
         }
     }

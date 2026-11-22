@@ -19,6 +19,7 @@
 package org.grails.plugin.hibernate.support
 
 import grails.gorm.annotation.Entity
+import groovy.transform.AutoImplement
 import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.orm.hibernate.HibernateDatastore
 import org.hibernate.FlushMode
@@ -200,42 +201,61 @@ class MultiDataSourceSessionSpec extends Specification {
         }
     }
 
-    def "a request whose session for a later datasource fails to be set up closes it, and the sessions opened before"() {
+    def "a request whose session for a later datasource fails to be set up with #failure.class.simpleName closes it, and the sessions opened before"() {
         given: "after the secondary datasource, one whose new session refuses its flush mode"
         def interceptor = new GrailsOpenSessionInViewInterceptor()
         interceptor.setHibernateDatastore(datastore)
         SessionFactory secondarySf = datastore.getDatastoreForConnection('secondary').sessionFactory
-        Session refusingSession = Mock(Session) {
-            isOpen() >> true
-            setHibernateFlushMode(_) >> { throw new IllegalStateException('flush mode refused') }
-        }
-        SessionFactory refusingSf = Stub(SessionFactory) {
-            openSession() >> refusingSession
-        }
-        def configClass = Class.forName(GrailsOpenSessionInViewInterceptor.name + '$AdditionalSessionFactoryConfig')
-        def constructor = configClass.getDeclaredConstructor(String, SessionFactory, FlushMode)
-        constructor.accessible = true
-        interceptor.@additionalSessionFactories << constructor.newInstance('refusing', refusingSf, FlushMode.AUTO)
+        // Groovy classes, not Spock mocks or coerced maps, whose proxies would wrap a checked exception
+        RefusingSession refusingSession = new RefusingSession(failure: failure)
+        SessionFactory refusingSf = new FailingSessionFactory(session: refusingSession)
+        addAdditionalSessionFactory(interceptor, 'refusing', refusingSf)
 
         when:
         interceptor.preHandle(webRequest())
 
         then: "the failure is thrown, the session that refused is closed, and the earlier sessions are released"
-        thrown(IllegalStateException)
-        1 * refusingSession.close()
+        def thrownFailure = thrown(Throwable)
+        thrownFailure.is(failure)
+        refusingSession.closeCount == 1
         !TransactionSynchronizationManager.hasResource(refusingSf)
+        !TransactionSynchronizationManager.hasResource(secondarySf)
+        !TransactionSynchronizationManager.hasResource(datastore.sessionFactory)
+
+        where: "a checked exception too, which Groovy code can throw without declaring it"
+        failure << [new IllegalStateException('flush mode refused'), new IOException('flush mode refused')]
+    }
+
+    def "a request whose session for a later datasource fails to open with a checked exception releases the sessions opened before"() {
+        given: "after the secondary datasource, one whose session factory throws a checked exception as it opens a session"
+        def interceptor = new GrailsOpenSessionInViewInterceptor()
+        interceptor.setHibernateDatastore(datastore)
+        SessionFactory secondarySf = datastore.getDatastoreForConnection('secondary').sessionFactory
+        IOException failure = new IOException('cannot open')
+        // a Groovy class, not a Spock stub or a coerced map, whose proxy would wrap a checked exception
+        SessionFactory failingSf = new FailingSessionFactory(failure: failure)
+        addAdditionalSessionFactory(interceptor, 'failing', failingSf)
+
+        when:
+        interceptor.preHandle(webRequest())
+
+        then: "the failure is thrown, and the earlier sessions are released"
+        def thrownFailure = thrown(IOException)
+        thrownFailure.is(failure)
+        !TransactionSynchronizationManager.hasResource(failingSf)
         !TransactionSynchronizationManager.hasResource(secondarySf)
         !TransactionSynchronizationManager.hasResource(datastore.sessionFactory)
     }
 
-    def "a request whose default session fails to be set up closes it"() {
+    def "a request whose default session fails to be set up with #failure.class.simpleName closes it"() {
         given: "an interceptor whose flush mode the new default session refuses"
         Session refused = null
+        Throwable refusal = failure
         def interceptor = new GrailsOpenSessionInViewInterceptor() {
             @Override
             protected void applyFlushMode(Session session) {
                 refused = session
-                throw new IllegalStateException('flush mode refused')
+                throw refusal
             }
         }
         interceptor.setHibernateDatastore(datastore)
@@ -244,10 +264,14 @@ class MultiDataSourceSessionSpec extends Specification {
         interceptor.preHandle(webRequest())
 
         then: "the failure is thrown, and the default session is closed and not bound"
-        thrown(IllegalStateException)
+        def thrownFailure = thrown(Throwable)
+        thrownFailure.is(failure)
         refused != null
         !refused.open
         !TransactionSynchronizationManager.hasResource(datastore.sessionFactory)
+
+        where: "a checked exception too, which a Groovy override can throw without declaring it"
+        failure << [new IllegalStateException('flush mode refused'), new IOException('flush mode refused')]
     }
 
     def "a request whose default session refuses its flush mode as it is opened closes it, failing with #expected.simpleName"() {
@@ -580,6 +604,13 @@ class MultiDataSourceSessionSpec extends Specification {
         }
     }
 
+    private static void addAdditionalSessionFactory(GrailsOpenSessionInViewInterceptor interceptor, String name, SessionFactory sessionFactory) {
+        def configClass = Class.forName(GrailsOpenSessionInViewInterceptor.name + '$AdditionalSessionFactoryConfig')
+        def constructor = configClass.getDeclaredConstructor(String, SessionFactory, FlushMode)
+        constructor.accessible = true
+        interceptor.@additionalSessionFactories << constructor.newInstance(name, sessionFactory, FlushMode.AUTO)
+    }
+
     private WebRequest webRequest() {
         Map<String, Object> attributes = [:]
         Stub(WebRequest) {
@@ -666,4 +697,41 @@ class BrokenOsivBook {
 @Entity
 class BrokenOsivAuthor {
     String name
+}
+
+/** A session that refuses its flush mode, throwing whatever it is given, a checked exception too. */
+@AutoImplement
+class RefusingSession implements Session {
+    Throwable failure
+    int closeCount
+
+    @Override
+    boolean isOpen() {
+        closeCount == 0
+    }
+
+    @Override
+    void setHibernateFlushMode(FlushMode flushMode) {
+        throw failure
+    }
+
+    @Override
+    void close() {
+        closeCount++
+    }
+}
+
+/** A session factory that hands out the session it is given, or throws whatever it is given, a checked exception too. */
+@AutoImplement
+class FailingSessionFactory implements SessionFactory {
+    Session session
+    Throwable failure
+
+    @Override
+    Session openSession() {
+        if (failure != null) {
+            throw failure
+        }
+        session
+    }
 }
