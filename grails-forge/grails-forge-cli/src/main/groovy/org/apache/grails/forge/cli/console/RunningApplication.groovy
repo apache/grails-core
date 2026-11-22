@@ -39,6 +39,12 @@ import groovy.transform.CompileStatic
  * running {@code bootRun}. A number alone is never enough: the system gives the number of a process
  * that has ended to another one.</p>
  *
+ * <p>A {@code run-app} that stays with its application runs the build from its own JVM, through the
+ * Tooling API of Gradle, and has started no process: it records itself, and says so in the record.
+ * Such a process is held to the number, the instant and the user, and to nothing of its command line,
+ * which is that of a command line and of no Gradle. It is never ended on the word of a record: it is
+ * asked, through a file beside the record that it looks for, and ends its build itself.</p>
+ *
  * <p>The record holds the number, the instant and the port, and nothing of the command line the
  * process was started with: that can have a password in it, and nothing reads it.</p>
  *
@@ -52,6 +58,27 @@ final class RunningApplication {
 
     /** What the build and the application write when {@code run-app} does not stay with them, in {@code .grails/run}. */
     public static final String LOG = 'app.log'
+
+    /**
+     * @return whether the record that was found is there still and names the process it named: a
+     * {@code run-app} that stays with its application removes it when the build has ended
+     */
+    boolean isRecorded() {
+        return record != null && names(record, pid, started)
+    }
+
+    /**
+     * Takes back what {@link #askToStop} said, when it is still there: a {@code run-app} that did not
+     * look for it in time is not to find it later.
+     *
+     * @param run the directory {@code .grails/run} of the project
+     */
+    void withdraw(Path run) {
+        Path asked = run.resolve(STOPPING)
+        if (names(asked, pid, started)) {
+            remove(asked)
+        }
+    }
 
     /**
      * Says that {@code stop-app} ends the application, to the {@code run-app} that stays with it; in
@@ -104,9 +131,15 @@ final class RunningApplication {
     /** Whether {@code run-app} did not stay with the application. */
     final boolean detached
 
+    /**
+     * Whether the recorded process is the command line that runs {@code run-app} itself, which is asked
+     * to end its build, and not a Gradle that it started, which is ended.
+     */
+    final boolean commandLine
+
     private final Path record
 
-    private RunningApplication(State state, String reason, Path record, ProcessHandle process, long pid, long started, int port, boolean detached) {
+    private RunningApplication(State state, String reason, Path record, ProcessHandle process, long pid, long started, int port, boolean detached, boolean commandLine = false) {
         this.state = state
         this.reason = reason
         this.record = record
@@ -115,6 +148,7 @@ final class RunningApplication {
         this.started = started
         this.port = port
         this.detached = detached
+        this.commandLine = commandLine
     }
 
     /**
@@ -143,8 +177,9 @@ final class RunningApplication {
         long started = said.started
         int port = (int) said.port.longValue()
         boolean detached = said.detached == 1L
+        boolean commandLine = said.commandLine == 1L
         Closure<RunningApplication> not = { State state, String why ->
-            new RunningApplication(state, why, record, null, pid, started, port, detached)
+            new RunningApplication(state, why, record, null, pid, started, port, detached, commandLine)
         }
         Optional<ProcessHandle> found = ProcessHandle.of(pid)
         if (!found.isPresent() || !found.get().isAlive()) {
@@ -154,16 +189,17 @@ final class RunningApplication {
         if (!began(process, started)) {
             return not(State.ENDED, "process ${pid} is not the one that was started for it: it did not begin when the record says".toString())
         }
-        if (isThisCommand(process)) {
+        // a command line that recorded itself is asked and not ended, so it can be this one or one above it
+        if (!commandLine && isThisCommand(process)) {
             return not(State.ENDED, "process ${pid} is this command or one that started it".toString())
         }
         if (!ProcessUser.isOfThisUser(process)) {
             return not(State.ENDED, "process ${pid} is not a process of the user who runs the command".toString())
         }
-        if (!isGradleOf(project, windows, process.info())) {
+        if (!commandLine && !isGradleOf(project, windows, process.info())) {
             return not(State.UNCONFIRMED, "process ${pid} began when the record says, but its command line is not that of the Gradle wrapper of this project running ${TASK}".toString())
         }
-        return new RunningApplication(State.RUNNING, null, record, process, pid, started, port, detached)
+        return new RunningApplication(State.RUNNING, null, record, process, pid, started, port, detached, commandLine)
     }
 
     /**
@@ -173,16 +209,19 @@ final class RunningApplication {
      * @param process the process
      * @param port the port the application was started for, or 0
      * @param detached whether {@code run-app} does not stay with the application
+     * @param commandLine whether the process is the command line that runs {@code run-app} itself
      * @return the instant the process began as the record has it, in milliseconds: what the record is
      * found by again when it is to be removed, which the system no longer says of a process that has ended
      * @throws IOException with one line, when the record cannot be written
      */
-    static long record(Path run, ProcessHandle process, int port, boolean detached) throws IOException {
+    static long record(Path run, ProcessHandle process, int port, boolean detached, boolean commandLine = false) throws IOException {
         Optional<Instant> began = process.info().startInstant()
         if (!began.isPresent()) {
             throw new IOException("${RunDirectory.LOCATION}/${RECORD} cannot be written: the system does not say when process ${process.pid()} began, and without that it cannot be told from another one later")
         }
-        String said = "{\"format\":${FORMAT},\"pid\":${process.pid()},\"started\":${began.get().toEpochMilli()},\"port\":${port},\"detached\":${detached}}\n"
+        // said only where it is so: a record of a Gradle that was started is what it has been
+        String said = "{\"format\":${FORMAT},\"pid\":${process.pid()},\"started\":${began.get().toEpochMilli()},\"port\":${port},\"detached\":${detached}" +
+                "${commandLine ? ',\"commandLine\":true' : ''}}\n"
         // written beside the record and moved, so that whoever reads the record reads all of it
         Path written = RunDirectory.create(run, RECORD + '.new')
         try {
@@ -346,11 +385,12 @@ final class RunningApplication {
         Long pid = whole(said.get('pid'))
         Long started = whole(said.get('started'))
         Long port = whole(said.get('port'))
-        if (pid == null || started == null || port == null || !(said.get('detached') instanceof Boolean) ||
+        Object commandLine = said.get('commandLine')
+        if (pid == null || started == null || port == null || !(said.get('detached') instanceof Boolean) || !(commandLine == null || commandLine instanceof Boolean) ||
                 pid < 2L || pid > MAX_PID || started < 1L || port < 0L || port > 65535L) {
             throw new IOException('it does not name a process, an instant and a port')
         }
-        return [pid: pid, started: started, port: port, detached: said.get('detached') ? 1L : 0L] as Map<String, Long>
+        return [pid: pid, started: started, port: port, detached: said.get('detached') ? 1L : 0L, commandLine: commandLine ? 1L : 0L] as Map<String, Long>
     }
 
     private static boolean isThisCommand(ProcessHandle process) {

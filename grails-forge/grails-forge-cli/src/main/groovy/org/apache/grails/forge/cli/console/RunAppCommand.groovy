@@ -40,8 +40,12 @@ import picocli.CommandLine
  * unless another one is given.
  *
  * <p>The command either stays with the application until it ends, or starts it, waits until it
- * answers on its port and returns, leaving it running for {@code stop-app}. Either way it records the
- * process it started in {@code .grails/run} of the project, which is what {@code stop-app} goes by.</p>
+ * answers on its port and returns, leaving it running for {@code stop-app}. Where it stays, it runs
+ * the build through the Tooling API of Gradle, from its own JVM, and records itself in
+ * {@code .grails/run} of the project: {@code stop-app} asks it to end the build, and it looks for
+ * that. Where it leaves the application running, it starts the Gradle wrapper of the project as a
+ * process that goes on without it, and records that process, which {@code stop-app} ends. Which of
+ * the two runs Gradle is decided in {@link GradleBuild}.</p>
  *
  * @since 9.0
  */
@@ -282,18 +286,25 @@ class RunAppCommand extends GradleEnvironmentCommand {
 
     // The command stays with Gradle, which stays with the application. The record lets stop-app, from
     // another terminal, end them; what Gradle then ends with is the end that was asked for. The record
-    // and what stop-app said are this run's only while they name the process this run started: by the
-    // time Gradle has ended, another run-app can have started and recorded another one.
+    // and what stop-app said are this run's only while they name the process this run recorded: by the
+    // time Gradle has ended, another run-app can have started and recorded another one. Where the build
+    // is run from this JVM there is no process for stop-app to end: the record names this command, which
+    // looks for what stop-app says while the build runs, and cancels the build itself.
     private int stayWith(ConsoleProject project, boolean windows, Path directory, List<String> arguments, int answersOn) throws GradleRunner.RefusedArgumentException {
         List<String> failures = []
         long[] recorded = [0L, 0L] as long[]
+        AtomicBoolean asked = new AtomicBoolean()
+        Thread[] looking = new Thread[1]
         GradleBuild runner = GradleBuild.of(GradleBuild.Purpose.BUILD, { String message -> failures.add(message) } as Consumer<String>, windows)
         out('| Running application...')
         int exit = runner.run(project, arguments, { GradleBuild.Running started ->
             try {
                 // the instant as it was recorded: of a process that has ended by now the system says none
-                recorded[1] = RunningApplication.record(directory, started.process, answersOn, false)
+                recorded[1] = RunningApplication.record(directory, started.process, answersOn, false, started.commandLine)
                 recorded[0] = started.process.pid()
+                if (started.commandLine) {
+                    looking[0] = lookForStop(directory, recorded[0], recorded[1], asked, started)
+                }
             } catch (IOException e) {
                 // a build that has ended by now is none to record, and says itself how it ended
                 if (started.process.isAlive()) {
@@ -301,16 +312,39 @@ class RunAppCommand extends GradleEnvironmentCommand {
                 }
             }
         } as Consumer<GradleBuild.Running>)
-        boolean asked = recorded[0] != 0L && RunningApplication.wasAskedToStop(directory, recorded[0], recorded[1])
+        if (looking[0] != null) {
+            looking[0].interrupt()
+        }
+        if (recorded[0] != 0L && RunningApplication.wasAskedToStop(directory, recorded[0], recorded[1])) {
+            asked.set(true)
+        }
         if (recorded[0] != 0L) {
             RunningApplication.forget(directory, recorded[0], recorded[1])
         }
-        if (asked) {
+        if (asked.get()) {
             out('| Application stopped')
             return 0
         }
         failures.each { String message -> err(message) }
         return exit
+    }
+
+    // Looks, while the build runs, for what stop-app says to this command, and cancels the build when it is said.
+    private static Thread lookForStop(Path directory, long pid, long began, AtomicBoolean asked, GradleBuild.Running build) {
+        Thread thread = new Thread({
+            try {
+                while (!RunningApplication.wasAskedToStop(directory, pid, began)) {
+                    Thread.sleep(POLL_MILLIS)
+                }
+                asked.set(true)
+                build.cancel()
+            } catch (InterruptedException ignored) {
+                // the build has ended
+            }
+        } as Runnable, 'grails-run-app-stop-asked')
+        thread.setDaemon(true)
+        thread.start()
+        return thread
     }
 
     private int startAndReturn(ConsoleProject project, boolean windows, Path directory, List<String> arguments, int answersOn, String address) throws GradleRunner.RefusedArgumentException {

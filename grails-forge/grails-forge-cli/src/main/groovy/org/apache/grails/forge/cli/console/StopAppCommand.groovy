@@ -29,16 +29,21 @@ import picocli.CommandLine
  * else. It goes by the record {@code run-app} wrote and by what the system says of the recorded
  * process, see {@link RunningApplication}; it never looks for whatever listens on a port.
  *
+ * <p>A {@code run-app} that left the application running recorded the Gradle it started, and that
+ * process is ended. A {@code run-app} that stays with its application recorded itself: it is asked to
+ * end the build it runs, which it does, and no process is ended by this command.</p>
+ *
  * @since 9.0
  */
 @CommandLine.Command(name = 'stop-app',
         description = [
                 'Stops the Grails application that run-app started for this project.',
-                'Ends the Gradle that run-app started, and with it every process below it. The application ends with them:',
-                'it is one of them, or it is ended by the Gradle daemon that runs the build, when the Gradle it worked for is gone.',
+                'A run-app that stays with the application is asked to end its build, and does.',
+                'Of a run-app that left the application running, the Gradle it started is ended, and with it every process below it.',
+                'The application ends with the build: the Gradle daemon that runs the build ends what the build started.',
                 'The command then waits until nothing takes connections on the port of the application any more,',
                 'and says so when the application had not taken its port yet: its end is then not seen.',
-                'Nothing else is ended: a process is ended only when it is the one run-app recorded in .grails/run.'
+                'Nothing else is ended: a process is ended, or asked, only when it is the one run-app recorded in .grails/run.'
         ])
 @CompileStatic
 class StopAppCommand extends InProjectCommand {
@@ -77,7 +82,39 @@ class StopAppCommand extends InProjectCommand {
                 err("The application was not stopped: ${running.reason}. End that process yourself if it is the application, and delete ${RECORD}")
                 return 1
         }
-        return stop(project, running)
+        return running.commandLine ? ask(project, running) : stop(project, running)
+    }
+
+    // The run-app that stays with the application runs its build from its own JVM: it is told that the
+    // end was asked for, and cancels the build. Nothing is ended here, so a record that names a process
+    // which is no such run-app costs a wait and nothing else.
+    private int ask(ConsoleProject project, RunningApplication running) {
+        out('| Stopping application...')
+        boolean answered = running.port > 0 && ApplicationPort.isOpen(running.port)
+        Path directory
+        try {
+            directory = RunDirectory.existing(project)
+            if (directory == null) {
+                throw new IOException("${RunDirectory.LOCATION} is not there any more")
+            }
+            running.askToStop(directory)
+        } catch (IOException e) {
+            err("The run-app that stays with the application, process ${running.pid}, could not be asked to end it: ${GradleRunner.line(e.getMessage())}. " +
+                    'Nothing was stopped; end that command where it runs')
+            return 1
+        }
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(STOP_SECONDS)
+        while (running.process.isAlive() && running.isRecorded()) {
+            if (System.nanoTime() > deadline || !pause()) {
+                running.withdraw(directory)
+                err("The run-app that stays with the application, process ${running.pid}, was asked to end it and has not within ${STOP_SECONDS} seconds. " +
+                        'Nothing is ended by force: end that command where it runs, with Ctrl-C. The record was kept')
+                return 1
+            }
+        }
+        running.withdraw(directory)
+        running.forget()
+        return seenAtPort(running, answered, 'The build was stopped')
     }
 
     private int stop(ConsoleProject project, RunningApplication running) {
@@ -100,22 +137,36 @@ class StopAppCommand extends InProjectCommand {
             return 1
         }
         running.forget()
-        // A Gradle daemon is not below what was ended, whether it was there before run-app or was started
-        // for it: it cancels the build when the Gradle it worked for is gone, and ends the application
-        // then. That it did is seen at the port, and only there.
+        return seenAtPort(running, answered, 'Gradle was stopped')
+    }
+
+    // A Gradle daemon is not below what was ended, whether it was there before run-app or was started
+    // for it: it cancels the build when the Gradle it worked for is gone or asks for it, and ends the
+    // application then. That it did is seen at the port, and only there.
+    private int seenAtPort(RunningApplication running, boolean answered, String stopped) {
         if (running.port > 0 && !closed(running.port)) {
-            err("Gradle was stopped, but something answers on port ${running.port} still after ${PORT_SECONDS} seconds: the application may take longer to end, or it is another one. " +
+            err("${stopped}, but something answers on port ${running.port} still after ${PORT_SECONDS} seconds: the application may take longer to end, or it is another one. " +
                     'Nothing else was stopped')
             return 1
         }
         if (running.port > 0 && !answered) {
             // an application that was still starting: a port nothing had taken says nothing by being free
-            out("| Gradle was stopped. Nothing took connections on port ${running.port} yet, so the end of the application was not seen there: " +
+            out("| ${stopped}. Nothing took connections on port ${running.port} yet, so the end of the application was not seen there: " +
                     'an application that was starting is ended with its build.')
             return 0
         }
         out('| Application stopped.')
         return 0
+    }
+
+    private static boolean pause() {
+        try {
+            Thread.sleep(POLL_MILLIS)
+            return true
+        } catch (InterruptedException ignored) {
+            Thread.currentThread().interrupt()
+            return false
+        }
     }
 
     private static boolean closed(int port) {
