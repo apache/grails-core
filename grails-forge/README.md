@@ -61,6 +61,33 @@ and use `grails-cli/build/install/apache-grails-bin/bin/grails`.
 
 Use `-PskipForgeTests` to skip Forge tests and their local-Maven publication prerequisites.
 
+## Feature packs of Forge
+
+A feature of the framework that is only dependencies, settings and files is a feature pack that Forge has in
+itself, in the format a plugin uses for its own pack (see "Adding a Feature to Application Creation" in the
+Grails guide). Each is a directory under
+`grails-forge-core/src/main/resources/META-INF/grails-forge-bundled`, named for its feature, with a
+`feature.yml` and the files it names under `templates`; the file `packs` beside the directories names the
+packs, one on a line. What a pack gives is held by a file under
+`grails-forge-core/src/test/resources/golden/bundled` (`BundledPackGoldenSpec`).
+
+A file of a pack whose name ends with `.gsp` is a template. The templates of these packs are compiled when
+Forge is built, not each time the command line generates an application: the task
+`:grails-forge-core:compilePackPages` compiles every template of every pack `packs` names, with the code that
+compiles a template when Forge runs, and the jar of `grails-forge-core` (and with it the jar of the `grails`
+command) has the classes, named `PackPage_` and a SHA-256 of the feature and the text of the template, and
+the index `META-INF/grails-forge-pages/index`. Whoever adds or changes a template has nothing to do for
+this: the next build compiles it, a template that does not compile fails the build, and
+`PrecompiledPackPagesSpec` fails when a template has no compiled page or writes anything else from it than
+when it is compiled where it is rendered.
+
+A compiled page is used only for the template it was compiled from, as it is parsed in the run. The
+template of a pack that is not of Forge (of a plugin, a directory or a repository), a template whose text
+is not the one that was compiled, and every template when the index or a class is missing are compiled when
+they are rendered, as before, and nothing says so. To see what the compiled pages have to do with a problem
+or with the time a command takes, run it with all templates compiled where they are rendered:
+`JAVA_OPTS=-Dgrails.forge.pack.precompiled=false grails create-app ...`.
+
 ## Installation
 
 The CLI is a Java application distributed with Grails for Windows, Linux and macOS. Download it from the [releases page](https://github.com/apache/grails-core/releases). For installation see the [Grails documentation](https://grails.apache.org/docs/latest/guide/index.html#buildCLI).

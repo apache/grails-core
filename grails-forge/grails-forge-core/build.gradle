@@ -208,6 +208,47 @@ tasks.named('test', Test).configure { Test test ->
     test.classpath += files(layout.buildDirectory.dir('gsp-classes/main')).builtBy('compileGroovyPages')
 }
 
+// The templates of the packs Forge has in itself (src/main/resources/META-INF/grails-forge-bundled) are
+// compiled here, so that the command line does not compile them each time it generates an application.
+// PackPagesCompiler compiles them with the code that compiles a template when Forge runs, in a JVM
+// that has what this module runs with, and writes the classes and an index that names them. The jar
+// has both. What it writes depends on its class path alone and is the same on every machine, so the
+// task is cached.
+abstract class PackPagesDirectory implements CommandLineArgumentProvider {
+
+    @OutputDirectory
+    abstract DirectoryProperty getDirectory()
+
+    @Override
+    Iterable<String> asArguments() {
+        [directory.get().asFile.absolutePath]
+    }
+}
+TaskProvider<JavaExec> compilePackPages = tasks.register('compilePackPages', JavaExec)
+compilePackPages.configure { JavaExec task ->
+    task.description = 'Compiles the templates of the feature packs Forge has in itself.'
+    task.group = 'build'
+    task.classpath = sourceSets.main.runtimeClasspath
+    task.mainClass = 'org.apache.grails.forge.core.pack.PackPagesCompiler'
+    PackPagesDirectory pages = objects.newInstance(PackPagesDirectory)
+    pages.directory.set(layout.buildDirectory.dir('pack-pages/main'))
+    task.argumentProviders.add(pages)
+    // Groovy compiles for the Java it runs on unless it is told: the classes are for the Java this build
+    // compiles for, whichever Java runs the build, as the classes of the module are
+    Object javaVersion = findProperty('javaVersion')
+    if (javaVersion != null) {
+        task.systemProperty('groovy.target.bytecode', javaVersion.toString())
+    }
+    task.outputs.cacheIf { true }
+}
+tasks.named('jar', Jar).configure { Jar jar ->
+    jar.from(compilePackPages)
+}
+// the specs take the pages of the build as the jar has them
+tasks.named('test', Test).configure { Test test ->
+    test.classpath += files(compilePackPages)
+}
+
 // PackCheckSpec runs the check of a feature pack as the Grails Gradle plugin does: in a JVM of its own
 // that has what this module needs to run and nothing of its tests. The class path goes through a file,
 // since it can be longer than a command line.

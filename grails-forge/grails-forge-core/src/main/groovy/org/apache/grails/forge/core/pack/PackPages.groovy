@@ -25,14 +25,19 @@ import java.security.MessageDigest
 import java.util.concurrent.ConcurrentHashMap
 import java.util.regex.Matcher
 import java.util.regex.Pattern
+import org.codehaus.groovy.control.BytecodeProcessor
 import org.codehaus.groovy.control.CompilationFailedException
+import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.MultipleCompilationErrorsException
 import org.codehaus.groovy.control.messages.SyntaxErrorMessage
 import org.grails.exceptions.ExceptionUtils
+import org.grails.forge.util.VersionInfo
+import org.grails.gsp.GroovyPageClassLoader
 import org.grails.gsp.GroovyPageMetaInfo
 import org.grails.gsp.GroovyPageTemplate
 import org.grails.gsp.GroovyPagesException
 import org.grails.gsp.GroovyPagesTemplateEngine
+import org.grails.gsp.compiler.GroovyPageParser
 import org.grails.gsp.io.DefaultGroovyPageLocator
 import org.grails.taglib.AbstractTemplateVariableBinding
 import org.grails.taglib.GrailsTagException
@@ -60,6 +65,11 @@ import org.grails.taglib.encoder.OutputContext
  * only the packs Forge has in itself, which are a fixed set, share one between generations. An
  * instance can be used by several threads at once: it compiles one page at a time and renders any
  * number.</p>
+ *
+ * <p>The instance of the packs of Forge is given the pages the build of Forge compiled, see
+ * {@link PrecompiledPackPages}: a template whose page is among them, for the very source it would be
+ * compiled from, is not compiled. The build compiles those pages with {@link #precompile}, which is
+ * what compiles a template here, so that a page of the build is the page a run would have compiled.</p>
  *
  * @since 9.0
  * @see PackModel
@@ -92,12 +102,30 @@ final class PackPages {
 
     private final GroovyPagesTemplateEngine engine
     private final Map<String, Compiled> pages = new ConcurrentHashMap<>()
+    private final PrecompiledPackPages precompiled
+    private final Loader loader
     private int compiled
+    private int taken
 
     /**
      * @param classLoader the class loader the pages are compiled against
      */
     PackPages(ClassLoader classLoader) {
+        this(classLoader, null)
+    }
+
+    /**
+     * @param classLoader the class loader the pages are compiled against
+     * @param precompiled the pages the build compiled, which are taken for the templates they are of
+     * and not compiled again, or {@code null} for an instance that compiles every template: the one of
+     * packs that are not of Forge
+     */
+    PackPages(ClassLoader classLoader, PrecompiledPackPages precompiled) {
+        this(classLoader, precompiled, false)
+    }
+
+    private PackPages(ClassLoader classLoader, PrecompiledPackPages precompiled, boolean ofBuild) {
+        this.precompiled = precompiled
         engine = new GroovyPagesTemplateEngine() {
 
             @Override
@@ -109,15 +137,69 @@ final class PackPages {
         engine.groovyPageLocator = new DefaultGroovyPageLocator()
         engine.classLoader = classLoader
         engine.afterPropertiesSet()
+        if (precompiled != null || ofBuild) {
+            // what the engine compiles with when it is left to make its class loader, which is told the
+            // source of each page and so can give the class of the build for it, or keep the classes it
+            // compiles for the build. Given to the engine after it has set itself up: before, it would
+            // put a class loader of its own in front of this one.
+            CompilerConfiguration configuration = new CompilerConfiguration()
+            configuration.setSourceEncoding(GroovyPageParser.GROOVY_SOURCE_CHAR_ENCODING)
+            loader = new Loader(classLoader, configuration, precompiled)
+            engine.classLoader = loader
+        } else {
+            loader = null
+        }
     }
 
     /**
-     * @return the number of templates this has compiled
+     * @return the number of templates this has compiled; a template whose page is one of the build was
+     * not compiled, see {@link #getPrecompiled}
      */
     int getCompiled() {
         synchronized (pages) {
             return compiled
         }
+    }
+
+    /**
+     * @return the number of templates this has taken the page of the build for
+     */
+    int getPrecompiled() {
+        synchronized (pages) {
+            return taken
+        }
+    }
+
+    /**
+     * Compiles the template of a pack of Forge for the build, as rendering it would compile it.
+     *
+     * @param classLoader the class loader the page is compiled against
+     * @param owner whose template it is, the name of its feature
+     * @param source the source of the template
+     * @return the page: its key, the classes it is compiled to and what they were compiled from
+     * @throws RuntimeException when the template cannot be compiled
+     */
+    static Precompiled precompile(ClassLoader classLoader, String owner, String source) {
+        PackPages pages = new PackPages(classLoader, null, true)
+        String text = withoutMark(source)
+        String key = key(owner, text)
+        Map<String, byte[]> classes = new TreeMap<>()
+        GroovyPageMetaInfo page
+        pages.loader.keep(classes)
+        try {
+            page = pages.create(DIRECTIVES + PackTemplateSource.toPage(text), PrecompiledPackPages.pageName(key))
+        } finally {
+            pages.loader.keep(null)
+        }
+        if (page.getCompilationException() != null) {
+            throw page.getCompilationException()
+        }
+        String name = page.getPageClass().getName()
+        if (name != PrecompiledPackPages.className(key) || !classes.containsKey(name)) {
+            throw new IllegalStateException("The page of a template was compiled to the class ${name}, and not to " +
+                    PrecompiledPackPages.className(key))
+        }
+        return new Precompiled(key, pages.loader.source, classes)
     }
 
     /**
@@ -136,7 +218,7 @@ final class PackPages {
     @SuppressWarnings('ParameterCount')
     byte[] render(String owner, String source, String name, int templateApi, Map<String, Object> model, int limit) {
         StringWriter out = new Bounded(limit)
-        String text = source.startsWith('\uFEFF') ? source.substring(1) : source
+        String text = withoutMark(source)
         GroovyPageMetaInfo page = null
         try {
             Compiled compiled = compiledPage(owner, text)
@@ -200,6 +282,12 @@ final class PackPages {
             // one at a time: an engine is not said to compile two pages at once, and a page is compiled once
             synchronized (pages) {
                 page = pages.get(key)
+                GroovyPageMetaInfo ofBuild = page == null ? ofBuild(key, text) : null
+                if (ofBuild != null) {
+                    taken++
+                    page = new Compiled(ofBuild, null)
+                    pages.put(key, page)
+                }
                 if (page == null) {
                     // the directives on the first line of the source, so that the lines of a message are those
                     // of the template; a name of its own for the page, since the name of a file is not always
@@ -207,7 +295,7 @@ final class PackPages {
                     String name = "template${++compiled}.gsp"
                     try {
                         String source = DIRECTIVES + PackTemplateSource.toPage(text)
-                        page = new Compiled(((GroovyPageTemplate) engine.createTemplate(source, name, false)).metaInfo, null)
+                        page = new Compiled(create(source, name), null)
                     } catch (GrailsTagException | PackTemplateSource.Refused e) {
                         // what the parser refuses, it refuses each time
                         page = new Compiled(null, e)
@@ -223,10 +311,51 @@ final class PackPages {
         return page
     }
 
-    // each part with its length in front of it: no two owners and sources are the same bytes
-    private static String key(String owner, String text) {
+    private GroovyPageMetaInfo create(String source, String name) {
+        return ((GroovyPageTemplate) engine.createTemplate(source, name, false)).metaInfo
+    }
+
+    /**
+     * The page of a template with the class the build compiled, or {@code null} when the template is to
+     * be compiled: the build compiled none for its key, or compiled it from another source than the one
+     * it has now. Whatever is wrong with the template is said where it is compiled.
+     */
+    private GroovyPageMetaInfo ofBuild(String key, String text) {
+        if (precompiled == null || !precompiled.has(key)) {
+            return null
+        }
+        loader.expect(key)
+        try {
+            GroovyPageMetaInfo page = create(DIRECTIVES + PackTemplateSource.toPage(text), PrecompiledPackPages.pageName(key))
+            return page.getCompilationException() == null && loader.gave(page.getPageClass()) ? page : null
+        } catch (VirtualMachineError e) {
+            throw e
+        } catch (Throwable ignored) {
+            return null
+        } finally {
+            loader.expect(null)
+        }
+    }
+
+    private static String withoutMark(String source) {
+        return source.startsWith('﻿') ? source.substring(1) : source
+    }
+
+    /**
+     * The key a page is kept by, which is the key the build names its class by: each part with its
+     * length in front of it, so that no two owners and sources are the same bytes.
+     *
+     * @param owner whose template it is, the name of its feature
+     * @param text the source of the template, without a byte order mark
+     * @return the SHA-256 of the owner, the directives and the text
+     */
+    static String key(String owner, String text) {
+        return digest([owner, DIRECTIVES, text])
+    }
+
+    private static String digest(List<String> parts) {
         MessageDigest digest = MessageDigest.getInstance('SHA-256')
-        for (String part : [owner, DIRECTIVES, text]) {
+        for (String part : parts) {
             byte[] bytes = part.getBytes(StandardCharsets.UTF_8)
             digest.update(ByteBuffer.allocate(Integer.BYTES).putInt(bytes.length).array())
             digest.update(bytes)
@@ -406,6 +535,113 @@ final class PackPages {
             }
             throw new MissingPropertyException("There is no '${name}' for a template: template API ${templateApi} has " +
                     "${known}")
+        }
+    }
+
+    /**
+     * A template as the build compiled it.
+     */
+    static final class Precompiled {
+
+        /** The key of the template, see {@link PackPages#key}. */
+        final String key
+        /** The SHA-256 of what the page was compiled from: the Groovy source, and the compiler and how it was set. */
+        final String source
+        /** The bytes of each class the page is compiled to, by the name of the class, in the order of the names. */
+        final Map<String, byte[]> classes
+
+        Precompiled(String key, String source, Map<String, byte[]> classes) {
+            this.key = key
+            this.source = source
+            this.classes = Collections.unmodifiableMap(classes)
+        }
+    }
+
+    /**
+     * Compiles the pages as the class loader the engine makes for itself does, and is told the Groovy
+     * source of each page as the engine is about to compile it. For a page that is expected of the
+     * build it gives the class of the build when that was compiled from this very source, and refuses
+     * the page when it was not: such a page is then compiled under a name of its own. For the build it
+     * keeps the bytes of the classes it compiles.
+     */
+    private static final class Loader extends GroovyPageClassLoader {
+
+        private final PrecompiledPackPages precompiled
+        private final String compiler
+        private String expected
+        private Class<?> given
+        private Map<String, byte[]> kept
+        private String source
+
+        Loader(ClassLoader parent, CompilerConfiguration configuration, PrecompiledPackPages precompiled) {
+            super(parent, configuration)
+            this.precompiled = precompiled
+            this.compiler = compiler(configuration)
+            configuration.setBytecodePostprocessor({ String name, byte[] original ->
+                if (kept != null) {
+                    kept.put(name, original.clone())
+                }
+                return original
+            } as BytecodeProcessor)
+        }
+
+        // the key of the page that is created next, which is one of the build; null for a page that is compiled
+        void expect(String key) {
+            expected = key
+            given = null
+        }
+
+        boolean gave(Class<?> page) {
+            return given != null && given.is(page)
+        }
+
+        void keep(Map<String, byte[]> classes) {
+            kept = classes
+        }
+
+        String getSource() {
+            return source
+        }
+
+        /**
+         * What, beside its source, the class of a page comes of: the compiler and how it is set. The
+         * build and a run say it with this, and a page of the build is taken only where it is the
+         * same. The Groovy source itself has in it what the parser of the pages made of the template
+         * for the environment, the directives and the system properties of the run. The version of
+         * Java the classes are written for is left out: a class of the build runs on every Java this
+         * runs on, and is what the compiler would write for the Java of the build.
+         */
+        private static String compiler(CompilerConfiguration configuration) {
+            return digest([
+                    "groovy ${GroovySystem.getVersion()}".toString(),
+                    "grails ${VersionInfo.getGrailsVersion()}".toString(),
+                    "encoding ${configuration.getSourceEncoding()}".toString(),
+                    "optimization ${new TreeMap<String, Boolean>(configuration.getOptimizationOptions())}".toString(),
+                    "parameters ${configuration.getParameters()} preview ${configuration.isPreviewFeatures()}".toString(),
+                    "base ${configuration.getScriptBaseClass()}".toString(),
+                    "customizers ${configuration.getCompilationCustomizers()*.getClass()*.getName()}".toString(),
+                    "disabled ${new TreeSet<String>(configuration.getDisabledGlobalASTTransformations() ?: [] as Set<String>)}".toString(),
+            ])
+        }
+
+        @Override
+        Class parseClass(String text, String fileName) {
+            source = digest([compiler, text])
+            if (expected == null) {
+                return super.parseClass(text, fileName)
+            }
+            given = precompiled.load(expected, source)
+            if (given == null) {
+                throw new NotOfBuild()
+            }
+            return given
+        }
+    }
+
+    private static final class NotOfBuild extends RuntimeException {
+
+        NotOfBuild() {
+            super('not the source the build compiled', null, false, false)
         }
     }
 

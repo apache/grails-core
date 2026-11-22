@@ -42,12 +42,23 @@ import org.springframework.beans.factory.support.RootBeanDefinition
  *
  * <p>The templates of these packs are compiled once, the first time each is rendered, and the compiled
  * pages are used by every generation after it, at once where generations are: they are of Forge, and
- * as many as its packs have templates.</p>
+ * as many as its packs have templates. A template the build of Forge compiled is not compiled then:
+ * its page is taken as the build made it, see {@link PrecompiledPackPages}. With the system property
+ * {@link #PRECOMPILED_PROPERTY} set to {@code false} every template is compiled, as it is for a pack
+ * that is not of Forge.</p>
  *
  * @since 9.0
  */
 @CompileStatic
 class BundledPackFeatures implements BeanDefinitionRegistryPostProcessor {
+
+    /**
+     * The system property that, set to {@code false}, has the templates of the packs of Forge compiled
+     * when they are rendered and no page of the build taken: to tell what a page of the build has to do
+     * with something that goes wrong, or with the time a generation takes. Read when the first template
+     * is rendered.
+     */
+    public static final String PRECOMPILED_PROPERTY = 'grails.forge.pack.precompiled'
 
     private static final String BEAN_PREFIX = 'forgeFeaturePack.'
 
@@ -96,10 +107,19 @@ class BundledPackFeatures implements BeanDefinitionRegistryPostProcessor {
         return shared == null ? 0 : shared.getCompiled()
     }
 
+    /**
+     * @return the number of templates of the packs of Forge that were not compiled since Forge started,
+     * because the page the build of Forge compiled for them was taken
+     */
+    synchronized int getPrecompiledTemplates() {
+        return shared == null ? 0 : shared.getPrecompiled()
+    }
+
     // made when the first template is rendered: many uses of Forge render none
     private synchronized PackPages shared(ClassLoader loader) {
         if (shared == null) {
-            shared = new PackPages(loader)
+            boolean precompiled = Boolean.parseBoolean(System.getProperty(PRECOMPILED_PROPERTY, 'true'))
+            shared = new PackPages(loader, precompiled ? PrecompiledPackPages.ofForge() : null)
         }
         return shared
     }
