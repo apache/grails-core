@@ -84,8 +84,9 @@ final class AsyncErrorCompletionHandler implements HttpHandler {
      * Adds the handlers to a deployment once every other handler has been added to it. A servlet container initializer
      * this adds as the last servlet extension runs after every other one, and a listener that initializer adds is told
      * the context was initialized after every other listener, which Undertow does just before it builds the handler
-     * chains. Undertow only lets a listener add a context listener through its internal API, and a listener added that
-     * way can always come after this one.
+     * chains. The outer handler is added as Undertow wraps the last inner one, which it does before it wraps the outer
+     * ones, so a handler another inner one adds as it wraps is added before it. Undertow only lets a listener add a
+     * context listener through its internal API, and a listener added that way can always come after this one.
      *
      * @param deployment the deployment, once its customizers and the servlet extensions before this one have run
      * @param servletContext the servlet context of the deployment
@@ -96,10 +97,13 @@ final class AsyncErrorCompletionHandler implements HttpHandler {
 
             @Override
             public void contextInitialized(ServletContextEvent event) {
-                deployment.addOuterHandlerChainWrapper(
-                    (next) -> new AsyncErrorCompletionHandler(next, DispatcherType.REQUEST));
-                deployment.addInnerHandlerChainWrapper(
-                    (next) -> new AsyncErrorCompletionHandler(next, DispatcherType.ASYNC));
+                deployment.addInnerHandlerChainWrapper((next) -> {
+                    // Undertow builds the inner chain, wrapping this last, before it builds the outer one, so a
+                    // handler an inner one adds as it wraps is added before this, and none can be added after it
+                    deployment.addOuterHandlerChainWrapper(
+                        (outer) -> new AsyncErrorCompletionHandler(outer, DispatcherType.REQUEST));
+                    return new AsyncErrorCompletionHandler(next, DispatcherType.ASYNC);
+                });
             }
 
         };

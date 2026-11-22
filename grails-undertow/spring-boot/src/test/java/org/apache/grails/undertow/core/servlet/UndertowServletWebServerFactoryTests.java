@@ -476,6 +476,23 @@ class UndertowServletWebServerFactoryTests {
                 new ImmediateInstanceFactory<>(addsHandlers)))));
     }
 
+    /**
+     * Undertow builds the inner handler chain before the outer one, so a handler an inner one adds while Undertow
+     * builds the chains is the last outer handler added. Undertow iterates both lists while it builds them, so no
+     * other handler can be added then.
+     */
+    @ParameterizedTest
+    @ValueSource(strings = { "/startsAsync", "/dispatches" })
+    void processingCompletesOnceTheErrorPageHasAnsweredAnErrorAHandlerAddedWhileTheChainsAreBuiltForwardedTo(
+            String path) throws Exception {
+        assertCompletesOnceTheErrorPageHasAnswered(path, (info) -> info.addServletExtension(
+            (deployment, servletContext) -> deployment.addInnerHandlerChainWrapper((next) -> {
+                deployment.addOuterHandlerChainWrapper(
+                    (outer) -> forwardsAndCompletesAfter(outer, DispatcherType.REQUEST, "/sendsErrorOnly"));
+                return forwardsAndCompletesAfter(next, DispatcherType.ASYNC, "/sendsErrorOnly");
+            })));
+    }
+
     @ParameterizedTest
     @ValueSource(strings = { "/startsAsync", "/dispatches" })
     void processingCompletesOnceTheErrorPageHasAnsweredAnErrorAHandlerAnInitializerAddedForwardedTo(String path)
