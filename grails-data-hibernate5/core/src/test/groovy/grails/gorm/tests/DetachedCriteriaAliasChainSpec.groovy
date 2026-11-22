@@ -82,6 +82,37 @@ class DetachedCriteriaAliasChainSpec extends GrailsDataTckSpec<GrailsDataHiberna
         }.list()*.name == ['with related']
     }
 
+    def 'a path that continues an alias declared inside #block is refused with the way to declare it'() {
+        when:
+        new DetachedCriteria(DcChainParent).build(criteria)
+
+        then:
+        IllegalArgumentException e = thrown()
+        e.message.contains('Declare the alias at the top level')
+
+        where:
+        block   | criteria
+        'and'   | { and { createAlias('children', 'c'); createAlias('c.related', 'r') } }
+        'or'    | { or { createAlias('children', 'c'); createAlias('c.related', 'r') } }
+        'not'   | { not { createAlias('children', 'c'); createAlias('c.related', 'r') } }
+        'a nested block' | { and { or { createAlias('children', 'c'); createAlias('c.related', 'r') } } }
+    }
+
+    def 'an alias declared at the top level and used inside a block still works'() {
+        given:
+        seed()
+
+        expect:
+        new DetachedCriteria(DcChainParent).build {
+            createAlias('children', 'c')
+            createAlias('c.related', 'r')
+            or {
+                isNotNull('r.name')
+                eq('name', 'without name')
+            }
+        }.list()*.name.sort() == ['with related', 'without name']
+    }
+
     def 'a path from an alias that continues with a property that is not an association is refused'() {
         when:
         new DetachedCriteria(DcChainParent).build {

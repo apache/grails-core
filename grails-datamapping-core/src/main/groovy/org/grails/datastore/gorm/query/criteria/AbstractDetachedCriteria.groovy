@@ -167,7 +167,28 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
                 return ((DetachedAssociationCriteria) criterion).associationPath + associationPath.substring(dot)
             }
         }
+        // a block that is still open is not in the criteria yet
+        List<Query.Criterion> inBlocks = new ArrayList<Query.Criterion>(criteria)
+        inBlocks.addAll(junctions)
+        if (declaredInBlock(inBlocks, head) && persistentEntity.getPropertyByName(head) == null) {
+            // the path would start from the root and fail further on, or find the wrong association: say what to do
+            throw new IllegalArgumentException("The alias [$head] is declared inside a block (and, or, not), and the path [$associationPath] cannot continue from it there. Declare the alias at the top level of the query and use it inside the block.")
+        }
         associationPath
+    }
+
+    private static boolean declaredInBlock(List<Query.Criterion> criteria, String alias) {
+        for (Query.Criterion criterion in criteria) {
+            if (criterion instanceof Query.Junction) {
+                for (Query.Criterion inner in ((Query.Junction) criterion).criteria) {
+                    if ((inner instanceof DetachedAssociationCriteria && ((DetachedAssociationCriteria) inner).alias == alias) ||
+                            (inner instanceof Query.Junction && declaredInBlock([inner], alias))) {
+                        return true
+                    }
+                }
+            }
+        }
+        false
     }
 
     /**
