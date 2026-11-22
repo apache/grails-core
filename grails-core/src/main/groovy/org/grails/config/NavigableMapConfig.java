@@ -21,6 +21,7 @@ package org.grails.config;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
@@ -335,6 +336,14 @@ public abstract class NavigableMapConfig implements Config {
         systemEnvironment = new SystemEnvironmentIndex(System.getenv());
     }
 
+    /**
+     * Indexes the given environment as the JVM of the given operating system would hold it, so that a test can
+     * exercise the names Windows matches regardless of case on any machine.
+     */
+    void refreshSystemEnvironment(Map<String, String> environment, boolean windows) {
+        systemEnvironment = new SystemEnvironmentIndex(environment, windows);
+    }
+
     @Override
     public <T> T getProperty(String key, Class<T> targetType, T defaultValue) {
         Object value = systemEnvironment.get(key);
@@ -567,8 +576,33 @@ public abstract class NavigableMapConfig implements Config {
         private final Set<String> canonicalNames;
         private final int[] canonicalHashes;
 
+        /**
+         * How the JVM compares variable names on Windows: each character upper-cased, and nothing else. That keeps names
+         * that {@link String#CASE_INSENSITIVE_ORDER} would merge apart, such as {@code CONFIG_ID} and {@code CONFIG_İD}
+         * (U+0130), because it also lower-cases and so reads the dotted capital I as an {@code i}.
+         */
+        private static final Comparator<String> WINDOWS_NAME_ORDER = (first, second) -> {
+            int length = Math.min(first.length(), second.length());
+            for (int i = 0; i < length; i++) {
+                char a = first.charAt(i);
+                char b = second.charAt(i);
+                if (a != b) {
+                    a = Character.toUpperCase(a);
+                    b = Character.toUpperCase(b);
+                    if (a != b) {
+                        return a - b;
+                    }
+                }
+            }
+            return first.length() - second.length();
+        };
+
         SystemEnvironmentIndex(Map<String, String> environment) {
-            this.variables = IS_WINDOWS ? new TreeMap<>(String.CASE_INSENSITIVE_ORDER) : HashMap.newHashMap(environment.size());
+            this(environment, IS_WINDOWS);
+        }
+
+        SystemEnvironmentIndex(Map<String, String> environment, boolean windows) {
+            this.variables = windows ? new TreeMap<>(WINDOWS_NAME_ORDER) : HashMap.newHashMap(environment.size());
             this.variables.putAll(environment);
             this.canonicalNames = HashSet.newHashSet(variables.size());
             for (String name : variables.keySet()) {
