@@ -422,7 +422,10 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
     /**
      * Takes the default session off the thread as asynchronous handling starts. One this interceptor opened, for a
      * request Grails made asynchronous, is added to {@code released}, to be closed when the asynchronous request
-     * completes; otherwise the parent class unbinds it, and leaves closing it to its asynchronous interceptors.
+     * completes. Otherwise the parent class unbinds it, and leaves closing it to its asynchronous interceptors, which
+     * close it in the dispatch that a {@code Callable} or {@code DeferredResult} starts; one this interceptor opened is
+     * also closed when the asynchronous request completes, unless it is closed by then, since a request can complete
+     * without that dispatch.
      */
     private void releaseDefaultSessionAsAsyncStarts(WebRequest request, List<Session> released) {
         if (isGrailsAsync(request) && !isParticipating(request) &&
@@ -431,8 +434,25 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
                     (SessionHolder) TransactionSynchronizationManager.unbindResource(getSessionFactory());
             released.add(sessionHolder.getSession());
         } else {
+            SessionHolder sessionHolder = isParticipating(request) ? null :
+                    (SessionHolder) TransactionSynchronizationManager.getResource(getSessionFactory());
             super.afterConcurrentHandlingStarted(request);
+            if (sessionHolder != null) {
+                closeIfLeftOpenWhenAsynchronousRequestCompletes(request, sessionHolder.getSession());
+            }
         }
+    }
+
+    /**
+     * Closes the default session that the parent class took off the thread when the asynchronous request completes,
+     * unless it is closed by then. Without an asynchronous context to listen to, it is left to the parent class.
+     */
+    private void closeIfLeftOpenWhenAsynchronousRequestCompletes(WebRequest request, Session session) {
+        AsynchronousCompletion.onComplete(request, () -> {
+            if (session.isOpen()) {
+                closeSessions(List.of(session), null);
+            }
+        });
     }
 
     /**
