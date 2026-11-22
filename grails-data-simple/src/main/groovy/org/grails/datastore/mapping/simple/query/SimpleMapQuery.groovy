@@ -308,7 +308,6 @@ class SimpleMapQuery extends Query {
 
     protected queryAssociation(allEntities, Association association, Closure callable) {
         allEntities?.findAll {
-            def propertyName = association.name
             if (association instanceof ToOne) {
 
                 // the association is stored under the key of its mapping, as any other property is
