@@ -80,8 +80,12 @@ final class ApplicationCommandManifestWriter {
         try {
             description = command.description
         }
-        catch (RuntimeException e) {
-            System.err.println("The command ${name} is listed with its name for a description, as its description could not be read: ${e.message}")
+        catch (VirtualMachineError e) {
+            throw e
+        }
+        catch (Throwable e) {
+            // also an assertion that the context is there, or a class of an optional library missing
+            System.err.println("The command ${name} is listed with its name for a description, as its description could not be read: ${e}")
             description = name
         }
         List<Map<String, Object>> arguments = declaredArguments(type).collect { CommandParameter argument ->

@@ -121,16 +121,23 @@ class ApplicationCommandManifestWriterSpec extends Specification {
         ContainerFirstManifestCommand       || 'container-first-manifest'     | ['b', 'c', 'a']     | ['y', 'z', 'x']
     }
 
-    void 'a command whose description cannot be read is listed with its name for a description, and the others as they are'() {
+    void 'a command whose description fails with #failure.simpleName is listed with its name for a description, and the others as they are'() {
         given: 'a command whose description needs the application context, which the writer does not start'
-        declareCommands(ContextDescriptionManifestCommand, DescribedManifestCommand)
+        FailingDescriptionManifestCommand.failure = failure
+        declareCommands(FailingDescriptionManifestCommand, DescribedManifestCommand)
 
         when:
         Map manifest = writeManifest()
 
         then:
-        command(manifest, 'context-description-manifest').description == 'context-description-manifest'
+        command(manifest, 'failing-description-manifest').description == 'failing-description-manifest'
         command(manifest, 'described-manifest').description == 'Sets up the users of the application'
+
+        cleanup:
+        FailingDescriptionManifestCommand.failure = null
+
+        where:
+        failure << [IllegalStateException, AssertionError, NoClassDefFoundError]
     }
 
     void 'the directory of the manifest is created when it does not exist'() {
@@ -233,11 +240,13 @@ class ContainerFirstManifestCommand implements ApplicationCommand {
     }
 }
 
-class ContextDescriptionManifestCommand implements ApplicationCommand {
+class FailingDescriptionManifestCommand implements ApplicationCommand {
+
+    static Class<? extends Throwable> failure
 
     @Override
     String getDescription() {
-        throw new IllegalStateException('The description needs the application context')
+        throw failure.getConstructor(String).newInstance('The description needs the application context')
     }
 
     @Override
