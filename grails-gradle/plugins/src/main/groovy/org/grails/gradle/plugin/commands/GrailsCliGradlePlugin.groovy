@@ -138,6 +138,14 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
     public static final String ARGS_FILE_PROPERTY = 'argsFile'
 
     /**
+     * The argument with which a command task hands the file of {@link #ARGS_FILE_PROPERTY} to the
+     * command's JVM, which reads the file itself, so the arguments in it, a password among them, are
+     * neither on that JVM's command line nor stored with the task by the configuration cache. The
+     * command runners of {@code grails-console} know the same argument.
+     */
+    public static final String ARGS_FILE_ARGUMENT = '--grails-args-file='
+
+    /**
      * Set this project property to the directory of a project, absolute or relative to the root of the
      * build, to run {@code runCommand},
      * {@link #COMMAND_MANIFEST_TASK} and the other command tasks only in that project. Without it, a task
@@ -421,38 +429,100 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
      * @return the arguments, empty when neither property is set
      */
     static List<String> commandArguments(Project project) {
-        List<String> arguments = []
-        def args = project.findProperty(ARGS_PROPERTY)
-        if (args) {
-            arguments.addAll(CommandLineParser.translateCommandline(args as String))
-        }
-        def argsFile = project.findProperty(ARGS_FILE_PROPERTY)
-        if (argsFile) {
-            String content = project.providers.fileContents(project.layout.projectDirectory.file(argsFile as String)).asText.orNull
-            if (content == null) {
-                throw new GradleException("The file of the '${ARGS_FILE_PROPERTY}' property, ${argsFile}, does not exist.")
-            }
-            Object parsed
-            try {
-                parsed = new JsonSlurper().parseText(content)
-            }
-            catch (JsonException e) {
-                throw new GradleException("The file of the '${ARGS_FILE_PROPERTY}' property, ${argsFile}, is not JSON: ${e.message}", e)
-            }
-            if (!(parsed instanceof List) || ((List) parsed).any { !(it instanceof String) }) {
-                throw new GradleException("The file of the '${ARGS_FILE_PROPERTY}' property, ${argsFile}, must hold a JSON array of strings.")
-            }
-            arguments.addAll((List<String>) parsed)
+        List<String> arguments = propertyArguments(project)
+        File argsFile = argumentsFile(project)
+        if (argsFile != null) {
+            arguments.addAll(fileArguments(project, argsFile))
         }
         arguments
     }
 
+    private static List<String> propertyArguments(Project project) {
+        def args = project.findProperty(ARGS_PROPERTY)
+        args ? CommandLineParser.translateCommandline(args as String).toList() : []
+    }
+
+    /** The file {@link #ARGS_FILE_PROPERTY} names, relative to the project's directory, or none */
+    private static File argumentsFile(Project project) {
+        def argsFile = project.findProperty(ARGS_FILE_PROPERTY)
+        argsFile ? project.layout.projectDirectory.file(argsFile as String).asFile : null
+    }
+
+    /** The arguments of the file, which must hold one JSON array of strings and nothing else */
+    private static List<String> fileArguments(Project project, File argsFile) {
+        String described = "The file of the '${ARGS_FILE_PROPERTY}' property, ${project.findProperty(ARGS_FILE_PROPERTY)},"
+        String content = project.providers.fileContents(project.layout.projectDirectory.file(argsFile.path)).asText.orNull
+        if (content == null) {
+            throw new GradleException("${described} does not exist.")
+        }
+        if (!content.trim()) {
+            throw new GradleException("${described} is not JSON: it is empty.")
+        }
+        Object parsed
+        try {
+            parsed = new JsonSlurper().parseText(content)
+        }
+        catch (JsonException | IllegalArgumentException e) {
+            throw new GradleException("${described} is not JSON: ${e.message}", e)
+        }
+        // the parser stops at the end of the first value, and would pass over anything after it
+        if (!onlyWhitespaceAfterFirstValue(content)) {
+            throw new GradleException("${described} is not JSON: text follows the end of its array.")
+        }
+        if (!(parsed instanceof List) || ((List) parsed).any { !(it instanceof String) }) {
+            throw new GradleException("${described} must hold a JSON array of strings.")
+        }
+        (List<String>) parsed
+    }
+
     /**
-     * Returns the arguments of a command task, from {@link #commandArguments}, and prepares the task for
-     * them: the system properties they name as {@code -Dname=value} are set on the command's JVM when
-     * the task runs, after every other setting, so {@code -Dgrails.env=test} among them chooses the
-     * environment; and the task runs only in the project {@link #COMMAND_PROJECT_PROPERTY} names, when
-     * it is set.
+     * Whether only white space follows the array or object the text starts with: its brackets are
+     * matched, leaving out those inside strings.
+     */
+    private static boolean onlyWhitespaceAfterFirstValue(String content) {
+        int start = 0
+        while (start < content.length() && Character.isWhitespace(content.charAt(start))) {
+            start++
+        }
+        if (start == content.length() || !(content.charAt(start) in ['[' as char, '{' as char])) {
+            return true
+        }
+        int depth = 0
+        boolean inString = false
+        for (int i = start; i < content.length(); i++) {
+            char c = content.charAt(i)
+            if (inString) {
+                if (c == ('\\' as char)) {
+                    i++
+                }
+                else if (c == ('"' as char)) {
+                    inString = false
+                }
+            }
+            else if (c == ('"' as char)) {
+                inString = true
+            }
+            else if (c == ('[' as char) || c == ('{' as char)) {
+                depth++
+            }
+            else if (c == (']' as char) || c == ('}' as char)) {
+                depth--
+                if (depth == 0) {
+                    return content.substring(i + 1).trim().isEmpty()
+                }
+            }
+        }
+        true
+    }
+
+    /**
+     * Returns the arguments of a command task and prepares the task for them. The task runs only in the
+     * project {@link #COMMAND_PROJECT_PROPERTY} names, when it is set; in any other project nothing is
+     * read. The system properties the arguments of {@link #commandArguments} name as
+     * {@code -Dname=value} are set on the command's JVM when the task runs, after every other setting,
+     * so {@code -Dgrails.env=test} among them chooses the environment. The arguments of
+     * {@link #ARGS_PROPERTY} are passed as they are, and the file of {@link #ARGS_FILE_PROPERTY} by its
+     * path, with {@link #ARGS_FILE_ARGUMENT}, for the command's JVM to read.
      *
      * @param task the command task
      * @param project the project the task belongs to
@@ -460,14 +530,24 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
      */
     @CompileDynamic
     static List<Object> commandTaskArguments(JavaExec task, Project project) {
+        // a project the command does not run in reads nothing, as the file may be one of another project
+        if (!isNamedCommandProject(project)) {
+            runOnlyInNamedProject(task, project)
+            return []
+        }
         List<String> arguments = commandArguments(project)
         Map<String, String> systemProperties = commandSystemProperties(arguments)
         if (systemProperties) {
             // set when the task runs, so no setting of grails.env made for every JavaExec task wins over it
             task.doFirst { JavaExec running -> running.systemProperties(systemProperties) }
         }
-        runOnlyInNamedProject(task, project)
-        new ArrayList<Object>(arguments)
+        // the file's arguments reach the command through the file, read by the command's JVM
+        File argsFile = argumentsFile(project)
+        List<Object> taskArguments = new ArrayList<Object>(propertyArguments(project))
+        if (argsFile != null) {
+            taskArguments << (ARGS_FILE_ARGUMENT + argsFile.absolutePath)
+        }
+        taskArguments
     }
 
     /**

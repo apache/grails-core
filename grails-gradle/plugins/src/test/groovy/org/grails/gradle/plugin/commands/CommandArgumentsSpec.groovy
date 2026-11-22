@@ -68,11 +68,24 @@ class CommandArgumentsSpec extends Specification {
         e.message.contains(message)
 
         where:
-        problem                        | content      || message
-        'does not exist'               | null         || 'does not exist'
-        'is not JSON'                  | 'not json'   || 'is not JSON'
-        'is not an array of strings'   | '["a", 1]'   || 'must hold a JSON array of strings'
-        'is an object'                 | '{"a": "b"}' || 'must hold a JSON array of strings'
+        problem                        | content          || message
+        'does not exist'               | null             || 'does not exist'
+        'is not JSON'                  | 'not json'       || 'is not JSON'
+        'is empty'                     | ''               || 'is not JSON: it is empty'
+        'is blank'                     | ' \n '           || 'is not JSON: it is empty'
+        'has text after its array'     | '["a"] trailing' || 'is not JSON: text follows the end of its array'
+        'holds a second array'         | '["a"] ["b"]'    || 'is not JSON: text follows the end of its array'
+        'is not an array of strings'   | '["a", 1]'       || 'must hold a JSON array of strings'
+        'is an object'                 | '{"a": "b"}'     || 'must hold a JSON array of strings'
+    }
+
+    void 'brackets and quotes inside the strings of an args file do not end its array'() {
+        given:
+        List<String> arguments = [']', '[', '"]', '\\', '\\"', '} {']
+        new File(projectDir, 'arguments.json').text = JsonOutput.toJson(arguments) + '\n'
+
+        expect:
+        GrailsCliGradlePlugin.commandArguments(project(argsFile: 'arguments.json')) == arguments
     }
 
     void 'an args file given by its absolute path, as the Grails Forge CLI gives it, is read'() {
@@ -97,8 +110,10 @@ class CommandArgumentsSpec extends Specification {
         when:
         List<Object> arguments = GrailsCliGradlePlugin.commandTaskArguments(task, project)
 
-        then: 'nothing is set while the build is configured, where a setting for every JavaExec task could replace it'
-        arguments == given
+        then: 'the file is handed to the command by its path, so its arguments are not on the command line of the JVM'
+        arguments == [GrailsCliGradlePlugin.ARGS_FILE_ARGUMENT + project.file('arguments.json').absolutePath]
+
+        and: 'nothing is set while the build is configured, where a setting for every JavaExec task could replace it'
         task.systemProperties == ['grails.env': 'development']
 
         when: 'the task starts'
@@ -107,6 +122,31 @@ class CommandArgumentsSpec extends Specification {
         then:
         task.systemProperties == ['grails.env': 'test', query: 'a=b', trimmed: 'yes', quoted: 'yes']
         task.onlyIf.isSatisfiedBy(task)
+    }
+
+    void 'the arguments of the args property are passed as they are, before the args file'() {
+        given:
+        new File(projectDir, 'arguments.json').text = JsonOutput.toJson(['--password', 'secret'])
+        Project project = project(args: 'dbm-update --verbose', argsFile: 'arguments.json')
+        JavaExec task = project.tasks.register('commandTask', JavaExec).get()
+
+        expect:
+        GrailsCliGradlePlugin.commandTaskArguments(task, project) ==
+                ['dbm-update', '--verbose', GrailsCliGradlePlugin.ARGS_FILE_ARGUMENT + project.file('arguments.json').absolutePath]
+    }
+
+    void 'a command task of a project the grailsCommandProject property does not name does not read the args file'() {
+        given: 'an args file that is not in this project, as one relative to another project of the build'
+        Project project = project(grailsCommandProject: new File(projectDir, 'other').absolutePath, argsFile: 'arguments.json')
+        JavaExec task = project.tasks.register('commandTask', JavaExec).get()
+
+        when:
+        List<Object> arguments = GrailsCliGradlePlugin.commandTaskArguments(task, project)
+
+        then:
+        noExceptionThrown()
+        arguments == []
+        !task.onlyIf.isSatisfiedBy(task)
     }
 
     void 'arguments the command line parser refuses set no system property'() {

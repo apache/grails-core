@@ -215,7 +215,10 @@ Now you can run the `greet` command with arguments and options:
 `args` is split into words as a shell would split it. A tool that passes arguments it cannot quote for
 every shell can put them in a JSON file as an array of strings and name it with `argsFile`, a path
 relative to the project directory or an absolute one. Each reaches the command's command line as it is in
-the file, after those of `args`:
+the file, after those of `args`. The file must hold one JSON array of strings and nothing else. The command
+reads the file itself, so its arguments, a password among them, are neither on the command line of the
+command's JVM nor kept by Gradle's configuration cache; those of `args` are both. Only a system property
+it sets with `-D` is set on the JVM:
 
 [source,shell]
 ----

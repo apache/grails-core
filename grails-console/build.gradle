@@ -51,6 +51,7 @@ dependencies {
     }
     api 'org.apache.groovy:groovy'
     api 'org.apache.groovy:groovy-console'
+    implementation 'org.apache.groovy:groovy-json' // reads the arguments file a command task hands its JVM
     api 'org.apache.groovy:groovy-swing'
     // groovysh declares the individual JLine modules. Grails ships the org.jline:jline bundle, which
     // contains every one of them at the BOM's version, so the modules are left off the classpath
