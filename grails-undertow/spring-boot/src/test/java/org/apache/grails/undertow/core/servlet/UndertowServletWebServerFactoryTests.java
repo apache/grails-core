@@ -19,6 +19,7 @@ package org.apache.grails.undertow.core.servlet;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -48,6 +49,9 @@ import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
 import jakarta.servlet.ServletRequest;
+import jakarta.servlet.ServletRequestEvent;
+import jakarta.servlet.ServletRequestListener;
+import jakarta.servlet.ServletResponse;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -76,6 +80,7 @@ import org.springframework.boot.web.server.Ssl;
 import org.springframework.boot.web.server.WebServer;
 import org.springframework.boot.web.server.WebServerException;
 import org.springframework.boot.web.servlet.ServletContextInitializer;
+import org.springframework.boot.web.servlet.ServletListenerRegistrationBean;
 import org.springframework.boot.web.servlet.ServletRegistrationBean;
 import org.springframework.util.FileCopyUtils;
 
@@ -505,15 +510,16 @@ class UndertowServletWebServerFactoryTests {
         assertThat(getStatus("http://localhost:" + this.webServer.getPort() + "/dispatchesAfterSendingAnError"))
             .isEqualTo(503);
 
-        Awaitility.await().untilAsserted(() -> assertThat(events).containsExactly("dispatched", "onComplete"));
+        Awaitility.await().untilAsserted(() -> assertThat(events)
+            .containsExactly("dispatched", "sent again", "onComplete"));
         Thread.sleep(200);
-        assertThat(events).containsExactly("dispatched", "onComplete");
+        assertThat(events).containsExactly("dispatched", "sent again", "onComplete");
     }
 
     /**
      * Undertow's error dispatch completes the processing once the error page has run, which tells the listeners before
-     * the dispatch the request asked for runs. That is Undertow's own, with or without the handler, which only keeps
-     * the error from being sent a second time by that dispatch.
+     * the dispatch the request asked for runs. That is Undertow's own, with or without the handler, which keeps the
+     * error from being sent a second time once that dispatch has returned.
      */
     @Test
     void asynchronousProcessingADispatchDispatchesAfterSendingAnErrorAnErrorPageAnswersCompletesOnce()
@@ -528,9 +534,161 @@ class UndertowServletWebServerFactoryTests {
             .isEqualTo("Error page");
 
         Awaitility.await().untilAsserted(() -> assertThat(events)
-            .containsExactlyInAnyOrder("errorPage", "dispatched", "onComplete"));
+            .containsExactly("errorPage", "onComplete", "dispatched", "sent again"));
         Thread.sleep(200);
-        assertThat(events).containsExactlyInAnyOrder("errorPage", "dispatched", "onComplete");
+        assertThat(events).containsExactly("errorPage", "onComplete", "dispatched", "sent again");
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = { false, true })
+    void asynchronousProcessingStartedAgainCompletesOnceThePreviousProcessingHeardItStarted(boolean errorPage)
+            throws Exception {
+        List<String> events = new CopyOnWriteArrayList<>();
+        UndertowServletWebServerFactory factory = new UndertowServletWebServerFactory(0);
+        if (errorPage) {
+            factory.addErrorPages(new ErrorPage("/errorPage"));
+        }
+        ServletRegistrationBean<HttpServlet> first = new ServletRegistrationBean<>(new HttpServlet() {
+
+            @Override
+            protected void doGet(HttpServletRequest request, HttpServletResponse response) {
+                request.startAsync().addListener(new AsyncListener() {
+
+                    @Override
+                    public void onComplete(AsyncEvent event) {
+                        events.add("first:onComplete");
+                    }
+
+                    @Override
+                    public void onTimeout(AsyncEvent event) {
+                        events.add("first:onTimeout");
+                    }
+
+                    @Override
+                    public void onError(AsyncEvent event) {
+                        events.add("first:onError");
+                    }
+
+                    @Override
+                    public void onStartAsync(AsyncEvent event) {
+                        events.add("first:onStartAsync");
+                        event.getAsyncContext().addListener(this);
+                    }
+
+                });
+                request.getAsyncContext().dispatch("/sendsError");
+            }
+
+        }, "/first");
+        first.setName("first");
+        first.setAsyncSupported(true);
+        this.webServer = factory.getWebServer(recordingErrorPage(events), first,
+            sendsErrorAfterStartingAsync(events, false));
+        this.webServer.start();
+
+        getResponse("http://localhost:" + this.webServer.getPort() + "/first");
+
+        List<String> expected = new ArrayList<>(List.of("first:onStartAsync", "onComplete", "first:onComplete"));
+        if (errorPage) {
+            expected.add(1, "errorPage");
+        }
+        Awaitility.await().untilAsserted(() -> assertThat(events).containsExactlyElementsOf(expected));
+        Thread.sleep(200);
+        assertThat(events).containsExactlyElementsOf(expected);
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = { false, true })
+    void asynchronousProcessingCompletesOnceAnErrorARequestListenerSentAfterTheDispatchIsAnswered(boolean errorPage)
+            throws Exception {
+        assertCompletesOnceARequestListenerSentAnError(errorPage, new ServletRequestListener() {
+
+            @Override
+            public void requestDestroyed(ServletRequestEvent event) {
+                ServletRequest request = event.getServletRequest();
+                if (isStartsAsync(request) && request.isAsyncStarted()) {
+                    sendError(request.getAsyncContext().getResponse());
+                }
+            }
+
+        });
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = { false, true })
+    void asynchronousProcessingARequestListenerStartsCompletesOnceTheErrorItSentIsAnswered(boolean errorPage)
+            throws Exception {
+        assertCompletesOnceARequestListenerSentAnError(errorPage, new ServletRequestListener() {
+
+            @Override
+            public void requestInitialized(ServletRequestEvent event) {
+                // Undertow tells request listeners again when it tells the listeners of the processing it completed
+                ServletRequest request = event.getServletRequest();
+                if (isStartsAsync(request) && request.getAttribute("startedAsync") == null) {
+                    request.setAttribute("startedAsync", Boolean.TRUE);
+                    request.startAsync();
+                    sendError(request.getAsyncContext().getResponse());
+                }
+            }
+
+        });
+    }
+
+    /**
+     * Requests {@code /startsAsync} with a request listener that sends an error, and asserts that the listeners of the
+     * processing hear once that it completed, once the error has been answered.
+     */
+    private void assertCompletesOnceARequestListenerSentAnError(boolean errorPage, ServletRequestListener listener)
+            throws Exception {
+        List<String> events = new CopyOnWriteArrayList<>();
+        UndertowServletWebServerFactory factory = new UndertowServletWebServerFactory(0);
+        if (errorPage) {
+            factory.addErrorPages(new ErrorPage("/errorPage"));
+        }
+        ServletRequestListener recordingListener = new ServletRequestListener() {
+
+            @Override
+            public void requestInitialized(ServletRequestEvent event) {
+                listener.requestInitialized(event);
+                ServletRequest request = event.getServletRequest();
+                if (isStartsAsync(request) && request.isAsyncStarted() && request.getAttribute("listened") == null) {
+                    request.setAttribute("listened", Boolean.TRUE);
+                    request.getAsyncContext().addListener(recordingListener(events));
+                }
+            }
+
+            @Override
+            public void requestDestroyed(ServletRequestEvent event) {
+                listener.requestDestroyed(event);
+            }
+
+        };
+        this.webServer = factory.getWebServer(recordingErrorPage(events), startsAsync(events),
+            new ServletListenerRegistrationBean<>(recordingListener));
+        this.webServer.start();
+
+        String body = getResponse("http://localhost:" + this.webServer.getPort() + "/startsAsync");
+        if (errorPage) {
+            assertThat(body).isEqualTo("Error page");
+        }
+
+        List<String> expected = errorPage ? List.of("errorPage", "onComplete") : List.of("onComplete");
+        Awaitility.await().untilAsserted(() -> assertThat(events).containsExactlyElementsOf(expected));
+        Thread.sleep(200);
+        assertThat(events).containsExactlyElementsOf(expected);
+    }
+
+    private static boolean isStartsAsync(ServletRequest request) {
+        return "/startsAsync".equals(((HttpServletRequest) request).getServletPath());
+    }
+
+    private static void sendError(ServletResponse response) {
+        try {
+            ((HttpServletResponse) response).sendError(503);
+        }
+        catch (IOException ex) {
+            throw new UncheckedIOException(ex);
+        }
     }
 
     /**
@@ -581,6 +739,9 @@ class UndertowServletWebServerFactoryTests {
             protected void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
                 if (request.getDispatcherType() == DispatcherType.ASYNC) {
                     events.add("dispatched");
+                    // Undertow ignores an error sent once an error has been sent and the response committed
+                    response.sendError(503);
+                    events.add("sent again");
                     return;
                 }
                 request.startAsync().addListener(recordingListener(events));

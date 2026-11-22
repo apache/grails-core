@@ -30,10 +30,12 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.ServletContainerInitializerInfo;
+import io.undertow.servlet.api.ThreadSetupHandler;
 import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.servlet.spec.AsyncContextImpl;
 import io.undertow.servlet.spec.HttpServletRequestImpl;
 import io.undertow.servlet.util.ImmediateInstanceFactory;
+import io.undertow.util.AttachmentKey;
 
 /**
  * Completes the asynchronous processing a request or asynchronous dispatch started once the error that dispatch sent
@@ -46,19 +48,28 @@ import io.undertow.servlet.util.ImmediateInstanceFactory;
  * When the dispatch, or a handler around it, completes the processing after an error was sent, Undertow tells its
  * listeners once the dispatch has returned and only then sends the error, so they would be told before the error page
  * runs. The error is therefore sent here once every handler that can send it, forward or complete the processing has
- * returned, and the processing completed after it, so its listeners are told once the error has been answered.
+ * returned, and the processing completed after it, so its listeners are told once the error has been answered. An
+ * asynchronous dispatch that started the processing again has its error sent, and the processing completed, once
+ * Undertow has told the listeners of the processing before it that it started again: completing it completes that
+ * processing as well.
  * <p>
  * {@link #addTo(DeploymentInfo, ServletContext)}, a servlet extension the factory adds after its customizers, puts the
  * handler around every handler the deployment has once it has started: those its customizers, its servlet extensions,
  * its servlet container initializers, such as Spring Boot's, and its context listeners add. Undertow runs outer
  * handlers on a request dispatch only, so a request dispatch is handled by the outermost outer handler, and an
  * asynchronous dispatch by the outermost inner one. Only Undertow's own handlers remain around them, and none of those
- * sends an error, forwards or completes the processing once the handlers it wraps have returned.
+ * sends an error, forwards or completes the processing once the handlers it wraps have returned. An error sent outside
+ * them, by a request listener for example, is sent by Undertow, and the processing it leaves open is completed once
+ * the dispatch has returned.
  * <p>
- * A dispatch that dispatches the processing after sending the error leaves its completion to the dispatch it asked
- * for.
+ * A dispatch that dispatches the processing after sending the error leaves it to Undertow to send, once, and the
+ * completion to the dispatch it asked for. Undertow's error dispatch completes the processing once the error page has
+ * run, though, so with an error page its listeners are told before that dispatch runs.
  */
 final class AsyncErrorCompletionHandler implements HttpHandler {
+
+    /** The error sent once, which a later dispatch of the request does not send again. */
+    private static final AttachmentKey<SentError> SENT_ERROR = AttachmentKey.create(SentError.class);
 
     private final HttpHandler next;
 
@@ -73,12 +84,14 @@ final class AsyncErrorCompletionHandler implements HttpHandler {
      * Adds the handlers to a deployment once every other handler has been added to it. A servlet container initializer
      * this adds as the last servlet extension runs after every other one, and a listener that initializer adds is told
      * the context was initialized after every other listener, which Undertow does just before it builds the handler
-     * chains.
+     * chains. Undertow only lets a listener add a context listener through its internal API, and a listener added that
+     * way can always come after this one.
      *
      * @param deployment the deployment, once its customizers and the servlet extensions before this one have run
      * @param servletContext the servlet context of the deployment
      */
     static void addTo(DeploymentInfo deployment, ServletContext servletContext) {
+        deployment.addThreadSetupAction(new DispatchBoundary());
         ServletContextListener addsHandlers = new ServletContextListener() {
 
             @Override
@@ -104,20 +117,124 @@ final class AsyncErrorCompletionHandler implements HttpHandler {
             return;
         }
         this.next.handleRequest(exchange);
+        int errorCode = context.getErrorCode();
+        if (errorCode <= 0) {
+            return;
+        }
         HttpServletRequestImpl request = context.getOriginalRequest();
         AsyncContextImpl asyncContext = request.getAsyncContextInternal();
         // An asynchronous dispatch that did not start the processing again finds the processing it was dispatched by
-        if (context.getErrorCode() <= 0 || asyncContext == null || !request.isAsyncStarted()) {
+        boolean started = asyncContext != null && request.isAsyncStarted();
+        SentError earlier = exchange.getAttachment(SENT_ERROR);
+        if (earlier != null) {
+            // An earlier dispatch's error was sent. It stays recorded, so that the response ignores it being sent
+            // again, and is set aside until the dispatch has returned, so that Undertow does not send it again
+            earlier.setAside(context);
+            if (started && !asyncContext.isDispatched() && !asyncContext.isCompletedBeforeInitialRequestDone()) {
+                asyncContext.addAsyncTask(asyncContext::complete);
+            }
             return;
         }
-        // Sent now, and cleared so that Undertow does not send it again
-        context.getOriginalResponse().doErrorDispatch(context.getErrorCode(), context.getErrorMessage());
-        context.setError(-1, null);
-        if (!asyncContext.isCompletedBeforeInitialRequestDone() && !asyncContext.isDispatched()) {
+        if (!started) {
+            return;
+        }
+        SentError sent = new SentError(errorCode, context.getErrorMessage());
+        exchange.putAttachment(SENT_ERROR, sent);
+        if (asyncContext.isDispatched()) {
+            // Undertow sends it once this dispatch has returned, and the dispatch the request asked for completes it
+            return;
+        }
+        sent.setAside(context);
+        if (this.dispatcherType == DispatcherType.ASYNC && !asyncContext.isCompletedBeforeInitialRequestDone()) {
+            // Completing it completes the processing before it as well, and Undertow tells that one's listeners that
+            // the processing started again only once this dispatch has returned. Its tasks run after that
+            ThreadSetupHandler.Action<Void, Object> sendAndComplete = context.getDeployment().createThreadSetupAction(
+                (ignored, none) -> {
+                    try {
+                        context.getOriginalResponse().doErrorDispatch(errorCode, sent.message());
+                    }
+                    finally {
+                        asyncContext.complete();
+                    }
+                    return null;
+                });
+            asyncContext.addAsyncTask(() -> {
+                try {
+                    sendAndComplete.call(exchange, null);
+                }
+                catch (Exception ex) {
+                    throw new IllegalStateException(ex);
+                }
+            });
+            return;
+        }
+        context.getOriginalResponse().doErrorDispatch(errorCode, sent.message());
+        if (!asyncContext.isCompletedBeforeInitialRequestDone()) {
             // On the thread of the dispatch, completing only marks the processing as completed, and Undertow tells
             // the listeners once the dispatch has returned. A handler outside this one completing it later is ignored
             asyncContext.complete();
         }
+    }
+
+    /**
+     * Restores the error set aside once a request or asynchronous dispatch has returned, and completes the processing
+     * an error sent outside the handlers left open: one a request listener sent, for example, or one sent before the
+     * request reached them.
+     */
+    private static final class DispatchBoundary implements ThreadSetupHandler {
+
+        @Override
+        public <T, C> Action<T, C> create(Action<T, C> action) {
+            return (exchange, context) -> {
+                try {
+                    return action.call(exchange, context);
+                }
+                finally {
+                    // Undertow runs a request or asynchronous dispatch with its request context
+                    if (exchange != null && context instanceof ServletRequestContext dispatched) {
+                        afterDispatch(exchange, dispatched);
+                    }
+                }
+            };
+        }
+
+        private static void afterDispatch(HttpServerExchange exchange, ServletRequestContext context) {
+            SentError sent = exchange.getAttachment(SENT_ERROR);
+            if (sent != null) {
+                sent.restore(context);
+            }
+            HttpServletRequestImpl request = context.getOriginalRequest();
+            AsyncContextImpl asyncContext = request.getAsyncContextInternal();
+            if (asyncContext == null || !request.isAsyncStarted() || asyncContext.isDispatched()) {
+                return;
+            }
+            if (asyncContext.isCompletedBeforeInitialRequestDone()) {
+                // Undertow's error dispatch completed it after Undertow looked for that
+                asyncContext.handleCompletedBeforeInitialRequestDone();
+            }
+            else if (exchange.isResponseComplete() && exchange.getStatusCode() >= 400) {
+                asyncContext.addAsyncTask(asyncContext::complete);
+            }
+        }
+
+    }
+
+    /**
+     * The error sent once, set aside while Undertow would send it again.
+     *
+     * @param code the status code of the error
+     * @param message the message of the error
+     */
+    private record SentError(int code, String message) {
+
+        void setAside(ServletRequestContext context) {
+            context.setError(-1, null);
+        }
+
+        void restore(ServletRequestContext context) {
+            context.setError(this.code, this.message);
+        }
+
     }
 
 }
