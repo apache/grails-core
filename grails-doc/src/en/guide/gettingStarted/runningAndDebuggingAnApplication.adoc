@@ -105,7 +105,7 @@ Startup progress is shown at http://localhost:8080/?grailsStartupToken=… until
 
 Opening that address once signs the browser in for as long as the application runs, through restarts by Spring Boot DevTools, and takes the token back out of the address bar. A browser opened by the application, as described below, is signed in already. Anyone else reaching the port sees only the progress bar: the details are left out of the page and out of its data, rather than hidden in them. The sign-in is a cookie, so it covers every tab of the browser that signed in. The token is made afresh each time the JVM starts and is only ever written to the log, so seeing the details takes the same access as reading the log.
 
-Until the embedded server takes the port over, the page is served by the HTTP server built into the JDK, so it changes nothing about how the application itself serves requests. `grails run-app --detach`, and `run-app` in interactive mode, follow the start as the page does and return once the application is ready, which is after `BootStrap` has finished; when the start fails they say so at once and stop what they started, rather than wait for an answer that will not come. See <<startupProgressClients,Following the Start from a Program>> below. The page is not served when the application:
+Until the embedded server takes the port over, the page is served by the HTTP server built into the JDK, so it changes nothing about how the application itself serves requests. `grails run-app --detach`, and `run-app` in interactive mode, keep waiting while the page holds the port, and stop waiting once the embedded server has taken the port over, as they do for an application without the module, so they do not wait for `BootStrap`. When the start fails while the page holds the port, they say so at once and stop what they started, rather than wait for an answer that will not come. The page is not served when the application:
 
 * is deployed as a WAR to a servlet container
 * uses a random port (`server.port: 0`) or SSL
@@ -130,35 +130,6 @@ grails:
 ----
 
 The page follows the start by polling `statusPath`. Once the application is ready, a poll there is told so rather than reaching the application, which would log every request it has no mapping for, so the path is taken from the application for as long as it runs. It cannot be the report's path.
-
-[[startupProgressClients]]
-==== Following the Start from a Program
-
-A program that waits for the application, such as a script that starts it and then runs requests against it, can follow the start without reading the page. Every answer the module gives while the application starts carries two headers:
-
-[cols="1,3"]
-|===
-|Header |Value
-
-|`Grails-Startup-Phase`
-|The phase the start is in: `PREPARING`, `LOADING_DEFINITIONS`, `CREATING_BEANS`, `STARTING_WEB_SERVER`, `INITIALIZING`, then `READY` once the application is ready, or `FAILED` when the start has failed.
-
-|`Grails-Startup-Status-Path`
-|The status path, with the context path: the path to ask for the phase from then on.
-|===
-
-Until the embedded server has the port, every request is answered with them. Once it has, requests reach the application, which answers without them although `BootStrap` may still be running, and only the status path goes on answering with the phase, with `READY` for as long as the application runs. So ask any path, take the status path from the answer, and ask that path until the phase is `READY`; a `HEAD` request is enough:
-
-[source,console]
-----
-$ curl -sI http://localhost:8080/__grails/startup-progress | grep -i grails-startup
-Grails-Startup-Phase: CREATING_BEANS
-Grails-Startup-Status-Path: /__grails/startup-progress
-----
-
-An answer without the phase header is the application's own: it has no startup progress, or its status path is another one. A start that fails says `FAILED` to a client that asked within the last three seconds before it releases the port, as it does for the page.
-
-This is what `grails run-app --detach` does, and `run-app` in interactive mode. Over SSL, where the progress page is not served, they find the status path once the embedded server answers, when the path is the default one; with another status path they take the application for started when the embedded server answers, as they do for an application without the module.
 
 With `openBrowser` set, a browser opens on the progress page as soon as it is served, so the start can be watched from the beginning. When the page is not served, for example because the application uses SSL, the browser opens on the application once it is ready instead. A browser is opened once per address for the life of the JVM, so the page already open follows a restart by Spring Boot DevTools rather than another window opening. The browser is opened with `open` on macOS, `xdg-open` elsewhere on Unix and `rundll32 url.dll,FileProtocolHandler` on Windows; `browserCommand` names another command, which is given the address as its last argument:
 

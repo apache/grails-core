@@ -916,7 +916,7 @@ The shell ran builds through the Gradle Tooling API with a Gradle it chose. `gra
 
 - `grails` without a command starts interactive mode only inside a project; elsewhere, and with `--non-interactive`, it prints the help.
 - Replace `quit` with `exit` in input that is piped into `grails`, and remove `!` and `open` lines. Better: one `grails --non-interactive <command>` call for each command.
-- `run-app` at the prompt returns once the application answers (with the `grails-startup-progress` feature: once it is ready, after `BootStrap`; a failed start is reported at once) and stops it when interactive mode ends; use `run-app --detach` to leave it running.
+- `run-app` at the prompt returns once the application answers (with the `grails-startup-progress` feature, a start that fails while the progress page has the port is reported at once) and stops it when interactive mode ends; use `run-app --detach` to leave it running.
 - Gradle task names after `gradle` are not completed.
 
 ## `~/.grails/settings.groovy`, Repositories and Proxies

@@ -50,11 +50,8 @@ final class ApplicationPort {
     /** The header in which the startup progress of an application names the phase of its start. */
     static final String PHASE_HEADER = 'Grails-Startup-Phase'
 
-    /** The header in which it names the path that goes on answering with the phase. */
+    /** The header in which it names the path its page polls, which is asked so that a start that fails says so. */
     static final String STATUS_PATH_HEADER = 'Grails-Startup-Status-Path'
-
-    /** The path that answers with the phase where nothing configures another one. */
-    static final String DEFAULT_STATUS_PATH = '/__grails/startup-progress'
 
     /** The phase of an application that has started. */
     static final String READY_PHASE = 'READY'
@@ -127,7 +124,7 @@ final class ApplicationPort {
      * Whether the application answers on the port, asked once: see {@link Start}.
      *
      * @param port the port
-     * @return whether the application has started
+     * @return whether the web server of the application answers
      */
     static boolean isReady(int port) {
         return start(port).ask() == Started.READY
@@ -147,10 +144,10 @@ final class ApplicationPort {
         /** Nothing takes a connection, or what does answers no HTTP request. */
         NO_ANSWER,
 
-        /** The startup progress of the application answers, and names a phase before the last. */
+        /** The server of the startup progress of the application has the port, and names a phase before the last. */
         STARTING,
 
-        /** The application answers, and its startup progress, where it has one, says that it is ready. */
+        /** The web server of the application answers. */
         READY,
 
         /** The startup progress of the application says that the start has failed. */
@@ -167,15 +164,19 @@ final class ApplicationPort {
      * the request is made over TLS, with any certificate taken, as the self-signed one of
      * development is: the address is this computer's, and nothing is sent but the request line.</p>
      *
-     * <p>An application with {@code grails-startup-progress} answers before it has started. Every
-     * such answer names the phase of the start in the header {@value #PHASE_HEADER}, and the path
-     * that goes on naming it in {@value #STATUS_PATH_HEADER}; that path is asked from then on, and
-     * the application has started when the phase is {@value #READY_PHASE}. Its web server answers
-     * for the application while {@code BootStrap} still runs, so the first answer without a phase is
-     * followed by one request for the path startup progress has by default, which finds an
-     * application that was past its progress page when it was first asked. Without the module that
-     * request is answered by the application as any other, and a response of HTTP is all there is to
-     * go by: the application answers, and whether it would answer well is not asked.</p>
+     * <p>An application with {@code grails-startup-progress} has a server answer on its port before
+     * its own web server does. Every answer of that server names the phase of the start in the
+     * header {@value #PHASE_HEADER}, and such an answer is none of the application yet. The
+     * application has started when its own web server answers, which is an answer without a phase or
+     * with the phase {@value #READY_PHASE}: that can be while {@code BootStrap} still runs, and
+     * whether it does is not asked.</p>
+     *
+     * <p>A start that fails says so only to who asks as the progress page does: it holds the port
+     * for a moment for a client that asked, a moment ago, the path the page polls, and lets go of it
+     * at once otherwise. So while the server of startup progress answers, the path it names in
+     * {@value #STATUS_PATH_HEADER} is asked as well, for nothing but that: the answer there counts
+     * only when its phase is {@value #FAILED_PHASE}. An application without startup progress, and
+     * the web server of one with it, are never asked for that path.</p>
      *
      * <p>Only the status line and the headers of an answer are read, of them only so much, and
      * nothing of them is shown: the phase is taken as one of three things, and a status path as a
@@ -186,7 +187,7 @@ final class ApplicationPort {
     static final class Start {
 
         private final int port
-        private String statusPath
+        private boolean reported
         // once an answer came over TLS, plain HTTP is not tried again
         private boolean tls
 
@@ -208,21 +209,20 @@ final class ApplicationPort {
         }
 
         /**
-         * @return whether startup progress has answered, so that the answers are its and not only a response of HTTP
+         * @return whether the server of startup progress has answered, so that the port was not only taken
          */
         boolean isReported() {
-            return statusPath != null
+            return reported
         }
 
         // null when nothing accepts a connection
         private Started ask(InetSocketAddress loopback) {
-            String path = statusPath ?: ROOT
-            Answer answer = request(loopback, tls, path)
+            Answer answer = request(loopback, tls, ROOT)
             if (answer == null) {
                 return null
             }
             if (!tls && (!answer.http || answer.refused)) {
-                Answer secure = request(loopback, true, path)
+                Answer secure = request(loopback, true, ROOT)
                 if (secure != null && secure.http) {
                     answer = secure
                     tls = true
@@ -231,23 +231,22 @@ final class ApplicationPort {
             if (!answer.http) {
                 return Started.NO_ANSWER
             }
-            if (answer.phase == null && statusPath == null) {
-                // the web server answers, which it does before the application is ready where startup progress is
-                Answer status = request(loopback, tls, DEFAULT_STATUS_PATH)
-                if (status == null || !status.http || status.phase == null) {
-                    return Started.READY
+            if (answer.phase == null || answer.phase == READY_PHASE) {
+                // the web server of the application answers
+                return Started.READY
+            }
+            reported = true
+            if (answer.phase == FAILED_PHASE) {
+                return Started.FAILED
+            }
+            if (answer.statusPath != null) {
+                // who asked there a moment ago is who a start that fails holds the port for, to say so
+                Answer status = request(loopback, tls, answer.statusPath)
+                if (status != null && status.phase == FAILED_PHASE) {
+                    return Started.FAILED
                 }
-                answer = status
             }
-            if (answer.phase == null) {
-                // what startup progress answered no longer does: the application has the path, and answers
-                return Started.READY
-            }
-            statusPath = answer.statusPath ?: statusPath ?: DEFAULT_STATUS_PATH
-            if (answer.phase == READY_PHASE) {
-                return Started.READY
-            }
-            return answer.phase == FAILED_PHASE ? Started.FAILED : Started.STARTING
+            return Started.STARTING
         }
     }
 

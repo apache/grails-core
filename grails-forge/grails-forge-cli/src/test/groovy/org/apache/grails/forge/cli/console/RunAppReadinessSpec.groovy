@@ -156,8 +156,9 @@ class RunAppReadinessSpec extends CommandSpec {
                             // who answers, and the phase: "page" is the server of the progress page, which takes every
                             // request; "filter" is the web server with the application behind it; "none" is no startup progress
                             String[] stage = text("stage.txt", "none").split(" ");
-                            String statusPath = text("status-path.txt", protocol.getProperty("statusPath.default"));
-                            String headers = stage.length < 2 ? "" : protocol.getProperty("header.phase") + ": " + stage[1] + "\\r\\n";
+                            String statusPath = text("status-path.txt", "/__grails/startup-progress");
+                            String phase = stage.length < 2 ? "" : request[1].equals(statusPath) ? text("phase-at-status-path.txt", stage[1]) : stage[1];
+                            String headers = stage.length < 2 ? "" : protocol.getProperty("header.phase") + ": " + phase + "\\r\\n";
                             if (stage.length == 2 && !Files.exists(home.resolve("no-status-path"))) {
                                 headers += protocol.getProperty("header.statusPath") + ": " + text("advertised.txt", statusPath) + "\\r\\n";
                             }
@@ -217,7 +218,6 @@ class RunAppReadinessSpec extends CommandSpec {
         ApplicationPort.REQUEST_LINE == protocol.getProperty('request.line')
         ApplicationPort.PHASE_HEADER == protocol.getProperty('header.phase')
         ApplicationPort.STATUS_PATH_HEADER == protocol.getProperty('header.statusPath')
-        ApplicationPort.DEFAULT_STATUS_PATH == protocol.getProperty('statusPath.default')
         ApplicationPort.READY_PHASE == protocol.getProperty('phase.ready')
         ApplicationPort.FAILED_PHASE == protocol.getProperty('phase.failed')
 
@@ -225,9 +225,9 @@ class RunAppReadinessSpec extends CommandSpec {
         !(protocol.getProperty('phases.starting').split(',') as List).any { String phase -> phase in [ApplicationPort.READY_PHASE, ApplicationPort.FAILED_PHASE] }
     }
 
-    void "run-app --detach follows the start through its phases on the path startup progress names, and returns when it says ready"() {
+    void "run-app --detach waits while the server of startup progress has the port, and returns when the web server of the application answers, with BootStrap still running"() {
         given: 'an application under a context path that shows its progress page'
-        String statusPath = '/app' + protocol.getProperty('statusPath.default')
+        String statusPath = '/app/__grails/startup-progress'
         new File(dir, 'status-path.txt').text = statusPath
         stage('page CREATING_BEANS')
         int port = freePort()
@@ -237,65 +237,43 @@ class RunAppReadinessSpec extends CommandSpec {
         when: 'the page has the port'
         command.start()
         conditions.eventually {
-            assert asked().count("HEAD ${statusPath}".toString()) >= 3
+            assert asked().count('HEAD /') >= 3
         }
 
-        then: 'the command asked the root once, and the path it was told from then on, and waits'
-        asked()[0] == 'HEAD /'
-        asked().count('HEAD /') == 1
+        then: 'the command waits, and asks the root again and again'
         command.alive
+        !out.toString().contains('Application answers')
+
+        and: 'with it the path the page polls, as it was told: a start that fails says so to who asked there'
+        asked().take(2) == ['HEAD /', "HEAD ${statusPath}".toString()]
 
         when: 'the web server has the port, and answers for the application while BootStrap runs'
         stage('filter INITIALIZING')
-        int before = asked().size()
-        conditions.eventually {
-            assert asked().size() >= before + 4
-        }
-
-        then: 'the command still waits: it asks the status path, where the start goes on, and not the root, which the application answers'
-        command.alive
-        asked().drop(before + 1).every { String request -> request == "HEAD ${statusPath}".toString() }
-        !out.toString().contains('Application answers')
-
-        when: 'the application is ready'
-        stage('filter READY')
         command.join(60_000)
 
-        then:
+        then: 'that is the application answering: the command returns, and does not ask how far BootStrap is'
         !command.alive
         exit.get() == 0
         errors() == []
         out.toString().contains("| Application answers on port ${port}: http://localhost:${port}. It runs until stop-app")
+        asked().last() == 'HEAD /'
 
         and: 'nothing was asked but those two paths, and nothing but their heads'
         asked().toSet() == ['HEAD /', "HEAD ${statusPath}".toString()] as Set
     }
 
-    void "run-app --detach waits for an application that was past its progress page when it was first asked"() {
+    void "run-app --detach returns at once for an application whose web server answers, and asks it for nothing else"() {
         given: 'a web server that answers for the application while BootStrap runs'
         stage('filter INITIALIZING')
         int port = freePort()
-        AtomicInteger exit = new AtomicInteger(-1)
-        Thread command = new Thread({ exit.set(ForgeCli.execute(beanContext, 'run-app', '--detach', '--port', port as String)) })
 
         when:
-        command.start()
-        conditions.eventually {
-            assert asked().size() >= 5
-        }
-
-        then: 'the root is the application\'s, so the path startup progress has by default was asked, and is asked from then on'
-        asked().take(2) == ['HEAD /', "HEAD ${protocol.getProperty('statusPath.default')}".toString()]
-        asked().count('HEAD /') == 1
-        command.alive
-
-        when:
-        stage('filter READY')
-        command.join(60_000)
+        int exit = ForgeCli.execute(beanContext, 'run-app', '--detach', '--port', port as String)
 
         then:
-        exit.get() == 0
+        exit == 0
         errors() == []
+        asked() == ['HEAD /']
     }
 
     void "run-app --detach says that the start failed when startup progress says so, and does not wait for the time to pass"() {
@@ -324,7 +302,28 @@ class RunAppReadinessSpec extends CommandSpec {
         !new File(dir, '.grails/run/app.json').exists()
     }
 
-    void "without startup progress an application has started when it answers a request, and is asked for the status once"() {
+    void "a failed start that is said only where the progress page polls is heard there"() {
+        given:
+        stage('page CREATING_BEANS')
+        int port = freePort()
+        AtomicInteger exit = new AtomicInteger(-1)
+        Thread command = new Thread({ exit.set(ForgeCli.execute(beanContext, 'run-app', '--detach', '--port', port as String, '--ready-timeout', '3600')) })
+
+        when: 'the root goes on naming the phase the start was in, and the path the page polls says that it failed'
+        command.start()
+        conditions.eventually {
+            assert asked().size() >= 3
+        }
+        new File(dir, 'phase-at-status-path.txt').text = protocol.getProperty('phase.failed')
+        command.join(60_000)
+
+        then:
+        !command.alive
+        exit.get() == 1
+        errors() == ["| Error The application failed to start: its startup progress says so on port ${port}. What was started was stopped".toString()]
+    }
+
+    void "without startup progress an application has started when it answers a request, and is asked for nothing else"() {
         given:
         int port = freePort()
 
@@ -334,42 +333,27 @@ class RunAppReadinessSpec extends CommandSpec {
         then:
         exit == 0
         errors() == []
-        asked() == ['HEAD /', "HEAD ${protocol.getProperty('statusPath.default')}".toString()]
+        asked() == ['HEAD /']
     }
 
-    void "run-app --detach --https follows the start over TLS, past the refusal a web server gives a request that is not TLS"() {
-        given:
+    void "run-app --detach --https takes the answer over TLS, past the refusal a web server gives a request that is not TLS"() {
+        given: 'a web server that expects TLS, with BootStrap still running behind it'
         stage('filter INITIALIZING')
         int port = freePort()
-        AtomicInteger exit = new AtomicInteger(-1)
-        Thread command = new Thread({ exit.set(ForgeCli.execute(beanContext, 'run-app', '--detach', '--https', '--port', port as String)) })
 
         when:
-        command.start()
-        conditions.eventually {
-            assert asked().count("HEAD ${protocol.getProperty('statusPath.default')}".toString()) >= 3
-        }
+        int exit = ForgeCli.execute(beanContext, 'run-app', '--detach', '--https', '--port', port as String)
 
-        then: 'the refusal was no answer of the application, and the start is followed where it is said'
-        asked().take(2) == ['PLAIN', 'HEAD /']
-        command.alive
-
-        and: 'once TLS answered, nothing is asked without it'
-        asked().count('PLAIN') == 1
-
-        when:
-        stage('filter READY')
-        command.join(60_000)
-
-        then:
-        exit.get() == 0
+        then: 'the refusal was no answer of the application; the answer over TLS is'
+        exit == 0
         errors() == []
         out.toString().contains("| Application answers on port ${port}: https://localhost:${port}.")
+        asked() == ['PLAIN', 'HEAD /']
         ApplicationPort.isReady(port)
     }
 
     @Unroll
-    void "a status path that is #what is not asked: the one startup progress has by default is"() {
+    void "a status path that is #what is not asked"() {
         given:
         new File(dir, 'advertised.txt').text = advertised
         stage('page CREATING_BEANS')
@@ -382,12 +366,12 @@ class RunAppReadinessSpec extends CommandSpec {
         conditions.eventually {
             assert asked().size() >= 4
         }
-        stage('page READY')
+        stage('filter INITIALIZING')
         command.join(60_000)
 
         then:
         exit.get() == 0
-        asked().toSet() == ['HEAD /', "HEAD ${protocol.getProperty('statusPath.default')}".toString()] as Set
+        asked().toSet() == ['HEAD /'] as Set
 
         where:
         what                      | advertised
@@ -398,10 +382,9 @@ class RunAppReadinessSpec extends CommandSpec {
         'longer than a path here' | '/' + 'a' * 300
     }
 
-    void "startup progress that names no path is followed on the default one, and what answers there without a phase is the application"() {
-        given: 'a progress page as an earlier version serves it, for an application that has its status elsewhere'
+    void "startup progress that names no path is asked for the root alone"() {
+        given: 'a progress page as an earlier version serves it'
         new File(dir, 'no-status-path').text = ''
-        new File(dir, 'status-path.txt').text = '/elsewhere'
         stage('page CREATING_BEANS')
         int port = freePort()
         AtomicInteger exit = new AtomicInteger(-1)
@@ -410,7 +393,7 @@ class RunAppReadinessSpec extends CommandSpec {
         when:
         command.start()
         conditions.eventually {
-            assert asked().count("HEAD ${protocol.getProperty('statusPath.default')}".toString()) >= 3
+            assert asked().size() >= 3
         }
 
         then:
@@ -420,12 +403,13 @@ class RunAppReadinessSpec extends CommandSpec {
         stage('filter INITIALIZING')
         command.join(60_000)
 
-        then: 'as before there was a status to ask'
+        then:
         exit.get() == 0
         errors() == []
+        asked().toSet() == ['HEAD /'] as Set
     }
 
-    void "run-app --detach says that startup progress answered when the application is not ready in time"() {
+    void "run-app --detach says that startup progress still had the port when the application does not answer in time"() {
         given:
         stage('page CREATING_BEANS')
         int port = freePort()
@@ -435,7 +419,7 @@ class RunAppReadinessSpec extends CommandSpec {
 
         then:
         exit == 1
-        errors() == ["| Error The application did not answer on port ${port} of this computer within 3 seconds: its startup progress answers there, and has not said that the application is ready. ".toString() +
+        errors() == ["| Error The application did not answer on port ${port} of this computer within 3 seconds: its startup progress answers there still, and the web server of the application has not taken the port. ".toString() +
                 'The build was still running, and was stopped. If the application answers on another port, give that with --port; if it needs longer, give it longer with --ready-timeout']
         !new File(dir, '.grails/run/app.json').exists()
     }

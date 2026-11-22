@@ -206,9 +206,8 @@ final class StartupProgressResponder {
     }
 
     /**
-     * Names the phase of the start on an answer, and with it the path that keeps answering with the phase once
-     * the web server has the port, so a client that is no browser can follow the start to its end as the page
-     * does: {@code grails run-app} waits for the application that way.
+     * Names the phase of the start on an answer, and with it the path the page polls, so a client that is no
+     * browser can ask there as the page does and be told when the start fails: {@code grails run-app} does.
      */
     private void setPhase(Exchange exchange, StartupProgress.Phase phase) {
         exchange.setHeader(StartupProgress.PHASE_HEADER, phase.name());

@@ -46,9 +46,9 @@ final class StartupProgress {
     static final String PHASE_HEADER = "Grails-Startup-Phase";
 
     /**
-     * Response header naming the full path that answers with the phase for as long as the application runs,
-     * sent with every answer that names a phase. While the application starts every path is answered with the
-     * phase only until the web server has the port; this one is answered with it after that too.
+     * Response header naming the full path the progress page polls, sent with every answer that names a phase.
+     * A failed start holds the port to say so only for a client that polled that path a moment ago, so
+     * {@code grails run-app}, which waits for the application and reads no page, is told here where to ask.
      */
     static final String STATUS_PATH_HEADER = "Grails-Startup-Status-Path";
 

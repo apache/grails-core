@@ -278,7 +278,7 @@ class StartupProgressSpec extends Specification {
         request('/app/hello').body == 'hello'
         request('/app/hello').phase == null
 
-        and: 'so does a HEAD request for the root, which is why grails run-app asks the status path to see whether the application is ready'
+        and: 'so does the HEAD request grails run-app makes to see whether the application is up'
         Response head = request('/app/', HTML, 'HEAD')
         head.status == 404
         head.phase == null
@@ -953,7 +953,7 @@ class StartupProgressSpec extends Specification {
         request('/hello').body == 'hello'
     }
 
-    void 'tells grails run-app the phase of the start and the path to ask for it, until the application is ready'() {
+    void 'tells grails run-app the phase of the start while it has the port, and nothing once the web server answers'() {
         given: 'what the command line and this module agree on, and a start that takes its time twice'
         Properties protocol = runAppProtocol()
         List<String> starting = protocol.getProperty('phases.starting').split(',').toList()
@@ -963,19 +963,18 @@ class StartupProgressSpec extends Specification {
         expect: 'the names this module answers with are the ones written down'
         StartupProgress.PHASE_HEADER == protocol.getProperty('header.phase')
         StartupProgress.STATUS_PATH_HEADER == protocol.getProperty('header.statusPath')
-        StartupProgressProperties.DEFAULT_STATUS_PATH == protocol.getProperty('statusPath.default')
         StartupProgress.Phase.values()*.name() == starting + [protocol.getProperty('phase.ready'), protocol.getProperty('phase.failed')]
 
         when: 'the application starts under a context path, and the command line asks for the root'
         start('grails.startup.progress.enabled': true, 'server.servlet.context-path': '/app')
         Map<String, String> first = awaitRunAppAnswer(protocol, '/', 'CREATING_BEANS')
 
-        then: 'the answer names the phase, which is one of a start that goes on, and the path to ask from then on'
+        then: 'the answer names the phase, which is one of a start that goes on, and the path the page polls'
         first.phase in starting
         first.statusPath == '/app/__grails/startup-progress'
 
-        and: 'so does the answer for the path the command line asks when it knows no other'
-        runAppAsks(protocol, protocol.getProperty('statusPath.default')).statusPath == '/app/__grails/startup-progress'
+        and: 'that path names the phase too'
+        runAppAsks(protocol, first.statusPath).phase == 'CREATING_BEANS'
 
         when: 'the web server has the port and a startup hook runs'
         Gates.beanCreation.countDown()
@@ -983,24 +982,18 @@ class StartupProgressSpec extends Specification {
             assert runAppAsks(protocol, first.statusPath)?.phase == 'INITIALIZING'
         }
 
-        then: 'the root is the application\'s own, and says nothing of the start'
+        then: 'the root is answered by the application, without a phase: for the command line it has started, with the hook still running'
         runAppAsks(protocol, '/').status == '404'
         runAppAsks(protocol, '/').phase == null
         runAppAsks(protocol, '/').statusPath == null
-
-        and: 'the status path still names a phase of a start that goes on'
-        runAppAsks(protocol, first.statusPath).phase in starting
-        runAppAsks(protocol, first.statusPath).statusPath == first.statusPath
 
         when: 'the hook finishes'
         Gates.startupHook.countDown()
         runner.join(30_000)
 
-        then: 'the status path says the application is ready, for as long as it runs'
+        then: 'and so it stays'
         runFailure == null
-        runAppAsks(protocol, first.statusPath).status == '200'
-        runAppAsks(protocol, first.statusPath).phase == protocol.getProperty('phase.ready')
-        runAppAsks(protocol, first.statusPath).statusPath == first.statusPath
+        runAppAsks(protocol, '/').phase == null
         Gates.unmappedRequests == 0
     }
 
@@ -1013,7 +1006,7 @@ class StartupProgressSpec extends Specification {
         when: 'the application starts, and the command line asks as it does while it waits'
         start('grails.startup.progress.enabled': true)
         String statusPath = awaitRunAppAnswer(protocol, '/', 'CREATING_BEANS').statusPath
-        assert statusPath == protocol.getProperty('statusPath.default')
+        assert statusPath == STATUS_PATH
         assert runAppAsks(protocol, statusPath).phase == 'CREATING_BEANS'
 
         and: 'the start fails'

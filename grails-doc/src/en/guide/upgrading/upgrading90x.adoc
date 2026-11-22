@@ -1972,7 +1972,7 @@ The Grails shell found the commands of the plugins of an application itself, on 
 * *`!` and `open` are gone* (note 42).
 * *The prompt is `grails>`*, and the line `Enter a command name to run. Use TAB for completion:` is not printed before the first one.
 * *Commands are completed, with their options.* The commands are those of the current directory, the commands of the application and its plugins that the build has listed among them. The names of Gradle tasks after `gradle` are not completed.
-* *`run-app` returns to the prompt* once the application answers on its port, and the application is stopped when interactive mode is left, unless it was started with `run-app --detach`. `run-app --foreground` stays with the application. With the `grails-startup-progress` feature it returns once the application is ready, which is after `BootStrap` has finished, and says at once when the start has failed.
+* *`run-app` returns to the prompt* once the application answers on its port, and the application is stopped when interactive mode is left, unless it was started with `run-app --detach`. `run-app --foreground` stays with the application. With the `grails-startup-progress` feature, a start that fails while the progress page has the port is reported at once.
 * *Ctrl-C while a command runs Gradle* stops Gradle and returns to the prompt. During another command it ends interactive mode.
 * *A line that starts with `#` is ignored.*
 

@@ -471,7 +471,7 @@ class RunAppCommand extends GradleEnvironmentCommand {
                 boolean accepts = ApplicationPort.isOpen(answersOn)
                 GradleRunner.stop(started, STOP_SECONDS)
                 String seen = !accepts ? '' : start.isReported() ?
-                        ': its startup progress answers there, and has not said that the application is ready' :
+                        ': its startup progress answers there still, and the web server of the application has not taken the port' :
                         ': the port takes connections, and no answer to an HTTP request came from it'
                 return "The application did not answer on port ${answersOn} of this computer within ${readyTimeout} seconds" + seen +
                         '. The build was still running, and was stopped. ' +
