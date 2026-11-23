@@ -1913,7 +1913,7 @@ The Grails shell ran the build of a project through the Gradle Tooling API, with
 
 ===== Required Actions
 
-* Commit the Gradle wrapper (`gradlew`, `gradlew.bat`, `gradle/wrapper`) to a project that has none: `gradle wrapper`, run with an installed Gradle of the version Grails 9 needs, creates it. `grails project health` reports a project without one as `gradle-wrapper.missing`, a wrapper of a Gradle before {gradleMinimumVersion} as `gradle-wrapper.version`, and one before {gradleVersion}, which new applications are generated with, as `gradle-wrapper.older`.
+* Commit the Gradle wrapper (`gradlew`, `gradlew.bat`, `gradle/wrapper`) to a project that has none: `gradle wrapper --gradle-version {gradleVersion} --gradle-distribution-sha256-sum <checksum>`, run with an installed Gradle {gradleMinimumVersion} or later, creates it, with the checksum of note 60. `grails project health` reports a project without one as `gradle-wrapper.missing`, a wrapper of a Gradle before {gradleMinimumVersion} as `gradle-wrapper.version`, and one before {gradleVersion}, which new applications are generated with, as `gradle-wrapper.older`.
 * Replace `grails run-app <Gradle arguments>` with `grails run-app -- <Gradle arguments>`.
 * A job that starts the application with one tool and stops it with `grails stop-app` starts it with `grails run-app --detach`.
 
