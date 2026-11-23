@@ -783,6 +783,96 @@ What works and what does not, once an application has the feature of such a pack
 |===
 
 
+[[forgeFeaturePackCompanyWorkflow]]
+==== A Pack of Your Organisation, from Start to Finish
+
+
+This is the whole way for a pack that an organisation keeps for its own applications, from the plugin that holds it to a feature that is added to an application long after it was created. The plugin is `com.acme:acme-audit-grails`, published to the repository `https://repo.acme.example/maven`, which can be read without credentials.
+
+. *Write and check the pack.* The pack is in `src/main/forge` of the plugin, as described above, with `src/main/forge/** eol=lf` in `.gitattributes`. `./gradlew checkForgePack` checks it, and `./gradlew forgePackTest` creates and builds applications with it; configure fixtures for the types and options your applications use.
+. *Publish it.* `./gradlew publish` publishes the plugin with the pack in its jar, and checks the pack first.
+. *Name the catalog, if you want names.* To select the feature by its name, keep a catalog: a JSON file in the format of the plugin index above, at an `https` address of your organisation, with a `pack` entry for each version whose jar has a pack, copied from its descriptor, and the SHA-256 of the jar as it was published (`sha256sum acme-audit-grails-2.3.0.jar`). Without a catalog, the plugin is given by its coordinates, and `--feature-pack-sha256` holds it to the digest you checked.
+. *Set up each computer.* Name the repository and the catalog in the environment of whoever creates applications:
++
+[source,console]
+----
+$ export GRAILS_REPO_URL=https://repo.acme.example/maven
+$ export GRAILS_PLUGIN_INDEX=https://catalog.acme.example/grails-plugins-index.json
+$ grails plugin-info com.acme:acme-audit-grails     # names the feature and the version an application gets
+----
++
+With `GRAILS_PLUGIN_INDEX` set, `list-plugins` and `plugin-info` list the plugins of your catalog, and not those of the Grails plugin index.
+. *Create the application.* `grails create-app com.example.shop --features acme-audit` (or `--features com.acme:acme-audit-grails:2.3.0`). Before anything is written, the command says which jar the name was taken as, from where, and its SHA-256; compare it with the one you published. The record names the coordinates, the version and the digest.
+. *Commit it*, with its `.grails` directory, whose own `.gitignore` and `.gitattributes` have Git keep every file of it as it is.
+. *Clone it elsewhere.* A clone has the record; the computer it is on needs `GRAILS_REPO_URL` as it was when the application was created, since the repositories are part of what the application was generated from, and access to the repository of the jar.
+. *Work without the network.* The build of the application works offline once Gradle has what it needs. For `feature add`, put the jar into a repository that is a directory, such as the local Maven repository (any tool that installs `com.acme:acme-audit-grails:2.3.0` there will do), and run the command with `--offline --feature-pack-repository file://$HOME/.m2/repository`.
+. *Add a feature.* `grails feature add grails-quartz` fetches the jar again by the coordinates and the digest of the record, generates the application again with it, and adds the feature, keeping what you changed in the files.
+. *Upgrade.* A new version of the pack, or a new version of Grails, is not applied by a command: create the application again with the new version and merge the difference, following the upgrade notes of Grails for a new release of Grails.
+
+A pack that is not published, but kept in the same Git repository as the applications, beside them (`forge/acme-audit` next to `shop`, say), goes the same way without steps 2 to 4: the application is created and changed with `--feature-pack-dir ../forge/acme-audit`, and its record holds the digest of the content of the pack, so everyone who clones the repository gives the same pack, and a pack that was changed since is refused until the application is created again with it.
+
+What this way does not have, today: a repository or a catalog that needs credentials cannot be read by the command line (an address with a user and a password is refused, and `~/.m2/settings.xml` is not read), and the command line keeps no copy of a jar it fetched, so every `feature add` and `project regenerate` fetches the jar again, or needs a repository that is a directory without the network.
+
+
+[[forgeFeaturePackCapabilities]]
+==== What a Pack Can Do
+
+
+Many features of Grails are written as feature packs inside the command line. Those packs can say more than the pack of a plugin, and how many of them there are says nothing about what the pack of a plugin can express. What each can say:
+
+[cols="3,2,2"]
+|===
+|What |The pack of a plugin |A pack of Grails
+
+|Its name, title, description, category, documentation, `applicationTypes`, `compatibility`
+|Yes
+|Yes
+
+|`requires` and `conflicts`, with features of Grails or of other packs
+|Yes
+|Yes
+
+|An exclusive group (`oneOf`)
+|A group of packs only
+|Also a group of Grails, such as `database-driver`, with the settings a driver gives the data source
+
+|Dependencies
+|In the scopes listed above, with a version or one a platform manages
+|Also `testAndDevelopmentOnly`, `integrationTestImplementationTestFixtures` and `buildscript`, and the version the release of Grails has for an artifact
+
+|Platforms, `gradle.properties` entries, settings, files, a paragraph of the readme
+|Yes
+|Yes, and links of the readme, comments of properties and a configuration file of one environment
+
+|Gradle plugins
+|By `id` and `version`
+|Also with the version of an artifact of the release, and declared without being applied
+
+|Code for blocks of `build.gradle` (`build.extensions`)
+|Yes
+|Also text at fixed places of the build file, and parts that depend on other features
+
+|Contributions that depend on the other features of the application, such as a dependency only with a given feature or option (`when`)
+|No: a template can test `features` and `options`, but a dependency, plugin, setting or file is always added
+|Yes
+
+|Being selected without being named, adding other features once the defaults are chosen, being hidden, its place among the features, the lowest JDK
+|No: the feature is selected when it is named, and has the default place
+|Yes
+
+|Templates
+|Template API 1
+|Template API 1, and the versions the release has for artifacts
+
+|Selected by its name
+|When it was given as a directory, by its coordinates, or with a catalog that is named
+|Always, and on https://start.grails.org
+
+|`feature add` and `project regenerate` of an application that has it
+|With the same pack, held to its digest
+|Always
+|===
+
 [[forgeFeaturePackSameEveryTime]]
 ==== What Is the Same Every Time
 
