@@ -290,7 +290,9 @@ properties apply to the Grails formats as they do to Spring MVC, and its media t
 takes them: by quality, then a more specific type ahead of a less specific one, then in the order the header lists them,
 except that a type with the `+xml` suffix comes ahead of the XML type of equal quality, as the Grails rules take it.
 `Accept: */*, application/json` is the `json` format, where the Grails rules give `all`, and
-`Accept: application/xml, application/atom+xml` is `atom`, as they give.
+`Accept: application/xml, application/atom+xml` is `atom`, as they give. The XML type is also a `text/xml` the header
+lists without `application/xml`, which the Grails rules leave first: `Accept: text/xml, application/atom+xml` is
+`atom`, where they give `xml`.
 * Each media type is the format `grails.mime.types`, or a `MimeTypeProvider` bean such as a renderer, gives it. A type
 with the `+json` or `+xml` suffix that no configured type names, such as `application/merge-patch+json` or
 `application/problem+xml`, is the `json` or the `xml` format, as Spring MVC's JSON and XML converters write such types.
@@ -345,7 +347,8 @@ too. A format neither maps is not acceptable, and the `all` format leaves the ch
 |Dropped: both are the `xml` format, which comes in Spring MVC's order.
 
 |A type with the `+xml` suffix comes ahead of `application/xml` of equal quality
-|Kept, also for what Spring MVC writes for the request.
+|Kept, also for what Spring MVC writes for the request, and also ahead of a `text/xml` the header lists without
+`application/xml`, which the Grails rules leave first.
 
 |The problem types of RFC 9457 are the `json` and `xml` formats
 |Extended to any type with the `+json` or `+xml` suffix that no configured type names.

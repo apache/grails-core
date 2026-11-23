@@ -1573,7 +1573,10 @@ The setting changes these answers, which the framework's tests record by running
 quality, where the Grails rules keep the order of the header: `Accept: */*, application/json` is the `json` format,
 where it is `all` without the setting, and `withFormat` runs the `json` block rather than its first. A type with the
 `+xml` suffix still comes ahead of the XML type of equal quality: `Accept: application/xml, application/atom+xml` is
-`atom` either way, and Spring MVC now writes what an action returns in that order too.
+`atom` either way, and Spring MVC now writes what an action returns in that order too. It now also comes ahead of a
+`text/xml` the header lists without `application/xml`, which the Grails rules leave first:
+`Accept: text/xml, application/atom+xml` is `atom`, where it is `xml` without the setting, and
+`Accept: text/xml, application/xhtml+xml` is `html`, so `withFormat` runs its `html` block rather than its `xml` one.
 * *Types with the `+json` and `+xml` suffixes.* A type no configured type names, such as `application/merge-patch+json`,
 `application/soap+xml` or, without a `hal` format, `application/hal+json`, is the `json` or `xml` format, where the
 Grails rules read only the problem types of RFC 9457 so and answer any other as `all`. In `Content-Type` too: a body sent

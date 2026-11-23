@@ -415,10 +415,11 @@ class GrailsContentNegotiationStrategy {
      * suffix of the quality of the XML type, the first {@code application/xml} or {@code text/xml}, or
      * {@code application/problem+xml} where no configured type names it, since Grails reads that problem type as
      * {@code application/xml}: they come ahead of it, as the more specific types, each one later in the header in front
-     * of those before it, as Grails 9 orders them. Such an unconfigured {@code application/problem+xml} is one of the
-     * XML types, so it is not moved ahead of another. A type the header lists more than once is moved from its own
-     * place, so no {@code +xml} type of the quality of the XML type is left behind it, and the order is the same however
-     * often it is applied.
+     * of those before it, as the Grails rules order them. Unlike those rules, which leave a {@code text/xml} the header
+     * lists without {@code application/xml} first, it is the XML type too. Such an unconfigured
+     * {@code application/problem+xml} is one of the XML types, so it is not moved ahead of another. A type the header
+     * lists more than once is moved from its own place, so no {@code +xml} type of the quality of the XML type is left
+     * behind it, and the order is the same however often it is applied.
      *
      * @param mediaTypes the media types in Spring MVC's order
      * @return the media types in the order Grails reads them
