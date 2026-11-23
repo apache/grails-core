@@ -69,8 +69,8 @@ import java.util.stream.Stream
  * files, so that a file is replaced and put back by a rename within one file system. Every file is
  * compared with what it was when the change was planned;</li>
  * <li>the record becomes the journal: the name of that directory and every file with the digests of
- * what it was and of what it becomes. Until the journal is there, nothing of the project was
- * touched;</li>
+ * what it was and of what it becomes, and the mode the change gives it where the file system has
+ * modes. Until the journal is there, nothing of the project was touched;</li>
  * <li>each file is compared once more and replaced by a rename; a file the change takes away is
  * removed, and its copy is what puts it back;</li>
  * <li>the journal is removed, which ends the change, and then the directory.</li>
@@ -83,9 +83,10 @@ import java.util.stream.Stream
  *
  * <p>When a file cannot be written, the files the change wrote are put back, and a file it had not
  * come to is left as it is. A change that was interrupted is found by its journal, and what is done
- * about it goes by the digests of its files alone, see {@code settle}: complete when every file is
- * what the change makes it, nothing to undo when every file is what it was, nothing put back when a
- * file is neither, and the written files put back otherwise.</p>
+ * about it goes by what its files are, see {@code settle}: complete when every file is what the
+ * change makes it, nothing to undo when every file is what it was, nothing put back when a file is
+ * neither or a file that would be put back has another mode than the change gave it, and the written
+ * files put back otherwise.</p>
  *
  * <p>The lock is between the commands that change a project. It does not keep an editor from writing
  * a file while the change is made or undone: a file is compared with what it is to be just before it
@@ -99,14 +100,14 @@ final class ProjectTransaction {
 
     private static final String LOCK = 'lock'
     private static final String JOURNAL = 'journal'
-    private static final String HEADER = 'grails-forge-transaction 3'
+    private static final String HEADER = 'grails-forge-transaction 4'
     private static final String STAGING = 'staging'
     private static final String END = 'end'
     private static final int MAX_JOURNAL = 16 * 1024 * 1024
     private static final int MAX_NAMED = 10
     private static final Pattern PROJECT = Pattern.compile(/project ([A-Za-z0-9_-]+)/)
     private static final Pattern NAME = Pattern.compile(/id (t[0-9a-f]{24})/)
-    private static final Pattern PUT = Pattern.compile(/put (\d{1,6}) (-|[0-9a-f]{64}) (-|[0-9a-f]{64}) (.+)/)
+    private static final Pattern PUT = Pattern.compile(/put (\d{1,6}) (-|[0-9a-f]{64}) (-|[0-9a-f]{64}) (-|(?:[r-][w-][x-]){3}) (.+)/)
     private static final Pattern MADE = Pattern.compile(/dir (.+)/)
     private static final Set<PosixFilePermission> EXECUTE = EnumSet.of(PosixFilePermission.OWNER_EXECUTE, PosixFilePermission.GROUP_EXECUTE, PosixFilePermission.OTHERS_EXECUTE)
     private static final List<String> STATE = [ProjectState.MANIFEST, ProjectState.LOCK, ProjectState.BASELINE_INDEX]
@@ -350,6 +351,14 @@ final class ProjectTransaction {
      * stay so, and the journal stays for the rest.</li>
      * </ul>
      *
+     * <p>Where the file system has modes, the mode of a file is part of what the change makes of it.
+     * A file of which the change changes only the mode is told by its mode alone, and one whose mode
+     * is neither the one it had nor the one the change gives it is neither. A file whose content is
+     * what the change makes of it and whose mode was changed since is not put back, as one whose
+     * content was changed is not: nothing is put back, and the files are named with their modes.
+     * Where nothing is put back, because the change is complete or there is nothing to undo, such a
+     * file stays as it is.</p>
+     *
      * @param reached for a change that fails while it is made, how many of its files it wrote: only
      * those are looked at and put back, and a file it had not come to is left as it is, whatever it
      * is now; -1 for a change that is found by its journal
@@ -370,6 +379,10 @@ final class ProjectTransaction {
         List<Put> written = []
         List<String> neither = []
         List<String> kept = []
+        // the files whose mode is not the one the change gives them, with the modes they have: of those of
+        // which the change changes only the mode, which tells nothing then, and of those it wrote
+        Map<Put, String> neitherMode = new LinkedHashMap<>()
+        Map<Put, String> changedMode = new LinkedHashMap<>()
         boolean allAfter = true
         boolean allBefore = true
         boolean posix = project.getFileSystem().supportedFileAttributeViews().contains('posix')
@@ -383,20 +396,28 @@ final class ProjectTransaction {
                     }
                 } else if (put.before == put.after && now == put.after) {
                     // Only the mode of the file changes, so its digest is what it was and what it
-                    // becomes at once. The copy that was kept has the mode it had: the file was
-                    // written when its mode is another, and without the copy nothing says which
+                    // becomes at once. The copy that was kept has the mode it had, and the journal the
+                    // one the change gives it: the file was written when it has that one, and was
+                    // changed since when it has neither
                     Path backup = directory.resolve('backup').resolve(String.valueOf(put.index))
                     if (Files.isRegularFile(backup, LinkOption.NOFOLLOW_LINKS)) {
-                        if (posix && Files.getPosixFilePermissions(backup, LinkOption.NOFOLLOW_LINKS) != Files.getPosixFilePermissions(target, LinkOption.NOFOLLOW_LINKS)) {
+                        String has = posix ? mode(target) : null
+                        if (!posix || has == mode(backup)) {
+                            allAfter = false
+                        } else if (put.mode == null || has == put.mode) {
                             written << put
                             allBefore = false
                         } else {
-                            allAfter = false
+                            neitherMode.put(put, has)
                         }
                     }
                 } else if (now == put.after) {
                     written << put
                     allBefore = false
+                    String has = posix && put.mode != null ? mode(target) : null
+                    if (has != null && has != put.mode) {
+                        changedMode.put(put, has)
+                    }
                 } else if (now == put.before) {
                     allAfter = false
                 } else {
@@ -412,6 +433,9 @@ final class ProjectTransaction {
                     "${named(neither)}. Nothing was put back. Make ${neither.size() == 1 ? 'it' : 'each'} what it was before the change (the files that were replaced " +
                     "are kept in ${DIRECTORY}/${change.name}/backup, and a file that was new is to be removed), or what the change makes of it, and run the command again; " +
                     'or restore the project from version control and ' + removal(journal))
+        }
+        if (!neitherMode.isEmpty()) {
+            throw otherModes(neitherMode, change, journal)
         }
         if (reached < 0 && allAfter) {
             // every file is what the change makes it: all that was missing is the end of its journal
@@ -434,6 +458,10 @@ final class ProjectTransaction {
         if (reached < 0) {
             permitted(project, directory, change, journal)
         }
+        // a mode that was changed since the change wrote the file is not undone by putting the file back
+        if (!changedMode.isEmpty()) {
+            throw otherModes(changedMode, change, journal)
+        }
         try {
             for (Put put : written) {
                 Path backup = directory.resolve('backup').resolve(String.valueOf(put.index))
@@ -446,9 +474,9 @@ final class ProjectTransaction {
             for (Put put : written.reverse()) {
                 Path target = target(project, put.path)
                 // Each file is compared once more just before it is put back, as it is before it is
-                // written: what was saved in it since the files were looked at is not overwritten. The
-                // files put back so far stay so, and the journal stays for the rest
-                if (digest(target) != put.after) {
+                // written, with its mode: what was saved in it, or done to it, since the files were looked
+                // at is not overwritten. The files put back so far stay so, and the journal stays for the rest
+                if (digest(target) != put.after || (posix && put.after != null && put.mode != null && mode(target) != put.mode)) {
                     throw new ProjectChangeException("${put.path} was changed while the change that was interrupted was being undone, and is left as it is. " +
                             "${putBack.size()} ${putBack.size() == 1 ? 'file was' : 'files were'} put back${putBack.isEmpty() ? '' : " (${named(putBack)})"}; " +
                             'the others were not, and the record of the change is kept. ' +
@@ -570,6 +598,22 @@ final class ProjectTransaction {
         return names.take(MAX_NAMED).join(', ') + (names.size() > MAX_NAMED ? " and ${names.size() - MAX_NAMED} more" : '')
     }
 
+    // files whose mode is not the one the change gave them, with the modes they have, which putting them back would undo
+    private static ProjectChangeException otherModes(Map<Put, String> modes, Journal change, Path journal) {
+        boolean one = modes.size() == 1
+        List<String> each = modes.collect { Put put, String mode -> "${put.path} is ${mode}, and the change gave it ${put.mode}".toString() }
+        return new ProjectChangeException("${one ? 'A file' : 'Files'} of a change that was interrupted ${one ? 'has' : 'have'} another mode than the change gave " +
+                "${one ? 'it' : 'them'}: ${each.take(MAX_NAMED).join('; ')}${each.size() > MAX_NAMED ? "; and ${each.size() - MAX_NAMED} more" : ''}. Putting " +
+                "${one ? 'it' : 'them'} back would undo what was changed since, so nothing was put back. Give ${one ? 'it' : 'each'} the mode the change gave it, or " +
+                "make ${one ? 'it' : 'each'} what it was before the change (the files that were replaced are kept in ${DIRECTORY}/${change.name}/backup, with their " +
+                'modes, and a file that was new is to be removed), and run the command again; or restore the project from version control and ' + removal(journal))
+    }
+
+    // the mode of a file, as PosixFilePermissions writes it
+    private static String mode(Path file) throws IOException {
+        return PosixFilePermissions.toString(Files.getPosixFilePermissions(file, LinkOption.NOFOLLOW_LINKS))
+    }
+
     private static String removal(Path journal) {
         return "remove the file ${JOURNAL} from the directory ${journal.getParent().getFileName()} of .grails/forge/transactions in the home directory of the user"
     }
@@ -630,6 +674,7 @@ final class ProjectTransaction {
             } else if (Files.exists(target, LinkOption.NOFOLLOW_LINKS)) {
                 throw new ProjectChangeException("${write.path} was created while the change of the project was being prepared; nothing of the project was changed")
             }
+            String given = null
             if (posix && write.content != null) {
                 permissions = permissions ?: new HashSet<>(Files.getPosixFilePermissions(file, LinkOption.NOFOLLOW_LINKS))
                 if (write.executable == Boolean.TRUE) {
@@ -638,8 +683,10 @@ final class ProjectTransaction {
                     permissions.removeAll(EXECUTE)
                 }
                 Files.setPosixFilePermissions(file, permissions)
+                // what the file is given by the rename, which recovery holds it to
+                given = PosixFilePermissions.toString(permissions)
             }
-            change.puts << new Put(index, write.before, write.content == null ? null : sha256(write.content), write.path)
+            change.puts << new Put(index, write.before, write.content == null ? null : sha256(write.content), given, write.path)
         }
         force(staged)
         force(backups)
@@ -656,7 +703,7 @@ final class ProjectTransaction {
         text.append("id ${change.name}\n")
         if (complete) {
             for (Put put : change.puts) {
-                text.append("put ${put.index} ${put.before ?: '-'} ${put.after ?: '-'} ${put.path}\n")
+                text.append("put ${put.index} ${put.before ?: '-'} ${put.after ?: '-'} ${put.mode ?: '-'} ${put.path}\n")
             }
             for (String made : change.made) {
                 text.append("dir ${made}\n")
@@ -702,8 +749,9 @@ final class ProjectTransaction {
         for (String line : lines.subList(3, lines.size() - 2)) {
             Matcher put = PUT.matcher(line)
             Matcher directory = MADE.matcher(line)
-            if (!change.staging && put.matches() && isWritable(put.group(4)) && !(put.group(2) == '-' && put.group(3) == '-') && seen.add(Integer.valueOf(put.group(1)))) {
-                change.puts << new Put(Integer.parseInt(put.group(1)), put.group(2) == '-' ? null : put.group(2), put.group(3) == '-' ? null : put.group(3), put.group(4))
+            if (!change.staging && put.matches() && isWritable(put.group(5)) && !(put.group(2) == '-' && put.group(3) == '-') && seen.add(Integer.valueOf(put.group(1)))) {
+                change.puts << new Put(Integer.parseInt(put.group(1)), put.group(2) == '-' ? null : put.group(2), put.group(3) == '-' ? null : put.group(3),
+                        put.group(4) == '-' ? null : put.group(4), put.group(5))
             } else if (!change.staging && directory.matches() && isWritable(directory.group(1))) {
                 change.made.add(directory.group(1))
             } else {
@@ -1055,12 +1103,16 @@ final class ProjectTransaction {
         final String before
         // the digest of the file as the change makes it, or null for a file the change removes
         final String after
+        // the mode the change gives the file, as PosixFilePermissions writes it; null for a file the
+        // change removes, and where the file system has no modes
+        final String mode
         final String path
 
-        Put(int index, String before, String after, String path) {
+        Put(int index, String before, String after, String mode, String path) {
             this.index = index
             this.before = before
             this.after = after
+            this.mode = mode
             this.path = path
         }
     }
