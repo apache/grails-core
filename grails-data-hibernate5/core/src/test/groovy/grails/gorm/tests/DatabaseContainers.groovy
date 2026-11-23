@@ -63,28 +63,37 @@ final class DatabaseContainers {
             .withStartupTimeout(Duration.ofMinutes(10))
 
     /**
-     * Whether a Docker daemon is reachable on this machine. A socket file at the well-known path of Docker Desktop or
-     * Linux answers yes without a call, which avoids asking Testcontainers' client on macOS, where it can fail with a
-     * 500 when the daemon API version does not match the docker-java version it bundles. Without such a file the
-     * daemon may still be there: on Windows it listens on a named pipe, and {@code DOCKER_HOST} can name a TCP address
-     * or a socket elsewhere. None of those is a file, so then the daemon itself is asked, and an error from the client
-     * means it is not reachable.
-     * SQL Server. Microsoft publishes the image for amd64 only, so on an arm64 machine Docker runs it under emulation,
-     * which makes it slow to start; the startup timeout allows for that.
+     * SQL Server. Microsoft publishes the image for amd64 only, so on an arm64 machine Docker runs it under emulation, which
+     * makes it slow to start, and fails to start it at all where emulation is not set up; the startup timeout allows for the
+     * first, and {@link #cannotRun} skips the rows on arm64 unless the {@value #AMD64_EMULATION_PROPERTY} system property
+     * says that emulation works.
      */
     static final MSSQLServerContainer SQL_SERVER = new MSSQLServerContainer('mcr.microsoft.com/mssql/server:2022-latest')
             .acceptLicense()
             .withStartupTimeout(Duration.ofMinutes(10))
 
+    /** Set to {@code true} to run the SQL Server and Db2 rows on an arm64 machine where Docker runs amd64 images. */
+    static final String AMD64_EMULATION_PROPERTY = 'grails.test.amd64.emulation'
+
     /**
-     * Whether a Docker daemon is reachable on this machine, from the well-known socket paths of Docker Desktop and
-     * Linux. Asking Testcontainers' client directly can fail with a 500 on macOS when the daemon API version does not
-     * match the docker-java version it bundles.
+     * Whether a row of a data-driven feature cannot run: it starts a container and no Docker daemon answers the client that
+     * starts it, or its database is published for amd64 only and this machine is arm64 without the opt-in.
+     */
+    static boolean cannotRun(String db, Object container) {
+        if (container == null) {
+            return false
+        }
+        boolean arm64 = System.getProperty('os.arch') in ['aarch64', 'arm64']
+        boolean amd64Only = db in ['DB2', 'SQL Server']
+        return !isDockerAvailable() || (amd64Only && arm64 && System.getProperty(AMD64_EMULATION_PROPERTY) != 'true')
+    }
+
+    /**
+     * Whether a Docker daemon is reachable by the client that starts the containers. The gate and the startup use the same
+     * Testcontainers client and endpoint, so a daemon that the client cannot talk to, or a configured {@code DOCKER_HOST}
+     * that does not answer, skips the container rows instead of failing them when they start.
      */
     static boolean isDockerAvailable() {
-        if ([System.getProperty('user.home') + '/.docker/run/docker.sock', '/var/run/docker.sock'].any { new File(it).exists() }) {
-            return true
-        }
         try {
             return DockerClientFactory.instance().isDockerAvailable()
         } catch (Throwable ignored) {

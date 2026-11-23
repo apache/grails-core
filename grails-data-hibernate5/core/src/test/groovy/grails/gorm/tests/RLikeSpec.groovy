@@ -21,13 +21,14 @@ package grails.gorm.tests
 import grails.gorm.annotation.Entity
 import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
-import org.testcontainers.spock.Testcontainers
 import spock.lang.IgnoreIf
-import spock.lang.Requires
 import spock.lang.Shared
 
-@Testcontainers
-@Requires({ DatabaseContainers.isDockerAvailable() })
+/**
+ * The H2 rows run everywhere; a row that starts a container is skipped when no Docker daemon answers the client that starts
+ * it, and the Db2 and SQL Server rows are skipped on arm64 machines, where their amd64-only images need emulation, unless
+ * {@code -Dgrails.test.amd64.emulation=true} says it works.
+ */
 class RLikeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
 
     @Shared postgres = DatabaseContainers.POSTGRES
@@ -41,7 +42,7 @@ class RLikeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
         manager.registerDomainClasses(RlikeFoo)
     }
 
-    @IgnoreIf({ data.db == 'DB2' && System.getProperty('os.arch') in ['aarch64', 'arm64'] })
+    @IgnoreIf({ DatabaseContainers.cannotRun(data.db, data.container) })
     void "test rlike works with #db"() {
         given:
         useDatabase(container, 'rlikeDB')
@@ -67,7 +68,7 @@ class RLikeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
         'SQL Server' | sqlServer || 0
     }
 
-    @IgnoreIf({ data.db == 'DB2' && System.getProperty('os.arch') in ['aarch64', 'arm64'] })
+    @IgnoreIf({ DatabaseContainers.cannotRun(data.db, data.container) })
     void "test rlike on #db matches #expected of Alice, alice and bob for the pattern ^al.*"() {
         given:
         useDatabase(container, 'rlikeCaseDB')
@@ -91,9 +92,10 @@ class RLikeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
         'SQL Server' | sqlServer || []
     }
 
-    void "rlike on #db falls back to like, so the wildcard % selects rows"() {
+    @IgnoreIf({ DatabaseContainers.cannotRun('SQL Server', DatabaseContainers.SQL_SERVER) })
+    void "rlike on SQL Server falls back to like, so the wildcard % selects rows"() {
         given:
-        useDatabase(container, 'rlikeFallbackDB')
+        useDatabase(sqlServer, 'rlikeFallbackDB')
         ['Alice', 'alice', 'bob'].each { new RlikeFoo(name: it).save(flush: true) }
 
         when: 'a pattern that a like matches is used, as the fallback is a like'
@@ -102,10 +104,6 @@ class RLikeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
 
         then: 'the fallback selects the rows, and the default collation of the image ignores case'
         names == ['Alice', 'alice']
-
-        where:
-        db           | container
-        'SQL Server' | sqlServer
     }
 
     private void useDatabase(container, String h2Name) {
