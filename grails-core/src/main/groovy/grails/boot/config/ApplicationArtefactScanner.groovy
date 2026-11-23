@@ -60,8 +60,14 @@ final class ApplicationArtefactScanner {
      * @return The classes that constitute the Grails application
      */
     static Collection<Class> scanApplicationClasses(Class<?> applicationClass, Collection<String> packageNames) {
-        Collection<Class> classes = new HashSet<>()
-        classes.addAll(new ClassPathScanner().scan(applicationClass, packageNames))
+        Collection<Class> classes = new LinkedHashSet<>()
+        Collection<Class> indexedClasses = ArtefactIndexReader.read(applicationClass, packageNames)
+        if (indexedClasses == null) {
+            classes.addAll(new ClassPathScanner().scan(applicationClass, packageNames))
+        }
+        else {
+            classes.addAll(indexedClasses)
+        }
         classes.addAll(loadTransformedClasses(applicationClass.classLoader))
         return classes
     }
