@@ -80,7 +80,7 @@ dependencies {
 What is said comes from three places:
 
 * the two lists of link:list-plugins.html[list-plugins]: the plugins of this release of Grails, which the command line has in itself, and the Grails plugin index, which is read from the network;
-* the `maven-metadata.xml` of the plugin in a Maven repository, for its versions;
+* the `maven-metadata.xml` of the plugin in a Maven repository, for its versions. A repository that is a directory can be the local Maven repository, in which `publishToMavenLocal` of Gradle and `mvn install` write `maven-metadata-local.xml` in its place: of a directory that file is read when it has no `maven-metadata.xml`, and a repository of the network is asked for `maven-metadata.xml` only;
 * the `<artifact>-<version>-plugin.xml` that a Grails plugin publishes beside its jar, for its title, description, license and the addresses of its documentation, issue tracker and sources. It is read for the version an application of this Grails gets, or else for the latest release.
 
 The repositories that are asked are those of the `GRAILS_REPO_URL` environment variable, in its order, then Maven Central, then the repository the plugin index names for the plugin. A repository that does not have a file is passed over; one that fails in another way is said in a warning and ends the search, so that the coordinates of a plugin are sent to no repository after one that refused them. Whatever cannot be read, the command says what is known without it.

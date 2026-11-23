@@ -666,6 +666,88 @@ class PluginCommandsSpec extends Specification {
         'answers for another artifact'    | false | '<metadata><groupId>org.other</groupId><artifactId>audit-logging</artifactId></metadata>'.bytes     | "maven-metadata.xml of org.example.plugins:audit-logging from ${REPOSITORY} is that of another artifact, and is not used"
     }
 
+    @Unroll
+    void "plugin-info reads the versions of a plugin that publishToMavenLocal installed, in a repository that is #named"() {
+        given: 'a local repository of Maven as publishToMavenLocal of Gradle writes it: maven-metadata-local.xml, and no maven-metadata.xml'
+        File repository = Files.createTempDirectory('grailsforgemavenlocal').toFile()
+        installedByPublishToMavenLocal(repository)
+        String address = repository.toPath().toAbsolutePath().normalize().toUri().toString()
+        String previous = System.getProperty('maven.repo.local')
+        if (entry == 'mavenLocal()') {
+            System.setProperty('maven.repo.local', repository.absolutePath)
+        }
+        repositoriesOfEnvironment = [before, entry == 'a path' ? repository.absolutePath : entry == 'an address' ? address : entry].findAll().join(';')
+        List<String> options = offline ? ['--plugin-index', 'none', '--offline'] : ['--plugin-index', 'none']
+
+        when:
+        int exit = info(*(options + ['com.acme.internal:acme-audit']))
+
+        then: 'the versions are those of the repository, and the plugin describes itself'
+        exit == 0
+        err.toString().isEmpty()
+        out.toString().readLines() == ['Plugin: acme-audit (com.acme.internal:acme-audit)',
+                                       'Title: Acme Audit',
+                                       '',
+                                       'Audits what Acme does',
+                                       '',
+                                       "* Version for Grails ${GRAILS}: none is known",
+                                       '* Latest Version: 2.0.0',
+                                       "* All Versions (${address}): 2.0.0",
+                                       '* Grails Version: 9.0.0 > *',
+                                       '* License: Proprietary',
+                                       '* Definition:',
+                                       '',
+                                       'dependencies {',
+                                       "    implementation 'com.acme.internal:acme-audit:2.0.0'",
+                                       '}']
+
+        and: 'a repository of the network is asked for maven-metadata.xml, and for no file of the local repository of Maven'
+        asked.findAll { it.contains('maven-metadata') } == askedOfTheNetwork
+
+        when: 'with the snapshots'
+        exit = info(*(options + ['--snapshots', 'com.acme.internal:acme-audit']))
+
+        then:
+        exit == 0
+        out.toString().contains('* Latest Version: 2.1.0-SNAPSHOT')
+        out.toString().contains("* All Versions (${address}): 2.0.0, 2.1.0-SNAPSHOT")
+
+        cleanup:
+        if (previous == null) {
+            System.clearProperty('maven.repo.local')
+        } else {
+            System.setProperty('maven.repo.local', previous)
+        }
+        repository.deleteDir()
+
+        where:
+        named                                  | before     | entry          | offline || askedOfTheNetwork
+        'named by its file: address'           | null       | 'an address'   | true    || []
+        'named by its path'                    | null       | 'a path'       | true    || []
+        'mavenLocal()'                         | null       | 'mavenLocal()' | true    || []
+        'named after one of the network'       | REPOSITORY | 'an address'   | false   || ["${REPOSITORY}com/acme/internal/acme-audit/maven-metadata.xml".toString()]
+    }
+
+    void "a local repository of Maven with metadata that is not of the plugin is said to, and plugin-info says what is known without it"() {
+        given:
+        File repository = Files.createTempDirectory('grailsforgemavenlocal').toFile()
+        installedByPublishToMavenLocal(repository)
+        File metadata = new File(repository, 'com/acme/internal/acme-audit/maven-metadata-local.xml')
+        metadata.text = metadata.text.replace('<artifactId>acme-audit</artifactId>', '<artifactId>other</artifactId>')
+        repositoriesOfEnvironment = repository.absolutePath
+
+        when:
+        int exit = info('--plugin-index', 'none', '--offline', 'com.acme.internal:acme-audit')
+
+        then: 'the warning names the file that was read'
+        exit == 1
+        err.toString().readLines()[0] == "| Warning maven-metadata-local.xml of com.acme.internal:acme-audit from ${repository.toPath().toAbsolutePath().normalize().toUri()} " +
+                'is that of another artifact, and is not used'
+
+        cleanup:
+        repository.deleteDir()
+    }
+
     void "the commands say how they are used"() {
         when:
         int exit = list('--help')
@@ -712,6 +794,37 @@ class PluginCommandsSpec extends Specification {
         // in the version of the BOM when that is a release, and in the latest release
         served["${REPOSITORY}org/apache/grails/grails-cache/8.0.1/grails-cache-8.0.1-plugin.xml".toString()] = description
         served["${REPOSITORY}org/apache/grails/grails-cache/${managed(CACHE)}/grails-cache-${managed(CACHE)}-plugin.xml".toString()] = description
+    }
+
+    /**
+     * What publishToMavenLocal of Gradle writes for a plugin published in 2.0.0 and then in
+     * 2.1.0-SNAPSHOT, with the descriptor of the plugin among the artifacts of its publication, as a
+     * run of Gradle 9 wrote it: the metadata of what was installed, and no checksums.
+     */
+    private static void installedByPublishToMavenLocal(File repository) {
+        File plugin = new File(repository, 'com/acme/internal/acme-audit')
+        Map<String, String> files = [
+                'maven-metadata-local.xml'                        : '<?xml version="1.0" encoding="UTF-8"?>\n<metadata>\n  <groupId>com.acme.internal</groupId>\n' +
+                        '  <artifactId>acme-audit</artifactId>\n  <versioning>\n    <latest>2.1.0-SNAPSHOT</latest>\n    <release>2.0.0</release>\n' +
+                        '    <versions>\n      <version>2.0.0</version>\n      <version>2.1.0-SNAPSHOT</version>\n    </versions>\n' +
+                        '    <lastUpdated>20261123174057</lastUpdated>\n  </versioning>\n</metadata>\n',
+                '2.0.0/acme-audit-2.0.0.jar'                      : 'a jar',
+                '2.0.0/acme-audit-2.0.0.pom'                      : '<project/>',
+                '2.0.0/acme-audit-2.0.0.module'                   : '{}',
+                '2.0.0/acme-audit-2.0.0-plugin.xml'               : "<plugin name='acme-audit' version='2.0.0' grailsVersion='9.0.0 &gt; *'><title>Acme Audit</title>" +
+                        '<description>Audits what Acme does</description><license>Proprietary</license></plugin>\n',
+                '2.1.0-SNAPSHOT/maven-metadata-local.xml'         : '<?xml version="1.0" encoding="UTF-8"?>\n<metadata modelVersion="1.1.0">\n' +
+                        '  <groupId>com.acme.internal</groupId>\n  <artifactId>acme-audit</artifactId>\n  <versioning>\n' +
+                        '    <lastUpdated>20261123174057</lastUpdated>\n    <snapshot>\n      <localCopy>true</localCopy>\n    </snapshot>\n' +
+                        '  </versioning>\n  <version>2.1.0-SNAPSHOT</version>\n</metadata>\n',
+                '2.1.0-SNAPSHOT/acme-audit-2.1.0-SNAPSHOT.jar'    : 'a jar',
+                '2.1.0-SNAPSHOT/acme-audit-2.1.0-SNAPSHOT.pom'    : '<project/>',
+                '2.1.0-SNAPSHOT/acme-audit-2.1.0-SNAPSHOT-plugin.xml': "<plugin name='acme-audit' version='2.1.0-SNAPSHOT'><title>Acme Audit</title></plugin>\n"]
+        files.each { String path, String text ->
+            File file = new File(plugin, path)
+            file.parentFile.mkdirs()
+            file.setText(text, 'UTF-8')
+        }
     }
 
     private static byte[] index() {
@@ -772,7 +885,7 @@ class PluginCommandsSpec extends Specification {
 
             @Override
             protected String grailsRepoUrl() {
-                return REPOSITORY
+                return repositoriesOfEnvironment ?: REPOSITORY
             }
         }, args)
     }
