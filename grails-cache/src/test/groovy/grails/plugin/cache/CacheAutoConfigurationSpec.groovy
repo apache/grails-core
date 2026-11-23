@@ -24,6 +24,8 @@ import groovy.transform.CompileStatic
 
 import jakarta.annotation.Priority
 
+import org.springframework.beans.factory.BeanCreationException
+import org.springframework.beans.factory.BeanCurrentlyInCreationException
 import org.springframework.beans.factory.BeanFactory
 import org.springframework.beans.factory.FactoryBean
 import org.springframework.beans.factory.annotation.Autowired
@@ -33,6 +35,7 @@ import org.springframework.cache.CacheManager
 import org.springframework.cache.concurrent.ConcurrentMapCacheManager
 import org.springframework.context.SmartLifecycle
 import org.springframework.context.annotation.AnnotationConfigApplicationContext
+import org.springframework.core.NestedExceptionUtils
 import org.springframework.core.env.MapPropertySource
 
 import grails.core.DefaultGrailsApplication
@@ -173,38 +176,7 @@ class CacheAutoConfigurationSpec extends Specification {
     @Unroll
     void 'a grailsCacheManager built from a cache-aware bean starts beside a cache manager #preferred, which that bean gets, as in 8.0.0'() {
         given: 'the application\'s grailsCacheManager, created from a bean that has a cache manager injected itself'
-        GrailsCacheManager mine = Mock(GrailsCacheManager)
-        AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext()
-
-        and: 'the cache manager Spring prefers, created first'
-        if (preferred == 'with a priority') {
-            context.registerBean('preferredCacheManager', HighPriorityCacheManager)
-        }
-        else if (preferred == 'with a priority only on the object its factory returns') {
-            context.registerBean('preferredCacheManager', CacheManager, { -> new HighPriorityCacheManager() } as Supplier<CacheManager>)
-        }
-        else if (preferred == 'that a factory bean naming only CacheManager makes, with a priority') {
-            context.registerBean('preferredCacheManager', PriorityProductFactoryBean)
-        }
-        else if (preferred == 'with a priority, which the key generator creates as the cache-aware bean is injected') {
-            BeanDefinitionCustomizer lazy = { BeanDefinition definition -> definition.lazyInit = true } as BeanDefinitionCustomizer
-            context.registerBean('preferredCacheManager', CacheManager,
-                    { -> new HighPriorityCacheManager() } as Supplier<CacheManager>, lazy)
-            context.registerBean('customCacheKeyGenerator', GrailsCacheKeyGenerator, { ->
-                context.getBean('preferredCacheManager')
-                new CustomCacheKeyGenerator()
-            } as Supplier<GrailsCacheKeyGenerator>, lazy)
-        }
-        else {
-            context.registerBean('preferredCacheManager', ConcurrentMapCacheManager,
-                    { BeanDefinition definition -> definition.primary = true } as BeanDefinitionCustomizer)
-        }
-        context.registerBean('grailsCacheManager', GrailsCacheManager, { ->
-            context.getBean(CacheAware)
-            mine
-        } as Supplier<GrailsCacheManager>)
-        context.registerBean(CacheAware)
-        context.register(CacheAutoConfiguration)
+        AnnotationConfigApplicationContext context = builtFromCacheAware(preferred, preferred == 'marked primary')
 
         when:
         context.refresh()
@@ -217,9 +189,72 @@ class CacheAutoConfigurationSpec extends Specification {
         context.close()
 
         where:
-        preferred << ['with a priority', 'with a priority only on the object its factory returns',
+        preferred << ['with a priority', 'marked primary']
+    }
+
+    @Unroll
+    void 'the known difference: a grailsCacheManager built from a cache-aware bean does not start beside a cache manager #preferred, unless that one is marked primary'() {
+        given: 'a priority only the object has, which Spring sees once it exists and the alias cannot'
+        AnnotationConfigApplicationContext unmarked = builtFromCacheAware(preferred, false)
+        AnnotationConfigApplicationContext marked = builtFromCacheAware(preferred, true)
+
+        when: 'Spring takes grailsCacheManager by the alias while it is being created'
+        unmarked.refresh()
+
+        then:
+        BeanCreationException e = thrown()
+        NestedExceptionUtils.getMostSpecificCause(e) instanceof BeanCurrentlyInCreationException
+
+        when: 'the cache manager is marked primary, as the upgrade notes say'
+        marked.refresh()
+
+        then: 'the context starts, and the cache-aware beans get it'
+        marked.getBean(CacheAware).grailsCacheManager.is(marked.getBean('preferredCacheManager'))
+        marked.getBean(GrailsCacheAdminService).grailsCacheManager.is(marked.getBean('preferredCacheManager'))
+
+        cleanup:
+        unmarked?.close()
+        marked?.close()
+
+        where:
+        preferred << ['with a priority only on the object its factory returns',
                       'that a factory bean naming only CacheManager makes, with a priority',
-                      'with a priority, which the key generator creates as the cache-aware bean is injected', 'marked primary']
+                      'with a priority, which the key generator creates as the cache-aware bean is injected']
+    }
+
+    /** The application's grailsCacheManager, created from a cache-aware bean, beside the cache manager described, created first. */
+    private static AnnotationConfigApplicationContext builtFromCacheAware(String preferred, boolean markedPrimary) {
+        GrailsCacheManager mine = new GrailsConcurrentMapCacheManager()
+        AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext()
+        BeanDefinitionCustomizer primary = { BeanDefinition definition -> definition.primary = markedPrimary } as BeanDefinitionCustomizer
+        if (preferred == 'with a priority') {
+            context.registerBean('preferredCacheManager', HighPriorityCacheManager, primary)
+        }
+        else if (preferred == 'with a priority only on the object its factory returns') {
+            context.registerBean('preferredCacheManager', CacheManager, { -> new HighPriorityCacheManager() } as Supplier<CacheManager>, primary)
+        }
+        else if (preferred == 'that a factory bean naming only CacheManager makes, with a priority') {
+            context.registerBean('preferredCacheManager', PriorityProductFactoryBean, primary)
+        }
+        else if (preferred == 'with a priority, which the key generator creates as the cache-aware bean is injected') {
+            BeanDefinitionCustomizer lazy = { BeanDefinition definition -> definition.lazyInit = true } as BeanDefinitionCustomizer
+            context.registerBean('preferredCacheManager', CacheManager,
+                    { -> new HighPriorityCacheManager() } as Supplier<CacheManager>, lazy, primary)
+            context.registerBean('customCacheKeyGenerator', GrailsCacheKeyGenerator, { ->
+                context.getBean('preferredCacheManager')
+                new CustomCacheKeyGenerator()
+            } as Supplier<GrailsCacheKeyGenerator>, lazy)
+        }
+        else {
+            context.registerBean('preferredCacheManager', ConcurrentMapCacheManager, primary)
+        }
+        context.registerBean('grailsCacheManager', GrailsCacheManager, { ->
+            context.getBean(CacheAware)
+            mine
+        } as Supplier<GrailsCacheManager>)
+        context.registerBean(CacheAware)
+        context.register(CacheAutoConfiguration)
+        context
     }
 
     @Unroll

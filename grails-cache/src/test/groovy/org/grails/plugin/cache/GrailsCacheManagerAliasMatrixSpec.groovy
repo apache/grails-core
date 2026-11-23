@@ -93,9 +93,9 @@ import org.apache.grails.core.aot.GeneratedArtifactsCommonAnnotationBeanPostProc
  * the beans the cache-aware bean is registered as depending on, and how many of each cache manager are
  * created, other than {@code grailsCacheManager}.</p>
  */
-class GrailsCacheManagerFallbackMatrixSpec extends Specification {
+class GrailsCacheManagerAliasMatrixSpec extends Specification {
 
-    private static final String NAMED = GrailsCacheManagerFallback.CACHE_MANAGER_BEAN_NAME
+    private static final String NAMED = GrailsCacheManagerAliasRegistrar.CACHE_MANAGER_BEAN_NAME
 
     private static final List<String> NAMED_KINDS = ['absent', 'plain', 'primary', 'lazy', 'notCandidate', 'wrongType', 'cyclic',
             'cacheAware', 'fallback', 'notDefault', 'priority', 'nullBean']
@@ -103,56 +103,74 @@ class GrailsCacheManagerFallbackMatrixSpec extends Specification {
     private static final List<String> OTHER_KINDS = ['plain', 'primary', 'lazy', 'notCandidate', 'fallback', 'notDefault',
             'priority', 'priorityOnObject', 'factoryBean', 'createdByKeyGenerator', 'prototypeFactoryBean']
 
-    private static final List<String> PREFERRED_KINDS = ['primary', 'priority', 'priorityOnObject', 'factoryBean',
-            'createdByKeyGenerator']
+    /** A cache manager preferred by its definition, which the registrar sees and leaves the alias out for. */
+    private static final List<String> PREFERRED_BY_DEFINITION = ['primary', 'priority']
 
-    void 'the fallback applies to the field the trait has in a class that implements it'() {
+    /** A cache manager whose priority only its object has, which the registrar cannot see. */
+    private static final List<String> PRIORITY_ON_OBJECT = ['priorityOnObject', 'factoryBean', 'createdByKeyGenerator']
+
+    void 'the alias is the name the trait\'s field has in a class that implements it'() {
         expect:
-        CacheAware.declaredFields*.name.contains(GrailsCacheManagerFallback.FIELD_NAME)
-        GrailsCacheManagerFallback.traitField(CacheAware)?.name == GrailsCacheManagerFallback.FIELD_NAME
-        GrailsCacheManagerFallback.traitField(OwnInjection) == null
+        CacheAware.declaredFields*.name.contains(GrailsCacheManagerAliasRegistrar.ALIAS)
     }
 
-    void 'the cache manager a cache-aware class gets is 8.0.0\'s, except where it failed with none preferred'() {
+    void 'the cache manager a cache-aware class gets is 8.0.0\'s, except where it failed with none preferred, and the known differences'() {
         given:
         List<Map<String, String>> rows = arrangements()
         assert rows.size() == NAMED_KINDS.size() * (1 + OTHER_KINDS.size() + OTHER_KINDS.size() * OTHER_KINDS.size())
 
-        expect: 'every arrangement, each in a context of its own, with the fallback and without it'
+        expect: 'every arrangement, each in a context of its own, with the alias and without it'
         List<String> mismatches = []
         rows.each { Map<String, String> row ->
             Map<String, Object> was = run(row, false)
             Map<String, Object> now = run(row, true)
             boolean namedUsable = row[NAMED] in ['plain', 'primary', 'lazy', 'cacheAware', 'fallback', 'priority']
-            boolean anotherPreferred = row.any { String name, String kind -> name != NAMED && kind in PREFERRED_KINDS }
+            boolean preferredByDefinition = row.any { String name, String kind -> name != NAMED && kind in PREFERRED_BY_DEFINITION }
+            boolean priorityOnObject = !preferredByDefinition &&
+                    row.any { String name, String kind -> name != NAMED && kind in PRIORITY_ON_OBJECT }
+            Object wasResult = was.failed ? 'failed' : was.chosen
             // a context that does not start has failed before the cache-aware bean, where it cannot fall back
-            boolean fallsBack = was.failed && !was.failedAtStartup && namedUsable && !anotherPreferred
-            Object expected = fallsBack ? NAMED : (was.failed ? 'failed' : was.chosen)
+            boolean fallsBack = was.failed && !was.failedAtStartup && namedUsable && !preferredByDefinition && !priorityOnObject
             Object got = now.failed ? 'failed' : now.chosen
+            // the known differences: Spring takes grailsCacheManager by the alias before a cache manager whose priority
+            // only its object has, which 8.0.0 chose where that one existed first, as it does where 8.0.0 failed; it gives
+            // what grailsCacheManager gives, Spring's null bean nothing, and a grailsCacheManager created from the
+            // cache-aware bean is asked for while it is created
+            boolean mayDiffer = !preferredByDefinition && row[NAMED] != null && (was.failed || priorityOnObject)
+            List<Object> allowed = [fallsBack ? NAMED : wasResult]
+            if (mayDiffer && !fallsBack) {
+                allowed << (row[NAMED] == 'nullBean' ? null : NAMED)
+                if (row[NAMED] == 'cyclic') {
+                    allowed << 'failed'
+                }
+            }
+            Object expected = got in allowed ? got : allowed[0]
+            boolean differs = expected != wasResult
             Map<String, Integer> wasCreated = ((List<String>) was.created).countBy { it }
             String overCreated = ((List<String>) now.created).countBy { it }.find { String name, Integer count ->
-                count > (wasCreated[name] ?: 0) + (fallsBack && name == NAMED ? 1 : 0)
+                count > (wasCreated[name] ?: 0) + (differs && name == NAMED ? 1 : 0)
             }?.key
             // the prototypes as in 8.0.0, and where 8.0.0 failed before them, as the probe's own resolution
-            Map<String, Integer> prototypesMayCreate = ((fallsBack ? now.created : was.createdByPrototypes) ?: []).countBy { it }
+            Map<String, Integer> prototypesMayCreate = ((differs ? now.created : was.createdByPrototypes) ?: []).countBy { it }
             String overCreatedByPrototypes = ((List<String>) (now.createdByPrototypes ?: [])).countBy { it }
                     .find { String name, Integer count -> count > (prototypesMayCreate[name] ?: 0) }?.key
             if (got != expected) {
                 mismatches << "${row}: got ${got}, expected ${expected} (8.0.0: ${was.failed ? 'failed' : was.chosen})".toString()
             }
-            else if (overCreated) {
+            // where the context now fails at another stage than in 8.0.0, what it created counts from another point
+            else if (overCreated && !(now.failed && was.failed != null && now.failedAtStartup != was.failedAtStartup)) {
                 mismatches << "${row}: created ${now.created}, where 8.0.0 created ${was.created}".toString()
             }
             else if (overCreatedByPrototypes) {
                 mismatches << "${row}: prototypes created ${now.createdByPrototypes}, where 8.0.0 created ${was.createdByPrototypes}".toString()
             }
-            else if (!now.failed && now.prototypes != (fallsBack ? [NAMED] * 3 : was.prototypes)) {
+            else if (!now.failed && now.prototypes != (differs ? [expected] * 3 : was.prototypes)) {
                 mismatches << "${row}: prototypes got ${now.prototypes}, where in 8.0.0 they got ${was.prototypes}".toString()
             }
-            else if (!now.failed && !was.failed && now.self != was.self) {
+            else if (!now.failed && !was.failed && !differs && now.self != was.self) {
                 mismatches << "${row}: grailsCacheManager got ${now.self}, where in 8.0.0 it got ${was.self}".toString()
             }
-            else if (!now.failed && (fallsBack ? ((List<String>) now.dependencies - ['customCacheKeyGenerator']) != [NAMED] :
+            else if (!now.failed && (differs ? !(((List<String>) now.dependencies - ['customCacheKeyGenerator']) in [[NAMED], []]) :
                     now.dependencies != was.dependencies)) {
                 mismatches << "${row}: depends on ${now.dependencies}, where 8.0.0 depended on ${was.dependencies}".toString()
             }
@@ -179,36 +197,36 @@ class GrailsCacheManagerFallbackMatrixSpec extends Specification {
         besidePlain?.close()
     }
 
-    void 'a factory bean of new cache managers makes one for the injection, as in 8.0.0'() {
+    void 'Spring takes grailsCacheManager by the alias without asking a factory bean of new cache managers, which 8.0.0 asked once'() {
         given: 'such a factory created first, beside a grailsCacheManager marked primary'
         Map<String, Object> was = run([factory: 'prototypeFactoryBean', (NAMED): 'primary'], false)
         Map<String, Object> now = run([factory: 'prototypeFactoryBean', (NAMED): 'primary'], true)
 
-        expect: 'it is asked once for the injection, with the fallback as without it, and grailsCacheManager is injected'
+        expect: 'grailsCacheManager is injected either way, and with the alias nothing else is made for it'
         ((List<String>) was.created).count('factory') == 1
-        ((List<String>) now.created).count('factory') == 1
+        ((List<String>) now.created).count('factory') == 0
         now.chosen == NAMED && was.chosen == NAMED
     }
 
-    void 'prototype beans resolve their cache manager once, as in 8.0.0, so a factory bean of new cache managers is asked once'() {
+    void 'prototype beans resolve their cache manager once, so a factory bean of new cache managers is asked at most once, as in 8.0.0'() {
         given: 'such a factory created first, beside a grailsCacheManager marked primary, and three prototype cache-aware beans'
         Map<String, Object> was = run([factory: 'prototypeFactoryBean', (NAMED): 'primary'], false)
         Map<String, Object> now = run([factory: 'prototypeFactoryBean', (NAMED): 'primary'], true)
 
-        expect: 'the factory is asked once for the first prototype, then the choice is reused'
+        expect: '8.0.0 asks the factory once for the first prototype and then reuses its choice; the alias takes the name first'
         was.prototypes == [NAMED] * 3 && now.prototypes == [NAMED] * 3
-        ((List<String>) now.createdByPrototypes).count('factory') == ((List<String>) was.createdByPrototypes).count('factory')
-        ((List<String>) now.createdByPrototypes).count('factory') == 1
+        ((List<String>) was.createdByPrototypes).count('factory') == 1
+        ((List<String>) now.createdByPrototypes).count('factory') == 0
     }
 
     void 'prototype beans given grailsCacheManager where Spring cannot choose keep it, and create nothing more'() {
         given: 'a factory bean of new cache managers and grailsCacheManager, which Spring cannot choose between'
         Map<String, Object> now = run([factory: 'prototypeFactoryBean', (NAMED): 'plain'], true)
 
-        expect: 'the first prototype asks the factory once, and the rest reuse the choice'
+        expect: 'every prototype gets grailsCacheManager by the alias, and the factory is never asked'
         now.chosen == NAMED
         now.prototypes == [NAMED] * 3
-        ((List<String>) now.createdByPrototypes).count('factory') == 1
+        ((List<String>) now.createdByPrototypes).count('factory') == 0
     }
 
     void 'a prototype bean registered again resolves its cache manager afresh, as in 8.0.0, where #arrangement'() {
@@ -311,7 +329,7 @@ class GrailsCacheManagerFallbackMatrixSpec extends Specification {
     void 'a remembered prototype cache manager made for its injection point gets one, as in 8.0.0'() {
         given: 'a prototype cache manager whose factory method takes the injection point, and a prototype cache-aware bean'
         AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext()
-        context.addBeanFactoryPostProcessor(new GrailsCacheManagerFallback())
+        context.addBeanFactoryPostProcessor(new GrailsCacheManagerAliasRegistrar())
         context.register(PerInjectionPoint)
         context.registerBean('prototype', CacheAware,
                 { BeanDefinition definition -> definition.scope = BeanDefinition.SCOPE_PROTOTYPE } as BeanDefinitionCustomizer)
@@ -321,7 +339,7 @@ class GrailsCacheManagerFallbackMatrixSpec extends Specification {
         List<CacheManager> got = (1..3).collect { ((CacheAware) context.getBean('prototype')).grailsCacheManager }
 
         then: 'each injection made one, for the field'
-        got.every { it instanceof PerInjectionPointCacheManager && ((PerInjectionPointCacheManager) it).field?.name == GrailsCacheManagerFallback.FIELD_NAME }
+        got.every { it instanceof PerInjectionPointCacheManager && ((PerInjectionPointCacheManager) it).field?.name == GrailsCacheManagerAliasRegistrar.ALIAS }
         got*.hashCode().unique().size() == 3
 
         cleanup:
@@ -334,27 +352,23 @@ class GrailsCacheManagerFallbackMatrixSpec extends Specification {
         Map<String, Object> now = aheadOfTime(subject, others, true)
 
         then: 'Spring\'s generated injection injects the field, after the trait\'s other field and before the class\'s method'
-        now.injection.indexOf('__customCacheKeyGenerator') < now.injection.indexOf("forField(\"${GrailsCacheManagerFallback.FIELD_NAME}\")")
-        now.injection.indexOf("forField(\"${GrailsCacheManagerFallback.FIELD_NAME}\")") < now.injection.indexOf('"init"')
+        now.injection.indexOf('__customCacheKeyGenerator') < now.injection.indexOf("forField(\"${GrailsCacheManagerAliasRegistrar.ALIAS}\")")
+        now.injection.indexOf("forField(\"${GrailsCacheManagerAliasRegistrar.ALIAS}\")") < now.injection.indexOf('"init"')
         now.fieldHinted
 
         and: 'the resolution of the field falls back where 8.0.0 failed, and is 8.0.0\'s elsewhere; the code generated for a bean depends on each candidate it gets from the bean factory'
         was.result == wasExpected
         now.result == nowExpected
 
-        and: 'the bean factory\'s resolver answers it, installed once'
-        now.resolver == [installed: true, once: true, copied: true]
-        !was.resolver?.installed
-
         where:
         subject       | others                                                 || wasExpected                                                       || nowExpected
         MethodInClass | [:]                                                    || [seen: NAMED, got: NAMED, copies: [NAMED], dependencies: [NAMED]]  || wasExpected
-        MethodInClass | [other: OtherCacheManager]                             || [failed: true] || [seen: NAMED, got: NAMED, copies: [NAMED], dependencies: [NAMED, 'other']]
+        MethodInClass | [other: OtherCacheManager]                             || [failed: true] || [seen: NAMED, got: NAMED, copies: [NAMED], dependencies: [NAMED]]
         MethodInClass | [other: OtherCacheManager, primary: OtherCacheManager] || [seen: 'primary', got: 'primary', copies: ['primary'], dependencies: [NAMED, 'other', 'primary']] || wasExpected
         // the generated code finds a field by its name, so it sets the subclass's copy of it twice, the first time before
         // the superclass's method, and never the superclass's copy, as in 8.0.0
         AwareAgain    | [:]                                                    || [seen: NAMED, got: NAMED, copies: [null, NAMED], dependencies: [NAMED]] || wasExpected
-        AwareAgain    | [other: OtherCacheManager]                             || [failed: true] || [seen: NAMED, got: NAMED, copies: [null, NAMED], dependencies: [NAMED, 'other']]
+        AwareAgain    | [other: OtherCacheManager]                             || [failed: true] || [seen: NAMED, got: NAMED, copies: [null, NAMED], dependencies: [NAMED]]
         AwareAgain    | [other: OtherCacheManager, primary: OtherCacheManager] || [seen: 'primary', got: 'primary', copies: [null, 'primary'], dependencies: [NAMED, 'other', 'primary']] || wasExpected
     }
 
@@ -366,7 +380,7 @@ class GrailsCacheManagerFallbackMatrixSpec extends Specification {
             GenericApplicationContext processed = new GenericApplicationContext()
             AnnotationConfigUtils.registerAnnotationConfigProcessors(processed)
             if (withFallback) {
-                processed.registerBean(GrailsCacheManagerFallback)
+                processed.registerBean(GrailsCacheManagerAliasRegistrar)
             }
             processed.registerBean(NAMED, ConcurrentMapCacheManager)
             others.each { String name, Class<?> type ->
@@ -375,7 +389,7 @@ class GrailsCacheManagerFallbackMatrixSpec extends Specification {
             }
             processed.registerBean('probe', (Class<Object>) subject)
             RuntimeHints hints = new RuntimeHints()
-            DefaultGenerationContext generation = new DefaultGenerationContext(new ClassNameGenerator(ClassName.get(GrailsCacheManagerFallbackMatrixSpec)),
+            DefaultGenerationContext generation = new DefaultGenerationContext(new ClassNameGenerator(ClassName.get(GrailsCacheManagerAliasMatrixSpec)),
                     new FileSystemGeneratedFiles(dir.resolve('sources')), hints)
             ClassName initializer = new ApplicationContextAotGenerator().processAheadOfTime(processed, generation)
             generation.writeGeneratedContent()
@@ -388,7 +402,7 @@ class GrailsCacheManagerFallbackMatrixSpec extends Specification {
                     null, files.getJavaFileObjectsFromFiles(sources)).call()
             files.close()
             Map<String, Object> result = [
-                    injection: sources.find { File file -> file.name == "GrailsCacheManagerFallbackMatrixSpec_${subject.simpleName}__Autowiring.java".toString() }.text,
+                    injection: sources.find { File file -> file.name == "GrailsCacheManagerAliasMatrixSpec_${subject.simpleName}__Autowiring.java".toString() }.text,
                     fieldHinted: copiesOfTheField(subject).every { Field copy -> RuntimeHintsPredicates.reflection().onField(copy).test(hints) }]
             URLClassLoader loader = new URLClassLoader([classes.toUri().toURL()] as URL[], getClass().classLoader)
             GenericApplicationContext started = new GenericApplicationContext()
@@ -420,13 +434,6 @@ class GrailsCacheManagerFallbackMatrixSpec extends Specification {
                 result.result = [seen: nameOf(probe.seen, instances), got: nameOf(probe.grailsCacheManager, instances),
                         copies: copies.collect { Field copy -> nameOf((CacheManager) copy.get(probe), instances) },
                         dependencies: (started.beanFactory.getDependenciesForBean('probe') as List<String>).sort()]
-                // post-processed again, the resolver is not wrapped twice, and a copy of it falls back too
-                Object resolver = started.defaultListableBeanFactory.autowireCandidateResolver
-                new GrailsCacheManagerFallback().postProcessBeanFactory(started.beanFactory)
-                result.resolver = [installed: resolver instanceof GrailsCacheManagerFallback.GeneratedInjectionFallback,
-                        once: started.defaultListableBeanFactory.autowireCandidateResolver.is(resolver),
-                        copied: started.defaultListableBeanFactory.autowireCandidateResolver.cloneIfNecessary()
-                                instanceof GrailsCacheManagerFallback.GeneratedInjectionFallback]
             }
             catch (BeansException ignored) {
                 result.result = [failed: true]
@@ -479,7 +486,7 @@ class GrailsCacheManagerFallbackMatrixSpec extends Specification {
         }
     }
 
-    void 'beside a dependency registered as resolvable, the field is resolved as in 8.0.0, #arrangement'() {
+    void 'beside a dependency registered as resolvable, the field is resolved as in 8.0.0, and by the alias before the dependency is asked, #arrangement'() {
         when: 'a prototype cache-aware bean is injected three times'
         Map<String, Object> was = withResolvable(row, registered, primaryEmpty, false)
         Map<String, Object> now = withResolvable(row, registered, primaryEmpty, true)
@@ -491,11 +498,11 @@ class GrailsCacheManagerFallbackMatrixSpec extends Specification {
         where:
         arrangement                                                                | row                                | registered    | primaryEmpty | oracle                                          | expected
         'a cache manager made empty at first, with no bean'                        | [:]                                | 'emptyFirst'  | false        | [got: [null, 'made 2', 'made 3'], asked: 3]     | null
-        'a cache manager made empty at first, beside grailsCacheManager'           | [(NAMED): 'plain']                 | 'emptyFirst'  | false        | [got: [NAMED, NAMED, NAMED], asked: 1]          | null
+        'a cache manager made empty at first, beside grailsCacheManager'           | [(NAMED): 'plain']                 | 'emptyFirst'  | false        | [got: [NAMED, NAMED, NAMED], asked: 1]          | [got: [NAMED, NAMED, NAMED], asked: 0]
         'a cache manager made empty at first, beside a primary one making nothing' | [(NAMED): 'plain']                 | 'emptyFirst'  | true         | [got: [null, null, null], asked: 3]             | null
-        'a cache manager made empty at first, where it falls back'                 | [(NAMED): 'plain', first: 'plain'] | 'emptyFirst'  | false        | [got: ['failed', 'failed', 'failed'], asked: 3] | [got: [NAMED, NAMED, NAMED], asked: 1]
-        'a cache manager made each time, beside grailsCacheManager alone'          | [(NAMED): 'plain']                 | 'eachTime'    | false        | [got: ['failed', 'failed', 'failed'], asked: 3] | [got: [NAMED, NAMED, NAMED], asked: 1]
-        'a factory that makes nothing, where it falls back'                        | [(NAMED): 'plain', first: 'plain'] | 'alwaysEmpty' | false        | [got: ['failed', 'failed', 'failed'], asked: 3] | [got: [NAMED, NAMED, NAMED], asked: 1]
+        'a cache manager made empty at first, where it falls back'                 | [(NAMED): 'plain', first: 'plain'] | 'emptyFirst'  | false        | [got: ['failed', 'failed', 'failed'], asked: 3] | [got: [NAMED, NAMED, NAMED], asked: 0]
+        'a cache manager made each time, beside grailsCacheManager alone'          | [(NAMED): 'plain']                 | 'eachTime'    | false        | [got: ['failed', 'failed', 'failed'], asked: 3] | [got: [NAMED, NAMED, NAMED], asked: 0]
+        'a factory that makes nothing, where it falls back'                        | [(NAMED): 'plain', first: 'plain'] | 'alwaysEmpty' | false        | [got: ['failed', 'failed', 'failed'], asked: 3] | [got: [NAMED, NAMED, NAMED], asked: 0]
         'an object that is no cache manager, where it falls back'                  | [(NAMED): 'plain', first: 'plain'] | 'notOne'      | false        | [got: ['failed', 'failed', 'failed'], asked: 0] | [got: [NAMED, NAMED, NAMED], asked: 0]
     }
 
@@ -618,7 +625,7 @@ class GrailsCacheManagerFallbackMatrixSpec extends Specification {
         Map<String, CacheManager> instances = [:]
         FailingFactoryBean failing = new FailingFactoryBean()
         GenericApplicationContext context = context([chosen: 'plain', (NAMED): 'plain'], instances, [], withFallback) { GenericApplicationContext it ->
-            it.registerAlias('chosen', GrailsCacheManagerFallback.FIELD_NAME)
+            it.registerAlias('chosen', GrailsCacheManagerAliasRegistrar.ALIAS)
             it.registerBean('failing', FailingFactoryBean, { -> failing } as Supplier<FailingFactoryBean>)
         }
         try {
@@ -665,7 +672,8 @@ class GrailsCacheManagerFallbackMatrixSpec extends Specification {
         MethodInSubclass | [(NAMED): 'plain', first: 'plain']             || [failed: true]                   || [seen: [NAMED] * 2, got: NAMED]
         TraitBelowMethod | [(NAMED): 'plain']                             || [seen: [null] * 2, got: NAMED]   || wasExpected
         TraitBelowMethod | [(NAMED): 'plain', first: 'plain']             || [failed: true]                   || [seen: [null] * 2, got: NAMED]
-        OwnField         | [(NAMED): 'plain', first: 'createdByOwnField'] || [seen: [null] * 2, got: 'first'] || wasExpected
+        // the known difference: a priority only the object has, that 8.0.0 saw where the object existed first
+        OwnField         | [(NAMED): 'plain', first: 'createdByOwnField'] || [seen: [null] * 2, got: 'first'] || [seen: [null] * 2, got: NAMED]
         FieldInSubclass  | [(NAMED): 'plain', first: 'createdByOwnField'] || [failed: true]                   || [seen: [null] * 2, got: NAMED]
         ByResourceName   | [(NAMED): 'plain', first: 'primary']           || [seen: [NAMED] * 2, got: 'first'] || wasExpected
         InheritsMethod   | [(NAMED): 'plain']                             || [seen: [NAMED] * 2, got: NAMED]  || wasExpected
@@ -702,7 +710,7 @@ class GrailsCacheManagerFallbackMatrixSpec extends Specification {
     private static List<Field> copiesOfTheField(Class<?> type) {
         List<Field> copies = []
         for (Class<?> declaring = type; declaring != null; declaring = declaring.superclass) {
-            Field copy = declaring.declaredFields.find { Field field -> field.name == GrailsCacheManagerFallback.FIELD_NAME }
+            Field copy = declaring.declaredFields.find { Field field -> field.name == GrailsCacheManagerAliasRegistrar.ALIAS }
             if (copy != null) {
                 copies.add(0, copy)
             }
@@ -975,7 +983,7 @@ return CachedSubclass
         try {
             AnnotationConfigUtils.registerAnnotationConfigProcessors(child)
             if (withFallback) {
-                child.addBeanFactoryPostProcessor(new GrailsCacheManagerFallback())
+                child.addBeanFactoryPostProcessor(new GrailsCacheManagerAliasRegistrar())
             }
             child.registerBean('other', ConcurrentMapCacheManager)
             if (shadowed) {
@@ -996,22 +1004,38 @@ return CachedSubclass
         }
     }
 
-    void 'the injection is installed once'() {
+    void 'no alias is registered where there is no grailsCacheManager, where its name is taken, or beside a preferred singleton'() {
         given:
-        GenericApplicationContext context = context([(NAMED): 'plain'], [:], [], true)
+        GenericApplicationContext withNone = context([first: 'plain'], [:], [], true)
+        GenericApplicationContext taken = context([(NAMED): 'plain'], [:], [], false)
+        taken.beanFactory.registerAlias('first', GrailsCacheManagerAliasRegistrar.ALIAS)
+        taken.registerBean('first', CacheManager, { -> new ConcurrentMapCacheManager() } as Supplier<CacheManager>)
 
-        when: 'post-processed again'
-        new GrailsCacheManagerFallback().postProcessBeanFactory(context.beanFactory)
+        and: 'cache managers registered as singletons, which have no bean definition, one of a class with a priority'
+        GenericApplicationContext besidePriority = context([(NAMED): 'plain'], [:], [], false)
+        besidePriority.beanFactory.registerSingleton('preferred', new HighPriorityCacheManager())
+        GenericApplicationContext besidePlain = context([(NAMED): 'plain'], [:], [], false)
+        besidePlain.beanFactory.registerSingleton('other', new ConcurrentMapCacheManager())
 
-        then: 'one registrar ahead of Spring\'s own injection, and one injection right after it'
-        List<String> processors = context.defaultListableBeanFactory.beanPostProcessors*.getClass()*.simpleName
-        processors.count('TraitFieldRegistrar') == 1
-        processors.indexOf('TraitFieldRegistrar') < processors.indexOf('AutowiredAnnotationBeanPostProcessor')
-        processors.count('TraitFieldInjection') == 1
-        processors.indexOf('TraitFieldInjection') == processors.indexOf('AutowiredAnnotationBeanPostProcessor') + 1
+        when:
+        [taken, besidePriority, besidePlain, besidePlain].each { GenericApplicationContext context ->
+            new GrailsCacheManagerAliasRegistrar().postProcessBeanFactory(context.beanFactory)
+        }
+
+        then:
+        !withNone.beanFactory.isAlias(GrailsCacheManagerAliasRegistrar.ALIAS)
+        taken.beanFactory.getAliases('first').contains(GrailsCacheManagerAliasRegistrar.ALIAS)
+        !taken.beanFactory.getAliases(NAMED).contains(GrailsCacheManagerAliasRegistrar.ALIAS)
+        !besidePriority.beanFactory.isAlias(GrailsCacheManagerAliasRegistrar.ALIAS)
+
+        and: 'a singleton without a priority leaves the alias to be registered, once however often it is post-processed'
+        besidePlain.beanFactory.getAliases(NAMED) as List == [GrailsCacheManagerAliasRegistrar.ALIAS]
 
         cleanup:
-        context?.close()
+        withNone?.close()
+        taken?.close()
+        besidePriority?.close()
+        besidePlain?.close()
     }
 
     private Map<String, Object> run(Map<String, String> row, boolean withFallback) {
@@ -1062,7 +1086,7 @@ return CachedSubclass
         GenericApplicationContext context = new GenericApplicationContext()
         AnnotationConfigUtils.registerAnnotationConfigProcessors(context)
         if (withFallback) {
-            context.addBeanFactoryPostProcessor(new GrailsCacheManagerFallback())
+            context.addBeanFactoryPostProcessor(new GrailsCacheManagerAliasRegistrar())
         }
         row.each { String name, String kind ->
             if (kind == 'wrongType') {

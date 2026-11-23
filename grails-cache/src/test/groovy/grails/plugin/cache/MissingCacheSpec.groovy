@@ -30,7 +30,7 @@ import spock.lang.Specification
 import spock.lang.Unroll
 
 import org.apache.grails.core.testing.support.LogCapture
-import org.grails.plugin.cache.GrailsCacheManagerFallback
+import org.grails.plugin.cache.GrailsCacheManagerAliasRegistrar
 import org.grails.plugin.cache.MissingCacheReporter
 
 /**
@@ -46,7 +46,7 @@ class MissingCacheSpec extends Specification {
         CacheManager cacheManager = new ConcurrentMapCacheManager('configured')
         GenericApplicationContext context = new GenericApplicationContext()
         AnnotationConfigUtils.registerAnnotationConfigProcessors(context)
-        context.addBeanFactoryPostProcessor(new GrailsCacheManagerFallback())
+        context.addBeanFactoryPostProcessor(new GrailsCacheManagerAliasRegistrar())
         context.registerBean('grailsCacheManager', CacheManager, { -> cacheManager } as Supplier<CacheManager>)
         context.registerBean('cacheManager', CacheManager, { -> new ConcurrentMapCacheManager() } as Supplier<CacheManager>)
         context.registerBean('service', (Class<Object>) compile(mode))
@@ -148,7 +148,7 @@ class MissingCacheSpec extends Specification {
         CacheManager cacheManager = new ConcurrentMapCacheManager('configured')
         GenericApplicationContext context = new GenericApplicationContext()
         AnnotationConfigUtils.registerAnnotationConfigProcessors(context)
-        context.addBeanFactoryPostProcessor(new GrailsCacheManagerFallback())
+        context.addBeanFactoryPostProcessor(new GrailsCacheManagerAliasRegistrar())
         context.registerBean('grailsCacheManager', CacheManager, { -> cacheManager } as Supplier<CacheManager>)
         context.registerBean('service', (Class<Object>) compileNamedLikeTheGeneratedCode(mode))
         context.refresh()

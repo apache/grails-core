@@ -28,7 +28,7 @@ import org.springframework.cache.Cache
 
 import grails.plugins.Plugin
 import org.grails.plugin.cache.GrailsCacheManager
-import org.grails.plugin.cache.GrailsCacheManagerFallback
+import org.grails.plugin.cache.GrailsCacheManagerAliasRegistrar
 
 /**
  * Configures the cache plugin.
@@ -83,7 +83,7 @@ class CacheGrailsPlugin extends Plugin {
 
         // Spring takes grailsCacheManager for the field of a cache-aware class beside a second cache
         // manager, such as the one cacheUsers defines, where it cannot otherwise choose.
-        bean(GrailsCacheManagerFallback).staticMethod()
+        bean(GrailsCacheManagerAliasRegistrar).staticMethod()
 
         bean(GrailsCacheManager).conditionalOnMissingBeanName() { CachePluginConfiguration grailsCacheConfiguration ->
             if (cacheManagerType == 'GrailsConcurrentLinkedMapCacheManager') {
