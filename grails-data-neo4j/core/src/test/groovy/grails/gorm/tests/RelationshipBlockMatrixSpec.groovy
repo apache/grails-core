@@ -73,7 +73,11 @@ class RelationshipBlockMatrixSpec extends Neo4jGormDatastoreSpec {
             ['kind', 'eq', ['a'], true], ['kind', 'eq', ['z'], false],
             ['kind', 'like', ['a%'], true], ['kind', 'like', ['z%'], false],
             ['kind', 'in', [['a']], true], ['kind', 'in', [['z']], false],
-            ['kind', 'isNotNull', [], true], ['kind', 'isNull', [], false]
+            ['kind', 'isNotNull', [], true], ['kind', 'isNull', [], false],
+            ['type', 'eq', ['COLLINK'], true], ['type', 'eq', ['OTHER'], false],
+            ['type', 'ne', ['COLLINK'], false], ['type', 'ne', ['OTHER'], true],
+            ['type', 'like', ['COL%'], true], ['type', 'like', ['X%'], false],
+            ['type', 'in', [['COLLINK', 'X']], true], ['type', 'in', [['X', 'Y']], false]
     ]
 
     private static Closure block(String property, String criterion, List args) {

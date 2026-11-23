@@ -19,6 +19,7 @@
 
 package grails.gorm.tests
 
+import grails.gorm.DetachedCriteria
 import grails.gorm.annotation.Entity
 import grails.neo4j.Relationship
 import org.apache.grails.data.neo4j.core.Neo4jGormDatastoreSpec
@@ -208,6 +209,52 @@ class IsNullAssociationSpec extends Neo4jGormDatastoreSpec {
         names(NullTestMate.createCriteria().list { isNull('connections') }) == ['a', 'b']
         names(NullTestMate.createCriteria().list { isNotNull('feuds') }) == ['a']
         names(NullTestMate.createCriteria().list { isNull('feuds') }) == ['b']
+    }
+
+    void "a null test on an end of a relationship in a block is made on the end the block bound"() {
+        given: 'a bond from a to b and one from b to c'
+        NullTestMate a = new NullTestMate(name: 'a').save(flush: true, failOnError: true)
+        NullTestMate b = new NullTestMate(name: 'b').save(flush: true, failOnError: true)
+        NullTestMate c = new NullTestMate(name: 'c').save(flush: true, failOnError: true)
+        new NullTestBond(from: a, to: b).save(flush: true)
+        new NullTestBond(from: b, to: c).save(flush: true)
+        NullTestMate.withSession { it.clear() }
+
+        expect: 'the ends of a relationship are always there: no bond lacks one, and every bond has both'
+        names(NullTestMate.createCriteria().list { connections { isNull('to') } }) == []
+        names(NullTestMate.createCriteria().list { connections { isNull('from') } }) == []
+        names(NullTestMate.createCriteria().list { connections { isNotNull('from') } }) == ['a', 'b']
+        names(NullTestMate.createCriteria().list { connections { isNotNull('to') } }) == ['a', 'b']
+    }
+
+    void "deleteAll with a null test on a self-referential association deletes the nodes the test matched when it ran"() {
+        given: 'Other, with Root below it and Leaf below Root'
+        NullTestFolder other = new NullTestFolder(name: 'Other').save(flush: true, failOnError: true)
+        NullTestFolder root = new NullTestFolder(name: 'Root', parent: other).save(flush: true, failOnError: true)
+        new NullTestFolder(name: 'Leaf', parent: root).save(flush: true, failOnError: true)
+        NullTestFolder.withSession { it.clear() }
+
+        when: 'only Other has no parent, and deleting it must not make Root a node without one'
+        long deleted = new DetachedCriteria(NullTestFolder).build { isNull('parent') }.deleteAll()
+
+        then:
+        deleted == 1
+        names(NullTestFolder.list()) == ['Leaf', 'Root']
+    }
+
+    void "deleteAll with a not null test on a self-referential association deletes the nodes the test matched when it ran"() {
+        given:
+        NullTestFolder other = new NullTestFolder(name: 'Other').save(flush: true, failOnError: true)
+        NullTestFolder root = new NullTestFolder(name: 'Root', parent: other).save(flush: true, failOnError: true)
+        new NullTestFolder(name: 'Leaf', parent: root).save(flush: true, failOnError: true)
+        NullTestFolder.withSession { it.clear() }
+
+        when: 'Root and Leaf have a parent, and deleting Root must not make Leaf a node without one'
+        long deleted = new DetachedCriteria(NullTestFolder).build { isNotNull('parent') }.deleteAll()
+
+        then:
+        deleted == 2
+        names(NullTestFolder.list()) == ['Other']
     }
 
     private static List<String> names(List<?> entities) {

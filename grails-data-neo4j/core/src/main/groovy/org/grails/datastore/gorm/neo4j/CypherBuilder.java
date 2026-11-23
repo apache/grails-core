@@ -305,14 +305,21 @@ public class CypherBuilder {
         }
 
         if (!deleteColumns.isEmpty()) {
-            cypher.append(DELETE);
-            Iterator<String> iter = deleteColumns.iterator();   // same as Collection.join(String separator)
-            if (iter.hasNext()) {
-                cypher.append(iter.next());
-                while (iter.hasNext()) {
-                    cypher.append(COMMAND_SEPARATOR).append(iter.next());
+            // Everything to delete is collected before the first node goes: the pattern of a condition is evaluated while
+            // the statement deletes, so deleting one node would change whether the next one matches, and the count of the
+            // matches, which is read first, would differ from what is deleted.
+            cypher.append(NEW_LINE).append("WITH ");
+            StringBuilder each = new StringBuilder();
+            int index = 0;
+            for (String column : deleteColumns) {
+                String collected = "toDelete" + index++;
+                if (index > 1) {
+                    cypher.append(COMMAND_SEPARATOR);
                 }
+                cypher.append("collect(DISTINCT ").append(column).append(") AS ").append(collected);
+                each.append(NEW_LINE).append("FOREACH (x IN ").append(collected).append(" |").append(DELETE.replace(NEW_LINE, " ")).append("x)");
             }
+            cypher.append(each);
             return cypher.toString();
         }
 

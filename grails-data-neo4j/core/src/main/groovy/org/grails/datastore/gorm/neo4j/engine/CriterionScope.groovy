@@ -113,6 +113,22 @@ final class CriterionScope {
     }
 
     /**
+     * The identity of the node an end of the relationship of this scope reaches, as the block bound it, or
+     * {@code null} when the name is not an end of a relationship. The ends of a relationship are always there, so a
+     * null test on one is a test of that identity.
+     *
+     * @param name The property name
+     */
+    String endReference(String name) {
+        PersistentProperty found = entity.getPropertyByName(name)
+        if (entity.isRelationshipEntity() && found instanceof Association && !(found instanceof Basic) &&
+                RelationshipPersistentEntity.isRelationshipAssociation((Association) found)) {
+            return reference(name)
+        }
+        null
+    }
+
+    /**
      * What a property name refers to as one side of a comparison: the identity of the node an association
      * reaches, which is matched for it, the identity of an end of a relationship, the type of a relationship, or
      * a plain property.
@@ -140,6 +156,10 @@ final class CriterionScope {
             return associated.formatId(target)
         }
         if (entity.isRelationshipEntity() && name == RelationshipPersistentEntity.TYPE) {
+            if (builder.isRelationshipVariable(variable)) {
+                // a block bound the relationship as a variable of its own, so its type is read from that variable
+                return "TYPE(${variable})".toString()
+            }
             builder.replaceFirstRelationshipMatch(((RelationshipPersistentEntity) entity).buildRelationshipMatchTo(null, CypherBuilder.REL_VAR))
             return "TYPE(${CypherBuilder.REL_VAR})".toString()
         }
