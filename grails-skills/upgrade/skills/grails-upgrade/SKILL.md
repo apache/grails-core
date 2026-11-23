@@ -625,6 +625,15 @@ The command line parser of the `grails` tool and of `runCommand`, which applicat
 - The text inside a pair of double quotes is trimmed: `" a "` reaches the command as `a`, where it used to be ` a `.
 - `--name=` gives an empty `name` (it threw `ArrayIndexOutOfBoundsException`), a lone `"` argument is passed on (it threw `StringIndexOutOfBoundsException`), and an option's value is everything after the first `=`: `--filter=status=active` gives `status=active`, where it gave `status`. Remove workarounds for these.
 
+## Cache Annotations Use `grailsCacheManager`
+
+The cache annotations and `GrailsCacheAdminService` cache with the bean named `grailsCacheManager`, or the bean with that alias, like the cache tags. Grails 8 injected them a cache manager by type, so a cache manager of the application's own marked primary or with a `@Priority` took them from `grailsCacheManager`; now no other cache manager is taken or created for them.
+
+- Search for `CacheManager` beans the application defines, marked primary or with a `@Priority`, and for `grails.cache.enabled: false`. Where the cached methods should keep caching with such a cache manager, name it `grailsCacheManager` or register that alias; with caching enabled it replaces the plugin's and must implement `GrailsCacheManager`.
+- Without a `grailsCacheManager`, as with `grails.cache.enabled: false`, the annotated methods run uncached, where Grails 8 used the only or primary cache manager, such as Spring Security's `cacheUsers` one.
+- A `grailsCacheManager` created from a bean with cached methods no longer starts; create it from that bean's dependencies.
+- Plugins compiled against Grails 8 keep the Grails 8.0.1 behaviour until they are compiled against Grails 9.
+
 # After the Upgrade
 
 ## Verification Checklist

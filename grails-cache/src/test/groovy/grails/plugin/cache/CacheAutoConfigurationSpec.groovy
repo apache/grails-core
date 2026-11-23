@@ -174,50 +174,22 @@ class CacheAutoConfigurationSpec extends Specification {
     }
 
     @Unroll
-    void 'a grailsCacheManager built from a cache-aware bean starts beside a cache manager #preferred, which that bean gets, as in 8.0.0'() {
-        given: 'the application\'s grailsCacheManager, created from a bean that has a cache manager injected itself'
+    void 'a grailsCacheManager built from a cache-aware bean does not start, as that bean asks for it while it is created: beside a cache manager #preferred'() {
+        given: 'the application\'s grailsCacheManager, created from a bean that has grailsCacheManager injected'
         AnnotationConfigApplicationContext context = builtFromCacheAware(preferred, preferred == 'marked primary')
 
         when:
         context.refresh()
 
-        then: 'the context starts, and the cache-aware beans get the cache manager Spring prefers'
-        context.getBean(CacheAware).grailsCacheManager.is(context.getBean('preferredCacheManager'))
-        context.getBean(GrailsCacheAdminService).grailsCacheManager.is(context.getBean('preferredCacheManager'))
-
-        cleanup:
-        context.close()
-
-        where:
-        preferred << ['with a priority', 'marked primary']
-    }
-
-    @Unroll
-    void 'the known difference: a grailsCacheManager built from a cache-aware bean does not start beside a cache manager #preferred, unless that one is marked primary'() {
-        given: 'a priority only the object has, which Spring sees once it exists and the alias cannot'
-        AnnotationConfigApplicationContext unmarked = builtFromCacheAware(preferred, false)
-        AnnotationConfigApplicationContext marked = builtFromCacheAware(preferred, true)
-
-        when: 'Spring takes grailsCacheManager by the alias while it is being created'
-        unmarked.refresh()
-
         then:
         BeanCreationException e = thrown()
         NestedExceptionUtils.getMostSpecificCause(e) instanceof BeanCurrentlyInCreationException
 
-        when: 'the cache manager is marked primary, as the upgrade notes say'
-        marked.refresh()
-
-        then: 'the context starts, and the cache-aware beans get it'
-        marked.getBean(CacheAware).grailsCacheManager.is(marked.getBean('preferredCacheManager'))
-        marked.getBean(GrailsCacheAdminService).grailsCacheManager.is(marked.getBean('preferredCacheManager'))
-
         cleanup:
-        unmarked?.close()
-        marked?.close()
+        context?.close()
 
         where:
-        preferred << ['with a priority only on the object its factory returns',
+        preferred << ['with a priority', 'marked primary', 'with a priority only on the object its factory returns',
                       'that a factory bean naming only CacheManager makes, with a priority',
                       'with a priority, which the key generator creates as the cache-aware bean is injected']
     }
@@ -258,8 +230,8 @@ class CacheAutoConfigurationSpec extends Specification {
     }
 
     @Unroll
-    void 'a grailsCacheManager that is cache-aware itself gets the other cache manager, as in 8.0.0, with circular references #circular'() {
-        given: 'Spring leaves a bean out of the candidates for its own fields'
+    void 'a grailsCacheManager that is cache-aware itself is given itself, as Spring gives a bean its only candidate, with circular references #circular'() {
+        given:
         AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext()
         context.allowCircularReferences = circular == 'allowed'
         context.registerBean('grailsCacheManager', CacheAwareGrailsCacheManager)
@@ -269,16 +241,21 @@ class CacheAutoConfigurationSpec extends Specification {
         context.register(CacheAutoConfiguration)
 
         when:
-        context.refresh()
+        boolean started = true
+        try {
+            context.refresh()
+        }
+        catch (BeanCreationException ignored) {
+            started = false
+        }
 
-        then: 'it starts, and grailsCacheManager is not given itself'
-        context.getBean('grailsCacheManager', GrailsCacheManagerAware).grailsCacheManager.is(other)
-
-        and: 'a cache-aware bean beside both, where Spring cannot choose, gets grailsCacheManager'
-        context.getBean(CacheAware).grailsCacheManager.is(context.getBean('grailsCacheManager'))
+        then: 'it starts where a bean may be given itself, and the cache-aware beans get grailsCacheManager'
+        started == (circular == 'allowed')
+        !started || context.getBean('grailsCacheManager', GrailsCacheManagerAware).grailsCacheManager.is(context.getBean('grailsCacheManager'))
+        !started || context.getBean(CacheAware).grailsCacheManager.is(context.getBean('grailsCacheManager'))
 
         cleanup:
-        context.close()
+        context?.close()
 
         where:
         circular << ['allowed', 'not allowed']
@@ -363,42 +340,58 @@ class CacheAutoConfigurationSpec extends Specification {
         others << ['alone', 'beside another one']
     }
 
-    void 'with caching disabled, the one cache manager the context has is used, as before'() {
-        given:
-        CacheManager only = new ConcurrentMapCacheManager()
-        AnnotationConfigApplicationContext context = buildContext(['grails.cache.enabled': 'false'], null, [cacheManager: only])
+    void 'with caching disabled, the cache annotations have no cache manager, beside #others'() {
+        given: 'cache managers of the application\'s own, and none named grailsCacheManager'
+        AnnotationConfigApplicationContext context = buildContext(['grails.cache.enabled': 'false'], null, managers, primary)
 
         expect:
-        context.getBean(CacheAware).grailsCacheManager.is(only)
+        context.getBean(CacheAware).grailsCacheManager == null
+
+        cleanup:
+        context.close()
+
+        where:
+        others                    | managers                                                                                        | primary
+        'one'                     | [cacheManager: new ConcurrentMapCacheManager()]                                                 | null
+        'several, one primary'    | [cacheManager: new ConcurrentMapCacheManager(), primaryCacheManager: new ConcurrentMapCacheManager()] | 'primaryCacheManager'
+    }
+
+    void 'with caching disabled, a cache manager of the application\'s own named grailsCacheManager is used'() {
+        given:
+        GrailsCacheManager mine = Mock(GrailsCacheManager)
+        AnnotationConfigApplicationContext context = buildContext(['grails.cache.enabled': 'false'], mine,
+                [cacheManager: new ConcurrentMapCacheManager()], 'cacheManager')
+
+        expect:
+        context.getBean(CacheAware).grailsCacheManager.is(mine)
 
         cleanup:
         context.close()
     }
 
-    void 'with caching disabled and several cache managers, the one marked primary is used, as Spring chose it before'() {
-        given:
-        CacheManager primary = new ConcurrentMapCacheManager()
-        AnnotationConfigApplicationContext context = buildContext(['grails.cache.enabled': 'false'], null,
-                [cacheManager: new ConcurrentMapCacheManager(), primaryCacheManager: primary], 'primaryCacheManager')
+    void 'grailsCacheManager is used beside a cache manager #preferred'() {
+        given: 'an application\'s own cache manager, preferred by Spring for an injection by type'
+        AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext()
+        if (preferred == 'marked primary') {
+            context.registerBean('cacheManager', ConcurrentMapCacheManager,
+                    { BeanDefinition definition -> definition.primary = true } as BeanDefinitionCustomizer)
+        }
+        else {
+            context.registerBean('cacheManager', HighPriorityCacheManager)
+        }
+        context.registerBean(CacheAware)
+        context.register(CacheAutoConfiguration)
+        context.refresh()
 
-        expect:
-        context.getBean(CacheAware).grailsCacheManager.is(primary)
-
-        cleanup:
-        context.close()
-    }
-
-    void 'a cache manager marked primary beside the Grails one is still used, as in 8.0.0'() {
-        given: 'an application\'s own cache manager, marked primary'
-        CacheManager primary = new ConcurrentMapCacheManager()
-        AnnotationConfigApplicationContext context = buildContext([:], null, [cacheManager: primary], 'cacheManager')
-
-        expect: 'Spring chooses as it did; the name is only taken where it cannot'
-        context.getBean(CacheAware).grailsCacheManager.is(primary)
-        context.getBean(GrailsCacheAdminService).grailsCacheManager.is(primary)
+        expect: 'the cache annotations, like the cache tags, use grailsCacheManager'
+        context.getBean(CacheAware).grailsCacheManager.is(context.getBean('grailsCacheManager'))
+        context.getBean(GrailsCacheAdminService).grailsCacheManager.is(context.getBean('grailsCacheManager'))
 
         cleanup:
         context.close()
+
+        where:
+        preferred << ['marked primary', 'with a priority']
     }
 
     void 'a lazy cache manager is not created to find the Grails one'() {
@@ -413,14 +406,13 @@ class CacheAutoConfigurationSpec extends Specification {
         context.close()
     }
 
-    void 'a lazy cache manager is not created to find the primary one where there is no Grails one'() {
+    void 'a lazy cache manager is not created where there is no Grails one'() {
         given:
-        CacheManager primary = new ConcurrentMapCacheManager()
         AnnotationConfigApplicationContext context = buildContext(['grails.cache.enabled': 'false'], null,
-                [primaryCacheManager: primary], 'primaryCacheManager', [unreachableCacheManager: STORE_DOWN])
+                [primaryCacheManager: new ConcurrentMapCacheManager()], 'primaryCacheManager', [unreachableCacheManager: STORE_DOWN])
 
-        expect:
-        context.getBean(CacheAware).grailsCacheManager.is(primary)
+        expect: 'the context starts, and the cache annotations have no cache manager'
+        context.getBean(CacheAware).grailsCacheManager == null
 
         cleanup:
         context.close()

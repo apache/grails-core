@@ -22,13 +22,25 @@ package org.grails.plugin.cache
 import groovy.transform.CompileStatic
 
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.cache.CacheManager
 
 import grails.plugin.cache.CustomCacheKeyGenerator
 import grails.plugin.cache.GrailsCacheKeyGenerator
 
 /**
- * A trait for classes that are cache aware
+ * A trait for classes that are cache aware.
+ *
+ * <p>The cache manager such a class caches with is the bean named {@code grailsCacheManager}, or the bean
+ * with that alias, which the plugin defines and a cache provider plugin or the application replaces. Spring
+ * injects it by that name, so another cache manager in the context, marked primary or with a
+ * {@code @Priority} or not, is never taken for it. Where there is no such bean, as with
+ * {@code grails.cache.enabled: false}, the class has no cache manager and its cached methods run
+ * uncached.</p>
+ *
+ * <p>A class compiled against Grails 8 has the field without the qualifier until it is compiled again;
+ * {@code GrailsCacheManagerAliasRegistrar} gives it {@code grailsCacheManager} where Spring could not
+ * otherwise choose, as in Grails 8.0.1.</p>
  *
  * @since 4.0
  * @author Graeme Rocher
@@ -39,7 +51,9 @@ trait GrailsCacheManagerAware {
     @Autowired(required = false)
     private GrailsCacheKeyGenerator customCacheKeyGenerator = new CustomCacheKeyGenerator()
 
+    /** The bean named {@code grailsCacheManager}, as the cache tags and the plugin use it. */
     @Autowired(required = false)
+    @Qualifier('grailsCacheManager')
     private CacheManager grailsCacheManager
 
     /**
