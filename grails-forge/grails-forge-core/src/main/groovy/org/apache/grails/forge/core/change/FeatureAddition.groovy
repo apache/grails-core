@@ -171,6 +171,21 @@ final class FeatureAddition {
     }
 
     /**
+     * Whether a change of the project that this user began was interrupted and left the project half
+     * changed, which {@link #recover(Path)} ends. The record of the project can then be half written
+     * too, and not read until the change is ended: a change writes the lock of the record before its
+     * manifest.
+     *
+     * @param projectDirectory the directory of the project
+     * @return whether the project is half changed by a change of this user; {@code false} also where
+     * the home directory cannot keep the records of changes, where none is looked for
+     * @since 9.0
+     */
+    boolean isHalfChanged(Path projectDirectory) {
+        return ProjectTransaction.isHalfMade(projectDirectory, home)
+    }
+
+    /**
      * @param putBack told the path of each file once it is put back. What it throws is not handled:
      * the rest is then put back when this is called again
      * @see #recover(Path)

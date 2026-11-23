@@ -200,10 +200,11 @@ class ProjectMigrateCommand extends BaseCommand implements Callable<Integer>, Pr
         }
         Path directory = search.project.directory
         ApplicationType given = givenType()
-        // the record of a generated application is moved to this version, by the choices it has
-        ProjectManifest generated = generatedRecord(directory)
-        if (generated != null) {
-            return move(directory, generated)
+        // The record of a generated application is moved to this version, by the choices it has. So is one that a change
+        // which was interrupted left half written, with the lock of the change and the manifest from before it: the move
+        // ends the change first, after which the record reads, and nothing refuses the record before that
+        if (hasGeneratedRecord(directory) || halfWritten(directory)) {
+            return move(directory)
         }
         String packs = packOptionsGiven()
         if (packs != null) {
@@ -700,16 +701,29 @@ class ProjectMigrateCommand extends BaseCommand implements Callable<Integer>, Pr
         return 0
     }
 
-    // the manifest of the record of a generated application, when the project has one that reads; what else it has is for the rest of the command
-    private static ProjectManifest generatedRecord(Path directory) {
+    // whether the project has the record of a generated application that reads; what else it has is for the rest of the command
+    private static boolean hasGeneratedRecord(Path directory) {
         if (!ProjectState.exists(directory)) {
-            return null
+            return false
         }
         try {
-            ProjectManifest manifest = ProjectState.readSelection(directory, true).manifest
-            return manifest.isTracked() ? manifest : null
+            return ProjectState.readSelection(directory, true).manifest.isTracked()
         } catch (ProjectStateException ignored) {
-            return null
+            return false
+        }
+    }
+
+    // A record that does not read because a change of this user that was interrupted left the project half changed. What
+    // tells it is started with the generator, which is asked for only here, when the record does not read
+    private boolean halfWritten(Path directory) {
+        if (!ProjectState.exists(directory)) {
+            return false
+        }
+        try {
+            ProjectState.readSelection(directory, true)
+            return false
+        } catch (ProjectStateException ignored) {
+            return new FeatureAddition(projectGeneratorSource.get()).isHalfChanged(directory)
         }
     }
 
@@ -765,7 +779,7 @@ class ProjectMigrateCommand extends BaseCommand implements Callable<Integer>, Pr
      * Moves the record of a generated application to this version, as {@link FeatureAddition#migrate}
      * does: from the choices the record has, and with the feature packs it has given again.
      */
-    private Integer move(Path directory, ProjectManifest manifest) {
+    private Integer move(Path directory) {
         List<String> choices = choicesGiven()
         if (!choices.isEmpty()) {
             err("The application has the record of how it was generated (${ProjectState.MANIFEST}), which is moved to this version with the choices it has: " +
@@ -784,7 +798,9 @@ class ProjectMigrateCommand extends BaseCommand implements Callable<Integer>, Pr
             Consumer<String> said = { String line -> out("@|blue ||@ ${GradleRunner.line(line)}") } as Consumer<String>
             Consumer<String> warned = { String line -> warning(GradleRunner.line(line)) } as Consumer<String>
             List<Pack> packs = packOptions.packs(directory, createPackArtifacts(), grailsRepoUrl(), said, warned)
-            return moved(directory, manifest, addition.migrate(directory, getOperatingSystem(), packs))
+            RecordMigration migration = addition.migrate(directory, getOperatingSystem(), packs)
+            // the record as it reads once a change that was interrupted is ended, which names the application
+            return moved(directory, ProjectState.readSelection(directory, true).manifest, migration)
         } catch (ProjectStateException e) {
             err("The record of the application under ${ProjectState.DIRECTORY} is not moved to this version, because it does not read: " +
                     "${GradleRunner.line(e.getMessage() ?: e.getClass().getSimpleName())}. Nothing was written")

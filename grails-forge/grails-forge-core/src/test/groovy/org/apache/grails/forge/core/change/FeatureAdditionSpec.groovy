@@ -346,6 +346,9 @@ class FeatureAdditionSpec extends AbstractFeatureAdditionSpec {
                 wrong << "${point}: no journal, or no directory of the change".toString()
             }
             boolean last = point == writes.size() - 1
+            if (addition(generator).isHalfChanged(project) == last) {
+                wrong << "${point}: the project is ${last ? '' : 'not '}said to be half changed".toString()
+            }
             try {
                 planOf(generator, project)
                 // a change that wrote its last file is complete: the project is not half changed
@@ -372,7 +375,8 @@ class FeatureAdditionSpec extends AbstractFeatureAdditionSpec {
             if (last ? tree(project) != added : tree(project) != before) {
                 wrong << "${point}: the project is not ${last ? 'the one with the feature' : 'as it was'}: ${differing(tree(project), last ? added : before)}".toString()
             }
-            if (left(project) != [] || journals() != [] || addition(generator).recover(project).with { it.undone || it.completed }) {
+            if (left(project) != [] || journals() != [] || addition(generator).isHalfChanged(project) ||
+                    addition(generator).recover(project).with { it.undone || it.completed }) {
                 wrong << "${point}: something is left of the change".toString()
             }
             if (!last && stopped && !recovery.undone && !recovery.discarded) {
