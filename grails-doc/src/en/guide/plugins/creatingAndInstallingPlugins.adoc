@@ -188,6 +188,8 @@ publishing {
 
 NOTE: Please refer to the Gradle Maven Publish plugin documentation for up-to-date information.
 
+A plugin that `grails create-plugin` generates does not apply the Maven Publish plugin, so its build has no `publishToMavenLocal` task yet: add `id "maven-publish"` to the `plugins` block of its `build.gradle` first, with the `publishing` block above.
+
 To make your plugin available for use in a Grails application run the `./gradlew publishToMavenLocal` command:
 
 [source,bash]
