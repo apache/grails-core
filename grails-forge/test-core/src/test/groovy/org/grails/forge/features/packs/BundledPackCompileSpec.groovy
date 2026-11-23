@@ -60,7 +60,10 @@ import spock.lang.Shared
  * are reached through the options and defaults that bring them in.</p>
  *
  * <p>Only the compile tasks run, so nothing a feature needs at run time is started: no database, no
- * container, no browser. The JSON and markup views of an application are compiled with it, since the
+ * container, no browser. What the application runs with is resolved all the same, by the catalog of its
+ * commands that the build writes after the classes, which says so when it does not resolve: an application
+ * whose runtime class path does not, such as one with two versions of a module that are both required,
+ * fails here as well, unless a pack of it is named in {@link #RUNTIME_NOT_RESOLVED} with the reason. The JSON and markup views of an application are compiled with it, since the
  * Gradle plugins of the views compile them before the tests are compiled. The Gradle build cache, which a generated application turns on, is switched
  * off for these builds, since a class file taken from the cache would say nothing about the sources.</p>
  */
@@ -71,6 +74,17 @@ class BundledPackCompileSpec extends CommandSpec {
      * the specification fails when one of them is no pack any more or is compiled after all.
      */
     static final Map<String, String> NOT_COMPILED = [:]
+
+    /**
+     * The packs that give an application a runtime class path that is known not to resolve, each with
+     * the reason. An application with one of them is compiled all the same; the specification fails when
+     * its runtime class path resolves, so that the pack is taken out of here once that is corrected.
+     */
+    static final Map<String, String> RUNTIME_NOT_RESOLVED = [
+            'gorm-neo4j': 'grails-data-neo4j needs version 4.4.13 of the Neo4j driver, which grails-neo4j-bom holds strictly, and the BOM of Grails ' +
+                    'the application gets (grails-bom or grails-hibernate7-bom) brings the 6.3.0 Spring Boot manages; a strict version that comes in ' +
+                    'transitively does not win, and the Grails Gradle plugin lets the application import one BOM of Grails only',
+    ]
 
     private static final Project PROJECT = NameUtils.parse('example.grails.foo')
 
@@ -123,8 +137,9 @@ class BundledPackCompileSpec extends CommandSpec {
                 'or name it in NOT_COMPILED with the reason:\n' +
                 inNoApplication.collect { String name, String refusal -> "  ${name}: ${refusal}" }.join('\n')
 
-        and: 'what is left out is a pack, and is left out'
+        and: 'what is left out is a pack, and is left out, and so is what is known not to resolve'
         (NOT_COMPILED.keySet() - packs).isEmpty()
+        (RUNTIME_NOT_RESOLVED.keySet() - packs).isEmpty()
         NOT_COMPILED.keySet().findAll { String name -> applications.any { Compiled application -> name in application.features } }.isEmpty()
     }
 
@@ -147,6 +162,11 @@ class BundledPackCompileSpec extends CommandSpec {
         result.task(':compileGroovy').outcome == TaskOutcome.SUCCESS
         tasks.every { String task -> result.task(":${task}").outcome in [TaskOutcome.SUCCESS, TaskOutcome.NO_SOURCE] }
         result.tasks.every { BuildTask task -> task.outcome != TaskOutcome.FROM_CACHE }
+
+        and: 'what the application runs with resolves, unless a pack is known to keep it from it: the catalog of its commands, which a build that compiles it writes, names a class path that does not'
+        String catalog = new File(dir, '.grails/cache/command-catalog.json').getText('US-ASCII')
+        catalog.contains('runtimeClasspath cannot be resolved completely ') == application.features.any { String name -> RUNTIME_NOT_RESOLVED.containsKey(name) }
+        !catalog.contains('grailsCliClasspath cannot be resolved completely ')
 
         where:
         application << applications
