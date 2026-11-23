@@ -38,7 +38,7 @@ $ grails --version
 $ grails help
 ----
 
-`grails help` lists the commands of the current directory. Outside a project those are the commands that create one and a few that work anywhere; inside a project there are more. `grails help NAME` and `grails NAME --help` describe one command.
+`grails help` lists the commands of the current directory. Outside a project those are the commands that create one and a few that work anywhere; inside a project there are more. `grails help NAME` describes one command, and it never runs anything to do so: not the build of the project, and not the command. For a command of `grails` itself, `grails NAME --help` shows the same. A command of the application or of a plugin (see below) is given everything after its name, `--help` included, so `grails NAME --help` runs that command through the build of the project, and what it then shows is up to the command; `grails help NAME` is the way to ask about it.
 
 Nothing has to be installed to create a project: https://start.grails.org/[the Grails Forge website] generates the same projects from the same application types and features, and each generated project brings the Grails wrapper, `grailsw`, described at the end of this section.
 
@@ -193,7 +193,7 @@ $ grails assemble
 * `test-app` runs every test phase of the project: the unit tests, the integration tests, and every phase the project adds, such as the functional tests of a `functionalTest` task. A phase is a `Test` task of the build, so a phase that is added to the build is run without anything else to do.
 * A switch of the name of a phase runs that phase alone: `--unit`, `--integration`, and for a phase the project adds the name of its task without the ending `Test`, as `--functional` for `functionalTest`. Several switches run several phases.
 * `test-app` with the name of a test runs the test wherever it is found, in any of the phases that are run.
-* The environment is `development` for `run-app`, `test` for `test-app` and `production` for `assemble`. `-Dgrails.env=NAME` after the name of the command selects another one. An environment in front of the command, as in `grails prod war` of earlier versions, is refused.
+* The environment is `development` for `run-app`, `test` for `test-app` and `production` for `assemble`. `-Dgrails.env=NAME` after the name of the command selects another one. This holds for the commands of `grails` itself, and not for a command of the application or of a plugin, which takes everything after its name as its own arguments: such a command runs in `development`, and `grails run-command -Dgrails.env=NAME COMMAND` runs it in another environment (see the next section). An environment in front of the command, as in `grails prod war` of earlier versions, is refused.
 * `run-app` stays with the application until it ends or you press Ctrl-C. `run-app --detach` returns once the application answers on its port and leaves it running; `stop-app` stops it.
 * Whatever follows `--` is given to Gradle as it is: `grails compile -- --offline`.
 
@@ -219,7 +219,14 @@ $ grails help
 $ grails data-import orders.csv
 ----
 
-`help` then lists the commands of the application and of its plugins after its own, each with where it comes from, and each is run by its name. The scaffolding plugin, which a web application has by default, brings link:{commandLineRef}generate-all.html[generate-all], link:{commandLineRef}generate-controller.html[generate-controller] and link:{commandLineRef}generate-views.html[generate-views] this way. `run-command NAME` runs a command without the list, and is also how to reach a command of a plugin whose name a command of `grails` itself has. A command that needs no application, because it only works on the files of the project, can say so and is then run without starting it; `query-tail` of Grails Data is one.
+`help` then lists the commands of the application and of its plugins after its own, each with where it comes from, and each is run by its name. `grails help data-import` describes the command from that list and runs nothing, while `grails data-import --help` gives `--help` to the command and runs it. Such a command runs in the `development` environment. Everything after its name is its own, so `-Dgrails.env=production` after the name does not select an environment: it reaches the command as an argument, and `grails` warns that the command runs in `development`. Name the environment in front of the command with `run-command`:
+
+[source,console]
+----
+$ grails run-command -Dgrails.env=production data-import orders.csv
+----
+
+The scaffolding plugin, which a web application has by default, brings link:{commandLineRef}generate-all.html[generate-all], link:{commandLineRef}generate-controller.html[generate-controller] and link:{commandLineRef}generate-views.html[generate-views] this way. `run-command NAME` runs a command without the list, and is also how to reach a command of a plugin whose name a command of `grails` itself has. A command that needs no application, because it only works on the files of the project, can say so and is then run without starting it; `query-tail` of Grails Data is one.
 
 A project can also have _scripts_ in `src/main/scripts`, created with `create-script`. A script is run by the build without the application and cannot use the classes of the application. Scripts are deprecated: write a new command as a class with `create-command`.
 

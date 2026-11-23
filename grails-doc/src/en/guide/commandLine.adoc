@@ -67,6 +67,18 @@ $ grails run-app -Dgrails.env=test
 $ grails assemble -Dgrails.env=staging
 ----
 
+This holds for the commands of `grails` itself. A command of the application or of a plugin (see "Commands of the Application and its Plugins" below) takes everything after its name as its own arguments, so a `-Dgrails.env=NAME` there does not select an environment. The command runs in `development` and is given the option as one of its arguments, and before the build starts a warning on the standard error says so and names the way to run it in another environment, which is to give the environment to `run-command` in front of the name of the command:
+
+[source,console]
+----
+$ grails audit-report -Dgrails.env=production
+| Running the command audit-report of com.example:my-plugin-cli:1.0.0, with the Gradle task runCommand
+| Warning -Dgrails.env=... after the name of audit-report is given to the command as an argument, and the command runs for the environment development. To run it for another environment, name it before the command: grails run-command -Dgrails.env=production audit-report
+$ grails run-command -Dgrails.env=production audit-report
+----
+
+The same holds for `run-command` itself: after the name of the command it runs, `-Dgrails.env=NAME` is an argument of that command, and is not warned of. A script of the application (see xref:commandLine#creatingCustomScripts[Creating Custom Scripts]) is given `-Dgrails.env=NAME` after its name as an argument as well, which the script can read; it runs in the environment of the build, and nothing is said of it.
+
 An environment in front of the command, as in `grails test run-app` or `grails prod war` of earlier versions, is refused: what follows `grails` is the name of a command, and `test` and `prod` are none. An option of a command in front of its name is a mistake in the command line as well.
 
 A `-D` option is a system property of the build. `bootRun` in your `build.gradle` configures the system properties of the application, so for the application to see such a property, append all `System.properties` to `bootRun` in `build.gradle` like:
@@ -310,7 +322,7 @@ This is the rule the Grails shell went by. There have to be as many parts as the
 
 === Help
 
-Every command of `grails` says how it is used when it is given `--help`. The `help` command shows the same for the command that is named after it, which can be shortened too, and lists the commands there are in the current directory when no command is named:
+`grails help NAME` shows how the command `NAME` is used, for every command there is in the current directory, and the name can be shortened too. Without a name, `help` lists the commands there are:
 
 [source,console]
 ----
@@ -318,9 +330,18 @@ $ grails help
 $ grails help create-app
 $ grails help feature add
 $ grails help gradle
+$ grails help audit-report
 ----
 
-`help gradle` is how to see the help of the `gradle` command itself, since `gradle --help` is given to Gradle. In a project, `help` lists the commands of the project as well, in every directory of it. A command there is not ends `help` with exit code 2.
+`help` never runs anything to answer: not the build of the project, and not the command it describes. That holds for the commands of the application and its plugins and for the scripts of the application as well, which it describes from what the build listed of them (see "Commands of the Application and its Plugins" below): their description, where they come from, and how they are run.
+
+Every command of `grails` itself also shows its help when it is given `--help` (`-h`): `grails create-app --help` is `grails help create-app`. Three kinds of commands give everything after their name to something else, and `--help` with it, so for them `--help` is not the help of `grails`:
+
+* `gradle --help` is the help of Gradle. `help gradle` is the help of the `gradle` command.
+* `run-command NAME --help` gives `--help` to the command `NAME`, and runs it.
+* `NAME --help`, for a command of the application or of a plugin, or for a script of the application, runs that command through the build of the project, with `--help` as its argument: what it does with it is up to the command, and the build is started for it. `help NAME` is the way to ask about such a command.
+
+In a project, `help` lists the commands of the project as well, in every directory of it. A command there is not ends `help` with exit code 2.
 
 The usage of every command is laid out for a width of 100 columns, and the list of commands shows the first sentence of the description of each.
 
@@ -686,7 +707,7 @@ The commands are the ones the Gradle task `grailsCommandCatalog` of the project 
 
 The file is in the directory of the project and not in its build directory. A build can move its build directory (`layout.buildDirectory = ...` in `build.gradle` or `build.gradle.kts`, also for every project of a build at once), and where it is cannot be known without running the build; so the task writes the file to that one place whatever the build directory is, and the `grails` command reads it there and nowhere else. In a build of several projects each Grails project has a file of its own, in its own directory, and `grails gradle grailsCommandCatalog` in the directory of the build writes all of them. `clean` does not delete the file. `.grails/cache` holds a `.gitignore` that keeps it out of a commit, as the `.gitignore` of a generated application does: what is in it is of one machine. A `build/grails/command-catalog.json` that an earlier build wrote is not read.
 
-* `help` lists the commands after those of `grails`, each with where it comes from, `help NAME` shows one of them, and `help --json` describes them. They have short forms too, after the commands of `grails`: a short form is first looked for among the commands of the command line itself, and is one of the commands of the application and its plugins only when it fits none of those. So what a plugin calls a command never changes what `cA` or `comp` means, and never makes it fit two commands.
+* `help` lists the commands after those of `grails`, each with where it comes from, `help NAME` shows one of them from that list, without starting the build or the command (`NAME --help` gives `--help` to the command, which runs it), and `help --json` describes them. They have short forms too, after the commands of `grails`: a short form is first looked for among the commands of the command line itself, and is one of the commands of the application and its plugins only when it fits none of those. So what a plugin calls a command never changes what `cA` or `comp` means, and never makes it fit two commands.
 * Before the command is started, one line on the standard error says which command is run, where it comes from and by which Gradle task: `| Running the command greet of the application, with the Gradle task runCommand`. A name that was mistyped into the name of a command of a plugin is seen there before anything runs. `run-command greet` says the same line, and is the same build to Gradle as `greet`: both give Gradle the same arguments (the task, the file of the arguments, `-Dgrails.env=development`), so a build with the configuration cache configures once for the two.
 * Everything after the name of the command is given to the command as it is, each argument as the one argument it is: spaces, quotes, a leading dash and line breaks are kept, and no option of `grails` is read from it, so `--help`, `-x` and `--stacktrace` after the name are the command's. Not given are the character U+0000, more than 4095 arguments, or more than 1 MiB of them; the command line refuses those with exit code 2.
 * The command runs in the application, or without it when it is a command that needs none (its `target` is `standalone`, and its help says so), started by the Gradle task `runCommand` of the project, with the Gradle wrapper of the project and everything that holds for the `gradle` command. The arguments are handed to Gradle in a file that only you can read, `.grails/run/command-args-0.json` in the project, which is deleted when the command ends, fails or is cancelled; `.grails/run` holds a `.gitignore` that keeps it out of a commit. The file has the same name every time, so a build with the configuration cache configures once for a command and reuses that whatever the arguments are the next time. When two commands run at once the second takes the next number, up to sixteen, and a file that a command left behind because it was killed is removed by the next one. The exit code is 0 when the command succeeded and 1, after one line, when it failed or Gradle did.

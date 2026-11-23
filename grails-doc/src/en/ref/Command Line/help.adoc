@@ -80,6 +80,8 @@ Commands:
 ...
 ----
 
-Every command also shows how it is used when it is given `--help` (`-h`): `grails create-app --help` is `grails help create-app`. `help gradle` is how to see the help of the link:gradle.html[gradle] command itself, since `gradle --help` is given to Gradle. A command there is not ends `help` with exit code 2.
+`help` runs nothing to answer, also for a command of the application or of a plugin, or a script of the application: it describes those from what the build of the project listed of them, with where each comes from and how it is run, and starts neither the build nor the command.
+
+Every command of `grails` itself also shows how it is used when it is given `--help` (`-h`): `grails create-app --help` is `grails help create-app`. A command that gives everything after its name to something else does not: `help gradle` is how to see the help of the link:gradle.html[gradle] command itself, since `gradle --help` is given to Gradle, and `NAME --help` for a command of the application or of a plugin gives `--help` to that command and runs it through the build of the project, so `grails help NAME` is the way to ask about such a command. A command there is not ends `help` with exit code 2.
 
 See "Help" in link:{guidePath}commandLine.html[The Command Line] for the JSON document.

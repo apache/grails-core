@@ -94,6 +94,8 @@ class ApplicationCommandCommand extends InProjectCommand {
                     ": it is started by the Gradle task ${TASK} of the project.").toString())
         }
         description.add('Everything after the name of the command is given to the command as it is, the options too.')
+        description.add('--help after the name is given to the command as well, which runs it. This help is what the build of the project listed of the command, ' +
+                'and nothing was run for it.')
         spec.usageMessage().description(description as String[])
         return spec
     }
