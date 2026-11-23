@@ -24,6 +24,10 @@ import grails.core.GrailsApplication
 import grails.web.mapping.UrlMappingInfo
 import grails.web.mapping.UrlMappingsHolder
 import grails.web.mapping.exceptions.UrlMappingException
+import io.micrometer.observation.Observation
+import io.micrometer.observation.ObservationHandler
+import io.micrometer.observation.ObservationRegistry
+import java.lang.reflect.InvocationTargetException
 import org.apache.grails.core.testing.support.LogCapture
 import org.codehaus.groovy.runtime.InvokerInvocationException
 import org.grails.exceptions.reporting.DefaultStackTraceFilterer
@@ -32,6 +36,7 @@ import org.grails.exceptions.reporting.StackTraceFilterer
 import org.grails.web.mapping.DefaultUrlMappingEvaluator
 import org.grails.web.mapping.DefaultUrlMappingsHolder
 import org.grails.web.mapping.mvc.GrailsControllerUrlMappings
+import org.grails.web.servlet.mvc.GrailsDispatcherServlet
 import org.grails.web.servlet.mvc.GrailsWebRequest
 import org.grails.web.servlet.mvc.exceptions.ControllerExecutionException
 import org.grails.web.servlet.view.CompositeViewResolver
@@ -40,23 +45,39 @@ import org.springframework.beans.factory.BeanNotOfRequiredTypeException
 import org.springframework.beans.factory.NoSuchBeanDefinitionException
 import org.springframework.context.ApplicationContext
 import org.springframework.context.support.StaticApplicationContext
+import org.springframework.http.server.observation.ServerRequestObservationContext
 import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.mock.web.MockHttpServletResponse
+import org.springframework.mock.web.MockRequestDispatcher
+import org.springframework.mock.web.MockServletConfig
 import org.springframework.mock.web.MockServletContext
 import org.springframework.web.context.request.RequestContextHolder
 import org.springframework.web.context.request.ServletRequestAttributes
 import org.springframework.web.context.request.async.AsyncRequestTimeoutException
+import org.springframework.web.filter.ServerHttpObservationFilter
 import org.springframework.web.util.WebUtils
 import org.springframework.web.context.WebApplicationContext
 import org.springframework.web.context.support.StaticWebApplicationContext
 import org.springframework.web.servlet.ModelAndView
 import org.springframework.web.servlet.ViewResolver
+import org.springframework.web.servlet.handler.SimpleUrlHandlerMapping
+import org.springframework.web.servlet.mvc.Controller
+import org.springframework.web.servlet.mvc.SimpleControllerHandlerAdapter
 import org.springframework.web.servlet.view.InternalResourceView
 import spock.lang.Issue
 import spock.lang.Specification
 
+import jakarta.servlet.DispatcherType
+import jakarta.servlet.FilterChain
+import jakarta.servlet.RequestDispatcher
+import jakarta.servlet.Servlet
+import jakarta.servlet.ServletContext
+import jakarta.servlet.ServletException
+import jakarta.servlet.ServletRequest
+import jakarta.servlet.ServletResponse
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
+import jakarta.servlet.http.HttpServletResponseWrapper
 
 class GrailsExceptionResolverSpec extends Specification {
 
@@ -64,6 +85,9 @@ class GrailsExceptionResolverSpec extends Specification {
     private static final String PLAIN_OVER_GRAILS = 'plain attributes over a stored GrailsWebRequest'
     private static final String PLAIN = 'plain attributes'
     private static final String NOTHING = 'nothing'
+    private static final Exception FAILURE = new IllegalStateException('failed')
+    private static final AssertionError FAILED_ASSERT = new AssertionError('failed')
+    private static final StackOverflowError TOO_DEEP = new StackOverflowError('too deep')
 
     private final MockServletContext servletContext = new MockServletContext()
     private StaticWebApplicationContext webContext
@@ -71,6 +95,268 @@ class GrailsExceptionResolverSpec extends Specification {
     def cleanup() {
         RequestContextHolder.resetRequestAttributes()
         webContext?.close()
+    }
+
+    void 'an exception #description is recorded as the error of the HTTP server observation'() {
+        given: 'the filter a running application has around its requests, whose registry the application need not know'
+        ServerRequestObservationContext observed = null
+        List<Throwable> notified = []
+        def registry = registryReporting({ observed = it }, { notified << it })
+        def resolver = observedResolver()
+        def request = new MockHttpServletRequest('GET', '/failing')
+        def response = new MockHttpServletResponse()
+        FilterChain application = { req, res ->
+            resolver.resolveException((HttpServletRequest) req, (HttpServletResponse) res, null, thrown)
+        } as FilterChain
+
+        when:
+        new ServerHttpObservationFilter(registry).doFilter(request, response, application)
+
+        then: 'or its metrics would say nothing failed'
+        response.status == status
+        observed.error.is(recorded)
+
+        and: 'or the handler that marks the span would not hear of it'
+        notified.size() == 1
+        notified.first().is(recorded)
+
+        where:
+        description                                  | thrown                                                                         | recorded      | status
+        'an action threw'                            | FAILURE                                                                        | FAILURE       | 500
+        'wrapped by Groovy'                          | new InvokerInvocationException(new InvocationTargetException(FAILURE))         | FAILURE       | 500
+        'that is an Error DispatcherServlet wrapped' | new ServletException("Handler dispatch failed: $FAILED_ASSERT", FAILED_ASSERT) | FAILED_ASSERT | 500
+        'that is an Error Groovy wrapped'            | new InvokerInvocationException(TOO_DEEP)                                       | TOO_DEEP      | 500
+    }
+
+    void 'an exception is still the error of a context that comes without its observation'() {
+        given:
+        def request = new MockHttpServletRequest('GET', '/failing')
+        def response = new MockHttpServletResponse()
+        def context = new ServerRequestObservationContext(request, response)
+        request.setAttribute(ServerHttpObservationFilter.CURRENT_OBSERVATION_CONTEXT_ATTRIBUTE, context)
+
+        when:
+        observedResolver().resolveException(request, response, null, FAILURE)
+
+        then:
+        context.error.is(FAILURE)
+    }
+
+    void 'the exception an error handler answers stays the error of the HTTP server observation'() {
+        given: 'the filter a running application has around its requests, and an error handler to forward to'
+        ServerRequestObservationContext observed = null
+        List<Throwable> notified = []
+        def registry = registryReporting({ observed = it }, { notified << it })
+        def resolver = resolverFor({ '500'(controller: 'errors', action: 'serverError') }, true)
+        def request = new MockHttpServletRequest(servletContext, 'GET', '/fail')
+        def response = new MockHttpServletResponse()
+        bind(GRAILS, request, response)
+        def original = new IllegalStateException('original')
+        FilterChain application = { req, res ->
+            resolver.resolveException((HttpServletRequest) req, (HttpServletResponse) res, null, original)
+        } as FilterChain
+
+        when:
+        new ServerHttpObservationFilter(registry).doFilter(request, response, application)
+
+        then: 'the handler answered, and the wrapper its model left on the request is not what is reported'
+        response.forwardedUrl == '/errors/serverError'
+        observed.error.is(original)
+
+        and: 'the handlers hear of it once, though both the resolver and the filter could tell them'
+        notified.size() == 1
+        notified.first().is(original)
+    }
+
+    void 'the handlers hear of an exception an error handler answers on an asynchronous dispatch, #where'() {
+        given: 'the filter, which on that dispatch does not read the exception left on the request'
+        List<Throwable> notified = []
+        def registry = registryReporting({ }, { notified << it })
+        def resolver = resolverFor({ '500'(controller: 'errors', action: 'serverError') }, true)
+        def request = new MockHttpServletRequest(servletContext, 'GET', '/fail')
+        request.dispatcherType = DispatcherType.ASYNC
+        request.setAttribute(GrailsWebUtils.ASYNC_REQUEST_URI_ATTRIBUTE, '/fail')
+        def response = new MockHttpServletResponse()
+        bind(GRAILS, request, response)
+        def original = new IllegalStateException('original')
+        FilterChain application = { req, res ->
+            request.dispatcherType = resolvedOn
+            resolver.resolveException((HttpServletRequest) req, (HttpServletResponse) res, null, original)
+            request.dispatcherType = DispatcherType.ASYNC
+        } as FilterChain
+
+        when:
+        new ServerHttpObservationFilter(registry).doFilter(request, response, application)
+
+        then:
+        response.forwardedUrl == '/errors/serverError'
+        notified.size() == 1
+        notified.first().is(original)
+
+        where:
+        where                       | resolvedOn
+        'in the action dispatched'  | DispatcherType.ASYNC
+        'in an action forwarded to' | DispatcherType.FORWARD
+    }
+
+    void 'the handlers hear once of an exception an error handler answers on #dispatch, when the request still reads as a forward afterwards'() {
+        given: 'a container that leaves a forwarded request reading as a forward, as Undertow does, so the filter reads the exception left on it'
+        List<Throwable> notified = []
+        def registry = registryReporting({ }, { notified << it })
+        def resolver = resolverFor({ '500'(controller: 'errors', action: 'serverError') }, true)
+        def request = new ForwardLeftOnRequest(servletContext, 'GET', '/fail')
+        request.dispatcherType = dispatch
+        if (dispatch == DispatcherType.ASYNC) {
+            request.setAttribute(GrailsWebUtils.ASYNC_REQUEST_URI_ATTRIBUTE, '/fail')
+        }
+        def response = new MockHttpServletResponse()
+        bind(GRAILS, request, response)
+        def original = new IllegalStateException('original')
+        FilterChain application = { req, res ->
+            resolver.resolveException((HttpServletRequest) req, (HttpServletResponse) res, null, original)
+        } as FilterChain
+
+        when:
+        new ServerHttpObservationFilter(registry).doFilter(request, response, application)
+
+        then:
+        response.forwardedUrl == '/errors/serverError'
+        request.dispatcherType == DispatcherType.FORWARD
+        notified.size() == 1
+        notified.first().is(original)
+
+        where:
+        dispatch << [DispatcherType.REQUEST, DispatcherType.ASYNC]
+    }
+
+    void 'the handlers hear once of an exception an error controller answers in a forward from #dispatch, when #container'() {
+        given: 'the Grails dispatcher servlet behind the filter, and a handler that forwards to one that fails'
+        List<Throwable> notified = []
+        def registry = registryReporting({ }, { notified << it })
+        def resolver = resolverFor({ '500'(controller: 'errors', action: 'serverError') }, true)
+        def original = new IllegalStateException('original')
+        def servlet = dispatcherServletWith(resolver, [
+                '/forwarding': { req, res -> req.getRequestDispatcher('/failing').forward(req, res); null } as Controller,
+                '/failing'   : { req, res -> throw original } as Controller])
+        def request = new ForwardingRequest(servletContext, '/forwarding', servlet, ['/forwarding', '/failing'] as Set,
+                restoresForward)
+        request.dispatcherType = dispatch
+        if (dispatch == DispatcherType.ASYNC) {
+            request.setAttribute(GrailsWebUtils.ASYNC_REQUEST_URI_ATTRIBUTE, '/forwarding')
+        }
+        def response = new MockHttpServletResponse()
+
+        when:
+        new ServerHttpObservationFilter(registry).doFilter(request, response, { req, res ->
+            servlet.service(req, res)
+        } as FilterChain)
+
+        then:
+        response.forwardedUrl == '/errors/serverError'
+        request.dispatcherType == (restoresForward ? dispatch : DispatcherType.FORWARD)
+        notified.size() == 1
+        notified.first().is(original)
+
+        where:
+        dispatch               | restoresForward | container
+        DispatcherType.REQUEST | true            | 'the container restores the request, as Tomcat and Jetty do'
+        DispatcherType.REQUEST | false           | 'the request still reads as the forward, as on Undertow'
+        DispatcherType.ASYNC   | true            | 'the container restores the request, as Tomcat and Jetty do'
+        DispatcherType.ASYNC   | false           | 'the request still reads as the forward, as on Undertow'
+    }
+
+    void 'a filter can read the exception an error handler answered once the chain has returned, with no observation, when #description'() {
+        given:
+        def resolver = resolverFor({ '500'(controller: 'errors', action: 'serverError') }, true)
+        def request = new MockHttpServletRequest(servletContext, 'GET', '/fail')
+        def response = new MockHttpServletResponse()
+        bind(GRAILS, request, response)
+
+        when:
+        resolver.resolveException(request, response, null, thrown)
+
+        then: 'what the action threw, as the filter that observes the request reports an exception that reaches it'
+        response.forwardedUrl == '/errors/serverError'
+        request.getAttribute(RequestDispatcher.ERROR_EXCEPTION).is(left)
+
+        where:
+        description                                          | thrown                                                                         | left
+        'an action threw an exception'                       | FAILURE                                                                        | FAILURE
+        'an action threw an Error DispatcherServlet wrapped' | new ServletException("Handler dispatch failed: $FAILED_ASSERT", FAILED_ASSERT) | FAILED_ASSERT
+    }
+
+    void 'an exception #handler answers inside an include is not recorded on the observation of the page that included it'() {
+        given: 'the Grails dispatcher servlet behind the filter, and a page that includes a handler that fails'
+        ServerRequestObservationContext observed = null
+        List<Throwable> notified = []
+        def registry = registryReporting({ observed = it }, { notified << it })
+        def resolver = resolverFor(mappings, controllerMappings)
+        def servlet = dispatcherServletWith(resolver, [
+                '/page'   : { req, res -> req.getRequestDispatcher('/failing').include(req, res); null } as Controller,
+                '/failing': { req, res -> throw FAILURE } as Controller])
+        def request = new ForwardingRequest(servletContext, '/page', servlet, ['/page', '/failing'] as Set, true)
+        def response = new MockHttpServletResponse()
+
+        when:
+        new ServerHttpObservationFilter(registry).doFilter(request, response, { req, res ->
+            servlet.service(req, res)
+        } as FilterChain)
+
+        then: 'the error page answered inside the page, included rather than forwarded to, which answered the request'
+        response.status == 200
+        response.includedUrls == [page]
+        response.forwardedUrl == null
+
+        and: 'so the request did not fail'
+        observed.error == null
+        notified.empty
+
+        where:
+        handler               | mappings                                               | controllerMappings | page
+        'the error view'      | { '500'(view: '/error') }                              | false              | '/error'
+        'an error controller' | { '500'(controller: 'errors', action: 'serverError') } | true               | '/errors/serverError'
+    }
+
+    void 'an exception is resolved as usual without an observation'() {
+        when:
+        def response = new MockHttpServletResponse()
+        observedResolver().resolveException(new MockHttpServletRequest('GET', '/failing'), response, null, FAILURE)
+
+        then:
+        response.status == 500
+    }
+
+    private static ObservationRegistry registryReporting(Closure stopped, Closure errored) {
+        def registry = ObservationRegistry.create()
+        registry.observationConfig().observationHandler(new ObservationHandler<Observation.Context>() {
+            @Override
+            boolean supportsContext(Observation.Context context) {
+                context instanceof ServerRequestObservationContext
+            }
+
+            @Override
+            void onError(Observation.Context context) {
+                errored.call(context.error)
+            }
+
+            @Override
+            void onStop(Observation.Context context) {
+                stopped.call(context)
+            }
+        })
+        registry
+    }
+
+    private GrailsExceptionResolver observedResolver() {
+        webContext = new StaticWebApplicationContext()
+        webContext.beanFactory.registerSingleton(GrailsApplication.APPLICATION_ID, Stub(GrailsApplication))
+        webContext.refresh()
+        servletContext.setAttribute(WebApplicationContext.ROOT_WEB_APPLICATION_CONTEXT_ATTRIBUTE, webContext)
+        def resolver = new GrailsExceptionResolver()
+        resolver.servletContext = servletContext
+        resolver.defaultErrorView = '/error'
+        resolver.stackFilterer = new DefaultStackTraceFilterer()
+        resolver
     }
 
     void 'async timeouts resolve as 503 without an error stack trace'() {
@@ -740,6 +1026,110 @@ class GrailsExceptionResolverSpec extends Specification {
         resolver.grailsApplication = grailsApplication
         resolver.exceptionMappings = ['java.lang.Exception': '/error'] as Properties
         resolver
+    }
+
+    private GrailsDispatcherServlet dispatcherServletWith(GrailsExceptionResolver resolver, Map<String, Controller> handlers) {
+        def handlerMapping = new SimpleUrlHandlerMapping(handlers)
+        handlerMapping.applicationContext = webContext
+        webContext.beanFactory.registerSingleton('handlerMapping', handlerMapping)
+        webContext.beanFactory.registerSingleton('handlerAdapter', new SimpleControllerHandlerAdapter())
+        webContext.beanFactory.registerSingleton('exceptionResolver', resolver)
+        def servlet = new GrailsDispatcherServlet(webContext)
+        servlet.init(new MockServletConfig(servletContext, 'grails'))
+        servlet
+    }
+
+    /**
+     * A request whose forwards and includes to the handlers of a servlet dispatch through it, and which reads as the
+     * forward once it has returned, unless the container restores it, as Tomcat and Jetty do and Undertow does not.
+     */
+    private static class ForwardingRequest extends MockHttpServletRequest {
+
+        final Servlet servlet
+        final Set<String> handled
+        final boolean restoresForward
+
+        ForwardingRequest(ServletContext servletContext, String requestURI, Servlet servlet, Set<String> handled,
+                boolean restoresForward) {
+            super(servletContext, 'GET', requestURI)
+            this.servlet = servlet
+            this.handled = handled
+            this.restoresForward = restoresForward
+        }
+
+        @Override
+        RequestDispatcher getRequestDispatcher(String path) {
+            ForwardingRequest forwarded = this
+            new MockRequestDispatcher(path) {
+                @Override
+                void forward(ServletRequest request, ServletResponse response) {
+                    DispatcherType dispatchedAs = forwarded.dispatcherType
+                    String requestURI = forwarded.requestURI
+                    forwarded.dispatcherType = DispatcherType.FORWARD
+                    forwarded.requestURI = path
+                    if (path in forwarded.handled) {
+                        forwarded.servlet.service(request, response)
+                    }
+                    else {
+                        super.forward(request, response)
+                    }
+                    if (forwarded.restoresForward) {
+                        forwarded.dispatcherType = dispatchedAs
+                        forwarded.requestURI = requestURI
+                    }
+                }
+
+                @Override
+                void include(ServletRequest request, ServletResponse response) {
+                    if (!(path in forwarded.handled)) {
+                        super.include(request, response)
+                        return
+                    }
+                    DispatcherType dispatchedAs = forwarded.dispatcherType
+                    forwarded.dispatcherType = DispatcherType.INCLUDE
+                    forwarded.setAttribute(WebUtils.INCLUDE_REQUEST_URI_ATTRIBUTE, path)
+                    try {
+                        forwarded.servlet.service(request, new IncludedResponse((HttpServletResponse) response))
+                    }
+                    finally {
+                        forwarded.removeAttribute(WebUtils.INCLUDE_REQUEST_URI_ATTRIBUTE)
+                        forwarded.dispatcherType = dispatchedAs
+                    }
+                }
+            }
+        }
+    }
+
+    /** The response an include writes to, which cannot change the status of the response that includes it. */
+    private static class IncludedResponse extends HttpServletResponseWrapper {
+
+        IncludedResponse(HttpServletResponse response) {
+            super(response)
+        }
+
+        @Override
+        void setStatus(int status) {
+        }
+    }
+
+    /** A request that still reads as a forward once a forward has returned, as Undertow leaves it. */
+    private static class ForwardLeftOnRequest extends MockHttpServletRequest {
+
+        ForwardLeftOnRequest(ServletContext servletContext, String method, String requestURI) {
+            super(servletContext, method, requestURI)
+        }
+
+        @Override
+        RequestDispatcher getRequestDispatcher(String path) {
+            MockHttpServletRequest forwarded = this
+            new MockRequestDispatcher(path) {
+                @Override
+                void forward(ServletRequest request, ServletResponse response) {
+                    super.forward(request, response)
+                    forwarded.dispatcherType = DispatcherType.FORWARD
+                }
+            }
+        }
     }
 
     private void bind(String attributes, MockHttpServletRequest request, MockHttpServletResponse response) {
