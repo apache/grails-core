@@ -327,7 +327,7 @@ public class PredicateGenerator {
      * The block's predicates, with the requirement that the associated entity exists when the block is in an {@code or}
      * with more than one branch, whether it is a branch or is nested in one: such a block is joined with a left join so
      * that another branch can match an entity without the association, and a missing association is a null that a null
-     * test in the block would otherwise match.
+     * test in the block would otherwise match. An entity with a composite id is present when its first id property is.
      */
     private Predicate requireAssociated(JpaQueryContext context, String path, From<?, ?> joined, PersistentProperty<?> identity,
                                        Predicate predicate) {
@@ -354,7 +354,7 @@ public class PredicateGenerator {
         if (criteriaList.isEmpty()) {
             return null;
         }
-        return requireAssociated(fromsByProvider, associationName, associationRoot, associatedEntity.getIdentity(),
+        return requireAssociated(fromsByProvider, associationName, associationRoot, firstIdentifierProperty(associatedEntity),
                 criteriaBuilder.and(getPredicates(criteriaQuery, associationRoot, criteriaList, nestedContext, associatedEntity)));
     }
 
@@ -371,7 +371,7 @@ public class PredicateGenerator {
         GrailsHibernatePersistentEntity associatedEntity = associationQuery.getEntity();
         List<Query.Criterion> criteriaList = associationQuery.getAssociationCriteria();
         Predicate block = criteriaBuilder.and(getPredicates(criteriaQuery, associationRoot, criteriaList, nestedContext, associatedEntity));
-        return criteriaList.isEmpty() ? block : requireAssociated(fromsByProvider, associationName, associationRoot, associatedEntity.getIdentity(), block);
+        return criteriaList.isEmpty() ? block : requireAssociated(fromsByProvider, associationName, associationRoot, firstIdentifierProperty(associatedEntity), block);
     }
 
     @SuppressWarnings("unchecked")

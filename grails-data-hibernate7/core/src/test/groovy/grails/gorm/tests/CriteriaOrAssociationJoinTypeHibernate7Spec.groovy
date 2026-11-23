@@ -20,6 +20,8 @@ package grails.gorm.tests
 
 import jakarta.persistence.criteria.JoinType
 
+import grails.gorm.DetachedCriteria
+
 import grails.gorm.annotation.Entity
 
 /**
@@ -30,7 +32,7 @@ import grails.gorm.annotation.Entity
 class CriteriaOrAssociationJoinTypeHibernate7Spec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
-        manager.registerDomainClasses(OjParent, OjChild)
+        manager.registerDomainClasses(OjParent, OjChild, OjCompositeParent, OjCompositeChild)
     }
 
     private void createParents() {
@@ -70,6 +72,101 @@ class CriteriaOrAssociationJoinTypeHibernate7Spec extends HibernateGormDatastore
 
         then:
         found.isEmpty()
+    }
+
+    void 'a block in or that names an inner join keeps it through a criteria, so an entity without the association does not match'() {
+        given:
+        createParents()
+
+        expect: 'through criteria'
+        OjParent.createCriteria().list {
+            or {
+                child(0) { eq('name', 'kid') }
+                eq('name', 'orphan')
+            }
+        }*.name == ['with']
+    }
+
+    void 'a block in or that names an inner join keeps it through a detached criteria'() {
+        given:
+        createParents()
+
+        expect:
+        new DetachedCriteria(OjParent).build {
+            or {
+                child(0) { eq('name', 'kid') }
+                eq('name', 'orphan')
+            }
+        }.list()*.name == ['with']
+    }
+
+    void 'a block in or that names a left join finds the entity without the association'() {
+        given:
+        createParents()
+
+        expect:
+        OjParent.createCriteria().list {
+            or {
+                child(1) { isNull('name') }
+                eq('name', 'nobody')
+            }
+        }*.name == ['orphan']
+    }
+
+    void 'a block in or on an association whose entity has a composite id still requires the associated entity'() {
+        given:
+        OjCompositeChild kid = new OjCompositeChild(area: 'a', code: 'b', name: null).save(flush: true)
+        new OjCompositeParent(name: 'with', child: kid).save(flush: true)
+        new OjCompositeParent(name: 'orphan').save(flush: true)
+
+        when:
+        def found = OjCompositeParent.createCriteria().list {
+            or {
+                child { isNull('name') }
+                eq('name', 'nobody')
+            }
+        }
+
+        then: 'the orphan has no child, so only the parent whose child has a null name matches'
+        found*.name == ['with']
+    }
+}
+
+@Entity
+class OjCompositeChild implements Serializable {
+
+    String area
+    String code
+    String name
+
+    static mapping = {
+        id composite: ['area', 'code']
+        version false
+    }
+
+    @Override
+    boolean equals(Object other) {
+        other instanceof OjCompositeChild && other.area == area && other.code == code
+    }
+
+    @Override
+    int hashCode() {
+        Objects.hash(area, code)
+    }
+
+    static constraints = {
+        name(nullable: true)
+    }
+}
+
+@Entity
+class OjCompositeParent {
+
+    String name
+    OjCompositeChild child
+
+    static constraints = {
+        child(nullable: true)
     }
 }
 

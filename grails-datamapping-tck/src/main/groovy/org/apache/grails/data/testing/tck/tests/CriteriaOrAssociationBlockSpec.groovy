@@ -35,8 +35,8 @@ import org.apache.grails.data.testing.tck.domains.TestEntity
  */
 @IgnoreIf({
         System.getProperty('mongodb.gorm.suite') == 'true' ||
-        System.getProperty('neo4j.gorm.suite') == 'true' ||
-        Boolean.getBoolean('hibernate5.gorm.suite')
+            System.getProperty('neo4j.gorm.suite') == 'true' ||
+            Boolean.getBoolean('hibernate5.gorm.suite')
 })
 class CriteriaOrAssociationBlockSpec extends GrailsDataTckSpec {
 
