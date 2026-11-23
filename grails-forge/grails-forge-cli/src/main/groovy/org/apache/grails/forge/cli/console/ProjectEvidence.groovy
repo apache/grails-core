@@ -31,6 +31,7 @@ import groovy.transform.CompileStatic
 import org.apache.grails.forge.core.state.EarlierRecord
 import org.apache.grails.forge.core.state.ProjectState
 import org.apache.grails.forge.core.state.ProjectStateException
+import org.grails.forge.options.ServletImpl
 
 /**
  * What the files of a Grails project say of what the application is, for a project that has no
@@ -72,6 +73,13 @@ final class ProjectEvidence {
     private static final int MAX_INIT_FILES = 2000
     private static final List<String> EARLIER_RECORDS = [ProjectState.EARLIER_RECORD, 'grails-cli.yml']
     private static final List<String> PROFILE_GROUPS = ['org.apache.grails.profiles', 'org.grails.profiles']
+    // the dependencies that give an application its servlet container: the starters of Spring Boot, among them the one
+    // for Undertow of the Spring Boot that earlier versions of Grails are on, and the module of Grails for Undertow
+    private static final Map<String, ServletImpl> SERVLET_STARTERS = Collections.unmodifiableMap([
+            'org.springframework.boot:spring-boot-starter-tomcat': ServletImpl.TOMCAT,
+            'org.springframework.boot:spring-boot-starter-jetty': ServletImpl.JETTY,
+            'org.springframework.boot:spring-boot-starter-undertow': ServletImpl.UNDERTOW,
+            'org.apache.grails:grails-undertow': ServletImpl.UNDERTOW] as Map<String, ServletImpl>)
     private static final Pattern YAML_KEY = Pattern.compile(/^( *)([A-Za-z0-9_.-]+):(?:[ \t]+(.*))?$/)
     private static final Pattern DEPENDENCY = Pattern.compile(/^\s*([A-Za-z][A-Za-z0-9]*)[ (]+(?:(?:platform|enforcedPlatform|testFixtures)\()?["']([^:"'\s]+):([^:"'\s]+)(?::[^"']*)?["']/)
     // the same with the group and the name each said by its own: implementation group: 'g', name: 'n', and (group = "g", name = "n") in Kotlin
@@ -126,6 +134,13 @@ final class ProjectEvidence {
 
     /** Every dependency the build declares in a line of its own, as {@code group:artifact} */
     final Set<String> dependencies
+
+    /**
+     * The servlet containers the build declares the starter of, each with the first of {@link #dependencies}
+     * that declares it, in the order of the build: {@code spring-boot-starter-tomcat}, {@code -jetty} and
+     * {@code -undertow} of Spring Boot, and {@code grails-undertow}
+     */
+    final Map<ServletImpl, String> servletStarters
 
     /** The group of the build */
     final String group
@@ -254,6 +269,14 @@ final class ProjectEvidence {
         profileDependency = profile
         gradlePlugins = Collections.unmodifiableSet(plugins)
         dependencies = Collections.unmodifiableSet(declared)
+        Map<ServletImpl, String> starters = new LinkedHashMap<>()
+        for (String each : declared) {
+            ServletImpl servlet = SERVLET_STARTERS.get(each)
+            if (servlet != null && !starters.containsKey(servlet)) {
+                starters.put(servlet, each)
+            }
+        }
+        servletStarters = Collections.unmodifiableMap(starters)
         group = ofGroup
         javaVersion = java
         List<String> unread = []

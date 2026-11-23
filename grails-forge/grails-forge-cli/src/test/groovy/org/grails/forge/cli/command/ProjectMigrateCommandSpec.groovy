@@ -972,6 +972,104 @@ dependencies {
         tree() == before
     }
 
+    @Unroll
+    void "the servlet of an application is the one whose starter its build declares: #declared"() {
+        given: 'the build of an application the Grails shell created, which declares the starter of its servlet container'
+        shellProject()
+        new File(dir, 'build.gradle').text = SHELL_BUILD.replace('    implementation "org.apache.grails:grails-core"\n',
+                '    implementation "org.apache.grails:grails-core"\n' + declared.collect { String each -> "    implementation \"${each}\"\n" }.join(''))
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'project', 'migrate')
+        List<String> said = out.toString().readLines()
+        ProjectState state = ProjectState.read(dir.toPath())
+
+        then:
+        exit == 0
+        err.toString().isEmpty()
+        row(said, 'servlet') == [servlet, where]
+        said.any { it.startsWith("| Assumed, because nothing in the project says it: ${assumed}. ") }
+        state.manifest.options.servlet == ServletImpl.valueOf(servlet.toUpperCase(Locale.ROOT))
+        notes.every { String note -> said.contains('| ' + note) }
+
+        where:
+        declared                                                    | servlet    | where                                                                             | assumed
+        ['org.springframework.boot:spring-boot-starter-tomcat']     | 'tomcat'   | '(build.gradle declares org.springframework.boot:spring-boot-starter-tomcat)'     | 'jdk (--jdk), reloading (--reloading)'
+        ['org.springframework.boot:spring-boot-starter-jetty']      | 'jetty'    | '(the feature spring-boot-starter-jetty)'                                         | 'jdk (--jdk), reloading (--reloading)'
+        ['org.springframework.boot:spring-boot-starter-undertow']   | 'undertow' | '(build.gradle declares org.springframework.boot:spring-boot-starter-undertow)'   | 'jdk (--jdk), reloading (--reloading)'
+        ['org.apache.grails:grails-undertow']                       | 'undertow' | '(the feature grails-undertow)'                                                   | 'jdk (--jdk), reloading (--reloading)'
+        ['org.springframework.boot:spring-boot-starter-tomcat',
+         'org.springframework.boot:spring-boot-starter-undertow']   | 'tomcat'   | '(assumed)'                                                                       | 'jdk (--jdk), servlet (--servlet), reloading (--reloading)'
+        []                                                          | 'tomcat'   | '(assumed)'                                                                       | 'jdk (--jdk), servlet (--servlet), reloading (--reloading)'
+        notes = declared.size() < 2 ? [] : ['build.gradle declares the starters of more than one servlet container ' +
+                '(org.springframework.boot:spring-boot-starter-tomcat, org.springframework.boot:spring-boot-starter-undertow), so the servlet was not taken from them']
+    }
+
+    void "the build of a Grails 8 application the shell created names its servlet container by its starter, and so does a Kotlin build"() {
+        given:
+        new File(dir, 'grails-app/conf').mkdirs()
+        new File(dir, 'grails-app/conf/application.yml').text = SHELL_CONFIGURATION
+        new File(dir, 'settings.gradle').text = "rootProject.name = 'legacy'\n"
+        new File(dir, 'gradle.properties').text = 'grailsVersion=8.0.0\n'
+        new File(dir, 'build.gradle').text = '''\
+            plugins {
+                id "groovy"
+                id "war"
+                id "org.apache.grails.gradle.grails-web"
+                id "org.apache.grails.gradle.grails-gsp"
+            }
+
+            group = "com.example.legacy"
+
+            dependencies {
+                profile "org.apache.grails.profiles:web"
+                implementation platform("org.apache.grails:grails-bom:$grailsVersion")
+                implementation "org.apache.grails:grails-core"
+                implementation "org.springframework.boot:spring-boot-autoconfigure"
+                implementation "org.springframework.boot:spring-boot-starter"
+                implementation "org.springframework.boot:spring-boot-starter-actuator"
+                implementation "org.springframework.boot:spring-boot-starter-logging"
+                implementation "org.springframework.boot:spring-boot-starter-tomcat"
+                implementation "org.springframework.boot:spring-boot-starter-validation"
+                implementation "org.apache.grails:grails-data-hibernate5"
+            }
+            '''.stripIndent()
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'project', 'migrate', '--dry-run')
+
+        then:
+        exit == 0
+        row(out.toString().readLines(), 'servlet') == ['tomcat', '(build.gradle declares org.springframework.boot:spring-boot-starter-tomcat)']
+
+        when: 'a plugin, which is generated without a servlet container that is Tomcat, declares the starter of Tomcat'
+        out.reset()
+        new File(dir, 'grails-app/conf/application.yml').text = 'grails:\n    profile: plugin\n    codegen:\n        defaultPackage: com.example.legacy\n'
+        new File(dir, 'build.gradle').text = new File(dir, 'build.gradle').text.replace('grails-web', 'grails-plugin').replace('profiles:web', 'profiles:plugin')
+        exit = ForgeCli.execute(beanContext, 'project', 'migrate', '--dry-run')
+        List<String> said = out.toString().readLines()
+
+        then: 'the servlet is not taken from it, and that is said'
+        exit == 0
+        row(said, 'type') == ['plugin', '(the profile plugin, grails.profile of grails-app/conf/application.yml)']
+        row(said, 'servlet') == ['none', '(assumed)']
+        said.contains('| build.gradle declares org.springframework.boot:spring-boot-starter-tomcat, the starter of the servlet container tomcat, ' +
+                'which an application of the type plugin is not generated with, so the servlet was not taken from it')
+
+        when: 'the build is written in Kotlin'
+        out.reset()
+        new File(dir, 'build.gradle').delete()
+        new File(dir, 'grails-app/conf/application.yml').text = SHELL_CONFIGURATION
+        new File(dir, 'build.gradle.kts').text = 'plugins {\n    id("org.apache.grails.gradle.grails-web")\n}\n\ndependencies {\n' +
+                '    implementation("org.springframework.boot:spring-boot-starter-jetty")\n' +
+                '    implementation("org.springframework.boot:spring-boot-starter-undertow")\n}\n'
+        exit = ForgeCli.execute(beanContext, 'project', 'migrate', '--dry-run')
+
+        then: 'the feature of Jetty is found, which says more than the starter of another servlet container'
+        exit == 0
+        row(out.toString().readLines(), 'servlet') == ['jetty', '(the feature spring-boot-starter-jetty)']
+    }
+
     private void shellProject() {
         new File(dir, 'grails-app/conf').mkdirs()
         new File(dir, 'grails-app/init/com/example/legacy').mkdirs()

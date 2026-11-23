@@ -265,7 +265,7 @@ class ProjectMigrateCommand extends BaseCommand implements Callable<Integer>, Pr
             }
         }
         stated.each { String feature -> has.put(feature, GIVEN + '--features') }
-        Map<String, Found<String>> options = options(applicationType.value, has.keySet(), evidence, notes)
+        Map<String, Found<String>> options = options(available, applicationType.value, has.keySet(), evidence, notes)
         // a feature that is an option of the application is there with the option, as it is in an application that is created
         addFeatureOf(available, has, excluded, options.get('servlet'), ServletImpl.values().find { ServletImpl each -> written(each) == options.get('servlet').value }?.getName())
         addFeatureOf(available, has, excluded, options.get('data'), GormImpl.values().find { GormImpl each -> written(each) == options.get('data').value }?.getName())
@@ -526,8 +526,10 @@ class ProjectMigrateCommand extends BaseCommand implements Callable<Integer>, Pr
         return names
     }
 
-    // the four options of the record: each as it was given, as the features that were found say it, or as it is assumed
-    private Map<String, Found<String>> options(ApplicationType applicationType, Set<String> has, ProjectEvidence evidence, List<String> notes) {
+    // the four options of the record: each as it was given, as the features that were found say it, as the build says
+    // it otherwise, or as it is assumed
+    private Map<String, Found<String>> options(AvailableFeatures available, ApplicationType applicationType, Set<String> has, ProjectEvidence evidence,
+                                               List<String> notes) {
         Map<String, Found<String>> options = new LinkedHashMap<>()
         if (javaVersion != null) {
             if (!JdkVersion.values().any { JdkVersion each -> each.majorVersion() == javaVersion }) {
@@ -543,9 +545,11 @@ class ProjectMigrateCommand extends BaseCommand implements Callable<Integer>, Pr
             options.put('jdk', new Found<String>(String.valueOf(JdkVersion.DEFAULT_OPTION.majorVersion()), ASSUMED, true))
         }
         ServletImpl servlet = ServletImpl.values().find { ServletImpl each -> each.getName() in has }
+        Found<String> started = servletImpl != null || servlet != null ? null : servletOfStarter(available, applicationType, evidence, notes)
         options.put('servlet', servletImpl != null ? new Found<String>(written(servletImpl), GIVEN + '--servlet') :
                 servlet != null ? new Found<String>(written(servlet), "the feature ${servlet.getName()}") :
-                        new Found<String>(written(applicationType == ApplicationType.PLUGIN ? ServletImpl.NONE : ServletImpl.DEFAULT_OPTION), ASSUMED, true))
+                        started != null ? started :
+                                new Found<String>(written(applicationType == ApplicationType.PLUGIN ? ServletImpl.NONE : ServletImpl.DEFAULT_OPTION), ASSUMED, true))
         GormImpl data = GormImpl.values().find { GormImpl each -> each.getName() in has }
         options.put('data', gormImpl != null ? new Found<String>(written(gormImpl), GIVEN + '--data') :
                 data != null ? new Found<String>(written(data), "the feature ${data.getName()}") :
@@ -557,6 +561,32 @@ class ProjectMigrateCommand extends BaseCommand implements Callable<Integer>, Pr
                         recorded != null ? new Found<String>(written(recorded), "reloading of ${evidence.earlierRecord}") :
                                 new Found<String>(written(DevelopmentReloading.NONE), ASSUMED, true))
         return options
+    }
+
+    // The servlet container whose starter the build declares, where no feature of one was found: a build that
+    // declares only the starter has the container, as the build of an application the Grails shell created
+    // does. A starter of a container the type of application is not generated with, and the starters of more
+    // than one container, name none, and that is said.
+    private static Found<String> servletOfStarter(AvailableFeatures available, ApplicationType applicationType, ProjectEvidence evidence, List<String> notes) {
+        Map<ServletImpl, String> starters = new LinkedHashMap<>()
+        evidence.servletStarters.each { ServletImpl servlet, String declared ->
+            if (available.findFeature(servlet.getName(), true).isPresent()) {
+                starters.put(servlet, declared)
+            } else {
+                notes << ("${evidence.buildFile} declares ${declared}, the starter of the servlet container ${written(servlet)}, which an application of the type " +
+                        "${written(applicationType)} is not generated with, so the servlet was not taken from it").toString()
+            }
+        }
+        if (starters.size() > 1) {
+            notes << ("${evidence.buildFile} declares the starters of more than one servlet container (${starters.values().join(', ')}), " +
+                    'so the servlet was not taken from them').toString()
+            return null
+        }
+        if (starters.isEmpty()) {
+            return null
+        }
+        Map.Entry<ServletImpl, String> declared = starters.entrySet().iterator().next()
+        return new Found<String>(written(declared.key), "${evidence.buildFile} declares ${declared.value}".toString())
     }
 
     // An option that was given says which of the features of its kind the application has: the others
