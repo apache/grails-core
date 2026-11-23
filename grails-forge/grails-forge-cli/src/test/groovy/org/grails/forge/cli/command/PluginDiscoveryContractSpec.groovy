@@ -81,8 +81,10 @@ class PluginDiscoveryContractSpec extends CommandSpec implements CommandFixture 
         originalErr = System.err
         System.setOut(new PrintStream(out))
         System.setErr(new PrintStream(err))
-        repository = Files.createTempDirectory('grailsforgerepository').toFile()
-        work = Files.createTempDirectory('grailsforgediscovery').toFile()
+        // the real paths: the temporary directory of Windows can be named by its short name (RUNNER~1), whose ~ a
+        // command line plugin-info prints is quoted for, which the lines this specification looks for do not have
+        repository = Files.createTempDirectory('grailsforgerepository').toRealPath().toFile()
+        work = Files.createTempDirectory('grailsforgediscovery').toRealPath().toFile()
         address = repository.toPath().toAbsolutePath().normalize().toUri().toString()
     }
 

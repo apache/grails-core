@@ -83,7 +83,9 @@ class PluginSuggestionsSpec extends CommandSpec implements CommandFixture {
         originalErr = System.err
         System.setOut(new PrintStream(out))
         System.setErr(new PrintStream(err))
-        work = Files.createTempDirectory('grailsforgesuggestions').toFile()
+        // the real path: the temporary directory of Windows can be named by its short name (RUNNER~1), whose ~ a
+        // command line plugin-info prints is quoted for, and the rows below say which addresses are quoted
+        work = Files.createTempDirectory('grailsforgesuggestions').toRealPath().toFile()
         local = new File(work, 'local')
         served.put(OF_THE_INDEX, new File(work, 'of-the-index'))
         served.put(OF_THE_VERSION, new File(work, 'of-the-version'))
