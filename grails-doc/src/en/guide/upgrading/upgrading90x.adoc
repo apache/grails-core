@@ -1573,7 +1573,7 @@ None for an application. A test that asserts the line of a GSP error asserts the
 
 NOTE: Notes 32 to 39 and 41 to 55 are about the command line. Grails 9 has one `grails` command, which is not the Grails shell of Grails 8, and it has no profiles. To translate a command line of Grails 8, start at <<cliMappingGrails8,note 55>>: its tables have every command of the Grails shell and of its profiles, every command and option of the Grails Forge command line, and every command and script of the plugins of the framework, each with what it is in Grails 9, and the rules for the environment, the options and the exit codes. The other notes say why, and what else differs.
 
-Compiling a command, in `grails-app/commands` of an application or in `src/cli/groovy` of a plugin, now also writes the file `META-INF/grails-commands/<class name>.json` into the compiled classes, beside `META-INF/grails-cli.factories`. It holds the name and the description of the command, and it goes wherever the compiled classes go, as the registration already does: into the jar of a plugin's `-cli` companion, and for commands under `grails-app/commands` into the archive of the application or plugin. The new `grailsCommandCatalog` task lists the commands of a project from these files, into `build/grails/command-catalog.json`, without loading a class. See xref:commandLine#creatingCustomCommands[Creating Custom Commands].
+Compiling a command, in `grails-app/commands` of an application or in `src/cli/groovy` of a plugin, now also writes the file `META-INF/grails-commands/<class name>.json` into the compiled classes, beside `META-INF/grails-cli.factories`. It holds the name and the description of the command, and it goes wherever the compiled classes go, as the registration already does: into the jar of a plugin's `-cli` companion, and for commands under `grails-app/commands` into the archive of the application or plugin. The new `grailsCommandCatalog` task lists the commands of a project from these files, into `.grails/cache/command-catalog.json` in the directory of the project, without loading a class. See xref:commandLine#creatingCustomCommands[Creating Custom Commands].
 
 `runCommand` and the task of each command take the new options `--arg=<argument>`, once for each argument, and `--args-file=<file>`. `--args-file` needs the `grails-console` of this version, which the Grails Gradle plugin adds to `grailsCli` by default; with an older one the task fails saying that the application class `--grails-args-file=...` was not found. `-Pargs="..."` works as it did, including how it is split at spaces and quotes.
 
@@ -1943,9 +1943,9 @@ For an application that Grails 9 generates, commit the `.grails` directory: `pro
 
 ==== 46. Commands of the Application and of Plugins Are Listed by the Build
 
-The Grails shell found the commands of the plugins of an application itself, on the class path of the project: `grails dbm-update`, `grails url-mappings-report` or `grails s2-quickstart` worked as soon as the plugin was a dependency. The `grails` command loads no class of the project. It has the commands that the Gradle task `grailsCommandCatalog` of the project has written to `build/grails/command-catalog.json` (note 32), and runs each through the Gradle task `runCommand`.
+The Grails shell found the commands of the plugins of an application itself, on the class path of the project: `grails dbm-update`, `grails url-mappings-report` or `grails s2-quickstart` worked as soon as the plugin was a dependency. The `grails` command loads no class of the project. It has the commands that the Gradle task `grailsCommandCatalog` of the project has written to `.grails/cache/command-catalog.json` in the directory of the project (note 32), and runs each through the Gradle task `runCommand`.
 
-* *Run `grails gradle grailsCommandCatalog` once*, and again when the commands of the project have changed. Until then `grails help` says that the commands of the application and its plugins are not listed, and `grails dbm-update` is refused with exit code 2 and the line that names the task. The file is in the `build` directory, so after `clean` the task has to run again.
+* *Run `grails gradle grailsCommandCatalog` once*, and again when the commands of the project have changed. Until then `grails help` says that the commands of the application and its plugins are not listed, and `grails dbm-update` is refused with exit code 2 and the line that names the task. The file is in `.grails/cache` of the project and not in the build directory, wherever the build puts that, so `clean` does not remove it; a `.gitignore` the task writes beside it, and the generated `.gitignore` of an application, keep it out of a commit.
 * *`run-command` needs no list.* `grails run-command dbm-update` and `./gradlew runCommand --arg=dbm-update` run a command whether or not it is listed.
 * *A command that has the name of a command of `grails` is not run by its name.* `install-templates` of the scaffolding plugin is the example: `grails install-templates` is the command of the command line, with a warning, and `grails run-command install-templates` the one of the plugin.
 * *What were scripts of the plugins of the framework are commands like the others.* `s2-quickstart` and the other commands of the Spring Security plugins are listed by the task and run as `grails s2-quickstart ...` afterwards, or as `grails run-command s2-quickstart ...` at any time (note 54). `create-job` and `create-functional-test` are commands of `grails` itself.
@@ -1960,7 +1960,7 @@ The Grails shell found the commands of the plugins of an application itself, on 
 * In scripts and continuous integration jobs, replace `grails <plugin command>` with `grails run-command <plugin command>` or with `./gradlew runCommand --arg=<plugin command>`, which do not depend on the list; or run `grails gradle grailsCommandCatalog` first.
 * Replace `grails <script of a plugin of the framework>`, such as `grails s2-quickstart com.example User Role`, with `grails run-command s2-quickstart com.example User Role` or `./gradlew runCommand -Pargs="s2-quickstart com.example User Role"`, and read note 54 for what each of them does differently. Do not run them with `runScriptCommand`: the scripts are gone.
 * Replace `grails <script of another plugin>` with `./gradlew runScriptCommand --arg=<name> --arg=<argument>`.
-* Developers who type the commands of plugins by their names run `grails gradle grailsCommandCatalog` after they have checked out or cleaned the project.
+* Developers who type the commands of plugins by their names run `grails gradle grailsCommandCatalog` after they have checked out the project.
 
 ==== 47. Interactive Mode
 
@@ -2511,7 +2511,7 @@ The Grails shell ran a command or a script of a plugin by its name as soon as th
 |Always. This is what the two others run.
 
 |`grails NAME ARGUMENTS`
-|Once `grails gradle grailsCommandCatalog` has listed the commands of the project, and again after `clean`. Not for a command that has the name of a command of `grails`.
+|Once `grails gradle grailsCommandCatalog` has listed the commands of the project. Not for a command that has the name of a command of `grails`.
 |===
 
 "The three ways" in this table are those. The environment of such a command is `development`; another one is named in front of the name of the command, as in `grails run-command -Dgrails.env=production dbm-update`, or for the build, as in `./gradlew -Dgrails.env=production runCommand --arg=dbm-update`.
