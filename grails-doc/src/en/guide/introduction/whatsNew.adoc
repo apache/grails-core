@@ -38,6 +38,13 @@ Starting with Grails 8.0, the Grails Gradle plugins support the https://docs.gra
 A build that runs the same tasks again skips configuring the project, so repeated runs of tasks such as `bootRun` and `test` start faster.
 See xref:commandLine#gradleConfigurationCache[Using the Gradle Configuration Cache] for how to enable it in an existing project and what it asks of build scripts.
 
+==== URL Mapping Index
+
+Grails writes one URL mapping index for the application and one for each plugin at build time.
+Request matching still uses the mappings evaluated at runtime.
+An index entry is used only when it names the same pattern, controller, action, namespace, and plugin as that mapping.
+See xref:theWebLayer#urlmappings[URL Mappings].
+
 ==== Grails Micronaut Repository
 
 Grails Micronaut is maintained and released from the https://github.com/apache/grails-micronaut[Apache Grails Micronaut repository] and consumes published Grails Core artifacts.

@@ -44,6 +44,7 @@ import org.gradle.api.artifacts.dsl.DependencyHandler
 import org.gradle.api.attributes.AttributeMatchingStrategy
 import org.gradle.api.attributes.Category
 import org.gradle.api.execution.TaskExecutionGraph
+import org.gradle.api.file.ConfigurableFileTree
 import org.gradle.api.file.CopySpec
 import org.gradle.api.file.Directory
 import org.gradle.api.file.DuplicatesStrategy
@@ -79,6 +80,7 @@ import org.grails.gradle.plugin.exploded.ExplodedCompatibilityRule
 import org.grails.gradle.plugin.exploded.ExplodedDisambiguationRule
 import org.grails.gradle.plugin.exploded.GrailsExplodedPlugin
 import org.grails.gradle.plugin.i18n.GenerateI18nDescriptorTask
+import org.grails.gradle.plugin.urlmappings.GenerateUrlMappingsIndexTask
 import org.apache.grails.gradle.plugin.aot.AotCacheExtension
 import org.apache.grails.gradle.plugin.aot.ExtractApplicationTask
 import org.apache.grails.gradle.plugin.aot.GenerateNativeMetadataTask
@@ -184,6 +186,7 @@ class GrailsGradlePlugin implements Plugin<Project> {
         enableNative2Ascii(project, grailsVersion)
 
         configureI18nDescriptor(project)
+        configureUrlMappingsIndex(project)
         configureNativeMetadata(project)
         configureAotCache(project)
 
@@ -1449,6 +1452,31 @@ ${importStatements}
 
         project.tasks.named(sourceSet.processResourcesTaskName, ProcessResources).configure { ProcessResources task ->
             task.from(descriptorTask)
+        }
+    }
+
+    /**
+     * Writes one URL mapping index for this application or plugin and packages it at the classpath
+     * root. Each plugin writes its own copy, and the runtime reads every copy.
+     */
+    protected void configureUrlMappingsIndex(Project project) {
+        SourceSet sourceSet = SourceSets.findMainSourceSet(project)
+        File controllers = project.layout.projectDirectory.dir('grails-app/controllers').asFile
+        ConfigurableFileTree mappings = project.fileTree(controllers)
+        mappings.include('**/*UrlMappings.groovy')
+
+        TaskProvider<GenerateUrlMappingsIndexTask> indexTask = project.tasks.register(
+                'generateUrlMappingsIndex', GenerateUrlMappingsIndexTask) { GenerateUrlMappingsIndexTask task ->
+            task.group = BasePlugin.BUILD_GROUP
+            task.description = 'Records the static URL mappings this artifact contributes'
+            task.sources.from(mappings)
+            task.artifactType.set(grailsArtifactType())
+            task.artifactName.set(grailsArtifactName(project))
+            task.outputDirectory.set(project.layout.buildDirectory.dir('generated-resources/grails-url-mappings'))
+        }
+
+        project.tasks.named(sourceSet.processResourcesTaskName, ProcessResources).configure { ProcessResources resources ->
+            resources.from(indexTask)
         }
     }
 
