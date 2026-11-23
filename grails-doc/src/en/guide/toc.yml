@@ -96,6 +96,7 @@ applicationTypes:
   title: Application Types, Features and Feature Packs
   applicationFeatures: The Features of an Application
   customizingGeneration: Customizing What a New Application Gets
+  presets: Making Applications from a Preset
   profilesReplaced: What Became of Profiles
 GORM:
   title: Object Relational Mapping (GORM)

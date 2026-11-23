@@ -26,6 +26,9 @@ Until Grails 8 a project was created from a _profile_: an artifact with a skelet
 |`create-app myapp --profile rest-api`
 |One command for each type of application: `create-restapi myapp`. No command has a `--profile` option.
 
+|`create-app myapp --profile com.acme:acme-profile:1.0.0`, a profile of your own by its coordinates
+|`create-restapi myapp --preset com.acme:acme-preset:1.0.0`, with the create command of the type of application of the preset: see xref:applicationTypes#presets[Making Applications from a Preset], which also says how a profile is converted to a preset.
+
 |The `web`, `rest-api`, `plugin`, `web-plugin` and `rest-api-plugin` profiles
 |The application types of `create-app`, `create-restapi`, `create-plugin`, `create-web-plugin` and `create-rest-api-plugin`.
 
@@ -33,7 +36,7 @@ Until Grails 8 a project was created from a _profile_: an artifact with a skelet
 |The features of the type of application, which `--list-features` lists. `--features` adds to the default features, where it took their place with a profile, and a name that is no feature is refused. `--exclude-features` leaves a default feature out.
 
 |A profile of your own: `create-profile`, the `profile` profile, a profile that is published to a repository and named by its coordinates
-|A plugin with a feature pack, selected by the coordinates of the plugin: see xref:applicationTypes#customizingGeneration[Customizing What a New Application Gets]. A feature pack adds to an application of one of the types. It has no skeleton that takes the place of the generated project, and it does not extend another pack.
+|A preset, which names the type of application, gives the options their defaults, asks for features and adds dependencies, configuration and files: see xref:applicationTypes#presets[Making Applications from a Preset]. A feature that every application of the organisation can have is a plugin with a feature pack: see xref:applicationTypes#customizingGeneration[Customizing What a New Application Gets]. A preset and a feature pack add to an application of one of the types. Neither has a skeleton that takes the place of the files Grails generates or that makes several projects, and neither extends another; those parts of a profile are converted by hand, as the page on presets describes.
 
 |The commands of a profile (`commands/*.groovy`, `commands/*.yml`)
 |The commands of the `grails` command line, the commands an application or a plugin brings as classes (xref:commandLine#creatingCustomCommands[Creating Custom Commands]) and the scripts of a project (xref:commandLine#creatingCustomScripts[Creating Custom Scripts]). A feature pack brings no commands.

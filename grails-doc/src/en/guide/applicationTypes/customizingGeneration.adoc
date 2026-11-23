@@ -31,7 +31,7 @@ $ grails create-app com.example.shop --features acme-audit --feature-catalog htt
 <2> From a directory, for a pack that is being written.
 <3> By the name of the feature, where a feature catalog that you name says which plugin has it, and in which version.
 
-To give the applications of an organisation their own starting point, with the dependencies, the settings and the files every one of them has, write a plugin with a feature pack and publish it to the repository of the organisation. A pack can add dependencies, BOMs and build plugins, build script code, configuration, and files from templates, and can require other features or refuse to be used with them. A pack only adds: it cannot change a setting, a dependency version or a file that another feature of the application gives it.
+To give the applications of an organisation their own starting point, with the dependencies, the settings and the files every one of them has, write a plugin with a feature pack and publish it to the repository of the organisation; or write a _preset_, which also names the type of application, gives the options their defaults and asks for features, and which an application is made from with `--preset`: see xref:applicationTypes#presets[Making Applications from a Preset]. A pack can add dependencies, BOMs and build plugins, build script code, configuration, and files from templates, and can require other features or refuse to be used with them. A pack only adds: it cannot change a setting, a dependency version or a file that another feature of the application gives it.
 
 A feature pack is code: what it adds to the build is run by Gradle, and it writes files into the application. Use a pack, a repository and a catalog only when you trust where they come from.
 

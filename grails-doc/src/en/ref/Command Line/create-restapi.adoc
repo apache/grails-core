@@ -47,6 +47,7 @@ These are the options of `grails create-restapi`:
 - `--subproject`: Create the project as a project of the Gradle build the directory is in, with the files of the application only.
 - `--list-features`: Output the available features and their descriptions. See link:list-features.html[--list-features].
 - `--feature-pack-dir=DIRECTORY`, `--feature-pack-repository=URL`, `--feature-pack-sha256=COORDINATES=SHA256`, `--feature-catalog=URL`, `--list-catalog-features`, `--refresh`, `--offline`: For the feature of a plugin that has a feature pack.
+- `--preset=PRESET`: The preset the project is made from: a preset for the `rest-api` type, given as the coordinates of its artifact (`group:artifact:version`), as a jar or a directory by a path with a `/` in it, or by its name in a feature catalog. An option given on the command line is used in place of the one of the preset. See link:{guidePath}applicationTypes.html#presets[Making Applications from a Preset].
 - `-h, --help`: Show the help of the command and exit.
 
 Each option is described in link:{guidePath}commandLine.html#creatingProject[Creating a Grails Project], and what the types of application and their features are in link:{guidePath}applicationTypes.html[Application Types, Features and Feature Packs].
@@ -86,4 +87,14 @@ $ grails create-restapi --inplace
 [source,console]
 ----
 $ grails create-restapi --list-features
+----
+
+5. Create a REST API application from the preset of an organisation, with Hibernate 7 in place of the Grails Data implementation the preset gives:
++
+[source,console]
+----
+$ grails create-restapi com.acme.payments \
+    --preset com.acme:acme-service-preset:1.0.0 \
+    --feature-pack-repository https://repo.acme.example/maven \
+    --data hibernate7
 ----

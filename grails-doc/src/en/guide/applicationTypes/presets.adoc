@@ -1,0 +1,213 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+A _preset_ is what an organisation or a team gives every new application of one kind: it names the type of application, gives the options of the `create-` commands their defaults, asks for features, and can add dependencies, configuration and files as a feature pack does. A preset is a pack of the kind `preset`: the same descriptor, templates, checks and distribution as a feature pack, published in a jar of its own. It takes the place of a profile of your own for what a profile gave a new application; xref:applicationTypes#profilesReplaced[What Became of Profiles] says what a preset does not do.
+
+
+==== Making an Application from a Preset
+
+
+A preset is given to the `create-` command of its type of application with `--preset`, in the forms a feature pack is given in:
+
+[source,console]
+----
+$ grails create-restapi com.acme.payments --preset com.acme:acme-service-preset:1.0.0 <1>
+$ grails create-restapi com.acme.payments --preset ./acme-service-preset <2>
+$ grails create-restapi com.acme.payments --preset acme-service --feature-catalog https://catalog.acme.example/index.json <3>
+----
+<1> By the coordinates of the artifact that has the preset. It is taken as the jar of a feature pack is: from the repositories of `GRAILS_REPO_URL` and then Maven Central, or from those `--feature-pack-repository` names, and `--feature-pack-sha256` with the same coordinates says which jar it has to be.
+<2> From a directory, for a preset that is being written, or from a jar. A path has a `/` in it or ends with `.jar`: a directory of the current directory is given as `./acme-service-preset`.
+<3> By its name, in a feature catalog that you name and that records the preset, as the name of a feature is looked up.
+
+The command says which preset it uses and what the preset adds, before the application is written:
+
+[source,console]
+----
+| Preset acme-service from com.acme:acme-service-preset:1.0.0 (https://repo.acme.example/maven), sha256 5f2c...
+    the jar matches the sha256 checksum the repository publishes for it
+    dependencies: implementation com.acme:acme-logging:1.2.0
+    configuration: 1 setting
+    files it writes outside the sources: TEAM.md
+| Application created at /home/me/payments
+----
+
+An application is made from one preset, and the preset is for one type of application. `create-app --preset acme-service`, for a preset of REST APIs, is refused with exit code 2 and names the command that takes it, `create-restapi`; nothing is created.
+
+What the application gets is decided in this order:
+
+[cols="1,3"]
+|===
+|What |Where it comes from
+
+|The options `--data`, `--servlet`, `--reloading` and `--jdk`
+|An option that is given on the command line, else the one of the preset, else the default of Grails. The servlet container and the reloading of a preset are defaults, as those of Grails are: a feature that requires another servlet container or another way of reloading is given it, where the same option on the command line is a choice and such a feature is refused. The Grails Data implementation of a preset is kept as one given with `--data` is, except Hibernate 5, which gives way to Hibernate 7 as the default of Grails does: a feature that needs another implementation is refused, and `--data` on the command line chooses another one.
+
+|The features
+|The features the preset asks for, the features given with `--features`, and the features each of them requires, all selected before the defaults of the type of application are chosen; then the defaults. The features of a preset are selected with it as the features a feature requires are: `--exclude-features` cannot leave one out, and the command says so.
+
+|What is added to the build, the configuration and the files
+|Grails, the features, and the preset, which adds what its descriptor says as a feature pack adds it. A preset only adds: it cannot write a file that Grails or another feature writes, such as `build.gradle`, and it cannot give a setting, a build property or a dependency another value than another feature gives it. Such an application is refused before anything of it is written.
+|===
+
+A feature a preset asks for is a feature of Grails, or the feature of a feature pack that is given to the same command, by coordinates, with `--feature-pack-dir` or by its name in a feature catalog. A preset does not fetch the packs of other plugins by itself.
+
+The record of the application under `.grails` says which preset it was made from: `preset` in `.grails/project.yml` names it, and it is among the requested features there with the coordinates and the version of its artifact, as a feature pack that was taken by coordinates is. The lock, `.grails/forge.lock.yml`, has it as a feature of the source `pack`, with the SHA-256 of the jar and the catalog it was named by. `project show` prints a `preset` line, and the command it prints to create the application again has `--preset` with the coordinates and `--feature-pack-sha256` with the SHA-256. The record does not say where a preset that was given as a directory or a jar was: `project show` says so in a line of its own, and the preset is then given to the command again with `--preset`.
+
+The artifact of a preset is not a dependency of the application: whatever the application needs is what the descriptor of the preset adds to it, and no word is said of the preset's own coordinates in the build.
+
+After the application is created, it is one with the feature of a pack that is not part of Grails: `feature add` and `project regenerate` refuse it in this version, as they refuse an application with the feature of a feature pack.
+
+A preset is code: its templates run when the application is generated, and what it adds to the build runs when the application is built. Use a preset, a repository and a catalog only when you trust where they come from.
+
+
+==== Writing a Preset
+
+
+A preset is kept as a feature pack is, in `src/main/forge` of a project of its own, with a descriptor whose `kind` is `preset`:
+
+[source,yaml]
+.src/main/forge/feature.yml
+----
+format: 1
+kind: preset
+templateApi: 1
+name: acme-service
+compatibility:
+  grails: '[9.0.0,10.0.0)'
+  forge: '[9.0.0,10.0.0)'
+title: Acme Service
+description: How Acme makes a REST service
+applicationType: rest-api
+options: { data: hibernate7, servlet: undertow, jdk: 25 }
+features: [database-migration, grails-quartz]
+dependencies:
+  - scope: implementation
+    coordinates: com.acme:acme-logging
+    version: '1.2.0'
+configuration:
+  acme.service.team: payments
+files:
+  - from: TEAM.md.gsp
+    to: TEAM.md
+readme: This service follows the Acme service guidelines.
+----
+
+[cols="1,3"]
+|===
+|Key |Meaning
+
+|`kind`
+|Required. `preset`.
+
+|`applicationType`
+|Required. The one type of application the preset is for: `web`, `rest-api`, `plugin`, `web-plugin` or `rest-api-plugin`.
+
+|`options`
+|Optional. The defaults the preset gives the options of the `create-` commands, written as the options take them: `data` (`hibernate5`, `hibernate7`, `mongodb`, `neo4j`), `servlet` (`tomcat`, `jetty`, `undertow`, `none`), `reloading` (`devtools`, `jrebel`, `none`) and `jdk` (a version of Java the `create-` commands offer, as a number).
+
+|`features`
+|Optional. The features the preset asks for: features of Grails, or the features of packs that are given to the same command.
+
+|`conflicts`
+|Optional. Features an application made from the preset cannot have.
+
+|`format`, `templateApi`, `name`, `compatibility`, `title`, `description`, `documentation`, `thirdPartyDocumentation`, `dependencies`, `platforms`, `buildPlugins`, `build`, `configuration`, `files`, `readme`, `instructions`
+|As in the descriptor of a feature pack: see xref:plugins#forgeFeaturePacks[Adding a Feature to Application Creation]. The templates of a preset have the names of the template API a feature pack has; `pack.name` is the name of the preset.
+|===
+
+A preset has no `applicationTypes`, `requires`, `oneOf` or `category`, and a feature pack has no `applicationType`, `options` or `features`: a descriptor with a key of the other kind is refused with a message that says what to write instead. A preset is not selected with `--features`, is not listed by `--list-features`, and cannot extend another preset. The parameters of a preset, values a template would be given on the command line, are not read in this version.
+
+The project of a preset needs no classes and no dependencies: its jar is the pack. With the `org.apache.grails.gradle.grails-plugin` Gradle plugin applied, the build packages `src/main/forge` into `META-INF/grails-forge` of the jar and records the name of the preset in the jar's manifest as `Grails-Forge-Pack`, as it does for a feature pack. The same tasks check and test it:
+
+* `checkForgePack`, which `check` runs, reads the preset as the `create-` commands read it and renders each of its templates for sample applications of its type.
+* `forgePackTest` generates an application from the preset and builds it. Without fixtures there is one, of the type of the preset, named after the type, with the options of the preset; a fixture that is named in `grails { forgePackTest { fixture(...) } }` and gives an option has it in place of the one of the preset, and the type of a fixture has to be that of the preset.
+
+[source,groovy]
+.build.gradle
+----
+plugins {
+    id 'org.apache.grails.gradle.grails-plugin'
+    id 'maven-publish'
+}
+
+group = 'com.acme'
+version = '1.0.0'
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            from components.java
+        }
+    }
+    repositories {
+        maven {
+            url = 'https://repo.acme.example/maven'
+        }
+    }
+}
+----
+
+`./gradlew publish` checks the preset before the jar is published, and `grails create-restapi com.acme.payments --preset com.acme:acme-service-preset:1.0.0 --feature-pack-repository https://repo.acme.example/maven` then makes an application from it. The project and the build of a preset are those of a feature pack in every other way; xref:plugins#forgeFeaturePacks[Adding a Feature to Application Creation] describes the layout, the templates and how a pack is tested.
+
+A feature catalog names a preset as it names a feature pack: in the plugin index format, a version of a plugin with a `pack` whose `kind` is `preset` and whose `name` is the name of the preset, with the SHA-256 of the jar. `applicationTypes`, with the type of the preset, lets the catalog leave the preset out for another type before the jar is fetched. `--list-catalog-features` lists features and not presets.
+
+
+==== Converting a Profile of Your Own to a Preset
+
+
+A profile of your own had a skeleton of files, features, the dependencies and settings of its features, and commands, and could extend another profile. What it gave a new application converts to a preset:
+
+[cols="2,3"]
+|===
+|In the profile |In the preset
+
+|The profile it extends, `web` or `rest-api`
+|`applicationType`. A profile that extends another profile of your own is written as one preset with what both give.
+
+|The default features, in `profile.yml`
+|`features`. A feature that Grails 9 has under another name, or does not have, is given its Grails 9 name or written into the preset itself.
+
+|The dependencies of `profile.yml` and the `build.gradle` the profile gave
+|`dependencies`, `platforms`, `buildPlugins`, `build.properties` and `build.extensions`. A dependency whose version the Grails BOM manages is written without a version.
+
+|The `application.yml` and other configuration of the skeleton
+|`configuration`, with the settings of an environment under `environments.<name>`.
+
+|A file of the skeleton that Grails does not write, such as a `README` of the team, a class or a configuration file of a tool
+|An entry of `files`, as it is or as a template with the names of the project.
+
+|The commands of the profile, `commands/*.groovy` and `commands/*.yml`
+|Not in a preset. The commands of a plugin (xref:commandLine#creatingCustomCommands[Creating Custom Commands]) or the scripts of a project (xref:commandLine#creatingCustomScripts[Creating Custom Scripts]).
+|===
+
+What does not convert, and is converted by hand:
+
+* *A file of the skeleton that takes the place of one Grails writes*, such as `build.gradle`, `settings.gradle`, `gradle.properties`, `application.yml` as a whole, `Application.groovy` or `UrlMappings.groovy`. A preset cannot write such a file. Give what the file adds as dependencies, build blocks and settings of the preset, which Grails puts into the file it writes. What cannot be said so, such as a `build.gradle` of another structure, is changed in each application after it is created, or by a plugin of the build that applies it.
+* *A skeleton of several projects*, such as an application with a plugin beside it in one Gradle build. A preset makes one application. Create the build of several projects once, by hand or from a template repository of your own, and add an application to it with `create-` and `--subproject`, from the preset: see xref:commandLine#creatingProject[Creating a Grails Project].
+* *A profile that extends a profile of your own.* A preset does not extend another preset: write one preset with what the two give, or one preset for each kind of application and feature packs for what they share, which every preset then asks for in `features`.
+* *Features of the profile that are files of the profile*, in `features/<name>/skeleton`. Each converts to a feature pack in a plugin of its own, or into the preset when every application of the preset has it.
+
+To convert a profile:
+
+. Create a project for the preset, with the `org.apache.grails.gradle.grails-plugin` Gradle plugin and `src/main/forge/feature.yml`, and give it the coordinates the profile had, with a new version.
+. Write the descriptor from `profile.yml` and the profiles it extends, by the table above: the type, the features, the dependencies and the configuration.
+. Copy each file of the skeleton that Grails does not write into `src/main/forge/templates`, and name it in `files`; give the ones that have the name or the package of the project the extension `.gsp` and the names of the template API in place of the tokens of the profile, such as `${project.packageName}` for `@grails.codegen.defaultPackage@`.
+. For each file of the skeleton that Grails writes too, compare the two, and move what the profile adds into the descriptor.
+. Run `./gradlew checkForgePack forgePackTest` and compare the application the fixture has with one the profile created with Grails 8.
+. Publish the preset, and replace `--profile <coordinates>` with `--preset <coordinates>` in what creates your applications.

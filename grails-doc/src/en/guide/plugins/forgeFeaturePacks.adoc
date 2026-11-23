@@ -83,7 +83,7 @@ readme: The audit trail is configured in `AuditConfig`.
 |Key |Meaning
 
 |`format`, `kind`, `templateApi`
-|Required. `1`, `feature` and `1`.
+|Required. `1`, `feature` and `1`. A descriptor whose `kind` is `preset` is that of a preset, which an application is made from: see xref:applicationTypes#presets[Making Applications from a Preset].
 
 |`name`
 |Required. The name the feature is selected by: lowercase letters, digits and single hyphens, starting with a letter. It cannot be the name of a feature Grails offers.

@@ -17,7 +17,7 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-What a new Grails project is made of is decided by two things when it is created: the _type_ of the application, which is the command that creates it, and the _features_ it has. A plugin can add features of its own with a _feature pack_. Before Grails 9 a project was created from a _profile_; the last section of this chapter says what became of profiles.
+What a new Grails project is made of is decided by two things when it is created: the _type_ of the application, which is the command that creates it, and the _features_ it has. A plugin can add features of its own with a _feature pack_, and an organisation can give its applications of one type their options, features and files with a _preset_. Before Grails 9 a project was created from a _profile_; the last section of this chapter says what became of profiles.
 
 There is one command for each type of application:
 

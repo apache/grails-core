@@ -245,6 +245,14 @@ The "create-*" commands are used to produce a fundamental Grails project, allowi
 --features acme-audit --feature-catalog https://catalog.acme.example/index.json
 ----
 
+| --preset
+| The preset the project is made from: a pack of an organisation or a team that is for the type of the project, gives the options their defaults, asks for features and adds dependencies, configuration and files as a feature pack does. It is given as the coordinates of its artifact, `group:artifact:version`, which are taken from the repositories as those of a feature pack are and can be held to a SHA-256 with `--feature-pack-sha256`; as a jar or a directory, by a path with a `/` in it, such as `./acme-preset`; or by its name in a feature catalog. An option given on the command line is used in place of the one of the preset, which is used in place of the default of Grails. A preset of another type of project is refused with exit code 2, and so is a feature pack. Given once. A preset is code: use one only when you trust where it comes from. See xref:applicationTypes#presets[Making Applications from a Preset].
+|
+[source,shell]
+----
+--preset com.acme:acme-service-preset:1.0.0
+----
+
 | --list-catalog-features
 | Output the features of the feature catalogs that can be selected by their name, with the plugin and the version each would be taken from. `--list-features` reads a catalog only when a name given with `--features` has to be looked up.
 |
@@ -374,6 +382,7 @@ $ ./grailsw project show
     --feature-pack-repository  (none)  (default)
     --feature-pack-sha256      (none)  (default)
     --feature-catalog          (none)  (default)
+    --preset                   (none)  (default)
     test framework             spock  (not recorded: the only one this version generates)
     build tool                 gradle  (not recorded: the only one this version generates)
 | Of the 30 features, 1 was asked for (--features above) and 29 came with the application type, with an option or with another feature:
@@ -404,6 +413,8 @@ The list of options has every option of the `create-` command that decides somet
 The line after the options tells the features that were asked for from the ones the application has because of its type, an option or another feature; the record does not say which of the three brought a feature in.
 
 The command line names the application with its package, each option whose recorded value is not the default of the `create-` commands of the running version (`--subproject` among them), the features that were asked for (`--features`) and those that were left out (`--exclude-features`). A feature pack that was selected by the coordinates of its plugin is named by those coordinates, with `--feature-pack-sha256` for the SHA-256 of the jar that was used and `--feature-pack-repository` for the repository, when the record has its address. An argument that a shell would act on is written between single quotes, so the line can be pasted into a POSIX shell as it is. Run by the version of Grails that generated the project, in an empty directory, it gives the same application with the same record. Three things the record does not hold are said in a line before the command, when they apply: a feature pack that was given as a directory (`--feature-pack-dir`), a repository whose address is not recorded, and the repositories of the `GRAILS_REPO_URL` environment variable, which has to be set to the same ones. `--json` writes the same as one JSON document, for a tool: the record (`applicationType`, `name`, `defaultPackage`, `grailsVersion`, `generator` with the `name`, the `version` and the `sha256` of the build that wrote the record, `options`, `requestedFeatures`, `excludedFeatures`, `repositories`, `features`), the command as `command.name`, `command.arguments` and `command.line`, those lines as `notes`, the list of options as `effectiveOptions` and the features that were not asked for as `addedFeatures`. An entry of `effectiveOptions` has a `name`, the `option` of the `create-` commands where there is one, the `value`, the `default` of the running command line where there is one, and a `status`: `default`, `differs`, `not-recorded`, or `recorded` for the type, the name and the version of Grails, which have no default. The keys are always in the same order. `format` is 1; a member that is added to the document later comes after the ones that are there and does not change the format, so a tool ignores a member it does not know.
+
+An application that was made from a preset has a `preset` line in what `project show` prints, with the coordinates and the version of its artifact, and the command names the preset with `--preset` and those coordinates, with `--feature-pack-sha256` for the SHA-256 of its jar; the preset is not among the `--features` of the command. A preset that was given as a directory or a jar is not named by the record, which a line before the command says. `--json` has the member `preset`, with its `name`, `coordinates` and `version`, only for an application that was made from one.
 
 `project regenerate` generates the application again from the record, without a command line to copy, and changes nothing in the project:
 
