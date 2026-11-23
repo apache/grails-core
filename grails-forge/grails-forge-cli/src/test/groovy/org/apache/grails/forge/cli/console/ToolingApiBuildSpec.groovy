@@ -163,6 +163,8 @@ class ToolingApiBuildSpec extends CommandSpec {
         command                                                                                 | requested                                                                                                                                                    | ran
         ['compile']                                                                             | 'requested=<:classes> system=[:] project=[:] log=LIFECYCLE stacktrace=INTERNAL_EXCEPTIONS console=Auto'                                                      | 'classes phase=[] tests=[] rerun=false debug=false argsFile=false env=null'
         ['compile', '--stacktrace', '--verbose', '-Da=b', '--', '--offline']                    | 'requested=<:classes> system=[a:b, grails.full.stacktrace:true] project=[:] log=INFO stacktrace=ALWAYS console=Auto'                                         | 'classes phase=[] tests=[] rerun=false debug=false argsFile=false env=null'
+        ['compile', '--', '--', 'jar']                                                          | 'requested=<:classes><jar> system=[:] project=[:] log=LIFECYCLE stacktrace=INTERNAL_EXCEPTIONS console=Auto'                                                 | 'classes phase=[] tests=[] rerun=false debug=false argsFile=false env=null\njar phase=[] tests=[] rerun=false debug=false argsFile=false env=null'
+        ['compile', '--', '--offline', '--', 'jar']                                             | 'requested=<:classes><jar> system=[:] project=[:] log=LIFECYCLE stacktrace=INTERNAL_EXCEPTIONS console=Auto'                                                 | 'classes phase=[] tests=[] rerun=false debug=false argsFile=false env=null\njar phase=[] tests=[] rerun=false debug=false argsFile=false env=null'
         ['clean']                                                                               | 'requested=<:clean> system=[:] project=[:] log=LIFECYCLE stacktrace=INTERNAL_EXCEPTIONS console=Auto'                                                        | 'clean phase=[] tests=[] rerun=false debug=false argsFile=false env=null'
         ['war', '--clean']                                                                      | 'requested=<:clean><:assemble> system=[grails.env:production] project=[:] log=LIFECYCLE stacktrace=INTERNAL_EXCEPTIONS console=Auto'                         | 'clean phase=[] tests=[] rerun=false debug=false argsFile=false env=production\nassemble phase=[] tests=[] rerun=false debug=false argsFile=false env=production'
         ['test-app', '--unit', 'BookSpec', '--tests', 'a.*', '--clean', '--debug-jvm']          | 'requested=<:testApp><--phase><unit><--tests><BookSpec><--tests><a.*><--rerun-tests><--debug-jvm> system=[grails.env:test] project=[:] log=LIFECYCLE stacktrace=INTERNAL_EXCEPTIONS console=Auto' | 'testApp phase=[unit] tests=[BookSpec, a.*] rerun=true debug=true argsFile=false env=test'
@@ -179,7 +181,7 @@ class ToolingApiBuildSpec extends CommandSpec {
 
         then:
         exit == 0
-        new File(dir, 'wrapper-was-run.txt').text == "<:shell><--debug-jvm><--quiet><-Dgrails.env=development>${pathCheck(dir)}\n"
+        new File(dir, 'wrapper-was-run.txt').text == "${pathCheck(dir)}<:shell><--debug-jvm><--quiet><-Dgrails.env=development>\n"
         !new File(dir, 'requested.txt').exists()
     }
 
@@ -374,7 +376,7 @@ class ToolingApiBuildSpec extends CommandSpec {
 
         then:
         exit == 0
-        new File(dir, 'wrapper-was-run.txt').text == "<:classes>${argument.collect { "<${it}>" }.join('')}${pathCheck(dir)}\n"
+        new File(dir, 'wrapper-was-run.txt').text == "${pathCheck(dir)}<:classes>${argument.collect { "<${it}>" }.join('')}\n"
         !new File(dir, 'requested.txt').exists()
 
         where:
@@ -466,7 +468,7 @@ class ToolingApiBuildSpec extends CommandSpec {
         then:
         exit == 0
         errors() == []
-        new File(dir, "${runIn}/wrapper-was-run.txt").text == "<:classes>${pathCheck(new File(dir, runIn))}\n"
+        new File(dir, "${runIn}/wrapper-was-run.txt").text == "${pathCheck(new File(dir, runIn))}<:classes>\n"
         !new File(dir, 'requested.txt').exists()
 
         where:
@@ -507,7 +509,7 @@ class ToolingApiBuildSpec extends CommandSpec {
         refused.message.contains('the Gradle wrapper of Windows is a batch file')
     }
 
-    // what the wrapper is given after the arguments of a command that names the tasks of the project as those of the root, see ProjectPathCheck
+    // what the wrapper is given in front of the arguments of a command that names the tasks of the project as those of the root, see ProjectPathCheck
     private static String pathCheck(File project) {
         return "<--init-script><${new File(project.canonicalFile, '.grails/run/project-path.gradle').path}>"
     }

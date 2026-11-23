@@ -36,20 +36,32 @@ import groovy.transform.CompileStatic
  * that other project, which can be another application that succeeds.
  *
  * <p>Which project the directory is cannot be told without the settings, and they are a program: a
- * settings plugin or an applied script can move any project anywhere. So Gradle itself is asked, in the
- * build the command runs and at no other time: it is given an init script that, once the settings are
- * evaluated and before any project is configured, compares the directory of the project of the path with
- * the directory Gradle was started in, and fails the build when they are not the same, with a message
- * that says which project the directory is and which directory the path is. Nothing is run then. The
- * script is the same for every build of the project, and Gradle compiles it once for the project; what it
- * costs a build could not be told apart from the time of the same build without it (some 420 ms for a
- * build that has nothing to do, with or without it). Where the settings give the directory the path its
- * directories give, which they do where a project is included by its directory, nothing else differs.</p>
+ * settings plugin, an applied script or a callback the settings register ({@code gradle.settingsEvaluated})
+ * can move any project anywhere. So Gradle itself is asked, in the build the command runs and at no other
+ * time: it is given an init script that, once Gradle has made the projects of the build from the settings
+ * and before any project is configured, compares the directory of the project of the path with the
+ * directory Gradle was started in, and fails the build when they are not the same, with a message that
+ * says which project the directory is and which directory the path is. Nothing is run then. What is
+ * compared is the projects Gradle made, and not what the settings say while they are evaluated: every
+ * callback of the settings has run by then, the one an init script registers first among them, and the
+ * directory of a project that was made does not change. A directory that is in no project of the build
+ * Gradle refuses itself before that, once the callbacks have run, saying that it is not part of the
+ * build; nothing is run then either. The script is the same for every build of the project, and Gradle
+ * compiles it once for the project; what it costs a build could not be told apart from the time of the
+ * same build without it (some 420 ms for a build that has nothing to do, with or without it). Where the
+ * settings give the directory the path its directories give, which they do where a project is included
+ * by its directory, nothing else differs.</p>
+ *
+ * <p>A build that reuses an entry of the configuration cache of Gradle evaluates no settings and runs no
+ * script, this one neither. Such an entry is one a build stored that the script let through, since Gradle
+ * does not reuse what a build that failed stored, and Gradle reuses it only for the same tasks, the same
+ * script and settings that read what they read then: the projects are the ones that were compared.</p>
  *
  * <p>The script is a file of {@code .grails/run} of the project ({@link RunDirectory}), which only its
  * owner can write, and it is written there only when what is there is not the script: a build that reads
  * it while another command writes it reads the one or the other. Its path is the same for every build of
- * the project, which the configuration cache of Gradle needs to reuse an entry.</p>
+ * the project, which the configuration cache of Gradle needs to reuse an entry. Gradle is given it before
+ * the arguments of the command, which can end the options of Gradle with a {@code --} of their own.</p>
  *
  * @since 9.0
  */
@@ -71,29 +83,30 @@ final class ProjectPathCheck {
         // root project where the directory has the settings of a build. Gradle is started in the directory of the
         // project and given this script with those tasks, and the build fails here, before any project is
         // configured, where the path is not the project of that directory: the settings of a build can give the
-        // directory another path, and the path to another directory, whose tasks would run in its place.
+        // directory another path, and the path to another directory, whose tasks would run in its place. The
+        // projects compared are those Gradle made once the settings, and every callback of them, were done.
         if (gradle.parent == null) {
-            gradle.settingsEvaluated { settings ->
+            gradle.projectsLoaded { loaded ->
                 String named = 'PROJECT_PATH'
-                File here = settings.startParameter.currentDir.canonicalFile
-                def project = settings.findProject(named)
+                File here = loaded.startParameter.currentDir.canonicalFile
+                def project = loaded.rootProject.findProject(named)
                 File there = project == null ? null : project.projectDir.canonicalFile
                 if (there == here) {
                     return
                 }
                 def found = null
-                List left = [settings.rootProject]
+                List left = [loaded.rootProject]
                 while (found == null && !left.isEmpty()) {
                     def each = left.remove(0)
                     if (each.projectDir.canonicalFile == here) {
                         found = each
                     }
-                    left.addAll(each.children)
+                    left.addAll(each.childProjects.values())
                 }
                 String asked = named == ':' ? 'as those of the root project of the build, which its settings make it,' : "by the path its directories give, ${named},"
                 String what = found == null ? 'no project of this build is in that directory' : "in this build the project in that directory is ${found.path}"
                 String where = project == null ? "the build has no project ${named}" : (named == ':' ? "the root project is in ${there}" : "${named} is the project in ${there}")
-                String task = settings.startParameter.taskNames.find { String requested -> requested.startsWith(named == ':' ? ':' : named + ':') }
+                String task = loaded.startParameter.taskNames.find { String requested -> requested.startsWith(named == ':' ? ':' : named + ':') }
                 String name = task == null ? 'TASK' : task.substring(task.lastIndexOf(':') + 1)
                 String advice
                 if (found != null) {
@@ -117,7 +130,8 @@ final class ProjectPathCheck {
      *
      * @param project the project
      * @param path the path the tasks of the project were named by, {@code :} for the root project of a build
-     * @return the arguments that give Gradle the script
+     * @return the arguments that give Gradle the script, which go in front of the arguments of the command:
+     * an option of Gradle is one only before a {@code --}
      * @throws IOException with one line, when the script cannot be written
      */
     static List<String> arguments(ConsoleProject project, String path) throws IOException {

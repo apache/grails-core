@@ -374,9 +374,10 @@ final class GradleRunner extends GradleBuild {
         }
         command.add(wrapper.toString())
         command.addAll(PlainOutput.forGradle(arguments))
-        command.addAll(arguments)
-        // an option of Gradle, which it reads wherever it stands: after what the command gives it, which stays as it was
+        // options of Gradle, which are options only before a --: in front of what the command gives it, which
+        // can have a -- of its own after which every argument is a task or an option of one, and stays as it was
         command.addAll(checked)
+        command.addAll(arguments)
         return command
     }
 

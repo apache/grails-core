@@ -84,7 +84,7 @@ class GradleRunnerChoiceSpec extends CommandSpec {
         then:
         exit == 1
         errors() == [OF_THE_WRAPPER]
-        wrapperWasAsked() == ["<:testApp><--phase><unit><-Dgrails.env=test>${pathCheck()}".toString()]
+        wrapperWasAsked() == ["${pathCheck()}<:testApp><--phase><unit><-Dgrails.env=test>".toString()]
         !toolingApiWasAsked()
         !ToolingApiRunner.connectionKept
 
@@ -106,7 +106,7 @@ class GradleRunnerChoiceSpec extends CommandSpec {
         then:
         exit == 1
         errors() == [OF_THE_WRAPPER]
-        wrapperWasAsked() == ["<:classes>${pathCheck()}".toString()]
+        wrapperWasAsked() == ["${pathCheck()}<:classes>".toString()]
         !toolingApiWasAsked()
     }
 
@@ -178,7 +178,7 @@ class GradleRunnerChoiceSpec extends CommandSpec {
         then:
         exit == 1
         errors() == [OF_THE_WRAPPER]
-        wrapperWasAsked() == ["<:testApp><--phase><unit><-Dgrails.env=test>${pathCheck()}".toString()]
+        wrapperWasAsked() == ["${pathCheck()}<:testApp><--phase><unit><-Dgrails.env=test>".toString()]
         !toolingApiWasAsked()
         ToolingApiRunner.connectionsMade == before
         !ToolingApiRunner.connectionKept
@@ -196,18 +196,19 @@ class GradleRunnerChoiceSpec extends CommandSpec {
         then:
         exit == 1
         wrapperWasAsked().size() == 1
-        wrapperWasAsked()[0].startsWith(asked)
+        wrapperWasAsked()[0].startsWith((checked ? pathCheck() : '') + asked)
         !toolingApiWasAsked()
 
         where:
-        command                                                    | value         | asked                   | why
-        ['gradle', 'classes', '--status']                          | ''            | '<classes><--status>'   | 'what follows gradle is Gradle\'s to read'
-        ['gradle', 'classes']                                      | 'tooling-api' | '<classes>'             | 'what follows gradle is Gradle\'s to read'
-        ['shell']                                                  | ''            | '<:shell><--quiet>'     | 'what is typed is the shell\'s until it is left'
-        ['shell']                                                  | 'tooling-api' | '<:shell><--quiet>'     | 'what is typed is the shell\'s until it is left'
-        ['run-app', '--port', freePort(), '--ready-timeout', '30'] | ''            | '<:bootRun><--quiet>'   | 'the application is left running there, and its build has to go on without the console'
-        ['run-app', '--port', freePort(), '--ready-timeout', '30'] | 'tooling-api' | '<:bootRun><--quiet>'   | 'the application is left running there, and its build has to go on without the console'
-        ['compile', '--', '--no-daemon']                           | ''            | '<:classes><--no-daemon>' | 'the argument is one the program gradle reads itself'
+        command                                                    | value         | checked | asked                     | why
+        ['gradle', 'classes', '--status']                          | ''            | false   | '<classes><--status>'     | 'what follows gradle is Gradle\'s to read'
+        ['gradle', 'classes']                                      | 'tooling-api' | false   | '<classes>'               | 'what follows gradle is Gradle\'s to read'
+        ['shell']                                                  | ''            | true    | '<:shell><--quiet>'       | 'what is typed is the shell\'s until it is left'
+        ['shell']                                                  | 'tooling-api' | true    | '<:shell><--quiet>'       | 'what is typed is the shell\'s until it is left'
+        ['run-app', '--port', freePort(), '--ready-timeout', '30'] | ''            | true    | '<:bootRun><--quiet>'     | 'the application is left running there, and its build has to go on without the console'
+        ['run-app', '--port', freePort(), '--ready-timeout', '30'] | 'tooling-api' | true    | '<:bootRun><--quiet>'     | 'the application is left running there, and its build has to go on without the console'
+        ['compile', '--', '--no-daemon']                           | ''            | true    | '<:classes><--no-daemon>' | 'the argument is one the program gradle reads itself'
+        ['compile', '--', '--no-daemon', '--', 'helpful']          | ''            | true    | '<:classes><--no-daemon><--><helpful>' | 'the argument is one the program gradle reads itself'
     }
 
     void "in the interactive console a run-app that stays with the application is a build of the console, and is asked of the Tooling API"() {
@@ -248,7 +249,7 @@ class GradleRunnerChoiceSpec extends CommandSpec {
         true        | 'in the interactive console'
     }
 
-    // what Gradle is given after the arguments of a command that names the tasks of the project as those of the root, see ProjectPathCheck
+    // what Gradle is given in front of the arguments of a command that names the tasks of the project as those of the root, see ProjectPathCheck
     private String pathCheck() {
         return "<--init-script><${new File(dir.canonicalFile, '.grails/run/project-path.gradle').path}>"
     }

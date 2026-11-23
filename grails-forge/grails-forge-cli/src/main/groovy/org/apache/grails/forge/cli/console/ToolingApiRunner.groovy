@@ -69,7 +69,8 @@ import org.gradle.tooling.ResultHandler
  * the connection as it was.</p>
  *
  * <p><strong>What the build is given.</strong> The arguments as the command put them together, tasks
- * and options alike, in their order. Of the system properties of this JVM none: a build has those that
+ * and options alike, in their order, after what the command line adds in front of them as the wrapper is
+ * given it ({@link ProjectPathCheck}). Of the system properties of this JVM none: a build has those that
  * are given to it with {@code -D}. The environment of this JVM. The JVM options of the build are no
  * arguments here: they are those of the Gradle daemon, which {@code org.gradle.jvmargs} sets.</p>
  *
@@ -167,7 +168,8 @@ final class ToolingApiRunner extends GradleBuild {
             return 1
         }
         try {
-            return run(connection, arguments + checked, started)
+            // options of Gradle, which are options only before a --: in front of what the command gives it, as the wrapper is given them
+            return run(connection, checked + arguments, started)
         } finally {
             if (!isKept(connection)) {
                 close(connection)
