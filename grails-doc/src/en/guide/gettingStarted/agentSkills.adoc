@@ -25,7 +25,7 @@ This section is about AI as a development tool. Using AI models from the applica
 |===
 | Skill | Coordinates | Use
 
-| `grails-developer` | `org.apache.grails.skills:grails-developer` | Building Grails applications: controllers, services, GORM, views, plugins, and testing with Spock and Geb
+| `grails-developer` | `org.apache.grails.skills:grails-developer` | Building Grails applications: controllers, services, GORM, views, plugins, testing with Spock and Geb, and the `grails` command line
 | `grails-upgrade` | `org.apache.grails.skills:grails-upgrade` | Upgrading an application from Grails 8 to Grails 9, and from one Grails 9 release to a later one
 | `grails-ai-developer` | `org.apache.grails.skills:grails-ai-developer` | Using AI models from an application: providers, the chat client, streamed answers, configuration and testing, see <<usingAi,Using AI in Your Application>>
 |===

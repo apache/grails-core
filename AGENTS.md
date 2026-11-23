@@ -80,7 +80,7 @@ export GRADLE_OPTS="-Dorg.gradle.jvmargs=-Xmx4G"
 > - **Merging standalone plugin repositories into monorepo** → Read `.agents/skills/mono-repo-integration/SKILL.md`
 > - **Grails application upgrade guidance** (8.x to 9 breaking changes, changes between 9.x releases, Groovy 6, invokedynamic) → Read `.agents/skills/grails-upgrade/SKILL.md`
 > - **Using AI models from a Grails application** (`grails-spring-ai`, Spring AI providers, `ChatClient`, streaming, scripted models in tests) → Read `.agents/skills/grails-ai-developer/SKILL.md`
-> - **Grails web application development** (controllers, views, GORM models, taglibs, services, web MVC) → Read `.agents/skills/grails-developer/SKILL.md`
+> - **Grails web application development** (controllers, views, GORM models, taglibs, services, web MVC, the `grails` command line of an application: `create-app`, `run-app`, `test-app`, `feature add`) → Read `.agents/skills/grails-developer/SKILL.md`
 >
 > Use your file reading capability to load the skill content before proceeding with any code changes.
 
@@ -95,7 +95,7 @@ export GRADLE_OPTS="-Dorg.gradle.jvmargs=-Xmx4G"
 | **mono-repo-integration** | Merging standalone Grails plugin repos | `.agents/skills/mono-repo-integration/SKILL.md` | Monorepo integration, subproject wiring, BOM registration |
 | **grails-upgrade** | Upgrading applications from Grails 8.x to 9, and between 9.x releases | `.agents/skills/grails-upgrade/SKILL.md` | Application upgrade guide, changes of each release, Groovy 6 baseline, invokedynamic compilation |
 | **grails-ai-developer** | `grails-spring-ai`, Spring AI providers, `ChatClient`, streamed answers | `.agents/skills/grails-ai-developer/SKILL.md` | Using AI models from an application: providers, chat client, streaming, testing |
-| **grails-developer** | Controllers, views, GORM models, taglibs, services, web MVC | `.agents/skills/grails-developer/SKILL.md` | Web applications, REST APIs, GORM, controllers, views, plugins |
+| **grails-developer** | Controllers, views, GORM models, taglibs, services, web MVC, `grails`/`grailsw` commands | `.agents/skills/grails-developer/SKILL.md` | Web applications, REST APIs, GORM, controllers, views, plugins, the command line of an application |
 
 ## Repository Conventions
 
