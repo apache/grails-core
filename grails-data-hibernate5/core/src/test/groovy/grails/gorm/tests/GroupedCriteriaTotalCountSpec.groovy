@@ -20,6 +20,12 @@
 package grails.gorm.tests
 
 import grails.gorm.annotation.Entity
+import grails.orm.PagedResultList
+import org.hibernate.Criteria
+import org.hibernate.criterion.Order
+import org.hibernate.criterion.Projections
+
+import org.grails.orm.hibernate.GrailsHibernateTemplate
 import spock.lang.Issue
 
 @Issue('https://github.com/apache/grails-core/issues/14431')
@@ -64,6 +70,21 @@ class GroupedCriteriaTotalCountSpec extends HibernateGormDatastoreSpec {
         then:
         results == ['a']
         results.totalCount == 2
+    }
+
+    void "totalCount of a grouped criteria that names its root alias counts the groups"() {
+        given: 'a criteria whose root is aliased as i and that groups by a property of it'
+        Criteria criteria = datastore.sessionFactory.currentSession.createCriteria(GroupedCountItem, 'i')
+        criteria.setProjection(Projections.projectionList().add(Projections.groupProperty('i.city')))
+        criteria.addOrder(Order.asc('i.city'))
+        criteria.setMaxResults(2)
+
+        when:
+        def results = new PagedResultList(new GrailsHibernateTemplate(datastore.sessionFactory, datastore), criteria)
+
+        then: 'the page works, and so does the total, which needs the alias on its own query'
+        results == ['a', 'b']
+        results.totalCount == 3
     }
 
     void "totalCount of an ungrouped criteria still counts the rows"() {

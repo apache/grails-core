@@ -70,7 +70,7 @@ public class PagedResultList extends org.grails.orm.hibernate.query.PagedResultL
             totalCount = hibernateTemplate.execute(new GrailsHibernateTemplate.HibernateCallback<>() {
                 public Integer doInHibernate(Session session) throws HibernateException, SQLException {
                     CriteriaImpl impl = (CriteriaImpl) criteria;
-                    Criteria totalCriteria = session.createCriteria(impl.getEntityOrClassName());
+                    Criteria totalCriteria = session.createCriteria(impl.getEntityOrClassName(), impl.getAlias());
                     hibernateTemplate.applySettings(totalCriteria);
 
                     Iterator iterator = impl.iterateExpressionEntries();
