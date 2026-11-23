@@ -181,11 +181,16 @@ processManPages.configure { Sync it ->
     }
 }
 
+// The completion script of the program grails for bash and zsh (build-completion/grails_completion), which the
+// distribution of grails-cli has in its bin directory: written from the command line as the program has it,
+// every command of the command line itself with its options, those of a project among them.
 def buildCompletion = tasks.register('buildCompletion', PicocliBuildCompletionTask)
 buildCompletion.configure { PicocliBuildCompletionTask it ->
     it.outputDirectory.set(layout.buildDirectory.dir('build-completion'))
     it.classpath.from(sourceSets.main.runtimeClasspath)
-    it.mainClass.set(findProperty('rootCommandClass'))
+    it.mainClass.set('org.grails.forge.cli.CompletionScript')
+    // the name of the program, as org.apache.grails.cli.GrailsCli of grails-cli starts the command line
+    it.commandName.set('grails')
 }
 
 // The CLI is distributed through the shadow jar of grails-cli and consumed as a library by it and by

@@ -425,6 +425,29 @@ The usage of every command is laid out for a width of 100 columns, and the list 
 | How many values are taken, as text: one number (`"0"`, `"1"`), or a least and a most number with `..` between them (`"0..1"`), where `*` stands for any number (`"1..*"`).
 |===
 
+[[shellCompletion]]
+=== Completion in a Shell
+
+The binary distribution has a completion script for bash and zsh, `bin/grails_completion`. Loaded into the shell, it completes on the TAB key the commands of `grails` itself, the commands of a project among them, their options, the values of an option that takes one of a few (`--servlet`, `--data`, `--reloading`, `--type`), and the names of features for `--features` of the create commands and for `feature add`. Load it in the file the shell reads when it starts. SDKMAN sets `GRAILS_HOME` to the version in use; with the zip of the distribution it is the directory it was unpacked to.
+
+In bash, in `~/.bashrc`:
+
+[source,bash]
+----
+source "$GRAILS_HOME/bin/grails_completion"
+----
+
+In zsh, in `~/.zshrc`, through the support zsh has for completion scripts of bash:
+
+[source,bash]
+----
+autoload -U +X compinit && compinit
+autoload -U +X bashcompinit && bashcompinit
+source "$GRAILS_HOME/bin/grails_completion"
+----
+
+The script is written when the distribution is built, so it knows the commands and the features of that version of Grails and nothing of a project: it does not offer the commands of the application and its plugins, and it offers to `feature add` every feature of Grails, also one the project has already. The interactive console completes from the project of the current directory: there `feature add` is offered the features the project does not have, and the commands of the application and its plugins are completed by their names. There is no completion script for other shells, such as fish or PowerShell.
+
 === Output for a Program, and Running Without a User
 
 Two options belong to the command line itself and not to one command. They are given in front of the command, and are accepted after the name of a command too:

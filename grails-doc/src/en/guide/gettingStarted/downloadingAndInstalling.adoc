@@ -91,6 +91,8 @@ If Grails is working correctly you should now be able to type `grails --version`
 Grails Version: {version}
 ----
 
+The `bin` directory also has `grails_completion`, a completion script for bash and zsh that completes the commands of `grails`, their options and the names of features on the TAB key once the shell loads it. Installed with SDKMAN, it is `$GRAILS_HOME/bin/grails_completion`. See "Completion in a Shell" in link:commandLine.html[The Command Line] for how to load it.
+
 === Grails Wrapper
 
 A generated project includes a wrapper, `grailsw` (with `grailsw.bat` and `grails-wrapper.jar`), that can be checked into source control.

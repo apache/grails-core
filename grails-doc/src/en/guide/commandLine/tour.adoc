@@ -372,6 +372,8 @@ grails> exit
 
 `run-app` returns to the prompt there once the application answers, and `exit` leaves. Outside a project, `grails` without a command shows the help. See xref:commandLine#interactiveMode[Interactive Mode].
 
+Outside interactive mode, bash and zsh complete the commands of `grails`, their options and the names of features on the TAB key once they have loaded the completion script of the distribution; see "Completion in a Shell" in xref:commandLine[the introduction of this chapter].
+
 === Using the command line from a script or a tool
 
 Every command ends with an exit code: `0` when it did what it was asked, `2` for a mistake in the command line (a command there is not, an unknown option, features that cannot be had together) and `1` for any other failure. `--plain-output` writes plain text without terminal markup, `--non-interactive` never waits for input, and `help --json` describes the commands of the current directory as one JSON document. These are described under "Help" and "Output for a Program, and Running Without a User" in xref:commandLine[the introduction of this chapter].

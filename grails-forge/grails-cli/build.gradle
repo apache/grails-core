@@ -216,6 +216,17 @@ tasks.named('test', Test).configure { Test it ->
     it.jvmArgumentProviders.add({ ["-Dgrails.cli.scripts=${scriptsPath.get()}".toString()] } as CommandLineArgumentProvider)
 }
 
+// CompletionScriptSpec loads the completion script the distribution has into bash and zsh. Its content is the input;
+// where it is is not.
+tasks.named('test', Test).configure { Test it ->
+    // looked up when the task is configured: grails-forge-cli, which has the task, is evaluated after this project
+    it.inputs.files(rootProject.project(':grails-forge-cli').tasks.named('buildCompletion')).withPropertyName('completionScript')
+            .withPathSensitivity(PathSensitivity.NONE)
+    Provider<String> completionPath = rootProject.project(':grails-forge-cli').layout.buildDirectory.file('build-completion/grails_completion')
+            .map { RegularFile file -> file.asFile.absolutePath }
+    it.jvmArgumentProviders.add({ ["-Dgrails.cli.completion=${completionPath.get()}".toString()] } as CommandLineArgumentProvider)
+}
+
 project.extensions.getByType(DistributionContainer).configureEach {
     it.distributionBaseName.set('apache-grails')
     it.distributionClassifier.set('bin')
@@ -231,7 +242,8 @@ project.extensions.getByType(DistributionContainer).configureEach {
             }
         }
 
-        from(rootProject.project(':grails-forge-cli').layout.buildDirectory.file('build-completion/grails_forge_cli_completion')) {
+        // the completion script of grails for bash and zsh, which a shell sources
+        from(rootProject.project(':grails-forge-cli').layout.buildDirectory.file('build-completion/grails_completion')) {
             into 'bin'
             it.filePermissions { permissions ->
                 permissions.unix(0755)
