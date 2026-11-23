@@ -31,6 +31,7 @@ import org.apache.grails.forge.core.state.ProjectStateException
 import org.grails.forge.application.generator.ProjectGenerator
 import org.grails.forge.cli.ForgeContext
 import org.grails.forge.feature.FeatureSelectionException
+import org.grails.forge.io.ConsoleOutput
 import org.grails.forge.io.FileSystemOutputHandler
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.annotation.Scope
@@ -80,6 +81,10 @@ class FeatureAddCommand extends BaseCommand implements Callable<Integer>, Projec
     @CommandLine.Option(names = ['--diff'], description = 'Show the changes that would be made to the files, as a diff, and change nothing.')
     boolean diff
 
+    @CommandLine.Option(names = ['--json'], description = 'With --dry-run: write what adding the features comes to as one JSON document for a tool to read, ' +
+            'and nothing else: the outcome, the reason, the files with their paths in the project and what would be done to each, and whether the change can be made.')
+    boolean json
+
     // asked of the Forge application when the command first needs it
     private final Supplier<ProjectGenerator> projectGeneratorSource
 
@@ -95,8 +100,14 @@ class FeatureAddCommand extends BaseCommand implements Callable<Integer>, Projec
 
     @Override
     Integer call() throws Exception {
+        if (json && (!dryRun || diff)) {
+            throw new CommandLine.ParameterException(spec.commandLine(), '--json writes what --dry-run says as one JSON document: give it with --dry-run, and without --diff')
+        }
         // the project the current directory is in, so that the command does the same in every directory of it
         Path current = FileSystemOutputHandler.getDefaultBaseDirectory().toPath()
+        if (json) {
+            return document(current)
+        }
         ConsoleProject.Search search = ConsoleProject.search(current)
         if (search.project == null) {
             err(search.none('feature add'))
@@ -106,10 +117,7 @@ class FeatureAddCommand extends BaseCommand implements Callable<Integer>, Projec
         boolean preview = dryRun || diff
         try {
             if (!ProjectState.exists(directory)) {
-                throw new ProjectStateException("There is no application here that a feature can be added to: ${ProjectState.MANIFEST} is missing. " +
-                        'Run the command in the directory of an application that Grails 9 created. For an application that was there before, ' +
-                        "${spec.root().name()} ${ProjectGroupCommand.NAME} ${ProjectMigrateCommand.NAME} writes the record the commands that create its classes read; " +
-                        'a feature is added to such an application by hand')
+                throw new ProjectStateException(noRecord())
             }
             FeatureAddition addition = new FeatureAddition(projectGeneratorSource.get())
             for (String message : (preview ? Collections.<String>emptyList() : addition.recover(directory).getMessages())) {
@@ -127,6 +135,55 @@ class FeatureAddCommand extends BaseCommand implements Callable<Integer>, Projec
             }
             return 1
         }
+    }
+
+    private String noRecord() {
+        return "There is no application here that a feature can be added to: ${ProjectState.MANIFEST} is missing. " +
+                'Run the command in the directory of an application that Grails 9 created. For an application that was there before, ' +
+                "${spec.root().name()} ${ProjectGroupCommand.NAME} ${ProjectMigrateCommand.NAME} writes the record the commands that create its classes read; " +
+                'a feature is added to such an application by hand'
+    }
+
+    /**
+     * What {@code --dry-run} says, as one JSON document and nothing else. The exit code is the one the
+     * command ends with without {@code --json}: 2 for features that cannot be added as they were
+     * asked for, 1 for a conflict and any other refusal or failure, and 0 otherwise.
+     */
+    private Integer document(Path current) {
+        ConsoleProject.Search search = ConsoleProject.search(current)
+        if (search.project == null) {
+            return written(ChangeDocument.ofFeatureAdd(null).noProject(search.untrusted, search.none('feature add')), 1)
+        }
+        Path directory = search.project.directory
+        ChangeDocument document = ChangeDocument.ofFeatureAdd(directory)
+        if (!ProjectState.exists(directory)) {
+            return written(document.ended(ChangeDocument.INVALID_RECORD, ChangeDocument.NO_RECORD, noRecord()), 1)
+        }
+        Notes notes = new Notes()
+        ChangePlan plan
+        try {
+            plan = new FeatureAddition(projectGeneratorSource.get()).plan(directory, features, getOperatingSystem(), notes, replace)
+        } catch (Exception e) {
+            if (showStacktrace()) {
+                e.printStackTrace(spec.commandLine().getErr())
+            }
+            return written(document.ended(e), e instanceof FeatureSelectionException ? 2 : 1)
+        }
+        List<PlannedFile> conflicts = plan.getConflicts()
+        document.planned(plan, notes.lines, conflicts.isEmpty() ? null : notAdded(plan, conflicts))
+        return written(document, document.outcome in [ChangeDocument.NO_CHANGES, ChangeDocument.CHANGES] ? 0 : 1)
+    }
+
+    private int written(ChangeDocument document, int exitCode) {
+        // written as it is: a document is not markup of the command line
+        spec.commandLine().getOut().println(document.toJson())
+        return exitCode
+    }
+
+    private static String notAdded(ChangePlan plan, List<PlannedFile> conflicts) {
+        return "The ${plan.requested.size() == 1 ? 'feature was' : 'features were'} not added: ${conflicts.size()} ${conflicts.size() == 1 ? 'file' : 'files'} " +
+                'cannot be written without losing what the application has. Nothing was changed. What is in the way is said with each file; ' +
+                '--diff shows what the feature would change. Make room for it and add the feature again'
     }
 
     private Integer apply(ChangePlan plan, boolean preview) {
@@ -174,9 +231,7 @@ class FeatureAddCommand extends BaseCommand implements Callable<Integer>, Projec
         }
         List<PlannedFile> conflicts = plan.getConflicts()
         if (!conflicts.isEmpty()) {
-            err("The ${plan.requested.size() == 1 ? 'feature was' : 'features were'} not added: ${conflicts.size()} ${conflicts.size() == 1 ? 'file' : 'files'} " +
-                    'cannot be written without losing what the application has. Nothing was changed. What is in the way is said with each file; ' +
-                    '--diff shows what the feature would change. Make room for it and add the feature again')
+            err(notAdded(plan, conflicts))
             return 1
         }
         if (preview) {
@@ -192,5 +247,36 @@ class FeatureAddCommand extends BaseCommand implements Callable<Integer>, Projec
 
     private static String shown(String text) {
         return text.replaceAll(/\p{Cntrl}/, '?').replace('@|', '@ |')
+    }
+
+    /** What the features say while the application is generated with them, kept for the document. */
+    private static final class Notes implements ConsoleOutput {
+
+        final List<String> lines = []
+
+        @Override
+        void out(String message) {
+            lines << message
+        }
+
+        @Override
+        void err(String message) {
+            lines << message
+        }
+
+        @Override
+        void warning(String message) {
+            lines << message
+        }
+
+        @Override
+        boolean showStacktrace() {
+            return false
+        }
+
+        @Override
+        boolean verbose() {
+            return false
+        }
     }
 }

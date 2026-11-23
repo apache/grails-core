@@ -449,6 +449,200 @@ The exit code says what happened:
 | Any other failure, with one line on the standard error that says why: a build that failed, a directory that is no project, a file that cannot be written, a generator that cannot be started. Every command that works on a project says the same outside one, whether it builds, creates a class or adds a feature: `create-controller is a command of a Grails project; there is none in /home/me or above it`.
 |===
 
+[[changeResultsForAProgram]]
+==== The Result of `feature add` and `project regenerate` for a Program
+
+A tool that checks whether a project still is what was generated, or what adding a feature would do to it, gives `--json` to the two commands that compare a project with its record: `feature add --dry-run --json` and `project regenerate --diff --json`. The command then writes one JSON document on one line of the standard output, and nothing else: no line for a person, and nothing on the standard error. The document says what the command came to as an `outcome` and a `reason`, which tell apart what the exit code does not: a comparison that found changes, a merge that has conflicts, a record of the project that cannot be used, and a command that failed. `--json` is taken with `--dry-run` or `--diff` only; given without it, or `feature add --json` with `--diff`, it is a mistake in the command line, which is said on the standard error with exit code 2 and no document, as is an option the command does not have.
+
+[source,json]
+----
+{"format":1,"command":"feature add","projectDirectory":"/home/me/shop","outcome":"changes","reason":null,"message":null,"hasChanges":true,"applicable":true,
+ "requested":["postgres"],"alreadyPresent":[],"added":["postgres","testcontainers"],"replaced":["h2"],
+ "replacements":["postgres replaces h2, the default of the group database-driver"],"lostFeatures":[],"changedOptions":[],
+ "files":[{"path":"README.md","action":"update","reason":null,"details":[]},{"path":"build.gradle","action":"update","reason":null,"details":[]},
+          {"path":"grails-app/conf/application.yml","action":"update","reason":null,"details":[]},
+          {"path":"src/test/resources/application-test.yml","action":"add","reason":null,"details":[]}],"notes":[]}
+----
+
+The document is written on one line; it is shown on several here. Both documents begin with the same members, always in the same order, and every member is always there: one that does not apply is `null`.
+
+[cols="1,3"]
+|===
+| Member | Meaning
+
+| `format`
+| The version of the document, `1`. It changes only when a reader of the earlier version would misread the document; members can be added at the end without it changing, so a reader ignores the members it does not know.
+
+| `command`
+| `feature add` or `project regenerate`.
+
+| `projectDirectory`
+| The directory of the project the current directory is in, or `null` when there is none.
+
+| `outcome`
+| What the command came to, one of the outcomes below.
+
+| `reason`
+| Why, as one of the reasons below, for every outcome but `no-changes` and `changes`, for which it is `null`.
+
+| `message`
+| The line the command says to a person without `--json`, for every outcome but `no-changes` and `changes`, for which it is `null`. It is for a person: a tool goes by the `outcome` and the `reason`.
+
+| `hasChanges`
+| Whether there is something to change: for `feature add`, whether the change would write any file of the project, the record under `.grails` included; for `project regenerate`, whether any file is not as it was generated. `null` when the command did not get as far as the comparison.
+
+| `files`
+| The files, each with its `path` in the project, exactly as it is there, with `/` between the directories: a character that a terminal acts on is written as a JSON escape, never replaced. `null` when the command did not get as far as the comparison. What each has besides is said below.
+|===
+
+[cols="1,3"]
+|===
+| Outcome | Meaning, and the exit code
+
+| `no-changes`
+| The comparison was made and there is nothing to do: `feature add` names only features the application has, or `project regenerate` finds every file as it was generated. Exit code 0.
+
+| `changes`
+| The comparison was made and there are changes: `feature add` would make them, or `project regenerate` lists files that are not as generated. Exit code 0 for `feature add` and 1 for `project regenerate`, as without `--json`.
+
+| `conflicts`
+| `feature add` only: the comparison was made and at least one file cannot be written without losing what the project has. The files with the action `conflict` say why. Exit code 1.
+
+| `refused`
+| What was asked cannot be done to this project: see the reason. Exit code 2 for the reasons that are a mistake in the command line (`contradictory-request`, `replace-required`, `required-by-another-feature`, `plugin-coordinates`, `feature-selection`), 1 for the others.
+
+| `invalid-record`
+| The record of the project under `.grails` is missing, cannot be read, or does not give the project it records. Exit code 1.
+
+| `failed`
+| The command failed while it worked: a file of the project cannot be read, or something went wrong that it does not know. Exit code 1.
+|===
+
+The exit code is always the one the command ends with without `--json`, so a script that only looks at it does what it did before. It does not tell the outcomes apart; the document does.
+
+[cols="1,1,3"]
+|===
+| Reason | Outcome | Meaning
+
+| `no-project`
+| `refused`
+| There is no Grails project in the current directory or above it.
+
+| `untrusted-project`
+| `refused`
+| The project above the current directory is not your own and is not used; the message says why.
+
+| `contradictory-request`
+| `refused`
+| Two or more features that were named are of one exclusive group, of which an application has one; whatever the application has, and with `--replace` too.
+
+| `replace-required`
+| `refused`
+| A feature would take the place of one that was asked for by name, and `--replace` was not given.
+
+| `required-by-another-feature`
+| `refused`
+| A feature would take the place of one that another feature of the application requires.
+
+| `plugin-coordinates`
+| `refused`
+| A feature was named by the coordinates of a plugin, which cannot be added to an application yet.
+
+| `feature-selection`
+| `refused`
+| The features cannot be had together, or one of them does not exist for the type of the application: the rules of the `create-` commands.
+
+| `changes-option`
+| `refused`
+| A feature would change an option the application was created with. The document has what it would come to: `files`, `changedOptions` and `lostFeatures`.
+
+| `removes-requested-feature`
+| `refused`
+| A feature would take out a feature that was asked for by name, and not by taking its place in an exclusive group. The document has what it would come to, as for `changes-option`.
+
+| `untracked-record`
+| `refused`
+| The record was written by `project migrate` for an application that was there: it has no baseline.
+
+| `other-generator`
+| `refused`
+| Another version of Grails generated the project; the message names it.
+
+| `pack-features`
+| `refused`
+| The application has a feature of a feature pack that is not part of Grails.
+
+| `interrupted-change`
+| `refused`
+| An earlier change of the project was interrupted and is undone by the next `feature add` without `--dry-run`.
+
+| `conflicts`
+| `conflicts`
+| See the outcome.
+
+| `no-record`
+| `invalid-record`
+| The project has no record under `.grails`.
+
+| `unreadable-record`
+| `invalid-record`
+| The record is not complete, cannot be read, was changed by hand, or a file of the baseline is missing or not what was generated.
+
+| `baseline-differs`
+| `invalid-record`
+| Generated again from its record, the application does not have the files of the baseline. The usual reason is another value of `GRAILS_REPO_URL` than when the project was created.
+
+| `record-differs`
+| `invalid-record`
+| Generated again from its record, the application does not have that very record.
+
+| `not-regenerable`
+| `invalid-record`
+| The generator fails on the record.
+
+| `unreadable-file`
+| `failed`
+| A file or a directory of the project cannot be read; the message names it.
+
+| `error`
+| `failed`
+| Any other failure, as a generator that cannot be started.
+|===
+
+`feature add --dry-run --json` has these members after `hasChanges`:
+
+[cols="1,3"]
+|===
+| Member | Meaning
+
+| `applicable`
+| Whether the change can be made: `true` for the outcomes `no-changes` and `changes`, when `feature add` without `--dry-run` makes the change the document describes, as long as the files are not changed in the meantime and the record of the change can be kept in your home directory. `false` for every other outcome.
+
+| `requested`
+| The features that were named and that the application does not have, which would be added.
+
+| `alreadyPresent`
+| The features that were named and that the application has.
+
+| `added`
+| Every feature the application would gain: those of `requested`, and the features they require.
+
+| `replaced`, `replacements`
+| The features the added ones would take the place of, and a line for each that says which feature replaces it.
+
+| `lostFeatures`, `changedOptions`
+| For the outcome `refused` with `changes-option` or `removes-requested-feature`: the features the application would lose, and the options that would change, as `--data hibernate7 in the place of hibernate5`. Empty otherwise.
+
+| `files`
+| Every file the features would write, change or cannot change, sorted by its path. `action` is what would be done to it, as without `--json`: `add`, `update`, `merge` (the file was changed in the project too, and keeps those changes), `keep` (the project has the file as the features make it already), `remove` or `conflict`. `reason` says why a file is a conflict, and is `null` for the others; `details` are the lines that are said under the file: for a conflict, the lines of both sides and what to do.
+
+| `notes`
+| What the features said while the application was generated with them, a line each; usually nothing.
+
+|===
+
+The `requested` to `notes` members of `feature add` are `null` when the command did not get as far as working out the change. `project regenerate --diff --json` has `files` only after `hasChanges`, each with its `path` and its `status`: `added` for a file the generator did not write, `removed` for a generated file that is not there any more, and `changed` for one with other content, sorted by the path. What the `.gitignore` the project was generated with leaves out is not looked at, and neither is `.git`, as without `--json`.
+
 ==== In a Project of an Earlier Version of Grails
 
 This command line works with projects of Grails 9 and later: Grails 9 is the first version it came with, and the build of an earlier project does not have what its commands run. In a project whose `gradle.properties` names a major version before 9 as `grailsVersion`, the commands of a project are not run: `compile`, `test-app`, `run-app`, `gradle`, the commands that create classes, `feature add`, `project show` and the commands of the application and its plugins end with exit code 1 and one line, on the standard error:

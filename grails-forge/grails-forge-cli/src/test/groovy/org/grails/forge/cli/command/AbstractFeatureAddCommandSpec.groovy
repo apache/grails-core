@@ -78,6 +78,10 @@ abstract class AbstractFeatureAddCommandSpec extends CommandSpec implements Comm
         return CliRunner.run(ProjectRegenerateCommand, beanContext, arguments)
     }
 
+    /**
+     * Creates an application with a create command. What the command says is not kept: the output of
+     * the command that is run next is all there is.
+     */
     protected int create(File directory, Class command, List<String> arguments) {
         String current = System.getProperty('user.dir')
         System.setProperty('user.dir', directory.absolutePath)
@@ -85,6 +89,7 @@ abstract class AbstractFeatureAddCommandSpec extends CommandSpec implements Comm
             return CliRunner.run(command, beanContext, (['com.example.shop', '--inplace'] + arguments) as String[])
         } finally {
             System.setProperty('user.dir', current)
+            reset()
         }
     }
 

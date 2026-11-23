@@ -181,8 +181,10 @@ final class FeatureAddition {
      * @param operatingSystem the operating system the generator is told of, as when an application is created
      * @param console where the features say what they have to say
      * @throws ProjectStateException when the state of the project cannot be used
-     * @throws FeatureSelectionException when the application cannot have the features, as when it is created with them
-     * @throws ProjectChangeException when features cannot be added to this project, or not these
+     * @throws FeatureSelectionException when the application cannot have the features, as when it is created with them; a
+     * {@link FeatureRequestException}, which says why with a code, when they cannot be added as they were asked for
+     * @throws ProjectChangeException when features cannot be added to this project, or not these; {@link ProjectChangeException#getReason()}
+     * says why with a code where the project is one that no feature is added to as it is
      */
     ChangePlan plan(Path projectDirectory, List<String> names, @Nullable OperatingSystem operatingSystem, ConsoleOutput console) {
         return plan(projectDirectory, names, operatingSystem, console, false)
@@ -194,7 +196,8 @@ final class FeatureAddition {
      * of an application that was created with the one in the place of the other. Without it, such an
      * addition is refused. It changes nothing when no feature that was asked for is in the way
      * @throws FeatureSelectionException also when a feature that would make way is required by a
-     * feature the application keeps or gets
+     * feature the application keeps or gets, and when two features of one exclusive group are asked
+     * for, whatever the application has: a {@link FeatureRequestException} each
      * @see #plan(Path, List, OperatingSystem, ConsoleOutput)
      */
     ChangePlan plan(Path projectDirectory, List<String> names, @Nullable OperatingSystem operatingSystem, ConsoleOutput console, boolean replace) {
@@ -208,8 +211,8 @@ final class FeatureAddition {
         List<String> asked = []
         for (String name : names) {
             if (name != null && name.contains(':')) {
-                throw new FeatureSelectionException("${FeatureSelectionException.shown(name)} is no name of a feature of Grails: the feature of a plugin cannot yet be " +
-                        'added to an application by the coordinates of the plugin')
+                throw new FeatureRequestException("${FeatureSelectionException.shown(name)} is no name of a feature of Grails: the feature of a plugin cannot yet be " +
+                        'added to an application by the coordinates of the plugin', FeatureRequestException.PLUGIN_COORDINATES)
             }
             Feature feature = name == null ? null : available.findFeature(name).orElse(null)
             // a name that is no feature is refused by the selection, in the words it has for it
@@ -239,7 +242,7 @@ final class FeatureAddition {
         // before the option is named as the way: it is none for a feature that cannot make way
         notRequiredByWhatStays(available, selected, making)
         if (!making.isEmpty() && !replace) {
-            throw new FeatureSelectionException(notReplaced(available, inThePlace, toAdd))
+            throw new FeatureRequestException(notReplaced(available, inThePlace, toAdd), FeatureRequestException.REPLACE_REQUIRED)
         }
         Set<String> inAnotherOrder = new TreeSet<>()
         RenderedProject before = replayed(projectDirectory, state, manifestBytes, lockBytes, indexBytes, operatingSystem, inAnotherOrder)
@@ -364,10 +367,10 @@ final class FeatureAddition {
         }
         List<String> names = contradiction.value
         String listed = names.size() == 2 ? "${names[0]} and ${names[1]}" : "${named(names.subList(0, names.size() - 1))} and ${names.last()}"
-        throw new FeatureSelectionException("The features ${listed} are ${names.size() == 2 ? 'both' : 'all'} of the group ${contradiction.key}, and an application " +
+        throw new FeatureRequestException("The features ${listed} are ${names.size() == 2 ? 'both' : 'all'} of the group ${contradiction.key}, and an application " +
                 'has one feature of such a group: name one of them. ' +
                 (replace ? '--replace puts a feature in the place of one the application has; it does not choose between features named together. ' : '') +
-                'Nothing was changed')
+                'Nothing was changed', FeatureRequestException.CONTRADICTORY_REQUEST)
     }
 
     // A feature that was asked for by name is replaced when that is said, and not by adding another alone
@@ -405,9 +408,10 @@ final class FeatureAddition {
                         for (String step = required; step != null; step = requiredBy.get(step)) {
                             way.add(0, step)
                         }
-                        throw new FeatureSelectionException("The feature ${required} is not replaced: the feature ${from}, which the application has or gets, requires it " +
+                        throw new FeatureRequestException("The feature ${required} is not replaced: the feature ${from}, which the application has or gets, requires it " +
                                 "(${FeatureSelectionException.chain(way)}), and an application has one feature of the group ${groupOf(available, required)}. " +
-                                "An application without ${from} can have another feature in the place of ${required}. Nothing was changed")
+                                "An application without ${from} can have another feature in the place of ${required}. Nothing was changed",
+                                FeatureRequestException.REQUIRED_BY_ANOTHER_FEATURE)
                     }
                     pending.push(required)
                 }
@@ -484,7 +488,7 @@ final class FeatureAddition {
     private ProjectState replayable(Path projectDirectory) {
         if (ProjectTransaction.isHalfMade(projectDirectory, home)) {
             throw new ProjectChangeException('An earlier change of the project was interrupted; it is undone when a feature is added without --dry-run and --diff, ' +
-                    'and has to be before anything else is done')
+                    'and has to be before anything else is done', ProjectChangeException.INTERRUPTED_CHANGE, null)
         }
         ProjectState state = ProjectState.read(projectDirectory)
         ProjectManifest manifest = state.manifest
@@ -494,19 +498,20 @@ final class FeatureAddition {
             throw new ProjectChangeException('The record of the application was written for an application that was there, and not by the generator (generationState in ' +
                     "${ProjectState.MANIFEST} is ${ProjectManifest.UNTRACKED}, as project migrate writes it). There is no baseline the generator wrote, and without one what a " +
                     'feature changes cannot be told from what the application changed: no feature is added to such an application by a command, and it is not generated ' +
-                    'again. Nothing was changed. Add to the build and the configuration by hand what the feature adds to an application that is created with it')
+                    'again. Nothing was changed. Add to the build and the configuration by hand what the feature adds to an application that is created with it',
+                    ProjectChangeException.UNTRACKED_RECORD, null)
         }
         state.verifyBaseline(projectDirectory)
         if (lock.generatorName != ProjectLock.GENERATOR || lock.generatorVersion != VersionInfo.getVersion() || lock.grailsVersion != VersionInfo.getGrailsVersion() ||
                 lock.templateApi != PackDescriptor.TEMPLATE_API) {
             throw new ProjectChangeException("The application was generated by ${lock.generatorName} ${lock.generatorVersion} for Grails ${lock.grailsVersion}, and this is " +
                     "${ProjectLock.GENERATOR} ${VersionInfo.getVersion()} for Grails ${VersionInfo.getGrailsVersion()}: a feature is added by the version the application " +
-                    "was generated with. Use the command line of Grails ${lock.generatorVersion} to add the feature")
+                    "was generated with. Use the command line of Grails ${lock.generatorVersion} to add the feature", ProjectChangeException.OTHER_GENERATOR, null)
         }
         List<String> ofPacks = lock.features.findAll { LockedFeature feature -> feature.source == LockedFeature.PACK }*.name
         if (!ofPacks.isEmpty()) {
             throw new ProjectChangeException("The application has the ${ofPacks.size() == 1 ? 'feature' : 'features'} ${named(ofPacks)} of a feature pack that is not part " +
-                    'of Grails; a feature cannot yet be added to such an application')
+                    'of Grails; a feature cannot yet be added to such an application', ProjectChangeException.PACK_FEATURES, null)
         }
         return state
     }
@@ -528,7 +533,7 @@ final class FeatureAddition {
         } catch (ProjectChangeException e) {
             throw e
         } catch (Exception e) {
-            throw new ProjectChangeException("The application cannot be generated again as it was recorded: ${line(e)}", e)
+            throw new ProjectChangeException("The application cannot be generated again as it was recorded: ${line(e)}", ProjectChangeException.NOT_REGENERABLE, e)
         }
         List<String> unlike = unlike(state.baseline, stateOf(before).baseline)
         if (inAnotherOrder != null) {
@@ -545,7 +550,7 @@ final class FeatureAddition {
         if (!unlike.isEmpty()) {
             throw new ProjectChangeException("The application cannot be generated again as it was: ${unlike.size()} ${unlike.size() == 1 ? 'file is' : 'files are'} " +
                     "not what the baseline of the project has (${named(unlike)}). A feature is added to what the same generator makes of the same choices; " +
-                    "the repositories given with GRAILS_REPO_URL are among those choices${anotherBuild(state.lock)}")
+                    "the repositories given with GRAILS_REPO_URL are among those choices${anotherBuild(state.lock)}", ProjectChangeException.BASELINE_DIFFERS, null)
         }
         // the index has the digest of every file, and the lock that of the index, so both are others
         // when a file has its keys in another order; every file of the index was compared above. Another
@@ -555,7 +560,7 @@ final class FeatureAddition {
                 !(reordered ? sameLockButForTheIndex(before.content(ProjectState.LOCK), lockBytes) : ProjectLock.sameButForTheBuild(before.content(ProjectState.LOCK), lockBytes)) ||
                 (!reordered && !Arrays.equals(before.content(ProjectState.BASELINE_INDEX), indexBytes))) {
             throw new ProjectChangeException("The record of the application under ${ProjectState.DIRECTORY} is not what this generator writes for the same choices, " +
-                    "so a feature cannot be added to it; the repositories given with GRAILS_REPO_URL are among those choices${anotherBuild(state.lock)}")
+                    "so a feature cannot be added to it; the repositories given with GRAILS_REPO_URL are among those choices${anotherBuild(state.lock)}", ProjectChangeException.RECORD_DIFFERS, null)
         }
         return before
     }
@@ -958,7 +963,7 @@ final class FeatureAddition {
             }
             return new Working(Files.readAllBytes(file), Files.isExecutable(file), null)
         } catch (IOException e) {
-            throw new ProjectChangeException("${path} cannot be read (${e.getClass().getSimpleName()}); nothing was changed", e)
+            throw new ProjectChangeException("${path} cannot be read (${e.getClass().getSimpleName()}); nothing was changed", ProjectChangeException.UNREADABLE_FILE, e)
         }
     }
 

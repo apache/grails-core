@@ -91,6 +91,10 @@ class ProjectRegenerateCommand extends BaseCommand implements Callable<Integer>,
     @CommandLine.Option(names = ['-f', '--force'], description = 'Whether to write into a directory that has files, and to overwrite those the application has')
     boolean overwrite
 
+    @CommandLine.Option(names = ['--json'], description = 'With --diff: write the files that are not those the application was generated with as one JSON ' +
+            'document for a tool to read, and nothing else, with the outcome of the comparison and, when there is none, the reason.')
+    boolean json
+
     // asked of the Forge application when the command first needs it
     private final Supplier<ProjectGenerator> projectGeneratorSource
 
@@ -113,15 +117,20 @@ class ProjectRegenerateCommand extends BaseCommand implements Callable<Integer>,
         if (overwrite && diff) {
             throw new CommandLine.ParameterException(spec.commandLine(), '--force is for --output: --diff writes nothing')
         }
+        if (json && !diff) {
+            throw new CommandLine.ParameterException(spec.commandLine(), '--json writes what --diff says as one JSON document: give it with --diff')
+        }
         Path current = FileSystemOutputHandler.getDefaultBaseDirectory().toPath()
+        if (json) {
+            return document(current)
+        }
         ConsoleProject.Search search = ConsoleProject.search(current)
         if (search.project == null) {
             err(search.none('project regenerate'))
             return 1
         }
         Path directory = search.project.directory
-        if (!ProjectState.exists(directory) && !Files.exists(directory.resolve(ProjectState.LOCK), LinkOption.NOFOLLOW_LINKS) &&
-                !Files.exists(directory.resolve(ProjectState.BASELINE_INDEX), LinkOption.NOFOLLOW_LINKS)) {
+        if (!hasRecord(directory)) {
             err(ProjectShowCommand.noRecord(spec.root().name()))
             return 1
         }
@@ -137,6 +146,50 @@ class ProjectRegenerateCommand extends BaseCommand implements Callable<Integer>,
             }
             return 1
         }
+    }
+
+    private static boolean hasRecord(Path directory) {
+        return ProjectState.exists(directory) || Files.exists(directory.resolve(ProjectState.LOCK), LinkOption.NOFOLLOW_LINKS) ||
+                Files.exists(directory.resolve(ProjectState.BASELINE_INDEX), LinkOption.NOFOLLOW_LINKS)
+    }
+
+    /**
+     * What {@code --diff} says, as one JSON document and nothing else. The exit code is the one the
+     * command ends with without {@code --json}: 0 when every file is as generated, and 1 otherwise.
+     */
+    private Integer document(Path current) {
+        ConsoleProject.Search search = ConsoleProject.search(current)
+        if (search.project == null) {
+            return written(ChangeDocument.ofRegenerate(null).noProject(search.untrusted, search.none('project regenerate')))
+        }
+        Path directory = search.project.directory
+        ChangeDocument document = ChangeDocument.ofRegenerate(directory)
+        if (!hasRecord(directory)) {
+            return written(document.ended(ChangeDocument.INVALID_RECORD, ChangeDocument.NO_RECORD, ProjectShowCommand.noRecord(spec.root().name())))
+        }
+        RegeneratedProject regenerated
+        try {
+            regenerated = new FeatureAddition(projectGeneratorSource.get()).regenerate(directory, getOperatingSystem())
+        } catch (Exception e) {
+            if (showStacktrace()) {
+                e.printStackTrace(spec.commandLine().getErr())
+            }
+            return written(document.ended(e))
+        }
+        try {
+            return written(document.compared(differences(directory, regenerated)))
+        } catch (IOException e) {
+            if (showStacktrace()) {
+                e.printStackTrace(spec.commandLine().getErr())
+            }
+            return written(document.ended(ChangeDocument.FAILED, ProjectChangeException.UNREADABLE_FILE, "The files of the project cannot be read: ${unread(directory, e)}"))
+        }
+    }
+
+    private int written(ChangeDocument document) {
+        // written as it is: a document is not markup of the command line
+        spec.commandLine().getOut().println(document.toJson())
+        return document.outcome == ChangeDocument.NO_CHANGES ? 0 : 1
     }
 
     // where the application is written to: no directory that has anything, unless that was asked for, and never the project
@@ -256,28 +309,9 @@ class ProjectRegenerateCommand extends BaseCommand implements Callable<Integer>,
     }
 
     private Integer compare(Path project, RegeneratedProject regenerated) {
-        byte[] ignore = regenerated.content(IGNORE_FILE)
-        IgnoreRules rules = new IgnoreRules(ignore == null ? '' : new String(ignore, StandardCharsets.UTF_8))
-        Set<String> has = new TreeSet<>()
+        Map<String, String> unlike
         try {
-            Files.walkFileTree(project, new SimpleFileVisitor<Path>() {
-
-                @Override
-                FileVisitResult preVisitDirectory(Path directory, BasicFileAttributes attributes) {
-                    String path = project.relativize(directory).join('/')
-                    return !path.isEmpty() && (path == REPOSITORY || rules.ignores(path, true)) ? FileVisitResult.SKIP_SUBTREE : FileVisitResult.CONTINUE
-                }
-
-                @Override
-                FileVisitResult visitFile(Path file, BasicFileAttributes attributes) {
-                    // a link is what it is and is not followed; the file of a worktree that says where its repository is is no file of the application
-                    String path = project.relativize(file).join('/')
-                    if (path != REPOSITORY && !rules.ignores(path, false)) {
-                        has.add(path)
-                    }
-                    return FileVisitResult.CONTINUE
-                }
-            })
+            unlike = differences(project, regenerated)
         } catch (IOException e) {
             err("The files of the project cannot be read: ${unread(project, e)}")
             if (showStacktrace()) {
@@ -285,6 +319,49 @@ class ProjectRegenerateCommand extends BaseCommand implements Callable<Integer>,
             }
             return 1
         }
+        if (unlike.isEmpty()) {
+            out('@|blue ||@ Every file of the application is as it was generated, and it has no others')
+            return 0
+        }
+        for (Map.Entry<String, String> each : unlike.entrySet()) {
+            // the name of a file is not markup of this command
+            spec.commandLine().getOut().println("${each.value.padRight(8)} ${each.key.replaceAll(/[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/, '?')}")
+        }
+        Map<String, Integer> counted = unlike.values().countBy { String kind -> kind }
+        out("@|blue ||@ ${unlike.size()} ${unlike.size() == 1 ? 'file is' : 'files are'} not as the application was generated: " +
+                ['added', 'removed', 'changed'].findAll { String kind -> counted.containsKey(kind) }.collect { String kind -> "${counted.get(kind)} ${kind}" }.join(', '))
+        return 1
+    }
+
+    /**
+     * The files of the project that are not those it was generated with, sorted by their paths in
+     * the project: {@code added}, {@code removed} or {@code changed}. What the {@code .gitignore} the
+     * application was generated with leaves out is not looked at, and neither is {@code .git}.
+     *
+     * @throws IOException when a directory of the project cannot be read
+     */
+    private static Map<String, String> differences(Path project, RegeneratedProject regenerated) throws IOException {
+        byte[] ignore = regenerated.content(IGNORE_FILE)
+        IgnoreRules rules = new IgnoreRules(ignore == null ? '' : new String(ignore, StandardCharsets.UTF_8))
+        Set<String> has = new TreeSet<>()
+        Files.walkFileTree(project, new SimpleFileVisitor<Path>() {
+
+            @Override
+            FileVisitResult preVisitDirectory(Path directory, BasicFileAttributes attributes) {
+                String path = project.relativize(directory).join('/')
+                return !path.isEmpty() && (path == REPOSITORY || rules.ignores(path, true)) ? FileVisitResult.SKIP_SUBTREE : FileVisitResult.CONTINUE
+            }
+
+            @Override
+            FileVisitResult visitFile(Path file, BasicFileAttributes attributes) {
+                // a link is what it is and is not followed; the file of a worktree that says where its repository is is no file of the application
+                String path = project.relativize(file).join('/')
+                if (path != REPOSITORY && !rules.ignores(path, false)) {
+                    has.add(path)
+                }
+                return FileVisitResult.CONTINUE
+            }
+        })
         Map<String, String> unlike = new TreeMap<>()
         for (String path : regenerated.paths) {
             if (rules.ignoresWithin(path)) {
@@ -299,18 +376,7 @@ class ProjectRegenerateCommand extends BaseCommand implements Callable<Integer>,
         for (String path : has) {
             unlike.put(path, 'added')
         }
-        if (unlike.isEmpty()) {
-            out('@|blue ||@ Every file of the application is as it was generated, and it has no others')
-            return 0
-        }
-        for (Map.Entry<String, String> each : unlike.entrySet()) {
-            // the name of a file is not markup of this command
-            spec.commandLine().getOut().println("${each.value.padRight(8)} ${each.key.replaceAll(/[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/, '?')}")
-        }
-        Map<String, Integer> counted = unlike.values().countBy { String kind -> kind }
-        out("@|blue ||@ ${unlike.size()} ${unlike.size() == 1 ? 'file is' : 'files are'} not as the application was generated: " +
-                ['added', 'removed', 'changed'].findAll { String kind -> counted.containsKey(kind) }.collect { String kind -> "${counted.get(kind)} ${kind}" }.join(', '))
-        return 1
+        return unlike
     }
 
     // What could not be read, by its path in the project where the file system names one in it: what it says besides is of writing
