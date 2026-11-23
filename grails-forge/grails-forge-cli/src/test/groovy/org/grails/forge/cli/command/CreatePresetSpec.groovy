@@ -536,6 +536,32 @@ class CreatePresetSpec extends CommandSpec {
                 "a preset that was given as a directory or a file whose content has the SHA-256 ${content}. Nothing was changed.")
         tree(new File(dir, 'shop')) == before
 
+        when: 'the features that can be added are listed without the preset'
+        exit = run('feature', 'list')
+
+        then: 'what the application has is listed, and the list names the preset it needs, as feature add does'
+        exit == 0
+        printed.startsWith('| The application shop (rest-api) has ')
+        printed.replaceAll(/\s+/, ' ').contains('| The features feature add can add to it are listed with the feature packs it was generated with, which feature add ' +
+                'needs too: give them to feature list as to feature add. The application was made from the preset acme-service, which is not part of Grails, ' +
+                'and that preset was not given: ')
+        printed.replaceAll(/\s+/, ' ').contains("acme-service, a preset that was given as a directory or a file whose content has the SHA-256 ${content}")
+        !printed.contains('cannot yet be added')
+        !printed.contains('can be added to it with')
+        tree(new File(dir, 'shop')) == before
+
+        when: 'they are listed with the preset'
+        exit = run('feature', 'list', '--feature-pack-dir', preset.absolutePath)
+        List<String> lines = printed.readLines()
+        int addable = lines.findIndexOf { it.contains('can be added to it with: grails-forge-cli feature add FEATURE, given the feature packs of the application as here') }
+
+        then: 'they are those feature add adds with it'
+        exit == 0
+        addable > 0
+        lines.drop(addable).any { it.startsWith('    cache ') }
+        !lines.any { it.startsWith('    acme-service ') }
+        tree(new File(dir, 'shop')) == before
+
         when: 'nor is it generated again'
         int regenerated = run('project', 'regenerate', '--output', other().absolutePath)
 
@@ -592,6 +618,17 @@ class CreatePresetSpec extends CommandSpec {
         compared == 0
         printed.contains("The preset acme-service of the application is fetched again as ${COORDINATES}, with the SHA-256 ${sha256(jar)} its record has. " +
                 "Asking ${address}")
+
+        when: 'the features that can be added are listed, without the network'
+        int listed = run('feature', 'list', '--offline', '--feature-pack-repository', address)
+        List<String> lines = printed.readLines()
+        int addable = lines.findIndexOf { it.contains('can be added to it with: grails-forge-cli feature add FEATURE') }
+
+        then: 'the preset is fetched again, as feature add fetches it, and they are listed'
+        listed == 0
+        printed.contains("The preset acme-service of the application is fetched again as ${COORDINATES}, with the SHA-256 ${sha256(jar)} its record has.")
+        addable > 0
+        lines.drop(addable).any { it.startsWith('    cache ') }
 
         when: 'a feature is added, without the network'
         int exit = run('feature', 'add', 'cache', '--offline', '--feature-pack-repository', address)

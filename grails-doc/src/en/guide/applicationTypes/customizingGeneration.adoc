@@ -37,4 +37,4 @@ A feature pack is code: what it adds to the build is run by Gradle, and it write
 
 xref:plugins#forgeFeaturePacks[Adding a Feature to Application Creation], in the chapter on plugins, is the guide to writing a pack: its layout, the descriptor, the templates, checking it, testing it with applications, and using the pack of a published plugin. The options the `create-` commands have for packs are in xref:commandLine#creatingProject[Creating a Grails Project].
 
-In this version the feature of a pack is selected when a project is created. `feature add` adds the features of Grails only: it refuses the feature of a pack, and an application that has one.
+In this version the feature of a pack is selected when a project is created. `feature add` adds the features of Grails only: it refuses the feature of a pack, and adds a feature of Grails to an application that has one only with that very pack, which `feature list` takes too. See xref:plugins#forgeFeaturePackAfterCreation[After the Application Is Created].

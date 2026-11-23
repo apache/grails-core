@@ -769,6 +769,9 @@ What works and what does not, once an application has the feature of such a pack
 |`project regenerate`
 |Works, with the same pack, as `feature add`.
 
+|`feature list`
+|Works with the same pack, given as to `feature add`: it lists the features `feature add` can add with it. Without the pack it lists what the application has and says which pack it needs and how it is given.
+
 |`project show`
 |Works without the pack: it reads the record only.
 

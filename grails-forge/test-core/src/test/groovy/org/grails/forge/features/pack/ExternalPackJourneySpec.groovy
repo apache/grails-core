@@ -29,13 +29,14 @@ import org.grails.forge.application.ApplicationType
 import org.grails.forge.cli.CliRunner
 import org.grails.forge.cli.command.CreateAppCommand
 import org.grails.forge.cli.command.FeatureAddCommand
+import org.grails.forge.cli.command.FeatureListCommand
 import org.grails.forge.utils.CommandSpec
 
 /**
  * A feature pack written as the guide says and packaged by the tasks of the Grails Gradle plugin,
  * used by the command line the way a team uses it: an application is created with the feature of the
  * jar of the plugin, and with the feature of the pack's directory, each is cloned elsewhere, and a
- * feature of Grails is added to the clone with the same pack given again. Nothing but what a plugin
+ * feature of Grails is listed and added to the clone with the same pack given again. Nothing but what a plugin
  * author has is used to make the pack: {@code src/main/forge}, {@code checkForgePack} and {@code jar}.
  */
 class ExternalPackJourneySpec extends CommandSpec {
@@ -106,8 +107,15 @@ class ExternalPackJourneySpec extends CommandSpec {
         new File(app, 'src/main/groovy/com/example/Audit.groovy').text.startsWith('package com.example\n\n// web ')
         new File(app, '.grails/forge.lock.yml').text.contains('coordinates: com.acme:acme-audit-grails\n  version: 1.0.0\n')
 
-        when: 'the application is cloned elsewhere and a feature of Grails is added to the clone, without the network'
+        when: 'the application is cloned elsewhere, and the features that can be added to the clone are listed, without the network'
         File clone = copy(app, new File(work, 'elsewhere/from-jar'))
+        String said = listed(clone, '--offline', '--feature-pack-repository', address)
+
+        then: 'they are worked out with the jar of the record, as feature add takes it'
+        said.contains('given the feature packs of the application as here')
+        said.readLines().any { String line -> line.startsWith('    grails-quartz ') }
+
+        when: 'a feature of Grails is added to the clone, without the network'
         exit = cli(clone, FeatureAddCommand, 'grails-quartz', '--offline', '--feature-pack-repository', address)
 
         then: 'the clone has both, and what the pack wrote is as it was'
@@ -124,9 +132,23 @@ class ExternalPackJourneySpec extends CommandSpec {
         exit == 0
         new File(fromDirectory, '.grails/forge.lock.yml').text =~ /- name: acme-audit\n  source: pack\n  contentSha256: [0-9a-f]{64}\n/
 
-        when: 'a clone of it and a copy of the pack, elsewhere'
+        when: 'the features that can be added to a clone of it are listed without the pack'
         File cloneOfDirectory = copy(fromDirectory, new File(work, 'elsewhere/from-directory'))
         File packElsewhere = copy(pack(), new File(work, 'elsewhere/pack'))
+        said = listed(cloneOfDirectory)
+
+        then: 'the list says which pack it needs, and how it is given'
+        said.contains('a feature pack that was given as a directory or a file whose content has the SHA-256 ')
+        said.contains('a pack of a directory is given with --feature-pack-dir')
+        !said.contains('can be added to it with')
+
+        when: 'they are listed with a copy of the pack, elsewhere'
+        said = listed(cloneOfDirectory, '--feature-pack-dir', packElsewhere.absolutePath)
+
+        then:
+        said.readLines().any { String line -> line.startsWith('    grails-quartz ') }
+
+        when: 'a feature is added with it'
         exit = cli(cloneOfDirectory, FeatureAddCommand, 'grails-quartz', '--feature-pack-dir', packElsewhere.absolutePath)
 
         then:
@@ -142,6 +164,19 @@ class ExternalPackJourneySpec extends CommandSpec {
         } finally {
             System.setProperty('user.dir', previousDirectory)
         }
+    }
+
+    // what feature list writes, which ends with exit code 0
+    private String listed(File directory, String... arguments) {
+        PrintStream original = System.out
+        ByteArrayOutputStream written = new ByteArrayOutputStream()
+        System.setOut(new PrintStream(written, true, 'UTF-8'))
+        try {
+            assert cli(directory, FeatureListCommand, arguments) == 0
+        } finally {
+            System.setOut(original)
+        }
+        return written.toString('UTF-8')
     }
 
     /**

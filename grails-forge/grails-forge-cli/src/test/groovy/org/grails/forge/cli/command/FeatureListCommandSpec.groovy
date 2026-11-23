@@ -161,6 +161,23 @@ class FeatureListCommandSpec extends CommandSpec {
         !said.contains('can be added to it')
     }
 
+    void "a feature pack the application was not generated with is refused, as feature add refuses it"() {
+        given:
+        create([])
+        File pack = new File(home, 'pack')
+        new File(pack, 'templates').mkdirs()
+        new File(pack, 'feature.yml').setText(CreateAppFeaturePackSpec.DESCRIPTOR, 'UTF-8')
+        new File(pack, 'templates/audit.txt').setText('kept as it is', 'UTF-8')
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'feature', 'list', '--feature-pack-dir', pack.absolutePath)
+
+        then:
+        exit == 1
+        err.toString().contains('The feature pack acme-audit was given, and the application has no feature of it')
+        !out.toString().contains('can be added to it')
+    }
+
     void "feature add completes the names of the features the application does not have, and outside a project those of every type of application"() {
         given:
         Terminal terminal = TerminalBuilder.builder().type(Terminal.TYPE_DUMB).streams(new ByteArrayInputStream(new byte[0]), new ByteArrayOutputStream()).build()

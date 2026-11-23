@@ -100,6 +100,41 @@ class ExternalPackJourneySpec extends CommandSpec implements CommandFixture {
         String content = (lock =~ /- name: acme-audit\n  source: pack\n  contentSha256: ([0-9a-f]{64})\n/)[0][1]
         !lock.contains(work.name)
 
+        when: 'the features that can be added are listed without the pack'
+        exit = list(app)
+        List<String> lines = out.toString().readLines()
+
+        then: 'what the application has is listed, and the list says which pack feature add and the list need, and how it is given'
+        exit == 0
+        lines[0] ==~ /\| The application shop \(web\) has \d+ features, as its record in \.grails says:/
+        lines[1] ==~ /\s+asked for\s+acme-audit/
+        out.toString().replaceAll(/\s+/, ' ').contains('| The features feature add can add to it are listed with the feature packs it was generated with, ' +
+                'which feature add needs too: give them to feature list as to feature add. The application has the feature of feature packs that are not part of ' +
+                'Grails, and that pack was not given: ')
+        out.toString().replaceAll(/\s+/, ' ').contains("acme-audit, a feature pack that was given as a directory or a file whose content has the SHA-256 ${content}")
+        out.toString().contains('a pack of a directory is given with --feature-pack-dir')
+        !out.toString().contains('cannot yet be added')
+        !out.toString().contains('can be added to it with')
+
+        when: 'with the pack'
+        exit = list(app, '--feature-pack-dir', original.absolutePath)
+        lines = out.toString().readLines()
+        int addable = lines.findIndexOf { it.contains('can be added to it with: ') && it.endsWith(' feature add FEATURE, given the feature packs of the application as here') }
+
+        then: 'they are listed as feature add adds them'
+        exit == 0
+        addable > 0
+        lines.drop(addable).any { it.startsWith('    grails-quartz ') }
+        lines.drop(addable).any { it.startsWith('    cache ') }
+        !lines.drop(addable).any { it.startsWith('    acme-audit ') }
+
+        when: 'with a pack of that name and another content'
+        exit = list(app, '--feature-pack-dir', pack(new File(work, 'listed-changed'), 'changed by someone').absolutePath)
+
+        then: 'it is refused, as feature add refuses it'
+        exit == 1
+        err.toString().contains('The feature pack that was given is not the one the application was generated with')
+
         when: 'the application is cloned elsewhere, and so is the pack, and a feature of Grails is added there'
         File clone = copy(app, new File(work, 'elsewhere/clone'))
         File packOfTheClone = copy(original, new File(work, 'elsewhere/pack'))
@@ -171,8 +206,32 @@ class ExternalPackJourneySpec extends CommandSpec implements CommandFixture {
         out.toString().contains('The feature acme-audit is that of a feature pack that is not part of Grails')
         new File(app, '.grails/forge.lock.yml').text.contains("- name: acme-audit\n  source: pack\n  coordinates: ${PLUGIN}\n  version: 2.3.0\n  sha256: ${sha256(jar)}\n")
 
-        when: 'a feature is added in a clone, with the repository'
+        when: 'the features that can be added are listed in a clone, with the repository'
         File clone = copy(app, new File(work, 'clone'))
+        exit = list(clone, '--feature-pack-repository', address)
+        List<String> lines = out.toString().readLines()
+        int addable = lines.findIndexOf { it.contains('can be added to it with: ') && it.endsWith(' feature add FEATURE, given the feature packs of the application as here') }
+
+        then: 'the jar is fetched again, as feature add fetches it, and they are listed'
+        exit == 0
+        out.toString().contains("The feature pack acme-audit of the application is fetched again as ${COORDINATES}, with the SHA-256 ${sha256(jar)} its record has. " +
+                "Asking ${address}")
+        addable > 0
+        lines.drop(addable).any { it.startsWith('    grails-quartz ') }
+
+        when: 'no repository has it'
+        exit = listWithoutRepositories(clone)
+
+        then: 'what the application has is listed, and the list says which jar it needs'
+        exit == 0
+        out.toString().startsWith("| The feature pack acme-audit of the application is fetched again as ${COORDINATES}")
+        out.toString().contains('\n| The application shop (web) has ')
+        out.toString().replaceAll(/\s+/, ' ').contains('| The features feature add can add to it are listed with the feature packs it was generated with, ' +
+                'which feature add needs too: give them to feature list as to feature add. The feature pack acme-audit of the application could not be had again: ')
+        out.toString().contains(COORDINATES)
+        !out.toString().contains('can be added to it with')
+
+        when: 'a feature is added in the clone, with the repository'
         exit = add(clone, 'grails-quartz', '--feature-pack-repository', address)
 
         then: 'the jar is fetched again, and said to be'
@@ -263,6 +322,31 @@ class ExternalPackJourneySpec extends CommandSpec implements CommandFixture {
 
     private int show(File directory, String... arguments) {
         return inDirectory(directory) { CliRunner.run(ProjectShowCommand, beanContext, arguments) }
+    }
+
+    private int list(File directory, String... arguments) {
+        return inDirectory(directory) { CliRunner.run(FeatureListCommand, beanContext, arguments) }
+    }
+
+    // feature list as addWithoutRepositories runs feature add
+    private int listWithoutRepositories(File directory, String... arguments) {
+        Transport transport = { URI asking ->
+            asked << asking
+            return new Reply(404, null, null)
+        } as Transport
+        FeatureListCommand command = new FeatureListCommand(beanContext.getBean(ProjectGenerator)) {
+
+            @Override
+            protected PackArtifacts createPackArtifacts() {
+                return new PackArtifacts(transport)
+            }
+
+            @Override
+            protected String grailsRepoUrl() {
+                return null
+            }
+        }
+        return inDirectory(directory) { new CommandLine(command, new GrailsPicocliFactory(beanContext)).execute(arguments) }
     }
 
     // with repositories that have nothing: GRAILS_REPO_URL names none, and Maven Central and the repository of the record are answers of this specification

@@ -97,6 +97,8 @@ class HelpJsonMetadataSpec extends CommandSpec {
         option(createApp, '--features').split == ','
         option(createApp, '--feature-pack-dir').repeatable == true
         option(createApp, '--feature-pack-dir').split == null
+        option(command(document, 'feature', 'list'), '--feature-pack-dir').repeatable == true
+        option(command(document, 'feature', 'list'), '--feature-pack-repository').repeatable == true
         option(runApp, '-D').repeatable == true
         option(runApp, '--port').repeatable == false
         option(createApp, '--inplace').repeatable == false

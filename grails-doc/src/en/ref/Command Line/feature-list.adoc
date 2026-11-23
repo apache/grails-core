@@ -28,6 +28,7 @@ Lists the features of the application in the current directory from its record: 
 [source,console]
 ----
 grails feature list
+grails feature list --feature-pack-dir ~/acme-audit/src/main/forge
 ----
 
 === Description
@@ -36,8 +37,14 @@ Usage:
 
 [source,console]
 ----
-grails feature list
+grails feature list [--feature-pack-dir=DIRECTORY]... [--feature-pack-repository=URL]... [--offline]
 ----
+
+Options:
+
+* `--feature-pack-dir=DIRECTORY` - The directory of a feature pack that is not part of Grails and that the application was generated with from a directory, or of the preset it was made from, as link:feature-add.html[feature add] takes it. Its content has to have the SHA-256 the record has. Can be given more than once.
+* `--feature-pack-repository=URL` - A Maven repository to fetch the jar of a plugin from, whose feature pack the application was generated with, or of its preset, as `feature add` takes it: `https`, or `file:` for a directory. When the option is given, only the repositories it names are asked; without it, those of `GRAILS_REPO_URL`, Maven Central and then the repository the record names for the jar. Can be given more than once.
+* `--offline` - Ask nothing of the network: such a jar is taken only from a repository that is a directory.
 
 `feature list` is the `list` command of the `feature` command. It reads the record of the project in its `.grails` directory and writes nothing:
 
@@ -84,7 +91,8 @@ $ grails feature list
 * The features the application has are those of its record: the ones that were asked for by name, with `--features` when it was created or with an earlier `feature add`, and the ones that came with them, by default or because a feature requires them.
 * A feature that can be added is listed by category, with what adding it comes to beside the feature: the default it takes the place of, as `postgres` that of `h2`; a feature that was asked for by name that it takes the place of, which `feature add` does only with `--replace`; and the features that come with it.
 * A feature that cannot be added is listed with the reason: it would change an option the application was created with (`--servlet`, `--data`, `--reloading`, `--jdk`), it was left out with `--exclude-features`, it cannot be used with a feature the application has, it needs what the application does not have, such as a later JDK or another feature, or a feature the application keeps requires the feature it would take the place of.
-* When the record does not let `feature add` add anything, as the record that link:project-migrate.html[project migrate] writes, the record of an application that another version of Grails generated, or one that has the feature of a feature pack that is not part of Grails, the list says why after the features the application has, and lists no others. For the record of an earlier version it names `project migrate`, which moves the record to the version that runs.
+* When the record does not let `feature add` add anything, as the record that link:project-migrate.html[project migrate] writes or the record of an application that another version of Grails generated, the list says why after the features the application has, and lists no others. For the record of an earlier version it names `project migrate`, which moves the record to the version that runs.
+* An application that has the feature of a feature pack that is not part of Grails, or was made from a preset, gets a feature of Grails only with that very pack, and `feature list` works its features out with it, taking the pack as `feature add` does: the jar of a plugin is fetched again by the coordinates, the version and the SHA-256 its record has, and the command says so before it asks; the pack of a directory is given again with `--feature-pack-dir`. The list then says that `feature add` takes the same packs. When a pack is not given, or its jar cannot be fetched, the list says which pack it is, by its coordinates or by the SHA-256 of the content of its directory, and how it is given, after the features the application has, and lists no others; the exit code is 0. A pack that is another than the one the record has is refused as `feature add` refuses it, with exit code 1.
 
 The list is worked out from the record alone, as `feature add` selects features: the files of the application are not read. A change of yours that is in the way of a feature, which `feature add` reports as a conflict, is therefore not seen here; `feature add FEATURE --dry-run` shows it.
 
