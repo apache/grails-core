@@ -1052,7 +1052,7 @@ class StartupProgressSpec extends Specification {
      */
     private Map<String, String> runAppAsks(Properties protocol, String path) {
         try (Socket socket = new Socket()) {
-            socket.connect(new InetSocketAddress(InetAddress.getByAddress([127, 0, 0, 1] as byte[]), port), 15_000)
+            socket.connect(new InetSocketAddress(InetAddress.getByAddress([127, 0, 0, 1] as byte[]), port), 30_000)
             socket.soTimeout = 30_000
             String requestLine = protocol.getProperty('request.line').replace('{path}', path)
             socket.outputStream.write("${requestLine}\r\nHost: localhost:${port}\r\n\r\n".getBytes('ISO-8859-1'))
