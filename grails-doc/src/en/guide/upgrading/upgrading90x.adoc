@@ -1828,7 +1828,7 @@ Most commands of the Grails shell and of its profiles are commands of `grails` u
 
 Some commands are there in projects of some kinds only, which note 55 says for each: `create-integration-test` is no command in a plain plugin, `create-functional-test` is one in a REST API project and in a web project with a Geb feature (note 54), `create-job` in a project with the `grails-quartz` feature, `create-domain-resource` and `create-restful-controller` in REST API projects, and `package-plugin` and `publish-plugin` in a project that has a plugin class (`*GrailsPlugin.groovy` under `src/main/groovy`). `install-templates` is another command than it was (note 45).
 
-New for someone who comes from the Grails shell are `create-restapi`, `create-rest-api-plugin`, `create-webapp` (another name of `create-app`), `feature add`, `project show`, `project regenerate` and `project migrate`.
+New for someone who comes from the Grails shell are `create-restapi`, `create-rest-api-plugin`, `create-webapp` (another name of `create-app`), `feature add`, `feature list`, `project show`, `project regenerate` and `project migrate`.
 
 *`list-plugins` and `plugin-info` are kept, and read another source.* `list-plugins` lists the plugins of the Grails release, which the command line knows without the network, and the plugins of the Grails plugin index, which it reads from `https://raw.githubusercontent.com/apache/grails-plugins-metadata/main/grails-plugins-index.json` in the place of the directory listing of `repo.grails.org` the shell read, and it takes a text to list by. `plugin-info` takes the name or the artifact of a plugin, or its coordinates as `group:artifact`, and prints the dependency for `build.gradle` as `implementation`, without a version when the Grails BOM manages the plugin. `plugin-info` still has `--snapshots`. Both have `--offline`, `--json` and `--plugin-index`; the `GRAILS_PLUGIN_INDEX` environment variable names another index, or `none`.
 
@@ -2243,7 +2243,7 @@ Every command the Grails shell of Grails 8 had, of itself and of the profiles `b
 
 |`create-app --profile` with a profile of your own
 |the shell
-|No replacement. `create-app --features group:artifact:version` with a plugin that has a feature pack (37).
+|`create-<type> NAME --preset group:artifact:version`, with the profile converted to a preset; what only some applications need is a plugin with a feature pack, `--features group:artifact:version` (37).
 
 |`create-command`
 |every project, and the profile for writing profiles
@@ -2383,7 +2383,7 @@ Every command the Grails shell of Grails 8 had, of itself and of the profiles `b
 
 |`profile-info`
 |the shell
-|Removed. `create-app --list-features`, and the same option of the other `create-` commands.
+|Removed. `create-app --list-features`, and the same option of the other `create-` commands; in a project, `feature list` says which features it has and which `feature add` can add.
 
 |`publish-plugin`
 |plugin projects
