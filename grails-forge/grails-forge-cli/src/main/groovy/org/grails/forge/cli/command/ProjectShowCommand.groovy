@@ -36,6 +36,9 @@ import org.apache.grails.forge.core.state.ProjectManifest.RequestedFeature
 import org.apache.grails.forge.core.state.ProjectState
 import org.apache.grails.forge.core.state.ProjectStateException
 import org.grails.forge.application.ApplicationType
+import org.grails.forge.application.generator.ProjectGenerator
+import org.grails.forge.cli.ForgeContext
+import org.grails.forge.feature.AvailableFeatures
 import org.grails.forge.feature.FeatureSelectionException
 import org.grails.forge.io.FileSystemOutputHandler
 import org.grails.forge.options.BuildTool
@@ -46,6 +49,7 @@ import org.grails.forge.options.ServletImpl
 import org.grails.forge.options.TestFramework
 import org.grails.forge.util.NameUtils
 import org.grails.forge.util.VersionInfo
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.annotation.Scope
 import org.springframework.stereotype.Component
 import picocli.CommandLine
@@ -53,6 +57,7 @@ import java.nio.file.Files
 import java.nio.file.LinkOption
 import java.nio.file.Path
 import java.util.concurrent.Callable
+import java.util.function.Supplier
 import java.util.regex.Pattern
 
 /**
@@ -116,6 +121,25 @@ class ProjectShowCommand extends BaseCommand implements Callable<Integer>, Proje
     @CommandLine.Option(names = ['--json'], description = 'Write the record and the command as one JSON document for a tool to read.')
     boolean json
 
+    // asked of the Forge application when the command first needs it: only for the record of an application that was there,
+    // whose features are looked up among those a create command takes by their names
+    private final Supplier<ProjectGenerator> projectGeneratorSource
+
+    @Autowired
+    ProjectShowCommand(ProjectGenerator projectGenerator) {
+        this.projectGeneratorSource = { projectGenerator } as Supplier<ProjectGenerator>
+    }
+
+    /** On a Forge application that is started when the command first needs it. */
+    ProjectShowCommand(ForgeContext context) {
+        this.projectGeneratorSource = { context.get().getBean(ProjectGenerator) } as Supplier<ProjectGenerator>
+    }
+
+    /** On a Forge application of its own, which is started when the command first needs it and lives as long as the JVM. */
+    ProjectShowCommand() {
+        this(new ForgeContext())
+    }
+
     @Override
     Integer call() throws Exception {
         Path current = FileSystemOutputHandler.getDefaultBaseDirectory().toPath()
@@ -141,8 +165,9 @@ class ProjectShowCommand extends BaseCommand implements Callable<Integer>, Proje
             }
             return 1
         }
-        List<String> arguments = arguments(state)
-        List<String> notes = notes(spec, state, directory)
+        List<String> found = found(state)
+        List<String> arguments = arguments(state, found)
+        List<String> notes = notes(spec, state, directory, found)
         String line = commandLine(spec.root().name(), arguments)
         List<Setting> settings = settings(state, createOptions(arguments.first()))
         if (json) {
@@ -164,15 +189,28 @@ class ProjectShowCommand extends BaseCommand implements Callable<Integer>, Proje
 
     /**
      * @param state the state of a project
+     * @return the arguments that create the application again, as {@link #arguments(ProjectState, List)}
+     * has them with no feature that was found
+     */
+    static List<String> arguments(ProjectState state) {
+        return arguments(state, Collections.<String>emptyList())
+    }
+
+    /**
+     * @param state the state of a project
+     * @param found the features of an application whose record project migrate wrote that were found
+     * in it, which the command asks for with those that were given; none for an application that was
+     * generated, whose features follow from what was asked for
      * @return the arguments that create the application again, the name of the create command first:
      * the name with the package; each option whose value in the record is not what a create command of
      * this version takes when the option is not given, whatever the default was when the application
      * was generated, and for an application made from a preset every option of the record that a preset
      * can give, since the preset gives it a default of its own, which the record does not have; the
-     * features that were asked for; a plugin by its coordinates with the SHA-256 of its jar and the
-     * repository it came from; and the features that were left out
+     * features that were asked for, and those that were found, by their names; a plugin by its
+     * coordinates with the SHA-256 of its jar and the repository it came from; and the features that
+     * were left out
      */
-    static List<String> arguments(ProjectState state) {
+    static List<String> arguments(ProjectState state, List<String> found) {
         ProjectManifest manifest = state.manifest
         GenerationOptions options = manifest.options
         List<String> arguments = [CREATE.get(manifest.applicationType), "${manifest.defaultPackage}.${manifest.name}".toString()]
@@ -195,8 +233,9 @@ class ProjectShowCommand extends BaseCommand implements Callable<Integer>, Proje
         if (plugins.preset != null) {
             arguments << '--preset' << plugins.preset
         }
-        if (!plugins.features.isEmpty()) {
-            arguments << '--features' << plugins.features.join(',')
+        List<String> features = found.isEmpty() ? plugins.features : (plugins.features + found).unique(false).toSorted()
+        if (!features.isEmpty()) {
+            arguments << '--features' << features.join(',')
         }
         for (String repository : plugins.repositories) {
             arguments << '--feature-pack-repository' << repository
@@ -219,6 +258,32 @@ class ProjectShowCommand extends BaseCommand implements Callable<Integer>, Proje
      */
     private static boolean ofPreset(ProjectManifest manifest, String option) {
         return manifest.preset != null && PackPreset.OPTIONS.contains(option) && !manifest.options.notRecorded.contains(option)
+    }
+
+    /**
+     * The features of an application whose record project migrate wrote that were found in it, which
+     * the create command asks for besides those that were given: the record has them, and they are not
+     * among the features that were asked for. Only those a create command takes by their names are: a
+     * feature of an option of the record is not, the option says it, and neither is a feature that is
+     * not selected by name, which an application has with its type, an option or another feature. The
+     * record of an application that was generated has none: its features follow from what was asked for.
+     *
+     * @param state the state of a project
+     * @return their names, in the order of the names
+     */
+    private List<String> found(ProjectState state) {
+        ProjectManifest manifest = state.manifest
+        if (manifest.isTracked()) {
+            return Collections.<String>emptyList()
+        }
+        GenerationOptions options = manifest.options
+        Set<String> named = (manifest.requestedFeatures*.name + [options.data.getName(), options.servlet.getName(), options.reloading.getFeatureName()]).toSet()
+        List<String> candidates = state.lock.features.findAll { LockedFeature feature -> feature.source != LockedFeature.PACK && !named.contains(feature.name) }*.name
+        if (candidates.isEmpty()) {
+            return Collections.<String>emptyList()
+        }
+        AvailableFeatures available = projectGeneratorSource.get().availableFeatures(manifest.applicationType, [])
+        return candidates.findAll { String name -> available.findFeature(name).isPresent() }.toSorted()
     }
 
     /**
@@ -245,13 +310,19 @@ class ProjectShowCommand extends BaseCommand implements Callable<Integer>, Proje
     }
 
     // what the command line does not say and the command needs all the same to give the same application
-    private static List<String> notes(CommandLine.Model.CommandSpec spec, ProjectState state, Path directory) {
+    private static List<String> notes(CommandLine.Model.CommandSpec spec, ProjectState state, Path directory, List<String> found) {
         ProjectLock lock = state.lock
         List<String> notes = []
         if (!state.manifest.isTracked()) {
             notes << ("The record was written for an application that was there, by ${ProjectGroupCommand.NAME} ${ProjectMigrateCommand.NAME}, and not when the application " +
                     'was generated (its state is untracked): it says what the application is taken to be. The command creates a new application of that kind, not ' +
                     'this one, and no feature is added to this one by a command').toString()
+        }
+        // the command line does not tell the features that were found from those that were given
+        if (!found.isEmpty()) {
+            notes << ('The command asks with --features for the features that were found in the project as well: ' +
+                    "${found.collect { String feature -> FeatureSelectionException.shown(feature) }.join(', ')}. A feature of the record that it does not name is not " +
+                    'selected by name, and comes with the type of application, an option or another feature').toString()
         }
         Set<String> notRecorded = state.manifest.options.notRecorded
         if (!notRecorded.isEmpty()) {

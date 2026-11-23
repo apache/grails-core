@@ -255,8 +255,10 @@ dependencies {
         said.any { it ==~ / +recorded by +grails-forge .*/ }
         said.any { it ==~ / +asked for +grails-web-console/ }
         said.any { it.startsWith('| The record was written for an application that was there, by project migrate, and not when the application was generated') }
+        said.contains('| The command asks with --features for the features that were found in the project as well: grails-quartz, postgres, testcontainers. ' +
+                'A feature of the record that it does not name is not selected by name, and comes with the type of application, an option or another feature')
         said[-2] == '| A new application of this type, with these options and features, is created with:'
-        said[-1].startsWith('grails-forge-cli create-app com.example.legacy.legacy ')
+        said[-1] == 'grails-forge-cli create-app com.example.legacy.legacy --reloading none --features grails-quartz,grails-web-console,postgres,testcontainers'
 
         when:
         out.reset()
@@ -267,7 +269,76 @@ dependencies {
         exit == 0
         document.generationState == 'untracked'
         document.requestedFeatures*.name == ['grails-web-console']
+        document.addedFeatures as Set == ['gorm-hibernate5', 'grails-gradle-plugin', 'grails-quartz', 'postgres', 'testcontainers'] as Set
+        document.command.arguments == ['com.example.legacy.legacy', '--reloading', 'none', '--features', 'grails-quartz,grails-web-console,postgres,testcontainers']
+        document.effectiveOptions.find { it.name == 'features' }.value == ['grails-web-console']
         ((List<String>) document.notes).any { it.startsWith('The record was written for an application that was there') }
+        ((List<String>) document.notes).any { it.startsWith('The command asks with --features for the features that were found in the project as well') }
+    }
+
+    @Unroll
+    void "the command project show prints for #fixture, whose record project migrate wrote, creates an application of the same type, options and features"() {
+        given:
+        Map<String, String> files = project(fixture)
+        files.each { String path, String text ->
+            new File(dir, path).parentFile.mkdirs()
+            new File(dir, path).setText(text, 'UTF-8')
+        }
+        assert ForgeCli.execute(beanContext, (['project', 'migrate'] + given) as String[]) == 0, err.toString()
+        ProjectState adopted = ProjectState.read(dir.toPath())
+        out.reset()
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'project', 'show', '--json')
+        Map document = (Map) new JsonSlurper().parseText(out.toString())
+        Map command = (Map) document.command
+        out.reset()
+        int shown = ForgeCli.execute(beanContext, 'project', 'show')
+        String line = out.toString().readLines().last()
+        File other = Files.createTempDirectory('grailsforgeother').toFile()
+        int created = inDirectory(other) { ForgeCli.execute(beanContext, ([command.name] + command.arguments) as String[]) }
+        ProjectState made = ProjectState.read(new File(other, adopted.manifest.name).toPath())
+
+        then: 'the command is the same in words and in the document, and creates an application'
+        exit == 0
+        shown == 0
+        line == command.line
+        assert created == 0, err.toString()
+
+        and: 'the new application is of the type, with the name, the package and the options of the record'
+        made.manifest.tracked
+        made.manifest.applicationType == adopted.manifest.applicationType
+        made.manifest.name == adopted.manifest.name
+        made.manifest.defaultPackage == adopted.manifest.defaultPackage
+        made.manifest.options == adopted.manifest.options
+        made.manifest.excludedFeatures*.name == adopted.manifest.excludedFeatures*.name
+
+        and: 'it has every feature of the record, those that were found in the project as well as those that were given'
+        made.lock.featureNames.containsAll(adopted.lock.featureNames)
+        made.manifest.requestedFeatures*.name.containsAll(adopted.manifest.requestedFeatures*.name)
+
+        and: 'what was found is told from what was given: the document has both, and a line before the command names what the command asks for of it'
+        List<String> requested = adopted.manifest.requestedFeatures*.name
+        List<String> named = command.arguments.contains('--features') ? ((String) command.arguments[command.arguments.indexOf('--features') + 1]).split(',').toList() : []
+        found == null || named - requested == found
+        document.requestedFeatures*.name == requested
+        document.addedFeatures == adopted.lock.featureNames.findAll { !(it in requested) }
+        ((List<String>) document.notes).any { it.startsWith('The command asks with --features for the features that were found in the project as well') } ==
+                !(named - requested).isEmpty()
+
+        cleanup:
+        other?.deleteDir()
+
+        where:
+        fixture                                                           | given                                                    || found
+        'an application the Grails shell created'                         | []                                                       || ['grails-quartz', 'postgres', 'testcontainers']
+        'an application the Grails shell created, with what was given'   | ['org.other.store', '--type', 'rest-api', '--jdk', '25', '--servlet', 'undertow',
+                                                                             '--data', 'hibernate7', '--reloading', 'devtools',
+                                                                             '--features', 'grails-web-console,cache', '--exclude-features', 'postgres'] || ['grails-quartz', 'testcontainers']
+        'a Grails 8 application the Grails shell created'                 | []                                                       || ['cache', 'grails-quartz', 'mysql']
+        'an application an earlier Forge generated'                       | []                                                       || ['grails-quartz']
+        'a REST API an earlier Forge generated, with every feature named' | []                                                       || null
+        'a build that names only its Grails Gradle plugins'               | []                                                       || []
     }
 
     void "an application Forge of an earlier version generated gets its record from grails-forge-cli.yml, which is left where it is"() {
@@ -1089,6 +1160,82 @@ dependencies {
         new File(dir, 'grails-app/init/com/example/legacy/Application.groovy').text = 'package com.example.legacy\n\nclass Application {\n}\n'
         new File(dir, 'build.gradle').text = SHELL_BUILD
         new File(dir, 'settings.gradle').text = "rootProject.name = 'legacy'\n"
+    }
+
+    // the files of a project that has no record, by what made it
+    private Map<String, String> project(String fixture) {
+        Map<String, String> shell = ['grails-app/conf/application.yml': SHELL_CONFIGURATION, 'build.gradle': SHELL_BUILD,
+                                     'grails-app/init/com/example/legacy/Application.groovy': 'package com.example.legacy\n\nclass Application {\n}\n',
+                                     'settings.gradle': "rootProject.name = 'legacy'\n"]
+        switch (fixture) {
+            case 'an application the Grails shell created':
+            case 'an application the Grails shell created, with what was given':
+                return shell
+            case 'a Grails 8 application the Grails shell created':
+                return shell + ['build.gradle': '''\
+                    plugins {
+                        id "groovy"
+                        id "war"
+                        id "org.apache.grails.gradle.grails-web"
+                        id "org.apache.grails.gradle.grails-gsp"
+                    }
+
+                    group = "com.example.legacy"
+
+                    dependencies {
+                        profile "org.apache.grails.profiles:web"
+                        implementation platform("org.apache.grails:grails-bom:$grailsVersion")
+                        implementation "org.apache.grails:grails-core"
+                        implementation "org.springframework.boot:spring-boot-autoconfigure"
+                        implementation "org.springframework.boot:spring-boot-starter"
+                        implementation "org.springframework.boot:spring-boot-starter-logging"
+                        implementation "org.springframework.boot:spring-boot-starter-jetty"
+                        implementation "org.apache.grails:grails-data-hibernate7"
+                        implementation "org.apache.grails:grails-quartz"
+                        implementation "org.apache.grails:grails-cache"
+                        runtimeOnly "com.mysql:mysql-connector-j"
+                        developmentOnly "org.springframework.boot:spring-boot-devtools"
+                    }
+
+                    java {
+                        toolchain {
+                            languageVersion = JavaLanguageVersion.of(25)
+                        }
+                    }
+                    '''.stripIndent()]
+            case 'an application an earlier Forge generated':
+                return ['settings.gradle': "rootProject.name = 'shop'\n", 'build.gradle': 'plugins {\n    id "org.apache.grails.gradle.grails-web"\n}\n',
+                        'grails-forge-cli.yml': 'applicationType: rest_api\ndefaultPackage: com.acme.shop\nreloading: devtools\nsourceLanguage: groovy\n' +
+                                'features: [gorm-hibernate5, grails-quartz, a-feature-of-grails-7, spring-boot-starter-jetty]\n']
+            case 'a build that names only its Grails Gradle plugins':
+                return ['settings.gradle': "rootProject.name = 'audit'\n", 'grails-app/init/org/acme/Application.groovy': 'package org.acme\n\nclass Application {\n}\n',
+                        'build.gradle': 'plugins {\n    id "org.apache.grails.gradle.grails-web"\n    id "org.apache.grails.gradle.grails-gsp"\n}\n']
+            case 'a REST API an earlier Forge generated, with every feature named':
+                // every feature an application of the type has, as the record of Forge named them, those that are not selected by name among them
+                File generated = Files.createTempDirectory('grailsforgegenerated').toFile()
+                try {
+                    assert inDirectory(generated) { ForgeCli.execute(beanContext, 'create-restapi', 'com.acme.shop', '--features', 'grails-quartz,openapi') } == 0
+                    List<String> features = ProjectState.read(new File(generated, 'shop').toPath()).lock.featureNames
+                    return ['settings.gradle': "rootProject.name = 'shop'\n", 'build.gradle': 'plugins {\n    id "org.apache.grails.gradle.grails-web"\n}\n',
+                            'grails-forge-cli.yml': "applicationType: rest_api\ndefaultPackage: com.acme.shop\nreloading: devtools\nfeatures: [${features.join(', ')}]\n"]
+                } finally {
+                    out.reset()
+                    generated.deleteDir()
+                }
+            default:
+                throw new IllegalArgumentException(fixture)
+        }
+    }
+
+    // runs a command in a directory
+    private int inDirectory(File directory, Closure<Integer> command) {
+        String current = System.getProperty('user.dir')
+        System.setProperty('user.dir', directory.absolutePath)
+        try {
+            return command.call()
+        } finally {
+            System.setProperty('user.dir', current)
+        }
     }
 
     // the value of a row of what the command says, and what it says of where the value is from
