@@ -104,6 +104,61 @@ class AsciidocConverterSpec extends Specification {
         new File(outputDir, 'index.html').text.contains('class Example {}')
     }
 
+    void 'an include that cannot be read fails the conversion once every document is converted'() {
+        given: 'a document including a file that does not exist, and a document after it'
+        File missing = new File(outputDir, 'Removed.groovy')
+        write('a.adoc', """
+            |= Guide
+            |
+            |----
+            |include::${missing.absolutePath}[tags=example]
+            |----
+            |""")
+        write('b.adoc', '''
+            |= Other
+            |
+            |Other content.
+            |''')
+
+        when:
+        AsciidocConverter.convert(sourceDir, outputDir, ['a.adoc', 'b.adoc'], [:])
+
+        then: 'the failure names the document, the line and the include, because the page would embed its path'
+        IllegalStateException e = thrown()
+        e.message.startsWith('Asciidoctor could not read 1 included file(s).')
+        e.message.contains("${new File(sourceDir, 'a.adoc')}: line 5: include file not found: ${missing.absolutePath}")
+
+        and: 'the documents after it are still converted, so one run reports every unresolved include'
+        new File(outputDir, 'b.html').text.contains('Other content.')
+    }
+
+    void 'errors other than an unresolved include are reported without failing the conversion'() {
+        given: 'a table whose last row is missing a cell'
+        write('index.adoc', '''
+            |= Guide
+            |
+            ||===
+            || A | B
+            || 1
+            ||===
+            |''')
+        PrintStream originalErr = System.err
+        ByteArrayOutputStream err = new ByteArrayOutputStream()
+        System.err = new PrintStream(err, true, 'UTF-8')
+
+        when:
+        try {
+            AsciidocConverter.convert(sourceDir, outputDir, ['index.adoc'], [:])
+        }
+        finally {
+            System.err = originalErr
+        }
+
+        then:
+        err.toString('UTF-8').contains('asciidoctor: ERROR: ')
+        new File(outputDir, 'index.html').isFile()
+    }
+
     void 'the warnings asciidoctor reports name the document and the line'() {
         given: 'a document whose section skips a level'
         write('index.adoc', '''
