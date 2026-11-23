@@ -126,7 +126,8 @@ class ProjectStateSpec extends ApplicationContextSpec {
 
         and: 'Git is told to keep the bytes of the state, which the digests are of'
         project.resolve('.grails/.gitattributes').toFile().getText('UTF-8') == '* -text\n'
-        project.resolve('.grails/.gitignore').toFile().getText('UTF-8') == '!/project.yml\n!/forge.lock.yml\n!/.gitattributes\n!/.gitignore\n!/baseline/\n!/baseline/**\n'
+        project.resolve('.grails/.gitignore').toFile().getText('UTF-8') == '!/project.yml\n!/forge.lock.yml\n!/.gitattributes\n!/.gitignore\n!/baseline/\n!/baseline/**\n' +
+                '/cache/\n/history\n/run/\n/transactions/\n'
         stateFiles(project) - state.baseline.files.collect { '.grails/baseline/files/' + BaselineIndex.copyPath(it.path) } ==
                 ['.grails/.gitattributes', '.grails/.gitignore', '.grails/baseline/index.yml', '.grails/forge.lock.yml', '.grails/project.yml']
 

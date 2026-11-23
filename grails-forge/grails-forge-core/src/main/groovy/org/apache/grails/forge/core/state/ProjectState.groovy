@@ -83,9 +83,13 @@ final class ProjectState {
      * What {@link #IGNORE} says: every file of the state that has to be committed is committed, also
      * where a pattern of a {@code .gitignore} above it, or of the one of whoever commits, would leave
      * it out. A pattern that leaves out the directory {@code .grails} itself is not undone by it: Git
-     * does not look into a directory that is ignored.
+     * does not look into a directory that is ignored. And what the commands keep under {@code .grails}
+     * that is of one machine is left out: {@code cache}, {@code history}, {@code run} and
+     * {@code transactions}, also in a project whose own {@code .gitignore} has no line for them, as one
+     * that an earlier version created and {@code project migrate} gave its record.
      */
-    public static final String IGNORE_CONTENT = '!/project.yml\n!/forge.lock.yml\n!/.gitattributes\n!/.gitignore\n!/baseline/\n!/baseline/**\n'
+    public static final String IGNORE_CONTENT = '!/project.yml\n!/forge.lock.yml\n!/.gitattributes\n!/.gitignore\n!/baseline/\n!/baseline/**\n' +
+            '/cache/\n/history\n/run/\n/transactions/\n'
 
     private static final Set<String> OF_BUILD_ROOT = ['gradlew', 'gradlew.bat', 'gradle/wrapper/gradle-wrapper.jar', 'gradle/wrapper/gradle-wrapper.properties',
                                                      'settings.gradle', 'settings.gradle.kts', 'grailsw', 'grailsw.bat', 'grails-wrapper.jar', '.gitattributes'].toSet().asImmutable()
