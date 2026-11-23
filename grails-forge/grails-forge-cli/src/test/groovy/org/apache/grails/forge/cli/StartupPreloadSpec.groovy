@@ -85,6 +85,16 @@ class StartupPreloadSpec extends Specification {
         ['help', 'create-app']                      | false
         ['--version']                               | false
         []                                          | false
+        ['feature', 'add', 'cache']                 | true
+        ['--plain-output', 'feature', 'list']       | true
+        ['project', 'regenerate', '--diff']         | true
+        ['project', 'migrate', '--dry-run']         | true
+        ['feature']                                 | false
+        ['feature', '--help']                       | false
+        ['project', 'show']                         | false
+        ['help', 'feature', 'add']                  | false
+        ['add', 'feature']                          | false
+        [null, 'feature', null, 'list']             | true
     }
 
     void "nothing is started where the JVM has one processor, or where the system property says so"() {

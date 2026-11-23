@@ -25,6 +25,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Loads, on threads beside the one that runs the command, classes the command line is about to load
@@ -78,6 +79,17 @@ public final class StartupPreload {
     /** The commands that start the project generator whatever their arguments are. */
     public static final List<String> GENERATOR_COMMANDS = List.of("create-app", "create-webapp", "create-plugin", "create-web-plugin",
             "create-rest-api-plugin", "create-restapi");
+
+    /**
+     * The commands of a group that start the project generator when they run, by the name of the group:
+     * {@code feature add} and {@code feature list} read what it knows of the features, {@code project regenerate}
+     * generates the application again and {@code project migrate} looks for the features of the application among
+     * those it knows. Each of them is short-lived and spends most of its time starting the generator, so the
+     * classes of the generator are loaded ahead for it as they are for the commands that create an application.
+     */
+    public static final Map<String, List<String>> GENERATOR_SUBCOMMANDS = Map.of(
+            "feature", List.of("add", "list"),
+            "project", List.of("regenerate", "migrate"));
 
     private static final String GROOVY_RUNTIME = "groovy.lang.GroovySystem";
     // Reported to Groovy as GROOVY-9646 (https://issues.apache.org/jira/browse/GROOVY-9646): the static
@@ -138,8 +150,7 @@ public final class StartupPreload {
             status = processors < 2 ? "off: the JVM has one processor" : "off: there is no class loader";
             return started;
         }
-        boolean generator = args != null && Arrays.stream(args).filter(arg -> arg != null && !arg.startsWith("-")).findFirst()
-                .map(GENERATOR_COMMANDS::contains).orElse(false);
+        boolean generator = startsGenerator(args);
         status = STARTED + ": the classes every command loads" + (generator ? " and those of the project generator" : "");
         started.add(daemon("grails-preload-classes", () -> {
             load(loader, CLASSES);
@@ -155,6 +166,23 @@ public final class StartupPreload {
         }
         started.add(daemon("grails-preload-formatting", () -> Class.forName(FORMATTING, true, loader)));
         return started;
+    }
+
+    // whether the command line names a command that starts the project generator: the first word that is no option,
+    // or that word and the next one for a command of a group
+    private static boolean startsGenerator(String... args) {
+        if (args == null) {
+            return false;
+        }
+        List<String> words = Arrays.stream(args).filter(arg -> arg != null && !arg.startsWith("-")).limit(2).toList();
+        if (words.isEmpty()) {
+            return false;
+        }
+        if (GENERATOR_COMMANDS.contains(words.get(0))) {
+            return true;
+        }
+        List<String> ofGroup = GENERATOR_SUBCOMMANDS.get(words.get(0));
+        return ofGroup != null && words.size() > 1 && ofGroup.contains(words.get(1));
     }
 
     private static void load(ClassLoader loader, String resource) throws Exception {

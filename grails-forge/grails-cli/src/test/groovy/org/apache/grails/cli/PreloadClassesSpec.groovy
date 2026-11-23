@@ -17,9 +17,11 @@
 package org.apache.grails.cli
 
 import java.nio.file.Files
+import java.nio.file.Path
 import java.util.jar.JarFile
 import org.apache.grails.forge.cli.StartupPreload
 import spock.lang.IgnoreIf
+import spock.lang.Requires
 import spock.lang.Shared
 import spock.lang.Specification
 
@@ -137,6 +139,41 @@ class PreloadClassesSpec extends Specification {
         creating as Set<String> == StartupPreload.GENERATOR_COMMANDS as Set<String>
     }
 
+    // Loading the classes of the generator ahead takes about a tenth off a command that starts it, and only the
+    // processor time of a second thread from one that does not: what the command line says it loaded ahead is held
+    // to what it says the command started.
+    @Requires({ Runtime.runtime.availableProcessors() > 1 })
+    void "a command loads the classes of the generator ahead where it starts the generator, and not where it does not: #arguments"() {
+        given:
+        File directory = recorded ? new File(dir, 'demo') : unrecorded()
+        File err = File.createTempFile('err', '.txt', dir)
+
+        when:
+        Process process = java(directory, [], arguments as String[], err, [GRAILS_CLI_DIAGNOSTICS: 'true'])
+        process.inputStream.getText('UTF-8')
+        process.waitFor()
+        List<String> said = err.readLines('UTF-8').findAll { String line -> line.startsWith('| Diagnostic ') }
+        String preload = said.find { String line -> line.startsWith('| Diagnostic preload: ') }
+        String ran = said.find { String line -> line.startsWith('| Diagnostic project generator: ') }
+
+        then: 'the classes of the generator are loaded ahead exactly where the generator runs'
+        preload ==~ /\| Diagnostic preload: started: the classes every command loads( and those of the project generator)?, (still loading|done)/
+        ran != null
+        preload.contains(' and those of the project generator') == generator
+        ran.startsWith('| Diagnostic project generator: running') == generator
+
+        where:
+        arguments                                   | recorded | generator
+        ['feature', 'list']                         | true     | true
+        ['feature', 'add', 'cache', '--dry-run']    | true     | true
+        ['project', 'regenerate', '--diff']         | true     | true
+        ['project', 'migrate', '--dry-run']         | false    | true
+        ['project', 'show']                         | true     | false
+        ['help', 'feature', 'add']                  | true     | false
+        ['--version']                               | true     | false
+        ['stats']                                   | true     | false
+    }
+
     void "a command writes what it writes without the classes loaded ahead, and the same with them"() {
         when:
         List<String> with = output(arguments, [])
@@ -156,6 +193,25 @@ class PreloadClassesSpec extends Specification {
         Process process = java(dir, options, arguments as String[], err)
         String out = process.inputStream.getText('UTF-8')
         return [out, String.valueOf(process.waitFor()), err.getText('UTF-8')]
+    }
+
+    // the application of the specification without its record, which project migrate writes
+    private File unrecorded() {
+        File copy = new File(dir, 'unrecorded')
+        if (!copy.directory) {
+            Path from = new File(dir, 'demo').toPath()
+            Files.walk(from).withCloseable { stream ->
+                stream.filter { Path each -> !from.relativize(each).toString().startsWith('.grails') }.forEach { Path each ->
+                    Path to = copy.toPath().resolve(from.relativize(each).toString())
+                    if (Files.isDirectory(each)) {
+                        Files.createDirectories(to)
+                    } else {
+                        Files.copy(each, to)
+                    }
+                }
+            }
+        }
+        return copy
     }
 
     private File file(String resource) {
@@ -197,7 +253,7 @@ class PreloadClassesSpec extends Specification {
         return names
     }
 
-    private Process java(File directory, List<String> options, String[] arguments, File err = null) {
+    private Process java(File directory, List<String> options, String[] arguments, File err = null, Map<String, String> environment = [:]) {
         List<String> command = [new File(System.getProperty('java.home'), 'bin/java').path, '--enable-native-access=ALL-UNNAMED',
                                 "-Duser.home=${new File(dir, 'home').path}".toString()] + options +
                 ['-cp', allJar.path, 'org.apache.grails.cli.GrailsCli'] + arguments.toList()
@@ -206,6 +262,7 @@ class PreloadClassesSpec extends Specification {
         builder.redirectInput(ProcessBuilder.Redirect.from(new File(File.separatorChar == ('\\' as char) ? 'NUL' : '/dev/null')))
         builder.environment().remove('COLORTERM')
         builder.environment().put('GRAILS_FORGE_CATALOG', 'none')
+        builder.environment().putAll(environment)
         return builder.start()
     }
 }
