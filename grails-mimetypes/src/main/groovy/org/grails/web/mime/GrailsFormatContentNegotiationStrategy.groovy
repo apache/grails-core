@@ -37,8 +37,8 @@ import org.grails.web.servlet.mvc.GrailsWebRequest
  * ahead of Spring MVC's own strategies, so that what Spring MVC writes for it is in the format Grails resolves for it. It
  * leaves any other request, such as one a Spring MVC endpoint handles, to them, and so a request whose format names no
  * type, as the {@code all} format does. A format no type of {@code grails.mime.types} stands for is the type Spring MVC's
- * manager maps it to, as {@code spring.mvc.contentnegotiation.media-types} maps one, and a request that names a format
- * neither maps is not acceptable.
+ * manager maps it to, such as one {@code spring.mvc.contentnegotiation.media-types} adds or a default Spring MVC
+ * registers for the message converters present, and a request that names a format neither maps is not acceptable.
  *
  * @since 9.0
  */

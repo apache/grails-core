@@ -290,7 +290,9 @@ properties apply to the Grails formats as they do to Spring MVC, and its media t
 takes them: by quality, then a more specific type ahead of a less specific one, then in the order the header lists them,
 except that a type with the `+xml` suffix comes ahead of the XML type of equal quality, as the Grails rules take it.
 `Accept: */*, application/json` is the `json` format, where the Grails rules give `all`, and
-`Accept: application/xml, application/atom+xml` is `atom`, as they give.
+`Accept: application/xml, application/atom+xml` is `atom`, as they give. The XML type is also a `text/xml` the header
+lists without `application/xml`, which the Grails rules leave first: `Accept: text/xml, application/atom+xml` is
+`atom`, where they give `xml`.
 * Each media type is the format `grails.mime.types`, or a `MimeTypeProvider` bean such as a renderer, gives it. A type
 with the `+json` or `+xml` suffix that no configured type names, such as `application/merge-patch+json` or
 `application/problem+xml`, is the `json` or the `xml` format, as Spring MVC's JSON and XML converters write such types.
@@ -305,11 +307,16 @@ that accepts any type, with the `all` format.
 * The `format` parameter and a URL extension name the format, ahead of the `Accept` header, as before. The first value
 of the parameter counts, as for Spring MVC; a format no type is configured for is not acceptable, where the Grails rules
 answer in the first configured format, but what Spring MVC writes for a format `grails.mime.types` does not list and
-`spring.mvc.contentnegotiation.media-types` maps is in the type that maps it, while `respond` answers it with
-`406 Not Acceptable`; and the `all` format, which is any type whether or not `grails.mime.types` lists
-it, leaves the format to the `Accept` header. Where `spring.mvc.contentnegotiation.favor-parameter` has Spring MVC read
-the `format` parameter too, Grails reads it in its place for a request a URL mapping handles, so `?format=all` is left
-to the `Accept` header there as well, while a Spring MVC endpoint reads it as Spring MVC does.
+Spring MVC's content negotiation manager maps is in the type the manager maps it to, while `respond` answers it with
+`406 Not Acceptable`. The manager maps the data formats Grails registers with it, those among `json`, `xml`, `hal`,
+`atom`, `rss`, `csv` and `text` that `grails.mime.types` lists, the formats `spring.mvc.contentnegotiation.media-types`
+adds, and those Spring MVC registers for the types its message converters support, such as `json`. It matches a
+format whatever its case, which `grails.mime.types` does not, so `?format=JSON` and `?format=HAL` are written as
+`application/json` and `application/hal+json`. The `all` format,
+which is any type whether or not `grails.mime.types` lists it, leaves the format to the `Accept` header. Where
+`spring.mvc.contentnegotiation.favor-parameter` has Spring MVC read the `format` parameter too, Grails reads it in its
+place for a request a URL mapping handles, so `?format=all` is left to the `Accept` header there as well, while a Spring
+MVC endpoint reads it as Spring MVC does.
 * `grails.mime.use.accept.header` and `grails.mime.disable.accept.header.*` ignore the `Accept` header as before.
 * The `format` parameter, the URL extension and the `Accept` header settings also decide what Spring MVC writes for a
 request a URL mapping handles, so that it is in the format Grails resolves for the request: an action that returns a
@@ -330,8 +337,8 @@ no URL mapping handles. Each rule of Grails' negotiation becomes:
 
 |The `format` parameter and URL extensions select the format
 |Kept, ahead of Spring MVC's strategies, and also for what Spring MVC writes for the request, which a format only
-`spring.mvc.contentnegotiation.media-types` maps decides too. A format neither maps is not acceptable, and the `all`
-format leaves the choice to the `Accept` header.
+Spring MVC's content negotiation manager maps, such as one `spring.mvc.contentnegotiation.media-types` adds, decides
+too. A format neither maps is not acceptable, and the `all` format leaves the choice to the `Accept` header.
 
 |`grails.mime.use.accept.header` and `grails.mime.disable.accept.header.*` ignore the `Accept` header
 |Kept, also for what Spring MVC writes for the request.
@@ -340,7 +347,8 @@ format leaves the choice to the `Accept` header.
 |Dropped: both are the `xml` format, which comes in Spring MVC's order.
 
 |A type with the `+xml` suffix comes ahead of `application/xml` of equal quality
-|Kept, also for what Spring MVC writes for the request.
+|Kept, also for what Spring MVC writes for the request, and also ahead of a `text/xml` the header lists without
+`application/xml`, which the Grails rules leave first.
 
 |The problem types of RFC 9457 are the `json` and `xml` formats
 |Extended to any type with the `+json` or `+xml` suffix that no configured type names.
