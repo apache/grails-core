@@ -40,7 +40,7 @@ Usage:
 grails create-command [-f] <<name>>
 ----
 
-Creates `grails-app/commands/<package>/<Name>Command.groovy`, a class that implements link:{apiFromRef}org/apache/grails/core/cli/GrailsApplicationCommand.html[GrailsApplicationCommand], from the template `artifacts/Command.groovy`. It is a command of every project.
+Creates `grails-app/commands/<package>/<Name>Command.groovy`, a class that implements link:{apiFromRef}org/apache/grails/core/cli/GrailsApplicationCommand.html[GrailsApplicationCommand], from the template `artifacts/Command.groovy`. It is a command of every project. As it is written, the class prints its name and the arguments it was given and returns `true` from `handle()`, so the new command runs and succeeds at once; its work replaces that body, and `handle()` returns `false` to end the command with exit code 1.
 
 The name is needed: the command does not ask for one. It can include a package, such as `org.bookstore` in the last example above; without one, the class goes into the default package of the project. The first letter of the name is made upper case.
 

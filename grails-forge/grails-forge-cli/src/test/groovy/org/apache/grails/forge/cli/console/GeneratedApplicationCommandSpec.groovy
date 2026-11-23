@@ -30,8 +30,9 @@ import spock.lang.Timeout
 /**
  * A command the application was given with {@code create-command} is a command of the command line by its
  * name, in a project that was never built: the build lists the commands of the application, which
- * compiles it, and the command is run in the application. Once the build has compiled the project the
- * list is current, also for a command added since.
+ * compiles it, and the command is run in the application. As {@code create-command} writes it, the command says
+ * what it was given and succeeds. Once the build has compiled the project the list is current, also for a
+ * command added since.
  */
 @IgnoreIf({ os.windows })
 @Timeout(900)
@@ -62,27 +63,30 @@ class GeneratedApplicationCommandSpec extends CommandSpec implements CommandFixt
         gradle.close()
     }
 
-    void "a command created in an application that was never built is run by its name"() {
-        given: 'a generated application with a command that says it ran, and no list of its commands'
+    void "a command created in an application that was never built is run by its name, as it was created"() {
+        given: 'a generated application with a command as create-command writes it, and no list of its commands'
         generateProject(ApplicationType.WEB)
         new File(dir, 'settings.gradle') << '\n' + gradle.recording
         new File(dir, 'gradle.properties') << "\norg.gradle.daemon.registry.base=${gradle.registry.canonicalPath}\norg.gradle.daemon.idletimeout=${IsolatedGradle.IDLE_MILLIS}\n"
-        assert ForgeCli.execute(beanContext, 'create-command', 'greet') == 0
-        File command = new File(dir, 'grails-app/commands/example/grails/GreetCommand.groovy')
-        command.text = command.text.replace('return false', "println 'GREETED'\n        return true")
+        out.reset()
+        assert ForgeCli.execute(beanContext, 'create-command', 'data-import') == 0
+        assert out.toString().readLines() == [
+                '| Rendered command to grails-app/commands/example/grails/DataImportCommand.groovy',
+                '| Run it with: grails-forge-cli data-import'
+        ]
         assert !new File(dir, ApplicationCommandFile.LOCATION).exists()
         out.reset()
         err.reset()
 
-        when:
-        int exit = ForgeCli.execute(beanContext, 'greet')
+        when: 'it is run by its name, as the guide shows it'
+        int exit = ForgeCli.execute(beanContext, 'data-import', 'orders.csv')
 
-        then: 'the build listed the commands once, and the command ran in the application'
+        then: 'the build listed the commands once, and the command ran in the application and succeeded'
         exit == 0
-        err.toString().readLines()[0] == '| Listing the commands of the application and its plugins, of which greet may be one, with the Gradle task grailsCommandCatalog'
-        err.toString().contains('| Running the command greet of the application, with the Gradle task runCommand')
-        out.toString().readLines().contains('GREETED')
-        catalog().commands.find { it.name == 'greet' }.origin == 'application'
+        err.toString().readLines()[0] == '| Listing the commands of the application and its plugins, of which data-import may be one, with the Gradle task grailsCommandCatalog'
+        err.toString().contains('| Running the command data-import of the application, with the Gradle task runCommand')
+        out.toString().readLines().contains('Ran data-import with the arguments [orders.csv]')
+        catalog().commands.find { it.name == 'data-import' }.origin == 'application'
 
         when: 'a second command, and a build that compiles the project'
         assert ForgeCli.execute(beanContext, 'create-command', 'wave') == 0
@@ -92,7 +96,7 @@ class GeneratedApplicationCommandSpec extends CommandSpec implements CommandFixt
 
         then: 'the build listed it, and the list is current for the command line, which lists it as a command of the application'
         compiled == 0
-        ((List<Map>) catalog().commands)*.name.containsAll(['greet', 'wave'])
+        ((List<Map>) catalog().commands)*.name.containsAll(['data-import', 'wave'])
 
         when:
         out.reset()
@@ -103,7 +107,7 @@ class GeneratedApplicationCommandSpec extends CommandSpec implements CommandFixt
         then:
         described.complete == true
         !((List<String>) described.diagnostics).any { String line -> line.contains(ApplicationCommandFile.LOCATION) }
-        ((List<Map>) described.commands).findAll { it.origin == 'application' }*.name.containsAll(['greet', 'wave'])
+        ((List<Map>) described.commands).findAll { it.origin == 'application' }*.name.containsAll(['data-import', 'wave'])
         !err.toString().contains('| Listing')
     }
 

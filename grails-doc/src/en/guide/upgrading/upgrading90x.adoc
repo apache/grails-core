@@ -1972,6 +1972,7 @@ What else differs for these commands:
 * *A name has to be the name of a class.* A path (`a/b/Book`), a name with a space or another character no identifier has, a package with a hyphen, a name that ends with `.groovy` and a name that Windows keeps for a device are refused with exit code 2. A name with hyphens is still made a class name (`data-import` becomes `DataImport`).
 * *A file that is there already fails the command.* The command writes none of its files, names the one that is in the way and ends with exit code 1. `-f` or `--force` replaces it. Until now such a file was kept with a warning, the other file of the command was written, and the command ended with 0.
 * *`create-unit-test BookSpec` writes `BookSpec.groovy`*, and `create-command ImportCommand` writes `ImportCommand.groovy`: a name that already ends with what the command adds is not given it twice.
+* *`create-command` writes a command that succeeds.* The class prints its name and the arguments it was given, and its `handle()` returns `true`, so the command runs by its name (`grails data-import orders.csv`) and ends with exit code 0 as it is written. The class the profiles wrote returned `false`, which ends a command with exit code 1, until its body was written. A project that wants the class as it was has the template `src/main/templates/artifacts/Command.groovy`, which `install-templates` copies there, return `false`.
 * *`create-functional-test` in a REST API application or REST API plugin* writes a test that uses the HTTP client of the JDK. In a web application or web plugin with a Geb feature it writes a Geb test (note 54).
 * *`add-property` only adds lines, and refuses a class it cannot add them to.* The command reads the domain class with the Groovy parser and no longer goes by the look of its lines: a method that returns a `String`, a brace in a comment, a block `static constraints = {}` on one line, an abstract class and a property of a type with parameters (`List<String> tags`) are no longer in the way, and the line endings, the indentation and the end of the file stay as they are. It writes nothing and ends with exit code 1 for a class that is written on one line, a class whose last property is on the line of its closing brace, and, when the property has a constraint, `constraints` that are not a block written in the class (`static constraints = Shared.rules`). See link:{commandLineRef}add-property.html[add-property].
 * *The commands work in every directory of the project* and write to the project, also when they are given in `grails-app/views`. They do not write through a link that stands where a directory of the sources is expected.
@@ -2306,7 +2307,7 @@ Every command the Grails shell of Grails 8 had, of itself and of the profiles `b
 
 |`create-command`
 |every project, and the profile for writing profiles
-|Unchanged in a project: writes `grails-app/commands/<package>/<Name>Command.groovy`. The one that wrote a command of a profile is removed.
+|Unchanged in a project: writes `grails-app/commands/<package>/<Name>Command.groovy`, now a command that says what it was given and succeeds (45). The one that wrote a command of a profile is removed.
 
 |`create-controller`
 |web and REST API projects

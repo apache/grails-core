@@ -211,6 +211,8 @@ $ grails create-command data-import
 $ grails data-import orders.csv
 ----
 
+As it is written, the command prints its name and what it was given, `Ran data-import with the arguments [orders.csv]`, and succeeds. Its work goes into its `handle()` method, which returns `true` when the command has done it and `false` to end the command with exit code 1.
+
 The build of the project lists these commands, with the Gradle task `grailsCommandCatalog`, every time it compiles the project. A command the build has not listed yet, as in a checkout that was never built or right after `create-command`, is listed when its name is typed: `grails` has the build list the commands once, which compiles the project, and runs the command. In a project that was built, `help` and a mistyped name answer at once, without a build.
 
 `help` lists the commands of the application and of its plugins after its own, each with where it comes from, and each is run by its name. `grails help data-import` describes the command from that list and runs nothing, while `grails data-import --help` gives `--help` to the command and runs it. Such a command runs in the `development` environment. Everything after its name is its own, so `-Dgrails.env=production` after the name does not select an environment: it reaches the command as an argument, and `grails` warns that the command runs in `development`. Name the environment in front of the command with `run-command`:

@@ -25,6 +25,20 @@ You can create your own commands by running the link:{commandLineRef}create-comm
 grails create-command HelloWorld
 ----
 
+As it is written, the class prints its name and the arguments it was given and returns `true`, so `grails hello-world` runs and succeeds at once:
+
+[source,groovy]
+----
+boolean handle() {
+    // args holds what was given after the name of the command. Return true when the command has
+    // done its work, and false to end it with exit code 1.
+    println "Ran ${name} with the arguments ${args}"
+    return true
+}
+----
+
+Replace that body with the work of the command. `handle()` returns `true` when the command succeeded; `false`, or an exception, ends the command with exit code 1.
+
 NOTE: Unlike scripts, commands cause the Grails environment to start and you have full access to the application context and the runtime.
 
 Since Grails 3.2.0, commands have similar abilities as scripts in regards to retrieving arguments, template generation, file access, and model building.
