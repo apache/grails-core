@@ -41,7 +41,7 @@
         <dependency>
             <groupId>org.grails.plugins</groupId>
             <artifactId>grails-web-console</artifactId>
-            <version>7.0.0</version>
+            <version>8.0.0</version>
         </dependency>
         <dependency>
             <!-- Last released Feb 24, 2021 -->
