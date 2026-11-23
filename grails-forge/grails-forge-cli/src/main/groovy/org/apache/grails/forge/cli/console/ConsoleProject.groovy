@@ -348,7 +348,8 @@ final class ConsoleProject {
      * make it the root of a build of several projects and are the user's own too. Such a wrapper that is
      * a link names its file itself, through no second link, and the file and every directory from the
      * link down to it are the user's own as well: who can write to a directory on the way decides
-     * which file the link leads to.
+     * which file the link leads to. So are the jar and the properties beside that file, which are the
+     * ones the script runs, besides those beside the link.
      *
      * @param windows whether the script for Windows is asked for
      * @return the wrapper script, or why there is none that is run
@@ -439,6 +440,12 @@ final class ConsoleProject {
             String distrusted = distrust(holder, looked)
             if (distrusted == null && target != null && !isSafeDirectory(holder)) {
                 distrusted = distrustLinked(holder, wrapper, target)
+                if (distrusted == null) {
+                    // The script finds the jar it runs from where its file really is, and the jar reads the
+                    // properties beside itself: a link does not take them with it. Those beside the link are
+                    // what the batch file of Windows runs, which finds its jar from where it was started.
+                    distrusted = distrust(target.getParent(), WRAPPER_FILES)
+                }
             }
             if (distrusted != null) {
                 return "${distrusted}; name ${GradleRunner.line(holder)} in the environment variable ${SAFE_DIRECTORY} to run it all the same"
