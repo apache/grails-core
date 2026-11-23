@@ -1007,13 +1007,13 @@ org.grails.forge.cli.command.CreateCommand$_generate_closure10
 org.grails.forge.cli.command.CreateCommand$_generate_closure9
 org.grails.forge.cli.command.CreateCommand$_included_closure8
 org.grails.forge.cli.command.CreateCommand$_isOfTheFramework_closure28
-org.grails.forge.cli.command.CreateCommand$_managedVersion_closure27
 org.grails.forge.cli.command.CreateCommand$_ofRepositories_closure11
 org.grails.forge.cli.command.CreateCommand$_ofRepositories_closure12
 org.grails.forge.cli.command.CreateCommand$_presetFromCatalogs_closure29
 org.grails.forge.cli.command.CreateCommand$_select_closure16
 org.grails.forge.cli.command.CreateCommand$_select_closure17
 org.grails.forge.cli.command.CreateCommand$_select_closure18
+org.grails.forge.cli.command.CreateCommand$_shipped_closure27
 org.grails.forge.cli.command.CreateCommand$_unlikeItsPlugin_closure14
 org.grails.forge.cli.command.CreateCommand$_unlikeItsPlugin_closure15
 org.grails.forge.cli.command.CreateCommand$_withPacks_closure13

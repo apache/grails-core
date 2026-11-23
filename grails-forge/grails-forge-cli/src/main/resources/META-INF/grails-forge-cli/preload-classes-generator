@@ -1104,6 +1104,9 @@ org.grails.forge.feature.database.GrailsDataHibernateValidator$_validateOnlyOneH
 org.grails.forge.feature.database.GrailsDataHibernateValidator$_validateOnlyOneHibernateImplementation_closure2
 org.grails.forge.feature.database.MongoDBTestingSupportValidator
 org.grails.forge.feature.database.MongoDBTestingSupportValidator$_validatePreProcessing_lambda1
+org.grails.forge.feature.database.Neo4jGormValidator
+org.grails.forge.feature.database.Neo4jGormValidator$_notCoveredWith_closure1
+org.grails.forge.feature.database.Neo4jGormValidator$_validateNeo4jBomCoversFeatures_closure2
 org.grails.forge.feature.grails.GrailsBase
 org.grails.forge.feature.grails.GrailsDefaultPlugins
 org.grails.forge.feature.grails.GrailsDefaultPlugins$_apply_lambda1
