@@ -183,12 +183,11 @@ Never unify those casually.
 3. Manually refresh the locations bootstrap does **not** cover. For each tree, keep the **full** wrapper set in sync (`gradle-wrapper.properties`, `gradle-wrapper.jar`, `gradlew`, `gradlew.bat`) - not properties alone:
 
    - `build-logic/` - run its wrapper task or copy the complete set from root after bootstrap
-   - Forge **generated-app** wrapper assets (all of these - properties alone is not enough):
-     - `grails-forge/grails-forge-core/grails-app/views/forge/.../gradleWrapperProperties.gsp` (properties page)
+   - Forge **generated-app** wrapper assets (all of these - properties alone is not enough; the properties page, `gradleWrapperProperties.gsp`, takes its version from `gradleToolingApiVersion` through `grails-versions.properties` and needs no edit):
      - `grails-forge/grails-forge-core/src/main/resources/gradle/gradlew`
      - `grails-forge/grails-forge-core/src/main/resources/gradle/gradlew.bat`
      - `grails-forge/grails-forge-core/src/main/resources/gradle/wrapper/gradle-wrapper.jar`
-   - `gradle.properties` → `gradleToolingApiVersion` (must match the new Gradle version: the `grails` command line runs the builds of projects with that Tooling API)
+   - `gradle.properties` → `gradleToolingApiVersion` (must match the new Gradle version: the `grails` command line runs the builds of projects with that Tooling API, and the wrapper of a generated application names it). `gradleMinimumVersion` beside it is the earliest Gradle Grails builds with; raise it only when the Grails Gradle plugins need a later Gradle.
 
 4. Verify every **main-line** tree matches on properties **and** scripts/jars. The only intentional holdout is `end-to-end/legacy-g7-command-plugin` (Gradle 8.x).
 

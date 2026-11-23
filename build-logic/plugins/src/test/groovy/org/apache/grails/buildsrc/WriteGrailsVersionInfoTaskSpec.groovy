@@ -98,6 +98,74 @@ class WriteGrailsVersionInfoTaskSpec extends Specification {
         date << ['2027-13-01', '31/07/2027', '20207-07-31']
     }
 
+    void 'the version of Gradle applications are generated with and the earliest one Grails is built with are written beside the BOM versions'() {
+        given:
+        WriteGrailsVersionInfoTask task = versionInfoTask()
+        task.gradleVersion.set('9.9.2')
+        task.gradleMinimumVersion.set(' 9.7 ')
+
+        when:
+        task.writeVersionInfo()
+
+        then:
+        writtenVersions() == [
+                'gradle.minimum'     : '9.7',
+                'gradle.version'     : '9.9.2',
+                'grails.version'     : '8.1.0-SNAPSHOT',
+                'spring-boot.version': '4.1.1'
+        ]
+    }
+
+    void 'a version of Gradle that is a release candidate is written as it is'() {
+        given:
+        WriteGrailsVersionInfoTask task = versionInfoTask()
+        task.gradleVersion.set('9.10.0-rc-1')
+        task.gradleMinimumVersion.set('9.10')
+
+        when:
+        task.writeVersionInfo()
+
+        then:
+        writtenVersions()['gradle.version'] == '9.10.0-rc-1'
+        writtenVersions()['gradle.minimum'] == '9.10'
+    }
+
+    @Unroll
+    void 'the Gradle versions #version and #minimum fail the build: #message'() {
+        given:
+        WriteGrailsVersionInfoTask task = versionInfoTask()
+        task.gradleVersion.set(version)
+        task.gradleMinimumVersion.set(minimum)
+
+        when:
+        task.writeVersionInfo()
+
+        then:
+        GradleException e = thrown()
+        e.message == message
+
+        where:
+        version    | minimum || message
+        'latest'   | '9.7'   || 'gradle.version must be a version of Gradle, such as 9.9.2, but was: latest'
+        '9.9.2'    | '9'     || 'gradle.minimum must be a version of Gradle, such as 9.9.2, but was: 9'
+        '9.9.2'    | '9.10'  || 'The earliest version of Gradle Grails is built with, 9.10, is later than the version applications are generated with, 9.9.2'
+        '9.9.2'    | '9.9.3' || 'The earliest version of Gradle Grails is built with, 9.9.3, is later than the version applications are generated with, 9.9.2'
+    }
+
+    void 'a property of the BOM is not taken for a version of Gradle'() {
+        given:
+        WriteGrailsVersionInfoTask task = versionInfoTask()
+        new File(tmp, 'pom-default.xml').text = '<project><properties><gradle.version>1.0</gradle.version></properties></project>'
+        task.gradleVersion.set('9.9.2')
+
+        when:
+        task.writeVersionInfo()
+
+        then:
+        GradleException e = thrown()
+        e.message == 'The BOM has a property gradle.version, which is the version of Gradle this task writes itself'
+    }
+
     private WriteGrailsVersionInfoTask versionInfoTask() {
         Project project = ProjectBuilder.builder().withProjectDir(tmp).build()
         WriteGrailsVersionInfoTask task = project.tasks.register('writeGrailsVersionInfo', WriteGrailsVersionInfoTask).get()

@@ -28,10 +28,11 @@ under the License.
 <%@ model="GradleBuild gradleBuild" %>
 <%@ model="Function<String,Coordinate> coordinateResolver" %>
 <%@ model="Features features" %>
-%{-- Keep gradle version synced with .sdkmanrc and all gradle-wrapper.properties files --}%
+<%@ model="String gradleVersion" %>
+%{-- The version is gradleToolingApiVersion of the gradle.properties of the root of the Grails repository, see VersionInfo.getGradleVersion() --}%
 distributionBase=GRADLE_USER_HOME
 distributionPath=wrapper/dists
-distributionUrl=https\://services.gradle.org/distributions/gradle-9.9.2-bin.zip
+distributionUrl=https\://services.gradle.org/distributions/gradle-${gradleVersion}-bin.zip
 networkTimeout=10000
 validateDistributionUrl=true
 zipStoreBase=GRADLE_USER_HOME

@@ -102,6 +102,10 @@ grailsVersionInfoTask.configure { WriteGrailsVersionInfoTask it ->
     it.bomPublicationFile = frameworkOutputs.file('grails-bom/default/build/publications/maven/pom-default.xml')
     it.versionsDirectory = grailsVersionsPath
     it.endOfSupport = findProperty('grailsEndOfSupport') as String
+    // the Gradle the wrapper of a generated application names, and the earliest Gradle Grails is built with: both from the
+    // gradle.properties of the root, so that the generated wrapper, the command line and the guide say the same
+    it.gradleVersion = findProperty('gradleToolingApiVersion') as String
+    it.gradleMinimumVersion = findProperty('gradleMinimumVersion') as String
 }
 sourceSets.main.resources.srcDir(grailsVersionsPath)
 

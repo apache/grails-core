@@ -29,6 +29,10 @@ import java.time.format.DateTimeParseException
 class VersionInfo {
 
     private static final String END_OF_SUPPORT = 'grails.endOfSupport'
+    private static final String GRADLE_VERSION = 'gradle.version'
+    private static final String GRADLE_MINIMUM = 'gradle.minimum'
+    // what the build writes beside the versions of the BOM, and is no version of a dependency
+    private static final Set<String> NOT_DEPENDENCIES = [END_OF_SUPPORT, GRADLE_VERSION, GRADLE_MINIMUM].toSet().asImmutable()
     private static final Properties VERSIONS = new Properties()
     private static final String GENERATOR_SHA256 = generatorSha256()
 
@@ -138,6 +142,39 @@ class VersionInfo {
     }
 
     /**
+     * The version of Gradle the wrapper of a generated application names. The build writes it from
+     * {@code gradleToolingApiVersion} of the root of the Grails repository, which is the Gradle of
+     * the build of Grails itself.
+     *
+     * @return the version, as {@code 9.9.2}
+     * @throws IllegalStateException for a generator that was not built with it
+     * @since 9.0
+     */
+    static String getGradleVersion() {
+        return required(GRADLE_VERSION)
+    }
+
+    /**
+     * The earliest version of Gradle a Grails application of this version is built with. The build
+     * writes it from {@code gradleMinimumVersion} of the root of the Grails repository.
+     *
+     * @return the version, as {@code 9.7}
+     * @throws IllegalStateException for a generator that was not built with it
+     * @since 9.0
+     */
+    static String getMinimumGradleVersion() {
+        return required(GRADLE_MINIMUM)
+    }
+
+    private static String required(String key) {
+        String value = VERSIONS.getProperty(key)
+        if (value == null) {
+            throw new IllegalStateException("The versions this generator was built with have no ${key}".toString())
+        }
+        return value
+    }
+
+    /**
      * Gets the dependency versions.
      *
      * @return The versions
@@ -145,7 +182,7 @@ class VersionInfo {
     static Map<String, String> getDependencyVersions() {
         Map<String, String> map = new LinkedHashMap<>()
         for (String key : VERSIONS.stringPropertyNames().sort()) {
-            if (key != END_OF_SUPPORT) {
+            if (!NOT_DEPENDENCIES.contains(key)) {
                 map.put(key, VERSIONS.getProperty(key))
             }
         }
