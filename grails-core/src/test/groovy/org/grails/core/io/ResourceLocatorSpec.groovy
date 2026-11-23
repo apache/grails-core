@@ -74,12 +74,13 @@ class ResourceLocatorSpec extends Specification {
     }
 
     private static BinaryGrailsPlugin getBinaryPlugin() {
-        def pluginXml = '''
-            <plugin name='testBinary'>
-                <class>org.grails.plugins.TestBinaryGrailsPlugin</class>
-            </plugin>
-        '''
-        def resource = new MockBinaryPluginResource(pluginXml.bytes).tap {
+        def pluginProps = '''
+            format.version=1
+            name=testBinary
+            version=1.0
+            class=org.grails.plugins.TestBinaryGrailsPlugin
+        '''.stripIndent()
+        def resource = new MockBinaryPluginResource(pluginProps.bytes).tap {
             relativesResources['static/css/main.css'] = new ByteArrayResource(''.bytes)
         }
         new BinaryGrailsPlugin(

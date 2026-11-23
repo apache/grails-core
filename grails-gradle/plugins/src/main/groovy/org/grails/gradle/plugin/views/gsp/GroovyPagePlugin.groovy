@@ -44,6 +44,7 @@ import org.gradle.jvm.toolchain.JavaToolchainService
 
 import org.grails.gradle.plugin.core.GrailsCompileStaticOptions
 import org.grails.gradle.plugin.core.GrailsGradlePlugin
+import org.grails.gradle.plugin.core.GrailsPluginGradlePlugin
 import org.grails.gradle.plugin.core.GrailsExtension
 import org.grails.gradle.plugin.scaffolding.GenerateScaffoldedViewsTask
 import org.grails.gradle.plugin.util.SourceSets
@@ -411,6 +412,19 @@ class GroovyPagePlugin implements Plugin<Project> {
         }
 
         wireCompileStaticOptions(project, [compileGroovyPages, compileWebappGroovyPages])
+
+        project.plugins.withId(GrailsPluginGradlePlugin.PLUGIN_ID) {
+            Provider<String> pluginViewsPath = project.provider {
+                String logicalName = GrailsPluginGradlePlugin.resolveLogicalPluginName(project)
+                "META-INF/grails/plugins/${logicalName}/views.properties".toString()
+            }
+            compileGroovyPages.configure { GroovyPageForkCompileTask task ->
+                task.viewsManifestPath.convention(pluginViewsPath)
+            }
+            compileWebappGroovyPages.configure { GroovyPageForkCompileTask task ->
+                task.viewsManifestPath.convention(pluginViewsPath)
+            }
+        }
 
         compileGroovyPages.configure {
             it.dependsOn(

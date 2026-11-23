@@ -18,29 +18,32 @@
  */
 package org.apache.grails.core.plugins;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.lang.reflect.Modifier;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 import java.util.function.Function;
 
-import javax.xml.parsers.ParserConfigurationException;
-import javax.xml.parsers.SAXParser;
-
 import groovy.transform.Internal;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.xml.sax.SAXException;
 
 import org.springframework.beans.BeanWrapper;
 import org.springframework.beans.BeanWrapperImpl;
@@ -53,10 +56,10 @@ import grails.plugins.GrailsVersionUtils;
 import grails.plugins.Plugin;
 import grails.plugins.VersionComparator;
 import grails.plugins.exceptions.PluginException;
+import grails.plugins.metadata.GrailsPluginDescriptor;
 import grails.util.Environment;
 import grails.util.GrailsClassUtils;
 import grails.util.GrailsNameUtils;
-import org.grails.io.support.SpringIOUtils;
 import org.grails.plugins.DefaultGrailsPlugin;
 
 /**
@@ -64,8 +67,9 @@ import org.grails.plugins.DefaultGrailsPlugin;
  * and compatibility checks.
  *
  * <p>This class centralizes the low-level operations used by bootstrap-time discovery, including scanning
- * {@code grails-plugin.xml} descriptors, deriving logical plugin names, reading plugin class metadata, and
- * evaluating environment and version constraints.</p>
+ * {@code META-INF/grails/plugins.imports} and per-plugin {@code META-INF/grails/plugins/<name>/plugin.properties}
+ * descriptors, deriving logical plugin names, reading plugin metadata from annotations, descriptors, or plugin
+ * classes, and evaluating environment and version constraints.</p>
  */
 public final class PluginUtils {
 
@@ -78,9 +82,33 @@ public final class PluginUtils {
     public static final String WILDCARD_OBSERVER_PATTERN = "*";
 
     /**
-     * The classpath location of the Grails plugin descriptor XML files.
+     * The classpath location of the Grails plugin discovery index file. Each non-blank, non-comment line
+     * names a logical plugin whose descriptor lives at {@code META-INF/grails/plugins/<name>/plugin.properties}.
+     *
+     * @since 9.0
      */
-    public static final String PLUGIN_XML_PATTERN = "META-INF/grails-plugin.xml";
+    public static final String PLUGINS_IMPORTS_PATH = "META-INF/grails/plugins.imports";
+
+    /**
+     * The classpath prefix under which each plugin stores its namespaced descriptor, configuration, and view manifest.
+     *
+     * @since 9.0
+     */
+    public static final String PLUGIN_DESCRIPTORS_PREFIX = "META-INF/grails/plugins/";
+
+    /**
+     * The filename of each plugin's generated properties descriptor.
+     *
+     * @since 9.0
+     */
+    public static final String PLUGIN_PROPERTIES_FILE = "plugin.properties";
+
+    /**
+     * The filename of each plugin's precompiled GSP view manifest inside its plugin namespace.
+     *
+     * @since 9.0
+     */
+    public static final String PLUGIN_VIEWS_FILE = "views.properties";
 
     /**
      * The filename for YAML-based plugin configuration.
@@ -122,7 +150,7 @@ public final class PluginUtils {
     public static final String GENERATED_CONFIG_PATH = "META-INF/grails/plugin-configuration/";
 
     /**
-     * The naming suffix required for Grails plugin implementation classes.
+     * The naming suffix required for traditional Grails plugin implementation classes.
      */
     public static final String GRAILS_PLUGIN_SUFFIX = "GrailsPlugin";
 
@@ -131,46 +159,114 @@ public final class PluginUtils {
     }
 
     /**
-     * Scans all {@code META-INF/grails-plugin.xml} resources visible to the supplied class loader.
+     * Returns the classpath location of a plugin's descriptor properties file.
      *
-     * <p>Each descriptor is parsed with {@link PluginXmlHandler} and returned as a {@link PluginDescriptor}
-     * containing the descriptor resource, declared plugin implementation classes, and any provided class names.
-     * Invalid descriptors are logged and skipped, so discovery can continue.</p>
+     * @param pluginName the logical plugin name
+     * @return {@code META-INF/grails/plugins/<name>/plugin.properties}
+     * @since 9.0
+     */
+    public static String getPluginDescriptorPath(String pluginName) {
+        return PLUGIN_DESCRIPTORS_PREFIX + normalizePluginName(pluginName) + "/" + PLUGIN_PROPERTIES_FILE;
+    }
+
+    /**
+     * Returns the classpath location of a plugin's namespaced configuration file.
+     *
+     * @param pluginName the logical plugin name
+     * @param configFileName {@link #PLUGIN_YML_CONFIG} or {@link #PLUGIN_GROOVY_CONFIG}
+     * @return {@code META-INF/grails/plugins/<name>/<configFileName>}
+     * @since 9.0
+     */
+    public static String getPluginConfigPath(String pluginName, String configFileName) {
+        return PLUGIN_DESCRIPTORS_PREFIX + normalizePluginName(pluginName) + "/" + configFileName;
+    }
+
+    /**
+     * Returns the classpath location of a plugin's precompiled GSP view manifest.
+     *
+     * @param pluginName the logical plugin name
+     * @return {@code META-INF/grails/plugins/<name>/views.properties}
+     * @since 9.0
+     */
+    public static String getPluginViewsPath(String pluginName) {
+        return PLUGIN_DESCRIPTORS_PREFIX + normalizePluginName(pluginName) + "/" + PLUGIN_VIEWS_FILE;
+    }
+
+    /**
+     * Scans all {@code META-INF/grails/plugins.imports} index resources visible to the supplied class loader
+     * and loads each named plugin's {@code META-INF/grails/plugins/<name>/plugin.properties} descriptor.
+     *
+     * <p>Invalid descriptors are logged and skipped so discovery of remaining plugins can continue.</p>
      *
      * @param classLoader the class loader to scan for plugin descriptors
-     * @return a list of {@link PluginDescriptor} records, one per
-     *         {@code META-INF/grails-plugin.xml} resource found on the
-     *         classpath
+     * @return a list of {@link PluginDescriptor} records discovered on the classpath
      */
     public static List<PluginDescriptor> scanPluginDescriptorResources(ClassLoader classLoader) {
         List<PluginDescriptor> descriptors = new ArrayList<>();
+        Set<String> pluginNames = scanPluginImports(classLoader);
+        if (pluginNames.isEmpty()) {
+            return descriptors;
+        }
 
-        try {
-            Enumeration<URL> resources = classLoader.getResources(PLUGIN_XML_PATTERN);
-            // Grails generates this descriptor and never writes a DOCTYPE, so it is read with the
-            // strict parser, matching the compile-time transform that generates and rewrites it
-            SAXParser saxParser = SpringIOUtils.newSAXParser();
-
-            while (resources.hasMoreElements()) {
-                URL url = resources.nextElement();
-                try (InputStream input = url.openStream()) {
-                    PluginXmlHandler handler = new PluginXmlHandler();
-                    saxParser.parse(input, handler);
-                    Resource xmlResource = new UrlResource(url);
-                    descriptors.add(new PluginDescriptor(
-                            xmlResource,
-                            handler.getPluginClassNames(),
-                            handler.getProvidedClasses()
-                    ));
-                } catch (IOException | SAXException e) {
-                    LOG.debug("Error parsing plugin descriptor at [{}]: {}", url, e.getMessage());
+        for (String pluginName : pluginNames) {
+            String descriptorPath = getPluginDescriptorPath(pluginName);
+            try {
+                Enumeration<URL> resources = classLoader.getResources(descriptorPath);
+                while (resources.hasMoreElements()) {
+                    URL url = resources.nextElement();
+                    try (InputStream input = url.openStream();
+                         InputStreamReader reader = new InputStreamReader(input, StandardCharsets.UTF_8)) {
+                        Properties props = new Properties();
+                        props.load(reader);
+                        Resource descriptorResource = new UrlResource(url);
+                        descriptors.add(PluginDescriptor.fromProperties(pluginName, descriptorResource, props));
+                    } catch (IOException | IllegalArgumentException e) {
+                        LOG.debug("Error parsing plugin descriptor at [{}]: {}", url, e.getMessage());
+                    }
                 }
+            } catch (IOException e) {
+                LOG.debug("Error locating plugin descriptor [{}]: {}", descriptorPath, e.getMessage());
             }
-        } catch (IOException | ParserConfigurationException | SAXException e) {
-            LOG.debug("Error scanning for plugin descriptors: {}", e.getMessage());
         }
 
         return descriptors;
+    }
+
+    /**
+     * Reads all {@code META-INF/grails/plugins.imports} files visible to the supplied class loader and
+     * returns the distinct logical plugin names in encounter order.
+     *
+     * @param classLoader the class loader to scan
+     * @return distinct logical plugin names declared in {@code META-INF/grails/plugins.imports}
+     * @since 9.0
+     */
+    public static Set<String> scanPluginImports(ClassLoader classLoader) {
+        Set<String> pluginNames = new LinkedHashSet<>();
+        try {
+            Enumeration<URL> importResources = classLoader.getResources(PLUGINS_IMPORTS_PATH);
+            while (importResources.hasMoreElements()) {
+                URL url = importResources.nextElement();
+                try (BufferedReader reader = new BufferedReader(
+                        new InputStreamReader(url.openStream(), StandardCharsets.UTF_8))) {
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        int commentIdx = line.indexOf('#');
+                        if (commentIdx >= 0) {
+                            line = line.substring(0, commentIdx);
+                        }
+                        String trimmed = line.trim();
+                        if (!trimmed.isEmpty()) {
+                            pluginNames.add(normalizePluginName(trimmed));
+                        }
+                    }
+                } catch (IOException e) {
+                    LOG.debug("Error reading plugin imports at [{}]: {}", url, e.getMessage());
+                }
+            }
+        } catch (IOException e) {
+            LOG.debug("Error scanning for plugin imports: {}", e.getMessage());
+        }
+        return pluginNames;
     }
 
     /**
@@ -181,7 +277,7 @@ public final class PluginUtils {
      * @param dynamic whether the plugin originated from a dynamic plugin configuration
      * @return the created plugin info
      */
-    public static PluginInfo createPluginInfo(Class<?> pluginClass, Resource descriptorResource, boolean dynamic) {
+    public static PluginInfo createPluginInfo(Class<?> pluginClass, @Nullable Resource descriptorResource, boolean dynamic) {
         List<String> pluginClassNames = List.of(pluginClass.getName());
         return createPluginInfoByDescriptor(pluginClass, new PluginDescriptor(descriptorResource, pluginClassNames, List.of()), dynamic);
     }
@@ -195,8 +291,10 @@ public final class PluginUtils {
      * @return the created plugin info
      */
     public static PluginInfo createPluginInfoByDescriptor(Class<?> pluginClass, PluginDescriptor descriptor, boolean dynamic) {
-        PluginMetadata metadata = PluginUtils.extractPluginMetadata(pluginClass);
-        Resource configResource = PluginUtils.readPluginConfiguration(pluginClass);
+        PluginMetadata metadata = PluginUtils.extractPluginMetadata(descriptor, pluginClass);
+        ClassLoader loader = pluginClass.getClassLoader();
+        String name = metadata != null ? metadata.getName() : descriptor.getPluginName();
+        Resource configResource = PluginUtils.readPluginConfiguration(name, pluginClass, loader);
         return new PluginInfo(
                 descriptor,
                 metadata,
@@ -222,12 +320,10 @@ public final class PluginUtils {
     }
 
     /**
-     * Convenience method that scans all {@code META-INF/grails-plugin.xml}
-     * resources and returns just the plugin class names.
+     * Convenience method that scans all classpath plugin descriptors and returns the declared plugin class names.
      *
      * @param classLoader the class loader to scan for plugin descriptors
-     * @return a list of fully qualified plugin class names discovered from
-     *         {@code META-INF/grails-plugin.xml} descriptors
+     * @return a list of fully qualified plugin class names discovered on the classpath
      */
     public static List<String> scanPluginDescriptors(ClassLoader classLoader) {
         List<PluginDescriptor> descriptors = scanPluginDescriptorResources(classLoader);
@@ -239,18 +335,17 @@ public final class PluginUtils {
     }
 
     /**
-     * Derives the logical plugin name from the plugin class, following Grails
-     * conventions.
-     *
-     * <p>For example, {@code org.grails.plugins.CoreGrailsPlugin} becomes
-     * {@code core}. This delegates to
-     * {@link GrailsNameUtils#getLogicalPropertyName} with the
-     * {@code "GrailsPlugin"} suffix.</p>
+     * Derives the logical plugin name from the plugin class, preferring {@link GrailsPluginDescriptor#name()}
+     * when present and otherwise following the Grails {@code *GrailsPlugin} naming convention.
      *
      * @param pluginClass the plugin class
      * @return the logical plugin name
      */
     public static String getLogicalPluginName(Class<?> pluginClass) {
+        GrailsPluginDescriptor annotation = pluginClass.getAnnotation(GrailsPluginDescriptor.class);
+        if (annotation != null && !annotation.name().isBlank()) {
+            return normalizePluginName(annotation.name().trim());
+        }
         return getLogicalPluginNameFromClassName(pluginClass.getSimpleName());
     }
 
@@ -261,27 +356,61 @@ public final class PluginUtils {
      * @return the logical plugin name with the {@link #GRAILS_PLUGIN_SUFFIX} removed
      */
     public static String getLogicalPluginNameFromClassName(String name) {
-        return GrailsNameUtils.getLogicalPropertyName(name, GRAILS_PLUGIN_SUFFIX);
+        if (name.endsWith(GRAILS_PLUGIN_SUFFIX)) {
+            return GrailsNameUtils.getLogicalPropertyName(name, GRAILS_PLUGIN_SUFFIX);
+        }
+        return GrailsNameUtils.getPropertyName(name);
     }
 
     /**
-     * Extracts plugin metadata ({@code loadAfter}, {@code loadBefore},
-     * {@code dependsOn}) from a plugin class without requiring a full
+     * Extracts {@link PluginMetadata} from a {@link PluginDescriptor} and optional plugin class.
+     *
+     * <p>When {@code pluginClass} is {@code null} (descriptor-less starter plugin) or when the descriptor
+     * carries complete metadata (such as from {@link GrailsPluginDescriptor}), metadata is constructed
+     * directly without instantiating any class via reflection. Otherwise metadata is extracted from the
+     * plugin class, falling back to the descriptor's version when the class does not declare one.</p>
+     *
+     * @param descriptor the parsed plugin descriptor
+     * @param pluginClass the loaded plugin class, or {@code null} for descriptor-less plugins
+     * @return the extracted {@link PluginMetadata}, or {@code null} if invalid
+     * @since 9.0
+     */
+    public static @Nullable PluginMetadata extractPluginMetadata(
+            PluginDescriptor descriptor,
+            @Nullable Class<?> pluginClass) {
+        if (pluginClass == null) {
+            return extractPluginMetadataFromDescriptor(descriptor, null);
+        }
+        if (pluginClass.isAnnotationPresent(GrailsPluginDescriptor.class)) {
+            return extractPluginMetadataFromAnnotation(pluginClass, descriptor.getPluginVersion());
+        }
+        if (descriptor.isMetadataComplete() && descriptor.getPluginName() != null) {
+            return extractPluginMetadataFromDescriptor(descriptor, pluginClass);
+        }
+        return extractPluginMetadata(pluginClass, descriptor.getPluginVersion());
+    }
+
+    /**
+     * Extracts plugin metadata from a plugin class without requiring a full
      * {@link grails.core.GrailsApplication} or plugin manager.
      *
-     * <p>The plugin class is instantiated to read its properties via a
-     * {@link BeanWrapper}, mirroring the approach used by
-     * {@link DefaultGrailsPlugin}. The {@code dependsOn} property is a
-     * {@code Map<String, String>} where keys are dependency plugin names and
-     * values are version constraints; only the keys are extracted.</p>
+     * <p>Classes annotated with {@link GrailsPluginDescriptor} are read directly from their annotation
+     * without reflection instantiation. Legacy {@code *GrailsPlugin} classes are instantiated and inspected
+     * via a {@link BeanWrapper}.</p>
      *
      * @param pluginClass the plugin class to extract metadata from
-     * @return a {@link PluginMetadata} instance, or {@code null} if the class is
-     *         not a valid Grails plugin
+     * @return a {@link PluginMetadata} instance, or {@code null} if the class is not a valid Grails plugin
      */
-    public static PluginMetadata extractPluginMetadata(Class<?> pluginClass) {
+    public static @Nullable PluginMetadata extractPluginMetadata(Class<?> pluginClass) {
+        return extractPluginMetadata(pluginClass, null);
+    }
+
+    private static @Nullable PluginMetadata extractPluginMetadata(Class<?> pluginClass, @Nullable String fallbackVersion) {
         if (!isGrailsPluginClassNamedCorrectly(pluginClass)) {
             return null;
+        }
+        if (pluginClass.isAnnotationPresent(GrailsPluginDescriptor.class)) {
+            return extractPluginMetadataFromAnnotation(pluginClass, fallbackVersion);
         }
 
         String pluginName = getLogicalPluginName(pluginClass);
@@ -305,7 +434,7 @@ public final class PluginUtils {
 
         var beanWrapper = new BeanWrapperImpl(pluginInstance);
 
-        pluginVersion = evaluatePluginVersion(beanWrapper, pluginInstance, pluginName);
+        pluginVersion = evaluatePluginVersion(beanWrapper, pluginInstance, pluginName, fallbackVersion);
         grailsVersion = getPluginGrailsVersionRange(pluginInstance, pluginName);
         dependencies = evaluatePluginDependencies(beanWrapper, pluginInstance);
         loadAfterNames = evaluatePluginLoadAfters(beanWrapper, pluginInstance);
@@ -329,6 +458,111 @@ public final class PluginUtils {
                 environments,
                 status != null && status.equalsIgnoreCase(DefaultGrailsPlugin.STATUS_ENABLED)
         );
+    }
+
+    private static PluginMetadata extractPluginMetadataFromAnnotation(
+            Class<?> pluginClass,
+            @Nullable String fallbackVersion) {
+        GrailsPluginDescriptor annotation = pluginClass.getAnnotation(GrailsPluginDescriptor.class);
+        String pluginName = getLogicalPluginName(pluginClass);
+        String pluginVersion = !annotation.version().isBlank() ? annotation.version().trim() : fallbackVersion;
+        if (pluginVersion == null || pluginVersion.isBlank()) {
+            throw new PluginException("Plugin [" + pluginName + "] must specify a version!");
+        }
+        String grailsVersion = !annotation.grailsVersion().isBlank() ? annotation.grailsVersion().trim() : null;
+
+        Map<String, Object> dependencies = new LinkedHashMap<>();
+        for (String depSpec : annotation.dependsOn()) {
+            if (depSpec == null || depSpec.isBlank()) {
+                continue;
+            }
+            int sep = depSpec.indexOf(':');
+            if (sep > 0) {
+                String depName = normalizePluginName(depSpec.substring(0, sep).trim());
+                String depVersion = depSpec.substring(sep + 1).trim();
+                dependencies.put(depName, depVersion.isEmpty() ? "*" : depVersion);
+            } else {
+                dependencies.put(normalizePluginName(depSpec.trim()), "*");
+            }
+        }
+
+        Map<String, Set<Object>> environments = buildEnvironmentsMap(
+                Arrays.asList(annotation.environmentsIncludes()),
+                Arrays.asList(annotation.environmentsExcludes())
+        );
+
+        return new PluginMetadata(
+                pluginName,
+                pluginVersion,
+                grailsVersion,
+                pluginClass,
+                normalizeNameArray(annotation.loadAfter()),
+                normalizeNameArray(annotation.loadBefore()),
+                dependencies,
+                dependencies.keySet().toArray(new String[0]),
+                normalizeNameArray(annotation.evict()),
+                annotation.observe(),
+                environments,
+                annotation.enabled()
+        );
+    }
+
+    private static @Nullable PluginMetadata extractPluginMetadataFromDescriptor(
+            PluginDescriptor descriptor,
+            @Nullable Class<?> pluginClass) {
+        String pluginName = descriptor.getPluginName();
+        if (pluginName == null || pluginName.isBlank()) {
+            return null;
+        }
+        String pluginVersion = descriptor.getPluginVersion();
+        if (pluginVersion == null || pluginVersion.isBlank()) {
+            throw new PluginException("Plugin [" + pluginName + "] must specify a version!");
+        }
+
+        Map<String, Object> dependencies = new LinkedHashMap<>(descriptor.getDependsOn());
+        Map<String, Set<Object>> environments = buildEnvironmentsMap(
+                descriptor.getEnvironmentsIncludes(),
+                descriptor.getEnvironmentsExcludes()
+        );
+
+        return new PluginMetadata(
+                pluginName,
+                pluginVersion,
+                descriptor.getGrailsVersionRange(),
+                pluginClass,
+                normalizeNameArray(descriptor.getLoadAfter().toArray(new String[0])),
+                normalizeNameArray(descriptor.getLoadBefore().toArray(new String[0])),
+                dependencies,
+                dependencies.keySet().toArray(new String[0]),
+                normalizeNameArray(descriptor.getEvict().toArray(new String[0])),
+                descriptor.getObserve().toArray(new String[0]),
+                environments,
+                descriptor.isEnabled()
+        );
+    }
+
+    private static String[] normalizeNameArray(String[] names) {
+        String[] result = new String[names.length];
+        for (int i = 0; i < names.length; i++) {
+            result[i] = normalizePluginName(names[i].trim());
+        }
+        return result;
+    }
+
+    private static Map<String, Set<Object>> buildEnvironmentsMap(List<String> includes, List<String> excludes) {
+        Map<String, Set<Object>> result = new HashMap<>();
+        Function<Object, Object> converter = arg -> {
+            var envName = (String) arg;
+            var env = Environment.getEnvironment(envName);
+            return env != null ? env.getName() : arg;
+        };
+        if (!includes.isEmpty()) {
+            evaluateAndAddListOfValues(result, includes, true, converter);
+        }
+        if (!excludes.isEmpty()) {
+            evaluateAndAddListOfValues(result, excludes, false, converter);
+        }
+        return result;
     }
 
     /**
@@ -366,7 +600,9 @@ public final class PluginUtils {
         Function<Object, Object> converter = arguments -> {
             var envName = (String) arguments;
             var env = Environment.getEnvironment(envName);
-            if (env != null) return env.getName();
+            if (env != null) {
+                return env.getName();
+            }
             return arguments;
         };
         return evaluateIncludeExcludeProperty(pluginInstance, GrailsPlugin.ENVIRONMENTS, converter);
@@ -440,16 +676,25 @@ public final class PluginUtils {
      */
     @Internal
     public static String evaluatePluginVersion(BeanWrapper beanWrapper, Object plugin, String name) throws PluginException {
-        if (!beanWrapper.isReadableProperty(DefaultGrailsPlugin.VERSION)) {
-            throw new PluginException("Plugin [" + name + "] must specify a version!");
-        }
+        return evaluatePluginVersion(beanWrapper, plugin, name, null);
+    }
 
-        var version = GrailsClassUtils.getPropertyOrStaticPropertyOrFieldValue(plugin, DefaultGrailsPlugin.VERSION);
-        if (version == null) {
-            throw new PluginException("Plugin [" + name + "] must specify a version. e.g.: def version = '0.1'");
+    @Internal
+    public static String evaluatePluginVersion(
+            BeanWrapper beanWrapper,
+            Object plugin,
+            String name,
+            @Nullable String fallbackVersion) throws PluginException {
+        if (beanWrapper.isReadableProperty(DefaultGrailsPlugin.VERSION)) {
+            var version = GrailsClassUtils.getPropertyOrStaticPropertyOrFieldValue(plugin, DefaultGrailsPlugin.VERSION);
+            if (version != null) {
+                return version.toString();
+            }
         }
-
-        return version.toString();
+        if (fallbackVersion != null && !fallbackVersion.isBlank()) {
+            return fallbackVersion;
+        }
+        throw new PluginException("Plugin [" + name + "] must specify a version. e.g.: def version = '0.1'");
     }
 
     /**
@@ -512,32 +757,69 @@ public final class PluginUtils {
                     dependencies.keySet().toArray(new String[0]),
                     dependencies
             );
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             LOG.trace("Could not read property [dependsOn]: {}", e.getMessage());
             return emptyPluginDependencies();
         }
     }
 
     /**
-     * Resolves the plugin configuration resource relative to the supplied plugin class.
+     * Resolves the plugin configuration resource for the supplied plugin class.
      *
-     * <p>The lookup probes for both {@code plugin.yml} and {@code plugin.groovy}. If both exist, a
-     * {@link RuntimeException} is thrown because a plugin may define only one configuration source.</p>
+     * <p>Looks up the namespaced location {@code META-INF/grails/plugins/<name>/plugin.yml} or
+     * {@code plugin.groovy} first, then any AOT-generated copy, and finally falls back to probing
+     * {@code /plugin.yml} or {@code /plugin.groovy} relative to the plugin class root. If both
+     * YAML and Groovy configuration files exist, a {@link RuntimeException} is thrown.</p>
      *
-     * <p>A copy the build made while generating code ahead of time is preferred, when there is one. A native
-     * image has no class roots: every class in it is at the same root, so every plugin's {@code plugin.yml}
-     * would be looked for at the same path, and the copy is the only place a plugin's own is found.</p>
-     *
-     * @param pluginClass the plugin class to resolve relative to
+     * @param pluginClass the plugin class to resolve configuration for
      * @return the configuration resource, or {@code null} if no config file is present
-     * @see #getGeneratedConfigurationPath(String, String)
      */
-    public static Resource readPluginConfiguration(Class<?> pluginClass) {
+    public static @Nullable Resource readPluginConfiguration(Class<?> pluginClass) {
+        return readPluginConfiguration(getLogicalPluginName(pluginClass), pluginClass, pluginClass.getClassLoader());
+    }
+
+    /**
+     * Resolves the plugin configuration resource for a plugin by logical name and optional plugin class.
+     *
+     * @param pluginName the logical plugin name (may be {@code null} if only {@code pluginClass} is provided)
+     * @param pluginClass the plugin class, or {@code null} for descriptor-less starter plugins
+     * @param classLoader the class loader to search for namespaced plugin configuration
+     * @return the configuration resource, or {@code null} if no config file is present
+     * @since 9.0
+     */
+    public static @Nullable Resource readPluginConfiguration(
+            @Nullable String pluginName,
+            @Nullable Class<?> pluginClass,
+            @Nullable ClassLoader classLoader) {
+        String effectiveName = pluginName != null ? normalizePluginName(pluginName) :
+                (pluginClass != null ? getLogicalPluginName(pluginClass) : null);
+        ClassLoader loader = classLoader != null ? classLoader :
+                (pluginClass != null ? pluginClass.getClassLoader() : Thread.currentThread().getContextClassLoader());
+
+        if (effectiveName != null && loader != null) {
+            URL namespacedYml = loader.getResource(getPluginConfigPath(effectiveName, PLUGIN_YML_CONFIG));
+            URL namespacedGroovy = loader.getResource(getPluginConfigPath(effectiveName, PLUGIN_GROOVY_CONFIG));
+            if (namespacedYml != null && namespacedGroovy != null) {
+                throw new RuntimeException("A plugin [" + effectiveName +
+                        "] may define a plugin.yml or a plugin.groovy, but not both");
+            }
+            if (namespacedYml != null) {
+                return new UrlResource(namespacedYml);
+            }
+            if (namespacedGroovy != null) {
+                return new UrlResource(namespacedGroovy);
+            }
+        }
+
+        if (pluginClass == null) {
+            return null;
+        }
+
         Resource generatedResource = findGeneratedConfiguration(pluginClass);
         if (generatedResource != null) {
             return generatedResource;
         }
+
         var ymlResource = getConfigurationResource(pluginClass, PLUGIN_YML_CONFIG_PATH);
         var groovyResource = getConfigurationResource(pluginClass, PLUGIN_GROOVY_CONFIG_PATH);
 
@@ -558,7 +840,7 @@ public final class PluginUtils {
 
     /**
      * The classpath location of the copy the build makes of a plugin's configuration while generating code
-     * ahead of time, which {@link #readPluginConfiguration(Class)} prefers to the original.
+     * ahead of time for legacy root-packaged configurations.
      *
      * @param pluginClassName the fully qualified name of the plugin class
      * @param configFileName the name of the configuration file, {@code plugin.yml} or {@code plugin.groovy}
@@ -569,7 +851,7 @@ public final class PluginUtils {
         return GENERATED_CONFIG_PATH + pluginClassName + "/" + configFileName;
     }
 
-    private static Resource findGeneratedConfiguration(Class<?> pluginClass) {
+    private static @Nullable Resource findGeneratedConfiguration(Class<?> pluginClass) {
         ClassLoader classLoader = pluginClass.getClassLoader();
         if (classLoader == null) {
             return null;
@@ -585,26 +867,28 @@ public final class PluginUtils {
 
     /**
      * Finds a plugin configuration resource at the given path relative to the
-     * plugin class, delegating to
-     * {@link IOUtils#findResourceRelativeToClass}.
+     * plugin class, delegating to {@link IOUtils#findResourceRelativeToClass}.
      *
      * @param pluginClass the plugin class to resolve relative to
      * @param configPath the path to probe (for example {@code "/plugin.yml"})
      * @return the resource wrapping the configuration URL, or {@code null} if no such resource exists
      */
-    public static Resource getConfigurationResource(Class<?> pluginClass, String configPath) {
+    public static @Nullable Resource getConfigurationResource(Class<?> pluginClass, String configPath) {
         URL urlToConfig = IOUtils.findResourceRelativeToClass(pluginClass, configPath);
         return urlToConfig != null ? new UrlResource(urlToConfig) : null;
     }
 
     /**
-     * Determines whether the supplied class follows Grails plugin naming conventions.
+     * Determines whether the supplied class is a valid Grails plugin descriptor class, either by
+     * following the {@code *GrailsPlugin} naming convention or by carrying {@link GrailsPluginDescriptor}.
      *
      * @param pluginClass the class to inspect
-     * @return {@code true} if the class name ends with {@link #GRAILS_PLUGIN_SUFFIX}
+     * @return {@code true} if the class is a valid Grails plugin class
      */
-    public static boolean isGrailsPluginClassNamedCorrectly(Class<?> pluginClass) {
-        return pluginClass != null && pluginClass.getName().endsWith(GRAILS_PLUGIN_SUFFIX);
+    public static boolean isGrailsPluginClassNamedCorrectly(@Nullable Class<?> pluginClass) {
+        return pluginClass != null &&
+                (pluginClass.getName().endsWith(GRAILS_PLUGIN_SUFFIX) ||
+                        pluginClass.isAnnotationPresent(GrailsPluginDescriptor.class));
     }
 
     /**
@@ -613,15 +897,14 @@ public final class PluginUtils {
      * @param pluginClass the class to inspect
      * @return {@code true} if the class is non-null, non-abstract, and not the framework base plugin class
      */
-    public static boolean isGrailsPluginLoadable(Class<?> pluginClass) {
-        return pluginClass != null && !Modifier.isAbstract(pluginClass.getModifiers()) && pluginClass != DefaultGrailsPlugin.class;
+    public static boolean isGrailsPluginLoadable(@Nullable Class<?> pluginClass) {
+        return pluginClass != null &&
+                !Modifier.isAbstract(pluginClass.getModifiers()) &&
+                !GrailsPlugin.class.isAssignableFrom(pluginClass);
     }
 
     /**
      * Determines whether a plugin's declared Grails version range is compatible with the target Grails version.
-     *
-     * <p>This method supports exact version checks and version ranges as interpreted by
-     * {@link GrailsVersionUtils}. Compatibility problems are logged and reported by returning {@code false}.</p>
      *
      * @param pluginVersion the plugin version used in log messages
      * @param pluginSupportedVersionRange the Grails version or version range declared by the plugin
@@ -649,7 +932,6 @@ public final class PluginUtils {
         var comparator = new VersionComparator();
 
         if (pluginMinGrailsVersion.equals(pluginMaxGrailsVersion)) {
-            //exact version compatibility required
             if (!grailsVersion.equals(pluginMinGrailsVersion)) {
                 LOG.warn("Plugin [{}:{}] may not be compatible with this application as the application Grails version is not equal" +
                                 " to the one that plugin requires. Plugin is compatible with Grails version {} but app is {}",
@@ -658,9 +940,6 @@ public final class PluginUtils {
             }
         }
         if (!pluginMaxGrailsVersion.equals("*")) {
-            // Case 1: a max version not specified. Forward compatibility expected
-
-            // the minimum version required by the plugin cannot be greater than the grails app version
             if (comparator.compare(pluginMinGrailsVersion, grailsVersion) > 0) {
                 LOG.warn("Plugin [{}:{}] may not be compatible with this application as the application Grails version is less" +
                                 " than the plugin requires. Plugin is compatible with Grails version {} but app is {}",
@@ -668,9 +947,6 @@ public final class PluginUtils {
                 return false;
             }
         } else {
-            // Case 2: both max and min version specified. Strict compatibility expected
-
-            // the minimum version required by the plugin cannot be greater than the grails app version
             if (comparator.compare(pluginMinGrailsVersion, grailsVersion) > 0) {
                 LOG.warn("Plugin [{}:{}] may not be compatible with this application as the application Grails version is less" +
                                 " than the plugin requires. Plugin is compatible with Grails version {} but app is {}",
@@ -678,7 +954,6 @@ public final class PluginUtils {
                 return false;
             }
 
-            // the maximum version required by the plugin cannot be less than the grails app version
             if (comparator.compare(pluginMaxGrailsVersion, grailsVersion) < 0) {
                 LOG.warn("Plugin [{}:{}] may not be compatible with this application as the application Grails version is greater" +
                                 " than the plugins max specified. Plugin is compatible with Grails versions {} but app is {}",
@@ -692,9 +967,6 @@ public final class PluginUtils {
 
     /**
      * Evaluates an include/exclude style plugin property into a normalized lookup map.
-     *
-     * <p>The property may be declared either as a map containing {@code includes} and {@code excludes} entries,
-     * or as a single include value. Values are converted through the supplied converter before being stored.</p>
      *
      * @param pluginBean the plugin bean containing the property
      * @param name the property name to evaluate
@@ -725,9 +997,6 @@ public final class PluginUtils {
     /**
      * Determines whether a value is permitted by a normalized include/exclude map.
      *
-     * <p>An empty map allows every value. If an include set is present, only included values are supported.
-     * Otherwise, values are rejected only when they appear in the exclude set.</p>
-     *
      * @param includeExcludeMap the include/exclude map to evaluate
      * @param value the value to test
      * @return {@code true} if the value is permitted by the include/exclude rules
@@ -744,14 +1013,7 @@ public final class PluginUtils {
         return !(excludes != null && excludes.contains(value));
     }
 
-    /**
-     * Resolves the declared Grails version range supported by the supplied plugin.
-     *
-     * @param pluginInstance the plugin instance being inspected
-     * @param pluginName the logical plugin name used in log messages
-     * @return the declared Grails version range, or {@code null} if it cannot be determined
-     */
-    private static String getPluginGrailsVersionRange(Object pluginInstance, String pluginName) {
+    private static @Nullable String getPluginGrailsVersionRange(Object pluginInstance, String pluginName) {
         try {
             var grailsVersionRange = GrailsClassUtils.getPropertyOrStaticPropertyOrFieldValue(pluginInstance, PLUGIN_GRAILS_VERSION_FIELD);
             return grailsVersionRange != null ? grailsVersionRange.toString() : null;
@@ -778,7 +1040,7 @@ public final class PluginUtils {
     }
 
     private static void evaluateAndAddListOfValues(
-            Map targetMap,
+            Map<String, Set<Object>> targetMap,
             List includeExcludeList,
             boolean include,
             Function<Object, Object> converter
@@ -806,13 +1068,19 @@ public final class PluginUtils {
     }
 
     private static String[] toStringArray(Object value) {
-        if (!(value instanceof Collection)) {
-            return new String[0];
+        if (value instanceof List<?> list) {
+            return list.stream().map(Object::toString).toArray(String[]::new);
         }
-        Collection<?> collection = (Collection<?>) value;
-        return collection.stream()
-                .map(o -> o == null ? "" : o.toString())
-                .toArray(String[]::new);
+        if (value instanceof String[] array) {
+            return array;
+        }
+        if (value instanceof Collection<?> collection) {
+            return collection.stream().map(Object::toString).toArray(String[]::new);
+        }
+        if (value instanceof String s) {
+            return new String[]{s};
+        }
+        return new String[0];
     }
 
     private static PluginDependencies emptyPluginDependencies() {

@@ -90,12 +90,39 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
     @Override
     protected Provider<String> grailsArtifactName(Project project) {
         project.provider {
+            GrailsExtension ext = project.extensions.findByType(GrailsExtension)
+            String configured = ext?.plugin?.name?.getOrNull()
+            if (configured) {
+                return GrailsNameUtils.getScriptName(configured)
+            }
             SourceSet mainSourceSet = SourceSets.findMainSourceSet(project)
             File descriptor = mainSourceSet?.allSource?.matching { PatternFilterable pattern ->
                 pattern.include('**/*GrailsPlugin.groovy')
             }?.files?.sort { File file -> file.name }?.find()
             descriptor ? GrailsNameUtils.getPluginName(descriptor.name) : project.name
         }
+    }
+
+    /**
+     * Resolves the logical (camelCase) plugin name for a Grails plugin project.
+     *
+     * @since 9.0
+     */
+    static String resolveLogicalPluginName(Project project) {
+        GrailsExtension ext = project.extensions.findByType(GrailsExtension)
+        String configured = ext?.plugin?.name?.getOrNull()
+        if (configured) {
+            return GeneratePluginDescriptorTask.normalizePluginName(configured)
+        }
+        SourceSet mainSourceSet = SourceSets.findMainSourceSet(project)
+        File descriptor = mainSourceSet?.allSource?.matching { PatternFilterable pattern ->
+            pattern.include('**/*GrailsPlugin.groovy')
+        }?.files?.sort { File file -> file.name }?.find()
+        if (descriptor) {
+            String baseName = descriptor.name.substring(0, descriptor.name.length() - '.groovy'.length())
+            return GrailsNameUtils.getLogicalPropertyName(baseName, 'GrailsPlugin')
+        }
+        GeneratePluginDescriptorTask.normalizePluginName(project.name)
     }
 
     @Override
@@ -108,8 +135,69 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
         configureAstSources(project)
         configureAssembleTask(project)
         configurePluginResources(project)
+        configurePluginDescriptorGeneration(project)
         configureJarTask(project)
         configureSourcesJarTask(project)
+    }
+
+    /**
+     * Registers {@link GeneratePluginDescriptorTask} to scan compiled plugin classes and emit
+     * {@code META-INF/grails/plugins.imports}, {@code META-INF/grails/plugins/<name>/plugin.properties},
+     * and namespaced {@code plugin.yml} / {@code plugin.groovy} configuration files.
+     *
+     * @since 9.0
+     */
+    protected void configurePluginDescriptorGeneration(Project project) {
+        SourceSet mainSourceSet = SourceSets.findMainSourceSet(project)
+        if (mainSourceSet == null) {
+            return
+        }
+        def generatedDir = project.layout.buildDirectory.dir('generated/resources/grailsPluginDescriptor')
+        GrailsExtension grailsExt = project.extensions.getByType(GrailsExtension)
+
+        TaskProvider<GeneratePluginDescriptorTask> descriptorTask = project.tasks.register(
+                'generatePluginDescriptor', GeneratePluginDescriptorTask) { GeneratePluginDescriptorTask task ->
+            task.group = 'build'
+            task.description = 'Generates META-INF/grails/plugins.imports and per-plugin plugin.properties descriptors'
+            task.classesDirs.from(mainSourceSet.output.classesDirs)
+            task.projectName.set(project.name)
+            task.projectVersion.set(project.provider {
+                Object ver = project.version
+                ver != null && ver.toString() != 'unspecified' ? ver.toString() : null
+            })
+            task.pluginOptions.name.convention(grailsExt.plugin.name)
+            task.pluginOptions.version.convention(grailsExt.plugin.version)
+            task.pluginOptions.grailsVersion.convention(grailsExt.plugin.grailsVersion)
+            task.pluginOptions.loadAfter.convention(grailsExt.plugin.loadAfter)
+            task.pluginOptions.loadBefore.convention(grailsExt.plugin.loadBefore)
+            task.pluginOptions.dependsOn.convention(grailsExt.plugin.dependsOn)
+            task.pluginOptions.evict.convention(grailsExt.plugin.evict)
+            task.pluginOptions.observe.convention(grailsExt.plugin.observe)
+            task.pluginOptions.enabled.convention(grailsExt.plugin.enabled)
+            task.pluginOptions.environmentsIncludes.convention(grailsExt.plugin.environmentsIncludes)
+            task.pluginOptions.environmentsExcludes.convention(grailsExt.plugin.environmentsExcludes)
+            task.pluginOptions.pluginExcludes.convention(grailsExt.plugin.pluginExcludes)
+            task.pluginConfigFile.fileProvider(project.provider {
+                findPluginConfigFile(project)
+            })
+            task.outputDirectory.set(generatedDir)
+        }
+
+        mainSourceSet.output.dir(Collections.<String, Object> singletonMap('builtBy', descriptorTask), generatedDir)
+    }
+
+    private static File findPluginConfigFile(Project project) {
+        List<File> candidates = [
+                project.layout.projectDirectory.file('grails-app/conf/plugin.yml').asFile,
+                project.layout.projectDirectory.file('grails-app/conf/plugin.groovy').asFile,
+                project.layout.projectDirectory.file('src/main/resources/plugin.yml').asFile,
+                project.layout.projectDirectory.file('src/main/resources/plugin.groovy').asFile,
+        ]
+        List<File> existing = candidates.findAll { File f -> f.isFile() }
+        if (existing.size() > 1) {
+            throw new RuntimeException('A plugin may define a plugin.yml or a plugin.groovy, but not both')
+        }
+        existing ? existing.first() : null
     }
 
     @Override
@@ -348,8 +436,9 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
         project.tasks.named('processResources', ProcessResources).configure { ProcessResources task ->
             // grails-app/views is a resource directory, but a plugin's views are compiled rather
             // than packaged. Templates carrying the same GSPs are staged above, out of reach of
-            // this pattern.
-            task.exclude('**/*.gsp')
+            // this pattern. Plugin configuration files are staged under
+            // META-INF/grails/plugins/<name>/ by generatePluginDescriptor to avoid JAR-root collisions.
+            task.exclude('**/*.gsp', 'plugin.yml', 'plugin.groovy')
         }
 
         routeCommandResources(project, copyCommands)

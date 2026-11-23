@@ -80,6 +80,8 @@ public class MockGrailsPluginManager extends AbstractGrailsPluginManager {
             GrailsPlugin plugin;
             if (pluginInfo.isDynamic()) {
                 plugin = new DefaultGrailsPlugin(pluginInfo.getPluginClass(), application);
+            } else if (pluginInfo.getPluginClass() == null) {
+                plugin = new BinaryGrailsPlugin(pluginInfo.getPluginDescriptor(), pluginInfo.getMetadata(), application);
             } else {
                 plugin = new BinaryGrailsPlugin(pluginInfo.getPluginClass(), pluginInfo.getPluginDescriptor(), application);
             }

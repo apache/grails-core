@@ -26,7 +26,7 @@ import org.gradle.process.CommandLineArgumentProvider
 /**
  * Supplies {@code -Dbase.dir=<projectDir>} to a forked Groovy compiler so the
  * {@code GlobalGrailsClassInjectorTransformation} AST transform resolves the correct project
- * directory when generating {@code META-INF/grails.factories} / {@code grails-plugin.xml}.
+ * directory when generating {@code META-INF/grails.factories} and {@code AutoConfiguration.imports}.
  *
  * <p>This mirrors {@code GrailsAppBaseDirProvider} from the Grails Gradle plugins, which is not on
  * this build's classpath (build-logic is a separate, unpublished build). It is applied to EVERY

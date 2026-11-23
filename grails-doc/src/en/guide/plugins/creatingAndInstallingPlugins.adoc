@@ -61,18 +61,48 @@ grails run-app
 
 NOTE: Plugin projects don't provide an index.gsp by default since most plugins don't need it. So, if you try to view the plugin running in a browser right after creating it, you will receive a page not found error. You can easily create a `grails-app/views/index.gsp` for your plugin if you'd like.
 
-The structure of a Grails plugin is very nearly the same as a Grails application project's except that in the `src/main/groovy` directory under the plugin package structure you will find a plugin descriptor class (a class that ends in "GrailsPlugin"). For example:
+The structure of a Grails plugin is very nearly the same as a Grails application project's. A plugin can declare its metadata in one of three ways:
 
+1. *Descriptor-less starter plugin (recommended for Spring Boot auto-configuration plugins):* Apply the `org.apache.grails.gradle.grails-plugin` Gradle plugin, expose Spring beans via `@AutoConfiguration` (registered in `META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports`), and optionally configure plugin metadata in `build.gradle`:
++
 [source,groovy]
 ----
-import grails.plugins.*
+grails {
+    plugin {
+        name = 'example'
+        grailsVersion = '9.0.0 > *'
+        loadAfter = ['core']
+    }
+}
+----
+2. *Typed `@GrailsPluginDescriptor` class (Java or `@CompileStatic` Groovy):* Annotate a class with `grails.plugins.metadata.GrailsPluginDescriptor` (no `*GrailsPlugin` suffix is required):
++
+[source,groovy]
+----
+import grails.plugins.Plugin
+import grails.plugins.metadata.GrailsPluginDescriptor
+
+@GrailsPluginDescriptor(
+    name = 'example',
+    grailsVersion = '9.0.0 > *',
+    loadAfter = ['core']
+)
+class ExamplePlugin extends Plugin {
+    ...
+}
+----
+3. *Traditional `*GrailsPlugin` class:* Place a Groovy class ending in `GrailsPlugin` under `src/main/groovy`:
++
+[source,groovy]
+----
+import grails.plugins.Plugin
 
 class ExampleGrailsPlugin extends Plugin {
-   ...
+    ...
 }
 ----
 
-All plugins must have this class under the `src/main/groovy` directory, otherwise they are not regarded as a plugin. The plugin class defines metadata about the plugin, and optionally various hooks into plugin extension points (covered shortly).
+At build time, Grails generates `META-INF/grails/plugins.imports` and `META-INF/grails/plugins/<name>/plugin.properties` containing the plugin's metadata and contributed artefacts, and packages `plugin.yml` / `plugin.groovy` and precompiled GSP `views.properties` under the same per-plugin namespace.
 
 You can also provide additional information about your plugin using several special properties:
 
@@ -417,18 +447,48 @@ Being a regular Grails project has a number of benefits in that you can immediat
 
 NOTE: Plugin projects don't provide an index.gsp by default since most plugins don't need it. So, if you try to view the plugin running in a browser right after creating it, you will receive a page not found error. You can easily create a `grails-app/views/index.gsp` for your plugin if you'd like.
 
-The structure of a Grails plugin is very nearly the same as a Grails application project's except that in the `src/main/groovy` directory under the plugin package structure you will find a plugin descriptor class (a class that ends in "GrailsPlugin"). For example:
+The structure of a Grails plugin is very nearly the same as a Grails application project's. A plugin can declare its metadata in one of three ways:
 
+1. *Descriptor-less starter plugin (recommended for Spring Boot auto-configuration plugins):* Apply the `org.apache.grails.gradle.grails-plugin` Gradle plugin, expose Spring beans via `@AutoConfiguration` (registered in `META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports`), and optionally configure plugin metadata in `build.gradle`:
++
 [source,groovy]
 ----
-import grails.plugins.*
+grails {
+    plugin {
+        name = 'example'
+        grailsVersion = '9.0.0 > *'
+        loadAfter = ['core']
+    }
+}
+----
+2. *Typed `@GrailsPluginDescriptor` class (Java or `@CompileStatic` Groovy):* Annotate a class with `grails.plugins.metadata.GrailsPluginDescriptor` (no `*GrailsPlugin` suffix is required):
++
+[source,groovy]
+----
+import grails.plugins.Plugin
+import grails.plugins.metadata.GrailsPluginDescriptor
+
+@GrailsPluginDescriptor(
+    name = 'example',
+    grailsVersion = '9.0.0 > *',
+    loadAfter = ['core']
+)
+class ExamplePlugin extends Plugin {
+    ...
+}
+----
+3. *Traditional `*GrailsPlugin` class:* Place a Groovy class ending in `GrailsPlugin` under `src/main/groovy`:
++
+[source,groovy]
+----
+import grails.plugins.Plugin
 
 class ExampleGrailsPlugin extends Plugin {
-   ...
+    ...
 }
 ----
 
-All plugins must have this class under the `src/main/groovy` directory, otherwise they are not regarded as a plugin. The plugin class defines metadata about the plugin, and optionally various hooks into plugin extension points (covered shortly).
+At build time, Grails generates `META-INF/grails/plugins.imports` and `META-INF/grails/plugins/<name>/plugin.properties` containing the plugin's metadata and contributed artefacts, and packages `plugin.yml` / `plugin.groovy` and precompiled GSP `views.properties` under the same per-plugin namespace.
 
 You can also provide additional information about your plugin using several special properties:
 

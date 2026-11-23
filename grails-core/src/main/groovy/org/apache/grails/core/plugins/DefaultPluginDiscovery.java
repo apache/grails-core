@@ -318,7 +318,7 @@ public class DefaultPluginDiscovery implements PluginDiscovery {
         }
 
         if (loadClasspathPlugins && requireClasspathPlugin && classpathPlugins.isEmpty()) {
-            LOG.debug("No Grails plugin classes found in META-INF/grails-plugin.xml descriptors");
+            LOG.debug("No Grails plugins found via META-INF/grails/plugins.imports descriptors");
             throw new IllegalStateException(
                     "Grails was unable to load plugins dynamically. This is normally a " +
                             "problem with the container class loader configuration, see " +
@@ -533,9 +533,8 @@ public class DefaultPluginDiscovery implements PluginDiscovery {
      * Registers a plugin that is eligible to be loaded.
      *
      * <p>This method skips disabled plugins and plugins already registered under the same name (a plugin
-     * class may be declared by more than one {@code META-INF/grails-plugin.xml} descriptor on the
-     * classpath), records eviction and observer relationships, and appends the plugin to the discovered
-     * load order.</p>
+     * may be declared by more than one descriptor on the classpath), records eviction and observer
+     * relationships, and appends the plugin to the discovered load order.</p>
      *
      * @param plugin the plugin to register
      */

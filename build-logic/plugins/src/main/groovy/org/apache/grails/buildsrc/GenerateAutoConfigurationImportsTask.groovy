@@ -38,8 +38,8 @@ import org.objectweb.asm.Opcodes
 /**
  * Scans this project's own compiled main classes for {@code @AutoConfiguration} and writes
  * {@code META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports}, so the
- * file never needs to be hand-maintained. Mirrors how {@code META-INF/grails-plugin.xml} is already
- * generated from scanned {@code *GrailsPlugin} classes elsewhere in this build.
+ * file never needs to be hand-maintained. Mirrors how {@code META-INF/grails/plugins.imports} and
+ * {@code plugin.properties} are generated from scanned plugin classes elsewhere in this build.
  *
  * <p>Class files are read directly with ASM rather than loaded. Loading required every supertype and
  * annotation of every candidate to be resolvable, and a candidate that failed to load could only be

@@ -33,12 +33,11 @@ class BinaryPluginSpec extends Specification {
 
     @Shared
     String testBinary = '''
-    <plugin name='testBinary'>
-      <class>org.grails.plugins.TestBinaryGrailsPlugin</class>
-      <resources>
-             <resource>org.grails.plugins.TestBinaryResource</resource>
-      </resources>
-    </plugin>
+    format.version=1
+    name=testBinary
+    version=1.0
+    class=org.grails.plugins.TestBinaryGrailsPlugin
+    artefacts.Domain=org.grails.plugins.TestBinaryResource
     '''
 
     def "Test creation of a binary plugin"() {
@@ -121,6 +120,56 @@ class BinaryPluginSpec extends Specification {
         new BinaryGrailsPlugin(TestBinaryGrailsPlugin, descriptor, new DefaultGrailsApplication()) != null
     }
 
+    def "Test creation of a descriptor-less starter binary plugin"() {
+        given:
+        def props = new Properties()
+        props.load(new StringReader('''
+            format.version=1
+            name=starterPlugin
+            version=2.0.0
+            loadAfter=core
+            metadata.complete=true
+            artefacts.Service=org.grails.plugins.TestBinaryResource
+        '''.stripIndent()))
+        def descriptor = PluginDescriptor.fromProperties('starterPlugin', new ByteArrayResource(new byte[0]), props)
+        def metadata = org.apache.grails.core.plugins.PluginUtils.extractPluginMetadata(descriptor, null)
+        def grailsApp = new DefaultGrailsApplication()
+
+        when:
+        def binaryPlugin = new BinaryGrailsPlugin(descriptor, metadata, grailsApp)
+
+        then:
+        binaryPlugin.name == 'starterPlugin'
+        binaryPlugin.version == '2.0.0'
+        binaryPlugin.pluginClass == null
+        binaryPlugin.loadAfterNames as List == ['core']
+        binaryPlugin.providedArtefacts as List == [TestBinaryResource]
+        binaryPlugin.enabled
+    }
+
+    def "Test creation of a binary plugin annotated with @GrailsPluginDescriptor without GrailsPlugin suffix"() {
+        given:
+        def descriptor = new PluginDescriptor(new ByteArrayResource(new byte[0]), [AnnotatedStarterDescriptor.name], [TestBinaryResource.name])
+        def grailsApp = new DefaultGrailsApplication()
+
+        when:
+        def binaryPlugin = new BinaryGrailsPlugin(AnnotatedStarterDescriptor, descriptor, grailsApp)
+
+        then:
+        binaryPlugin.name == 'annotatedStarter'
+        binaryPlugin.version == '1.5.0'
+        binaryPlugin.loadAfterNames as List == ['core']
+        binaryPlugin.providedArtefacts as List == [TestBinaryResource]
+    }
+
+}
+
+@grails.plugins.metadata.GrailsPluginDescriptor(
+        name = 'annotated-starter',
+        version = '1.5.0',
+        loadAfter = ['core']
+)
+class AnnotatedStarterDescriptor {
 }
 
 class TestBinaryGrailsPlugin {

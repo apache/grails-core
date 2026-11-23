@@ -62,6 +62,7 @@ public abstract class AbstractGrailsPlugin extends GroovyObjectSupport implement
     protected Map<String, Object> dependencies = new HashMap<>();
     protected String[] dependencyNames = {};
     protected Class<?> pluginClass;
+    protected String pluginName;
     protected ApplicationContext applicationContext;
     protected GrailsPluginManager manager;
     protected String[] evictionList = {};
@@ -74,17 +75,36 @@ public abstract class AbstractGrailsPlugin extends GroovyObjectSupport implement
      */
     class GrailsPluginClass extends AbstractGrailsClass {
         public GrailsPluginClass(Class<?> clazz) {
-            super(clazz, TRAILING_NAME);
+            super(clazz, clazz.getSimpleName().endsWith(TRAILING_NAME) ? TRAILING_NAME : "");
         }
     }
 
     public AbstractGrailsPlugin(Class<?> pluginClass, GrailsApplication application) {
         Assert.notNull(pluginClass, "Argument [pluginClass] cannot be null");
-        Assert.isTrue(pluginClass.getName().endsWith(TRAILING_NAME),
+        Assert.isTrue(PluginUtils.isGrailsPluginClassNamedCorrectly(pluginClass),
                 "Argument [pluginClass] with value [" + pluginClass +
-                        "] is not a Grails plugin (class name must end with 'GrailsPlugin')");
+                        "] is not a Grails plugin (class name must end with 'GrailsPlugin' or carry @GrailsPluginDescriptor)");
         this.grailsApplication = application;
         this.pluginClass = pluginClass;
+        this.pluginName = PluginUtils.getLogicalPluginName(pluginClass);
+    }
+
+    /**
+     * Creates a plugin backed by a declarative descriptor rather than a plugin class.
+     *
+     * @param pluginName the logical plugin name
+     * @param version the plugin version
+     * @param application the Grails application
+     * @since 9.0
+     */
+    protected AbstractGrailsPlugin(String pluginName, String version, GrailsApplication application) {
+        Assert.hasText(pluginName, "Argument [pluginName] cannot be blank");
+        this.grailsApplication = application;
+        this.pluginClass = null;
+        this.pluginName = PluginUtils.normalizePluginName(pluginName);
+        if (version != null) {
+            this.version = version;
+        }
     }
 
     /**
@@ -108,12 +128,12 @@ public abstract class AbstractGrailsPlugin extends GroovyObjectSupport implement
         var environment = mainContext.getEnvironment();
         if (environment instanceof ConfigurableEnvironment configurableEnv) {
             var propertySources = configurableEnv.getPropertySources();
-            String pluginName = GrailsNameUtils.getLogicalPropertyName(pluginClass.getSimpleName(), "GrailsPlugin");
-            PropertySource<?> ps = propertySources.get(pluginName + "-" + PluginUtils.PLUGIN_YML_CONFIG);
+            String logicalName = getName();
+            PropertySource<?> ps = propertySources.get(logicalName + "-" + PluginUtils.PLUGIN_YML_CONFIG);
             if (ps != null) {
                 return ps;
             }
-            return propertySources.get(pluginName + "-" + PluginUtils.PLUGIN_GROOVY_CONFIG);
+            return propertySources.get(logicalName + "-" + PluginUtils.PLUGIN_GROOVY_CONFIG);
         }
         return null;
     }
@@ -167,7 +187,10 @@ public abstract class AbstractGrailsPlugin extends GroovyObjectSupport implement
     }
 
     public String getName() {
-        return pluginClass.getName();
+        if (pluginName != null) {
+            return pluginName;
+        }
+        return pluginClass != null ? pluginClass.getName() : "";
     }
 
     public String getVersion() {
@@ -220,22 +243,26 @@ public abstract class AbstractGrailsPlugin extends GroovyObjectSupport implement
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (!(o instanceof AbstractGrailsPlugin)) return false;
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof AbstractGrailsPlugin that)) {
+            return false;
+        }
 
-        AbstractGrailsPlugin that = (AbstractGrailsPlugin) o;
-
-        if (!pluginClass.equals(that.pluginClass)) return false;
-        if (!version.equals(that.version)) return false;
-
-        return true;
+        if (pluginClass != null || that.pluginClass != null) {
+            if (!java.util.Objects.equals(pluginClass, that.pluginClass)) {
+                return false;
+            }
+        } else if (!java.util.Objects.equals(getName(), that.getName())) {
+            return false;
+        }
+        return java.util.Objects.equals(version, that.version);
     }
 
     @Override
     public int hashCode() {
-        int result = version.hashCode();
-        result = 31 * result + pluginClass.hashCode();
-        return result;
+        return java.util.Objects.hash(version, pluginClass != null ? pluginClass : getName());
     }
 
     public int compareTo(Object o) {

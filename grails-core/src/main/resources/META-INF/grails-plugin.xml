@@ -1,3 +1,0 @@
-<plugin name='core'>
-  <type>org.grails.plugins.CoreGrailsPlugin</type>
-</plugin>

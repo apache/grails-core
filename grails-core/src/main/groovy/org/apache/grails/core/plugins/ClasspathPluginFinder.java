@@ -26,11 +26,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Discovers Grails plugins from {@code META-INF/grails-plugin.xml} descriptors available on the classpath.
+ * Discovers Grails plugins from {@code META-INF/grails/plugins.imports} and per-plugin
+ * {@code META-INF/grails/plugins/<name>/plugin.properties} descriptors available on the classpath.
  *
- * <p>For each descriptor, this finder attempts to load the declared plugin classes, extract their
- * {@link PluginMetadata}, resolve any plugin configuration resource, and assemble the results into
- * {@link PluginInfo} instances.</p>
+ * <p>Supports class-backed plugins (traditional {@code *GrailsPlugin} classes and
+ * {@link grails.plugins.metadata.GrailsPluginDescriptor}-annotated classes) as well as descriptor-less
+ * starter plugins that declare no plugin class at all.</p>
  *
  * <p>Discovery is intentionally tolerant: individual plugin load failures are logged and skipped so the
  * remaining classpath plugins can still be discovered.</p>
@@ -41,15 +42,6 @@ public class ClasspathPluginFinder {
 
     /**
      * Discovers classpath plugins for the supplied Grails version.
-     *
-     * <p>This method scans {@code META-INF/grails-plugin.xml} descriptors via
-     * {@link PluginUtils#scanPluginDescriptorResources(ClassLoader)}, iterates over each descriptor's
-     * declared plugin classes, and then builds {@link PluginInfo} instances from the loaded plugin class,
-     * extracted metadata, and optional plugin configuration resource.</p>
-     *
-     * <p>{@link PluginInfo#isGrailsVersionCompatible(String)} is invoked for each discovered plugin so the
-     * compatibility check is evaluated during discovery. Any failure while loading or inspecting an individual
-     * plugin class is logged and does not stop discovery of the remaining plugins.</p>
      *
      * @param classLoader the class loader used to locate descriptors and load plugin classes
      * @param targetGrailsVersion the Grails version the discovered plugins should be checked against
@@ -65,13 +57,30 @@ public class ClasspathPluginFinder {
 
         LOG.debug("Attempting to load [{}] plugin descriptors", pluginDescriptors.size());
         for (var pluginDescriptor : pluginDescriptors) {
+            if (pluginDescriptor.isDescriptorLess()) {
+                try {
+                    var metadata = PluginUtils.extractPluginMetadata(pluginDescriptor, null);
+                    if (metadata != null) {
+                        var configResource = PluginUtils.readPluginConfiguration(metadata.getName(), null, classLoader);
+                        var pluginInfo = new PluginInfo(pluginDescriptor, metadata, configResource, false);
+                        pluginInfo.isGrailsVersionCompatible(targetGrailsVersion);
+                        discoveredPlugins.add(pluginInfo);
+                    }
+                } catch (Exception e) {
+                    LOG.debug("Error loading descriptor-less plugin [{}]: {}",
+                            pluginDescriptor.getPluginName(), e.getMessage());
+                }
+                continue;
+            }
+
             for (var pluginClassName : pluginDescriptor.getProvidedPlugins()) {
                 try {
                     var pluginClass = attemptPluginClassLoad(pluginClassName, classLoader);
                     if (PluginUtils.isGrailsPluginLoadable(pluginClass)) {
-                        var metadata = PluginUtils.extractPluginMetadata(pluginClass);
+                        var metadata = PluginUtils.extractPluginMetadata(pluginDescriptor, pluginClass);
                         if (metadata != null) {
-                            var configResource = PluginUtils.readPluginConfiguration(pluginClass);
+                            var configResource = PluginUtils.readPluginConfiguration(
+                                    metadata.getName(), pluginClass, classLoader);
                             var pluginInfo = new PluginInfo(pluginDescriptor, metadata, configResource, false);
                             pluginInfo.isGrailsVersionCompatible(targetGrailsVersion);
                             discoveredPlugins.add(pluginInfo);
@@ -86,16 +95,6 @@ public class ClasspathPluginFinder {
         return discoveredPlugins;
     }
 
-    /**
-     * Attempts to load a plugin class from the supplied class loader.
-     *
-     * <p>{@link ClassNotFoundException} is handled leniently so discovery can continue with the remaining
-     * plugin descriptors.</p>
-     *
-     * @param pluginClassName the fully qualified plugin class name to load
-     * @param classLoader the class loader used to load the class
-     * @return the loaded plugin class, or {@code null} if the class cannot be found
-     */
     private static Class<?> attemptPluginClassLoad(String pluginClassName, ClassLoader classLoader) {
         try {
             return classLoader.loadClass(pluginClassName);

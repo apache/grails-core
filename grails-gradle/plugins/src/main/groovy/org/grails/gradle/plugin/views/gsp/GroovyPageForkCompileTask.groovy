@@ -116,6 +116,17 @@ abstract class GroovyPageForkCompileTask extends AbstractCompile {
     final Property<String> serverpath
 
     /**
+     * Relative path within {@link #destinationDirectory} where the precompiled view manifest is written.
+     * Unset for applications (which default to {@code gsp/views.properties}); set by {@link GroovyPagePlugin}
+     * to {@code META-INF/grails/plugins/<name>/views.properties} for plugins.
+     *
+     * @since 9.0
+     */
+    @Input
+    @Optional
+    final Property<String> viewsManifestPath
+
+    /**
      * Whether the pages this task compiles are compiled statically.
      *
      * <p>Stated to the forked compiler as the {@code grails.views.gsp.compileStatic} system property,
@@ -202,6 +213,7 @@ abstract class GroovyPageForkCompileTask extends AbstractCompile {
         srcDir = objectFactory.directoryProperty()
         compileOptions = objectFactory.newInstance(ViewCompileOptions)
         serverpath = objectFactory.property(String)
+        viewsManifestPath = objectFactory.property(String)
         grailsEnvironment = objectFactory.property(String).convention(ViewCompileEnvironment.defaultFor(project.providers, compileOptions))
         // the input is what the compiler gets: a change to it once the input is read would be compiled but not keyed
         grailsEnvironment.finalizeValueOnRead()
@@ -318,6 +330,9 @@ abstract class GroovyPageForkCompileTask extends AbstractCompile {
                             if (compileStaticStrict.get()) {
                                 javaExecSpec.systemProperty(BuildSettings.COMPILE_STATIC_GSP_STRICT, 'true')
                             }
+                        }
+                        if (viewsManifestPath.present) {
+                            javaExecSpec.systemProperty(BuildSettings.GSP_VIEWS_MANIFEST_PATH, viewsManifestPath.get())
                         }
 
                         String configFiles = grailsConfigurationPaths.files.collect { it.canonicalPath }.join(',')

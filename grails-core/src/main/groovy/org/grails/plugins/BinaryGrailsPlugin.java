@@ -22,7 +22,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.net.URI;
 import java.net.URL;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
@@ -32,6 +31,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
+
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
@@ -45,14 +46,17 @@ import grails.io.ResourceUtils;
 import grails.plugins.exceptions.PluginException;
 import grails.util.BuildSettings;
 import org.apache.grails.core.plugins.PluginDescriptor;
+import org.apache.grails.core.plugins.PluginMetadata;
+import org.apache.grails.core.plugins.PluginUtils;
 import org.grails.core.io.StaticResourceLoader;
 
 /**
- * Models a pre-compiled binary plugin.
+ * Models a pre-compiled binary plugin backed by a {@code META-INF/grails/plugins/<name>/plugin.properties}
+ * descriptor, with or without a Groovy/Java plugin descriptor class.
  *
  * @see grails.plugins.GrailsPlugin
  *
- * @author  Graeme Rocher
+ * @author Graeme Rocher
  * @since 2.0
  */
 @SuppressWarnings("rawtypes")
@@ -63,37 +67,32 @@ public class BinaryGrailsPlugin extends DefaultGrailsPlugin {
     public static final char UNDERSCORE = '_';
     public static final String PROPERTIES_EXTENSION = ".properties";
     public static final String DEFAULT_PROPERTIES_ENCODING = "UTF-8";
-    public static final String PLUGIN_DESCRIPTOR_PATH = "META-INF/grails-plugin.xml";
 
-    private final PluginDescriptor descriptor;
+    private final @Nullable PluginDescriptor descriptor;
     private Class[] providedArtefacts = {};
     private final Map<String, Class> precompiledViewMap = new HashMap<>();
-    private final Resource baseResource;
-    private final Resource baseResourcesResource;
+    private final @Nullable Resource baseResource;
+    private final @Nullable Resource baseResourcesResource;
     private final boolean isJar;
-    private final File projectDirectory;
+    private final @Nullable File projectDirectory;
 
     /**
-     * Creates a binary plugin instance.
+     * Creates a binary plugin instance backed by a plugin descriptor class.
      *
-     * @param pluginClass The plugin class
-     * @param descriptor The META-INF/grails-plugin.xml descriptor
-     * @param application The application
+     * @param pluginClass the plugin class
+     * @param descriptor the parsed plugin descriptor
+     * @param application the application
      */
-    public BinaryGrailsPlugin(Class<?> pluginClass, PluginDescriptor descriptor, GrailsApplication application) {
-        super(pluginClass, application);
+    public BinaryGrailsPlugin(Class<?> pluginClass, @Nullable PluginDescriptor descriptor, GrailsApplication application) {
+        super(pluginClass,
+                descriptor != null ? descriptor.getResource() : null,
+                application,
+                descriptor != null ? descriptor.getPluginVersion() : null);
         this.descriptor = descriptor;
         URL rootResource = IOUtils.findRootResource(pluginClass);
-        if (rootResource == null) {
-            throw new PluginException("Cannot evaluate plugin location for plugin " + pluginClass);
-        }
-        this.baseResource = new UrlResource(rootResource);
-        try {
-            this.isJar = ResourceUtils.isJarURL(baseResource.getURL());
-        } catch (IOException e) {
-            throw new PluginException("Cannot evaluate plugin location for plugin " + pluginClass, e);
-        }
-        this.projectDirectory = isJar ? null : IOUtils.findApplicationDirectoryFile(pluginClass);
+        this.baseResource = rootResource != null ? new UrlResource(rootResource) : null;
+        this.isJar = resolveIsJar(this.baseResource, descriptor, pluginClass);
+        this.projectDirectory = (!isJar && rootResource != null) ? IOUtils.findApplicationDirectoryFile(pluginClass) : null;
 
         if (BuildSettings.BASE_DIR != null && projectDirectory != null) {
             try {
@@ -106,52 +105,61 @@ public class BinaryGrailsPlugin extends DefaultGrailsPlugin {
         }
 
         URL rootResourcesURL = IOUtils.findRootResourcesURL(pluginClass);
-        if (rootResourcesURL == null) {
-            throw new PluginException("Cannot evaluate plugin location for plugin " + pluginClass);
-        }
-
-        this.baseResourcesResource = new UrlResource(rootResourcesURL);
+        this.baseResourcesResource = rootResourcesURL != null ? new UrlResource(rootResourcesURL) : null;
         if (descriptor != null) {
             initializeProvidedArtefacts(descriptor.getProvidedClasses());
             initializeViewMap(descriptor);
         }
     }
 
-    public File getProjectDirectory() {
+    /**
+     * Creates a binary plugin instance for a descriptor-less starter plugin that declares no plugin class.
+     *
+     * @param descriptor the parsed plugin descriptor
+     * @param metadata the extracted plugin metadata
+     * @param application the application
+     * @since 9.0
+     */
+    public BinaryGrailsPlugin(PluginDescriptor descriptor, PluginMetadata metadata, GrailsApplication application) {
+        super(metadata, descriptor.getResource(), application);
+        this.descriptor = descriptor;
+        this.baseResource = descriptor.getResource();
+        this.isJar = resolveIsJar(this.baseResource, descriptor, null);
+        this.projectDirectory = null;
+        this.baseResourcesResource = null;
+        initializeProvidedArtefacts(descriptor.getProvidedClasses());
+        initializeViewMap(descriptor);
+    }
+
+    private static boolean resolveIsJar(
+            @Nullable Resource baseResource,
+            @Nullable PluginDescriptor descriptor,
+            @Nullable Class<?> pluginClass) {
+        if (baseResource != null) {
+            try {
+                return ResourceUtils.isJarURL(baseResource.getURL());
+            } catch (IOException e) {
+                if (descriptor == null && pluginClass != null) {
+                    throw new PluginException("Cannot evaluate plugin location for plugin " + pluginClass, e);
+                }
+                return true;
+            }
+        }
+        return true;
+    }
+
+    public @Nullable File getProjectDirectory() {
         return projectDirectory;
     }
 
     protected void initializeViewMap(PluginDescriptor descriptor) {
-        final Resource descriptorResource = descriptor.getResource();
-
-        Resource viewsPropertiesResource = null;
-        try {
-            viewsPropertiesResource = descriptorResource.createRelative(VIEWS_PROPERTIES);
-        } catch (IOException e) {
-            // ignore
-        }
-
-        if (viewsPropertiesResource == null || !viewsPropertiesResource.exists()) {
-            try {
-                String urlString = descriptorResource.getURL().toString();
-                if (urlString.endsWith(PLUGIN_DESCRIPTOR_PATH)) {
-                    urlString = urlString.substring(0, urlString.length() - PLUGIN_DESCRIPTOR_PATH.length());
-                    URL newUrl = URI.create(urlString + RELATIVE_VIEWS_PROPERTIES).toURL();
-                    viewsPropertiesResource = new UrlResource(newUrl);
-                }
-            } catch (IOException e) {
-                // ignore
-            }
-        }
-
+        Resource viewsPropertiesResource = resolveViewsPropertiesResource(descriptor);
         if (viewsPropertiesResource == null || !viewsPropertiesResource.exists()) {
             return;
         }
 
         Properties viewsProperties = new Properties();
-        InputStream input = null;
-        try {
-            input = viewsPropertiesResource.getInputStream();
+        try (InputStream input = viewsPropertiesResource.getInputStream()) {
             viewsProperties.load(input);
             for (Object view : viewsProperties.keySet()) {
                 String viewName = view.toString();
@@ -160,22 +168,50 @@ public class BinaryGrailsPlugin extends DefaultGrailsPlugin {
                     final Class<?> viewClass = grailsApplication.getClassLoader().loadClass(viewClassName);
                     precompiledViewMap.put(viewName, viewClass);
                 } catch (Throwable e) {
-                    throw new PluginException("Failed to initialize view [" + viewName + "] from plugin [" + getName() + "] : " + e.getMessage(), e);
+                    throw new PluginException(
+                            "Failed to initialize view [" + viewName + "] from plugin [" + getName() + "] : " + e.getMessage(), e);
                 }
             }
         } catch (IOException e) {
             LOG.error("Error loading views for binary plugin [" + this + "]: " + e.getMessage(), e);
-        } finally {
+        }
+    }
+
+    private @Nullable Resource resolveViewsPropertiesResource(PluginDescriptor descriptor) {
+        ClassLoader classLoader = grailsApplication != null ? grailsApplication.getClassLoader() : null;
+        if (classLoader != null) {
+            URL namespacedViews = classLoader.getResource(PluginUtils.getPluginViewsPath(getName()));
+            if (namespacedViews != null) {
+                return new UrlResource(namespacedViews);
+            }
+        }
+
+        final Resource descriptorResource = descriptor.getResource();
+        if (descriptorResource != null) {
             try {
-                if (input != null) input.close();
+                Resource relative = descriptorResource.createRelative(VIEWS_PROPERTIES);
+                if (relative != null && relative.exists()) {
+                    return relative;
+                }
             } catch (IOException e) {
                 // ignore
             }
         }
+
+        if (baseResource != null) {
+            try {
+                Resource rootViews = baseResource.createRelative(RELATIVE_VIEWS_PROPERTIES);
+                if (rootViews != null && rootViews.exists()) {
+                    return rootViews;
+                }
+            } catch (IOException e) {
+                // ignore
+            }
+        }
+        return null;
     }
 
     protected void initializeProvidedArtefacts(List<String> classNames) {
-
         List<Class> artefacts = new ArrayList<>();
         if (!classNames.isEmpty()) {
             final ClassLoader classLoader = grailsApplication.getClassLoader();
@@ -183,9 +219,9 @@ public class BinaryGrailsPlugin extends DefaultGrailsPlugin {
                 try {
                     artefacts.add(classLoader.loadClass(className));
                 } catch (Throwable e) {
-                    throw new PluginException("Failed to initialize class [" + className + "] from plugin [" + getName() + "] : " + e.getMessage(), e);
+                    throw new PluginException(
+                            "Failed to initialize class [" + className + "] from plugin [" + getName() + "] : " + e.getMessage(), e);
                 }
-
             }
         }
         artefacts.addAll(Arrays.asList(super.getProvidedArtefacts()));
@@ -198,28 +234,39 @@ public class BinaryGrailsPlugin extends DefaultGrailsPlugin {
     }
 
     /**
-     * @return The META-INF/grails-plugin.xml descriptor
+     * @return the parsed plugin descriptor
      */
-    public PluginDescriptor getPluginDescriptor() {
+    public @Nullable PluginDescriptor getPluginDescriptor() {
         return descriptor;
     }
 
     /**
-     * Resolves a static resource contained within this binary plugin
+     * Resolves a static resource contained within this binary plugin.
      *
-     * @param path The relative path to the static resource
-     * @return The resource or null if it doesn't exist
+     * @param path the relative path to the static resource
+     * @return the resource or {@code null} if it doesn't exist
      */
-    public Resource getResource(String path) {
-        final Resource descriptorResource = descriptor.getResource();
-
-        try {
-            Resource resource = descriptorResource.createRelative("static" + path);
-            if (resource.exists()) {
-                return resource;
+    public @Nullable Resource getResource(String path) {
+        final Resource descriptorResource = descriptor != null ? descriptor.getResource() : null;
+        if (descriptorResource != null) {
+            try {
+                Resource resource = descriptorResource.createRelative("static" + path);
+                if (resource != null && resource.exists()) {
+                    return resource;
+                }
+            } catch (IOException e) {
+                // fall through
             }
-        } catch (IOException e) {
-            return null;
+        }
+        if (baseResource != null) {
+            try {
+                Resource resource = baseResource.createRelative("static" + path);
+                if (resource != null && resource.exists()) {
+                    return resource;
+                }
+            } catch (IOException e) {
+                return null;
+            }
         }
         return null;
     }
@@ -227,12 +274,12 @@ public class BinaryGrailsPlugin extends DefaultGrailsPlugin {
     /**
      * Obtains all properties for this binary plugin for the given locale.
      *
-     * Note this method does not cache so clients should in general cache the results of this method.
+     * <p>Note this method does not cache so clients should in general cache the results of this method.</p>
      *
-     * @param locale The locale
-     * @return The properties or null if non exist
+     * @param locale the locale
+     * @return the properties or {@code null} if none exist
      */
-    public Properties getProperties(final Locale locale) {
+    public @Nullable Properties getProperties(final Locale locale) {
         Resource url = this.baseResourcesResource;
         Properties properties = null;
         if (url != null) {
@@ -240,14 +287,11 @@ public class BinaryGrailsPlugin extends DefaultGrailsPlugin {
             resourceLoader.setBaseResource(url);
             ResourcePatternResolver resolver = new PathMatchingResourcePatternResolver(resourceLoader);
             try {
-                // first load all properties
                 Resource[] resources = resolver.getResources('*' + PROPERTIES_EXTENSION);
                 resources = resources.length > 0 ? filterResources(resources, locale) : resources;
                 if (resources.length > 0) {
                     properties = new Properties();
 
-                    // message bundles are locale specific. The more underscores the locale has the more specific the locale
-                    // so we order by the number of underscores present so that the most specific appears
                     Arrays.sort(resources, (o1, o2) -> {
                         String f1 = o1.getFilename();
                         String f2 = o2.getFilename();
@@ -257,8 +301,7 @@ public class BinaryGrailsPlugin extends DefaultGrailsPlugin {
 
                         if (firstUnderscoreCount == secondUnderscoreCount) {
                             return 0;
-                        }
-                        else {
+                        } else {
                             return firstUnderscoreCount > secondUnderscoreCount ? 1 : -1;
                         }
                     });
@@ -281,15 +324,12 @@ public class BinaryGrailsPlugin extends DefaultGrailsPlugin {
             if (fn.indexOf(UNDERSCORE) > -1) {
                 if (fn.endsWith(UNDERSCORE + locale.toString() + PROPERTIES_EXTENSION)) {
                     finalResources.add(resource);
-                }
-                else if (fn.endsWith(UNDERSCORE + locale.getLanguage() + UNDERSCORE + locale.getCountry() + PROPERTIES_EXTENSION)) {
+                } else if (fn.endsWith(UNDERSCORE + locale.getLanguage() + UNDERSCORE + locale.getCountry() + PROPERTIES_EXTENSION)) {
+                    finalResources.add(resource);
+                } else if (fn.endsWith(UNDERSCORE + locale.getLanguage() + PROPERTIES_EXTENSION)) {
                     finalResources.add(resource);
                 }
-                else if (fn.endsWith(UNDERSCORE + locale.getLanguage() + PROPERTIES_EXTENSION)) {
-                    finalResources.add(resource);
-                }
-            }
-            else {
+            } else {
                 finalResources.add(resource);
             }
         }
@@ -298,15 +338,9 @@ public class BinaryGrailsPlugin extends DefaultGrailsPlugin {
 
     private void loadFromResources(Properties properties, Resource[] resources) throws IOException {
         for (Resource messageResource : resources) {
-            InputStream inputStream = messageResource.getInputStream();
-            try {
-                properties.load(new InputStreamReader(inputStream, Charset.forName(System.getProperty("file.encoding", DEFAULT_PROPERTIES_ENCODING))));
-            } finally {
-                try {
-                    inputStream.close();
-                } catch (IOException e) {
-                    // ignore
-                }
+            try (InputStream inputStream = messageResource.getInputStream()) {
+                properties.load(new InputStreamReader(
+                        inputStream, Charset.forName(System.getProperty("file.encoding", DEFAULT_PROPERTIES_ENCODING))));
             }
         }
     }
@@ -314,16 +348,10 @@ public class BinaryGrailsPlugin extends DefaultGrailsPlugin {
     /**
      * Resolves a view for the given view name.
      *
-     * @param viewName The view name
-     *
-     * @return The view class which is a subclass of GroovyPage
+     * @param viewName the view name
+     * @return the view class which is a subclass of GroovyPage
      */
     public Class resolveView(String viewName) {
-
-        // this is a workaround for GRAILS-9234; in that scenario the viewName will be
-        // "/WEB-INF/grails-app/views/plugins/plugin9234-0.1/junk/_book.gsp" with the
-        // extra "/plugins/plugin9234-0.1". I'm not sure if that's needed elsewhere, so
-        // removing it here for the lookup
         String extraPath = "/plugins/" + getName() + '-' + getVersion() + '/';
         viewName = viewName.replace(extraPath, "/");
 

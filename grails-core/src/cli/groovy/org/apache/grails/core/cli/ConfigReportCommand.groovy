@@ -56,9 +56,12 @@ class ConfigReportCommand implements ApplicationCommand {
 
     static final String METADATA_RESOURCE = 'META-INF/spring-configuration-metadata.json'
 
-    static final String PLUGIN_DESCRIPTOR_RESOURCE = 'META-INF/grails-plugin.xml'
+    static final String PLUGIN_DESCRIPTOR_RESOURCE = 'META-INF/grails/plugins.imports'
 
     static final Pattern GRADLE_CLASSES_DIRECTORY = Pattern.compile('^(file:.*/)classes/[^/]+/([^/]+)/$')
+
+    static final Pattern GRADLE_GENERATED_DESCRIPTOR_DIRECTORY =
+            Pattern.compile('^(file:.*/)generated/resources/grailsPluginDescriptor/$')
 
     final String description = 'Generates an AsciiDoc report of the application configuration'
 
@@ -351,6 +354,10 @@ class ConfigReportCommand implements ApplicationCommand {
             Matcher classesDirectory = GRADLE_CLASSES_DIRECTORY.matcher(root)
             if (classesDirectory.matches()) {
                 roots.add("${classesDirectory.group(1)}resources/${classesDirectory.group(2)}/".toString())
+            }
+            Matcher generatedDirectory = GRADLE_GENERATED_DESCRIPTOR_DIRECTORY.matcher(root)
+            if (generatedDirectory.matches()) {
+                roots.add("${generatedDirectory.group(1)}resources/main/".toString())
             }
         }
         roots

@@ -56,6 +56,9 @@ abstract class GenerateNativeMetadataTask extends DefaultTask {
     /** The manifest the GSP compiler writes, mapping a view to the class it compiled to. */
     static final String VIEWS_MANIFEST = 'gsp/views.properties'
 
+    private static final String PLUGIN_VIEWS_PREFIX = 'META-INF/grails/plugins/'
+    private static final String PLUGIN_VIEWS_SUFFIX = '/views.properties'
+
     /** Compiled application classes. */
     @InputFiles
     @PathSensitive(PathSensitivity.RELATIVE)
@@ -110,12 +113,17 @@ abstract class GenerateNativeMetadataTask extends DefaultTask {
             }
             try {
                 new java.util.jar.JarFile(entry).withCloseable { java.util.jar.JarFile jar ->
-                    java.util.jar.JarEntry manifest = jar.getJarEntry(VIEWS_MANIFEST)
-                    if (manifest == null) {
+                    Properties views = new Properties()
+                    boolean hasManifest = false
+                    for (java.util.jar.JarEntry e : jar.entries()) {
+                        if (!e.directory && isViewsManifestEntry(e.name)) {
+                            jar.getInputStream(e).withCloseable { views.load(it) }
+                            hasManifest = true
+                        }
+                    }
+                    if (!hasManifest) {
                         return
                     }
-                    Properties views = new Properties()
-                    jar.getInputStream(manifest).withCloseable { views.load(it) }
                     for (Object value : views.values()) {
                         found << value.toString()
                     }
@@ -136,6 +144,10 @@ abstract class GenerateNativeMetadataTask extends DefaultTask {
             }
         }
         found
+    }
+
+    private static boolean isViewsManifestEntry(String name) {
+        name == VIEWS_MANIFEST || (name.startsWith(PLUGIN_VIEWS_PREFIX) && name.endsWith(PLUGIN_VIEWS_SUFFIX))
     }
 
     /** Every compiled application class, including the closures its artefacts declare. */

@@ -52,6 +52,7 @@ class GrailsExtension {
         this.compileStatic = project.objects.newInstance(GrailsCompileStaticOptions)
         this.gorm = project.objects.newInstance(GrailsGormOptions)
         this.i18n = project.objects.newInstance(GrailsI18nOptions)
+        this.plugin = project.objects.newInstance(GrailsPluginOptions)
         this.cliAutoProvision = project.objects.property(Boolean).convention(project.provider {
             def fromProperty = project.findProperty('grailsCliAutoProvision')
             fromProperty == null ? Boolean.TRUE : Boolean.parseBoolean(fromProperty as String)
@@ -194,6 +195,26 @@ class GrailsExtension {
      */
     void i18n(@DelegatesTo(value = GrailsI18nOptions, strategy = Closure.DELEGATE_FIRST) Closure<?> configureClosure) {
         configureClosure.delegate = this.i18n
+        configureClosure.resolveStrategy = Closure.DELEGATE_FIRST
+        configureClosure.call()
+    }
+
+    /**
+     * Plugin descriptor options, configured through the nested {@code plugin} block. Used to supply
+     * declarative plugin metadata for descriptor-less starter plugins or additional exclude patterns.
+     *
+     * @since 9.0
+     */
+    final GrailsPluginOptions plugin
+
+    /**
+     * Configures the nested {@link #plugin} options.
+     *
+     * @param configureClosure a closure applied to the {@link GrailsPluginOptions}
+     * @since 9.0
+     */
+    void plugin(@DelegatesTo(value = GrailsPluginOptions, strategy = Closure.DELEGATE_FIRST) Closure<?> configureClosure) {
+        configureClosure.delegate = this.plugin
         configureClosure.resolveStrategy = Closure.DELEGATE_FIRST
         configureClosure.call()
     }

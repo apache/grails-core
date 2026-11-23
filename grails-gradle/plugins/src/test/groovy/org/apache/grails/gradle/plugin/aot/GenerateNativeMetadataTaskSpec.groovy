@@ -147,6 +147,24 @@ class GenerateNativeMetadataTaskSpec extends Specification {
             recordedTypes(task([pluginJar])).contains('gsp_fields_field_gsp')
     }
 
+    void 'the pages a plugin contributes via namespaced META-INF/grails/plugins/<name>/views.properties are recorded'() {
+        given: 'a Grails 9 plugin jar with a namespaced view manifest'
+            File pluginJar = new File(projectDir, 'modern-plugin.jar')
+            Properties properties = new Properties()
+            properties.setProperty('/WEB-INF/grails-app/views/modern/_widget.gsp', 'gsp_modern_widget_gsp')
+            new JarOutputStream(pluginJar.newOutputStream()).withCloseable { JarOutputStream out ->
+                out.putNextEntry(new JarEntry('META-INF/grails/plugins/modern/views.properties'))
+                properties.store(out, null)
+                out.closeEntry()
+                out.putNextEntry(new JarEntry('gsp_modern_widget_gsp.class'))
+                out.write([0xCA, 0xFE, 0xBA, 0xBE] as byte[])
+                out.closeEntry()
+            }
+
+        expect:
+            recordedTypes(task([pluginJar])).contains('gsp_modern_widget_gsp')
+    }
+
     void 'an artifact carrying no pages is passed over'() {
         given:
             File plainJar = new File(projectDir, 'plain.jar')

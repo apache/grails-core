@@ -387,7 +387,7 @@ class ConfigReportCommandSpec extends Specification {
     def "loadPropertyMetadata includes the properties of Grails plugins outside the Grails namespaces"() {
         given: "a Grails plugin and a library that both publish metadata outside the Grails namespaces"
         File plugin = classpathRoot('plugin', [
-                'META-INF/grails-plugin.xml': '<plugin name="acme"/>',
+                'META-INF/grails/plugins.imports': 'acme\n',
                 'META-INF/spring-configuration-metadata.json': '''{
                     "groups": [{"name": "acme", "description": "Acme"}],
                     "properties": [{"name": "acme.enabled", "type": "java.lang.Boolean", "description": "Whether Acme is enabled.", "defaultValue": true}]
@@ -421,9 +421,9 @@ class ConfigReportCommandSpec extends Specification {
     }
 
     def "loadPropertyMetadata includes the resources of a plugin on the classpath as Gradle output directories"() {
-        given: "a plugin whose descriptor is in the compiled classes and its metadata in the processed resources"
-        File pluginClasses = classpathRoot('plugin/build/classes/groovy/main', [
-                'META-INF/grails-plugin.xml': '<plugin name="acme"/>'
+        given: "a plugin whose descriptor is in the generated descriptor output and its metadata in the processed resources"
+        File pluginClasses = classpathRoot('plugin/build/generated/resources/grailsPluginDescriptor', [
+                'META-INF/grails/plugins.imports': 'acme\n'
         ])
         File pluginResources = classpathRoot('plugin/build/resources/main', [
                 'META-INF/spring-configuration-metadata.json': '''{
@@ -460,7 +460,7 @@ class ConfigReportCommandSpec extends Specification {
     def "writeReport documents plugin properties in their own section"() {
         given: "the metadata of a plugin outside the Grails namespaces"
         File plugin = classpathRoot('plugin', [
-                'META-INF/grails-plugin.xml': '<plugin name="acme"/>',
+                'META-INF/grails/plugins.imports': 'acme\n',
                 'META-INF/spring-configuration-metadata.json': '''{
                     "groups": [{"name": "acme", "description": "Acme"}],
                     "properties": [{"name": "acme.enabled", "type": "java.lang.Boolean", "description": "Whether Acme is enabled.", "defaultValue": true}]

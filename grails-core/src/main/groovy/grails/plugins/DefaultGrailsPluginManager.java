@@ -163,6 +163,8 @@ public class DefaultGrailsPluginManager extends AbstractGrailsPluginManager {
             GrailsPlugin plugin;
             if (pluginInfo.isDynamic()) {
                 plugin = createGrailsPlugin(pluginInfo.getPluginClass(), pluginInfo.getPluginDescriptor().getResource());
+            } else if (pluginInfo.getPluginClass() == null) {
+                plugin = new BinaryGrailsPlugin(pluginInfo.getPluginDescriptor(), pluginInfo.getMetadata(), application);
             } else {
                 plugin = createBinaryGrailsPlugin(pluginInfo.getPluginClass(), pluginInfo.getPluginDescriptor());
             }

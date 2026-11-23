@@ -229,6 +229,16 @@ class BuildSettings {
     public static final String OPTIONAL_GSP_PAGES = 'grails.views.gsp.optionalPages'
 
     /**
+     * A property name that overrides the relative path within the GSP compilation target directory where
+     * the precompiled view registry manifest is written. Applications default to {@code gsp/views.properties};
+     * plugins write to {@code META-INF/grails/plugins/<name>/views.properties} so plugin manifests never
+     * collide across JARs, fat archives, or native images.
+     *
+     * @since 9.0
+     */
+    public static final String GSP_VIEWS_MANIFEST_PATH = 'grails.views.gsp.viewsManifestPath'
+
+    /**
      * A property name whose value lists, separated by the platform's path separator, directories of
      * pages the build generated, to be compiled in the same page compilation as the directory being
      * compiled: each page is named by its path under the directory holding it, as though it were in

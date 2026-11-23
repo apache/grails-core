@@ -231,7 +231,7 @@ class GroovyPagePluginFunctionalSpec extends GradleSpecification {
         }
         // a plugin whose controller cannot be read, and a classpath entry that holds nothing to read
         new JarOutputStream(new File(projectDir, 'damaged-plugin.jar').newOutputStream()).withCloseable { JarOutputStream out ->
-            ['META-INF/grails-plugin.xml': '<plugin/>'.bytes,
+            ['META-INF/grails/plugins.imports': 'example\n'.bytes,
              'com/plugin/DamagedController.class': [0xCA, 0xFE, 0xBA, 0xBE, 0, 0] as byte[]].each { String name, byte[] bytes ->
                 out.putNextEntry(new JarEntry(name))
                 out.write(bytes)
@@ -339,7 +339,7 @@ class GroovyPagePluginFunctionalSpec extends GradleSpecification {
         scaffold.visitEnd()
         controller.visitEnd()
         new JarOutputStream(new File(projectDir, 'widget-plugin.jar').newOutputStream()).withCloseable { JarOutputStream out ->
-            ['META-INF/grails-plugin.xml': '<plugin/>'.bytes,
+            ['META-INF/grails/plugins.imports': 'example\n'.bytes,
              'com/plugin/WidgetController.class': controller.toByteArray(),
              'META-INF/templates/scaffolding/show.gsp': 'widget show ${className}'.bytes].each { String name, byte[] bytes ->
                 out.putNextEntry(new JarEntry(name))
@@ -399,7 +399,7 @@ class GroovyPagePluginFunctionalSpec extends GradleSpecification {
             domain.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, type, null, 'java/lang/Object', null)
             domain.visitEnd()
             new JarOutputStream(new File(projectDir, "${name}-plugin.jar").newOutputStream()).withCloseable { JarOutputStream out ->
-                ['META-INF/grails-plugin.xml': '<plugin/>'.bytes,
+                ['META-INF/grails/plugins.imports': 'example\n'.bytes,
                  ("${type}Controller.class".toString()): controller.toByteArray(),
                  ("${type}.class".toString()): domain.toByteArray(),
                  'META-INF/templates/scaffolding/show.gsp': "${name} show \${className}".bytes].each { String entry, byte[] bytes ->
@@ -500,7 +500,7 @@ class GroovyPagePluginFunctionalSpec extends GradleSpecification {
         scaffold.visitEnd()
         controller.visitEnd()
         new JarOutputStream(new File(projectDir, 'widget-plugin.jar').newOutputStream()).withCloseable { JarOutputStream out ->
-            ['META-INF/grails-plugin.xml': '<plugin/>'.bytes,
+            ['META-INF/grails/plugins.imports': 'example\n'.bytes,
              'com/plugin/WidgetController.class': controller.toByteArray(),
              'META-INF/templates/scaffolding/show.gsp': 'widget show ${className}'.bytes].each { String name, byte[] bytes ->
                 out.putNextEntry(new JarEntry(name))

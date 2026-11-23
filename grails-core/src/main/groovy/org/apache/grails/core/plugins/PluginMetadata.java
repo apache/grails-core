@@ -21,11 +21,13 @@ package org.apache.grails.core.plugins;
 import java.util.Map;
 import java.util.Set;
 
+import org.jspecify.annotations.Nullable;
+
 import grails.plugins.exceptions.PluginException;
 import grails.util.Environment;
 
 /**
- * Immutable metadata extracted from a Grails plugin class during discovery.
+ * Immutable metadata extracted from a Grails plugin class or descriptor during discovery.
  *
  * <p>This value object captures the fields needed for plugin filtering, ordering, dependency resolution,
  * environment checks, and later bootstrap processing.</p>
@@ -35,7 +37,7 @@ public final class PluginMetadata {
     private final String name;
     private final String pluginVersion;
     private final String grailsVersionRange;
-    private final Class<?> pluginClass;
+    private final @Nullable Class<?> pluginClass;
     private final String[] loadAfterNames;
     private final String[] loadBeforeNames;
     private final Map<String, Object> dependencies;

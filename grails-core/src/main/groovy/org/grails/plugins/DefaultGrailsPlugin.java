@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -39,6 +40,7 @@ import org.codehaus.groovy.runtime.DefaultGroovyMethods;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.beans.BeanWrapper;
 import org.springframework.beans.BeanWrapperImpl;
@@ -64,12 +66,14 @@ import grails.plugins.GrailsPlugin;
 import grails.plugins.GrailsPluginManager;
 import grails.plugins.Plugin;
 import grails.plugins.exceptions.PluginException;
+import grails.plugins.metadata.GrailsPluginDescriptor;
 import grails.spring.BeanBuilder;
 import grails.util.CollectionUtils;
 import grails.util.Environment;
 import grails.util.GrailsArrayUtils;
 import grails.util.GrailsClassUtils;
 import grails.util.GrailsUtil;
+import org.apache.grails.core.plugins.PluginMetadata;
 import org.apache.grails.core.plugins.PluginUtils;
 import org.grails.core.io.CachingPathMatchingResourcePatternResolver;
 import org.grails.core.io.SpringResource;
@@ -100,7 +104,7 @@ public class DefaultGrailsPlugin extends AbstractGrailsPlugin implements ParentA
 
     private GrailsPluginClass pluginGrailsClass;
 
-    private GroovyObject plugin;
+    private Object plugin;
     protected BeanWrapper pluginBean;
     private Closure onChangeListener;
     private Resource[] watchedResources = {};
@@ -110,29 +114,66 @@ public class DefaultGrailsPlugin extends AbstractGrailsPlugin implements ParentA
     private String[] loadAfterNames = {};
     private String[] loadBeforeNames = {};
     private String status = STATUS_ENABLED;
-    private String[] observedPlugins;
+    private String[] observedPlugins = {};
     private Closure onConfigChangeListener;
     private Closure onShutdownListener;
     private Class<?>[] providedArtefacts = {};
     private Collection profiles = null;
-    private Map pluginEnvs;
+    private Map pluginEnvs = new HashMap();
     private List<String> pluginExcludes = new ArrayList<>();
     private Collection<? extends TypeFilter> typeFilters = new ArrayList<>();
     private Resource pluginDescriptor;
     private List<WatchPattern> watchedResourcePatterns;
 
     public DefaultGrailsPlugin(Class<?> pluginClass, Resource resource, GrailsApplication application) {
+        this(pluginClass, resource, application, null);
+    }
+
+    protected DefaultGrailsPlugin(
+            Class<?> pluginClass,
+            @Nullable Resource resource,
+            GrailsApplication application,
+            @Nullable String fallbackVersion) {
         super(pluginClass, application);
-        // create properties
         dependencies = Collections.emptyMap();
         pluginDescriptor = resource;
         resolver = CachingPathMatchingResourcePatternResolver.INSTANCE;
 
         try {
-            initialisePlugin(pluginClass);
+            initialisePlugin(pluginClass, fallbackVersion);
         } catch (Throwable e) {
             throw new PluginException("Error initialising plugin for class [" + pluginClass.getName() + "]:" + e.getMessage(), e);
         }
+    }
+
+    /**
+     * Creates a plugin backed solely by declarative {@link PluginMetadata} without a plugin class.
+     *
+     * @param metadata the plugin metadata parsed from its descriptor
+     * @param resource the descriptor resource
+     * @param application the Grails application
+     * @since 9.0
+     */
+    protected DefaultGrailsPlugin(
+            PluginMetadata metadata,
+            @Nullable Resource resource,
+            GrailsApplication application) {
+        super(metadata.getName(), metadata.getPluginVersion(), application);
+        pluginDescriptor = resource;
+        resolver = CachingPathMatchingResourcePatternResolver.INSTANCE;
+        applyMetadata(metadata);
+    }
+
+    private void applyMetadata(PluginMetadata metadata) {
+        version = metadata.getPluginVersion();
+        dependencies = metadata.getDependencies() != null ? metadata.getDependencies() : Collections.emptyMap();
+        dependencyNames = metadata.getDependsOnNames() != null ? metadata.getDependsOnNames() : new String[0];
+        loadAfterNames = metadata.getLoadAfterNames() != null ? metadata.getLoadAfterNames() : new String[0];
+        loadBeforeNames = metadata.getLoadBeforeNames() != null ? metadata.getLoadBeforeNames() : new String[0];
+        evictionList = metadata.getEvictions() != null ? metadata.getEvictions() : new String[0];
+        observedPlugins = metadata.getObservedPluginNames() != null ? metadata.getObservedPluginNames() : new String[0];
+        status = metadata.getEnabled() ? STATUS_ENABLED : STATUS_DISABLED;
+        pluginEnvs = metadata.getEnvironments() != null ? new HashMap(metadata.getEnvironments()) : new HashMap();
     }
 
     @Override
@@ -182,9 +223,9 @@ public class DefaultGrailsPlugin extends AbstractGrailsPlugin implements ParentA
         }
     }
 
-    private void initialisePlugin(Class<?> clazz) {
+    private void initialisePlugin(Class<?> clazz, @Nullable String fallbackVersion) {
         pluginGrailsClass = new GrailsPluginClass(clazz);
-        plugin = (GroovyObject) pluginGrailsClass.newInstance();
+        plugin = pluginGrailsClass.newInstance();
         if (plugin instanceof Plugin) {
             Plugin p = (Plugin) plugin;
             p.setApplicationContext(applicationContext);
@@ -197,8 +238,41 @@ public class DefaultGrailsPlugin extends AbstractGrailsPlugin implements ParentA
         }
         pluginBean = new BeanWrapperImpl(plugin);
 
+        if (clazz.isAnnotationPresent(GrailsPluginDescriptor.class)) {
+            GrailsPluginDescriptor annotation = clazz.getAnnotation(GrailsPluginDescriptor.class);
+            PluginMetadata metadata = PluginUtils.extractPluginMetadata(
+                    new org.apache.grails.core.plugins.PluginDescriptor(
+                            pluginDescriptor,
+                            PluginUtils.getLogicalPluginName(clazz),
+                            fallbackVersion,
+                            null,
+                            List.of(clazz.getName()),
+                            List.of(),
+                            Map.of(),
+                            List.of(),
+                            List.of(),
+                            Map.of(),
+                            List.of(),
+                            List.of(),
+                            List.of(),
+                            List.of(),
+                            annotation.enabled(),
+                            true),
+                    clazz);
+            if (metadata != null) {
+                applyMetadata(metadata);
+            }
+            if (annotation.pluginExcludes().length > 0) {
+                pluginExcludes = new ArrayList<>(Arrays.asList(annotation.pluginExcludes()));
+            }
+            evaluateProvidedArtefacts();
+            evaluateOnChangeListener();
+            evaluateTypeFilters();
+            return;
+        }
+
         // configure plugin
-        version = PluginUtils.evaluatePluginVersion(pluginBean, plugin, pluginGrailsClass.getName());
+        version = PluginUtils.evaluatePluginVersion(pluginBean, plugin, pluginGrailsClass.getName(), fallbackVersion);
 
         PluginUtils.PluginDependencies pluginDependencies = PluginUtils.evaluatePluginDependencies(pluginBean, plugin);
         dependencies = pluginDependencies.dependencies();
@@ -358,11 +432,17 @@ public class DefaultGrailsPlugin extends AbstractGrailsPlugin implements ParentA
     }
 
     public void doWithApplicationContext(ApplicationContext ctx) {
+        if (plugin == null) {
+            return;
+        }
         if (plugin instanceof Plugin) {
             Plugin pluginObject = (Plugin) plugin;
 
             pluginObject.setApplicationContext(ctx);
             pluginObject.doWithApplicationContext();
+        }
+        else if (plugin instanceof GrailsApplicationLifeCycle lifeCycle) {
+            lifeCycle.doWithApplicationContext();
         }
         else {
             Object[] args = {ctx};
@@ -371,12 +451,17 @@ public class DefaultGrailsPlugin extends AbstractGrailsPlugin implements ParentA
     }
 
     private void invokePluginHook(String methodName, Object[] args, ApplicationContext ctx) {
-        if (pluginBean.isReadableProperty(methodName)) {
-            Closure c = (Closure) plugin.getProperty(methodName);
-            c.setDelegate(this);
-            c.call(args);
+        if (plugin == null || pluginBean == null) {
+            return;
         }
-        else {
+        if (plugin instanceof GroovyObject groovyPlugin && pluginBean.isReadableProperty(methodName)) {
+            Object prop = groovyPlugin.getProperty(methodName);
+            if (prop instanceof Closure c) {
+                c.setDelegate(this);
+                c.call(args);
+            }
+        }
+        else if (pluginGrailsClass != null) {
             MetaClass pluginMetaClass = pluginGrailsClass.getMetaClass();
             if (!pluginMetaClass.respondsTo(plugin, methodName, args).isEmpty()) {
                 pluginMetaClass.invokeMethod(plugin, methodName, ctx);
@@ -385,6 +470,9 @@ public class DefaultGrailsPlugin extends AbstractGrailsPlugin implements ParentA
     }
 
     public void doWithRuntimeConfiguration(RuntimeSpringConfiguration springConfig) {
+        if (plugin == null) {
+            return;
+        }
         Binding b = new Binding();
         b.setVariable("application", grailsApplication);
         b.setVariable(GrailsApplication.APPLICATION_ID, grailsApplication);
@@ -411,7 +499,7 @@ public class DefaultGrailsPlugin extends AbstractGrailsPlugin implements ParentA
             }
             // Method-based hook: doWithSpring(BeanBuilder) registers beans directly against the builder
             pluginObject.doWithSpring(bb);
-        } else {
+        } else if (plugin instanceof GroovyObject groovyPlugin) {
             if (!pluginBean.isReadableProperty(DO_WITH_SPRING)) {
                 return;
             }
@@ -420,7 +508,7 @@ public class DefaultGrailsPlugin extends AbstractGrailsPlugin implements ParentA
                 LOG.debug("Plugin " + this + " is participating in Spring configuration...");
             }
 
-            Closure c = (Closure) plugin.getProperty(DO_WITH_SPRING);
+            Closure c = (Closure) groovyPlugin.getProperty(DO_WITH_SPRING);
             BeanBuilder bb = new BeanBuilder(getParentCtx(), springConfig, grailsApplication.getClassLoader());
             bb.setBinding(b);
             c.setDelegate(bb);
@@ -457,7 +545,10 @@ public class DefaultGrailsPlugin extends AbstractGrailsPlugin implements ParentA
 
     @Override
     public String getName() {
-        return pluginGrailsClass.getLogicalPropertyName();
+        if (pluginName != null) {
+            return pluginName;
+        }
+        return pluginGrailsClass != null ? pluginGrailsClass.getLogicalPropertyName() : super.getName();
     }
 
     @SuppressWarnings("unchecked")
@@ -571,19 +662,36 @@ public class DefaultGrailsPlugin extends AbstractGrailsPlugin implements ParentA
         ClassLoader parent = grailsApplication.getClassLoader();
         GroovyClassLoader gcl = new GroovyClassLoader(parent);
         try {
-            initialisePlugin(gcl.parseClass(descriptor.getFile()));
+            initialisePlugin(gcl.parseClass(descriptor.getFile()), version);
         } catch (Exception e) {
             LOG.error("Error refreshing plugin: " + e.getMessage(), e);
         }
     }
 
     public GroovyObject getInstance() {
+        return plugin instanceof GroovyObject ? (GroovyObject) plugin : null;
+    }
+
+    /**
+     * Returns the underlying plugin descriptor instance, which may be a Groovy or Java object,
+     * or {@code null} for descriptor-less starter plugins.
+     *
+     * @return the plugin instance, or {@code null}
+     * @since 9.0
+     */
+    public @Nullable Object getPluginInstance() {
         return plugin;
     }
 
     public void doWithDynamicMethods(ApplicationContext ctx) {
+        if (plugin == null) {
+            return;
+        }
         if (plugin instanceof Plugin) {
             ((Plugin) plugin).doWithDynamicMethods();
+        }
+        else if (plugin instanceof GrailsApplicationLifeCycle lifeCycle) {
+            lifeCycle.doWithDynamicMethods();
         }
         else {
             Object[] args = {ctx};
@@ -696,7 +804,7 @@ public class DefaultGrailsPlugin extends AbstractGrailsPlugin implements ParentA
     }
 
     public void doArtefactConfiguration() {
-        if (!pluginBean.isReadableProperty(ARTEFACTS)) {
+        if (plugin == null || pluginBean == null || !pluginBean.isReadableProperty(ARTEFACTS)) {
             return;
         }
 
@@ -704,9 +812,12 @@ public class DefaultGrailsPlugin extends AbstractGrailsPlugin implements ParentA
         if (plugin instanceof Plugin) {
             l = ((Plugin) plugin).getArtefacts();
         }
+        else if (plugin instanceof GroovyObject groovyPlugin) {
+            l = (List) groovyPlugin.getProperty(ARTEFACTS);
+        }
         else {
-
-            l = (List) plugin.getProperty(ARTEFACTS);
+            Object prop = pluginBean.getPropertyValue(ARTEFACTS);
+            l = prop instanceof List ? (List) prop : Collections.emptyList();
         }
         for (Object artefact : l) {
             if (artefact instanceof Class) {
@@ -769,6 +880,6 @@ public class DefaultGrailsPlugin extends AbstractGrailsPlugin implements ParentA
     }
 
     public Map getProperties() {
-        return DefaultGroovyMethods.getProperties(plugin);
+        return plugin != null ? DefaultGroovyMethods.getProperties(plugin) : Collections.emptyMap();
     }
 }

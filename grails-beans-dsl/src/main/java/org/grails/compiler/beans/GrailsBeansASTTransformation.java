@@ -537,7 +537,14 @@ public class GrailsBeansASTTransformation implements ASTTransformation, Compilat
         return configuration;
     }
 
+    private static final String PLUGIN_DESCRIPTOR_ANNOTATION_NAME = "grails.plugins.metadata.GrailsPluginDescriptor";
+
     private boolean extendsGrailsPlugin(ClassNode classNode) {
+        for (AnnotationNode annotation : classNode.getAnnotations()) {
+            if (PLUGIN_DESCRIPTOR_ANNOTATION_NAME.equals(annotation.getClassNode().getName())) {
+                return true;
+            }
+        }
         for (ClassNode current = classNode.getSuperClass(); current != null; current = current.getSuperClass()) {
             if (PLUGIN_SUPERCLASS_NAME.equals(current.getName())) {
                 return true;

@@ -106,7 +106,7 @@ abstract class GenerateScaffoldedViewsTask extends DefaultTask {
     private static final String TEMPLATE_PATH = 'META-INF/templates/scaffolding/'
 
     /** What marks an artifact as a Grails plugin, whose controllers are artefacts of the application. */
-    private static final String PLUGIN_DESCRIPTOR = 'META-INF/grails-plugin.xml'
+    private static final String PLUGIN_DESCRIPTOR = 'META-INF/grails/plugins.imports'
 
     /** What marks a classpath entry as one providing the servlet API. */
     private static final String SERVLET_API = 'jakarta/servlet/ServletRequest.class'

@@ -30,25 +30,9 @@ import org.apache.grails.core.plugins.PluginDescriptor;
 import org.apache.grails.core.plugins.PluginUtils;
 
 /**
- * Registers what finding the plugins reads: the descriptors that list them, and the classes they name.
- *
- * <p>Plugins are found by reading every {@code META-INF/grails-plugin.xml} on the classpath, loading
- * the plugin classes each one names, creating an instance of each and reading its version, the
- * Grails versions it supports and what it loads after through its getters. An image carries none of
- * that unless asked: without the descriptors no plugin is found and the application fails to start
- * with "Grails was unable to load plugins dynamically", and without the classes every plugin fails
- * to load and the same thing happens. A descriptor is Groovy written largely without static
- * compilation, so its closures reach its own fields and methods dynamically too -- reading a
- * constant it declares stopped the context from starting.</p>
- *
- * <p>Each plugin class's own class file is registered as a resource as well. A plugin is located by
- * looking its class file up -- where it was found is the root its other resources are read relative
- * to -- and an image carries no class files unless asked, so every plugin failed to register with
- * "Root classpath resource not found".</p>
- *
- * <p>The classes are read from the descriptors while the hints are written, on an ordinary JVM with
- * the full classpath, so a plugin in any package is covered -- an application's own plugins are not
- * the framework's and are named in no list here.</p>
+ * Registers what finding and initializing plugins reads: the {@code META-INF/grails/plugins.imports}
+ * index, each plugin's {@code META-INF/grails/plugins/<name>/plugin.properties} descriptor, its
+ * namespaced configuration and view manifest when present, and reflection hints for class-backed plugins.
  *
  * @since 9.0
  */
@@ -56,9 +40,16 @@ public class GrailsPluginRuntimeHints implements RuntimeHintsRegistrar {
 
     @Override
     public void registerHints(RuntimeHints hints, @Nullable ClassLoader classLoader) {
-        hints.resources().registerPattern(PluginUtils.PLUGIN_XML_PATTERN);
+        hints.resources().registerPattern(PluginUtils.PLUGINS_IMPORTS_PATH);
         ClassLoader loader = (classLoader != null) ? classLoader : ClassUtils.getDefaultClassLoader();
         for (PluginDescriptor descriptor : PluginUtils.scanPluginDescriptorResources(loader)) {
+            String pluginName = descriptor.getPluginName();
+            if (pluginName != null && !pluginName.isBlank()) {
+                hints.resources().registerPattern(PluginUtils.getPluginDescriptorPath(pluginName));
+                registerResourceIfPresent(hints, loader, PluginUtils.getPluginConfigPath(pluginName, PluginUtils.PLUGIN_YML_CONFIG));
+                registerResourceIfPresent(hints, loader, PluginUtils.getPluginConfigPath(pluginName, PluginUtils.PLUGIN_GROOVY_CONFIG));
+                registerResourceIfPresent(hints, loader, PluginUtils.getPluginViewsPath(pluginName));
+            }
             for (String pluginClass : descriptor.getProvidedPlugins()) {
                 if (RegistrableTypes.loads(pluginClass, loader)) {
                     hints.reflection().registerTypeIfPresent(loader, pluginClass,
@@ -70,6 +61,12 @@ public class GrailsPluginRuntimeHints implements RuntimeHintsRegistrar {
                             ClassUtils.CLASS_FILE_SUFFIX);
                 }
             }
+        }
+    }
+
+    private static void registerResourceIfPresent(RuntimeHints hints, ClassLoader loader, String resourcePath) {
+        if (loader.getResource(resourcePath) != null) {
+            hints.resources().registerPattern(resourcePath);
         }
     }
 

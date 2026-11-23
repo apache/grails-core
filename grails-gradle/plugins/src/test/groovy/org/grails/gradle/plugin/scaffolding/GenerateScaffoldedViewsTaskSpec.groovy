@@ -196,7 +196,7 @@ class GenerateScaffoldedViewsTaskSpec extends Specification {
         }
     }
 
-    private static final String PLUGIN_DESCRIPTOR = 'META-INF/grails-plugin.xml'
+    private static final String PLUGIN_DESCRIPTOR = 'META-INF/grails/plugins.imports'
 
     private GenerateScaffoldedViewsTask task(Object overrides = []) {
         Project project = ProjectBuilder.builder().withProjectDir(projectDir).build()

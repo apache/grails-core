@@ -75,7 +75,44 @@ class CompilePlugin implements Plugin<Project> {
         configureJars(project)
         configureCompiler(project)
         configureCallSiteModule(project)
+        configurePluginDescriptorGeneration(project)
         configureReproducible(project)
+    }
+
+    /**
+     * Registers {@link GeneratePluginDescriptorTask} on framework library modules that do not apply
+     * {@code org.apache.grails.gradle.grails-plugin}, so core Grails plugins such as {@code grails-core}
+     * and {@code grails-controllers} generate {@code META-INF/grails/plugins.imports} and
+     * {@code META-INF/grails/plugins/<name>/plugin.properties} from compiled bytecode.
+     */
+    private static void configurePluginDescriptorGeneration(Project project) {
+        if (project.gradle.rootProject.name in GRADLE_SIDE_BUILDS) {
+            return
+        }
+        if (project.plugins.hasPlugin('org.apache.grails.gradle.grails-plugin')) {
+            return
+        }
+        def main = project.extensions.getByType(JavaPluginExtension).sourceSets.findByName(SourceSet.MAIN_SOURCE_SET_NAME)
+        if (main == null) {
+            return
+        }
+        def generatedDir = project.layout.buildDirectory.dir('generated/resources/grailsPluginDescriptor')
+        def task = project.tasks.register('generateGrailsPluginDescriptor', GeneratePluginDescriptorTask) { GeneratePluginDescriptorTask t ->
+            t.group = 'build'
+            t.description = 'Generates META-INF/grails/plugins.imports and per-plugin plugin.properties descriptors from compiled classes'
+            t.classesDirs.from(main.output.classesDirs)
+            t.projectVersion.set(project.provider {
+                Object ver = project.version
+                ver != null && ver.toString() != 'unspecified' ? ver.toString() : null
+            })
+            t.outputDirectory.set(generatedDir)
+        }
+        project.plugins.withId('org.apache.grails.gradle.grails-plugin') {
+            task.configure { GeneratePluginDescriptorTask t ->
+                t.enabled = false
+            }
+        }
+        main.output.dir(Collections.<String, Object> singletonMap('builtBy', task), generatedDir)
     }
 
     /**
