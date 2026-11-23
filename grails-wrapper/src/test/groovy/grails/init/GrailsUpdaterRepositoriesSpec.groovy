@@ -277,13 +277,16 @@ class GrailsUpdaterRepositoriesSpec extends Specification {
         when:
         Map result = runWrapper(GRAILS_REPO_URL: named.path, PREFERRED_GRAILS_VERSION: '9.0.0')
 
-        then: 'the wrapper looks into what it downloads, and goes on to the other repositories'
+        then: 'the wrapper looks into what it downloads, and ends there: the other repositories are not asked'
         result.status == 1
-        result.out.contains('Unable to execute Grails Wrapper: Could not find the Grails CLI in any repository:')
-        result.out.contains("  [${cliDirectory(named).path}]: the download is not a Grails command line that can be started: it does not open as a jar: ")
-        result.err.contains("The Grails CLI could not be taken from the repository [${cliDirectory(named).path}]: the download is not a Grails command line that can be started: it does not open as a jar: ")
+        result.out.contains("Unable to execute Grails Wrapper: The Grails CLI that the repository [${cliDirectory(named).path}] gave is not installed: " +
+                'the download is not a Grails command line that can be started: it does not open as a jar: ')
+        result.out.contains('No other repository was asked: the command line of another repository does not take the place of a download that is not whole. ' +
+                'Run the command again; if the repository gives the same download, correct the repository or remove it from GRAILS_REPO_URL.')
+        !result.out.contains('Could not find the Grails CLI in any repository')
+        result.err.empty
         !result.out.contains('Updated wrapper to version')
-        proxy.requestedHosts == REMOTE_HOSTS
+        proxy.requestedHosts.empty
 
         and: 'neither the jar nor the file it was downloaded to is in the home'
         new File(home, 'wrapper').list().length == 0
@@ -343,7 +346,7 @@ class GrailsUpdaterRepositoriesSpec extends Specification {
     }
 
     @Unroll
-    def "a jar that is cut off in the first repository, which has #checksums, is passed over for the whole one of the second"() {
+    def "a jar that is cut off in the first repository, which has #checksums, ends the update, and the whole one of the second is not taken"() {
         given:
         File first = repository('first')
         File second = repository('second')
@@ -354,16 +357,17 @@ class GrailsUpdaterRepositoriesSpec extends Specification {
         CliJars.writeChecksums(publishRelease(second, '9.0.0', 'of the second'), kinds)
 
         when:
-        Map result = update([first, second], [GrailsReleaseType.RELEASE], '9.0.0')
+        Map result = attempt([first, second], [GrailsReleaseType.RELEASE], '9.0.0')
 
         then:
-        result.updated
-        CliJars.marker(installed('9.0.0')) == 'of the second'
-        result.err.readLines() == ["The Grails CLI could not be taken from the repository [${cliDirectory(first).path}]: ${message}".toString()]
+        result.thrown instanceof GrailsWrapperException
+        result.thrown.message == notInstalled(first, message)
+        result.err.empty
+        !result.out.contains(cliDirectory(second).path)
         proxy.requestedHosts.empty
 
-        and: 'the jar is all there is in the directory of the version'
-        installed('9.0.0').parentFile.list() == ['grails-cli-9.0.0-all.jar']
+        and: 'nothing is installed, and nothing of the download is left'
+        new File(home, 'wrapper').list().length == 0
 
         where:
         checksums                | kinds                             | message
@@ -384,18 +388,13 @@ class GrailsUpdaterRepositoriesSpec extends Specification {
         }
 
         when:
-        boolean updated = false
-        String failure = null
-        try {
-            updated = update([named], [GrailsReleaseType.RELEASE], '9.0.0').updated
-        } catch (GrailsWrapperException e) {
-            failure = e.message.readLines()[1]
-        }
+        Map result = attempt([named], [GrailsReleaseType.RELEASE], '9.0.0')
 
-        then:
-        updated == (message == null)
+        then: 'a download that is refused ends the update, and the remote repositories are not asked'
+        (result.updated as boolean) == (message == null)
         installed('9.0.0').exists() == (message == null)
-        failure == (message == null ? null : "  [${cliDirectory(named).path}]: ${message}".toString())
+        result.thrown?.message == (message == null ? null : notInstalled(named, message))
+        proxy.requestedHosts.empty
 
         where:
         outcome     | situation                                              | checksums                                                               | message
@@ -424,8 +423,9 @@ class GrailsUpdaterRepositoriesSpec extends Specification {
 
         then:
         GrailsWrapperException e = thrown()
-        e.message.readLines()[1] == "  [${cliDirectory(named).path}]: the download is corrupt: IOException: an entry of the jar does not match its CRC"
+        e.message == notInstalled(named, 'the download is corrupt: IOException: an entry of the jar does not match its CRC')
         new File(home, 'wrapper').list().length == 0
+        proxy.requestedHosts.empty
     }
 
     def "an installed file that is no jar is said in one line, downloaded again and started"() {
@@ -615,6 +615,116 @@ class GrailsUpdaterRepositoriesSpec extends Specification {
         'has a user and a password but no @'          | 'https://deployer:Xq7Zk9/releases'                                        || 'https://***/releases'
     }
 
+    @Unroll
+    def "a #kind that does not match its checksum in the first named repository ends the wrapper with status 1, and the second repository is not asked"() {
+        given: 'the first repository has another jar in the place of the one its checksum file is of, and the second has a whole one'
+        File first = repository('first')
+        File second = repository('second')
+        File tampered = publish(first, version, 'the jar of the first')
+        CliJars.writeChecksums(tampered, ['sha1'])
+        tamper(tampered)
+        publish(second, version, 'the jar of the second')
+
+        when:
+        Map result = runWrapper([GRAILS_REPO_URL: "${first.path};${second.path}".toString(), PREFERRED_GRAILS_VERSION: version], ['help'])
+
+        then: 'the message names the repository and why, without a stack trace'
+        result.status == 1
+        result.out.contains("Unable to execute Grails Wrapper: ${notInstalled(first, 'the download does not match the SHA-1 checksum of the repository: it was cut off or is corrupt')}")
+        !result.out.contains('\tat ')
+        !result.err.contains('\tat ')
+
+        and: 'nothing is installed or started, and neither the second repository nor a remote one is asked'
+        !result.out.contains(CliJars.STARTED)
+        !result.out.contains('Updated wrapper to version')
+        new File(home, 'wrapper').list().length == 0
+        !result.out.contains('...Trying the next repository.')
+        !result.out.contains(cliDirectory(second).path)
+        !result.err.contains(cliDirectory(second).path)
+        proxy.requestedHosts.empty
+
+        where:
+        kind       | version
+        'release'  | '9.0.0'
+        'snapshot' | '9.0.0-SNAPSHOT'
+    }
+
+    @Unroll
+    def "the update of a #kind ends at a jar of the first named repository that does not match its checksum"() {
+        given:
+        File first = repository('first')
+        File second = repository('second')
+        File tampered = publish(first, version, 'the jar of the first')
+        CliJars.writeChecksums(tampered, ['sha512', 'sha1'])
+        tamper(tampered)
+        publish(second, version, 'the jar of the second')
+
+        when:
+        Map result = attempt([first, second], [type], version)
+
+        then:
+        result.thrown instanceof GrailsWrapperException
+        result.thrown.message == notInstalled(first, 'the download does not match the SHA-512 checksum of the repository: it was cut off or is corrupt')
+        !result.updated
+        new File(home, 'wrapper').list().length == 0
+        proxy.requestedHosts.empty
+
+        and: 'no line says that a repository was passed over'
+        result.err.empty
+        !result.out.contains('...Trying the next repository.')
+        !result.out.contains(cliDirectory(second).path)
+
+        where:
+        kind       | version          | type
+        'release'  | '9.0.0'          | GrailsReleaseType.RELEASE
+        'snapshot' | '9.0.0-SNAPSHOT' | GrailsReleaseType.SNAPSHOT
+    }
+
+    @Unroll
+    def "a #kind that the first named repository does not have is taken from the second, which the wrapper starts"() {
+        given:
+        File first = repository('first')
+        File second = repository('second')
+        CliJars.writeChecksums(publish(second, version, 'the jar of the second'), ['sha1'])
+
+        when:
+        Map result = runWrapper([GRAILS_REPO_URL: "${first.path};${second.path}".toString(), PREFERRED_GRAILS_VERSION: version], ['help'])
+
+        then:
+        result.status == 0
+        result.out.contains("${CliJars.STARTED}help")
+        CliJars.marker(installed(version)) == 'the jar of the second'
+        result.out.contains("...The Grails CLI was not found in the overridden repository [${cliDirectory(first).path}]: ")
+        result.out.contains('...Trying the next repository.')
+        proxy.requestedHosts.empty
+
+        where:
+        kind       | version
+        'release'  | '9.0.0'
+        'snapshot' | '9.0.0-SNAPSHOT'
+    }
+
+    def "an installed snapshot is kept when the next download of it does not match its checksum, and the wrapper ends"() {
+        given:
+        File named = repository('named')
+        publishSnapshot(named, '9.0.0-SNAPSHOT', 'the first build')
+        update([named], [GrailsReleaseType.SNAPSHOT], '9.0.0-SNAPSHOT')
+        File next = publishSnapshot(named, '9.0.0-SNAPSHOT', 'the second build')
+        CliJars.writeChecksums(next, ['sha256'])
+        tamper(next)
+
+        when:
+        Map result = runWrapper([GRAILS_REPO_URL: named.path, PREFERRED_GRAILS_VERSION: '9.0.0-SNAPSHOT'], ['help'])
+
+        then:
+        result.status == 1
+        result.out.contains("Unable to execute Grails Wrapper: ${notInstalled(named, 'the download does not match the SHA-256 checksum of the repository: it was cut off or is corrupt')}")
+        !result.out.contains(CliJars.STARTED)
+        CliJars.marker(installed('9.0.0-SNAPSHOT')) == 'the first build'
+        installed('9.0.0-SNAPSHOT').parentFile.list() == ['grails-cli-9.0.0-SNAPSHOT-all.jar']
+        proxy.requestedHosts.empty
+    }
+
     // the update as update does it, which keeps what was written when it throws, and what it threw as a stack trace shows it
     private Map updateWhatever(List repositories, String version) {
         Map result = [:]
@@ -666,9 +776,10 @@ class GrailsUpdaterRepositoriesSpec extends Specification {
     /**
      * A snapshot as {@code publishToMavenLocal} writes it: the jar has the name of the version.
      */
-    private static void publishSnapshot(File repository, String version, String content) {
-        publishRelease(repository, version, content)
+    private static File publishSnapshot(File repository, String version, String content) {
+        File jar = publishRelease(repository, version, content)
         new File(cliDirectory(repository), "${version}/maven-metadata-local.xml").text = snapshotMetadata(version)
+        jar
     }
 
     private static String snapshotMetadata(String value) {
@@ -712,6 +823,19 @@ class GrailsUpdaterRepositoriesSpec extends Specification {
      * @return updated, updater, and what was written to out and err
      */
     private Map update(List repositories, List<GrailsReleaseType> allowed, String version) {
+        Map result = attempt(repositories, allowed, version)
+        if (result.thrown) {
+            throw result.thrown
+        }
+        result
+    }
+
+    /**
+     * {@link #update}, which keeps what was written when the update throws.
+     *
+     * @return updated or thrown, updater, and what was written to out and err
+     */
+    private Map attempt(List repositories, List<GrailsReleaseType> allowed, String version) {
         Map result = [:]
         result.err = SystemStubs.tapSystemErr {
             result.out = SystemStubs.tapSystemOut {
@@ -721,12 +845,37 @@ class GrailsUpdaterRepositoriesSpec extends Specification {
                     SystemStubs.withEnvironmentVariable('GRAILS_WRAPPER_HOME', home.path).execute {
                         GrailsUpdater updater = new GrailsUpdater(new LinkedHashSet<>(allowed), version ? new GrailsVersion(version) : null)
                         result.updater = updater
-                        result.updated = updater.update()
+                        try {
+                            result.updated = updater.update()
+                        } catch (GrailsWrapperException e) {
+                            result.thrown = e
+                        }
                     }
                 }
             }
         }
         result
+    }
+
+    /**
+     * What ends the wrapper when a repository that was named gave a jar that is not whole.
+     */
+    private static String notInstalled(File repository, String reason) {
+        "The Grails CLI that the repository [${cliDirectory(repository).path}] gave is not installed: ${reason}. " +
+                'No other repository was asked: the command line of another repository does not take the place of a download that is not whole. ' +
+                'Run the command again; if the repository gives the same download, correct the repository or remove it from GRAILS_REPO_URL.'
+    }
+
+    /**
+     * Replaces a jar by another one that is whole, as one that was tampered with is: the checksum files beside it
+     * are those of the jar that was there.
+     */
+    private static void tamper(File jar) {
+        jar.bytes = CliJars.jar('a jar in the place of the published one')
+    }
+
+    private static File publish(File repository, String version, String marker) {
+        version.endsWith('-SNAPSHOT') ? publishSnapshot(repository, version, marker) : publishRelease(repository, version, marker)
     }
 
     /**

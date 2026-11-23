@@ -58,6 +58,10 @@ import static java.nio.file.StandardCopyOption.ATOMIC_MOVE;
  * has none, every entry of it was read and matches its CRC; and in both cases it opens as a jar that has its
  * start class. The checksum is from the repository the jar is from, so it tells a download that was cut off or
  * damaged, and does not tell a repository that serves another jar.
+ * <p>
+ * The repositories are asked in their order. One that does not have the jar, whose metadata cannot be read, or
+ * that cannot be reached or answers with an error, is passed over. The first one that gives the jar decides: a
+ * download that is not whole ends the update, and no other repository is asked.
  */
 public class GrailsUpdater {
 
@@ -167,7 +171,8 @@ public class GrailsUpdater {
      *
      * @return true if an update was performed; false if the download was whole and the jar that is installed,
      * which is whole too, could not be replaced by it
-     * @throws GrailsWrapperException if no repository had the command line, or the home cannot be written to
+     * @throws GrailsWrapperException if no repository had the command line, the one that gave it gave a download
+     * that is not whole, or the home cannot be written to
      */
     public boolean update() {
         return update(preferredVersion);
@@ -177,7 +182,8 @@ public class GrailsUpdater {
      * Downloads the selected version again, over a jar that is installed and cannot be started.
      *
      * @return true if the jar was replaced
-     * @throws GrailsWrapperException if no repository had the command line, or the home cannot be written to
+     * @throws GrailsWrapperException if no repository had the command line, the one that gave it gave a download
+     * that is not whole, or the home cannot be written to
      */
     public boolean repair() {
         return update(getSelectedVersion());
@@ -273,9 +279,19 @@ public class GrailsUpdater {
                 part = createPart(directory, version);
                 transfer(part, inputStream, contentLength[0]);
             } catch (IOException e) {
-                throw new GrailsDownloadException("the download failed: " + describe(e));
+                String reason = "the download failed: " + describe(e);
+                if (part == null) {
+                    // the repository could not be reached, or answered with an error and not with the jar
+                    throw new GrailsDownloadException(reason);
+                }
+                // the repository gave the jar, and it broke off
+                throw notInstalled(repo, reason);
             }
-            verify(repo, wrapperUrl, part);
+            try {
+                verify(repo, wrapperUrl, part);
+            } catch (GrailsDownloadException e) {
+                throw notInstalled(repo, said(e));
+            }
             return install(version, part, repo.isFile);
         } finally {
             if (part != null) {
@@ -286,6 +302,19 @@ public class GrailsUpdater {
                 directory.delete();
             }
         }
+    }
+
+    /**
+     * A repository that gave the jar decides: what it gave is installed when it is whole, and otherwise the wrapper
+     * ends. No other repository is asked then, since the command line of that one would run in the place of the
+     * one that was given, and a download that is not whole can be one that was cut off or tampered with.
+     */
+    private static GrailsWrapperException notInstalled(GrailsWrapperRepo repo, String reason) {
+        return new GrailsWrapperException("The Grails CLI that the repository [" + repo.getDisplayUrl() + "] gave is not installed: " + reason + ". " +
+                "No other repository was asked: the command line of another repository does not take the place of a download that is not whole. " +
+                (repo.overridden ?
+                        "Run the command again; if the repository gives the same download, correct the repository or remove it from GRAILS_REPO_URL." :
+                        "Run the command again."));
     }
 
     /**

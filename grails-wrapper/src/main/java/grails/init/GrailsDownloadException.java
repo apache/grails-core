@@ -18,7 +18,8 @@ package grails.init;
 
 /**
  * A repository has the command line, or says it has, and it could not be taken from it: its metadata cannot be
- * read, the download failed, or what was downloaded is not whole. The next repository is tried.
+ * read, the download failed, or what was downloaded is not whole. Before the repository gave the jar, the next
+ * repository is tried; a jar the repository gave that is not whole ends the update instead.
  * A repository that simply does not have the command line is a {@link GrailsReleaseNotFoundException}.
  */
 class GrailsDownloadException extends Exception {
