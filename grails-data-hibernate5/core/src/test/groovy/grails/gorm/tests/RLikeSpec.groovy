@@ -21,13 +21,13 @@ package grails.gorm.tests
 import grails.gorm.annotation.Entity
 import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
-import org.testcontainers.spock.Testcontainers
 import spock.lang.IgnoreIf
-import spock.lang.Requires
 import spock.lang.Shared
 
-@Testcontainers
-@Requires({ DatabaseContainers.isDockerAvailable() })
+/**
+ * The H2 rows run everywhere; a row that starts a container is skipped when no Docker daemon answers the client that starts
+ * it, and the Db2 rows are skipped on arm64 machines, as IBM publishes the image for amd64 only.
+ */
 class RLikeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
 
     @Shared postgres = DatabaseContainers.POSTGRES
@@ -40,7 +40,7 @@ class RLikeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
         manager.registerDomainClasses(RlikeFoo)
     }
 
-    @IgnoreIf({ data.db == 'DB2' && System.getProperty('os.arch') in ['aarch64', 'arm64'] })
+    @IgnoreIf({ data.container != null && (!DatabaseContainers.isDockerAvailable() || (data.db == 'DB2' && System.getProperty('os.arch') in ['aarch64', 'arm64'])) })
     void "test rlike works with #db"() {
         given:
         useDatabase(container, 'rlikeDB')
@@ -65,7 +65,7 @@ class RLikeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
         'DB2'      | db2
     }
 
-    @IgnoreIf({ data.db == 'DB2' && System.getProperty('os.arch') in ['aarch64', 'arm64'] })
+    @IgnoreIf({ data.container != null && (!DatabaseContainers.isDockerAvailable() || (data.db == 'DB2' && System.getProperty('os.arch') in ['aarch64', 'arm64'])) })
     void "test rlike on #db matches #expected of Alice, alice and bob for the pattern ^al.*"() {
         given:
         useDatabase(container, 'rlikeCaseDB')

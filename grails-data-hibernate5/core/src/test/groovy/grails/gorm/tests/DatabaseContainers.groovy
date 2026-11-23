@@ -18,19 +18,7 @@
  */
 package grails.gorm.tests
 
-import java.net.StandardProtocolFamily
-import java.net.UnixDomainSocketAddress
-import java.nio.ByteBuffer
-import java.nio.channels.SocketChannel
-import java.nio.charset.StandardCharsets
-import java.nio.file.Files
-import java.nio.file.Path
 import java.time.Duration
-import java.util.concurrent.Callable
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.Executors
-import java.util.concurrent.Future
-import java.util.concurrent.TimeUnit
 
 import groovy.transform.CompileStatic
 import org.testcontainers.DockerClientFactory
@@ -74,55 +62,17 @@ final class DatabaseContainers {
             .withStartupTimeout(Duration.ofMinutes(10))
 
     /**
-     * Whether a Docker daemon is reachable on this machine; a yes means a daemon answered. A socket file at the
-     * well-known path of Docker Desktop or Linux is asked with a {@code GET /_ping}, which avoids Testcontainers'
-     * client on macOS, where it can fail with a 500 when the daemon API version does not match the docker-java version
-     * it bundles. The file alone proves nothing: it stays behind when the daemon exits. Without a socket that answers
-     * the daemon may still be there: on Windows it listens on a named pipe, and {@code DOCKER_HOST} can name a TCP
-     * address or a socket elsewhere. None of those is a file, so then Testcontainers' client is asked, and an error
-     * from it means the daemon is not reachable.
+     * Whether a Docker daemon is reachable by the client that starts the containers. The gate and the startup use the same
+     * Testcontainers client and endpoint, so a daemon that the client cannot talk to, or a configured {@code DOCKER_HOST}
+     * that does not answer, skips the container rows instead of failing them when they start.
      */
     static boolean isDockerAvailable() {
-        if ([System.getProperty('user.home') + '/.docker/run/docker.sock', '/var/run/docker.sock'].any { pings(Path.of(it)) }) {
-            return true
-        }
         try {
             return DockerClientFactory.instance().isDockerAvailable()
         } catch (Throwable ignored) {
             return false
         }
     }
-
-    /**
-     * Whether a Docker daemon answers {@code GET /_ping} with {@code OK} on the Unix socket at {@code socket}. A path
-     * with no file, a file nothing listens on, a file that is not a socket, and a listener that does not speak HTTP all
-     * answer no, within two seconds.
-     */
-    static boolean pings(Path socket) {
-        if (!Files.exists(socket)) {
-            return false
-        }
-        try (SocketChannel channel = SocketChannel.open(StandardProtocolFamily.UNIX)) {
-            channel.configureBlocking(true)
-            channel.connect(UnixDomainSocketAddress.of(socket))
-            channel.write(ByteBuffer.wrap('GET /_ping HTTP/1.0\r\n\r\n'.getBytes(StandardCharsets.US_ASCII)))
-            ByteBuffer response = ByteBuffer.allocate(512)
-            long deadline = System.nanoTime() + PING_TIMEOUT.toNanos()
-            ExecutorService reader = Executors.newSingleThreadExecutor()
-            try {
-                Future<Integer> read = reader.submit({ channel.read(response) } as Callable<Integer>)
-                read.get(Math.max(1L, deadline - System.nanoTime()), TimeUnit.NANOSECONDS)
-            } finally {
-                reader.shutdownNow()
-            }
-            String text = new String(response.array(), 0, response.position(), StandardCharsets.US_ASCII)
-            return text.startsWith('HTTP/1.') && text.contains(' 200 ') && text.trim().endsWith('OK')
-        } catch (Throwable ignored) {
-            return false
-        }
-    }
-
-    private static final Duration PING_TIMEOUT = Duration.ofSeconds(2)
 
     private DatabaseContainers() {
     }
