@@ -93,6 +93,12 @@ class RunAppCommand extends GradleEnvironmentCommand {
     private static final String ADDRESS_VARIABLE = 'SERVER_ADDRESS'
     // a system property of the build that the Grails Gradle plugin does not hand to the application
     private static final String BUILD_PORT_PROPERTY = 'server.port'
+    private static final String BUILD_ADDRESS_PROPERTY = 'server.address'
+    private static final String ENVIRONMENT_PROPERTY = 'grails.env'
+    private static final String SYSTEM_PROPERTY = '-D'
+    private static final String SYSTEM_PROPERTY_LONG = '--system-prop'
+    // the option of the task bootRun, of the JavaExec of Gradle, that gives the application its arguments
+    private static final String APPLICATION_ARGUMENTS = '--args'
     private static final String LOG = RunDirectory.LOCATION + '/' + RunningApplication.LOG
     private static final Map<String, String> ENVIRONMENTS = [dev: 'development', prod: 'production']
     // a lambda, and no closure made into a function when the class is loaded: that goes through what Groovy
@@ -231,6 +237,10 @@ class RunAppCommand extends GradleEnvironmentCommand {
         debugJvm = debugJvm || debugJvmOfShell
         queryTail = queryTail || queryTailOfShell
         check(detached)
+        List<String> arguments = new ArrayList<String>(gradleArguments(project))
+        // the system properties of the build as Gradle reads them, from the same arguments: what follows -- among them
+        Map<String, String> told = systemPropertiesOf(arguments + passedOn)
+        checkTold(detached, told)
         RunningApplication running = RunningApplication.find(project, windows)
         if (running.state == RunningApplication.State.RUNNING) {
             err("An application that run-app started is running for this project already: process ${running.pid}${running.port > 0 ? ', for port ' + running.port : ''}. " +
@@ -249,7 +259,7 @@ class RunAppCommand extends GradleEnvironmentCommand {
             err("The application was not started, because it could not be recorded for stop-app: ${GradleRunner.line(e.getMessage())}")
             return 1
         }
-        Configured configured = configured(project)
+        Configured configured = configured(project, told)
         int answersOn = configured.port
         if (detached) {
             String unknown = configured.portUnknown ?: configured.addressUnknown
@@ -259,7 +269,6 @@ class RunAppCommand extends GradleEnvironmentCommand {
                 return 1
             }
         }
-        List<String> arguments = new ArrayList<String>(gradleArguments(project))
         if (https) {
             if (answersOn == 0 && configured.portUnknown == null) {
                 answersOn = DEFAULT_HTTPS_PORT
@@ -301,11 +310,68 @@ class RunAppCommand extends GradleEnvironmentCommand {
                     "The command waits for the application on the loopback address of this computer, where one that is bound to ${FeatureSelectionException.shown(host)} does not answer: " +
                             'give --foreground to stay with the application instead')
         }
-        if (detached && port == null && !systemProperties.containsKey(PORT_PROPERTY) && systemProperties.containsKey(BUILD_PORT_PROPERTY)) {
+    }
+
+    // What the build is told, after -- as well, that the command cannot wait on when it does not stay with the application.
+    private void checkTold(boolean detached, Map<String, String> told) {
+        if (!detached) {
+            return
+        }
+        if (!told.containsKey(PORT_PROPERTY) && told.containsKey(BUILD_PORT_PROPERTY)) {
             throw new CommandLine.ParameterException(spec.commandLine(),
                     "-D${BUILD_PORT_PROPERTY} is a system property of the build, which the Grails Gradle plugin does not give to the application, so the command cannot tell " +
                             "which port the application answers on: give --port PORT or -D${PORT_PROPERTY}=PORT, which the application is given")
         }
+        // the arguments of the application itself, which Spring Boot reads before any system property
+        String arguments = applicationArguments(passedOn)
+        if (arguments != null && (arguments.contains(BUILD_PORT_PROPERTY) || arguments.contains(BUILD_ADDRESS_PROPERTY))) {
+            throw new CommandLine.ParameterException(spec.commandLine(),
+                    "${APPLICATION_ARGUMENTS} gives the application arguments that name its port or its address, which it reads before what the command tells it, " +
+                            'so the command cannot tell where the application answers: give --port PORT and --host HOST instead, or stay with the application with --foreground')
+        }
+    }
+
+    /**
+     * The system properties a build is given by its arguments, as Gradle reads them: {@code -Dname=value},
+     * {@code -D name=value}, {@code --system-prop name=value} and {@code --system-prop=name=value}, and a
+     * name without {@code =} for an empty value. Of a name that is given more than once the last counts,
+     * as in Gradle.
+     *
+     * @param arguments the arguments of Gradle
+     * @return the properties, by their names
+     */
+    static Map<String, String> systemPropertiesOf(List<String> arguments) {
+        Map<String, String> properties = new LinkedHashMap<String, String>()
+        for (int i = 0; i < arguments.size(); i++) {
+            String argument = arguments.get(i)
+            String given = null
+            if (argument == SYSTEM_PROPERTY || argument == SYSTEM_PROPERTY_LONG) {
+                given = i + 1 < arguments.size() ? arguments.get(++i) : null
+            } else if (argument.startsWith(SYSTEM_PROPERTY_LONG + '=')) {
+                given = argument.substring(SYSTEM_PROPERTY_LONG.length() + 1)
+            } else if (argument.startsWith(SYSTEM_PROPERTY)) {
+                given = argument.substring(SYSTEM_PROPERTY.length())
+            }
+            if (given != null && !given.isEmpty()) {
+                int assigned = given.indexOf('=')
+                properties.put(assigned < 0 ? given : given.substring(0, assigned), assigned < 0 ? '' : given.substring(assigned + 1))
+            }
+        }
+        return properties
+    }
+
+    // the value of the option of the task bootRun that gives the application its arguments, the last one; null for none
+    private static String applicationArguments(List<String> arguments) {
+        String given = null
+        for (int i = 0; i < arguments.size(); i++) {
+            String argument = arguments.get(i)
+            if (argument == APPLICATION_ARGUMENTS) {
+                given = i + 1 < arguments.size() ? arguments.get(++i) : given
+            } else if (argument.startsWith(APPLICATION_ARGUMENTS + '=')) {
+                given = argument.substring(APPLICATION_ARGUMENTS.length() + 1)
+            }
+        }
+        return given
     }
 
     // The command stays with Gradle, which stays with the application. The record lets stop-app, from
@@ -617,10 +683,12 @@ class RunAppCommand extends GradleEnvironmentCommand {
     // server.port), then the environment the build runs it in, then its application.yml, where what is
     // said for the environment it runs for comes before what is said for all. What names a port and is
     // not plainly one, as a placeholder that the application resolves when it starts, is not guessed at.
-    private Configured configured(ConsoleProject project) {
+    // The system properties are those the build is told, by the options of the command and by what
+    // follows --, as Gradle reads them.
+    private Configured configured(ConsoleProject project, Map<String, String> told) {
         Configured found = new Configured()
         Map<String, Object> inFile = null
-        String given = port != null ? port.toString() : systemProperties.get(PORT_PROPERTY)
+        String given = told.get(PORT_PROPERTY)
         String variable = environmentVariables.apply(PORT_VARIABLE)
         if (given != null) {
             found.port = portOf(given) ?: 0
@@ -629,15 +697,15 @@ class RunAppCommand extends GradleEnvironmentCommand {
             found.port = portOf(variable) ?: 0
             found.portUnknown = found.port == 0 ? "the environment variable ${PORT_VARIABLE} is set, and its value is not a port, a number from 1 to 65535" : null
         } else {
-            inFile = ofFile(project)
+            inFile = ofFile(project, told)
             found.port = (inFile.port ?: 0) as int
             found.portUnknown = inFile.portUnknown as String ?: inFile.unknown as String
         }
-        String address = host != null ? host : systemProperties.get(ADDRESS_PROPERTY) ?: environmentVariables.apply(ADDRESS_VARIABLE)
+        String address = told.get(ADDRESS_PROPERTY) ?: environmentVariables.apply(ADDRESS_VARIABLE)
         if (address != null && !address.isEmpty()) {
             found.address = address
         } else {
-            inFile = inFile != null ? inFile : ofFile(project)
+            inFile = inFile != null ? inFile : ofFile(project, told)
             found.address = inFile.address as String
             found.addressUnknown = inFile.addressUnknown as String ?: inFile.unknown as String
         }
@@ -647,7 +715,7 @@ class RunAppCommand extends GradleEnvironmentCommand {
     // port, address: what application.yml names plainly; portUnknown, addressUnknown: why one that is named
     // is not known; unknown: why nothing of the file is. Every reason is the command's own words: nothing
     // of the file, and nothing a parser says of it, is repeated.
-    private Map<String, Object> ofFile(ConsoleProject project) {
+    private Map<String, Object> ofFile(ConsoleProject project, Map<String, String> told) {
         Map<String, Object> found = [:]
         Path file = project.directory.resolve(CONFIGURATION)
         if (!Files.exists(file, LinkOption.NOFOLLOW_LINKS)) {
@@ -662,9 +730,10 @@ class RunAppCommand extends GradleEnvironmentCommand {
                 found.unknown = "${CONFIGURATION} is larger than ${MAX_CONFIGURATION} bytes, and is not read".toString()
                 return found
             }
-            // the environment of the project, the one this command gives its build (-Dgrails.env, or
-            // development), and not the one of Forge, which is production whatever the project's is
-            String environment = ENVIRONMENTS.get(environment()) ?: environment()
+            // the environment of the project, the one this command gives its build (-Dgrails.env, also after
+            // --, or development), and not the one of Forge, which is production whatever the project's is
+            String named = told.get(ENVIRONMENT_PROPERTY) ?: environment()
+            String environment = ENVIRONMENTS.get(named) ?: named
             LoaderOptions options = new LoaderOptions()
             options.setAllowDuplicateKeys(false)
             options.setMaxAliasesForCollections(MAX_ALIASES)
