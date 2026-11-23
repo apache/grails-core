@@ -51,6 +51,7 @@ import org.grails.datastore.gorm.transform.AbstractMethodDecoratingTransformatio
 import org.grails.datastore.gorm.transform.AbstractTraitApplyingGormASTTransformation
 import org.grails.datastore.mapping.model.config.GormProperties
 import org.grails.plugin.cache.GrailsCacheManagerAware
+import org.grails.plugin.cache.MissingCacheReporter
 
 import static org.codehaus.groovy.ast.ClassHelper.CLOSURE_TYPE
 import static org.codehaus.groovy.ast.ClassHelper.MAP_TYPE
@@ -59,15 +60,19 @@ import static org.codehaus.groovy.ast.ClassHelper.STRING_TYPE
 import static org.codehaus.groovy.ast.ClassHelper.int_TYPE
 import static org.codehaus.groovy.ast.ClassHelper.make
 import static org.codehaus.groovy.ast.tools.GeneralUtils.args
+import static org.codehaus.groovy.ast.tools.GeneralUtils.block
 import static org.codehaus.groovy.ast.tools.GeneralUtils.callX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.classX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.constX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.declS
+import static org.codehaus.groovy.ast.tools.GeneralUtils.ifElseS
 import static org.codehaus.groovy.ast.tools.GeneralUtils.ifS
+import static org.codehaus.groovy.ast.tools.GeneralUtils.notNullX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.notX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.param
 import static org.codehaus.groovy.ast.tools.GeneralUtils.params
 import static org.codehaus.groovy.ast.tools.GeneralUtils.returnS
+import static org.codehaus.groovy.ast.tools.GeneralUtils.stmt
 import static org.codehaus.groovy.ast.tools.GeneralUtils.varX
 import static org.grails.datastore.gorm.transform.AstMethodDispatchUtils.callD
 
@@ -102,6 +107,10 @@ abstract class AbstractCacheTransformation extends AbstractMethodDecoratingTrans
                                                                                                     param(MAP_TYPE, 'methodParams')))
     private static final ClassNode CACHE_MANAGER_CLASS_NODE = make(CacheManager)
     private static final MethodNode GET_CACHE_METHOD_NODE = CACHE_MANAGER_CLASS_NODE.getMethod('getCache', [new Parameter(STRING_TYPE, 'name')] as Parameter[])
+    private static final ClassNode MISSING_CACHE_REPORTER_CLASS_NODE = make(MissingCacheReporter)
+    private static final MethodNode REPORT_MISSING_CACHE_METHOD_NODE = MISSING_CACHE_REPORTER_CLASS_NODE.getMethod('report',
+            [new Parameter(CACHE_MANAGER_CLASS_NODE, 'cacheManager'), new Parameter(STRING_TYPE, 'cacheName'),
+             new Parameter(make(Class), 'owner')] as Parameter[])
     private static final MethodNode MAP_PUT_METHOD = MAP_TYPE.getMethod('put', [new Parameter(OBJECT_TYPE, 'key'), new Parameter(OBJECT_TYPE, 'value')] as Parameter[])
     public static final String CACHE_ORIGINAL_METHOD_RETURN_VALUE_LOCAL_VARIABLE_NAME = '$_cache_originalMethodReturnValue'
 
@@ -169,6 +178,29 @@ abstract class AbstractCacheTransformation extends AbstractMethodDecoratingTrans
             declS(cacheVariableExpression, getCacheMethodCallExpression)
         )
         return cacheVariableExpression
+    }
+
+    /**
+     * Adds to the caching block what runs only where the cache manager has the cache the annotation
+     * names, and returns the block to add it to. A cache manager answers null for a name it has no
+     * cache of, as {@code JCacheCacheManager} does for a cache it was not configured with, and the
+     * method then runs as it does without a cache manager, which is reported once.
+     *
+     * @param annotationNode the cache annotation, whose {@code value} names the cache
+     * @param classNode the class the method is in, which the report names
+     * @param cacheVariableExpression the cache declared by {@link #declareCache}
+     * @param cacheBlock the caching block
+     * @return the block that runs where there is a cache
+     */
+    protected BlockStatement whereCacheExists(AnnotationNode annotationNode, ClassNode classNode,
+                                              VariableExpression cacheVariableExpression, BlockStatement cacheBlock) {
+        BlockStatement whereCacheExists = block()
+        Object cacheName = ((ConstantExpression) annotationNode.getMember('value')).value
+        MethodCallExpression report = callX(classX(MISSING_CACHE_REPORTER_CLASS_NODE), 'report',
+                args(varX(GRAILS_CACHE_MANAGER_PROPERTY_NAME), constX(cacheName), classX(classNode.plainNodeReference)))
+        report.methodTarget = REPORT_MISSING_CACHE_METHOD_NODE
+        cacheBlock.addStatement(ifElseS(notNullX(cacheVariableExpression), whereCacheExists, stmt(report)))
+        return whereCacheExists
     }
 
     protected VariableExpression declareCacheKey(SourceUnit sourceUnit, AnnotationNode annotationNode, ClassNode classNode, MethodNode methodNode, BlockStatement cacheBlock) {
