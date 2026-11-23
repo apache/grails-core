@@ -83,17 +83,24 @@ public enum SupportedDatabase implements ClassKeyed<SupportedDatabase> {
 
     ORACLE(SqlSyntax.ORACLE, "REGEXP_LIKE(?1, ?2)", UniqueIndexNulls.COMPARED, OracleDialect.class),
 
-    SQL_SERVER(SqlSyntax.TRANSACT_SQL, "?1 LIKE ?2", UniqueIndexNulls.DISTINCT, SQLServerDialect.class),
+    // no regular expression operator here, so rlike is a like; Transact-SQL has no boolean value for a predicate, so the
+    // like is the condition of a case that gives a bit, which the query compares with true
+    SQL_SERVER(SqlSyntax.TRANSACT_SQL, "CASE WHEN ?1 LIKE ?2 THEN 1 ELSE 0 END", UniqueIndexNulls.DISTINCT,
+            SQLServerDialect.class),
 
-    // reads native SQL as SQL Server does, and has no regular expression operator here
+    // reads native SQL as SQL Server does, and has no regular expression operator here. No Sybase image is maintained,
+    // so no test runs this row against the database: it is declared as it was and is not known to work, in particular
+    // the like it falls back to may fail as it did on SQL Server before the case above (#16881)
     SYBASE(SqlSyntax.TRANSACT_SQL, "?1 LIKE ?2", UniqueIndexNulls.DISTINCT, SybaseDialect.class),
 
     H2(SqlSyntax.H2, "REGEXP_LIKE(?1, ?2)", UniqueIndexNulls.DISTINCT, H2Dialect.class),
 
     // Db2 for IBM i and z/OS: their dialects extend the one for Linux, UNIX and Windows, so they are declared first
+    // like Db2 for z/OS, it cannot run in a container, so no test runs this row against the database (#16881)
     DB2_IBM_I(SqlSyntax.DB2_NESTED_COMMENTS, "REGEXP_LIKE(?1, ?2)", UniqueIndexNulls.DISTINCT, DB2iDialect.class),
 
-    // runs REGEXP_LIKE only through the Db2 Analytics Accelerator, so it falls back as other databases do
+    // runs REGEXP_LIKE only through the Db2 Analytics Accelerator, so it falls back as other databases do. It cannot run
+    // in a container, so no test runs this row against the database (#16881)
     DB2_ZOS(SqlSyntax.DB2_NESTED_COMMENTS, "?1 LIKE ?2", UniqueIndexNulls.DISTINCT, DB2zDialect.class),
 
     DB2(SqlSyntax.SQL, "REGEXP_LIKE(?1, ?2)", UniqueIndexNulls.COMPARED, DB2Dialect.class),

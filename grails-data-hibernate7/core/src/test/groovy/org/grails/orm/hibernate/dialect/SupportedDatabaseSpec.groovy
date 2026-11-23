@@ -80,7 +80,7 @@ class SupportedDatabaseSpec extends Specification {
         new DB2iDialect()       || 'REGEXP_LIKE(?1, ?2)'
         // only through the Db2 Analytics Accelerator
         new DB2zDialect()       || '?1 LIKE ?2'
-        new SQLServerDialect()  || '?1 LIKE ?2'
+        new SQLServerDialect()  || 'CASE WHEN ?1 LIKE ?2 THEN 1 ELSE 0 END'
     }
 
     @Unroll

@@ -99,6 +99,8 @@ dependencies {
     // IBM's driver (IPLA licence), for the test rows against the Db2 container only, as ojdbc11 is for Oracle's
     testImplementation 'com.ibm.db2:jcc'
     testImplementation 'org.testcontainers:testcontainers-db2'
+    testImplementation 'com.microsoft.sqlserver:mssql-jdbc'
+    testImplementation 'org.testcontainers:testcontainers-mssqlserver'
     testImplementation 'org.testcontainers:testcontainers-spock'
     testImplementation 'org.jsr107.ri:cache-ri-impl'
 

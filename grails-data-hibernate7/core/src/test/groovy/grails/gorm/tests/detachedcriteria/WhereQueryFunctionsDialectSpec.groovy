@@ -46,12 +46,16 @@ class WhereQueryFunctionsDialectSpec extends HibernateGormDatastoreSpec {
     @Shared MariaDBContainer mariadb = new MariaDBContainer('mariadb:10.11')
     @Shared oracle = DatabaseContainers.ORACLE
     @Shared db2 = DatabaseContainers.DB2
+    @Shared sqlServer = DatabaseContainers.SQL_SERVER
 
     void setupSpec() {
         manager.registerDomainClasses(WhereQueryFunctionEntity)
     }
 
     private void startOn(container) {
+        if (!container.isRunning()) {
+            container.start()
+        }
         manager.destroy()
         manager.grailsConfig = [
             'dataSource.url'             : container.jdbcUrl,
@@ -109,6 +113,7 @@ class WhereQueryFunctionsDialectSpec extends HibernateGormDatastoreSpec {
         'Postgres' | postgres
         'MySQL'    | mysql
         'MariaDB'  | mariadb
+        'SQL Server' | sqlServer
     }
 
     void "a function compared with a fraction keeps the fraction on #db, on a read and in a bulk statement"() {
@@ -136,6 +141,7 @@ class WhereQueryFunctionsDialectSpec extends HibernateGormDatastoreSpec {
         'Postgres' | postgres
         'MySQL'    | mysql
         'MariaDB'  | mariadb
+        'SQL Server' | sqlServer
     }
     void "an empty list and a subquery without projection work on #db, on a read and in a bulk update and delete"() {
         given:
@@ -161,6 +167,7 @@ class WhereQueryFunctionsDialectSpec extends HibernateGormDatastoreSpec {
         'Postgres' | postgres
         'MySQL'    | mysql
         'MariaDB'  | mariadb
+        'SQL Server' | sqlServer
     }
 
     @IgnoreIf({ data.db == 'DB2' && System.getProperty('os.arch') in ['aarch64', 'arm64'] })
