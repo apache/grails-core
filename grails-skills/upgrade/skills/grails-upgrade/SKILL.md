@@ -1585,7 +1585,7 @@ Apply this part when the application is on Grails 7 or on Grails 8.0.0.
 
 ## GORM for Hibernate 7: Bulk deleteAll and updateAll Reject max and offset
 
-- `deleteAll()` and `updateAll(Map)` on a `where` query or `DetachedCriteria` run one statement with no row limit, so a query with `max` or an `offset` other than 0 wrote to every matching row. It now throws `InvalidDataAccessResourceUsageException` and writes nothing; an `offset` of 0 is accepted. To keep writing every matching row, call `deleteAll()` or `updateAll(Map)` before `max` or `offset` are applied. To write a limited number of rows, select the ids with the limit (`.max(n).property('id').list()`) and delete or update by id.
+- `deleteAll()` and `updateAll(Map)` on a `where` query or `DetachedCriteria` run one statement with no row limit, so a query with `max` or an `offset` wrote to every matching row. It now throws `InvalidDataAccessResourceUsageException` and writes nothing; an `offset` of 0 is refused too, as a bulk write cannot apply a page. To keep writing every matching row, call `deleteAll()` or `updateAll(Map)` before `max` or `offset` are applied. To write a limited number of rows, select the ids with the limit (`.max(n).property('id').list()`) and delete or update by id.
 
 ## Map Entries Named `properties` or `metaClass`
 

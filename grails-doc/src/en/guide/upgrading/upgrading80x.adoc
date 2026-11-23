@@ -4798,7 +4798,7 @@ Under Hibernate 7, calling a collection criterion such as `isNotEmpty('pets')`, 
 
 ==== Bulk deleteAll and updateAll Reject max and offset
 
-With Hibernate 7, `deleteAll()` and `updateAll(Map)` on a `where` query or a `DetachedCriteria` run one `delete` or `update` statement. The statement has no row limit, so a query that carries `max` or an `offset` other than 0 used to write to every matching row: `Person.where { age > 18 }.max(2).deleteAll()` deleted all of them (issue https://github.com/apache/grails-core/issues/16805[#16805]). `deleteAll()` and `updateAll(Map)` now throw an `InvalidDataAccessResourceUsageException` that names the `max` or `offset` value (an `offset` of 0 is accepted), and write nothing. Grails 7 with Hibernate 5 behaves the same from 7.0.19.
+With Hibernate 7, `deleteAll()` and `updateAll(Map)` on a `where` query or a `DetachedCriteria` run one `delete` or `update` statement. The statement has no row limit, so a query that carries `max` or an `offset`, zero included, used to write to every matching row: `Person.where { age > 18 }.max(2).deleteAll()` deleted all of them (issue https://github.com/apache/grails-core/issues/16805[#16805]). `deleteAll()` and `updateAll(Map)` now throw an `InvalidDataAccessResourceUsageException` that names the `max` or `offset` value (an `offset` of 0 is accepted), and write nothing. Grails 7 with Hibernate 5 behaves the same from 7.0.19.
 
 To keep writing every matching row, as before, call `deleteAll()` or `updateAll(Map)` on the query before `max` or `offset` are applied to it; a criteria cannot drop them once they are set. To limit the rows written, select the ids first, with the limit on that query, and delete or update by id:
 

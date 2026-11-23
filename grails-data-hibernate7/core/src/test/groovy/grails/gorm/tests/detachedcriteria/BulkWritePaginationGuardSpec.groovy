@@ -76,16 +76,30 @@ class BulkWritePaginationGuardSpec extends HibernateGormDatastoreSpec {
         BulkGuardEntity.count() == 4
     }
 
-    void "an offset of 0 leaves no row out and is accepted"() {
+    void "an offset of 0 is refused like any other offset, since a bulk write cannot apply one"() {
         given:
         seed()
 
         when:
-        long updated = BulkGuardEntity.where { amount <= 1 }.offset(0).updateAll(name: 'changed')
+        BulkGuardEntity.where { amount <= 1 }.offset(0).updateAll(name: 'changed')
 
         then:
-        updated == 1
-        BulkGuardEntity.countByName('changed') == 1
+        InvalidDataAccessResourceUsageException e = thrown()
+        e.message.contains('offset(0)')
+        BulkGuardEntity.countByName('changed') == 0
+    }
+
+    void "deleteAll with an offset of 0 is refused and deletes nothing"() {
+        given:
+        seed()
+
+        when:
+        BulkGuardEntity.where { amount > 0 }.offset(0).deleteAll()
+
+        then:
+        InvalidDataAccessResourceUsageException e = thrown()
+        e.message.contains('offset(0)')
+        BulkGuardEntity.count() == 4
     }
 
     void "deleteAll with max and offset names both values"() {
