@@ -27,6 +27,6 @@ import java.util.stream.Stream
 class ServletImplCandidates extends ArrayList<String> {
 
     ServletImplCandidates() {
-        super(Stream.of(ServletImpl.values()).map(servlet -> servlet.toString().toLowerCase()).collect(Collectors.toList()))
+        super(Stream.of(ServletImpl.values()).map(servlet -> servlet.toString().toLowerCase(Locale.ROOT)).collect(Collectors.toList()))
     }
 }

@@ -112,6 +112,13 @@ tasks.named('test', Test).configure { Test it ->
     Provider<String> cliAllJarPath = shadowJarTask.flatMap { Jar jar -> jar.archiveFile }.map { RegularFile file -> file.asFile.absolutePath }
     it.jvmArgumentProviders.add({ ["-Dgrails.cli.all.jar=${cliAllJarPath.get()}".toString()] } as CommandLineArgumentProvider)
 }
+// The intermediate archive is also an output of the build: its merged metadata must have no clock.
+TaskProvider<ShadowJar> intermediateJar = project(':grails-cli-shadow').tasks.named('shadowJar', ShadowJar)
+tasks.named('test', Test).configure { Test it ->
+    it.inputs.files(intermediateJar).withPropertyName('cliIntermediateJar').withPathSensitivity(PathSensitivity.NONE)
+    Provider<String> intermediatePath = intermediateJar.flatMap { ShadowJar jar -> jar.archiveFile }.map { RegularFile file -> file.asFile.absolutePath }
+    it.jvmArgumentProviders.add({ ["-Dgrails.cli.intermediate.jar=${intermediatePath.get()}".toString()] } as CommandLineArgumentProvider)
+}
 shadowJarTask.configure { ShadowJar it ->
     it.archiveClassifier = 'all'
 

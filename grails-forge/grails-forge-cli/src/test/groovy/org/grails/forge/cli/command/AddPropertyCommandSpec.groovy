@@ -544,6 +544,24 @@ class Book {
         book.getText('UTF-8') == BOOK
     }
 
+    void "--constraint-style is read the same in a language whose upper case of i is not I"() {
+        given:
+        File book = domain(BOOK)
+        Locale locale = Locale.getDefault()
+        Locale.setDefault(Locale.forLanguageTag('tr-TR'))
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'add-property', 'Book', 'isbn', '--constraint-style', 'grails', '--nullable')
+
+        then:
+        exit == 0
+        err.toString().isEmpty()
+        book.getText('UTF-8').contains('        isbn nullable: true\n')
+
+        cleanup:
+        Locale.setDefault(locale)
+    }
+
     private File domain(String text) {
         return domain(PATH, text)
     }

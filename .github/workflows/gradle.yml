@@ -31,9 +31,9 @@ on:
 # results would be for a superseded commit, and the run that replaces it publishes the newer one. The publish
 # jobs (publishGradle, publish, publishForge, verifyWrapper, docs) run on always() with explicit result checks
 # instead, so a publish that has started completes: an interrupted upload would leave the snapshot repository
-# with modules from two commits. publishGradle waits for every build job (buildGradle, buildForge and
-# validateDependencies), so nothing of the cancelled commit is published when the cancel arrives before the
-# builds have finished. A later cancel lets the publish jobs whose needs have already succeeded or been skipped
+# with modules from two commits. publishGradle waits for every build job (buildGradle, buildForge,
+# frameworkTestRepository and validateDependencies), so nothing of the cancelled commit is published when the
+# cancel arrives before the builds have finished. A later cancel lets the publish jobs whose needs have already succeeded or been skipped
 # run: on a run without tests that is the whole chain, and on a run whose tests are still running only
 # publishGradle, because a cancelled test job fails the explicit checks of publish and of everything after it.
 # A cancel after every test has passed lets the whole chain run as well. The replacing run is pending until the
@@ -367,9 +367,59 @@ jobs:
           -PonlyCoreTests
           -PskipCodeStyle
           ${{ matrix.extra_arguments }}
+  frameworkTestRepository:
+    # Both call-site variants are needed, but no Java 25 variant: these jars target Java 21.
+    # The Java 25 Forge lane still compiles Forge and its generated applications on Java 25.
+    # End to End publishes the same repository in a different workflow run, whose artifacts cannot
+    # be handed off through needs. Keep this producer in the consumers' run, including fork PRs.
+    # When tests are skipped this job succeeds without doing work: buildForge can still build through
+    # its ordinary composite, and publishGradle still requires this job's explicit success. Publishing
+    # the whole framework for a no-tests build would cost more than compiling its small Forge subset.
+    name: "Publish Forge test repository (Java 21, indy=${{ matrix.indy }})"
+    needs: [ policy ]
+    strategy:
+      fail-fast: false
+      matrix:
+        indy: [ true, false ]
+    runs-on: ubuntu-22.04
+    steps:
+      - name: "📥 Checkout repository"
+        if: ${{ needs.policy.outputs.run-tests == 'true' }}
+        uses: actions/checkout@v7.0.1
+      - name: "☕️ Setup JDK"
+        if: ${{ needs.policy.outputs.run-tests == 'true' }}
+        uses: actions/setup-java@v6.3.0
+        with:
+          distribution: liberica
+          java-version: 21
+      - name: "🗄️ Decide the Gradle cache mode"
+        if: ${{ needs.policy.outputs.run-tests == 'true' }}
+        id: gradle-cache-policy
+        uses: ./.github/actions/gradle-cache-policy
+      - name: "🐘 Setup Gradle"
+        if: ${{ needs.policy.outputs.run-tests == 'true' }}
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+        with:
+          cache-read-only: ${{ steps.gradle-cache-policy.outputs.read-only }}
+          develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
+      - name: "📦 Publish Gradle plugins"
+        if: ${{ needs.policy.outputs.run-tests == 'true' }}
+        working-directory: grails-gradle
+        run: ./gradlew publishAllPublicationsToTestCaseMavenRepoRepository --stacktrace
+      - name: "📦 Publish framework"
+        if: ${{ needs.policy.outputs.run-tests == 'true' }}
+        run: ./gradlew publishAllPublicationsToTestCaseMavenRepoRepository -PgrailsIndy=${{ matrix.indy }} --stacktrace
+      - name: "📤 Share the test repository"
+        if: ${{ needs.policy.outputs.run-tests == 'true' }}
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: forge-test-repository-indy-${{ matrix.indy }}
+          path: build/local-maven/
+          if-no-files-found: error
+          retention-days: 1
   buildForge:
     name: "Build Grails Forge (Java ${{ matrix.java }}, indy=${{ matrix.indy }})"
-    needs: [ policy ]
+    needs: [ policy, frameworkTestRepository ]
     strategy:
       fail-fast: false
       matrix:
@@ -384,6 +434,12 @@ jobs:
         run: curl -s https://api.ipify.org
       - name: "📥 Checkout repository"
         uses: actions/checkout@v7.0.1
+      - name: "📥 Download the matching framework"
+        if: ${{ needs.policy.outputs.run-tests == 'true' }}
+        uses: actions/download-artifact@v8.0.2
+        with:
+          name: forge-test-repository-indy-${{ matrix.indy }}
+          path: build/local-maven/
       - name: "☕️ Setup JDK"
         uses: actions/setup-java@v6.1.0
         with:
@@ -421,6 +477,7 @@ jobs:
           --rerun-tasks
           --stacktrace
           -PgrailsIndy=${{ matrix.indy }}
+          -PprebuiltTestRepository
           -PskipCodeStyle
           -PallRepositoryViews
       - name: "✅ Verify combined CLI"
@@ -449,11 +506,11 @@ jobs:
     # command line already build some with gradlew.bat. The features that drive a /bin/sh stub of gradlew
     # are skipped on Windows (204 of the 842 of grails-forge-cli, and with them the interactive console,
     # run-app and stop-app), as are those that need links or file modes (23 of the 821 of grails-forge-core).
-    # No --rerun-tasks, as the Windows cells of the core build: compiling and publishing the framework that
-    # the generated builds resolve may come from the build cache. DO_NOT_CACHE_TESTS keeps the Test tasks
+    # The framework comes from the matching Linux artifact. No --rerun-tasks, as the Windows cells of the
+    # core build: Forge's own compilation may come from the build cache. DO_NOT_CACHE_TESTS keeps the Test tasks
     # themselves out of it, since a result stored by an Ubuntu cell would otherwise be taken for this one.
     name: "Test Grails Forge (Windows, Java 21, indy=true)"
-    needs: [ policy ]
+    needs: [ policy, frameworkTestRepository ]
     if: ${{ needs.policy.outputs.run-tests == 'true' }}
     # There is no Windows run to take twice the slowest of yet. On Ubuntu the tasks of this cell are about
     # 50 of the 54 min of a run (22 min to compile and publish the framework, 23 min for the specs of the
@@ -466,6 +523,11 @@ jobs:
         run: curl -s https://api.ipify.org
       - name: "📥 Checkout repository"
         uses: actions/checkout@v7.0.1
+      - name: "📥 Download the indy framework"
+        uses: actions/download-artifact@v8.0.2
+        with:
+          name: forge-test-repository-indy-true
+          path: build/local-maven/
       - name: "☕️ Setup JDK"
         uses: actions/setup-java@v6.1.0
         with:
@@ -491,6 +553,7 @@ jobs:
           --continue
           --stacktrace
           -PgrailsIndy=true
+          -PprebuiltTestRepository
           -PskipCodeStyle
   # Every test job from here through neo4jFunctional sets timeout-minutes to twice the slowest run that
   # finished on its own, passed or failed, over the 160 CI runs of 2026-09-03 to 2026-09-13, rounded up to
@@ -696,7 +759,7 @@ jobs:
         # config only runs when TESTCONFIG matches. TESTCONFIG is applied at app startup, so every config
         # must be its own run. Carried over from the standalone grails-spring-security CI — do not drop
         # configs (add, don't remove) when the app's security configurations change.
-        test-config: [ 'static', 'annotation', 'requestmap', 'basic', 'basicCacheUsers', 'misc', 'putWithParams', 'bcrypt', 'issue503', 'noAnonymous', 'oncePerRequest' ]
+        test-config: [ 'static', 'annotation', 'requestmap', 'basic', 'basicCacheUsers', 'misc', 'putWithParams', 'bcrypt', 'issue503', 'noAnonymous', 'oncePerRequest', 'inactive' ]
     runs-on: ubuntu-22.04
     steps:
       - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
@@ -1065,9 +1128,10 @@ jobs:
           (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
           needs.buildGradle.result == 'success' &&
           needs.buildForge.result == 'success' &&
+          needs.frameworkTestRepository.result == 'success' &&
           needs.validateDependencies.result == 'success'
       }}
-    needs: [ buildGradle, buildForge, validateDependencies ]
+    needs: [ buildGradle, buildForge, frameworkTestRepository, validateDependencies ]
     runs-on: ubuntu-22.04
     steps:
       - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it

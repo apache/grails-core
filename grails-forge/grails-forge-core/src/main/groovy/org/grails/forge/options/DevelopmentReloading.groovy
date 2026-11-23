@@ -60,7 +60,7 @@ enum DevelopmentReloading {
 
     @Override
     String toString() {
-        return this.name().toLowerCase()
+        return this.name().toLowerCase(Locale.ROOT)
     }
 
     @Nonnull

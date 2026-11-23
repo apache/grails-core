@@ -20,8 +20,11 @@ import org.apache.tools.ant.DirectoryScanner
 import org.gradle.api.initialization.resolve.RepositoriesMode
 
 pluginManagement {
-    includeBuild('../grails-gradle') {
-        name = 'grails-gradle'
+    String prebuilt = providers.gradleProperty('prebuiltTestRepository').orNull
+    if (prebuilt == null || prebuilt.trim().equalsIgnoreCase('false')) {
+        includeBuild('../grails-gradle') {
+            name = 'grails-gradle'
+        }
     }
     includeBuild('../build-logic') {
         name = 'build-logic-root'
@@ -80,11 +83,60 @@ include(
         'test-core',
 )
 
-includeBuild('..') {
-    name = 'grails-core'
-}
-includeBuild('../grails-gradle') {
-    name = 'grails-gradle'
+// -PprebuiltTestRepository: the framework is not built by this build. It is not included, the modules of Forge
+// resolve it from the repository of the tests (build/local-maven, or the path the property gives) as the
+// applications the specs generate do, and the specs that build those applications are given the repository as
+// it is, without publishing to it. The repository is checked first, and the build fails when it is not there,
+// is of another version or kind, or was published from other sources of the framework than are checked out:
+// see PrebuiltTestRepository in build-logic. The build scripts read the result as
+// rootProject.ext.prebuiltTestRepository, which is null without the property.
+def prebuiltTestRepository = org.apache.grails.buildsrc.PrebuiltTestRepository.of(settings)
+if (prebuiltTestRepository) {
+    pluginManagement {
+        repositories {
+            exclusiveContent {
+                forRepository {
+                    maven {
+                        name = 'GrailsPrebuiltPlugins'
+                        url = prebuiltTestRepository.directory.toURI()
+                    }
+                }
+                filter {
+                    includeGroup('org.apache.grails')
+                    includeModuleByRegex('org[.]apache[.]grails[.]gradle', 'grails-gradle-.*')
+                }
+            }
+        }
+        resolutionStrategy.eachPlugin {
+            if (requested.id.id.startsWith('org.apache.grails.gradle.')) {
+                useModule("org.apache.grails:grails-gradle-plugins:${prebuiltTestRepository.version}")
+            }
+        }
+    }
+    dependencyResolutionManagement {
+        repositories {
+            // exclusiveContent rather than ordering, as in end-to-end/settings.gradle: a snapshot of the same
+            // version in a remote repository must never stand in for a module the repository lacks
+            exclusiveContent {
+                forRepository {
+                    maven {
+                        name = 'GrailsPrebuiltTestRepository'
+                        url = prebuiltTestRepository.directory.toURI()
+                    }
+                }
+                filter {
+                    includeGroupByRegex('org\\.apache\\.grails.*')
+                }
+            }
+        }
+    }
+} else {
+    includeBuild('..') {
+        name = 'grails-core'
+    }
+    includeBuild('../grails-gradle') {
+        name = 'grails-gradle'
+    }
 }
 
 // No build packages a .gitignore or a .gitattributes since the profiles were removed. These lines stay so that a

@@ -84,12 +84,22 @@ dependencies {
 }
 
 
+// What this build takes from the framework build besides its modules: the POMs of the BOMs and the Grails wrapper.
+// With -PprebuiltTestRepository (see settings.gradle) the framework build is not part of this one, and they are
+// read from the copies its publish leaves in the repository of the tests, under the paths they have in the
+// checkout (TestRepositoryMarker.FRAMEWORK_OUTPUTS in build-logic).
+def prebuiltTestRepository = rootProject.ext.prebuiltTestRepository
+Directory frameworkOutputs = prebuiltTestRepository
+        ? layout.projectDirectory.dir(new File(prebuiltTestRepository.directory as File, org.apache.grails.buildsrc.TestRepositoryMarker.FRAMEWORK_OUTPUTS_DIRECTORY).absolutePath)
+        : rootProject.layout.projectDirectory.dir('..')
+
 def grailsVersionsPath = layout.buildDirectory.dir('version-info')
 def grailsVersionInfoTask = tasks.register('grailsVersionInfo', WriteGrailsVersionInfoTask)
 grailsVersionInfoTask.configure { WriteGrailsVersionInfoTask it ->
-    def bomPublicationTask = gradle.includedBuild('grails-core').task(':grails-bom:generatePomFileForMavenPublication')
-    it.dependsOn(bomPublicationTask)
-    it.bomPublicationFile = rootProject.layout.projectDirectory.file('../grails-bom/default/build/publications/maven/pom-default.xml')
+    if (!prebuiltTestRepository) {
+        it.dependsOn(gradle.includedBuild('grails-core').task(':grails-bom:generatePomFileForMavenPublication'))
+    }
+    it.bomPublicationFile = frameworkOutputs.file('grails-bom/default/build/publications/maven/pom-default.xml')
     it.versionsDirectory = grailsVersionsPath
     it.endOfSupport = findProperty('grailsEndOfSupport') as String
 }
@@ -101,12 +111,14 @@ sourceSets.main.resources.srcDir(grailsVersionsPath)
 // nothing is resolved, so what Spring Boot's BOM and the other imported BOMs manage is not in it.
 def bomTablesTask = tasks.register('grailsBomTables', WriteBomTablesTask)
 bomTablesTask.configure { WriteBomTablesTask it ->
-    it.dependsOn(['grails-base-bom', 'grails-bom', 'grails-hibernate7-bom'].collect { String bom ->
-        gradle.includedBuild('grails-core').task(":${bom}:generatePomFileForMavenPublication")
-    })
-    it.basePom = rootProject.layout.projectDirectory.file('../grails-bom/base/build/publications/maven/pom-default.xml')
-    it.defaultPom = rootProject.layout.projectDirectory.file('../grails-bom/default/build/publications/maven/pom-default.xml')
-    it.hibernate7Pom = rootProject.layout.projectDirectory.file('../grails-bom/hibernate7/build/publications/maven/pom-default.xml')
+    if (!prebuiltTestRepository) {
+        it.dependsOn(['grails-base-bom', 'grails-bom', 'grails-hibernate7-bom'].collect { String bom ->
+            gradle.includedBuild('grails-core').task(":${bom}:generatePomFileForMavenPublication")
+        })
+    }
+    it.basePom = frameworkOutputs.file('grails-bom/base/build/publications/maven/pom-default.xml')
+    it.defaultPom = frameworkOutputs.file('grails-bom/default/build/publications/maven/pom-default.xml')
+    it.hibernate7Pom = frameworkOutputs.file('grails-bom/hibernate7/build/publications/maven/pom-default.xml')
     it.tablesDirectory = layout.buildDirectory.dir('bom-tables')
 }
 sourceSets.main.resources.srcDir(bomTablesTask)
@@ -175,9 +187,11 @@ tasks.named('processResources', ProcessResources).configure { ProcessResources t
 // the Grails wrapper every generated application gets
 TaskProvider<Sync> copyGrailsWrapper = tasks.register('copyGrailsWrapper', Sync)
 copyGrailsWrapper.configure { Sync it ->
-    it.dependsOn(gradle.includedBuild('grails-core').task(':grails-wrapper:installDist'))
+    if (!prebuiltTestRepository) {
+        it.dependsOn(gradle.includedBuild('grails-core').task(':grails-wrapper:installDist'))
+    }
 
-    def wrapperFiles = rootProject.layout.projectDirectory.dir('../grails-wrapper/build/install/apache-grails-wrapper-bin')
+    def wrapperFiles = frameworkOutputs.dir('grails-wrapper/build/install/apache-grails-wrapper-bin')
     it.inputs.files(wrapperFiles)
     it.includeEmptyDirs = false
 
@@ -188,6 +202,10 @@ copyGrailsWrapper.configure { Sync it ->
                 'grails-wrapper.jar'
         )
         eachFile { details -> details.path = details.name } // flatten
+    }
+    if (prebuiltTestRepository) {
+        // a repository that was downloaded as a workflow artifact has lost the permissions installDist gave the script
+        it.filesMatching('grailsw') { details -> details.permissions { unix(0755) } }
     }
     it.into(layout.projectDirectory.dir('src/main/resources/grails-wrapper'))
 }

@@ -46,8 +46,8 @@ dependentFeatures: []
 in an application without being named: the default options
 == build.gradle
 +         classpath "org.apache.grails:grails-gradle-plugins"
-+ apply plugin: "org.apache.grails.gradle.grails-gsp"
 + apply plugin: "org.apache.grails.gradle.grails-plugin"
++ apply plugin: "org.apache.grails.gradle.grails-gsp"
 
 # plugin
 title: grails-gradle-plugin

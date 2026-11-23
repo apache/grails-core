@@ -120,7 +120,7 @@ class AddPropertyCommand extends CodeGenCommand {
         }
         if (constraintStyle != null) {
             try {
-                property.setConstraintStyle(AbstractMemberDefinition.ConstraintStyle.valueOf(constraintStyle.toUpperCase()))
+                property.setConstraintStyle(AbstractMemberDefinition.ConstraintStyle.valueOf(constraintStyle.toUpperCase(Locale.ROOT)))
             } catch (IllegalArgumentException e) {
                 err('Invalid constraint style: ' + constraintStyle + '. Use: grails, jakarta, or both')
                 return 1

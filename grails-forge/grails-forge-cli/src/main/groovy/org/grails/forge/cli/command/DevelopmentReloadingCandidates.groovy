@@ -27,6 +27,6 @@ import java.util.stream.Stream
 class DevelopmentReloadingCandidates extends ArrayList<String> {
 
     DevelopmentReloadingCandidates() {
-        super(Stream.of(DevelopmentReloading.values()).map(reloading -> reloading.toString().toLowerCase()).collect(Collectors.toList()))
+        super(Stream.of(DevelopmentReloading.values()).map(reloading -> reloading.toString().toLowerCase(Locale.ROOT)).collect(Collectors.toList()))
     }
 }

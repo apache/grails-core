@@ -16,6 +16,7 @@
  */
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import com.github.jengelman.gradle.plugins.shadow.transformers.PropertiesFileTransformer
+import org.apache.grails.forge.buildlogic.shadowjar.GrailsGroovyExtensionTransformer
 import org.apache.grails.forge.buildlogic.shadowjar.GrailsShadowLicenseTransform
 import org.apache.grails.forge.buildlogic.shadowjar.GrailsShadowNoticeTransform
 
@@ -62,8 +63,8 @@ shadowJarTask.configure { ShadowJar it ->
         mergeStrategy = 'append'
     }
 
-    // groovy extensions are shipped with grails-core
-    it.mergeGroovyExtensionModules()
+    // Keep the intermediate jar reproducible too: Shadow's transformer writes a timestamp comment.
+    it.transform(GrailsGroovyExtensionTransformer)
 
     // combines all NOTICE files
     it.transform(GrailsShadowNoticeTransform) {

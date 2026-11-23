@@ -941,8 +941,8 @@ class PackGenerationSpec extends ApplicationContextSpec {
         Map<String, String> with = generate(['acme'], [pack])
         Map<String, String> without = generate([], [])
 
-        then:
-        with['build.gradle'] == without['build.gradle']
+        then: 'the duplicate plugin stays at its first declaration, in the earlier acme feature'
+        with['build.gradle'] == without['build.gradle'].replace('    id "war"\n    id "eclipse"\n', '    id "eclipse"\n    id "war"\n')
         with['gradle.properties'].readLines().toSorted() == without['gradle.properties'].readLines().toSorted()
         new org.yaml.snakeyaml.Yaml().load(with['grails-app/conf/application.yml']) == new org.yaml.snakeyaml.Yaml().load(without['grails-app/conf/application.yml'])
     }

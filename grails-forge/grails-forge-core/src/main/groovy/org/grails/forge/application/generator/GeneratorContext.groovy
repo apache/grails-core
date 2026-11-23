@@ -73,19 +73,24 @@ class GeneratorContext implements DependencyContext {
     private final Map<String, ApplicationConfiguration> applicationEnvironmentConfiguration = new LinkedHashMap<>()
     private final Map<String, BootstrapConfiguration> bootstrapEnvironmentConfiguration = new LinkedHashMap<>()
     private final BootstrapConfiguration bootstrapConfiguration = new BootstrapConfiguration()
-    private final Set<Configuration> otherConfiguration = new HashSet<>()
+    // in the order they were added: what is written of them is in an order that is said, see applyOnce
+    private final Set<Configuration> otherConfiguration = new LinkedHashSet<>()
 
     private final Map<String, Template> templates = new LinkedHashMap<>()
     private final List<Writable> helpTemplates = new ArrayList<>(8)
     private final ApplicationType command
     private final Features features
     private final Options options
-    private final Set<Dependency> dependencies = new HashSet<>()
-    private final Set<Dependency> buildscriptDependencies = new HashSet<>()
+    // The dependencies and the plugins are kept in the order the features declare them. The build file
+    // sorts the dependencies and puts the plugins by their order; what that leaves undecided stays as it
+    // was declared, and not as a set of hashes would have it, which is another order for another number
+    // of entries and for another run
+    private final Set<Dependency> dependencies = new LinkedHashSet<>()
+    private final Set<Dependency> buildscriptDependencies = new LinkedHashSet<>()
     private final Set<GradleRepository> buildRepositories
     private final Set<GradleRepository> repositories
 
-    private final Set<BuildPlugin> buildPlugins = new HashSet<>()
+    private final Set<BuildPlugin> buildPlugins = new LinkedHashSet<>()
     private final BuildFileContributions buildContributions = new BuildFileContributions()
     private boolean featuresApplied
     private Throwable applyFailure
@@ -232,7 +237,7 @@ class GeneratorContext implements DependencyContext {
     }
 
     @Nonnull Set<Configuration> getAllConfigurations() {
-        Set<Configuration> allConfigurations = new HashSet<>()
+        Set<Configuration> allConfigurations = new LinkedHashSet<>()
         allConfigurations.add(configuration)
         allConfigurations.add(bootstrapConfiguration)
         allConfigurations.addAll(applicationEnvironmentConfiguration.values())

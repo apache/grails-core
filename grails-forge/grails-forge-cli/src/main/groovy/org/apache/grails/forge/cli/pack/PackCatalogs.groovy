@@ -494,7 +494,9 @@ final class PackCatalogs {
     private static Version latestOf(List<Version> releases) {
         Version latest = null
         for (Version each : releases) {
-            if (latest == null || PackCatalog.compareReleases(each.version, latest.version) > 0) {
+            // Equal numeric releases, such as 2.3 and 2.3.0, are distinct artifact coordinates.
+            // Break the tie by their spelling rather than the order of the catalog's entries.
+            if (latest == null || (PackCatalog.compareReleases(each.version, latest.version) ?: each.version.compareTo(latest.version)) > 0) {
                 latest = each
             }
         }

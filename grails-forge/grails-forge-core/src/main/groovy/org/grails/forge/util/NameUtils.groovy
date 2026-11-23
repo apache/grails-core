@@ -286,7 +286,7 @@ final class NameUtils {
         }
 
         if (name.indexOf('-') == -1) {
-            return name.substring(0, 1).toUpperCase() + name.substring(1)
+            return name.substring(0, 1).toUpperCase(Locale.ROOT) + name.substring(1)
         }
 
         StringBuilder buf = new StringBuilder()
@@ -295,7 +295,7 @@ final class NameUtils {
             if (token == null || token.length() == 0) {
                 continue
             }
-            buf.append(token.substring(0, 1).toUpperCase())
+            buf.append(token.substring(0, 1).toUpperCase(Locale.ROOT))
                     .append(token.substring(1))
         }
         return buf.toString()
@@ -341,7 +341,7 @@ final class NameUtils {
     static String getLogicalPropertyName(String className, String trailingName) {
         if (!isBlank(className) && !isBlank(trailingName)) {
             if (className.length() == trailingName.length() + 1 && className.endsWith(trailingName)) {
-                return className.substring(0, 1).toLowerCase()
+                return className.substring(0, 1).toLowerCase(Locale.ROOT)
             }
         }
         return getLogicalName(getPropertyName(className), trailingName)
@@ -453,7 +453,7 @@ final class NameUtils {
         if (i > -1) {
             packageName = className.substring(0, i)
         }
-        return packageName.toLowerCase()
+        return packageName.toLowerCase(Locale.ROOT)
     }
 
     /**
@@ -482,7 +482,7 @@ final class NameUtils {
         if (name.endsWith('.groovy')) {
             name = name.substring(0, name.length() - 7)
         }
-        return getNaturalName(name).replaceAll('\\s', '-').toLowerCase()
+        return getNaturalName(name).replaceAll('\\s', '-').toLowerCase(Locale.ROOT)
     }
 
     /**
@@ -533,7 +533,7 @@ final class NameUtils {
         }
 
         if (name.length() == 1) {
-            return name.toUpperCase()
+            return name.toUpperCase(Locale.ROOT)
         } else {
             StringBuilder sb = new StringBuilder()
             sb.append(name.charAt(name.length() - 1))
@@ -568,7 +568,7 @@ final class NameUtils {
      * @return The converted property name
      */
     static String getNaturalNameOfEnum(String name) {
-        return getNaturalName(camelCase(name.toLowerCase()))
+        return getNaturalName(camelCase(name.toLowerCase(Locale.ROOT)))
     }
 
     /**
@@ -760,7 +760,7 @@ final class NameUtils {
         }
 
         if (suffix.length() == 1) {
-            return Character.isUpperCase(suffix.charAt(0)) ? suffix.toLowerCase() : null
+            return Character.isUpperCase(suffix.charAt(0)) ? suffix.toLowerCase(Locale.ROOT) : null
         }
         if (Character.isUpperCase(suffix.charAt(1))) {
             // "aProperty", "AProperty"

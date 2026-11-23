@@ -55,6 +55,8 @@ jobs:
       matrix:
         os: [ubuntu-24.04]
     runs-on: ${{ matrix.os }}
+    outputs:
+      repository-ready: ${{ steps.test-repository.outcome == 'success' }}
     steps:
       - name: "📥 Checkout repository"
         uses: actions/checkout@v7.0.1
@@ -84,6 +86,24 @@ jobs:
           name: coverage-core-${{ matrix.os }}
           path: build/reports/jacoco/aggregate/jacocoAggregateReport.xml
           if-no-files-found: warn
+      - name: "📦 Publish Gradle plugins for Forge coverage"
+        if: ${{ !cancelled() }}
+        id: publish-plugins
+        working-directory: grails-gradle
+        run: ./gradlew publishAllPublicationsToTestCaseMavenRepoRepository --stacktrace
+      - name: "📦 Publish the framework already built for coverage"
+        if: ${{ !cancelled() }}
+        id: publish-framework
+        run: ./gradlew publishAllPublicationsToTestCaseMavenRepoRepository --stacktrace
+      - name: "📤 Share the test repository"
+        if: ${{ !cancelled() && steps.publish-framework.outcome == 'success' && steps.publish-plugins.outcome == 'success' }}
+        id: test-repository
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: forge-coverage-test-repository
+          path: build/local-maven/
+          if-no-files-found: error
+          retention-days: 1
 
   coverage-gradle:
     name: "Coverage - grails-gradle (${{ matrix.os }})"
@@ -127,8 +147,11 @@ jobs:
 
   coverage-forge:
     name: "Coverage - grails-forge (${{ matrix.os }})"
-    needs: [ policy ]
-    if: ${{ needs.policy.outputs.run-tests == 'true' }}
+    needs: [ policy, coverage-core ]
+    # JaCoCo instruments at test runtime. Forge's report includes only its own source sets, not those
+    # of the included framework; no framework exec data or instrumented jars need transferring.
+    # A failed core test need not lose Forge coverage if the repository was successfully published.
+    if: ${{ !cancelled() && needs.policy.outputs.run-tests == 'true' && needs.coverage-core.outputs.repository-ready == 'true' }}
     # Twice the slowest of the Forge builds of the CI workflow that finished over 2026-11-21 and 2026-11-22
     # (83 min), rounded up to the half hour: this job runs the same specs, less those of test-core.
     timeout-minutes: 180 # slowest run: none yet
@@ -140,6 +163,11 @@ jobs:
     steps:
       - name: "📥 Checkout repository"
         uses: actions/checkout@v7.0.1
+      - name: "📥 Download the framework built for core coverage"
+        uses: actions/download-artifact@v8.0.2
+        with:
+          name: forge-coverage-test-repository
+          path: build/local-maven/
       - name: "☕️ Setup JDK"
         uses: actions/setup-java@v6.1.0
         with:
@@ -161,6 +189,7 @@ jobs:
         working-directory: grails-forge
         run: >
           ./gradlew jacocoAggregateReport
+          -PprebuiltTestRepository
           --continue
           --stacktrace
           -PskipCodeStyle
@@ -185,6 +214,7 @@ jobs:
         uses: actions/download-artifact@v8.0.1
         with:
           path: coverage-reports
+          pattern: coverage-*
       - name: "📊 Upload coverage to Codecov"
         continue-on-error: true
         uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1

@@ -79,6 +79,13 @@ tasks.named('test') {
     // ConfigurationMetadataPluginSpec compiles its fixtures against the versions the framework ships with
     systemProperty('fixture.groovy.version', bomDependencyVersions['groovy.version'])
     systemProperty('fixture.spring-boot.version', gradleBomDependencyVersions['spring-boot.version'])
+    // PrebuiltTestRepositorySpec applies the script that wires the test tasks of Forge to a build of its own
+    inputs.file(layout.projectDirectory.file('../../grails-forge/gradle/test-config.gradle'))
+            .withPropertyName('forgeTestConfig')
+            .withPathSensitivity(PathSensitivity.NONE)
+    inputs.file(layout.projectDirectory.file('../../grails-forge/settings.gradle'))
+            .withPropertyName('forgeSettings')
+            .withPathSensitivity(PathSensitivity.NONE)
 }
 
 gradlePlugin {
@@ -90,6 +97,10 @@ gradlePlugin {
         register('publishPlugin') {
             id = 'org.apache.grails.buildsrc.publish'
             implementationClass = 'org.apache.grails.buildsrc.PublishPlugin'
+        }
+        register('testRepositoryMarkerPlugin') {
+            id = 'org.apache.grails.buildsrc.test-repository-marker'
+            implementationClass = 'org.apache.grails.buildsrc.TestRepositoryMarkerPlugin'
         }
         register('sbomPlugin') {
             id = 'org.apache.grails.buildsrc.sbom'

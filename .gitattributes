@@ -43,6 +43,11 @@ grails-forge/grails-forge-core/src/main/resources/META-INF/grails-forge-bundled/
 # written with the files under golden as text.
 grails-forge/grails-forge-cli/src/main/resources/META-INF/grails-forge-cli/templates/** text eol=lf
 grails-forge/grails-forge-cli/src/test/resources/golden/** text eol=lf
+# The lists the command line reads from its jar are written by hand or by a spec and go into the jar as they
+# are checked out: the classes it loads ahead and the plugins of the release. With CRLF a jar built on
+# Windows differs from one built elsewhere.
+grails-forge/grails-forge-cli/src/main/resources/META-INF/grails-forge-cli/preload-classes* text eol=lf
+grails-forge/grails-forge-cli/src/main/resources/META-INF/grails-forge-plugins/plugins.tsv text eol=lf
 # And for what the specs of the generator compare with as text: the views of the templates of a pack, the
 # files the bundled packs generate, and the reference of the merge of three texts. No `text` is set for the
 # directories, so what git takes for binary there stays as it is.

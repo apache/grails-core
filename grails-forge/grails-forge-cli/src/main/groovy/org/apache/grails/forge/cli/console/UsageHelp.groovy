@@ -50,6 +50,66 @@ class UsageHelp extends CommandLine.Help {
         super(spec, scheme)
     }
 
+    // picocli lists the options by their names in upper case, and takes the upper case of the language
+    // of the computer: in Turkish that of i is not I, and -i was listed after -x. These are its two
+    // orders with the upper case of no language, so the help of a command is the same text everywhere.
+    private static final Comparator<CommandLine.Model.OptionSpec> BY_NAME = new ByName()
+    private static final Comparator<CommandLine.Model.OptionSpec> BY_ARITY_AND_NAME = new ByArityAndName()
+
+    @CompileStatic
+    private static class ByName implements Comparator<CommandLine.Model.OptionSpec> {
+
+        @Override
+        int compare(CommandLine.Model.OptionSpec one, CommandLine.Model.OptionSpec other) {
+            String first = withoutPrefix(one.shortestName())
+            String second = withoutPrefix(other.shortestName())
+            int result = first.toUpperCase(Locale.ROOT) <=> second.toUpperCase(Locale.ROOT)
+            // lower case before upper case, and the options that show help last
+            result = result == 0 ? second <=> first : result
+            return one.help() == other.help() ? result : other.help() ? -1 : 1
+        }
+    }
+
+    @CompileStatic
+    private static class ByArityAndName extends ByName {
+
+        @Override
+        int compare(CommandLine.Model.OptionSpec one, CommandLine.Model.OptionSpec other) {
+            int result = one.arity().max() - other.arity().max()
+            if (result == 0) {
+                result = one.arity().min() - other.arity().min()
+            }
+            if (result == 0 && one.isMultiValue() != other.isMultiValue()) {
+                result = one.isMultiValue() ? 1 : -1
+            }
+            return result == 0 ? super.compare(one, other) : result
+        }
+    }
+
+    @Override
+    Comparator<CommandLine.Model.OptionSpec> createDefaultOptionSort() {
+        return commandSpec().usageMessage().sortOptions() ? BY_NAME : super.createDefaultOptionSort()
+    }
+
+    @Override
+    String synopsis(int synopsisHeadingLength) {
+        CommandLine.Model.UsageMessageSpec usage = commandSpec().usageMessage()
+        if (usage.customSynopsis() || usage.abbreviateSynopsis() || !usage.sortSynopsis()) {
+            return super.synopsis(synopsisHeadingLength)
+        }
+        return detailedSynopsis(synopsisHeadingLength, BY_ARITY_AND_NAME, commandSpec().parser().posixClusteredShortOptionsAllowed())
+    }
+
+    // the name of an option from its first letter or digit on
+    private static String withoutPrefix(String name) {
+        for (int index = 0; index < name.length(); index++) {
+            if (Character.isJavaIdentifierPart(name.charAt(index))) {
+                return name.substring(index)
+            }
+        }
+        return name
+    }
+
     @Override
     CommandLine.Help.IParamLabelRenderer parameterLabelRenderer() {
         return asTyped(super.parameterLabelRenderer())

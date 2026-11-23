@@ -19,7 +19,12 @@
 
 package org.apache.grails.security.acl.cli
 
+import grails.plugin.springsecurity.acl.AclClass
+import grails.plugin.springsecurity.acl.AclObjectIdentity
+import grails.plugin.springsecurity.acl.AclSid
 import org.apache.grails.core.cli.StandaloneCommand
+import spock.lang.AutoCleanup
+import spock.lang.Issue
 import spock.lang.Specification
 import spock.lang.TempDir
 import spock.lang.Unroll
@@ -43,6 +48,9 @@ class S2CreateAclDomainsCommandSpec extends Specification {
 
     @TempDir
     File project
+
+    @AutoCleanup
+    GroovyClassLoader generatedClasses = new GroovyClassLoader(getClass().classLoader)
 
     def "the command has the name and the description of the script it replaces, and does not run BootStrap"() {
         given:
@@ -84,25 +92,107 @@ class S2CreateAclDomainsCommandSpec extends Specification {
     }
 
     def "a class that is in the project is kept, the others are written, and that is no failure"() {
-        given: 'a class of the project, edited'
+        given: 'a class generated before the equality and serialization fix, with a customization'
         File edited = new File(project, "${DIRECTORY}/AclSid.groovy")
         edited.parentFile.mkdirs()
-        edited.text = 'edited'
+        String legacy = 'package grails.plugin.springsecurity.acl\nclass AclSid { String sid; boolean principal; String custom }\n'
+        edited.text = legacy
 
         when:
         boolean result = run('s2-create-acl-domains')
 
         then:
         result
-        edited.text == 'edited'
+        edited.text == legacy
         (NAMES - 'AclSid').every { String name -> written(name) == expected(name) }
+        (NAMES - 'AclSid').every { String name -> written(name).contains('@EqualsAndHashCode') }
 
         when: 'the command has no flag that writes the class again'
         boolean again = run('s2-create-acl-domains --force')
 
         then:
         again
-        edited.text == 'edited'
+        edited.text == legacy
+    }
+
+    @Issue(['#15927', '#16968'])
+    def "the command emits #name with value equality and a serializable round trip"() {
+        when:
+        assert run('s2-create-acl-domains')
+        Class generated = generatedClasses.parseClass(written(name).replace("class ${name}", "class Generated${name}"), "Generated${name}.groovy")
+        Object first = generated.newInstance(values(name))
+        Object second = generated.newInstance(values(name))
+
+        then:
+        first == second
+        first.hashCode() == second.hashCode()
+        Serializable.isAssignableFrom(generated)
+        ObjectStreamClass.lookup(generated).serialVersionUID == 1L
+
+        when:
+        ByteArrayOutputStream bytes = new ByteArrayOutputStream()
+        bytes.withObjectOutputStream { ObjectOutputStream stream -> stream.writeObject(first) }
+        Object copy
+        new ObjectInputStream(new ByteArrayInputStream(bytes.toByteArray())) {
+            @Override
+            protected Class<?> resolveClass(ObjectStreamClass descriptor) {
+                Class.forName(descriptor.name, false, generated.classLoader)
+            }
+        }.withCloseable { ObjectInputStream stream -> copy = stream.readObject() }
+
+        then:
+        copy == first
+        copy.hashCode() == first.hashCode()
+
+        where:
+        name << NAMES
+    }
+
+    @Issue(['#15927', '#16968'])
+    def "the emitted #name distinguishes a different #property"() {
+        given:
+        assert run('s2-create-acl-domains')
+        Class generated = generatedClasses.parseClass(written(name).replace("class ${name}", "class Generated${name}"), "Generated${name}.groovy")
+        Map original = values(name)
+
+        expect:
+        generated.newInstance(original) != generated.newInstance(original + [(property): replacement])
+
+        where:
+        name                | property            | replacement
+        'AclClass'          | 'className'         | 'example.Author'
+        'AclSid'            | 'sid'               | 'ROLE_EDITOR'
+        'AclSid'            | 'principal'         | true
+        'AclEntry'          | 'aclObjectIdentity' | new AclObjectIdentity(objectId: 2L)
+        'AclEntry'          | 'aceOrder'          | 1
+        'AclEntry'          | 'sid'               | new AclSid(sid: 'ROLE_EDITOR', principal: false)
+        'AclEntry'          | 'mask'              | 2
+        'AclEntry'          | 'granting'          | false
+        'AclEntry'          | 'auditSuccess'      | true
+        'AclEntry'          | 'auditFailure'      | true
+        'AclObjectIdentity' | 'objectId'          | 2L
+        'AclObjectIdentity' | 'aclClass'          | new AclClass(className: 'example.Author')
+        'AclObjectIdentity' | 'owner'             | new AclSid(sid: 'ROLE_EDITOR', principal: false)
+        'AclObjectIdentity' | 'parent'            | new AclObjectIdentity(objectId: 2L)
+        'AclObjectIdentity' | 'entriesInheriting' | false
+    }
+
+    private static Map values(String name) {
+        switch (name) {
+            case 'AclClass':
+                return [className: 'example.Book']
+            case 'AclSid':
+                return [sid: 'ROLE_READER', principal: false]
+            case 'AclEntry':
+                return [aclObjectIdentity: new AclObjectIdentity(objectId: 1L), aceOrder: 0,
+                        sid: new AclSid(sid: 'ROLE_READER', principal: false), mask: 1,
+                        granting: true, auditSuccess: false, auditFailure: false]
+            case 'AclObjectIdentity':
+                return [objectId: 1L, aclClass: new AclClass(className: 'example.Book'),
+                        owner: new AclSid(sid: 'ROLE_READER', principal: false), entriesInheriting: true]
+            default:
+                throw new IllegalArgumentException(name)
+        }
     }
 
     def "a template of the project is used in place of the template of the plugin"() {

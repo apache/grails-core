@@ -38,11 +38,24 @@ tasks.withType(Test).configureEach { Test testTask ->
         // framework; the unit specs of the other modules run without the publish chain.
         boolean forgeTestsNeedLocalMaven = project.findProperty('forgeTestsNeedLocalMaven') == true
         if (forgeTestsNeedLocalMaven) {
-            testTask.dependsOn(
-                    gradle.includedBuild('grails-core').task(':publishAllPublicationsToTestCaseMavenRepoRepository'),
-                    gradle.includedBuild('grails-gradle').task(':publishAllPublicationsToTestCaseMavenRepoRepository')
-            )
-            testTask.environment('GRAILS_REPO_URL', uri(rootProject.layout.projectDirectory.dir('../build/local-maven')))
+            // -PprebuiltTestRepository (see settings.gradle): the repository is there already and was checked
+            // when the build was configured, so nothing is published and no module of the framework is built
+            def prebuilt = rootProject.ext.prebuiltTestRepository
+            if (prebuilt) {
+                testTask.environment('GRAILS_REPO_URL', prebuilt.directory.toURI())
+                // the jars are part of what the specs test, and no task of this build makes them
+                testTask.inputs.dir(prebuilt.directory).withPropertyName('prebuiltTestRepository').withPathSensitivity(PathSensitivity.RELATIVE)
+                String staleRepository = prebuilt.warning
+                if (staleRepository) {
+                    testTask.doFirst { Task task -> task.logger.warn('WARNING: {}', staleRepository) }
+                }
+            } else {
+                testTask.dependsOn(
+                        gradle.includedBuild('grails-core').task(':publishAllPublicationsToTestCaseMavenRepoRepository'),
+                        gradle.includedBuild('grails-gradle').task(':publishAllPublicationsToTestCaseMavenRepoRepository')
+                )
+                testTask.environment('GRAILS_REPO_URL', uri(rootProject.layout.projectDirectory.dir('../build/local-maven')))
+            }
             if (classicFramework) {
                 // Groovy 6 loads a classic-compiled class only with groovy-callsite. The specs pass this
                 // init script to every generated build (GeneratedBuild in the CLI module's test fixtures

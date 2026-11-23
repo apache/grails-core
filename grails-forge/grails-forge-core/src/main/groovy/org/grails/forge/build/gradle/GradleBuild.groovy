@@ -164,7 +164,8 @@ class GradleBuild {
                 .forEach(writable -> {
                     try {
                         writable.write(outputStream)
-                        outputStream.write(System.lineSeparator().getBytes(StandardCharsets.UTF_8))
+                        // a line feed, as every other line of the file ends, on every platform
+                        outputStream.write('\n'.getBytes(StandardCharsets.UTF_8))
                     } catch (IOException e) {
                         if (LOG.isErrorEnabled()) {
                             LOG.error('IO Exception rendering Gradle Plugin extension')
@@ -174,15 +175,19 @@ class GradleBuild {
         return new String(outputStream.toByteArray(), StandardCharsets.UTF_8)
     }
 
+    /**
+     * @return the import lines of the plugins, each once and ended with a line feed, in the order of
+     * the lines: the same file whichever plugin was added first and whatever the platform ends a line with
+     */
     @Nonnull
     Set<String> getPluginsImports() {
-        Set<String> imports = new HashSet<>()
+        Set<String> imports = new TreeSet<>()
         for (GradlePlugin p : plugins) {
             Set<String> pluginImports = p.getBuildImports()
             if (pluginImports != null) {
                 imports.addAll(pluginImports)
             }
         }
-        return imports.stream().map(it -> it + System.lineSeparator()).collect(Collectors.toSet())
+        return imports.stream().map(it -> it + '\n').collect(Collectors.toCollection(LinkedHashSet::new))
     }
 }

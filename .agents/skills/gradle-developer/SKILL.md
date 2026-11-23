@@ -94,6 +94,29 @@ cd end-to-end
 
 Leave `legacy-g7-command-plugin`'s wrapper on its pinned Grails 7 Gradle version when bumping the main line.
 
+### Forge specs without building the framework (`-PprebuiltTestRepository`)
+
+`grails-forge` includes the framework build, so a run of its specs brings the framework up to date first, and the specs that build generated applications (`forgeTestsNeedLocalMaven = true`: `grails-forge-cli`, `test-core`) depend on `publishAllPublicationsToTestCaseMavenRepoRepository` of both included builds. When only Forge changes, publish once and tell the Forge build so:
+
+```bash
+# once, and again whenever the framework changes
+./gradlew publishAllPublicationsToTestCaseMavenRepoRepository
+(cd grails-gradle && ./gradlew publishAllPublicationsToTestCaseMavenRepoRepository)
+
+# as often as needed
+cd grails-forge
+./gradlew :grails-forge-cli:test --tests '*SomeSpec' -PprebuiltTestRepository
+```
+
+- With the property `grails-forge/settings.gradle` includes neither the framework nor `grails-gradle`: Forge's modules and published Gradle plugins resolve from the repository (`exclusiveContent`, as `end-to-end` does), the specs get it as `GRAILS_REPO_URL`, and no framework or published-plugin task runs. Only `build-logic` stays included. `compilePackPages` compiles Forge's bundled templates against the published runtime jars.
+- Value: nothing or `true` = `<checkout>/build/local-maven`; a path = that repository (relative to the directory Gradle is started in; CI passes a downloaded artifact this way); `false` = off. `ORG_GRADLE_PROJECT_prebuiltTestRepository` works too.
+- The publish task of each root project ends by writing a record into the repository (`TestRepositoryMarkerPlugin`, id `org.apache.grails.buildsrc.test-repository-marker`): `build/local-maven/grails-test-repository/grails-core.properties` and `grails-gradle.properties` (format, version, Java target, time, `callSites`, slim/complete, SBOM, and a fingerprint of the framework sources from `FrameworkSources`), plus copies of what Forge takes from the framework's build directories (`TestRepositoryMarker.FRAMEWORK_OUTPUTS`: the BOM POMs and the installed Grails wrapper). Every individual Maven publication invalidates its build's old record first, including a partial or failed publication. Add to the output list, not to `grails-forge-core/build.gradle`, when Forge needs another output of the framework build.
+- `PrebuiltTestRepository` checks the repository before anything is configured (a `ValueSource`, so it is checked again on every configuration-cache hit) and **fails** when it is missing, of another version, without a record, of the other call-site kind (`-PgrailsIndy=false` must match on both sides), or published from other framework sources. Changes under `FrameworkSources.NOT_FRAMEWORK` (`grails-forge`, `end-to-end`, `grails-test-examples`, `grails-doc`, `.github`, ...) and top-level Markdown files never count; everything else does, per top-level entry. `-PallowStaleTestRepository=true` downgrades only the last check to a warning.
+- Do not make the staleness check a warning by default, and do not add framework directories to `NOT_FRAMEWORK` to quiet it: specs that pass against old jars are the failure it exists to prevent.
+- Fingerprints hash sorted relative paths and Git blob identifiers, overlaying working-tree changes on HEAD and using Git's clean filters for line-ending normalization. Staging or committing identical content preserves the fingerprint, as do relocation, shallow detached checkouts and checkout executable modes. Commit and publication time are diagnostics only.
+- When tests run, CI shares one baseline Java 21 repository per indy/classic variant with Linux Java 21/25 and Windows Forge jobs. When the policy skips tests, producer steps do no work and Forge keeps its ordinary composite, avoiding a full-framework publish for a build that needs only a subset. Coverage publishes the framework already compiled by `coverage-core` and hands it to `coverage-forge`; the latter measures only its own source sets, so no instrumented framework jars are needed. Artifacts stay within each workflow run and expire after one day. A new suite that compiles Micronaut applications needs the Java 25-only framework modules as well.
+- Without the property nothing changes: the framework is included and the specs publish it.
+
 Root `settings.gradle` wires:
 
 ```groovy

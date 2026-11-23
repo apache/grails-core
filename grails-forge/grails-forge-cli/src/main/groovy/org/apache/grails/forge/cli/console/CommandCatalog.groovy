@@ -261,9 +261,25 @@ final class CommandCatalog {
         return described
     }
 
+    private static final Comparator<CommandLine.Model.OptionSpec> OPTION_ORDER = new ByLongestName()
+
+    // by the longest name of an option without its hyphens, whatever its case, and then as it is written
+    @CompileStatic
+    private static class ByLongestName implements Comparator<CommandLine.Model.OptionSpec> {
+
+        @Override
+        int compare(CommandLine.Model.OptionSpec one, CommandLine.Model.OptionSpec other) {
+            String first = one.longestName().replaceFirst(/^-+/, '')
+            String second = other.longestName().replaceFirst(/^-+/, '')
+            int ignoringCase = String.CASE_INSENSITIVE_ORDER.compare(first, second)
+            return ignoringCase != 0 ? ignoringCase : one.longestName() <=> other.longestName()
+        }
+    }
+
     private static List<Map<String, Object>> options(CommandLine.Model.CommandSpec spec) {
         List<Map<String, Object>> options = []
-        for (CommandLine.Model.OptionSpec option : spec.options()) {
+        // Reflection does not promise field order; use an explicit, locale-independent order.
+        for (CommandLine.Model.OptionSpec option : spec.options().toSorted(OPTION_ORDER)) {
             if (option.hidden()) {
                 continue
             }

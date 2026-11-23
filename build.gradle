@@ -20,6 +20,7 @@ plugins {
     id 'org.apache.grails.gradle.grails-ij-formatter'
     id 'org.apache.grails.gradle.grails-validate-actions'
     id 'org.apache.grails.buildsrc.test-task-sharding'
+    id 'org.apache.grails.buildsrc.test-repository-marker'
     id 'org.apache.grails.buildsrc.vulnerability-scan-report'
 }
 
