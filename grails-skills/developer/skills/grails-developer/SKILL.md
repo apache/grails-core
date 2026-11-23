@@ -997,7 +997,7 @@ grails> exit
 
 - `./grailsw` (`grailsw.bat` on Windows) downloads the command line of the project's `grailsVersion` to `~/.grails/wrapper` and runs it. Commit `grailsw`, `grailsw.bat` and `grails-wrapper.jar`. Use it in the project and in CI: `feature add` and `project regenerate` need the version whose record the project has.
 - To move to a later Grails 9 release: change `grailsVersion` in `gradle.properties`, run `./grailsw update-wrapper` and commit the three files, then `./grailsw project migrate` (it moves the record) and `./grailsw project health`. Upgrading from Grails 8 is the job of the `grails-upgrade` skill.
-- Commit the Gradle wrapper too (`gradlew`, `gradlew.bat`, `gradle/wrapper/`). `grails` has no Gradle of its own: in a project without the wrapper the commands that build end with exit code 1. Change the Gradle version with `./gradlew wrapper --gradle-version VERSION`.
+- Commit the Gradle wrapper too (`gradlew`, `gradlew.bat`, `gradle/wrapper/`). `grails` has no Gradle of its own: in a project without the wrapper the commands that build end with exit code 1. Change the Gradle version with `./gradlew wrapper --gradle-version VERSION --gradle-distribution-sha256-sum SHA256`, the checksum of that version from https://gradle.org/release-checksums/: the generated wrapper has `distributionSha256Sum` and refuses a download that does not match it.
 - Memory and JVM options: of the build, `org.gradle.jvmargs` in `gradle.properties`; of the application and the tests, the `bootRun` and test tasks in `build.gradle`; of the `grails` command itself, `GRAILS_OPTS`.
 
 ### Output for Tools and Agents
