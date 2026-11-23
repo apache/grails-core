@@ -234,6 +234,8 @@ class ConsoleProgramSpec extends Specification {
         commands == [['create-app', 'first'], ['create-app', '!!'], ['create-app', '!-1'], ['create-app', '!cre'], ['create-app', 'a b', 'c"d', 'e\\f']]
     }
 
+    // cmd runs each side of a pipe in a cmd of its own, which is given a block in parentheses written out again with a
+    // space before & and ), and echo writes that space: on Windows the lines are written to a file before the pipe
     @Unroll
     void "in a JVM whose output is not that of the process the console is given what the program writes: #command"() {
         given:
@@ -257,7 +259,7 @@ class ConsoleProgramSpec extends Specification {
         where:
         command                                                           | shown                             | code
         'echo hello'                                                      | 'hello'                           | 0
-        (isWindows() ? '(echo b& echo a)| sort' : 'printf \'b\\na\\n\' | sort') | (isWindows() ? 'a\r\nb' : 'a\nb') | 0
+        (isWindows() ? 'echo b>lines.txt& echo a>>lines.txt& type lines.txt| sort' : 'printf \'b\\na\\n\' | sort') | (isWindows() ? 'a\r\nb' : 'a\nb') | 0
         (isWindows() ? 'cd' : 'pwd -P')                                   | 'DIR'                             | 0
         'exit 3'                                                          | ''                                | 3
     }
