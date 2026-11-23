@@ -91,6 +91,22 @@ final class CommandCatalog {
         return candidates.isEmpty() ? null : candidates.get(0)
     }
 
+    /**
+     * The shortest form of lower-case letters that is short for a command and for no other command
+     * of the command it is one of, as {@link ShortForms#shortest} finds it.
+     *
+     * @param command a command of the command line
+     * @return the form, or {@code null} for the command line itself and where there is none
+     */
+    static String shortestForm(CommandLine command) {
+        CommandLine parent = command.getParent()
+        if (parent == null) {
+            return null
+        }
+        Known known = new Known(parent)
+        return ShortForms.shortest(command, { String form -> known.resolve(form) } as Function<String, CommandLine>)
+    }
+
     // A short form that fits several commands runs none of them, and names them, each with the
     // shortest form that is short for it alone, which is what is then typed.
     private static String ambiguous(Known known, String typed, List<CommandLine> candidates) {

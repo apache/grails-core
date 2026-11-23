@@ -86,6 +86,35 @@ class UsageHelp extends CommandLine.Help {
         }
     }
 
+    // The help of a command ends its description with the shortest form it can be typed in, as Short form: ra
+    // for run-app: what is typed has to be told from the other commands there are, and is worked out then.
+    @Override
+    String description(Object... params) {
+        String described = super.description(params)
+        String form = shortForm(commandSpec())
+        return form == null ? described : described + "Short form: ${form}" + String.format('%n')
+    }
+
+    /**
+     * @param spec a command
+     * @return what is typed for the command in its shortest form, the commands it is a command of
+     * among it, as {@code f a} for {@code feature add}; {@code null} for the command line itself, and
+     * where no name in it can be typed shorter, see {@link CommandCatalog#shortestForm}
+     */
+    static String shortForm(CommandLine.Model.CommandSpec spec) {
+        List<String> typed = []
+        boolean shorter = false
+        CommandLine.Model.CommandSpec each = spec
+        while (each.parent() != null) {
+            String form = CommandCatalog.shortestForm(each.commandLine())
+            boolean shortened = form != null && form.length() < each.name().length()
+            shorter = shorter || shortened
+            typed.add(0, shortened ? form : each.name())
+            each = each.parent()
+        }
+        return shorter ? typed.join(' ') : null
+    }
+
     @Override
     Comparator<CommandLine.Model.OptionSpec> createDefaultOptionSort() {
         return commandSpec().usageMessage().sortOptions() ? BY_NAME : super.createDefaultOptionSort()

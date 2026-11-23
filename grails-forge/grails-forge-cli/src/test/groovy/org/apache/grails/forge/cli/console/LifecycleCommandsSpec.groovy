@@ -1391,6 +1391,8 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
         then:
         exits.values().every { int each -> each == 0 }
         initials == runApp
+        runApp.readLines().contains('Short form: ra')
+        stopApp.readLines().contains('Short form: sa')
         runApp.readLines()[0] == 'Usage: grails-forge-cli run-app [-hvVx] [--non-interactive] [--plain-output]'
         runApp.contains('[--port=PORT] [--host=HOST] [--https] [--debug-jvm] [--query-tail] [--detach | --foreground]')
         runApp.contains('[--ready-timeout=SECONDS] [-DNAME=VALUE]... [-PNAME=VALUE]... [-- GRADLE-ARGUMENT...]')

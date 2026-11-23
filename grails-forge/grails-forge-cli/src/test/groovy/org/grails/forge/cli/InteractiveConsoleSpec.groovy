@@ -164,9 +164,11 @@ class InteractiveConsoleSpec extends Specification {
         ended
         program.exitValue() == 0
 
-        and: 'the help of the commands the forms are short for'
+        and: 'the help of the commands the forms are short for, which says the form'
         said.contains('Usage: grails run-app ')
+        said.contains('Short form: ra')
         said.contains('Usage: grails stop-app ')
+        said.contains('Short form: sa')
 
         and: 'a form two commands fit runs neither and says how each is typed, and one that fits none says what it nearly is'
         said.contains('cc is short for more than one command: create-controller (ccon), create-command (ccom). ' +

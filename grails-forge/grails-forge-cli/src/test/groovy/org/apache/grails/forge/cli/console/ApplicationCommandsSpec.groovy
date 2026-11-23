@@ -155,6 +155,7 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
         out.toString().readLines()[0] == usage
         out.toString().contains(from)
         out.toString().contains('Everything after the name of the command is given to the command as it is, the options too.')
+        out.toString().readLines().contains("Short form: ${form}".toString())
 
         and: 'nothing was run for any of it, and nothing written'
         dir.list().sort() == ['.grails', 'grails-app']
@@ -162,13 +163,13 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
         new File(dir, '.grails/cache').list() == ['command-catalog.json']
 
         where:
-        name           | usage                                                          | from
-        'hello-world'  | 'Usage: grails-forge-cli hello-world [ARGS...]'                | 'A command of org.example:hello-cli:1.2.3, which runs in the application'
-        'hW'           | 'Usage: grails-forge-cli hello-world [ARGS...]'                | 'Says hello'
-        'hw'           | 'Usage: grails-forge-cli hello-world [ARGS...]'                | 'Says hello'
-        'audit-report' | 'Usage: grails-forge-cli audit-report [ARGS...]'               | 'A command of the application, which runs in the application'
-        'ar'           | 'Usage: grails-forge-cli audit-report [ARGS...]'               | 'A command of the application, which runs in the application'
-        'oldest'       | 'Usage: grails-forge-cli old-one [ARGS...]'                    | 'A command of file:legacy-plugin.jar, which runs in the application'
+        name           | usage                                                          | from                                                                     | form
+        'hello-world'  | 'Usage: grails-forge-cli hello-world [ARGS...]'                | 'A command of org.example:hello-cli:1.2.3, which runs in the application' | 'hw'
+        'hW'           | 'Usage: grails-forge-cli hello-world [ARGS...]'                | 'Says hello'                                                             | 'hw'
+        'hw'           | 'Usage: grails-forge-cli hello-world [ARGS...]'                | 'Says hello'                                                             | 'hw'
+        'audit-report' | 'Usage: grails-forge-cli audit-report [ARGS...]'               | 'A command of the application, which runs in the application'           | 'ar'
+        'ar'           | 'Usage: grails-forge-cli audit-report [ARGS...]'               | 'A command of the application, which runs in the application'           | 'ar'
+        'oldest'       | 'Usage: grails-forge-cli old-one [ARGS...]'                    | 'A command of file:legacy-plugin.jar, which runs in the application'    | 'oo'
     }
 
     void "the document for a tool has the commands the build lists after those of the CLI, with what the build says of them"() {

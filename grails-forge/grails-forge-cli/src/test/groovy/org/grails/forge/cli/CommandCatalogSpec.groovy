@@ -389,6 +389,58 @@ class CommandCatalogSpec extends CommandSpec implements CommandFixture {
         ['help', 'help']         | ['help', '--help']           | ' help'
     }
 
+    @Unroll
+    void "the help of #command ends its description with the shortest form it is typed in, #form"() {
+        when:
+        int exit = ForgeCli.execute(beanContext, (['help'] + command.split(' ').toList()) as String[])
+        List<String> lines = out.toString().readLines()
+
+        then:
+        exit == 0
+        err.toString().isEmpty()
+        lines.count { it.startsWith('Short form: ') } == 1
+        lines.contains("Short form: ${form}".toString())
+
+        and: 'right before the parameters and options, and what it says is that command'
+        lines[lines.indexOf("Short form: ${form}".toString()) + 1].startsWith('  ')
+        shownBy('help', *form.split(' ')) == shownBy('help', *command.split(' '))
+
+        where:
+        command               | form
+        'run-app'             | 'ra'
+        'stop-app'            | 'sa'
+        'create-app'          | 'ca'
+        'create-controller'   | 'ccon'
+        'create-command'      | 'ccom'
+        'create-restful-controller' | 'crc'
+        'stats'               | 'st'
+        'clean'               | 'cl'
+        'compile'             | 'com'
+        'help'                | 'h'
+        'gradle'              | 'g'
+        'feature add'         | 'f a'
+        'project health'      | 'pr h'
+    }
+
+    void "the help of the command line itself, and that of a command that is typed by its name only, has no short form"() {
+        when:
+        int exit = ForgeCli.execute(beanContext, 'help')
+
+        then:
+        exit == 0
+        !out.toString().contains('Short form:')
+
+        when: 'a command whose name is the only thing that is that command'
+        CommandLine commandLine = ForgeCli.createCommandLine(beanContext, true, false)
+        commandLine.addSubcommand('compiler', new Sample())
+        out.reset()
+        exit = ForgeCli.execute(commandLine, 'help', 'compile')
+
+        then: 'com is short for compile and compiler, and comp, compi and compil too'
+        exit == 0
+        !out.toString().contains('Short form:')
+    }
+
     void "help shows how gradle is used, which gradle --help leaves to Gradle"() {
         expect:
         shownBy('help', 'gradle').startsWith('Usage: grails-forge-cli gradle ARGS...')
