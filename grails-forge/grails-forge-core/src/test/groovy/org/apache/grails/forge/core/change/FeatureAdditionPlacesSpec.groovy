@@ -125,9 +125,11 @@ class FeatureAdditionPlacesSpec extends ApplicationContextSpec {
         changed <= mostChanged
         emptyLines <= mostEmptyLines
 
+        // build.gradle: 123, 176, 180 and 125 until gorm-neo4j replaced the two lines of grails-bom with those of grails-neo4j-bom,
+        // which made a change next to them one more feature's conflict; the merge was not changed
         where:
         file                              || mostInserted | mostRemoved | mostChanged | mostEmptyLines
-        'build.gradle'                    || 123          | 176         | 180         | 125
+        'build.gradle'                    || 129          | 183         | 189         | 131
         'grails-app/conf/application.yml' || 43           | 69          | 69          | 40
         'README.md'                       || 70           | 101         | 101         | 71
     }
