@@ -80,11 +80,7 @@ class BundledPackCompileSpec extends CommandSpec {
      * the reason. An application with one of them is compiled all the same; the specification fails when
      * its runtime class path resolves, so that the pack is taken out of here once that is corrected.
      */
-    static final Map<String, String> RUNTIME_NOT_RESOLVED = [
-            'gorm-neo4j': 'grails-data-neo4j needs version 4.4.13 of the Neo4j driver, which grails-neo4j-bom holds strictly, and the BOM of Grails ' +
-                    'the application gets (grails-bom or grails-hibernate7-bom) brings the 6.3.0 Spring Boot manages; a strict version that comes in ' +
-                    'transitively does not win, and the Grails Gradle plugin lets the application import one BOM of Grails only',
-    ]
+    static final Map<String, String> RUNTIME_NOT_RESOLVED = [:]
 
     private static final Project PROJECT = NameUtils.parse('example.grails.foo')
 

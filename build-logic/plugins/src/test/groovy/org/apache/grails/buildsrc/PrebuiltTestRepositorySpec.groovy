@@ -188,6 +188,7 @@ class PrebuiltTestRepositorySpec extends Specification {
         and:
         TestRepositoryMarker.FRAMEWORK_OUTPUTS.every { String path -> TestRepositoryMarker.frameworkOutput(repository, path).isFile() }
         TestRepositoryMarker.frameworkOutput(repository, 'grails-bom/hibernate7/build/publications/maven/pom-default.xml').text.contains('hibernate7')
+        TestRepositoryMarker.frameworkOutput(repository, 'grails-bom/neo4j/build/publications/maven/pom-default.xml').text.contains('neo4j')
         !new File(repository, "${TestRepositoryMarker.FRAMEWORK_OUTPUTS_DIRECTORY}/grails-gradle").exists()
     }
 
@@ -433,16 +434,19 @@ class PrebuiltTestRepositorySpec extends Specification {
         []                      | ['-PgrailsIndy=false']  | 'with invokedynamic call sites, and this build is run with -PgrailsIndy=false, so for classic call sites'
     }
 
-    void "a repository that lacks what Forge takes from the framework build besides its modules fails the build"() {
-        given:
+    void "a repository that lacks what Forge takes from the framework build besides its modules fails the build: #missing"() {
+        given: 'a repository published before Forge took the output, as one without the POM of the Neo4j BOM was'
         publish()
-        assert TestRepositoryMarker.frameworkOutput(repository, 'grails-wrapper/build/install/apache-grails-wrapper-bin/grailsw').delete()
+        assert TestRepositoryMarker.frameworkOutput(repository, missing).delete()
 
         when:
         BuildResult result = run(forge, 'specs', '--dry-run', '-PprebuiltTestRepository').buildAndFail()
 
         then:
-        result.output.contains('(grails-test-repository/framework): grails-wrapper/build/install/apache-grails-wrapper-bin/grailsw.')
+        result.output.contains("(grails-test-repository/framework): ${missing}.")
+
+        where:
+        missing << ['grails-wrapper/build/install/apache-grails-wrapper-bin/grailsw', 'grails-bom/neo4j/build/publications/maven/pom-default.xml']
     }
 
     void "a change of the framework since the publish fails the build, and the message says where and since when"() {
@@ -607,7 +611,7 @@ class PrebuiltTestRepositorySpec extends Specification {
             boolean framework = rootProject.name == 'framework'
             File checkout = framework ? rootDir : rootDir.parentFile
             File published = new File(checkout, "build/local-maven/org/apache/grails/${artifact}/\${project.property('projectVersion')}/${artifact}.${extension}")
-            List<File> poms = framework ? ['base', 'default', 'hibernate7'].collect { String bom -> new File(checkout, "grails-bom/\${bom}/build/publications/maven/pom-default.xml") } : []
+            List<File> poms = framework ? ['base', 'default', 'hibernate7', 'neo4j'].collect { String bom -> new File(checkout, "grails-bom/\${bom}/build/publications/maven/pom-default.xml") } : []
             // as in the real builds, the task of the root project only depends on the tasks that publish
             def publishModule = tasks.register('publishModule') {
                 doLast {

@@ -25,6 +25,7 @@ import org.grails.forge.application.generator.GeneratorContext
 import org.grails.forge.build.dependencies.Dependency
 import org.grails.forge.feature.DefaultFeature
 import org.grails.forge.feature.Feature
+import org.grails.forge.feature.Features
 import org.grails.forge.options.Options
 import org.grails.forge.template.URLTemplate
 
@@ -52,29 +53,63 @@ class GrailsBase implements DefaultFeature {
         return false
     }
 
+    /** The feature of Micronaut, which gives an application a BOM of Grails for Micronaut */
+    static final String MICRONAUT = 'grails-micronaut'
+
+    /** The feature of Grails Data for Hibernate 7, which gives an application a BOM of Grails for Hibernate 7 */
+    static final String HIBERNATE7 = 'gorm-hibernate7'
+
+    /** The feature of GORM for Neo4j, which gives an application the BOM of Grails for Neo4j */
+    static final String NEO4J = 'gorm-neo4j'
+
     /**
      * @param micronaut whether the application has the Micronaut feature
      * @param hibernate7 whether the application has Grails Data for Hibernate 7
-     * @return the artifact of the BOM of Grails such an application is generated with
+     * @param neo4j whether the application has GORM for Neo4j
+     * @return the artifact of the BOM of Grails such an application is generated with, see
+     * {@link #bomArtifactId(Collection)}
      * @since 9.0
      */
-    static String bomArtifactId(boolean micronaut, boolean hibernate7) {
+    static String bomArtifactId(boolean micronaut, boolean hibernate7, boolean neo4j) {
         if (micronaut) {
             return hibernate7 ? 'grails-hibernate7-micronaut-bom' : 'grails-micronaut-bom'
         }
-        return hibernate7 ? 'grails-hibernate7-bom' : 'grails-bom'
+        if (hibernate7) {
+            return 'grails-hibernate7-bom'
+        }
+        return neo4j ? 'grails-neo4j-bom' : 'grails-bom'
+    }
+
+    /**
+     * Returns the artifact id, in the {@code org.apache.grails} group, of the one Grails BOM that an
+     * application with the given features imports: in its dependencies, on its buildscript classpath
+     * and in {@code buildSrc}.
+     *
+     * <p>When Micronaut is used, the application must consume the Micronaut BOM variant as an
+     * enforcedPlatform so the Micronaut platform cannot override the Grails BOM. The Hibernate 7 BOM
+     * variants pin the Hibernate 7 dependency versions (e.g. jandex) that conflict with the default
+     * (Hibernate 5) grails-bom - see grails-core issue #15942. GORM for Neo4j needs the Neo4j driver
+     * that grails-neo4j-bom holds strictly, which is older than the one Spring Boot manages, and a
+     * strict version that only comes in transitively cannot replace the version the application's
+     * own BOM asks for. An application with GORM for Neo4j therefore imports grails-neo4j-bom, which
+     * imports grails-bom, so GORM for Hibernate 5 next to it keeps every version grails-bom gives.
+     * No BOM covers GORM for Neo4j together with Hibernate 7 or Micronaut, and
+     * {@link org.grails.forge.feature.database.Neo4jGormValidator} refuses those combinations
+     * before this is asked.</p>
+     *
+     * @param features the names of the features of the application
+     * @return the artifact id of the Grails BOM
+     * @since 9.0
+     */
+    static String bomArtifactId(Collection<String> features) {
+        return bomArtifactId(features.contains(MICRONAUT), features.contains(HIBERNATE7), features.contains(NEO4J))
     }
 
     @Override
     void apply(GeneratorContext generatorContext) {
-
-        // When Micronaut is used, the application must consume the Micronaut BOM variant as an
-        // enforcedPlatform so the Micronaut platform cannot override the Grails BOM. The
-        // Hibernate 7 BOM variants pin the Hibernate 7 dependency versions (e.g. jandex) that
-        // conflict with the default (Hibernate 5) grails-bom - see grails-core issue #15942.
-        boolean useMicronautBom = generatorContext.getFeatures().contains('grails-micronaut')
-        boolean useHibernate7Bom = generatorContext.getFeatures().contains('gorm-hibernate7')
-        String bomArtifactId = bomArtifactId(useMicronautBom, useHibernate7Bom)
+        Features features = generatorContext.getFeatures()
+        boolean useMicronautBom = features.contains(MICRONAUT)
+        String bomArtifactId = bomArtifactId(features)
 
         generatorContext.addDependency(Dependency.builder()
                 .groupId('org.apache.grails')

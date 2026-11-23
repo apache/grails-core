@@ -27,6 +27,7 @@ import org.grails.forge.application.generator.GeneratorContext
 import org.grails.forge.feature.AvailableFeatures
 import org.grails.forge.feature.Feature
 import org.grails.forge.feature.FeatureContext
+import org.grails.forge.feature.database.Neo4jGormValidator
 import org.grails.forge.io.ConsoleOutput
 import org.grails.forge.options.Options
 import java.util.stream.Collectors
@@ -102,6 +103,7 @@ class ListFeatures {
     }
 
     private void listFeatures(ConsoleOutput consoleOutput, Set<Feature> defaultFeatures, List<Feature> allFeatures, int width) {
+        List<String> defaultNames = defaultFeatures*.getName()
         for (Feature feature: allFeatures) {
             String name = feature.getName()
             if (feature.isPreview()) {
@@ -114,7 +116,9 @@ class ListFeatures {
                 name += ' (+)'
                 consoleOutput.out('@|blue   ' + String.format('%1$-' + width + 's', name) + feature.getDescription() + '|@')
             } else {
-                consoleOutput.out('  ' + String.format('%1$-' + width + 's', name) + feature.getDescription())
+                // a feature that no Grails BOM covers together with a feature the application has by default
+                String withoutBom = Neo4jGormValidator.notCoveredBeside(feature.getName(), defaultNames)
+                consoleOutput.out('  ' + String.format('%1$-' + width + 's', name) + feature.getDescription() + (withoutBom == null ? '' : " (${withoutBom})"))
             }
         }
     }

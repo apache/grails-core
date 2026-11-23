@@ -77,6 +77,7 @@ class TestRepositoryMarker {
             'grails-bom/base/build/publications/maven/pom-default.xml',
             'grails-bom/default/build/publications/maven/pom-default.xml',
             'grails-bom/hibernate7/build/publications/maven/pom-default.xml',
+            'grails-bom/neo4j/build/publications/maven/pom-default.xml',
             'grails-wrapper/build/install/apache-grails-wrapper-bin/grailsw',
             'grails-wrapper/build/install/apache-grails-wrapper-bin/grailsw.bat',
             'grails-wrapper/build/install/apache-grails-wrapper-bin/grails-wrapper.jar',

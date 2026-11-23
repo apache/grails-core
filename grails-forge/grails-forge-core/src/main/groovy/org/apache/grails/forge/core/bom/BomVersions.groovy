@@ -25,10 +25,11 @@ import java.nio.charset.StandardCharsets
  * The versions a BOM of Grails manages, as they were when this Forge was built: the BOM has the
  * version of Forge, so these are the versions an application that Forge generates with that BOM gets.
  *
- * <p>A table has what the published pom of the BOM manages itself, and what
- * {@code org.apache.grails:grails-base-bom}, which it imports, manages. What the other BOMs it imports
- * manage, Spring Boot's among them, is not in it: the table is for the artifacts of Grails and of its
- * plugins. It is a resource, {@code META-INF/grails-forge-boms/<artifact of the BOM>.tsv}, with a
+ * <p>A table has what the published pom of the BOM manages itself, and what the BOMs of Grails it
+ * imports manage: {@code org.apache.grails:grails-base-bom}, which each imports, and
+ * {@code org.apache.grails:grails-bom}, which {@code grails-neo4j-bom} imports. What the other BOMs it
+ * imports manage, Spring Boot's among them, is not in it: the table is for the artifacts of Grails and
+ * of its plugins. It is a resource, {@code META-INF/grails-forge-boms/<artifact of the BOM>.tsv}, with a
  * line of {@code group:artifact}, a tab and the version for each, sorted.</p>
  *
  * @since 9.0
@@ -43,7 +44,7 @@ final class BomVersions {
     public static final String DIRECTORY = 'META-INF/grails-forge-boms'
 
     /** The BOMs this Forge is built with a table of */
-    public static final List<String> SHIPPED = Collections.unmodifiableList(['grails-bom', 'grails-hibernate7-bom'])
+    public static final List<String> SHIPPED = Collections.unmodifiableList(['grails-bom', 'grails-hibernate7-bom', 'grails-neo4j-bom'])
 
     private final String artifact
     private final Map<String, String> versions

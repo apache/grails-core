@@ -103,6 +103,8 @@ class ProjectCommandsSpec extends CommandSpec {
         'create-app'        | ['--jdk', '25', '--servlet', 'undertow', '--data', 'mongodb', '--reloading', 'none',
                                '--features', 'grails-quartz,asciidoctor', '--exclude-features', 'mockito,scaffolding'] || ['--jdk', '25', '--servlet', 'undertow', '--data', 'mongodb', '--reloading', 'none', '--features', 'asciidoctor,grails-quartz', '--exclude-features', 'mockito,scaffolding']
         'create-app'        | ['--servlet', 'tomcat', '--data', 'hibernate7', '--features', 'grails-web-console']      || ['--data', 'hibernate7', '--features', 'grails-web-console']
+        'create-app'        | ['--data', 'neo4j']                                                                     || ['--data', 'neo4j']
+        'create-app'        | ['--features', 'gorm-neo4j']                                                            || ['--features', 'gorm-neo4j']
         'create-webapp'     | ['-s', 'jetty', '-f', 'cache']                                                           || ['--servlet', 'jetty', '--features', 'cache']
         'create-restapi'    | ['--exclude-features', 'mockito', '--features', 'openapi']                              || ['--features', 'openapi', '--exclude-features', 'mockito']
         'create-plugin'     | ['--features', 'asciidoctor']                                                           || ['--servlet', 'none', '--features', 'asciidoctor']

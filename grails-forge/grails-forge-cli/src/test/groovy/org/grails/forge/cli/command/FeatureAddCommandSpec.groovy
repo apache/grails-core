@@ -110,6 +110,9 @@ class FeatureAddCommandSpec extends CommandSpec implements CommandFixture {
         CreateAppCommand       | []                                                      | 'grails-spring-security'
         CreateAppCommand       | []                                                      | 'database-migration'
         CreateAppCommand       | []                                                      | 'gorm-mongodb'
+        CreateAppCommand       | []                                                      | 'gorm-neo4j'
+        CreateAppCommand       | ['--data', 'neo4j']                                     | 'grails-quartz'
+        CreateRestApiCommand   | []                                                      | 'gorm-neo4j'
         CreateAppCommand       | ['--servlet', 'undertow', '--data', 'mongodb']          | 'grails-quartz'
         CreateAppCommand       | ['--data', 'hibernate7', '--jdk', '25']                 | 'hibernate-validator'
         CreateAppCommand       | ['--reloading', 'none', '--servlet', 'jetty']           | 'cache'
@@ -396,6 +399,30 @@ class FeatureAddCommandSpec extends CommandSpec implements CommandFixture {
         ['--features=spring-ai-ollama']         | 'spring-ai-openai'       || 'spring-ai-ollama'
         ['--exclude-features', 'mockito']       | 'mockito'                || 'The feature mockito is both selected and excluded'
         ['--exclude-features', 'geb-with-testcontainers,scaffolding,spock'] | 'mockito' || 'Mockito requires JUnit or Spock'
+        ['--data', 'hibernate7']                | 'gorm-neo4j'             || CreateAppSelectionSpec.NEO4J_WITH_HIBERNATE7
+        ['--data', 'neo4j']                     | 'gorm-hibernate7'        || CreateAppSelectionSpec.NEO4J_WITH_HIBERNATE7
+        ['--jdk', '25', '--features=grails-micronaut'] | 'gorm-neo4j'      || CreateAppSelectionSpec.NEO4J_WITH_MICRONAUT
+    }
+
+    void "adding gorm-neo4j to an application with Hibernate 5 gives it grails-neo4j-bom in the place of grails-bom, and keeps a change of yours to the build"() {
+        given:
+        create(dir, CreateAppCommand, [])
+        File buildFile = new File(dir, 'build.gradle')
+        buildFile.text = buildFile.text + '\n// mine\n'
+
+        when:
+        int exit = add('gorm-neo4j')
+        String build = buildFile.text
+
+        then: 'the BOM of the application and of its build are the Neo4j BOM, each where grails-bom was'
+        exit == 0
+        out.toString().contains('    merge    build.gradle (your changes are kept)')
+        build.contains('implementation platform("org.apache.grails:grails-neo4j-bom:$grailsVersion")')
+        build.contains('classpath platform("org.apache.grails:grails-neo4j-bom:$grailsVersion")')
+        !build.contains('org.apache.grails:grails-bom:')
+        build.contains('implementation "org.apache.grails:grails-data-hibernate5"')
+        build.contains('implementation "org.apache.grails:grails-data-neo4j"')
+        build.endsWith('\n// mine\n')
     }
 
     @Unroll

@@ -20,6 +20,7 @@ under the License.
 <%@ page import="org.grails.forge.application.ApplicationType" %>
 <%@ page import="org.grails.forge.application.Project" %>
 <%@ page import="org.grails.forge.feature.Features" %>
+<%@ page import="org.grails.forge.feature.grails.GrailsBase" %>
 <%@ page import="org.grails.forge.build.gradle.GradleBuild" %>
 <%@ page import="org.grails.forge.build.gradle.GradleDependency" %>
 <%@ page import="org.grails.forge.build.gradle.GradleRepository" %>
@@ -47,15 +48,7 @@ repositories {
 }
 
 dependencies {
-    <% if (features.contains('gorm-hibernate7') && features.contains('grails-micronaut')) { %>
-    implementation platform("org.apache.grails:grails-hibernate7-micronaut-bom:$grailsVersion")
-    <% } else if (features.contains('grails-micronaut')) { %>
-    implementation platform("org.apache.grails:grails-micronaut-bom:$grailsVersion")
-    <% } else if (features.contains('gorm-hibernate7')) { %>
-    implementation platform("org.apache.grails:grails-hibernate7-bom:$grailsVersion")
-    <% } else { %>
-    implementation platform("org.apache.grails:grails-bom:$grailsVersion")
-    <% } %>
+    implementation platform("org.apache.grails:${GrailsBase.bomArtifactId(features)}:$grailsVersion")
     <% for (GradleDependency dependency : gradleBuild.getBuildSrcDependencies()) { %>
     ${dependency.toSnippet()}
     <% } %>

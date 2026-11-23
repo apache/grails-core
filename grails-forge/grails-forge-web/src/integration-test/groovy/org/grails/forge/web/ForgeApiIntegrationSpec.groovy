@@ -51,6 +51,10 @@ import java.util.zip.ZipInputStream
 @Integration(applicationClass = Application)
 class ForgeApiIntegrationSpec extends Specification {
 
+    private static final String NEO4J_WITH_HIBERNATE7 = 'gorm-neo4j cannot be combined with gorm-hibernate7: an application with GORM for Neo4j uses ' +
+            'grails-neo4j-bom, which manages Hibernate 5, and no Grails BOM manages the Neo4j driver of GORM for Neo4j together with Hibernate 7. ' +
+            'Select gorm-hibernate5, or no Hibernate implementation, with gorm-neo4j.'
+
     @Value('${local.server.port}')
     int serverPort
 
@@ -144,6 +148,22 @@ class ForgeApiIntegrationSpec extends Specification {
         zipText(response.body as byte[], 'forge-contract/build.gradle').contains('spring-boot-devtools')
         zipText(response.body as byte[], 'forge-contract/grails-app/init/forge/contract/Application.groovy')
         zipEntries(response.body as byte[]).every { it.startsWith('forge-contract/') }
+    }
+
+    void "an application with GORM for Neo4j is created with grails-neo4j-bom as its BOM of Grails: #query"() {
+        when:
+        Map response = get("/create/web/forge-neo4j?${query}")
+        String buildGradle = zipText(response.body as byte[], 'forge-neo4j/build.gradle')
+
+        then:
+        response.status == 201
+        buildGradle.contains('implementation platform("org.apache.grails:grails-neo4j-bom:$grailsVersion")')
+        buildGradle.contains('classpath platform("org.apache.grails:grails-neo4j-bom:$grailsVersion")')
+        !buildGradle.contains('org.apache.grails:grails-bom:')
+        buildGradle.contains('org.apache.grails:grails-data-neo4j')
+
+        where:
+        query << ['gorm=neo4j', 'features=gorm-neo4j']
     }
 
     void "GET /:name.zip returns a zip archive for the default application type"() {
@@ -709,6 +729,8 @@ class ForgeApiIntegrationSpec extends Specification {
                         ['gorm=hibernate7&features=gorm-hibernate5', 'Only one Grails Data for Hibernate implementation can be selected: gorm-hibernate5 or gorm-hibernate7'],
                         ['gorm=neo4j&features=gorm-mongodb', 'There can only be one of the following features selected: [gorm-mongodb, gorm-neo4j]'],
                         ['gorm=mongodb&reloading=DEVTOOLS&servlet=TOMCAT&features=gorm-neo4j', 'There can only be one of the following features selected: [gorm-mongodb, gorm-neo4j]'],
+                        ['gorm=hibernate7&features=gorm-neo4j', NEO4J_WITH_HIBERNATE7],
+                        ['gorm=neo4j&features=gorm-hibernate7', NEO4J_WITH_HIBERNATE7],
                 ]
         ].combinations().collect { List each -> [each[0], each[1][0], each[1][1]] }
     }

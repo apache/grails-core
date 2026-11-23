@@ -162,6 +162,51 @@ class ProjectMigrateGeneratedSpec extends CommandSpec {
         files(project, '.grails/baseline') == files(new File(other, 'shop'), '.grails/baseline')
     }
 
+    void "a Neo4j application an earlier version generated with grails-bom keeps it when the record is moved, and is what this version generates once grails-neo4j-bom is in its place"() {
+        given: 'an application with GORM for Neo4j whose build file an earlier template wrote with grails-bom'
+        create(dir, 'create-app', 'com.example.shop', '--data', 'neo4j')
+        String generated = new File(project, 'build.gradle').text
+        assert generated.count('org.apache.grails:grails-neo4j-bom:') == 2
+        String earlier = generated.replace('org.apache.grails:grails-neo4j-bom:', 'org.apache.grails:grails-bom:')
+        earlierBaseline('build.gradle', earlier)
+        new File(project, 'build.gradle').text = earlier
+        writtenBy(EARLIER, 'ab' * 32)
+
+        when: 'the record is moved'
+        int moved = run('project', 'migrate')
+        List<String> said = out.toString().readLines()
+
+        then: 'the build file is not changed, and is named as one this version generates otherwise'
+        moved == 0
+        said.contains('    changed  build.gradle')
+        new File(project, 'build.gradle').text == earlier
+
+        when: 'the files that are not as this version generates them are named'
+        out.reset()
+        int compared = run('project', 'regenerate', '--diff')
+
+        then:
+        compared == 1
+        out.toString().readLines() == ['changed  build.gradle', '| 1 file is not as the application was generated: 1 changed']
+
+        when: 'the application is generated again from its record'
+        out.reset()
+        File regenerated = new File(other, 'regenerated')
+        int written = run('project', 'regenerate', '--output', regenerated.absolutePath)
+
+        then: 'with the BOM of Grails for Neo4j'
+        written == 0
+        new File(regenerated, 'build.gradle').text == generated
+
+        when: 'grails-neo4j-bom takes the place of grails-bom'
+        out.reset()
+        new File(project, 'build.gradle').text = generated
+        compared = run('project', 'regenerate', '--diff')
+
+        then: 'the application is what this version generates'
+        compared == 0
+    }
+
     void "a change of yours next to the lines the feature adds is a conflict after the record was moved, and nothing is written over"() {
         given: 'a line next to where the feature adds its dependency, which you changed'
         create(dir, 'create-app', 'com.example.shop')

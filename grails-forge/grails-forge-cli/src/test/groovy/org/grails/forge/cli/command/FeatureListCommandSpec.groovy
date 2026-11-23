@@ -143,6 +143,37 @@ class FeatureListCommandSpec extends CommandSpec {
         'gorm-mongodb'         | []            | 'added'
     }
 
+    @Unroll
+    void "with #created, #feature cannot be added, and the list says that no Grails BOM covers it with #other"() {
+        given:
+        create(created)
+        String refusal = other == 'gorm-hibernate7' ? CreateAppSelectionSpec.NEO4J_WITH_HIBERNATE7 : CreateAppSelectionSpec.NEO4J_WITH_MICRONAUT
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'feature', 'list')
+        List<String> lines = out.toString().readLines()
+        int refused = lines.findIndexOf { it ==~ /\| \d+ features? of Grails for this type of application cannot be added to it:/ }
+
+        then:
+        exit == 0
+        refused > 0
+        entry(lines.subList(refused, lines.size()), feature).contains(refusal)
+
+        when: 'feature add says the same'
+        out.reset()
+        int added = CliRunner.run(FeatureAddCommand, beanContext, feature, '--dry-run')
+
+        then:
+        added == 2
+        err.toString().contains(refusal)
+
+        where:
+        created                                  | feature            | other
+        ['--data', 'hibernate7']                 | 'gorm-neo4j'       | 'gorm-hibernate7'
+        ['--data', 'neo4j']                      | 'gorm-hibernate7'  | 'gorm-hibernate7'
+        ['--data', 'neo4j', '--jdk', '25']       | 'grails-micronaut' | 'grails-micronaut'
+    }
+
     void "an application whose record feature add does not take: what it has is listed, and the list says why nothing can be added"() {
         given: 'an application whose record project migrate wrote'
         create([])

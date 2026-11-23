@@ -32,6 +32,13 @@ import spock.lang.Unroll
 
 class CreateAppSelectionSpec extends CommandSpec implements CommandFixture {
 
+    static final String NEO4J_WITH_HIBERNATE7 = 'gorm-neo4j cannot be combined with gorm-hibernate7: an application with GORM for Neo4j uses ' +
+            'grails-neo4j-bom, which manages Hibernate 5, and no Grails BOM manages the Neo4j driver of GORM for Neo4j together with Hibernate 7. ' +
+            'Select gorm-hibernate5, or no Hibernate implementation, with gorm-neo4j.'
+
+    static final String NEO4J_WITH_MICRONAUT = 'gorm-neo4j cannot be combined with grails-micronaut: an application with GORM for Neo4j uses ' +
+            'grails-neo4j-bom, and no Grails BOM manages the Neo4j driver of GORM for Neo4j together with Micronaut.'
+
     PrintStream originalOut
     PrintStream originalErr
     ByteArrayOutputStream out = new ByteArrayOutputStream()
@@ -301,6 +308,74 @@ class CreateAppSelectionSpec extends CommandSpec implements CommandFixture {
         !(excluded =~ /mockito \(\+\)/)
         excluded =~ /mockito\s/
         excluded =~ /spock \(\+\)/
+    }
+
+    @Unroll
+    void "an application with GORM for Neo4j is created with grails-neo4j-bom as its one Grails BOM: #arguments"() {
+        when:
+        int exit = CliRunner.run(CreateAppCommand, beanContext, (['com.example.shop'] + arguments) as String[])
+
+        then:
+        exit == 0
+        String buildGradle = new File(dir, 'shop/build.gradle').text
+        buildGradle.contains('implementation platform("org.apache.grails:grails-neo4j-bom:$grailsVersion")')
+        buildGradle.contains('classpath platform("org.apache.grails:grails-neo4j-bom:$grailsVersion")')
+        !buildGradle.contains('org.apache.grails:grails-bom:')
+        buildGradle.contains('implementation "org.apache.grails:grails-data-neo4j"')
+        buildGradle.contains('implementation "org.apache.grails:grails-data-hibernate5"') == hibernate5
+
+        where:
+        arguments                                         || hibernate5
+        ['--data', 'neo4j']                               || false
+        ['--features', 'gorm-neo4j']                      || true
+        ['--data', 'hibernate5', '--features', 'gorm-neo4j'] || true
+    }
+
+    @Unroll
+    void "features that no Grails BOM covers together are refused, and nothing is created: #arguments"() {
+        when:
+        int exit = CliRunner.run(CreateAppCommand, beanContext, (['com.example.shop'] + arguments) as String[])
+
+        then:
+        exit == 2
+        err.toString().contains(other == 'gorm-hibernate7' ? NEO4J_WITH_HIBERNATE7 : NEO4J_WITH_MICRONAUT)
+        !new File(dir, 'shop').exists()
+
+        where:
+        arguments                                                            || other
+        ['--data', 'hibernate7', '--features', 'gorm-neo4j']                 || 'gorm-hibernate7'
+        ['--data', 'neo4j', '--features', 'gorm-hibernate7']                 || 'gorm-hibernate7'
+        ['--features', 'gorm-hibernate7,gorm-neo4j']                         || 'gorm-hibernate7'
+        ['--jdk', '25', '--data', 'neo4j', '--features', 'grails-micronaut'] || 'grails-micronaut'
+        ['--jdk', '25', '--features', 'grails-micronaut,gorm-neo4j']         || 'grails-micronaut'
+    }
+
+    @Unroll
+    void "the list of features says which feature no Grails BOM covers together with a default: #arguments"() {
+        when:
+        int exit = ForgeCli.execute(beanContext, (['create-app', '--list-features'] + arguments) as String[])
+        List<String> lines = out.toString().readLines()
+
+        then:
+        exit == 0
+        lines.find { it.startsWith("  ${marked} ") }.endsWith(" (cannot be combined with ${with}: no Grails BOM covers both)")
+        !lines.find { it.startsWith("  ${unmarked} ") }.contains('no Grails BOM')
+
+        where:
+        arguments                || marked             | with              | unmarked
+        ['--data', 'hibernate7'] || 'gorm-neo4j'       | 'gorm-hibernate7' | 'gorm-mongodb'
+        ['--data', 'neo4j']      || 'gorm-hibernate7'  | 'gorm-neo4j'      | 'gorm-hibernate5'
+        ['--data', 'neo4j']      || 'grails-micronaut' | 'gorm-neo4j'      | 'gorm-mongodb'
+    }
+
+    void "with the default features the list marks no feature for its BOM"() {
+        when:
+        int exit = ForgeCli.execute(beanContext, 'create-app', '--list-features')
+
+        then:
+        exit == 0
+        out.toString().contains('  gorm-neo4j ')
+        !out.toString().contains('no Grails BOM')
     }
 
     void "a feature that is not for the type of application is refused"() {

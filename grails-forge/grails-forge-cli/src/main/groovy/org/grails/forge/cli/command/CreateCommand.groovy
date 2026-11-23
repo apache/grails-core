@@ -889,7 +889,8 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer>, O
     protected String bomOfTheSelection() {
         List<String> selected = getSelectedFeatures() + (presetPack == null ? Collections.<String>emptyList() : presetPack.descriptor.requires)
         GormImpl data = gormImpl ?: presetPack?.descriptor?.preset?.data
-        return GrailsBase.bomArtifactId(selected.contains('grails-micronaut'), data == GormImpl.HIBERNATE7 || selected.contains(GormImpl.HIBERNATE7.getName()))
+        return GrailsBase.bomArtifactId(selected.contains(GrailsBase.MICRONAUT), data == GormImpl.HIBERNATE7 || selected.contains(GrailsBase.HIBERNATE7),
+                data == GormImpl.NEO4J || selected.contains(GrailsBase.NEO4J))
     }
 
     /**
@@ -903,10 +904,16 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer>, O
         BomVersions versions = bomVersions(bom)
         if (versions == null) {
             throw new IllegalArgumentException("A feature is not taken from a feature catalog for an application with ${BomVersions.GROUP}:${bom}: this Forge " +
-                    "does not have the versions that BOM manages (it has those of ${BomVersions.SHIPPED.collect { String each -> "${BomVersions.GROUP}:${each}" }.join(' and ')}), " +
+                    "does not have the versions that BOM manages (it has those of ${shipped()}), " +
                     'and so cannot tell which version of the plugin the application would have. Give the plugin by its coordinates, group:artifact:version')
         }
         return versions.versionOf(artifact)
+    }
+
+    // the BOMs this Forge has the versions of, as a sentence names them
+    private static String shipped() {
+        List<String> boms = BomVersions.SHIPPED.collect { String each -> "${BomVersions.GROUP}:${each}".toString() }
+        return boms.size() < 2 ? boms.join('') : "${boms.take(boms.size() - 1).join(', ')} and ${boms.last()}"
     }
 
     // for a list, which says what would be taken where that is known and does not fail where it is not
@@ -929,7 +936,7 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer>, O
      * command says so and creates nothing.
      */
     private void heldToItsBom(GeneratorContext context) {
-        String actual = GrailsBase.bomArtifactId(context.getFeatures().contains('grails-micronaut'), context.getFeatures().contains('gorm-hibernate7'))
+        String actual = GrailsBase.bomArtifactId(context.getFeatures())
         if (bomOfCatalogPacks != null && bomOfCatalogPacks != actual) {
             throw new CommandLine.ParameterException(this.spec.commandLine(), 'The features that were found by their names in a feature catalog were chosen for an ' +
                     "application with ${BomVersions.GROUP}:${bomOfCatalogPacks}, and with all its features the application gets ${BomVersions.GROUP}:${actual}, " +

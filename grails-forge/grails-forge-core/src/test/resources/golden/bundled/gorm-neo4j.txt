@@ -21,7 +21,11 @@ in an application without being named: gorm neo4j
 + 
 + 
 == build.gradle
+-         classpath platform("org.apache.grails:grails-bom:$grailsVersion")
+-     implementation platform("org.apache.grails:grails-bom:$grailsVersion")
++         classpath platform("org.apache.grails:grails-neo4j-bom:$grailsVersion")
 +     implementation "org.apache.grails:grails-data-neo4j"
++     implementation platform("org.apache.grails:grails-neo4j-bom:$grailsVersion")
 +     testRuntimeOnly "org.neo4j.test:neo4j-harness"
 == grails-app/conf/application.yml
 +   neo4j:
@@ -43,7 +47,11 @@ in an application without being named: gorm neo4j
 + 
 + 
 == build.gradle
+-         classpath platform("org.apache.grails:grails-bom:$grailsVersion")
+-     implementation platform("org.apache.grails:grails-bom:$grailsVersion")
++         classpath platform("org.apache.grails:grails-neo4j-bom:$grailsVersion")
 +     implementation "org.apache.grails:grails-data-neo4j"
++     implementation platform("org.apache.grails:grails-neo4j-bom:$grailsVersion")
 +     testRuntimeOnly "org.neo4j.test:neo4j-harness"
 == grails-app/conf/application.yml
 - grails.codegen.defaultPackage: example.grails
@@ -69,7 +77,11 @@ in an application without being named: gorm neo4j
 + 
 + 
 == build.gradle
+-         classpath platform("org.apache.grails:grails-bom:$grailsVersion")
+-     implementation platform("org.apache.grails:grails-bom:$grailsVersion")
++         classpath platform("org.apache.grails:grails-neo4j-bom:$grailsVersion")
 +     implementation "org.apache.grails:grails-data-neo4j"
++     implementation platform("org.apache.grails:grails-neo4j-bom:$grailsVersion")
 +     testRuntimeOnly "org.neo4j.test:neo4j-harness"
 == grails-app/conf/application.yml
 +   neo4j:
@@ -91,7 +103,11 @@ in an application without being named: gorm neo4j
 + 
 + 
 == build.gradle
+-         classpath platform("org.apache.grails:grails-bom:$grailsVersion")
+-     implementation platform("org.apache.grails:grails-bom:$grailsVersion")
++         classpath platform("org.apache.grails:grails-neo4j-bom:$grailsVersion")
 +     implementation "org.apache.grails:grails-data-neo4j"
++     implementation platform("org.apache.grails:grails-neo4j-bom:$grailsVersion")
 +     testRuntimeOnly "org.neo4j.test:neo4j-harness"
 == grails-app/conf/application.yml
 - grails.codegen.defaultPackage: example.grails
@@ -117,7 +133,11 @@ in an application without being named: gorm neo4j
 + 
 + 
 == build.gradle
+-         classpath platform("org.apache.grails:grails-bom:$grailsVersion")
+-     implementation platform("org.apache.grails:grails-bom:$grailsVersion")
++         classpath platform("org.apache.grails:grails-neo4j-bom:$grailsVersion")
 +     implementation "org.apache.grails:grails-data-neo4j"
++     implementation platform("org.apache.grails:grails-neo4j-bom:$grailsVersion")
 +     testRuntimeOnly "org.neo4j.test:neo4j-harness"
 == grails-app/conf/application.yml
 - grails.codegen.defaultPackage: example.grails

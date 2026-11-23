@@ -113,18 +113,20 @@ sourceSets.main.resources.srcDir(grailsVersionsPath)
 
 // The versions each BOM of Grails manages that the generator can give an application and that this build makes:
 // the Forge CLI holds the feature pack of a plugin to the version the application's BOM manages the plugin at.
-// A table has what the pom of the BOM manages itself and what grails-base-bom, which it imports, manages;
-// nothing is resolved, so what Spring Boot's BOM and the other imported BOMs manage is not in it.
+// A table has what the pom of the BOM manages itself and what the BOMs of Grails it imports manage: grails-base-bom,
+// which each imports, and grails-bom, which grails-neo4j-bom imports; nothing is resolved, so what Spring Boot's BOM
+// and the other imported BOMs manage is not in it.
 def bomTablesTask = tasks.register('grailsBomTables', WriteBomTablesTask)
 bomTablesTask.configure { WriteBomTablesTask it ->
     if (!prebuiltTestRepository) {
-        it.dependsOn(['grails-base-bom', 'grails-bom', 'grails-hibernate7-bom'].collect { String bom ->
+        it.dependsOn(['grails-base-bom', 'grails-bom', 'grails-hibernate7-bom', 'grails-neo4j-bom'].collect { String bom ->
             gradle.includedBuild('grails-core').task(":${bom}:generatePomFileForMavenPublication")
         })
     }
     it.basePom = frameworkOutputs.file('grails-bom/base/build/publications/maven/pom-default.xml')
     it.defaultPom = frameworkOutputs.file('grails-bom/default/build/publications/maven/pom-default.xml')
     it.hibernate7Pom = frameworkOutputs.file('grails-bom/hibernate7/build/publications/maven/pom-default.xml')
+    it.neo4jPom = frameworkOutputs.file('grails-bom/neo4j/build/publications/maven/pom-default.xml')
     it.tablesDirectory = layout.buildDirectory.dir('bom-tables')
 }
 sourceSets.main.resources.srcDir(bomTablesTask)
@@ -143,16 +145,24 @@ abstract class WriteBomTablesTask extends DefaultTask {
     @PathSensitive(PathSensitivity.NONE)
     abstract RegularFileProperty getHibernate7Pom()
 
+    @InputFile
+    @PathSensitive(PathSensitivity.NONE)
+    abstract RegularFileProperty getNeo4jPom()
+
     @OutputDirectory
     abstract DirectoryProperty getTablesDirectory()
 
     @TaskAction
     void write() {
-        Map<String, String> ofTheBase = managed(basePom.get().asFile)
-        ['grails-bom': defaultPom, 'grails-hibernate7-bom': hibernate7Pom].each { String bom, RegularFileProperty pom ->
+        // each BOM with the poms of the BOMs of Grails it imports, the one it imports first, and its own last
+        Map<String, List<RegularFileProperty>> boms = ['grails-bom': [basePom, defaultPom], 'grails-hibernate7-bom': [basePom, hibernate7Pom],
+                                                       'grails-neo4j-bom': [basePom, defaultPom, neo4jPom]]
+        boms.each { String bom, List<RegularFileProperty> poms ->
             // what a BOM manages itself is said over what the BOM it imports manages
-            Map<String, String> versions = new TreeMap<String, String>(ofTheBase)
-            versions.putAll(managed(pom.get().asFile))
+            Map<String, String> versions = new TreeMap<String, String>()
+            for (RegularFileProperty pom : poms) {
+                versions.putAll(managed(pom.get().asFile))
+            }
             File table = tablesDirectory.get().file("META-INF/grails-forge-boms/${bom}.tsv").asFile
             table.parentFile.mkdirs()
             table.setText(versions.collect { String artifact, String version -> "${artifact}\t${version}\n" }.join(''), 'UTF-8')

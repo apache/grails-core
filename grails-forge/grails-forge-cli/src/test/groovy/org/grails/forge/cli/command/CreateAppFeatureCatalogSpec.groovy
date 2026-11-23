@@ -1176,6 +1176,8 @@ class CreateAppFeatureCatalogSpec extends CommandSpec implements CommandFixture 
         'grails-bom'            | []                              | false
         'grails-bom'            | ['--data', 'hibernate5']        | false
         'grails-hibernate7-bom' | ['--data', 'hibernate7']        | true
+        'grails-neo4j-bom'      | ['--data', 'neo4j']             | false
+        'grails-neo4j-bom'      | ['--features', 'gorm-neo4j']    | false
     }
 
     @Unroll
@@ -1190,7 +1192,8 @@ class CreateAppFeatureCatalogSpec extends CommandSpec implements CommandFixture 
         then: 'the BOM could have the plugin in another version than any that would be chosen here'
         exit == 2
         err.toString().readLines()[0] == "A feature is not taken from a feature catalog for an application with org.apache.grails:${bom}: this Forge does not have the " +
-                'versions that BOM manages (it has those of org.apache.grails:grails-bom and org.apache.grails:grails-hibernate7-bom), and so cannot tell which version of ' +
+                'versions that BOM manages (it has those of org.apache.grails:grails-bom, org.apache.grails:grails-hibernate7-bom and org.apache.grails:grails-neo4j-bom), ' +
+                'and so cannot tell which version of ' +
                 'the plugin the application would have. Give the plugin by its coordinates, group:artifact:version'
         !new File(dir, 'shop').exists()
 

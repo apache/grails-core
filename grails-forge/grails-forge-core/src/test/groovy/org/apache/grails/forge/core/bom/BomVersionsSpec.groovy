@@ -53,7 +53,7 @@ class BomVersionsSpec extends Specification {
         bom << BomVersions.SHIPPED
     }
 
-    void "the two tables differ in what Grails Data for Hibernate 7 needs"() {
+    void "the tables of grails-bom and grails-hibernate7-bom differ in what Grails Data for Hibernate 7 needs"() {
         expect:
         BomVersions.of('grails-bom').versionOf('org.hibernate.orm:hibernate-core') == null
         BomVersions.of('grails-hibernate7-bom').versionOf('org.hibernate.orm:hibernate-core') != null
@@ -61,12 +61,43 @@ class BomVersionsSpec extends Specification {
         BomVersions.of('grails-hibernate7-bom').versionOf('org.hibernate:hibernate-core-jakarta') == null
     }
 
-    void "there is a table for each BOM the generator gives an application that this build makes, and none for the others"() {
+    void "the table of grails-neo4j-bom has what grails-bom, which it imports, manages, and the Neo4j driver GORM for Neo4j is built with"() {
+        given:
+        BomVersions neo4j = BomVersions.of('grails-neo4j-bom')
+        BomVersions grails = BomVersions.of('grails-bom')
+
+        expect: 'every version of grails-bom, and two more'
+        neo4j.versions.subMap(grails.versions.keySet()) == grails.versions
+        (neo4j.versions.keySet() - grails.versions.keySet()) == ['org.neo4j.driver:neo4j-java-driver', 'org.neo4j.test:neo4j-harness'] as Set
+
+        and: 'the driver at the version GORM for Neo4j needs, older than the one Spring Boot manages, and what Hibernate 5 needs, as grails-bom has it'
+        neo4j.versionOf('org.neo4j.driver:neo4j-java-driver') ==~ /4\.4\.\d+/
+        neo4j.versionOf('org.hibernate:hibernate-core-jakarta') == grails.versionOf('org.hibernate:hibernate-core-jakarta')
+        neo4j.versionOf('org.hibernate.orm:hibernate-core') == null
+        grails.versionOf('org.neo4j.driver:neo4j-java-driver') == null
+    }
+
+    @Unroll
+    void "there is a table for the BOM the generator gives an application with #features, #bom, when this build makes it"() {
         expect:
-        BomVersions.of(GrailsBase.bomArtifactId(false, false)) != null
-        BomVersions.of(GrailsBase.bomArtifactId(false, true)) != null
-        BomVersions.of(GrailsBase.bomArtifactId(true, false)) == null
-        BomVersions.of(GrailsBase.bomArtifactId(true, true)) == null
+        GrailsBase.bomArtifactId(features) == bom
+        (BomVersions.of(bom) != null) == shipped
+
+        where:
+        features                                  || bom                               | shipped
+        []                                        || 'grails-bom'                      | true
+        ['gorm-hibernate5']                       || 'grails-bom'                      | true
+        ['gorm-hibernate7']                       || 'grails-hibernate7-bom'           | true
+        ['gorm-neo4j']                            || 'grails-neo4j-bom'                | true
+        ['gorm-hibernate5', 'gorm-neo4j']         || 'grails-neo4j-bom'                | true
+        ['gorm-mongodb']                          || 'grails-bom'                      | true
+        ['grails-micronaut']                      || 'grails-micronaut-bom'            | false
+        ['grails-micronaut', 'gorm-hibernate7']   || 'grails-hibernate7-micronaut-bom' | false
+    }
+
+    void "a name that is no BOM this build makes has no table"() {
+        expect:
         BomVersions.of('../grails-bom') == null
+        BomVersions.of('grails-hibernate5-bom') == null
     }
 }
