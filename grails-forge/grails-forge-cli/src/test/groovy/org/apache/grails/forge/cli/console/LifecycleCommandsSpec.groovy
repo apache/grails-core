@@ -101,6 +101,8 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
                     }
                 }
                 Files.writeString(home.resolve("invoked.txt"), invoked + "\\n");
+                String told = System.getenv("GRAILS_NON_INTERACTIVE");
+                Files.writeString(home.resolve("told.txt"), (told == null ? "<unset>" : told) + "\\n");
                 String mode = Files.exists(home.resolve("mode.txt")) ? Files.readString(home.resolve("mode.txt")).trim() : "serve";
                 String task = args.length > 0 ? args[0] : "";
                 System.out.println("the fixture ran " + task);
@@ -468,6 +470,38 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
         then:
         twice == 1
         errors() == ['| Error No application that run-app started is running for this project: there is no record of one, .grails/run/app.json. Nothing was stopped']
+    }
+
+    @Unroll
+    void "#asked run-app #how is told through the environment that nothing may wait for what a user types #told"() {
+        given:
+        scriptedProject(detached ? 'serve' : 'record')
+        int port = freePort()
+
+        when:
+        int exit = ForgeCli.execute(beanContext, (options + ['run-app', '--port', port as String] + (detached ? ['--detach'] : [])) as String[])
+
+        then: 'the build the command waits for and the one it leaves running are given the same environment'
+        exit == 0
+        errors() == []
+        new File(dir, 'told.txt').text == variable + '\n'
+
+        cleanup:
+        if (detached) {
+            assert ForgeCli.execute(beanContext, 'stop-app') == 0
+            assert !ApplicationPort.isOpen(port)
+        }
+
+        where:
+        options                 | detached | variable
+        ['--non-interactive']   | false    | 'true'
+        ['--non-interactive']   | true     | 'true'
+        []                      | false    | '<unset>'
+        []                      | true     | '<unset>'
+
+        asked = options ? 'with --non-interactive' : 'without --non-interactive'
+        how = detached ? 'that leaves the application running' : 'that stays with it'
+        told = options ? 'as every build is' : 'by nothing'
     }
 
     void "run-app stays with the application, and stop-app from elsewhere ends it as an end that was asked for"() {

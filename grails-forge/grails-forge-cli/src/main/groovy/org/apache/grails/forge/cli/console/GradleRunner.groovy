@@ -164,10 +164,12 @@ final class GradleRunner extends GradleBuild {
     /**
      * Starts Gradle in the directory of the project and does not wait for it: the build goes on when
      * the command has ended, and when the CLI has. It reads nothing, and what it writes is added to a
-     * file. Where the system has process groups, the interrupt of the terminal the CLI runs in is not
-     * an interrupt of the build, and the build is not ended with the terminal: it is in a session or a
-     * process group of its own where the system has {@code setsid} or the shell grants job control,
-     * and ignores the interrupt where neither is so.
+     * file. Its environment is the one a build the command waits for has: that of the CLI, and
+     * {@link GradleBuild#NON_INTERACTIVE} with {@code --non-interactive}. Where the system has process
+     * groups, the interrupt of the terminal the CLI runs in is not an interrupt of the build, and the
+     * build is not ended with the terminal: it is in a session or a process group of its own where the
+     * system has {@code setsid} or the shell grants job control, and ignores the interrupt where neither
+     * is so.
      *
      * <p>On Windows the interrupt and the end of a console go to the processes that are attached to
      * it, and the build is attached to another one: none of the three streams of the process that is
@@ -204,6 +206,10 @@ final class GradleRunner extends GradleBuild {
             if (shellPath != null) {
                 builder.environment().put('PATH', shellPath)
             }
+        }
+        if (isNonInteractive()) {
+            // it reads the end of its input as every build does, and is told why as every build is
+            builder.environment().put(NON_INTERACTIVE, 'true')
         }
         builder.directory(project.directory.toFile())
         try {
