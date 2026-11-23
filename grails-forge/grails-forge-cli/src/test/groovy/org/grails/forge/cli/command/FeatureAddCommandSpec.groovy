@@ -397,11 +397,39 @@ class FeatureAddCommandSpec extends CommandSpec implements CommandFixture {
         created                                 | added                    || message
         []                                      | 'no-such-feature'        || 'The requested feature does not exist: no-such-feature'
         ['--features=spring-ai-ollama']         | 'spring-ai-openai'       || 'spring-ai-ollama'
-        ['--exclude-features', 'mockito']       | 'mockito'                || 'The feature mockito is both selected and excluded'
         ['--exclude-features', 'geb-with-testcontainers,scaffolding,spock'] | 'mockito' || 'Mockito requires JUnit or Spock'
         ['--data', 'hibernate7']                | 'gorm-neo4j'             || CreateAppSelectionSpec.NEO4J_WITH_HIBERNATE7
         ['--data', 'neo4j']                     | 'gorm-hibernate7'        || CreateAppSelectionSpec.NEO4J_WITH_HIBERNATE7
         ['--jdk', '25', '--features=grails-micronaut'] | 'gorm-neo4j'      || CreateAppSelectionSpec.NEO4J_WITH_MICRONAUT
+    }
+
+    @Unroll
+    void "adding #added to what create-app made without it is refused with the option it was left out with, where creating it so is refused as selected and excluded"() {
+        given:
+        create(dir, CreateAppCommand, ['--exclude-features', excluded])
+        Map<String, String> before = tree(dir)
+        int creating = create(with, CreateAppCommand, ['--exclude-features', excluded, '--features=' + added])
+        String whenCreated = err.toString()
+        err.reset()
+
+        when:
+        int exit = add(added)
+
+        then: 'create-app says that the feature is both selected and excluded, and feature add that it was left out'
+        creating == 2
+        exit == 2
+        whenCreated.contains("The feature ${excluded.split(',').sort().first()} is both selected and excluded")
+        err.toString().contains(said)
+        !err.toString().contains('selected and excluded')
+        tree(dir) == before
+        !new File(dir, '.grails/transactions').exists()
+
+        where:
+        excluded                          | added                             || said
+        'mockito'                         | 'mockito'                         || 'The feature mockito was left out with --exclude-features when the application was created: ' +
+                                                                                   'adding a feature does not change what the application was created with'
+        'mockito,geb-with-testcontainers' | 'mockito,geb-with-testcontainers' || 'The features mockito, geb-with-testcontainers were left out with --exclude-features when the application ' +
+                                                                                   'was created: adding a feature does not change what the application was created with'
     }
 
     void "adding gorm-neo4j to an application with Hibernate 5 gives it grails-neo4j-bom in the place of grails-bom, and keeps a change of yours to the build"() {

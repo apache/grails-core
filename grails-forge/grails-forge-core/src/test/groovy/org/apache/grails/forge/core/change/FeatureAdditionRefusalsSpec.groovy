@@ -30,11 +30,14 @@ import org.grails.forge.application.OperatingSystem
 import org.grails.forge.application.Project
 import org.grails.forge.application.generator.GeneratorContext
 import org.grails.forge.application.generator.ProjectGenerator
+import org.grails.forge.feature.FeatureSelectionException
 import org.grails.forge.io.ConsoleOutput
+import org.grails.forge.io.FileSystemOutputHandler
 import org.grails.forge.options.DevelopmentReloading
 import org.grails.forge.options.JdkVersion
 import org.grails.forge.options.Options
 import org.grails.forge.options.ServletImpl
+import org.grails.forge.util.NameUtils
 import spock.lang.IgnoreIf
 import spock.lang.Unroll
 
@@ -95,6 +98,41 @@ class FeatureAdditionRefusalsSpec extends AbstractFeatureAdditionSpec {
         '--servlet jetty'    | { Options it -> it.withServletImpl(ServletImpl.JETTY) }                        | '--servlet jetty in the place of tomcat'      | ['spring-boot-starter-tomcat']
         '--reloading jrebel' | { Options it -> it.withDevelopmentReloading(DevelopmentReloading.JREBEL) }     | '--reloading jrebel in the place of devtools' | ['spring-boot-devtools']
         '--jdk 25'           | { Options it -> it.withJavaVersion(JdkVersion.JDK_25) }                        | '--jdk 25 in the place of 21'                 | []
+    }
+
+    @Unroll
+    void "a feature the application was created without is refused with the option it was left out with, and nothing is written: #added"() {
+        given: 'an application created without two of its defaults'
+        ProjectGenerator generator = beanContext.getBean(ProjectGenerator)
+        Path project = Files.createDirectory(directory.resolve('app'))
+        Project named = NameUtils.parse('com.acme.shop')
+        GeneratorContext context = generator.createGeneratorContext(ApplicationType.WEB, named, new Options(), OperatingSystem.LINUX, [], ConsoleOutput.NOOP,
+                Collections.<Pack>emptyList(), ['mockito', 'geb-with-testcontainers'])
+        generator.generate(ApplicationType.WEB, named, new FileSystemOutputHandler(project.toFile(), ConsoleOutput.NOOP), context)
+        ProjectState state = ProjectState.read(project)
+        Map<String, String> before = tree(project)
+
+        expect: 'which of the features were left out'
+        FeatureAddition.leftOut(generator.availableFeatures(ApplicationType.WEB, Collections.<Pack>emptyList()), state.manifest, added) == leftOut
+
+        when:
+        planOf(generator, project, added)
+
+        then: 'refused as a selection, in words that name the option, and not as selected and excluded'
+        FeatureSelectionException e = thrown()
+        e.message == said
+        e.option == null
+        tree(project) == before
+        !Files.exists(project.resolve('.grails/transactions'))
+
+        where:
+        added                                | leftOut                              || said
+        ['mockito']                          | ['mockito']                          || 'The feature mockito was left out with --exclude-features when the application was created: ' +
+                                                                                       'adding a feature does not change what the application was created with'
+        ['grails-quartz', 'mockito']         | ['mockito']                          || 'The feature mockito was left out with --exclude-features when the application was created: ' +
+                                                                                       'adding a feature does not change what the application was created with'
+        ['geb-with-testcontainers', 'mockito'] | ['geb-with-testcontainers', 'mockito'] || 'The features geb-with-testcontainers, mockito were left out with --exclude-features when the ' +
+                                                                                       'application was created: adding a feature does not change what the application was created with'
     }
 
     void "a feature that would take out a feature that was asked for, and changes no option, is refused, and nothing is written"() {

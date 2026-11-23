@@ -118,6 +118,9 @@ final class FeatureAddition {
         ProjectTransaction.setOwnedWithoutModes(owned)
     }
 
+    /** The option of the create commands that leaves features out of an application, as a message names it. */
+    public static final String EXCLUDE_OPTION = '--exclude-features'
+
     private static final int MAX_NAMED = 10
     private static final int MAX_MESSAGE = 1000
     private static final int MAX_SCANNED = 20000
@@ -262,6 +265,12 @@ final class FeatureAddition {
         List<String> toAdd = asked.findAll { String name -> !lock.featureNames.contains(name) }
         if (toAdd.isEmpty()) {
             return new ChangePlan(projectDirectory, home, [], alreadyThere, [], [], [], null, [], [], [], [])
+        }
+        // what the application was created without stays out of it: the selection would refuse it as selected and excluded at once
+        List<String> leftOut = leftOut(available, manifest, toAdd)
+        if (!leftOut.isEmpty()) {
+            throw new FeatureSelectionException("${leftOut.size() == 1 ? 'The feature' : 'The features'} ${named(leftOut)} ${leftOut.size() == 1 ? 'was' : 'were'} " +
+                    "left out with ${EXCLUDE_OPTION} when the application was created: adding a feature does not change what the application was created with")
         }
 
         byte[] manifestBytes = bytes(projectDirectory, ProjectState.MANIFEST)
@@ -1113,6 +1122,20 @@ final class FeatureAddition {
         } catch (IOException e) {
             throw new ProjectStateException("The state of the project cannot be read: ${e.getClass().getSimpleName()}")
         }
+    }
+
+    /**
+     * @param available the features of the application
+     * @param manifest the manifest of the application
+     * @param names the names of features
+     * @return those of the features that the application was created without, as {@link #EXCLUDE_OPTION} asked
+     */
+    static List<String> leftOut(AvailableFeatures available, ProjectManifest manifest, List<String> names) {
+        Set<String> excluded = manifest.excludedFeatures.collect { RequestedFeature each ->
+            Feature feature = available.findFeature(each.name, true).orElse(null)
+            return feature == null ? each.name : feature.getName()
+        } as Set<String>
+        return names.findAll { String name -> excluded.contains(name) }
     }
 
     private static String named(List<String> names) {

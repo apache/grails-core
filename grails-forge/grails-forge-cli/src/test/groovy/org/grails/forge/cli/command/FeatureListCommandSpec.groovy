@@ -41,6 +41,8 @@ import spock.lang.Unroll
  */
 class FeatureListCommandSpec extends CommandSpec {
 
+    static final String LEFT_OUT = 'it was left out with --exclude-features when the application was created'
+
     PrintStream originalOut
     PrintStream originalErr
     ByteArrayOutputStream out = new ByteArrayOutputStream()
@@ -104,7 +106,7 @@ class FeatureListCommandSpec extends CommandSpec {
         entry(lines.subList(addable, refused), 'mysql').contains('with --replace only: it takes the place of postgres, which was asked for by name (group database-driver)')
 
         and: 'what cannot be added, each with the reason'
-        entry(lines.subList(refused, lines.size()), 'mockito') != null
+        entry(lines.subList(refused, lines.size()), 'mockito') == 'mockito ' + LEFT_OUT
         entry(lines.subList(refused, lines.size()), 'gorm-hibernate7').contains('Adding a feature does not change the options the application was created with')
 
         and: 'what the application has is not among either'
@@ -141,6 +143,44 @@ class FeatureListCommandSpec extends CommandSpec {
         'mockito'              | []            | 'refused'
         'gorm-hibernate7'      | []            | 'refused'
         'gorm-mongodb'         | []            | 'added'
+    }
+
+    @Unroll
+    void "what create-app left out with #excluded cannot be added, and feature list and feature add say so in the same words: #added"() {
+        given:
+        create(['--exclude-features', excluded])
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'feature', 'list')
+        List<String> lines = out.toString().readLines()
+        int refused = lines.findIndexOf { it ==~ /\| \d+ features? of Grails for this type of application cannot be added to it:/ }
+
+        then: 'each feature that was left out is listed as such, and as nothing else'
+        exit == 0
+        refused > 0
+        excluded.split(',').every { String name -> entry(lines.subList(refused, lines.size()), name) == "${name} ${LEFT_OUT}".toString() }
+        !out.toString().contains('selected and excluded')
+
+        when: 'feature add, which changes nothing'
+        out.reset()
+        err.reset()
+        Map<String, String> before = tree()
+        int adding = ForgeCli.execute(beanContext, 'feature', 'add', added)
+
+        then:
+        adding == 2
+        err.toString().readLines()[0] == said
+        !err.toString().contains('selected and excluded')
+        tree() == before
+
+        where:
+        excluded                        | added                           || said
+        'mockito'                       | 'mockito'                       || 'The feature mockito was left out with --exclude-features when the application was created: ' +
+                                                                               'adding a feature does not change what the application was created with'
+        'mockito,geb-with-testcontainers' | 'geb-with-testcontainers,mockito' || 'The features geb-with-testcontainers, mockito were left out with --exclude-features when the application ' +
+                                                                               'was created: adding a feature does not change what the application was created with'
+        'mockito,geb-with-testcontainers' | 'cache,mockito'               || 'The feature mockito was left out with --exclude-features when the application was created: ' +
+                                                                               'adding a feature does not change what the application was created with'
     }
 
     @Unroll

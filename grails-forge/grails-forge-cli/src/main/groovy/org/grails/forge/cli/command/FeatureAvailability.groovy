@@ -139,6 +139,10 @@ final class FeatureAvailability {
         ProjectManifest manifest = state.manifest
         List<String> asked = manifest.requestedFeatures*.name
         String name = feature.getName()
+        // feature add refuses what the application was created without, and names the option, before it selects anything
+        if (!FeatureAddition.leftOut(available, manifest, [name]).isEmpty()) {
+            return new Verdict(feature, false, ["it was left out with ${FeatureAddition.EXCLUDE_OPTION} when the application was created".toString()])
+        }
         // a feature that was asked for by name and is of the exclusive group of this one makes way only with --replace
         List<String> making = asked.findAll { String each -> sameGroup(available, each, feature) }
         String requiredBy = requiredByWhatStays(available, asked.findAll { String each -> !making.contains(each) } + [name], making)
