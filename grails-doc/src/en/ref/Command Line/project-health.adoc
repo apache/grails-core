@@ -303,6 +303,11 @@ The id of a finding is the name of its check and the name of the finding, as `ja
 | A file the list is made from was changed after it was written.
 | As for `command-catalog.missing`.
 
+| `command-catalog.incomplete`
+| advice
+| The list is current and says that the build could not list every command, with the first thing it could not list: for example that the runtime class path of the project does not resolve completely, or that a plugin has commands of Grails 7.
+| `grails help` lists what is not listed and why; correct that, and a build that compiles the project lists the commands again.
+
 4+| `leftover`: what an earlier version of Grails read and Grails {grailsMajorVersion} does not.
 
 | `leftover.settings-groovy`

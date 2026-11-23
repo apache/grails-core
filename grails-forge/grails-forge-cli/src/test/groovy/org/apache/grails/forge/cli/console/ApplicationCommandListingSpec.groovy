@@ -83,6 +83,10 @@ class ApplicationCommandListingSpec extends CommandSpec {
     static final String MISSING = 'The commands of the application and its plugins are not listed yet: a build that compiles the project lists them, and so does typing ' +
             'the name of one. To list them now: grails-forge-cli gradle grailsCommandCatalog'
     static final String LISTING = '| Listing the commands of the application and its plugins, of which greet may be one, with the Gradle task grailsCommandCatalog'
+    // what the task writes when the runtime class path of the project does not resolve completely
+    static final String UNRESOLVED = 'runtimeClasspath cannot be resolved completely (gradle dependencies --configuration runtimeClasspath says why), ' +
+            'so the commands of what is missing from it are not listed: Could not resolve org.neo4j.driver:neo4j-java-driver:4.4.13. ' +
+            'Component is the target of multiple version constraints with conflicting requirements.'
 
     @Shared
     IsolatedGradle gradle = new IsolatedGradle()
@@ -162,6 +166,52 @@ class ApplicationCommandListingSpec extends CommandSpec {
         lines[0].startsWith('There is no command grete. Did you mean: ')
         !lines.any { String line -> line.contains('Listing') || line.contains('listed') }
         listed().size() == 1
+    }
+
+    void "a name that is no command of a list the build could not make complete is refused with a line that says so, and the build is not run again for it"() {
+        given: 'a build whose runtime class path does not resolve completely, as it lists the commands'
+        new File(dir, 'commands.json').text = ApplicationCommandsSpec.doc([GREET, STATS], [complete: false, diagnostics: [UNRESOLVED]])
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'audit')
+        List<String> lines = err.toString().readLines()
+
+        then: 'the build lists the commands once, and the name may be one it could not list'
+        exit == 2
+        lines[0] == '| Listing the commands of the application and its plugins, of which audit may be one, with the Gradle task grailsCommandCatalog'
+        lines.any { String line -> line.startsWith('There is no command audit') }
+        lines.contains('The build of the project has just listed the commands of the application and its plugins, and audit is none of them. ' +
+                'Not every command of the application and its plugins is listed, so audit may be one that is not. What is not listed, and why: grails-forge-cli help')
+        listed().size() == 1
+        !new File(dir, 'ran.txt').exists()
+
+        when: 'another name that is no command'
+        err.reset()
+        exit = ForgeCli.execute(beanContext, 'audit-trail')
+        lines = err.toString().readLines()
+
+        then: 'the list is current, so it is not made again: the build would not list more'
+        exit == 2
+        lines.contains('Not every command of the application and its plugins is listed, so audit-trail may be one that is not. ' +
+                'What is not listed, and why: grails-forge-cli help')
+        listed().size() == 1
+
+        when: 'the commands it could list are run'
+        err.reset()
+        exit = ForgeCli.execute(beanContext, 'greet', 'Dora')
+
+        then:
+        exit == 0
+        ran() == ['greet Dora']
+        listed().size() == 1
+
+        when: 'the help says what it could not list'
+        out.reset()
+        exit = ForgeCli.execute(beanContext, 'help')
+
+        then:
+        exit == 0
+        out.toString().replaceAll(/\s+/, ' ').contains("The Gradle task grailsCommandCatalog says: ${UNRESOLVED}")
     }
 
     void "a list that may be out of date is made again for a name that is not in it, and the command it now has is run"() {

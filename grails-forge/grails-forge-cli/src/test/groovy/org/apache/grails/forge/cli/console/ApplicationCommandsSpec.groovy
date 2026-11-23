@@ -91,6 +91,8 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
     static final String MISSING = 'The commands of the application and its plugins are not listed yet: a build that compiles the project lists them, ' +
             'and so does typing the name of one. To list them now: grails-forge-cli gradle grailsCommandCatalog'
     static final String REFUSED = 'The commands of the application and its plugins are not listed: .grails/cache/command-catalog.json '
+    static final String NOT_ALL = 'Not every command of the application and its plugins is listed, so audit-report may be one that is not. ' +
+            'What is not listed, and why: grails-forge-cli help'
 
     // One Gradle daemon, of this specification alone, runs the builds of its features: they have nothing to
     // compile, and without it every one of them would wait for a JVM of Gradle to start. A feature that looks
@@ -218,6 +220,33 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
         then:
         exit == 0
         out.toString().replaceAll(/\s+/, ' ').contains('The Gradle task grailsCommandCatalog says: The command class example.A of application is not listed: its descriptor @|red is|@ wrong.')
+
+        when: 'a name that is none of the commands is typed'
+        err.reset()
+        exit = ForgeCli.execute(beanContext, 'audit-report')
+
+        then: 'it may be one the build could not list, and the help says what that is'
+        exit == 2
+        err.toString().readLines()[0].startsWith('There is no command audit-report')
+        err.toString().readLines()[1] == NOT_ALL
+
+        when: 'its help is asked for'
+        err.reset()
+        exit = ForgeCli.execute(beanContext, 'help', 'audit-report')
+
+        then:
+        exit == 2
+        err.toString().readLines()[1] == NOT_ALL
+
+        when: 'the build lists every command'
+        catalog([HELLO])
+        err.reset()
+        exit = ForgeCli.execute(beanContext, 'audit-report')
+
+        then: 'nothing is said of the list'
+        exit == 2
+        err.toString().readLines()[0].startsWith('There is no command audit-report')
+        !err.toString().contains('Not every command')
     }
 
     void "without the file of the build there are no commands of the application, nothing is run to have them, and it is said which task lists them"() {

@@ -130,7 +130,9 @@ final class ApplicationCommands {
     /**
      * What is said when something was typed for a command and is none: without a list of the
      * commands of the application that can be relied on, it may be one of those; after the build has
-     * just listed them, that it is none of those either.
+     * just listed them, that it is none of those either. Where the build could not list every one of
+     * them, such as where the class path they run with does not resolve, it may be one it did not
+     * list, and {@code help} says what that is.
      *
      * @param root the command line of the CLI
      * @param shown what was typed, as it can be shown
@@ -142,10 +144,17 @@ final class ApplicationCommands {
             return null
         }
         String about = commands.aboutFile(root)
-        if (about == null && commands.listedJustNow) {
-            return "The build of the project has just listed the commands of the application and its plugins, and ${shown} is none of them"
+        if (about != null) {
+            return about
         }
-        return about
+        // what the build lists is current, and may still not have them all
+        String notAll = commands.isComplete() ? null : "Not every command of the application and its plugins is listed, so ${shown} may be one that is not. " +
+                "What is not listed, and why: ${UsageHelp.toType(root, 'help')}"
+        if (commands.listedJustNow) {
+            return "The build of the project has just listed the commands of the application and its plugins, and ${shown} is none of them" +
+                    (notAll == null ? '' : ". ${notAll}")
+        }
+        return notAll
     }
 
     /**

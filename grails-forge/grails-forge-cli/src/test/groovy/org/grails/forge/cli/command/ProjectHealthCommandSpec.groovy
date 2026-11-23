@@ -26,6 +26,7 @@ import java.security.MessageDigest
 import java.util.jar.Attributes
 import java.util.jar.JarOutputStream
 import java.util.jar.Manifest
+import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
 import org.apache.grails.forge.cli.health.HealthContext
 import org.apache.grails.forge.core.state.ProjectState
@@ -64,9 +65,13 @@ class ProjectHealthCommandSpec extends CommandSpec {
             'record.missing', 'record.unreadable', 'record.baseline', 'record.earlier-generator', 'record.version-drift', 'record.interrupted',
             'grails-wrapper.version', 'grails-wrapper.outdated', 'grails-wrapper.leftover',
             'git-files.record-ignored', 'git-files.state-ignored', 'git-files.wrapper-line-endings',
-            'command-catalog.missing', 'command-catalog.refused', 'command-catalog.stale',
+            'command-catalog.missing', 'command-catalog.refused', 'command-catalog.stale', 'command-catalog.incomplete',
             'leftover.settings-groovy', 'leftover.earlier-record', 'leftover.earlier-record-differs', 'leftover.profile-config', 'leftover.preferred-shell',
             'agent-skills.upgrade-skill', 'agent-skills.not-extracted'].asImmutable()
+
+    /** What the build writes into the list when the runtime class path of the project does not resolve completely. */
+    static final String UNRESOLVED = 'runtimeClasspath cannot be resolved completely (gradle dependencies --configuration runtimeClasspath says why), ' +
+            'so the commands of what is missing from it are not listed: Could not find org.example:missing:1.0.'
 
     static final String TOOLCHAIN_25 = 'java {\n    toolchain {\n        languageVersion = JavaLanguageVersion.of(25)\n    }\n}\n'
     static final String TOOLCHAIN_21 = 'java {\n    toolchain {\n        languageVersion = JavaLanguageVersion.of(21)\n    }\n}\n'
@@ -258,6 +263,8 @@ class ProjectHealthCommandSpec extends CommandSpec {
         'command-catalog.missing'              | 'advice'  | 'the build has not listed the commands'                | { File p, File h -> }
         'command-catalog.refused'              | 'advice'  | 'the list is no file'                                  | { File p, File h -> new File(p, '.grails/cache/command-catalog.json').mkdirs() }
         'command-catalog.stale'                | 'advice'  | 'the build file was changed after the list'            | { File p, File h -> catalog(p); new File(p, 'build.gradle').setLastModified(System.currentTimeMillis() + 60_000) }
+        'command-catalog.incomplete'           | 'advice'  | 'the runtime class path did not resolve completely'    | { File p, File h -> catalog(p, false, [UNRESOLVED]) }
+        'command-catalog.incomplete'           | 'advice'  | 'a command of the list is not as the task writes one'  | { File p, File h -> catalog(p, true, [], [name: 'Not A Name']) }
         'command-catalog.ok'                   | 'ok'      | 'the build listed the commands'                        | { File p, File h -> catalog(p) }
         'leftover.settings-groovy'             | 'warning' | '~/.grails/settings.groovy is there'                   | { File p, File h -> new File(h, '.grails').mkdirs(); new File(h, '.grails/settings.groovy').text = 'grails { }\n' }
         'leftover.earlier-record'              | 'advice'  | 'grails-forge-cli.yml is beside .grails'               | { File p, File h -> new File(p, 'grails-forge-cli.yml').text = 'applicationType: web\n' }
@@ -450,6 +457,25 @@ class ProjectHealthCommandSpec extends CommandSpec {
         profile.files == ['build.gradle']
         profile.upgradeNote == "https://grails.apache.org/docs/${VersionInfo.documentationVersion}/guide/upgrading.html#upgradingShellNotPublished".toString()
         findings.find { it.id == 'command-catalog.missing' }.command == 'grails-forge-cli gradle grailsCommandCatalog'
+    }
+
+    void "command-catalog.incomplete names what the build could not list, as it says it, and how many more things it says"() {
+        given: 'a list the build wrote while the runtime class path of the project did not resolve completely, with another line'
+        File project = copyOfTemplate()
+        catalog(project, false, [UNRESOLVED, 'org.example:old-plugin:7.0.0 has commands of Grails 7, which are not listed because they cannot be run.'])
+
+        when:
+        int exit = run(project, 'project', 'health', '--json')
+        Map finding = (parsed().findings as List<Map>).find { it.id == 'command-catalog.incomplete' }
+
+        then: 'advice, which fails nothing'
+        exit == 0
+        finding.level == 'advice'
+        finding.message == ".grails/cache/command-catalog.json lists 0 commands of the application and its plugins, and not every one the build has: ${UNRESOLVED} (and 1 more)".toString()
+        finding.fix == 'grails-forge-cli help lists what is not listed and why. A build that compiles the project lists the commands again once that is corrected'
+        finding.command == 'grails-forge-cli help'
+        finding.files == ['.grails/cache/command-catalog.json']
+        finding.upgradeNote == "https://grails.apache.org/docs/${VersionInfo.documentationVersion}/guide/upgrading.html#upgradingCommandCatalog".toString()
     }
 
     void "the findings are said in words, by their levels, with a line that counts them, and -v lists what was found to be in order"() {
@@ -816,10 +842,10 @@ class ProjectHealthCommandSpec extends CommandSpec {
         err.reset()
     }
 
-    static void catalog(File project) {
+    static void catalog(File project, boolean complete = true, List<String> diagnostics = [], Map command = null) {
         File file = new File(project, '.grails/cache/command-catalog.json')
         file.parentFile.mkdirs()
-        file.text = '{"format":1,"complete":true,"diagnostics":[],"commands":[]}'
+        file.text = JsonOutput.toJson([format: 1, complete: complete, diagnostics: diagnostics, commands: command == null ? [] : [command]])
         file.setLastModified(System.currentTimeMillis() + 30_000)
     }
 

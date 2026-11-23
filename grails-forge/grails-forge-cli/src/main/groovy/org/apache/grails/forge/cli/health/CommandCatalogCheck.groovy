@@ -24,7 +24,9 @@ import org.apache.grails.forge.cli.console.ApplicationCommandFile
 /**
  * {@code command-catalog}: the list of the commands of the application and its plugins that the
  * build writes to {@code .grails/cache/command-catalog.json}, which is how the {@code grails}
- * command has them. Nothing here is more than advice: the build of the project lists them.
+ * command has them. Nothing here is more than advice: the build of the project lists them. A list
+ * that is current and says that the build could not list everything, such as when the class path
+ * the commands run with does not resolve, is named with the first thing the build says.
  *
  * @since 9.0
  */
@@ -52,9 +54,17 @@ final class CommandCatalogCheck extends HealthCheck {
             case ApplicationCommandFile.State.STALE:
                 return [found('stale', HealthLevel.ADVICE, "${ApplicationCommandFile.LOCATION} may not list the commands the build has now: ${file.reason} was changed " +
                         'after it was written', fix, task, files, NOTE_COMMAND_CATALOG)]
-            default:
-                return [ok("The commands of the application and its plugins are listed (${ApplicationCommandFile.LOCATION}): ${file.commands.size()} " +
-                        "${file.commands.size() == 1 ? 'command' : 'commands'}", files)]
         }
+        String listed = "${file.commands.size()} ${file.commands.size() == 1 ? 'command' : 'commands'}"
+        // what the build could not list, as it says it, and what of the file is not used
+        List<String> said = file.diagnostics + file.leftOut
+        if (!file.complete || !file.leftOut.isEmpty()) {
+            String first = said ? said.first() : 'the build does not say why'
+            String more = said.size() > 1 ? " (and ${said.size() - 1} more)" : ''
+            return [found('incomplete', HealthLevel.ADVICE, "${ApplicationCommandFile.LOCATION} lists ${listed} of the application and its plugins, and not every one " +
+                    "the build has: ${first}${more}", "${context.toType('help')} lists what is not listed and why. A build that compiles the project lists " +
+                    'the commands again once that is corrected', context.toType('help'), files, NOTE_COMMAND_CATALOG)]
+        }
+        return [ok("The commands of the application and its plugins are listed (${ApplicationCommandFile.LOCATION}): ${listed}", files)]
     }
 }
