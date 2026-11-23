@@ -79,12 +79,16 @@ import org.gradle.tooling.ResultHandler
  * write through the same console; the report of a build that failed loses its last lines that way.</p>
  *
  * <p><strong>What the build reads.</strong> The input of this JVM, where the command line is a program
- * that runs one command and ends, and nothing says that no one may be waited for. An input that has
- * ended in the interactive console, and where the command line is run in the JVM of a caller: the
- * Tooling API reads the stream it is given as soon as a build starts, whether or not the build reads,
- * and the thread that does goes on waiting for what is typed after the build has ended, so it would
- * take the next line from the prompt of the console, or from the caller. A build that is a session at the
- * terminal, {@code shell}, is for that reason not run here at all, see {@link GradleBuild#of}.</p>
+ * that runs one command and ends, and nothing says that no one may be waited for. No input in the
+ * interactive console, where the command line is run in the JVM of a caller, and with
+ * {@code --non-interactive}: the Tooling API reads the stream it is given as soon as a build starts,
+ * whether or not the build reads, and the thread that does goes on waiting for what is typed after the
+ * build has ended, so it would take the next line from the prompt of the console, or from the caller.
+ * The build is given no stream rather than one that has ended: Gradle takes a build that is given a
+ * stream for one a user types into, and ends a continuous build of that kind when the stream ends,
+ * after its first build. A build that is given none reads the end of its input at once all the same.
+ * A build that is a session at the terminal, {@code shell}, is for that reason not run here at all, see
+ * {@link GradleBuild#of}.</p>
  *
  * @since 9.0
  */
@@ -301,16 +305,18 @@ final class ToolingApiRunner extends GradleBuild {
         // error beside that, not through it, so a line of an error, the report of a failed build among them, is
         // drawn over. Given a terminal by the wrapper, Gradle writes both through the one console; here it cannot.
         launcher.setColorOutput(false)
+        // Where the build may not read the input of the command line it is given none, and not an input that has
+        // ended: Gradle takes a build that is given an input for one a user types into, and a continuous build of that
+        // kind ends when its input does, after its first build. Given none, Gradle and what it starts read the end of
+        // their input at once all the same.
         if (isNonInteractive()) {
-            // Gradle and what it starts read the end of their input at once, and are told why
-            launcher.setStandardInput(new ByteArrayInputStream(new byte[0]))
+            // and are told why
             Map<String, String> environment = new LinkedHashMap<String, String>(System.getenv())
             environment.put(NON_INTERACTIVE, 'true')
             launcher.setEnvironmentVariables(environment)
-        } else if (ConsoleCommands.isInteractive() || !isProgram()) {
-            // the input is the console's, or the caller's: whatever reads it for a build would still read it when the build has ended
-            launcher.setStandardInput(new ByteArrayInputStream(new byte[0]))
-        } else {
+        } else if (!ConsoleCommands.isInteractive() && isProgram()) {
+            // The input of a program that runs one command. That of the console, or of a caller, is not given: whatever
+            // reads it for a build would still read it when the build has ended.
             launcher.setStandardInput(System.in)
         }
         CountDownLatch ended = new CountDownLatch(1)
