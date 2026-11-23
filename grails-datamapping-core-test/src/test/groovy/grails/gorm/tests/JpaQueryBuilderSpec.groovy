@@ -22,6 +22,8 @@ import grails.gorm.DetachedCriteria
 import org.apache.grails.data.testing.tck.domains.Person
 import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
+import org.grails.datastore.mapping.query.Query
+import org.grails.datastore.mapping.query.criteria.FunctionCallingCriterion
 import org.grails.datastore.mapping.query.jpa.JpaQueryBuilder
 import org.springframework.dao.InvalidDataAccessResourceUsageException
 
@@ -243,6 +245,58 @@ class JpaQueryBuilderSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
         queryInfo.query != null
         queryInfo.query == 'UPDATE org.apache.grails.data.testing.tck.domains.Person person SET person.firstName=:p1'
         queryInfo.parameters == ["Fred"]
+    }
+
+    void "a fraction compared with a function is written into a bulk statement as a literal"() {
+        given:
+        def personEntity = manager.session.mappingContext.getPersistentEntity(Person.name)
+
+        when: "a comparison with a fraction, then a whole number, and an in-list that holds a fraction"
+        def fraction = new JpaQueryBuilder(personEntity, [
+            new FunctionCallingCriterion('length', new Query.GreaterThan('firstName', 3.5))
+        ]).buildUpdate(age: 40)
+        def whole = new JpaQueryBuilder(personEntity, [
+            new FunctionCallingCriterion('length', new Query.GreaterThan('firstName', 3))
+        ]).buildUpdate(age: 40)
+        def inList = new JpaQueryBuilder(personEntity, [
+            new FunctionCallingCriterion('length', new Query.In('firstName', [3, 3.5, 4])),
+            new FunctionCallingCriterion('upper', new Query.Equals('lastName', 'SMITH'))
+        ]).buildUpdate(age: 40)
+
+        then: "the fraction is not a parameter, so it keeps its type, and the parameters that follow are numbered without it"
+        fraction.query == 'UPDATE org.apache.grails.data.testing.tck.domains.Person person SET person.age=:p1 WHERE (length(person.firstName) > 3.5bd)'
+        fraction.parameters == [40]
+        whole.query == 'UPDATE org.apache.grails.data.testing.tck.domains.Person person SET person.age=:p1 WHERE (length(person.firstName) > :p2)'
+        whole.parameters == [40, 3]
+        inList.query == 'UPDATE org.apache.grails.data.testing.tck.domains.Person person SET person.age=:p1 WHERE (length(person.firstName) IN (:p2,3.5bd,:p3) AND upper(person.lastName) = :p4)'
+        inList.parameters == [40, 3, 4, 'SMITH']
+    }
+
+    void "a number a hair past a whole number is written as it is"() {
+        given:
+        def personEntity = manager.session.mappingContext.getPersistentEntity(Person.name)
+
+        when:
+        def queryInfo = new JpaQueryBuilder(personEntity, [
+            new FunctionCallingCriterion('length', new Query.Equals('firstName', 3.0000000000000000001))
+        ]).buildUpdate(age: 40)
+
+        then:
+        queryInfo.query.endsWith('WHERE (length(person.firstName) = 3.0000000000000000001bd)')
+        queryInfo.parameters == [40]
+    }
+
+    void "a function cannot be compared with a number that is not finite"() {
+        given:
+        def personEntity = manager.session.mappingContext.getPersistentEntity(Person.name)
+
+        when:
+        new JpaQueryBuilder(personEntity, [
+            new FunctionCallingCriterion('length', new Query.GreaterThan('firstName', Double.NaN))
+        ]).buildUpdate(age: 40)
+
+        then:
+        thrown(InvalidDataAccessResourceUsageException)
     }
 
     void "Test build UPDATE with FunctionCallingCriterion ILike, In values, In subquery, and null checks"() {
