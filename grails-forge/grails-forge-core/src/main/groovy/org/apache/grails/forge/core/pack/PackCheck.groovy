@@ -18,11 +18,11 @@
  */
 package org.apache.grails.forge.core.pack
 
-import grails.util.Environment
 import groovy.transform.CompileStatic
 import java.nio.charset.StandardCharsets
 import java.nio.file.InvalidPathException
 import java.nio.file.Path
+import org.apache.grails.forge.core.ForgeEnvironment
 import org.apache.grails.forge.core.pack.PackDescriptor.PackFile
 import org.grails.forge.util.VersionInfo
 
@@ -181,11 +181,9 @@ final class PackCheck {
      * so that what the check says is all there is to read.
      */
     static void main(String[] args) {
-        if (!Environment.isSystemSet()) {
-            // as the command line that generates applications runs: a template is compiled a little
-            // differently for each environment, and what is checked is what will be generated
-            System.setProperty(Environment.KEY, Environment.PRODUCTION.getName())
-        }
+        // Forge's own environment, not the one of the pack's project, which the Gradle build that starts
+        // this may have set: the templates are checked as the command line will render them
+        ForgeEnvironment.useProduction()
         PrintStream out = System.out
         System.setOut(System.err)
         int result = run(args, out, System.err)

@@ -18,7 +18,6 @@
  */
 package org.apache.grails.forge.core.pack
 
-import grails.util.Environment
 import groovy.transform.CompileStatic
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
@@ -26,6 +25,7 @@ import java.nio.file.InvalidPathException
 import java.nio.file.LinkOption
 import java.nio.file.Path
 import java.util.regex.Pattern
+import org.apache.grails.forge.core.ForgeEnvironment
 import org.grails.forge.ForgeCoreConfiguration
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.application.OperatingSystem
@@ -474,10 +474,9 @@ final class PackFixtures {
      * that what became of the fixtures is all there is to read.
      */
     static void main(String[] args) {
-        if (!Environment.isSystemSet()) {
-            // as the command line that generates applications runs
-            System.setProperty(Environment.KEY, Environment.PRODUCTION.getName())
-        }
+        // Forge's own environment, not the one of the pack's project, which the Gradle build that starts
+        // this may have set: the fixtures are generated as the command line generates applications
+        ForgeEnvironment.useProduction()
         PrintStream out = System.out
         System.setOut(System.err)
         int result = run(args, out, System.err)

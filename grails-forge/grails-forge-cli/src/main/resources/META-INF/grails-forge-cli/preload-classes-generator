@@ -465,6 +465,7 @@ org.apache.grails.forge.cli.pack.PackArtifacts$_repositories_closure1
 org.apache.grails.forge.cli.pack.PackArtifacts$_repositories_closure2
 org.apache.grails.forge.cli.pack.PackArtifacts$_resolve_closure7
 org.apache.grails.forge.cli.pack.PackArtifacts$_watchdog_closure8
+org.apache.grails.forge.core.ForgeEnvironment
 org.apache.grails.forge.core.pack.BundledPackFeatures
 org.apache.grails.forge.core.pack.BundledPackFeatures$_find_closure7
 org.apache.grails.forge.core.pack.BundledPackFeatures$_names_closure4

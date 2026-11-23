@@ -18,12 +18,12 @@
  */
 package org.apache.grails.forge.core.pack
 
-import grails.util.Environment
 import groovy.transform.CompileStatic
 import java.nio.charset.StandardCharsets
 import java.nio.file.DirectoryStream
 import java.nio.file.Files
 import java.nio.file.Path
+import org.apache.grails.forge.core.ForgeEnvironment
 import org.apache.grails.forge.core.pack.PackDescriptor.PackFile
 
 /**
@@ -124,11 +124,10 @@ final class PackPagesCompiler {
             System.err.println('Give the directory to write the pages of the templates into, and nothing else')
             System.exit(2)
         }
-        // as the command line and the web application that generate applications run: a template is
-        // compiled a little differently for each environment, and a page of the build is taken only by
-        // a run that would have compiled it the same. Whatever the build that starts this has set: the
-        // Grails Gradle plugin gives every JVM it starts the environment of development.
-        System.setProperty(Environment.KEY, Environment.PRODUCTION.getName())
+        // Forge's own environment, not the one of the build that starts this, to which the Grails Gradle
+        // plugin gives development: a page of the build is taken only by a run of Forge, which compiles
+        // its templates in production
+        ForgeEnvironment.useProduction()
         SortedMap<String, PackPages.Precompiled> pages = compile(PackPagesCompiler.classLoader)
         write(pages, Path.of(args[0]))
         println("Compiled the pages of ${pages.size()} templates of the packs of Forge")

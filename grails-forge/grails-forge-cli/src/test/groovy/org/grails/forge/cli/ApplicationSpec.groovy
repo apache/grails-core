@@ -78,10 +78,30 @@ class ApplicationSpec extends Specification {
         !context.getBean(CreateAppCommand).is(context.getBean(CreateAppCommand))
     }
 
-    void "the environment is never development, so nothing watches the working directory"() {
+    void "Forge runs in production, so nothing watches the working directory"() {
         expect:
-        Environment.current != Environment.DEVELOPMENT
+        Environment.current == Environment.PRODUCTION
         !Environment.current.reloadEnabled
+    }
+
+    void "Forge runs in production whatever environment its JVM was given, which is meant for a project"() {
+        given: 'the environment of a project, as -Dgrails.env in GRAILS_OPTS would give the JVM'
+        String before = System.getProperty(Environment.KEY)
+        System.setProperty(Environment.KEY, Environment.DEVELOPMENT.name)
+
+        when:
+        Application.builder()
+
+        then:
+        Environment.current == Environment.PRODUCTION
+        !Environment.current.reloadEnabled
+
+        cleanup:
+        if (before == null) {
+            System.clearProperty(Environment.KEY)
+        } else {
+            System.setProperty(Environment.KEY, before)
+        }
     }
 
     void 'the CLI ignores application configuration in the working directory and its config directory'() {

@@ -390,6 +390,19 @@ class PackFixturesSpec extends Specification {
         ofNothing.out == []
     }
 
+    void "the fixtures are generated in production, whatever environment the build that starts it gives its JVM"() {
+        given: 'a template that says the environment it is rendered in'
+        Path pack = pack('applicationTypes: [web]\n' + FILES,
+                ['Audit.groovy.gsp': '<% System.out.println("environment " + grails.util.Environment.current.name) %>package ${project.packageName}'])
+
+        when: 'the JVM is given the environment of a project in GRAILS_ENV'
+        Map<String, Object> result = fork([GRAILS_ENV: 'development'], pack.toString(), directory.resolve('fixtures').toString())
+
+        then: 'the environment is the one of Forge, which generates applications as the command line does'
+        result.exit == PackFixtures.GENERATED
+        ((String) result.err).readLines().findAll { String line -> line.startsWith('environment ') }.unique() == ['environment production']
+    }
+
     void "a template that ends the JVM does not make its fixtures ones that were generated"() {
         given:
         Path pack = pack('applicationTypes: [web]\n' + FILES, ['Audit.groovy.gsp': '<% System.exit(0) %>'])

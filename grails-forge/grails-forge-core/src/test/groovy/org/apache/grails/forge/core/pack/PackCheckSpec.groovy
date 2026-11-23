@@ -348,6 +348,18 @@ class PackCheckSpec extends Specification {
         ]
     }
 
+    void "a pack is checked in production, whatever environment the build that starts the check gives its JVM"() {
+        given: 'a template that says the environment it is rendered in'
+        Path pack = pack(TEMPLATE, ['Audit.groovy.gsp': '<% System.out.println("environment " + grails.util.Environment.current.name) %>package ${project.packageName}'])
+
+        when: 'the JVM is given the environment of a project, as GRAILS_OPTS or a build can give it'
+        Map<String, Object> result = forkWithJvmArguments(['-Dgrails.env=development'], pack.toString())
+
+        then: 'the environment is the one of Forge, which renders the templates of a pack as the command line does'
+        result.exit == PackCheck.VALID
+        ((String) result.err).readLines().findAll { String line -> line.startsWith('environment ') }.unique() == ['environment production']
+    }
+
     void "a template that ends the JVM does not make its pack one that was checked"() {
         given:
         Path pack = pack(TEMPLATE, ['Audit.groovy.gsp': '<% System.exit(0) %>${nope}'])
@@ -415,11 +427,17 @@ class PackCheckSpec extends Specification {
     }
 
     private Map<String, Object> fork(String... arguments) {
+        return forkWithJvmArguments([], arguments)
+    }
+
+    private Map<String, Object> forkWithJvmArguments(List<String> jvmArguments, String... arguments) {
         String classpath = Files.readAllLines(Path.of(System.getProperty('forge.packCheck.classpathFile'))).join(File.pathSeparator)
         // in a file, since a class path can be longer than a command line
         Path options = Files.createTempFile(directory, 'java', '.args')
         Files.writeString(options, '-cp\n"' + classpath.replace('\\', '\\\\') + '"\n')
-        List<String> command = [Path.of(System.getProperty('java.home'), 'bin', 'java').toString(), "@${options}".toString(), PackCheck.name]
+        List<String> command = [Path.of(System.getProperty('java.home'), 'bin', 'java').toString(), "@${options}".toString()]
+        command.addAll(jvmArguments)
+        command.add(PackCheck.name)
         command.addAll(arguments)
         Path out = Files.createTempFile(directory, 'out', '.txt')
         Path err = Files.createTempFile(directory, 'err', '.txt')
