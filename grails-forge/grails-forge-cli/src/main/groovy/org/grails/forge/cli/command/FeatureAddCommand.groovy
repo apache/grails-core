@@ -20,6 +20,7 @@ package org.grails.forge.cli.command
 
 import groovy.transform.CompileStatic
 import org.apache.grails.forge.cli.console.ConsoleProject
+import org.apache.grails.forge.cli.console.OptionRelation
 import org.apache.grails.forge.cli.console.ProjectCommand
 import org.apache.grails.forge.cli.console.UsageHelp
 import org.apache.grails.forge.cli.pack.PackArtifactException
@@ -66,7 +67,7 @@ import java.util.function.Supplier
 @Component
 @Scope('prototype')
 @CompileStatic
-class FeatureAddCommand extends BaseCommand implements Callable<Integer>, ProjectCommand {
+class FeatureAddCommand extends BaseCommand implements Callable<Integer>, ProjectCommand, OptionRelation.Declared {
 
     public static final String NAME = 'add'
 
@@ -107,6 +108,12 @@ class FeatureAddCommand extends BaseCommand implements Callable<Integer>, Projec
     /** On a Forge application that is started when the command first needs it. */
     FeatureAddCommand(ForgeContext context) {
         this.projectGeneratorSource = { context.get().getBean(ProjectGenerator) } as Supplier<ProjectGenerator>
+    }
+
+    @Override
+    List<OptionRelation> getOptionRelations() {
+        // what call checks first
+        return [OptionRelation.requires('--json', '--dry-run'), OptionRelation.exclusive(false, '--json', '--diff')]
     }
 
     @Override

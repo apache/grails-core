@@ -107,7 +107,7 @@ class ProjectRegenerateCommand extends BaseCommand implements Callable<Integer>,
     @Override
     List<OptionRelation> getOptionRelations() {
         // what call checks first
-        return [OptionRelation.exclusive(true, '--output', '--diff'), OptionRelation.requires('--force', '--output')]
+        return [OptionRelation.exclusive(true, '--output', '--diff'), OptionRelation.requires('--force', '--output'), OptionRelation.requires('--json', '--diff')]
     }
 
     // asked of the Forge application when the command first needs it

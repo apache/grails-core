@@ -19,6 +19,7 @@
 package org.apache.grails.forge.cli.console
 
 import java.nio.charset.StandardCharsets
+import groovy.io.FileType
 import org.grails.forge.cli.CommandSpec
 import org.grails.forge.cli.ForgeCli
 import spock.lang.IgnoreIf
@@ -80,7 +81,8 @@ class ApplicationCommandHelpSpec extends CommandSpec {
 
         and:
         !ran.exists()
-        !new File(dir, '.grails').exists()
+        // the catalog the build listed is all there is under .grails: nothing was run or recorded
+        writtenUnderRecord() == [ApplicationCommandFile.LOCATION]
 
         where:
         name           | said
@@ -118,6 +120,15 @@ class ApplicationCommandHelpSpec extends CommandSpec {
         err.toString().readLines()[0].startsWith('There is no command audit-report')
         err.toString().contains('The commands of the application and its plugins are not listed yet. To list them: grails-forge-cli gradle grailsCommandCatalog')
         !ran.exists()
+    }
+
+    private List<String> writtenUnderRecord() {
+        File record = new File(dir, '.grails')
+        List<String> files = []
+        record.eachFileRecurse(FileType.FILES) { File file ->
+            files << dir.toPath().relativize(file.toPath()).toString().replace(File.separatorChar, '/' as char)
+        }
+        return files.sort()
     }
 
     private void listed() {

@@ -40,6 +40,9 @@ class HelpJsonMetadataSpec extends CommandSpec {
             'project regenerate exclusive --output --diff'               : [['project', 'regenerate', '--output', 'elsewhere', '--diff'],
                                                                             ['project', 'regenerate']],
             'project regenerate requires --force --output'               : [['project', 'regenerate', '--diff', '--force']],
+            'project regenerate requires --json --diff'                  : [['project', 'regenerate', '--output', 'elsewhere', '--json']],
+            'feature add requires --json --dry-run'                      : [['feature', 'add', 'cache', '--json']],
+            'feature add exclusive --json --diff'                        : [['feature', 'add', 'cache', '--dry-run', '--diff', '--json']],
             'help exclusive --json COMMAND'                              : [['help', '--json', 'create-app']],
             'create-app requires --feature-pack-sha256 --features'       : [['create-app', 'shop', '--feature-pack-sha256', "org.example:pack:1.0.0=${'a' * 64}".toString()]],
             'create-webapp requires --feature-pack-sha256 --features'    : [['create-webapp', 'shop', '--feature-pack-sha256', "org.example:pack:1.0.0=${'a' * 64}".toString()]],
@@ -116,7 +119,10 @@ class HelpJsonMetadataSpec extends CommandSpec {
         all.every { Map each -> each.relations instanceof List }
         command(document, 'run-app').relations == [[kind: 'exclusive', members: ['--detach', '--foreground'], required: false]]
         command(document, 'project', 'regenerate').relations == [[kind: 'exclusive', members: ['--output', '--diff'], required: true],
-                                                                 [kind: 'requires', members: ['--force'], requires: ['--output']]]
+                                                                 [kind: 'requires', members: ['--force'], requires: ['--output']],
+                                                                 [kind: 'requires', members: ['--json'], requires: ['--diff']]]
+        command(document, 'feature', 'add').relations == [[kind: 'requires', members: ['--json'], requires: ['--dry-run']],
+                                                          [kind: 'exclusive', members: ['--json', '--diff'], required: false]]
         command(document, 'help').relations == [[kind: 'exclusive', members: ['--json', 'COMMAND'], required: false]]
         command(document, 'create-app').relations == [[kind: 'requires', members: ['--feature-pack-sha256'], requires: ['--features']]]
         command(document, 'compile').relations == []
@@ -181,7 +187,7 @@ class HelpJsonMetadataSpec extends CommandSpec {
     private static List<String> everyRule(List<Map> commands) {
         List<String> rules = []
         for (Map each : commands) {
-            String name = each.name == 'regenerate' ? 'project regenerate' : each.name
+            String name = each.name == 'regenerate' ? 'project regenerate' : each.name == 'add' ? 'feature add' : each.name
             for (Map relation : (each.relations as List<Map>)) {
                 rules << ([name, relation.kind] + (relation.members as List<String>) + ((relation.requires ?: []) as List<String>)).join(' ')
             }
