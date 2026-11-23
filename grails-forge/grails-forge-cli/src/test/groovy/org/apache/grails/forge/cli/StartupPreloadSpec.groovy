@@ -147,6 +147,43 @@ class StartupPreloadSpec extends Specification {
         loader.asked.size() > 1000
     }
 
+    void "what was done is said for the diagnostics of the command line: started and for which lists, and whether they still load, or why nothing was"() {
+        given:
+        Recording loader = new Recording((StartupPreload.CLASSES): "${MARKED}\n", (StartupPreload.GENERATOR_CLASSES): "${OF_GENERATOR}\n")
+
+        when:
+        List<Thread> threads = StartupPreload.start(loader, 2, '--version')
+        threads*.join(30_000)
+
+        then:
+        StartupPreload.status() == 'started: the classes every command loads, done'
+
+        when:
+        StartupPreload.start(loader, 2, 'create-app', 'demo')*.join(30_000)
+
+        then:
+        StartupPreload.status() == 'started: the classes every command loads and those of the project generator, done'
+
+        when:
+        StartupPreload.start(loader, 1, '--version')
+
+        then:
+        StartupPreload.status() == 'off: the JVM has one processor'
+
+        when:
+        StartupPreload.start(null, 2, '--version')
+
+        then:
+        StartupPreload.status() == 'off: there is no class loader'
+
+        when:
+        System.setProperty(StartupPreload.PROPERTY, 'false')
+        StartupPreload.start(loader, '--version')
+
+        then:
+        StartupPreload.status() == 'off: the system property grails.cli.preload is false'
+    }
+
     // A class loader that writes down what it is asked for. With no lists of its own it hands out those of the class path.
     static class Recording extends ClassLoader {
 

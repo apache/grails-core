@@ -38,7 +38,8 @@ Outside a project, `grails` without a command shows the help, and with `--non-in
 ** *A build does not read what you type*: what is typed is the next line of the prompt. A command of the application that asks a question is run as `grails run-command ...` in a terminal of its own.
 ** *Ctrl-C cancels the build* and returns to the prompt; the Gradle daemon stays for the next build.
 ** `gradle`, `shell` and `run-app` start the Gradle wrapper there as everywhere, and `GRAILS_GRADLE_RUNNER=process` has every command do so. See link:commandLine.html#howGradleIsRun[How the `grails` Command Runs Gradle].
-* `run-app` returns to the prompt once the application answers on its port and leaves it running, so that other commands can be given; `stop-app` stops it. See link:commandLine.html#gradleBuild[Building with Gradle].
+* `run-app` returns to the prompt once the application answers on its port and leaves it running, so that other commands can be given; `stop-app` stops it, and so does leaving interactive mode, before `grails` returns. An application that `run-app --detach` started goes on after interactive mode, until `stop-app`. See link:commandLine.html#gradleBuild[Building with Gradle].
+* `test-app --continuous` runs the tests again on every change until Ctrl-C cancels it, and returns to the prompt then.
 
 NOTE: The interactive mode of the Grails shell of earlier versions had the commands `open`, which opened a file with the program of the desktop, `quit`, and `!`, which ran a program of the operating system or repeated the last command. Interactive mode has none of them: `exit` leaves it, and a file is opened and a program is run in another terminal. Its prompt is `grails>`, and it does not say `Enter a command name to run. Use TAB for completion:` when it starts. See "Commands of Earlier Versions" in xref:commandLine[The Command Line].
 

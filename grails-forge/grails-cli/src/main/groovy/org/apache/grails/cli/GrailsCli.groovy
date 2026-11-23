@@ -96,7 +96,9 @@ final class GrailsCli {
      *
      * <p>When this returns the JVM is as it was. The system properties that starting the project
      * generator sets, the environment of Grails among them, are put back unless the caller changed
-     * them in the meantime; the generator is closed and leaves no shutdown hook; the context class
+     * them in the meantime, and the environment of Grails also where the start failed; the
+     * applications {@code run-app} started in the interactive console without {@code --detach} have
+     * been stopped; the generator is closed and leaves no shutdown hook; the context class
      * loader of the thread, which is the class loader of this class while the command runs, is the one it was; and
      * {@code picocli.ansi}, which {@code --plain-output} sets for the run, has the value it had, or
      * the one the caller gave it during the run.</p>

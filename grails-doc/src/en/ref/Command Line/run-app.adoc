@@ -55,7 +55,7 @@ Options:
 * `--host=HOST` - The address the application binds to.
 * `--https` - Serve HTTPS, on port 8443 unless a port is given or configured, with a self-signed certificate that is created in `build/ssl` when there is none. Intended for development use only.
 * `--query-tail` - Capture every statement GORM runs, SQL, Cypher or a MongoDB command, with the controller and action serving it, for the link:{commandLineRefFromRef}query-tail.html[query-tail] command. See link:{guidePath}conf.html#queryTail[Finding Query-Heavy Pages with query-tail].
-* `--detach` - Return when the application answers on its port, and leave it running until `stop-app`, also when `grails` has ended. Its output is in `.grails/run/app.log`. The port the command waits on has to be plain: `--port`, `-Dgrails.server.port`, the environment variable `SERVER_PORT` or a number in `grails-app/conf/application.yml`; otherwise it starts nothing and asks for `--port`.
+* `--detach` - Return when the application answers on its port, and leave it running until `stop-app`, also when `grails` has ended. Its output is in `.grails/run/app.log`. The port the command waits on has to be plain: `--port`, `-Dgrails.server.port` (also after `--`, where the last one given counts, as for Gradle), the environment variable `SERVER_PORT` or a number in `grails-app/conf/application.yml`; otherwise it starts nothing and asks for `--port`.
 * `--foreground` - Stay with the application until it ends, also in interactive mode.
 * `--ready-timeout=SECONDS` - How long the application is given to answer when the command does not stay with it (300 by default); it is stopped when it has not by then.
 * `-Dname=value` - A system property for the build. Can be given more than once.

@@ -28,6 +28,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 import java.util.function.Consumer
 import groovy.transform.CompileStatic
+import org.apache.grails.forge.cli.Diagnostics
 import org.gradle.tooling.BuildCancelledException
 import org.gradle.tooling.BuildException
 import org.gradle.tooling.BuildLauncher
@@ -134,7 +135,15 @@ final class ToolingApiRunner extends GradleBuild {
             failure.accept("${found.refusal}. Gradle was not run, since the command runs the Gradle of the project and no other".toString())
             return 1
         }
-        if (arguments.any { String argument -> isOfTheProgram(argument) } || !isWhereGradleLooks(project, found.file)) {
+        String ofTheProgram = arguments.find { String argument -> isOfTheProgram(argument) }
+        if (ofTheProgram != null || !isWhereGradleLooks(project, found.file)) {
+            if (Diagnostics.isOn()) {
+                // the name of the argument, and not its value, which can be anything
+                String named = ofTheProgram == null ? null : ofTheProgram.split('=', 2)[0]
+                Diagnostics.say('gradle runner', "${TOOLING_API} falls back to ${PROCESS}: ".toString() + (named != null ?
+                        "the argument ${named} is one the program gradle reads itself, which the Tooling API does not take".toString() :
+                        'the Gradle wrapper is a link, or stands above a project that has settings of its own, and the Tooling API does not look for the Gradle of the build there'))
+            }
             return wrapper.run(project, arguments, started)
         }
         Path properties = found.file.getParent().resolve(PROPERTIES)
@@ -197,8 +206,12 @@ final class ToolingApiRunner extends GradleBuild {
     private static ProjectConnection connect(ConsoleProject project, Path properties) throws IOException {
         if (!ConsoleCommands.isInteractive()) {
             ProjectConnection made = GradleConnector.newConnector().forProjectDirectory(project.directory.toFile()).useBuildDistribution().connect()
+            int count
             synchronized (KEPT) {
-                connectionsMade++
+                count = ++connectionsMade
+            }
+            if (Diagnostics.isOn()) {
+                connection("made for this build, and closed after it (${count} made in this JVM)".toString())
             }
             return made
         }
@@ -207,6 +220,9 @@ final class ToolingApiRunner extends GradleBuild {
         try {
             synchronized (KEPT) {
                 if (kept != null && keptFor == wanted) {
+                    if (Diagnostics.isOn()) {
+                        connection("reused: the one the console keeps for this project and its Gradle (${connectionsMade} made in this JVM)".toString())
+                    }
                     return kept
                 }
                 replaced = kept
@@ -215,6 +231,11 @@ final class ToolingApiRunner extends GradleBuild {
                 kept = GradleConnector.newConnector().forProjectDirectory(project.directory.toFile()).useBuildDistribution().connect()
                 keptFor = wanted
                 connectionsMade++
+                if (Diagnostics.isOn()) {
+                    connection((replaced == null ? 'made, and kept for the next build of the console' :
+                            'made in the place of the one the console kept, which was for another project or another Gradle') +
+                            " (${connectionsMade} made in this JVM)".toString())
+                }
                 return kept
             }
         } finally {
@@ -222,6 +243,10 @@ final class ToolingApiRunner extends GradleBuild {
                 close(replaced)
             }
         }
+    }
+
+    private static void connection(String said) {
+        Diagnostics.say('gradle connection', said)
     }
 
     private static boolean isKept(ProjectConnection connection) {

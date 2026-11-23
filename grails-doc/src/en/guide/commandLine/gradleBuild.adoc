@@ -131,10 +131,85 @@ A build that is run through the Tooling API is the same build: the same Gradle d
 * *Where the wrapper is started all the same.* The Tooling API looks for that file in one place, the root of the build. For a wrapper script that is a link, and for a wrapper that stands above a project with a `settings.gradle` of its own, the command starts the wrapper as before. It does so too when an argument after `--` is one the program `gradle` reads itself: `--daemon`, `--no-daemon`, `--foreground`, `--status`, `--stop`, `-g` or `--gradle-user-home`, `-p` or `--project-dir`, and a `-Dorg.gradle.` property such as `-Dorg.gradle.jvmargs`.
 * *System properties.* The build has the system properties that `-D` after the name of the command gives it, and none of the JVM of `grails`. `GRADLE_OPTS`, which the wrapper script reads for the JVM it starts, is not read: a property that was set there is given with `-D`, and the memory of the build is `org.gradle.jvmargs`, as it is for the wrapper. Gradle keeps the two ways apart in its configuration cache: a build that the wrapper has run before is configured once more when it is first run through the Tooling API, and is taken from the cache from then on.
 * *Output.* Gradle writes plain text to the output of `grails`, line by line as the build goes on: no colors and no display of progress, on a terminal too, and a line for every task, as its plain console has it. The wrapper is given the terminal itself and draws both there; the Tooling API is given two streams, and when it is told that a terminal reads them it draws its progress over what it wrote to the error stream, the report of a failed build for one. `--verbose` shows what the build does task by task, as before. What `grails` itself writes, such as the line of an error, has its colors as before.
-* *Input.* In the interactive console a build reads an input that has ended, and so does a build of a command line that is run in the JVM of another program; a command line that runs one command with `GRAILS_GRADLE_RUNNER=tooling-api` gives the build its input, as the wrapper does. The reason: the Tooling API takes what is typed as soon as a build starts, whether the build reads it or not, and would still take it when the build has ended, which there is the next line at the prompt. A command of the application that asks a question is run as a command line of its own (`grails run-command ...`), which starts the wrapper. With `--non-interactive` every build reads an input that has ended, as before.
+* *Input.* In the interactive console a build is given no input, and neither is a build of a command line that is run in the JVM of another program: what the build reads ends at once. A command line that runs one command with `GRAILS_GRADLE_RUNNER=tooling-api` gives the build its input, as the wrapper does. The reason: the Tooling API takes what is typed as soon as a build starts, whether the build reads it or not, and would still take it when the build has ended, which there is the next line at the prompt. A command of the application that asks a question is run as a command line of its own (`grails run-command ...`), which starts the wrapper. With `--non-interactive` every build is given no input, as before. A continuous build (`test-app --continuous`) is given no input either where it may not read one, so it is not taken for one that a user ends by ending its input: it runs again on every change until the command is cancelled.
 * *Failure and cancelling.* The exit codes are the same. There is no exit code of Gradle to name, so after the report of Gradle the command says `Gradle did not succeed: the build failed`. When the command is cancelled, or `grails` is ended while the build runs, the build is cancelled: the Gradle daemon ends what the build started, the application or the tests, and stays for the next build; the command says in one line that Gradle was stopped. When `grails` is killed, the daemon sees that it is gone and cancels the build too.
 * *Windows.* No batch file is run, so the arguments and the paths that a batch file cannot be given (below, for `gradle`) are not refused.
 * *Versions.* The Tooling API is of the Gradle version this release of Grails is built with ({GradleVersion}), and runs the builds of every Gradle from 4.0 on, also of a version that is newer than itself: which Gradle builds the project is the wrapper's to say.
+
+[[gradleRunnerContract]]
+==== What Each Way Gives a Build
+
+The two ways at a glance, for whoever runs a command and for whoever writes a command, a script or a task that is run by one:
+
+[cols="2,4,4"]
+|===
+| |The wrapper as a process (`process`) |The Tooling API (`tooling-api`)
+
+|Input
+|The input of `grails`, the terminal as a rule. With `--non-interactive`, an input that has ended.
+|None in the interactive console, in the JVM of another program and with `--non-interactive`: what the build reads ends at once. The `grails` program, running one command with `GRAILS_GRADLE_RUNNER=tooling-api`, gives the build its input.
+
+|Cancelling
+|Ctrl-C, or ending `grails`, ends the wrapper and every process below it, by force after ten seconds; a daemon that was running before cancels the build.
+|Ctrl-C, or ending `grails`, cancels the build; the daemon ends what the build started and stays. The interactive console returns to the prompt.
+
+|Continuous builds (`test-app --continuous`)
+|Run again on every change until the command is cancelled, or, at a terminal, until Ctrl-D ends the input.
+|The same. Where the build is given no input, nothing but cancelling the command ends it.
+
+|Environment variables
+|Those of `grails`, and `GRAILS_NON_INTERACTIVE=true` with `--non-interactive`.
+|The same.
+
+|System properties and JVM options
+|The `-D` options of the command, after `-Dgrails.env`, and what follows `--`. `GRADLE_OPTS` and `JAVA_OPTS` are read by the wrapper script.
+|The `-D` options of the command and what follows `--`, and none of the JVM of `grails`. `GRADLE_OPTS` is not read; the JVM options are those of `org.gradle.jvmargs`.
+
+|Output
+|The output of `grails` itself, so on a terminal the colors and the progress of Gradle.
+|Plain text, line by line, on the output of `grails`.
+
+|When the other way is used
+|Never.
+|For `gradle`, `shell`, a `run-app` that leaves the application running, an argument after `--` that the program `gradle` reads itself, and a wrapper the Tooling API does not look for: see above.
+
+|What outlives the command
+|`run-app --detach` leaves the application running until `stop-app`, also when `grails` has ended. In the interactive console, `run-app` without `--detach` leaves it running until the console is left, and stops it then, before `grails`, or the call of a program that runs the command line in its own JVM, returns.
+|Nothing: the build ends with the command. The connection of the interactive console is closed when the console is left.
+|===
+
+[[gradleRunnerDiagnostics]]
+==== Seeing How a Command Runs
+
+With the environment variable `GRAILS_CLI_DIAGNOSTICS` set to `true`, the command line says on its error output how it runs a command, each in a line that starts with `| Diagnostic`:
+
+[source,console]
+----
+$ GRAILS_CLI_DIAGNOSTICS=true grails compile
+| Diagnostic preload: started: the classes every command loads, still loading
+| Diagnostic gradle runner: requested auto, GRAILS_GRADLE_RUNNER not set; effective process: a command line that runs one command
+...
+| Diagnostic project generator: not started
+----
+
+[cols="1,4"]
+|===
+|Line |What it says
+
+|`preload`
+|Whether the classes of the command line were loaded ahead on threads of their own, and whether they still load when the command starts; or why not: the system property `grails.cli.preload` is `false`, the JVM has one processor, or the command line runs in the JVM of a program, which does not load them ahead.
+
+|`gradle runner`
+|The value of `GRAILS_GRADLE_RUNNER` (`requested`), the way Gradle is run for the command (`effective`), and why. A line `tooling-api falls back to process` follows when a build that was to be run through the Tooling API starts the wrapper all the same, with the reason: the name of the argument the program `gradle` reads itself (never its value), or where the wrapper is.
+
+|`gradle connection`
+|For a build through the Tooling API: whether the connection was made for this build and closed after it, made and kept by the interactive console, made in the place of the one it kept, or reused, with the number of connections made so far.
+
+|`project generator`
+|After each command: whether the project generator runs, and, where it does, how many templates of the feature packs of Grails it has taken as the build of Grails compiled them, and how many it compiled itself since it started. The build of Grails compiles every template of its packs, so the second number is 0 unless a compiled page is missing or out of date, which is worth a bug report. The templates of a feature pack that is not of Grails, one given with `--feature-pack-dir` for example, are compiled when they are rendered and are counted in neither.
+|===
+
+The lines are for finding out why a command is slow or runs Gradle differently than expected, and to add to a bug report; their wording is not fixed from one release to the next. With any other value, or without the variable, nothing is written, and nothing of it is worked out.
 
 === Building and Testing with the `grails` Command
 
@@ -262,13 +337,14 @@ $ grails run-script src/main/scripts/load.groovy
 
 Without `--detach`, `run-app` stays with the application: its output is on the terminal, and the command ends when the application does. Ctrl-C, or ending `grails`, ends Gradle and every process it started, the application among them. Where such a `run-app` runs the build through the Tooling API (`run-app --foreground` in the interactive console, and with `GRAILS_GRADLE_RUNNER=tooling-api`), no Gradle is started for it: Ctrl-C then cancels the build, and the Gradle daemon that runs it ends the application.
 
-With `--detach`, `run-app` starts the application, waits until it answers on its port, says so and returns with exit code 0. The application then runs until `stop-app`, also when `grails` and the terminal have ended, and what it and the build write is in `.grails/run/app.log` of the project. In the interactive shell this is what `run-app` does without `--detach`, so that it returns to the prompt, and an application started that way is stopped when the shell ends; give `--detach` there to leave it running, or `--foreground` to stay with it.
+With `--detach`, `run-app` starts the application, waits until it answers on its port, says so and returns with exit code 0. The application then runs until `stop-app`, also when `grails` and the terminal have ended, and what it and the build write is in `.grails/run/app.log` of the project. In the interactive shell this is what `run-app` does without `--detach`, so that it returns to the prompt, and an application started that way is stopped when the shell ends: when it is left, before `grails` returns, and also where a program runs the command line in its own JVM and goes on after the shell (`GrailsCli.execute`, as an IDE or a build does); and when `grails` is ended while the shell runs. Give `--detach` there to leave it running, also after the shell and `grails` have ended, or `--foreground` to stay with it.
 
 When the command does not stay with the application:
 
-* The port it waits on is the one the application is told, in the order the application listens: `--port`, or `-Dgrails.server.port` (which the Grails Gradle plugin gives the application as `server.port`); then the environment variable `SERVER_PORT`; then the `server.port` of `grails-app/conf/application.yml`, where what is said for the environment the application is run for comes before what is said for all; and 8080 when nothing names one. The address is found in the same way (`--host`, `-Dgrails.server.address`, `SERVER_ADDRESS`, `server.address`).
+* The port it waits on is the one the application is told, in the order the application listens: `--port`, or `-Dgrails.server.port` (which the Grails Gradle plugin gives the application as `server.port`); then the environment variable `SERVER_PORT`; then the `server.port` of `grails-app/conf/application.yml`, where what is said for the environment the application is run for comes before what is said for all; and 8080 when nothing names one. The address is found in the same way (`--host`, `-Dgrails.server.address`, `SERVER_ADDRESS`, `server.address`). A system property counts as Gradle reads it from all the arguments it is given, what follows `--` among them, in each form Gradle takes (`-Dname=value`, `-D name=value`, `--system-prop name=value`, `--system-prop=name=value`), and the last one of a name wins: `run-app --port 9090 -- -Dgrails.server.port=9191` runs the application on port 9191, and the command waits there. A `-Dgrails.env` after `--` likewise selects the environment whose `server.port` of `application.yml` is read.
 * The command does not guess. When what names the port is not plainly a port, as a placeholder such as `${PORT:8080}` that the application works out when it starts, a number with a fraction, or an `application.yml` that the command cannot read (it reads at most 1 MiB, refuses a key that is twice in one map, and follows no link), nothing is started: the command says that the port could not be determined, repeats nothing of the file, and ends with exit code 1. Give `--port` then. A port that is set in another place (`application.groovy`, a properties file, a document for a Spring profile) is not seen by the command: give `--port` for it too.
-* `-Dserver.port=PORT` is a system property of the build, and the Grails Gradle plugin does not give it to the application. With `--detach` it is refused with exit code 2 unless `--port` or `-Dgrails.server.port` is given as well.
+* `-Dserver.port=PORT` is a system property of the build, and the Grails Gradle plugin does not give it to the application. With `--detach` it is refused with exit code 2 unless `--port` or `-Dgrails.server.port` is given as well, also when it follows `--`.
+* The arguments of the application itself, the option `--args` of the task `bootRun` after `--`, come before every system property for the application. With `--detach` they are refused with exit code 2 when they name `server.port` or `server.address`, as in `-- --args=--server.port=9191`: give `--port` and `--host` instead.
 * It asks the loopback address of your computer only (`127.0.0.1` and `::1`), and looks up no name. An application that is bound to another address would not answer there, so `--detach` is refused with such a `--host` or configured `server.address`; use `--foreground`.
 * Nothing is started when something takes connections on the port already, since the command could not tell the application from it.
 * The application answers when it answers an HTTP request with an HTTP response, whatever its status. A port that only takes connections is not an answer. When plain HTTP gets none, or the refusal a web server that expects TLS gives, the request is made over TLS, with any certificate taken, since the address is your own computer's. An answer counts only while the Gradle the command started is still running. The request is `HEAD /`; only the status line and the headers of the answer are read, no redirect is followed, and nothing of the answer is shown.

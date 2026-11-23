@@ -85,7 +85,26 @@ public final class StartupPreload {
     // not use. When a Groovy that Grails requires no longer does that, the thread that initializes it can go.
     private static final String FORMATTING = "org.codehaus.groovy.runtime.FormatHelper";
 
+    private static final String STARTED = "started";
+
+    // what start did, for the diagnostics of the command line
+    private static volatile String status = "not started: the command line runs in the JVM of a program that did not start it";
+    private static volatile List<Thread> running = List.of();
+
     private StartupPreload() {
+    }
+
+    /**
+     * @return what was done, in a few words: whether the threads were started and, while they run,
+     * that they still load; or why nothing was done. For {@link Diagnostics}.
+     */
+    public static String status() {
+        String said = status;
+        if (!said.startsWith(STARTED)) {
+            return said;
+        }
+        boolean loading = running.stream().anyMatch(Thread::isAlive);
+        return said + (loading ? ", still loading" : ", done");
     }
 
     /**
@@ -99,6 +118,7 @@ public final class StartupPreload {
     public static void start(ClassLoader loader, String... args) {
         try {
             if ("false".equalsIgnoreCase(System.getProperty(PROPERTY))) {
+                status = "off: the system property " + PROPERTY + " is false";
                 return;
             }
             start(loader, Runtime.getRuntime().availableProcessors(), args);
@@ -113,11 +133,14 @@ public final class StartupPreload {
      */
     static List<Thread> start(ClassLoader loader, int processors, String... args) {
         List<Thread> started = new ArrayList<>();
+        running = started;
         if (processors < 2 || loader == null) {
+            status = processors < 2 ? "off: the JVM has one processor" : "off: there is no class loader";
             return started;
         }
         boolean generator = args != null && Arrays.stream(args).filter(arg -> arg != null && !arg.startsWith("-")).findFirst()
                 .map(GENERATOR_COMMANDS::contains).orElse(false);
+        status = STARTED + ": the classes every command loads" + (generator ? " and those of the project generator" : "");
         started.add(daemon("grails-preload-classes", () -> {
             load(loader, CLASSES);
             if (generator) {

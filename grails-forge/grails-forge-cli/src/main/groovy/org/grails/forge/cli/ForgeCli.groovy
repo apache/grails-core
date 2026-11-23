@@ -23,6 +23,9 @@ import java.util.function.BiFunction
 import java.util.function.Predicate
 import java.util.function.Supplier
 import groovy.transform.CompileStatic
+import org.apache.grails.forge.cli.Diagnostics
+import org.apache.grails.forge.cli.StartupPreload
+import org.apache.grails.forge.core.pack.BundledPackFeatures
 import org.apache.grails.forge.cli.console.ApplicationCommands
 import org.apache.grails.forge.cli.console.ConsoleCommands
 import org.apache.grails.forge.cli.console.ConsoleProject
@@ -154,6 +157,9 @@ final class ForgeCli {
      * @return the exit code
      */
     static int launch(ForgeContext context, boolean consoleInProjectOnly, String... args) {
+        if (Diagnostics.isOn()) {
+            Diagnostics.say('preload', StartupPreload.status())
+        }
         try {
             if (!args.every { String arg -> arg == PlainOutput.OPTION || arg == ForgeCommand.NON_INTERACTIVE }) {
                 return execute(context, args)
@@ -211,7 +217,28 @@ final class ForgeCli {
         if (reads) {
             held.advice = { advice(context) } as Supplier<String>
         }
-        return execute(commandLine, held, args)
+        try {
+            return execute(commandLine, held, args)
+        } finally {
+            if (Diagnostics.isOn()) {
+                generator(context)
+            }
+        }
+    }
+
+    // whether the project generator runs, and how many templates of the packs of Forge it compiled and took as the build compiled them
+    private static void generator(ForgeContext context) {
+        if (!context.isStarted()) {
+            Diagnostics.say('project generator', 'not started')
+            return
+        }
+        try {
+            BundledPackFeatures packs = context.get().getBean(BundledPackFeatures)
+            Diagnostics.say('project generator', "running; templates of the packs of Forge since it started: ${packs.precompiledTemplates} precompiled by the build of Forge, ".toString() +
+                    "${packs.compiledTemplates} compiled at run time".toString())
+        } catch (RuntimeException e) {
+            Diagnostics.say('project generator', "running; the templates it compiled are not known: ${e.getClass().getSimpleName()}".toString())
+        }
     }
 
     // said once for a directory while the context lives, which in the interactive shell is once

@@ -22,6 +22,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import java.util.function.Consumer
 import java.util.function.Supplier
 import groovy.transform.CompileStatic
+import org.apache.grails.forge.cli.Diagnostics
 
 /**
  * How a command has Gradle run a build of the project and waits for it. A command says what it runs
@@ -137,6 +138,9 @@ abstract class GradleBuild {
         String said = runner.get()
         String asked = said == null || said.trim().isEmpty() ? AUTO : said.trim()
         if (!(asked in [AUTO, PROCESS, TOOLING_API])) {
+            if (Diagnostics.isOn()) {
+                chosen(said, 'none', "${asked} is none of the values of ${RUNNER}".toString())
+            }
             return new GradleBuild() {
 
                 @Override
@@ -149,9 +153,32 @@ abstract class GradleBuild {
         }
         boolean throughToolingApi = asked == TOOLING_API || (asked == AUTO && ConsoleCommands.isInteractive())
         if (purpose != Purpose.BUILD || !throughToolingApi) {
+            if (Diagnostics.isOn()) {
+                chosen(said, PROCESS, whyProcess(purpose, asked))
+            }
             return wrapper
         }
+        if (Diagnostics.isOn()) {
+            chosen(said, TOOLING_API, asked == TOOLING_API ? "${RUNNER} is ${TOOLING_API}".toString() : 'a build of the interactive console')
+        }
         return new ToolingApiRunner(failure, windows, wrapper)
+    }
+
+    // why the wrapper is started as a process, said where the diagnostics of the command line are on
+    private static String whyProcess(Purpose purpose, String asked) {
+        if (purpose == Purpose.PASSED_ON) {
+            return 'what follows gradle is given to Gradle as on a command line of its own'
+        }
+        if (purpose == Purpose.TERMINAL_SESSION) {
+            return 'a session at the terminal is given the terminal itself'
+        }
+        return asked == PROCESS ? "${RUNNER} is ${PROCESS}".toString() : 'a command line that runs one command'
+    }
+
+    // what was asked for and what is used, in one line of the diagnostics of the command line
+    private static void chosen(String said, String effective, String reason) {
+        String requested = said == null || said.trim().isEmpty() ? "${AUTO}, ${RUNNER} not set".toString() : said.trim()
+        Diagnostics.say('gradle runner', "requested ${requested}; effective ${effective}: ${reason}".toString())
     }
 
     /**
@@ -175,6 +202,9 @@ abstract class GradleBuild {
      * @return what starts the build
      */
     static GradleRunner leftRunning(Consumer<String> failure, boolean windows) {
+        if (Diagnostics.isOn()) {
+            chosen(runner.get(), PROCESS, 'an application that is left running is a process of its own, which outlives the command line')
+        }
         return new GradleRunner(failure, windows)
     }
 
