@@ -198,19 +198,15 @@ class FilesInUseSpec extends Specification {
 
     @Requires({ os.windows })
     void "on Windows a file that a program has open is removed once the program has closed it"() {
-        given: 'a program that has the file open as one that reads it has, for less than the tries take'
-        FilesInUse.set(null, null)
+        given: 'a program that has the file open as one that reads it has, and closes it while the first try waits to be made again'
         Path file = Files.writeString(dir.resolve('build.gradle'), 'plugins {}\n')
         RandomAccessFile open = new RandomAccessFile(file.toFile(), 'r')
+        closedInTheFirstPause(open)
         IOException atOnce = null
         try {
             Files.delete(file)
         } catch (IOException e) {
             atOnce = e
-        }
-        Thread closes = Thread.start {
-            Thread.sleep(400)
-            open.close()
         }
 
         expect: 'the system refuses while it is open, with what is tried again'
@@ -222,31 +218,27 @@ class FilesInUseSpec extends Specification {
             Files.delete(file)
         }
 
-        then:
+        then: 'a try after the first has done it'
         noExceptionThrown()
         !Files.exists(file)
+        !waited.empty
 
         cleanup:
-        closes?.join()
         open?.close()
     }
 
     @Requires({ os.windows })
     void "on Windows a file that a program has open is replaced once the program has closed it"() {
-        given:
-        FilesInUse.set(null, null)
+        given: 'a program that has the file open, and closes it while the first try waits to be made again'
         Path file = Files.writeString(dir.resolve('build.gradle'), 'plugins {}\n')
         Path written = Files.writeString(dir.resolve('build.gradle.new'), 'plugins { id "groovy" }\n')
         RandomAccessFile open = new RandomAccessFile(file.toFile(), 'r')
+        closedInTheFirstPause(open)
         IOException atOnce = null
         try {
             Files.move(written, file, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
         } catch (IOException e) {
             atOnce = e
-        }
-        Thread closes = Thread.start {
-            Thread.sleep(400)
-            open.close()
         }
 
         expect:
@@ -258,12 +250,22 @@ class FilesInUseSpec extends Specification {
             Files.move(written, file, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
         }
 
-        then:
+        then: 'a try after the first has done it'
         noExceptionThrown()
         file.toFile().text == 'plugins { id "groovy" }\n'
+        !waited.empty
 
         cleanup:
-        closes?.join()
         open?.close()
+    }
+
+    // As the system is, and with the waits of the thread; the program closes the file in the first of them, so
+    // that it is closed before the tries are over however slow the machine is.
+    private void closedInTheFirstPause(RandomAccessFile open) {
+        FilesInUse.set(null, { long millis ->
+            waited.add(millis)
+            open.close()
+            Thread.sleep(millis)
+        } as FilesInUse.Sleeper)
     }
 }
