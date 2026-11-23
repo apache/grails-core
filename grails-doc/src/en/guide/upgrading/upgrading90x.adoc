@@ -2820,3 +2820,49 @@ Each note above says in its Required Actions which of its changes the command re
 
 * Run `grails project health` (or `./grailsw project health`) in the project after `update-wrapper` and `project migrate`, resolve every error and warning it names, and run it again until `grails project health --strict` ends with exit code 0. Then work through the notes above that the command does not check.
 * A job of continuous integration that holds a project to the upgrade notes runs `grails project health --strict`. A tool reads `grails project health --json` and goes by the `id` of each finding, which is never renamed; link:{commandLineRef}project-health.html[project health] lists every id with its level and fix.
+
+[[upgradingCommandLineJava]]
+==== 58. The Command Line Needs Java 21, and `project migrate` Reads the Java Version of the Build
+
+The `grails` command line and the Grails wrapper are compiled for Java 21. Their start scripts (`grails`, `grails.bat`, `grailsw`, `grailsw.bat`) now read the version of the Java they are about to start from the `release` file of its installation and refuse an earlier one with a message that names it, such as `ERROR: grailsw needs Java 21 or later, and JAVA_HOME (/opt/java/jdk-17.0.18) is Java 17.0.18.`, and exit code 1, where the JVM ended with `UnsupportedClassVersionError` before (see xref:commandLine[The Command Line]). A `grailsw` of an earlier Grails 9 snapshot has the check once `./grailsw update-wrapper` has replaced it.
+
+`project migrate` reads the version of Java of the build from `compileJava.options.release` (or `options.release = N`, `options.release.set(N)` and `release` in a block of the options), `targetCompatibility`, `sourceCompatibility`, a `JavaVersion` constant and the Java toolchain (`JavaLanguageVersion.of(N)`, or `jvmToolchain(N)` of Kotlin), in `build.gradle` and `build.gradle.kts`, in that order, and names the setting and its line in the `jdk` row, such as `21 (compileJava.options.release of build.gradle, line 68)`. An application that Grails 8 generated for Java 17 has `compileJava.options.release = 17`: the command now says that Grails 9 needs Java 21 or later and that the build has to be changed, and records Java 21 as assumed in place of it, where an earlier Grails 9 snapshot recorded Java 21 as assumed and said nothing.
+
+`grails project health` reads the build the same way. It reports each setting before Java 21, with its line, as `java-target.release`, and a record that `project migrate` wrote with another version of Java than the classes are compiled for as `java-target.record`.
+
+===== Required Actions
+
+* Set `JAVA_HOME` to Java 21 or later, or put a Java 21 or later first on the path, wherever `grails` or `./grailsw` runs, in jobs of continuous integration too. See xref:gettingStarted#requirements[Installation Requirements].
+* Change every setting of the build that names a Java before 21 to 21 (or 25), as `compileJava.options.release = 21`, and run `grails project migrate --force` if the record was written before, so that it has the version of the build.
+
+[[upgradingRecordIgnoresMachineState]]
+==== 59. The Record Keeps What Is of One Machine Out of Version Control
+
+The `.grails/.gitignore` that `create-app`, the other create commands and `project migrate` write now leaves out `.grails/cache/`, `.grails/history`, `.grails/run/` and `.grails/transactions/` itself, so they stay out of version control also in an application whose root `.gitignore` is older than Grails 9, and committing the directory `.grails` commits the record and nothing else. A `.grails/.gitignore` that is there already is not rewritten: where an earlier Grails 9 snapshot wrote the record, add these lines to it:
+
+[source]
+.grails/.gitignore
+----
+/cache/
+/history
+/run/
+/transactions/
+----
+
+`grails project health` reports a project in which no `.gitignore` leaves out `.grails/transactions` or `.grails/history` as `git-files.state-ignored`.
+
+===== Required Actions
+
+* Where an earlier Grails 9 snapshot wrote the record, add the four lines above to `.grails/.gitignore`, and take `.grails/transactions`, `.grails/history`, `.grails/run` and `.grails/cache` out of version control if they were committed (`git rm -r --cached` with the paths).
+
+[[upgradingGradleChecksum]]
+==== 60. The Generated Gradle Wrapper Names the Checksum of Gradle
+
+`gradle/wrapper/gradle-wrapper.properties` of a generated application has `distributionSha256Sum`, the SHA-256 Gradle publishes for the distribution it names, Gradle {gradleVersion}, and the Gradle wrapper refuses a download that does not have it. To move the application to another Gradle version, give its checksum from https://gradle.org/release-checksums/[Gradle's checksums]: `./gradlew wrapper --gradle-version <version> --gradle-distribution-sha256-sum <checksum>`. Running that with the version the application has adds the checksum to an existing application.
+
+`grails project health` reports a wrapper without `distributionSha256Sum` as `gradle-wrapper.checksum`, and a wrapper of the binary distribution of Gradle {gradleVersion} on `services.gradle.org` whose `distributionSha256Sum` is not the one Gradle publishes for it as `gradle-wrapper.checksum-differs`: the wrapper refuses that distribution wherever it downloads it.
+
+===== Required Actions
+
+* Add `distributionSha256Sum` to the wrapper of an application that has none, with the command above and the version the application has.
+* Give the checksum of the new version with `--gradle-distribution-sha256-sum` whenever the Gradle version of the application changes: the checksum of another version makes the wrapper refuse the download.
