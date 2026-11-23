@@ -40,7 +40,7 @@ These are the options of `grails create-app`:
 - `NAME`: The name of the project, with or without a package: `com.example.bookstore` creates `bookstore` with the default package `com.example`. It can be left out with `--inplace`.
 - `-f, --features=FEATURE[,FEATURE...]`: The features to use in addition to the default ones. `--list-features` lists them.
 - `--exclude-features=FEATURE[,FEATURE...]`: The features to leave out of those the project would have by default.
-- `-d, --data=Grails Data Implementation` (`-g`, `--gorm` are legacy aliases): The Grails Data implementation: `hibernate5`, `hibernate7`, `mongodb`, `neo4j`.
+- `-d, --data=Grails Data Implementation` (`-g`, `--gorm` are legacy aliases): The Grails Data implementation: `hibernate5`, `hibernate7`, `mongodb`, `neo4j`. With `hibernate7` the project imports `grails-hibernate7-bom`, and with `neo4j` (or the feature `gorm-neo4j`) `grails-neo4j-bom`, in the place of `grails-bom`; GORM for Neo4j is refused with Hibernate 7 and with `grails-micronaut`, which no BOM manages together.
 - `-s, --servlet=Servlet Implementation`: The embedded servlet container: `tomcat`, `jetty`, `undertow`, `none`.
 - `-r, --reloading=RELOADING`: The development reloading option: `devtools`, `jrebel`, `none`.
 - `--jdk, --java-version=<javaVersion>`: The JDK version the project should target.

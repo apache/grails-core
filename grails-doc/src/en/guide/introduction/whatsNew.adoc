@@ -204,7 +204,7 @@ The `.grails` record, `feature add`, `project show`, `project regenerate`, `proj
 ==== Hibernate 7 Application Generation
 
 Grails Forge can now generate applications configured for Grails Data with Hibernate 7.
-The `create-*` commands also accept a new `-d, --data` option (the previous `-g` and `--gorm` flags remain supported as legacy aliases) with the values `hibernate5`, `hibernate7`, and `mongodb`; the legacy value `hibernate` is still accepted and selects Hibernate 5:
+The `create-*` commands also accept a new `-d, --data` option (the previous `-g` and `--gorm` flags remain supported as legacy aliases) with the values `hibernate5`, `hibernate7`, `mongodb`, and `neo4j`; the legacy value `hibernate` is still accepted and selects Hibernate 5:
 
 [source,console]
 ----
@@ -214,6 +214,8 @@ grails create-app --data=hibernate7 com.example.demo
 Applications generated for Hibernate 7 consume `grails-hibernate7-bom` consistently across the application dependencies, the buildscript classpath, and `buildSrc`.
 This avoids the dependency resolution conflicts that occur when an application generated for Hibernate 5 is manually switched to `grails-data-hibernate7` while the default `grails-bom` remains on the build classpath.
 The `database-migration` feature also selects the matching `grails-data-hibernate7-dbmigration` plugin automatically.
+Applications generated with GORM for Neo4j (`--data=neo4j` or the `gorm-neo4j` feature) consume `grails-neo4j-bom` in the same places, also when they use Hibernate 5, because `grails-data-neo4j` needs the Neo4j driver that BOM manages.
+No Grails BOM covers GORM for Neo4j together with Hibernate 7 or Micronaut, so Grails Forge refuses those combinations.
 
 ==== Generated Applications Keep Their Wrapper Scripts on Every Clone
 

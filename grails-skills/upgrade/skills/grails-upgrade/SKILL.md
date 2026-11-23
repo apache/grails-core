@@ -992,6 +992,13 @@ Generated YAML configuration has a fixed key order (`info`, `dataSource`, `envir
 - **`project show`**: prints every `create-` option with its recorded value and `default` / `differs from the current default` / `not recorded`; use it after an upgrade to see which recorded values are no longer defaults. JSON: `effectiveOptions`, `addedFeatures` (format 1).
 - **REST API plugins**: `create-app NAME --profile rest-api-plugin` becomes `grails create-rest-api-plugin NAME` (application type `rest-api-plugin`: a plugin built with `org.apache.grails.gradle.grails-plugin` and `grails-gson`, with `views-json` by default and no GSP). As with the profile, its `UrlMappings` is empty and it has no controller and no views of its own.
 
+## GORM for Neo4j Uses `grails-neo4j-bom`
+
+- **An application with GORM for Neo4j imports `grails-neo4j-bom` in place of `grails-bom`.** Search the build for `org.apache.grails:grails-data-neo4j`. Where it is declared, replace `grails-bom` with `grails-neo4j-bom` in every `platform(...)` that imports it: in `dependencies`, on the `buildscript` classpath, and in `buildSrc/build.gradle`. With `grails-bom` the runtime class path does not resolve: `grails-data-neo4j` brings Neo4j driver 4.4.13 as a strict version from `grails-neo4j-bom`, and a strict version that comes in transitively cannot replace the 6.x driver `grails-bom` manages through Spring Boot. The application compiles, but `bootRun`, `bootJar` and the tests fail with `Could not resolve org.neo4j.driver:neo4j-java-driver:4.4.13` (`grails help` and `project health` say `runtimeClasspath cannot be resolved completely`). Grails Forge generated `grails-bom` for these applications before Grails 8.0.1, and so did earlier Grails 9 snapshots.
+  - `grails-neo4j-bom` imports `grails-bom`, so GORM for Hibernate 5 next to GORM for Neo4j keeps its versions. The Grails Gradle plugin applies the declared BOM to the other configurations; a build that relies on the BOM the plugin applies sets `grails { bom = 'grails-neo4j-bom' }`. Never declare both: the plugin refuses two Grails BOMs.
+  - No Grails BOM covers GORM for Neo4j with GORM for Hibernate 7 or with `grails-micronaut`: `create-app`, `feature add` and the hosted Forge refuse those combinations (`gorm-neo4j cannot be combined with ...`). Do not move an application with GORM for Neo4j to Hibernate 7 or Micronaut.
+  - `grails create-app --data neo4j` (or `--features gorm-neo4j`) and `grails feature add gorm-neo4j` write `grails-neo4j-bom`; `project migrate` does not change the build file of an application an earlier version generated with `grails-bom`, and `project regenerate --diff` names `build.gradle` until it is replaced.
+
 # After the Upgrade
 
 ## Verification Checklist
@@ -1071,6 +1078,7 @@ Generated YAML configuration has a fixed key order (`info`, `dataSource`, `envir
 - [ ] An interrupted `feature add` or `project migrate` that refuses with "has another mode than the change gave it": give the named file the mode the message names (or make it what it was before the change) and run the command again; a journal of an earlier Grails 9 build in `~/.grails/forge/transactions` is not read: restore the project from version control and remove that `journal`
 - [ ] `project regenerate --diff [--json]` reports `unreadable-file` for a file it cannot read: make the file readable before comparing
 - [ ] If `grails help` or `grails project health` says `runtimeClasspath cannot be resolved completely`, fix the dependency it names (`./gradlew dependencies --configuration runtimeClasspath`): the project compiles, but it does not run until then
+- [ ] An application with GORM for Neo4j imports `grails-neo4j-bom` and no `grails-bom`, in `build.gradle` (`dependencies` and `buildscript`) and in `buildSrc/build.gradle`, and has neither Hibernate 7 nor Micronaut beside it
 - [ ] The full test suite passes on Groovy 6
 
 ## Pitfalls to Avoid

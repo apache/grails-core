@@ -2890,3 +2890,18 @@ The `.grails/.gitignore` that `create-app`, the other create commands and `proje
 
 * Add `distributionSha256Sum` to the wrapper of an application that has none, with the command above and the version the application has.
 * Give the checksum of the new version with `--gradle-distribution-sha256-sum` whenever the Gradle version of the application changes: the checksum of another version makes the wrapper refuse the download.
+
+[[upgradingNeo4jBom]]
+==== 61. An Application With GORM for Neo4j Imports `grails-neo4j-bom`
+
+An application with GORM for Neo4j imports `grails-neo4j-bom` as its one Grails BOM, in place of `grails-bom`, also when it uses GORM for Hibernate 5, as Grails 8.0.1 generates it. The Grails 8.0.1 note link:upgrading.html#gorm-neo4j-bom[GORM for Neo4j Uses `grails-neo4j-bom`] says why and what to change in the build of an application that Grails 8 generated with `grails-bom`: with Grails 9 the runtime class path of such an application does not resolve either, since `grails-bom` manages the 6.3.0 driver of Spring Boot 4.2 and GORM for Neo4j needs 4.4.13. That note applies to an application of an earlier Grails 9 snapshot as well. What the command line of Grails 9 does besides:
+
+* `grails create-app` writes `grails-neo4j-bom` for `--data neo4j`, the feature `gorm-neo4j` and a preset or feature pack that brings it, in the `dependencies` and the `buildscript` block of `build.gradle` and, with the feature `gradle-build-src`, in `buildSrc/build.gradle`. `grails feature add gorm-neo4j` replaces `grails-bom` with it in an application that Grails 9 generated.
+* The create commands, `feature add` and the hosted Forge refuse `gorm-neo4j` with `gorm-hibernate7` (`--data hibernate7`) and with `grails-micronaut`, which no Grails BOM covers together, with a message that starts `gorm-neo4j cannot be combined with` (the command line ends with exit code 2). `feature list` gives that reason for a feature that cannot be added, and `--list-features` marks the feature with `(cannot be combined with ...: no Grails BOM covers both)`.
+* `grails project migrate` does not change the build file of an application that an earlier Grails 9 snapshot generated with GORM for Neo4j and `grails-bom`; `grails project regenerate --diff` names `build.gradle` until the BOM is replaced.
+
+===== Required Actions
+
+* In an application with GORM for Neo4j (`org.apache.grails:grails-data-neo4j`), replace `grails-bom` with `grails-neo4j-bom` wherever the build imports it, keeping the version: `implementation platform("org.apache.grails:grails-neo4j-bom:$grailsVersion")`, `classpath platform("org.apache.grails:grails-neo4j-bom:$grailsVersion")`, and `buildSrc/build.gradle`. A build that lets the Grails Gradle plugin import the BOM sets `grails { bom = 'grails-neo4j-bom' }`.
+* To keep `grails-bom`, hold the driver with a version of the application's own that no BOM moves, `implementation('org.neo4j.driver:neo4j-java-driver') { version { strictly '4.4.13' } }`, at the version `grails-neo4j-bom` manages; the BOM is the simpler way.
+* Scripts that create an application with GORM for Neo4j together with Hibernate 7 or Micronaut fail now, where the application they made did not run; keep GORM for Neo4j with Hibernate 5, or put the Neo4j data in an application of its own.

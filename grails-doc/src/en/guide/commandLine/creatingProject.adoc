@@ -166,7 +166,7 @@ The "create-*" commands are used to produce a fundamental Grails project, allowi
 ----
 
 | -d, --data (-g, --gorm are legacy aliases)
-| Which Grails Data implementation to configure. Possible values: hibernate5, hibernate7, mongodb, neo4j. The value hibernate is accepted as a legacy alias for hibernate5.
+| Which Grails Data implementation to configure. Possible values: hibernate5, hibernate7, mongodb, neo4j. The value hibernate is accepted as a legacy alias for hibernate5. The application imports the Grails BOM that matches: `grails-hibernate7-bom` with hibernate7, `grails-neo4j-bom` with neo4j or the gorm-neo4j feature, and `grails-bom` otherwise. GORM for Neo4j cannot be combined with Hibernate 7 or with the grails-micronaut feature, because no Grails BOM covers those combinations. The command refuses them and says why, and `--list-features` marks such a feature.
 |
 [source,shell]
 ----
