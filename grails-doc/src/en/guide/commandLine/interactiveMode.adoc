@@ -116,7 +116,9 @@ Creates an application
                             coordinates has to have, as group:artifact:version=sha256. A jar with
                             another one is refused before it is opened. Can be given more than once.
   -h, --help              Show this help message and exit.
-  -i, --inplace           Create a service using the current directory
+  -i, --inplace           Create the application in the current directory, and not in a new
+                            directory named after it. Without NAME, the application is named after
+                            the current directory.
       --jdk, --java-version=<javaVersion>
                           The JDK version the project should target
       --list-catalog-features

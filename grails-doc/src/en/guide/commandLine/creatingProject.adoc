@@ -198,7 +198,7 @@ The "create-*" commands are used to produce a fundamental Grails project, allowi
 ----
 
 | -i, --inplace
-| Create a project using the current directory
+| Create the project in the current directory, and not in a new directory named after it. Without a name, the project is named after the current directory. See "Creating a project in the current directory" below.
 |
 [source,shell]
 ----
@@ -280,6 +280,24 @@ The "create-*" commands are used to produce a fundamental Grails project, allowi
 |===
 
 The features of a project do not depend on the order they are named in. A feature brings in the features it requires, and the features that nothing selected are then given their defaults: selecting `postgres`, for example, leaves out the default database driver `h2`. The servlet container and the reloading a project has when `--servlet` and `--reloading` are not given are defaults of the same kind and give way in the same way: without `--servlet`, a feature that requires Jetty gives a project with Jetty and without Tomcat. Without `--data`, the default Grails Data implementation, Hibernate 5, gives way to Hibernate 7: `--features gorm-hibernate7` gives a Hibernate 7 project. An option that is given on the command line is a choice and does not give way: `--data hibernate5 --features gorm-hibernate7` asks for two things that cannot both be had, as does `--servlet none` with a feature that requires a servlet container, and the command refuses them rather than choose one. What is recorded of the options is what the project has: `data: hibernate7` in the first example, and `servlet: none` for a plugin, which has no servlet container unless one is asked for. Features and options that cannot be had as they were asked for, and a value an option cannot have, are a mistake in the command line: the command says what is wrong, shows its usage and ends with exit code 2, and nothing is created.
+
+=== Creating a project in the current directory
+
+`--inplace` creates the project in the current directory, and not in a new directory named after it. The name can then be left out, and the project is named after the current directory:
+
+[source,shell]
+----
+mkdir bookstore
+cd bookstore
+grails create-app --inplace
+----
+
+* The name of the directory is the name of the project, and the default package is made from it as from a name given without a package. `bookstore` is the project `bookstore` in the package `bookstore`, and `my-shop` the project `my-shop` in the package `my.shop`, as `grails create-app bookstore` and `grails create-app my-shop` make them. This is the directory the command is run in, and a symbolic link on the way to it does not name it: the name is that of the directory the link leads to.
+* A name that is given is used as it is without `--inplace`, with or without a package: in any directory, `grails create-app --inplace com.example.bookstore` creates the project `bookstore` in the package `com.example` there.
+* A directory whose name the project cannot have is refused, with exit code 2, and nothing is written: a name with a dot, which in the name of a project ends its package, a name with a character that cannot be part of the name of a class, such as a space, a name that gives no package, such as one that starts with a digit, and the root of a file system, which has no name. The message names the directory. Give the name of the project then.
+* A file the directory already has is kept, and a directory that already has the record of a project is refused, as "The `.grails` directory of a project" below describes. The `create-` commands have no `--force` that would replace such a file.
+* With `--subproject` the current directory becomes the project of the build around it, under the name of the directory.
+* The record of the project has the name and the package, and not that the project was created in place: `project show` prints the `create-` command with the name and its package, such as `grails create-app bookstore.bookstore`, which creates the same project in a new directory `bookstore`.
 
 === Creating a project in an existing Gradle build
 

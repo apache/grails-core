@@ -23,6 +23,7 @@ import jakarta.annotation.Nonnull
 import org.apache.grails.forge.cli.console.ConsoleProject
 import org.apache.grails.forge.cli.console.GradleRunner
 import org.apache.grails.forge.cli.console.OptionRelation
+import org.apache.grails.forge.cli.console.UsageHelp
 import org.apache.grails.forge.cli.pack.PackArtifactException
 import org.apache.grails.forge.cli.pack.PackArtifacts
 import org.apache.grails.forge.cli.pack.PackCatalogs
@@ -98,7 +99,8 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer>, O
     @CommandLine.Option(names = ['-s', '--servlet'], paramLabel = 'Servlet Implementation', description = 'Which Servlet Implementation to configure. Possible values: ${COMPLETION-CANDIDATES}.', completionCandidates = ServletImplCandidates, converter = ServletImplConverter)
     ServletImpl servletImpl
 
-    @CommandLine.Option(names = ['-i', '--inplace'], description = 'Create a service using the current directory')
+    @CommandLine.Option(names = ['-i', '--inplace'], description = 'Create the application in the current directory, and not in a new directory named after it. ' +
+            'Without NAME, the application is named after the current directory.')
     boolean inplace
 
     @CommandLine.Option(names = ['--subproject'],
@@ -305,9 +307,9 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer>, O
         }
         Project project
         try {
-            project = NameUtils.parse(name)
+            project = toCreate()
         } catch (IllegalArgumentException e) {
-            throw new CommandLine.ParameterException(this.spec.commandLine(), (name == null || name.isEmpty()) ? 'Specify an application name or use --inplace to create an application in the current directory' : e.getMessage())
+            throw new CommandLine.ParameterException(this.spec.commandLine(), e.getMessage())
         }
 
         OutputHandler outputHandler = new FileSystemOutputHandler(project, inplace, this)
@@ -359,7 +361,52 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer>, O
     }
 
     void generate(OutputHandler outputHandler) throws Exception {
-        generate(NameUtils.parse(name), outputHandler)
+        generate(toCreate(), outputHandler)
+    }
+
+    /**
+     * @return the application the command creates: the one of the name that is given, and with
+     * {@code --inplace} and no name the one that is named after the current directory
+     * @throws IllegalArgumentException when there is no name, or it is not one an application can have
+     */
+    private Project toCreate() throws IOException {
+        if (name != null && !name.isEmpty()) {
+            return NameUtils.parse(name)
+        }
+        if (!inplace) {
+            throw new IllegalArgumentException('Specify an application name or use --inplace to create an application in the current directory')
+        }
+        return namedAfter(FileSystemOutputHandler.getDefaultBaseDirectory())
+    }
+
+    /**
+     * The application that {@code --inplace} creates without a name, which is named after the directory
+     * it is created in, as the Grails shell named it. The name of the directory is taken as a name that
+     * is given without a package, and the package is made of it as it is of such a name. What the name
+     * of an application cannot be is refused, and so are two things a name on the command line can have:
+     * a dot, which there ends the package, and a character that the name of a class cannot have, since
+     * classes of the application are named after it. The name is then given on the command line.
+     */
+    private Project namedAfter(File directory) {
+        String named = directory.getName()
+        String why
+        if (named.isEmpty()) {
+            why = 'the root of a file system has no name'
+        } else if (named.contains('.')) {
+            why = 'it has a dot, which in the name of an application ends its package'
+        } else {
+            try {
+                Project project = NameUtils.parse(named)
+                if (NameUtils.isValidJavaIdentifier(project.getClassName())) {
+                    return project
+                }
+                why = "it has a character that the name of a class cannot have: only letters, digits, '_' and '-' between words"
+            } catch (IllegalArgumentException e) {
+                why = (e.getMessage() ?: e.getClass().getSimpleName()).replaceAll('\\.$', '')
+            }
+        }
+        throw new IllegalArgumentException("With --inplace and no name the application is named after the current directory, ${GradleRunner.line(directory)}, " +
+                "and its name is not one an application can have: ${why}. Give the name: ${UsageHelp.toType(spec, "${spec.name()} --inplace NAME")}")
     }
 
     void generate(Project project, OutputHandler outputHandler) throws Exception {

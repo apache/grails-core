@@ -1995,11 +1995,13 @@ The Grails shell read `~/.grails/settings.groovy`: the repositories it resolved 
 * *Repositories.* The feature pack of a plugin that is given to `--features` by its coordinates is taken from the repositories of the `GRAILS_REPO_URL` environment variable and then from Maven Central, or from those that `--feature-pack-repository` names. A feature catalog is named with `--feature-catalog` or `GRAILS_FORGE_CATALOG`. `~/.m2/settings.xml` is not read for either.
 * *Proxies.* The JVM of the `grails` command takes the proxy settings of Java from `GRAILS_OPTS` or `JAVA_OPTS`, for example `-Dhttps.proxyHost=... -Dhttps.proxyPort=...`. The build of a project takes them from Gradle.
 * *`create-app`.* The name may still be given with its package (`create-app com.example.myapp`), and `--inplace` creates the application in the current directory. A name with a character a directory cannot have, and a part of the package that Windows keeps for a device, are refused. `--profile` is no option (note 37).
+* *`create-app --inplace` without a name.* The application is named after the current directory, as the shell named it, and the default package is made from that name as from a name given without a package (`my-shop` is the application `my-shop` in the package `my.shop`). The `create-app` of the Grails Forge command line of Grails 8 refused `--inplace` without a name. Two directories the shell took are refused, with exit code 2 and a message that names the directory: one whose name has a dot, which the shell split into a package and a name (`com.example.shop` was the application `shop` in the package `com.example`), and one whose name has a character that cannot be part of the name of a class, such as a space. The same holds for `create-restapi`, `create-plugin`, `create-web-plugin` and `create-rest-api-plugin`.
 
 ===== Required Actions
 
 * Delete the profile settings from `~/.grails/settings.groovy`, or the file. Move a repository it named for profiles of your own to `GRAILS_REPO_URL` or `--feature-pack-repository`, for the plugin that now holds the feature pack.
 * Move proxy settings to `GRAILS_OPTS` and to the Gradle properties of the build.
+* A script that runs `create-app --inplace` without a name in a directory whose name has a dot gives the name the shell made of it: `grails create-app --inplace com.example.shop` in a directory `com.example.shop`. In a directory whose name has a space or another character a class name cannot have, give the name the application is to have.
 
 ==== 49. A Project Above the Current Directory Has to Be Your Own, and Builds of Several Projects
 
@@ -2231,7 +2233,7 @@ Every command the Grails shell of Grails 8 had, of itself and of the profiles `b
 
 |`create-app`
 |the shell
-|Kept, without `--profile`: the type of application is the command (37). `--features` adds to the default features; `--inplace` is unchanged (48).
+|Kept, without `--profile`: the type of application is the command (37). `--features` adds to the default features. `--inplace` without a name still names the application after the current directory, and refuses a directory whose name has a dot or a character a class name cannot have: give the name there (48).
 
 |`create-app --profile rest-api`
 |the shell
@@ -2478,7 +2480,7 @@ What `grails-forge-cli` of Grails 8 took, which was also reached as `grails -t f
 |Unchanged.
 
 |`-i`, `--inplace`
-|Unchanged.
+|Unchanged with a name. Without one, which was refused, the application is now named after the current directory, as the Grails shell named it (48).
 
 |`--jdk`, `--java-version`
 |Unchanged.

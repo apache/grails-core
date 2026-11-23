@@ -765,6 +765,7 @@ Where an unchanged name is a command:
 | `create-app NAME --profile rest-api` | `grails create-restapi NAME` |
 | `create-app NAME --profile plugin` / `web-plugin` / `rest-api-plugin` | `grails create-plugin NAME` / `create-web-plugin NAME` / `create-rest-api-plugin NAME` |
 | `create-app --profile <own profile>` | `grails create-<type> NAME --preset <coordinates>`: the profile converted to a preset; a plugin with a feature pack for what only some applications need (`--features group:artifact:version`) |
+| `create-app --inplace` (no name: named after the current directory) | unchanged, also for the other `create-` commands; refused (exit 2) in a directory whose name has a dot, which the shell split into package and name, or a character a class name cannot have, such as a space: give the name, `grails create-app --inplace com.example.shop` |
 | `create-profile`, `create-feature`, `create-template`, `create-creator-command`, `create-generator-command`, `create-gradle-command` | removed with the profiles; a feature pack is written by hand |
 | `list-profiles` | removed: `grails help` lists the `create-` commands |
 | `profile-info` | removed: `grails create-app --list-features` (and the other `create-` commands) |
@@ -784,7 +785,7 @@ Where an unchanged name is a command:
 | `grails -t shell CMD`, `grails-shell-cli CMD` | `grails CMD`, after translating `CMD` with the tables above |
 | `GRAILS_PREFERRED_SHELL` | not read: remove it |
 | `create-app`, `create-webapp`, `create-restapi`, `create-plugin`, `create-web-plugin` | unchanged; new: `create-rest-api-plugin` |
-| `-f`/`--features`, `--list-features`, `-i`/`--inplace`, `--jdk`/`--java-version`, `-d`/`--data`/`-g`/`--gorm`, `-s`/`--servlet`, `-r`/`--reloading` | unchanged; new: `--exclude-features`, `--subproject`, `--features group:artifact:version` |
+| `-f`/`--features`, `--list-features`, `-i`/`--inplace`, `--jdk`/`--java-version`, `-d`/`--data`/`-g`/`--gorm`, `-s`/`--servlet`, `-r`/`--reloading` | unchanged; new: `--exclude-features`, `--subproject`, `--features group:artifact:version`, and `--inplace` without a name, which was refused, names the application after the current directory |
 | `--test`, `--build`, `--lang` | never were options; do not add them |
 | `-h`, `-V`/`--version`, `-v`/`--verbose`, `-x`/`--stacktrace` | unchanged; new: `--plain-output`, `--non-interactive` |
 | `create-controller`, `create-service`, `create-domain-class`, `create-taglib`, `create-interceptor`, `create-job`, `add-property` (`-f`/`--force`) | unchanged names; an existing file now fails the command (exit 1) without `--force` |

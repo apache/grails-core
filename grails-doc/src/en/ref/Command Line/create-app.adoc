@@ -28,22 +28,23 @@ The `create-app` command serves as the initial step in Grails application develo
 [source,console]
 ----
 $ grails create-app [OPTIONS] NAME
+$ grails create-app --inplace [OPTIONS] [NAME]
 ----
 
-The command creates a subdirectory named after the project in the directory where it is executed, or with `--inplace` creates the project in the current directory.
+The command creates a subdirectory named after the project in the directory where it is executed, or with `--inplace` creates the project in the current directory. With `--inplace` the name can be left out: the project is then named after the current directory.
 
 === Options
 
 These are the options of `grails create-app`:
 
-- `NAME`: The name of the project, with or without a package: `com.example.bookstore` creates `bookstore` with the default package `com.example`.
+- `NAME`: The name of the project, with or without a package: `com.example.bookstore` creates `bookstore` with the default package `com.example`. It can be left out with `--inplace`.
 - `-f, --features=FEATURE[,FEATURE...]`: The features to use in addition to the default ones. `--list-features` lists them.
 - `--exclude-features=FEATURE[,FEATURE...]`: The features to leave out of those the project would have by default.
 - `-d, --data=Grails Data Implementation` (`-g`, `--gorm` are legacy aliases): The Grails Data implementation: `hibernate5`, `hibernate7`, `mongodb`, `neo4j`.
 - `-s, --servlet=Servlet Implementation`: The embedded servlet container: `tomcat`, `jetty`, `undertow`, `none`.
 - `-r, --reloading=RELOADING`: The development reloading option: `devtools`, `jrebel`, `none`.
 - `--jdk, --java-version=<javaVersion>`: The JDK version the project should target.
-- `-i, --inplace`: Create the project in the current directory.
+- `-i, --inplace`: Create the project in the current directory, and not in a new directory named after it. Without `NAME`, the project is named after the current directory, and its default package is made from that name as from a name given without a package: `my-shop` is the project `my-shop` in the package `my.shop`. A directory whose name has a dot, or a character that cannot be part of the name of a class, such as a space, is refused: give `NAME` then.
 - `--subproject`: Create the project as a project of the Gradle build the directory is in, with the files of the application only.
 - `--list-features`: Output the available features and their descriptions. See link:list-features.html[--list-features].
 - `--feature-pack-dir=DIRECTORY`, `--feature-pack-repository=URL`, `--feature-pack-sha256=COORDINATES=SHA256`, `--feature-catalog=URL`, `--list-catalog-features`, `--refresh`, `--offline`: For the feature of a plugin that has a feature pack.
@@ -73,7 +74,7 @@ $ grails create-app com.example.bookstore \
     --features=asciidoctor,github-workflow-java-ci
 ----
 
-3. Create a web application in the current directory:
+3. Create a web application in the current directory, named after it (the project `bookstore`, in the package `bookstore`):
 +
 [source,console]
 ----
