@@ -22,6 +22,7 @@ package org.grails.forge.create
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.application.OperatingSystem
 import org.grails.forge.options.DevelopmentReloading
+import org.grails.forge.options.GormImpl
 import org.grails.forge.options.JdkVersion
 import org.grails.forge.utils.CommandSpec
 
@@ -61,6 +62,27 @@ class CreateAppSpec extends CommandSpec {
 
         then:
         output.contains('BUILD SUCCESSFUL')
+    }
+
+    void "grails-compile-static compiles the artefacts that #features generate for a #applicationType application with #gormImpl"() {
+        given:
+        generateProject(OperatingSystem.MACOS_ARCH64, ['grails-compile-static'] + features, applicationType,
+                DevelopmentReloading.DEFAULT_OPTION, JdkVersion.DEFAULT_OPTION, gormImpl)
+
+        when:
+        final String output = executeGradle(tasks as String[]).getOutput()
+
+        then:
+        output.contains('BUILD SUCCESSFUL')
+
+        where:
+        features                         | applicationType          | gormImpl            | tasks
+        ['spring-boot-starter-security'] | ApplicationType.WEB      | GormImpl.HIBERNATE5 | ['compileGroovy', 'compileGroovyPages']
+        ['spring-boot-starter-security'] | ApplicationType.WEB      | GormImpl.HIBERNATE7 | ['compileGroovy', 'compileGroovyPages']
+        ['spring-boot-starter-security'] | ApplicationType.WEB      | GormImpl.MONGODB    | ['compileGroovy', 'compileGroovyPages']
+        ['grails-spring-security']       | ApplicationType.WEB      | GormImpl.HIBERNATE7 | ['compileGroovy', 'compileGroovyPages']
+        ['grails-spring-security-ui']    | ApplicationType.WEB      | GormImpl.HIBERNATE7 | ['compileGroovy', 'compileGroovyPages']
+        []                               | ApplicationType.REST_API | GormImpl.HIBERNATE7 | ['compileGroovy']
     }
 
     void "test create-app contains i18n files"() {

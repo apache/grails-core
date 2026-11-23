@@ -42,8 +42,9 @@ dependencies {
         // impl: BeanTypeResolver, @Secured(runtime), SecurityFilterPosition, SpringSecurityUtils
     }
     api "com.nimbusds:nimbus-jose-jwt", {
-        // api: EncryptionMethod, JOSEException, JWEAlgorithm, JWSAlgorithm, JWSSigner, JWT, JWTClaimsSet
-        // impl: EncryptedJWT, EncryptionMethod, JWEHeader, JWSHeader, JWTParser, MACSigner, MACVerifier, PlainJWT, RSADecrypter, RSAEncrypter, SignedJWT
+        // api: EncryptionMethod, JOSEException, JWEAlgorithm, JWEObject, JWSAlgorithm, JWSSigner, JWT, JWTClaimsSet, SignedJWT
+        // impl: EncryptedJWT, EncryptionMethod, JWEAlgorithm, JWEHeader, JWEObject, JWSAlgorithm, JWSHeader, JWTParser, MACSigner,
+        //       MACVerifier, Payload, PlainJWT, RSADecrypter, RSAEncrypter, RSASSASigner, RSASSAVerifier, SignedJWT
     }
     api project(':grails-web-url-mappings'), {
         // api: LinkGenerator
