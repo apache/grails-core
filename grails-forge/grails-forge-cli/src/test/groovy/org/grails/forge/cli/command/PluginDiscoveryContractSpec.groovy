@@ -36,6 +36,7 @@ import org.grails.forge.application.WebAvailableFeatures
 import org.grails.forge.application.generator.ProjectGenerator
 import org.grails.forge.cli.CommandFixture
 import org.grails.forge.cli.CommandSpec
+import org.grails.forge.cli.ForgeContext
 import org.grails.forge.cli.ForkedCli
 import org.grails.forge.cli.GrailsPicocliFactory
 import org.grails.forge.util.VersionInfo
@@ -129,7 +130,8 @@ class PluginDiscoveryContractSpec extends CommandSpec implements CommandFixture 
 
         then:
         exit == 0
-        document.plugin.featurePacks == [[name: 'acme-audit', offered: true, version: '2.3.0', coordinates: "${PLUGIN}:2.3.0".toString(), applicationTypes: null]]
+        document.plugin.featurePacks == [[name: 'acme-audit', offered: true, version: '2.3.0', coordinates: "${PLUGIN}:2.3.0".toString(), applicationTypes: null,
+                                          applicationType: 'web']]
 
         when: 'the plugins are listed'
         exit = list('--plugin-index', index.toURI().toString(), '--json', 'acme')
@@ -186,7 +188,7 @@ class PluginDiscoveryContractSpec extends CommandSpec implements CommandFixture 
         what                                          | overrides                              || taken   | pluginInfo                                               | outcome
         'a kind this Forge does not know'             | [kind: 'theme']                        || '2.3.0' | '2.3.0.'                                                 | 'the older release is taken'
         'a type of application it does not know'      | [applicationTypes: ['web', 'desktop']] || '2.4.0' | '2.4.0, for applications of type web, desktop.'          | 'the later release is taken for a web application'
-        'only types of application it does not know'  | [applicationTypes: ['desktop']]        || '2.3.0' | '2.4.0, for applications of type desktop.'               | 'the older release is taken for a web application'
+        'only types of application it does not know'  | [applicationTypes: ['desktop']]        || '2.3.0' | '2.3.0.'                                                 | 'the older release is taken for a web application'
         'a template API to come'                      | [templateApi: 2]                       || '2.3.0' | '2.3.0.'                                                 | 'the older release is taken'
     }
 
@@ -394,7 +396,7 @@ class PluginDiscoveryContractSpec extends CommandSpec implements CommandFixture 
     }
 
     private int info(String... args) {
-        return plugins(new PluginInfoCommand() {
+        return plugins(new PluginInfoCommand(ForgeContext.of(beanContext)) {
 
             @Override
             protected PackArtifacts createPackArtifacts() {
@@ -414,7 +416,7 @@ class PluginDiscoveryContractSpec extends CommandSpec implements CommandFixture 
     }
 
     private int list(String... args) {
-        return plugins(new ListPluginsCommand() {
+        return plugins(new ListPluginsCommand(ForgeContext.of(beanContext)) {
 
             @Override
             protected PackArtifacts createPackArtifacts() {

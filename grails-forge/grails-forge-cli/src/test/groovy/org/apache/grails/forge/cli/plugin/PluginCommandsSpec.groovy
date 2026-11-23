@@ -19,12 +19,15 @@
 package org.apache.grails.forge.cli.plugin
 
 import java.nio.file.Files
+import java.util.function.Supplier
 import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
 import org.apache.grails.forge.cli.pack.PackArtifacts
 import org.apache.grails.forge.cli.pack.PackArtifacts.Reply
 import org.apache.grails.forge.cli.pack.PackArtifacts.Transport
 import org.apache.grails.forge.core.bom.BomVersions
+import org.grails.forge.cli.ForgeContext
+import org.springframework.context.ApplicationContext
 import picocli.CommandLine
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -50,6 +53,9 @@ class PluginCommandsSpec extends Specification {
     String repositoriesOfEnvironment
     StringWriter out = new StringWriter()
     StringWriter err = new StringWriter()
+
+    /** The Forge application of the command line, which these indexes, without a feature pack, never start */
+    ForgeContext generator = new ForgeContext({ throw new IllegalStateException('no project generator is started by this specification') } as Supplier<ApplicationContext>)
     Transport transport = { URI address ->
         asked << address.toString()
         Object answer = served[address.toString()]
@@ -846,7 +852,7 @@ class PluginCommandsSpec extends Specification {
     }
 
     private int list(String... args) {
-        return run(new ListPluginsCommand() {
+        return run(new ListPluginsCommand(generator) {
 
             @Override
             protected PackArtifacts createPackArtifacts() {
@@ -866,7 +872,7 @@ class PluginCommandsSpec extends Specification {
     }
 
     private int info(String... args) {
-        return run(new PluginInfoCommand() {
+        return run(new PluginInfoCommand(generator) {
 
             @Override
             protected PackArtifacts createPackArtifacts() {

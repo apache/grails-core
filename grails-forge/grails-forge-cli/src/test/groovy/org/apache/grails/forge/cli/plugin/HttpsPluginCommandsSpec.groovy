@@ -28,10 +28,13 @@ import java.time.Duration
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import java.util.function.Supplier
 import javax.net.ssl.KeyManagerFactory
 import javax.net.ssl.SSLContext
 import javax.net.ssl.TrustManagerFactory
 import org.apache.grails.forge.cli.pack.PackArtifacts
+import org.grails.forge.cli.ForgeContext
+import org.springframework.context.ApplicationContext
 import picocli.CommandLine
 import spock.lang.Shared
 import spock.lang.Specification
@@ -57,6 +60,9 @@ class HttpsPluginCommandsSpec extends Specification {
 
     StringWriter out = new StringWriter()
     StringWriter err = new StringWriter()
+
+    /** The Forge application of the command line, which these indexes, without a feature pack, never start */
+    ForgeContext generator = new ForgeContext({ throw new IllegalStateException('no project generator is started by this specification') } as Supplier<ApplicationContext>)
 
     void setupSpec() {
         store = Files.createTempFile('grailsforgecertificate', '.p12').toFile()
@@ -211,7 +217,7 @@ class HttpsPluginCommandsSpec extends Specification {
         handlers[INDEX_PATH] = { HttpExchange exchange -> send(exchange, 200, INDEX.bytes) }
 
         when: 'the client trusts what the JVM trusts, which this certificate is not among'
-        int exit = run(new ListPluginsCommand() {
+        int exit = run(new ListPluginsCommand(generator) {
 
             @Override
             protected String pluginIndexSetting() {
@@ -240,7 +246,7 @@ class HttpsPluginCommandsSpec extends Specification {
         SSLContext trusted = context
 
         when:
-        int exit = run(new PluginInfoCommand() {
+        int exit = run(new PluginInfoCommand(generator) {
 
             @Override
             protected PackArtifacts createPackArtifacts() {
@@ -305,7 +311,7 @@ class HttpsPluginCommandsSpec extends Specification {
 
     private int list(Duration within, String... args) {
         SSLContext trusted = context
-        return run(new ListPluginsCommand() {
+        return run(new ListPluginsCommand(generator) {
 
             @Override
             protected PackArtifacts createPackArtifacts() {

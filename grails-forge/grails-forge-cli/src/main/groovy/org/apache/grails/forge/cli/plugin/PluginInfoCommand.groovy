@@ -23,7 +23,10 @@ import groovy.transform.CompileStatic
 import org.apache.grails.forge.cli.console.UsageHelp
 import org.apache.grails.forge.cli.pack.PackArtifacts
 import org.apache.grails.forge.cli.plugin.PluginRecord.Release
+import org.apache.grails.forge.cli.plugin.PluginsCommand.Offer
+import org.grails.forge.cli.ForgeContext
 import org.grails.forge.cli.command.FeatureCommand
+import org.grails.forge.cli.command.ProjectShowCommand
 import org.grails.forge.feature.FeatureSelectionException
 import picocli.CommandLine
 
@@ -60,6 +63,13 @@ class PluginInfoCommand extends PluginsCommand {
     @CommandLine.Option(names = ['--snapshots'], description = 'Lists the snapshot versions among the versions as well.')
     boolean snapshots
 
+    /**
+     * @param context the Forge application of the command line, see {@link PluginsCommand#PluginsCommand(ForgeContext)}
+     */
+    PluginInfoCommand(ForgeContext context) {
+        super(context)
+    }
+
     @Override
     protected int run() {
         List<PluginRecord> all = known()
@@ -77,7 +87,8 @@ class PluginInfoCommand extends PluginsCommand {
         if (record == null) {
             return failed(unknown(all))
         }
-        PluginArtifacts repositories = new PluginArtifacts(artifacts(), repositories(record), FILE_WITHIN)
+        List<URI> ofTheEnvironment = repositories()
+        PluginArtifacts repositories = new PluginArtifacts(artifacts(), repositories(record, ofTheEnvironment), FILE_WITHIN)
         PluginArtifacts.Versions published = repositories.versions(record.coordinates)
         if (found.isEmpty() && published == null) {
             notes.addAll(repositories.notes)
@@ -114,7 +125,8 @@ class PluginInfoCommand extends PluginsCommand {
         info.put('deprecated', record.deprecated)
         info.put('dependency', dependency(record, managed, forGrails ?: latest))
         info.put('features', record.features)
-        info.put('featurePacks', featurePacks(record))
+        List<Offer> offers = offers(record)
+        info.put('featurePacks', featurePacks(offers))
         if (json) {
             Map<String, Object> document = new LinkedHashMap<>()
             document.put('format', FORMAT)
@@ -125,11 +137,11 @@ class PluginInfoCommand extends PluginsCommand {
             return 0
         }
         sayNotes()
-        print(info, record, managed)
+        print(info, record, managed, offers, ofTheEnvironment)
         return 0
     }
 
-    private void print(Map<String, Object> info, PluginRecord record, Map.Entry<String, String> managed) {
+    private void print(Map<String, Object> info, PluginRecord record, Map.Entry<String, String> managed, List<Offer> offers, List<URI> ofTheEnvironment) {
         out("Plugin: ${record.name} (${record.coordinates})")
         if (info.get('title') && info.get('title') != record.name) {
             out("Title: ${info.get('title')}")
@@ -169,18 +181,17 @@ class PluginInfoCommand extends PluginsCommand {
             out("* ${record.features.size() == 1 ? 'Feature' : 'Features'}: ${record.features.join(', ')}. In the directory of an application: " +
                     "${UsageHelp.toType(spec, "${FeatureCommand.NAME} add ${record.features.first()}")}")
         }
-        for (Map<String, Object> pack : (List<Map<String, Object>>) info.get('featurePacks')) {
-            if (pack.get('offered')) {
-                List<String> types = (List<String>) pack.get('applicationTypes')
-                out("* Feature pack: ${pack.get('name')}, of version ${pack.get('version')}${types ? ", for applications of type ${types.join(', ')}" : ''}. " +
+        for (Offer offer : offers) {
+            if (offer.version != null) {
+                Set<String> types = offer.version.applicationTypes
+                out("* Feature pack: ${offer.name}, of version ${offer.version.version}${types ? ", for applications of type ${types.join(', ')}" : ''}. " +
                         'An application is created with it by:')
-                out("    ${UsageHelp.toType(spec, "create-app NAME --features ${pack.get('coordinates')}")}")
-                String named = byName((String) pack.get('name'))
-                if (named != null) {
-                    out("    ${UsageHelp.toType(spec, "create-app NAME ${named}")}")
+                // each as a POSIX shell reads it: an address can have in it what a shell acts on
+                for (List<String> command : commandsOf(record, offer, ofTheEnvironment)) {
+                    out("    ${UsageHelp.toType(spec, ProjectShowCommand.commandLine(command.first(), command.drop(1)))}")
                 }
             } else {
-                out("* Feature pack: ${pack.get('name')}, which an application of Grails ${grailsVersion()} is not created with: ${pack.get('reason')}")
+                out("* Feature pack: ${offer.name}, which an application of Grails ${grailsVersion()} is not created with: ${offer.reason}")
             }
         }
         out('* Definition:')
@@ -268,8 +279,8 @@ class PluginInfoCommand extends PluginsCommand {
      * The repositories that are asked about a plugin: those {@link #repositories()} gives, and after
      * them the one the plugin index names for the plugin.
      */
-    private List<URI> repositories(PluginRecord record) {
-        Set<URI> all = new LinkedHashSet<>(repositories())
+    private static List<URI> repositories(PluginRecord record, List<URI> ofTheEnvironment) {
+        Set<URI> all = new LinkedHashSet<>(ofTheEnvironment)
         if (record.repository != null) {
             all << record.repository
         }

@@ -807,7 +807,7 @@ This is the whole way for a pack that an organisation keeps for its own applicat
 ----
 $ export GRAILS_REPO_URL=https://repo.acme.example/maven
 $ export GRAILS_PLUGIN_INDEX=https://catalog.acme.example/grails-plugins-index.json
-$ grails plugin-info com.acme:acme-audit-grails     # names the feature and the version an application gets
+$ grails plugin-info com.acme:acme-audit-grails     # names the feature, the version an application gets and how it is created
 ----
 +
 With `GRAILS_PLUGIN_INDEX` set, `list-plugins` and `plugin-info` list the plugins of your catalog, and not those of the Grails plugin index.

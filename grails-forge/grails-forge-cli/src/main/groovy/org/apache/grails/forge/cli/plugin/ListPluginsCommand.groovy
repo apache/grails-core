@@ -21,6 +21,7 @@ package org.apache.grails.forge.cli.plugin
 import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
 import org.apache.grails.forge.cli.console.UsageHelp
+import org.grails.forge.cli.ForgeContext
 import picocli.CommandLine
 
 /**
@@ -47,6 +48,13 @@ class ListPluginsCommand extends PluginsCommand {
 
     @CommandLine.Option(names = ['--deprecated'], description = 'Lists the plugins the plugin index says are deprecated as well.')
     boolean deprecated
+
+    /**
+     * @param context the Forge application of the command line, see {@link PluginsCommand#PluginsCommand(ForgeContext)}
+     */
+    ListPluginsCommand(ForgeContext context) {
+        super(context)
+    }
 
     @Override
     protected int run() {
@@ -120,6 +128,6 @@ class ListPluginsCommand extends PluginsCommand {
 
     // the names of the features of the packs of the plugin an application of this Grails is created with
     private List<String> offeredPacks(PluginRecord plugin) {
-        return featurePacks(plugin).findAll { Map<String, Object> pack -> pack.get('offered') }.collect { Map<String, Object> pack -> (String) pack.get('name') }
+        return offers(plugin).findAll { PluginsCommand.Offer offer -> offer.version != null }*.name
     }
 }

@@ -550,8 +550,8 @@ final class ForgeCli {
         commandLine.setExecutionStrategy({ CommandLine.ParseResult parsed -> ForgeCli.runAsRead(root, parsed) } as CommandLine.IExecutionStrategy)
         ConsoleCommands.addTo(commandLine, readsProject)
         // the plugins there are, in a project and outside one: only these two ask the plugin index for anything
-        commandLine.addSubcommand(new ListPluginsCommand())
-        commandLine.addSubcommand(new PluginInfoCommand())
+        commandLine.addSubcommand(new ListPluginsCommand(context))
+        commandLine.addSubcommand(new PluginInfoCommand(context))
         // last: a command of the application does not take the name of a command that is there
         ApplicationCommands.addTo(commandLine, listsApplication)
         // everything after gradle is Gradle's, and everything after a command of the application is that command's
