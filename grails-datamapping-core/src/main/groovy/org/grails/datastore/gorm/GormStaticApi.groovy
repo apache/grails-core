@@ -763,17 +763,17 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
     }
 
     @Override
-    grails.gorm.DetachedCriteria<D> where(Closure callable) {
+    grails.gorm.DetachedCriteria<D> where(@DelegatesTo(value = grails.gorm.DetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure callable) {
         new grails.gorm.DetachedCriteria<D>(persistentClass).withConnection(qualifier).where(callable)
     }
 
     @Override
-    grails.gorm.DetachedCriteria<D> whereLazy(Closure callable) {
+    grails.gorm.DetachedCriteria<D> whereLazy(@DelegatesTo(value = grails.gorm.DetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure callable) {
         where(callable)
     }
 
     @Override
-    grails.gorm.DetachedCriteria<D> whereAny(Closure callable) {
+    grails.gorm.DetachedCriteria<D> whereAny(@DelegatesTo(value = grails.gorm.DetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure callable) {
         new grails.gorm.DetachedCriteria<D>(persistentClass).or(callable)
     }
 
@@ -862,12 +862,12 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
     }
 
     @Override
-    List<D> findAll(Closure callable) {
+    List<D> findAll(@DelegatesTo(value = grails.gorm.DetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure callable) {
         where(callable).list()
     }
 
     @Override
-    List<D> findAll(Map args, Closure callable) {
+    List<D> findAll(Map args, @DelegatesTo(value = grails.gorm.DetachedCriteria, strategy = Closure.DELEGATE_FIRST) Closure callable) {
         where(callable).list(args)
     }
 

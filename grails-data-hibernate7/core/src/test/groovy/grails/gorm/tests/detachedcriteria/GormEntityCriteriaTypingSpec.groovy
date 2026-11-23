@@ -57,6 +57,19 @@ class GormEntityCriteriaTypingSpec extends HibernateGormDatastoreSpec {
         TypedGrailsCaller.petsNamedAndOf('rex', 'Ned') == ['rex']
         TypedGrailsCaller.petsNamedAndOf('rex', 'Homer') == []
     }
+
+    void "a where query inside another where query on another class restricts the inner query, not the outer one"() {
+        given:
+        TypedCriteriaOwner ned = new TypedCriteriaOwner(name: 'Ned').save(flush: true)
+        TypedCriteriaOwner homer = new TypedCriteriaOwner(name: 'Homer').save(flush: true)
+        new TypedCriteriaPet(name: 'rex', owner: ned).save(flush: true)
+        new TypedCriteriaPet(name: 'tom', owner: homer).save(flush: true)
+
+        expect: 'the inner eq selects one owner, so only the pet of that owner matches'
+        TypedGrailsCaller.petsOfOwnersNamed('Ned') == ['rex']
+        TypedGrailsCaller.petsOfOwnersNamed('Homer') == ['tom']
+        TypedGrailsCaller.petsOfOwnersNamed('Nobody') == []
+    }
 }
 
 @CompileStatic
@@ -98,6 +111,12 @@ class TypedGrailsCaller {
 
     static List<String> petsOfPath(String ownerName) {
         TypedCriteriaPet.where { owner.name == ownerName }.list(sort: 'name')*.name
+    }
+
+    static List<String> petsOfOwnersNamed(String ownerName) {
+        TypedCriteriaPet.where {
+            'in'('owner', TypedCriteriaOwner.where { eq('name', ownerName) }.list())
+        }.list(sort: 'name')*.name
     }
 
     static List<String> petsNamedAndOf(String petName, String ownerName) {
