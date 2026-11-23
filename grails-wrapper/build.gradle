@@ -63,6 +63,13 @@ apply {
 // It's surprisingly hard to generate start scripts and *not* have them nested into a bin / lib directory
 // rather than defining the application and then having to add tasks to rework it, just define a distribution and
 // create the scripts in the right location from the start
+// The jar is committed into every project and comes with each clone of it, so it is kept small: the classes keep
+// their source file and line numbers, which a stack trace shows, and leave out the tables of local variables, which
+// only a debugger reads (a tenth of the jar)
+tasks.named('compileJava', JavaCompile).configure { JavaCompile it ->
+    it.options.debugOptions.debugLevel = 'source,lines'
+}
+
 TaskProvider<Jar> jarTask = tasks.named('jar', Jar)
 jarTask.configure { Jar it ->
     it.archiveFileName = "${project.name}.jar" as String
