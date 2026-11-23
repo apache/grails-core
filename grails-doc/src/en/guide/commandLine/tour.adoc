@@ -349,9 +349,9 @@ $ ./grailsw help
 $ ./grailsw feature add cache
 ----
 
-Commit the three files. Everyone who works on the project, and the build server, then runs the command line of the same version without installing Grails, and `feature add` is run by the version that generated the project, as it requires. The downloads are kept in `~/.grails/wrapper` and not in the project. See "Grails Wrapper" in link:gettingStarted.html#downloadingAndInstalling[Downloading and Installing].
+Commit the three files. Everyone who works on the project, and the build server, then runs the command line of the same version without installing Grails, and `feature add` is run by the version whose record the project has, as it requires. The downloads are kept in `~/.grails/wrapper` and not in the project. See "Grails Wrapper" in link:gettingStarted.html#downloadingAndInstalling[Downloading and Installing].
 
-When the project moves to another version of Grails, the wrapper moves with it: change `grailsVersion` in `gradle.properties`, run link:{commandLineRef}update-wrapper.html[update-wrapper] and commit the files it names.
+When the project moves to another version of Grails, the wrapper moves with it: change `grailsVersion` in `gradle.properties`, run link:{commandLineRef}update-wrapper.html[update-wrapper] and commit the files it names. Then `./grailsw project migrate` moves the record of the project to that version, so that `feature add` works with it, and changes no other file: see link:{commandLineRef}project-migrate.html[project migrate].
 
 [source,console]
 ----

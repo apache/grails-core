@@ -200,7 +200,8 @@ class FeatureAddJsonSpec extends AbstractFeatureAddCommandSpec {
         exit == 1
         document.outcome == 'refused'
         document.reason == 'other-generator'
-        document.message.contains('Use the command line of Grails 9.0.0-M1 to add the feature')
+        document.message.contains('its record is moved to this version first. Nothing was changed. ')
+        document.message.endsWith(' project migrate moves the record to this version, from the choices it has, and changes no file of the application outside .grails')
         document.applicable == false
     }
 

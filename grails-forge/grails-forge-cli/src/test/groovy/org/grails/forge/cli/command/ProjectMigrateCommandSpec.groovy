@@ -446,7 +446,7 @@ dependencies {
     }
 
     @Unroll
-    void "the record of an application this version generated is never replaced: project migrate #options"() {
+    void "the record of an application this version generated is not written over, and is this version's already: project migrate #options"() {
         given:
         ForgeCli.execute(beanContext, 'create-app', 'com.example.shop')
         File generated = new File(dir, 'shop')
@@ -457,11 +457,11 @@ dependencies {
         when:
         int exit = ForgeCli.execute(beanContext, (['project', 'migrate'] + options) as String[])
 
-        then:
-        exit == 1
-        err.toString().readLines() == ['| Error The application has the record of how it was generated (.grails/project.yml), which this command does not replace: ' +
-                                               'grails-forge-cli project show says what it has. Nothing was written']
-        out.toString().isEmpty()
+        then: 'nothing is worked out from the files: the record says that there is nothing to move to this version'
+        exit == 0
+        err.toString().isEmpty()
+        out.toString().readLines() == ["| The record of the application shop was written by this build of the command line, grails-forge ${VersionInfo.version} for " +
+                                               "Grails ${VersionInfo.grailsVersion}: it is that of this version already, and there is nothing to move. Nothing was written".toString()]
         tree(generated) == before
 
         where:

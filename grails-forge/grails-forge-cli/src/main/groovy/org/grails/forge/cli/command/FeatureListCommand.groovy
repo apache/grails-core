@@ -26,6 +26,7 @@ import org.apache.grails.forge.cli.console.ConsoleProject
 import org.apache.grails.forge.cli.console.GradleRunner
 import org.apache.grails.forge.cli.console.ProjectCommand
 import org.apache.grails.forge.cli.console.UsageHelp
+import org.apache.grails.forge.core.change.RecordMigration
 import org.apache.grails.forge.core.state.ProjectState
 import org.apache.grails.forge.core.state.ProjectStateException
 import org.grails.forge.application.generator.ProjectGenerator
@@ -96,7 +97,9 @@ class FeatureListCommand extends BaseCommand implements Callable<Integer>, Proje
         FeatureAvailability availability = FeatureAvailability.of(projectGeneratorSource.get(), state, getOperatingSystem())
         listHas(state, availability)
         if (availability.refusal != null) {
-            out("@|blue ||@ No feature is added to this application with feature add: ${shown(availability.refusal)}")
+            // the record of an earlier version is moved to this one by a command that is named
+            String move = state.manifest.isTracked() && RecordMigration.isMovable(state.lock) ? ". ${ProjectMigrateCommand.moveAdvice(spec)}" : ''
+            out("@|blue ||@ No feature is added to this application with feature add: ${shown(availability.refusal)}${move}")
             return 0
         }
         listAddable(availability)

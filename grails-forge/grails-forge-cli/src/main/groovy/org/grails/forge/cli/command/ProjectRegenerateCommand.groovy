@@ -157,7 +157,8 @@ class ProjectRegenerateCommand extends BaseCommand implements Callable<Integer>,
             RegeneratedProject regenerated = new FeatureAddition(projectGeneratorSource.get()).regenerate(directory, getOperatingSystem(), packs)
             return diff ? compare(directory, regenerated) : write(directory, target, regenerated)
         } catch (ProjectStateException | ProjectChangeException | IllegalArgumentException | PackArtifactException e) {
-            err(GradleRunner.line(e.getMessage() ?: e.getClass().getSimpleName()))
+            // a record that another version wrote is moved to this one by a command that is named
+            err(GradleRunner.line(ProjectMigrateCommand.withMove(spec, directory, e)))
             if (showStacktrace()) {
                 e.printStackTrace(spec.commandLine().getErr())
             }
@@ -194,7 +195,7 @@ class ProjectRegenerateCommand extends BaseCommand implements Callable<Integer>,
             if (showStacktrace()) {
                 e.printStackTrace(spec.commandLine().getErr())
             }
-            return written(document.ended(e))
+            return written(document.ended(e, ProjectMigrateCommand.withMove(spec, directory, e)))
         }
         try {
             return written(document.compared(differences(directory, regenerated)))

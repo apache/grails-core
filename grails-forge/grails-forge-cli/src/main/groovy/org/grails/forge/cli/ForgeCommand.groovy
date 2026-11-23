@@ -60,7 +60,8 @@ import java.util.concurrent.Callable
         '*  @|bold project show|@',
         '*  @|bold project regenerate|@ @|yellow --output DIRECTORY|@',
         '',
-        'An application that has no record of how it was generated, as one of an earlier version, is given one with:',
+        'An application that has no record of how it was generated, as one of an earlier version, is given one, and the record an earlier version of ' +
+                'Grails 9 wrote is moved to this one, with:',
         '',
         '*  @|bold project migrate|@'
 ],

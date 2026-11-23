@@ -149,7 +149,8 @@ class FeatureAddCommand extends BaseCommand implements Callable<Integer>, Projec
             // features an application cannot have are a mistake in the command line, as they are when it is created
             throw new CommandLine.ParameterException(spec.commandLine(), shown(e.getMessage()))
         } catch (ProjectStateException | ProjectChangeException | IllegalArgumentException | PackArtifactException e) {
-            err(shown(e.getMessage() ?: e.getClass().getSimpleName()))
+            // a record that another version wrote is moved to this one by a command that is named
+            err(shown(ProjectMigrateCommand.withMove(spec, directory, e)))
             if (showStacktrace()) {
                 e.printStackTrace(spec.commandLine().getErr())
             }
@@ -190,7 +191,7 @@ class FeatureAddCommand extends BaseCommand implements Callable<Integer>, Projec
             if (showStacktrace()) {
                 e.printStackTrace(spec.commandLine().getErr())
             }
-            return written(document.ended(e), e instanceof FeatureSelectionException ? 2 : 1)
+            return written(document.ended(e, ProjectMigrateCommand.withMove(spec, directory, e)), e instanceof FeatureSelectionException ? 2 : 1)
         }
         List<PlannedFile> conflicts = plan.getConflicts()
         document.planned(plan, notes.lines, conflicts.isEmpty() ? null : notAdded(plan, conflicts))

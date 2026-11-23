@@ -779,7 +779,7 @@ What works and what does not, once an application has the feature of such a pack
 |Not done by a command. The record names one version; to move to another, create the application again with it (the command line `project show` prints, with the new version) and merge the difference, or change the files by hand.
 
 |A command line of another version of Grails
-|`feature add` and `project regenerate` are refused, as they are for every application: a feature is added by the version that generated the application.
+|`feature add` and `project regenerate` are refused, as they are for every application, until `project migrate` moves the record of the earlier version to the one that runs. It generates the application again with the very pack, which is given again as `feature add` takes it (`--feature-pack-dir`, or fetched again by the coordinates and the SHA-256 of the record), and refuses without it.
 |===
 
 

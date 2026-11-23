@@ -141,7 +141,14 @@ final class ChangeDocument {
      * Ends the document with what was thrown: the outcome and the reason it stands for.
      */
     ChangeDocument ended(Exception failure) {
-        String message = failure.getMessage() ?: failure.getClass().getSimpleName()
+        return ended(failure, failure.getMessage() ?: failure.getClass().getSimpleName())
+    }
+
+    /**
+     * Ends the document with what was thrown, and what is said of it: the outcome and the reason the
+     * failure stands for, and the message.
+     */
+    ChangeDocument ended(Exception failure, String message) {
         if (failure instanceof FeatureRequestException) {
             return ended(REFUSED, ((FeatureRequestException) failure).getReason(), message)
         }

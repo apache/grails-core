@@ -23,6 +23,8 @@ under the License.
 
 Writes the record of the application in the current directory, for an application that has none: one that was created with the Grails shell, one that an earlier version generated, or one that was not generated at all. The `create-*` code generation commands are there once the application has the record.
 
+For an application that Grails 9 generated, whose record an earlier version of the command line wrote, it moves the record to the version that runs: `feature add` and `project regenerate` work again afterwards.
+
 === Examples
 
 [source,console]
@@ -31,6 +33,7 @@ grails project migrate
 grails project migrate --dry-run
 grails project migrate com.example.shop --type rest-api --features grails-quartz
 grails project migrate --force --exclude-features postgres
+grails project migrate --feature-pack-dir ../acme-audit
 ----
 
 === Description
@@ -41,6 +44,7 @@ Usage:
 ----
 grails project migrate [<<name>>] [--type=<<type>>] [--features=<<feature>>[,<<feature>>...]] [--exclude-features=<<feature>>[,<<feature>>...]]
                     [--jdk=<<version>>] [--servlet=<<servlet>>] [--data=<<data>>] [--reloading=<<reloading>>] [--dry-run] [--force]
+                    [--feature-pack-dir=<<directory>>]... [--feature-pack-repository=<<url>>]... [--offline]
 ----
 
 Arguments:
@@ -56,13 +60,45 @@ Options:
 * `-s`, `--servlet=SERVLET` - The servlet implementation the application has: `tomcat`, `jetty`, `undertow` or `none`.
 * `-d`, `--data=DATA` - The Grails Data implementation the application has: `hibernate5`, `hibernate7`, `mongodb` or `neo4j`.
 * `-r`, `--reloading=RELOADING` - How the application reloads in development: `devtools`, `jrebel` or `none`.
-* `--dry-run` - Say what the record would be, and write nothing.
-* `--force` - Write the record again over one this command wrote, worked out anew: the name and the options that were given before are given again. The record of how an application was generated is never replaced.
+* `--dry-run` - Say what the record would be, or what moving the record of a generated application to this version would change in it, and write nothing.
+* `--force` - Write the record again over one this command wrote, worked out anew: the name and the options that were given before are given again. The record of how an application was generated is never written over with one that is worked out from the files: it is moved to this version, which needs no `--force`.
+* `--feature-pack-dir=DIRECTORY` - For the record of a generated application: the directory of a feature pack that is not part of Grails and that the application was generated with from a directory, or of the preset it was made from. Its content has to have the SHA-256 the record has. Can be given more than once.
+* `--feature-pack-repository=URL` - For the record of a generated application: a Maven repository to fetch the jar of a plugin from, whose feature pack the application was generated with, or of its preset: `https`, or `file:` for a directory. When the option is given, only the repositories it names are asked; without it, those of `GRAILS_REPO_URL`, Maven Central and then the repository the record names for the jar. Can be given more than once.
+* `--offline` - For the record of a generated application: ask nothing of the network, so that such a jar is taken only from a repository that is a directory.
 
 `project migrate` is the `migrate` command of the `project` command. It reads the files of the project as text and runs nothing of the build: the `grails-forge-cli.yml` (or `grails-cli.yml`) of an earlier version, `grails.profile` and `grails.codegen.defaultPackage` in `grails-app/conf/application.yml`, the `profile` dependency, the Grails Gradle plugins, the `group` and the dependencies of `build.gradle`, `rootProject.name` in `settings.gradle`, and the package of the `Application` class. A project whose build is written in Kotlin is read from `build.gradle.kts` and `settings.gradle.kts`. A dependency is found where it is written as `implementation "group:name"` or as `implementation group: 'group', name: 'name'`, and not in a comment. It says what it found, where it found it and what it assumed, and also what it knows it did not read: a build file that `build.gradle` applies, a dependency of a version catalog, what `build.gradle` declares for other projects, and, for a project without a `settings.gradle` of its own, the build above it. The options and the name say it otherwise.
 
 It writes the files of the record in the `.grails` directory (`project.yml`, `forge.lock.yml` and `baseline/index.yml`, and `.gitignore` and `.gitattributes` when they are not there) and no other file of the project. The record has `generationState: untracked` and a baseline without files. link:feature-add.html[feature add] and link:project-regenerate.html[project regenerate] refuse such an application and change nothing; link:project-show.html[project show] shows the record.
 
-The command refuses, with exit code 1 and without writing anything, a project that has the record of how it was generated, what is left of a record that is not complete or cannot be read, and a project whose type or package it cannot work out. A type, a feature or a version of Java that is none is a mistake in the command line, with exit code 2.
+The command refuses, with exit code 1 and without writing anything, what is left of a record that is not complete or cannot be read, and a project whose type or package it cannot work out. A type, a feature or a version of Java that is none is a mistake in the command line, with exit code 2. The options of a feature pack (`--feature-pack-dir`, `--feature-pack-repository`, `--offline`) are refused for a project without the record of a generated application.
 
-See "The record of an application that was not generated by Grails 9" in link:{guidePath}commandLine.html#creatingProject[Creating a Grails Project] for the details.
+==== Moving the record of a generated application to this version
+
+An application that Grails 9 generated has the record of how it was generated (`generationState: tracked`), which names the version of the command line that wrote it and the identity of its build. When that is an earlier version, or another build of this version that generates other files, `project migrate` moves the record to the version that runs:
+
+[source,console]
+----
+$ ./grailsw project migrate
+| The record of how the application shop was generated, moved to this version: the application is generated again from the choices the record has, and nothing but the record is written
+    generator  grails-forge 9.0.0 for Grails 9.0.0 (generator sha256 3f1c0d9e8b7a), now grails-forge 9.1.0 for Grails 9.1.0 (generator sha256 9a0b1c2d3e4f)
+    changed  build.gradle
+    changed  gradle.properties
+| 2 files of the baseline, in .grails/baseline/files, are not as this version generates them: 2 changed. The record names this version
+| The record was moved to this version: .grails/project.yml, .grails/forge.lock.yml and the baseline under .grails/baseline were written. No other file of the project was changed. Commit the directory .grails
+| Where a file of the application is not what this version generates, as where an earlier version generated it otherwise, grails feature add takes it for your change and keeps it; grails project regenerate --diff names those files
+----
+
+* The application is generated again, in memory, from the choices the record has: the type, the name and the package, the options, the features that were asked for and those that were left out, and the feature packs that are not part of Grails and the preset, which are given again with `--feature-pack-dir`, or fetched again by the coordinates and the SHA-256 of the record, as for link:feature-add.html[feature add]. The record is not worked out from the files, and the name, `--type`, `--features`, `--exclude-features`, `--jdk`, `--servlet`, `--data` and `--reloading` are refused.
+* The copy of every generated file under `.grails/baseline`, its index, `forge.lock.yml` and `project.yml` become what the version that runs writes for those choices, and name that version. The lines list the files of the baseline that are `added`, `removed` or `changed`. The files are written all of them or none, as `feature add` writes its files, and a move that was interrupted is undone by the next command that changes the project.
+* No file of the application outside `.grails` is written. Where a file is not what the version that runs generates, because the earlier version generated it otherwise or because you changed it, `feature add` takes the difference for a change of yours: it keeps it, merges what a feature adds around it, and reports a conflict where a feature changes the same lines or the lines next to them. `project regenerate --diff` names those files.
+* With `--dry-run` the lines say what would change, and nothing is written.
+
+When there is nothing to move, the command says so, writes nothing and ends with exit code 0: the record of the build that runs, and the record of another build of the same version that writes the same record for its choices. It refuses, with exit code 1 and without writing anything:
+
+* the record of a later version than the one that runs, or of a generator that is not Grails: the message names the version that wrote it, whose command line is used for the application;
+* a record that asks for a feature this version does not have for the type of the application, because it was taken out of Grails or renamed: the message names it. A record whose option value this version does not have does not read, and the message names the value;
+* a record of an application with a feature pack that is not part of Grails, or made from a preset, when the pack is not given again or is another than the record names: as `feature add` refuses it;
+* a record whose application was generated with the repositories of `GRAILS_REPO_URL` when the variable gives other ones now: they are among the choices, so run the command with the variable as it was;
+* a project with a change that was interrupted, for `--dry-run`: the command without `--dry-run` undoes it first.
+
+See "The record of an application that was not generated by Grails 9" and "The record over the life of a project" in link:{guidePath}commandLine.html#creatingProject[Creating a Grails Project] for the details.

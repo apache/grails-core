@@ -132,6 +132,8 @@ class ProjectRegenerateJsonSpec extends AbstractFeatureAddCommandSpec {
         document.keySet().toList() == MEMBERS
         document.outcome == 'refused'
         document.reason == 'other-generator'
+        document.message.contains('its record is moved to this version first. Nothing was changed. ')
+        document.message.endsWith(' project migrate moves the record to this version, from the choices it has, and changes no file of the application outside .grails')
         document.hasChanges == null
         document.files == null
     }

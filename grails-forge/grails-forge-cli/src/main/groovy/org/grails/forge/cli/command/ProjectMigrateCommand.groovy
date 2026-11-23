@@ -28,11 +28,19 @@ import org.apache.grails.forge.cli.console.OptionChoices
 import org.apache.grails.forge.cli.console.ProjectCommand
 import org.apache.grails.forge.cli.console.ProjectEvidence
 import org.apache.grails.forge.cli.console.UsageHelp
+import org.apache.grails.forge.cli.pack.PackArtifactException
+import org.apache.grails.forge.cli.pack.PackArtifacts
+import org.apache.grails.forge.cli.pack.RecordedPackOptions
+import org.apache.grails.forge.core.change.FeatureAddition
+import org.apache.grails.forge.core.change.ProjectChangeException
+import org.apache.grails.forge.core.change.RecordMigration
+import org.apache.grails.forge.core.pack.Pack
 import org.apache.grails.forge.core.pack.PackCondition
 import org.apache.grails.forge.core.pack.PackDescriptor.PackDependency
 import org.apache.grails.forge.core.pack.PackFeature
 import org.apache.grails.forge.core.state.AdoptedProjectRecord
 import org.apache.grails.forge.core.state.GenerationOptions
+import org.apache.grails.forge.core.state.ProjectLock
 import org.apache.grails.forge.core.state.ProjectLock.LockedFeature
 import org.apache.grails.forge.core.state.ProjectManifest
 import org.apache.grails.forge.core.state.ProjectState
@@ -51,6 +59,7 @@ import org.grails.forge.options.GormImpl
 import org.grails.forge.options.JdkVersion
 import org.grails.forge.options.ServletImpl
 import org.grails.forge.util.NameUtils
+import org.grails.forge.util.VersionInfo
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.annotation.Scope
 import org.springframework.stereotype.Component
@@ -60,6 +69,7 @@ import java.nio.file.Files
 import java.nio.file.LinkOption
 import java.nio.file.Path
 import java.util.concurrent.Callable
+import java.util.function.Consumer
 import java.util.function.Supplier
 
 /**
@@ -73,6 +83,12 @@ import java.util.function.Supplier
  * without a file: the commands that create the classes of an application read it as they read the
  * record of a generated one, and no feature is added to the application by a command.</p>
  *
+ * <p>The record of an application that Grails 9 generated, which an earlier version of the command
+ * line wrote, or another build of this version that generates other files, is moved to this version:
+ * the application is generated again from the choices the record has, by this version, and the
+ * baseline and the record become what this version writes for them, see {@link FeatureAddition#migrate}.
+ * No file of the application outside {@code .grails} is written.</p>
+ *
  * @since 9.0
  */
 @CommandLine.Command(name = ProjectMigrateCommand.NAME, description = [
@@ -82,7 +98,11 @@ import java.util.function.Supplier
                 'it had, the plugins and the dependencies of build.gradle, and its configuration. What was found, where, and what was assumed is said; ' +
                 'the options say it otherwise. Only the directory .grails is written to.',
         'The record says that it was written for an application that was there. No feature is added to such an application by a command, and it is ' +
-                'not generated again: there is no copy of what the generator wrote to tell its changes from yours.'])
+                'not generated again: there is no copy of what the generator wrote to tell its changes from yours.',
+        'An application that Grails 9 generated has the record of how it was generated. When an earlier version of the command line wrote it, the command ' +
+                'moves it to this version: the application is generated again from the choices the record has, and the copy of every generated file and the ' +
+                'record become what this version writes for them. No other file is changed; feature add then takes what the application has otherwise than ' +
+                'this version generates for a change of yours.'])
 @Component
 @Scope('prototype')
 @CompileStatic
@@ -98,6 +118,8 @@ class ProjectMigrateCommand extends BaseCommand implements Callable<Integer>, Pr
                                                                   'web-plugin': ApplicationType.WEB_PLUGIN,
                                                                   'rest-api-plugin': ApplicationType.REST_API_PLUGIN] as Map<String, ApplicationType>
     private static final String ASSUMED = 'assumed'
+    // how many characters of the identity of a build a line shows
+    private static final int SHORT_SHA256 = 12
     private static final String GIVEN = 'given with '
 
     @CommandLine.Parameters(arity = '0..1', paramLabel = 'NAME',
@@ -144,12 +166,16 @@ class ProjectMigrateCommand extends BaseCommand implements Callable<Integer>, Pr
             completionCandidates = DevelopmentReloadingCandidates, converter = DevelopmentReloadingConverter)
     DevelopmentReloading reloading
 
-    @CommandLine.Option(names = ['--dry-run'], description = 'Say what the record would be, and write nothing.')
+    @CommandLine.Option(names = ['--dry-run'], description = 'Say what the record would be, or what moving it to this version would change in it, and write nothing.')
     boolean dryRun
 
     @CommandLine.Option(names = ['--force'],
-            description = 'Write the record again over one this command wrote. The record of how an application was generated is never replaced.')
+            description = 'Write the record again over one this command wrote. The record of how an application was generated is never written over with one ' +
+                    'that is worked out from the files: it is moved to this version, which needs no --force.')
     boolean overwrite
+
+    @CommandLine.Mixin
+    RecordedPackOptions packOptions = new RecordedPackOptions()
 
     // asked of the Forge application when the command first needs it
     private final Supplier<ProjectGenerator> projectGeneratorSource
@@ -174,6 +200,17 @@ class ProjectMigrateCommand extends BaseCommand implements Callable<Integer>, Pr
         }
         Path directory = search.project.directory
         ApplicationType given = givenType()
+        // the record of a generated application is moved to this version, by the choices it has
+        ProjectManifest generated = generatedRecord(directory)
+        if (generated != null) {
+            return move(directory, generated)
+        }
+        String packs = packOptionsGiven()
+        if (packs != null) {
+            err("${packs} ${packs.contains(', ') ? 'are' : 'is'} for moving the record of a generated application that has the features of feature packs that are " +
+                    'not part of Grails, and this application has no such record. Nothing was written')
+            return 1
+        }
         String refusal = refusal(directory)
         if (refusal != null) {
             err(refusal)
@@ -290,10 +327,6 @@ class ProjectMigrateCommand extends BaseCommand implements Callable<Integer>, Pr
             return "The project has a record under ${ProjectState.DIRECTORY} that cannot be read (${GradleRunner.line(e.getMessage())}), and it is not written over. " +
                     "Restore it from version control, or remove ${ProjectState.MANIFEST}, ${ProjectState.LOCK} and ${ProjectState.BASELINE}, and run the command again. " +
                     'Nothing was written'
-        }
-        if (manifest.isTracked()) {
-            return "The application has the record of how it was generated (${ProjectState.MANIFEST}), which this command does not replace: ${UsageHelp.toType(spec, 'project show')} " +
-                    'says what it has. Nothing was written'
         }
         if (!overwrite && !dryRun) {
             return "The application already has a record that ${UsageHelp.toType(spec, 'project migrate')} wrote (${ProjectState.MANIFEST}). Run again with --force to write it anew, " +
@@ -606,6 +639,231 @@ class ProjectMigrateCommand extends BaseCommand implements Callable<Integer>, Pr
                 "The record says what the application is taken to be, not how it was generated: ${UsageHelp.toType(spec, 'feature add')} and ${UsageHelp.toType(spec, 'project regenerate')} are for an " +
                 'application this version generated, and change nothing here')
         return 0
+    }
+
+    // the manifest of the record of a generated application, when the project has one that reads; what else it has is for the rest of the command
+    private static ProjectManifest generatedRecord(Path directory) {
+        if (!ProjectState.exists(directory)) {
+            return null
+        }
+        try {
+            ProjectManifest manifest = ProjectState.readSelection(directory, true).manifest
+            return manifest.isTracked() ? manifest : null
+        } catch (ProjectStateException ignored) {
+            return null
+        }
+    }
+
+    // the options of the feature packs that were given, by their names; null when none was
+    private String packOptionsGiven() {
+        List<String> given = []
+        if (!packOptions.directories.isEmpty()) {
+            given << '--feature-pack-dir'
+        }
+        if (!packOptions.jars.isEmpty()) {
+            given << '--feature-pack-jar'
+        }
+        if (!packOptions.repositories.isEmpty()) {
+            given << '--feature-pack-repository'
+        }
+        if (packOptions.offline) {
+            given << '--offline'
+        }
+        return given.isEmpty() ? null : given.join(', ')
+    }
+
+    // what says what an application without a record is, which the record of a generated application says itself
+    private List<String> choicesGiven() {
+        List<String> given = []
+        if (name != null) {
+            given << 'the name'
+        }
+        if (type != null) {
+            given << '--type'
+        }
+        if (!features.isEmpty()) {
+            given << '--features'
+        }
+        if (!excludedFeatures.isEmpty()) {
+            given << '--exclude-features'
+        }
+        if (javaVersion != null) {
+            given << '--jdk'
+        }
+        if (servletImpl != null) {
+            given << '--servlet'
+        }
+        if (gormImpl != null) {
+            given << '--data'
+        }
+        if (reloading != null) {
+            given << '--reloading'
+        }
+        return given
+    }
+
+    /**
+     * Moves the record of a generated application to this version, as {@link FeatureAddition#migrate}
+     * does: from the choices the record has, and with the feature packs it has given again.
+     */
+    private Integer move(Path directory, ProjectManifest manifest) {
+        List<String> choices = choicesGiven()
+        if (!choices.isEmpty()) {
+            err("The application has the record of how it was generated (${ProjectState.MANIFEST}), which is moved to this version with the choices it has: " +
+                    "${choices.join(', ')} ${choices.size() == 1 ? 'is' : 'are'} for an application without such a record. " +
+                    "${UsageHelp.toType(spec, 'project show')} says what the record has. Nothing was written")
+            return 1
+        }
+        try {
+            FeatureAddition addition = new FeatureAddition(projectGeneratorSource.get())
+            if (!dryRun) {
+                // a change that was interrupted is ended first, as a feature that is added ends it
+                for (String message : addition.recover(directory).getMessages()) {
+                    out("@|blue ||@ ${message}")
+                }
+            }
+            Consumer<String> said = { String line -> out("@|blue ||@ ${GradleRunner.line(line)}") } as Consumer<String>
+            Consumer<String> warned = { String line -> warning(GradleRunner.line(line)) } as Consumer<String>
+            List<Pack> packs = packOptions.packs(directory, createPackArtifacts(), grailsRepoUrl(), said, warned)
+            return moved(directory, manifest, addition.migrate(directory, getOperatingSystem(), packs))
+        } catch (ProjectStateException e) {
+            err("The record of the application under ${ProjectState.DIRECTORY} is not moved to this version, because it does not read: " +
+                    "${GradleRunner.line(e.getMessage() ?: e.getClass().getSimpleName())}. Nothing was written")
+            stacktrace(e)
+            return 1
+        } catch (ProjectChangeException | IllegalArgumentException | PackArtifactException e) {
+            err(GradleRunner.line(e.getMessage() ?: e.getClass().getSimpleName()))
+            stacktrace(e)
+            return 1
+        }
+    }
+
+    private Integer moved(Path directory, ProjectManifest manifest, RecordMigration migration) {
+        String running = "${ProjectLock.GENERATOR} ${VersionInfo.getVersion()} for Grails ${VersionInfo.getGrailsVersion()}"
+        if (migration.outcome == RecordMigration.Outcome.SAME_BUILD) {
+            out("@|blue ||@ The record of the application ${shown(manifest.name)} was written by this build of the command line, ${running}: it is that of " +
+                    'this version already, and there is nothing to move. Nothing was written')
+            return 0
+        }
+        if (migration.outcome == RecordMigration.Outcome.SAME_FILES) {
+            out("@|blue ||@ The record of the application ${shown(manifest.name)} was written by another build of ${running} (the generator sha256 " +
+                    "${migration.recordedSha256 ?: 'not recorded'} there, ${VersionInfo.getGeneratorSha256() ?: 'none'} here), which writes the same record for " +
+                    'its choices: it is that of this version already, and there is nothing to move. Nothing was written')
+            return 0
+        }
+        out("@|blue ||@ The record of how the application ${shown(manifest.name)} was generated, ${dryRun ? 'as it would be moved' : 'moved'} to this version: " +
+                'the application is generated again from the choices the record has, and nothing but the record is written')
+        out("    generator  ${ProjectLock.GENERATOR} ${shown(migration.recordedVersion)} for Grails ${shown(migration.recordedGrailsVersion)}" +
+                "${migration.recordedSha256 == null ? '' : " (generator sha256 ${migration.recordedSha256.take(SHORT_SHA256)})"}, now " +
+                "${running}${VersionInfo.getGeneratorSha256() == null ? '' : " (generator sha256 ${VersionInfo.getGeneratorSha256().take(SHORT_SHA256)})"}")
+        Map<String, String> files = new TreeMap<>()
+        for (String path : migration.added) {
+            files.put(path, 'added')
+        }
+        for (String path : migration.removed) {
+            files.put(path, 'removed')
+        }
+        for (String path : migration.changed) {
+            files.put(path, 'changed')
+        }
+        for (Map.Entry<String, String> file : files.entrySet()) {
+            out("    ${file.value.padRight(8)} ${shown(file.key)}")
+        }
+        out('@|blue ||@ ' + (files.isEmpty() ? 'Every file of the baseline is as this version generates it. The record names this version' :
+                "${files.size()} ${files.size() == 1 ? 'file' : 'files'} of the baseline, in ${ProjectState.BASELINE_FILES}, ${files.size() == 1 ? 'is' : 'are'} " +
+                        "not as this version generates ${files.size() == 1 ? 'it' : 'them'}: ${counted(migration)}. The record names this version"))
+        if (dryRun) {
+            out('@|blue ||@ Nothing was written')
+            return 0
+        }
+        try {
+            migration.apply()
+        } catch (ProjectChangeException e) {
+            err(GradleRunner.line(e.getMessage() ?: e.getClass().getSimpleName()))
+            stacktrace(e)
+            return 1
+        }
+        out("@|blue ||@ The record was moved to this version: ${ProjectState.MANIFEST}, ${ProjectState.LOCK} and the baseline under ${ProjectState.BASELINE} " +
+                "were written. No other file of the project was changed. Commit the directory ${ProjectState.DIRECTORY}")
+        out('@|blue ||@ Where a file of the application is not what this version generates, as where an earlier version generated it otherwise, ' +
+                "${UsageHelp.toType(spec, 'feature add')} takes it for your change and keeps it; ${UsageHelp.toType(spec, 'project regenerate --diff')} names those files")
+        String projectVersion = EarlierGrailsProject.projectVersion(directory)
+        if (projectVersion != null && projectVersion != VersionInfo.getGrailsVersion()) {
+            out("@|blue ||@ The project is on Grails ${shown(projectVersion)} (gradle.properties), and the record is now of Grails ${VersionInfo.getGrailsVersion()}: " +
+                    'the upgrade notes of the Grails guide say what changes with the version, gradle.properties among it')
+        }
+        return 0
+    }
+
+    private static String counted(RecordMigration migration) {
+        List<String> counts = []
+        if (!migration.changed.isEmpty()) {
+            counts << "${migration.changed.size()} changed".toString()
+        }
+        if (!migration.added.isEmpty()) {
+            counts << "${migration.added.size()} added".toString()
+        }
+        if (!migration.removed.isEmpty()) {
+            counts << "${migration.removed.size()} removed".toString()
+        }
+        return counts.join(', ')
+    }
+
+    private void stacktrace(Exception e) {
+        if (showStacktrace()) {
+            e.printStackTrace(spec.commandLine().getErr())
+        }
+    }
+
+    /**
+     * @return what fetches the jar of a plugin the application has the feature pack of
+     */
+    protected PackArtifacts createPackArtifacts() {
+        return new PackArtifacts()
+    }
+
+    /**
+     * @return the repositories of the build of the application, which are asked for such a jar when
+     * the command names none
+     */
+    protected String grailsRepoUrl() {
+        return System.getenv('GRAILS_REPO_URL')
+    }
+
+    /**
+     * What a command that generates the application again says when it refuses to, with the command
+     * that moves the record to this version where that is what would let it go on: the record of an
+     * earlier version, or of another build of this version that generates other files.
+     *
+     * @param spec the command that refuses
+     * @param directory the directory of the project
+     * @param failure why it refuses
+     * @return the message of the failure, and where the record can be moved, the command line to type
+     * for it
+     */
+    static String withMove(CommandLine.Model.CommandSpec spec, Path directory, Exception failure) {
+        String message = failure.getMessage() ?: failure.getClass().getSimpleName()
+        if (!(failure instanceof ProjectChangeException) ||
+                !(((ProjectChangeException) failure).getReason() in [ProjectChangeException.OTHER_GENERATOR, ProjectChangeException.BASELINE_DIFFERS,
+                                                                     ProjectChangeException.RECORD_DIFFERS])) {
+            return message
+        }
+        ProjectLock lock
+        try {
+            lock = ProjectState.readSelection(directory, true).lock
+        } catch (ProjectStateException ignored) {
+            return message
+        }
+        return RecordMigration.isMovable(lock) ? "${message}. ${moveAdvice(spec)}".toString() : message
+    }
+
+    /**
+     * @param spec the command that says it
+     * @return the sentence that names the command that moves a record to this version, and what it does
+     */
+    static String moveAdvice(CommandLine.Model.CommandSpec spec) {
+        return "${UsageHelp.toType(spec, "${ProjectGroupCommand.NAME} ${NAME}")} moves the record to this version, from the choices it has, and changes no file " +
+                "of the application outside ${ProjectState.DIRECTORY}"
     }
 
     private static String written(Enum value) {

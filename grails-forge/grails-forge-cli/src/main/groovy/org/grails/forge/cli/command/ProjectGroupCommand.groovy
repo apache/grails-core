@@ -42,6 +42,7 @@ class ProjectGroupCommand extends BaseCommand implements Callable<Integer> {
     @Override
     Integer call() throws Exception {
         throw new CommandLine.ParameterException(spec.commandLine(), 'No command specified: project show says how the application was generated, ' +
-                'and project regenerate generates it again; project migrate writes the record of an application that has none')
+                'and project regenerate generates it again; project migrate writes the record of an application that has none, and moves the record an earlier ' +
+                'version wrote to this one')
     }
 }
