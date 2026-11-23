@@ -642,8 +642,10 @@ class ProjectStateSpec extends ApplicationContextSpec {
                 ".grails/project.yml gives a value the tag 'tag:yaml.org,2002:java.net.URL', and the state of a project does not use tags"
         'the manifest has a key twice' | '.grails/project.yml' | { it + 'name: store\n' } |
                 '.grails/project.yml is not YAML that can be read: '
-        'the manifest has a key this version does not read' | '.grails/project.yml' | { it + 'preset: acme\n' } |
-                '.grails/project.yml: preset is not a key this version of Grails reads'
+        'the manifest has a key this version does not read' | '.grails/project.yml' | { it + 'profile: acme\n' } |
+                '.grails/project.yml: profile is not a key this version of Grails reads'
+        'the manifest names a preset it did not ask for' | '.grails/project.yml' | { it + 'preset: acme\n' } |
+                '.grails/project.yml: preset is acme, which is not among the requestedFeatures'
         'the manifest is nested deeper than it is written' | '.grails/project.yml' | { it.replace('parameters: {}', 'parameters: {a: {b: {c: {d: {e: {f: {g: h}}}}}}}') } |
                 '.grails/project.yml has mappings and lists more than 6 deep'
         'the manifest names no kind of application there is' | '.grails/project.yml' | { it.replace('applicationType: web', 'applicationType: desktop') } |

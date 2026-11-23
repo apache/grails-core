@@ -61,6 +61,10 @@ import org.springframework.context.annotation.AnnotationConfigApplicationContext
  * pack names, with the name of the type and no options. A fixture the generator refuses, such as one
  * of a type the pack is not for, is a result and is said as one; the other fixtures are generated.</p>
  *
+ * <p>A preset is tested the same way: its one type of application is the one fixture there is without
+ * a list, and an option a fixture does not give is the one of the preset, as it is for the create
+ * commands.</p>
+ *
  * @since 9.0
  */
 @CompileStatic
@@ -276,7 +280,8 @@ final class PackFixtures {
         }
         try {
             OperatingSystem operatingSystem = operatingSystem()
-            Options options = optionsOf(fixture.name, fixture.options).withOperatingSystem(operatingSystem)
+            // of a preset, an option the fixture does not give is the one of the preset, as it is for the create commands
+            Options options = optionsOf(fixture.name, fixture.options, descriptor.preset).withOperatingSystem(operatingSystem)
             List<String> features = [descriptor.name]
             features.addAll(fixture.features)
             GeneratorContext context = generator.createGeneratorContext(fixture.applicationType, project, options, operatingSystem,
@@ -308,12 +313,17 @@ final class PackFixtures {
         }
     }
 
-    // as the create commands make them: an option that is given is a choice, and one that is not has a default
     private static Options optionsOf(String fixture, Map<String, String> given) {
-        GormImpl data = null
-        ServletImpl servlet = null
-        DevelopmentReloading reloading = null
-        JdkVersion jdk = JdkVersion.DEFAULT_OPTION
+        return optionsOf(fixture, given, null)
+    }
+
+    // as the create commands make them: an option that is given is a choice, and one that is not has a
+    // default, which is the one of the preset when the pack is a preset and gives one
+    private static Options optionsOf(String fixture, Map<String, String> given, PackPreset preset) {
+        GormImpl data = preset?.data
+        ServletImpl servlet = preset?.servlet
+        DevelopmentReloading reloading = preset?.reloading
+        JdkVersion jdk = preset?.jdk ?: JdkVersion.DEFAULT_OPTION
         Set<OptionName> names = EnumSet.noneOf(OptionName)
         for (Map.Entry<String, String> option : given.entrySet()) {
             String value = option.value

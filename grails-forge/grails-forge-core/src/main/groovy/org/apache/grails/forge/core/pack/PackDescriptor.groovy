@@ -79,6 +79,13 @@ final class PackDescriptor {
     final List<PackLink> readmeLinks
     /** For a pack Forge has in itself: how the feature is selected and what it gives beside other features; otherwise {@link PackOfForge#NONE} */
     final PackOfForge ofForge
+    /**
+     * For a preset, a pack of the kind {@code preset}: its type of application and its options; otherwise
+     * {@code null}, which is how a feature pack is told from a preset. The features a preset asks for are
+     * its {@link #requires}. A preset is given to a create command with {@code --preset} and is not
+     * selected as a feature.
+     */
+    final PackPreset preset
 
     @SuppressWarnings('ParameterCount')
     PackDescriptor(String name, String title, String description, String category, String documentation,
@@ -138,6 +145,20 @@ final class PackDescriptor {
                    Map<String, String> buildExtensions, Map<String, Object> configuration, List<PackFile> files,
                    String readme, String instructions, String thirdPartyDocumentation, Map<String, String> versionsOfForge,
                    Map<String, String> buildBlocks, List<PackLink> readmeLinks, int templateApi, PackOfForge ofForge) {
+        this(name, title, description, category, documentation, grailsCompatibility, forgeCompatibility, applicationTypes, requires,
+                conflicts, oneOf, dependencies, platforms, buildPlugins, buildProperties, buildExtensions, configuration, files, readme,
+                instructions, thirdPartyDocumentation, versionsOfForge, buildBlocks, readmeLinks, templateApi, ofForge, null)
+    }
+
+    @SuppressWarnings('ParameterCount')
+    PackDescriptor(String name, String title, String description, String category, String documentation,
+                   String grailsCompatibility, String forgeCompatibility, Set<ApplicationType> applicationTypes,
+                   List<String> requires, List<String> conflicts, String oneOf, List<PackDependency> dependencies,
+                   List<PackDependency> platforms, List<PackBuildPlugin> buildPlugins, Map<String, String> buildProperties,
+                   Map<String, String> buildExtensions, Map<String, Object> configuration, List<PackFile> files,
+                   String readme, String instructions, String thirdPartyDocumentation, Map<String, String> versionsOfForge,
+                   Map<String, String> buildBlocks, List<PackLink> readmeLinks, int templateApi, PackOfForge ofForge, PackPreset preset) {
+        this.preset = preset
         this.ofForge = ofForge
         this.templateApi = templateApi
         this.versionsOfForge = Collections.unmodifiableMap(new LinkedHashMap<String, String>(versionsOfForge))
@@ -170,7 +191,14 @@ final class PackDescriptor {
         return [name, title, description, category, documentation, grailsCompatibility, forgeCompatibility, applicationTypes,
                 requires, conflicts, oneOf, dependencies, platforms, buildPlugins, buildProperties, buildExtensions,
                 configuration, files, readme, instructions, thirdPartyDocumentation, versionsOfForge, buildBlocks, readmeLinks,
-                templateApi, ofForge] as List<Object>
+                templateApi, ofForge, preset] as List<Object>
+    }
+
+    /**
+     * @return the {@code kind} of the descriptor: {@code feature} or {@code preset}
+     */
+    String getKind() {
+        return preset != null ? PackPreset.KIND : 'feature'
     }
 
     /**

@@ -139,9 +139,13 @@ class PackFeature implements Feature {
         return pack.descriptor.ofForge.order
     }
 
+    /**
+     * @return whether the feature is selected by its name and listed: a preset is neither, it is given
+     * to a create command with {@code --preset}
+     */
     @Override
     boolean isVisible() {
-        return pack.descriptor.ofForge.visible
+        return pack.descriptor.ofForge.visible && !pack.descriptor.preset
     }
 
     @Override

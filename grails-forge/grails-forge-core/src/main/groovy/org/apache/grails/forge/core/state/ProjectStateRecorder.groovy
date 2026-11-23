@@ -226,6 +226,8 @@ final class ProjectStateRecorder {
         List<Feature> applied = new ArrayList<>(generatorContext.getFeatures().getFeatures())
         applied.sort(FeatureContext.FEATURE_ORDER)
         List<LockedFeature> locked = applied.collect { Feature feature -> locked(feature) }
+        // the preset the application was made from is a feature of it, the one whose pack is a preset
+        Feature preset = applied.find { Feature feature -> feature instanceof PackFeature && ((PackFeature) feature).getPack().getDescriptor().getPreset() != null }
         byte[] manifestBytes = new ProjectManifest(
                 grailsVersion,
                 applicationType,
@@ -235,7 +237,8 @@ final class ProjectStateRecorder {
                 ProjectManifest.TRACKED,
                 generatorContext.getRequestedFeatures().toSorted().unique().collect { String name -> requested(name, locked) },
                 generatorContext.getExcludedFeatures().toSorted().unique().collect { String name -> new RequestedFeature(name) },
-                [:]).toBytes()
+                [:],
+                preset?.getName()).toBytes()
         // more repositories than the lock names are counted: they are in the build file, all of them
         List<LockedRepository> repositories = repositories(generatorContext.getRepositoryOverride())
         byte[] lockBytes = new ProjectLock(

@@ -32,6 +32,10 @@ import org.grails.forge.build.dependencies.Scope
 import org.grails.forge.build.gradle.BuildFileAnchor
 import org.grails.forge.feature.Category
 import org.grails.forge.feature.FeaturePhase
+import org.grails.forge.options.DevelopmentReloading
+import org.grails.forge.options.GormImpl
+import org.grails.forge.options.JdkVersion
+import org.grails.forge.options.ServletImpl
 import org.grails.forge.util.VersionInfo
 import org.yaml.snakeyaml.DumperOptions
 import org.yaml.snakeyaml.LoaderOptions
@@ -70,6 +74,12 @@ import org.yaml.snakeyaml.resolver.Resolver
  * application. What makes a descriptor costly to read is refused while its text is scanned, one problem
  * at a time, and so is what SnakeYAML cannot load. Then the form of the keys is checked, and when that
  * is right every other problem is reported, each with its place, up to {@link #MAX_PROBLEMS}.</p>
+ *
+ * <p>A descriptor whose {@code kind} is {@code preset} is that of a preset ({@link PackPreset}): it
+ * names one type of application with {@code applicationType}, gives options with {@code options} and
+ * asks for features with {@code features}, which are its {@link PackDescriptor#requires}; it has no
+ * {@code applicationTypes}, {@code requires}, {@code oneOf} or {@code category}, and a feature has
+ * none of the three keys of a preset. A pack Forge has in itself is a feature.</p>
  *
  * @since 9.0
  */
@@ -123,6 +133,22 @@ class PackDescriptorParser {
                                              'description', 'category', 'documentation', 'applicationTypes', 'requires',
                                              'conflicts', 'oneOf', 'dependencies', 'platforms', 'buildPlugins', 'build',
                                              'configuration', 'files', 'readme', 'instructions', 'thirdPartyDocumentation'] as Set<String>
+    // a preset names one type of application, gives options and asks for features, and is in no group or category
+    private static final List<String> PRESET_KEYS = ['format', 'kind', 'name', 'templateApi', 'compatibility', 'title', 'description',
+                                                     'documentation', 'thirdPartyDocumentation', 'applicationType', 'options', 'features',
+                                                     'conflicts', 'dependencies', 'platforms', 'buildPlugins', 'build', 'configuration', 'files',
+                                                     'readme', 'instructions']
+    private static final Map<String, String> NOT_OF_A_PRESET = [
+            applicationTypes: 'a preset is for one type of application, which it names with applicationType',
+            requires: 'a preset asks for features with features',
+            oneOf: 'a preset is in no exclusive group',
+            category: 'a preset is not among the features that are listed, and has no category',
+    ]
+    private static final Map<String, String> ONLY_OF_A_PRESET = [
+            applicationType: 'only a preset (kind: preset) names one type of application; a feature names the types it is for with applicationTypes',
+            options: 'only a preset (kind: preset) gives options',
+            features: 'only a preset (kind: preset) asks for features; a feature requires them with requires',
+    ]
     private static final List<String> KEYS_OF_FORGE = ['versionsOfForge', 'readmeLinks', 'guideOfGrails', 'default', 'adds', 'order', 'visible',
                                                        'reliesOn', 'requiresJdk', 'dataSource', 'dataSourceOfDriver']
     private static final String GRAILS_DOCUMENTATION = 'https://grails.apache.org/docs/'
@@ -234,12 +260,17 @@ class PackDescriptorParser {
         List<String> problems = new Problems()
         checkTree(root, '', problems)
         failOn(problems, source)
-        unknownKeys(root, ofForge ? KEYS.toList() + KEYS_OF_FORGE : KEYS.toList(), '', problems)
+        // which keys are read depends on the kind: a preset has keys a feature has not, and the reverse
+        boolean preset = !ofForge && root.get('kind') == PackPreset.KIND
+        rootKeys(root, ofForge ? KEYS.toList() + KEYS_OF_FORGE : preset ? PRESET_KEYS : KEYS.toList(), preset, problems)
         requireNumber(root, 'format', PackDescriptor.FORMAT, problems)
         int templateApi = requireTemplateApi(root, problems)
         String kind = requiredText(root, 'kind', '', MAX_LINE, problems)
-        if (kind != null && kind != FEATURE_KIND) {
-            problems << "kind: must be '${FEATURE_KIND}', the only kind this version of Forge reads, but is ${describe(kind)}".toString()
+        if (kind != null && ofForge && kind != FEATURE_KIND) {
+            problems << "kind: must be '${FEATURE_KIND}', the only kind of a pack Forge has in itself, but is ${describe(kind)}".toString()
+        } else if (kind != null && kind != FEATURE_KIND && kind != PackPreset.KIND) {
+            problems << ("kind: must be '${FEATURE_KIND}' or '${PackPreset.KIND}', the kinds this version of Forge reads, " +
+                    "but is ${describe(kind)}").toString()
         }
         String name = matching(requiredText(root, 'name', '', MAX_LINE, problems), NAME, 'name',
                 'must be lower case letters and digits in words joined by hyphens, starting with a letter', problems)
@@ -252,18 +283,20 @@ class PackDescriptorParser {
             forge = versionRange(compatibility, 'forge', problems)
         }
         Set<String> categories = categories()
-        String category = text(root, 'category', '', MAX_LINE, problems) ?: Category.OTHER
+        String category = preset ? Category.OTHER : text(root, 'category', '', MAX_LINE, problems) ?: Category.OTHER
         if (!categories.contains(category)) {
             problems << "category: must be one of ${categories.toSorted()}, but is ${describe(category)}".toString()
         }
-        List<String> requires = featureIds(root, 'requires', name, problems)
+        // the features a preset asks for are selected with it, as the requirements of a feature are
+        List<String> requires = featureIds(root, preset ? 'features' : 'requires', name, problems)
         List<String> conflicts = featureIds(root, 'conflicts', name, problems)
         for (String both : requires.intersect(conflicts)) {
-            problems << "conflicts: ${describe(both)} is also required".toString()
+            problems << "conflicts: ${describe(both)} is also ${preset ? 'asked for' : 'required'}".toString()
         }
+        PackPreset ofPreset = preset ? presetOf(root, problems) : null
         Map<String, Object> build = map(root, 'build', '', problems)
         unknownKeys(build, ofForge ? ['properties', 'extensions', 'blocks', 'propertyComments'] : ['properties', 'extensions'], 'build.', problems)
-        String oneOf = matching(text(root, 'oneOf', '', MAX_LINE, problems), GROUP_ID, 'oneOf',
+        String oneOf = preset ? null : matching(text(root, 'oneOf', '', MAX_LINE, problems), GROUP_ID, 'oneOf',
                 "must be the identifier of a group, such as 'database-driver' or 'com.acme:audit'", problems)
         Map<String, List<PackOfForge.Part>> extensionParts = new LinkedHashMap<>()
         List<PackOfForge.Settings> settings = []
@@ -276,7 +309,7 @@ class PackDescriptorParser {
                 documentation(root, ofForge, problems),
                 grails,
                 forge,
-                applicationTypes(root, problems),
+                ofPreset != null ? EnumSet.of(ofPreset.applicationType) : preset ? EnumSet.noneOf(ApplicationType) : applicationTypes(root, problems),
                 requires,
                 conflicts,
                 oneOf,
@@ -295,9 +328,75 @@ class PackDescriptorParser {
                 ofForge ? buildBlocks(build, problems) : [:] as Map<String, String>,
                 ofForge ? readmeLinks(root, problems) : [] as List<PackLink>,
                 templateApi,
-                ofForge ? readOfForge(root, build, name, oneOf, extensionParts, settings, problems) : PackOfForge.NONE)
+                ofForge ? readOfForge(root, build, name, oneOf, extensionParts, settings, problems) : PackOfForge.NONE,
+                ofPreset)
         failOn(problems, source)
         return descriptor
+    }
+
+    /**
+     * The keys of the descriptor itself. A key that only the other kind has is said to be of that kind,
+     * so that a feature written with a key of a preset, or the reverse, is told what to write instead.
+     */
+    private static void rootKeys(Map<String, Object> root, List<String> known, boolean preset, List<String> problems) {
+        Map<String, String> ofTheOtherKind = preset ? NOT_OF_A_PRESET : ONLY_OF_A_PRESET
+        Map<String, Object> others = new LinkedHashMap<>()
+        root.each { String key, Object value ->
+            if (!known.contains(key) && ofTheOtherKind.containsKey(key)) {
+                problems << "${key}: ${ofTheOtherKind.get(key)}".toString()
+            } else {
+                others.put(key, value)
+            }
+        }
+        unknownKeys(others, known, '', problems)
+    }
+
+    /**
+     * What a preset says that a feature does not: the one type of application it is for, which is
+     * required, and the options it gives, each with a value the create commands take for it.
+     */
+    private static PackPreset presetOf(Map<String, Object> root, List<String> problems) {
+        Map<String, ApplicationType> known = ApplicationType.values().collectEntries { ApplicationType type ->
+            [PackPreset.nameOf(type), type]
+        }
+        String typeName = requiredText(root, 'applicationType', '', MAX_LINE, problems)
+        ApplicationType type = typeName == null ? null : known.get(typeName)
+        if (typeName != null && type == null) {
+            problems << "applicationType: must be one of ${known.keySet().toSorted()}, but is ${describe(typeName)}".toString()
+        }
+        Map<String, Object> options = map(root, 'options', '', problems)
+        unknownKeys(options, PackPreset.OPTIONS, 'options.', problems)
+        GormImpl data = option(options, 'data', GormImpl.values().toList(), problems)
+        ServletImpl servlet = option(options, 'servlet', ServletImpl.values().toList(), problems)
+        DevelopmentReloading reloading = option(options, 'reloading', DevelopmentReloading.values().toList(), problems)
+        JdkVersion jdk = null
+        if (options.get('jdk') != null) {
+            Object value = options.get('jdk')
+            jdk = JdkVersion.values().find { JdkVersion each -> value instanceof Integer && each.majorVersion() == value }
+            if (jdk == null) {
+                problems << ("options.jdk: must be one of ${JdkVersion.values().collect { JdkVersion each -> each.majorVersion() }}, " +
+                        "the versions of Java this version of Forge generates for, but is ${describe(value)}").toString()
+            }
+        }
+        return type == null ? null : new PackPreset(type, data, servlet, reloading, jdk)
+    }
+
+    // the value of an option as the create commands take it: the name of the value in lower case
+    private static <T extends Enum<T>> T option(Map<String, Object> options, String key, List<T> values, List<String> problems) {
+        String value = text(options, key, 'options.', MAX_LINE, problems)
+        if (value == null) {
+            return null
+        }
+        List<String> names = []
+        for (T each : values) {
+            String written = each.name().toLowerCase(Locale.ROOT)
+            if (written == value) {
+                return each
+            }
+            names << written
+        }
+        problems << "options.${key}: must be one of ${names}, as --${key} takes it, but is ${describe(value)}".toString()
+        return null
     }
 
     /**

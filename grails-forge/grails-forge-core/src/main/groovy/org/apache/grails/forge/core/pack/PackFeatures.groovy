@@ -48,7 +48,8 @@ final class PackFeatures implements AvailableFeatures {
      * @param packs the packs to add; one that does not support the type of application is left out
      * @param applicationType the type of application
      * @throws PackRefusedException when a pack has the name of a feature of the framework or of
-     * another pack, names an exclusive group of the framework, or is for another Grails or Forge
+     * another pack, names an exclusive group of the framework, or is for another Grails or Forge; and
+     * when more than one preset is given, or a preset of another type of application
      */
     PackFeatures(AvailableFeatures framework, Collection<Feature> everyFrameworkFeature, Collection<Pack> packs, ApplicationType applicationType) {
         this.framework = framework
@@ -59,6 +60,7 @@ final class PackFeatures implements AvailableFeatures {
                 .collect { Feature feature -> ((OneOfFeature) feature).getGroup() } as Set<String>
         Function<String, Optional<Feature>> lookup = { String required -> findFeature(required, true) } as Function<String, Optional<Feature>>
         Map<String, Pack> named = new HashMap<>()
+        Pack preset = null
         // one for this generation, and only when a pack has a template
         PackPages[] made = new PackPages[1]
         Supplier<PackPages> pages = { ->
@@ -82,6 +84,19 @@ final class PackFeatures implements AvailableFeatures {
             Pack other = named.put(name, pack)
             if (other != null) {
                 throw new PackRefusedException("The feature packs ${other.origin} and ${pack.origin} both have the name ${name}", [other, pack], false)
+            }
+            if (pack.descriptor.preset) {
+                // one preset for an application, of its type: one that is not for it is not left out as a feature pack is, it was asked for
+                if (preset != null) {
+                    throw new PackRefusedException("The presets ${preset.descriptor.name} from ${preset.origin} and ${name} from ${pack.origin} were both given, " +
+                            'and an application is made from one preset', [preset, pack], false)
+                }
+                preset = pack
+                if (!feature.supports(applicationType)) {
+                    throw new PackRefusedException("The preset ${name} from ${pack.origin} is for an application of the type " +
+                            "${PackPreset.nameOf(pack.descriptor.preset.applicationType)}, and this is one of the type ${PackPreset.nameOf(applicationType)}",
+                            [pack], false)
+                }
             }
             if (feature.supports(applicationType)) {
                 this.packs.put(name, feature)

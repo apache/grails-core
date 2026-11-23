@@ -315,6 +315,10 @@ final class ProjectState {
                 return "the feature ${excluded.name} was left out and is among the features of the lock"
             }
         }
+        // a preset is a pack: the lock has where it came from as it has it for a feature pack
+        if (manifest.preset != null && locked.get(manifest.preset)?.source != LockedFeature.PACK) {
+            return "the preset ${manifest.preset} is not the feature of a pack in the lock"
+        }
         return null
     }
 

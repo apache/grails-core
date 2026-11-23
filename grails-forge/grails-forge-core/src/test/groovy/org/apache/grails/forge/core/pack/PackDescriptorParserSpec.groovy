@@ -236,7 +236,7 @@ configuration:
         'the template API is text'                 | 'templateApi: 1'      | "templateApi: '1'"                                             || "templateApi: must be one of the template APIs this version of Forge renders, [1], but is '1'"
         'the template API is a fraction'           | 'templateApi: 1'      | 'templateApi: 1.0'                                             || 'templateApi: must be one of the template APIs this version of Forge renders, [1], but is the number 1.0'
         'the kind is missing'                      | 'kind: feature\n'     | 'title: T\n'                                                   || 'kind: is required'
-        'the kind is not a feature'                | 'kind: feature'       | 'kind: preset'                                                 || "kind: must be 'feature', the only kind this version of Forge reads, but is 'preset'"
+        'the kind is neither feature nor preset'   | 'kind: feature'       | 'kind: profile'                                                || "kind: must be 'feature' or 'preset', the kinds this version of Forge reads, but is 'profile'"
         'the name is missing'                      | 'name: acme-audit\n'  | 'title: T\n'                                                   || 'name: is required'
         'the name is empty'                        | 'name: acme-audit'    | 'name: ~'                                                      || 'name: is required'
         'the name has upper case'                  | 'name: acme-audit'    | 'name: AcmeAudit'                                              || "name: must be lower case letters and digits in words joined by hyphens, starting with a letter, but is 'AcmeAudit'"

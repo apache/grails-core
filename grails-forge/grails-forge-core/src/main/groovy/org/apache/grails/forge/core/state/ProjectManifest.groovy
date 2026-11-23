@@ -66,10 +66,26 @@ final class ProjectManifest {
     final List<RequestedFeature> requestedFeatures
     final List<RequestedFeature> excludedFeatures
     final Map<String, String> parameters
+    /**
+     * The name of the preset the application was made from, which is one of the {@link #requestedFeatures}
+     * and has its coordinates and version there when it was taken by them; or {@code null}
+     */
+    final String preset
 
     ProjectManifest(String grailsVersion, ApplicationType applicationType, String name, String defaultPackage,
                     GenerationOptions options, String generationState, List<RequestedFeature> requestedFeatures,
                     List<RequestedFeature> excludedFeatures, Map<String, String> parameters) {
+        this(grailsVersion, applicationType, name, defaultPackage, options, generationState, requestedFeatures, excludedFeatures, parameters, null)
+    }
+
+    /**
+     * @param preset the name of the preset the application was made from, which has to be among the
+     * requested features, or {@code null}
+     */
+    ProjectManifest(String grailsVersion, ApplicationType applicationType, String name, String defaultPackage,
+                    GenerationOptions options, String generationState, List<RequestedFeature> requestedFeatures,
+                    List<RequestedFeature> excludedFeatures, Map<String, String> parameters, String preset) {
+        this.preset = preset
         this.grailsVersion = grailsVersion
         this.applicationType = applicationType
         this.name = name
@@ -98,6 +114,10 @@ final class ProjectManifest {
         map.put('defaultPackage', defaultPackage)
         map.put('options', options.toMap())
         map.put('generationState', generationState)
+        // only of an application that was made from a preset, so that the manifest of any other is as it was
+        if (preset != null) {
+            map.put('preset', preset)
+        }
         map.put('requestedFeatures', requestedFeatures.collect { RequestedFeature each -> each.toMap() })
         map.put('excludedFeatures', excludedFeatures.collect { RequestedFeature each -> each.toMap() })
         map.put('parameters', new LinkedHashMap<String, Object>(parameters))
@@ -134,7 +154,11 @@ final class ProjectManifest {
                 root.oneOf('generationState', [TRACKED, UNTRACKED]),
                 root.sections('requestedFeatures', StateLimits.MAX_FEATURES).collect { StateSection each -> RequestedFeature.read(each) },
                 root.sections('excludedFeatures', StateLimits.MAX_FEATURES).collect { StateSection each -> RequestedFeature.read(each) },
-                root.texts('parameters', StateLimits.MAX_PARAMETERS))
+                root.texts('parameters', StateLimits.MAX_PARAMETERS),
+                root.has('preset') ? root.matching('preset', FEATURE_NAME, 'the name of a preset') : null)
+        if (manifest.preset != null && !manifest.requestedFeatures.any { RequestedFeature each -> each.name == manifest.preset }) {
+            throw root.problem('preset', "is ${manifest.preset}, which is not among the requestedFeatures: the preset an application is made from is asked for with it")
+        }
         root.end()
         return manifest
     }
