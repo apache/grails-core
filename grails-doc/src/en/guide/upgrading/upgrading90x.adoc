@@ -1137,6 +1137,7 @@ Adding `spring-boot-starter-hateoas` alone does not register a Grails renderer f
 `EntityModel` values. Return those models from a Spring MVC controller or provide an explicit Grails
 renderer for the desired media type.
 
+[[upgradingGrailsFormatResolution]]
 ==== 15. Grails Format Resolution and Spring MVC Content Negotiation
 
 Grails format resolution -- `withFormat`, `respond`, and `response.format` -- applies the `grails.mime.*`
@@ -2786,7 +2787,10 @@ The setting changes these answers, which the framework's tests record by running
 quality, where the Grails rules keep the order of the header: `Accept: */*, application/json` is the `json` format,
 where it is `all` without the setting, and `withFormat` runs the `json` block rather than its first. A type with the
 `+xml` suffix still comes ahead of the XML type of equal quality: `Accept: application/xml, application/atom+xml` is
-`atom` either way, and Spring MVC now writes what an action returns in that order too.
+`atom` either way, and Spring MVC now writes what an action returns in that order too. It now also comes ahead of a
+`text/xml` the header lists without `application/xml`, which the Grails rules leave first:
+`Accept: text/xml, application/atom+xml` is `atom`, where it is `xml` without the setting, and
+`Accept: text/xml, application/xhtml+xml` is `html`, so `withFormat` runs its `html` block rather than its `xml` one.
 * *Types with the `+json` and `+xml` suffixes.* A type no configured type names, such as `application/merge-patch+json`,
 `application/soap+xml` or, without a `hal` format, `application/hal+json`, is the `json` or `xml` format, where the
 Grails rules read only the problem types of RFC 9457 so and answer any other as `all`. In `Content-Type` too: a body sent
@@ -2798,11 +2802,15 @@ where the Grails rules answer as for a client that accepts any type, with the `a
 leniently. Code that reads `response.format` or `response.mimeType` must allow for `null`.
 * *The `format` parameter and URL extensions.* A format no type is configured for is not acceptable, to `respond`, which
 answers `406`, and to what Spring MVC writes, where the Grails rules answer in the first configured format;
-`withFormat` answers it from the `Accept` header, as for a format it has no block for. A format that
-`spring.mvc.contentnegotiation.media-types` maps, such as `plain: text/plain`, decides what Spring MVC writes, as
-without the setting where `spring.mvc.contentnegotiation.favor-parameter` is on, while `respond` still answers `406`
-for it. The `all` format leaves the format to the `Accept` header: `?format=all` with `Accept: application/json` is `json`, where it is otherwise `all`. The
-first value of the parameter counts.
+`withFormat` answers it from the `Accept` header, as for a format it has no block for. A format only Spring MVC's
+content negotiation manager maps decides what Spring MVC writes, as without the setting where
+`spring.mvc.contentnegotiation.favor-parameter` is on, while `respond` still answers `406` for it. That is a format
+`spring.mvc.contentnegotiation.media-types` adds, such as `plain: text/plain`, one Spring MVC registers for the types
+its message converters support, or a data format Grails registers with the manager written in another case, such as
+`?format=JSON` or `?format=HAL` (see
+<<upgradingGrailsFormatResolution,Grails Format Resolution and Spring MVC Content Negotiation>>). The `all` format
+leaves the format to the `Accept` header: `?format=all` with `Accept: application/json` is `json`, where it is
+otherwise `all`. The first value of the parameter counts.
 * *What Spring MVC writes for an action.* The `format` parameter and URL extensions now decide the type of a
 `ResponseEntity`, a `ProblemDetail` or another value Spring MVC writes for a request a URL mapping handles, where Spring
 MVC read only the `Accept` header: `/book/show/1.json` is answered in JSON whatever the `Accept` header asks for, and

@@ -71,6 +71,6 @@ class GrailsAcceptHeaderContentNegotiationStrategy extends HeaderContentNegotiat
         }
         List<MediaType> mediaTypes = springStrategy.resolveMediaTypes(webRequest)
         // in the order Grails reads them, so that what Spring MVC writes is in the format Grails resolves
-        return handled ? GrailsContentNegotiationStrategy.preferringSuffixedXml(mediaTypes) : mediaTypes
+        return handled ? grailsStrategy.get().preferringSuffixedXml(mediaTypes) : mediaTypes
     }
 }

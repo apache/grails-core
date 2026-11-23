@@ -337,6 +337,44 @@ class SpringFormatNegotiationSpec extends Specification {
         'application/xml, application/atom+xml;q=0.5'             || ['xml', 'atom']            | ['application/xml', 'application/atom+xml;q=0.5']
         'application/atom+xml, application/xml'                   || ['atom', 'xml']            | ['application/atom+xml', 'application/xml']
         'application/json, application/atom+xml'                  || ['json', 'atom']           | ['application/json', 'application/atom+xml']
+        'application/problem+xml, application/atom+xml'           || ['atom', 'xml']            | ['application/atom+xml', 'application/problem+xml']
+        'application/problem+xml;q=0.5, application/atom+xml;q=0.4' || ['xml', 'atom']          | ['application/problem+xml;q=0.5', 'application/atom+xml;q=0.4']
+        'application/atom+xml, application/xml, application/atom+xml' || ['atom', 'xml']        | ['application/atom+xml', 'application/atom+xml', 'application/xml']
+        'application/xml, application/atom+xml, application/atom+xml' || ['atom', 'xml']        | ['application/atom+xml', 'application/atom+xml', 'application/xml']
+    }
+
+    void 'a problem type grails.mime.types names keeps the order of the header, as a format of its own, for Grails and for what Spring MVC writes'() {
+        given:
+        start((Settings.MIME_NEGOTIATION_SPRING): true, 'grails.mime.types': [all: '*/*', xml: 'application/xml',
+                atom: 'application/atom+xml', problem: 'application/problem+xml'])
+        def request = request('Accept': 'application/problem+xml, application/atom+xml')
+        handledBy(request, urlMapping())
+
+        expect:
+        GrailsWebRequest.lookup().currentResponse.mimeTypes*.extension == ['problem', 'atom']
+        GrailsWebRequest.lookup().currentResponse.format == 'problem'
+        manager().resolveMediaTypes(new ServletWebRequest(request))*.toString() == ['application/problem+xml', 'application/atom+xml']
+    }
+
+    void "a problem type only Spring MVC's media types map is one of the XML types, which a +xml type comes ahead of and which is not moved itself: #accept"() {
+        given: 'problem mapped to application/problem+xml in Spring MVC only, as spring.mvc.contentnegotiation.media-types.problem maps it'
+        start((Settings.MIME_NEGOTIATION_SPRING): true, (ParameterConfiguration.PROBLEM): true)
+        def request = request('Accept': accept)
+        handledBy(request, urlMapping())
+
+        expect: 'the format and the type Spring MVC writes agree, as the Grails rules read the header'
+        GrailsWebRequest.lookup().currentResponse.format == format
+        manager().resolveMediaTypes(new ServletWebRequest(request))*.toString() == resolved
+
+        where:
+        accept                                                             || format | resolved
+        'application/problem+xml, application/atom+xml'                    || 'atom' | ['application/atom+xml', 'application/problem+xml']
+        'application/xml, application/atom+xml, application/problem+xml'   || 'atom' | ['application/atom+xml', 'application/xml', 'application/problem+xml']
+        'text/xml, application/atom+xml, application/problem+xml'          || 'atom' | ['application/atom+xml', 'text/xml', 'application/problem+xml']
+        'application/xml, application/problem+xml'                         || 'xml'  | ['application/xml', 'application/problem+xml']
+        'application/problem+xml, application/xml, application/atom+xml'   || 'atom' | ['application/atom+xml', 'application/problem+xml', 'application/xml']
+        'application/atom+xml, application/problem+xml, application/atom+xml' || 'atom' | ['application/atom+xml', 'application/atom+xml', 'application/problem+xml']
+        'application/problem+xml, application/atom+xml, application/atom+xml' || 'atom' | ['application/atom+xml', 'application/atom+xml', 'application/problem+xml']
     }
 
     void 'a wildcard is of the all format, which withFormat answers with the first block compatible with it: #result for #accept'() {
@@ -466,6 +504,38 @@ class SpringFormatNegotiationSpec extends Specification {
         'whatever the case of the format'                      | false          | 'PLAIN'   || [MediaType.TEXT_PLAIN]
         'and a format neither maps is not acceptable'          | false          | 'unknown' || 'not acceptable'
         'and with parameter negotiation, still not acceptable' | true           | 'unknown' || 'not acceptable'
+    }
+
+    void "a format grails.mime.types does not list is written in the type Spring MVC maps it to by default, as #format"() {
+        given: 'grails.mime.types without json, which Spring MVC maps by default for its JSON message converter'
+        start((Settings.MIME_NEGOTIATION_SPRING): true, 'grails.mime.types': [all: '*/*', xml: 'application/xml'])
+        def request = request('Accept': 'application/xml')
+        request.addParameter('format', format)
+        handledBy(request, urlMapping())
+
+        expect:
+        resolve(request) == [MediaType.APPLICATION_JSON]
+
+        where:
+        format << ['json', 'JSON']
+    }
+
+    void "a data format Grails registers with Spring MVC is written in its type whatever its case, while Grails resolves no format for #format"() {
+        given: 'the default grails.mime.types, whose data formats Grails registers with Spring MVC as format aliases'
+        start((Settings.MIME_NEGOTIATION_SPRING): true)
+        def request = request('Accept': 'application/xml')
+        request.addParameter('format', format)
+        handledBy(request, urlMapping())
+
+        expect:
+        resolve(request) == [MediaType.parseMediaType(expected)]
+        GrailsWebRequest.lookup().currentResponse.format == null
+
+        where:
+        format || expected
+        'HAL'  || 'application/hal+json'
+        'CSV'  || 'text/csv'
+        'Text' || 'text/plain'
     }
 
     void "a format Grails configures keeps the types grails.mime.types gives it, whatever type Spring MVC's media types map it to"() {
@@ -648,16 +718,25 @@ class SpringFormatNegotiationSpec extends Specification {
         /** Maps the {@code plain} format to {@code text/plain}, as {@code spring.mvc.contentnegotiation.media-types.plain} does. */
         static final String PLAIN = 'test.parameter.negotiation.plain'
 
+        /**
+         * Maps the {@code problem} format to {@code application/problem+xml}, as
+         * {@code spring.mvc.contentnegotiation.media-types.problem} does.
+         */
+        static final String PROBLEM = 'test.parameter.negotiation.problem'
+
         private final boolean enabled
 
         private final String name
 
         private final boolean plain
 
+        private final boolean problem
+
         ParameterConfiguration(ConfigurableEnvironment environment) {
             enabled = environment.getProperty(ENABLED, Boolean, false)
             name = environment.getProperty(NAME, 'mediaType')
             plain = environment.getProperty(PLAIN, Boolean, false)
+            problem = environment.getProperty(PROBLEM, Boolean, false)
         }
 
         @Override
@@ -667,6 +746,9 @@ class SpringFormatNegotiationSpec extends Specification {
             }
             if (plain) {
                 configurer.mediaType('plain', MediaType.TEXT_PLAIN)
+            }
+            if (problem) {
+                configurer.mediaType('problem', MediaType.APPLICATION_PROBLEM_XML)
             }
         }
     }

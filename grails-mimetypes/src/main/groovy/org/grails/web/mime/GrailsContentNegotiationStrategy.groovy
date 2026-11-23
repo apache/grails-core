@@ -261,9 +261,12 @@ class GrailsContentNegotiationStrategy {
     }
 
     /**
-     * The media type Spring MVC's content negotiation manager maps a format to, as {@code spring.mvc.contentnegotiation.media-types}
-     * maps one, for a format no type of {@code grails.mime.types} stands for, so that what Spring MVC writes for a request
-     * that names it is in that type, as without {@code grails.mime.negotiation.spring}.
+     * The media type Spring MVC's content negotiation manager maps a format to, whatever its case, for a format no
+     * type of {@code grails.mime.types} stands for, so that what Spring MVC writes for a request that names it is in
+     * that type, as without {@code grails.mime.negotiation.spring}. The manager maps the data formats Grails
+     * registers with it, the formats {@code spring.mvc.contentnegotiation.media-types} adds, and those Spring MVC
+     * registers for the types its message converters support, such as {@code json}; since the lookup ignores case, a
+     * data format {@code grails.mime.types} lists, named in another case, such as {@code HAL}, is mapped too.
      *
      * @param format the format
      * @return the media type, as a list, or {@code null} where the manager maps no type to the format
@@ -409,29 +412,49 @@ class GrailsContentNegotiationStrategy {
 
     /**
      * Media types in the order Grails reads them, which keeps Spring MVC's order but for the types with the {@code +xml}
-     * suffix of the quality of the XML type, the first {@code application/xml} or {@code text/xml}: they come ahead of
-     * it, as the more specific types, each one later in the header in front of those before it, as Grails 9 orders them.
+     * suffix of the quality of the XML type, the first {@code application/xml} or {@code text/xml}, or
+     * {@code application/problem+xml} where no configured type names it, since Grails reads that problem type as
+     * {@code application/xml}: they come ahead of it, as the more specific types, each one later in the header in front
+     * of those before it, as the Grails rules order them. Unlike those rules, which leave a {@code text/xml} the header
+     * lists without {@code application/xml} first, it is the XML type too. Such an unconfigured
+     * {@code application/problem+xml} is one of the XML types, so it is not moved ahead of another. A type the header
+     * lists more than once is moved from its own place, so no {@code +xml} type of the quality of the XML type is left
+     * behind it, and the order is the same however often it is applied.
      *
      * @param mediaTypes the media types in Spring MVC's order
      * @return the media types in the order Grails reads them
      * @since 9.0
      */
-    static List<MediaType> preferringSuffixedXml(List<MediaType> mediaTypes) {
-        int xml = mediaTypes.findIndexOf { MediaType mediaType ->
-            mediaType.type == 'application' && mediaType.subtype == 'xml' || mediaType.type == 'text' && mediaType.subtype == 'xml'
+    List<MediaType> preferringSuffixedXml(List<MediaType> mediaTypes) {
+        boolean problemXmlAsXml = !mimeTypes.any { MimeType configured ->
+            configured?.name?.equalsIgnoreCase(MediaType.APPLICATION_PROBLEM_XML_VALUE)
         }
+        int xml = mediaTypes.findIndexOf { MediaType mediaType -> isXmlType(mediaType, problemXmlAsXml) }
         if (xml < 0) {
             return mediaTypes
         }
         double quality = mediaTypes[xml].qualityValue
         List<MediaType> ordered = new ArrayList<>(mediaTypes)
-        for (MediaType mediaType in mediaTypes.subList(xml + 1, mediaTypes.size())) {
-            if (mediaType.subtypeSuffix?.equalsIgnoreCase('xml') && mediaType.qualityValue >= quality) {
-                ordered.remove(mediaType)
+        for (int i = xml + 1; i < mediaTypes.size(); i++) {
+            MediaType mediaType = mediaTypes[i]
+            if (mediaType.subtypeSuffix?.equalsIgnoreCase('xml') && mediaType.qualityValue >= quality &&
+                    !isXmlType(mediaType, problemXmlAsXml)) {
+                // still at i: each type moved before it was taken from between the XML type and i and put at the XML type
+                ordered.removeAt(i)
                 ordered.add(xml, mediaType)
             }
         }
         return ordered
+    }
+
+    /**
+     * @return whether Grails reads the media type as XML: {@code application/xml}, {@code text/xml}, or, where no
+     * configured type names it, {@code application/problem+xml}, which Grails reads as {@code application/xml}
+     */
+    private static boolean isXmlType(MediaType mediaType, boolean problemXmlAsXml) {
+        return mediaType.type == 'application' && mediaType.subtype == 'xml' ||
+                mediaType.type == 'text' && mediaType.subtype == 'xml' ||
+                problemXmlAsXml && mediaType.equalsTypeAndSubtype(MediaType.APPLICATION_PROBLEM_XML)
     }
 
     /**
