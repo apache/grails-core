@@ -18,7 +18,13 @@
  */
 package org.apache.grails.forge.cli.console
 
+import java.util.function.Consumer
+import java.util.function.Supplier
+import java.util.regex.Pattern
 import groovy.transform.CompileStatic
+import org.grails.forge.application.OperatingSystem
+import org.grails.forge.cli.command.BaseCommand
+import org.grails.forge.feature.FeatureSelectionException
 import org.grails.forge.io.FileSystemOutputHandler
 import picocli.CommandLine
 
@@ -29,9 +35,11 @@ import picocli.CommandLine
  *
  * <p>A command the CLI has itself keeps its name, also where it is another name of the command or
  * the short form of its name: a command of the build that would take it is not added, and that is
- * said wherever the commands are listed and when the name is typed. Nothing is run to have the list:
- * without the file, or with one that cannot be used, there are no such commands and one line says
- * which Gradle task writes it.</p>
+ * said wherever the commands are listed and when the name is typed. Every build that compiles the
+ * project writes the file, and nothing is run to read it: without the file, or with one that cannot
+ * be used, there are no such commands, and one line says which Gradle task writes it. Only for a name
+ * that is typed and is no command, where the file is missing or may be out of date, is the build run
+ * once to list the commands ({@link #listsFor}, {@link #list}), and the command line read again.</p>
  *
  * <p>The scripts of the application ({@link ScriptCommandFiles}) are commands in the same way and by
  * the same rules, after the commands the build lists: a script does not take the name of one of
@@ -42,20 +50,39 @@ import picocli.CommandLine
 @CompileStatic
 final class ApplicationCommands {
 
+    /**
+     * The environment variable that turns the listing for a name that is typed off: with {@code false}
+     * such a name is refused at once, and no build is run for it. With any other value, and without it,
+     * the build lists the commands when the name is no command yet.
+     */
+    public static final String LISTING = 'GRAILS_LIST_COMMANDS'
+
     private static final String SECTION = 'applicationCommandList'
     private static final String RUN_COMMAND = 'run-command'
     private static final String OF_WHAT = 'The commands of the application and its plugins'
+    private static final String OFF = 'false'
+    // what can be the name of a command of the build, or the short form of the name of one: anything else is never one
+    private static final Pattern NAME_OR_SHORT_FORM = Pattern.compile('[a-z][a-z0-9]*(-[a-z0-9]+)*|[A-Za-z][A-Za-z-]{0,63}')
+    private static final int MAX_NAME = 64
+    private static final Supplier<String> ENVIRONMENT = { System.getenv(LISTING) } as Supplier<String>
+
+    private static volatile Supplier<String> listing = ENVIRONMENT
 
     // what there is to say about a command line, for as long as there is the command line
     private static final Map<CommandLine, ApplicationCommands> OF = Collections.synchronizedMap(new WeakHashMap<CommandLine, ApplicationCommands>())
 
+    private final ConsoleProject project
     private final ApplicationCommandFile file
     private final ScriptCommandFiles scripts
     // by each name a command of the build would have had: what has the name, and the command that is not there for it
     private final Map<String, String> notAdded = new LinkedHashMap<>()
     private final Map<String, ApplicationCommandFile.Entry> notAddedBy = new LinkedHashMap<>()
 
-    private ApplicationCommands(ApplicationCommandFile file, ScriptCommandFiles scripts) {
+    /** Whether the build listed the commands for what was typed just before the command line was put together. */
+    boolean listedJustNow
+
+    private ApplicationCommands(ConsoleProject project, ApplicationCommandFile file, ScriptCommandFiles scripts) {
+        this.project = project
         this.file = file
         this.scripts = scripts
     }
@@ -72,7 +99,7 @@ final class ApplicationCommands {
         if (project == null) {
             return
         }
-        ApplicationCommands commands = new ApplicationCommands(ApplicationCommandFile.read(project.getDirectory()), ScriptCommandFiles.list(project.getDirectory()))
+        ApplicationCommands commands = new ApplicationCommands(project, ApplicationCommandFile.read(project.getDirectory()), ScriptCommandFiles.list(project.getDirectory()))
         commands.add(root)
         // the build lists the test phases of the project in the same file
         TestAppCommand.phasesOf(root, commands.file)
@@ -102,14 +129,104 @@ final class ApplicationCommands {
 
     /**
      * What is said when something was typed for a command and is none: without a list of the
-     * commands of the application that can be relied on, it may be one of those.
+     * commands of the application that can be relied on, it may be one of those; after the build has
+     * just listed them, that it is none of those either.
      *
      * @param root the command line of the CLI
+     * @param shown what was typed, as it can be shown
      * @return one line, or {@code null} when there is such a list or no project
      */
-    static String whenUnknown(CommandLine root) {
+    static String whenUnknown(CommandLine root, String shown) {
         ApplicationCommands commands = of(root)
-        return commands == null ? null : commands.aboutFile(root)
+        if (commands == null) {
+            return null
+        }
+        String about = commands.aboutFile(root)
+        if (about == null && commands.listedJustNow) {
+            return "The build of the project has just listed the commands of the application and its plugins, and ${shown} is none of them"
+        }
+        return about
+    }
+
+    /**
+     * Whether the build is run to list the commands of the application and its plugins for what was
+     * typed where a command was expected, at the top of the command line, and is no command: in a
+     * project that is used, whose Gradle wrapper is run, when the list is missing or may be out of
+     * date, and when what was typed can be the name of a command of the build or the short form of
+     * one. A name the Grails shell had for a command that is here under another name, or is gone, is
+     * answered at once. {@link #LISTING} turns it off.
+     *
+     * @param root the command line of the CLI
+     * @param typed what was typed
+     * @return whether to list
+     */
+    static boolean listsFor(CommandLine root, String typed) {
+        ApplicationCommands commands = of(root)
+        if (commands == null || OFF.equalsIgnoreCase(listing.get()?.trim()) || typed == null || typed.length() > MAX_NAME ||
+                !NAME_OR_SHORT_FORM.matcher(typed).matches()) {
+            return false
+        }
+        if (!(commands.file.state in [ApplicationCommandFile.State.MISSING, ApplicationCommandFile.State.STALE])) {
+            return false
+        }
+        FormerCommands.Former former = FormerCommands.find(typed)
+        if (former != null && former.status != FormerCommands.Status.PLUGIN) {
+            return false
+        }
+        // without a wrapper that is run nothing can be listed, and no command of the build run either
+        return commands.project.gradleWrapper(isWindows(root)).file != null
+    }
+
+    /**
+     * Has the build of the project list the commands of the application and its plugins with the Gradle
+     * task {@link ApplicationCommandFile#TASK}, after one line on the error stream that says so. The build
+     * is run as the build of every command is, by {@link GradleBuild}, with an input that has ended; the
+     * task is run although Gradle may take it for up to date, so that the file is written again.
+     *
+     * @param root the command line of the CLI, in a project that is used
+     * @param typed what was typed, which is no command yet
+     * @return 0 when the build listed the commands, and 1 after what the build said otherwise
+     */
+    static int list(CommandLine root, String typed) {
+        ApplicationCommands commands = of(root)
+        BaseCommand command = (BaseCommand) root.getCommand()
+        PrintWriter said = root.getErr()
+        String shown = FeatureSelectionException.shown(typed)
+        said.println(CommandLine.Help.Ansi.AUTO.string("@|bold | Listing|@ the commands of the application and its plugins, of which ${shown} may be one, " +
+                "with the Gradle task ${ApplicationCommandFile.TASK}"))
+        said.flush()
+        GradleBuild runner = GradleBuild.of(GradleBuild.Purpose.BUILD, { String message -> command.err(message) } as Consumer<String>, isWindows(root))
+        boolean nonInteractive = GradleBuild.isNonInteractive()
+        GradleBuild.setNonInteractive(true)
+        int exit
+        try {
+            exit = runner.run(commands.project, [commands.project.task(ApplicationCommandFile.TASK), '--rerun'])
+        } catch (GradleRunner.RefusedArgumentException e) {
+            command.err(e.getMessage())
+            exit = 1
+        } finally {
+            GradleBuild.setNonInteractive(nonInteractive)
+        }
+        if (exit != 0) {
+            command.err("The commands of the application and its plugins could not be listed, so it is not known whether ${shown} is one of them. It was not run")
+        }
+        return exit
+    }
+
+    /**
+     * Replaces what the environment says of {@link #LISTING}, for a specification, which cannot change
+     * the environment it runs in.
+     *
+     * @param value what {@link #LISTING} is taken to be; {@code null} for what the environment says
+     */
+    static void setListing(String value) {
+        listing = value == null ? ENVIRONMENT : ({ value } as Supplier<String>)
+    }
+
+    private static boolean isWindows(CommandLine root) {
+        Object command = root.getCommand()
+        return command instanceof BaseCommand ? ((BaseCommand) command).getOperatingSystem() == OperatingSystem.WINDOWS :
+                System.getProperty('os.name', '').toLowerCase(Locale.ROOT).contains('windows')
     }
 
     /**
@@ -244,7 +361,7 @@ final class ApplicationCommands {
         String gradle = UsageHelp.toType(root, "gradle ${ApplicationCommandFile.TASK}")
         switch (file.state) {
             case ApplicationCommandFile.State.MISSING:
-                return "${OF_WHAT} are not listed yet. To list them: ${gradle}"
+                return "${OF_WHAT} are not listed yet: a build that compiles the project lists them, and so does typing the name of one. To list them now: ${gradle}"
             case ApplicationCommandFile.State.REFUSED:
                 return "${OF_WHAT} are not listed: ${ApplicationCommandFile.LOCATION} ${file.reason}. To write it again: ${gradle} --rerun"
             case ApplicationCommandFile.State.STALE:

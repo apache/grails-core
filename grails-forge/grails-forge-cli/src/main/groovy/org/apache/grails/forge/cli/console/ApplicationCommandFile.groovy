@@ -36,7 +36,9 @@ import groovy.transform.CompileStatic
 /**
  * The file in which the build of a project lists the commands of the application and of its plugins:
  * {@code .grails/cache/command-catalog.json}, written by the Gradle task {@code grailsCommandCatalog}.
- * The CLI reads it and never writes it, and runs nothing to have it.
+ * The CLI reads it and never writes it, and runs nothing to read it: every build that compiles the
+ * project writes it, and the CLI has the build write it only for a name that is no command yet
+ * ({@link ApplicationCommands#list}).
  *
  * <p>The file is in the directory of the project and not in its build directory, which the build of
  * the project can move: where that is cannot be known without running the build, so the task writes

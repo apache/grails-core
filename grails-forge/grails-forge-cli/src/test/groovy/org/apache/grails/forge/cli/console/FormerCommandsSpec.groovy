@@ -34,7 +34,8 @@ class FormerCommandsSpec extends CommandSpec {
     static final String CLI = 'grails-forge-cli'
     static final String RECORD = '/former-commands-grails-8.tsv'
     static final Set<String> TEST_TOOLING = ['generate-unit-test', 'generate-functional-test', 'generate-resource-controller'] as Set
-    static final String MISSING = 'The commands of the application and its plugins are not listed yet. To list them: grails-forge-cli gradle grailsCommandCatalog'
+    static final String MISSING = 'The commands of the application and its plugins are not listed yet: a build that compiles the project lists them, ' +
+            'and so does typing the name of one. To list them now: grails-forge-cli gradle grailsCommandCatalog'
     static final Map<String, List<String>> PROJECTS = [
             web        : ['create-app', 'example.web'],
             rest       : ['create-restapi', 'example.rest'],
@@ -55,12 +56,15 @@ class FormerCommandsSpec extends CommandSpec {
         System.setOut(new PrintStream(out, true))
         System.setErr(new PrintStream(err, true))
         top = dir
+        // the projects are not built: a name of a command of a plugin does not have the build list the commands of the application
+        ApplicationCommands.setListing('false')
     }
 
     void cleanup() {
         System.setOut(originalOut)
         System.setErr(originalErr)
         ConsoleProject.setOwnedByUser(null)
+        ApplicationCommands.setListing(null)
     }
 
     @Unroll
@@ -202,7 +206,7 @@ class FormerCommandsSpec extends CommandSpec {
         exit == 2
         lines[1] == MISSING
         lines[2] == 'generate-all is a command of the scaffolding plugin (grails-scaffolding) for applications with GSP views: where the application has the plugin, ' +
-                'grails-forge-cli gradle grailsCommandCatalog makes it a command here. What the REST API profile generated with it (JSON views) has no replacement'
+                'it is a command here by its name. What the REST API profile generated with it (JSON views) has no replacement'
 
         when: 'a command the directory has'
         err.reset()

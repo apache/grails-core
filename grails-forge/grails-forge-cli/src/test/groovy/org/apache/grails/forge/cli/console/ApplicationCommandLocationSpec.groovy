@@ -19,8 +19,10 @@
 package org.apache.grails.forge.cli.console
 
 import java.nio.charset.StandardCharsets
+import java.nio.file.Files
 import groovy.json.JsonSlurper
 import org.apache.grails.gradle.model.cli.CommandCatalogBuilder
+import org.apache.grails.gradle.model.cli.CommandCatalogFreshness
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.cli.CommandFixture
 import org.grails.forge.cli.CommandSpec
@@ -139,6 +141,43 @@ class ApplicationCommandLocationSpec extends CommandSpec implements CommandFixtu
         ((List<Map>) described.commands).findAll { it.origin == 'application' }*.name == ['greet']
         !((List<Map>) described.commands).any { it.name == STALE.name }
         !((List<String>) described.diagnostics).any { it.contains(ApplicationCommandFile.LOCATION) }
+    }
+
+    void "the command line takes the catalog for out of date by the rule the task of the build holds itself to, when #changed is newer"() {
+        given: 'a catalog, and then a file that is newer than it'
+        File catalog = file(ApplicationCommandFile.LOCATION, ApplicationCommandsSpec.doc([ApplicationCommandsSpec.HELLO]))
+        catalog.setLastModified(System.currentTimeMillis() - 60_000)
+        file(changed, '')
+        File classes = new File(dir, 'build/classes/groovy/main')
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'help', '--json')
+        Map described = document()
+
+        then: 'the command line says what the task of the build would write the catalog again for'
+        exit == 0
+        described.complete == false
+        ((List<String>) described.diagnostics)[0].contains("may have changed: ${named} is newer than ${ApplicationCommandFile.LOCATION}")
+        CommandCatalogFreshness.changedSince(dir, [classes], Files.getLastModifiedTime(catalog.toPath())) == named
+
+        when: 'the catalog is written again, as the task does'
+        catalog.setLastModified(System.currentTimeMillis() + 2_000)
+        out.reset()
+        ForgeCli.execute(beanContext, 'help', '--json')
+
+        then: 'neither takes it for out of date'
+        document().complete == true
+        CommandCatalogFreshness.changedSince(dir, [classes], Files.getLastModifiedTime(catalog.toPath())) == null
+
+        where:
+        changed                                                                       | named
+        'build.gradle'                                                                | 'build.gradle'
+        'build.gradle.kts'                                                            | 'build.gradle.kts'
+        'settings.gradle'                                                             | 'settings.gradle'
+        'settings.gradle.kts'                                                         | 'settings.gradle.kts'
+        'gradle.properties'                                                           | 'gradle.properties'
+        'grails-app/commands/example/GreetCommand.groovy'                             | 'grails-app/commands'
+        'build/classes/groovy/main/META-INF/grails-commands/example.GreetCommand.json' | 'build/classes/groovy/main/META-INF/grails-commands'
     }
 
     private File file(String path, String text) {

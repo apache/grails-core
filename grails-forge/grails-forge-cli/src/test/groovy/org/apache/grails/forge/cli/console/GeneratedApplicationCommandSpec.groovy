@@ -1,0 +1,113 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+package org.apache.grails.forge.cli.console
+
+import groovy.json.JsonSlurper
+import org.grails.forge.application.ApplicationType
+import org.grails.forge.cli.CommandFixture
+import org.grails.forge.cli.CommandSpec
+import org.grails.forge.cli.ForgeCli
+import spock.lang.IgnoreIf
+import spock.lang.Shared
+import spock.lang.Timeout
+
+/**
+ * A command the application was given with {@code create-command} is a command of the command line by its
+ * name, in a project that was never built: the build lists the commands of the application, which
+ * compiles it, and the command is run in the application. Once the build has compiled the project the
+ * list is current, also for a command added since.
+ */
+@IgnoreIf({ os.windows })
+@Timeout(900)
+class GeneratedApplicationCommandSpec extends CommandSpec implements CommandFixture {
+
+    // the Gradle daemon of the builds of the application is one of this specification, which ends it
+    @Shared
+    IsolatedGradle gradle = new IsolatedGradle()
+
+    PrintStream originalOut
+    PrintStream originalErr
+    ByteArrayOutputStream out = new ByteArrayOutputStream()
+    ByteArrayOutputStream err = new ByteArrayOutputStream()
+
+    void setup() {
+        originalOut = System.out
+        originalErr = System.err
+        System.setOut(new PrintStream(out, true))
+        System.setErr(new PrintStream(err, true))
+    }
+
+    void cleanup() {
+        System.setOut(originalOut)
+        System.setErr(originalErr)
+    }
+
+    void cleanupSpec() {
+        gradle.close()
+    }
+
+    void "a command created in an application that was never built is run by its name"() {
+        given: 'a generated application with a command that says it ran, and no list of its commands'
+        generateProject(ApplicationType.WEB)
+        new File(dir, 'settings.gradle') << '\n' + gradle.recording
+        new File(dir, 'gradle.properties') << "\norg.gradle.daemon.registry.base=${gradle.registry.canonicalPath}\norg.gradle.daemon.idletimeout=${IsolatedGradle.IDLE_MILLIS}\n"
+        assert ForgeCli.execute(beanContext, 'create-command', 'greet') == 0
+        File command = new File(dir, 'grails-app/commands/example/grails/GreetCommand.groovy')
+        command.text = command.text.replace('return false', "println 'GREETED'\n        return true")
+        assert !new File(dir, ApplicationCommandFile.LOCATION).exists()
+        out.reset()
+        err.reset()
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'greet')
+
+        then: 'the build listed the commands once, and the command ran in the application'
+        exit == 0
+        err.toString().readLines()[0] == '| Listing the commands of the application and its plugins, of which greet may be one, with the Gradle task grailsCommandCatalog'
+        err.toString().contains('| Running the command greet of the application, with the Gradle task runCommand')
+        out.toString().readLines().contains('GREETED')
+        catalog().commands.find { it.name == 'greet' }.origin == 'application'
+
+        when: 'a second command, and a build that compiles the project'
+        assert ForgeCli.execute(beanContext, 'create-command', 'wave') == 0
+        out.reset()
+        err.reset()
+        int compiled = ForgeCli.execute(beanContext, 'compile')
+
+        then: 'the build listed it, and the list is current for the command line, which lists it as a command of the application'
+        compiled == 0
+        ((List<Map>) catalog().commands)*.name.containsAll(['greet', 'wave'])
+
+        when:
+        out.reset()
+        err.reset()
+        ForgeCli.execute(beanContext, 'help', '--json')
+        Map described = (Map) new JsonSlurper().parseText(out.toString().readLines().last())
+
+        then:
+        described.complete == true
+        !((List<String>) described.diagnostics).any { String line -> line.contains(ApplicationCommandFile.LOCATION) }
+        ((List<Map>) described.commands).findAll { it.origin == 'application' }*.name.containsAll(['greet', 'wave'])
+        !err.toString().contains('| Listing')
+    }
+
+    private Map catalog() {
+        return (Map) new JsonSlurper().parse(new File(dir, ApplicationCommandFile.LOCATION))
+    }
+}

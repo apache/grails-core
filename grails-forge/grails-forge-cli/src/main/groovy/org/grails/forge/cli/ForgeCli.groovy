@@ -207,19 +207,39 @@ final class ForgeCli {
      * the command needed it, and not started otherwise. The name of a command can be given in its
      * short form, as {@code cA} for {@code create-app}: it is replaced by the name before the
      * command line is read, see {@link CommandCatalog#expand}.
+     *
+     * <p>A name that is no command, in a project whose list of the commands of the application and its
+     * plugins is missing or may be out of date, has the build list them once, and the command line is
+     * then put together again and read again: see {@link ApplicationCommands#listsFor}.</p>
      */
     static int execute(ForgeContext context, String... args) {
         // What reading the record of the project has to say is held back until the command is known:
         // a short form is looked up among the commands of the project too, and may then be a command
         // that has nothing to do with the project.
         HeldBack held = new HeldBack()
+        held.mayList = true
         boolean reads = readsProject(args)
         CommandLine commandLine = createCommandLine(context, held, reads, listsApplication(args))
         if (reads) {
             held.advice = { advice(context) } as Supplier<String>
         }
         try {
-            return execute(commandLine, held, args)
+            int exit = execute(commandLine, held, args)
+            if (!held.listed) {
+                return exit
+            }
+            // the build has just listed the commands of the application and its plugins: they are read
+            // again, and so is the record of the project, whose warnings were not said the first time
+            HeldBack again = new HeldBack()
+            CommandLine listed = createCommandLine(context, again, reads, listsApplication(args))
+            if (reads) {
+                again.advice = { advice(context) } as Supplier<String>
+            }
+            ApplicationCommands commands = ApplicationCommands.of(listed)
+            if (commands != null) {
+                commands.listedJustNow = true
+            }
+            return execute(listed, again, args)
         } finally {
             if (Diagnostics.isOn()) {
                 generator(context)
@@ -290,9 +310,18 @@ final class ForgeCli {
                 root.err(refused)
                 return 1
             }
+            String typed = commandOf(args)
+            // The help or the version asked for in front of the name is the answer, and is no mistake that comes here;
+            // after the name, as in a name followed by --help, it is an argument of the command the name may be.
+            if (held.mayList && isNoCommand(commandLine, e, typed) && ApplicationCommands.listsFor(commandLine, typed)) {
+                // it may be a command of the application or of a plugin that the build has not listed yet
+                int listing = ApplicationCommands.list(commandLine, typed)
+                held.listed = listing == 0
+                return listing
+            }
             held.replay(root)
             // what was typed may be the name of a command of the application that is not there for it
-            ApplicationCommands.said(commandLine, commandOf(args))
+            ApplicationCommands.said(commandLine, typed)
             return commandLine.getParameterExceptionHandler().handleParseException(e, args)
         }
         CommandLine help = commandLine.getSubcommands().get(HelpCommand.NAME)
@@ -393,6 +422,19 @@ final class ForgeCli {
 
     private static String commandOf(String... args) {
         return args.find { String arg -> !arg.startsWith('-') }
+    }
+
+    // whether the mistake is that what was typed where the command is expected is no command of the
+    // command line, by its name or its short form: not that it is short for more than one
+    private static boolean isNoCommand(CommandLine commandLine, CommandLine.ParameterException mistake, String typed) {
+        if (typed == null || !mistake.getCommandLine().is(commandLine)) {
+            return false
+        }
+        try {
+            return new CommandCatalog(commandLine).find(commandLine, typed) == null
+        } catch (CommandLine.ParameterException ignored) {
+            return false
+        }
     }
 
     // what can be an option: after -- nothing is
@@ -553,6 +595,12 @@ final class ForgeCli {
 
         private final List<Closure> said = []
         private final List<String> lines = []
+
+        /** Whether a name that is no command may have the build list the commands of the application: once for a command line. */
+        boolean mayList
+
+        /** Whether the build listed them, after which the command line is put together and read again. */
+        boolean listed
 
         /** Whether no record of the project was found that could not be used. */
         boolean recordUsed = true

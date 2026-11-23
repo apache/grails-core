@@ -40,7 +40,8 @@ class ConsoleSuggestionsSpec extends Specification {
     @Shared
     Map<String, List<String>> told = [
             'no-such-command'  : ["Run 'grails help' for the commands",
-                                  'The commands of the application and its plugins are not listed yet. To list them: grails gradle grailsCommandCatalog'],
+                                  'The commands of the application and its plugins are not listed yet: a build that compiles the project lists them, ' +
+                                          'and so does typing the name of one. To list them now: grails gradle grailsCommandCatalog'],
             'compile --nothing': ["Run 'grails help compile' for the options"],
             'feature add'      : ["Run 'grails help feature add' for the options"],
             'test'             : ['test was another name of test-app in the Grails shell. Type: grails test-app'],
@@ -94,7 +95,7 @@ class ConsoleSuggestionsSpec extends Specification {
         and: 'the name of the program is refused at the prompt, and the answer says what to type there'
         said.contains('There is no command grails')
         !said.contains("'grails ")
-        !said.contains('them: grails ')
+        !said.contains('them now: grails ')
         !said.contains('Run: grails ')
         !said.contains('Type: grails ')
         !said.contains('grails project migrate')
@@ -110,6 +111,8 @@ class ConsoleSuggestionsSpec extends Specification {
         builder.command().set(main, InteractiveConsoleSpec.AsGrails.name)
         builder.environment().remove('GRAILS_SAFE_DIRECTORY')
         builder.environment().put('NO_COLOR', '1')
+        // what is told to type is said without a build: a name that is no command does not have the wrapper list the commands of the application
+        builder.environment().put('GRAILS_LIST_COMMANDS', 'false')
         if (input == null) {
             builder.redirectInput(ProcessBuilder.Redirect.from(new File('/dev/null')))
         } else {

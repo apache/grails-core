@@ -106,7 +106,7 @@ final class CommandCatalog {
         List<String> similar = typed == null || typed.isEmpty() || given != typed ? Collections.<String>emptyList() :
                 new CommandLine.UnmatchedArgumentException(parent, Collections.singletonList(typed)).getSuggestions()
         // it may be a command of the application, where the build of the project has not listed those
-        String listed = parent.getParent() == null ? ApplicationCommands.whenUnknown(parent) : null
+        String listed = parent.getParent() == null ? ApplicationCommands.whenUnknown(parent, given) : null
         // below a project that is not used its commands are not there, which is then why there is none of that name
         String untrusted = parent.getParent() == null ? ConsoleProject.search(FileSystemOutputHandler.getDefaultBaseDirectory().toPath()).untrusted : null
         return new UsageHelp.Lines(parent, "There is no command ${given}" +

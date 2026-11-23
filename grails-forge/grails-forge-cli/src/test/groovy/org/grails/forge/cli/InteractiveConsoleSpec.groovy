@@ -20,6 +20,7 @@ package org.grails.forge.cli
 
 import java.nio.file.Files
 import java.util.concurrent.TimeUnit
+import org.apache.grails.forge.cli.console.ApplicationCommands
 import org.apache.grails.forge.cli.console.GradleRunner
 import spock.lang.IgnoreIf
 import spock.lang.Specification
@@ -118,8 +119,10 @@ class InteractiveConsoleSpec extends Specification {
         given:
         project()
 
-        when:
-        program = command(true, [], []).redirectInput(typed('# a line that is a comment\n' +
+        when: 'a name that is no command is answered without a build: the wrapper here names no Gradle that would list the commands of the application'
+        ProcessBuilder console = command(true, [], [])
+        console.environment().put(ApplicationCommands.LISTING, 'false')
+        program = console.redirectInput(typed('# a line that is a comment\n' +
                 'no-such-command\n' +
                 'gradle build "two  words"\n' +
                 '  exit  \n' +

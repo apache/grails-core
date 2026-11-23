@@ -149,9 +149,9 @@ class ArtefactCommandsSpec extends CommandSpec implements CommandFixture {
                 '| Rendered integration test to src/integration-test/groovy/example/grails/FooBarFlowSpec.groovy',
                 '| Rendered integration test to src/integration-test/groovy/other/pkg/BazFlowSpec.groovy',
                 '| Rendered command to grails-app/commands/example/grails/FooBarCommand.groovy',
-                '| To make it a command of grails-forge-cli, list the commands of the application again: grails-forge-cli gradle grailsCommandCatalog',
+                '| Run it with: grails-forge-cli foo-bar',
                 '| Rendered command to grails-app/commands/other/pkg/BazCommand.groovy',
-                '| To make it a command of grails-forge-cli, list the commands of the application again: grails-forge-cli gradle grailsCommandCatalog',
+                '| Run it with: grails-forge-cli baz',
                 '| Rendered script to src/main/scripts/foo-bar.groovy',
                 '| Rendered script to src/main/scripts/other-thing.groovy'
         ]

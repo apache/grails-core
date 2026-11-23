@@ -593,7 +593,7 @@ class CommandCatalogSpec extends CommandSpec implements CommandFixture {
 
         and: 'the build of the project has not listed the commands of the application, so they are not all there'
         described.complete == false
-        described.diagnostics == ['The commands of the application and its plugins are not listed yet. To list them: grails-forge-cli gradle grailsCommandCatalog']
+        described.diagnostics == ['The commands of the application and its plugins are not listed yet: a build that compiles the project lists them, and so does typing the name of one. To list them now: grails-forge-cli gradle grailsCommandCatalog']
     }
 
     void "the commands are not those of a project in another repository, or of a project above the nearest one"() {
@@ -642,7 +642,7 @@ class CommandCatalogSpec extends CommandSpec implements CommandFixture {
         described.complete == false
         described.diagnostics.size() == 2
         described.diagnostics[0].startsWith("grails-forge-cli.yml: applicationType is not a type of application, but 'nonsense'")
-        described.diagnostics[1] == 'The commands of the application and its plugins are not listed yet. To list them: grails-forge-cli gradle grailsCommandCatalog'
+        described.diagnostics[1] == 'The commands of the application and its plugins are not listed yet: a build that compiles the project lists them, and so does typing the name of one. To list them now: grails-forge-cli gradle grailsCommandCatalog'
         described.projectDirectory == dir.canonicalPath
         !((List<Map>) described.commands).any { it.name == 'create-controller' }
 

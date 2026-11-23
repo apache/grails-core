@@ -79,7 +79,7 @@ final class FormerCommands {
     private static final String REST_API = 'is a command in the directory of a REST API application or REST API plugin (create-restapi, create-rest-api-plugin), and the current directory is in none'
     private static final String PLUGIN_PROJECT = 'is a command in the directory of a Grails plugin, which has a class whose name ends with GrailsPlugin under src/main/groovy, and the current directory is in none'
     private static final String SCAFFOLDING = 'is a command of the scaffolding plugin (grails-scaffolding) for applications with GSP views: where the application has the plugin, ' +
-            '{cli} gradle grailsCommandCatalog makes it a command here. What the REST API profile generated with it (JSON views) has no replacement'
+            'it is a command here by its name. What the REST API profile generated with it (JSON views) has no replacement'
 
     private static final Map<String, Former> TABLE = table()
 
@@ -162,7 +162,7 @@ final class FormerCommands {
 
         add('query-tail', 'script command of Grails Data', Status.PLUGIN,
                 'query-tail is a command of Grails Data (grails-datamapping-core), which the build of a project runs without starting the application: ' +
-                'where the application has GORM, {cli} gradle grailsCommandCatalog makes it a command here, and {cli} run-command query-tail runs it before that')
+                'where the application has GORM, it is a command here by its name')
 
         add('open', 'shell', Status.NO_REPLACEMENT,
                 'open opened a file with the program the desktop has for it in the Grails shell. It has no replacement in {name}')

@@ -104,7 +104,8 @@ abstract class GradleBuild {
      * <li>A {@linkplain Purpose#BUILD build the command line asks for itself}, which is {@code compile},
      * {@code clean}, {@code assemble}, {@code war} and {@code package}, {@code test-app},
      * {@code dependency-report}, {@code package-plugin}, {@code publish-plugin}, {@code run-command}, a
-     * command of the application by its name, {@code run-script} and a script by its name,
+     * command of the application by its name and the build that lists those for a name that is none
+     * yet ({@link ApplicationCommands#list}), {@code run-script} and a script by its name,
      * {@code console} and a {@code run-app} that stays with the application, is run through the
      * Tooling API of Gradle, see {@link ToolingApiRunner}: the console is one JVM that runs many
      * builds, and asks each of one connection that is there already, which takes a seventh of the

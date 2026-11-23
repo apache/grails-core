@@ -88,7 +88,8 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
         '''.stripIndent()
 
     static final Map HELLO = [name: 'hello-world', aliases: [], description: 'Says hello', origin: 'org.example:hello-cli:1.2.3', target: 'application', registration: 'descriptor']
-    static final String MISSING = 'The commands of the application and its plugins are not listed yet. To list them: grails-forge-cli gradle grailsCommandCatalog'
+    static final String MISSING = 'The commands of the application and its plugins are not listed yet: a build that compiles the project lists them, ' +
+            'and so does typing the name of one. To list them now: grails-forge-cli gradle grailsCommandCatalog'
     static final String REFUSED = 'The commands of the application and its plugins are not listed: .grails/cache/command-catalog.json '
 
     // One Gradle daemon, of this specification alone, runs the builds of its features: they have nothing to

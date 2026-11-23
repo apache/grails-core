@@ -22,9 +22,11 @@ import groovy.transform.CompileStatic
 import jakarta.inject.Inject
 import org.apache.grails.forge.cli.artefact.ArtefactTemplate
 import org.apache.grails.forge.cli.console.UsageHelp
+import org.grails.forge.application.Project
 import org.grails.forge.cli.CodeGenConfig
 import org.grails.forge.io.ConsoleOutput
 import org.grails.forge.io.OutputHandler
+import org.grails.forge.util.NameUtils
 import org.grails.forge.util.ThrowingSupplier
 import picocli.CommandLine
 
@@ -65,12 +67,14 @@ class CreateCommandCommand extends CodeGenCommand {
 
     @Override
     Integer call() throws Exception {
-        Integer exit = generate('command', newArtefact(commandName, 'Command'), [
+        Project names = newArtefact(commandName, 'Command')
+        Integer exit = generate('command', names, [
                 'grails-app/commands/{packagePath}/{className}Command.groovy': ArtefactTemplate.COMMAND
         ])
         if (exit == 0) {
-            // the build lists the commands of the application, and is not run for it from here
-            out("@|blue ||@ To make it a command of ${spec.root().name()}, list the commands of the application again: ${UsageHelp.toType(spec, 'gradle grailsCommandCatalog')}")
+            // the name the command has by its class: the build lists it when it compiles the project, and
+            // the command line has the build list it when the name is typed before that
+            out("@|blue ||@ Run it with: ${UsageHelp.toType(spec, NameUtils.getScriptName(names.getClassName()))}")
         }
         return exit
     }
