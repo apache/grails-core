@@ -826,7 +826,8 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
         and: 'the file has the same name in the project every time, which is what Gradle is given, and is gone afterwards'
         lineOf('option=') == '.grails/run/command-args-0.json'
         file.canonicalFile == new File(dir, '.grails/run/command-args-0.json').canonicalFile
-        new File(dir, '.grails/run').list().sort() == ['.gitignore']
+        // the init script with which Gradle checks the path of the project stays, see ProjectPathCheck
+        new File(dir, '.grails/run').list().sort() - ProjectPathCheck.FILE == ['.gitignore']
         permissions('.grails/run/.gitignore') == 'rw-------'
 
         when: 'by another name of the command, and without arguments'
@@ -839,7 +840,7 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
         !err.toString().contains('-Dgrails.env')
         lineOf('vector=') == '<' + 'hello-world'.bytes.encodeHex() + '>'
         lineOf('option=') == '.grails/run/command-args-0.json'
-        new File(dir, '.grails/run').list().sort() == ['.gitignore']
+        new File(dir, '.grails/run').list().sort() - ProjectPathCheck.FILE == ['.gitignore']
     }
 
     @IgnoreIf({ os.windows })
@@ -1122,7 +1123,7 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
         all().contains('this command fails on purpose')
         errors() == ['| Error Gradle did not succeed: it ended with exit code 1']
         !all().contains('Usage:')
-        new File(dir, '.grails/run').list().sort() == ['.gitignore']
+        new File(dir, '.grails/run').list().sort() - ProjectPathCheck.FILE == ['.gitignore']
     }
 
     @IgnoreIf({ os.windows })
@@ -1150,7 +1151,7 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
         exit.get() == 1
         errors() == ['| Error Gradle was stopped before it finished, because the command was cancelled']
         !file.exists()
-        new File(dir, '.grails/run').list().sort() == ['.gitignore']
+        new File(dir, '.grails/run').list().sort() - ProjectPathCheck.FILE == ['.gitignore']
     }
 
     @Unroll

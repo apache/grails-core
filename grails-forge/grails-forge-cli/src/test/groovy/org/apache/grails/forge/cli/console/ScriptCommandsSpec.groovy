@@ -374,9 +374,9 @@ class ScriptCommandsSpec extends CommandSpec implements CommandFixture {
         err.toString().readLines()[0] == '| Running the script data-import of src/main/scripts, with the Gradle task runScriptCommand'
         err.toString().readLines()[1] == DEPRECATED
 
-        and: 'the file of the arguments is gone'
+        and: 'the file of the arguments is gone; the init script with which Gradle checks the path of the project stays, see ProjectPathCheck'
         !file.exists()
-        new File(dir, '.grails/run').list().sort() == ['.gitignore']
+        new File(dir, '.grails/run').list().sort() - ProjectPathCheck.FILE == ['.gitignore']
 
         and: 'the script was run by nothing but the build, which here is a stand-in that runs none'
         notEvaluated()
@@ -424,7 +424,7 @@ class ScriptCommandsSpec extends CommandSpec implements CommandFixture {
         all().contains('this command fails on purpose')
         errors() == ['| Error Gradle did not succeed: it ended with exit code 1']
         !all().contains('Usage:')
-        new File(dir, '.grails/run').list().sort() == ['.gitignore']
+        new File(dir, '.grails/run').list().sort() - ProjectPathCheck.FILE == ['.gitignore']
     }
 
     @Unroll

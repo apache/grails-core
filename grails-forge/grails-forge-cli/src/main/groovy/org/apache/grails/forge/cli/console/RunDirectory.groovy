@@ -30,7 +30,8 @@ import groovy.transform.CompileStatic
 /**
  * The directory {@code .grails/run} of a project: what the commands of the CLI keep while something
  * they started runs, as the record of the application {@code run-app} started, its output, and the
- * arguments of an application command. Nothing in it is part of the project: the directory holds a
+ * arguments of an application command, and the init script with which Gradle checks the path of the
+ * project ({@link ProjectPathCheck}), which stays. Nothing in it is part of the project: the directory holds a
  * {@code .gitignore} that leaves all of it out, and it and its files are readable and writable by
  * their owner only, where the file system has such permissions.
  *

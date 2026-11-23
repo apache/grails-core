@@ -84,7 +84,7 @@ class GradleRunnerChoiceSpec extends CommandSpec {
         then:
         exit == 1
         errors() == [OF_THE_WRAPPER]
-        wrapperWasAsked() == ['<:testApp><--phase><unit><-Dgrails.env=test>']
+        wrapperWasAsked() == ["<:testApp><--phase><unit><-Dgrails.env=test>${pathCheck()}".toString()]
         !toolingApiWasAsked()
         !ToolingApiRunner.connectionKept
 
@@ -106,7 +106,7 @@ class GradleRunnerChoiceSpec extends CommandSpec {
         then:
         exit == 1
         errors() == [OF_THE_WRAPPER]
-        wrapperWasAsked() == ['<:classes>']
+        wrapperWasAsked() == ["<:classes>${pathCheck()}".toString()]
         !toolingApiWasAsked()
     }
 
@@ -178,7 +178,7 @@ class GradleRunnerChoiceSpec extends CommandSpec {
         then:
         exit == 1
         errors() == [OF_THE_WRAPPER]
-        wrapperWasAsked() == ['<:testApp><--phase><unit><-Dgrails.env=test>']
+        wrapperWasAsked() == ["<:testApp><--phase><unit><-Dgrails.env=test>${pathCheck()}".toString()]
         !toolingApiWasAsked()
         ToolingApiRunner.connectionsMade == before
         !ToolingApiRunner.connectionKept
@@ -246,6 +246,11 @@ class GradleRunnerChoiceSpec extends CommandSpec {
         interactive | where
         false       | 'for a command line that runs one command'
         true        | 'in the interactive console'
+    }
+
+    // what Gradle is given after the arguments of a command that names the tasks of the project as those of the root, see ProjectPathCheck
+    private String pathCheck() {
+        return "<--init-script><${new File(dir.canonicalFile, '.grails/run/project-path.gradle').path}>"
     }
 
     private List<String> wrapperWasAsked() {

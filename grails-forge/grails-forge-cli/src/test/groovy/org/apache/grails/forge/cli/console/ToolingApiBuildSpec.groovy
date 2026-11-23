@@ -179,7 +179,7 @@ class ToolingApiBuildSpec extends CommandSpec {
 
         then:
         exit == 0
-        new File(dir, 'wrapper-was-run.txt').text == '<:shell><--debug-jvm><--quiet><-Dgrails.env=development>\n'
+        new File(dir, 'wrapper-was-run.txt').text == "<:shell><--debug-jvm><--quiet><-Dgrails.env=development>${pathCheck(dir)}\n"
         !new File(dir, 'requested.txt').exists()
     }
 
@@ -374,7 +374,7 @@ class ToolingApiBuildSpec extends CommandSpec {
 
         then:
         exit == 0
-        new File(dir, 'wrapper-was-run.txt').text == "<:classes>${argument.collect { "<${it}>" }.join('')}\n"
+        new File(dir, 'wrapper-was-run.txt').text == "<:classes>${argument.collect { "<${it}>" }.join('')}${pathCheck(dir)}\n"
         !new File(dir, 'requested.txt').exists()
 
         where:
@@ -466,7 +466,7 @@ class ToolingApiBuildSpec extends CommandSpec {
         then:
         exit == 0
         errors() == []
-        new File(dir, "${runIn}/wrapper-was-run.txt").text == '<:classes>\n'
+        new File(dir, "${runIn}/wrapper-was-run.txt").text == "<:classes>${pathCheck(new File(dir, runIn))}\n"
         !new File(dir, 'requested.txt').exists()
 
         where:
@@ -505,6 +505,11 @@ class ToolingApiBuildSpec extends CommandSpec {
         then: 'it is refused, as it has been'
         GradleRunner.RefusedArgumentException refused = thrown()
         refused.message.contains('the Gradle wrapper of Windows is a batch file')
+    }
+
+    // what the wrapper is given after the arguments of a command that names the tasks of the project as those of the root, see ProjectPathCheck
+    private static String pathCheck(File project) {
+        return "<--init-script><${new File(project.canonicalFile, '.grails/run/project-path.gradle').path}>"
     }
 
     private String said(String name) {

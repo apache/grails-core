@@ -52,7 +52,9 @@ import org.apache.grails.forge.core.state.ProjectState
  * and the nearest directory above it that has them is the root of the build, which is where Gradle
  * itself takes the build to be. The Gradle wrapper of that root is the one that is run, and the
  * tasks a command runs are named by the path the project has in that build, so that they are the
- * tasks of this project and of no other.</p>
+ * tasks of this project and of no other. That path is the one the directories give, which the settings
+ * of the build need not give the directory, so Gradle is made to check it before it runs anything: see
+ * {@link #pathCheck}.</p>
  *
  * <p>The user who runs the command is the one {@link ProcessUser} establishes from the process. For
  * root, also under {@code sudo}, that is root, so that root does not run from below it what another
@@ -102,6 +104,8 @@ final class ConsoleProject {
     private final boolean above
     private Path buildRoot
     private boolean buildRootLooked
+    // the path of the project in its build that a task was named by, see pathCheck
+    private String namedBy
 
     private ConsoleProject(Path directory, boolean above) {
         this.directory = directory
@@ -311,9 +315,28 @@ final class ConsoleProject {
     String task(String name) {
         String path = getGradlePath()
         if (path == null && getBuildRoot() == null && SETTINGS.any { String settings -> Files.isRegularFile(directory.resolve(settings), LinkOption.NOFOLLOW_LINKS) }) {
+            namedBy = ':'
             return ":${name}".toString()
         }
+        if (path != null) {
+            namedBy = path
+        }
         return path == null ? name : "${path}:${name}".toString()
+    }
+
+    /**
+     * What Gradle is given besides the arguments of a command, so that the tasks the command named by
+     * the path of this project ({@link #task}) are run only where that path is this project: the path is
+     * the one the directories give, or the root project where the directory has the settings of a build,
+     * and the settings of a build can give the directory another path and that path to another directory.
+     * See {@link ProjectPathCheck}.
+     *
+     * @return the arguments, none where no task was named by a path
+     * @throws IOException with one line, when what Gradle is given for it cannot be written; Gradle is not
+     * to be run then, since the path would be a guess
+     */
+    List<String> pathCheck() throws IOException {
+        return namedBy == null ? Collections.<String>emptyList() : ProjectPathCheck.arguments(this, namedBy)
     }
 
     /**

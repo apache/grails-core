@@ -115,7 +115,8 @@ final class GradleRunner extends GradleBuild {
     @Override
     int run(ConsoleProject project, List<String> arguments, Consumer<GradleBuild.Running> started) throws RefusedArgumentException {
         Path wrapper = wrapperFor(project, arguments)
-        return wrapper == null ? 1 : run(command(wrapper, arguments), wrapper, project.directory, started)
+        List<String> command = wrapper == null ? null : command(project, wrapper, arguments)
+        return command == null ? 1 : run(command, wrapper, project.directory, started)
     }
 
     /**
@@ -184,10 +185,10 @@ final class GradleRunner extends GradleBuild {
      */
     ProcessHandle start(ConsoleProject project, List<String> arguments, Path log) throws RefusedArgumentException {
         Path wrapper = wrapperFor(project, arguments)
-        if (wrapper == null) {
+        List<String> command = wrapper == null ? null : command(project, wrapper, arguments)
+        if (command == null) {
             return null
         }
-        List<String> command = command(wrapper, arguments)
         ProcessBuilder builder
         if (windows) {
             // every stream is redirected, and has to be: with one of them inherited the JVM would start
@@ -357,7 +358,15 @@ final class GradleRunner extends GradleBuild {
         return false
     }
 
-    private List<String> command(Path wrapper, List<String> arguments) {
+    // null when the check of the path of the project cannot be given to Gradle, which was then said
+    private List<String> command(ConsoleProject project, Path wrapper, List<String> arguments) {
+        List<String> checked
+        try {
+            checked = project.pathCheck()
+        } catch (IOException e) {
+            failed(ProjectPathCheck.notRun(project, e))
+            return null
+        }
         List<String> command = []
         // a wrapper that lost its executable bit, as in a project unpacked from an archive, is still the script it was
         if (!windows && !Files.isExecutable(wrapper)) {
@@ -366,6 +375,8 @@ final class GradleRunner extends GradleBuild {
         command.add(wrapper.toString())
         command.addAll(PlainOutput.forGradle(arguments))
         command.addAll(arguments)
+        // an option of Gradle, which it reads wherever it stands: after what the command gives it, which stays as it was
+        command.addAll(checked)
         return command
     }
 

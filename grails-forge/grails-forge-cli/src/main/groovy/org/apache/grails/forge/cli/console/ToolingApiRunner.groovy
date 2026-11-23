@@ -152,6 +152,13 @@ final class ToolingApiRunner extends GradleBuild {
                     'Gradle was not run, since the command runs the Gradle of the project and no other')
             return 1
         }
+        List<String> checked
+        try {
+            checked = project.pathCheck()
+        } catch (IOException e) {
+            failure.accept(ProjectPathCheck.notRun(project, e))
+            return 1
+        }
         ProjectConnection connection
         try {
             connection = connect(project, properties)
@@ -160,7 +167,7 @@ final class ToolingApiRunner extends GradleBuild {
             return 1
         }
         try {
-            return run(connection, arguments, started)
+            return run(connection, arguments + checked, started)
         } finally {
             if (!isKept(connection)) {
                 close(connection)
