@@ -72,7 +72,6 @@ class PrecompiledPackPagesSpec extends ApplicationContextSpec {
     void setup() {
         environmentBefore = System.getProperty(Environment.KEY)
         precompiledBefore = System.getProperty(BundledPackFeatures.PRECOMPILED_PROPERTY)
-        System.setProperty(Environment.KEY, Environment.PRODUCTION.getName())
     }
 
     void cleanup() {
@@ -202,8 +201,8 @@ class PrecompiledPackPagesSpec extends ApplicationContextSpec {
     }
 
     @Unroll
-    void "in the environment #environment a template with an expression is #how, and writes the same"() {
-        given: 'a page is compiled from one source for development and test, and from another for every other environment'
+    void "in the environment #environment a template with an expression is taken from the build, and writes the same"() {
+        given: 'GSP compiles an expression one way in development and test and another way in every other environment, but a template is compiled for production in each'
         Map<String, Object> template = templates.find { (it.text as String).contains('${') }
         Map<String, Object> model = modelsOf(template).first()
         byte[] inProduction = new PackPages(FORGE).render(template.owner as String, template.text as String, 'a template', 1, model, PackLoader.MAX_FILE_BYTES)
@@ -214,18 +213,12 @@ class PrecompiledPackPagesSpec extends ApplicationContextSpec {
         byte[] rendered = pages.render(template.owner as String, template.text as String, 'a template', 1, model, PackLoader.MAX_FILE_BYTES)
 
         then:
-        pages.precompiled == (taken ? 1 : 0)
-        pages.compiled == (taken ? 0 : 1)
+        pages.precompiled == 1
+        pages.compiled == 0
         Arrays.equals(rendered, inProduction)
 
         where:
-        environment   | taken
-        'production'  | true
-        'development' | false
-        'test'        | false
-        'staging'     | true
-
-        how = taken ? 'taken from the build' : 'compiled'
+        environment << ['production', 'development', 'test', 'staging']
     }
 
     void "the system property that has pages compiled statically changes nothing: a template of a pack says that it is not"() {

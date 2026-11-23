@@ -439,7 +439,7 @@ class PackTemplateSpec extends ApplicationContextSpec {
 
         then:
         IllegalArgumentException e = thrown()
-        e.message.startsWith("The template t.txt.gsp of the feature acme-audit cannot be rendered: Error evaluating expression [x] on line [2]: There is no 'x' for a template")
+        e.message.startsWith("The template t.txt.gsp of the feature acme-audit cannot be rendered: line 2: There is no 'x' for a template")
     }
 
     @Unroll
@@ -478,8 +478,8 @@ class PackTemplateSpec extends ApplicationContextSpec {
         'calls itself without end'                        | 'one\ntwo\n<% def f; f = { f() }; f() %>\n'                                     || 'line 3: it calls itself without end'
         'calls itself without end in an instruction'      | 'one\n<g:each in="${[1]}">\n<% def f; f = { f() }; f() %>\n</g:each>\n'         || 'line 3: it calls itself without end'
         'calls itself without end in an expression'       | 'one\n${({ -> def f; f = { f() }; f() })()}\n'                                  || 'line 2: it calls itself without end'
-        'fails in an expression'                          | 'one\ntwo\n${features.nope()}'                                                  || 'Error evaluating expression [features.nope()] on line [3]: '
-        'fails in an expression in a tag that is text'    | 'one\n<g:link\n id="${features.nope()}"/>'                                      || 'Error evaluating expression [features.nope()] on line [3]: '
+        'fails in an expression'                          | 'one\ntwo\n${features.nope()}'                                                  || 'line 3: No signature of method: nope'
+        'fails in an expression in a tag that is text'    | 'one\n<g:link\n id="${features.nope()}"/>'                                      || 'line 3: No signature of method: nope'
         'has a scriptlet that does not compile'           | 'one\ntwo\n<% def x = ) %>\nfour\n'                                             || 'line 3: it does not compile: '
         'has an expression that does not compile'         | 'one\n${1 +* }\nthree\n'                                                        || 'line 2: it does not compile: '
         'has a test that does not compile'                | 'one\ntwo\nthree\n<g:if test="${)}">x</g:if>'                                   || 'line 4: it does not compile: '
@@ -516,7 +516,7 @@ class PackTemplateSpec extends ApplicationContextSpec {
 
         then:
         IllegalArgumentException e = thrown()
-        e.message.startsWith("The template t.txt.gsp of the feature acme-audit cannot be rendered: Error evaluating expression [y] on line [3]: There is no 'y' for a template: template API 1 has ")
+        e.message.startsWith("The template t.txt.gsp of the feature acme-audit cannot be rendered: line 3: There is no 'y' for a template: template API 1 has ")
         e.message.endsWith('. The <g:set var="y"> of the template is text, which is written and sets nothing: use <g:def>')
 
         when: 'in a scriptlet, and another name'

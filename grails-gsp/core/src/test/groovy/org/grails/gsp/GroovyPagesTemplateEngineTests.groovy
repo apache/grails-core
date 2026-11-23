@@ -21,6 +21,7 @@ package org.grails.gsp
 import grails.config.Config
 import grails.core.GrailsApplication
 import grails.core.GrailsClass
+import grails.util.Environment
 import grails.util.GrailsUtil
 import org.grails.config.PropertySourcesConfig
 import org.grails.core.io.MockStringResourceLoader
@@ -576,6 +577,42 @@ never
         w.writeTo(pw)
 
         assertEquals "hello", sw.toString()
+    }
+
+    @Test
+    void testConfiguredParserCompilesForItsOwnEnvironment() {
+        try {
+            System.setProperty("grails.env", "development")
+            assert GrailsUtil.isDevelopmentEnv()
+
+            def current = new GroovyPagesTemplateEngine()
+            current.afterPropertiesSet()
+            def production = new GroovyPagesTemplateEngine() {
+                @Override
+                protected void configureParser(GroovyPageParser parser) {
+                    parser.environment = Environment.PRODUCTION
+                }
+            }
+            production.afterPropertiesSet()
+
+            // in development an expression is wrapped to name itself and its line when it fails
+            assertTrue(sourceOf(current, 'current_environment_test').contains("evaluate('1 + 1'"))
+            // compiled for production it is written as it is, whatever environment the engine runs in
+            String source = sourceOf(production, 'configured_environment_test')
+            assertTrue(!source.contains('evaluate('))
+            assertTrue(source.contains('(1 + 1)'))
+        }
+        finally {
+            System.setProperty("grails.env", "")
+        }
+    }
+
+    private static String sourceOf(GroovyPagesTemplateEngine engine, String pageName) {
+        def writable = engine.createTemplate('${1 + 1}', pageName).make()
+        writable.showSource = true
+        def sw = new StringWriter()
+        writable.writeTo(new PrintWriter(sw))
+        return sw.toString()
     }
 
     @Test

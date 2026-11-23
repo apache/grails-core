@@ -33,17 +33,15 @@ import org.grails.gsp.GroovyPage
  * the text of the template, the SHA-256 of what the page was compiled from, and the name of its
  * class, which is {@link #CLASS_PREFIX} and the key, in the package {@link #PACKAGE}.</p>
  *
- * <p>The text of a template is not all its class comes of. The parser of the pages writes an
- * expression one way for the environments of development and test and another way for every other,
- * and reads directives, system properties and its own version; the compiler has a version and
- * settings. So a class is given for a key and for what it was compiled from: the template is still
- * parsed in each run, and its class is the one of the build only when the Groovy source it would be
- * compiled from now is, byte for byte, the source it was compiled from then, and the compiler is the
- * same and set the same. The build compiles for the production environment, which the command line
- * and the web application that generate applications run in. A template with another text, of another
- * feature, or rendered in another environment, by another version of Grails or of Groovy, is compiled
- * as it would be without this. So is every template when the index is missing or cannot be read, and
- * one whose class cannot be loaded.</p>
+ * <p>The text of a template is not all its class comes of. The parser of the pages reads directives,
+ * system properties and its own version; the compiler has a version and settings. So a class is given
+ * for a key and for what it was compiled from: the template is still parsed in each run, and its class
+ * is the one of the build only when the Groovy source it would be compiled from now is, byte for byte,
+ * the source it was compiled from then, and the compiler is the same and set the same. The environment
+ * is not part of it: {@link PackPages} compiles every template for production, the build as every run.
+ * A template with another text, of another feature, or rendered by another version of Grails or of
+ * Groovy, is compiled as it would be without this. So is every template when the index is missing or
+ * cannot be read, and one whose class cannot be loaded.</p>
  *
  * <p>The index and the classes are taken from one class loader, the one Forge itself is loaded by, and
  * a class counts only when that loader defined it. A feature pack is data: nothing of it is on a

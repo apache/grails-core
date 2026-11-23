@@ -125,8 +125,7 @@ final class PackPagesCompiler {
             System.exit(2)
         }
         // Forge's own environment, not the one of the build that starts this, to which the Grails Gradle
-        // plugin gives development: a page of the build is taken only by a run of Forge, which compiles
-        // its templates in production
+        // plugin gives development
         ForgeEnvironment.useProduction()
         SortedMap<String, PackPages.Precompiled> pages = compile(PackPagesCompiler.classLoader)
         write(pages, Path.of(args[0]))

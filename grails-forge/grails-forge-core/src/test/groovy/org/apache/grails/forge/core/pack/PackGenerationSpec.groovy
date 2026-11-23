@@ -277,7 +277,7 @@ class PackGenerationSpec extends ApplicationContextSpec {
 
         then:
         IllegalArgumentException e = thrown()
-        e.message.contains('on line [3]')
+        e.message.contains(': line 3: ')
         e.cause != null
     }
 

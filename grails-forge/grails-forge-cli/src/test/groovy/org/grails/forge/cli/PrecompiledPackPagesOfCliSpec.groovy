@@ -18,7 +18,6 @@
  */
 package org.grails.forge.cli
 
-import grails.util.Environment
 import java.util.jar.JarFile
 import org.apache.grails.forge.core.pack.BundledPackFeatures
 import org.grails.forge.application.ApplicationType
@@ -35,30 +34,13 @@ import spock.lang.Specification
 
 /**
  * The application the CLI runs takes the pages the build of Forge compiled for the templates of its
- * packs: it runs in the environment they were compiled for, and with the jar of Forge that has them.
+ * packs, from the jar of Forge that has them.
  */
 class PrecompiledPackPagesOfCliSpec extends Specification {
 
     @Shared
     @AutoCleanup
     ConfigurableApplicationContext context = Application.builder().run()
-
-    private String environmentBefore
-
-    void setup() {
-        // the environment the command line gives itself when none is set, as none is for a user: the
-        // JVM of the tests has one set, which Application.builder() leaves as it is
-        environmentBefore = System.getProperty(Environment.KEY)
-        System.setProperty(Environment.KEY, Environment.PRODUCTION.getName())
-    }
-
-    void cleanup() {
-        if (environmentBefore == null) {
-            System.clearProperty(Environment.KEY)
-        } else {
-            System.setProperty(Environment.KEY, environmentBefore)
-        }
-    }
 
     void "the application of the command line compiles no template of a pack of Forge"() {
         given:

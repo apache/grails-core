@@ -18,6 +18,7 @@
  */
 package org.apache.grails.forge.core.pack
 
+import grails.util.Environment
 import groovy.transform.CompileStatic
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
@@ -56,6 +57,12 @@ import org.grails.taglib.encoder.OutputContext
  * logic writes nothing, what an expression gives is written as it is, not encoded for HTML, and the
  * text is that of a file and not of a page of a web application. The only tags a template has are the
  * instructions to the generator; every other tag is text, see {@link PackTemplateSource}.</p>
+ *
+ * <p>Every template is compiled for production, whatever environment the JVM runs in. GSP is how Forge
+ * renders a template, not something a template is reloaded by, and GSP compiles an expression one way
+ * in development and test and another way in every other environment; so a page, and what an error in
+ * it says, is the same in the command line, in a pack's check and in the specs. The line of the
+ * template an error is on is put in front of it here, not by GSP.</p>
  *
  * <p>A template is compiled once for an instance, however often it is rendered: the compiled page is
  * kept, by a digest of whose template it is and of its source, for as long as the instance is. A
@@ -132,6 +139,12 @@ final class PackPages {
             String getGspEncoding() {
                 // the source is handed over in UTF-8, whatever the platform reads its files in
                 return StandardCharsets.UTF_8.name()
+            }
+
+            @Override
+            protected void configureParser(GroovyPageParser parser) {
+                // Forge's own environment, not the one of the JVM, which a project or a spec may have set
+                parser.setEnvironment(Environment.PRODUCTION)
             }
         }
         engine.groovyPageLocator = new DefaultGroovyPageLocator()
@@ -365,7 +378,7 @@ final class PackPages {
 
     /**
      * Where in the template an error is, to go in front of what it is: {@code line 3: }, or nothing when
-     * the error does not say or says so itself. The compiler and the virtual machine name a line of the
+     * the error does not say. The compiler and the virtual machine name a line of the
      * class a page is compiled to, and the page has the line of the template each of those was written for.
      */
     private static String where(Throwable e, GroovyPageMetaInfo page) {
@@ -382,7 +395,7 @@ final class PackPages {
                 inBody = inBody.getCause()
             }
         } else if (e instanceof GroovyPagesException) {
-            // any other is of an expression, and names the line itself
+            // of the engine: a page that does not compile names a line of its class
             if (e.getCause() instanceof CompilationFailedException) {
                 line = lineOfTemplate(page, ExceptionUtils.extractLineNumber((CompilationFailedException) e.getCause()))
             }
@@ -607,7 +620,7 @@ final class PackPages {
          * What, beside its source, the class of a page comes of: the compiler and how it is set. The
          * build and a run say it with this, and a page of the build is taken only where it is the
          * same. The Groovy source itself has in it what the parser of the pages made of the template
-         * for the environment, the directives and the system properties of the run. The version of
+         * for the directives and the system properties of the run. The version of
          * Java the classes are written for is left out: a class of the build runs on every Java this
          * runs on, and is what the compiler would write for the Java of the build.
          */

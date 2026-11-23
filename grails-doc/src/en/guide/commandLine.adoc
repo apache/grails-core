@@ -139,7 +139,7 @@ For the same reason the command line loads the classes it is about to use on a s
 export GRAILS_OPTS="-Dgrails.cli.preload=false"
 ----
 
-The port of the application is an option of `run-app`: `grails run-app --port=8081`. The Grails environment is `-Dgrails.env=NAME` after the name of the command, and where that is not given the environment variable `GRAILS_ENV` names it, which is also how an application that is started with `java -jar` or in a container is given its environment; see link:conf.html#environments[Environments].
+The port of the application is an option of `run-app`: `grails run-app --port=8081`. The Grails environment of a project is `-Dgrails.env=NAME` after the name of the command, and where that is not given it is the command's own, such as `development` for `run-app`, `test` for `test-app` and `production` for `assemble`. The command line does not read the environment variable `GRAILS_ENV`, which is how an application that is started with `java -jar` or in a container is given its environment; see link:conf.html#environments[Environments].
 
 These are the environment variables the command line and the Grails wrapper read or set:
 
@@ -155,9 +155,6 @@ These are the environment variables the command line and the Grails wrapper read
 
 |`GRAILSW_OPTS`
 |JVM options of the Grails wrapper, which come after that option in the same way.
-
-|`GRAILS_ENV`
-|The Grails environment, where no `grails.env` system property names one.
 
 |`GRAILS_REPO_URL`
 |Maven repositories to use ahead of the default ones: by the Grails wrapper to find the command line, and in a project that is generated, in its build.

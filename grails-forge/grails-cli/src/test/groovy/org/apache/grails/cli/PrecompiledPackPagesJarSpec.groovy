@@ -88,7 +88,9 @@ class PrecompiledPackPagesJarSpec extends Specification {
                                 "-Xlog:class+load:file=${classes.path}".toString(), '-cp', allJar.path, 'org.apache.grails.cli.GrailsCli',
                                 'create-app', 'com.example.demo', '--features=asciidoctor']
         ProcessBuilder builder = new ProcessBuilder(command).directory(dir).redirectErrorStream(true).redirectOutput(out)
-        ['COLORTERM', 'JAVA_OPTS', 'GRAILS_OPTS', 'JAVA_TOOL_OPTIONS', 'GRAILS_ENV'].each { builder.environment().remove(it) }
+        ['COLORTERM', 'JAVA_OPTS', 'GRAILS_OPTS', 'JAVA_TOOL_OPTIONS'].each { builder.environment().remove(it) }
+        // the environment of a project, which the command line, being Forge, does not run in
+        builder.environment().put('GRAILS_ENV', 'development')
 
         when:
         Process process = builder.start()

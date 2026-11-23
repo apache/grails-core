@@ -182,7 +182,7 @@ final class PackCheck {
      */
     static void main(String[] args) {
         // Forge's own environment, not the one of the pack's project, which the Gradle build that starts
-        // this may have set: the templates are checked as the command line will render them
+        // this may have set
         ForgeEnvironment.useProduction()
         PrintStream out = System.out
         System.setOut(System.err)

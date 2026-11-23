@@ -475,7 +475,7 @@ final class PackFixtures {
      */
     static void main(String[] args) {
         // Forge's own environment, not the one of the pack's project, which the Gradle build that starts
-        // this may have set: the fixtures are generated as the command line generates applications
+        // this may have set
         ForgeEnvironment.useProduction()
         PrintStream out = System.out
         System.setOut(System.err)

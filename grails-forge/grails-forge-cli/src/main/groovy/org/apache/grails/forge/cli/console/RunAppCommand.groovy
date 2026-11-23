@@ -643,6 +643,8 @@ class RunAppCommand extends GradleEnvironmentCommand {
                 found.unknown = "${CONFIGURATION} is larger than ${MAX_CONFIGURATION} bytes, and is not read".toString()
                 return found
             }
+            // the environment of the project, the one this command gives its build (-Dgrails.env, or
+            // development), and not the one of Forge, which is production whatever the project's is
             String environment = ENVIRONMENTS.get(environment()) ?: environment()
             LoaderOptions options = new LoaderOptions()
             options.setAllowDuplicateKeys(false)
