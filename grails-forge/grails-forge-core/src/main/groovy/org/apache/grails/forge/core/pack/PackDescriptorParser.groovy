@@ -612,7 +612,8 @@ class PackDescriptorParser {
         texts(root, key, '', problems).each { int index, String id ->
             String at = "${key}[${index}]"
             if (matching(id, FEATURE_ID, at, "must be the name of a feature, or 'group:artifact#name' for the feature of another pack", problems) != null) {
-                if (id == name) {
+                // by its full name too: a feature of another pack of that name is never beside this one
+                if (PackFeature.nameOf(id) == name) {
                     problems << "${at}: must not name the feature itself, ${describe(name)}".toString()
                 }
                 ids << id

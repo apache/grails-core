@@ -115,7 +115,8 @@ final class PackModel {
      */
     static Map<String, Map<String, Object>> samples(PackDescriptor descriptor) {
         Map<String, String> project = NameUtils.parse('com.example.shop').getProperties()
-        Set<String> features = new TreeSet<String>(descriptor.requires)
+        // a feature that is required by its full name is there by its name, as it is in an application
+        Set<String> features = new TreeSet<String>(descriptor.requires.collect { String required -> PackFeature.nameOf(required) })
         features.add(descriptor.name)
         List<ApplicationType> types = ApplicationType.values().findAll { ApplicationType type -> descriptor.applicationTypes.contains(type) }
         GormImpl[] data = GormImpl.values()

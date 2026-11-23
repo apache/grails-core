@@ -122,10 +122,10 @@ readme: This service follows the Acme service guidelines.
 |Optional. The defaults the preset gives the options of the `create-` commands, written as the options take them: `data` (`hibernate5`, `hibernate7`, `mongodb`, `neo4j`), `servlet` (`tomcat`, `jetty`, `undertow`, `none`), `reloading` (`devtools`, `jrebel`, `none`) and `jdk` (a version of Java the `create-` commands offer, as a number).
 
 |`features`
-|Optional. The features the preset asks for: features of Grails, or the features of packs that are given to the same command.
+|Optional. The features the preset asks for: features of Grails, or the features of packs that are given to the same command. The feature of the pack of a plugin can be named by its full name, `group:artifact#name`, as `requires` of a feature pack names it.
 
 |`conflicts`
-|Optional. Features an application made from the preset cannot have.
+|Optional. Features an application made from the preset cannot have, by their names or their full names.
 
 |`format`, `templateApi`, `name`, `compatibility`, `title`, `description`, `documentation`, `thirdPartyDocumentation`, `dependencies`, `platforms`, `buildPlugins`, `build`, `configuration`, `files`, `readme`, `instructions`
 |As in the descriptor of a feature pack: see xref:plugins#forgeFeaturePacks[Adding a Feature to Application Creation]. The templates of a preset have the names of the template API a feature pack has; `pack.name` is the name of the preset.

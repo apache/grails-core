@@ -46,6 +46,13 @@ class ExternalPackJourneySpec extends CommandSpec implements CommandFixture {
 
     static final String PLUGIN = 'com.acme:acme-audit-grails'
     static final String COORDINATES = PLUGIN + ':2.3.0'
+    static final String BASE_PLUGIN = 'com.acme:acme-base-grails'
+    static final String BASE = BASE_PLUGIN + ':1.4.0'
+    static final String BASE_DESCRIPTOR = 'format: 1\nkind: feature\ntemplateApi: 1\nname: acme-base\n' +
+            "compatibility:\n  grails: '[9.0.0,10.0.0)'\n  forge: '[9.0.0,10.0.0)'\n" +
+            'description: The base of the Acme plugins\n' +
+            'dependencies:\n  - scope: implementation\n    coordinates: com.acme:acme-base-grails\n    version: 1.4.0\n' +
+            'files:\n  - from: audit.txt\n    to: grails-app/conf/base.txt\n'
 
     PrintStream originalOut
     PrintStream originalErr
@@ -282,6 +289,57 @@ class ExternalPackJourneySpec extends CommandSpec implements CommandFixture {
         !new File(nowhere, 'build.gradle').text.contains('quartz')
     }
 
+    void "a pack requires and conflicts with the feature of the pack of a plugin by its full name, when the application is created and when a feature is added"() {
+        given: 'the pack of a plugin, and packs of directories that name its feature by its full name'
+        publish(BASE, 'the base', BASE_DESCRIPTOR)
+        File audit = pack(new File(work, 'audit'), 'kept as it is', 'acme-audit', "requires: ['${BASE_PLUGIN}#acme-base']\n")
+        File other = pack(new File(work, 'other'), 'kept as it is', 'acme-other', "conflicts: ['${BASE_PLUGIN}#acme-base']\n")
+
+        when: 'the plugin is not given'
+        File without = new File(work, 'without')
+        int exit = create(without, '--features', 'acme-audit', '--feature-pack-dir', audit.absolutePath)
+
+        then: 'nothing is created, and the message names the plugin'
+        exit == 2
+        err.toString().contains("The feature acme-audit requires the feature acme-base of the plugin ${BASE_PLUGIN} (${BASE_PLUGIN}#acme-base), " +
+                'and no feature pack of that plugin with that feature was given for this type of application')
+        !new File(without, 'build.gradle').exists()
+
+        when: 'it is given by its coordinates'
+        File app = new File(work, 'app')
+        exit = create(app, '--features', "acme-audit,${BASE}", '--feature-pack-dir', audit.absolutePath, '--feature-pack-repository', address)
+
+        then: 'the feature of its pack is the one that was required'
+        exit == 0
+        new File(app, 'build.gradle').text.contains('implementation "com.acme:acme-base-grails:1.4.0"')
+        new File(app, 'grails-app/conf/base.txt').text == 'the base'
+        new File(app, '.grails/forge.lock.yml').text.contains("- name: acme-base\n  source: pack\n  coordinates: ${BASE_PLUGIN}\n  version: 1.4.0\n")
+
+        when: 'a pack that conflicts with it is selected with it'
+        File conflicting = new File(work, 'conflicting')
+        exit = create(conflicting, '--features', "acme-other,${BASE}", '--feature-pack-dir', other.absolutePath, '--feature-pack-repository', address)
+
+        then: 'nothing is created'
+        exit == 2
+        err.toString().contains('The feature acme-other cannot be used with the feature acme-base')
+        !new File(conflicting, 'build.gradle').exists()
+
+        when: 'a feature is added to the application, with its packs'
+        exit = add(app, 'grails-quartz', '--feature-pack-dir', audit.absolutePath, '--feature-pack-repository', address)
+
+        then: 'it is generated again with the feature the full name names, and gets the feature'
+        exit == 0
+        new File(app, 'build.gradle').text.contains('quartz')
+        new File(app, 'build.gradle').text.contains('implementation "com.acme:acme-base-grails:1.4.0"')
+
+        when: 'the features that can be added are listed with its packs'
+        exit = list(app, '--feature-pack-dir', audit.absolutePath, '--feature-pack-repository', address)
+
+        then:
+        exit == 0
+        out.toString().readLines().any { it.startsWith('    cache ') }
+    }
+
     void "project show names the digest of the pack, and says what the later commands need, in its document too"() {
         given:
         File original = pack(new File(work, 'pack'), 'kept as it is')
@@ -382,20 +440,20 @@ class ExternalPackJourneySpec extends CommandSpec implements CommandFixture {
         }
     }
 
-    private static File pack(File directory, String content, String name = 'acme-audit') {
+    private static File pack(File directory, String content, String name = 'acme-audit', String more = '') {
         new File(directory, 'templates').mkdirs()
-        new File(directory, 'feature.yml').setText(CreateAppFeaturePackSpec.DESCRIPTOR.replace('name: acme-audit', "name: ${name}"), 'UTF-8')
+        new File(directory, 'feature.yml').setText(CreateAppFeaturePackSpec.DESCRIPTOR.replace('name: acme-audit', "name: ${name}") + more, 'UTF-8')
         new File(directory, 'templates/audit.txt').setText(content, 'UTF-8')
         return directory
     }
 
-    private File publish(String coordinates, String content) {
+    private File publish(String coordinates, String content, String descriptor = CreateAppFeaturePackSpec.DESCRIPTOR) {
         List<String> parts = coordinates.split(':').toList()
         File directory = new File(repository, "${parts[0].replace('.', '/')}/${parts[1]}/${parts[2]}")
         directory.mkdirs()
         File jar = new File(directory, "${parts[1]}-${parts[2]}.jar")
         new ZipOutputStream(new FileOutputStream(jar)).withCloseable { ZipOutputStream zip ->
-            ['META-INF/grails-forge/feature.yml'        : CreateAppFeaturePackSpec.DESCRIPTOR,
+            ['META-INF/grails-forge/feature.yml'        : descriptor,
              'META-INF/grails-forge/templates/audit.txt': content].each { String path, String text ->
                 zip.putNextEntry(new ZipEntry(path))
                 zip.write(text.getBytes('UTF-8'))

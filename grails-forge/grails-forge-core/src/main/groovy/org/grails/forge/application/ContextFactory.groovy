@@ -20,6 +20,7 @@ package org.grails.forge.application
 
 import groovy.transform.CompileStatic
 import jakarta.annotation.Nullable
+import org.apache.grails.forge.core.pack.PackFeature
 import org.springframework.stereotype.Component
 import org.grails.forge.application.generator.GeneratorContext
 import org.grails.forge.build.dependencies.DefaultCoordinateResolver
@@ -324,8 +325,7 @@ class ContextFactory {
             Feature feature = pending.pop()
             for (String name : feature.getDependentFeatures()) {
                 Feature required = availableFeatures.findFeature(name, true).orElseThrow {
-                    new FeatureSelectionException("The feature ${feature.getName()} requires the feature ${name}, " +
-                            "which there is not for this type of application${through(feature, requiredBy)}")
+                    new FeatureSelectionException(PackFeature.requiredNotThere(feature.getName(), name) + through(feature, requiredBy))
                 }
                 if (excluded.contains(required.getName())) {
                     throw new FeatureSelectionException("The feature ${name} cannot be excluded: the feature ${feature.getName()} " +

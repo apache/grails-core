@@ -101,10 +101,10 @@ readme: The audit trail is configured in `AuditConfig`.
 |The kinds of application the feature can be selected for: `web`, `rest-api`, `plugin`, `web-plugin`, `rest-api-plugin`. All of them when left out.
 
 |`requires`
-|Features that are selected with this one. They can be features of Grails or of other packs given to the same command. Two packs can require each other: both are selected, whichever of them is named. A required feature cannot be left out with `--exclude-features`.
+|Features that are selected with this one. They can be features of Grails or of other packs given to the same command. Two packs can require each other: both are selected, whichever of them is named. A required feature cannot be left out with `--exclude-features`. The feature of another pack can be named by its full name, `group:artifact#name`, as in `requires: ['com.acme:acme-base-grails#acme-base']`: see below the table.
 
 |`conflicts`
-|Features this one cannot be used with. The application is refused, before anything of it is written, when it would have one of them, whether that feature was selected, is there by default or was brought in by another feature.
+|Features this one cannot be used with. The application is refused, before anything of it is written, when it would have one of them, whether that feature was selected, is there by default or was brought in by another feature. A full name, `group:artifact#name`, is the feature of that plugin only.
 
 |`oneOf`
 |An exclusive group the feature belongs to, such as `acme-audit-store`: only one feature of a group can be selected. The group is one of packs; a pack cannot join a group of Grails, such as `database-driver`.
@@ -133,6 +133,8 @@ readme: The audit trail is configured in `AuditConfig`.
 |`readme`
 |A paragraph for the application's `README.md`.
 |===
+
+A name in `requires` and `conflicts` is the feature of that name, of Grails or of whichever pack has it. A full name, `group:artifact#name`, is the feature `name` of the pack of the plugin `group:artifact` and of no other: of the jar of that plugin, in whichever version the command took it, by its coordinates or from a feature catalog. The pack of a directory or of a file is the pack of no plugin, so a full name does not name it, even when the feature has that name. A feature that is required by its full name is selected by its name, which is the name `features` has in a template. When no pack of that plugin with that feature was given for the type of the application, the application is refused, and the message names the plugin and the feature, so that the plugin can be given by its coordinates; a feature that conflicts by its full name is refused only beside the feature of the pack of that plugin.
 
 A pack only adds. It cannot change what another selected feature gives the application: a setting, a build property or the version of a dependency that is already there with another value is an error, and so is a file another feature writes, such as the `.gitignore` and the `.gitattributes` at the root of an application. A descriptor with an unknown key, or a destination outside the application, is refused with a message that names the key.
 

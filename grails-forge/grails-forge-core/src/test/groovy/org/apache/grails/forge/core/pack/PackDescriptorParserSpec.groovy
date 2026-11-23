@@ -261,6 +261,8 @@ configuration:
         'a requirement is a choice of a group'     | null                  | 'requires:\n  - gsp\n  - oneOf: { group: database-driver }\n'  || 'requires[1]: is a mapping; this version of Forge reads only the names of features here'
         'the feature requires itself'              | null                  | 'requires: [acme-audit]\n'                                     || "requires[0]: must not name the feature itself, 'acme-audit'"
         'the feature conflicts with itself'        | null                  | 'conflicts: [gsp, acme-audit]\n'                               || "conflicts[1]: must not name the feature itself, 'acme-audit'"
+        'the feature requires itself by full name' | null                  | "requires: ['com.acme:acme-audit-grails#acme-audit']\n"        || "requires[0]: must not name the feature itself, 'acme-audit'"
+        'it conflicts with itself by full name'    | null                  | "conflicts: ['com.acme:other#acme-audit']\n"                   || "conflicts[0]: must not name the feature itself, 'acme-audit'"
         'a requirement is also a conflict'         | null                  | 'requires: [gsp]\nconflicts: [gsp]\n'                          || "conflicts: 'gsp' is also required"
         'the group is not an identifier'           | null                  | "oneOf: 'a b'\n"                                               || "oneOf: must be the identifier of a group, such as 'database-driver' or 'com.acme:audit', but is 'a b'"
         'the dependencies are a mapping'           | null                  | 'dependencies: {}\n'                                           || 'dependencies: must be a list of mappings, but is a mapping'

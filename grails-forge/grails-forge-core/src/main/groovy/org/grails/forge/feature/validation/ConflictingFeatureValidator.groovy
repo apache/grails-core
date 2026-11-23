@@ -57,23 +57,23 @@ class ConflictingFeatureValidator implements FeatureValidator {
      * through what each requires, ending with the feature itself
      * @return what to say of the first pack, by name, that is there with a feature it conflicts with, or
      * {@code null} when there is none. A name among the conflicts of a pack that is no feature of the
-     * application conflicts with nothing: a pack can name a feature another type of application has.
+     * application conflicts with nothing: a pack can name a feature another type of application has. A
+     * full name, {@code group:artifact#name}, is the feature of the pack of that plugin, see
+     * {@link PackFeature#isNamed}.
      */
     static String conflict(Set<Feature> features, Function<String, List<String>> requirementsTo) {
-        Set<String> names = new HashSet<>()
-        for (Feature feature : features) {
-            names.add(feature.getName())
-        }
-        for (Feature feature : features.toSorted(Comparator.comparing(Feature::getName))) {
+        List<Feature> sorted = features.toSorted(Comparator.comparing(Feature::getName))
+        for (Feature feature : sorted) {
             if (feature instanceof PackFeature) {
                 for (String conflict : ((PackFeature) feature).getPack().descriptor.conflicts) {
-                    if (names.contains(conflict)) {
+                    Feature other = sorted.find { Feature each -> PackFeature.isNamed(conflict, each) }
+                    if (other != null) {
                         // which feature brought in the one that conflicts, or else the pack itself
-                        List<String> way = requirementsTo.apply(conflict)
+                        List<String> way = requirementsTo.apply(other.getName())
                         if (way.size() < 2) {
                             way = requirementsTo.apply(feature.getName())
                         }
-                        return "The feature ${feature.getName()} cannot be used with the feature ${conflict}" +
+                        return "The feature ${feature.getName()} cannot be used with the feature ${other.getName()}" +
                                 (way.size() < 2 ? '' : " (${FeatureSelectionException.chain(way)})")
                     }
                 }

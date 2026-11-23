@@ -66,6 +66,9 @@ class PackFeature implements Feature {
     /** The exclusive group of the database drivers, whose settings a Grails Data implementation can take */
     public static final String DATABASE_DRIVERS = 'database-driver'
 
+    /** What is between the coordinates of a plugin and the name of a feature in a full name, {@code group:artifact#name} */
+    public static final String FULL_NAME_SEPARATOR = '#'
+
     private static final String TASKS = 'tasks.'
     private static final String ENVIRONMENTS = 'environments.'
     private static final String TEST_ENVIRONMENT = 'test'
@@ -155,11 +158,65 @@ class PackFeature implements Feature {
 
     /**
      * @return the features the descriptor requires, which are selected with this one before the features
-     * nothing has chosen are given their defaults
+     * nothing has chosen are given their defaults. A full name is the name of the feature it names; one
+     * that names no feature that was given stays as it is, and is refused when it is looked up
      */
     @Override
     List<String> getDependentFeatures() {
-        return pack.descriptor.requires
+        return pack.descriptor.requires.collect { String required ->
+            pluginOf(required) == null ? required : features.apply(required).map { Feature found -> found.getName() }.orElse(required)
+        }
+    }
+
+    /**
+     * @param id a feature as the {@code requires}, {@code features} and {@code conflicts} of a descriptor
+     * name it: by its name, or by its full name, {@code group:artifact#name}
+     * @return the {@code group:artifact} of the plugin of a full name, or {@code null} for a name
+     */
+    static String pluginOf(String id) {
+        int at = id.indexOf(FULL_NAME_SEPARATOR)
+        return at < 0 ? null : id.substring(0, at)
+    }
+
+    /**
+     * @param id a feature by its name or by its full name, see {@link #pluginOf}
+     * @return the name of the feature
+     */
+    static String nameOf(String id) {
+        return id.substring(id.indexOf(FULL_NAME_SEPARATOR) + 1)
+    }
+
+    /**
+     * @param id a feature by its name or by its full name, see {@link #pluginOf}
+     * @param feature a feature of the application
+     * @return whether the feature is the one that is named: a name is the feature of that name, and a full
+     * name is the feature of that name of the pack that was taken from the jar of that plugin, whichever
+     * version of it that was. The pack of a directory or of a file is of no plugin
+     */
+    static boolean isNamed(String id, Feature feature) {
+        String plugin = pluginOf(id)
+        if (plugin == null) {
+            return feature.getName() == id
+        }
+        if (!(feature instanceof PackFeature) || feature.getName() != nameOf(id)) {
+            return false
+        }
+        PackArtifact artifact = ((PackFeature) feature).getPack().artifact
+        return artifact != null && artifact.coordinates.substring(0, Math.max(artifact.coordinates.lastIndexOf(':'), 0)) == plugin
+    }
+
+    /**
+     * @param feature the name of a feature
+     * @param required a feature it requires, by its name or by its full name, see {@link #pluginOf}, that is not there
+     * @return what to say of it
+     */
+    static String requiredNotThere(String feature, String required) {
+        String plugin = pluginOf(required)
+        if (plugin == null) {
+            return "The feature ${feature} requires the feature ${required}, which there is not for this type of application"
+        }
+        return "The feature ${feature} requires the feature ${nameOf(required)} of the plugin ${plugin} (${required}), and no feature pack of that plugin " +
+                'with that feature was given for this type of application'
     }
 
     @Override
@@ -181,13 +238,11 @@ class PackFeature implements Feature {
             throw new IllegalArgumentException("${name} requires JDK ${jdk} or later (selected: JDK ${featureContext.getJavaVersion().majorVersion()}).")
         }
         // the requirements are selected when the features are; this is for a context made another way
-        for (String required : pack.descriptor.requires) {
+        for (String required : getDependentFeatures()) {
             if (!featureContext.isPresent(required)) {
                 Feature feature = features.apply(required)
                         .filter { Feature found -> found.supports(featureContext.getApplicationType()) }
-                        .orElseThrow {
-                            new IllegalArgumentException("The feature ${name} requires the feature ${required}, which there is not for this type of application")
-                        }
+                        .orElseThrow { new IllegalArgumentException(requiredNotThere(name, required)) }
                 featureContext.addFeature(feature)
             }
         }
@@ -209,8 +264,9 @@ class PackFeature implements Feature {
         PackOfForge ofForge = descriptor.ofForge
         PackCondition.Facts facts = PackCondition.of(generatorContext)
         for (String conflict : descriptor.conflicts) {
-            if (generatorContext.getFeatures().contains(conflict)) {
-                throw new IllegalArgumentException("The feature ${name} cannot be used with the feature ${conflict}")
+            Feature other = generatorContext.getFeatures().getFeatures().find { Feature each -> isNamed(conflict, each) }
+            if (other != null) {
+                throw new IllegalArgumentException("The feature ${name} cannot be used with the feature ${other.getName()}")
             }
         }
         // a pack of Forge is a feature of the framework: what it sets is not compared with what another feature sets

@@ -114,8 +114,17 @@ final class PackFeatures implements AvailableFeatures {
         return findFeature(name, false)
     }
 
+    /**
+     * @param name the name of a feature, or the full name of the feature of the pack of a plugin,
+     * {@code group:artifact#name}, which is that feature only when the pack was taken from the jar of
+     * that plugin, in whichever version: see {@link PackFeature#isNamed}
+     */
     @Override
     Optional<Feature> findFeature(@Nonnull String name, boolean ignoreVisibility) {
+        if (PackFeature.pluginOf(name) != null) {
+            Feature named = packs.get(PackFeature.nameOf(name))
+            return named != null && PackFeature.isNamed(name, named) ? Optional.of(named) : Optional.<Feature>empty()
+        }
         Feature pack = packs.get(name)
         return pack != null ? Optional.of(pack) : framework.findFeature(name, ignoreVisibility)
     }

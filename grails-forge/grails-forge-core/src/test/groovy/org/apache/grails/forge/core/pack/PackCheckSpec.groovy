@@ -227,6 +227,15 @@ class PackCheckSpec extends Specification {
         PackCheck.check(pack) == []
     }
 
+    void "a template has the feature a full name requires by its name, as an application with it has"() {
+        given:
+        Path pack = pack("requires: [database-migration, 'com.acme:acme-base-grails#acme-base']\n" + TEMPLATE,
+                ['Audit.groovy.gsp': '<% assert features == ["acme-audit", "acme-base", "database-migration"] %>'])
+
+        expect:
+        PackCheck.check(pack) == []
+    }
+
     void "each template with a problem is named once, by the place the descriptor names it first"() {
         given:
         Path pack = pack('files:\n  - from: a.txt.gsp\n    to: a.txt\n  - from: fine.txt.gsp\n    to: fine.txt\n' +

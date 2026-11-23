@@ -973,6 +973,78 @@ class PackGenerationSpec extends ApplicationContextSpec {
         !buildGradle.contains('com.h2database')
     }
 
+    @Unroll
+    void "a pack requires the feature of the pack of a plugin by its full name, whichever version of the plugin was given: #version"() {
+        given:
+        Pack audit = pack('acme-audit', "requires: ['com.acme:acme-base-grails#acme-base']\n")
+        Pack base = ofPlugin(pack('acme-base', "requires: [mysql]\ndependencies:\n  - scope: implementation\n    coordinates: com.acme:acme-base\n"),
+                "com.acme:acme-base-grails:${version}")
+
+        when:
+        Map<String, String> output = generate(['acme-audit'], [audit, base])
+
+        then: 'the feature of that pack is selected, with what it requires, before the defaults'
+        output['build.gradle'].contains('implementation "com.acme:acme-base"')
+        output['build.gradle'].contains('mysql')
+        !output['build.gradle'].contains('com.h2database')
+        ['acme-audit', 'acme-base', 'mysql'].every { output['.grails/forge.lock.yml'].contains("- name: ${it}\n") }
+
+        where:
+        version << ['1.4.0', '2.0.0-SNAPSHOT']
+    }
+
+    void "a preset asks for the feature of the pack of a plugin by its full name"() {
+        given:
+        Pack preset = new PackLoader().fromDirectory(presetDirectory('acme-service', "features: ['com.acme:acme-base-grails#acme-base']\n"))
+        Pack base = ofPlugin(pack('acme-base', "dependencies:\n  - scope: implementation\n    coordinates: com.acme:acme-base\n"), 'com.acme:acme-base-grails:1.4.0')
+
+        when:
+        Map<String, String> output = generate(['acme-service'], [preset, base])
+
+        then:
+        output['build.gradle'].contains('implementation "com.acme:acme-base"')
+        output['.grails/forge.lock.yml'].contains('- name: acme-base\n')
+    }
+
+    @Unroll
+    void "a full name is the feature of that plugin only: #what"() {
+        given:
+        List<Pack> packs = descriptors.collect { String name, String body ->
+            Pack pack = pack(name, body)
+            plugins.containsKey(name) ? ofPlugin(pack, plugins[name]) : pack
+        }
+
+        when:
+        generate(selected, packs)
+
+        then:
+        IllegalArgumentException e = thrown()
+        e.message == message
+
+        where:
+        what                                                  | selected                     | plugins                                         | descriptors                                                                                                       || message
+        'a requirement whose plugin was not given'            | ['acme-audit']               | [:]                                             | ['acme-audit': "requires: ['com.acme:acme-base-grails#acme-base']\n"]                                             || 'The feature acme-audit requires the feature acme-base of the plugin com.acme:acme-base-grails (com.acme:acme-base-grails#acme-base), and no feature pack of that plugin with that feature was given for this type of application'
+        'a requirement met by a pack of a directory'          | ['acme-audit']               | [:]                                             | ['acme-audit': "requires: ['com.acme:acme-base-grails#acme-base']\n", 'acme-base': '']                            || 'The feature acme-audit requires the feature acme-base of the plugin com.acme:acme-base-grails (com.acme:acme-base-grails#acme-base), and no feature pack of that plugin with that feature was given for this type of application'
+        'a requirement met by the pack of another plugin'     | ['acme-audit']               | ['acme-base': 'com.acme:acme-other:1.0.0']      | ['acme-audit': "requires: ['com.acme:acme-base-grails#acme-base']\n", 'acme-base': '']                            || 'The feature acme-audit requires the feature acme-base of the plugin com.acme:acme-base-grails (com.acme:acme-base-grails#acme-base), and no feature pack of that plugin with that feature was given for this type of application'
+        'a requirement of a pack of another type'             | ['acme-audit']               | ['acme-base': 'com.acme:acme-base-grails:1.0']  | ['acme-audit': "requires: ['com.acme:acme-base-grails#acme-base']\n", 'acme-base': 'applicationTypes: [rest-api]\n'] || 'The feature acme-audit requires the feature acme-base of the plugin com.acme:acme-base-grails (com.acme:acme-base-grails#acme-base), and no feature pack of that plugin with that feature was given for this type of application'
+        'a conflict with the selected pack of that plugin'    | ['acme-audit', 'acme-base']  | ['acme-base': 'com.acme:acme-base-grails:1.0']  | ['acme-audit': "conflicts: ['com.acme:acme-base-grails#acme-base']\n", 'acme-base': '']                           || 'The feature acme-audit cannot be used with the feature acme-base'
+        'a conflict with the pack another feature requires'   | ['acme-audit', 'acme-report'] | ['acme-base': 'com.acme:acme-base-grails:1.0'] | ['acme-audit': "conflicts: ['com.acme:acme-base-grails#acme-base']\n", 'acme-base': '', 'acme-report': 'requires: [acme-base]\n'] || 'The feature acme-audit cannot be used with the feature acme-base (acme-report requires acme-base)'
+    }
+
+    void "a full name among the conflicts is not a pack of that name from a directory or of another plugin"() {
+        given:
+        Pack audit = pack('acme-audit', "conflicts: ['com.acme:acme-base-grails#acme-base', 'com.acme:acme-base-grails#acme-extra']\n")
+        Pack base = pack('acme-base', "dependencies:\n  - scope: implementation\n    coordinates: com.acme:acme-base\n")
+        Pack extra = ofPlugin(pack('acme-extra', "dependencies:\n  - scope: implementation\n    coordinates: com.acme:acme-extra\n"), 'com.acme:acme-extra-grails:1.0')
+
+        when:
+        String buildGradle = generate(['acme-audit', 'acme-base', 'acme-extra'], [audit, base, extra])['build.gradle']
+
+        then:
+        buildGradle.contains('implementation "com.acme:acme-base"')
+        buildGradle.contains('implementation "com.acme:acme-extra"')
+    }
+
     void "two packs cannot set one setting to two values"() {
         given:
         Pack first = pack('acme-a', 'configuration:\n  acme.audit.enabled: true\n  acme.shared: 1\n')
@@ -1261,6 +1333,19 @@ class PackGenerationSpec extends ApplicationContextSpec {
             Files.writeString(file, text)
         }
         return new PackLoader().fromDirectory(packDirectory)
+    }
+
+    // the pack as one taken from the jar of a plugin of a repository is
+    private static Pack ofPlugin(Pack pack, String coordinates) {
+        return pack.withArtifact(new PackArtifact(pack.descriptor.name, coordinates, 'https://repo.acme.example/maven/',
+                "${coordinates.split(':')[1]}.jar".toString(), 'ab' * 32, 'sha256', false))
+    }
+
+    private Path presetDirectory(String name, String body) {
+        Path packDirectory = Files.createDirectories(directory.resolve(name))
+        Files.writeString(packDirectory.resolve('feature.yml'), HEADER.replace('kind: feature', 'kind: preset') + 'name: ' + name + '\napplicationType: web\n' + body)
+        Files.createDirectories(packDirectory.resolve('templates'))
+        return packDirectory
     }
 
     private Map<String, String> generate(List<String> features, List<Pack> packs, ApplicationType type = ApplicationType.WEB, String name = 'example.grails.foo') {
