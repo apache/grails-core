@@ -1054,7 +1054,7 @@ Generated YAML configuration has a fixed key order (`info`, `dataSource`, `envir
 - [ ] Commands that read an option followed by an empty argument, or quoted arguments with spaces at their ends, expect the Grails 9 values, and no command works around a value cut at its second `=`
 - [ ] No build file declares a `profile` dependency, depends on `grails-shell-cli` or `org.apache.grails.profiles`, applies `grails-profile` or `grails-publish-profile`, or declares `spring-boot-cli` without a version
 - [ ] No client or test of an application with Redis or Grails cache token storage expects 200 from the REST logout endpoint for a token that is not stored
-- [ ] No script, CI job, container file or document calls a removed or renamed command: `grails test`, `grails run`, `grails stop`, `grails install`, `grails open`, `open` in piped input, `create-profile` and the other profile commands, `list-profiles`, `profile-info`, `create-app --profile`, `-t forge`, `grails-forge-cli`
+- [ ] No script, CI job, container file or document calls a removed or renamed command: `grails test`, `grails install`, `grails open`, `open` in piped input, `create-profile` and the other profile commands, `list-profiles`, `profile-info`, `create-app --profile`, `-t forge`, `grails-forge-cli`
 - [ ] No call of `grails` or `grailsw` has an environment (`test`, `prod`, `dev`) or a command's option in front of the command, and Gradle options a command does not have follow `--`
 - [ ] No script uses a short form that fits two commands (`cC`, `cc`, `cS`, `cs`, `s`, `co`), and scripts check the exit code of `grails` (2: nothing ran)
 - [ ] The Gradle wrapper (`gradlew`, `gradlew.bat`, `gradle/wrapper/`) is committed
