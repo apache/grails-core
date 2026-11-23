@@ -197,11 +197,11 @@ public class GrailsUpdater {
                 return installed;
             } catch (GrailsReleaseNotFoundException e) {
                 // the repository does not have it: ordinary for all but a repository the user named
-                misses.add("[" + repo.getDisplayUrl() + "]: " + e.getMessage());
+                misses.add("[" + repo.getDisplayUrl() + "]: " + said(e));
                 reportSkippedOverride(repo, e);
             } catch (GrailsDownloadException e) {
-                misses.add("[" + repo.getDisplayUrl() + "]: " + e.getMessage());
-                System.err.println("The Grails CLI could not be taken from the repository [" + repo.getDisplayUrl() + "]: " + e.getMessage());
+                misses.add("[" + repo.getDisplayUrl() + "]: " + said(e));
+                System.err.println("The Grails CLI could not be taken from the repository [" + repo.getDisplayUrl() + "]: " + said(e));
             }
         }
 
@@ -215,9 +215,18 @@ public class GrailsUpdater {
      */
     private static void reportSkippedOverride(GrailsWrapperRepo repo, GrailsReleaseNotFoundException reason) {
         if (repo.overridden) {
-            System.out.println("...The Grails CLI was not found in the overridden repository [" + repo.getDisplayUrl() + "]: " + reason.getMessage());
+            System.out.println("...The Grails CLI was not found in the overridden repository [" + repo.getDisplayUrl() + "]: " + said(reason));
             System.out.println("...Trying the next repository.");
         }
+    }
+
+    /**
+     * What a repository that was passed over said, as a line names it. The message can have the address of the
+     * repository in it, or a path made from it where the repository is a directory, so it is held to what an
+     * address is held to wherever it was made.
+     */
+    private static String said(Exception reason) {
+        return GrailsWrapperRepo.textWithoutCredentials(reason.getMessage());
     }
 
     /**
@@ -556,7 +565,7 @@ public class GrailsUpdater {
      */
     private static String describe(Throwable e) {
         String message = e.getMessage();
-        String text = e.getClass().getSimpleName() + (message == null ? "" : ": " + GrailsWrapperRepo.withoutCredentials(message));
+        String text = e.getClass().getSimpleName() + (message == null ? "" : ": " + GrailsWrapperRepo.textWithoutCredentials(message));
         text = CONTROL_CHARACTERS.matcher(text).replaceAll("?");
         return text.length() > MAX_MESSAGE_LENGTH ? text.substring(0, MAX_MESSAGE_LENGTH) + "..." : text;
     }

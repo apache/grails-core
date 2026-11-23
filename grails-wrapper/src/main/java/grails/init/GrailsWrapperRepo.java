@@ -22,6 +22,7 @@ import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
@@ -30,7 +31,13 @@ import java.util.regex.Pattern;
 public class GrailsWrapperRepo {
 
     private static final Pattern URL_SCHEME_PREFIX = Pattern.compile("[A-Za-z][A-Za-z0-9+.-]*://.*");
-    private static final Pattern URL_CREDENTIALS = Pattern.compile("([A-Za-z][A-Za-z0-9+.-]*://)[^/?#@\\s]*@");
+    private static final Pattern URL_SCHEME = Pattern.compile("[A-Za-z][A-Za-z0-9+.-]*://");
+    // a host and a port as a URL has them when it has no user: a name or an address in brackets, and digits
+    private static final Pattern HOST_AND_PORT = Pattern.compile("(?:[A-Za-z0-9._~-]+|\\[[0-9A-Fa-f:.]+\\])(?::[0-9]{1,5})?");
+    private static final Pattern WORD = Pattern.compile("\\S+");
+    // what a message puts before a URL that is shown where the start of the URL is not
+    private static final String OPENING = "[(<\"'";
+    private static final String HIDDEN = "***";
 
     private static final String LOCAL_METADATA_NAME = "maven-metadata-local.xml";
     private static final String DEPLOYED_METADATA_NAME = "maven-metadata.xml";
@@ -65,13 +72,74 @@ public class GrailsWrapperRepo {
 
     /**
      * A URL can carry a user and a password ({@code https://user:password@host/}), and what the wrapper prints
-     * ends in the logs of build servers.
+     * ends in the logs of build servers. A URL that is given to the wrapper need not be one that can be read with
+     * confidence: a password can have an {@code @}, a {@code /} or a bracket in it that should have been
+     * percent-encoded, and the scheme can be missing. So what is hidden is decided by what cannot be a host,
+     * never by what a well-formed URL would be: in each word of the text that has an {@code @}, everything from
+     * the start of the URL (after its scheme, or the start of the word where there is no scheme) to the last
+     * {@code @} of the word is hidden, and in a URL without an {@code @} whatever stands where its host and port
+     * are and is not a host and a port. That hides a little more than the credentials at times (an {@code @} in
+     * a path, a host that is not a plain name), and never a part of them.
      *
-     * @param url a URL or a path, or a text that has URLs
-     * @return the same without the user and password of each URL
+     * @param url a URL or a path as it was given, all of which is taken for one: white space in it is not
+     * taken for the end of the URL
+     * @return the same without the user and password the URL can have
      */
     static String withoutCredentials(String url) {
-        return url == null ? null : URL_CREDENTIALS.matcher(url).replaceAll("$1***@");
+        return url == null ? null : wordWithoutCredentials(url);
+    }
+
+    /**
+     * {@link #withoutCredentials} for a text that can have URLs among other words, as the message of an exception
+     * has: each part of it between white space is taken for what can be a URL. A URL that is in such a text was
+     * made by a program, which has no white space in a URL.
+     *
+     * @param text the text
+     * @return the same without the user and password of each URL in it
+     */
+    static String textWithoutCredentials(String text) {
+        if (text == null) {
+            return null;
+        }
+        StringBuilder shown = new StringBuilder(text.length());
+        Matcher words = WORD.matcher(text);
+        int end = 0;
+        while (words.find()) {
+            shown.append(text, end, words.start()).append(wordWithoutCredentials(words.group()));
+            end = words.end();
+        }
+        return shown.append(text.substring(end)).toString();
+    }
+
+    // a URL, or a word that can be one or have one in it, without what can be a user or a password of a URL
+    private static String wordWithoutCredentials(String word) {
+        Matcher scheme = URL_SCHEME.matcher(word);
+        int start = scheme.find() ? scheme.end() : 0;
+        int lastAt = word.lastIndexOf('@');
+        if (lastAt >= 0) {
+            if (lastAt < start) {
+                // an @ before the scheme: no telling what the word is, so everything before the last @ is hidden
+                start = 0;
+            }
+            if (start == 0) {
+                while (start < lastAt && OPENING.indexOf(word.charAt(start)) >= 0) {
+                    start++;
+                }
+            }
+            return word.substring(0, start) + HIDDEN + word.substring(lastAt);
+        }
+        if (start == 0) {
+            return word;
+        }
+        int hostEnd = start;
+        while (hostEnd < word.length() && "/?#".indexOf(word.charAt(hostEnd)) < 0) {
+            hostEnd++;
+        }
+        String host = word.substring(start, hostEnd);
+        if (host.isEmpty() || HOST_AND_PORT.matcher(host).matches()) {
+            return word;
+        }
+        return word.substring(0, start) + HIDDEN + word.substring(hostEnd);
     }
 
     /**
@@ -193,6 +261,11 @@ public class GrailsWrapperRepo {
             URI uri = new URI(url);
             if (!"https".equalsIgnoreCase(uri.getScheme())) {
                 throw new IllegalArgumentException("Grails wrapper remote repository URLs must use HTTPS: " + withoutCredentials(url));
+            }
+            if (uri.getHost() == null) {
+                // No host and port where they belong: as a password with a / or a # that is not percent-encoded leaves
+                // it. Nothing could be downloaded from it, and what Java would say about it is part of the password.
+                throw new IllegalArgumentException("Invalid Grails wrapper remote repository URL, which names no host: " + withoutCredentials(url));
             }
         } catch (URISyntaxException e) {
             // without the cause: its message is the URL as it was given

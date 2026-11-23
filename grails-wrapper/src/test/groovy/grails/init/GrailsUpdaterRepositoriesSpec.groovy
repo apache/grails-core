@@ -580,6 +580,64 @@ class GrailsUpdaterRepositoriesSpec extends Specification {
         !e.message.contains('deployer')
     }
 
+    @Unroll
+    def "no part of the user or the password of a repository URL that #what is in any message"() {
+        given: 'a repository named after one whose URL cannot be read with confidence, and which has the command line'
+        File named = repository('named')
+        publishRelease(named, '9.0.0', 'the command line')
+
+        when:
+        Map result = updateWhatever([url, named], '9.0.0')
+        String said = "${result.out}\n${result.err}\n${result.thrown ?: ''}"
+
+        then: 'the URL is shown as far as it is no user and no password'
+        said.contains("...Update Repository is overridden to prefer [${shown}].")
+
+        and: 'nothing of the user and the password is in what is written or thrown'
+        ['deployer', 'Xq7', 'Zk9'].every { String secret -> !said.contains(secret) }
+
+        where:
+        what                                          | url                                                                       || shown
+        'has an @ in the password'                    | 'https://deployer:Xq7@Zk9@repository.example.invalid/releases'            || 'https://***@repository.example.invalid/releases'
+        'has several @'                               | 'https://deployer@Xq7:Zk9@repository.example.invalid/releases'            || 'https://***@repository.example.invalid/releases'
+        'has a / in the password'                     | 'https://deployer:Xq7/Zk9@repository.example.invalid/releases'            || 'https://***@repository.example.invalid/releases'
+        'has a # in the password'                     | 'https://deployer:Xq7#Zk9@repository.example.invalid/releases'            || 'https://***@repository.example.invalid/releases'
+        'has a ? in the password'                     | 'https://deployer:Xq7?Zk9@repository.example.invalid/releases'            || 'https://***@repository.example.invalid/releases'
+        'has no scheme'                               | 'deployer:Xq7Zk9@repository.example.invalid/releases'                     || '***@repository.example.invalid/releases'
+        'has no scheme but its slashes'               | '//deployer:Xq7Zk9@repository.example.invalid/releases'                   || '***@repository.example.invalid/releases'
+        'has an opening bracket in the password'      | 'https://deployer:Xq7[Zk9@repository.example.invalid/releases'            || 'https://***@repository.example.invalid/releases'
+        'has an opening bracket before the user'      | 'https://[deployer:Xq7Zk9@repository.example.invalid/releases'            || 'https://***@repository.example.invalid/releases'
+        'has a closing bracket in the password'       | 'https://deployer:Xq7]Zk9@repository.example.invalid/releases'            || 'https://***@repository.example.invalid/releases'
+        'has a percent-encoded @ in the password'     | 'https://deployer:Xq7%40Zk9@repository.example.invalid/releases'          || 'https://***@repository.example.invalid/releases'
+        'has only percent-encoded @'                  | 'https://deployer:Xq7%40Zk9%40repository.example.invalid/releases'        || 'https://***/releases'
+        'has a user and no password'                  | 'https://deployer@repository.example.invalid/releases'                    || 'https://***@repository.example.invalid/releases'
+        'has a space in the password'                 | 'https://deployer:Xq7 Zk9@repository.example.invalid/releases'            || 'https://***@repository.example.invalid/releases'
+        'has a user and a password but no @'          | 'https://deployer:Xq7Zk9/releases'                                        || 'https://***/releases'
+    }
+
+    // the update as update does it, which keeps what was written when it throws, and what it threw as a stack trace shows it
+    private Map updateWhatever(List repositories, String version) {
+        Map result = [:]
+        result.err = SystemStubs.tapSystemErr {
+            result.out = SystemStubs.tapSystemOut {
+                SystemStubs.restoreSystemProperties {
+                    proxy.systemProperties.each { String name, String value -> System.setProperty(name, value) }
+                    System.setProperty('grails.repo.url', repositories.collect { it instanceof File ? it.path : it }.join(';'))
+                    SystemStubs.withEnvironmentVariable('GRAILS_WRAPPER_HOME', home.path).execute {
+                        try {
+                            result.updated = new GrailsUpdater(new LinkedHashSet<>([GrailsReleaseType.RELEASE]), new GrailsVersion(version)).update()
+                        } catch (Exception e) {
+                            StringWriter trace = new StringWriter()
+                            e.printStackTrace(new PrintWriter(trace))
+                            result.thrown = trace.toString()
+                        }
+                    }
+                }
+            }
+        }
+        result
+    }
+
     // stands for the checksum of another file, of the kind of the checksum file
     private static final Closure<String> WRONG = { File jar -> null }
 

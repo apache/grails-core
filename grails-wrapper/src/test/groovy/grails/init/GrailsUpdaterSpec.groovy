@@ -132,9 +132,9 @@ class GrailsUpdaterSpec extends Specification {
         when:
         GrailsUpdater.resolveSecureRedirectUrl(new URI(REMOTE_BASE_URL), 'http://[bad')
 
-        then:
+        then: 'what stands where the host is, and is none, is not shown: it cannot be told from a user and a password'
         def e = thrown(IOException)
-        e.message == 'Invalid redirect Location header for Grails wrapper remote resource: http://[bad'
+        e.message == 'Invalid redirect Location header for Grails wrapper remote resource: http://***'
     }
 
     def "remote wrapper accepts final response after maximum redirects"() {
