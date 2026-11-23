@@ -270,10 +270,13 @@ class ScriptCommandRunner {
         ClassLoader before = thread.contextClassLoader
         thread.contextClassLoader = classLoader
         try {
-            script.begin(this, name, baseDir, new ExecutionContext(commandLine))
-            fire(script, "${name}Start".toString())
+            ExecutionContext context = new ExecutionContext(commandLine)
+            script.begin(this, name, baseDir, context)
+            // a listener of the start and of the end of a command is given the context the command runs
+            // with, as in the Grails shell: before('inner') { context -> ... } reads the arguments of inner
+            fire(script, "${name}Start".toString(), context)
             Object result = script.run()
-            fire(script, "${name}End".toString())
+            fire(script, "${name}End".toString(), context)
             return result instanceof Boolean && !((Boolean) result) ? 1 : 0
         } finally {
             thread.contextClassLoader = before

@@ -26,6 +26,7 @@ import java.util.jar.JarOutputStream
 import groovy.json.JsonOutput
 
 import grails.build.logging.GrailsConsole
+import org.apache.grails.core.cli.ExecutionContext
 import spock.lang.IgnoreIf
 import spock.lang.Specification
 import spock.lang.TempDir
@@ -185,6 +186,88 @@ class ScriptCommandRunnerSpec extends Specification {
         said() == ''
         exit == 0
         new File(project, 'order.txt').text == 'before inner:[one]:true after custom:x outer:true'
+    }
+
+    def 'a listener of the start of a command reads the arguments of that command from the context it is given'() {
+        given:
+        script('outer', '''
+            before('inner') { context ->
+                assert context.commandLine.remainingArgs == ['one']
+            }
+            return inner('one')
+        ''')
+        script('inner', 'true')
+
+        when:
+        int exit = run('outer')
+
+        then:
+        said() == ''
+        exit == 0
+    }
+
+    @Unroll
+    def 'a listener registered with #listener is given the context the command it hears runs with'() {
+        given: 'outer runs middle, which runs inner; each listener writes down the context it is given'
+        script('outer', """
+            void record(Object context, Object heard) {
+                file('heard.txt') << [context.getClass().name, context.commandLine.commandName, context.commandLine.remainingArgs,
+                                      context.commandLine.undeclaredOptions.keySet().toList(), context.is(heard.executionContext)].inspect() + '\\n'
+            }
+            ${listener}
+            return middle('m1', '--fast')
+        """)
+        script('middle', 'return inner("i1", "i2")')
+        script('inner', 'true')
+
+        when:
+        int exit = run('outer', 'o1')
+
+        then:
+        said() == ''
+        exit == 0
+        new File(project, 'heard.txt').text == [ExecutionContext.name, command, remaining, flags, true].inspect() + '\n'
+
+        where:
+        listener                                                                                    | command  | remaining    | flags
+        "before('middle') { context -> record(context, delegate) }"                                 | 'middle' | ['m1']       | ['fast']
+        "after('middle') { context -> record(context, delegate) }"                                  | 'middle' | ['m1']       | ['fast']
+        "before('inner') { context -> record(context, delegate) }"                                  | 'inner'  | ['i1', 'i2'] | []
+        "after('inner') { record(it, delegate) }"                                                   | 'inner'  | ['i1', 'i2'] | []
+        "on('innerStart') { org.apache.grails.core.cli.ExecutionContext context -> record(context, delegate) }" | 'inner'  | ['i1', 'i2'] | []
+        "on('middleEnd') { context -> record(context, delegate) }"                                  | 'middle' | ['m1']       | ['fast']
+        "after('outer') { context -> record(context, delegate) }"                                   | 'outer'  | ['o1']       | []
+    }
+
+    @Unroll
+    def 'the example of the guide says what the listener reads, and after is heard when the script #ended'() {
+        given:
+        script('outer', '''
+            before('data-import') { context ->
+                console.addStatus "Importing ${context.commandLine.remainingArgs.join(', ')}"
+            }
+            after('data-import') { context -> console.addStatus "Imported ${context.commandLine.remainingArgs.size()}" }
+            try {
+                dataImport('orders.csv')
+            } catch (IllegalStateException ignored) {
+            }
+            return true
+        ''')
+        script('data-import', body)
+
+        when:
+        int exit = run('outer')
+
+        then:
+        said() == ''
+        exit == 0
+        out.toString().readLines() == ['| Importing orders.csv'] + heard
+
+        where:
+        ended               | body                                   | heard
+        'returned true'     | 'true'                                 | ['| Imported 1']
+        'returned false'    | 'false'                                | ['| Imported 1']
+        'threw, and is not' | 'throw new IllegalStateException("x")' | []
     }
 
     @Unroll

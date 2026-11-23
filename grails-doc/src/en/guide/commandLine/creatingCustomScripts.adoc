@@ -182,4 +182,14 @@ A script that the build runs has `description`, `args`, `argsMap`, `flag`, `mode
 | Not there. A script that uses one of them fails with one line that names it.
 |===
 
+A listener that `before` or `after` registers for the name of a script, which is a listener of the event `<name>Start` or `<name>End` that `on` can name as well, is given the context that script runs with, as in the Grails shell: its `commandLine` has the name and the arguments of that script, and the delegate of the listener is that script. The listeners of `after` are called when the script has ended without throwing, also when it returned `false`.
+
+[source,groovy]
+----
+before('data-import') { context ->
+    console.addStatus "Importing ${context.commandLine.remainingArgs.join(', ')}"
+}
+dataImport('orders.csv')
+----
+
 Script commands are kept for the applications that have them and are deprecated. A new command is written as a class in `grails-app/commands` (see xref:commandLine#creatingCustomCommands[Creating Custom Commands]), which the `grails` command lists with its description.

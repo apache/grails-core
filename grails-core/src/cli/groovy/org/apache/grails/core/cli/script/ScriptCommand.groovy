@@ -206,20 +206,22 @@ abstract class ScriptCommand extends Script implements ModelBuilder, ConsoleLogg
     }
 
     /**
-     * Registers what is done before a script command runs.
+     * Registers what is done before a script command runs: the event {@code <commandName>Start}.
      *
      * @param commandName the name of the command
-     * @param callable what is done
+     * @param callable what is done; it is given the {@link ExecutionContext} the command runs with,
+     * whose {@code commandLine} has the name and the arguments of that command, and its delegate is that command
      */
     void before(String commandName, Closure callable) {
         runner.listen("${commandName}Start".toString(), callable)
     }
 
     /**
-     * Registers what is done after a script command ran.
+     * Registers what is done after a script command ran and did not throw: the event {@code <commandName>End}.
      *
      * @param commandName the name of the command
-     * @param callable what is done
+     * @param callable what is done; it is given the {@link ExecutionContext} the command ran with,
+     * whose {@code commandLine} has the name and the arguments of that command, and its delegate is that command
      */
     void after(String commandName, Closure callable) {
         runner.listen("${commandName}End".toString(), callable)
