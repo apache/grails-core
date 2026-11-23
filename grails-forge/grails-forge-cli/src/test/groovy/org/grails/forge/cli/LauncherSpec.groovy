@@ -24,6 +24,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import java.util.function.Supplier
 import groovy.json.JsonSlurper
 import org.apache.grails.forge.cli.console.EarlierGrailsProject
+import org.apache.grails.forge.cli.console.ConsoleCommands
 import org.apache.grails.forge.cli.console.ConsoleProject
 import org.apache.grails.forge.cli.console.PlainOutput
 import org.springframework.context.ApplicationContext
@@ -473,6 +474,65 @@ class LauncherSpec extends Specification {
         exit == 0
         started.get() == 1
         !running.active
+    }
+
+    @Unroll
+    void "#option, which the Grails shell took with one dash, is refused #where with what is typed now, and starts nothing"() {
+        given:
+        if (inProject) {
+            project()
+        }
+        broken.commandName = 'grails'
+        ConsoleCommands.setInteractive(console)
+
+        when:
+        int exit = console ? ForgeCli.execute(broken, option) : ForgeCli.launch(broken, true, option)
+        List<String> lines = err.toString().readLines()
+
+        then:
+        exit == 2
+        started.get() == 0
+        out.toString().isEmpty()
+        lines.findAll { !it.startsWith('Possible solutions: ') } == [said,
+                  'Usage: grails [-hvVx] [--non-interactive] [--plain-output] [COMMAND]',
+                  console ? "Run 'help' for the commands" : "Run 'grails help' for the commands"]
+
+        and: 'where picocli finds the option with two dashes alike, it offers it too'
+        lines.findAll { it.startsWith('Possible solutions: ') }.every { it == "Possible solutions: -${option}".toString() }
+
+        cleanup:
+        ConsoleCommands.setInteractive(false)
+
+        where:
+        option            | inProject | console || said
+        '-version'        | false     | false   || 'grails has no option -version since Grails 9: --version or -V shows the version, and -v is --verbose'
+        '-version'        | true      | false   || 'grails has no option -version since Grails 9: --version or -V shows the version, and -v is --verbose'
+        '-version'        | true      | true    || 'grails has no option -version since Grails 9: --version or -V shows the version, and -v is --verbose'
+        '-verbose'        | false     | false   || 'grails has no option -verbose since Grails 9: it is written with two dashes, --verbose'
+        '-verbose'        | true      | true    || 'grails has no option -verbose since Grails 9: it is written with two dashes, --verbose'
+        '-stacktrace'     | false     | false   || 'grails has no option -stacktrace since Grails 9: it is written with two dashes, --stacktrace'
+        '-plain-output'   | false     | false   || 'grails has no option -plain-output since Grails 9: it is written with two dashes, --plain-output'
+        '-non-interactive' | false    | false   || 'grails has no option -non-interactive since Grails 9: it is written with two dashes, --non-interactive'
+        where = (inProject ? 'in a project' : 'outside a project') + (console ? ' at the prompt of the console' : '')
+    }
+
+    @Unroll
+    void "an option of one letter the command line does not have, after one it has, is named by its letter: #args"() {
+        given:
+        broken.commandName = 'grails'
+
+        when:
+        int exit = ForgeCli.launch(broken, true, args as String[])
+
+        then:
+        exit == 2
+        started.get() == 0
+        err.toString().readLines()[0] == said
+
+        where:
+        args                 | said
+        ['-vq']              | 'grails has no option -q'
+        ['-vq', 'compile']   | 'grails has no option -q'
     }
 
     void "the command line has the name it was started under"() {

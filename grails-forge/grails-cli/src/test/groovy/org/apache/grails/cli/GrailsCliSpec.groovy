@@ -91,6 +91,30 @@ class GrailsCliSpec extends Specification {
                                                             'Type: grails war -Dgrails.env=production'
         ['development', 'run-app']                        | 'development is the name of an environment. The environment follows the command as -Dgrails.env=development. ' +
                                                             'Type: grails run-app -Dgrails.env=development'
+        ['-version']                                      | 'grails has no option -version since Grails 9: --version or -V shows the version, and -v is --verbose'
+        ['--plain-output', '-version']                    | 'grails has no option -version since Grails 9: --version or -V shows the version, and -v is --verbose'
+        ['-version', 'create-app', 'x']                   | 'grails has no option -version since Grails 9: --version or -V shows the version, and -v is --verbose'
+        ['-verbose', 'compile']                           | 'grails has no option -verbose since Grails 9: it is written with two dashes, --verbose'
+        ['-stacktrace', 'compile']                        | 'grails has no option -stacktrace since Grails 9: it is written with two dashes, --stacktrace'
+        ['-plain-output', 'help']                         | 'grails has no option -plain-output since Grails 9: it is written with two dashes, --plain-output'
+        ['-non-interactive']                              | 'grails has no option -non-interactive since Grails 9: it is written with two dashes, --non-interactive'
+    }
+
+    void "the version is shown with #args, and -v is --verbose"() {
+        when:
+        int exit = GrailsCli.execute(args as String[])
+
+        then:
+        exit == 0
+        out.toString().startsWith('Grails Version: ') == version
+        err.toString().isEmpty()
+
+        where:
+        args                     | version
+        ['--version']            | true
+        ['-V']                   | true
+        ['-v', 'help']           | false
+        ['--verbose', 'help']    | false
     }
 
     void "without a command the help is shown outside a project, and nothing waits for what is typed"() {

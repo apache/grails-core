@@ -213,6 +213,15 @@ class UsageHelp extends CommandLine.Help {
         }
     }
 
+    // The options the Grails shell took with one dash in front of a command, each with what is typed for it now. picocli reads
+    // -version and -verbose as -v and what follows it, which would be said as an option -ersion or -erbose.
+    private static final Map<String, String> FORMER_OPTIONS = Collections.unmodifiableMap([
+            '-version': '--version or -V shows the version, and -v is --verbose',
+            '-verbose': 'it is written with two dashes, --verbose',
+            '-stacktrace': 'it is written with two dashes, --stacktrace',
+            '-plain-output': 'it is written with two dashes, --plain-output',
+            '-non-interactive': 'it is written with two dashes, --non-interactive'])
+
     /** How many characters of a mistake are said, at most: what was typed can be of any length. */
     public static final int MAX_MISTAKE = 600
 
@@ -247,7 +256,7 @@ class UsageHelp extends CommandLine.Help {
         if (mistake instanceof Lines) {
             err.println(scheme.errorText(mistake.getMessage()))
         } else {
-            err.println(scheme.errorText(line(notAnOption(mistake, spec, given) ?: worded(mistake, spec))))
+            err.println(scheme.errorText(line(formerOption(spec, given) ?: notAnOption(mistake, spec, given) ?: worded(mistake, spec))))
         }
         // for an option that is nearly one of the command's, the ones it could have been
         CommandLine.UnmatchedArgumentException.printSuggestions(mistake, err)
@@ -347,6 +356,24 @@ class UsageHelp extends CommandLine.Help {
         } catch (IOException ignored) {
             return null
         }
+    }
+
+    // An option the Grails shell took in front of a command with one dash, as -version: the command line has no option by
+    // that name, and says what is typed instead
+    private static String formerOption(CommandLine.Model.CommandSpec spec, String... given) {
+        if (spec.parent() != null || given == null) {
+            return null
+        }
+        for (String arg : given) {
+            if (arg == null || arg == '--' || !arg.startsWith('-')) {
+                return null
+            }
+            String instead = FORMER_OPTIONS.get(arg)
+            if (instead != null) {
+                return "${named(spec)} has no option ${arg} since Grails 9: ${instead}"
+            }
+        }
+        return null
     }
 
     // One wording for one mistake: an option a command does not have, and an argument it does not take,
