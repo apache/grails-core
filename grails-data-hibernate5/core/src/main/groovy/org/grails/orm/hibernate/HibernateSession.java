@@ -120,8 +120,9 @@ public class HibernateSession extends AbstractHibernateSession {
 
     /**
      * A bulk {@code delete} or {@code update} statement has no {@code LIMIT} or {@code OFFSET}, so a
-     * criteria that carries {@code max} or an {@code offset} other than 0 would write to every matching row. Refuse it.
-     * An {@code offset} of 0 leaves no row out and is accepted.
+     * criteria that carries {@code max} or an {@code offset} would write to every matching row. Refuse it. Any
+     * {@code offset} that was set is refused, zero included: a bulk write cannot apply it, and the call says what it
+     * leaves out.
      */
     private static void rejectPagination(QueryableCriteria<?> criteria, String operation) {
         if (!(criteria instanceof AbstractDetachedCriteria)) {
@@ -129,9 +130,6 @@ public class HibernateSession extends AbstractHibernateSession {
         }
         Integer max = criteriaValue(DEFAULT_MAX, (AbstractDetachedCriteria<?>) criteria);
         Integer offset = criteriaValue(DEFAULT_OFFSET, (AbstractDetachedCriteria<?>) criteria);
-        if (offset != null && offset == 0) {
-            offset = null;
-        }
         if (max == null && offset == null) {
             return;
         }

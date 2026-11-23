@@ -1311,7 +1311,7 @@ As of Grails 7.0.18, with `grails.plugin.springsecurity.rest.token.storage.jwt.u
 
 ==== Bulk deleteAll and updateAll reject max and offset
 
-With Hibernate 5, `deleteAll()` and `updateAll(Map)` on a `where` query or a `DetachedCriteria` run one `delete` or `update` statement. The statement has no row limit, so a query that carries `max` or an `offset` other than 0 used to write to every matching row: `Person.where { age > 18 }.max(2).deleteAll()` deleted all of them (issue https://github.com/apache/grails-core/issues/16832[#16832]). `deleteAll()` and `updateAll(Map)` now throw an `InvalidDataAccessResourceUsageException` that names the `max` or `offset` value (an `offset` of 0 is accepted), and write nothing.
+With Hibernate 5, `deleteAll()` and `updateAll(Map)` on a `where` query or a `DetachedCriteria` run one `delete` or `update` statement. The statement has no row limit, so a query that carries `max` or an `offset` used to write to every matching row: `Person.where { age > 18 }.max(2).deleteAll()` deleted all of them (issue https://github.com/apache/grails-core/issues/16832[#16832]). `deleteAll()` and `updateAll(Map)` now throw an `InvalidDataAccessResourceUsageException` that names the `max` or `offset` value (an `offset` of 0 included), and write nothing.
 
 To keep writing every matching row, as before, call `deleteAll()` or `updateAll(Map)` on the query before `max` or `offset` are applied to it; a criteria cannot drop them once they are set. To limit the rows written, select the ids first, with the limit on that query, and delete or update by id:
 

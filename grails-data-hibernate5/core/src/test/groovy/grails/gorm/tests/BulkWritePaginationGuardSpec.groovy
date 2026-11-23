@@ -26,7 +26,7 @@ import org.springframework.dao.InvalidDataAccessResourceUsageException
 import spock.lang.Issue
 
 /**
- * A bulk write has no LIMIT or OFFSET, so a criteria with max or an offset other than 0 is refused and writes nothing.
+ * A bulk write has no LIMIT or OFFSET, so a criteria with max or an offset, zero included, is refused and writes nothing.
  */
 @Issue('https://github.com/apache/grails-core/issues/16832')
 class BulkWritePaginationGuardSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
@@ -116,10 +116,27 @@ class BulkWritePaginationGuardSpec extends GrailsDataTckSpec<GrailsDataHibernate
         olderRows() == 0
     }
 
-    void "an offset of 0 leaves no row out and is accepted"() {
-        expect:
-        named('a').offset(0).updateAll(age: 41) == 1
-        olderRows() == 1
+    void "an offset of 0 is refused like any other offset, since a bulk write cannot apply one"() {
+        when:
+        named('a').offset(0).updateAll(age: 41)
+
+        then:
+        InvalidDataAccessResourceUsageException e = thrown()
+        e.message.contains('offset(0)')
+
+        and:
+        olderRows() == 0
+        rows() == 3
+    }
+
+    void "deleteAll with an offset of 0 is refused and deletes nothing"() {
+        when:
+        TestEntity.where { age > 0 }.offset(0).deleteAll()
+
+        then:
+        InvalidDataAccessResourceUsageException e = thrown()
+        e.message.contains('offset(0)')
+        rows() == 3
     }
 
     void "without max and offset the matching rows are written"() {
