@@ -37,6 +37,7 @@ class FormerCommandsSpec extends CommandSpec {
     static final Set<String> TEST_TOOLING = ['generate-unit-test', 'generate-functional-test', 'generate-resource-controller'] as Set
     static final String TEST = 'test was another name of test-app in the Grails shell, and in front of another command it named the environment test, ' +
             'which now follows the command as -Dgrails.env=test. Type: grails-forge-cli test-app'
+    static final String FOLLOWS = '. The environment now follows the command as -Dgrails.env='
     static final String CREATE_SCRIPT = 'create-script wrote a script command into src/main/scripts. Script commands are deprecated, and the scripts a project has still run: ' +
             'a new command is a class of the application. Type: grails-forge-cli create-command NAME'
     static final String MISSING ='The commands of the application and its plugins are not listed yet: a build that compiles the project lists them, ' +
@@ -134,28 +135,144 @@ class FormerCommandsSpec extends CommandSpec {
     }
 
     @Unroll
-    void "test in front of #command, where the Grails shell read it as the environment, is refused with its line #where, and nothing is run"() {
+    void "#environment in front of #command, where the Grails shell read an environment, is refused #where with the command line that gives the environment, and nothing is run"() {
+        given:
+        if (inAProject) {
+            inProject('web')
+            // a command of a plugin the build of the project lists
+            File catalog = new File(top, 'web/.grails/cache/command-catalog.json')
+            catalog.parentFile.mkdirs()
+            catalog.text = ApplicationCommandsSpec.doc([[name: 'dbm-update', aliases: [], description: '', origin: 'org.grails.plugins:database-migration:5.0.0',
+                                                         target: 'application', registration: 'factories']])
+        }
+        ConsoleCommands.setInteractive(console)
+        File project = new File(System.getProperty('user.dir'))
+        Set<String> before = project.list() as Set
+
+        when:
+        int exit = ForgeCli.execute(beanContext, ([environment] + (command == null ? [] : [command])) as String[])
+        List<String> lines = err.toString().readLines()
+
+        then: 'a mistake in the command line, whose line says where the environment is given now, and what to type'
+        exit == 2
+        out.toString().isEmpty()
+        lines[0].startsWith("There is no command ${environment}")
+        lines.contains(said.replace('{cli} ', console ? '' : CLI + ' '))
+        lines.count { it.startsWith('Usage: ') } == 1
+
+        and: 'nothing was run or written'
+        (project.list() as Set) == before
+
+        cleanup:
+        ConsoleCommands.setInteractive(false)
+
+        where:
+        environment   | command           | inAProject | console || said
+        'prod'        | 'war'             | false      | false   || shell('prod', 'production') + FOLLOWS + 'production. Type: {cli} war -Dgrails.env=production'
+        'dev'         | 'run-app'         | false      | false   || shell('dev', 'development') + FOLLOWS + 'development. Type: {cli} run-app -Dgrails.env=development'
+        'test'        | 'run-app'         | false      | false   || shell('test', 'test') + FOLLOWS + 'test. Type: {cli} run-app -Dgrails.env=test'
+        'production'  | 'war'             | false      | false   || named('production') + 'production. Type: {cli} war -Dgrails.env=production'
+        'development' | 'run-app'         | false      | false   || named('development') + 'development. Type: {cli} run-app -Dgrails.env=development'
+        'prod'        | 'assemble'        | false      | false   || shell('prod', 'production') + FOLLOWS + 'production. Type: {cli} assemble -Dgrails.env=production'
+        'prod'        | 'ra'              | false      | false   || shell('prod', 'production') + FOLLOWS + 'production. Type: {cli} run-app -Dgrails.env=production'
+        'prod'        | 'create-app'      | false      | false   || shell('prod', 'production') + '. create-app runs for no environment. Type: {cli} create-app'
+        'prod'        | null              | false      | false   || shell('prod', 'production') + FOLLOWS + 'production. Type: {cli} COMMAND -Dgrails.env=production'
+        'production'  | 'no-such-command' | false      | false   || named('production') + 'production. Type: {cli} COMMAND -Dgrails.env=production'
+        'prod'        | 'war'             | true       | false   || shell('prod', 'production') + FOLLOWS + 'production. Type: {cli} war -Dgrails.env=production'
+        'test'        | 'run'             | true       | false   || shell('test', 'test') + FOLLOWS + 'test. Type: {cli} run -Dgrails.env=test'
+        'dev'         | 'test-app'        | true       | false   || shell('dev', 'development') + FOLLOWS + 'development. Type: {cli} test-app -Dgrails.env=development'
+        'prod'        | 'dbm-update'      | true       | false   || shell('prod', 'production') + '. A command of the application is given the environment by run-command, ' +
+                                                                      'in front of the name of the command. Type: {cli} run-command -Dgrails.env=production dbm-update'
+        'prod'        | 'war'             | true       | true    || shell('prod', 'production') + FOLLOWS + 'production. Type: {cli} war -Dgrails.env=production'
+        'production'  | 'run-app'         | true       | true    || named('production') + 'production. Type: {cli} run-app -Dgrails.env=production'
+        'dev'         | null              | false      | true    || shell('dev', 'development') + FOLLOWS + 'development. Type: {cli} COMMAND -Dgrails.env=development'
+        where = (inAProject ? 'in a project' : 'outside a project') + (console ? ' at the prompt of the console' : '')
+    }
+
+    @Unroll
+    void "test alone, which was also another name of test-app, is refused with its line of the table #where"() {
         given:
         if (inAProject) {
             inProject('web')
         }
+        ConsoleCommands.setInteractive(console)
 
         when:
-        int exit = ForgeCli.execute(beanContext, 'test', command)
-        List<String> lines = err.toString().readLines()
+        int exit = ForgeCli.execute(beanContext, typed as String[])
 
-        then: 'a mistake in the command line, whose line says where the environment is given now'
+        then:
         exit == 2
-        out.toString().isEmpty()
-        lines[0].startsWith('There is no command test')
-        lines.contains(TEST)
-        lines.count { it.startsWith('Usage: ') } == 1
+        err.toString().readLines().contains(console ? TEST.replace("${CLI} ", '') : TEST)
+
+        cleanup:
+        ConsoleCommands.setInteractive(false)
 
         where:
-        command   | inAProject | where
-        'run-app' | false      | 'outside a project'
-        'run-app' | true       | 'in a project'
-        'run'     | true       | 'before the other name of run-app'
+        typed                       | inAProject | console
+        ['test']                    | false      | false
+        ['test']                    | true       | false
+        ['test']                    | true       | true
+        ['test', 'no-such-command'] | false      | false
+        where = (inAProject ? 'in a project' : 'outside a project') + (console ? ' at the prompt of the console' : '') + (typed.size() > 1 ? ', before what is no command' : '')
+    }
+
+    @Unroll
+    void "#environment is never short for a command, also where the application has a command it starts, which #form is short for"() {
+        given: 'commands of the application whose names start with the names of the environments'
+        inProject('web')
+        File catalog = new File(top, 'web/.grails/cache/command-catalog.json')
+        catalog.parentFile.mkdirs()
+        catalog.text = ApplicationCommandsSpec.doc(['dev-tools', 'prod-check', 'production-report', 'development-report'].collect { String each ->
+            [name: each, aliases: [], description: '', origin: 'application', target: 'application', registration: 'factories']
+        })
+
+        when:
+        int exit = ForgeCli.execute(beanContext, environment, 'run-app')
+        List<String> lines = err.toString().readLines()
+
+        then: 'the line of the environment, and the command of the application is not run'
+        exit == 2
+        lines[0].startsWith("There is no command ${environment}")
+        lines.any { it.startsWith("${environment} ") && it.endsWith('Type: grails-forge-cli run-app -Dgrails.env=' + full) }
+
+        when:
+        err.reset()
+        out.reset()
+        exit = ForgeCli.execute(beanContext, 'help', form)
+
+        then:
+        exit == 0
+        out.toString().readLines()[0] == "Usage: grails-forge-cli ${command} [ARGS...]".toString()
+
+        where:
+        environment   | full          | form | command
+        'dev'         | 'development' | 'dt' | 'dev-tools'
+        'prod'        | 'production'  | 'pc' | 'prod-check'
+        'production'  | 'production'  | 'prodr' | 'production-report'
+        'development' | 'development' | 'devr' | 'development-report'
+    }
+
+    @Unroll
+    void "what is not exactly the name of an environment has no line of one: #shown"() {
+        when:
+        int exit = ForgeCli.execute(beanContext, typed, 'war')
+        String said = err.toString()
+
+        then:
+        exit == 2
+        said.readLines()[0].startsWith('There is no command ')
+        !said.contains('-Dgrails.env=')
+        !said.contains('\u001b')
+
+        where:
+        typed              | shown
+        'Prod'             | 'another case'
+        'PRODUCTION'       | 'upper case'
+        'prod '            | 'a space after it'
+        'staging'          | 'an environment of the application'
+        'prod\u001b[31m'   | 'an escape sequence after it'
+        'prod-'            | 'a hyphen after it'
+        'produc'           | 'part of a name'
     }
 
     @Unroll
@@ -665,6 +782,16 @@ class FormerCommandsSpec extends CommandSpec {
         System.setProperty('user.dir', top.absolutePath)
         err.reset()
         return commands
+    }
+
+    // the start of the line of an environment the Grails shell read in front of a command
+    private static String shell(String typed, String environment) {
+        return "${typed} in front of a command named the environment ${environment} in the Grails shell"
+    }
+
+    // the start of the line of the name of an environment, up to the environment in the option
+    private static String named(String typed) {
+        return "${typed} is the name of an environment. The environment follows the command as -Dgrails.env="
     }
 
     private void inProject(String kind) {

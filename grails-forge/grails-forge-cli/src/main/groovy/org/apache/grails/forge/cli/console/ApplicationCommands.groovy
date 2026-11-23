@@ -162,8 +162,8 @@ final class ApplicationCommands {
      * typed where a command was expected, at the top of the command line, and is no command: in a
      * project that is used, whose Gradle wrapper is run, when the list is missing or may be out of
      * date, and when what was typed can be the name of a command of the build or the short form of
-     * one. A name the Grails shell had for a command that is here under another name, or is gone, is
-     * answered at once. {@link #LISTING} turns it off.
+     * one. A name the Grails shell had for a command that is here under another name, or is gone, and
+     * the name of an environment in front of a command are answered at once. {@link #LISTING} turns it off.
      *
      * @param root the command line of the CLI
      * @param typed what was typed
@@ -179,7 +179,7 @@ final class ApplicationCommands {
             return false
         }
         FormerCommands.Former former = FormerCommands.find(typed)
-        if (former != null && former.status != FormerCommands.Status.PLUGIN) {
+        if ((former != null && former.status != FormerCommands.Status.PLUGIN) || FormerCommands.isEnvironment(typed)) {
             return false
         }
         // without a wrapper that is run nothing can be listed, and no command of the build run either

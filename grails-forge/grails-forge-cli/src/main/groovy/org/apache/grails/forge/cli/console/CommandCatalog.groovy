@@ -129,6 +129,20 @@ final class CommandCatalog {
      * @return the mistake in the command line, which is answered with how the command is used
      */
     static CommandLine.ParameterException unknown(CommandLine parent, String typed) {
+        return unknown(parent, typed, null)
+    }
+
+    /**
+     * The refusal of what was typed for a command and is none, as {@link #unknown(CommandLine, String)},
+     * where something else was typed after it: an environment in front of a command is answered with
+     * the command line that gives that command the environment, see {@link FormerCommands#line(CommandLine, String, String)}.
+     *
+     * @param parent the command a command was expected of
+     * @param typed what was typed
+     * @param next what was typed after it, or {@code null}
+     * @return the mistake in the command line, which is answered with how the command is used
+     */
+    static CommandLine.ParameterException unknown(CommandLine parent, String typed, String next) {
         String given = FeatureSelectionException.shown(typed)
         // what was typed is compared, and nothing else: not what stands for an empty name or for one that cannot be shown as it is
         List<String> similar = typed == null || typed.isEmpty() || given != typed ? Collections.<String>emptyList() : suggestions(parent, typed)
@@ -141,7 +155,20 @@ final class CommandCatalog {
                 (similar.isEmpty() ? '' : ". Did you mean: ${similar.join(' or ')}?") +
                 (untrusted == null ? '' : "${System.lineSeparator()}The commands of a project are not there: ${untrusted}") +
                 (listed == null ? '' : "${System.lineSeparator()}${listed}") +
-                FormerCommands.line(parent, typed))
+                FormerCommands.line(parent, typed, FormerCommands.isEnvironment(typed) ? commandNamed(parent, next) : null))
+    }
+
+    // the command of a command that was typed, by the name it was typed by or, for a short form, by its name; null for none and for several
+    private static String commandNamed(CommandLine parent, String typed) {
+        if (typed == null || parent.getSubcommands().containsKey(typed)) {
+            return typed
+        }
+        try {
+            CommandLine command = new CommandCatalog(parent.getCommandSpec().root().commandLine()).find(parent, typed)
+            return command == null ? null : command.getCommandName()
+        } catch (CommandLine.ParameterException ignored) {
+            return null
+        }
     }
 
     /**
@@ -199,7 +226,7 @@ final class CommandCatalog {
                     if (help) {
                         break
                     }
-                    throw unknown(current, arg)
+                    throw unknown(current, arg, i + 1 < expanded.length ? expanded[i + 1] : null)
                 }
                 expanded[i] = named.getCommandName()
             }
@@ -399,9 +426,10 @@ final class CommandCatalog {
         return names
     }
 
-    // whether what was typed is the name of a command the Grails shell had, which is answered with what there is in its place and is short for nothing
+    // whether what was typed is the name of a command the Grails shell had, or of an environment in front of a command, which is answered with
+    // what there is in its place and is short for nothing
     private static boolean isFormer(CommandLine parent, String typed) {
-        return parent.getParent() == null && FormerCommands.find(typed) != null
+        return parent.getParent() == null && (FormerCommands.find(typed) != null || FormerCommands.isEnvironment(typed))
     }
 
     /**

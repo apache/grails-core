@@ -79,7 +79,18 @@ $ grails run-command -Dgrails.env=production audit-report
 
 The same holds for `run-command` itself: after the name of the command it runs, `-Dgrails.env=NAME` is an argument of that command, and is not warned of. A script of the application (see xref:commandLine#creatingCustomScripts[Creating Custom Scripts]) is given `-Dgrails.env=NAME` after its name as an argument as well, which the script can read; it runs in the environment of the build, and nothing is said of it.
 
-An environment in front of the command, as in `grails test run-app` or `grails prod war` of earlier versions, is refused: what follows `grails` is the name of a command, and `test` and `prod` are none. An option of a command in front of its name is a mistake in the command line as well.
+An environment in front of the command, as in `grails test run-app` or `grails prod war` of earlier versions, is refused with exit code 2: what follows `grails` is the name of a command, and `test` and `prod` are none. The refusal ends with a line that says where the environment is given now and the command line to type, with `run-command` in front of a command of the application or of a plugin, as above. `dev`, `prod` and `test`, which the Grails shell read there, and `development` and `production` are answered this way, and none of them is read as the short form of a command; `test` alone, which was also another name of `test-app`, is answered with that (see "Commands of Earlier Versions" below):
+
+[source,console]
+----
+$ grails prod war
+There is no command prod. Did you mean: project?
+prod in front of a command named the environment production in the Grails shell. The environment now follows the command as -Dgrails.env=production. Type: grails war -Dgrails.env=production
+Usage: grails [-hvVx] [--non-interactive] [--plain-output] [COMMAND]
+Run 'grails help' for the commands
+----
+
+An option of a command in front of its name is a mistake in the command line as well.
 
 A `-D` option is a system property of the build. `bootRun` in your `build.gradle` configures the system properties of the application, so for the application to see such a property, append all `System.properties` to `bootRun` in `build.gradle` like:
 

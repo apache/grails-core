@@ -27,6 +27,12 @@ import picocli.CommandLine
  * the one name the Grails Forge CLI of Grails 7 told to type that it did not have. The table is fixed: it is read from no profile, no project and no build, and what was typed is only
  * looked up in it and never repeated from it.
  *
+ * <p>Beside the table are the names of the environments that stand in front of a command where a
+ * command is expected: {@code dev}, {@code prod} and {@code test}, which the Grails shell read there
+ * as the environment, and {@code development} and {@code production}. Each is answered with the
+ * command line to type, with the environment after the command as {@code -Dgrails.env}: the
+ * command that follows is named in it only by a name it has here.</p>
+ *
  * @since 9.0
  */
 @CompileStatic
@@ -87,6 +93,15 @@ final class FormerCommands {
 
     private static final Map<String, Former> TABLE = table()
 
+    // What the Grails shell read in front of a command as the environment it ran for, and the environments
+    // they name; and the names of those environments, which a Grails application has for them.
+    private static final Map<String, String> SHELL_ENVIRONMENTS = Collections.unmodifiableMap([dev: 'development', prod: 'production', test: 'test'])
+    private static final Map<String, String> ENVIRONMENTS = Collections.unmodifiableMap(SHELL_ENVIRONMENTS + [development: 'development', production: 'production'])
+
+    // what follows a command for its environment, as the commands that run the build take it
+    private static final String ENVIRONMENT_OPTION = '-Dgrails.env='
+    private static final String SYSTEM_PROPERTY = '-D'
+
     private FormerCommands() {
     }
 
@@ -107,12 +122,64 @@ final class FormerCommands {
      * @return a line break and one line, or nothing
      */
     static String line(CommandLine parent, String typed) {
-        Former former = parent == null || parent.getParent() != null ? null : find(typed)
-        if (former == null) {
+        return line(parent, typed, null)
+    }
+
+    /**
+     * What is added to the refusal of something that was typed for a command and is none, as
+     * {@link #line(CommandLine, String)} says, where a command may follow it. A name of an environment
+     * in front of a command is answered with the command line that gives that command the environment;
+     * {@code test} alone, which was also another name of {@code test-app}, with its line of the table.
+     *
+     * @param parent the command a command was expected of
+     * @param typed what was typed
+     * @param following the name of the command of {@code parent} that was typed after it, by a name
+     * the command has here, or {@code null} where what followed is no command or nothing followed
+     * @return a line break and one line, or nothing
+     */
+    static String line(CommandLine parent, String typed, String following) {
+        if (parent == null || parent.getParent() != null || typed == null) {
+            return ''
+        }
+        Former former = find(typed)
+        String environment = ENVIRONMENTS.get(typed)
+        CommandLine command = following == null ? null : parent.getSubcommands().get(following)
+        String hint = environment != null && (former == null || command != null) ? environmentHint(typed, environment, command == null ? null : following, command) :
+                former?.hint
+        if (hint == null) {
             return ''
         }
         CommandLine.Model.CommandSpec root = parent.getCommandSpec().root()
-        return System.lineSeparator() + former.hint.replace('{cli} ', UsageHelp.toType(root, '')).replace('{name}', root.name())
+        return System.lineSeparator() + hint.replace('{cli} ', UsageHelp.toType(root, '')).replace('{name}', root.name())
+    }
+
+    /**
+     * @param typed what was typed where a command is expected
+     * @return whether it is the name of an environment that is answered in front of a command, see {@link #line(CommandLine, String, String)}
+     */
+    static boolean isEnvironment(String typed) {
+        return typed != null && ENVIRONMENTS.containsKey(typed)
+    }
+
+    // The line for an environment in front of a command: what the environment is, and the command line to type. A command that runs the build
+    // takes the environment after its name; a command of the application takes everything after its name as its own, and is given it by
+    // run-command; a command that runs for no environment is typed without it.
+    private static String environmentHint(String typed, String environment, String name, CommandLine command) {
+        String option = ENVIRONMENT_OPTION + environment
+        boolean ofShell = SHELL_ENVIRONMENTS.containsKey(typed)
+        String start = ofShell ? "${typed} in front of a command named the environment ${environment} in the Grails shell" : "${typed} is the name of an environment"
+        String follows = "The environment ${ofShell ? 'now ' : ''}follows the command as ${option}"
+        if (command == null) {
+            return "${start}. ${follows}. Type: {cli} COMMAND ${option}"
+        }
+        if (command.getCommandSpec().userObject() instanceof ApplicationCommandCommand) {
+            return "${start}. A command of the application is given the environment by run-command, in front of the name of the command. " +
+                    "Type: {cli} run-command ${option} ${name}"
+        }
+        if (command.getCommandSpec().findOption(SYSTEM_PROPERTY) == null) {
+            return "${start}. ${name} runs for no environment. Type: {cli} ${name}"
+        }
+        return "${start}. ${follows}. Type: {cli} ${name} ${option}"
     }
 
     /**

@@ -81,6 +81,16 @@ class GrailsCliSpec extends Specification {
         ['--plain-output', '-t', 'forge', 'create-app', 'x'] | 'grails has no option -t, and does not take forge after it'
         ['create-app', 'x', '--profile', 'rest-api']      | 'create-app has no option --profile, and does not take rest-api after it'
         ['create-app', 'x', '--profile', 'rest-api', '--other'] | 'create-app has no option --profile, and does not take rest-api or --other after it'
+        ['prod', 'war']                                   | 'prod in front of a command named the environment production in the Grails shell. The environment now follows the command as ' +
+                                                            '-Dgrails.env=production. Type: grails war -Dgrails.env=production'
+        ['dev', 'run-app']                                | 'dev in front of a command named the environment development in the Grails shell. The environment now follows the command as ' +
+                                                            '-Dgrails.env=development. Type: grails run-app -Dgrails.env=development'
+        ['test', 'run-app']                               | 'test in front of a command named the environment test in the Grails shell. The environment now follows the command as ' +
+                                                            '-Dgrails.env=test. Type: grails run-app -Dgrails.env=test'
+        ['production', 'war']                             | 'production is the name of an environment. The environment follows the command as -Dgrails.env=production. ' +
+                                                            'Type: grails war -Dgrails.env=production'
+        ['development', 'run-app']                        | 'development is the name of an environment. The environment follows the command as -Dgrails.env=development. ' +
+                                                            'Type: grails run-app -Dgrails.env=development'
     }
 
     void "without a command the help is shown outside a project, and nothing waits for what is typed"() {
