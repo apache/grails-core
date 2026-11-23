@@ -90,11 +90,43 @@ class FormerCommandsSpec extends CommandSpec {
         typed                      | said
         'test'                     | TEST
         'create-tag-lib'           | 'create-tag-lib is written in the web profile of the Grails shell as another name of create-taglib, in a place the shell did not read, so it was no command there either. Type: grails-forge-cli create-taglib'
-        'quit'                     | 'quit ended the interactive mode of the Grails shell. The interactive mode of grails-forge-cli is ended with exit, and there is none to end outside it'
+        'quit'                     | 'quit ends the interactive mode, which grails-forge-cli starts when it is given no command. It is no command outside it'
         'exit'                     | 'exit ends the interactive mode, which grails-forge-cli starts when it is given no command. It is no command outside it'
         'list-profiles'            | 'list-profiles listed the profiles of the Grails shell. Profiles are replaced by application types and features: grails-forge-cli help lists the create commands, and each lists its features with --list-features'
         'open'                     | 'open opened a file with the program the desktop has for it in the Grails shell. It has no replacement in grails-forge-cli'
         'create-profile'           | 'create-profile created a profile for the Grails shell. Profiles are replaced by application types, features and feature packs, and no command creates any of these'
+    }
+
+    @Unroll
+    void "on a command line of its own #typed, which ends the interactive console as in the Grails shell, is answered as exit is #place"() {
+        given:
+        if (inAProject) {
+            inProject('web')
+        }
+
+        when: 'exit, and then the name'
+        int ofExit = ForgeCli.execute(beanContext, 'exit')
+        List<String> exitLines = err.toString().readLines()
+        err.reset()
+        int exit = ForgeCli.execute(beanContext, typed)
+        List<String> lines = err.toString().readLines()
+
+        then: 'the same mistake in the command line, with the line of exit for the name that was typed'
+        ofExit == 2
+        exit == 2
+        out.toString().isEmpty()
+        lines[0].startsWith("There is no command ${typed}")
+        lines.contains("${typed} ends the interactive mode, which grails-forge-cli starts when it is given no command. It is no command outside it".toString())
+        lines.drop(1) == exitLines.drop(1).collect { it.replace('exit ends', "${typed} ends") }
+        lines.count { it.startsWith('Usage: ') } == 1
+
+        where:
+        typed  | inAProject
+        'exit' | false
+        'quit' | false
+        'exit' | true
+        'quit' | true
+        place = inAProject ? 'in a project' : 'outside a project'
     }
 
     @Unroll

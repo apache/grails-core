@@ -48,7 +48,7 @@ class ConsoleSuggestionsSpec extends Specification {
                                           'which now follows the command as -Dgrails.env=test. Type: grails test-app'],
             'run app.groovy'   : ['run-app takes no argument app.groovy. A Groovy script is run in a Grails project with run-script, ' +
                                           'with the application started around it. Type: grails run-script app.groovy'],
-            'quit'             : ['quit ended the interactive mode of the Grails shell. The interactive mode of grails is ended with exit, and there is none to end outside it'],
+            'open'             : ['open opened a file with the program the desktop has for it in the Grails shell. It has no replacement in grails'],
             'install'          : ['Run: grails gradle publishToMavenLocal'],
             'create-controller': ['grails project migrate writes the record of an application that has none'],
             'rn'               : ['There is no command rn. Did you mean: run-app or run-script or run-command?'],
@@ -107,7 +107,7 @@ class ConsoleSuggestionsSpec extends Specification {
         !said.contains('grails project migrate')
 
         and: 'where the text names the program and tells nothing to type, the name is kept'
-        said.contains('The interactive mode of grails is ended with exit')
+        said.contains('It has no replacement in grails')
     }
 
     // the program grails, with a command line or with the lines of its console

@@ -337,7 +337,7 @@ $ grails f a grails-quartz       <5>
 A short form is read in the following order, and the first reading that fits a command is the one that counts:
 
 . The name of a command, or another name it has, is that command, also when it happens to be the short form of another one. `run` and `stop` are other names of `run-app` and `stop-app`, as in the Grails shell.
-. At the top of the command line, a name a command of the Grails shell had that is gone or has another name now, such as `test`, `quit` or `list-profiles`, is answered with what there is in its place (see <<commandsOfEarlierVersions,Commands of Earlier Versions>>) and is never read as a short form.
+. At the top of the command line, a name a command of the Grails shell had that is gone or has another name now, such as `test`, `open` or `list-profiles`, is answered with what there is in its place (see <<commandsOfEarlierVersions,Commands of Earlier Versions>>) and is never read as a short form.
 . The rule the Grails shell went by: the form is cut into parts before every upper-case letter and at every hyphen, there have to be as many parts as the name has words, and each part is the start of its word, whatever its case. `cA`, `creA`, `creat-app` and `CA` are all `create-app`. A form of lower-case letters only is one part, so here it is the start of the name of a command of one word: `h` is `help`, `cl` is `clean`.
 . A form of lower-case letters only that starts no such name is read as the first letters of the words of a name: `ra` is `run-app`, `sa` is `stop-app`, `cdc` is `create-domain-class`.
 . Failing that, a form of lower-case letters only is cut into as many parts as the name has words, each part the start of its word and the parts in the order of the words: `runa`, `rapp` and `runapp` are `run-app`, `ccon` is `create-controller`.
@@ -995,7 +995,7 @@ Outside a project these commands are not mistakes: `create-controller`, `install
 
 |`quit`
 |the shell, in interactive mode
-|replaced: `exit`
+|replaced: `quit` ends the interactive mode of the `grails` command as well, as `exit` does. Outside the interactive mode it is no command.
 
 |`test`
 |the base profile, another name of `test-app`; in front of another command the shell read it as the environment

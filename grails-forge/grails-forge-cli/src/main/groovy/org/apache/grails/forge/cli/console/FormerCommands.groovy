@@ -81,6 +81,10 @@ final class FormerCommands {
     private static final String SCAFFOLDING = 'is a command of the scaffolding plugin (grails-scaffolding) for applications with GSP views: where the application has the plugin, ' +
             'it is a command here by its name. What the REST API profile generated with it (JSON views) has no replacement'
 
+    // What ends the interactive console, as both ended the interactive mode of the Grails shell. The table has a line for
+    // each, the same but for the name, as each is no command outside the console.
+    private static final List<String> ENDS_THE_CONSOLE = Collections.unmodifiableList(['exit', 'quit'])
+
     private static final Map<String, Former> TABLE = table()
 
     private FormerCommands() {
@@ -112,6 +116,17 @@ final class FormerCommands {
     }
 
     /**
+     * Whether a line of the interactive console ends it: {@code exit} or {@code quit}, in lower case,
+     * with nothing else on the line but spaces around it, as in the Grails shell.
+     *
+     * @param line the line as it was read
+     * @return whether the console ends at it
+     */
+    static boolean endsTheConsole(String line) {
+        return line != null && ENDS_THE_CONSOLE.contains(line.trim())
+    }
+
+    /**
      * @param typed what was typed
      * @return the command of the table by that name, or {@code null}
      */
@@ -138,10 +153,10 @@ final class FormerCommands {
         add('create-tag-lib', 'web profile, written as another name of create-taglib where the shell did not read it', Status.REPLACED,
                 'create-tag-lib is written in the web profile of the Grails shell as another name of create-taglib, in a place the shell did not read, ' +
                         'so it was no command there either. Type: {cli} create-taglib')
-        add('quit', 'shell, interactive mode', Status.REPLACED,
-                'quit ended the interactive mode of the Grails shell. The interactive mode of {name} is ended with exit, and there is none to end outside it')
-        add('exit', 'shell, interactive mode', Status.REPLACED,
-                'exit ends the interactive mode, which {name} starts when it is given no command. It is no command outside it')
+        for (String ends : ENDS_THE_CONSOLE) {
+            add(ends, 'shell, interactive mode', Status.REPLACED,
+                    ends + ' ends the interactive mode, which {name} starts when it is given no command. It is no command outside it')
+        }
         add('list-profiles', 'shell', Status.REPLACED,
                 'list-profiles listed the profiles of the Grails shell. Profiles are replaced by application types and features: {cli} help lists the create commands, ' +
                 'and each lists its features with --list-features')

@@ -991,7 +991,7 @@ grails> exit
 
 - `grails` without a command starts interactive mode in a project, and shows the help elsewhere. It takes the same commands, completes them on TAB, and runs builds faster.
 - `run-app` there returns to the prompt and the application runs until `stop-app` or `exit`; `run-app --detach` leaves it running after `exit`.
-- `!program` runs the rest of the line in your shell, and `!` alone runs the last command again. `exit` or Ctrl-D leaves; there is no `quit` and no `open` (use `!open FILE`).
+- `!program` runs the rest of the line in your shell, and `!` alone runs the last command again. `exit`, `quit` or Ctrl-D leaves; there is no `open` (use `!open FILE`).
 - An agent runs one command per invocation, with `--non-interactive`, and does not start interactive mode.
 
 ### The Wrappers
@@ -1040,7 +1040,7 @@ Each writes one JSON document on one line of the standard output and nothing els
 - No Gradle options without `--` (`grails --offline run-app`): `grails run-app -- --offline`.
 - No `grails install`: `grails gradle publishToMavenLocal`.
 - No `-t forge`, `--type forge`, `grails-forge-cli`, `grails-shell-cli` or `GRAILS_PREFERRED_SHELL`: there is one `grails`.
-- No `quit` or `open` in interactive mode: `exit`, `!open FILE`.
+- No `open` in interactive mode: `!open FILE`.
 - No `grails -v` for the version: `grails --version`.
 - No hand edits of `.grails`, and no `grails-forge-cli.yml` for a new project.
 - No new script commands: `create-command`.

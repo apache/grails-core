@@ -18,10 +18,15 @@
  */
 package org.grails.forge.cli
 
+import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.util.concurrent.TimeUnit
+import java.util.function.Consumer
 import org.apache.grails.forge.cli.console.ApplicationCommands
 import org.apache.grails.forge.cli.console.GradleRunner
+import org.jline.terminal.Terminal
+import org.jline.terminal.impl.ExternalTerminal
+import picocli.CommandLine
 import spock.lang.IgnoreIf
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -32,9 +37,11 @@ import spock.lang.Unroll
  * where nothing may wait for what is typed.
  *
  * <p>The console reads the input the process has, which in the virtual machine of a specification is
- * the one its build talks to it through and never ends. So every feature here runs the command line
- * as a program of its own, with an input the feature gives it, waits for it for a time that is long
- * for the start of a virtual machine, and ends it by force afterwards when it is still there.</p>
+ * the one its build talks to it through and never ends. So the features here run the command line
+ * as a program of its own, with an input the feature gives it, wait for it for a time that is long
+ * for the start of a virtual machine, and end it by force afterwards when it is still there. Only the
+ * lines typed at a terminal are given to the console in this virtual machine, on a terminal of its
+ * own.</p>
  */
 @IgnoreIf({ os.windows || !ForkedCli.available() })
 class InteractiveConsoleSpec extends Specification {
@@ -141,6 +148,105 @@ class InteractiveConsoleSpec extends Specification {
 
         and: 'nothing after exit was read'
         !said.contains('the wrapper ran with never')
+    }
+
+    @Unroll
+    void "lines piped into the console end it at #shown, as exit and quit ended the interactive mode of the Grails shell, and nothing after it is read"() {
+        given:
+        project()
+
+        when:
+        ProcessBuilder console = command(true, [], [])
+        console.environment().put(ApplicationCommands.LISTING, 'false')
+        console.environment().put('NO_COLOR', '1')
+        program = console.redirectInput(typed("gradle build\n${line}\ngradle never\n")).start()
+        boolean ended = program.waitFor(SECONDS, TimeUnit.SECONDS)
+        String said = written.text
+
+        then: 'it left as at the end of its input, after the command before the line'
+        ended
+        program.exitValue() == 0
+        said.contains('the wrapper ran with build')
+        said.count('grails>') == 2
+
+        and: 'the line was no command, and nothing after it was read'
+        !said.contains('There is no command')
+        !said.contains('| Error')
+        !said.contains('the wrapper ran with never')
+
+        where:
+        line       | shown
+        'exit'     | 'exit'
+        'quit'     | 'quit'
+        '  exit  ' | 'exit with spaces around it'
+        '  quit  ' | 'quit with spaces around it'
+        'quit   '  | 'quit with spaces after it'
+    }
+
+    @Unroll
+    void "#shown is a line of the console as any other, alike for exit and quit, and the console goes on after it"() {
+        given:
+        project()
+
+        when:
+        ProcessBuilder console = command(true, [], [])
+        console.environment().put(ApplicationCommands.LISTING, 'false')
+        console.environment().put('NO_COLOR', '1')
+        program = console.redirectInput(typed("${line}\ngradle after\n")).start()
+        boolean ended = program.waitFor(SECONDS, TimeUnit.SECONDS)
+        String said = written.text
+
+        then: 'the line was refused as no command, and the next one was run'
+        ended
+        program.exitValue() == 0
+        said.contains("There is no command ${line.split(' ')[0]}")
+        said.contains('the wrapper ran with after')
+        said.count('grails>') == 3
+
+        and: 'a name of exactly exit or quit has the line that says what it is'
+        said.contains("${line.split(' ')[0]} ends the interactive mode, which grails starts when it is given no command. It is no command outside it") == withLine
+
+        where:
+        line       | withLine | shown
+        'EXIT'     | false    | 'exit in upper case'
+        'QUIT'     | false    | 'quit in upper case'
+        'Quit'     | false    | 'quit in another case'
+        'exit now' | true     | 'exit with an argument'
+        'quit now' | true     | 'quit with an argument'
+    }
+
+    // A terminal that is none reads the lines as they were piped; this one is an xterm, at which the lines are typed.
+    @Unroll
+    void "typed at a terminal, #shown #what the console"() {
+        given:
+        List<List<String>> commands = []
+        InteractiveShell shell = new InteractiveShell(new CommandLine(new ConsoleProgramSpec.Root()),
+                { String[] args -> commands.add(args.toList()) } as Consumer<String[]>, null)
+        Terminal terminal = new ExternalTerminal('console', 'xterm-256color',
+                new ByteArrayInputStream("create-app first\n${line}\ncreate-app after\n".getBytes('UTF-8')), new ByteArrayOutputStream(), StandardCharsets.UTF_8)
+
+        when:
+        int exit = shell.start(terminal)
+
+        then: 'it left with 0 after the command before the line, and ran the line and the one after it only where the line was no end'
+        exit == 0
+        commands == [['create-app', 'first']] + (ends ? [] : [line.trim().split(' ').toList(), ['create-app', 'after']])
+
+        cleanup:
+        terminal?.close()
+
+        where:
+        line       | ends
+        'exit'     | true
+        'quit'     | true
+        '  exit  ' | true
+        '  quit  ' | true
+        'EXIT'     | false
+        'QUIT'     | false
+        'exit now' | false
+        'quit now' | false
+        shown = "'${line}'"
+        what = ends ? 'ends' : 'is a command line of'
     }
 
     void "the console reads the short forms the command line reads, of lower-case letters too"() {

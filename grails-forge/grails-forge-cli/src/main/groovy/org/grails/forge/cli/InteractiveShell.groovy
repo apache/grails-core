@@ -20,6 +20,7 @@ package org.grails.forge.cli
 
 import groovy.transform.CompileStatic
 import org.apache.grails.forge.cli.console.ConsoleProgram
+import org.apache.grails.forge.cli.console.FormerCommands
 import org.apache.grails.forge.cli.console.GradleBuild
 import org.apache.grails.forge.cli.console.PlainOutput
 import org.jline.builtins.Completers
@@ -273,7 +274,7 @@ class InteractiveShell {
             String ansiPrompt = ansi.string(prompt)
             String rightPrompt = null
 
-            // start the shell and process input until the user quits with Ctl-D
+            // start the shell and process input until the user leaves with exit or quit, or ends the input with Ctrl-D
             String line
             while (true) {
                 try {
@@ -281,7 +282,7 @@ class InteractiveShell {
                     if (line.matches('^\\s*#.*')) {
                         continue
                     }
-                    if (line.trim() == 'exit') {
+                    if (FormerCommands.endsTheConsole(line)) {
                         return 0
                     }
                     String program = ConsoleProgram.of(line)

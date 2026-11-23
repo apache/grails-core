@@ -377,7 +377,7 @@ grails> !git status --short
 grails> exit
 ----
 
-`run-app` returns to the prompt there once the application answers, and `exit` leaves. A line that starts with `!` runs the rest of the line in your shell, with the terminal, in the current directory, and `!` alone runs the last command again. Outside a project, `grails` without a command shows the help. See xref:commandLine#interactiveMode[Interactive Mode].
+`run-app` returns to the prompt there once the application answers, and `exit` or `quit` leaves. A line that starts with `!` runs the rest of the line in your shell, with the terminal, in the current directory, and `!` alone runs the last command again. Outside a project, `grails` without a command shows the help. See xref:commandLine#interactiveMode[Interactive Mode].
 
 Outside interactive mode, bash and zsh complete the commands of `grails`, their options and the names of features on the TAB key once they have loaded the completion script of the distribution; see "Completion in a Shell" in xref:commandLine[the introduction of this chapter].
 

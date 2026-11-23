@@ -34,6 +34,6 @@ grails> create-controller greeting
 grails> run-app
 ----
 
-`exit` leaves interactive mode. Outside a project, `grails` without a command shows the help.
+`exit` or `quit` leaves interactive mode. Outside a project, `grails` without a command shows the help.
 
 For more information on the capabilities of interactive mode, refer to the section on link:commandLine.html#interactiveMode[Interactive Mode] in the user guide.
