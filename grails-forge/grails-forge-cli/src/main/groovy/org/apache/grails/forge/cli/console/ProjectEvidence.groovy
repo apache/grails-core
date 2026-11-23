@@ -95,9 +95,18 @@ final class ProjectEvidence {
     private static final Pattern ROOT_NAME = Pattern.compile(/^\s*rootProject\.name\s*=\s*["']([^"']+)["']\s*$/)
     private static final Pattern NOT_PLAIN = Pattern.compile('[\\[{&*!|>\\x40`$%].*')
     private static final Pattern PACKAGE = Pattern.compile(/^\s*package\s+([A-Za-z_][A-Za-z0-9_.]*)\s*;?\s*$/)
-    private static final List<Pattern> JAVA = [Pattern.compile(/JavaLanguageVersion\.of\(\s*(\d{1,3})\s*\)/),
-                                               Pattern.compile(/JavaVersion\.VERSION_(\d{1,3})\b(?!_)/),
-                                               Pattern.compile(/^\s*(?:sourceCompatibility|targetCompatibility)\s*=?\s*["']?(\d{1,3})["']?\s*$/)]
+    // A setting that names the version of Java by its name, with what is in front of it: compileJava.options.release,
+    // options.release, java.sourceCompatibility. Its value follows an equals sign, .set( or a space.
+    private static final Pattern JAVA_SETTING = Pattern.compile(
+            /(?<![\w.$])((?:[A-Za-z_][A-Za-z0-9_]*\.)*(?:options\.release|sourceCompatibility|targetCompatibility))\b\s*(?:=|\.set\s*\(|\(|(?=\s))\s*/)
+    // the value of such a setting: 21, '21', "1.8", JavaVersion.VERSION_21, JavaVersion.VERSION_1_8 or JavaVersion.toVersion(21)
+    private static final Pattern JAVA_VALUE = Pattern.compile(
+            /JavaVersion\.VERSION_(?:1_)?(\d{1,3})(?![\d_])|JavaVersion\.toVersion\(\s*["']?(?:1\.)?(\d{1,3})(?:\.\d+)*["']?\s*\)|["']?(?:1\.)?(\d{1,3})(?:\.\d+)*["']?(?![\w.])/)
+    // the Java toolchain of the build, by the language version of Gradle or of the Kotlin plugin
+    private static final Pattern JAVA_TOOLCHAIN = Pattern.compile(/JavaLanguageVersion\.of\(\s*["']?(\d{1,3})["']?\s*\)/)
+    private static final Pattern KOTLIN_TOOLCHAIN = Pattern.compile(/(?<![\w.])jvmToolchain\s*\(\s*(\d{1,3})\s*\)/)
+    // a version of Java on its own, not as the value of a setting that is named
+    private static final Pattern JAVA_CONSTANT = Pattern.compile(/JavaVersion\.VERSION_(?:1_)?(\d{1,3})(?![\d_])/)
 
     /** The file of the record an earlier version wrote, when the project has one */
     final String earlierRecord
@@ -145,8 +154,19 @@ final class ProjectEvidence {
     /** The group of the build */
     final String group
 
-    /** The version of Java the build names */
+    /**
+     * The version of Java the build names, of the setting that says most directly what the classes are compiled
+     * for: the release of the compilation ({@code options.release}), then {@code targetCompatibility}, then
+     * {@code sourceCompatibility}, then a {@code JavaVersion} constant of no named setting, then the Java toolchain;
+     * of two settings of a kind, the first in the build file. {@code null} when it names none
+     */
     final Integer javaVersion
+
+    /** The setting {@link #javaVersion} is of; {@code null} when the build names no version of Java */
+    final JavaSetting javaSetting
+
+    /** Every setting of the build that names a version of Java, in the order of the build file */
+    final List<JavaSetting> javaSettings
 
     /** The name of the root project, of a project that has the settings of a build */
     final String rootProjectName
@@ -210,7 +230,8 @@ final class ProjectEvidence {
         buildFile = read
         String profile = null
         String ofGroup = null
-        Integer java = null
+        List<JavaSetting> java = []
+        int number = 0
         Set<String> plugins = new LinkedHashSet<>()
         Set<String> declared = new LinkedHashSet<>()
         int applied = 0
@@ -220,6 +241,7 @@ final class ProjectEvidence {
         int depth = 0
         int others = -1
         for (String line : withoutComments(build ?: [] as List<String>)) {
+            number++
             if (others < 0 && FOR_OTHERS.matcher(line).find()) {
                 others = depth
             }
@@ -254,12 +276,7 @@ final class ProjectEvidence {
                 if (ofGroup == null && grouped.matches()) {
                     ofGroup = value(grouped.group(1))
                 }
-                for (Pattern pattern : JAVA) {
-                    Matcher version = pattern.matcher(line)
-                    if (java == null && version.find()) {
-                        java = Integer.valueOf(version.group(1))
-                    }
-                }
+                java.addAll(javaSettingsOf(line, number))
             }
             depth += line.count('{') - line.count('}')
             if (others >= 0 && depth <= others) {
@@ -278,7 +295,9 @@ final class ProjectEvidence {
         }
         servletStarters = Collections.unmodifiableMap(starters)
         group = ofGroup
-        javaVersion = java
+        javaSettings = Collections.unmodifiableList(java)
+        javaSetting = java.min { JavaSetting each -> each.kind.ordinal() }
+        javaVersion = javaSetting?.version
         List<String> unread = []
         if (applied > 0) {
             unread << "${read} applies ${applied == 1 ? 'another build file' : "${applied} other build files"} (apply from), which ${applied == 1 ? 'was' : 'were'} not read".toString()
@@ -306,6 +325,14 @@ final class ProjectEvidence {
             named.matches() ? value(named.group(1)) : null
         }
         applicationClassPackage = applicationPackage(directory)
+    }
+
+    /**
+     * @return where the build names {@link #javaVersion}: the setting, the build file and the line, as
+     * {@code compileJava.options.release of build.gradle, line 68}; {@code null} when it names none
+     */
+    String getJavaVersionWhere() {
+        return javaSetting == null ? null : "${javaSetting.setting} of ${buildFile}, line ${javaSetting.line}".toString()
     }
 
     /**
@@ -338,6 +365,41 @@ final class ProjectEvidence {
         return EarlierRecord.isLine(text, MAX_VALUE) ? text : null
     }
 
+    // The settings of a line of the build file that name a version of Java: those that are named, with the value that follows
+    // them, and then the toolchain and a JavaVersion constant that is the value of none of them
+    private static List<JavaSetting> javaSettingsOf(String line, int number) {
+        List<JavaSetting> found = []
+        Matcher named = JAVA_SETTING.matcher(line)
+        int end = 0
+        while (named.find(end)) {
+            end = named.end()
+            Matcher value = JAVA_VALUE.matcher(line).region(named.end(), line.length())
+            if (value.lookingAt()) {
+                String version = value.group(1) ?: value.group(2) ?: value.group(3)
+                String setting = named.group(1).startsWith('it.') ? named.group(1).substring(3) : named.group(1)
+                JavaSetting.Kind kind = setting.endsWith('release') ? JavaSetting.Kind.RELEASE :
+                        setting.endsWith('targetCompatibility') ? JavaSetting.Kind.TARGET : JavaSetting.Kind.SOURCE
+                found << new JavaSetting(kind, setting, number, Integer.parseInt(version))
+                end = value.end()
+            }
+        }
+        Matcher toolchain = JAVA_TOOLCHAIN.matcher(line)
+        while (toolchain.find()) {
+            found << new JavaSetting(JavaSetting.Kind.TOOLCHAIN, 'the Java toolchain', number, Integer.parseInt(toolchain.group(1)))
+        }
+        Matcher kotlin = KOTLIN_TOOLCHAIN.matcher(line)
+        while (kotlin.find()) {
+            found << new JavaSetting(JavaSetting.Kind.TOOLCHAIN, 'jvmToolchain', number, Integer.parseInt(kotlin.group(1)))
+        }
+        if (!found.any { JavaSetting each -> each.kind != JavaSetting.Kind.TOOLCHAIN }) {
+            Matcher constant = JAVA_CONSTANT.matcher(line)
+            if (constant.find()) {
+                found << new JavaSetting(JavaSetting.Kind.CONSTANT, "JavaVersion.VERSION_${constant.group(1)}".toString(), number, Integer.parseInt(constant.group(1)))
+            }
+        }
+        return found
+    }
+
     // the lines of a file of the project that is text of a size a file of a build has; null when there is no such file
     private static List<String> lines(Path file) {
         try {
@@ -351,7 +413,8 @@ final class ProjectEvidence {
             if (read.length > MAX_FILE) {
                 return null
             }
-            return new String(read, StandardCharsets.UTF_8).readLines().findAll { String line -> line.length() <= MAX_LINE }
+            // a line that is too long to be read is left empty, so that every other line keeps its number
+            return new String(read, StandardCharsets.UTF_8).readLines().collect { String line -> line.length() <= MAX_LINE ? line : '' }
         } catch (IOException ignored) {
             return null
         }
@@ -481,6 +544,53 @@ final class ProjectEvidence {
         return withoutComments(lines(found.first()) ?: [] as List<String>).findResult { String line ->
             Matcher declared = PACKAGE.matcher(line)
             declared.matches() ? declared.group(1) : null
+        }
+    }
+
+    /**
+     * A setting of the build file that names a version of Java.
+     */
+    @CompileStatic
+    static final class JavaSetting {
+
+        /** The kinds of settings, in the order in which they say what the classes are compiled for */
+        @CompileStatic
+        static enum Kind {
+            /** {@code options.release} of a compilation */
+            RELEASE,
+            /** {@code targetCompatibility} */
+            TARGET,
+            /** {@code sourceCompatibility} */
+            SOURCE,
+            /** A {@code JavaVersion} constant that is the value of no named setting */
+            CONSTANT,
+            /** The Java toolchain, of Gradle or of the Kotlin plugin */
+            TOOLCHAIN
+        }
+
+        /** The kind of the setting */
+        final Kind kind
+
+        /** The setting, as it is written in front of its value: {@code compileJava.options.release}, {@code sourceCompatibility}; or {@code the Java toolchain} */
+        final String setting
+
+        /** The line of the build file it is on, from 1 */
+        final int line
+
+        /** The version of Java it names */
+        final int version
+
+        JavaSetting(Kind kind, String setting, int line, int version) {
+            this.kind = kind
+            this.setting = setting
+            this.line = line
+            this.version = version
+        }
+
+        /** @return the setting and its line, as {@code compileJava.options.release, line 68} */
+        @Override
+        String toString() {
+            return "${setting}, line ${line}".toString()
         }
     }
 }

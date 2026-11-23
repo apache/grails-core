@@ -531,19 +531,7 @@ class ProjectMigrateCommand extends BaseCommand implements Callable<Integer>, Pr
     private Map<String, Found<String>> options(AvailableFeatures available, ApplicationType applicationType, Set<String> has, ProjectEvidence evidence,
                                                List<String> notes) {
         Map<String, Found<String>> options = new LinkedHashMap<>()
-        if (javaVersion != null) {
-            if (!JdkVersion.values().any { JdkVersion each -> each.majorVersion() == javaVersion }) {
-                throw new CommandLine.ParameterException(spec.commandLine(), "--jdk is one of ${JdkVersion.values().collect { JdkVersion each -> each.majorVersion() }.join(', ')}")
-            }
-            options.put('jdk', new Found<String>(String.valueOf(javaVersion), GIVEN + '--jdk'))
-        } else if (evidence.javaVersion != null && JdkVersion.values().any { JdkVersion each -> each.majorVersion() == evidence.javaVersion }) {
-            options.put('jdk', new Found<String>(String.valueOf(evidence.javaVersion), "the version of Java ${evidence.buildFile} names"))
-        } else {
-            if (evidence.javaVersion != null) {
-                notes << "${evidence.buildFile} names Java ${evidence.javaVersion}, which this version of Grails does not generate for".toString()
-            }
-            options.put('jdk', new Found<String>(String.valueOf(JdkVersion.DEFAULT_OPTION.majorVersion()), ASSUMED, true))
-        }
+        options.put('jdk', jdk(evidence, notes))
         ServletImpl servlet = ServletImpl.values().find { ServletImpl each -> each.getName() in has }
         Found<String> started = servletImpl != null || servlet != null ? null : servletOfStarter(available, applicationType, evidence, notes)
         options.put('servlet', servletImpl != null ? new Found<String>(written(servletImpl), GIVEN + '--servlet') :
@@ -561,6 +549,43 @@ class ProjectMigrateCommand extends BaseCommand implements Callable<Integer>, Pr
                         recorded != null ? new Found<String>(written(recorded), "reloading of ${evidence.earlierRecord}") :
                                 new Found<String>(written(DevelopmentReloading.NONE), ASSUMED, true))
         return options
+    }
+
+    // The version of Java of the record: the one that was given, or the one the build names when this version generates
+    // for it. A version of Java the build names that Grails does not run on is said, whatever the record takes, for
+    // the build has to be changed before it builds with this version
+    private Found<String> jdk(ProjectEvidence evidence, List<String> notes) {
+        List<Integer> generated = JdkVersion.values().collect { JdkVersion each -> each.majorVersion() }
+        int lowest = generated.min()
+        String grails = "Grails ${VersionInfo.getGrailsVersion().tokenize('.').first()}"
+        List<ProjectEvidence.JavaSetting> below = evidence.javaSettings.findAll { ProjectEvidence.JavaSetting each -> each.version < lowest }
+        if (below) {
+            notes << ("${evidence.buildFile} names ${below.collect { ProjectEvidence.JavaSetting each -> "Java ${each.version} (${each})" }.join(' and ')}, and ${grails} " +
+                    "needs Java ${lowest} or later: change the build to Java ${lowest} or later, or the application does not build with ${grails}").toString()
+        }
+        if (javaVersion != null) {
+            if (!(javaVersion in generated)) {
+                throw new CommandLine.ParameterException(spec.commandLine(), "--jdk is one of ${generated.join(', ')}")
+            }
+            return new Found<String>(String.valueOf(javaVersion), GIVEN + '--jdk')
+        }
+        ProjectEvidence.JavaSetting named = evidence.javaSetting
+        if (named == null) {
+            return new Found<String>(String.valueOf(JdkVersion.DEFAULT_OPTION.majorVersion()), ASSUMED, true)
+        }
+        if (!(named.version in generated)) {
+            if (named.version >= lowest) {
+                notes << "${evidence.buildFile} names Java ${named.version} (${named}), which this version of Grails does not generate for".toString()
+            }
+            return new Found<String>(String.valueOf(JdkVersion.DEFAULT_OPTION.majorVersion()), "assumed in place of Java ${named.version}: ${evidence.javaVersionWhere}", true, true)
+        }
+        // what other settings name otherwise, which is not what the classes are compiled for, as a toolchain that is newer
+        List<ProjectEvidence.JavaSetting> otherwise = evidence.javaSettings.findAll { ProjectEvidence.JavaSetting each -> each.version != named.version && each.version >= lowest }
+        if (otherwise) {
+            notes << ("${evidence.buildFile} also names ${otherwise.collect { ProjectEvidence.JavaSetting each -> "Java ${each.version} (${each})" }.join(' and ')}; the record takes " +
+                    "Java ${named.version}, of ${named.setting}, which is what the classes are compiled for").toString()
+        }
+        return new Found<String>(String.valueOf(named.version), evidence.javaVersionWhere)
     }
 
     // The servlet container whose starter the build declares, where no feature of one was found: a build that
@@ -627,15 +652,18 @@ class ProjectMigrateCommand extends BaseCommand implements Callable<Integer>, Pr
             out("@|blue ||@ ${GradleRunner.line(note)}")
         }
         List<String> assumed = []
+        List<String> instead = []
         if (applicationType.assumed) {
             assumed << 'the type (--type)'
         }
         options.each { String option, Found<String> value ->
             if (value.assumed) {
-                assumed << "${option} (--${option})".toString()
+                (value.instead ? instead : assumed) << "${option} (--${option})".toString()
             }
         }
-        out('@|blue ||@ ' + (assumed.isEmpty() ? 'Nothing was assumed. ' : "Assumed, because nothing in the project says it: ${assumed.join(', ')}. ") +
+        out('@|blue ||@ ' + (assumed.isEmpty() && instead.isEmpty() ? 'Nothing was assumed. ' : '') +
+                (assumed.isEmpty() ? '' : "Assumed, because nothing in the project says it: ${assumed.join(', ')}. ") +
+                (instead.isEmpty() ? '' : "Assumed in place of what the project says, which this version does not generate for: ${instead.join(', ')}. ") +
                 'The files of the project were read as text and nothing of the build was run, so a feature the build does not declare in a line of its own was ' +
                 "not found. To say it otherwise, run ${UsageHelp.toType(spec, 'project migrate --force')} with the name and the package (com.example.shop), --type, --jdk, --servlet, " +
                 '--data, --reloading, --features for features that were not found and --exclude-features for features the application does not have')
@@ -913,11 +941,14 @@ class ProjectMigrateCommand extends BaseCommand implements Callable<Integer>, Pr
         final T value
         final String where
         final boolean assumed
+        // assumed in place of what the project says, which this version does not generate for
+        final boolean instead
 
-        Found(T value, String where, boolean assumed = false) {
+        Found(T value, String where, boolean assumed = false, boolean instead = false) {
             this.value = value
             this.where = where
             this.assumed = assumed
+            this.instead = instead
         }
     }
 

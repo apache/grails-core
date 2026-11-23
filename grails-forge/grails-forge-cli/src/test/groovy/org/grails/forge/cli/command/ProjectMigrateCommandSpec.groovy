@@ -789,7 +789,7 @@ dependencies {
         row(said, 'type') == ['web', '(the Gradle plugins grails-web and grails-gsp of build.gradle.kts)']
         row(said, 'name') == ['kshop', '(rootProject.name of settings.gradle.kts)']
         row(said, 'package') == ['com.example.kotlin', '(group of build.gradle.kts)']
-        row(said, 'jdk') == ['25', '(the version of Java build.gradle.kts names)']
+        row(said, 'jdk') == ['25', '(the Java toolchain of build.gradle.kts, line 10)']
         said.contains('    grails-quartz (build.gradle.kts declares org.apache.grails:grails-quartz)')
         said.contains('    postgres (build.gradle.kts declares org.postgresql:postgresql)')
         !said.any { it.startsWith('    gorm-mongodb ') }
@@ -940,7 +940,7 @@ dependencies {
 
         then:
         exit == 0
-        row(out.toString().readLines(), 'jdk') == ['25', '(the version of Java build.gradle names)']
+        row(out.toString().readLines(), 'jdk') == ['25', '(the Java toolchain of build.gradle, line 30)']
 
         when:
         out.reset()
@@ -950,8 +950,20 @@ dependencies {
 
         then:
         exit == 0
-        row(said, 'jdk') == [String.valueOf(JdkVersion.DEFAULT_OPTION.majorVersion()), '(assumed)']
-        said.contains('| build.gradle names Java 11, which this version of Grails does not generate for')
+        row(said, 'jdk') == [String.valueOf(JdkVersion.DEFAULT_OPTION.majorVersion()), '(assumed in place of Java 11: sourceCompatibility of build.gradle, line 28)']
+        said.contains('| build.gradle names Java 11 (sourceCompatibility, line 28), and Grails 9 needs Java 21 or later: change the build to Java 21 or later, ' +
+                'or the application does not build with Grails 9')
+
+        when: 'a version above the lowest that this version does not generate for'
+        out.reset()
+        new File(dir, 'build.gradle').text = SHELL_BUILD + '\ncompileJava.options.release = 23\n'
+        exit = ForgeCli.execute(beanContext, 'project', 'migrate', '--dry-run')
+        said = out.toString().readLines()
+
+        then:
+        exit == 0
+        row(said, 'jdk') == [String.valueOf(JdkVersion.DEFAULT_OPTION.majorVersion()), '(assumed in place of Java 23: compileJava.options.release of build.gradle, line 28)']
+        said.contains('| build.gradle names Java 23 (compileJava.options.release, line 28), which this version of Grails does not generate for')
     }
 
     void "a record that cannot be written is said not to be, and nothing is left of it"() {
