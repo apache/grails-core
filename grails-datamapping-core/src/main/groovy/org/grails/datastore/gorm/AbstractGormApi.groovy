@@ -176,12 +176,10 @@ abstract class AbstractGormApi<D> extends AbstractDatastoreApi {
      * tenant's transaction belongs to the tenant's datastore: a change left pending there would be lost, or written
      * although the tenant's transaction rolled back. Such a write runs in a transaction of the class's own datastore.
      * Flushing does not enlist the write in the tenant's transaction and does not replace that transaction.
-     * Only a transaction-bound session of this tenant requires a tenant datastore lookup.
+     * An unregistered tenant does not require a tenant datastore lookup.
      * Session holders identify active transactions even when transaction synchronization is disabled.
-     *
-     * @param flush Whether the write is flushed at once; this does not exempt it from requiring its own transaction
      */
-    protected void requireTransactionForWrite(boolean flush) {
+    protected void requireTransactionForWrite() {
         if (MultiTenant.isAssignableFrom(persistentClass)) {
             return
         }
@@ -202,19 +200,7 @@ abstract class AbstractGormApi<D> extends AbstractDatastoreApi {
         if (tenantConnection == null) {
             return
         }
-        boolean tenantTransactionActive = false
-        for (Map.Entry<Object, Object> entry : TransactionSynchronizationManager.getResourceMap().entrySet()) {
-            if (entry.key instanceof MultiTenantCapableDatastore && entry.value instanceof SessionHolder &&
-                    ((SessionHolder) entry.value).transactionActive) {
-                MultiTenantCapableDatastore candidate = (MultiTenantCapableDatastore) entry.key
-                if (candidate.connectionSources.defaultConnectionSource.is(tenantConnection) &&
-                        candidate.is(multiTenantDatastore.getDatastoreForTenantId(tenantId))) {
-                    tenantTransactionActive = true
-                    break
-                }
-            }
-        }
-        if (!tenantTransactionActive) {
+        if (!isTransactionActive(multiTenantDatastore.getDatastoreForTenantId(tenantId))) {
             return
         }
         throw new IllegalTransactionStateException("${persistentClass.name} is not multi-tenant, so inside a block of " +

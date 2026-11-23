@@ -157,16 +157,16 @@ class AbstractGormApiSpec extends Specification {
         resolver.resolve().is(ds)
     }
 
-    void 'a plain class can be flushed with an unregistered tenant bound and unrelatedTransaction=#unrelatedTransaction'() {
+    void 'a plain class can be flushed with tenant #tenantId bound and unrelatedTransaction=#unrelatedTransaction'() {
         given:
         datastore.close()
         datastore = new SimpleMapDatastore(
                 DatastoreUtils.createPropertyResolver(['grails.gorm.multiTenancy.mode': 'DATABASE']),
-                [ConnectionSource.DEFAULT, 'other'], AbstractGormApiThing)
+                [ConnectionSource.DEFAULT, 'tenant', 'other'], AbstractGormApiThing)
 
         when:
         Closure write = {
-            Tenants.withTenant(AbstractGormApiThing, 'unregistered') {
+            Tenants.withTenant(AbstractGormApiThing, tenantId) {
                 new AbstractGormApiThing(name: 'flushed').save(flush: true)
             }
         }
@@ -178,10 +178,10 @@ class AbstractGormApiSpec extends Specification {
         AbstractGormApiThing.get(saved.id)?.name == 'flushed'
 
         where:
-        unrelatedTransaction << [false, true]
+        [tenantId, unrelatedTransaction] << [['tenant', 'unregistered'], [false, true]].combinations()
     }
 
-    void 'a plain class write with flush=#flush is refused in a tenant transaction without synchronization'() {
+    void 'a plain class #operation is refused in a tenant transaction without synchronization'() {
         given:
         datastore.close()
         datastore = new SimpleMapDatastore(
@@ -196,7 +196,7 @@ class AbstractGormApiSpec extends Specification {
                 assert !TransactionSynchronizationManager.isSynchronizationActive()
                 assert !TransactionSynchronizationManager.isActualTransactionActive()
                 status.setRollbackOnly()
-                new AbstractGormApiThing(name: 'unsafe').save(flush: flush)
+                write.call(new AbstractGormApiThing(name: 'unsafe'))
             }
         }
 
@@ -205,7 +205,17 @@ class AbstractGormApiSpec extends Specification {
         AbstractGormApiThing.withTransaction { AbstractGormApiThing.count() } == 0
 
         where:
-        flush << [false, true]
+        operation                      | write
+        'save without flush'           | { thing -> thing.save(flush: false) }
+        'save with flush'              | { thing -> thing.save(flush: true) }
+        'insert without flush'         | { thing -> thing.insert(flush: false) }
+        'insert with flush'            | { thing -> thing.insert(flush: true) }
+        'delete without flush'         | { thing -> thing.delete(flush: false) }
+        'delete with flush'            | { thing -> thing.delete(flush: true) }
+        'saveAll'                      | { thing -> AbstractGormApiThing.saveAll([thing]) }
+        'deleteAll without parameters' | { thing -> AbstractGormApiThing.deleteAll([thing]) }
+        'deleteAll without flush'      | { thing -> AbstractGormApiThing.deleteAll([flush: false], [thing]) }
+        'deleteAll with flush'         | { thing -> AbstractGormApiThing.deleteAll([flush: true], [thing]) }
     }
 
     interface MixedDatastore extends MultiTenantCapableDatastore, Datastore {}

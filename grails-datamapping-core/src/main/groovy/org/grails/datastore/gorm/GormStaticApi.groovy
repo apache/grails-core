@@ -814,7 +814,7 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
 
     @Override
     List<Serializable> saveAll(Iterable<?> objectsToSave) {
-        requireTransactionForWrite(false)
+        requireTransactionForWrite()
         execute({ Session session ->
             session.persist(objectsToSave)
         } as SessionCallback<List<Serializable>>)
@@ -843,7 +843,7 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
 
     @Override
     void deleteAll(Iterable objectsToDelete) {
-        requireTransactionForWrite(false)
+        requireTransactionForWrite()
         execute({ Session session ->
             for (obj in objectsToDelete) {
                 session.delete(obj)
@@ -858,7 +858,7 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
 
     @Override
     void deleteAll(Map params, Iterable objectsToDelete) {
-        requireTransactionForWrite(params?.flush as boolean)
+        requireTransactionForWrite()
         execute({ Session session ->
             for (obj in objectsToDelete) {
                 session.delete(obj)

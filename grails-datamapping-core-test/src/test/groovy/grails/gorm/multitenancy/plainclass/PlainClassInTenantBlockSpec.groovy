@@ -269,6 +269,38 @@ class PlainClassInTenantBlockSpec extends Specification {
         [mode, tenantId, boundSession, synchronization] << [MODES, ['foo', 'unregistered'], [false, true], SYNCHRONIZATION_MODES].combinations()
     }
 
+    @Unroll
+    void 'with #mode multi-tenancy and synchronization=#synchronization, an inactive tenant session allows a flushed save with unrelatedTransaction=#unrelatedTransaction'() {
+        given:
+        startDatastore(mode)
+        def other = (SimpleMapDatastore) datastore.getDatastoreForConnection('bar')
+        other.transactionManager.transactionSynchronization = synchronization
+        Closure write = {
+            Tenants.withId('foo') {
+                TenantNote.withSession {
+                    new PlainNote(text: 'flushed').save(flush: true)
+                }
+            }
+        }
+
+        when:
+        if (unrelatedTransaction) {
+            new TransactionTemplate(other.transactionManager).execute { status ->
+                write.call()
+                status.setRollbackOnly()
+            }
+        }
+        else {
+            write.call()
+        }
+
+        then:
+        PlainNote.withTransaction { PlainNote.list()*.text.sort() } == ['flushed', 'seed']
+
+        where:
+        [mode, synchronization, unrelatedTransaction] << [MODES, SYNCHRONIZATION_MODES, [false, true]].combinations()
+    }
+
     static final List<Integer> SYNCHRONIZATION_MODES = [
             AbstractPlatformTransactionManager.SYNCHRONIZATION_ALWAYS,
             AbstractPlatformTransactionManager.SYNCHRONIZATION_NEVER
@@ -288,6 +320,9 @@ class PlainClassInTenantBlockSpec extends Specification {
             'a delete'   : { PlainClassInTenantBlockSpec spec -> PlainNote.get(spec.seed.id).delete() },
             'a saveAll'  : { PlainClassInTenantBlockSpec spec -> PlainNote.saveAll(new PlainNote(text: 'pending')) },
             'a deleteAll': { PlainClassInTenantBlockSpec spec -> PlainNote.deleteAll(PlainNote.get(spec.seed.id)) },
+            'an iterable saveAll': { PlainClassInTenantBlockSpec spec -> PlainNote.saveAll([new PlainNote(text: 'pending')]) },
+            'an iterable deleteAll': { PlainClassInTenantBlockSpec spec -> PlainNote.deleteAll([PlainNote.get(spec.seed.id)]) },
+            'an unflushed iterable deleteAll': { PlainClassInTenantBlockSpec spec -> PlainNote.deleteAll([flush: false], [PlainNote.get(spec.seed.id)]) },
     ]
 
     static final Map<String, Closure> OWN_TRANSACTION_WRITES = [
