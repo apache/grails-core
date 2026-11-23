@@ -46,7 +46,7 @@ Related skills (do not substitute this one):
 2. **Prefer existing convention plugins** over inline configuration. If `CompilePlugin` already sets encoding, release, jars, and reproducibility, do not re-declare those in the module script.
 3. **Gradle docs are secondary.** Official Gradle 9 docs are useful for APIs and deprecations, but this monorepo intentionally diverges (no Spring DM plugin, heavy `projectDir` remapping, presence-based `-P` flags, custom BOM validator). When docs and this repo disagree, **follow this repo** unless you are deliberately fixing a known issue with a tracked reason.
 4. **Do not use** `io.spring.dependency-management` / Spring Dependency Management plugin in core modules or applications. The intentional regression fixture at `grails-test-examples/spring-dependency-management` is the only exception. Grails 8 otherwise uses native `platform()` / `enforcedPlatform()` plus `org.apache.grails.gradle.bom-property-overrides` (see PR #15467).
-5. **Scope Gradle invocations** to the touched subproject (`:module:test`, not root `test`) unless the change is cross-cutting.
+5. **Scope Gradle invocations** to the touched subproject (`:module:test`, not root `test`) unless the change is cross-cutting. Keep build caching and up-to-date checks enabled for normal local verification. A commit or merge does not by itself justify `clean`, `--rerun-tasks`, `--no-build-cache`, or `DO_NOT_CACHE_TESTS=1`; reserve those for a specific debugging need, a reproducibility experiment or an explicit fresh-run request. Reuse completed checks for unchanged inputs and do not repeat every source branch's suites just to integrate it.
 
 ### Change workflow
 
@@ -518,7 +518,7 @@ Parallelism: `configuredTestParallel` from `-PmaxTestParallel` or CI default **3
 
 Env:
 
-- `DO_NOT_CACHE_TESTS=1` - force test re-run without full `--rerun-tasks`
+- `DO_NOT_CACHE_TESTS=1` - deliberately bypass both test-result caching and up-to-date checks; use only when fresh execution is needed for a specific test investigation, not as a default pre-commit environment variable
 - `debug.tests` system prop - attach debugger args
 - `SUPPRESS_DEPRECATION_WARNINGS=true` - strip some `-Xlint` noise
 
@@ -783,6 +783,6 @@ Strong 8.0.x Gradle PRs are small, sibling-consistent, and evidence-backed:
 - [ ] No overlapping task outputs; classpath normalization considered for packed generated files
 - [ ] Apache headers on new files
 - [ ] User-facing behavior documented if it affects app builds (`grails-doc`)
-- [ ] For commit-ready work, use `violation-fixer` to run the AGENTS.md gate: `./gradlew clean aggregateViolations :grails-test-report:check --continue`. This is not required merely to read this skill.
+- [ ] For commit-ready work, follow AGENTS.md's scoped, cache-enabled Local Verification guidance and review the relevant results. `:grails-test-report:check` schedules repository-wide tests; it is not a report-only check or a routine commit gate. Loading this skill does not itself require running Gradle.
 
 If you only remember three things: **copy siblings**, **BOM owns versions**, **never resolve configurations while configuring tasks**.

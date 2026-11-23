@@ -30,13 +30,17 @@ Activate this skill when:
 
 ### Targeted Testing Recommended
 
-To save time, run only related tests:
+To save time, run only related tests with Gradle caching and up-to-date checks enabled:
 
 ```bash
 ./gradlew :grails-data-hibernate7-core:test --tests "grails.gorm.tests.BasicCollection*"
 ```
 
+`UP-TO-DATE` and `FROM-CACHE` are valid results for unchanged task inputs. Do not set `DO_NOT_CACHE_TESTS=1`, add `--no-build-cache`/`--rerun-tasks`, or clean outputs by default. Force fresh execution only to investigate a specific failure, suspected cache problem or flaky test, or when explicitly requested. Test caching is task-level: changing a dependency can invalidate the whole test task. After a fix passes its relevant checks, expand or repeat testing only for new changes or unresolved concerns.
+
 ### Full Run
+
+Use a full run for CI, an explicit request or a demonstrated cross-cutting need, not as the default local commit gate.
 
 ```bash
 ./gradlew test --continue
@@ -48,7 +52,7 @@ Use `--continue` when you need later modules to run after an earlier module fail
 
 ## Aggregate Test Reports
 
-The `grails-test-report` project owns repository test aggregation.
+The `grails-test-report` project owns repository test aggregation. Its `check` task depends on the root unit and integration test tasks: the following command runs the suites, not merely a report check. It is not required for every local commit.
 
 ```bash
 ./gradlew :grails-test-report:check --continue
@@ -65,7 +69,7 @@ This generates:
 
 The aggregate report includes root subprojects that define matching `test` or `integrationTest` tasks.
 
-The collected unit and integration `Test` tasks are finalized by their matching aggregate report tasks. Reports are attempted after failures and after targeted module test runs, but they summarize the XML results currently available on disk. Use `--continue` for full-suite runs so Gradle keeps scheduling later test tasks after an earlier failure; without it, reports can be partial. Run `clean` first when stale XML results should be excluded.
+The collected unit and integration `Test` tasks are finalized by their matching aggregate report tasks. Reports are attempted after failures and after targeted module test runs, but they summarize the XML results currently available on disk. Inspect the existing reports directly rather than invoking `check` merely to read results. Use `--continue` for full-suite runs so Gradle keeps scheduling later test tasks after an earlier failure; without it, reports can be partial. If stale XML results are suspected, identify the affected task's outputs and scope any cleanup to those outputs rather than routinely cleaning the entire repository.
 
 ---
 
