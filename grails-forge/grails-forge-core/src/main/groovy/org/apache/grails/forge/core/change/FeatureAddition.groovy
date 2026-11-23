@@ -203,8 +203,7 @@ final class FeatureAddition {
             throw new FeatureSelectionException('Name the feature to add')
         }
         AvailableFeatures available = generator.availableFeatures(manifest.applicationType, [])
-        List<String> alreadyThere = []
-        List<String> toAdd = []
+        List<String> asked = []
         for (String name : names) {
             if (name != null && name.contains(':')) {
                 throw new FeatureSelectionException("${FeatureSelectionException.shown(name)} is no name of a feature of Grails: the feature of a plugin cannot yet be " +
@@ -213,14 +212,18 @@ final class FeatureAddition {
             Feature feature = name == null ? null : available.findFeature(name).orElse(null)
             // a name that is no feature is refused by the selection, in the words it has for it
             String canonical = feature == null ? String.valueOf(name) : feature.getName()
-            if (lock.featureNames.contains(canonical)) {
-                alreadyThere << canonical
-            } else if (!toAdd.contains(canonical)) {
-                toAdd << canonical
+            if (!asked.contains(canonical)) {
+                asked << canonical
             }
         }
+        // The request is looked at as a whole before what the application has is set aside: a feature
+        // the application has is no choice of its own among the others, so that the same request
+        // gives the same application whatever the application had
+        notContradictory(available, asked, replace)
+        List<String> alreadyThere = asked.findAll { String name -> lock.featureNames.contains(name) }
+        List<String> toAdd = asked.findAll { String name -> !lock.featureNames.contains(name) }
         if (toAdd.isEmpty()) {
-            return new ChangePlan(projectDirectory, home, [], alreadyThere.unique(), [], [], [], null, [], [], [], [])
+            return new ChangePlan(projectDirectory, home, [], alreadyThere, [], [], [], null, [], [], [], [])
         }
 
         byte[] manifestBytes = bytes(projectDirectory, ProjectState.MANIFEST)
@@ -306,7 +309,7 @@ final class FeatureAddition {
             writes.add(0, new Write("${ProjectState.BASELINE_FILES}/${BaselineIndex.copyPath(path)}".toString(), null, null, generated.sha256))
         }
         List<String> replaced = refusal == null ? lostFeatures : Collections.<String>emptyList()
-        return new ChangePlan(projectDirectory, home, toAdd, alreadyThere.unique(), gained,
+        return new ChangePlan(projectDirectory, home, toAdd, alreadyThere, gained,
                 files.sort(false) { PlannedFile file -> file.path }, writes, refusal, refusal == null ? Collections.<String>emptyList() : lostFeatures, changedOptions,
                 replaced, replaced.collect { String name -> replacement(available, name, gained, toAdd, making) })
     }
@@ -336,6 +339,33 @@ final class FeatureAddition {
             }
         }
         return inThePlace
+    }
+
+    /**
+     * Two features of one exclusive group that are asked for at once contradict each other, whichever
+     * of them the application has: the request is refused, as creating an application with both is.
+     * {@code replace} puts a feature in the place of one the application has, and does not choose
+     * between the features of one request.
+     */
+    private static void notContradictory(AvailableFeatures available, List<String> asked, boolean replace) {
+        Map<String, List<String>> byGroup = new LinkedHashMap<>()
+        for (String name : asked) {
+            // a default that cannot be asked for by name, as sitemesh3, is no less of its group
+            Feature feature = available.findFeature(name, true).orElse(null)
+            if (feature instanceof OneOfFeature) {
+                byGroup.computeIfAbsent(((OneOfFeature) feature).getGroup()) { String group -> new ArrayList<String>() }.add(feature.getName())
+            }
+        }
+        Map.Entry<String, List<String>> contradiction = byGroup.find { String group, List<String> members -> members.size() > 1 }
+        if (contradiction == null) {
+            return
+        }
+        List<String> names = contradiction.value
+        String listed = names.size() == 2 ? "${names[0]} and ${names[1]}" : "${named(names.subList(0, names.size() - 1))} and ${names.last()}"
+        throw new FeatureSelectionException("The features ${listed} are ${names.size() == 2 ? 'both' : 'all'} of the group ${contradiction.key}, and an application " +
+                'has one feature of such a group: name one of them. ' +
+                (replace ? '--replace puts a feature in the place of one the application has; it does not choose between features named together. ' : '') +
+                'Nothing was changed')
     }
 
     // A feature that was asked for by name is replaced when that is said, and not by adding another alone

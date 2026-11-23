@@ -73,7 +73,8 @@ class FeatureAddCommand extends BaseCommand implements Callable<Integer>, Projec
 
     @CommandLine.Option(names = ['--replace'], description = 'Replace a feature that was asked for by name with the feature that takes its place, ' +
             'as mysql takes that of a postgres the application was created with. Without it only a feature the application has by default is replaced. ' +
-            'It changes nothing when no such feature is in the way.')
+            'It changes nothing when no such feature is in the way, and it does not choose between features of one exclusive group that are named together: ' +
+            'those are refused.')
     boolean replace
 
     @CommandLine.Option(names = ['--diff'], description = 'Show the changes that would be made to the files, as a diff, and change nothing.')
