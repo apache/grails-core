@@ -25,12 +25,14 @@ import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 
+import org.gradle.api.Action
 import org.gradle.api.GradleException
 import org.gradle.api.NamedDomainObjectProvider
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.artifacts.ArtifactCollection
+import org.gradle.api.artifacts.ArtifactView
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.ConfigurationContainer
 import org.gradle.api.artifacts.Dependency
@@ -172,7 +174,9 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
      * the application, its tests or an archive, or an IDE builds it, leaves the catalog current, and
      * the command line has the commands of the application and its plugins by their names without a
      * step of its own. A finalizer adds nothing that {@code classes} waits for, and is up to date when
-     * nothing it reads changed.</p>
+     * nothing it reads changed. The class paths are resolved leniently, since compiling the project
+     * does not need them: one that does not resolve completely gives a catalog of what does, which says
+     * what does not and is not complete, and the build goes on.</p>
      */
     protected void configureCommandCatalog(Project project) {
         project.pluginManager.withPlugin('java') {
@@ -195,9 +199,14 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
                     patterns.include(GrailsCommandCatalogTask.REGISTRATION_PATTERNS)
                 })
                 for (String configurationName : [JavaPlugin.RUNTIME_CLASSPATH_CONFIGURATION_NAME, GRAILS_CLI_CLASSPATH_CONFIGURATION]) {
-                    ArtifactCollection artifacts = project.configurations.getByName(configurationName).incoming.artifacts
+                    // leniently: compiling the project does not need the class path its commands run with, and a build
+                    // that compiles it does not fail because that does not resolve; the catalog lists what does, and
+                    // says what does not (the configuration cache resolves it when it stores the task)
+                    ArtifactCollection artifacts = project.configurations.getByName(configurationName).incoming
+                            .artifactView({ ArtifactView.ViewConfiguration view -> view.lenient(true) } as Action<ArtifactView.ViewConfiguration>).artifacts
                     task.commandClasspath.from(artifacts.artifactFiles)
                     task.originsByPath.putAll(artifacts.resolvedArtifacts.map(new GrailsCommandCatalogTask.OriginsByPath()))
+                    task.unresolved.put(configurationName, project.provider(new GrailsCommandCatalogTask.UnresolvedLines(artifacts)))
                 }
                 task.origins.set(task.originsByPath.map(new GrailsCommandCatalogTask.Origins()))
                 // the names of the Test tasks there are when the task is about to run: none is created for them

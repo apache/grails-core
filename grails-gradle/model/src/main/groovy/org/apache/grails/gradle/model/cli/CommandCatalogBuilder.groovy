@@ -194,6 +194,20 @@ class CommandCatalogBuilder {
     }
 
     /**
+     * Says that a class path the commands run with could not be resolved completely: what could be
+     * resolved is added as it always is, and the commands of what is missing from it cannot be
+     * listed, so the document is not complete. A build that compiles the project does not need that
+     * class path, and does not fail for it; the command that is run with it does.
+     *
+     * @param classPath the name the build gives the class path, such as {@code runtimeClasspath}
+     * @param failure what the build says could not be resolved, which is made one line of printable ASCII
+     */
+    void unresolved(String classPath, String failure) {
+        say("${printable(classPath)} cannot be resolved completely (gradle dependencies --configuration ${printable(classPath)} says why), " +
+                "so the commands of what is missing from it are not listed: ${printable(failure)}")
+    }
+
+    /**
      * @return the document: {@code format}, {@code complete}, {@code diagnostics} and {@code commands},
      * the same whenever the same elements were added in the same order
      */
@@ -478,6 +492,25 @@ class CommandCatalogBuilder {
     // the first few of a list, and how many there are beside them
     private static String some(List<String> all) {
         all.size() <= MAX_NAMED ? all.join(', ') : "${all.subList(0, MAX_NAMED).join(', ')} and ${all.size() - MAX_NAMED} more"
+    }
+
+    // a text the build gives as one line a terminal can take: what is not printable ASCII is a question mark, and a run of white space one space
+    private static String printable(String text) {
+        StringBuilder printable = new StringBuilder()
+        boolean space = false
+        for (int index = 0; index < text.length(); index++) {
+            char character = text.charAt(index)
+            if (Character.isWhitespace(character)) {
+                space = printable.length() > 0
+                continue
+            }
+            if (space) {
+                printable.append(' ' as char)
+                space = false
+            }
+            printable.append(character > (0x20 as char) && character < (0x7f as char) ? character : ('?' as char))
+        }
+        printable.toString()
     }
 
     // an origin is coordinates a build gives, which a line of a diagnostic and a terminal have to be able to take

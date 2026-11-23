@@ -21,12 +21,14 @@ package org.grails.gradle.plugin.commands
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.attribute.FileTime
+import java.util.concurrent.Callable
 
 import groovy.transform.CompileStatic
 
 import org.gradle.api.DefaultTask
 import org.gradle.api.Task
 import org.gradle.api.Transformer
+import org.gradle.api.artifacts.ArtifactCollection
 import org.gradle.api.artifacts.component.ComponentIdentifier
 import org.gradle.api.artifacts.component.ModuleComponentIdentifier
 import org.gradle.api.artifacts.result.ResolvedArtifactResult
@@ -72,6 +74,11 @@ import org.apache.grails.gradle.model.cli.CommandCatalogFreshness
  * made from was changed after it was written ({@link CommandCatalogFreshness}), which a compiler that
  * writes a descriptor again with the same content does; the task holds itself to that rule as well, and
  * writes a catalog that is older than one of those files again, although what it lists is the same.</p>
+ *
+ * <p>A class path the commands run with that does not resolve completely, such as a runtime class path
+ * with versions that conflict, does not fail the build that compiles the project, which does not need
+ * it: the catalog lists the commands of what resolves, says in its diagnostics what does not, and is not
+ * complete. Running a command with that class path fails as the application does.</p>
  *
  * @since 9.0
  */
@@ -130,6 +137,16 @@ abstract class GrailsCommandCatalogTask extends DefaultTask {
     abstract ListProperty<String> getOrigins()
 
     /**
+     * What of the class path could not be resolved: by the name of each class path, what the build
+     * says is missing from it, one line each ({@link UnresolvedLines}); an empty list for a class path
+     * that was resolved completely. The commands of what is missing are not listed, and the catalog
+     * says so: the class path is resolved leniently, so that a build that compiles the project, which
+     * this task finalizes, does not fail because the class path its commands run with does not resolve.
+     */
+    @Input
+    abstract MapProperty<String, List<String>> getUnresolved()
+
+    /**
      * The test phases of the project, which {@code grails test-app} selects with a switch each: the
      * Gradle task of each phase by the name of the phase.
      */
@@ -164,6 +181,11 @@ abstract class GrailsCommandCatalogTask extends DefaultTask {
         Map<String, String> origins = originsByPath.get()
         for (File file : commandClasspath.files) {
             catalog.add(origins.get(file.absolutePath) ?: "file:${file.name}".toString(), file)
+        }
+        for (Map.Entry<String, List<String>> classPath : unresolved.get()) {
+            for (String failure : classPath.value) {
+                catalog.unresolved(classPath.key, failure)
+            }
         }
         // in the order of the phases: the unit tests, the integration tests, the others by name
         Map<String, String> phases = testPhases.get()
@@ -253,6 +275,74 @@ abstract class GrailsCommandCatalogTask extends DefaultTask {
                 origins.putIfAbsent(artifact.file.absolutePath, origin(artifact))
             }
             origins
+        }
+    }
+
+    /**
+     * Gives what a class path that is resolved leniently could not resolve, one line each, in the order
+     * the build gives it: the first line of what the build says of each failure and of each failure
+     * that caused it, without what follows, which names where a module was looked for, and so paths of
+     * this machine. Called when the configuration cache is stored, or without it when the task is about
+     * to run, and not again when the configuration cache is reused.
+     */
+    static class UnresolvedLines implements Callable<List<String>> {
+
+        private final ArtifactCollection artifacts
+
+        UnresolvedLines(ArtifactCollection artifacts) {
+            this.artifacts = artifacts
+        }
+
+        @Override
+        List<String> call() {
+            // Gradle fails each dependency on a module that cannot be selected, and gives all of them the
+            // same cause: one line for each cause, as Gradle says one failure with an identical cause
+            Map<String, String> lines = new LinkedHashMap<String, String>()
+            for (Throwable failure : artifacts.failures) {
+                Throwable cause = failure
+                Set<Throwable> seen = Collections.newSetFromMap(new IdentityHashMap<Throwable, Boolean>())
+                while (cause.cause != null && seen.add(cause)) {
+                    cause = cause.cause
+                }
+                lines.putIfAbsent(messageOf(cause) ?: cause.class.name, firstLines(failure))
+            }
+            new ArrayList<String>(new LinkedHashSet<String>(lines.values()))
+        }
+    }
+
+    /**
+     * @param failure what the build threw for something it could not resolve
+     * @return the first line of its message and of the message of each of its causes, each as a sentence,
+     * in one line: {@code Could not find com.example:missing:1.0.}, {@code Could not resolve
+     * com.example:lib:1.0. Component is the target of multiple version constraints with conflicting requirements.}
+     */
+    static String firstLines(Throwable failure) {
+        List<String> sentences = []
+        Set<Throwable> seen = Collections.newSetFromMap(new IdentityHashMap<Throwable, Boolean>())
+        for (Throwable each = failure; each != null && seen.add(each); each = each.cause) {
+            String first = (messageOf(each) ?: '').readLines().collect { String line -> line.trim() }.find { String line -> !line.isEmpty() }
+            if (first == null) {
+                continue
+            }
+            // a line that leads to the lines after it ends with a colon, and is a sentence without them
+            String sentence = first.endsWith(':') ? first.substring(0, first.length() - 1).trim() : first
+            sentence = sentence.endsWith('.') ? sentence : "${sentence}.".toString()
+            if (!sentences.contains(sentence)) {
+                sentences << sentence
+            }
+        }
+        sentences ? sentences.join(' ') : failure.class.simpleName
+    }
+
+    /**
+     * @param failure a failure
+     * @return its message, or {@code null} when it has none or cannot give it
+     */
+    static String messageOf(Throwable failure) {
+        try {
+            return failure.message
+        } catch (RuntimeException ignored) {
+            return null
         }
     }
 

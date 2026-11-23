@@ -125,6 +125,35 @@ class CommandCatalogBuilderSpec extends Specification {
         'more than the bytes, written as escapes' | '\u00e9' | 120     | ' in 524288 bytes'
     }
 
+    @Unroll
+    def "a class path that is not resolved completely leaves the catalog not complete, with one line of printable ASCII that names it: #title"() {
+        given: 'what resolves of the class path, with a command'
+        CommandCatalogBuilder builder = new CommandCatalogBuilder()
+        builder.add('org.example:report:1.0', element('report', CommandDescriptor.describe(CLASS, 'audit-report', 'Writes it')))
+
+        when:
+        builder.unresolved('runtimeClasspath', failure)
+        Map<String, Object> catalog = builder.build()
+        String line = 'runtimeClasspath cannot be resolved completely (gradle dependencies --configuration runtimeClasspath says why), ' +
+                'so the commands of what is missing from it are not listed: ' + said
+
+        then: 'the command of what resolves is listed'
+        catalog.commands*.name == ['audit-report']
+
+        and: 'the catalog says what does not resolve, in a line of a bounded length, and is not complete'
+        catalog.complete == false
+        catalog.diagnostics == [line.length() <= CommandCatalogBuilder.MAX_DIAGNOSTIC_LENGTH ? line :
+                                        line.take(CommandCatalogBuilder.MAX_DIAGNOSTIC_LENGTH - 3) + '...']
+        catalog.diagnostics.every { String each -> each.length() <= CommandCatalogBuilder.MAX_DIAGNOSTIC_LENGTH && each.every { it >= ' ' && it <= '~' } }
+
+        where:
+        title                         | failure                                             | said
+        'as Gradle says it'           | 'Could not find org.example:missing:1.0.'           | 'Could not find org.example:missing:1.0.'
+        'on lines of its own'         | '  Could not resolve a:b:1.\n\tRequired by:\r\n x ' | 'Could not resolve a:b:1. Required by: x'
+        'with what a terminal cannot' | 'Could not find gr\u00fc\u00df:\u001b[31mred:1.'    | 'Could not find gr??:?[31mred:1.'
+        'that is too long'            | 'Could not find ' + 'x' * 1000                      | 'Could not find ' + 'x' * 1000
+    }
+
     // a directory that registers the class, with the descriptor when there is one
     private File element(String name, String descriptor) {
         File element = new File(dir, name)
