@@ -104,6 +104,13 @@ class SqlRestrictionHibernate7Spec extends HibernateGormDatastoreSpec {
             sqlRestriction("{alias}.name not like '%?' and length({alias}.name) > ? -- why?", [6])
         }*.name == ['ABCDEFGHI']
 
+        and: 'where the database has dollar-quoted literals, a question mark in a tagged literal is not a placeholder'
+        if (db in ['Postgres', 'CockroachDB']) {
+            assert SqlRestrictionParent.createCriteria().list {
+                sqlRestriction('{alias}.name <> $tag$why?$tag$ and length({alias}.name) > ?', [6])
+            }*.name == ['ABCDEFGHI']
+        }
+
         and: 'a condition in an association block inside a junction'
         SqlRestrictionParent.createCriteria().listDistinct {
             or {

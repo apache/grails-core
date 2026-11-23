@@ -78,15 +78,16 @@ public enum SupportedDatabase implements ClassKeyed<SupportedDatabase> {
     // ~ is case-sensitive; Hibernate 5 renders ~*, see #16882
     POSTGRESQL(SqlSyntax.POSTGRESQL, "?1 ~ ?2", UniqueIndexNulls.DISTINCT, PostgreSQLDialect.class),
 
-    // reads native SQL and matches regular expressions as PostgreSQL does (run on a CockroachDB container, #16955); ~ is
-    // case-sensitive, Hibernate 5 renders ~*, see #16882
+    // reads native SQL and matches regular expressions as PostgreSQL does (run on a CockroachDB container, #16955), with the
+    // case-sensitive operator ~
     COCKROACH(SqlSyntax.POSTGRESQL, "?1 ~ ?2", UniqueIndexNulls.DISTINCT, CockroachDialect.class),
 
     ORACLE(SqlSyntax.ORACLE, "REGEXP_LIKE(?1, ?2)", UniqueIndexNulls.COMPARED, OracleDialect.class),
 
     // no regular expression operator here, so rlike is a like; Transact-SQL has no boolean value for a predicate, so the
-    // like is the condition of a case that gives a bit, which the query compares with true
-    SQL_SERVER(SqlSyntax.TRANSACT_SQL, "CASE WHEN ?1 LIKE ?2 THEN 1 ELSE 0 END", UniqueIndexNulls.DISTINCT,
+    // like is the condition of a case that gives a bit, which the query compares with true. A value that is null makes the
+    // like unknown, and the case gives null for it, not 0: a negated rlike leaves that row out, as a negated like does
+    SQL_SERVER(SqlSyntax.TRANSACT_SQL, "CASE WHEN ?1 LIKE ?2 THEN 1 WHEN ?1 NOT LIKE ?2 THEN 0 END", UniqueIndexNulls.DISTINCT,
             SQLServerDialect.class),
 
     // reads native SQL as SQL Server does, and has no regular expression operator here. No Sybase image is maintained,
