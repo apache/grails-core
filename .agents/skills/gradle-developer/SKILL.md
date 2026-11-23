@@ -183,7 +183,8 @@ Never unify those casually.
 3. Manually refresh the locations bootstrap does **not** cover. For each tree, keep the **full** wrapper set in sync (`gradle-wrapper.properties`, `gradle-wrapper.jar`, `gradlew`, `gradlew.bat`) - not properties alone:
 
    - `build-logic/` - run its wrapper task or copy the complete set from root after bootstrap
-   - Forge **generated-app** wrapper assets (all of these - properties alone is not enough; the properties page, `gradleWrapperProperties.gsp`, takes its version from `gradleToolingApiVersion` through `grails-versions.properties` and needs no edit):
+   - Forge **generated-app** wrapper assets (all of these - properties alone is not enough):
+     - `grails-forge/grails-forge-core/grails-app/views/forge/.../gradleWrapperProperties.gsp` (properties page) takes its version from `gradleToolingApiVersion` through `grails-versions.properties`, but its `distributionSha256Sum` is the SHA-256 Gradle publishes for `gradle-<version>-bin.zip` (https://gradle.org/release-checksums/) and changes with it. Add the line `<version>=<sha256>` to `grails-forge-core/src/test/resources/org/grails/forge/feature/build/gradle/gradle-distribution-sha256.properties`; `GradleWrapperPropertiesSpec` fails while the template's version has no line there or another checksum, and `./gradlew :grails-forge-core:test --tests '*GradleWrapperPropertiesSpec' -PverifyGradleChecksums` (from `grails-forge`) compares the table with what Gradle publishes
      - `grails-forge/grails-forge-core/src/main/resources/gradle/gradlew`
      - `grails-forge/grails-forge-core/src/main/resources/gradle/gradlew.bat`
      - `grails-forge/grails-forge-core/src/main/resources/gradle/wrapper/gradle-wrapper.jar`

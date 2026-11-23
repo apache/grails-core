@@ -387,3 +387,13 @@ tasks.named('test', Test).configure { Test test ->
         test.outputs.upToDateWhen { false }
     }
 }
+// -PverifyGradleChecksums has GradleWrapperPropertiesSpec download the SHA-256 Gradle publishes for each version of
+// its table, which it holds the distributionSha256Sum of the generated gradle-wrapper.properties to:
+// ./gradlew :grails-forge-core:test --tests '*GradleWrapperPropertiesSpec' -PverifyGradleChecksums
+tasks.named('test', Test).configure { Test test ->
+    if (providers.gradleProperty('verifyGradleChecksums').present) {
+        test.systemProperty('forge.gradleChecksums.verify', 'true')
+        // what Gradle publishes is no input of the tests: a run that was asked for is a run
+        test.outputs.upToDateWhen { false }
+    }
+}
