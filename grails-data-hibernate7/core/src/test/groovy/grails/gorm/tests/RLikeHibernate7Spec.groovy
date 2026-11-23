@@ -87,6 +87,42 @@ class RLikeHibernate7Spec extends HibernateGormDatastoreSpec {
         "Oracle"     | oracle
         "DB2"        | db2
     }
+
+    @IgnoreIf({ data.db == 'DB2' && System.getProperty('os.arch') in ['aarch64', 'arm64'] })
+    void "test rlike on #db matches #expected of Alice, alice and bob for the pattern ^al.*"() {
+        given:
+        if (container != null && !container.isRunning()) {
+            container.start()
+        }
+        manager.destroy()
+        manager.grailsConfig = [
+                'dataSource.url'                     : container?.jdbcUrl ?: "jdbc:h2:mem:rlikeCaseDB;LOCK_TIMEOUT=10000",
+                'dataSource.driverClassName'         : container?.driverClassName ?: "org.h2.Driver",
+                'dataSource.username'                : container?.username ?: "sa",
+                'dataSource.password'                : container?.password ?: "",
+                'dataSource.dbCreate'                : 'create-drop',
+                'hibernate.id.new_generator_mappings': 'true'
+        ]
+        manager.setup(this.class)
+        ['Alice', 'alice', 'bob'].each { new RlikeFoo(name: it).save() }
+        RlikeFoo.withSession { it.flush() }
+
+        when: 'the pattern is matched'
+        manager.session.clear()
+        List<String> names = RlikeFoo.findAllByNameRlike('^al.*')*.name.sort()
+
+        then: 'whether case matters follows the database: PostgreSQL matches with ~, which is case-sensitive, and MySQL and MariaDB follow the collation (Hibernate 5 renders ~*, see #16882)'
+        names == expected
+
+        where:
+        db           | container || expected
+        "H2"         | null      || ['alice']
+        "Postgres"   | postgres  || ['alice']
+        "MySQL"      | mysql     || ['Alice', 'alice']
+        "MariaDB"    | mariadb   || ['Alice', 'alice']
+        "Oracle"     | oracle    || ['alice']
+        "DB2"        | db2       || ['alice']
+    }
 }
 
 @Entity

@@ -24,10 +24,12 @@ Grails publishes https://agentskills.io[Agent Skills] that teach AI coding agent
 | Skill | Coordinates | Use
 
 | `grails-developer` | `org.apache.grails.skills:grails-developer` | Building Grails applications: controllers, services, GORM, views, plugins, and testing with Spock and Geb
-| `grails-8-upgrade` | `org.apache.grails.skills:grails-8-upgrade` | Upgrading an application from Grails 7 to Grails 8
+| `grails-upgrade` | `org.apache.grails.skills:grails-upgrade` | Upgrading an application from Grails 7 to Grails 8, and from one Grails 8 release to a later one
 |===
 
-The skills are released with Grails, under the same version, and the Grails BOM manages them, so an application gets the skills written for the Grails version it builds with.
+The skills are released with Grails, under the same version, and the Grails BOM manages them, so an application gets the skills written for the Grails version it builds with. The `grails-upgrade` skill of a release lists the changes of every earlier release of the same major version, one section per release, so it covers an upgrade that skips releases.
+
+NOTE: Grails 8.0.0 published the upgrade skill as `org.apache.grails.skills:grails-8-upgrade`. That skill now only points to `grails-upgrade`. It stays published for the Grails 8 releases, and Grails 9 does not publish it, so replace the dependency with `grails-upgrade`.
 
 ==== Adding the Skills to an Application
 
@@ -43,7 +45,7 @@ plugins {
 
 dependencies {
     skill 'org.apache.grails.skills:grails-developer'
-    skill 'org.apache.grails.skills:grails-8-upgrade'
+    skill 'org.apache.grails.skills:grails-upgrade'
 }
 
 skillsjars {
@@ -83,13 +85,13 @@ dependencies {
 
 ==== Grails 7 Applications
 
-The upgrade skill is for applications still on Grails 7. They apply the SkillsJars Gradle plugin as above, but the Grails 7 BOM does not manage the skills, so they name the version:
+The upgrade skill is also for applications still on Grails 7. They apply the SkillsJars Gradle plugin as above and name the version of the Grails 8 skill, since the Grails 7 BOM manages the upgrade skill of Grails 7:
 
 [source,groovy,subs="attributes"]
 .build.gradle
 ----
 dependencies {
-    skill 'org.apache.grails.skills:grails-8-upgrade:{version}'
+    skill 'org.apache.grails.skills:grails-upgrade:{version}'
 }
 ----
 
