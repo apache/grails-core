@@ -223,10 +223,25 @@ public class ExpressionResolver {
         return join;
     }
 
+    /**
+     * The path from the root of the join an alias names, or {@code null} when the property below it cannot be named
+     * from the root: an alias that continues from another alias, and a later alias of a path, whose join is its own
+     * and not the join the query shares for the path.
+     */
     private String aliasPath(String alias) {
         HibernateAlias def = aliasRegistry.getDefinition(alias);
-        return def != null && def.path() != null && !def.path().contains(HibernateCriteriaBuilder.ALIAS_SEPARATOR) ?
-                def.path() : null;
+        if (def == null || def.path() == null || def.path().contains(HibernateCriteriaBuilder.ALIAS_SEPARATOR)) {
+            return null;
+        }
+        if (def.explicit()) {
+            String planned = joinTracker.plannedOwner(def.path());
+            boolean ownsPath = planned != null ? planned.equals(def.alias()) :
+                    def.equals(aliasRegistry.getAssociationAlias(def.path()));
+            if (!ownsPath) {
+                return null;
+            }
+        }
+        return def.path();
     }
 
     /**

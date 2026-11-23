@@ -79,6 +79,42 @@ class DetachedCriteriaAliasChainSpec extends HibernateGormDatastoreSpec {
         }*.name == ['split']
     }
 
+    def 'a property path that continues past the second alias of an association stays on that alias'() {
+        given:
+        seed()
+
+        expect: 'c2.related.leaf.name is the leaf of the child c2 names, so the parent whose other child has that leaf is not returned'
+        new DetachedCriteria(DepParent).build {
+            createAlias('children', 'c1')
+            createAlias('children', 'c2')
+            eq('c1.name', 'one')
+            eq('c2.name', 'two')
+            eq('c2.related.leaf.name', 'x')
+        }.list()*.name == ['split']
+        new DetachedCriteria(DepParent).build {
+            createAlias('children', 'c1')
+            createAlias('children', 'c2')
+            createAlias('c2.related', 'r')
+            eq('c1.name', 'one')
+            eq('c2.name', 'two')
+            eq('r.leaf.name', 'x')
+        }.list()*.name == ['split']
+    }
+
+    def 'a property path that continues past the second alias of an association stays on it in the criteria builder'() {
+        given:
+        seed()
+
+        expect:
+        DepParent.withCriteria {
+            createAlias('children', 'c1')
+            createAlias('children', 'c2')
+            eq('c1.name', 'one')
+            eq('c2.name', 'two')
+            eq('c2.related.leaf.name', 'x')
+        }*.name == ['split']
+    }
+
     def 'a chain of three aliases from the first alias of an association stays on that alias'() {
         given:
         seed()
