@@ -170,8 +170,10 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
         // a block that is still open is not in the criteria yet
         List<Query.Criterion> inBlocks = new ArrayList<Query.Criterion>(criteria)
         inBlocks.addAll(junctions)
-        if (declaredInBlock(inBlocks, head) && persistentEntity.getPropertyByName(head) == null) {
-            // the path would start from the root and fail further on, or find the wrong association: say what to do
+        if (declaredInBlock(inBlocks, head)) {
+            // the alias names the first segment, also where the class has a property of the same name, and it cannot be
+            // continued from here: the path would start from the root and fail further on, or find the wrong association,
+            // so say what to do
             throw new IllegalArgumentException("The alias [$head] is declared inside a block (and, or, not), and the path [$associationPath] cannot continue from it there. Declare the alias at the top level of the query and use it inside the block.")
         }
         associationPath

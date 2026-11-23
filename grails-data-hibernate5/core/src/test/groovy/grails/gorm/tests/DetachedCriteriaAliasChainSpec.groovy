@@ -96,6 +96,9 @@ class DetachedCriteriaAliasChainSpec extends GrailsDataTckSpec<GrailsDataHiberna
         'or'    | { or { createAlias('children', 'c'); createAlias('c.related', 'r') } }
         'not'   | { not { createAlias('children', 'c'); createAlias('c.related', 'r') } }
         'a nested block' | { and { or { createAlias('children', 'c'); createAlias('c.related', 'r') } } }
+        'and, with an alias named like a property of the class' | { and { createAlias('children', 'name'); createAlias('name.related', 'r') } }
+        'or, with an alias named like a property of the class' | { or { createAlias('children', 'name'); createAlias('name.related', 'r') } }
+        'a nested block, with an alias named like a property of the class' | { and { or { createAlias('children', 'name'); createAlias('name.related', 'r') } } }
     }
 
     def 'an alias declared at the top level and used inside a block still works'() {
