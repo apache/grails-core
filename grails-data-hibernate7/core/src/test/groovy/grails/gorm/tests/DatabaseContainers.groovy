@@ -21,6 +21,7 @@ package grails.gorm.tests
 import java.time.Duration
 
 import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
 import org.testcontainers.containers.ContainerFetchException
 import org.testcontainers.containers.GenericContainer
 import org.testcontainers.db2.Db2Container
@@ -82,11 +83,20 @@ final class DatabaseContainers {
      * @throws ContainerFetchException if the container is Db2 and its image cannot be fetched
      */
     static void start(GenericContainer container) {
+        start(container, DB2, DB2_IMAGE_FETCH)
+    }
+
+    /**
+     * Starts the container of a row as {@link #start(GenericContainer)} does, with the Db2 container and the fetch of
+     * its image given, so that a test can give its own.
+     */
+    @PackageScope
+    static void start(GenericContainer container, GenericContainer db2, ImageFetch db2ImageFetch) {
         if (container == null || container.running) {
             return
         }
-        if (container.is(DB2)) {
-            DB2_IMAGE_FETCH.fetch()
+        if (container.is(db2)) {
+            db2ImageFetch.fetch()
         }
         container.start()
     }
@@ -115,13 +125,14 @@ final class DatabaseContainers {
          */
         synchronized void fetch() {
             if (!attempted) {
-                attempted = true
                 try {
                     // Pulls the image unless Docker has it; the container keeps the name, so start() does not pull again
                     container.dockerImageName
                 } catch (ContainerFetchException e) {
                     failure = e
                 }
+                // Not set when an error ends the fetch, so the next row fetches the image again
+                attempted = true
             }
             if (failure != null) {
                 // The message of the exception only names the image; its cause says what went wrong

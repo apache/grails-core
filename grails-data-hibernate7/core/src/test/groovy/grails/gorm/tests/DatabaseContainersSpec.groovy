@@ -43,12 +43,13 @@ class DatabaseContainersSpec extends Specification {
         0 * running._
     }
 
-    void 'the container of a row other than Db2 is started without fetching its image first'() {
+    void 'the container of a row other than Db2 is started without fetching an image first'() {
         given:
+        final GenericContainer db2 = Mock()
         final GenericContainer container = Mock()
 
         when:
-        DatabaseContainers.start(container)
+        DatabaseContainers.start(container, db2, new DatabaseContainers.ImageFetch(db2, IMAGE))
 
         then:
         1 * container.isRunning() >> false
@@ -56,6 +57,73 @@ class DatabaseContainersSpec extends Specification {
         then:
         1 * container.start()
         0 * container._
+        0 * db2._
+    }
+
+    void 'the image of the Db2 container is fetched before the container is started'() {
+        given:
+        final GenericContainer db2 = Mock()
+        final fetch = new DatabaseContainers.ImageFetch(db2, IMAGE)
+
+        when:
+        DatabaseContainers.start(db2, db2, fetch)
+
+        then:
+        1 * db2.isRunning() >> false
+
+        then:
+        1 * db2.getDockerImageName() >> IMAGE
+
+        then:
+        1 * db2.start()
+        0 * db2._
+    }
+
+    void 'the Db2 container is not started when its image cannot be fetched, by that row or a later one'() {
+        given:
+        final GenericContainer db2 = Mock()
+        final fetch = new DatabaseContainers.ImageFetch(db2, IMAGE)
+
+        when:
+        DatabaseContainers.start(db2, db2, fetch)
+
+        then:
+        1 * db2.isRunning() >> false
+        1 * db2.getDockerImageName() >> { throw new ContainerFetchException("Can't get Docker image", timeout()) }
+        0 * db2.start()
+        thrown(ContainerFetchException)
+
+        when:
+        DatabaseContainers.start(db2, db2, fetch)
+
+        then:
+        1 * db2.isRunning() >> false
+        0 * db2.getDockerImageName()
+        0 * db2.start()
+        thrown(ContainerFetchException)
+    }
+
+    void 'a Db2 container that failed to start is started again by the next row without fetching its image again'() {
+        given:
+        final GenericContainer db2 = Mock()
+        final fetch = new DatabaseContainers.ImageFetch(db2, IMAGE)
+
+        when:
+        DatabaseContainers.start(db2, db2, fetch)
+
+        then:
+        1 * db2.isRunning() >> false
+        1 * db2.getDockerImageName() >> IMAGE
+        1 * db2.start() >> { throw new ContainerLaunchException('Container startup failed') }
+        thrown(ContainerLaunchException)
+
+        when:
+        DatabaseContainers.start(db2, db2, fetch)
+
+        then:
+        1 * db2.isRunning() >> false
+        0 * db2.getDockerImageName()
+        1 * db2.start()
     }
 
     void 'a container that fails to start fails the row'() {
@@ -108,6 +176,28 @@ class DatabaseContainersSpec extends Specification {
         later.cause.is(failure)
     }
 
+    void 'when an error ends the fetch, the next row fetches the image again'() {
+        given:
+        final GenericContainer container = Mock()
+        final fetch = new DatabaseContainers.ImageFetch(container, IMAGE)
+
+        when:
+        fetch.fetch()
+
+        then:
+        1 * container.getDockerImageName() >> {
+            throw new NoClassDefFoundError('Could not initialize class org.testcontainers.DockerClientFactory')
+        }
+        thrown(NoClassDefFoundError)
+
+        when:
+        fetch.fetch()
+
+        then:
+        1 * container.getDockerImageName() >> IMAGE
+        noExceptionThrown()
+    }
+
     void 'a failed fetch names the image and #what'() {
         given:
         final failure = new ContainerFetchException("Can't get Docker image", cause)
@@ -125,10 +215,11 @@ class DatabaseContainersSpec extends Specification {
         e.cause.is(failure)
 
         where:
-        what                                      | cause      || message
-        'that the registry did not answer'        | timeout()  || "Pulling ${IMAGE} failed: not fulfilled within 2 minutes"
-        'that the image is not there'             | notFound() || "Pulling ${IMAGE} failed: Status 404: not found"
-        'the failure itself when it has no cause' | null       || "Pulling ${IMAGE} failed: Can't get Docker image"
+        what                                               | cause                  || message
+        'that the registry did not answer'                 | timeout()              || "Pulling ${IMAGE} failed: not fulfilled within 2 minutes"
+        'that the image is not there'                      | notFound()             || "Pulling ${IMAGE} failed: Status 404: not found"
+        'the failure itself when it has no cause'          | null                   || "Pulling ${IMAGE} failed: Can't get Docker image"
+        'the failure itself when its cause has no message' | new RuntimeException() || "Pulling ${IMAGE} failed: Can't get Docker image"
     }
 
     /**
