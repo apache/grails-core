@@ -54,10 +54,12 @@ import org.gradle.api.provider.Provider
 import org.gradle.api.provider.ProviderFactory
 import org.gradle.api.provider.ValueSourceParameters
 import org.gradle.api.provider.ValueSourceSpec
+import org.gradle.api.publish.PublishingExtension
 import org.gradle.api.publish.maven.tasks.PublishToMavenRepository
 import org.gradle.api.tasks.Copy
 import org.gradle.api.tasks.JavaExec
 import org.gradle.api.tasks.SourceSet
+import org.gradle.api.tasks.TaskContainer
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.bundling.Jar
@@ -516,7 +518,9 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
      * {@code forgePackTest} has Forge generate applications with the feature of the pack, and builds
      * each with its own Gradle wrapper. No other task depends on it, since it builds applications,
      * which takes minutes and the repositories Grails is in. What is generated and how it is built is
-     * said in the {@code grails { forgePackTest { } }} block.
+     * said in the {@code grails { forgePackTest { } }} block. The Maven publications of the project are
+     * given to the applications in a repository of the task, before every other one, as this build has
+     * just built them: see {@link ForgePackPublications}.
      */
     protected void configureForgePackTest(Project project) {
         ProjectLayout layout = project.layout
@@ -555,6 +559,18 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
             task.gradleUserHome.set(gradleUserHome)
             task.fixturesDirectory.set(layout.buildDirectory.dir('forge-pack-fixtures'))
             task.reportDirectory.set(layout.buildDirectory.dir('forge-pack-test'))
+            task.publicationRepository.set(layout.buildDirectory.dir('forge-pack-repository'))
+            task.publicationLayout.convention(Collections.<String, String>emptyMap())
+            task.publicationPaths.set(task.publicationLayout.map { Map<String, String> files -> new ArrayList<String>(files.keySet()) })
+            task.publicationFiles.from(task.publicationLayout.map { Map<String, String> files -> files.values() })
+            // what the applications get of the plugin is what this build has just built: the publications are
+            // built before the task and are its inputs, so a plugin that was built again is tested again
+            project.pluginManager.withPlugin('maven-publish') {
+                PublishingExtension publishing = project.extensions.getByType(PublishingExtension)
+                TaskContainer tasks = project.tasks
+                task.publicationLayout.set(project.provider { ForgePackPublications.layout(publishing, tasks) })
+                task.publicationFiles.builtBy(project.provider { ForgePackPublications.builtBy(publishing, tasks) })
+            }
         }
     }
 

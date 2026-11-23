@@ -19,6 +19,8 @@
 package org.grails.gradle.plugin.core
 
 import java.nio.charset.StandardCharsets
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
 import java.time.Duration
 import java.util.concurrent.TimeUnit
 import java.util.regex.Matcher
@@ -31,14 +33,19 @@ import groovy.transform.CompileStatic
 
 import org.apache.tools.ant.taskdefs.condition.Os
 import org.gradle.api.GradleException
+import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DeleteSpec
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.FileSystemOperations
 import org.gradle.api.provider.ListProperty
+import org.gradle.api.provider.MapProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.OutputDirectory
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.options.Option
 import org.gradle.work.DisableCachingByDefault
@@ -57,7 +64,11 @@ import org.gradle.work.DisableCachingByDefault
  * end without the last line is not a run that got to its end.</p>
  *
  * <p>The repositories the generated builds resolve from are given to Forge in the environment variable
- * {@code GRAILS_REPO_URL}, as they are given to the commands that create an application. A build of a
+ * {@code GRAILS_REPO_URL}, as they are given to the commands that create an application. The first of
+ * them, when the project has Maven publications, is a repository of this task that has them as this
+ * build has just built them ({@link #getPublicationLayout()}): an application gets the plugin that is
+ * tested, whatever another repository has of the same version, and a change of the plugin is a change
+ * of what the task tests. A build of a
  * fixture uses the Gradle user home of this build, so what it downloads is downloaded once, and the
  * Java of the toolchain of the project. All of what it writes goes to a log of the fixture, and it
  * has {@link #getFixtureTimeout()} to be done in.</p>
@@ -166,6 +177,28 @@ abstract class ForgePackTestTask extends ForgePackToolTask {
     @Internal
     abstract DirectoryProperty getFixturesDirectory()
 
+    /**
+     * The files of the Maven publications of the project, by their paths in a Maven repository, see
+     * {@link ForgePackPublications}. They are put into {@link #getPublicationRepository()}, which the
+     * applications resolve from before the other repositories. Nothing when the project has no Maven
+     * publication.
+     */
+    @Internal
+    abstract MapProperty<String, String> getPublicationLayout()
+
+    /** The paths of the files of the publications in the repository: other coordinates are another test. */
+    @Input
+    abstract ListProperty<String> getPublicationPaths()
+
+    /** The files of the publications: a plugin that was built again with other content is another test. */
+    @InputFiles
+    @PathSensitive(PathSensitivity.NONE)
+    abstract ConfigurableFileCollection getPublicationFiles()
+
+    /** The repository the publications of the project are put into, for the applications. */
+    @Internal
+    abstract DirectoryProperty getPublicationRepository()
+
     /** Where the log of each fixture is written, in the directory of the fixture, and what became of them all. */
     @OutputDirectory
     abstract DirectoryProperty getReportDirectory()
@@ -177,7 +210,8 @@ abstract class ForgePackTestTask extends ForgePackToolTask {
     void test() {
         File applications = fixturesDirectory.get().asFile
         File reports = reportDirectory.get().asFile
-        fileSystemOperations.delete { DeleteSpec spec -> spec.delete(applications, reports) }
+        File published = publicationRepository.get().asFile
+        fileSystemOperations.delete { DeleteSpec spec -> spec.delete(applications, reports, published) }
         reports.mkdirs()
         requireTooling('tested', 'tests', 'test')
         repositoriesLeftOut.get().each { String line -> logger.warn(withoutUserInfo(line)) }
@@ -187,7 +221,7 @@ abstract class ForgePackTestTask extends ForgePackToolTask {
         if (buildTasks.get().isEmpty()) {
             throw new GradleException("The feature pack in ${SOURCE} could not be tested: there is no task to run in the applications")
         }
-        List<String> names = generate(applications)
+        List<String> names = generate(applications, stagePublications(published))
         List<String> report = []
         List<String> failures = []
         for (String name : names) {
@@ -209,8 +243,30 @@ abstract class ForgePackTestTask extends ForgePackToolTask {
                 SOURCE, names.size() == 1 ? '1 application' : "${names.size()} applications", buildTasks.get().join(' '), names.join(', '), reports)
     }
 
+    // The repository of the publications of the project, with each of their files as the build has just built
+    // it, or null when there is none. A file a publication names that the build did not write, such as module
+    // metadata the build was told not to write, is left out, as maven-publish leaves it out.
+    private File stagePublications(File repository) {
+        Map<String, String> layout = publicationLayout.get()
+        List<String> staged = []
+        layout.each { String path, String source ->
+            File file = new File(source)
+            if (file.isFile()) {
+                File target = new File(repository, path)
+                target.parentFile.mkdirs()
+                Files.copy(file.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING)
+                staged << path
+            }
+        }
+        if (!staged) {
+            return null
+        }
+        logger.info('The applications resolve from {} first, which has the publications of this build: {}', repository, staged.join(', '))
+        return repository
+    }
+
     // the names of the fixtures that were generated, which are all of them
-    private List<String> generate(File applications) {
+    private List<String> generate(File applications, File publications) {
         List<String> arguments = [packDirectory.get().asFile.absolutePath, applications.absolutePath]
         if (!fixtures.get().isEmpty()) {
             File listed = new File(temporaryDir, 'fixtures.txt')
@@ -218,7 +274,8 @@ abstract class ForgePackTestTask extends ForgePackToolTask {
             arguments << listed.absolutePath
         }
         // those of this task and no others: what the environment of the build has is not an input of it
-        Launched result = launch(MAIN_CLASS, arguments, [GRAILS_REPO_URL: repositories.get() ? repositories.get().join(';') : null])
+        List<String> entries = (publications == null ? [] : [publications.absolutePath]) + repositories.get()
+        Launched result = launch(MAIN_CLASS, arguments, [GRAILS_REPO_URL: entries ? entries.join(';') : null])
         List<String> written = result.written
         boolean ended = written && written.last() ==~ SUMMARY_LINE && written.count { String line -> line ==~ SUMMARY_LINE } == 1
         List<String> fixtureLines = ended ? written.take(written.size() - 1) : written

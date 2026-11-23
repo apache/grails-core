@@ -7,6 +7,9 @@ import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Stream;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
 
 /**
  * Stands in for the class of Forge that generates the fixtures of a feature pack. It is started as
@@ -25,7 +28,9 @@ import java.util.List;
  * repositories the stand-in was given in {@code repositories.txt}, as an application has them in its
  * build file. Without a list there are the four fixtures Forge makes of a pack that names no type of
  * application. A descriptor can tell it to end as a Forge that went
- * wrong does.</p>
+ * wrong does. Of every repository it is given that is a directory it says which jars it has, and what
+ * the entry {@code marker.txt} of each says, which is how far a stand-in sees into what an application
+ * would be built with.</p>
  */
 public final class PackFixtures {
 
@@ -43,6 +48,7 @@ public final class PackFixtures {
         System.err.println("stand-in fixtures in: " + output);
         System.err.println("stand-in fixtures class path: " + System.getProperty("java.class.path"));
         System.err.println("stand-in fixtures repositories: " + System.getenv("GRAILS_REPO_URL"));
+        sayJars(System.getenv("GRAILS_REPO_URL"));
         List<String> fixtures = new ArrayList<>();
         if (args.length == 3) {
             for (String line : Files.readAllLines(Path.of(args[2]), StandardCharsets.UTF_8)) {
@@ -178,5 +184,32 @@ public final class PackFixtures {
         }
         System.out.println("feature pack fixtures: generated=" + generated + " refused=" + refused);
         System.exit(refused == 0 ? 0 : 1);
+    }
+
+    // each jar of a repository that is a directory, by its path in the repository, with what its marker.txt says
+    private static void sayJars(String repositories) throws IOException {
+        if (repositories == null) {
+            return;
+        }
+        for (String entry : repositories.split(";")) {
+            Path repository = Path.of(entry);
+            if (!Files.isDirectory(repository)) {
+                continue;
+            }
+            List<Path> jars;
+            try (Stream<Path> walked = Files.walk(repository)) {
+                jars = walked.filter(path -> path.toString().endsWith(".jar")).sorted().toList();
+            }
+            for (Path jar : jars) {
+                String marker = "-";
+                try (ZipFile zip = new ZipFile(jar.toFile())) {
+                    ZipEntry found = zip.getEntry("marker.txt");
+                    if (found != null) {
+                        marker = new String(zip.getInputStream(found).readAllBytes(), StandardCharsets.UTF_8).trim();
+                    }
+                }
+                System.err.println("stand-in fixtures repository jar: " + repository.relativize(jar).toString().replace('\\', '/') + " marker=" + marker);
+            }
+        }
     }
 }
