@@ -19,6 +19,9 @@
 package grails.gorm.tests
 
 import grails.gorm.annotation.Entity
+import org.grails.orm.hibernate.dialect.SupportedDatabase
+import org.hibernate.dialect.CockroachDialect
+import org.hibernate.engine.spi.SessionFactoryImplementor
 import org.testcontainers.spock.Testcontainers
 import spock.lang.IgnoreIf
 import spock.lang.Requires
@@ -36,9 +39,22 @@ class RLikeHibernate7Spec extends HibernateGormDatastoreSpec {
     @Shared oracle = DatabaseContainers.ORACLE
     @Shared db2 = DatabaseContainers.DB2
     @Shared sqlServer = DatabaseContainers.SQL_SERVER
+    @Shared cockroach = DatabaseContainers.COCKROACH
 
     void setupSpec() {
         manager.registerDomainClasses(RlikeFoo)
+    }
+
+    /**
+     * The CockroachDB rows expect what PostgreSQL gives, and both declarations render ~, so they would pass if Hibernate had
+     * picked the PostgreSQL dialect for the container: check that the bootstrapped session factory selected CockroachDB.
+     */
+    private void assertDialectOf(String db) {
+        if (db == 'CockroachDB') {
+            def dialect = manager.sessionFactory.unwrap(SessionFactoryImplementor).jdbcServices.dialect
+            assert dialect instanceof CockroachDialect
+            assert SupportedDatabase.forDialect(dialect) == SupportedDatabase.COCKROACH
+        }
     }
 
     @IgnoreIf({ data.db in ['DB2', 'SQL Server'] && System.getProperty('os.arch') in ['aarch64', 'arm64'] && System.getProperty('grails.test.amd64.emulation') != 'true' })
@@ -66,6 +82,7 @@ class RLikeHibernate7Spec extends HibernateGormDatastoreSpec {
         // which avoids deprecation warnings and hardcoded dialect strings.
         
         manager.setup(this.class)
+        assertDialectOf(db)
 
         // Seed data
         new RlikeFoo(name: "ABC").save()
@@ -88,6 +105,7 @@ class RLikeHibernate7Spec extends HibernateGormDatastoreSpec {
         "Oracle"     | oracle     || 2
         "DB2"        | db2        || 2
         "SQL Server" | sqlServer  || 0
+        "CockroachDB"| cockroach  || 2
     }
 
     @IgnoreIf({ data.db in ['DB2', 'SQL Server'] && System.getProperty('os.arch') in ['aarch64', 'arm64'] && System.getProperty('grails.test.amd64.emulation') != 'true' })
@@ -106,6 +124,7 @@ class RLikeHibernate7Spec extends HibernateGormDatastoreSpec {
                 'hibernate.id.new_generator_mappings': 'true'
         ]
         manager.setup(this.class)
+        assertDialectOf(db)
         ['Alice', 'alice', 'bob'].each { new RlikeFoo(name: it).save() }
         RlikeFoo.withSession { it.flush() }
 
@@ -113,7 +132,7 @@ class RLikeHibernate7Spec extends HibernateGormDatastoreSpec {
         manager.session.clear()
         List<String> names = RlikeFoo.findAllByNameRlike(pattern)*.name.sort()
 
-        then: 'whether case matters follows the database: PostgreSQL matches with ~, which is case-sensitive, and MySQL and MariaDB follow the collation (Hibernate 5 renders ~*, see #16882); SQL Server falls back to a like, so a regular expression matches nothing and a like pattern selects the rows'
+        then: 'whether case matters follows the database: PostgreSQL and CockroachDB match with ~, which is case-sensitive and treats % as a literal, and MySQL and MariaDB follow the collation (Hibernate 5 renders ~*, see #16882); SQL Server falls back to a like, so a regular expression matches nothing and a like pattern selects the rows'
         names == expected
 
         where:
@@ -126,6 +145,8 @@ class RLikeHibernate7Spec extends HibernateGormDatastoreSpec {
         "DB2"        | db2       | '^al.*'  || ['alice']
         "SQL Server" | sqlServer | '^al.*'  || []
         "SQL Server" | sqlServer | 'al%'    || ['Alice', 'alice']
+        "CockroachDB"| cockroach | '^al.*'  || ['alice']
+        "CockroachDB"| cockroach | 'al%'    || []
     }
 
     @IgnoreIf({ System.getProperty('os.arch') in ['aarch64', 'arm64'] && System.getProperty('grails.test.amd64.emulation') != 'true' })

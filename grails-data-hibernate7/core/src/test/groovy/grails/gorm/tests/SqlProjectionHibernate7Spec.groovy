@@ -37,6 +37,7 @@ class SqlProjectionHibernate7Spec extends HibernateGormDatastoreSpec {
     @Shared mysql = DatabaseContainers.MYSQL
     @Shared mariadb = DatabaseContainers.MARIADB
     @Shared oracle = DatabaseContainers.ORACLE
+    @Shared cockroach = DatabaseContainers.COCKROACH
 
     void setupSpec() {
         manager.registerDomainClasses(SqlProjectionDbBox, SqlProjectionDbShelf)
@@ -74,7 +75,19 @@ class SqlProjectionHibernate7Spec extends HibernateGormDatastoreSpec {
                 sqlProjection '(2 * (width + height)) as perimeter, (width * height) as area', ['perimeter', 'area'], [INTEGER, INTEGER]
             }
             order('height')
+            order('width')
         }*.toList() == [[18, 14], [20, 16], [22, 18], [26, 36]]
+
+        and: 'where the database has dollar-quoted literals, a comma inside a tagged literal does not split the columns'
+        if (db in ['Postgres', 'CockroachDB']) {
+            assert SqlProjectionDbBox.createCriteria().list {
+                projections {
+                    sqlProjection '(2 * (width + height)) as perimeter, $tag$a,b$tag$ as note', ['perimeter', 'note'], [INTEGER, StandardBasicTypes.STRING]
+                }
+                order('height')
+                order('width')
+            }*.toList() == [[18, 'a,b'], [20, 'a,b'], [22, 'a,b'], [26, 'a,b']]
+        }
 
         and: 'a single aggregated value'
         SqlProjectionDbBox.createCriteria().get {
@@ -185,6 +198,7 @@ class SqlProjectionHibernate7Spec extends HibernateGormDatastoreSpec {
         'MySQL'    | mysql
         'MariaDB'  | mariadb
         'Oracle'   | oracle
+        'CockroachDB' | cockroach
     }
 
     private static Date date(LocalDateTime dateTime) {
