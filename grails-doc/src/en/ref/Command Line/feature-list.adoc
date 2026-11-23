@@ -1,0 +1,71 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+== feature list
+
+=== Purpose
+
+Lists the features of the application in the current directory from its record: those it has, the features link:feature-add.html[feature add] can add to it, and for each of the others why it cannot.
+
+=== Examples
+
+[source,console]
+----
+grails feature list
+----
+
+=== Description
+
+Usage:
+
+[source,console]
+----
+grails feature list
+----
+
+`feature list` is the `list` command of the `feature` command. It reads the record of the project in its `.grails` directory and writes nothing:
+
+[source,console]
+----
+$ grails feature list
+| The application shop (web) has 33 features, as its record in .grails says:
+    asked for                      grails-quartz, postgres
+    with them                      asset-pipeline-grails, ..., testcontainers
+| 61 features can be added to it with: grails feature add FEATURE
+  Cache
+    cache                          The Grails Cache plugin provides powerful and easy to use caching ...
+  Database
+    mysql                          Adds the MySQL driver and default config
+                                   with --replace only: it takes the place of postgres, which was asked
+                                   for by name (group database-driver)
+  ...
+| 4 features of Grails for this type of application cannot be added to it:
+    gorm-hibernate7                The feature gorm-hibernate7 ... Adding a feature does not change the
+                                   options the application was created with
+    ...
+----
+
+* The features the application has are those of its record: the ones that were asked for by name, with `--features` when it was created or with an earlier `feature add`, and the ones that came with them, by default or because a feature requires them.
+* A feature that can be added is listed by category, with what adding it comes to beside the feature: the default it takes the place of, as `postgres` that of `h2`; a feature that was asked for by name that it takes the place of, which `feature add` does only with `--replace`; and the features that come with it.
+* A feature that cannot be added is listed with the reason: it would change an option the application was created with (`--servlet`, `--data`, `--reloading`, `--jdk`), it was left out with `--exclude-features`, it cannot be used with a feature the application has, or a feature the application keeps requires the feature it would take the place of.
+* When the record does not let `feature add` add anything, as the record that link:project-migrate.html[project migrate] writes, the record of an application that another version of Grails generated, or one that has the feature of a feature pack that is not part of Grails, the list says why after the features the application has, and lists no others.
+
+The list is worked out from the record alone, as `feature add` selects features: the files of the application are not read. A change of yours that is in the way of a feature, which `feature add` reports as a conflict, is therefore not seen here; `feature add FEATURE --dry-run` shows it.
+
+Outside a project, `feature list` ends with exit code 1 and says, as every command of a project does there, that it is a command of a project; the features an application can be created with are listed by the `create-` commands with link:list-features.html[--list-features].

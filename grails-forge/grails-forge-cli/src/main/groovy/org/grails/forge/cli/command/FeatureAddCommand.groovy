@@ -66,8 +66,8 @@ class FeatureAddCommand extends BaseCommand implements Callable<Integer>, Projec
     private static final Map<Action, String> ACTIONS = [(Action.ADD): 'add', (Action.UPDATE): 'update', (Action.MERGE): 'merge', (Action.ADOPT): 'keep',
                                                         (Action.CONFLICT): 'conflict', (Action.REMOVE): 'remove'] as Map<Action, String>
 
-    @CommandLine.Parameters(arity = '1..*', paramLabel = 'FEATURE', split = ',',
-            description = 'The names of the features to add, as the create commands list them with --list-features.')
+    @CommandLine.Parameters(arity = '1..*', paramLabel = 'FEATURE', split = ',', completionCandidates = FeatureNameCandidates,
+            description = 'The names of the features to add: feature list lists those that can be added to the application.')
     List<String> features = new ArrayList<>()
 
     @CommandLine.Option(names = ['--dry-run'], description = 'Say which files would be added, changed and removed, which features would be replaced, and which conflicts there are, and change nothing.')

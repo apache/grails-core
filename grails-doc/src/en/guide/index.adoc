@@ -1491,6 +1491,11 @@ include::ref/Command Line/package.adoc[]
 
 include::ref/Command Line/feature-add.adoc[]
 
+[[ref-command-line-feature-list]]
+==== feature list
+
+include::ref/Command Line/feature-list.adoc[]
+
 [[ref-command-line-gradle]]
 ==== gradle
 
