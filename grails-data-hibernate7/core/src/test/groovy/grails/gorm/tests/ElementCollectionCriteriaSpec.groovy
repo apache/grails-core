@@ -25,7 +25,7 @@ import spock.lang.Issue
 class ElementCollectionCriteriaSpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
-        manager.registerDomainClasses(EcContact)
+        manager.registerDomainClasses(EcContact, EcMeasure)
     }
 
     void setup() {
@@ -75,6 +75,17 @@ class ElementCollectionCriteriaSpec extends HibernateGormDatastoreSpec {
         }.isEmpty()
     }
 
+    void "two restrictions that spell a number with different scales apply to the same stored number"() {
+        given: 'a collection that holds 1.00'
+        new EcMeasure(name: 'm', readings: [1.00G, 5.5G]).save(flush: true)
+        session.clear()
+
+        expect: '1.0 and 1.00 are one number, though they are not equal as Java values'
+        EcMeasure.createCriteria().list { readings { eq('elements', 1.0G); eq('elements', 1.00G) } }*.name == ['m']
+        EcMeasure.createCriteria().list { readings { 'in'('elements', [1.0G, 2.0G]); eq('elements', 1.00G) } }*.name == ['m']
+        EcMeasure.createCriteria().list { readings { eq('elements', 1.0G); eq('elements', 5.50G) } }.isEmpty()
+    }
+
     void "the block combines with other criteria"() {
         expect:
         EcContact.createCriteria().list {
@@ -98,4 +109,12 @@ enum EcKind { None, Email, Phone }
 class EcContact {
     String name
     static hasMany = [kinds: EcKind]
+}
+
+@Entity
+class EcMeasure {
+
+    String name
+
+    static hasMany = [readings: BigDecimal]
 }

@@ -441,9 +441,27 @@ public class CriteriaMethodInvoker {
                 allowed = new java.util.LinkedHashSet<>(values);
             }
             else {
-                allowed.retainAll(values);
+                // the values are compared as the numbers they store: 1.0 and 1.00 are not equal as Java values
+                allowed.removeIf(kept -> values.stream().noneMatch(value -> sameValue(kept, value)));
             }
             return this;
+        }
+
+        private static boolean sameValue(Object left, Object right) {
+            if (left instanceof Number leftNumber && right instanceof Number rightNumber) {
+                try {
+                    return toDecimal(leftNumber).compareTo(toDecimal(rightNumber)) == 0;
+                }
+                catch (NumberFormatException notFinite) {
+                    // NaN and the infinities have no decimal form
+                    return java.util.Objects.equals(left, right);
+                }
+            }
+            return java.util.Objects.equals(left, right);
+        }
+
+        private static java.math.BigDecimal toDecimal(Number number) {
+            return number instanceof java.math.BigDecimal decimal ? decimal : new java.math.BigDecimal(number.toString());
         }
 
         /** Adds the restriction of the block to the query: an element that is one of the values left. */
