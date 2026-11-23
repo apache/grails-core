@@ -267,7 +267,7 @@ tasks.named('assemble').configure {
     it.dependsOn cliStartScripts, rootProject.project(':grails-forge-cli').tasks.named('buildCompletion')
 }
 tasks.named('installDist').configure {
-    it.dependsOn cliStartScripts
+    it.dependsOn cliStartScripts, rootProject.project(':grails-forge-cli').tasks.named('buildCompletion')
 }
 tasks.named('distTar').configure {
     dependsOn cliStartScripts, jarTask, shadowJarTask, rootProject.project(':grails-forge-cli').tasks.named('buildCompletion')
