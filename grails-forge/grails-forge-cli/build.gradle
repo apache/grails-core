@@ -24,6 +24,7 @@ plugins {
     id 'org.apache.grails.buildsrc.properties'
     id 'org.apache.grails.buildsrc.dependency-validator'
     id 'org.apache.grails.gradle.grails-app'
+    id 'java-library' // api: what a program that calls GrailsCli.execute compiles against
     id 'java-test-fixtures' // CliRunner, which the specs here and in test-core run one command bean with
     id 'org.apache.grails.buildsrc.compile'
     id 'org.apache.grails.buildsrc.publish'
@@ -87,7 +88,9 @@ dependencies {
     // the framework of a Grails application without a web server
     implementation 'org.apache.grails:grails-core'
     implementation 'org.apache.grails.bootstrap:grails-bootstrap' // grails.codegen.model, for add-property
-    implementation 'org.apache.groovy:groovy'
+    // GrailsCli, which a program calls (see "Starting the Command Line from a Tool" in the guide), is a Groovy class:
+    // its supertype groovy.lang.GroovyObject is on the class path a program compiles a call of execute against
+    api 'org.apache.groovy:groovy'
     // the document help --json writes
     implementation 'org.apache.groovy:groovy-json'
 

@@ -502,7 +502,7 @@ After a mistake in the command line of a command that creates an application, on
 
 ==== Starting the Command Line from a Tool
 
-An IDE, a script or a build that starts the Grails command line itself, without the `grails` script of the distribution, uses the artifact `org.apache.grails:grails-cli` of the version of Grails with its dependencies, and the class the `Main-Class` attribute of the manifest of its jar names: `org.apache.grails.forge.cli.GrailsCli`. A tool that starts more than one version of Grails reads the name from the manifest rather than keeping it.
+An IDE, a script or a build that starts the Grails command line itself, without the `grails` script of the distribution, uses the artifact `org.apache.grails:grails-cli` of the version of Grails with its dependencies, and the class the `Main-Class` attribute of the manifest of its jar names: `org.apache.grails.forge.cli.GrailsCli`. A tool that starts more than one version of Grails reads the name from the manifest rather than keeping it. The dependencies are on Maven Central, except `org.gradle:gradle-tooling-api`, with which the command line runs Gradle: Gradle publishes it to its own repository, `https://repo.gradle.org/gradle/libs-releases`.
 
 As a program, the JVM ends with the exit code of the command:
 
@@ -511,12 +511,27 @@ As a program, the JVM ends with the exit code of the command:
 $ java -cp <the class path of org.apache.grails:grails-cli> org.apache.grails.forge.cli.GrailsCli --plain-output --non-interactive help --json
 ----
 
-In a JVM of your own, the exit code is returned:
+In a JVM of your own, a program calls `execute`, which returns the exit code. The program is compiled against the artifact that has the class, `org.apache.grails.forge:grails-forge-cli` of the version of Grails, whose jar has the module name `org.apache.grails.forge.cli`. `GrailsCli` is written in Groovy, so Groovy comes with it onto the class path the program is compiled against. `org.apache.grails:grails-cli` has `grails-forge-cli` among its dependencies at run time only: its own class, which the Grails wrapper starts, needs nothing but the JDK, and a program that is compiled against `grails-cli` does not find `GrailsCli`.
+
+[source,groovy,subs="attributes"]
+.build.gradle
+----
+repositories {
+    mavenCentral()
+    maven { url = 'https://repo.gradle.org/gradle/libs-releases' } // org.gradle:gradle-tooling-api
+}
+
+dependencies {
+    implementation "org.apache.grails.forge:grails-forge-cli:{version}"
+}
+----
 
 [source,groovy]
 ----
 int exitCode = org.apache.grails.forge.cli.GrailsCli.execute('--plain-output', 'create-app', 'com.example.myapp')
 ----
+
+`grails-forge-cli` brings `org.slf4j:slf4j-nop` at run time, so that the command line logs nothing through SLF4J. A program that has an SLF4J provider of its own excludes that module, so that SLF4J finds one provider.
 
 Started this way the command line is called `grails` in its help, and takes the commands of this chapter as they are given here. Without a command it starts the interactive console in a Grails project and shows the help elsewhere, and always the help with `--non-interactive`. `execute` runs one command line at a time, in the current directory of the JVM, and writes to the standard output and the standard error of the JVM.
 

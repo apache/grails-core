@@ -74,7 +74,9 @@ dependencies {
     shadowCombined 'org.apache.groovy:groovy'
     shadowCombined files(rootProject.project(':grails-cli-shadow').tasks.named('shadowJar'))
 
-    // GrailsCliSpec: the entry point on the class path this artifact is published with
+    // GrailsCliSpec calls GrailsCli as a program that embeds the command line does, compiled against grails-forge-cli, which
+    // has the class (this artifact has it at run time only, see EmbeddingClassPathSpec), and runs it on the class path this
+    // artifact is published with
     testImplementation project(':grails-forge-cli'), {
         exclude group: 'org.slf4j', module: 'slf4j-nop'
     }
@@ -83,6 +85,40 @@ dependencies {
         exclude group: 'org.apache.groovy', module: 'groovy-all'
     }
     testImplementation 'org.apache.groovy:groovy-json'
+}
+
+// EmbeddingClassPathSpec compiles a program that calls GrailsCli.execute against the class path a build of its own gives
+// it for the one artifact it declares, and runs the program on the class path it runs with: the java-api and java-runtime
+// variants of grails-forge-cli, which the guide names for such a program ("Starting the Command Line from a Tool"), and
+// the java-api variant of this artifact, which has nothing to compile against
+Map<String, String> embeddingClassPaths = [
+        embeddingForgeCliApi    : Usage.JAVA_API,
+        embeddingForgeCliRuntime: Usage.JAVA_RUNTIME,
+        embeddingCliApi         : Usage.JAVA_API,
+]
+embeddingClassPaths.each { String name, String usage ->
+    configurations.register(name) { Configuration it ->
+        it.canBeConsumed = false
+        it.canBeResolved = true
+        it.attributes { AttributeContainer attributes ->
+            attributes.attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage, usage))
+            attributes.attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category, Category.LIBRARY))
+            attributes.attribute(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE, objects.named(LibraryElements, LibraryElements.JAR))
+            attributes.attribute(Bundling.BUNDLING_ATTRIBUTE, objects.named(Bundling, Bundling.EXTERNAL))
+        }
+    }
+}
+dependencies {
+    embeddingForgeCliApi project(':grails-forge-cli')
+    embeddingForgeCliRuntime project(':grails-forge-cli')
+    embeddingCliApi project(project.path)
+}
+tasks.named('test', Test).configure { Test it ->
+    embeddingClassPaths.keySet().each { String name ->
+        FileCollection classPath = configurations.named(name).get()
+        it.inputs.files(classPath).withPropertyName(name).withNormalizer(ClasspathNormalizer)
+        it.jvmArgumentProviders.add({ ["-Dgrails.cli.${name}=${classPath.files*.absolutePath.join(File.pathSeparator)}".toString()] } as CommandLineArgumentProvider)
+    }
 }
 
 apply {
