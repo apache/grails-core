@@ -839,6 +839,8 @@ Never run a script of the framework's plugins with `runScriptCommand` in Grails 
 ## Environment, Short Forms, Options and Exit Codes
 
 - Replace an environment in front of the command with a system property after it: `grails prod war` becomes `grails war -Dgrails.env=production`, `grails test run-app` becomes `grails run-app -Dgrails.env=test`, `grails dev run-app` becomes `grails run-app`. `test`, `prod` and `dev` in that place are refused with exit code 2. Defaults: `development` for `run-app`, `console`, `shell`, `run-command`, `run-script`; `test` for `test-app`; `production` for `assemble`, `war`, `package`.
+- `grails <application or plugin command> -Dgrails.env=X` does not select the environment: the command runs in development with the option as an argument, and a warning says so. Use `grails run-command -Dgrails.env=X <command>`. Use `grails help <command>` to describe it without running it; `grails <command> --help` runs it.
+- The shell completion script is now `bin/grails_completion` (bash; zsh after `bashcompinit`), replacing `bin/grails_forge_cli_completion`. In a project, `grails feature list` shows the features it has and which `feature add` can add.
 - Move every option of a command behind the name of the command. In front of it only `--plain-output`, `--non-interactive`, `-x`/`--stacktrace`, `-v`/`--verbose`, `-h` and `-V` are taken.
 - Write options with two dashes and remove options a command does not have: the shell took one dash or two and ignored unknown options, and `grails` refuses both with exit code 2. Replace `grails -v` and `grails -version` with `grails --version`.
 - Put a Gradle option that the command does not have behind `--`: `grails compile -- --offline`. Without the `--` it is refused.
