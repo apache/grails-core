@@ -19,10 +19,9 @@
 package org.apache.grails.forge.cli.console
 
 import java.nio.file.Path
+import java.util.function.Function
 import java.util.function.Supplier
-import java.util.regex.Pattern
 import groovy.transform.CompileStatic
-import org.grails.build.parsing.ScriptNameResolver
 import org.grails.forge.cli.ForgeContext
 import org.grails.forge.cli.command.CodeGenCommand
 import org.grails.forge.feature.FeatureSelectionException
@@ -34,10 +33,14 @@ import picocli.CommandLine
  * with the command line is in the catalog, with nothing else to do for it. The catalog finds a
  * command by its name or by the short form of its name, and describes the commands for a tool.
  *
- * <p>The short form is the one the Grails shell takes, by the rule of {@link ScriptNameResolver}:
- * the first letters of each word of the name, the first letter of every word after the first in
- * upper case, so that {@code cA} and {@code creA} are {@code create-app} and {@code cDC} is
- * {@code create-domain-class}. There have to be as many parts as the name has words.</p>
+ * <p>A short form is read as {@link ShortForms} says: as the Grails shell read it, so that {@code cA}
+ * and {@code creA} are {@code create-app} and {@code cDC} is {@code create-domain-class}, and, when it
+ * is of lower-case letters only, also as the starts of the words of the name, so that {@code ra} is
+ * {@code run-app} and {@code ccon} is {@code create-controller}. The name of a command, or another
+ * name it has, is that command whatever it is short for; at the top of the command line a name of
+ * {@link FormerCommands} is short for nothing, and is answered with what there is in its place. The
+ * commands of the CLI itself come first: a short form that fits one of them is not one of a command
+ * of the application or of its plugins.</p>
  *
  * @since 9.0
  */
@@ -49,10 +52,6 @@ final class CommandCatalog {
 
     /** The origin of a command that is part of the command line itself. */
     public static final String BUILT_IN = 'built-in'
-
-    // What can be the short form of a name. Anything else, a path or an option among them, is not
-    // looked at: the rule of the shell takes the letters out of whatever it is given.
-    private static final Pattern SHORT_FORM = Pattern.compile('[A-Za-z][A-Za-z-]{0,63}')
 
     private final CommandLine root
 
@@ -84,13 +83,26 @@ final class CommandCatalog {
         if (named != null) {
             return named
         }
-        List<CommandLine> candidates = shortFor(parent, typed)
+        Known known = new Known(parent)
+        List<CommandLine> candidates = known.shortFor(typed)
         if (candidates.size() > 1) {
-            throw new CommandLine.ParameterException(parent, "${FeatureSelectionException.shown(typed)} is short for more than one command: " +
-                    "${candidates.collect { CommandLine each -> FeatureSelectionException.shown(each.getCommandName()) }.join(', ')}. " +
-                    'Type more of the name of the one that is meant')
+            throw new CommandLine.ParameterException(parent, ambiguous(known, typed, candidates))
         }
         return candidates.isEmpty() ? null : candidates.get(0)
+    }
+
+    // A short form that fits several commands runs none of them, and names them, each with the
+    // shortest form that is short for it alone, which is what is then typed.
+    private static String ambiguous(Known known, String typed, List<CommandLine> candidates) {
+        boolean anyForm = false
+        List<String> named = []
+        for (CommandLine candidate : candidates) {
+            String form = ShortForms.shortest(candidate, { String each -> known.resolve(each) } as Function<String, CommandLine>)
+            anyForm = anyForm || form != null
+            named.add(FeatureSelectionException.shown(candidate.getCommandName()) + (form == null ? '' : " (${form})"))
+        }
+        return "${FeatureSelectionException.shown(typed)} is short for more than one command: ${named.join(', ')}. " +
+                'Type more of the name of the one that is meant' + (anyForm ? ', or the short form in brackets after it' : '')
     }
 
     /**
@@ -355,26 +367,56 @@ final class CommandCatalog {
         return listed
     }
 
-    private static List<CommandLine> shortFor(CommandLine parent, String typed) {
-        if (!SHORT_FORM.matcher(typed).matches()) {
-            return Collections.emptyList()
-        }
-        // with the commands that create the classes of a project where they are not listed, outside one:
-        // they are commands there by their names, and so by their short forms
-        List<CommandLine> known = listed(parent)
-        for (CommandLine command : new LinkedHashSet<CommandLine>(parent.getSubcommands().values())) {
-            if (command.getCommandSpec().usageMessage().hidden() && command.getCommandSpec().userObject() instanceof CodeGenCommand) {
-                known.add(command)
+    // whether what was typed is the name of a command the Grails shell had, which is answered with what there is in its place and is short for nothing
+    private static boolean isFormer(CommandLine parent, String typed) {
+        return parent.getParent() == null && FormerCommands.find(typed) != null
+    }
+
+    /**
+     * The commands of a command that a short form is looked up among: those the help lists, and outside
+     * a project the commands that create the classes of a project, which are not listed there; they are
+     * commands there by their names, and so by their short forms. The commands of the CLI itself come
+     * first: what a project or one of its plugins calls a command does not change what a short form of
+     * theirs means, or make it stand for two.
+     */
+    @CompileStatic
+    private static final class Known {
+
+        private final CommandLine parent
+        private final List<CommandLine> own = []
+        private final List<CommandLine> ofTheBuild = []
+
+        Known(CommandLine parent) {
+            this.parent = parent
+            List<CommandLine> known = listed(parent)
+            for (CommandLine command : new LinkedHashSet<CommandLine>(parent.getSubcommands().values())) {
+                if (command.getCommandSpec().usageMessage().hidden() && command.getCommandSpec().userObject() instanceof CodeGenCommand) {
+                    known.add(command)
+                }
+            }
+            for (CommandLine command : known) {
+                (command.getCommandSpec().userObject() instanceof ApplicationCommandCommand ? ofTheBuild : own).add(command)
             }
         }
-        List<CommandLine> fits = known.findAll { CommandLine command ->
-            CommandLine.Model.CommandSpec spec = command.getCommandSpec()
-            ScriptNameResolver.resolvesTo(typed, spec.name()) || spec.aliases().any { String alias -> ScriptNameResolver.resolvesTo(typed, alias) }
+
+        // what a form is short for; nothing for anything that cannot be a short form, and for a name of the Grails shell
+        List<CommandLine> shortFor(String typed) {
+            if (!ShortForms.FORM.matcher(typed).matches() || isFormer(parent, typed)) {
+                return Collections.emptyList()
+            }
+            List<CommandLine> fits = ShortForms.fitting(typed, own)
+            return fits.isEmpty() ? ShortForms.fitting(typed, ofTheBuild) : fits
         }
-        // The commands of the CLI itself come first: what a project or one of its plugins calls a
-        // command does not change what a short form of theirs means, or make it stand for two.
-        List<CommandLine> own = fits.findAll { CommandLine command -> !(command.getCommandSpec().userObject() instanceof ApplicationCommandCommand) }
-        return own.isEmpty() ? fits : own
+
+        // the command what was typed stands for alone, by its name or as a short form; null for none and for several
+        CommandLine resolve(String typed) {
+            CommandLine named = parent.getSubcommands().get(typed)
+            if (named != null) {
+                return named
+            }
+            List<CommandLine> fits = shortFor(typed)
+            return fits.size() == 1 ? fits.get(0) : null
+        }
     }
 
     // the lines of a description as plain text: without the markup of the help, which a tool would show as it is

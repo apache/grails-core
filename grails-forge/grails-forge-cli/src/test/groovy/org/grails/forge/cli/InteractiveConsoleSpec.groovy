@@ -143,6 +143,36 @@ class InteractiveConsoleSpec extends Specification {
         !said.contains('the wrapper ran with never')
     }
 
+    void "the console reads the short forms the command line reads, of lower-case letters too"() {
+        given:
+        project()
+
+        when:
+        ProcessBuilder console = command(true, [], [])
+        console.environment().put(ApplicationCommands.LISTING, 'false')
+        console.environment().put('NO_COLOR', '1')
+        program = console.redirectInput(typed('ra --help\n' +
+                'help sa\n' +
+                'cc\n' +
+                'g build\n' +
+                'exit\n')).start()
+        boolean ended = program.waitFor(SECONDS, TimeUnit.SECONDS)
+        String said = written.text
+
+        then:
+        ended
+        program.exitValue() == 0
+
+        and: 'the help of the commands the forms are short for'
+        said.contains('Usage: grails run-app ')
+        said.contains('Usage: grails stop-app ')
+
+        and: 'a form two commands fit runs neither and says how each is typed'
+        said.contains('cc is short for more than one command: create-controller (ccon), create-command (ccom). ' +
+                'Type more of the name of the one that is meant, or the short form in brackets after it')
+        said.contains('the wrapper ran with build')
+    }
+
     void "the console ends with the input also after its last line was a command"() {
         given:
         project()

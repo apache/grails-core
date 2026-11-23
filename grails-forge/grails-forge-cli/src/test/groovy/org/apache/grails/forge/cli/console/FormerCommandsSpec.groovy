@@ -91,6 +91,7 @@ class FormerCommandsSpec extends CommandSpec {
         'run'                      | 'run was another name of run-app in a project in the Grails shell; outside a project it ran a Groovy script with Spring Boot, which has no replacement. Type: grails-forge-cli run-app'
         'stop'                     | 'stop was another name of stop-app in the Grails shell. Type: grails-forge-cli stop-app'
         'quit'                     | 'quit ended the interactive mode of the Grails shell. The interactive mode of grails-forge-cli is ended with exit, and there is none to end outside it'
+        'exit'                     | 'exit ends the interactive mode, which grails-forge-cli starts when it is given no command. It is no command outside it'
         'list-profiles'            | 'list-profiles listed the profiles of the Grails shell. Profiles are replaced by application types and features: grails-forge-cli help lists the create commands, and each lists its features with --list-features'
         'open'                     | 'open opened a file with the program the desktop has for it in the Grails shell. It has no replacement in grails-forge-cli'
         'create-profile'           | 'create-profile created a profile for the Grails shell. Profiles are replaced by application types, features and feature packs, and no command creates any of these'
@@ -239,6 +240,41 @@ class FormerCommandsSpec extends CommandSpec {
         then: 'nothing is said about the list, and the line of the table follows the refusal'
         other == 2
         err.toString().readLines()[1].startsWith('generate-views is a command of the scaffolding plugin')
+    }
+
+    @Unroll
+    void "#name is answered with its line also where it is the short form of a command of the application, which is found by a short form of its own"() {
+        given: 'commands of the application whose names start as the name of the table and the rest of it'
+        inProject('web')
+        File catalog = new File(top, 'web/.grails/cache/command-catalog.json')
+        catalog.parentFile.mkdirs()
+        catalog.text = ApplicationCommandsSpec.doc(['run-now', 'test-tool', 'stop-point'].collect { String each ->
+            [name: each, aliases: [], description: '', origin: 'application', target: 'application', registration: 'factories']
+        })
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'help', name)
+        List<String> lines = err.toString().readLines()
+
+        then:
+        exit == 2
+        lines[0].startsWith("There is no command ${name}")
+        lines.contains(FormerCommands.find(name).hint.replace('{cli}', CLI).replace('{name}', CLI))
+
+        when:
+        err.reset()
+        out.reset()
+        exit = ForgeCli.execute(beanContext, 'help', form)
+
+        then:
+        exit == 0
+        out.toString().readLines()[0] == "Usage: grails-forge-cli ${command} [ARGS...]".toString()
+
+        where:
+        name   | form | command
+        'run'  | 'rn' | 'run-now'
+        'test' | 'tt' | 'test-tool'
+        'stop' | 'sp' | 'stop-point'
     }
 
     void "below a project that is not used the reason comes first"() {

@@ -165,7 +165,9 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
         name           | usage                                                          | from
         'hello-world'  | 'Usage: grails-forge-cli hello-world [ARGS...]'                | 'A command of org.example:hello-cli:1.2.3, which runs in the application'
         'hW'           | 'Usage: grails-forge-cli hello-world [ARGS...]'                | 'Says hello'
+        'hw'           | 'Usage: grails-forge-cli hello-world [ARGS...]'                | 'Says hello'
         'audit-report' | 'Usage: grails-forge-cli audit-report [ARGS...]'               | 'A command of the application, which runs in the application'
+        'ar'           | 'Usage: grails-forge-cli audit-report [ARGS...]'               | 'A command of the application, which runs in the application'
         'oldest'       | 'Usage: grails-forge-cli old-one [ARGS...]'                    | 'A command of file:legacy-plugin.jar, which runs in the application'
     }
 
@@ -673,6 +675,7 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
                  [name: 'install-templates', description: 'Installs the scaffolding templates', origin: 'org.apache.grails:grails-scaffolding:9.0.0', target: 'application', registration: 'descriptor'],
                  [name: 'war', origin: 'application', target: 'application', registration: 'factories'],
                  [name: 'stat', origin: 'file:stat.jar', target: 'application', registration: 'legacy'],
+                 [name: 'ra', origin: 'application', target: 'application', registration: 'factories'],
                  [name: 'c', origin: 'application', target: 'application', registration: 'factories'],
                  [name: 'help', origin: 'org.example:helper:1', target: 'application', registration: 'descriptor'],
                  [name: 'gradle', origin: 'org.example:helper:1', target: 'application', registration: 'descriptor'],
@@ -687,6 +690,7 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
                 "gradle is a command of the CLI itself (built-in), so the command gradle of org.example:helper:1 is not a command here. ${how}gradle",
                 "help is a command of the CLI itself (built-in), so the command help of org.example:helper:1 is not a command here. ${how}help",
                 "install-templates is a command of the CLI itself (built-in), so the command install-templates of org.apache.grails:grails-scaffolding:9.0.0 is not a command here. ${how}install-templates",
+                "ra is short for run-app, a command of the CLI itself (built-in), so the command ra of application is not a command here. ${how}ra",
                 "stat is short for stats, a command of the CLI itself (built-in), so the command stat of file:stat.jar is not a command here. ${how}stat",
                 "war is another name of assemble, a command of the CLI itself (built-in), so the command war of application is not a command here. ${how}war"]
 
@@ -729,6 +733,7 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
         'install-templates' | 'install-templates'
         'war'               | 'assemble'
         'stat'              | 'stats'
+        'ra'                | 'run-app'
     }
 
     void "a command of the build that is not there is said to be run with run-command"() {
@@ -757,7 +762,8 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
 
         then:
         exit == 2
-        err.toString().readLines()[0] == 'cC is short for more than one command: create-controller, create-command. Type more of the name of the one that is meant'
+        err.toString().readLines()[0] == 'cC is short for more than one command: create-controller (ccon), create-command (ccom). ' +
+                'Type more of the name of the one that is meant, or the short form in brackets after it'
         !new File(dir, 'grails-app/controllers/example/grails/BookController.groovy').exists()
 
         when: 'and what was short for one command of the CLI is that command'
@@ -779,6 +785,15 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
         err.toString().isEmpty()
         out.toString().readLines()[0] == 'Usage: grails-forge-cli hello-there [ARGS...]'
 
+        when: 'and so is one of lower-case letters'
+        out.reset()
+        exit = ForgeCli.execute(beanContext, 'help', 'ht')
+
+        then:
+        exit == 0
+        err.toString().isEmpty()
+        out.toString().readLines()[0] == 'Usage: grails-forge-cli hello-there [ARGS...]'
+
         when: 'the commands of the build are all there, under their names'
         out.reset()
         exit = ForgeCli.execute(beanContext, 'help', '--json')
@@ -794,6 +809,9 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
         'comp' | 'compile'
         'cA'   | 'create-app'
         'cApp' | 'create-app'
+        'ca'   | 'create-app'
+        'cdc'  | 'create-domain-class'
+        'ccon' | 'create-controller'
     }
 
     @IgnoreIf({ os.windows })

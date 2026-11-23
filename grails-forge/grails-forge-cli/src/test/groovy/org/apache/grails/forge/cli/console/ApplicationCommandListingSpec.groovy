@@ -190,6 +190,30 @@ class ApplicationCommandListingSpec extends CommandSpec {
         ran() == ['greet', 'greet']
     }
 
+    void "a form of lower-case letters that only a command of the application fits has the build list the commands, and the command is run"() {
+        given:
+        new File(dir, 'commands.json').text = ApplicationCommandsSpec.doc([GREET, STATS, ApplicationCommandsSpec.HELLO])
+
+        when: 'the first letters of hello-world'
+        int exit = ForgeCli.execute(beanContext, 'hw', 'Ann')
+
+        then:
+        exit == 0
+        err.toString().readLines()[0] == '| Listing the commands of the application and its plugins, of which hw may be one, with the Gradle task grailsCommandCatalog'
+        listed().size() == 1
+        ran() == ['hello-world Ann']
+
+        when: 'more of its letters, now that the list is current'
+        err.reset()
+        exit = ForgeCli.execute(beanContext, 'hellow', 'Bo')
+
+        then:
+        exit == 0
+        !all().contains('| Listing')
+        listed().size() == 1
+        ran() == ['hello-world Ann', 'hello-world Bo']
+    }
+
     void "the build is not run for #what"() {
         when:
         int exit = ForgeCli.execute(beanContext, typed as String[])
@@ -207,6 +231,10 @@ class ApplicationCommandListingSpec extends CommandSpec {
         'the help asked for in front of a name'          | ['--help', 'greet']      | 0        | ['Usage: grails-forge-cli']
         'the version'                                    | ['--version']            | 0        | []
         'the help of a command of the command line'      | ['cA', '--help']         | 0        | ['Usage: grails-forge-cli create-app']
+        'a command of the command line by its initials'  | ['ra', '--help']         | 0        | ['Usage: grails-forge-cli run-app']
+        'another one by its initials'                    | ['sa', '--help']         | 0        | ['Usage: grails-forge-cli stop-app']
+        'a command of the command line by more letters'  | ['ccon', '--help']       | 0        | ['Usage: grails-forge-cli create-controller']
+        'a form several commands of the command line fit' | ['cc']                  | 2        | ['cc is short for more than one command: create-controller (ccon), create-command (ccom)']
         'a command of the command line'                  | ['stats']                | 0        | []
         'what cannot be the name of a command'           | ['greet.groovy']         | 2        | ['There is no command greet.groovy', MISSING]
         'a command of the Grails shell that is replaced' | ['run']                  | 2        | ['Type: grails-forge-cli run-app']

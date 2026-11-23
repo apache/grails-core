@@ -1373,8 +1373,8 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
         (commands['run-command'].parameters as List<Map>)*.label == ['NAME', 'ARG']
         (commands['run-script'].parameters as List<Map>)*.label == ['FILE']
 
-        when: 'the short forms of the shell'
-        Map<String, Integer> exits = ['rA', 'sA', 'rS', 'rC', 'con', 'she'].collectEntries { String form ->
+        when: 'the short forms of the shell, and those of lower-case letters'
+        Map<String, Integer> exits = ['rA', 'sA', 'rS', 'rC', 'con', 'she', 'ra', 'sa', 'rs', 'rc'].collectEntries { String form ->
             out.reset()
             [(form): ForgeCli.execute(beanContext, form, '--help')]
         }
@@ -1384,9 +1384,13 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
         out.reset()
         ForgeCli.execute(beanContext, 'sA', '--help')
         String stopApp = out.toString()
+        out.reset()
+        ForgeCli.execute(beanContext, 'ra', '--help')
+        String initials = out.toString()
 
         then:
         exits.values().every { int each -> each == 0 }
+        initials == runApp
         runApp.readLines()[0] == 'Usage: grails-forge-cli run-app [-hvVx] [--non-interactive] [--plain-output]'
         runApp.contains('[--port=PORT] [--host=HOST] [--https] [--debug-jvm] [--query-tail] [--detach | --foreground]')
         runApp.contains('[--ready-timeout=SECONDS] [-DNAME=VALUE]... [-PNAME=VALUE]... [-- GRADLE-ARGUMENT...]')
@@ -1417,9 +1421,12 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
         }
 
         then: 'before these commands s was stats and co was compile; r is no command, so it starts nothing, and st is stats still'
-        ambiguous.s == '2 s is short for more than one command: stats, shell. Type more of the name of the one that is meant'
-        ambiguous.co == '2 co is short for more than one command: compile, console. Type more of the name of the one that is meant'
-        ambiguous.c == '2 c is short for more than one command: compile, clean, console. Type more of the name of the one that is meant'
+        ambiguous.s == '2 s is short for more than one command: stats (st), shell (sh). ' +
+                'Type more of the name of the one that is meant, or the short form in brackets after it'
+        ambiguous.co == '2 co is short for more than one command: compile (com), console (con). ' +
+                'Type more of the name of the one that is meant, or the short form in brackets after it'
+        ambiguous.c == '2 c is short for more than one command: compile (com), clean (cl), console (con). ' +
+                'Type more of the name of the one that is meant, or the short form in brackets after it'
         ambiguous.r.startsWith('2 ')
         ambiguous.st.startsWith('0 ') && ambiguous.st.contains(' stats ')
     }

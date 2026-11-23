@@ -82,6 +82,9 @@ class CommandCatalogSpec extends CommandSpec implements CommandFixture {
         'cWP'       | 'create-web-plugin'
         'cRApiP'    | 'create-rest-api-plugin'
         'create-rest-a-p' | 'create-rest-api-plugin'
+        'rA'        | 'run-app'
+        'RA'        | 'run-app'
+        'r-a'       | 'run-app'
         'f'         | 'feature'
         'f a'       | 'feature add'
         'feature a' | 'feature add'
@@ -89,6 +92,59 @@ class CommandCatalogSpec extends CommandSpec implements CommandFixture {
         '-x cA'     | 'create-app'
         '-x -v cA'  | 'create-app'
         '-xv cA'    | 'create-app'
+    }
+
+    @Unroll
+    void "#typed, of lower-case letters only, is cut into the words of #command: #how"() {
+        when:
+        int exit = ForgeCli.execute(beanContext, (typed.split(' ').toList() + '--help') as String[])
+
+        then:
+        exit == 0
+        out.toString().startsWith("Usage: grails-forge-cli ${command} ")
+        err.toString().isEmpty()
+
+        where:
+        typed         | command                     | how
+        'ca'          | 'create-app'                | 'the first letter of each word'
+        'cw'          | 'create-webapp'             | 'the first letter of each word'
+        'cr'          | 'create-restapi'            | 'the first letter of each word'
+        'cp'          | 'create-plugin'             | 'the first letter of each word'
+        'cwp'         | 'create-web-plugin'         | 'the first letter of each word'
+        'crap'        | 'create-rest-api-plugin'    | 'the first letter of each word'
+        'ra'          | 'run-app'                   | 'the first letter of each word'
+        'sa'          | 'stop-app'                  | 'the first letter of each word'
+        'ta'          | 'test-app'                  | 'the first letter of each word'
+        'rs'          | 'run-script'                | 'the first letter of each word'
+        'rc'          | 'run-command'               | 'the first letter of each word'
+        'uw'          | 'update-wrapper'            | 'the first letter of each word'
+        'dr'          | 'dependency-report'         | 'the first letter of each word'
+        'br'          | 'bug-report'                | 'the first letter of each word'
+        'lp'          | 'list-plugins'              | 'the first letter of each word'
+        'pi'          | 'plugin-info'               | 'the first letter of each word'
+        'cdc'         | 'create-domain-class'       | 'the first letter of each word, of a command of a project'
+        'cdr'         | 'create-domain-resource'    | 'the first letter of each word, of a command of a project'
+        'cit'         | 'create-integration-test'   | 'the first letter of each word, of a command of a project'
+        'cut'         | 'create-unit-test'          | 'the first letter of each word, of a command of a project'
+        'cft'         | 'create-functional-test'    | 'the first letter of each word, of a command of a project'
+        'ap'          | 'add-property'              | 'the first letter of each word, of a command of a project'
+        'crc'         | 'create-restful-controller' | 'the first letters come first, although cr and c start create-controller'
+        'runa'        | 'run-app'                   | 'more of the first word'
+        'rapp'        | 'run-app'                   | 'more of the last word'
+        'runapp'      | 'run-app'                   | 'every letter'
+        'creatapp'    | 'create-app'                | 'more of each word'
+        'ccon'        | 'create-controller'         | 'more of the word that tells it from create-command'
+        'ccom'        | 'create-command'            | 'more of the word that tells it from create-controller'
+        'cse'         | 'create-service'            | 'more of the word that tells it from create-script'
+        'csc'         | 'create-script'             | 'more of the word that tells it from create-service'
+        'crestc'      | 'create-restful-controller' | 'more of a word in the middle'
+        'he'          | 'help'                      | 'the start of a name of one word, as before'
+        'cl'          | 'clean'                     | 'the start of a name of one word, as before'
+        'f l'         | 'feature list'              | 'a command of a command'
+        'pr h'        | 'project health'            | 'a command of a command'
+        'pr m'        | 'project migrate'           | 'a command of a command'
+        'project reg' | 'project regenerate'        | 'a command of a command'
+        '-x ra'       | 'run-app'                   | 'after an option of the command line'
     }
 
     @Unroll
@@ -104,7 +160,7 @@ class CommandCatalogSpec extends CommandSpec implements CommandFixture {
         !new File(dir, 'grails-app').exists()
 
         where:
-        typed << ['ca', 'cxA', 'aC', 'cAA', 'cA2', 'c_A']
+        typed << ['cxA', 'aC', 'cAA', 'cA2', 'c_A', 'Ra', 'rUA', 'fa', 'cxa', 'zz', 'rap-x']
     }
 
     void "a short form creates the application the name would"() {
@@ -211,7 +267,8 @@ class CommandCatalogSpec extends CommandSpec implements CommandFixture {
         then: 'none of them is run, and they are named'
         exit == 2
         out.toString().isEmpty()
-        err.toString().readLines()[0] == 'cA is short for more than one command: create-app, check-all, clean-all. Type more of the name of the one that is meant'
+        err.toString().readLines()[0] == 'cA is short for more than one command: create-app (cap), check-all (cha), clean-all (cla). ' +
+                'Type more of the name of the one that is meant, or the short form in brackets after it'
         err.toString().contains('Usage: grails-forge-cli [-hvVx] [--non-interactive] [--plain-output] [COMMAND]')
         !new File(dir, 'three').exists()
 
@@ -224,7 +281,7 @@ class CommandCatalogSpec extends CommandSpec implements CommandFixture {
         help == 0
         out.toString().startsWith('Usage: grails-forge-cli clean-all ')
         ambiguous == 2
-        err.toString().readLines()[0].startsWith('cA is short for more than one command: create-app, check-all, clean-all.')
+        err.toString().readLines()[0].startsWith('cA is short for more than one command: create-app (cap), check-all (cha), clean-all (cla).')
 
         when: 'the commands are described for a tool'
         out.reset()
@@ -240,6 +297,54 @@ class CommandCatalogSpec extends CommandSpec implements CommandFixture {
         sample.parameters == [[label: 'WORD', arity: '0..*', description: 'What to say', repeatable: true, split: null, choices: null]]
     }
 
+    @Unroll
+    void "#typed fits more than one command, and each is named with the shortest form that fits it alone"() {
+        when:
+        int exit = ForgeCli.execute(beanContext, typed, 'x')
+
+        then:
+        exit == 2
+        out.toString().isEmpty()
+        err.toString().readLines()[0] == "${typed} is short for more than one command: ${named}. ".toString() +
+                'Type more of the name of the one that is meant, or the short form in brackets after it'
+        !new File(dir, 'x').exists()
+
+        where:
+        typed    | named
+        'cc'     | 'create-controller (ccon), create-command (ccom)'
+        'cs'     | 'create-service (cse), create-script (csc)'
+        'creapp' | 'create-app (ca), create-rest-api-plugin (crap)'
+        'pp'     | 'package-plugin (pap), publish-plugin (pup)'
+        'co'     | 'compile (com), console (con)'
+        's'      | 'stats (st), shell (sh)'
+        'p'      | 'project (pr), assemble (a)'
+    }
+
+    @Unroll
+    void "#typed is #what"() {
+        given: 'commands as another part of the command line registers them, which names of the Grails shell are short forms of'
+        CommandLine commandLine = ForgeCli.createCommandLine(beanContext, true, false)
+        ['run-now', 'test-tool', 'stop-point', 'ra'].each { String name -> commandLine.addSubcommand(name, new Sample()) }
+
+        when:
+        int exit = ForgeCli.execute(commandLine, typed, 'x')
+
+        then:
+        exit == expected
+        out.toString().readLines() == ran
+        said.every { String line -> err.toString().contains(line) }
+
+        where:
+        typed  | expected | ran                           | said                                                           | what
+        'ra'   | 0        | ['ra ran with [x]']           | []                                                             | 'the command of that name, which is not run-app'
+        'run'  | 2        | []                            | ['There is no command run', 'Type: grails-forge-cli run-app']   | 'answered with what the Grails shell had, and is not run-now'
+        'test' | 2        | []                            | ['There is no command test', 'Type: grails-forge-cli test-app'] | 'answered with what the Grails shell had, and is not test-tool'
+        'stop' | 2        | []                            | ['There is no command stop', 'Type: grails-forge-cli stop-app'] | 'answered with what the Grails shell had, and is not stop-point'
+        'rn'   | 0        | ['run-now ran with [x]']      | []                                                             | 'short for run-now'
+        'tt'   | 0        | ['test-tool ran with [x]']    | []                                                             | 'short for test-tool'
+        'stopp' | 0       | ['stop-point ran with [x]']   | []                                                             | 'short for stop-point'
+    }
+
     void "help shows what --help shows, for a command of a command too"() {
         expect:
         shownBy(*help) == shownBy(*option)
@@ -253,6 +358,11 @@ class CommandCatalogSpec extends CommandSpec implements CommandFixture {
         ['help', 'feature']      | ['feature', '--help']        | ' feature'
         ['help', 'feature', 'add'] | ['feature', 'add', '--help'] | ' feature add'
         ['h', 'f', 'a']          | ['feature', 'add', '--help'] | ' feature add'
+        ['help', 'ra']           | ['run-app', '--help']        | ' run-app'
+        ['help', 'sa']           | ['stop-app', '--help']       | ' stop-app'
+        ['help', 'cdc']          | ['create-domain-class', '--help'] | ' create-domain-class'
+        ['help', 'pr', 'h']      | ['project', 'health', '--help'] | ' project health'
+        ['he', 'ra']             | ['ra', '--help']             | ' run-app'
         ['help', 'help']         | ['help', '--help']           | ' help'
     }
 
@@ -409,7 +519,17 @@ class CommandCatalogSpec extends CommandSpec implements CommandFixture {
 
         then:
         exit == 2
-        err.toString().readLines()[0] == 'cC is short for more than one command: create-controller, create-command. Type more of the name of the one that is meant'
+        err.toString().readLines()[0] == 'cC is short for more than one command: create-controller (ccon), create-command (ccom). ' +
+                'Type more of the name of the one that is meant, or the short form in brackets after it'
+
+        when: 'and so is the form of lower-case letters'
+        err.reset()
+        exit = ForgeCli.execute(beanContext, 'cc', 'Book')
+
+        then:
+        exit == 2
+        err.toString().readLines()[0] == 'cc is short for more than one command: create-controller (ccon), create-command (ccom). ' +
+                'Type more of the name of the one that is meant, or the short form in brackets after it'
 
         when: 'a tool is not told of it'
         out.reset()
@@ -568,7 +688,8 @@ class CommandCatalogSpec extends CommandSpec implements CommandFixture {
 
         then: 'neither is run'
         ambiguous == 2
-        err.toString().readLines()[0] == 'cC is short for more than one command: create-controller, create-command. Type more of the name of the one that is meant'
+        err.toString().readLines()[0] == 'cC is short for more than one command: create-controller (ccon), create-command (ccom). ' +
+                'Type more of the name of the one that is meant, or the short form in brackets after it'
         !new File(project, 'grails-app/controllers/example/OtherController.groovy').exists()
         !new File(project, 'grails-app/commands/example/OtherCommand.groovy').exists()
 

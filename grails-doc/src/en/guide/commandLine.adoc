@@ -318,22 +318,70 @@ To create an application in an existing build, see the `--subproject` option of 
 
 === Short forms of commands
 
-The name of a command can be shortened to the first letters of its words, with the first letter of every word after the first in upper case:
+The name of a command can be shortened to the first letters of its words, or to the start of each of its words:
 
 [source,console]
 ----
-$ grails cA com.example.myapp    <1>
-$ grails cDC Book                <2>
-$ grails f a grails-quartz       <3>
+$ grails ra                      <1>
+$ grails cdc Book                <2>
+$ grails ccon Book               <3>
+$ grails cA com.example.myapp    <4>
+$ grails f a grails-quartz       <5>
 ----
-<1> `create-app`
+<1> `run-app`
 <2> `create-domain-class`
-<3> `feature add`: the command of a command has a short form too
+<3> `create-controller`: more of the second word, since `cc` fits `create-command` as well
+<4> `create-app`: the start of every word after the first in upper case, as the Grails shell took it
+<5> `feature add`: the command of a command has a short form too
 
-This is the rule the Grails shell went by. There have to be as many parts as the name has words, and each part is the start of its word: `cA`, `creA`, `creat-app` and `CA` are all `create-app`; `ca` and `c` are not, because they are one part for a name of two words. Parts are told apart by upper case letters and hyphens only, so a short form has nothing but letters and hyphens in it.
+A short form is read in the following order, and the first reading that fits a command is the one that counts:
 
-* The name of a command always is that command, also when it happens to be the short form of another one.
-* When a short form fits more than one command of the directory, none of them is run. The command line names the commands it fits and ends with exit code 2; type more of the name. Where the Grails shell ran the first command that fits, `grails` asks. In a project this happens with two short forms that come to mind first: `cC` fits `create-controller` and `create-command`, and `cS` fits `create-service` and `create-script`. `cCont` and `cSe` are the controller and the service, `cCom` and `cSc` the command and the script.
+. The name of a command, or another name it has, is that command, also when it happens to be the short form of another one.
+. At the top of the command line, a name a command of the Grails shell had, such as `run`, `test` or `stop`, is answered with what there is in its place (see <<commandsOfEarlierVersions,Commands of Earlier Versions>>) and is never read as a short form.
+. The rule the Grails shell went by: the form is cut into parts before every upper-case letter and at every hyphen, there have to be as many parts as the name has words, and each part is the start of its word, whatever its case. `cA`, `creA`, `creat-app` and `CA` are all `create-app`. A form of lower-case letters only is one part, so here it is the start of the name of a command of one word: `h` is `help`, `cl` is `clean`.
+. A form of lower-case letters only that starts no such name is read as the first letters of the words of a name: `ra` is `run-app`, `sa` is `stop-app`, `cdc` is `create-domain-class`.
+. Failing that, a form of lower-case letters only is cut into as many parts as the name has words, each part the start of its word and the parts in the order of the words: `runa`, `rapp` and `runapp` are `run-app`, `ccon` is `create-controller`.
+
+Upper case and hyphens say where the words begin, so a form that has them is read by the rule of the Grails shell alone. A short form has nothing but letters and hyphens in it. Some forms and what they are:
+
+[cols="2,3,5"]
+|===
+|Typed |Command |Why
+
+|`ra`, `rA`, `RA`, `r-a`
+|`run-app`
+|The first letters of the words.
+
+|`runa`, `rapp`, `runapp`
+|`run-app`
+|More of a word, or of every word.
+
+|`cdc`, `cDC`
+|`create-domain-class`
+|The first letters of the words.
+
+|`crc`
+|`create-restful-controller`
+|The first letters of the words come before every other cut, although `cr` and `c` start the words of `create-controller` too.
+
+|`h`, `he`
+|`help`
+|The start of the name of a command of one word.
+
+|`cc`
+|none
+|It fits `create-controller` and `create-command`, so neither is run (see below).
+
+|`Ra`
+|none
+|An upper-case letter starts a word, so `Ra` is one part, and no command of one word starts with it.
+
+|`fa`
+|none
+|A short form stands for one name: `f a` is `feature add`, and no command has two words that start with `f` and `a`.
+|===
+
+* When a short form fits more than one command of the directory, none of them is run. The command line names the commands it fits, each with the shortest form of lower-case letters that fits it alone, and ends with exit code 2: `cc is short for more than one command: create-controller (ccon), create-command (ccom)`. Type more of the name, or that form. Where the Grails shell ran the first command that fits, `grails` asks. In a project this happens with the short forms that come to mind first: `cc` and `cC` fit `create-controller` and `create-command`, `cs` and `cS` fit `create-service` (`cse`) and `create-script` (`csc`), and `c` fits `compile`, `clean` and `console`.
 * Only the name of a command is ever looked at, never what follows it: in `create-app cA` the application is called `cA`, and everything after `gradle` reaches Gradle as it was typed.
 * What stands where a command is expected and is neither a command nor the short form of one is refused with exit code 2, together with the commands that are most like it, one line that shows how the command line is used, and `Run 'grails help' for the commands`. The same holds for every mistake in the use of a command: what is wrong, the one line of the usage of that command, and where its help is. The help itself is shown by `help` and `--help`. After `--help` or `--version` (`-h`, `-V`) it is not looked at: `grails --help anything` shows the help.
 
@@ -800,7 +848,7 @@ In a checkout that was never built, the first command of the application or of a
 
 The file is in the directory of the project and not in its build directory. A build can move its build directory (`layout.buildDirectory = ...` in `build.gradle` or `build.gradle.kts`, also for every project of a build at once), and where it is cannot be known without running the build; so the task writes the file to that one place whatever the build directory is, and the `grails` command reads it there and nowhere else. In a build of several projects each Grails project has a file of its own, in its own directory, and `grails gradle grailsCommandCatalog` in the directory of the build writes all of them by hand. `clean` does not delete the file. `.grails/cache` holds a `.gitignore` that keeps it out of a commit, as the `.gitignore` of a generated application does: what is in it is of one machine. A `build/grails/command-catalog.json` that an earlier build wrote is not read.
 
-* `help` lists the commands after those of `grails`, each with where it comes from, `help NAME` shows one of them from that list, without starting the build or the command (`NAME --help` gives `--help` to the command, which runs it), and `help --json` describes them. They have short forms too, after the commands of `grails`: a short form is first looked for among the commands of the command line itself, and is one of the commands of the application and its plugins only when it fits none of those. So what a plugin calls a command never changes what `cA` or `comp` means, and never makes it fit two commands.
+* `help` lists the commands after those of `grails`, each with where it comes from, `help NAME` shows one of them from that list, without starting the build or the command (`NAME --help` gives `--help` to the command, which runs it), and `help --json` describes them. They have short forms too, after the commands of `grails`: a short form is first looked for among the commands of the command line itself, and is one of the commands of the application and its plugins only when it fits none of those. So what a plugin calls a command never changes what `cA`, `ra` or `comp` means, and never makes it fit two commands. The forms of lower-case letters are read for them as for the others: `hw` is a command `hello-world` of a plugin, also when it is typed before the build has listed the commands, which the build then does.
 * Before the command is started, one line on the standard error says which command is run, where it comes from and by which Gradle task: `| Running the command greet of the application, with the Gradle task runCommand`. A name that was mistyped into the name of a command of a plugin is seen there before anything runs. `run-command greet` says the same line, and is the same build to Gradle as `greet`: both give Gradle the same arguments (the task, the file of the arguments, `-Dgrails.env=development`), so a build with the configuration cache configures once for the two.
 * Everything after the name of the command is given to the command as it is, each argument as the one argument it is: spaces, quotes, a leading dash and line breaks are kept, and no option of `grails` is read from it, so `--help`, `-x` and `--stacktrace` after the name are the command's. Not given are the character U+0000, more than 4095 arguments, or more than 1 MiB of them; the command line refuses those with exit code 2.
 * The command runs in the application, or without it when it is a command that needs none (its `target` is `standalone`, and its help says so), started by the Gradle task `runCommand` of the project, with the Gradle wrapper of the project and everything that holds for the `gradle` command. The arguments are handed to Gradle in a file that only you can read, `.grails/run/command-args-0.json` in the project, which is deleted when the command ends, fails or is cancelled; `.grails/run` holds a `.gitignore` that keeps it out of a commit. The file has the same name every time, so a build with the configuration cache configures once for a command and reuses that whatever the arguments are the next time. When two commands run at once the second takes the next number, up to sixteen, and a file that a command left behind because it was killed is removed by the next one. The exit code is 0 when the command succeeded and 1, after one line, when it failed or Gradle did.
@@ -812,7 +860,7 @@ The file is in the directory of the project and not in its build directory. A bu
 
 ==== When a command has the name of a command of `grails`
 
-A command of `grails` keeps its name, the other names it has and the short forms of its name. A command of the application or of a plugin that is called `install-templates`, `war` (another name of `assemble`) or `stat` (short for `stats`) is therefore not a command of `grails`. This is never silent: `help` and `help --json` name the command, where it comes from and what has the name, and typing the name runs the command of `grails` after one warning line on the standard error. The command of the application is still run through Gradle:
+A command of `grails` keeps its name, the other names it has and the short forms of its name. A command of the application or of a plugin that is called `install-templates`, `war` (another name of `assemble`), `stat` (short for `stats`) or `ra` (short for `run-app`) is therefore not a command of `grails`. This is never silent: `help` and `help --json` name the command, where it comes from and what has the name, and typing the name runs the command of `grails` after one warning line on the standard error. The command of the application is still run through Gradle:
 
 [source,console]
 ----
@@ -843,6 +891,7 @@ The plugins of this release of Grails, which the framework itself publishes, are
 
 The `GRAILS_PLUGIN_INDEX` environment variable, or the `--plugin-index` option of the two commands, names another plugin index: an `https` address, a `file:` address, or `none` for no index. A plugin index the variable names is also the feature catalog of the `create-` commands, so that the feature `plugin-info` names for a plugin of it is selected by its name, unless `--feature-catalog` or `GRAILS_FORGE_CATALOG` names another catalog; the plugin index nobody named is not. The feature packs an index records are read in the same way by all of these commands, as xref:plugins#forgeFeaturePacks[Adding a Feature to Application Creation] describes, so what `plugin-info` says a plugin offers is what an application is created with. Each command line it shows for a pack creates the application with that plugin in that version when it is typed as it is shown, in the same environment: it is the create command of a type of application the pack is for, and names the plugin, the catalog and the repository wherever the create command would otherwise take others. `plugin-info` also asks Maven repositories for the versions of a plugin and for the description a plugin publishes beside its jar: those of `GRAILS_REPO_URL`, then Maven Central, then the repository the plugin index names for the plugin. What is read is shown as text with the control characters taken out, within a limit of size and time, and nothing of it is run or installed. Both commands have `--json` for a tool.
 
+[[commandsOfEarlierVersions]]
 === Commands of Earlier Versions
 
 The Grails shell and its profiles of Grails 8 and earlier had commands that the `grails` command does not have under the name they had. link:upgrading.html#upgrading90x[Upgrading from Grails 8 to Grails 9] says what else differs for the commands that are kept, and its link:upgrading.html#cliMappingGrails8[note 55] has a table of every command line of Grails 8, the commands that are kept among them, with what it is in Grails 9. When one of these names is typed, the command line refuses it as it refuses anything that is no command, with exit code 2, and adds one line that says what there is in its place:
@@ -858,7 +907,7 @@ Run 'grails help' for the commands
 
 In a project the first line may name the commands that are most like what was typed, and a line about the commands of the application may stand before the line of this table.
 
-The same line is added for a command that the `grails` command has in projects of some kinds only, when it is typed in a project of another kind: `create-restful-controller` in an application that is no REST API application, `create-job` in a project without the `grails-quartz` feature, `publish-plugin` in a project that is no plugin. Only the name of a command, exactly as it was, is looked up; nothing is run for it.
+The same line is added for a command that the `grails` command has in projects of some kinds only, when it is typed in a project of another kind: `create-restful-controller` in an application that is no REST API application, `create-job` in a project without the `grails-quartz` feature, `publish-plugin` in a project that is no plugin. Only the name of a command, exactly as it was, is looked up; nothing is run for it. Such a name is never read as a short form: `run` is answered with its line also in a project that has a command `run-now`, which `rn` is short for.
 
 Outside a project these commands are not mistakes: `create-controller`, `install-templates` and the others that write into a project, and `package-plugin` and `publish-plugin`, are known by their names everywhere and end with exit code 1 and the line every command of a project has there, `create-controller is a command of a Grails project; there is none in /home/me or above it`. The ones that write into a project are not in the list of `help` outside a project, which says in its last line that a project has more commands; they are found by their short forms there as in a project, show their help with `--help`, and answer a mistake in their use with exit code 2 like every command. A command of a project that is not given what it needs, such as `run-command` without a name, says outside a project that it is a command of a project, with exit code 1, before anything is said of what is missing. A command says so by the name that was typed: `war` for `assemble`.
 
