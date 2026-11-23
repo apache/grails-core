@@ -60,6 +60,7 @@ import org.grails.forge.cli.command.CreateUnitTestCommand
 import org.grails.forge.cli.command.InstallTemplatesCommand
 import org.grails.forge.cli.command.HelpCommand
 import org.grails.forge.cli.command.ProjectGroupCommand
+import org.grails.forge.cli.command.ProjectHealthCommand
 import org.grails.forge.cli.command.ProjectMigrateCommand
 import org.grails.forge.io.ConsoleOutput
 import org.grails.forge.io.FileSystemOutputHandler
@@ -332,8 +333,9 @@ final class ForgeCli {
     /**
      * What there is to say of a command line in a project of a version of Grails before the first this
      * command line works with, and {@code null} in any other directory and for the command lines that
-     * are run there all the same: asking for the version, creating an application, and
-     * {@code project migrate}, which is how such a project gets the record of this version.
+     * are run there all the same: asking for the version, creating an application,
+     * {@code project migrate}, which is how such a project gets the record of this version, and
+     * {@code project health}, which says what this version asks of the project.
      */
     private static String refusedIn(String... args) {
         Class<?> type = declared(args)
@@ -341,7 +343,7 @@ final class ForgeCli {
             return null
         }
         List<String> words = optionsOf(args).findAll { String arg -> !arg.startsWith('-') }
-        if (words.size() > 1 && words[0] == ProjectGroupCommand.NAME && words[1] == ProjectMigrateCommand.NAME) {
+        if (words.size() > 1 && words[0] == ProjectGroupCommand.NAME && words[1] in [ProjectMigrateCommand.NAME, ProjectHealthCommand.NAME]) {
             return null
         }
         try {

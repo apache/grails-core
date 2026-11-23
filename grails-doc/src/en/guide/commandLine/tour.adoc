@@ -322,6 +322,18 @@ added    src/test/groovy/com/example/BookSpec.groovy
 
 `project show --json` writes the same as one JSON document for a tool, and `project regenerate --diff` ends with exit code 1 when it lists a file. See "How a project was generated, and generating it again" in xref:commandLine#creatingProject[Creating a Grails Project].
 
+`project health` reads the project and says what makes its build fail, what the upgrade notes ask for and is not done, and what the guide recommends, each with what to do. It changes nothing and runs nothing of the build. It ends with exit code 1 when there is an error, and with `--strict` when there is a warning too, so a job can hold the project to it:
+
+[source,console]
+----
+$ grails project health
+| Project shop on Grails 9.0.0 (gradle.properties), checked by the command line of Grails 9.0.0, offline
+| Advice  command-catalog.missing  The commands of the application and its plugins are not listed: ... Fix: Any build of the project lists them, or grails gradle grailsCommandCatalog lists them now
+| 11 checks OK (-v lists them). 0 errors, 0 warnings, 1 advice, 0 skipped
+----
+
+See "The state of a project" in xref:commandLine#creatingProject[Creating a Grails Project].
+
 === For plugin authors
 
 A plugin can give its users two things on the command line.
@@ -351,7 +363,7 @@ $ ./grailsw feature add cache
 
 Commit the three files. Everyone who works on the project, and the build server, then runs the command line of the same version without installing Grails, and `feature add` is run by the version whose record the project has, as it requires. The downloads are kept in `~/.grails/wrapper` and not in the project. See "Grails Wrapper" in link:gettingStarted.html#downloadingAndInstalling[Downloading and Installing].
 
-When the project moves to another version of Grails, the wrapper moves with it: change `grailsVersion` in `gradle.properties`, run link:{commandLineRef}update-wrapper.html[update-wrapper] and commit the files it names. Then `./grailsw project migrate` moves the record of the project to that version, so that `feature add` works with it, and changes no other file: see link:{commandLineRef}project-migrate.html[project migrate].
+When the project moves to another version of Grails, the wrapper moves with it: change `grailsVersion` in `gradle.properties`, run link:{commandLineRef}update-wrapper.html[update-wrapper] and commit the files it names. Then `./grailsw project migrate` moves the record of the project to that version, so that `feature add` works with it, and changes no other file: see link:{commandLineRef}project-migrate.html[project migrate]. Last, `./grailsw project health` says what else the upgrade notes ask of the project, as far as its files show it, each finding with what to do: see link:{commandLineRef}project-health.html[project health].
 
 [source,console]
 ----

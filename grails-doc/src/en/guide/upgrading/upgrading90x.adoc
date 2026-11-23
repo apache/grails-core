@@ -37,13 +37,18 @@ skill 'org.apache.grails.skills:grails-upgrade:{version}'
 
 The changes are listed by release. Apply the section of every release after the one the application is on, up to and including the release it is upgrading to.
 
+Once `grailsVersion` names Grails 9, the Grails wrapper is replaced with `./grailsw update-wrapper` (note 37) and the record of the project is written or moved with `grails project migrate` (note 45), run `grails project health` in the project. It reads the files of the project and says, with the id of each finding and what to do, which of the changes below are still to be made, as far as the files show them; it runs in a project that still names Grails 7 or 8 as well. Run it again after each change, until `grails project health --strict` ends with exit code 0. See <<upgradingProjectHealth,note 57>>.
+
 [[grails-9-0-0-M1]]
 === Grails 9.0.0-M1
 
+[[upgradingGroovy6]]
 ==== 1. Groovy 6
 
 Grails 9 builds on Groovy {groovyVersion} and the matching Spock {spockVersion}; Java 21 is unchanged from Grails 8.
 The Grails BOM manages Groovy and Spock, so remove any version an application pins for them and review the https://groovy-lang.org/releasenotes/groovy-6.0.html[Groovy 6 release notes] for language changes that affect application code.
+
+`grails project health` reports a build that compiles for a Java before 21 as `java-target.release`, and a `.sdkmanrc` that selects one as `sdkmanrc.java`, or another major version of Groovy as `sdkmanrc.groovy`; a version of Groovy or Spock the build pins is not checked.
 
 ==== 2. Spring Boot 4.2 and Spring Framework 7.1
 
@@ -211,6 +216,7 @@ The nullability annotations document existing behavior and do not change what gr
 
 The plugin continues to use graphql-java-extended-scalars 24.0, its latest release, which works with graphql-java 26.1.
 
+[[upgradingGpars]]
 ==== 4. GPars Integration Deprecated in Favour of Groovy Concurrency
 
 Groovy 6 brings a unified concurrency and parallel-processing toolkit into core under https://groovy-lang.org/releasenotes/groovy-6.0.html#concurrency-toolkit[GEP-18: Integrated Concurrency and Parallel Processing]. The `groovy.concurrent` package provides `Awaitable`, `DataflowVariable`, `Actor`, `Agent`, `Pool`, `ParallelScope` and the parallel collection methods such as `eachParallel` and `collectParallel`. The Groovy release notes describe the toolkit as modernising the patterns from GPars around virtual threads, structured concurrency and Groovy 6's `async`/`await`, and state that previous users of GPars will find much of its functionality there.
@@ -235,6 +241,8 @@ The Groovy actor event bus delivers each event to its subscribers in publication
 Applications that use GPars directly, for example `GParsPool.withPool { list.eachParallel { } }`, should move to the Groovy equivalents: the parallel collection methods are available on every `Collection` without a pool, and `groovy.concurrent.ParallelScope.withPool(n) { scope -> list.eachParallel { } }` runs them on a pool of a chosen size. Once the deprecated modules are removed, Grails will no longer bring GPars onto the classpath, so an application that still needs it must declare `org.codehaus.gpars:gpars` itself.
 
 NOTE: Groovy 6 marks the concurrency toolkit as incubating. The Grails modules that build on it expose only the Grails `Promise` and `EventBus` contracts, so changes to the Groovy API in later Groovy releases are absorbed by Grails rather than by application code.
+
+`grails project health` reports a GPars module as `deprecated-dependency.gpars`, and a GPars module beside its Groovy counterpart as `deprecated-dependency.gpars-and-groovy`; the use of the GPars API in the sources is not checked.
 
 ==== 5. Groovy Code Is Compiled with invokedynamic
 
@@ -1398,12 +1406,14 @@ A datastore implementation of RxGORM built for Grails 8 or earlier, such as the 
 The `RxEntity` domain model has had no datastore implementation for several releases and its removal is under discussion for Grails 9, so an application that implements `RxEntity` should plan to move to `GormEntity` with the RxJava data services, which work on every GORM datastore. The import and blocking-call changes above apply to both.
 The `rx-mongodb` profile feature is removed, because the `org.grails.plugins:rx-mongodb` plugin it added has had no release since GORM 6.1 and has never been published to Maven Central, so an application generated with it could not resolve its dependencies.
 
+[[upgradingRxJavaModules]]
 ==== 21. RxJava 1 and RxJava 2 Async and Events Modules Are Deprecated
 
 The RxJava 1 and RxJava 2 implementations of the Grails promise and event bus APIs, `grails-async-rxjava`, `grails-async-rxjava2`, `grails-events-rxjava` and `grails-events-rxjava2`, are deprecated for removal.
 They keep working in Grails 9 and log a warning when their promise factory or event bus is created.
 Replace either dependency with the RxJava 3 module, `grails-async-rxjava3` or `grails-events-rxjava3`; the `Promise` and `EventBus` APIs an application uses are the same.
 See <<asyncPromises,Promises>> and <<events,Events>>.
+`grails project health` reports these modules, and `io.reactivex:rxjava` and `io.reactivex.rxjava2:rxjava`, as `deprecated-dependency.rxjava`.
 
 `grails-async-rxjava3` carries a `null` value as the RxJava 1 factory and every other promise factory do: `createPromise()` and `createPromise(Class)` give a promise whose `get()` returns `null`, a task that returns `null` resolves to `null`, and a `null` value keeps its place in the list that `onComplete`, `onError` and `waitAll` deliver.
 `grails-async-rxjava2` does not: there `createPromise()` and `onComplete` over a list holding a bound promise of `null` fail with a `NullPointerException`, and a task that returns `null` resolves to the `java.lang.Void` class.
@@ -1519,6 +1529,7 @@ In an application with several data sources, or with a database or a schema per 
 
 For most applications **no changes are required**. Check the domain classes saved through a data source other than the default one whose auditor properties, given timestamps or, with Neo4j, events were expected to be left alone.
 
+[[upgradingJLine4]]
 ==== 29. JLine 4
 
 Grails 9 manages JLine 4 (`org.jline:jline`), the line Groovy 6's `groovysh` is built on, in place of JLine 3. The link:{versionsRef}Grails%20BOM.html[Grails BOM dependency table] has the exact version. JLine is the terminal library behind the interactive mode of the `grails` command line and behind `grails shell`, and behind `GrailsConsole`, which application and plugin commands write to. The line reader, terminal and completer APIs keep their `org.jline` packages.
@@ -1526,7 +1537,7 @@ Grails 9 manages JLine 4 (`org.jline:jline`), the line Groovy 6's `groovysh` is 
 ===== Required Actions
 
 * Recompile code of your own that uses JLine, such as an `org.jline.reader.Completer` for a command, against JLine 4. JLine 4 removed APIs that JLine 3 had deprecated, so code that uses them no longer compiles. For example, use `org.jline.builtins.Completers.FileNameCompleter` in place of `org.jline.reader.impl.completer.FileNameCompleter`, and `Terminal.inputEncoding()` and `outputEncoding()` in place of `stdinEncoding()`, `stdoutEncoding()` and `stderrEncoding()`. `TerminalBuilder.codepage(int)` and the `TerminalBuilder.PROP_JNA` and `PROP_JANSI` constants are gone too.
-* JLine 4 has no JNA or Jansi terminal provider. Remove a dependency on `org.jline:jline-terminal-jna` or `org.jline:jline-terminal-jansi`: neither has a JLine 4 version, and JLine finds the terminal through its remaining providers.
+* JLine 4 has no JNA or Jansi terminal provider. Remove a dependency on `org.jline:jline-terminal-jna` or `org.jline:jline-terminal-jansi`: neither has a JLine 4 version, and JLine finds the terminal through its remaining providers. `grails project health` reports such a dependency as `removed-dependency.jline`.
 
 picocli's `info.picocli:picocli-shell-jline3` runs on JLine 4, but picocli has no JLine 4 version of it, and its `PicocliCommands` implements `org.jline.console.CommandRegistry`, which JLine 4 deprecates. JLine's own picocli bridge, `org.jline:jline-picocli`, is built for JLine 4. To move to it, use it at the JLine version the Grails BOM manages.
 
@@ -1621,6 +1632,7 @@ A script command of another plugin, one of your own or of a third party that has
 
 None for the commands. Code that used the classes `DbmCreateChangelog`, `DbmChangelogToGroovy` or the trait `ScriptDatabaseMigrationCommand` of a database migration `-cli` artifact uses `DbmCreateChangelogCommand` and `DbmChangelogToGroovyCommand`; those artifacts no longer depend on `grails-shell-cli`. A plugin of your own whose script names a completer of the Grails shell in its `description` removes the `import` and the `completer` line: the classes of `org.grails.cli` are not on the class path of a script, a script that imports one is not compiled, and nothing completes the arguments of a script, since the build does not evaluate a description (see note 33).
 
+[[upgradingNoProfileDependency]]
 ==== 35. A Generated Application Has No Profile Dependency and No `grails-forge-cli.yml`
 
 An application that Grails Forge generates (`create-app` and the other `create-` commands of `grails`, and the Grails Forge website) no longer has two things that the Grails shell and its profiles needed:
@@ -1636,10 +1648,12 @@ None for the `grails-forge-cli.yml` of an application that exists: it is left as
 
 * A tool or script of your own that reads `grails-forge-cli.yml` of a newly generated application reads `.grails/project.yml` (application type, default package, options) and `.grails/forge.lock.yml` (features) instead. There is no option that writes the old file. To have one for such a tool all the same, write it yourself with the keys the tool reads; the `grails` command then warns when it does not say the same default package and features as `.grails`, and goes by `.grails`.
 * Do not add the `profile` line back to a newly generated application: nothing reads it, and the build fails with it (see note 39).
+* `grails project health` reports a `grails-forge-cli.yml` beside `.grails` as `leftover.earlier-record`, and as `leftover.earlier-record-differs` where it does not name the same default package and features.
 * When the files of `.grails` cannot be used, because one was changed by hand or is missing, the `create-*` code generation commands of a newly generated application are not there until the directory is as it was: restore it from version control. An application that has a `grails-forge-cli.yml` goes by that file then, as before.
 * A feature pack of your own that writes a file named `grails-forge-cli.yml` or `grails-cli.yml` to the root of the application is refused when the application is generated, because the command line would read that file as the record of a project. Give the file another name.
 * An application that a snapshot of Grails 9 generated before this change cannot have a feature added with `feature add` by a later build of the same version: the command says that the application cannot be generated again as it was and names `build.gradle`. Add the dependencies and the configuration of the feature by hand, or generate the application again.
 
+[[upgradingNoProfileAtRunTime]]
 ==== 36. An Application Has No Profile at Run Time: `grails.profile` Is Not Read
 
 Until Grails 9 the framework read the `grails.profile` key of the configuration while an application started and added its value to the active Spring profiles, and `web` when the key was not there. A running application therefore reported a Spring profile named after the profile it was created from (`web`, `rest-api`, `plugin`, `web-plugin`, `rest-api-plugin`, or a profile of your own), whether or not anything asked for one.
@@ -1655,6 +1669,8 @@ In Grails 9 nothing reads the key:
 * *`grails.config.Settings.PROFILE` is removed.*
 
 ===== Required Actions
+
+* `grails project health` reports `grails.profile` in `application.yml` as `leftover.profile-config`. Code that asks the environment for the profile is not checked.
 
 * *Code that asks the environment for the profile while the application runs.* Search the application and the plugins of your own for `acceptsProfiles`, `activeProfiles` and `getActiveProfiles` used with one of the profile names above: in a service, a controller, `BootStrap`, a tag library, or a bean that is created lazily or in a child context after startup. Such a check was `true` in every application of that type and is now `false`; a negated one, such as `!environment.acceptsProfiles(Profiles.of('web'))`, is now `true`. An application that had no `grails.profile` key reported `web`. Either remove the check, when what it guards belongs to the application in every case, or ask for the profile in the main document of `application.yml`:
 +
@@ -1687,6 +1703,7 @@ A plugin that needs a web application to work says so with what it needs, such a
 * *The key.* Delete `grails.profile` from `application.yml` (or `application.groovy`) when nothing of your own reads it. A page or an endpoint of your own that shows it, such as the "Profile" row of a welcome page copied from an earlier version, shows nothing for an application without the key: remove the row.
 * *`Settings.PROFILE`.* Code that used the constant to read the key names the key itself, `'grails.profile'`.
 
+[[upgradingOneCommandLine]]
 ==== 37. The `grails` Command Is One Command Line, and the Grails Wrapper Is Replaced
 
 Until Grails 9 the `grails` command and the Grails wrapper (`grailsw`) started a class that chose between two command lines: the Grails shell, by default, and Grails Forge, with `-t forge`. In Grails 9 there is one command line, and `grails` starts it.
@@ -1738,6 +1755,7 @@ $ git add gradle.properties grailsw grailsw.bat grails-wrapper.jar
 * *Replace `grails-forge-cli` with `grails`*, with the same arguments, wherever the command is called. `grails-shell-cli` has no command that takes its place: its commands are those of `grails` where that section has them.
 * *Replace `source .../grails_forge_cli_completion`* with `source "$GRAILS_HOME/bin/grails_completion"`, in zsh after `autoload -U +X bashcompinit && bashcompinit`.
 * *Remove `GRAILS_PREFERRED_SHELL`* from shell profiles and continuous integration settings. It has no effect.
+* `grails project health` reports a wrapper of Grails 7 or 8 as `grails-wrapper.version`, a `.new` file left beside the wrapper as `grails-wrapper.leftover`, and `GRAILS_PREFERRED_SHELL` as `leftover.preferred-shell`. The command lines of scripts and jobs are not checked.
 * *Replace `create-app NAME --profile PROFILE`* with the command of the type of application: `create-app` for `web`, `create-restapi` for `rest-api`, `create-plugin` for `plugin`, `create-web-plugin` for `web-plugin` and `create-rest-api-plugin` for `rest-api-plugin`. A REST API plugin is generated as the profile generated it, with an empty `UrlMappings` and no controller or views. `--features` now adds to the default features of the type and refuses a name that is no feature; `--exclude-features` leaves a default one out.
 * *A profile of your own.* Nothing reads a profile artifact. Convert it to a _preset_ and replace `create-app NAME --profile com.acme:acme-profile:1.0.0` with the create command of the preset's type: `create-restapi NAME --preset com.acme:acme-preset:1.0.0`. A preset names one type of application, gives the options of the `create-` commands their defaults, asks for features, and adds dependencies, configuration and files from its skeleton; see xref:applicationTypes#presets[Making Applications from a Preset], which lists what converts and what is converted by hand: a skeleton file that replaces one Grails writes, a skeleton of several projects, a profile that extends another of your own, and the commands of the profile, which become classes of a plugin (xref:commandLine#creatingCustomCommands[Creating Custom Commands]). A feature that some applications need is a plugin with a feature pack, selected with `--features group:artifact:version`.
 * *A tool of your own that loads the start class from a `grails-cli` jar* reads the `Main-Class` attribute of the manifest of the jar, which names the class in Grails 7, 8 and 9, or loads `org.apache.grails.forge.cli.GrailsCli` in place of `org.apache.grails.cli.DelegatingShellApplication`. `GrailsCli.main(String[])` ends the JVM with the exit code and `GrailsCli.execute(String...)` returns it. A tool that still starts `DelegatingShellApplication` in a Grails 9 jar gets what the earlier wrapper gets: in a project of Grails 9 that has a Grails wrapper, the three files of the wrapper are replaced before the command line is run.
@@ -1756,6 +1774,7 @@ Scripts inside a project are not affected: `run-script` runs a Groovy script wit
 * *A script that was started with `grails run`.* Make it a project: create an application with the features it needs and move the code of the script into it, or run the code inside an existing application with `run-script`.
 * *Code that names `GormCompilerAutoConfiguration`.* Remove it. Nothing takes its place, because nothing compiles a script outside a project.
 
+[[upgradingShellNotPublished]]
 ==== 39. The Grails Shell and the Profiles Are Not Published, and a Build Cannot Declare a Profile
 
 Grails 9 does not build the Grails shell or the profiles, so these artifacts have no Grails 9 version in any repository:
@@ -1778,7 +1797,7 @@ Nothing is downloaded for that configuration, and it cannot be resolved or used 
 
 ===== Required Actions
 
-* *Remove every `profile ...` line* from the `dependencies` block of `build.gradle`, in every project of the build, and every `dependencies.add('profile', ...)` of build logic of your own. Nothing takes its place. This is also the line that note 35 says a generated application no longer has.
+* *Remove every `profile ...` line* from the `dependencies` block of `build.gradle`, in every project of the build, and every `dependencies.add('profile', ...)` of build logic of your own. Nothing takes its place. This is also the line that note 35 says a generated application no longer has. `grails project health` reports it as `removed-dependency.profile`, a dependency on the shell or a profile as `removed-dependency.shell`, and the two plugin ids as `removed-dependency.profile-plugin`.
 * *Remove dependencies on `org.apache.grails:grails-shell-cli` and on `org.apache.grails.profiles:*`*, in every configuration. Code of your own that used classes of the shell (`org.grails.cli`) has to be written without them; a command of your own is an application command or a script of the project, as notes 32 to 34 describe.
 * *Give a dependency on `org.springframework.boot:spring-boot-cli` a version, or remove it.* The Grails shell was what used it.
 * *A profile of your own becomes a plugin with a feature pack*: see note 37.
@@ -1867,6 +1886,7 @@ What stands after `grails` is read by other rules than the Grails shell had.
 * Write out short forms that a script uses, or check them with `grails help <short form>`.
 * A script that went on after a `grails` command whatever it answered checks the exit code: 2 means that nothing was run.
 
+[[upgradingGradleWrapper]]
 ==== 44. The Commands That Build, Test and Run a Project Run Its Gradle Wrapper
 
 The Grails shell ran the build of a project through the Gradle Tooling API, with a Gradle the shell chose. The `grails` command runs the Gradle wrapper of the project, `gradlew` or `gradlew.bat`, as a process, with the arguments the command stands for, and what Gradle writes goes to the terminal as it is. In interactive mode the builds are asked of the Gradle that the wrapper names through the Tooling API (note 47). See link:commandLine.html#gradleBuild[Building with Gradle].
@@ -1882,10 +1902,11 @@ The Grails shell ran the build of a project through the Gradle Tooling API, with
 
 ===== Required Actions
 
-* Commit the Gradle wrapper (`gradlew`, `gradlew.bat`, `gradle/wrapper`) to a project that has none: `gradle wrapper`, run with an installed Gradle of the version Grails 9 needs, creates it.
+* Commit the Gradle wrapper (`gradlew`, `gradlew.bat`, `gradle/wrapper`) to a project that has none: `gradle wrapper`, run with an installed Gradle of the version Grails 9 needs, creates it. `grails project health` reports a project without one as `gradle-wrapper.missing`, a wrapper of a Gradle before {gradleMinimumVersion} as `gradle-wrapper.version`, and one before {gradleVersion}, which new applications are generated with, as `gradle-wrapper.older`.
 * Replace `grails run-app <Gradle arguments>` with `grails run-app -- <Gradle arguments>`.
 * A job that starts the application with one tool and stops it with `grails stop-app` starts it with `grails run-app --detach`.
 
+[[upgradingProjectRecord]]
 ==== 45. The `create-*` Commands Read the Record of the Project, and an Application of the Grails Shell Has None
 
 The Grails shell had the commands of the profile that the `profile` dependency of `build.gradle` named, and took the default package of new classes from `grails.codegen.defaultPackage` in `application.yml`. The `grails` command of Grails 9 decides which code generation commands a project has, and where their classes go, from the record of the project: `.grails/project.yml` and `.grails/forge.lock.yml` of an application that Grails 9 generated, or `grails-forge-cli.yml` (earlier `grails-cli.yml`) of one that Grails Forge of an earlier version generated.
@@ -1917,13 +1938,14 @@ $ grails project migrate
     grails-quartz (build.gradle declares org.apache.grails:grails-quartz)
 ...
 | The record was written: .grails/.gitignore, .grails/.gitattributes, .grails/baseline/index.yml, .grails/forge.lock.yml, .grails/project.yml. No other file of the project was changed. Commit the directory .grails
+| grails project health says what else the upgrade notes ask of the project, as far as its files show it
 ----
 
 The command reads the files of the project as text and changes none of them; it writes the `.grails` directory and nothing else. It takes the type of the application from the profile the application had (`grails.profile` in `application.yml`, or the `profile` dependency of `build.gradle`: `web` is a web application, `rest-api` a REST API, and `plugin`, `web-plugin` and `rest-api-plugin` the types of plugin) and, when neither is there any more, from the Grails Gradle plugins of `build.gradle`; the default package from `grails.codegen.defaultPackage`, then the `group` of the build, then the package of the `Application` class; and the features from the dependencies `build.gradle` declares, or `build.gradle.kts` and `settings.gradle.kts` in a project without a `build.gradle`. It takes the servlet container from the starter `build.gradle` declares, where no servlet feature is found: `spring-boot-starter-tomcat` is `tomcat`, `spring-boot-starter-jetty` is `jetty`, and `spring-boot-starter-undertow` (of a Grails 7 build) or `grails-undertow` is `undertow`. A dependency is read in string notation and in map notation (`implementation group: 'g', name: 'n'`), and nothing is read from a comment. It says where it found each value and what it assumed, and in a line each what it is known not to have read: build files that are applied with `apply from`, dependencies that a version catalog names, what `build.gradle` declares for other projects, and for a project without a `settings.gradle` of its own the build above it. One feature cannot be found in a build at all: Of the two Geb features it finds `geb-with-local-browsers` where the build declares the browser drivers that feature adds, and `geb-with-testcontainers` where it declares the Geb plugin (`testFixtures('org.apache.grails:grails-geb')`) without them. To say it otherwise, give the name with its package (`grails project migrate com.example.myapp`), `--type`, `--features`, `--exclude-features`, `--jdk`, `--servlet`, `--data` or `--reloading`; `--dry-run` shows the record without writing it, and `--force` writes again a record the command wrote. When it cannot work out the type or the package it writes nothing and says which option to give.
 
 With the record the code generation commands are there, and a class that is named without a package goes into the default package. `create-job` is there when `grails-quartz` is among the features, and `create-functional-test` in a web application when a Geb feature is (note 54). The record says that it was written for an application that was there (`generationState: untracked` in `.grails/project.yml`) and holds no copy of generated files, so `feature add` and `project regenerate` refuse the application and change nothing: add the dependencies and the configuration of a feature by hand, as before, and run `grails project migrate --force` again so that the record names the feature. `project show` shows the record.
 
-`project migrate` can be run before or after `grailsVersion` in `gradle.properties` names Grails 9: it is the one command of a project that runs in a project that still names Grails 7 or 8, and it says there that the record is that of an application of Grails 9. Every other command of a project (`compile`, `test-app`, `run-app`, `gradle`, the `create-*` commands, `feature add`, `project show`, the commands of the application) is refused in such a project with exit code 1 and one line that names the version, with or without the record: the command line of Grails 9 works with projects of Grails 9 and later. Until the project is on Grails 9, its own `./grailsw` starts the command line of its version. The command can be run before or after the `profile` line is removed from `build.gradle` (note 39) and `grails.profile` from `application.yml` (note 36): without them the type is taken from the Gradle plugins.
+`project migrate` can be run before or after `grailsVersion` in `gradle.properties` names Grails 9: with `project health` (note 57), it is a command of a project that runs in a project that still names Grails 7 or 8, and it says there that the record is that of an application of Grails 9. Every other command of a project (`compile`, `test-app`, `run-app`, `gradle`, the `create-*` commands, `feature add`, `project show`, the commands of the application) is refused in such a project with exit code 1 and one line that names the version, with or without the record: the command line of Grails 9 works with projects of Grails 9 and later. Until the project is on Grails 9, its own `./grailsw` starts the command line of its version. The command can be run before or after the `profile` line is removed from `build.gradle` (note 39) and `grails.profile` from `application.yml` (note 36): without them the type is taken from the Gradle plugins.
 
 What else differs for these commands:
 
@@ -1946,7 +1968,9 @@ For an application that Grails 9 generates, commit the `.grails` directory: `pro
 * *A `Job.groovy` or `artifacts/Script.groovy` template of the project with code in it* is rewritten as text with the names in braces, or the class is completed by hand after the command.
 * *Replace `grails install-templates`*, where the scaffolding templates are meant, with `grails run-command install-templates`.
 * *Where `.grails/run` shows up as untracked* in a project that Grails 9 did not generate, add `.grails/run/` to its `.gitignore`; the directory holds a `.gitignore` of its own that normally keeps it out.
+* `grails project health` reports a project without a record as `record.missing`, a record of an earlier version as `record.earlier-generator`, a record of another version of Grails than the project as `record.version-drift`, a `.gitignore` that leaves out `.grails` as `git-files.record-ignored`, and one that does not leave out `.grails/transactions` and `.grails/history` as `git-files.state-ignored`. The templates of the project are not checked.
 
+[[upgradingCommandCatalog]]
 ==== 46. Commands of the Application and of Plugins Are Listed by the Build
 
 The Grails shell found the commands of the plugins of an application itself, on the class path of the project: `grails dbm-update`, `grails url-mappings-report` or `grails s2-quickstart` worked as soon as the plugin was a dependency. The `grails` command loads no class of the project. It has the commands that the Gradle task `grailsCommandCatalog` of the project has written to `.grails/cache/command-catalog.json` in the directory of the project (note 32), and runs each through the Gradle task `runCommand`.
@@ -1967,6 +1991,7 @@ The Grails shell found the commands of the plugins of an application itself, on 
 * Replace `grails <script of a plugin of the framework>`, such as `grails s2-quickstart com.example User Role`, with `grails run-command s2-quickstart com.example User Role` or `./gradlew runCommand -Pargs="s2-quickstart com.example User Role"`, and read note 54 for what each of them does differently. Do not run them with `runScriptCommand`: the scripts are gone.
 * Replace `grails <script of another plugin>` with `./gradlew runScriptCommand --arg=<name> --arg=<argument>`.
 * Developers who type the commands of plugins by their names run `grails gradle grailsCommandCatalog` after they have checked out the project.
+* `grails project health` reports a project whose commands are not listed as `command-catalog.missing`, and a list that is not used or may be out of date as `command-catalog.refused` or `command-catalog.stale`, as advice. The command lines of scripts and jobs are not checked.
 
 ==== 47. Interactive Mode
 
@@ -1989,6 +2014,7 @@ The Grails shell found the commands of the plugins of an application itself, on 
 
 * A script that pipes commands into `grails` ends them with `exit`, not `quit`. Its lines that start with `!` are read by the shell now: quote a `*`, `$`, `|`, `;` or `>` there that the program was given as it was. Better, give each command to `grails` on its own command line, with `--non-interactive`, and check its exit code.
 
+[[upgradingSettingsGroovy]]
 ==== 48. `~/.grails/settings.groovy` Is Not Read
 
 The Grails shell read `~/.grails/settings.groovy`: the repositories it resolved profiles from (`grails.profiles.repositories`), the default group and version of a profile, and proxy settings. The `grails` command reads no such file, and resolves no profile.
@@ -2002,6 +2028,7 @@ The Grails shell read `~/.grails/settings.groovy`: the repositories it resolved 
 
 * Delete the profile settings from `~/.grails/settings.groovy`, or the file. Move a repository it named for profiles of your own to `GRAILS_REPO_URL` or `--feature-pack-repository`, for the plugin that now holds the feature pack.
 * Move proxy settings to `GRAILS_OPTS` and to the Gradle properties of the build.
+* `grails project health` reports the file as `leftover.settings-groovy`.
 * A script that runs `create-app --inplace` without a name in a directory whose name has a dot gives the name the shell made of it: `grails create-app --inplace com.example.shop` in a directory `com.example.shop`. In a directory whose name has a space or another character a class name cannot have, give the name the application is to have.
 
 ==== 49. A Project Above the Current Directory Has to Be Your Own, and Builds of Several Projects
@@ -2192,7 +2219,7 @@ These tables are for looking up a command line of Grails 8, typed or found in a 
 Four things hold for every row:
 
 * Use the `grails` command of Grails 9, or the `grailsw` of the project once its three files are those of Grails 9 (note 37). Both take the same commands.
-* The commands of a project are run in a project that is on Grails 9. In a project whose `gradle.properties` still names Grails 7 or 8, the `grails` command of Grails 9 runs `project migrate`, `--version` and the commands that create another application, and refuses the rest with exit code 1 (note 45).
+* The commands of a project are run in a project that is on Grails 9. In a project whose `gradle.properties` still names Grails 7 or 8, the `grails` command of Grails 9 runs `project migrate`, `project health`, `--version` and the commands that create another application, and refuses the rest with exit code 1 (notes 45 and 57).
 * `grails help` lists the commands the current directory has, and `grails help NAME` describes one. A name that is no command ends with exit code 2 and runs nothing.
 * The commands that create the classes of a project need its record (`.grails`, or the `grails-forge-cli.yml` of Grails 7 or 8). An application that the Grails shell created gets one from `grails project migrate` (note 45).
 
@@ -2767,3 +2794,30 @@ of types, is of no format, where the Grails rules read it leniently as `json`.
 
 Other requests resolve as before, among them those of browsers and those that name one configured type. A Spring MVC
 endpoint, and Spring Security's filters before a URL mapping has matched a request, negotiate as before.
+
+[[upgradingProjectHealth]]
+==== 57. `grails project health` Says What Is Left of an Upgrade
+
+`grails project health` is a new command of a project. It reads the files of the project as text and says what they show of its state: what makes the build fail (an error), what an upgrade note requires and is not done, or what is deprecated for removal (a warning), and what the guide recommends (advice), each with an id, such as `removed-dependency.profile`, and what to do. It changes nothing and runs no Gradle, no generator, no Git and nothing of the network. It ends with exit code 1 when there is an error, and with `--strict` when there is a warning too; `--json` writes every finding as one JSON document for a tool, and `-v` lists the checks that found nothing as well.
+
+It runs in a project whose `gradle.properties` still names Grails 7 or 8, as `project migrate` does, and says there what Grails 9 asks of the project:
+
+[source,console]
+----
+$ grails project health
+| Project legacy on Grails 8.0.1 (gradle.properties), checked by the command line of Grails 9.0.0, offline
+| Error   removed-dependency.profile  build.gradle declares the profile dependency org.apache.grails.profiles:web: Grails 9 has no profiles, and the build fails while it is configured. Fix: Remove the profile line from the dependencies of build.gradle; nothing takes its place
+| Warning grails-version.earlier      The project is on Grails 8.0.1 (gradle.properties), and the command line is of Grails 9.0.0: what is found is what Grails 9 asks of the project. Fix: Work through the upgrade notes of Grails 9, set grailsVersion in gradle.properties to 9.0.0, and run ./grailsw update-wrapper
+| Warning record.missing              The project has no record (.grails/project.yml or grails-forge-cli.yml): the commands that create its classes are not there. Fix: grails project migrate writes it from the files of the project; commit .grails
+| Advice  leftover.profile-config     grails-app/conf/application.yml sets grails.profile, which Grails 9 does not read: an application has no profile. Fix: Remove grails.profile from grails-app/conf/application.yml
+...
+| 6 checks OK (-v lists them). 1 error, 3 warnings, 3 advice, 0 skipped
+| Error project health found 1 error: removed-dependency.profile
+----
+
+Each note above says in its Required Actions which of its changes the command reports, and as which id. What it reports is what a file shows: a dependency `build.gradle` declares, a version `gradle.properties` or the Gradle wrapper names, the record under `.grails`, the Grails wrapper, `.gitignore` and `.gitattributes`, `.sdkmanrc`, `~/.grails/settings.groovy` and the environment. What the application does when it runs, the sources of the application and the command lines of scripts and jobs are not checked: the notes say what to look for there. A project that `create-app` has just generated has no error and no warning. `project migrate`, and `update-wrapper` when it replaces the wrapper of an earlier major version, end with a line that names the command.
+
+===== Required Actions
+
+* Run `grails project health` (or `./grailsw project health`) in the project after `update-wrapper` and `project migrate`, resolve every error and warning it names, and run it again until `grails project health --strict` ends with exit code 0. Then work through the notes above that the command does not check.
+* A job of continuous integration that holds a project to the upgrade notes runs `grails project health --strict`. A tool reads `grails project health --json` and goes by the `id` of each finding, which is never renamed; link:{commandLineRef}project-health.html[project health] lists every id with its level and fix.

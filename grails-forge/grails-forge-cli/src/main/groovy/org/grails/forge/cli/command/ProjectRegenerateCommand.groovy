@@ -546,7 +546,18 @@ class ProjectRegenerateCommand extends BaseCommand implements Callable<Integer>,
          * @return whether the path itself is left out; what is above it is not asked
          */
         boolean ignores(String path, boolean directory) {
-            boolean ignored = false
+            return decides(path, directory) ?: false
+        }
+
+        /**
+         * @param path the path of a file or a directory, with {@code /} between its steps
+         * @param directory whether it is a directory
+         * @return whether the last line that matches the path leaves it out, or takes it back;
+         * {@code null} when no line matches it, so that a {@code .gitignore} further up decides
+         * @since 9.0
+         */
+        Boolean decides(String path, boolean directory) {
+            Boolean ignored = null
             for (int i = 0; i < patterns.size(); i++) {
                 if ((directory || !directories[i]) && patterns[i].matcher(path).matches()) {
                     ignored = !negated[i]

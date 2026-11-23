@@ -30,6 +30,8 @@ import java.nio.file.attribute.PosixFilePermissions
 import java.security.CodeSource
 import java.util.jar.JarFile
 import java.util.jar.Manifest
+import java.util.regex.Matcher
+import java.util.regex.Pattern
 import groovy.transform.CompileStatic
 import org.grails.forge.io.FileSystemOutputHandler
 import org.grails.forge.util.VersionInfo
@@ -407,6 +409,17 @@ final class WrapperFiles {
 
     // the version of Grails the jar that is there is of, as its manifest says; null where it does not say
     private String formerVersion() {
+        return versionOf(directory)
+    }
+
+    /**
+     * @param directory a directory that has a wrapper
+     * @return the version of Grails the {@code grails-wrapper.jar} of the directory is of, as its
+     * manifest says; {@code null} where it does not say, and where the jar is no file of a size a
+     * wrapper has
+     * @since 9.0
+     */
+    static String versionOf(Path directory) {
         Path jar = directory.resolve(JAR)
         try {
             if (!Files.isRegularFile(jar, LinkOption.NOFOLLOW_LINKS) || Files.size(jar) > MAX_JAR) {
@@ -422,6 +435,28 @@ final class WrapperFiles {
         }
     }
 
+    /**
+     * @param directory a directory that has a wrapper
+     * @return the files of the wrapper that are not those of this version of Grails, which
+     * {@code update-wrapper} would write, in the order of {@link #NAMES}: a file that is missing, a
+     * link, and a file that cannot be read among them
+     * @since 9.0
+     */
+    static List<String> differing(Path directory) {
+        return NAMES.findAll { String name ->
+            Path file = directory.resolve(name)
+            try {
+                if (!Files.isRegularFile(file, LinkOption.NOFOLLOW_LINKS) || Files.size(file) > (name == JAR ? MAX_JAR : MAX_SCRIPT)) {
+                    return true
+                }
+                byte[] content = content(name)
+                return Files.size(file) != content.length || !Arrays.equals(Files.readAllBytes(file), content)
+            } catch (IOException ignored) {
+                return true
+            }
+        }
+    }
+
     private static String reason(IOException e) {
         String message = e.getMessage()
         return GradleRunner.line(message == null || message.isEmpty() ? e.getClass().getSimpleName() : "${e.getClass().getSimpleName()}: ${message}")
@@ -429,6 +464,8 @@ final class WrapperFiles {
 
     /** What an update of the wrapper of a directory did. */
     static final class Result {
+
+        private static final Pattern MAJOR = Pattern.compile(/^(\d{1,4})\./)
 
         /** The directory the wrapper is in. */
         final Path directory
@@ -473,6 +510,25 @@ final class WrapperFiles {
          */
         boolean isSettled() {
             return beside.isEmpty() && failed.isEmpty()
+        }
+
+        /**
+         * @return whether a wrapper of an earlier major version of Grails than this one was replaced, or
+         * one that does not say its version, as a step of an upgrade
+         * @since 9.0
+         */
+        boolean isFromEarlierMajor() {
+            if (replaced.isEmpty() && pending.isEmpty()) {
+                return false
+            }
+            Integer was = majorOf(former)
+            Integer now = majorOf(version)
+            return was == null || (now != null && was < now)
+        }
+
+        private static Integer majorOf(String version) {
+            Matcher matched = version == null ? null : MAJOR.matcher(version)
+            return matched != null && matched.find() ? Integer.valueOf(matched.group(1)) : null
         }
 
         /**

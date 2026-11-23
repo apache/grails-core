@@ -63,7 +63,11 @@ import java.util.concurrent.Callable
         'An application that has no record of how it was generated, as one of an earlier version, is given one, and the record an earlier version of ' +
                 'Grails 9 wrote is moved to this one, with:',
         '',
-        '*  @|bold project migrate|@'
+        '*  @|bold project migrate|@',
+        '',
+        'What the files of a project show of its state, and what the upgrade notes still ask of it, is said with:',
+        '',
+        '*  @|bold project health|@'
 ],
         synopsisHeading = '@|bold,underline Usage:|@ ',
         optionListHeading = '%n@|bold,underline Options:|@%n',

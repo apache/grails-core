@@ -39,6 +39,9 @@ class UpdateWrapperCommandSpec extends Specification {
 
     static final List<String> WRAPPER = ['grailsw', 'grailsw.bat', 'grails-wrapper.jar']
 
+    // what the command says after it replaced a wrapper of an earlier major version, or one that names no version, as a step of an upgrade
+    static final String HEALTH = 'grails project health says what else the upgrade notes ask of the project, as far as its files show it.'
+
     @TempDir
     File dir
 
@@ -82,7 +85,7 @@ class UpdateWrapperCommandSpec extends Specification {
         exit == 0
         err.toString().isEmpty()
         out.toString().readLines() == ["The Grails wrapper of the project in ${project.path} was that of Grails 8.1.0 and is now that of Grails ${VersionInfo.grailsVersion}: " +
-                                               'grailsw, grailsw.bat, grails-wrapper.jar were replaced. Commit them.']
+                                               'grailsw, grailsw.bat, grails-wrapper.jar were replaced. Commit them.', HEALTH]
         WRAPPER.every { String name -> new File(project, name).bytes == generated(name) }
         PosixFilePermissions.toString(Files.getPosixFilePermissions(new File(project, 'grailsw').toPath())) == 'rwxr-x---'
         PosixFilePermissions.toString(Files.getPosixFilePermissions(new File(project, 'grailsw.bat').toPath())) == 'rw-r--r--'
@@ -113,7 +116,7 @@ class UpdateWrapperCommandSpec extends Specification {
         then:
         exit == 0
         out.toString().readLines() == ["The Grails wrapper of the project in ${project.path} is now that of Grails ${VersionInfo.grailsVersion}: " +
-                                               'grailsw.bat, grails-wrapper.jar were replaced. Commit them.']
+                                               'grailsw.bat, grails-wrapper.jar were replaced. Commit them.', HEALTH]
         WRAPPER.every { String name -> new File(project, name).bytes == generated(name) }
     }
 

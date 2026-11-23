@@ -482,6 +482,7 @@ $ grails project migrate
     grails-quartz (build.gradle declares org.apache.grails:grails-quartz)
 | Assumed, because nothing in the project says it: jdk (--jdk), reloading (--reloading). The files of the project were read as text and nothing of the build was run, so a feature the build does not declare in a line of its own was not found. To say it otherwise, run grails project migrate --force with the name and the package (com.example.shop), --type, --jdk, --servlet, --data, --reloading, --features for features that were not found and --exclude-features for features the application does not have
 | The record was written: .grails/.gitignore, .grails/.gitattributes, .grails/baseline/index.yml, .grails/forge.lock.yml, .grails/project.yml. No other file of the project was changed. Commit the directory .grails
+| grails project health says what else the upgrade notes ask of the project, as far as its files show it
 ----
 
 The command reads the files of the project and changes none of them. It writes only the files of the record in `.grails`, and leaves a `.gitignore` or `.gitattributes` that is there already as it is. Each value is taken from the first of these that has it:
@@ -514,7 +515,27 @@ The record of such an application says what the application is taken to be, not 
 * `project show` shows it, says that it was written for an application that was there, and ends with the `create-` command for a new application of the same type, options and features.
 * `feature add` and `project regenerate` refuse it and change nothing. Without a copy of what the generator wrote, what a feature changes cannot be told from what you changed. Add the dependencies and the configuration of a feature by hand, and then run `project migrate --force` so that the record names it, with `--features` for a feature the command does not find. `--force` works the record out anew: give the name and the options again that you gave before.
 
-`project migrate` never replaces the record of how an application was generated, with or without `--force`: `--force` writes again a record that `project migrate` wrote. It is run in a project whose `gradle.properties` still names Grails 7 or 8 as well, where no other command of a project is: the record is a step of the upgrade, and the other commands are there once the project is on Grails 9. A `grails-forge-cli.yml` is read and left where it is; once the `.grails` directory is there the commands go by it, and warn when the two do not name the same package or the same features, so remove the file when nothing else reads it.
+`project migrate` never replaces the record of how an application was generated, with or without `--force`: `--force` writes again a record that `project migrate` wrote. It is run in a project whose `gradle.properties` still names Grails 7 or 8 as well, where no other command of a project is but `project health`: the record is a step of the upgrade, and the other commands are there once the project is on Grails 9. A `grails-forge-cli.yml` is read and left where it is; once the `.grails` directory is there the commands go by it, and warn when the two do not name the same package or the same features, so remove the file when nothing else reads it.
+
+[[projectHealth]]
+=== The state of a project
+
+`project health` says what the files of a project show of its state: what makes its build fail, what the upgrade notes ask for and is not done, and what the guide recommends. It reads the project as text and changes nothing, and runs no Gradle, no generator and nothing of the network, so it answers at once, also in a project that does not build:
+
+[source,console]
+----
+$ grails project health
+| Project legacy on Grails 9.0.0 (gradle.properties), checked by the command line of Grails 9.0.0, offline
+| Error   removed-dependency.profile  build.gradle declares the profile dependency org.apache.grails.profiles:web: Grails 9 has no profiles, and the build fails while it is configured. Fix: Remove the profile line from the dependencies of build.gradle; nothing takes its place
+| Warning record.missing              The project has no record (.grails/project.yml or grails-forge-cli.yml): the commands that create its classes are not there. Fix: grails project migrate writes it from the files of the project; commit .grails
+| Advice  gradle-wrapper.checksum     gradle/wrapper/gradle-wrapper.properties has no distributionSha256Sum, so the wrapper does not check the distribution of Gradle it downloads. Fix: ...
+| 9 checks OK (-v lists them). 1 error, 1 warning, 1 advice, 0 skipped
+| Error project health found 1 error: removed-dependency.profile
+----
+
+Twelve checks look at the version of Grails the project is on, the Gradle wrapper and the Gradle it names, the versions of Java the build compiles for, `.sdkmanrc`, the dependencies Grails 9 no longer has or deprecates, the record under `.grails`, the Grails wrapper, the `.gitignore` and `.gitattributes` files, the list of the commands of the application, what an earlier version read and this one does not, and, while an upgrade is under way, the `grails-upgrade` agent skill. Each finding is an `error`, which ends the command with exit code 1, a `warning`, which does so with `--strict`, an `advice`, which never does, or `skipped` where a check could not decide, as for a build file that applies another one, and says why: a check that cannot decide never says it found nothing. Every finding has an id, as `removed-dependency.profile`, and says what to do. `-v` lists the checks that found nothing as well, and `--json` writes every finding as one JSON document for a tool. A project that `create-app` has just generated has no error and no warning.
+
+The command is run in a project whose `gradle.properties` still names Grails 7 or 8, as `project migrate` is, and says there what Grails 9 asks of it, which makes it the list of what is left to do during an upgrade: run it after `update-wrapper` and `project migrate`, and again after each change, until `grails project health --strict` ends with exit code 0. A job can run it with `--strict` to keep a project there. link:{commandLineRef}project-health.html[project health] lists every check and finding with its level and its fix.
 
 === Adding a feature to a project
 

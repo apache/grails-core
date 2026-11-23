@@ -1,0 +1,364 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+== project health
+
+=== Purpose
+
+Says what the files of the project in the current directory show of its state: what makes its build fail, what the upgrade notes ask for and is not done, and what the guide recommends, each with what to do about it. It reads the project and changes nothing.
+
+=== Examples
+
+[source,console]
+----
+grails project health
+grails project health -v
+grails project health --strict
+grails project health --json
+----
+
+=== Description
+
+Usage:
+
+[source,console]
+----
+grails project health [--json] [--strict] [-v]
+----
+
+Options:
+
+* `--json` - Write every finding as one JSON document for a tool to read, with the exit code the command has without it.
+* `--strict` - End with exit code 1 when there is a warning, as when there is an error: for a job that holds a project to what the upgrade notes ask.
+* `-v`, `--verbose` - List the checks that found nothing as well.
+
+`project health` is the `health` command of the `project` command. It runs twelve checks on the project and reports what each of them found:
+
+[source,console]
+----
+$ grails project health
+| Project legacy on Grails 9.0.0 (gradle.properties), checked by the command line of Grails 9.0.0, offline
+| Warning java-target.release        build.gradle compiles for Java 17 (compileJava.options.release), and Grails 9 is built for Java 21: a class of the project that uses one of Grails does not compile. Fix: Set compileJava.options.release to 21 or later in build.gradle
+| Advice  gradle-wrapper.older       The Gradle wrapper names Gradle 9.8.0 (gradle/wrapper/gradle-wrapper.properties), and create-app generates applications with Gradle 9.9.2. Fix: ./gradlew wrapper --gradle-version 9.9.2, and commit the wrapper
+| Advice  git-files.state-ignored    No .gitignore of the project leaves out .grails/transactions and .grails/history, ... Fix: Add .grails/transactions/ and .grails/history to the .gitignore of the project, as create-app writes them
+| 9 checks OK (-v lists them). 0 errors, 1 warning, 2 advice, 0 skipped
+----
+
+The first line names the project, the version of Grails it is on and the version of the command line. Then come the findings, one line each, the errors first, then the warnings, the advice and the checks that could not decide, each with the id of the finding and, after `Fix:`, what to do; where a command does it, the line names the command. The last line counts them. `-v` lists the checks that found nothing too, after the others.
+
+Each finding has one of these levels:
+
+[cols="1,3,1"]
+|===
+| Level | Meaning | Exit code
+
+| `error`
+| As the project stands, its build fails, or a command that builds, tests or runs it does.
+| 1
+
+| `warning`
+| Something an upgrade note requires is not done, something deprecated for removal is used, or a command of `grails` does less than it should in the project.
+| 0; 1 with `--strict`
+
+| `advice`
+| Something the guide recommends.
+| 0
+
+| `skipped`
+| The check could not decide, and says why: a file it needs is not there or cannot be read, or the build file has something it does not read, as another build file it applies or a version catalog. A check that cannot decide never says that it found nothing.
+| 0
+
+| `ok`
+| The check found nothing.
+| 0
+|===
+
+The command ends with exit code 0 when no finding fails it, and with 1 when there is an error, or with `--strict` a warning; one line on the standard error then names the ids of those findings. It ends with 2 for a mistake in the command line. Advice never fails it.
+
+The checks read the project as text, within bounds, and change nothing. They run no Gradle, no generator, no Git and nothing of the network, and they print no value of the configuration of the application, only the names of its keys. What a build file declares through a variable, in a loop, in a convention plugin or in another file is not seen, and where a check can tell that there is something it did not read, it says so as `skipped` rather than finding nothing.
+
+The command is a command of a project, and works in every directory of it. Outside a project it says so and ends with exit code 1. It is run in a project whose `gradle.properties` still names Grails 7 or 8 as well, where the other commands of a project but `project migrate` are refused: what it finds there is what Grails {grailsMajorVersion} asks of the project. link:project-migrate.html[project migrate] and link:update-wrapper.html[update-wrapper], when it replaces the wrapper of an earlier major version, end with a line that names this command.
+
+==== The checks and their findings
+
+The id of a finding is the name of its check and the name of the finding, as `java-target.release`. An id is never renamed, and one that is no longer used is never used again: a tool, and the `grails-upgrade` agent skill, go by it. A check that found nothing has the finding `ok`, as `record.ok`, and one that could not decide the finding `skipped`.
+
+[cols="2,1,4,3"]
+|===
+| Id | Level | Found when | Fix
+
+4+| `grails-version`: the `grailsVersion` of `gradle.properties`, as the build reads it, against the version of the command line.
+
+| `grails-version.earlier`
+| warning
+| The project is on an earlier major version of Grails.
+| Work through the upgrade notes, set `grailsVersion` and run `./grailsw update-wrapper`.
+
+| `grails-version.newer`
+| warning
+| The project is on a later major version than the command line.
+| `./grailsw project health`, which runs the command line of the version of the project.
+
+| `grails-version.release`
+| advice
+| The project is on another release of the same major version.
+| `./grailsw project health` for a later one; the upgrade notes of the releases in between for an earlier one.
+
+4+| `gradle-wrapper`: the Gradle wrapper the commands of the project run, and the `distributionUrl` of its `gradle/wrapper/gradle-wrapper.properties`.
+
+| `gradle-wrapper.missing`
+| error
+| There is no Gradle wrapper that is run, or it names no Gradle.
+| `gradle wrapper --gradle-version {gradleVersion}` with an installed Gradle, and commit the wrapper.
+
+| `gradle-wrapper.version`
+| error
+| The wrapper names a Gradle before {gradleMinimumVersion}, the earliest Grails is built with.
+| `./gradlew wrapper --gradle-version {gradleVersion}`, or set the `distributionUrl`.
+
+| `gradle-wrapper.older`
+| advice
+| The wrapper names a Gradle before {gradleVersion}, which `create-app` generates applications with.
+| `./gradlew wrapper --gradle-version {gradleVersion}`.
+
+| `gradle-wrapper.checksum`
+| advice
+| The properties have no `distributionSha256Sum`, so the wrapper does not check the distribution it downloads.
+| Add the SHA-256 that gradle.org publishes for the distribution (`--gradle-distribution-sha256-sum` of the `wrapper` task).
+
+4+| `java-target`: the versions of Java `build.gradle` compiles for: `compileJava.options.release` and `options.release`, the toolchain (`JavaLanguageVersion.of`), `targetCompatibility` and `sourceCompatibility`.
+
+| `java-target.release`
+| warning
+| One of them is before Java 21.
+| Set it to 21 or later.
+
+| `java-target.record`
+| advice
+| The record that `project migrate` wrote names another version of Java (`--jdk`) than the build compiles for.
+| `grails project migrate --force --jdk VERSION`, with the name and the options the record was written with.
+
+4+| `sdkmanrc`: the versions the `.sdkmanrc` of the project selects for `sdk env`. A project without one has nothing to check.
+
+| `sdkmanrc.java`
+| warning
+| `java` is before Java 21.
+| Select a JDK 21 or later.
+
+| `sdkmanrc.grails`
+| warning
+| `grails` is not the version the project is on.
+| Select that version, or remove the line: `./grailsw` starts the command line of the project.
+
+| `sdkmanrc.gradle`
+| advice
+| `gradle` is before {gradleMinimumVersion}.
+| Select Gradle {gradleVersion}.
+
+| `sdkmanrc.groovy`
+| advice
+| `groovy` is of another major version than the Groovy the Grails BOM manages.
+| Select that version, or remove the line.
+
+4+| `removed-dependency`: what `build.gradle` (or `build.gradle.kts`) declares that Grails {grailsMajorVersion} has no version of.
+
+| `removed-dependency.profile`
+| error
+| A `profile` dependency.
+| Remove the line.
+
+| `removed-dependency.shell`
+| error
+| `org.apache.grails:grails-shell-cli`, or an artifact of `org.apache.grails.profiles`.
+| Remove the dependency.
+
+| `removed-dependency.profile-plugin`
+| error
+| The Gradle plugin `org.apache.grails.gradle.grails-profile` or `org.apache.grails.gradle.grails-publish-profile`.
+| Remove the plugin id.
+
+| `removed-dependency.jline`
+| error
+| `org.jline:jline-terminal-jna` or `org.jline:jline-terminal-jansi`.
+| Remove the dependency.
+
+4+| `deprecated-dependency`: what `build.gradle` declares that is deprecated for removal.
+
+| `deprecated-dependency.gpars`
+| warning
+| `grails-async-gpars` or `grails-events-gpars`.
+| `grails-async-groovy-concurrent` or `grails-events-groovy-concurrent` in its place.
+
+| `deprecated-dependency.gpars-and-groovy`
+| error
+| A GPars module and the Groovy concurrency module that takes its place, both.
+| Remove the GPars module.
+
+| `deprecated-dependency.rxjava`
+| warning
+| `io.reactivex:rxjava`, `io.reactivex.rxjava2:rxjava`, or a promise or event module of RxJava 1 or 2.
+| The RxJava 3 module in its place.
+
+4+| `record`: the record of the project under `.grails`, which the commands that create its classes, `feature add` and `project regenerate` read. A project with the `grails-forge-cli.yml` of an earlier version, and no `.grails`, is in order.
+
+| `record.missing`
+| warning
+| The project has no record.
+| `grails project migrate`, and commit `.grails`.
+
+| `record.unreadable`
+| warning
+| The record does not read: a file is missing, was changed by hand, or has the markers of a merge conflict.
+| As the message says; a record that was changed by hand is restored from version control.
+
+| `record.baseline`
+| warning
+| The copy of a generated file under `.grails/baseline` is not what the index of the baseline says.
+| Restore `.grails` from version control.
+
+| `record.earlier-generator`
+| warning
+| The record was written by an earlier version of the command line, or another build of this one: `feature add` and `project regenerate` refuse it.
+| `grails project migrate`, which moves it to this version.
+
+| `record.version-drift`
+| warning
+| The project is on another version of Grails than the record.
+| `./grailsw update-wrapper`, then `./grailsw project migrate`; for a record that `project migrate` wrote, `project migrate --force`.
+
+| `record.interrupted`
+| warning
+| A change of the project did not come to its end: `.grails/transactions` has what it left.
+| The next `feature add` without `--dry-run` undoes or completes it.
+
+4+| `grails-wrapper`: the Grails wrapper (`grailsw`, `grailsw.bat`, `grails-wrapper.jar`), and the version its jar says it is of. A project without one has nothing to check.
+
+| `grails-wrapper.version`
+| warning
+| The wrapper is of an earlier major version of Grails.
+| `./grailsw update-wrapper` once `grailsVersion` names the new version, and commit the three files.
+
+| `grails-wrapper.outdated`
+| advice
+| The wrapper is of another version than the project, or its files are not those of the command line of its version.
+| `./grailsw update-wrapper`, and commit the files it names.
+
+| `grails-wrapper.leftover`
+| warning
+| `grails-wrapper.jar.new` or `grailsw.bat.new` is beside the wrapper: an update of it is not complete.
+| Run `./grailsw` once, and do not commit the `.new` files.
+
+4+| `git-files`: the `.gitignore` and `.gitattributes` files of the project and of the directories above it, up to the root of its Git repository. Git is not run, so the ignore file of the user and `.git/info/exclude` are not read.
+
+| `git-files.record-ignored`
+| warning
+| A `.gitignore` leaves out `.grails`, so the record is not committed.
+| Take the pattern out, and leave out the four directories `create-app` names in its place.
+
+| `git-files.state-ignored`
+| advice
+| No `.gitignore` leaves out `.grails/transactions` or `.grails/history`, which are of one machine.
+| Add `.grails/transactions/` and `.grails/history`, as `create-app` writes them.
+
+| `git-files.wrapper-line-endings`
+| advice
+| No `.gitattributes` keeps the line endings of the wrapper scripts, or the jars of the wrappers as binary.
+| Add the four lines `create-app` writes to `.gitattributes`.
+
+4+| `command-catalog`: the list of the commands of the application and its plugins in `.grails/cache/command-catalog.json`, which the build writes.
+
+| `command-catalog.missing`
+| advice
+| There is no list.
+| Any build of the project lists them, or `grails gradle grailsCommandCatalog` now.
+
+| `command-catalog.refused`
+| advice
+| The list is not used: it is not a file, or not what the build writes.
+| As for `command-catalog.missing`.
+
+| `command-catalog.stale`
+| advice
+| A file the list is made from was changed after it was written.
+| As for `command-catalog.missing`.
+
+4+| `leftover`: what an earlier version of Grails read and Grails {grailsMajorVersion} does not.
+
+| `leftover.settings-groovy`
+| warning
+| `~/.grails/settings.groovy` is there.
+| `GRAILS_REPO_URL` for the repositories, `-Dhttps.proxyHost` and the Gradle properties for the proxies; then remove the file.
+
+| `leftover.earlier-record`
+| advice
+| `grails-forge-cli.yml` or `grails-cli.yml` is beside `.grails`.
+| Remove it unless a tool of yours reads it.
+
+| `leftover.earlier-record-differs`
+| warning
+| Such a file names another default package or other features than `.grails`.
+| As for `leftover.earlier-record`.
+
+| `leftover.profile-config`
+| advice
+| `grails-app/conf/application.yml` sets `grails.profile`.
+| Remove it.
+
+| `leftover.preferred-shell`
+| advice
+| The environment variable `GRAILS_PREFERRED_SHELL` is set.
+| Unset it.
+
+4+| `agent-skills`: the `grails-upgrade` agent skill, looked for only where an upgrade is under way: in a project on an earlier major version, or one with an error or a warning of an upgrade note.
+
+| `agent-skills.upgrade-skill`
+| advice
+| The build declares no SkillsJars Gradle plugin with the skill.
+| Add the plugin, the `skill` dependency and its `outputDir`, and run `./gradlew extractSkillsJars`; see link:{guidePath}gettingStarted.html#agentSkills[Agent Skills].
+
+| `agent-skills.not-extracted`
+| advice
+| The build declares the skill and it is not extracted to `.agents/skills`, `.claude/skills` or the `outputDir` of the build.
+| `./gradlew extractSkillsJars`.
+|===
+
+A project that `create-app` has just generated, of every type and with the default features, has no error and no warning. It can have advice, as `command-catalog.missing` until its first build lists the commands of the application.
+
+==== The JSON document
+
+With `--json` the command writes one JSON document and nothing else, and ends with the exit code it has without the option:
+
+[source,json]
+----
+{"format": 1, "command": "project health", "projectDirectory": "/home/me/legacy", "outcome": "checked", "reason": null, "message": null,
+ "projectGrailsVersion": "9.0.0", "commandLineVersion": "9.0.0", "online": false, "strict": false, "passed": true,
+ "counts": {"error": 0, "warning": 1, "advice": 2, "ok": 9, "skipped": 0},
+ "findings": [{"id": "java-target.release", "check": "java-target", "level": "warning", "message": "build.gradle compiles for Java 17 ...",
+               "fix": "Set compileJava.options.release to 21 or later in build.gradle", "command": null, "files": ["build.gradle"],
+               "upgradeNote": "https://grails.apache.org/docs/9.0.0/guide/upgrading.html#upgradingGroovy6", "origin": "built-in"}, ...]}
+----
+
+* `outcome` is `checked` when the checks ran, `refused` outside a project (`reason` `no-project`, or `untrusted-project` for a project above the current directory that is not the user's, with the line the command says as `message`), and `failed` when the command failed (`reason` `error`).
+* `passed` is whether no finding fails the command: no error, and with `--strict` no warning.
+* `counts` has the number of findings of each level, and `findings` every finding, also those of the checks that found nothing, in the order of their levels and then of the checks.
+* A finding has its `id`, its `check`, its `level`, the `message`, the `fix` (`null` for `ok` and `skipped`), the `command` that is the fix or the most of it, or `null`, the `files` of the project it is about, the `upgradeNote` that says more, as the address of the note in the guide of the version of the command line, or `null`, and its `origin`, `built-in` for the checks of the command line.
+
+Every member is always there, in this order, and is `null` where it does not apply. The `format` changes only when a reader of the earlier format would misread the document; a member that is added later comes after the others.
+
+See "The state of a project" in link:{guidePath}commandLine.html#creatingProject[Creating a Grails Project], and link:{guidePath}upgrading.html#upgradingProjectHealth[the upgrade notes] for its place in an upgrade.

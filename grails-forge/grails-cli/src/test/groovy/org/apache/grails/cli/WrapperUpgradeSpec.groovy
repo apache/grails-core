@@ -58,6 +58,8 @@ class WrapperUpgradeSpec extends Specification {
     private static final List<String> WRAPPER = ['grailsw', 'grailsw.bat', 'grails-wrapper.jar']
     private static final String CLI_JAR_VARIABLE = 'EARLIER_WRAPPER_CLI_JAR'
     private static final String VERSION = '9.0.0'
+    // what the command line says once it has replaced the wrapper of an earlier major version, as a step of an upgrade
+    private static final String HEALTH = 'grails project health says what else the upgrade notes ask of the project, as far as its files show it.'
 
     @Shared
     File allJar = new File(System.getProperty('grails.cli.all.jar'))
@@ -130,7 +132,7 @@ class WrapperUpgradeSpec extends Specification {
         result.status == 0
         result.err.isEmpty()
         result.out.readLines() == ["The Grails wrapper of the project in ${project.path} was that of Grails 8.1.0 and is now that of Grails ${cliVersion()}: " +
-                                           'grailsw, grailsw.bat, grails-wrapper.jar were replaced. Commit them.']
+                                           'grailsw, grailsw.bat, grails-wrapper.jar were replaced. Commit them.', HEALTH]
 
         and: 'the files are those the jar has, the script can still be executed by whom it could be, and nothing else is left'
         WRAPPER.every { String name -> new File(project, name).bytes == inJar(name) }
@@ -178,7 +180,8 @@ class WrapperUpgradeSpec extends Specification {
 
         then:
         result.status == 0
-        result.out.readLines().size() == 1
+        result.out.readLines().size() == 2
+        result.out.readLines().last() == HEALTH
         result.out.contains(jarIsInUse() ? 'grailsw, grailsw.bat were replaced, and grails-wrapper.jar is in use by the wrapper that runs this command' : 'grailsw, grailsw.bat, grails-wrapper.jar were replaced')
         isOfThisVersion(project)
     }

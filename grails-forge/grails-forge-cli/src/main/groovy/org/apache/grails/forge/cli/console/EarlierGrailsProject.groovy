@@ -78,7 +78,8 @@ final class EarlierGrailsProject {
         String ours = own.matches() ? own.group(1) : FIRST_MAJOR as String
         return "This project is on Grails ${theirs} (${PROPERTIES}), and the command line of Grails ${ours} works with projects of Grails ${FIRST_MAJOR} and later. " +
                 "Use the command line of Grails ${majorOf(theirs)} for this project, or upgrade the project to Grails ${FIRST_MAJOR} first, as the upgrade notes of the " +
-                'Grails guide describe; project migrate, which writes the record the commands of a project read, is the one command of a project that runs here'
+                'Grails guide describe; project migrate, which writes the record the commands of a project read, and project health, which says what the upgrade ' +
+                'notes still ask of the project, are the commands of a project that run here'
     }
 
     /**

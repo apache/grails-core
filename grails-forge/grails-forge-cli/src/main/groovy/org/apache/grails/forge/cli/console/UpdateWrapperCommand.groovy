@@ -20,6 +20,7 @@ package org.apache.grails.forge.cli.console
 
 import java.nio.file.Path
 import groovy.transform.CompileStatic
+import org.grails.forge.cli.command.ProjectHealthCommand
 import picocli.CommandLine
 
 /**
@@ -61,6 +62,10 @@ class UpdateWrapperCommand extends InProjectCommand {
         }
         for (String line : result.left()) {
             err(line)
+        }
+        if (result.isFromEarlierMajor()) {
+            // a wrapper of an earlier major version is replaced as a step of an upgrade, which has more
+            out(ProjectHealthCommand.advice(spec) + '.')
         }
         return result.isSettled() ? 0 : 1
     }

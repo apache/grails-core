@@ -668,6 +668,7 @@ class ProjectMigrateCommand extends BaseCommand implements Callable<Integer>, Pr
         out("@|blue ||@ ${UsageHelp.toType(spec, 'help')} lists the commands that create the classes of the application, and ${UsageHelp.toType(spec, 'project show')} says what the record has. " +
                 "The record says what the application is taken to be, not how it was generated: ${UsageHelp.toType(spec, 'feature add')} and ${UsageHelp.toType(spec, 'project regenerate')} are for an " +
                 'application this version generated, and change nothing here')
+        out("@|blue ||@ ${ProjectHealthCommand.advice(spec)}")
         return 0
     }
 
@@ -822,6 +823,7 @@ class ProjectMigrateCommand extends BaseCommand implements Callable<Integer>, Pr
             out("@|blue ||@ The project is on Grails ${shown(projectVersion)} (gradle.properties), and the record is now of Grails ${VersionInfo.getGrailsVersion()}: " +
                     'the upgrade notes of the Grails guide say what changes with the version, gradle.properties among it')
         }
+        out("@|blue ||@ ${ProjectHealthCommand.advice(spec)}")
         return 0
     }
 

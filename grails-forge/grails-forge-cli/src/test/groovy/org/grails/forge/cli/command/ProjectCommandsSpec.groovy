@@ -998,7 +998,7 @@ class ProjectCommandsSpec extends CommandSpec {
         then:
         exit == 0
         project.project == false
-        project.commands*.name == ['show', 'regenerate', 'migrate']
+        project.commands*.name == ['show', 'regenerate', 'migrate', 'health']
         project.commands.every { it.project == true && it.origin == 'built-in' && it.description }
         project.commands[0].options*.names.contains(['--json'])
         project.commands[1].options*.names.containsAll([['-o', '--output'], ['--diff'], ['-f', '--force']])

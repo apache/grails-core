@@ -70,6 +70,8 @@ Options:
 
 It writes the files of the record in the `.grails` directory (`project.yml`, `forge.lock.yml` and `baseline/index.yml`, and `.gitignore` and `.gitattributes` when they are not there) and no other file of the project. The record has `generationState: untracked` and a baseline without files. link:feature-add.html[feature add] and link:project-regenerate.html[project regenerate] refuse such an application and change nothing; link:project-show.html[project show] shows the record.
 
+Once the record is written or moved, the last line names link:project-health.html[project health], which says what else the upgrade notes ask of the project.
+
 The command refuses, with exit code 1 and without writing anything, what is left of a record that is not complete or cannot be read, and a project whose type or package it cannot work out. A type, a feature or a version of Java that is none is a mistake in the command line, with exit code 2. The options of a feature pack (`--feature-pack-dir`, `--feature-pack-repository`, `--offline`) are refused for a project without the record of a generated application.
 
 ==== Moving the record of a generated application to this version
@@ -86,6 +88,7 @@ $ ./grailsw project migrate
 | 2 files of the baseline, in .grails/baseline/files, are not as this version generates them: 2 changed. The record names this version
 | The record was moved to this version: .grails/project.yml, .grails/forge.lock.yml and the baseline under .grails/baseline were written. No other file of the project was changed. Commit the directory .grails
 | Where a file of the application is not what this version generates, as where an earlier version generated it otherwise, grails feature add takes it for your change and keeps it; grails project regenerate --diff names those files
+| grails project health says what else the upgrade notes ask of the project, as far as its files show it
 ----
 
 * The application is generated again, in memory, from the choices the record has: the type, the name and the package, the options, the features that were asked for and those that were left out, and the feature packs that are not part of Grails and the preset, which are given again with `--feature-pack-dir`, or fetched again by the coordinates and the SHA-256 of the record, as for link:feature-add.html[feature add]. The record is not worked out from the files, and the name, `--type`, `--features`, `--exclude-features`, `--jdk`, `--servlet`, `--data` and `--reloading` are refused.

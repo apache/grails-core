@@ -228,6 +228,11 @@ include::ref/Command Line/gradle.adoc[]
 
 include::ref/Command Line/plugin-info.adoc[]
 
+[[ref-command-line-project-health]]
+==== project health
+
+include::ref/Command Line/project-health.adoc[]
+
 [[ref-command-line-project-migrate]]
 ==== project migrate
 

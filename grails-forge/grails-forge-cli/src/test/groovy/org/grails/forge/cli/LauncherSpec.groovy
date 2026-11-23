@@ -43,7 +43,8 @@ class LauncherSpec extends Specification {
 
     private static final String REFUSAL = 'This project is on Grails 8.1.2 (gradle.properties), and the command line of Grails 9 works with projects of Grails 9 and later. ' +
                 'Use the command line of Grails 8 for this project, or upgrade the project to Grails 9 first, as the upgrade notes of the Grails guide describe; ' +
-                'project migrate, which writes the record the commands of a project read, is the one command of a project that runs here'
+                'project migrate, which writes the record the commands of a project read, and project health, which says what the upgrade notes still ask of ' +
+                'the project, are the commands of a project that run here'
 
     static final String ESCAPE = '\u001b['
     static final String BROKEN = 'the generator is broken on purpose'

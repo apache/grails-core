@@ -32,6 +32,7 @@ Updating Grails wrapper, allowed versions to update to are [RELEASE]...
 ...
 Updated wrapper to version: 9.0.0
 The Grails wrapper of the project in /home/me/shop was that of Grails 8.1.2 and is now that of Grails 9.0.0: grailsw, grailsw.bat, grails-wrapper.jar were replaced. Commit them.
+grails project health says what else the upgrade notes ask of the project, as far as its files show it.
 $ git add grailsw grailsw.bat grails-wrapper.jar
 ----
 
@@ -45,7 +46,7 @@ Usage:
 grails update-wrapper
 ----
 
-The command line has the three files of the wrapper with it, the ones a new application is created with, and writes those that differ over the ones of the project. It downloads nothing. The command ends with exit code 0 and one line that names the files it replaced, or says that nothing was changed. It takes no arguments.
+The command line has the three files of the wrapper with it, the ones a new application is created with, and writes those that differ over the ones of the project. It downloads nothing. The command ends with exit code 0 and one line that names the files it replaced, or says that nothing was changed. When the wrapper it replaced was that of an earlier major version of Grails, or did not say its version, a second line names link:project-health.html[project health], which says what else the upgrade asks of the project. It takes no arguments.
 
 Typed to the wrapper, `./grailsw update-wrapper` first makes the wrapper download the command line of the version the project names, the `grailsVersion` of its `gradle.properties`, again, also when it is there already. That command line then runs the command. This is how the wrapper of a project follows the version of the project: change `grailsVersion`, run `./grailsw update-wrapper`, commit the files it names. Typed to an installed command line, `grails update-wrapper` writes the wrapper of the version that is installed.
 

@@ -324,6 +324,9 @@ org.apache.grails.forge.cli.console.UsageHelp$_createDefaultOptionRenderer_closu
 org.apache.grails.forge.cli.console.UsageHelp$_isSystemProperty_closure2
 org.apache.grails.forge.cli.console.UsageHelp$_notAnOption_closure5
 org.apache.grails.forge.cli.console.UsageHelp$_typed_closure4
+org.apache.grails.forge.cli.health.HealthContext
+org.apache.grails.forge.cli.health.HealthDocument
+org.apache.grails.forge.cli.health.ProjectHealth
 org.apache.grails.forge.cli.pack.PackArtifactException
 org.apache.grails.forge.cli.pack.PackArtifacts
 org.apache.grails.forge.cli.pack.PackCatalog$Plugin
@@ -381,6 +384,7 @@ org.apache.grails.forge.core.change.FeatureAddition
 org.apache.grails.forge.core.change.FeatureAddition$_declaredTwice_closure23
 org.apache.grails.forge.core.change.FeatureAddition$_declaredTwice_closure24
 org.apache.grails.forge.core.change.FeatureAddition$_inThePlaceOfOnesAskedFor_closure11
+org.apache.grails.forge.core.change.FeatureAddition$_migrate_closure27
 org.apache.grails.forge.core.change.FeatureAddition$_nameThere_closure26
 org.apache.grails.forge.core.change.FeatureAddition$_notContradictory_closure12
 org.apache.grails.forge.core.change.FeatureAddition$_notContradictory_closure13
@@ -403,6 +407,8 @@ org.apache.grails.forge.core.change.FeatureAddition$_recover_closure1
 org.apache.grails.forge.core.change.FeatureAddition$_refusal_closure20
 org.apache.grails.forge.core.change.FeatureAddition$_replacement_closure15
 org.apache.grails.forge.core.change.FeatureAddition$_replayed_closure19
+org.apache.grails.forge.core.change.FeatureAddition$_requestedOf_closure29
+org.apache.grails.forge.core.change.FeatureAddition$_shownRepositories_closure28
 org.apache.grails.forge.core.change.FeatureAddition$_unlike_closure21
 org.apache.grails.forge.core.change.FilesInUse
 org.apache.grails.forge.core.change.FilesInUse$Operation
@@ -419,6 +425,7 @@ org.apache.grails.forge.core.change.ProjectTransaction$_recover_closure3
 org.apache.grails.forge.core.change.ProjectTransaction$_remove_closure8
 org.apache.grails.forge.core.change.ProjectTransaction$_run_closure2
 org.apache.grails.forge.core.change.ProjectTransaction$_strangers_closure1
+org.apache.grails.forge.core.change.RecordMigration
 org.apache.grails.forge.core.change.RegeneratedProject
 org.apache.grails.forge.core.pack.Pack
 org.apache.grails.forge.core.pack.PackCondition
@@ -1053,16 +1060,21 @@ org.grails.forge.cli.command.InstallTemplatesCommand$_call_closure2
 org.grails.forge.cli.command.InstallTemplatesCommand$_call_closure3
 org.grails.forge.cli.command.InstallTemplatesCommand$_call_closure4
 org.grails.forge.cli.command.ProjectGroupCommand
+org.grails.forge.cli.command.ProjectHealthCommand
+org.grails.forge.cli.command.ProjectHealthCommand$_call_closure1
+org.grails.forge.cli.command.ProjectHealthCommand$_call_closure2
+org.grails.forge.cli.command.ProjectHealthCommand$_report_closure3
+org.grails.forge.cli.command.ProjectHealthCommand$_report_closure4
 org.grails.forge.cli.command.ProjectMigrateCommand
 org.grails.forge.cli.command.ProjectMigrateCommand$Found
 org.grails.forge.cli.command.ProjectMigrateCommand$Identity
 org.grails.forge.cli.command.ProjectMigrateCommand$TypeChoices
-org.grails.forge.cli.command.ProjectMigrateCommand$__clinit__closure44
-org.grails.forge.cli.command.ProjectMigrateCommand$_addFeatureOf_closure36
+org.grails.forge.cli.command.ProjectMigrateCommand$__clinit__closure47
 org.grails.forge.cli.command.ProjectMigrateCommand$_addFeatureOf_closure37
 org.grails.forge.cli.command.ProjectMigrateCommand$_addFeatureOf_closure38
 org.grails.forge.cli.command.ProjectMigrateCommand$_addFeatureOf_closure39
 org.grails.forge.cli.command.ProjectMigrateCommand$_addFeatureOf_closure40
+org.grails.forge.cli.command.ProjectMigrateCommand$_addFeatureOf_closure41
 org.grails.forge.cli.command.ProjectMigrateCommand$_applicationType_closure16
 org.grails.forge.cli.command.ProjectMigrateCommand$_call_closure10
 org.grails.forge.cli.command.ProjectMigrateCommand$_call_closure11
@@ -1077,8 +1089,8 @@ org.grails.forge.cli.command.ProjectMigrateCommand$_call_closure8
 org.grails.forge.cli.command.ProjectMigrateCommand$_call_closure9
 org.grails.forge.cli.command.ProjectMigrateCommand$_closure1
 org.grails.forge.cli.command.ProjectMigrateCommand$_closure2
-org.grails.forge.cli.command.ProjectMigrateCommand$_describe_closure41
 org.grails.forge.cli.command.ProjectMigrateCommand$_describe_closure42
+org.grails.forge.cli.command.ProjectMigrateCommand$_describe_closure43
 org.grails.forge.cli.command.ProjectMigrateCommand$_featuresFound_closure18
 org.grails.forge.cli.command.ProjectMigrateCommand$_featuresFound_closure19
 org.grails.forge.cli.command.ProjectMigrateCommand$_featuresFound_closure20
@@ -1092,6 +1104,8 @@ org.grails.forge.cli.command.ProjectMigrateCommand$_featuresFound_closure27
 org.grails.forge.cli.command.ProjectMigrateCommand$_featuresFound_closure28
 org.grails.forge.cli.command.ProjectMigrateCommand$_givenType_closure14
 org.grails.forge.cli.command.ProjectMigrateCommand$_identity_closure17
+org.grails.forge.cli.command.ProjectMigrateCommand$_move_closure45
+org.grails.forge.cli.command.ProjectMigrateCommand$_move_closure46
 org.grails.forge.cli.command.ProjectMigrateCommand$_options_closure29
 org.grails.forge.cli.command.ProjectMigrateCommand$_options_closure30
 org.grails.forge.cli.command.ProjectMigrateCommand$_options_closure31
@@ -1100,7 +1114,8 @@ org.grails.forge.cli.command.ProjectMigrateCommand$_options_closure33
 org.grails.forge.cli.command.ProjectMigrateCommand$_options_closure34
 org.grails.forge.cli.command.ProjectMigrateCommand$_options_closure35
 org.grails.forge.cli.command.ProjectMigrateCommand$_refusal_closure15
-org.grails.forge.cli.command.ProjectMigrateCommand$_write_closure43
+org.grails.forge.cli.command.ProjectMigrateCommand$_servletOfStarter_closure36
+org.grails.forge.cli.command.ProjectMigrateCommand$_write_closure44
 org.grails.forge.cli.command.ProjectRegenerateCommand
 org.grails.forge.cli.command.ProjectRegenerateCommand$_call_closure3
 org.grails.forge.cli.command.ProjectRegenerateCommand$_call_closure4

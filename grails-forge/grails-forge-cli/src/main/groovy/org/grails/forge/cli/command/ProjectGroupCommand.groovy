@@ -25,13 +25,15 @@ import picocli.CommandLine
 import java.util.concurrent.Callable
 
 /**
- * The commands for the record of how the application in the current directory was generated, and
- * the one that writes a record for an application that has none.
+ * The commands for the record of how the application in the current directory was generated, the
+ * one that writes a record for an application that has none, and the one that says what the files
+ * of the project show of its state.
  *
  * @since 9.0
  */
-@CommandLine.Command(name = ProjectGroupCommand.NAME, description = 'Works with the record of how the application in the current directory was generated',
-        subcommands = [ProjectShowCommand, ProjectRegenerateCommand, ProjectMigrateCommand])
+@CommandLine.Command(name = ProjectGroupCommand.NAME, description = 'Works with the record of how the application in the current directory was generated, ' +
+        'and says what the files of the project show of its state',
+        subcommands = [ProjectShowCommand, ProjectRegenerateCommand, ProjectMigrateCommand, ProjectHealthCommand])
 @Component
 @Scope('prototype')
 @CompileStatic
@@ -43,6 +45,6 @@ class ProjectGroupCommand extends BaseCommand implements Callable<Integer> {
     Integer call() throws Exception {
         throw new CommandLine.ParameterException(spec.commandLine(), 'No command specified: project show says how the application was generated, ' +
                 'and project regenerate generates it again; project migrate writes the record of an application that has none, and moves the record an earlier ' +
-                'version wrote to this one')
+                'version wrote to this one; project health says what the files of the project show of its state')
     }
 }
