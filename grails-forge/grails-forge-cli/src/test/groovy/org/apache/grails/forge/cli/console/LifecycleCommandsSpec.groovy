@@ -414,6 +414,34 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
         new File(dir, 'invoked.txt').text == '<bootRun><--quiet><-Dgrails.env=development><-Dgrails.server.ssl.key-store=/elsewhere/mine><-Dgrails.server.port=8443>\n'
     }
 
+    @Unroll
+    void "run-app --https #what"() {
+        given: 'the passwords of a key store in the configuration of the application'
+        scriptedProject('record')
+        new File(dir, 'grails-app/conf').mkdirs()
+        new File(dir, 'grails-app/conf/application.yml').text = 'server:\n    ssl:\n        key-store-password: secret\n        key-password: secret\n'
+        String generated = "${dir.canonicalPath}/build/ssl/keystore"
+
+        when:
+        int exit = ForgeCli.execute(beanContext, (['run-app', '--https'] + options) as String[])
+
+        then:
+        exit == 0
+        errors() == []
+        new File(generated).isFile() == created
+        out.toString().contains('| Created a self-signed certificate') == created
+        new File(dir, 'invoked.txt').text == '<bootRun><--quiet><-Dgrails.env=development>' + invoked.replace('GENERATED', generated) + '\n'
+
+        where:
+        what                                                                                           | options                                                                    | created | invoked
+        'creates a certificate and gives the application its passwords when nothing names a key store' | []                                                                         | true    | '<-Dgrails.server.port=8443><-Dgrails.server.ssl.key-store=GENERATED><-Dgrails.server.ssl.key-store-password=123456><-Dgrails.server.ssl.key-password=123456>'
+        'gives a key store of the user no password when it is given as an option'                      | ['-Dgrails.server.ssl.key-store=/elsewhere/mine']                          | false   | '<-Dgrails.server.ssl.key-store=/elsewhere/mine><-Dgrails.server.port=8443>'
+        'gives a key store of the user no password when it is given to Gradle after --'                | ['--', '-Dgrails.server.ssl.key-store=/elsewhere/mine']                    | false   | '<-Dgrails.server.port=8443><-Dgrails.server.ssl.key-store=/elsewhere/mine>'
+        'gives a key store of the user no password when it is given to Gradle after -- as -D NAME=VALUE' | ['--', '-D', 'grails.server.ssl.key-store=/elsewhere/mine']              | false   | '<-Dgrails.server.port=8443><-D><grails.server.ssl.key-store=/elsewhere/mine>'
+        'gives a key store of the user no password when it is given to Gradle after -- as --system-prop' | ['--', '--system-prop=grails.server.ssl.key-store=/elsewhere/mine']      | false   | '<-Dgrails.server.port=8443><--system-prop=grails.server.ssl.key-store=/elsewhere/mine>'
+        'gives a key store of the user no password when it is given before and after --'              | ['-Dgrails.server.ssl.key-store=/elsewhere/mine', '--', '-Dgrails.server.ssl.key-store=/elsewhere/other'] | false | '<-Dgrails.server.ssl.key-store=/elsewhere/mine><-Dgrails.server.port=8443><-Dgrails.server.ssl.key-store=/elsewhere/other>'
+    }
+
     void "run-app --detach returns when the application answers, records what it started, and stop-app stops that and nothing else"() {
         given:
         scriptedProject('child')

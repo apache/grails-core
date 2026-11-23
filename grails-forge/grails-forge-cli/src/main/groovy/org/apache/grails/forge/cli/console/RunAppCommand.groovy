@@ -283,7 +283,7 @@ class RunAppCommand extends GradleEnvironmentCommand implements OptionRelation.D
                 answersOn = DEFAULT_HTTPS_PORT
                 arguments.add("-D${PORT_PROPERTY}=${DEFAULT_HTTPS_PORT}".toString())
             }
-            arguments.addAll(certificateArguments(project))
+            arguments.addAll(certificateArguments(project, told))
         }
         if (answersOn == 0 && configured.portUnknown == null) {
             answersOn = DEFAULT_PORT
@@ -633,9 +633,11 @@ class RunAppCommand extends GradleEnvironmentCommand implements OptionRelation.D
         }
     }
 
-    // The certificate the shell creates for --https, in the place it has it, so one that is there is used.
-    private List<String> certificateArguments(ConsoleProject project) {
-        if (systemProperties.containsKey(KEY_STORE_PROPERTY)) {
+    // The certificate the shell creates for --https, in the place it has it, so one that is there is used. A key
+    // store that the build is told of, also after --, is the user's, whose passwords are the application's to know:
+    // with it nothing is created, and no password is given that would stand above those of its configuration.
+    private List<String> certificateArguments(ConsoleProject project, Map<String, String> told) {
+        if (told.containsKey(KEY_STORE_PROPERTY)) {
             return []
         }
         Path keyStore = project.directory.resolve(KEY_STORE)
