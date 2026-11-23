@@ -188,6 +188,7 @@ class ProjectCommandsSpec extends CommandSpec {
                 [name: 'feature-pack-repository', option: '--feature-pack-repository', value: [], default: [], status: 'default'],
                 [name: 'feature-pack-sha256', option: '--feature-pack-sha256', value: [], default: [], status: 'default'],
                 [name: 'feature-catalog', option: '--feature-catalog', value: [], default: [], status: 'default'],
+                [name: 'preset', option: '--preset', value: [], default: [], status: 'default'],
                 [name: 'test-framework', value: 'spock', default: 'spock', status: 'not-recorded'],
                 [name: 'build-tool', value: 'gradle', default: 'gradle', status: 'not-recorded']]
         document.addedFeatures == state.lock.featureNames - 'grails-quartz'
@@ -212,7 +213,7 @@ class ProjectCommandsSpec extends CommandSpec {
         List<String> lines = out.toString().readLines()
         int from = lines.indexOf("| Every option of create-app with the value the application was generated with, and whether that is the default of this version " +
                 "(${VersionInfo.version}) of the command line".toString())
-        List<List<String>> rows = lines.subList(from + 1, from + 18).collect { String line -> line.trim().split(/ {2,}/).toList() }
+        List<List<String>> rows = lines.subList(from + 1, from + 19).collect { String line -> line.trim().split(/ {2,}/).toList() }
 
         then:
         exit == 0
@@ -233,13 +234,14 @@ class ProjectCommandsSpec extends CommandSpec {
                  ['--feature-pack-repository', '(none)', '(default)'],
                  ['--feature-pack-sha256', '(none)', '(default)'],
                  ['--feature-catalog', '(none)', '(default)'],
+                 ['--preset', '(none)', '(default)'],
                  ['test framework', 'spock', '(not recorded: the only one this version generates)'],
                  ['build tool', 'gradle', '(not recorded: the only one this version generates)']]
 
         and: 'the features that were asked for apart from those that came with them'
-        lines[from + 18] == "| Of the ${state.lock.features.size()} features, 1 was asked for (--features above) and ${state.lock.features.size() - 1} came with the " +
+        lines[from + 19] == "| Of the ${state.lock.features.size()} features, 1 was asked for (--features above) and ${state.lock.features.size() - 1} came with the " +
                 'application type, with an option or with another feature:'
-        lines[from + 19].trim().split(', ').toList() == state.lock.featureNames - 'grails-quartz'
+        lines[from + 20].trim().split(', ').toList() == state.lock.featureNames - 'grails-quartz'
 
         and: 'the command line is the short one, and last'
         lines[-1] == 'grails-forge-cli create-app com.example.shop --features grails-quartz'

@@ -613,14 +613,21 @@ final class PackCatalog {
         }
 
         /**
-         * @return whether the pack is one this Forge can read as a feature
+         * @return whether the pack is one this Forge can read, as a feature or as a preset, whichever its kind is
          */
         boolean isReadable() {
-            return kind == FEATURE && format == PackCatalog.FORMAT && templateApi == PackDescriptor.TEMPLATE_API
+            return (kind == FEATURE || kind == PRESET) && format == PackCatalog.FORMAT && templateApi == PackDescriptor.TEMPLATE_API
         }
 
         boolean isFeature() {
             return kind == FEATURE
+        }
+
+        /**
+         * @return whether the pack is a preset, which is given to a create command with {@code --preset}
+         */
+        boolean isPreset() {
+            return kind == PRESET
         }
 
         /**

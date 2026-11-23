@@ -91,7 +91,7 @@ class ProjectShowCommand extends BaseCommand implements Callable<Integer>, Proje
     /** The options of a create command that are shown with their value, in the order they are shown. */
     public static final List<String> SHOWN_OPTIONS = Collections.unmodifiableList([
             '--jdk', '--servlet', '--data', '--reloading', '--subproject', '--features', '--exclude-features', '--feature-pack-dir',
-            '--feature-pack-repository', '--feature-pack-sha256', '--feature-catalog'])
+            '--feature-pack-repository', '--feature-pack-sha256', '--feature-catalog', '--preset'])
 
     /**
      * The options of a create command that are not shown, because they say nothing of the application:
@@ -187,6 +187,9 @@ class ProjectShowCommand extends BaseCommand implements Callable<Integer>, Proje
             arguments << '--subproject'
         }
         Plugins plugins = new Plugins(state)
+        if (plugins.preset != null) {
+            arguments << '--preset' << plugins.preset
+        }
         if (!plugins.features.isEmpty()) {
             arguments << '--features' << plugins.features.join(',')
         }
@@ -240,7 +243,12 @@ class ProjectShowCommand extends BaseCommand implements Callable<Integer>, Proje
                     "the command takes the default of this version of the command line for ${notRecorded.size() == 1 ? 'it' : 'them'}, which need not be what " +
                     'the application was generated with').toString()
         }
-        List<String> given = lock.features.findAll { LockedFeature feature -> feature.source == LockedFeature.PACK && feature.coordinates == null }
+        String preset = state.manifest.preset
+        if (preset != null && lock.features.any { LockedFeature feature -> feature.name == preset && feature.coordinates == null }) {
+            notes << ("The application was made from the preset ${FeatureSelectionException.shown(preset)}, given as a directory or a jar, which the record " +
+                    'does not name: give it to the command with --preset').toString()
+        }
+        List<String> given = lock.features.findAll { LockedFeature feature -> feature.source == LockedFeature.PACK && feature.coordinates == null && feature.name != preset }
                 .collect { LockedFeature feature -> FeatureSelectionException.shown(feature.name) }
         if (!given.isEmpty()) {
             notes << ("The ${given.size() == 1 ? 'feature' : 'features'} ${given.join(', ')} ${given.size() == 1 ? 'is that of a feature pack' : 'are those of feature packs'} " +
@@ -308,6 +316,10 @@ class ProjectShowCommand extends BaseCommand implements Callable<Integer>, Proje
         row('servlet', written(options.servlet))
         row('data', written(options.data))
         row('reloading', written(options.reloading))
+        RequestedFeature preset = manifest.requestedFeatures.find { RequestedFeature feature -> manifest.preset != null && feature.name == manifest.preset }
+        if (preset != null) {
+            row('preset', preset.coordinates == null ? shown(preset.name) : "${shown(preset.name)} (${shown(preset.coordinates + ':' + preset.version)})".toString())
+        }
         row('asked for', manifest.requestedFeatures.collect { RequestedFeature feature ->
             feature.coordinates == null ? shown(feature.name) : "${shown(feature.name)} (${shown(feature.coordinates + ':' + feature.version)})".toString()
         }.join(', ') ?: '(no features)')
@@ -368,7 +380,10 @@ class ProjectShowCommand extends BaseCommand implements Callable<Integer>, Proje
                 new Setting('name', null, manifest.name, null, RECORDED),
                 new Setting('package', null, manifest.defaultPackage, ofName, ofName == null ? RECORDED : manifest.defaultPackage == ofName ? DEFAULT : DIFFERS),
                 new Setting('grails-version', null, manifest.grailsVersion, null, RECORDED)]
-        List<String> unnamedPacks = lock.features.findAll { LockedFeature feature -> feature.source == LockedFeature.PACK && feature.coordinates == null }*.name
+        // the preset is given with --preset, and not with --feature-pack-dir
+        List<String> unnamedPacks = lock.features.findAll { LockedFeature feature ->
+            feature.source == LockedFeature.PACK && feature.coordinates == null && feature.name != manifest.preset
+        }*.name
         Map<String, Setting> known = new LinkedHashMap<>()
         known.put('--jdk', compared('--jdk', options.jdk.majorVersion(), JdkVersion.DEFAULT_OPTION.majorVersion(), options.notRecorded.contains('jdk')))
         known.put('--servlet', compared('--servlet', written(options.servlet), written(ServletImpl.DEFAULT_OPTION), options.notRecorded.contains('servlet')))
@@ -383,6 +398,9 @@ class ProjectShowCommand extends BaseCommand implements Callable<Integer>, Proje
         known.put('--feature-pack-repository', compared('--feature-pack-repository', plugins.repositories, [], false))
         known.put('--feature-pack-sha256', compared('--feature-pack-sha256', plugins.digests, [], false))
         known.put('--feature-catalog', compared('--feature-catalog', lock.features.findAll { LockedFeature feature -> feature.catalog != null }*.catalog.unique(false), [], false))
+        // the preset of a directory or a jar is in the record by its name, and not where it was
+        known.put('--preset', manifest.preset != null && plugins.preset == null ? new Setting('preset', '--preset', null, [], NOT_RECORDED) :
+                compared('--preset', plugins.preset == null ? [] : [plugins.preset], [], false))
         for (String option : SHOWN_OPTIONS) {
             if (createOptions.contains(option)) {
                 settings << known.get(option)
@@ -509,15 +527,24 @@ class ProjectShowCommand extends BaseCommand implements Callable<Integer>, Proje
         final List<String> features = []
         final List<String> digests = []
         final List<String> repositories = []
+        /** The preset as --preset takes it, by its coordinates, or {@code null} when there is none or the record does not say where it was */
+        String preset
 
         Plugins(ProjectState state) {
             for (RequestedFeature requested : state.manifest.requestedFeatures) {
+                boolean isPreset = requested.name == state.manifest.preset
                 if (requested.coordinates == null || requested.version == null) {
-                    features << requested.name
+                    if (!isPreset) {
+                        features << requested.name
+                    }
                     continue
                 }
                 String plugin = "${requested.coordinates}:${requested.version}".toString()
-                features << plugin
+                if (isPreset) {
+                    preset = plugin
+                } else {
+                    features << plugin
+                }
                 LockedFeature locked = state.lock.features.find { LockedFeature feature -> feature.name == requested.name }
                 if (locked != null && locked.sha256 != null) {
                     digests << "${plugin}=${locked.sha256}".toString()
@@ -558,6 +585,11 @@ class ProjectShowCommand extends BaseCommand implements Callable<Integer>, Proje
         // added after the first version of the document, at its end: the format is the same, and a reader that does not know them leaves them
         document.put('effectiveOptions', settings.collect { Setting setting -> setting.toMap() })
         document.put('addedFeatures', addedFeatures(state))
+        // only of an application that was made from a preset
+        RequestedFeature preset = manifest.requestedFeatures.find { RequestedFeature feature -> manifest.preset != null && feature.name == manifest.preset }
+        if (preset != null) {
+            document.put('preset', entries(name: preset.name, coordinates: preset.coordinates, version: preset.version))
+        }
         return document
     }
 

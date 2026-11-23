@@ -313,6 +313,55 @@ final class PackCatalogs {
     }
 
     /**
+     * Chooses the plugin and the version that has a preset, as {@link #choose} chooses the one that has a
+     * feature, from the packs whose kind is {@code preset}: of the plugins that have a preset of that
+     * name, the one that is not deprecated; of its versions, the one the BOM of the application manages,
+     * or else the latest release whose preset this Forge reads and that is for this Grails and this
+     * Forge, and that is for the type of application where the catalog records the type.
+     *
+     * @param preset the name of the preset, or its full name, {@code group:artifact#name}
+     * @return what was chosen, or {@code null} when no catalog has a preset of that name
+     * @throws IllegalArgumentException when plugins have it and none of them, or more than one, can be
+     * chosen: one line of at most {@link #MAX_MESSAGE} characters
+     * @throws PackArtifactException when a catalog cannot be read
+     */
+    Choice choosePreset(String preset, String applicationType, String grails, String forge, String bom, Function<String, String> managed) {
+        String name = nameOf(preset)
+        String only = pluginOf(preset)
+        Map<String, Choice> chosen = new LinkedHashMap<>()
+        Map<String, String> refused = new LinkedHashMap<>()
+        for (Listed each : listed().values()) {
+            Plugin plugin = each.plugin
+            if (plugin == null || (only != null && plugin.coordinates != only)) {
+                continue
+            }
+            List<Version> withIt = plugin.versions.findAll { Version version -> version.name == name && version.preset }
+            if (withIt.isEmpty()) {
+                continue
+            }
+            Object result = of(plugin, withIt, applicationType, grails, forge, bom, managed)
+            if (result instanceof Version) {
+                chosen.put(plugin.coordinates, new Choice(each.catalog, plugin, (Version) result))
+            } else {
+                refused.put(plugin.coordinates, (String) result)
+            }
+        }
+        if (chosen.size() == 1) {
+            return chosen.values().first()
+        }
+        if (chosen.size() > 1) {
+            throw new IllegalArgumentException(bounded("More than one plugin of the feature catalog has a preset ${name}: name the one that is meant as " +
+                    chosen.keySet().take(MAX_REASONS).collect { String plugin -> "${plugin}#${name}".toString() }.join(' or ') +
+                    (chosen.size() > MAX_REASONS ? " (and ${chosen.size() - MAX_REASONS} more)" : '')))
+        }
+        if (refused.isEmpty()) {
+            return null
+        }
+        throw new IllegalArgumentException(bounded("The preset ${name} is not taken from the feature catalog: " +
+                refused.values().take(MAX_REASONS).join('; ') + (refused.size() > MAX_REASONS ? "; and ${refused.size() - MAX_REASONS} more plugins" : '')))
+    }
+
+    /**
      * @param name the name of a feature
      * @return the plugins the catalogs have a pack of that name for, as {@code group:artifact}
      */

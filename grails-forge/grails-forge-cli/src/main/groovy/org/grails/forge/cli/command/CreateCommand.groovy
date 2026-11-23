@@ -25,12 +25,14 @@ import org.apache.grails.forge.cli.console.GradleRunner
 import org.apache.grails.forge.cli.pack.PackArtifactException
 import org.apache.grails.forge.cli.pack.PackArtifacts
 import org.apache.grails.forge.cli.pack.PackCatalogs
+import org.apache.grails.forge.cli.pack.PresetReference
 import org.apache.grails.forge.core.bom.BomVersions
 import org.apache.grails.forge.core.pack.Pack
 import org.apache.grails.forge.core.pack.PackArtifact
 import org.apache.grails.forge.core.pack.PackDescriptor.PackDependency
 import org.apache.grails.forge.core.pack.PackDescriptorException
 import org.apache.grails.forge.core.pack.PackLoader
+import org.apache.grails.forge.core.pack.PackPreset
 import org.apache.grails.forge.core.pack.PackRefusedException
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.application.ContextFactory
@@ -52,6 +54,8 @@ import org.grails.forge.options.ServletImpl
 import org.grails.forge.util.NameUtils
 import org.grails.forge.util.VersionInfo
 import picocli.CommandLine
+import java.nio.file.Files
+import java.nio.file.LinkOption
 import java.nio.file.Path
 import java.time.Duration
 import java.util.concurrent.Callable
@@ -60,6 +64,14 @@ import java.util.regex.Pattern
 
 @CompileStatic
 abstract class CreateCommand extends BaseCommand implements Callable<Integer> {
+
+    /** The create command of each type of application, which a preset of that type is given to */
+    static final Map<ApplicationType, String> CREATE_COMMANDS = Collections.unmodifiableMap([
+            (ApplicationType.WEB): CreateAppCommand.NAME,
+            (ApplicationType.REST_API): CreateRestApiCommand.NAME,
+            (ApplicationType.PLUGIN): CreatePluginCommand.NAME,
+            (ApplicationType.WEB_PLUGIN): CreateWebPluginCommand.NAME,
+            (ApplicationType.REST_API_PLUGIN): CreateRestApiPluginCommand.NAME] as Map<ApplicationType, String>)
 
     @CommandLine.Parameters(arity = '0..1', paramLabel = 'NAME', description = 'The name of the application to create.')
     String name
@@ -137,6 +149,14 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer> {
             description = 'Read each feature catalog anew, and not the copy of it that is kept on this computer for a day')
     boolean refresh
 
+    @CommandLine.Option(names = ['--preset'], paramLabel = 'PRESET',
+            description = 'The preset the application is made from: a pack, of a company or a team, that is for this type of application, ' +
+                    'gives the options their defaults, asks for features, and can add dependencies, configuration and files as a feature pack does. ' +
+                    'It is given as the coordinates of its artifact, group:artifact:version, which are taken as those of a feature pack are; as a ' +
+                    'jar or a directory, by a path with a / in it, such as ./acme-preset; or by its name in a feature catalog. An option that is ' +
+                    'given on the command line is used in place of the one of the preset. A preset is code: use one only when you trust where it comes from.')
+    String preset
+
     @CommandLine.Option(names = ['--offline'],
             description = 'Ask nothing of the network: a feature catalog is read from its copy on this computer or from a file, and ' +
                     'the feature pack of a plugin is taken only from a repository that is a directory')
@@ -144,6 +164,8 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer> {
 
     private PackArtifacts packArtifacts
     private Selection selection
+    // the preset the application is made from, once it is taken: its options and features come before those of the framework
+    private Pack presetPack
     private String notInCatalog = ''
     private String bomOfCatalogPacks
 
@@ -255,7 +277,7 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer> {
             }
             try {
                 new ListFeatures(packs.isEmpty() ? availableFeatures : withPacks(packs),
-                        new Options(reloading, gormImpl, servletImpl, getJdkVersion(), getOperatingSystem()),
+                        options(),
                         applicationType,
                         getOperatingSystem(),
                         contextFactory,
@@ -322,11 +344,12 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer> {
     }
 
     void generate(Project project, OutputHandler outputHandler) throws Exception {
-        Options options = new Options(reloading, gormImpl, servletImpl, getJdkVersion(), getOperatingSystem())
+        // a version of Java there is not is said before anything is taken from a repository
+        getJdkVersion()
         checkExcludedNames()
-        // an option that is given is a choice, which the features that are selected do not replace
-        options = options.withGiven(given()).withSubproject(subproject)
         List<Pack> packs = selection().packs
+        // an option that is given is a choice, which the features that are selected do not replace; one a preset gives is a default
+        Options options = options().withGiven(given()).withSubproject(subproject)
         if (!packs.isEmpty()) {
             withPacks(packs)
         }
@@ -347,7 +370,8 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer> {
                 for (String line : pack.summary()) {
                     out("    ${line.replace('@|', '@ |')}")
                 }
-                if (pack.artifact != null) {
+                // a preset is not a plugin the application is to depend on: its artifact carries the preset and nothing else
+                if (pack.artifact != null && !pack.descriptor.preset) {
                     String unlike = unlikeItsPlugin(pack)
                     if (unlike != null) {
                         warnings << unlike
@@ -382,14 +406,14 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer> {
      */
     private void origin(Pack pack) {
         PackArtifact artifact = pack.artifact
-        out("@|blue ||@ Feature pack ${pack.descriptor.name} from ${pack.origin.replaceAll(/\p{Cntrl}/, '?').replace('@|', '@ |')}" +
+        out("@|blue ||@ ${pack.descriptor.preset ? 'Preset' : 'Feature pack'} ${pack.descriptor.name} from ${pack.origin.replaceAll(/\p{Cntrl}/, '?').replace('@|', '@ |')}" +
                 (artifact == null ? '' : ", sha256 ${artifact.sha256}"))
         if (artifact != null) {
             // the digest says which jar was read; only a checksum from elsewhere says it is the one that was published
             if (artifact.catalog != null) {
                 String catalog = artifact.catalog.replaceAll(/\p{Cntrl}/, '?').replace('@|', '@ |')
                 out("    the coordinates are those the feature catalog ${catalog.length() > 200 ? catalog.substring(0, 200) + '...' : catalog} " +
-                        "(sha256 ${artifact.catalogSha256}) has for the feature ${pack.descriptor.name}")
+                        "(sha256 ${artifact.catalogSha256}) has for the ${pack.descriptor.preset ? 'preset' : 'feature'} ${pack.descriptor.name}")
                 // the catalog chose the jar and said what its digest is: that the two agree is no word of anyone else
                 out('    the SHA-256 is the one that same catalog gives for the jar: the jar is the one the catalog means, which nobody else has checked')
             } else if (artifact.pinned) {
@@ -537,10 +561,15 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer> {
 
     private Selection select() {
         List<Pack> packs = featurePacks()
+        PresetReference presetReference = presetReference()
+        if (presetReference != null && presetReference.form in [PresetReference.Form.DIRECTORY, PresetReference.Form.JAR]) {
+            presetPack = presetOfPath(presetReference)
+        }
         // every mistake in the command line is found before a repository is asked for anything
         Map<String, String> digests = new LinkedHashMap<>()
         Map<String, PackArtifacts.Coordinates> plugins = new LinkedHashMap<>()
         List<URI> repositories
+        String presetDigest = null
         List<String> unused = []
         // what a catalog can be asked for: a name that is not known here, or the full name of a feature of a plugin
         List<String> sought = getSelectedFeatures().findAll { String feature ->
@@ -568,23 +597,38 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer> {
                     plugins.put(coordinates.toString(), coordinates)
                 }
             }
+            // the SHA-256 of the artifact of a preset that is given by its coordinates is that of the preset, and of no feature
+            presetDigest = presetReference?.form == PresetReference.Form.COORDINATES ? digests.remove(presetReference.coordinates.toString()) : null
             for (String pinned : digests.keySet()) {
-                // a catalog can still give these coordinates for a name: then this is said after it was read
-                if (!plugins.containsKey(pinned) && sought.isEmpty()) {
+                // a catalog can still give these coordinates for a name, of a feature or of the preset: then this is said after it was read
+                if (!plugins.containsKey(pinned) && sought.isEmpty() && presetReference?.form != PresetReference.Form.NAME) {
                     throw new IllegalArgumentException("--feature-pack-sha256 names ${pinned}, which is not among the features asked for with --features")
                 }
             }
             // the environment is only read when there is something to look for
-            repositories = PackArtifacts.repositories(featurePackRepositories, plugins.isEmpty() ? null : grailsRepoUrl(), unused)
+            repositories = PackArtifacts.repositories(featurePackRepositories,
+                    plugins.isEmpty() && presetReference?.form != PresetReference.Form.COORDINATES ? null : grailsRepoUrl(), unused)
         } catch (IllegalArgumentException e) {
             throw new CommandLine.ParameterException(this.spec.commandLine(), e.getMessage())
         }
         for (String each : unused) {
             warning(each.replaceAll(/\p{Cntrl}/, '?').replace('@|', '@ |'))
         }
+        // the preset first: what it gives decides the BOM the features of a catalog are chosen for
+        if (presetReference?.form == PresetReference.Form.COORDINATES) {
+            presetPack = aPreset(packArtifacts().resolve(presetReference.coordinates, repositories, presetDigest), presetReference)
+        } else if (presetReference?.form == PresetReference.Form.NAME) {
+            presetPack = presetFromCatalogs(presetReference, digests)
+        }
+        if (presetPack != null && !presetPack.descriptor.applicationTypes.contains(applicationType)) {
+            ApplicationType ofPreset = presetPack.descriptor.preset.applicationType
+            throw new CommandLine.ParameterException(this.spec.commandLine(), "The preset ${presetPack.descriptor.name} is for an application of the type " +
+                    "${PackPreset.nameOf(ofPreset)}, and ${this.spec.name()} creates one of the type ${PackPreset.nameOf(applicationType)}: create the application " +
+                    "with ${CREATE_COMMANDS.get(ofPreset)} --preset ${FeatureSelectionException.shown(presetReference.given)}")
+        }
         Map<String, String> names = new HashMap<>()
         for (PackArtifacts.Coordinates coordinates : plugins.values()) {
-            Pack pack = packArtifacts().resolve(coordinates, repositories, digests.get(coordinates.toString()))
+            Pack pack = notAPreset(packArtifacts().resolve(coordinates, repositories, digests.get(coordinates.toString())), coordinates.toString())
             packs << pack
             names.put(coordinates.toString(), pack.descriptor.name)
         }
@@ -593,7 +637,11 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer> {
         if (!sought.isEmpty() || digests.keySet().any { String pinned -> !plugins.containsKey(pinned) }) {
             fromCatalogs(sought, packs, names, digests, plugins.isEmpty() ? null : repositories)
         }
-        List<String> features = []
+        // the preset is a feature of the application, applied as the feature of a pack is, and asks for its features as their requirements
+        List<String> features = presetPack == null ? [] : [presetPack.descriptor.name]
+        if (presetPack != null) {
+            packs.add(0, presetPack)
+        }
         Set<String> taken = new HashSet<>()
         for (String feature : getSelectedFeatures()) {
             // the feature of a pack is one selection, however often and in whichever ways it was asked for:
@@ -748,14 +796,16 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer> {
     /**
      * The BOM of Grails the application gets, as far as the command line says it: by the option for
      * Grails Data and by the features of the framework it names, which are known before any catalog is
-     * read. A feature that another one requires can make it a different one, which
-     * {@link #heldToItsBom} finds once the features of the application are known.
+     * read, and by the option and the features of the preset, once it is taken. A feature that another
+     * one requires can make it a different one, which {@link #heldToItsBom} finds once the features of
+     * the application are known.
      *
      * @return the artifact of the BOM
      */
     protected String bomOfTheSelection() {
-        List<String> selected = getSelectedFeatures()
-        return GrailsBase.bomArtifactId(selected.contains('grails-micronaut'), gormImpl == GormImpl.HIBERNATE7 || selected.contains(GormImpl.HIBERNATE7.getName()))
+        List<String> selected = getSelectedFeatures() + (presetPack == null ? Collections.<String>emptyList() : presetPack.descriptor.requires)
+        GormImpl data = gormImpl ?: presetPack?.descriptor?.preset?.data
+        return GrailsBase.bomArtifactId(selected.contains('grails-micronaut'), data == GormImpl.HIBERNATE7 || selected.contains(GormImpl.HIBERNATE7.getName()))
     }
 
     /**
@@ -892,19 +942,152 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer> {
         PackLoader loader = new PackLoader()
         for (File directory : featurePackDirectories) {
             try {
-                packs << loader.fromDirectory(directory.toPath().toAbsolutePath().normalize())
+                packs << notAPreset(loader.fromDirectory(directory.toPath().toAbsolutePath().normalize()), directory.path)
             } catch (PackDescriptorException e) {
                 throw new CommandLine.ParameterException(this.spec.commandLine(), e.getMessage())
             }
         }
         for (File jar : featurePackJars) {
             try {
-                packs << loader.fromJar(jar.toPath().toAbsolutePath().normalize())
+                packs << notAPreset(loader.fromJar(jar.toPath().toAbsolutePath().normalize()), jar.path)
             } catch (PackDescriptorException e) {
                 throw new CommandLine.ParameterException(this.spec.commandLine(), e.getMessage())
             }
         }
         return packs
+    }
+
+    /**
+     * @return what {@code --preset} names, or {@code null} when the option was not given
+     */
+    private PresetReference presetReference() {
+        if (preset == null) {
+            return null
+        }
+        try {
+            return PresetReference.of(preset)
+        } catch (IllegalArgumentException e) {
+            throw new CommandLine.ParameterException(this.spec.commandLine(), e.getMessage().replace('@|', '@ |'))
+        }
+    }
+
+    /**
+     * The options of the application: each one that was given, else the one of the preset, else the
+     * default of the framework. None is marked as given here.
+     */
+    private Options options() {
+        JdkVersion jdk = javaVersion == null ? null : getJdkVersion()
+        if (presetPack == null) {
+            return new Options(reloading, gormImpl, servletImpl, jdk ?: JdkVersion.DEFAULT_OPTION, getOperatingSystem())
+        }
+        return presetPack.descriptor.preset.optionsWith(reloading, gormImpl, servletImpl, jdk, getOperatingSystem())
+    }
+
+    /**
+     * The preset of a directory or a jar that was given with {@code --preset}, read as the feature pack
+     * of one is read with {@code --feature-pack-dir} or {@code --feature-pack-jar}.
+     */
+    private Pack presetOfPath(PresetReference reference) {
+        PackLoader loader = new PackLoader()
+        try {
+            Pack pack = reference.form == PresetReference.Form.DIRECTORY ? loader.fromDirectory(reference.path) : loader.fromJar(reference.path)
+            return aPreset(pack, reference)
+        } catch (PackDescriptorException e) {
+            throw new CommandLine.ParameterException(this.spec.commandLine(), e.getMessage().replace('@|', '@ |'))
+        }
+    }
+
+    /**
+     * A pack that was given with {@code --preset} has to be a preset: a feature pack is selected with
+     * {@code --features}, and is no preset of an application.
+     */
+    private Pack aPreset(Pack pack, PresetReference reference) {
+        if (!pack.descriptor.preset) {
+            throw new CommandLine.ParameterException(this.spec.commandLine(), "--preset ${FeatureSelectionException.shown(reference.given)} " +
+                    "has the feature pack ${pack.descriptor.name}, which is not a preset (its kind is feature): the feature of a pack is selected " +
+                    'with --features, by the coordinates of its plugin or its name in a feature catalog, or with --feature-pack-dir')
+        }
+        return pack
+    }
+
+    /**
+     * A pack that was given as a feature pack, by its coordinates, a directory or a jar, has to be one:
+     * a preset is given with {@code --preset}, and is not selected as a feature.
+     */
+    private Pack notAPreset(Pack pack, String given) {
+        if (pack.descriptor.preset) {
+            throw new CommandLine.ParameterException(this.spec.commandLine(), "${FeatureSelectionException.shown(given)} has the preset " +
+                    "${pack.descriptor.name}, which is not a feature: an application is made from a preset with --preset")
+        }
+        return pack
+    }
+
+    /**
+     * The preset of a name, looked up in the feature catalogs as the name of a feature is: the catalog
+     * says which plugin has it, in which version and with which SHA-256, and the preset is then taken
+     * from the jar as the preset of coordinates is, with the SHA-256 of the catalog as the one the jar
+     * has to have.
+     */
+    private Pack presetFromCatalogs(PresetReference reference, Map<String, String> digests) {
+        String shown = FeatureSelectionException.shown(reference.given)
+        PackCatalogs catalogs = catalogs()
+        if (catalogs.isEmpty()) {
+            boolean there = Files.exists(Path.of(reference.given), LinkOption.NOFOLLOW_LINKS)
+            throw new CommandLine.ParameterException(this.spec.commandLine(), "--preset ${shown} is the name of a preset, which is looked up in a feature " +
+                    'catalog, and no catalog is read: --feature-catalog or GRAILS_FORGE_CATALOG names one. A preset is also given by the coordinates of ' +
+                    "its artifact, group:artifact:version, or by a path with a / in it${there ? ", such as ./${shown} for the one of that name here" : ''}")
+        }
+        try {
+            catalogs.read()
+        } catch (PackArtifactException e) {
+            throw new PackArtifactException(PackCatalogs.bounded("The preset ${shown} was looked for in a feature catalog. ${e.getMessage()}"))
+        }
+        saidOf(catalogs)
+        if (catalogs.getUnread() != null) {
+            throw new CommandLine.ParameterException(this.spec.commandLine(), PackCatalogs.bounded("The preset ${shown} was not looked for: " +
+                    catalogs.getUnread()).replaceAll(/\p{Cntrl}/, '?').replace('@|', '@ |'))
+        }
+        PackCatalogs.Choice choice
+        try {
+            choice = catalogs.choosePreset(reference.given, applicationTypeName(), VersionInfo.getGrailsVersion(), VersionInfo.getVersion(),
+                    "${BomVersions.GROUP}:${bomOfTheSelection()}", this.&managedVersion)
+        } catch (IllegalArgumentException e) {
+            throw new CommandLine.ParameterException(this.spec.commandLine(), e.getMessage().replaceAll(/\p{Cntrl}/, '?').replace('@|', '@ |'))
+        }
+        if (choice == null) {
+            throw new CommandLine.ParameterException(this.spec.commandLine(), PackCatalogs.bounded("There is no preset ${shown} in ${catalogs.searched()}. " +
+                    'A preset is also given by the coordinates of its artifact, group:artifact:version, or by a path with a / in it')
+                    .replaceAll(/\p{Cntrl}/, '?').replace('@|', '@ |'))
+        }
+        List<String> unused = []
+        List<URI> repositories = PackArtifacts.repositories(featurePackRepositories, grailsRepoUrl(), unused)
+        for (String each : unused) {
+            warning(each.replaceAll(/\p{Cntrl}/, '?').replace('@|', '@ |'))
+        }
+        PackArtifacts.Coordinates coordinates = choice.version.coordinates
+        String from = choice.catalog.address
+        String asPinned = digests.remove(coordinates.toString())
+        if (asPinned != null && asPinned != choice.version.sha256) {
+            throw new PackArtifactException("The feature catalog ${from} records the SHA-256 ${choice.version.sha256} for ${coordinates}, " +
+                    "and ${asPinned} was asked for with --feature-pack-sha256")
+        }
+        List<URI> where = new ArrayList<>(repositories)
+        // the repository the catalog names is asked last, and not at all when repositories were given
+        boolean ofTheCatalog = featurePackRepositories.isEmpty() && choice.version.repository != null && !where.contains(choice.version.repository)
+        if (ofTheCatalog) {
+            where << choice.version.repository
+        }
+        out('@|blue ||@ ' + ("The preset ${choice.version.name} is taken as ${coordinates}, which the feature catalog ${from} (sha256 ${choice.catalog.sha256}) " +
+                "names for it, with the SHA-256 ${choice.version.sha256}. Asking ${repositories.take(4).collect { URI each -> PackArtifacts.shownAddress(each) }.join(', ')}" +
+                "${repositories.size() > 4 ? " and ${repositories.size() - 4} more" : ''}" +
+                (ofTheCatalog ? "${repositories.isEmpty() ? '' : ', and then '}${PackArtifacts.shownAddress(choice.version.repository)}, the repository the catalog names" : ''))
+                .replaceAll(/\p{Cntrl}/, '?').replace('@|', '@ |'))
+        Pack pack = packArtifacts().resolve(coordinates, where, choice.version.sha256)
+        if (pack.descriptor.name != choice.version.name || !pack.descriptor.preset) {
+            throw new PackArtifactException("The feature catalog ${from} says that ${coordinates} has the preset ${choice.version.name}, " +
+                    "and the jar has the ${pack.descriptor.preset ? 'preset' : 'feature pack'} ${pack.descriptor.name}")
+        }
+        return pack.withArtifact(pack.artifact.withCatalog(choice.catalog.recordableAddress ?: choice.catalog.address, choice.catalog.sha256))
     }
 
     private JdkVersion getJdkVersion() {
