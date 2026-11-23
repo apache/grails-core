@@ -1589,13 +1589,14 @@ leniently. Code that reads `response.format` or `response.mimeType` must allow f
 * *The `format` parameter and URL extensions.* A format no type is configured for is not acceptable, to `respond`, which
 answers `406`, and to what Spring MVC writes, where the Grails rules answer in the first configured format;
 `withFormat` answers it from the `Accept` header, as for a format it has no block for. A format only Spring MVC's
-content negotiation manager maps, such as one `spring.mvc.contentnegotiation.media-types` adds (`plain: text/plain`),
-one Spring MVC registers for the types its message converters support, or, in another case, as `?format=JSON` or
-`?format=HAL`, a data format Grails registers with it (see
-<<upgradingGrailsFormatResolution,Grails Format Resolution and Spring MVC Content Negotiation>>), decides what Spring
-MVC writes, as without the setting where `spring.mvc.contentnegotiation.favor-parameter` is on, while `respond` still
-answers `406` for it. The `all` format leaves the format to the `Accept` header: `?format=all` with
-`Accept: application/json` is `json`, where it is otherwise `all`. The first value of the parameter counts.
+content negotiation manager maps decides what Spring MVC writes, as without the setting where
+`spring.mvc.contentnegotiation.favor-parameter` is on, while `respond` still answers `406` for it. That is a format
+`spring.mvc.contentnegotiation.media-types` adds, such as `plain: text/plain`, one Spring MVC registers for the types
+its message converters support, or a data format Grails registers with the manager written in another case, such as
+`?format=JSON` or `?format=HAL` (see
+<<upgradingGrailsFormatResolution,Grails Format Resolution and Spring MVC Content Negotiation>>). The `all` format
+leaves the format to the `Accept` header: `?format=all` with `Accept: application/json` is `json`, where it is
+otherwise `all`. The first value of the parameter counts.
 * *What Spring MVC writes for an action.* The `format` parameter and URL extensions now decide the type of a
 `ResponseEntity`, a `ProblemDetail` or another value Spring MVC writes for a request a URL mapping handles, where Spring
 MVC read only the `Accept` header: `/book/show/1.json` is answered in JSON whatever the `Accept` header asks for, and
