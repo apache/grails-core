@@ -35,6 +35,7 @@ import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.core.connections.ConnectionSourcesSupport
 import org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore
 import org.grails.datastore.mapping.core.connections.SingleSessionCapableDatastore
+import org.grails.datastore.mapping.core.exceptions.ConfigurationException
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
@@ -194,6 +195,80 @@ class GormRegistry {
         }
         if (ds instanceof TransactionCapableDatastore) {
             return ((TransactionCapableDatastore) ds).transactionManager
+        }
+        return null
+    }
+
+    /**
+     * Finds the transaction manager of the connection named by the tenant bound to the current thread for the default
+     * datastore.
+     * Nominally unused, but invoked at compile-time by transactional AST transformations.
+     *
+     * @return The transaction manager, or {@code null} if no tenant or the tenant {@link ConnectionSource#DEFAULT} is
+     *         bound, or no connection has the name of the tenant
+     * @see #findCurrentTenantTransactionManager(Datastore)
+     */
+    PlatformTransactionManager findCurrentTenantTransactionManager() {
+        return findCurrentTenantTransactionManager(null)
+    }
+
+    /**
+     * Finds the transaction manager of the connection named by the tenant bound to the current thread for the given
+     * datastore. A thread can hold a different tenant for each datastore, so only the tenant of the datastore the
+     * transaction is for is considered. The connection is the one of that datastore when it has several, as another
+     * datastore can have a connection of the same name.
+     * Nominally unused, but invoked at compile-time by transactional AST transformations.
+     *
+     * @param datastore The datastore the tenant is bound for, or {@code null} for the default datastore
+     * @return The transaction manager, or {@code null} if no datastore is registered, no tenant or the tenant
+     *         {@link ConnectionSource#DEFAULT} is bound, or no connection has the name of the tenant
+     */
+    PlatformTransactionManager findCurrentTenantTransactionManager(Datastore datastore) {
+        Datastore tenantDatastore = datastore ?: getDefaultDatastore()
+        if (tenantDatastore == null) {
+            return null
+        }
+        Serializable tenantId = CurrentTenantHolder.get(tenantDatastore)
+        if (tenantId == null || ConnectionSource.DEFAULT == tenantId.toString()) {
+            return null
+        }
+        if (tenantDatastore instanceof MultipleConnectionSourceCapableDatastore) {
+            return findConnectionTransactionManager((MultipleConnectionSourceCapableDatastore) tenantDatastore, tenantId.toString())
+        }
+        return findSingleTransactionManager(tenantId.toString())
+    }
+
+    /**
+     * Finds the transaction manager of the connection named by the tenant bound to the current thread for the
+     * datastore of the given type, as {@link #findCurrentTenantTransactionManager(Datastore)} does.
+     * Nominally unused, but invoked at compile-time by transactional AST transformations for a
+     * {@code datastore} attribute.
+     *
+     * @param datastoreType The type of the datastore the tenant is bound for
+     * @return The transaction manager, or {@code null} if no datastore of the type is registered, or as
+     *         {@link #findCurrentTenantTransactionManager(Datastore)} returns it
+     */
+    PlatformTransactionManager findCurrentTenantTransactionManagerByType(Class<? extends Datastore> datastoreType) {
+        Datastore datastore
+        try {
+            datastore = apiResolver.findDatastoreByType(datastoreType)
+        }
+        catch (IllegalStateException ignored) {
+            return null
+        }
+        return findCurrentTenantTransactionManager(datastore)
+    }
+
+    private static PlatformTransactionManager findConnectionTransactionManager(MultipleConnectionSourceCapableDatastore datastore, String connectionName) {
+        Datastore connectionDatastore
+        try {
+            connectionDatastore = datastore.getDatastoreForConnection(connectionName)
+        }
+        catch (ConfigurationException ignored) {
+            return null
+        }
+        if (connectionDatastore instanceof TransactionCapableDatastore) {
+            return ((TransactionCapableDatastore) connectionDatastore).transactionManager
         }
         return null
     }

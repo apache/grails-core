@@ -465,13 +465,14 @@ class GspCompileStaticConfigSpec extends Specification {
 
         when:
         GroovyPageTemplate template = compile(engine, UNTYPED + '${n <=> 2}')
-
-        then: 'reporting the receiver does not stop the transformer that reads it from failing later,'
-        template.metaInfo.compilationException.message.contains('General error during canonicalization')
-
-        and: 'so what matters is that the page reads what it can act on first'
         String message = template.metaInfo.compilationException.message
-        message.indexOf('is not known here') < message.indexOf('General error during canonicalization')
+
+        then: 'the page is told about the receiver'
+        message.contains('is not known here')
+
+        and: 'before the transformer that reads it fails, where it still does, as it did until GROOVY-12560'
+        int failure = message.indexOf('General error during canonicalization')
+        failure == -1 || message.indexOf('is not known here') < failure
     }
 
     void 'the same operators are left alone once the receiver has a type'() {

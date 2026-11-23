@@ -111,14 +111,24 @@ class GormApiResolver {
         return datastore
     }
 
+    /**
+     * The datastore of the default connection, the one that {@link grails.gorm.multitenancy.Tenants} and
+     * {@code @CurrentTenant} bind the tenant for. It is never a datastore of another connection or, in DATABASE mode,
+     * of a tenant, even inside {@link grails.gorm.multitenancy.Tenants#withId(Serializable, Closure)} or while a
+     * session of one is bound: such a datastore knows only its own connection, and no tenant is bound for it.
+     *
+     * @return The datastore
+     * @throws IllegalStateException if no datastore is registered for a connection, and no or more than one GORM
+     *         implementation is configured
+     */
     Datastore findSingleDatastore() {
-        if (registry.datastoresByQualifier.size() > 1) {
-            return findDatastore(null, null)
-        }
-
         Datastore defaultDs = registry.datastoresByQualifier.get(ConnectionSource.DEFAULT)
         if (defaultDs != null) {
             return defaultDs
+        }
+
+        if (registry.datastoresByQualifier.size() > 1) {
+            return findDatastore(null, null)
         }
 
         if (registry.datastoresByQualifier.size() == 1) {
@@ -137,7 +147,9 @@ class GormApiResolver {
 
     /**
      * Resolves the datastore for a tenant-management service lookup (e.g. the {@code @CurrentTenant}
-     * {@link grails.gorm.multitenancy.TenantService}). Unlike {@link #findDatastore}, this never
+     * {@link grails.gorm.multitenancy.TenantService}) and the datastore that
+     * {@link grails.gorm.multitenancy.Tenants#withId(Class, Serializable, Closure)} binds the tenant for. Unlike
+     * {@link #findDatastore}, this never
      * resolves the current tenant: it returns the entity's primary (DEFAULT) datastore — the tenant
      * MANAGER, where runtime schemas (e.g. {@code addTenantForSchema}) are registered — rather than a
      * per-tenant child datastore. Falls back to the single configured datastore when the entity is

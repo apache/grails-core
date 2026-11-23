@@ -155,7 +155,7 @@ class GraphqlGormSpec extends ApplicationContextSpec implements CommandOutputFix
         then:
         readme
         readme.contains('## Feature gorm-graphql documentation')
-        readme.contains("[Grails GORM for GraphQL documentation](https://grails.apache.org/docs/${VersionInfo.documentationVersion}/grails-data/graphql/manual/)")
+        readme.contains("[Grails Data for GraphQL documentation](https://grails.apache.org/docs/${VersionInfo.documentationVersion}/grails-data/graphql/manual/)")
         readme.contains('[https://graphql.org](https://graphql.org)')
     }
 

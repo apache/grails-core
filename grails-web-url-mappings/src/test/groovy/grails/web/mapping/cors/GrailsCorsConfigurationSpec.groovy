@@ -19,8 +19,14 @@
 package grails.web.mapping.cors
 
 import grails.util.TypeConvertingMap
+import org.grails.config.yaml.YamlPropertySourceLoader
+import org.springframework.boot.context.properties.bind.Bindable
+import org.springframework.boot.context.properties.bind.Binder
+import org.springframework.core.env.StandardEnvironment
+import org.springframework.core.io.ByteArrayResource
 import org.springframework.web.bind.annotation.CrossOrigin
 import org.springframework.web.cors.CorsConfiguration
+import spock.lang.Issue
 import spock.lang.Specification
 
 /**
@@ -236,5 +242,30 @@ class GrailsCorsConfigurationSpec extends Specification {
         config["[/c/**]"].exposedHeaders == ["Foo"]
         config["[/c/**]"].allowCredentials == true
         config["[/c/**]"].maxAge == 1234
+    }
+
+    @Issue('https://github.com/apache/grails-core/pull/16771')
+    void "a mapping in application.yml is bound by Spring Boot, as the CORS guide documents it"() {
+        given: "the mapping from the CORS guide, loaded as Grails loads application.yml"
+        def yaml = '''\
+grails:
+    cors:
+        enabled: true
+        allowedHeaders:
+            - Content-Type
+        mappings:
+            '[/api/**]':
+                allowedOrigins:
+                    - http://localhost:5000
+'''
+        def environment = new StandardEnvironment()
+        environment.propertySources.addFirst(new YamlPropertySourceLoader().load('application.yml', new ByteArrayResource(yaml.bytes)).first())
+
+        when:
+        GrailsCorsConfiguration cors = Binder.get(environment).bind('grails.cors', Bindable.of(GrailsCorsConfiguration)).get()
+
+        then: "the mapping, not the default for every path"
+        cors.corsConfigurations.keySet() == ['/api/**'] as Set
+        cors.corsConfigurations['/api/**'].allowedOrigins == ['http://localhost:5000']
     }
 }

@@ -686,8 +686,9 @@ class ServiceTransformation extends AbstractTraitApplyingGormASTTransformation i
         def transactionCapableDatastore = ClassHelper.make(TransactionCapableDatastore)
         def registryExpr = callX(classX(GormRegistry), 'getInstance')
 
-        // getDatastore() call (method from Service trait or overridden on impl)
-        def datastoreVar = callX(varX('this'), 'getDatastore')
+        // Datastore serviceDatastore = getDatastore() (method from Service trait or overridden on impl)
+        // Called once, as it can resolve through the registry, and so that every use below sees the same datastore.
+        VariableExpression datastoreVar = varX('serviceDatastore', ClassHelper.make(Datastore))
         // .getTransactionManager()
         def datastoreTxManager = propX(
                 castX(transactionCapableDatastore, datastoreVar),
@@ -699,31 +700,19 @@ class ServiceTransformation extends AbstractTraitApplyingGormASTTransformation i
                 'findSingleTransactionManager'
         )
 
+        // PlatformTransactionManager tenantTransactionManager = GormRegistry.getInstance().findCurrentTenantTransactionManager(serviceDatastore)
+        // if (tenantTransactionManager != null) return tenantTransactionManager
+        // The tenant is the one bound for the service's datastore: the thread can hold a different one for each datastore.
         BlockStatement body = new BlockStatement()
-        ClassNode currentTenantHolderClassNode = ClassHelper.make(grails.gorm.multitenancy.CurrentTenantHolder)
-        ClassNode connectionSourceClassNode = ClassHelper.make(org.grails.datastore.mapping.core.connections.ConnectionSource)
-        VariableExpression tenantIdVar = varX('tenantId', ClassHelper.make(Serializable))
         body.addStatement(
-            declS(tenantIdVar, callX(classX(currentTenantHolderClassNode), 'get'))
+            declS(datastoreVar, callX(varX('this'), 'getDatastore'))
         )
-        BlockStatement ifTenantActiveBody = new BlockStatement()
-        VariableExpression tmVar = varX('tm', transactionManagerClassNode)
-        ifTenantActiveBody.addStatement(
-            declS(tmVar, callX(registryExpr, 'findSingleTransactionManager', callX(tenantIdVar, 'toString')))
-        )
-        ifTenantActiveBody.addStatement(
-            ifS(notNullX(tmVar), returnS(tmVar))
-        )
-        
+        VariableExpression tenantTransactionManagerVar = varX('tenantTransactionManager', transactionManagerClassNode)
         body.addStatement(
-            ifS(
-                notNullX(tenantIdVar),
-                ifElseS(
-                    callX(callX(tenantIdVar, 'toString'), 'equals', propX(classX(connectionSourceClassNode), 'DEFAULT')),
-                    new org.codehaus.groovy.ast.stmt.EmptyStatement(),
-                    ifTenantActiveBody
-                )
-            )
+            declS(tenantTransactionManagerVar, callX(registryExpr, 'findCurrentTenantTransactionManager', datastoreVar))
+        )
+        body.addStatement(
+            ifS(notNullX(tenantTransactionManagerVar), returnS(tenantTransactionManagerVar))
         )
 
         // if (datastore != null) { return <datastoreTxManager> } else { return <fallbackTxManager> }

@@ -43,6 +43,7 @@ dependencies {
         implementation 'org.apache.grails:grails-sitemesh3'
     }
     implementation 'org.apache.grails:grails-gsp'
+    implementation 'org.apache.grails:grails-async'
 
     testAndDevelopmentOnly platform(project(':grails-bom'))
     testAndDevelopmentOnly 'org.webjars.npm:jquery'
@@ -63,6 +64,7 @@ dependencies {
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
     integrationTestImplementation testFixtures('org.apache.grails:grails-geb')
+    integrationTestImplementation project(':grails-testing-support-http-client')
 }
 
 apply {

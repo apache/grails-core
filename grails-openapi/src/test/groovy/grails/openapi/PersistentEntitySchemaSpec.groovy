@@ -359,7 +359,9 @@ class PersistentEntitySchemaSpec extends Specification {
 
         and: 'but without what only GORM knows'
         openApi.components.schemas['Widget'].required == null
-        !openApi.components.schemas['Widget'].properties.id?.readOnly
+
+        and: 'the id is read-only, as data binding does not bind it'
+        openApi.components.schemas['Widget'].properties.id.readOnly
     }
 
     void 'honors a Schema annotation on the domain class'() {
