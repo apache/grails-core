@@ -252,9 +252,15 @@ final class CommandCatalog {
                 entry.put('label', parameter.paramLabel())
                 entry.put('arity', parameter.arity().toString())
                 entry.put('description', text(parameter.renderedDescription()))
+                entry.put('repeatable', parameter.isMultiValue())
+                entry.put('split', parameter.splitRegex() ?: null)
+                entry.put('choices', choices(parameter))
                 parameters.add(entry)
             }
             each.put('parameters', parameters)
+            each.put('relations', spec.userObject() instanceof OptionRelation.Declared ?
+                    ((OptionRelation.Declared) spec.userObject()).getOptionRelations().collect { OptionRelation relation -> relation.describe() } :
+                    Collections.<Map<String, Object>>emptyList())
             each.put('commands', commands(command))
             described.add(each)
         }
@@ -289,9 +295,41 @@ final class CommandCatalog {
             entry.put('label', option.arity().max() > 0 ? option.paramLabel() : null)
             entry.put('required', option.required())
             entry.put('description', description(option))
+            entry.put('repeatable', option.isMultiValue())
+            entry.put('split', option.splitRegex() ?: null)
+            entry.put('choices', choices(option))
+            entry.put('default', defaultOf(option))
             options.add(entry)
         }
         return options
+    }
+
+    // Every value an option or a parameter takes, where those are all it takes: the constants of an
+    // enum, or values that say they are all there are. Values that are only suggestions are none, and
+    // neither are the features, which only the generator knows and a tool asks --list-features for.
+    private static List<String> choices(CommandLine.Model.ArgSpec arg) {
+        Iterable<String> candidates = arg.completionCandidates()
+        if (candidates == null || candidates instanceof ForgeContext.Candidates || !(arg.type().isEnum() || candidates instanceof OptionChoices)) {
+            return null
+        }
+        List<String> choices = []
+        for (String each : candidates) {
+            choices.add(each)
+        }
+        return choices
+    }
+
+    // The value an option that takes one has when it is not given, as the command declares it; null where
+    // it declares none, or where what the command does without the option is not a value, as for a switch.
+    private static String defaultOf(CommandLine.Model.OptionSpec option) {
+        if (option.arity().max() == 0) {
+            return null
+        }
+        if (option.defaultValue() != null) {
+            return option.defaultValue()
+        }
+        Object initial = option.hasInitialValue() ? option.initialValue() : null
+        return initial == null || initial instanceof Collection || initial instanceof Map || initial.getClass().isArray() ? null : String.valueOf(initial)
     }
 
     // The values an option can have are part of its description, except those only the generator

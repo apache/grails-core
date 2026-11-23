@@ -22,6 +22,7 @@ import groovy.transform.CompileStatic
 import jakarta.annotation.Nonnull
 import org.apache.grails.forge.cli.console.ConsoleProject
 import org.apache.grails.forge.cli.console.GradleRunner
+import org.apache.grails.forge.cli.console.OptionRelation
 import org.apache.grails.forge.cli.pack.PackArtifactException
 import org.apache.grails.forge.cli.pack.PackArtifacts
 import org.apache.grails.forge.cli.pack.PackCatalogs
@@ -63,7 +64,7 @@ import java.util.function.Supplier
 import java.util.regex.Pattern
 
 @CompileStatic
-abstract class CreateCommand extends BaseCommand implements Callable<Integer> {
+abstract class CreateCommand extends BaseCommand implements Callable<Integer>, OptionRelation.Declared {
 
     /** The create command of each type of application, which a preset of that type is given to */
     static final Map<ApplicationType, String> CREATE_COMMANDS = Collections.unmodifiableMap([
@@ -75,6 +76,12 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer> {
 
     @CommandLine.Parameters(arity = '0..1', paramLabel = 'NAME', description = 'The name of the application to create.')
     String name
+
+    @Override
+    List<OptionRelation> getOptionRelations() {
+        // a digest is of a plugin that is asked for: see what the jars of the packs are taken with
+        return [OptionRelation.requires('--feature-pack-sha256', '--features')]
+    }
 
     @CommandLine.Option(names = ['-r', '--reloading'], paramLabel = 'RELOADING', description = 'Which development reloading option to use. Possible values: ${COMPLETION-CANDIDATES}.', completionCandidates = DevelopmentReloadingCandidates, converter = DevelopmentReloadingConverter)
     DevelopmentReloading reloading

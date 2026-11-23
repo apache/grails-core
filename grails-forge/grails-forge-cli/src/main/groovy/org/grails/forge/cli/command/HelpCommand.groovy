@@ -25,6 +25,7 @@ import groovy.transform.CompileStatic
 import org.apache.grails.forge.cli.console.ApplicationCommands
 import org.apache.grails.forge.cli.console.CommandCatalog
 import org.apache.grails.forge.cli.console.ConsoleProject
+import org.apache.grails.forge.cli.console.OptionRelation
 import org.grails.forge.io.FileSystemOutputHandler
 import picocli.CommandLine
 
@@ -39,7 +40,7 @@ import picocli.CommandLine
         'Shows how a command is used, or without a command which commands there are here.',
         'For a command of a command give both names, as in @|bold help feature add|@.'])
 @CompileStatic
-class HelpCommand extends BaseCommand implements Callable<Integer> {
+class HelpCommand extends BaseCommand implements Callable<Integer>, OptionRelation.Declared {
 
     public static final String NAME = 'help'
 
@@ -60,6 +61,11 @@ class HelpCommand extends BaseCommand implements Callable<Integer> {
      * that the commands of the project are all there; set by what puts the command line together.
      */
     boolean complete = true
+
+    @Override
+    List<OptionRelation> getOptionRelations() {
+        return [OptionRelation.exclusive(false, '--json', 'COMMAND')]
+    }
 
     @Override
     Integer call() throws Exception {

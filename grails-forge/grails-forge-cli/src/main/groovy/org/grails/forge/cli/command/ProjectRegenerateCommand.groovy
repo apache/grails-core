@@ -23,6 +23,7 @@ import org.apache.grails.forge.cli.artefact.ProjectFiles
 import org.apache.grails.forge.cli.artefact.ProjectOutputHandler
 import org.apache.grails.forge.cli.console.ConsoleProject
 import org.apache.grails.forge.cli.console.GradleRunner
+import org.apache.grails.forge.cli.console.OptionRelation
 import org.apache.grails.forge.cli.console.ProjectCommand
 import org.apache.grails.forge.core.change.FeatureAddition
 import org.apache.grails.forge.core.change.ProjectChangeException
@@ -69,7 +70,7 @@ import java.util.stream.Stream
 @Component
 @Scope('prototype')
 @CompileStatic
-class ProjectRegenerateCommand extends BaseCommand implements Callable<Integer>, ProjectCommand {
+class ProjectRegenerateCommand extends BaseCommand implements Callable<Integer>, ProjectCommand, OptionRelation.Declared {
 
     public static final String NAME = 'regenerate'
 
@@ -94,6 +95,12 @@ class ProjectRegenerateCommand extends BaseCommand implements Callable<Integer>,
     @CommandLine.Option(names = ['--json'], description = 'With --diff: write the files that are not those the application was generated with as one JSON ' +
             'document for a tool to read, and nothing else, with the outcome of the comparison and, when there is none, the reason.')
     boolean json
+
+    @Override
+    List<OptionRelation> getOptionRelations() {
+        // what call checks first
+        return [OptionRelation.exclusive(true, '--output', '--diff'), OptionRelation.requires('--force', '--output')]
+    }
 
     // asked of the Forge application when the command first needs it
     private final Supplier<ProjectGenerator> projectGeneratorSource

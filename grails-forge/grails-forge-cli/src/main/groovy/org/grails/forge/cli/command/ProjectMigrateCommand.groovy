@@ -24,6 +24,7 @@ import org.apache.grails.forge.cli.artefact.ProjectOutputHandler
 import org.apache.grails.forge.cli.console.ConsoleProject
 import org.apache.grails.forge.cli.console.EarlierGrailsProject
 import org.apache.grails.forge.cli.console.GradleRunner
+import org.apache.grails.forge.cli.console.OptionChoices
 import org.apache.grails.forge.cli.console.ProjectCommand
 import org.apache.grails.forge.cli.console.ProjectEvidence
 import org.apache.grails.forge.cli.console.UsageHelp
@@ -104,9 +105,18 @@ class ProjectMigrateCommand extends BaseCommand implements Callable<Integer>, Pr
                     'package its classes are created in, or alone.')
     String name
 
-    @CommandLine.Option(names = ['--type'], paramLabel = 'TYPE',
+    @CommandLine.Option(names = ['--type'], paramLabel = 'TYPE', completionCandidates = TypeChoices,
             description = 'The type of the application: web (what create-app creates), rest-api, plugin, web-plugin or rest-api-plugin.')
     String type
+
+    /** What {@code --type} takes, which is all it takes. */
+    @CompileStatic
+    static class TypeChoices extends ArrayList<String> implements OptionChoices {
+
+        TypeChoices() {
+            super(TYPES)
+        }
+    }
 
     @CommandLine.Option(names = ['--features'], paramLabel = 'FEATURE', split = ',',
             description = 'Features the application has besides those that were found, by the names the create commands list with --list-features.')

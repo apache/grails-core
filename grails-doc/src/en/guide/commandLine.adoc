@@ -355,7 +355,8 @@ The usage of every command is laid out for a width of 100 columns, and the list 
   "diagnostics": [],
   "projectDirectory": "/home/me/myapp",
   "options": [
-    { "names": ["--plain-output"], "arity": "0", "label": null, "required": false, "description": "Write plain text for a program to read: no colour or other terminal markup, and no progress display of Gradle." }
+    { "names": ["--plain-output"], "arity": "0", "label": null, "required": false, "description": "Write plain text for a program to read: no colour or other terminal markup, and no progress display of Gradle.",
+      "repeatable": false, "split": null, "choices": null, "default": null }
   ],
   "commands": [
     {
@@ -365,16 +366,20 @@ The usage of every command is laid out for a width of 100 columns, and the list 
       "project": true,
       "origin": "built-in",
       "options": [
-        { "names": ["-f", "--force"], "arity": "0", "label": null, "required": false, "description": "Whether to overwrite existing files" }
+        { "names": ["-f", "--force"], "arity": "0", "label": null, "required": false, "description": "Whether to overwrite existing files",
+          "repeatable": false, "split": null, "choices": null, "default": null }
       ],
       "parameters": [
-        { "label": "CONTROLLER-NAME", "arity": "1", "description": "The name of the controller to create" }
+        { "label": "CONTROLLER-NAME", "arity": "1", "description": "The name of the controller to create", "repeatable": false, "split": null, "choices": null }
       ],
+      "relations": [],
       "commands": []
     }
   ]
 }
 ----
+
+`run-app` has, among others, the option `{ "names": ["--ready-timeout"], "arity": "1", "label": "SECONDS", ..., "default": "300" }` and the rule `{ "kind": "exclusive", "members": ["--detach", "--foreground"], "required": false }`; the `--servlet` option of `create-app` has `"choices": ["tomcat", "jetty", "undertow", "none"]`.
 
 [cols="1,3"]
 |===
@@ -396,10 +401,25 @@ The usage of every command is laid out for a width of 100 columns, and the list 
 | The commands, in the order `help` lists them. `name` is what is typed, `aliases` are other names of the command, `description` is one line of plain text, `project` says whether the command works on a project and cannot be used outside one, `origin` says where the command comes from (`built-in` for the commands of the command line itself), and `commands` holds the commands of the command, described in the same way. The commands of the application and its plugins come after those of `grails`. Their `origin` is `application`, the coordinates `group:artifact:version` of the artifact the command comes from, or `file:` and the name of a jar; they also have `target`, which is `application` for a command that runs in the application and `standalone` for one the build runs without starting the application, and `registration`, as the build of the project says it (see xref:commandLine#creatingCustomCommands[Creating Custom Commands]). A script of the application comes after them, with the `origin` `application`, the `target` `standalone`, because the build runs it without the application, the `registration` `script` and an empty `description`.
 
 | `options`
-| The options of the command: all the `names` of an option, the `label` of its value (`null` for an option that takes none), whether it is `required`, and its `arity`. The options are sorted by name, in every language: by the longest name of each without its hyphens, ignoring case. A command of the application or of a plugin has neither `options` nor `parameters`: the build does not know them.
+| The options of the command: all the `names` of an option, the `label` of its value (`null` for an option that takes none), whether it is `required`, its `arity`, and what the members below say of it. The options are sorted by name, in every language: by the longest name of each without its hyphens, ignoring case. A command of the application or of a plugin has neither `options` nor `parameters` nor `relations`: the build does not know them.
+
+| `repeatable`
+| Whether an option or a parameter can be given more than once, each time with a value that is added to those before, as `--features` and `-D` can.
+
+| `split`
+| The text that separates several values given in one, as `","` for `--features cache,postgres`; `null` for an option or a parameter that takes one value each time it is given.
+
+| `choices`
+| Every value an option or a parameter takes, where those are all it takes, as for `--servlet`, `--data`, `--reloading` and the `--type` of `project migrate`; `null` where any value is taken. The features are never listed here, because the generator knows them and the document is written without it: `--list-features` of the create commands and `feature list` list them.
+
+| `default`
+| For an option that takes a value, the value the command declares it has when it is not given, as `"300"` for `--ready-timeout` of `run-app`; `null` where the command declares none, and for an option that takes no value. A default that depends on the project, as the environment of a command that runs the build, is said in the description.
 
 | `parameters`
-| What the command takes besides options, in the order it is given, each with its `label` and `arity`.
+| What the command takes besides options, in the order it is given, each with its `label`, `arity`, `repeatable`, `split` and `choices`.
+
+| `relations`
+| The rules the command holds its options and parameters to beyond what each takes, which it refuses a command line that breaks as a mistake (exit code 2). Each has a `kind` and its `members`, an option by its longest name or a parameter by its label. With the `kind` `exclusive` at most one of the members is given, and exactly one when `required` is `true`: `--detach` and `--foreground` of `run-app`, or `--output` and `--diff` of `project regenerate`. With the `kind` `requires`, a member is given only together with every one of `requires`: `--force` of `project regenerate` with `--output`. A command without such rules has an empty list.
 
 | `arity`
 | How many values are taken, as text: one number (`"0"`, `"1"`), or a least and a most number with `..` between them (`"0..1"`), where `*` stands for any number (`"1..*"`).

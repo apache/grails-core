@@ -67,7 +67,7 @@ import picocli.CommandLine
         ],
         preprocessor = GradleTaskCommand.PassedOn)
 @CompileStatic
-class RunAppCommand extends GradleEnvironmentCommand {
+class RunAppCommand extends GradleEnvironmentCommand implements OptionRelation.Declared {
 
     private static final int DEFAULT_PORT = 8080
     private static final int DEFAULT_HTTPS_PORT = 8443
@@ -149,6 +149,12 @@ class RunAppCommand extends GradleEnvironmentCommand {
 
     @CommandLine.Option(names = ['--foreground'], description = 'Stay with the application until it ends, also in the interactive shell.')
     boolean foreground
+
+    @Override
+    List<OptionRelation> getOptionRelations() {
+        // see check
+        return [OptionRelation.exclusive(false, '--detach', '--foreground')]
+    }
 
     @CommandLine.Option(names = ['--ready-timeout'], paramLabel = 'SECONDS', defaultValue = '300',
             description = 'How long the application is given to answer when the command does not stay with it; it is stopped when it has not by then. Default: ${DEFAULT-VALUE}.')
