@@ -697,6 +697,7 @@ public class JpaQueryBuilder {
                            .append(" IN (");
                 if (subquery != null) {
                     buildSubQuery(q, whereClause, position, parameters, conversionService, allowJoins, hibernateCompatible, subquery);
+                    // the parameters of the subquery take the positions that the criteria after this one continue from
                     position = parameters.size();
                 }
                 else {
@@ -853,7 +854,7 @@ public class JpaQueryBuilder {
         buildSubQuery(q, whereClause, position, parameters, conversionService, allowJoins, hibernateCompatible, subquery);
         position = parameters.size();
         whereClause.append(CLOSE_BRACKET);
-        return position;
+        return parameters.size();
     }
 
     protected static int handleSizeComparison(PersistentEntity entity, Query.PropertyCriterion criterion, StringBuilder whereClause, String logicalName, int position, List parameters, ConversionService conversionService, String operator, boolean hibernateCompatible) {
@@ -900,9 +901,9 @@ public class JpaQueryBuilder {
                 .append(associatedEntityLogicalName);
         List<Query.Criterion> criteria = subquery.getCriteria();
         if (!criteria.isEmpty()) {
-            // the criteria of a subquery are all required, as they are of the query, and a subquery
-            // without criteria has no WHERE
-            whereClause.append(" WHERE ");
+            // the criteria of a subquery are all required, as they are of the query, and a subquery without criteria
+            // has no WHERE
+            whereClause.append(WHERE_CLAUSE);
             buildWhereClauseForCriterion(associatedEntity, new Query.Conjunction(), q, whereClause, associatedEntityLogicalName,
                     criteria, position, parameters, conversionService, allowJoins, hibernateCompatible);
         }
