@@ -220,6 +220,63 @@ apply {
         it.dependsOn(copyGrailsWrapper, grailsVersionInfoTask)
     }
 }
+
+// The identity of the generator, which the record of a generated project names beside the version: one digest of
+// what the generator generates from, its sources and pages, the templates and feature packs it has in itself, the
+// Grails wrapper it gives an application and the versions it writes. Two builds of one version, as two snapshots
+// are, are told apart by it. It is a digest of the sources and not of the jar, so that the website and the command
+// line, which has these classes in a jar of its own, name the same generator.
+TaskProvider<WriteGeneratorIdentityTask> generatorIdentityTask = tasks.register('generatorIdentity', WriteGeneratorIdentityTask)
+generatorIdentityTask.configure { WriteGeneratorIdentityTask it ->
+    it.dependsOn(copyGrailsWrapper)
+    it.generatorSources.from(layout.projectDirectory.dir('src/main'), layout.projectDirectory.dir('grails-app'), grailsVersionInfoTask, bomTablesTask)
+    it.identityDirectory = layout.buildDirectory.dir('generator-identity')
+}
+sourceSets.main.resources.srcDir(generatorIdentityTask)
+
+@CacheableTask
+abstract class WriteGeneratorIdentityTask extends DefaultTask {
+
+    /** Where the identity is read from when the generator runs */
+    static final String RESOURCE = 'META-INF/grails-forge-generator.properties'
+
+    @InputFiles
+    @PathSensitive(PathSensitivity.RELATIVE)
+    @IgnoreEmptyDirectories
+    @NormalizeLineEndings
+    abstract ConfigurableFileCollection getGeneratorSources()
+
+    @OutputDirectory
+    abstract DirectoryProperty getIdentityDirectory()
+
+    @TaskAction
+    void write() {
+        // every file by its path and the digest of its content, the lines ending with a line feed whatever the
+        // checkout gives them, so that a checkout on Windows names the same generator
+        List<String> entries = []
+        generatorSources.asFileTree.visit { FileVisitDetails details ->
+            if (!details.isDirectory()) {
+                byte[] content = details.file.bytes
+                ByteArrayOutputStream normalized = new ByteArrayOutputStream(content.length)
+                for (int index = 0; index < content.length; index++) {
+                    if (content[index] != (byte) 13 || index + 1 == content.length || content[index + 1] != (byte) 10) {
+                        normalized.write(content[index])
+                    }
+                }
+                entries << "${WriteGeneratorIdentityTask.sha256(normalized.toByteArray())} ${details.relativePath.pathString}".toString()
+            }
+        }
+        entries.sort()
+        String digest = WriteGeneratorIdentityTask.sha256(entries.join('\n').getBytes('UTF-8'))
+        File properties = identityDirectory.get().file(RESOURCE).asFile
+        properties.parentFile.mkdirs()
+        properties.setText("# The digest of the sources of the generator of Grails applications this jar was built from\nsha256=${digest}\n", 'UTF-8')
+    }
+
+    static String sha256(byte[] bytes) {
+        return java.security.MessageDigest.getInstance('SHA-256').digest(bytes).encodeHex().toString()
+    }
+}
 // The specs render the pages as the plugin ships them, compiled. The GSP plugin leaves the compiled
 // pages off a Grails build's test class path, where an application renders its views from source.
 tasks.named('test', Test).configure { Test test ->

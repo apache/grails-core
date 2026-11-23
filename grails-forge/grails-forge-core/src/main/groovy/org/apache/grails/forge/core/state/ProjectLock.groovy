@@ -51,9 +51,19 @@ final class ProjectLock {
 
     private static final String SEAL = 'seal:\n  sha256: '
 
+    // the generator as a lock names it, with the identity of its build after its version
+    private static final Pattern WITH_BUILD = Pattern.compile(/(?m)^(generator:\n  name: [^\n]*\n  version: [^\n]*\n)  sha256: [0-9a-f]{64}\n/)
+
     final String manifestSha256
     final String generatorName
     final String generatorVersion
+
+    /**
+     * The identity of the build of the generator that wrote the lock: the digest of the sources,
+     * templates and feature packs it generates from, which tells two builds of one version apart, as
+     * two snapshots are. {@code null} in a lock that was written without it.
+     */
+    final String generatorSha256
     final String grailsVersion
     final int templateApi
     final ApplicationType applicationType
@@ -78,10 +88,24 @@ final class ProjectLock {
     ProjectLock(String manifestSha256, String generatorName, String generatorVersion, String grailsVersion, int templateApi,
                 ApplicationType applicationType, GenerationOptions options, String lineEndings, List<LockedRepository> repositories,
                 int repositoriesNotNamed, List<LockedFeature> features, Map<String, String> parameters, String baselineIndexSha256) {
+        this(manifestSha256, generatorName, generatorVersion, null, grailsVersion, templateApi, applicationType, options, lineEndings, repositories,
+                repositoriesNotNamed, features, parameters, baselineIndexSha256)
+    }
+
+    /**
+     * @param generatorSha256 the identity of the build of the generator, see {@link #generatorSha256}, or
+     * {@code null} when it is not known
+     * @param repositoriesNotNamed how many repositories were given beyond those that are named
+     * @since 9.0
+     */
+    ProjectLock(String manifestSha256, String generatorName, String generatorVersion, String generatorSha256, String grailsVersion, int templateApi,
+                ApplicationType applicationType, GenerationOptions options, String lineEndings, List<LockedRepository> repositories,
+                int repositoriesNotNamed, List<LockedFeature> features, Map<String, String> parameters, String baselineIndexSha256) {
         this.repositoriesNotNamed = repositoriesNotNamed
         this.manifestSha256 = manifestSha256
         this.generatorName = generatorName
         this.generatorVersion = generatorVersion
+        this.generatorSha256 = generatorSha256
         this.grailsVersion = grailsVersion
         this.templateApi = templateApi
         this.applicationType = applicationType
@@ -105,7 +129,11 @@ final class ProjectLock {
         Map<String, Object> map = new LinkedHashMap<>()
         map.put('format', FORMAT)
         map.put('manifest', [sha256: manifestSha256] as Map<String, Object>)
-        map.put('generator', [name: generatorName, version: generatorVersion] as Map<String, Object>)
+        Map<String, Object> generator = [name: generatorName, version: generatorVersion] as Map<String, Object>
+        if (generatorSha256 != null) {
+            generator.put('sha256', generatorSha256)
+        }
+        map.put('generator', generator)
         map.put('grailsVersion', grailsVersion)
         map.put('templateApi', templateApi)
         map.put('applicationType', GenerationOptions.written(applicationType))
@@ -127,6 +155,30 @@ final class ProjectLock {
         return bytes.toByteArray()
     }
 
+    /**
+     * Whether two locks say the same but for the build of the generator that wrote them, as two builds
+     * of one version that generate the same files from the same choices write them. The seal is left
+     * out with the identity, since it is the digest of the rest.
+     *
+     * @param one the bytes of a lock
+     * @param other the bytes of another
+     * @since 9.0
+     */
+    static boolean sameButForTheBuild(byte[] one, byte[] other) {
+        return withoutTheBuild(one) == withoutTheBuild(other)
+    }
+
+    /**
+     * @param lock the bytes of a lock
+     * @return its text up to its seal, without the identity of the build of the generator
+     * @since 9.0
+     */
+    static String withoutTheBuild(byte[] lock) {
+        String text = new String(lock, StandardCharsets.ISO_8859_1)
+        int seal = text.lastIndexOf('\n' + SEAL)
+        return (seal < 0 ? text : text.substring(0, seal + 1)).replaceFirst(WITH_BUILD, '$1')
+    }
+
     @PackageScope
     static ProjectLock read(byte[] bytes) {
         return read(bytes, false)
@@ -142,6 +194,8 @@ final class ProjectLock {
         StateSection generator = root.section('generator')
         String generatorName = generator.matching('name', ProjectManifest.FEATURE_NAME, 'the name of a generator')
         String generatorVersion = generator.matching('version', ProjectManifest.VERSION, 'a version')
+        // a lock that a build before the identity was recorded wrote has none
+        String generatorSha256 = generator.optionalMatching('sha256', SHA256, 'a SHA-256 digest in hexadecimal')
         generator.end()
         String grailsVersion = root.matching('grailsVersion', ProjectManifest.VERSION, 'a version')
         int templateApi = root.number('templateApi', 1, 9999)
@@ -176,7 +230,7 @@ final class ProjectLock {
                 StateYaml.sha256(Arrays.copyOfRange(bytes, 0, before)) != sealed) {
             throw new ProjectStateException("${ProjectState.LOCK} was changed after it was written: it does not have the digest it ends with")
         }
-        return new ProjectLock(manifestSha256, generatorName, generatorVersion, grailsVersion, templateApi, applicationType, options,
+        return new ProjectLock(manifestSha256, generatorName, generatorVersion, generatorSha256, grailsVersion, templateApi, applicationType, options,
                 lineEndings, repositories, repositoriesNotNamed, features, parameters, baselineIndexSha256)
     }
 

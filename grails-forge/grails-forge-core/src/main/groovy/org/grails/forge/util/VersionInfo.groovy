@@ -30,6 +30,7 @@ class VersionInfo {
 
     private static final String END_OF_SUPPORT = 'grails.endOfSupport'
     private static final Properties VERSIONS = new Properties()
+    private static final String GENERATOR_SHA256 = generatorSha256()
 
     static {
         URL resource = VersionInfo.getResource('/grails-versions.properties')
@@ -54,6 +55,34 @@ class VersionInfo {
             }
         }
         return getGrailsVersion()
+    }
+
+    /**
+     * The identity of this build of the generator: the digest of what it generates from, its sources,
+     * templates and feature packs and the versions it writes, which the build computes. Two builds of
+     * one version, as two snapshots are, have different ones when they generate from different sources.
+     *
+     * @return the SHA-256 digest in hexadecimal, or {@code null} for a generator that was not built with
+     * one, as when it runs from the classes an editor compiled
+     * @since 9.0
+     */
+    static String getGeneratorSha256() {
+        return GENERATOR_SHA256
+    }
+
+    private static String generatorSha256() {
+        URL resource = VersionInfo.getResource('/META-INF/grails-forge-generator.properties')
+        if (resource == null) {
+            return null
+        }
+        Properties properties = new Properties()
+        try (Reader reader = new InputStreamReader(resource.openStream(), StandardCharsets.UTF_8)) {
+            properties.load(reader)
+        } catch (IOException ignored) {
+            return null
+        }
+        String digest = properties.getProperty('sha256')
+        return digest != null && digest ==~ /[0-9a-f]{64}/ ? digest : null
     }
 
     /**

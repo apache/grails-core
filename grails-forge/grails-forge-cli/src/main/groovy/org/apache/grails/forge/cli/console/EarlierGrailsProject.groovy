@@ -90,6 +90,17 @@ final class EarlierGrailsProject {
         return theirs == null || majorOf(theirs) >= FIRST_MAJOR ? null : theirs
     }
 
+    /**
+     * @param from the directory a command is run in
+     * @return the version of Grails the project of the directory is on, as its build reads it, whichever
+     * version that is; {@code null} outside a project and where none can be read
+     * @since 9.0
+     */
+    static String projectVersion(Path from) {
+        ConsoleProject project = ConsoleProject.find(from)
+        return project == null ? null : versionOf(project)
+    }
+
     private static int majorOf(String version) {
         return Integer.parseInt(version.substring(0, version.indexOf('.')))
     }

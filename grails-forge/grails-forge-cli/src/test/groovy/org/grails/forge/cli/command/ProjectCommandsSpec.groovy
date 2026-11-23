@@ -157,7 +157,7 @@ class ProjectCommandsSpec extends CommandSpec {
         document.keySet() as List == ['format', 'applicationType', 'name', 'defaultPackage', 'grailsVersion', 'generator', 'templateApi', 'generationState', 'options',
                                       'requestedFeatures', 'excludedFeatures', 'repositories', 'repositoriesNotNamed', 'features', 'command', 'notes',
                                       'effectiveOptions', 'addedFeatures']
-        document.generator == [name: 'grails-forge', version: VersionInfo.version]
+        document.generator == [name: 'grails-forge', version: VersionInfo.version, sha256: VersionInfo.generatorSha256]
         document.generationState == 'tracked'
         document.options == [jdk: 25, servlet: 'tomcat', data: 'hibernate5', reloading: 'devtools']
         document.requestedFeatures == [[name: 'grails-quartz']]

@@ -22,6 +22,7 @@ import groovy.transform.CompileStatic
 import org.apache.grails.forge.core.state.BaselineIndex.BaselineFile
 import org.apache.grails.forge.core.state.ProjectLock.LockedFeature
 import org.apache.grails.forge.core.state.ProjectManifest.RequestedFeature
+import java.nio.charset.StandardCharsets
 import java.nio.file.FileVisitResult
 import java.nio.file.Files
 import java.nio.file.LinkOption
@@ -88,6 +89,10 @@ final class ProjectState {
 
     private static final Set<String> OF_BUILD_ROOT = ['gradlew', 'gradlew.bat', 'gradle/wrapper/gradle-wrapper.jar', 'gradle/wrapper/gradle-wrapper.properties',
                                                      'settings.gradle', 'settings.gradle.kts', 'grailsw', 'grailsw.bat', 'grails-wrapper.jar', '.gitattributes'].toSet().asImmutable()
+
+    // how Git marks the lines of the two sides of a conflict it leaves in a file
+    private static final String CONFLICT_START = '<<<<<<<'
+    private static final String CONFLICT_END = '>>>>>>>'
 
     /** The directory of the baseline, the index and the content */
     public static final String BASELINE = '.grails/baseline'
@@ -222,9 +227,33 @@ final class ProjectState {
         try {
             byte[] manifestBytes = bytes(projectDirectory, MANIFEST, StateLimits.MAX_MANIFEST)
             byte[] lockBytes = bytes(projectDirectory, LOCK, StateLimits.MAX_LOCK)
-            return of(manifestBytes, lockBytes, withBaseline ? bytes(projectDirectory, BASELINE_INDEX, StateLimits.MAX_INDEX) : null, missingOptionsAsDefaults)
+            byte[] indexBytes = withBaseline ? bytes(projectDirectory, BASELINE_INDEX, StateLimits.MAX_INDEX) : null
+            notMergedByLines([(MANIFEST): manifestBytes, (LOCK): lockBytes, (BASELINE_INDEX): indexBytes])
+            return of(manifestBytes, lockBytes, indexBytes, missingOptionsAsDefaults)
         } catch (IOException e) {
             throw new ProjectStateException("The state of the project cannot be read: ${e.class.simpleName}")
+        }
+    }
+
+    /**
+     * What a merge of two branches that both changed the state leaves in it: the lines of both sides,
+     * between the markers of a conflict. The files hold the digests of each other, so the state is not
+     * merged line by line, by hand or by a tool; what is said instead is the way back to a state that
+     * reads, which the guide describes as the state after a merge.
+     */
+    private static void notMergedByLines(Map<String, byte[]> files) {
+        for (Map.Entry<String, byte[]> file : files.entrySet()) {
+            if (file.value == null) {
+                continue
+            }
+            List<String> lines = new String(file.value, StandardCharsets.UTF_8).readLines()
+            int at = lines.findIndexOf { String line -> line.startsWith(CONFLICT_START) || line.startsWith(CONFLICT_END) }
+            if (at >= 0) {
+                throw new ProjectStateException("${file.key} has the markers of a merge conflict in it (line ${at + 1}). The files of ${DIRECTORY} hold the digests of " +
+                        'each other and are not merged line by line: take them as one side of the merge committed them, as git restore --source=HEAD --staged ' +
+                        "--worktree -- ${DIRECTORY} does for this branch, resolve the conflicts of the other files, and then add the features the other side added " +
+                        'with feature add')
+            }
         }
     }
 

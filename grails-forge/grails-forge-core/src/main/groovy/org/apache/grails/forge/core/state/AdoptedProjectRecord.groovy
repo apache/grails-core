@@ -75,12 +75,15 @@ final class AdoptedProjectRecord {
                 StateYaml.sha256(manifestBytes),
                 ProjectLock.GENERATOR,
                 VersionInfo.getVersion(),
+                // the build that wrote the record, as for a generated application
+                VersionInfo.getGeneratorSha256(),
                 grailsVersion,
                 PackDescriptor.TEMPLATE_API,
                 applicationType,
                 options,
                 ProjectLock.LINE_ENDINGS_OF_TEMPLATES,
                 Collections.<LockedRepository>emptyList(),
+                0,
                 features,
                 [:],
                 StateYaml.sha256(indexBytes)).toBytes()

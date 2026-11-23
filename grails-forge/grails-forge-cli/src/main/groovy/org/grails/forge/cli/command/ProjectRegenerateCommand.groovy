@@ -27,6 +27,7 @@ import org.apache.grails.forge.cli.console.ProjectCommand
 import org.apache.grails.forge.core.change.FeatureAddition
 import org.apache.grails.forge.core.change.ProjectChangeException
 import org.apache.grails.forge.core.change.RegeneratedProject
+import org.apache.grails.forge.core.state.ProjectLock
 import org.apache.grails.forge.core.state.ProjectState
 import org.apache.grails.forge.core.state.ProjectStateException
 import org.grails.forge.application.generator.ProjectGenerator
@@ -225,7 +226,8 @@ class ProjectRegenerateCommand extends BaseCommand implements Callable<Integer>,
             if (!Files.isRegularFile(ours, LinkOption.NOFOLLOW_LINKS)) {
                 return "${FeatureSelectionException.shown(path)} is a file of the directory that was written to only"
             }
-            if (Files.mismatch(ours, theirs) >= 0) {
+            // another build of the same version that generates the same files writes the same lock but for its own identity
+            if (Files.mismatch(ours, theirs) >= 0 && !(path == ProjectState.LOCK && ProjectLock.sameButForTheBuild(Files.readAllBytes(ours), Files.readAllBytes(theirs)))) {
                 return "${FeatureSelectionException.shown(path)} differs"
             }
         }
@@ -332,6 +334,10 @@ class ProjectRegenerateCommand extends BaseCommand implements Callable<Integer>,
         }
         Path file = resolved(project, path)
         try {
+            if (path == ProjectState.LOCK) {
+                // the lock of the record is what was generated when another build of the version, that generates the same, would write it but for its identity
+                return Files.isRegularFile(file, LinkOption.NOFOLLOW_LINKS) && ProjectLock.sameButForTheBuild(Files.readAllBytes(file), regenerated.content(path))
+            }
             return Files.isRegularFile(file, LinkOption.NOFOLLOW_LINKS) && Files.size(file) == regenerated.content(path).length &&
                     Arrays.equals(Files.readAllBytes(file), regenerated.content(path))
         } catch (IOException ignored) {

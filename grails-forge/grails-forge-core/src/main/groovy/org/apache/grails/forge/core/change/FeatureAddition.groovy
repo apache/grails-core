@@ -513,27 +513,38 @@ final class FeatureAddition {
         if (!unlike.isEmpty()) {
             throw new ProjectChangeException("The application cannot be generated again as it was: ${unlike.size()} ${unlike.size() == 1 ? 'file is' : 'files are'} " +
                     "not what the baseline of the project has (${named(unlike)}). A feature is added to what the same generator makes of the same choices; " +
-                    'the repositories given with GRAILS_REPO_URL are among those choices')
+                    "the repositories given with GRAILS_REPO_URL are among those choices${anotherBuild(state.lock)}")
         }
         // the index has the digest of every file, and the lock that of the index, so both are others
-        // when a file has its keys in another order; every file of the index was compared above
+        // when a file has its keys in another order; every file of the index was compared above. Another
+        // build of the same version that generates the same files writes the same record but for its identity
         boolean reordered = inAnotherOrder != null && !inAnotherOrder.isEmpty()
         if (!Arrays.equals(before.content(ProjectState.MANIFEST), manifestBytes) ||
-                !(reordered ? sameLockButForTheIndex(before.content(ProjectState.LOCK), lockBytes) : Arrays.equals(before.content(ProjectState.LOCK), lockBytes)) ||
+                !(reordered ? sameLockButForTheIndex(before.content(ProjectState.LOCK), lockBytes) : ProjectLock.sameButForTheBuild(before.content(ProjectState.LOCK), lockBytes)) ||
                 (!reordered && !Arrays.equals(before.content(ProjectState.BASELINE_INDEX), indexBytes))) {
             throw new ProjectChangeException("The record of the application under ${ProjectState.DIRECTORY} is not what this generator writes for the same choices, " +
-                    'so a feature cannot be added to it; the repositories given with GRAILS_REPO_URL are among those choices')
+                    "so a feature cannot be added to it; the repositories given with GRAILS_REPO_URL are among those choices${anotherBuild(state.lock)}")
         }
         return before
     }
 
     // a lock ends with the digest of the index and its seal, which is the digest of what is before it
     private static boolean sameLockButForTheIndex(byte[] one, byte[] other) {
-        String first = new String(one, StandardCharsets.ISO_8859_1)
-        String second = new String(other, StandardCharsets.ISO_8859_1)
+        String first = ProjectLock.withoutTheBuild(one)
+        String second = ProjectLock.withoutTheBuild(other)
         int firstEnd = first.lastIndexOf('\nbaselineIndex:\n')
         int secondEnd = second.lastIndexOf('\nbaselineIndex:\n')
         return firstEnd >= 0 && secondEnd >= 0 && first.substring(0, firstEnd) == second.substring(0, secondEnd)
+    }
+
+    // what is said of a record that another build of this version wrote, when it does not come to the same files
+    private static String anotherBuild(ProjectLock lock) {
+        String running = VersionInfo.getGeneratorSha256()
+        if (lock.generatorSha256 == null || running == null || lock.generatorSha256 == running) {
+            return ''
+        }
+        return ". The record was written by another build of ${ProjectLock.GENERATOR} ${lock.generatorVersion} than this one (the generator sha256 " +
+                "${lock.generatorSha256} there, ${running} here), which does not generate the same files: use the build that generated the application"
     }
 
     private static List<String> changedOptions(GenerationOptions has, GenerationOptions would) {

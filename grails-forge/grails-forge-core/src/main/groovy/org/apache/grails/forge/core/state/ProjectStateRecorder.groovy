@@ -242,6 +242,8 @@ final class ProjectStateRecorder {
                 StateYaml.sha256(manifestBytes),
                 ProjectLock.GENERATOR,
                 VersionInfo.getVersion(),
+                // which build of the version: two snapshots of one version generate from other sources
+                VersionInfo.getGeneratorSha256(),
                 grailsVersion,
                 PackDescriptor.TEMPLATE_API,
                 applicationType,
