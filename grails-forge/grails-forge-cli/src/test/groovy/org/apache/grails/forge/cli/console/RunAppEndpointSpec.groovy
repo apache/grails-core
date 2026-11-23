@@ -159,7 +159,7 @@ class RunAppEndpointSpec extends CommandSpec {
         what                                                  | given                                      | code | said
         '-Dserver.port, which the application is not given'   | ['-Dserver.port=18082']                    | 2    | '-Dserver.port is a system property of the build, which the Grails Gradle plugin does not give to the application'
         'an address the loopback address does not reach'      | ['-Dgrails.server.address=192.0.2.7']      | 1    | 'The application is bound to 192.0.2.7'
-        'a port that is not plainly one'                      | ['-Dgrails.server.port=${PORT}']           | 1    | 'The port and the address the application answers on could not be determined: -Dgrails.server.port is given'
+        'a port that is not plainly one'                      | ['-Dgrails.server.port=${PORT}']           | 1    | 'The port the application answers on could not be determined: -Dgrails.server.port is given'
         'arguments of the application that name its port'     | ['--args=--server.port=18083']             | 2    | '--args gives the application arguments that name its port or its address'
         'arguments of the application that name its address'  | ['--args', '--server.address=0.0.0.0 --debug'] | 2 | '--args gives the application arguments that name its port or its address'
     }

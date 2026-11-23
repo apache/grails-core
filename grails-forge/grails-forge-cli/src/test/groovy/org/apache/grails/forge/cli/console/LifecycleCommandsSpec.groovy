@@ -1384,7 +1384,7 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
     }
 
     @Unroll
-    void "run-app --detach starts nothing when #what, since the port cannot be determined"() {
+    void "run-app --detach starts nothing when #what, since the #unknown cannot be determined"() {
         given:
         scriptedProject('serve')
         new File(dir, 'grails-app/conf').mkdirs()
@@ -1399,9 +1399,9 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
         then:
         exit == 1
         errors().size() == 1
-        errors()[0].startsWith('| Error The port and the address the application answers on could not be determined: ')
+        errors()[0].startsWith("| Error The ${unknown} the application answers on could not be determined: ".toString())
         errors()[0].contains(said)
-        errors()[0].endsWith('Nothing was started; give the port with --port, or stay with the application with --foreground')
+        errors()[0].endsWith("Nothing was started; give ${asks}, or stay with the application with --foreground".toString())
         !new File(dir, 'invoked.txt').exists()
 
         and: 'nothing of the file is on the terminal'
@@ -1421,18 +1421,22 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
         ForgeCli.execute(beanContext, 'stop-app')
 
         where:
-        what                                             | configuration                                                    | options                        | variables            | said
-        'the configuration has a placeholder'            | 'server:\n  port: ${PORT:18194}\n'                               | []                             | [:]                  | 'server.port of grails-app/conf/application.yml is not plainly a port'
-        'the configuration has a number with a fraction' | 'server:\n  port: 18196.0\n'                                     | []                             | [:]                  | 'server.port of grails-app/conf/application.yml is not plainly a port'
-        'the configuration has a number of another base' | 'server:\n  port: 0o17\n'                                        | []                             | [:]                  | 'server.port of grails-app/conf/application.yml is not plainly a port'
-        'the configuration has a number that starts with a zero' | 'server:\n  port: "018195"\n'                            | []                             | [:]                  | 'server.port of grails-app/conf/application.yml is not plainly a port'
-        'the configuration has a port that is a list'    | 'server:\n  port: [1, 2]\n'                                      | []                             | [:]                  | 'server.port of grails-app/conf/application.yml is not plainly a port'
-        'the configuration has an address to work out'   | 'server:\n  address: "${HOST}"\n'                                | []                             | [:]                  | 'server.address of grails-app/conf/application.yml is not plainly an address'
-        'the configuration has a key twice'              | '"k\\e[31mRED\\nFAKE | Error @|red x|@": 1\n"k\\e[31mRED\\nFAKE | Error @|red x|@": 2\n' | [] | [:]          | 'grails-app/conf/application.yml could not be read as the YAML the command reads'
-        'the configuration is nested without end'        | 'x: ' + '[' * 5000 + ']' * 5000 + '\nserver:\n  port: 18199\n'   | []                             | [:]                  | 'grails-app/conf/application.yml could not be read as the YAML the command reads'
-        'the configuration is not YAML'                  | 'server: [\u0000'                                                | []                             | [:]                  | 'grails-app/conf/application.yml could not be read as the YAML the command reads'
-        'the system property is no port'                 | null                                                             | ['-Dgrails.server.port=abc']   | [:]                  | '-Dgrails.server.port is given, and its value is not a port'
-        'the environment names no port'                  | 'server:\n  port: 18200\n'                                       | []                             | [SERVER_PORT: 'abc'] | 'the environment variable SERVER_PORT is set, and its value is not a port'
+        what                                             | configuration                                                    | options                        | variables            | unknown                | said
+        'the configuration has a placeholder'            | 'server:\n  port: ${PORT:18194}\n'                               | []                             | [:]                  | 'port'                 | 'server.port of grails-app/conf/application.yml is not plainly a port'
+        'the configuration has a number with a fraction' | 'server:\n  port: 18196.0\n'                                     | []                             | [:]                  | 'port'                 | 'server.port of grails-app/conf/application.yml is not plainly a port'
+        'the configuration has a number of another base' | 'server:\n  port: 0o17\n'                                        | []                             | [:]                  | 'port'                 | 'server.port of grails-app/conf/application.yml is not plainly a port'
+        'the configuration has a number that starts with a zero' | 'server:\n  port: "018195"\n'                            | []                             | [:]                  | 'port'                 | 'server.port of grails-app/conf/application.yml is not plainly a port'
+        'the configuration has a port that is a list'    | 'server:\n  port: [1, 2]\n'                                      | []                             | [:]                  | 'port'                 | 'server.port of grails-app/conf/application.yml is not plainly a port'
+        'the configuration has an address to work out'   | 'server:\n  address: "${HOST}"\n'                                | []                             | [:]                  | 'address'              | 'server.address of grails-app/conf/application.yml is not plainly an address'
+        'the configuration has a key twice'              | '"k\\e[31mRED\\nFAKE | Error @|red x|@": 1\n"k\\e[31mRED\\nFAKE | Error @|red x|@": 2\n' | [] | [:] | 'port and the address' |
+                'grails-app/conf/application.yml has a key twice in one map at line 2, column 1, which YAML does not allow'
+        'the configuration is nested without end'        | 'x: ' + '[' * 5000 + ']' * 5000 + '\nserver:\n  port: 18199\n'   | []                             | [:]                  | 'port and the address' |
+                'grails-app/conf/application.yml nests lists and maps deeper than 32 levels, more than the command reads'
+        'the configuration is not YAML'                  | 'server: [\u0000'                                                | []                             | [:]                  | 'port and the address' |
+                'grails-app/conf/application.yml is not valid YAML at line 1, column 10, where it has a character YAML does not allow'
+        'the system property is no port'                 | null                                                             | ['-Dgrails.server.port=abc']   | [:]                  | 'port'                 | '-Dgrails.server.port is given, and its value is not a port'
+        'the environment names no port'                  | 'server:\n  port: 18200\n'                                       | []                             | [SERVER_PORT: 'abc'] | 'port'                 | 'the environment variable SERVER_PORT is set, and its value is not a port'
+        asks = [port: 'the port with --port', address: 'the address with --host', 'port and the address': 'the port with --port and the address with --host'][unknown]
     }
 
     void "run-app takes -Dserver.port for what it is, a property the application is not given"() {

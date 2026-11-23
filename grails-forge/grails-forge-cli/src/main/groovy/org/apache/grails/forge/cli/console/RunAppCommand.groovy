@@ -18,6 +18,7 @@
  */
 package org.apache.grails.forge.cli.console
 
+import java.nio.charset.CharacterCodingException
 import java.nio.file.Files
 import java.nio.file.LinkOption
 import java.nio.file.Path
@@ -32,7 +33,13 @@ import org.grails.forge.application.OperatingSystem
 import org.grails.forge.feature.FeatureSelectionException
 import org.yaml.snakeyaml.LoaderOptions
 import org.yaml.snakeyaml.Yaml
+import org.yaml.snakeyaml.constructor.ConstructorException
+import org.yaml.snakeyaml.constructor.DuplicateKeyException
 import org.yaml.snakeyaml.constructor.SafeConstructor
+import org.yaml.snakeyaml.error.Mark
+import org.yaml.snakeyaml.error.MarkedYAMLException
+import org.yaml.snakeyaml.error.YAMLException
+import org.yaml.snakeyaml.reader.ReaderException
 import picocli.CommandLine
 
 /**
@@ -267,13 +274,9 @@ class RunAppCommand extends GradleEnvironmentCommand implements OptionRelation.D
         }
         Configured configured = configured(project, told)
         int answersOn = configured.port
-        if (detached) {
-            String unknown = configured.portUnknown ?: configured.addressUnknown
-            if (unknown != null) {
-                err("The port and the address the application answers on could not be determined: ${unknown}. " +
-                        'Nothing was started; give the port with --port, or stay with the application with --foreground')
-                return 1
-            }
+        if (detached && (configured.portUnknown != null || configured.addressUnknown != null)) {
+            err(undetermined(configured))
+            return 1
         }
         if (https) {
             if (answersOn == 0 && configured.portUnknown == null) {
@@ -296,6 +299,34 @@ class RunAppCommand extends GradleEnvironmentCommand implements OptionRelation.D
         } catch (GradleRunner.RefusedArgumentException e) {
             throw new CommandLine.ParameterException(spec.commandLine(), e.getMessage())
         }
+    }
+
+    // Why nothing is started when the command does not stay with the application: what of the port and the
+    // address is not known, why, and what to give for it. An option that was given is not asked for again:
+    // what it names is not known all the same when a system property after -- names it otherwise, which the
+    // reason says.
+    private String undetermined(Configured configured) {
+        List<String> unknown = []
+        List<String> reasons = []
+        List<String> asked = []
+        if (configured.portUnknown != null) {
+            unknown << 'port'
+            reasons << configured.portUnknown
+            if (port == null) {
+                asked << 'the port with --port'
+            }
+        }
+        if (configured.addressUnknown != null) {
+            unknown << 'address'
+            if (!reasons.contains(configured.addressUnknown)) {
+                reasons << configured.addressUnknown
+            }
+            if (host == null) {
+                asked << 'the address with --host'
+            }
+        }
+        return "The ${unknown.join(' and the ')} the application answers on could not be determined: ${reasons.join('; ')}. Nothing was started; ".toString() +
+                (asked.isEmpty() ? '' : "give ${asked.join(' and ')}, or ".toString()) + 'stay with the application with --foreground'
     }
 
     private void check(boolean detached) {
@@ -720,13 +751,15 @@ class RunAppCommand extends GradleEnvironmentCommand implements OptionRelation.D
 
     // port, address: what application.yml names plainly; portUnknown, addressUnknown: why one that is named
     // is not known; unknown: why nothing of the file is. Every reason is the command's own words: nothing
-    // of the file, and nothing a parser says of it, is repeated.
+    // of the file, and nothing a parser says of it, is repeated, but for the line and the column where it
+    // stopped. A limit of the command is named where the file goes past it, and only there.
     private Map<String, Object> ofFile(ConsoleProject project, Map<String, String> told) {
         Map<String, Object> found = [:]
         Path file = project.directory.resolve(CONFIGURATION)
         if (!Files.exists(file, LinkOption.NOFOLLOW_LINKS)) {
             return found
         }
+        String text = ''
         try {
             if (project.isLinked(CONFIGURATION) || !Files.isRegularFile(file, LinkOption.NOFOLLOW_LINKS)) {
                 found.unknown = "${CONFIGURATION} is not a file of the project, or is reached through a link, and is not read".toString()
@@ -748,7 +781,8 @@ class RunAppCommand extends GradleEnvironmentCommand implements OptionRelation.D
             options.setProcessComments(false)
             Object[] ports = new Object[2]
             Object[] addresses = new Object[2]
-            for (Object document : new Yaml(new SafeConstructor(options)).loadAll(Files.readString(file))) {
+            text = Files.readString(file)
+            for (Object document : new Yaml(new SafeConstructor(options)).loadAll(text)) {
                 List<Object> levels = [document, value(document, ['environments', environment])]
                 for (int level = 0; level < 2; level++) {
                     // a key can be written in one piece or as a map in a map
@@ -773,12 +807,70 @@ class RunAppCommand extends GradleEnvironmentCommand implements OptionRelation.D
                 found.addressUnknown = plain ? null :
                         "server.address of ${CONFIGURATION} is not plainly an address, but something the application works out when it starts".toString()
             }
-        } catch (IOException | RuntimeException | StackOverflowError ignored) {
+        } catch (CharacterCodingException ignored) {
             found.clear()
-            found.unknown = "${CONFIGURATION} could not be read as the YAML the command reads: at most ${MAX_CONFIGURATION} bytes, no key twice in one map, ".toString() +
-                    "nothing nested deeper than ${MAX_NESTING}".toString()
+            found.unknown = "${CONFIGURATION} is not text in UTF-8, which is what the command reads".toString()
+        } catch (IOException ignored) {
+            found.clear()
+            found.unknown = "${CONFIGURATION} could not be read".toString()
+        } catch (YAMLException e) {
+            found.clear()
+            found.unknown = notRead(e, text)
+        } catch (RuntimeException | StackOverflowError ignored) {
+            found.clear()
+            found.unknown = "${CONFIGURATION} could not be read as YAML".toString()
         }
         return found
+    }
+
+    // Why the YAML of the file is not read: where the parser stopped, or the limit of the command the file goes past
+    private static String notRead(YAMLException e, String text) {
+        if (e instanceof DuplicateKeyException) {
+            return "${CONFIGURATION} has a key twice in one map${at(((MarkedYAMLException) e).getProblemMark())}, which YAML does not allow".toString()
+        }
+        if (e instanceof ConstructorException) {
+            return "${CONFIGURATION} has a value${at(((MarkedYAMLException) e).getProblemMark())} that the command cannot read as YAML data, ".toString() +
+                    'such as one with a tag it does not know'
+        }
+        if (e instanceof MarkedYAMLException) {
+            MarkedYAMLException marked = (MarkedYAMLException) e
+            return "${CONFIGURATION} is not valid YAML${at(marked.getProblemMark() ?: marked.getContextMark())}".toString()
+        }
+        if (e instanceof ReaderException) {
+            return "${CONFIGURATION} is not valid YAML${at(text, ((ReaderException) e).getPosition())}, where it has a character YAML does not allow".toString()
+        }
+        // the limits of the parser, which it tells by its words alone
+        String said = e.getMessage() ?: ''
+        if (said.startsWith('Nesting Depth exceeded')) {
+            return "${CONFIGURATION} nests lists and maps deeper than ${MAX_NESTING} levels, more than the command reads".toString()
+        }
+        if (said.startsWith('Number of aliases')) {
+            return "${CONFIGURATION} refers to a list or a map by an alias more than ${MAX_ALIASES} times, more than the command reads".toString()
+        }
+        return "${CONFIGURATION} could not be read as YAML".toString()
+    }
+
+    private static String at(Mark mark) {
+        return mark == null ? '' : " at line ${mark.getLine() + 1}, column ${mark.getColumn() + 1}".toString()
+    }
+
+    // The line and the column of a position in the text, which the parser counts in characters: a line ends
+    // with a line feed, with a carriage return that no line feed follows, or with a line break of Unicode.
+    private static String at(String text, int position) {
+        int line = 1
+        int column = 1
+        int index = 0
+        int i = 0
+        while (i < text.length() && index < position) {
+            int character = text.codePointAt(i)
+            i += Character.charCount(character)
+            index++
+            boolean breaks = character == 0x0A || character == 0x85 || character == 0x2028 || character == 0x2029 ||
+                    (character == 0x0D && (i >= text.length() || text.charAt(i) != (char) 0x0A))
+            line += breaks ? 1 : 0
+            column = breaks ? 1 : column + 1
+        }
+        return " at line ${line}, column ${column}".toString()
     }
 
     private static Object value(Object from, List<String> path) {
