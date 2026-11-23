@@ -120,7 +120,7 @@ The id of a finding is the name of its check and the name of the finding, as `ja
 | The project is on another release of the same major version.
 | `./grailsw project health` for a later one; the upgrade notes of the releases in between for an earlier one.
 
-4+| `gradle-wrapper`: the Gradle wrapper the commands of the project run, and the `distributionUrl` of its `gradle/wrapper/gradle-wrapper.properties`.
+4+| `gradle-wrapper`: the Gradle wrapper the commands of the project run, and the `distributionUrl` and `distributionSha256Sum` of its `gradle/wrapper/gradle-wrapper.properties`.
 
 | `gradle-wrapper.missing`
 | error
@@ -139,8 +139,13 @@ The id of a finding is the name of its check and the name of the finding, as `ja
 
 | `gradle-wrapper.checksum`
 | advice
-| The properties have no `distributionSha256Sum`, so the wrapper does not check the distribution it downloads.
+| The properties have no `distributionSha256Sum`, so the wrapper does not check the distribution it downloads. `create-app` writes it.
 | Add the SHA-256 that gradle.org publishes for the distribution (`--gradle-distribution-sha256-sum` of the `wrapper` task).
+
+| `gradle-wrapper.checksum-differs`
+| warning
+| The wrapper names the binary distribution of Gradle {gradleVersion} on `services.gradle.org`, which `create-app` generates applications with, and a `distributionSha256Sum` that is not the SHA-256 Gradle publishes for it, so the wrapper refuses the distribution where it downloads it. Another distribution, of another version or from another address, is not compared.
+| Set `distributionSha256Sum` to the SHA-256 the message names, which is the one on https://gradle.org/release-checksums/[Gradle's checksums].
 
 4+| `java-target`: each setting of `build.gradle` (or `build.gradle.kts`) that names a version of Java, read as `project migrate` reads it and named with its line: `compileJava.options.release`, `options.release` and `release` in a block of the options, `targetCompatibility` and `sourceCompatibility`, a `JavaVersion` constant, and the toolchain (`JavaLanguageVersion.of`, `jvmToolchain`). The classes are compiled for the version of the release where the build sets one, else of `targetCompatibility`, of `sourceCompatibility`, of a constant, and of the toolchain, in that order; what is set for other projects (`subprojects`, `configure`, `project`) does not count.
 
@@ -338,7 +343,7 @@ The id of a finding is the name of its check and the name of the finding, as `ja
 | `./gradlew extractSkillsJars`.
 |===
 
-A project that `create-app` has just generated, of every type and with the default features, has no error and no warning. It can have advice, as `command-catalog.missing` until its first build lists the commands of the application.
+A project that `create-app` has just generated, of every type and with the default features, has no error and no warning, and no advice but `command-catalog.missing`, until its first build lists the commands of the application.
 
 ==== The JSON document
 

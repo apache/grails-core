@@ -29,7 +29,9 @@ import org.grails.forge.util.VersionInfo
  * {@code gradle-wrapper}: the Gradle wrapper the commands of the project run, which the
  * {@code grails} command runs as it finds it, and the version of Gradle its
  * {@code gradle/wrapper/gradle-wrapper.properties} names in {@code distributionUrl}, against the
- * earliest version Grails is built with and the version {@code create-app} generates.
+ * earliest version Grails is built with and the version {@code create-app} generates; and its
+ * {@code distributionSha256Sum}, against the SHA-256 Gradle publishes where the wrapper names the
+ * binary distribution {@code create-app} generates with, from {@code services.gradle.org}.
  *
  * @since 9.0
  */
@@ -39,6 +41,8 @@ final class GradleWrapperCheck extends HealthCheck {
     private static final String PROPERTIES = 'gradle/wrapper/gradle-wrapper.properties'
     private static final String DISTRIBUTION = 'distributionUrl'
     private static final String CHECKSUM = 'distributionSha256Sum'
+    // where Gradle publishes its distributions, and the checksums of them that the generated wrapper names
+    private static final String PUBLISHED = 'https://services.gradle.org/distributions/'
     // the version a distribution of Gradle is named by, at the end of its address
     private static final Pattern VERSION = Pattern.compile(/gradle-(\d{1,4}\.\d{1,4}(?:\.\d{1,4})?(?:-[A-Za-z0-9.\-]{1,40})?)-(?:bin|all)\.zip$/)
 
@@ -83,10 +87,18 @@ final class GradleWrapperCheck extends HealthCheck {
             findings << found('older', HealthLevel.ADVICE, "The Gradle wrapper names Gradle ${version} (${properties}), and create-app generates applications with Gradle " +
                     "${generated}", "${command}, and commit the wrapper", command, [properties], NOTE_GRADLE_WRAPPER)
         }
-        if (!read.getProperty(CHECKSUM)?.trim()) {
+        String checksum = read.getProperty(CHECKSUM)?.trim()
+        String published = VersionInfo.getGradleDistributionSha256Sum()
+        if (!checksum) {
             findings << found('checksum', HealthLevel.ADVICE, "${properties} has no ${CHECKSUM}, so the wrapper does not check the distribution of Gradle it downloads",
                     "Add the SHA-256 of the distribution that gradle.org publishes for Gradle ${version}, as ./gradlew wrapper --gradle-version ${version} " +
-                            '--gradle-distribution-sha256-sum SHA256 writes it', null, [properties], null)
+                            '--gradle-distribution-sha256-sum SHA256 writes it', null, [properties], NOTE_GRADLE_CHECKSUM)
+        } else if (distribution == "${PUBLISHED}gradle-${generated}-bin.zip".toString() && checksum != published) {
+            // the wrapper compares the checksum as it is written with the one it computes, in lowercase
+            findings << found('checksum-differs', HealthLevel.WARNING, "The ${CHECKSUM} of ${properties} is not the SHA-256 Gradle publishes for " +
+                    "gradle-${generated}-bin.zip: the wrapper refuses that distribution where it downloads it, as on a new machine or in a job of continuous integration",
+                    "Set ${CHECKSUM} to ${published} in ${properties}, the SHA-256 that gradle.org publishes for Gradle ${generated}", null, [properties],
+                    NOTE_GRADLE_CHECKSUM)
         }
         return findings ?: [ok("The Gradle wrapper names Gradle ${version} (${properties}) and checks the distribution it downloads", [properties])]
     }

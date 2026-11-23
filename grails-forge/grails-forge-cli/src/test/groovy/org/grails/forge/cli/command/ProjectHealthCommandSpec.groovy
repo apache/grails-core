@@ -48,15 +48,15 @@ class ProjectHealthCommandSpec extends CommandSpec {
                                         'grails-wrapper', 'git-files', 'command-catalog', 'leftover', 'agent-skills']
 
     /**
-     * What a project that create-app has just generated may be advised, and nothing else: the build has not run, so the commands of the application
-     * are not listed yet, and the generated Gradle wrapper does not name the SHA-256 of its distribution until the generator writes it.
+     * What a project that create-app has just generated is advised, and nothing else: the build has not run, so the commands of the application
+     * are not listed yet. Its Gradle wrapper names the SHA-256 of its distribution, so it is not advised to.
      */
-    static final List<String> ADVICE_OF_A_NEW_PROJECT = ['command-catalog.missing', 'gradle-wrapper.checksum']
+    static final List<String> ADVICE_OF_A_NEW_PROJECT = ['command-catalog.missing']
 
     /** Every finding of every check, by its id: what the reference page of the command lists, and what a tool goes by. */
     static final List<String> IDS = [
             'grails-version.earlier', 'grails-version.newer', 'grails-version.release',
-            'gradle-wrapper.missing', 'gradle-wrapper.version', 'gradle-wrapper.older', 'gradle-wrapper.checksum',
+            'gradle-wrapper.missing', 'gradle-wrapper.version', 'gradle-wrapper.older', 'gradle-wrapper.checksum', 'gradle-wrapper.checksum-differs',
             'java-target.release', 'java-target.record',
             'sdkmanrc.java', 'sdkmanrc.grails', 'sdkmanrc.gradle', 'sdkmanrc.groovy',
             'removed-dependency.profile', 'removed-dependency.shell', 'removed-dependency.profile-plugin', 'removed-dependency.jline',
@@ -127,13 +127,14 @@ class ProjectHealthCommandSpec extends CommandSpec {
         document.counts.warning == 0
         document.counts.skipped == 0
 
-        and: 'the advice it has is what a project that was never built has'
-        ADVICE_OF_A_NEW_PROJECT.containsAll(ids(document, 'advice'))
-        ids(document, 'advice').contains('command-catalog.missing')
+        and: 'the advice it has is what a project that was never built has, and nothing else'
+        ids(document, 'advice') == ADVICE_OF_A_NEW_PROJECT
 
-        and: 'each check reports, and those that found nothing say so'
+        and: 'each check reports, and those that found nothing say so: every other check, once, as the tour of the guide shows'
         (document.findings as List<Map>)*.check.unique() as Set == CHECKS as Set
         (document.findings as List<Map>).findAll { it.level == 'ok' }.every { it.id == "${it.check}.ok" && it.fix == null }
+        document.counts.ok == CHECKS.size() - ADVICE_OF_A_NEW_PROJECT.size()
+        document.counts.advice == ADVICE_OF_A_NEW_PROJECT.size()
 
         where:
         command << ['create-app', 'create-restapi', 'create-plugin', 'create-web-plugin', 'create-rest-api-plugin']
@@ -198,6 +199,11 @@ class ProjectHealthCommandSpec extends CommandSpec {
         'gradle-wrapper.version'               | 'error'   | 'the wrapper is of Gradle 8'                           | { File p, File h -> distribution(p, 'https\\://services.gradle.org/distributions/gradle-8.14.3-bin.zip') }
         'gradle-wrapper.older'                 | 'advice'  | 'the wrapper is older than create-app generates'       | { File p, File h -> distribution(p, "https\\://services.gradle.org/distributions/gradle-${VersionInfo.minimumGradleVersion}-bin.zip") }
         'gradle-wrapper.checksum'              | 'advice'  | 'the wrapper names no SHA-256 of its distribution'     | { File p, File h -> without(p, 'gradle/wrapper/gradle-wrapper.properties', ~/distributionSha256Sum=.*\n/) }
+        'gradle-wrapper.checksum-differs'      | 'warning' | 'the wrapper names another SHA-256 for its distribution' | { File p, File h -> checksum(p, '0' * 64) }
+        'gradle-wrapper.checksum-differs'      | 'warning' | 'the SHA-256 is in capitals, which the wrapper refuses' | { File p, File h -> checksum(p, VersionInfo.gradleDistributionSha256Sum.toUpperCase()) }
+        'gradle-wrapper.ok'                    | 'ok'      | 'the wrapper is the one create-app generates'          | { File p, File h -> }
+        'gradle-wrapper.ok'                    | 'ok'      | 'a distribution of a mirror is not compared'           | { File p, File h -> distribution(p, "https\\://repo.example.com/gradle/gradle-${VersionInfo.gradleVersion}-bin.zip"); checksum(p, '0' * 64) }
+        'gradle-wrapper.ok'                    | 'ok'      | 'the complete distribution has a checksum of its own'  | { File p, File h -> distribution(p, "https\\://services.gradle.org/distributions/gradle-${VersionInfo.gradleVersion}-all.zip"); checksum(p, '0' * 64) }
         'gradle-wrapper.skipped'               | 'skipped' | 'the wrapper names a distribution of its own'          | { File p, File h -> distribution(p, 'https\\://repo.example.com/dists/gradle.zip') }
         'java-target.release'                  | 'warning' | 'the build compiles for Java 17'                       | { File p, File h -> replace(p, 'build.gradle', ~/compileJava\.options\.release = \d+/, 'compileJava.options.release = 17') }
         'java-target.release'                  | 'warning' | 'the toolchain is of Java 17'                           | { File p, File h -> append(p, 'build.gradle', 'java {\n    toolchain {\n        languageVersion = JavaLanguageVersion.of(17)\n    }\n}\n') }
@@ -235,9 +241,9 @@ class ProjectHealthCommandSpec extends CommandSpec {
         'grails-wrapper.leftover'              | 'warning' | 'an update of the wrapper left a file beside it'       | { File p, File h -> new File(p, 'grails-wrapper.jar.new').bytes = new File(p, 'grails-wrapper.jar').bytes }
         'grails-wrapper.skipped'               | 'skipped' | 'the jar of the wrapper names no version'              | { File p, File h -> wrapperJar(p, null) }
         'git-files.record-ignored'             | 'warning' | '.gitignore leaves out .grails'                        | { File p, File h -> append(p, '.gitignore', '.grails/\n') }
-        'git-files.state-ignored'              | 'advice'  | '.gitignore keeps what is of one machine'              | { File p, File h -> without(p, '.gitignore', ~/\.grails\/(transactions\/|history)\n/) }
+        'git-files.state-ignored'              | 'advice'  | 'no .gitignore leaves out what is of one machine'      | { File p, File h -> without(p, '.gitignore', ~/\.grails\/(transactions\/|history)\n/); without(p, '.grails/.gitignore', ~/\/(transactions\/|history)\n/) }
         'git-files.wrapper-line-endings'       | 'advice'  | 'there is no .gitattributes'                           | { File p, File h -> new File(p, '.gitattributes').delete() }
-        'git-files.ok'                         | 'ok'      | '.grails/.gitignore leaves out what is of one machine' | { File p, File h -> without(p, '.gitignore', ~/\.grails\/(transactions\/|history)\n/); append(p, '.grails/.gitignore', '/transactions/\n/history\n') }
+        'git-files.ok'                         | 'ok'      | '.grails/.gitignore leaves out what is of one machine' | { File p, File h -> without(p, '.gitignore', ~/\.grails\/(transactions\/|history)\n/) }
         'command-catalog.missing'              | 'advice'  | 'the build has not listed the commands'                | { File p, File h -> }
         'command-catalog.refused'              | 'advice'  | 'the list is no file'                                  | { File p, File h -> new File(p, '.grails/cache/command-catalog.json').mkdirs() }
         'command-catalog.stale'                | 'advice'  | 'the build file was changed after the list'            | { File p, File h -> catalog(p); new File(p, 'build.gradle').setLastModified(System.currentTimeMillis() + 60_000) }
@@ -686,6 +692,10 @@ class ProjectHealthCommandSpec extends CommandSpec {
     // the build file as a build file of Kotlin, which is read where there is no build.gradle
     static void kotlinBuild(File project) {
         assert new File(project, 'build.gradle').renameTo(new File(project, 'build.gradle.kts'))
+    }
+
+    static void checksum(File project, String sha256) {
+        replace(project, 'gradle/wrapper/gradle-wrapper.properties', ~/distributionSha256Sum=.*/, "distributionSha256Sum=${sha256}")
     }
 
     static void dependency(File project, String line) {
