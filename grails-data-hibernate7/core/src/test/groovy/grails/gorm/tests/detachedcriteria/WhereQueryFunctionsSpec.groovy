@@ -142,6 +142,27 @@ class WhereQueryFunctionsSpec extends HibernateGormDatastoreSpec {
         matches == ['a', 'b']
     }
 
+    void "function IN criterion filters null values, handles all-null and empty lists, and converts numeric function values"() {
+        given:
+        seedEntities()
+
+        when:
+        def mixedNullString = WhereQueryFunctionEntity.where { upper(name) in ['A', null, 'C'] }.list()*.name.sort()
+        def allNullString = WhereQueryFunctionEntity.where { upper(name) in [null] }.list()
+        def emptyString = WhereQueryFunctionEntity.where { upper(name) in [] }.list()
+        def mixedNullNumeric = WhereQueryFunctionEntity.where { year(created) in ['2011', null, 2013] }.list()*.name.sort()
+        def allNullNumeric = WhereQueryFunctionEntity.where { year(created) in [null] }.list()
+        def emptyNumeric = WhereQueryFunctionEntity.where { year(created) in [] }.list()
+
+        then:
+        mixedNullString == ['a', 'c']
+        allNullString.isEmpty()
+        emptyString.isEmpty()
+        mixedNullNumeric == ['a', 'c']
+        allNullNumeric.isEmpty()
+        emptyNumeric.isEmpty()
+    }
+
     void "bulk updateAll and deleteAll support function IN, ILike, and subquery criteria"() {
         given:
         seedEntities()
@@ -170,6 +191,23 @@ class WhereQueryFunctionsSpec extends HibernateGormDatastoreSpec {
         then:
         deleted == 1
         WhereQueryFunctionEntity.list()*.name.sort() == ['b', 'c', 'd']
+    }
+
+    void "an empty list in a function comparison matches nothing, and its negation matches every row, in a read and in a bulk statement"() {
+        given:
+        seedEntities()
+        DetachedCriteria<WhereQueryFunctionEntity> empty = lengthIn([])
+        DetachedCriteria<WhereQueryFunctionEntity> notEmpty = criteriaOf(new Query.Negation().add(new FunctionCallingCriterion('length', new Query.In('name', []))))
+
+        expect: 'a read'
+        empty.list().isEmpty()
+        notEmpty.list().size() == 4
+
+        and: 'a bulk write changes nothing for the list and every row for its negation'
+        empty.updateAll(label: 'x') == 0
+        empty.deleteAll() == 0
+        WhereQueryFunctionEntity.count() == 4
+        notEmpty.updateAll(label: 'all') == 4
     }
 
     void "a function in over a subquery works in a bulk statement"() {

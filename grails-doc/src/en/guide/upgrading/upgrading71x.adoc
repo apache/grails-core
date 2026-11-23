@@ -22,7 +22,14 @@ under the License.
 To ensure compatibility with Grails 7.1.x, please review the following upgrade instructions carefully.
 This guide outlines the necessary steps & warnings to upgrade your Grails project.
 
-=== 1. Groovy Changes
+The changes are listed by release. Apply the section of every release after the one the application is on, up to and including the release it is upgrading to.
+
+[[grails-7-1-0]]
+=== Grails 7.1.0
+
+This release carries the changes of every Grails 7.0 release up to <<grails-7-0-10,Grails 7.0.10>>.
+
+==== 1. Groovy Changes
 
 The Grails Gradle Plugins now automatically disables invokedynamic for all `GroovyCompile` tasks (see https://github.com/apache/grails-core/issues/15293[#15293]). If you have a manual `tasks.withType(GroovyCompile)` block in your `build.gradle` that sets `indy = false`, you can safely remove it:
 
@@ -45,7 +52,7 @@ To re-enable invokedynamic, use the `grails` extension in your `build.gradle`:
   }
 ----
 
-==== 2 Breaking changes
+==== 2. Breaking changes
 
 ===== 2.1 Plugin configuration and Spring Conditional Annotations
 
@@ -794,7 +801,17 @@ grails:
 
 See the {gspTagsRef}flashMessages.html[flashMessages] tag reference for full details.
 
-===== 2.12 Exception Log Line Includes Per-Request Context
+[[grails-7-1-1]]
+=== Grails 7.1.1
+
+This release carries the changes of <<grails-7-0-11,Grails 7.0.11>>. It has no upgrade notes of its own.
+
+[[grails-7-1-2]]
+=== Grails 7.1.2
+
+This release carries the changes of <<grails-7-0-12,Grails 7.0.12>>.
+
+==== Exception Log Line Includes Per-Request Context
 
 `GrailsExceptionResolver` now appends a parenthesised clause of per-request context — the current auditor and,
 optionally, the remote client address — to its exception log headline:
@@ -808,7 +825,7 @@ The auditor entry reuses the same `AuditorAware` resolution that populates `@Cre
 `HttpServletRequest.getRemoteAddr()` — behind a reverse proxy, set `server.forward-headers-strategy: native` so
 the address reflects the real client.
 
-====== Impact
+===== Impact
 
 Any log parser, alert rule, or log-aggregation query that matches on the exact exception headline format will
 need to tolerate the optional ` (ip: <value>, user: <value>)` suffix. Both entries are opt-in — the auditor
@@ -827,7 +844,7 @@ grails:
 With both disabled — the default — the headline matches its pre-7.1 form. See the Logging Full Stack Traces
 section of the user guide for details.
 
-===== 2.13 StackTrace Logger Side-Effect Emission
+==== StackTrace Logger Side-Effect Emission
 
 Pre-7.1, `DefaultStackTraceFilterer.filter(Throwable)` emitted the unfiltered stack trace to the dedicated
 `StackTrace` logger as a side effect of cleaning the trace. The 7.1 PR that fixed duplicate-per-cause logging
@@ -849,3 +866,33 @@ Set to `false` to disable the side-effect emission and rely solely on `logFullSt
 output. The two flags interact — if both are enabled, a request exception with N causes produces N+1 `StackTrace`
 records (one resolver-driven plus one per throwable visited by the recursive filter walk). The Logging Full
 Stack Traces section of the user guide includes a matrix of behaviours for the four flag combinations.
+
+[[grails-7-1-3]]
+=== Grails 7.1.3
+
+This release carries the changes of <<grails-7-0-13,Grails 7.0.13>>. It has no upgrade notes of its own.
+
+[[grails-7-1-4]]
+=== Grails 7.1.4
+
+This release carries the changes of <<grails-7-0-14,Grails 7.0.14>>. It has no upgrade notes of its own.
+
+[[grails-7-1-5]]
+=== Grails 7.1.5
+
+This release carries the changes of <<grails-7-0-15,Grails 7.0.15>>. It has no upgrade notes of its own.
+
+[[grails-7-1-6]]
+=== Grails 7.1.6
+
+This release carries the changes of <<grails-7-0-16,Grails 7.0.16>>. It has no upgrade notes of its own.
+
+[[grails-7-1-7]]
+=== Grails 7.1.7
+
+This release carries the changes of <<grails-7-0-17,Grails 7.0.17>>. It has no upgrade notes of its own.
+
+[[grails-7-1-8]]
+=== Grails 7.1.8
+
+This release carries the changes of <<grails-7-0-18,Grails 7.0.18>>. It has no upgrade notes of its own.

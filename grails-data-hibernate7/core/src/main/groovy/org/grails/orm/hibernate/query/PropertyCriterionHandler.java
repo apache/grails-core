@@ -22,6 +22,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 import jakarta.persistence.criteria.Expression;
@@ -72,21 +73,37 @@ class PropertyCriterionHandler implements InternalCriterionHandler<Query.Propert
         } else if (pc instanceof Query.Like) {
             return criteriaBuilder.like((Expression<String>) propertyPath, (String) context.convertValue(propertyName, pc.getValue(), propertyPath));
         } else if (pc instanceof Query.GreaterThan) {
+            if (pc.getValue() instanceof QueryableCriteria qc) {
+                Subquery<?> subquery = buildSubquery(context, propertyPath, qc, propertyName);
+                return criteriaBuilder.greaterThan((Expression<? extends Comparable>) propertyPath, (Expression) subquery);
+            }
             Object value = context.convertComparisonValue(propertyName, pc.getValue(), propertyPath);
             return value instanceof Comparable<?> comparable ?
                 criteriaBuilder.greaterThan((Expression<? extends Comparable>) propertyPath, (Comparable) comparable) :
                 criteriaBuilder.greaterThan((Expression<? extends Comparable>) propertyPath, (Expression) context.asExpression(value, propertyPath));
         } else if (pc instanceof Query.GreaterThanEquals) {
+            if (pc.getValue() instanceof QueryableCriteria qc) {
+                Subquery<?> subquery = buildSubquery(context, propertyPath, qc, propertyName);
+                return criteriaBuilder.greaterThanOrEqualTo((Expression<? extends Comparable>) propertyPath, (Expression) subquery);
+            }
             Object value = context.convertComparisonValue(propertyName, pc.getValue(), propertyPath);
             return value instanceof Comparable<?> comparable ?
                 criteriaBuilder.greaterThanOrEqualTo((Expression<? extends Comparable>) propertyPath, (Comparable) comparable) :
                 criteriaBuilder.greaterThanOrEqualTo((Expression<? extends Comparable>) propertyPath, (Expression) context.asExpression(value, propertyPath));
         } else if (pc instanceof Query.LessThan) {
+            if (pc.getValue() instanceof QueryableCriteria qc) {
+                Subquery<?> subquery = buildSubquery(context, propertyPath, qc, propertyName);
+                return criteriaBuilder.lessThan((Expression<? extends Comparable>) propertyPath, (Expression) subquery);
+            }
             Object value = context.convertComparisonValue(propertyName, pc.getValue(), propertyPath);
             return value instanceof Comparable<?> comparable ?
                 criteriaBuilder.lessThan((Expression<? extends Comparable>) propertyPath, (Comparable) comparable) :
                 criteriaBuilder.lessThan((Expression<? extends Comparable>) propertyPath, (Expression) context.asExpression(value, propertyPath));
         } else if (pc instanceof Query.LessThanEquals) {
+            if (pc.getValue() instanceof QueryableCriteria qc) {
+                Subquery<?> subquery = buildSubquery(context, propertyPath, qc, propertyName);
+                return criteriaBuilder.lessThanOrEqualTo((Expression<? extends Comparable>) propertyPath, (Expression) subquery);
+            }
             Object value = context.convertComparisonValue(propertyName, pc.getValue(), propertyPath);
             return value instanceof Comparable<?> comparable ?
                 criteriaBuilder.lessThanOrEqualTo((Expression<? extends Comparable>) propertyPath, (Comparable) comparable) :
@@ -163,26 +180,36 @@ class PropertyCriterionHandler implements InternalCriterionHandler<Query.Propert
         }
 
         Collection<?> collection = value instanceof Collection ? (Collection<?>) value : Collections.singletonList(value);
-        List<Object> converted = collection.stream()
-            .map(v -> context.convertValue(propertyName, v, propertyPath))
-            .collect(Collectors.toList());
-
-        if (context.isCollectionPath(propertyPath)) {
-            if (converted.isEmpty()) {
-                return criteriaBuilder.disjunction();
-            }
-            Predicate[] memberOfPredicates = converted.stream()
-                .map(v -> criteriaBuilder.isMember((Object) v, (Expression) context.resolveCollectionPath(propertyPath)))
-                .toArray(Predicate[]::new);
-            return criteriaBuilder.or(memberOfPredicates);
+        if (collection.isEmpty()) {
+            return criteriaBuilder.disjunction();
         }
 
+        if (context.isCollectionPath(propertyPath)) {
+            // a null is no member of a collection
+            Predicate[] memberOfPredicates = collection.stream()
+                .filter(Objects::nonNull)
+                .map(v -> context.convertValue(propertyName, v, propertyPath))
+                .map(v -> criteriaBuilder.isMember((Object) v, (Expression) context.resolveCollectionPath(propertyPath)))
+                .toArray(Predicate[]::new);
+            return memberOfPredicates.length == 0 ? criteriaBuilder.disjunction() : criteriaBuilder.or(memberOfPredicates);
+        }
+
+        // a null stays in the list, as it does on Hibernate 5 and in the bulk statements: SQL decides what it matches,
+        // so a negated list that holds a null matches no row
+        List<Object> converted = collection.stream()
+            .map(v -> v == null ? null : context.convertValue(propertyName, v, propertyPath))
+            .collect(Collectors.toList());
         return propertyPath.in(converted);
     }
 
     @SuppressWarnings("unchecked")
     static Subquery<?> buildSubquery(CriterionContext context, Expression<?> propertyPath, QueryableCriteria<?> qc, String propertyName) {
-        if (qc.getProjections().isEmpty() && propertyPath != null) {
+        Query.ProjectionList projectionList = new Query.ProjectionList();
+        for (Object p : qc.getProjections()) {
+            projectionList.add((Query.Projection) p);
+        }
+
+        if (projectionList.isEmpty()) {
             String propName = propertyName;
             if (propName != null && propName.contains(grails.orm.HibernateCriteriaBuilder.ALIAS_SEPARATOR)) {
                 propName = propName.split(grails.orm.HibernateCriteriaBuilder.ALIAS_SEPARATOR)[1];
@@ -190,22 +217,38 @@ class PropertyCriterionHandler implements InternalCriterionHandler<Query.Propert
             if (propName != null) {
                 PersistentProperty prop = qc.getPersistentEntity().getPropertyByName(propName);
                 if (prop != null) {
-                    ((QueryableCriteria) qc).getProjections().add(Projections.property(propName));
+                    projectionList.add(Projections.property(propName));
                 }
             }
         }
 
-        Query.ProjectionList projectionList = new Query.ProjectionList();
-        for (Object p : qc.getProjections()) {
-            projectionList.add((Query.Projection) p);
-        }
-
-        Class<?> expectedType = propertyPath != null ? propertyPath.getJavaType() : qc.getPersistentEntity().getJavaClass();
+        Class<?> expectedType = resolveSubqueryType(propertyPath, qc, projectionList);
         Subquery<?> subquery = context.getCriteriaQuery().subquery(expectedType);
         var creator = new JpaCriteriaQueryCreator(projectionList, context.getCriteriaBuilder(), (GrailsHibernatePersistentEntity) qc.getPersistentEntity(), (DetachedCriteria) qc, context.getConversionService());
         creator.setParentContext(context.getQueryContext());
         creator.populateSubquery((JpaSubQuery) subquery);
         return subquery;
+    }
+
+    static Class<?> resolveSubqueryType(Expression<?> propertyPath, QueryableCriteria<?> qc, Query.ProjectionList projectionList) {
+        List<Query.Projection> projections = projectionList != null ? projectionList.getProjectionList() : qc.getProjections();
+        if (!projections.isEmpty()) {
+            Object first = projections.get(0);
+            if (first instanceof Query.CountProjection || first instanceof Query.CountDistinctProjection) {
+                return Long.class;
+            } else if (first instanceof Query.AvgProjection) {
+                return Double.class;
+            } else if (first instanceof Query.IdProjection) {
+                PersistentProperty identity = qc.getPersistentEntity().getIdentity();
+                return identity != null ? identity.getType() : Object.class;
+            } else if (first instanceof Query.PropertyProjection propertyProjection) {
+                PersistentProperty prop = qc.getPersistentEntity().getPropertyByName(propertyProjection.getPropertyName());
+                if (prop != null) {
+                    return prop.getType();
+                }
+            }
+        }
+        return propertyPath != null ? propertyPath.getJavaType() : qc.getPersistentEntity().getJavaClass();
     }
 
     static Predicate handleRLike(HibernateCriteriaBuilder criteriaBuilder, Expression<String> propertyPath, Query.RLike c) {

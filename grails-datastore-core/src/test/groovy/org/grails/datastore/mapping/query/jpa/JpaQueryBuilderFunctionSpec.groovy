@@ -67,6 +67,27 @@ class JpaQueryBuilderFunctionSpec extends Specification {
         'upper'      | new Query.In('name', ['A', 'B', 'C'])        || 'upper(jpaFunctionTestPerson.name) IN (:p1,:p2,:p3)'       | ['A', 'B', 'C']
     }
 
+    @Unroll
+    void "an empty list renders `#expectedWhere`: #form"() {
+        when:
+        def info = new JpaQueryBuilder(entity, criteria).buildDelete()
+
+        then:
+        info.query == "DELETE FROM ${JpaFunctionTestPerson.name} jpaFunctionTestPerson WHERE (${expectedWhere})"
+        info.parameters == expectedParams
+
+        where:
+        form                                          | criteria                                                                                              || expectedWhere                                                                | expectedParams
+        'a function comparison'                       | [new FunctionCallingCriterion('upper', new Query.In('name', []))]                                      || '1 = 0'                                                                      | []
+        'a function comparison beside a criterion'    | [new FunctionCallingCriterion('upper', new Query.In('name', [])), new Query.Equals('age', 5)]          || '1 = 0 AND jpaFunctionTestPerson.age=:p1'                                    | [5]
+        'a function comparison under a negation'      | [new Query.Negation().add(new FunctionCallingCriterion('upper', new Query.In('name', [])))]            || ' NOT(1 = 0)'                                                                | []
+        'a plain property'                            | [new Query.In('name', [])]                                                                             || '1 = 0'                                                                      | []
+        'a plain property beside a criterion'         | [new Query.In('name', []), new Query.Equals('age', 5)]                                                 || '1 = 0 AND jpaFunctionTestPerson.age=:p1'                                    | [5]
+        'a plain property under a negation'           | [new Query.Negation().add(new Query.In('name', []))]                                                   || ' NOT(1 = 0)'                                                                | []
+        'a function comparison, one value (control)'  | [new FunctionCallingCriterion('upper', new Query.In('name', ['A']))]                                   || 'upper(jpaFunctionTestPerson.name) IN (:p1)'                                 | ['A']
+        'a plain property, one value (control)'       | [new Query.In('name', ['A'])]                                                                          || 'jpaFunctionTestPerson.name IN (:p1)'                                        | ['A']
+    }
+
     void "FunctionCallingCriterion with In subquery renders subselect and advances parameter positions"() {
         given:
         QueryableCriteria subquery = Stub(QueryableCriteria) {

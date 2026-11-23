@@ -34,6 +34,9 @@ import org.grails.datastore.mapping.query.api.QueryableCriteria;
  * a read as well as a bulk statement, builds its query from this, so a rule about an operand lives here and not
  * in each of them.
  *
+ * <p>Internal to GORM: it is public only because the Hibernate modules and the query builder, which are in other
+ * packages and modules, build their queries from it. It may change in a minor release.</p>
+ *
  * @since 8.0.1
  */
 public final class FunctionComparison {

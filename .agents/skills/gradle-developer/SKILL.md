@@ -36,7 +36,7 @@ Related skills (do not substitute this one):
 | CodeNarc / Checkstyle / PMD / SpotBugs reports | `violation-fixer` |
 | Failing tests / aggregate reports | `test-fixer` |
 | Merging an external plugin repo into the monorepo | `mono-repo-integration` |
-| App-facing Grails 8 upgrade guidance | `grails-8-upgrade` |
+| App-facing Grails upgrade guidance | `grails-upgrade` |
 
 ---
 

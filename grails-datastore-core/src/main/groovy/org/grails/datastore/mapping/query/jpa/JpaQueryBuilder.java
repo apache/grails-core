@@ -54,6 +54,11 @@ import org.grails.datastore.mapping.query.criteria.FunctionComparison;
  */
 @SuppressWarnings({"rawtypes", "unchecked"})
 public class JpaQueryBuilder {
+    /**
+     * What membership in an empty list is. An empty IN list is not valid SQL on most databases, so it is written as this
+     * condition, which matches nothing; a negation of it, written as NOT (...), matches everything.
+     */
+    private static final String NO_ROWS = "1 = 0";
     private static final String DISTINCT_CLAUSE = "DISTINCT ";
     private static final String SELECT_CLAUSE = "SELECT ";
     private static final String AS_CLAUSE = " AS ";
@@ -635,6 +640,10 @@ public class JpaQueryBuilder {
                         whereClause.append(CLOSE_BRACKET);
                         return parameters.size();
                     case IN_VALUES:
+                        if (comparison.getValues().isEmpty()) {
+                            whereClause.append(NO_ROWS);
+                            return position;
+                        }
                         whereClause.append(function).append(" IN (");
                         for (Iterator i = comparison.getValues().iterator(); i.hasNext();) {
                             Object val = i.next();
@@ -677,11 +686,15 @@ public class JpaQueryBuilder {
                 final String name = inQuery.getProperty();
                 PersistentProperty prop = validateProperty(entity, name, Query.In.class);
                 Class propType = prop.getType();
+                QueryableCriteria subquery = inQuery.getSubquery();
+                if (subquery == null && inQuery.getValues().isEmpty()) {
+                    whereClause.append(NO_ROWS);
+                    return position;
+                }
                 whereClause.append(logicalName)
                            .append(DOT)
                            .append(name)
                            .append(" IN (");
-                QueryableCriteria subquery = inQuery.getSubquery();
                 if (subquery != null) {
                     buildSubQuery(q, whereClause, position, parameters, conversionService, allowJoins, hibernateCompatible, subquery);
                     position = parameters.size();
@@ -870,7 +883,7 @@ public class JpaQueryBuilder {
      *
      * @param comparedProperty the property the subquery is compared with, or {@code null} to select the entity
      */
-    protected static void buildSubQuery(StringBuilder q, StringBuilder whereClause, int position, List parameters, ConversionService conversionService, boolean allowJoins, boolean hibernateCompatible, QueryableCriteria subquery, String comparedProperty) {
+    private static void buildSubQuery(StringBuilder q, StringBuilder whereClause, int position, List parameters, ConversionService conversionService, boolean allowJoins, boolean hibernateCompatible, QueryableCriteria subquery, String comparedProperty) {
         PersistentEntity associatedEntity = subquery.getPersistentEntity();
         String associatedEntityName = associatedEntity.getName();
         String associatedEntityLogicalName = associatedEntity.getDecapitalizedName() + position;

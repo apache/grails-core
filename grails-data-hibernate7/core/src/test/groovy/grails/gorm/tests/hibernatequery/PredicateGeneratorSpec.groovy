@@ -661,6 +661,35 @@ class PredicateGeneratorSpec extends HibernateGormDatastoreSpec {
         predicates.length == 1
     }
 
+    def "test getPredicates with scalar subquery in comparison criteria"() {
+        given:
+        new PredicateGeneratorSpecPerson(firstName: 'Young', lastName: 'P', age: 20, salary: 10G).save(failOnError: true)
+        new PredicateGeneratorSpecPerson(firstName: 'Mid', lastName: 'P', age: 30, salary: 20G).save(failOnError: true)
+        new PredicateGeneratorSpecPerson(firstName: 'Old', lastName: 'P', age: 40, salary: 30G).save(flush: true, failOnError: true)
+
+        def subqueryCriteria = new DetachedCriteria(PredicateGeneratorSpecPerson).build {
+            projections {
+                avg "age"
+            }
+        }
+        def executeSingle = { Query.Criterion c ->
+            CriteriaQuery<String> q = cb.createQuery(String)
+            Root<PredicateGeneratorSpecPerson> r = q.from(PredicateGeneratorSpecPerson)
+            JpaQueryContext ctx = new JpaQueryContext(r)
+            Predicate[] preds = predicateGenerator.getPredicates(q, r, [c], ctx, personEntity)
+            q.select(r.get('firstName')).where(preds)
+            def hq = sessionFactory.currentSession.createQuery(q)
+            ctx.parameterValues.each { k, v -> hq.setParameter(k, v) }
+            hq.resultList.sort()
+        }
+
+        expect:
+        executeSingle(new Query.GreaterThan("age", subqueryCriteria)) == ['Old']
+        executeSingle(new Query.GreaterThanEquals("age", subqueryCriteria)) == ['Mid', 'Old']
+        executeSingle(new Query.LessThan("age", subqueryCriteria)) == ['Young']
+        executeSingle(new Query.LessThanEquals("age", subqueryCriteria)) == ['Mid', 'Young']
+    }
+
     def "test getPredicates with FunctionCallingCriterion for string functions"() {
         given:
         List criteria = [
@@ -792,6 +821,53 @@ class PredicateGeneratorSpec extends HibernateGormDatastoreSpec {
 
         then:
         thrown(IllegalArgumentException)
+    }
+
+    def "subquery translation does not mutate source criteria projection list in-place"() {
+        given:
+        def subCriteria = new DetachedCriteria(PredicateGeneratorSpecPerson).eq("lastName", "Smith")
+        List criteria = [
+            new Query.In("id", subCriteria),
+            new Query.EqualsAll("age", subCriteria)
+        ]
+
+        when:
+        def predicates = predicateGenerator.getPredicates(query, root, criteria, fromProvider, personEntity)
+
+        then:
+        predicates.length == 2
+        subCriteria.projections.isEmpty()
+    }
+
+    def "property comparison and property name criteria throw ConfigurationException on non-existent property"() {
+        when:
+        predicateGenerator.getPredicates(query, root, [criterion], fromProvider, personEntity)
+
+        then:
+        thrown(ConfigurationException)
+
+        where:
+        criterion << [
+            new Query.EqualsProperty("nonExistent", "lastName"),
+            new Query.EqualsProperty("firstName", "nonExistent"),
+            new Query.IsNull("nonExistent"),
+            new Query.EqualsAll("nonExistent", new DetachedCriteria(PredicateGeneratorSpecPerson))
+        ]
+    }
+
+    def "Query.In filters null values and returns disjunction when empty"() {
+        given:
+        List criteria = [
+            new Query.In("firstName", ["Bob", null]),
+            new Query.In("firstName", [null]),
+            new Query.In("firstName", [])
+        ]
+
+        when:
+        def predicates = predicateGenerator.getPredicates(query, root, criteria, fromProvider, personEntity)
+
+        then:
+        predicates.length == 3
     }
 }
 
