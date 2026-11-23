@@ -66,17 +66,11 @@ final class DatabaseContainers {
             .withStartupTimeout(Duration.ofMinutes(3))
 
     /**
-     * Whether a Docker daemon is reachable on this machine. A socket file at the well-known path of Docker Desktop or
-     * Linux answers yes without a call, which avoids asking Testcontainers' client on macOS, where it can fail with a
-     * 500 when the daemon API version does not match the docker-java version it bundles. Without such a file the
-     * daemon may still be there: on Windows it listens on a named pipe, and {@code DOCKER_HOST} can name a TCP address
-     * or a socket elsewhere. None of those is a file, so then the daemon itself is asked, and an error from the client
-     * means it is not reachable.
+     * Whether a Docker daemon is reachable by the client that starts the containers. The gate and the startup use the same
+     * Testcontainers client and endpoint, so a daemon that the client cannot talk to, or a configured {@code DOCKER_HOST}
+     * that does not answer, skips the container rows instead of failing them when they start.
      */
     static boolean isDockerAvailable() {
-        if ([System.getProperty('user.home') + '/.docker/run/docker.sock', '/var/run/docker.sock'].any { new File(it).exists() }) {
-            return true
-        }
         try {
             return DockerClientFactory.instance().isDockerAvailable()
         } catch (Throwable ignored) {

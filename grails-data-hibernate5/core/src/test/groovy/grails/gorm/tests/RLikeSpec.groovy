@@ -21,13 +21,15 @@ package grails.gorm.tests
 import grails.gorm.annotation.Entity
 import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
-import org.testcontainers.spock.Testcontainers
+import org.grails.orm.hibernate.dialect.SupportedDatabase
+import org.hibernate.engine.spi.SessionFactoryImplementor
 import spock.lang.IgnoreIf
-import spock.lang.Requires
 import spock.lang.Shared
 
-@Testcontainers
-@Requires({ DatabaseContainers.isDockerAvailable() })
+/**
+ * The H2 rows run everywhere; a row that starts a container is skipped when no Docker daemon answers the client that starts
+ * it, and the Db2 rows are skipped on arm64 machines, as IBM publishes the image for amd64 only.
+ */
 class RLikeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
 
     @Shared postgres = DatabaseContainers.POSTGRES
@@ -41,10 +43,11 @@ class RLikeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
         manager.registerDomainClasses(RlikeFoo)
     }
 
-    @IgnoreIf({ data.db == 'DB2' && System.getProperty('os.arch') in ['aarch64', 'arm64'] })
+    @IgnoreIf({ data.container != null && (!DatabaseContainers.isDockerAvailable() || (data.db == 'DB2' && System.getProperty('os.arch') in ['aarch64', 'arm64'])) })
     void "test rlike works with #db"() {
         given:
         useDatabase(container, 'rlikeDB', dialect)
+        assertResolved(database)
         new RlikeFoo(name: "ABC").save(flush: true)
         new RlikeFoo(name: "ABCDEF").save(flush: true)
         new RlikeFoo(name: "ABCDEFGHI").save(flush: true)
@@ -53,25 +56,26 @@ class RLikeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
         manager.session.clear()
         List<RlikeFoo> allFoos = RlikeFoo.findAllByNameRlike("ABCD.*")
 
-        then: 'CockroachDB matches with the operator of PostgreSQL, whether Hibernate detects it as PostgreSQL or its own dialect is set'
-        allFoos.size() == expected
+        then: 'the pattern matches two of the three names'
+        allFoos.size() == 2
 
         where:
-        db                             | container | dialect                                       || expected
-        'H2'                           | null      | null                                          || 2
-        'Postgres'                     | postgres  | null                                          || 2
-        'MySQL'                        | mysql     | null                                          || 2
-        'MariaDB'                      | mariadb   | null                                          || 2
-        'Oracle'                       | oracle    | null                                          || 2
-        'DB2'                          | db2       | null                                          || 2
-        'CockroachDB'                  | cockroach | null                                          || 2
-        'CockroachDB with its dialect' | cockroach | 'org.hibernate.dialect.CockroachDB192Dialect' || 2
+        db                             | container | dialect                                       | database
+        'H2'                           | null      | null                                          | SupportedDatabase.H2
+        'Postgres'                     | postgres  | null                                          | SupportedDatabase.POSTGRESQL
+        'MySQL'                        | mysql     | null                                          | SupportedDatabase.MYSQL
+        'MariaDB'                      | mariadb   | null                                          | SupportedDatabase.MARIADB
+        'Oracle'                       | oracle    | null                                          | SupportedDatabase.ORACLE
+        'DB2'                          | db2       | null                                          | SupportedDatabase.DB2
+        'CockroachDB'                  | cockroach | null                                          | SupportedDatabase.POSTGRESQL
+        'CockroachDB with its dialect' | cockroach | 'org.hibernate.dialect.CockroachDB192Dialect' | SupportedDatabase.COCKROACH
     }
 
-    @IgnoreIf({ data.db == 'DB2' && System.getProperty('os.arch') in ['aarch64', 'arm64'] })
+    @IgnoreIf({ data.container != null && (!DatabaseContainers.isDockerAvailable() || (data.db == 'DB2' && System.getProperty('os.arch') in ['aarch64', 'arm64'])) })
     void "test rlike on #db matches #expected of Alice, alice and bob for the pattern ^al.*"() {
         given:
         useDatabase(container, 'rlikeCaseDB', dialect)
+        assertResolved(database)
         ['Alice', 'alice', 'bob'].each { new RlikeFoo(name: it).save(flush: true) }
 
         when: 'the pattern is matched'
@@ -82,15 +86,25 @@ class RLikeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
         names == expected
 
         where:
-        db                             | container | dialect                                       || expected
-        'H2'                           | null      | null                                          || ['alice']
-        'Postgres'                     | postgres  | null                                          || ['Alice', 'alice']
-        'MySQL'                        | mysql     | null                                          || ['Alice', 'alice']
-        'MariaDB'                      | mariadb   | null                                          || ['Alice', 'alice']
-        'Oracle'                       | oracle    | null                                          || ['alice']
-        'DB2'                          | db2       | null                                          || ['alice']
-        'CockroachDB'                  | cockroach | null                                          || ['Alice', 'alice']
-        'CockroachDB with its dialect' | cockroach | 'org.hibernate.dialect.CockroachDB192Dialect' || ['Alice', 'alice']
+        db                             | container | dialect                                       | database                      || expected
+        'H2'                           | null      | null                                          | SupportedDatabase.H2          || ['alice']
+        'Postgres'                     | postgres  | null                                          | SupportedDatabase.POSTGRESQL  || ['Alice', 'alice']
+        'MySQL'                        | mysql     | null                                          | SupportedDatabase.MYSQL       || ['Alice', 'alice']
+        'MariaDB'                      | mariadb   | null                                          | SupportedDatabase.MARIADB     || ['Alice', 'alice']
+        'Oracle'                       | oracle    | null                                          | SupportedDatabase.ORACLE      || ['alice']
+        'DB2'                          | db2       | null                                          | SupportedDatabase.DB2         || ['alice']
+        'CockroachDB'                  | cockroach | null                                          | SupportedDatabase.POSTGRESQL  || ['Alice', 'alice']
+        'CockroachDB with its dialect' | cockroach | 'org.hibernate.dialect.CockroachDB192Dialect' | SupportedDatabase.COCKROACH   || ['Alice', 'alice']
+    }
+
+    /**
+     * Both CockroachDB rows render the same ~* as PostgreSQL, so their result cannot show whether the dialect that was set
+     * is the one in use: check which database the session factory resolved. Hibernate detects CockroachDB as PostgreSQL
+     * unless its own dialect is configured.
+     */
+    private void assertResolved(SupportedDatabase database) {
+        def dialect = ((SessionFactoryImplementor) manager.sessionFactory).jdbcServices.dialect
+        assert SupportedDatabase.forDialect(dialect) == database
     }
 
     private void useDatabase(container, String h2Name, String dialect) {

@@ -64,7 +64,7 @@ public enum SupportedDatabase implements ClassKeyed<SupportedDatabase> {
 
     POSTGRESQL("?1 ~* ?2", PostgreSQL81Dialect.class),
 
-    // matches regular expressions as PostgreSQL does (run on a CockroachDB container, #16959); ~* is case-insensitive
+    // CockroachDB has PostgreSQL's regular expression operators; ~* is case-insensitive
     COCKROACH("?1 ~* ?2", CockroachDB192Dialect.class),
 
     ORACLE(" REGEXP_LIKE (?1, ?2)", Oracle8iDialect.class, Oracle9Dialect.class),
