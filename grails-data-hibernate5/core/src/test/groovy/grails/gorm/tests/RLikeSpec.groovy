@@ -21,6 +21,8 @@ package grails.gorm.tests
 import grails.gorm.annotation.Entity
 import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
+import org.grails.orm.hibernate.dialect.SupportedDatabase
+import org.hibernate.engine.spi.SessionFactoryImplementor
 import spock.lang.IgnoreIf
 import spock.lang.Shared
 
@@ -35,6 +37,7 @@ class RLikeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
     @Shared mariadb = DatabaseContainers.MARIADB
     @Shared oracle = DatabaseContainers.ORACLE
     @Shared db2 = DatabaseContainers.DB2
+    @Shared cockroach = DatabaseContainers.COCKROACH
 
     void setupSpec() {
         manager.registerDomainClasses(RlikeFoo)
@@ -43,7 +46,8 @@ class RLikeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
     @IgnoreIf({ data.container != null && (!DatabaseContainers.isDockerAvailable() || (data.db == 'DB2' && System.getProperty('os.arch') in ['aarch64', 'arm64'])) })
     void "test rlike works with #db"() {
         given:
-        useDatabase(container, 'rlikeDB')
+        useDatabase(container, 'rlikeDB', dialect)
+        assertResolved(database)
         new RlikeFoo(name: "ABC").save(flush: true)
         new RlikeFoo(name: "ABCDEF").save(flush: true)
         new RlikeFoo(name: "ABCDEFGHI").save(flush: true)
@@ -52,23 +56,26 @@ class RLikeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
         manager.session.clear()
         List<RlikeFoo> allFoos = RlikeFoo.findAllByNameRlike("ABCD.*")
 
-        then:
+        then: 'the pattern matches two of the three names'
         allFoos.size() == 2
 
         where:
-        db         | container
-        'H2'       | null
-        'Postgres' | postgres
-        'MySQL'    | mysql
-        'MariaDB'  | mariadb
-        'Oracle'   | oracle
-        'DB2'      | db2
+        db                             | container | dialect                                       | database
+        'H2'                           | null      | null                                          | SupportedDatabase.H2
+        'Postgres'                     | postgres  | null                                          | SupportedDatabase.POSTGRESQL
+        'MySQL'                        | mysql     | null                                          | SupportedDatabase.MYSQL
+        'MariaDB'                      | mariadb   | null                                          | SupportedDatabase.MARIADB
+        'Oracle'                       | oracle    | null                                          | SupportedDatabase.ORACLE
+        'DB2'                          | db2       | null                                          | SupportedDatabase.DB2
+        'CockroachDB'                  | cockroach | null                                          | SupportedDatabase.POSTGRESQL
+        'CockroachDB with its dialect' | cockroach | 'org.hibernate.dialect.CockroachDB192Dialect' | SupportedDatabase.COCKROACH
     }
 
     @IgnoreIf({ data.container != null && (!DatabaseContainers.isDockerAvailable() || (data.db == 'DB2' && System.getProperty('os.arch') in ['aarch64', 'arm64'])) })
     void "test rlike on #db matches #expected of Alice, alice and bob for the pattern ^al.*"() {
         given:
-        useDatabase(container, 'rlikeCaseDB')
+        useDatabase(container, 'rlikeCaseDB', dialect)
+        assertResolved(database)
         ['Alice', 'alice', 'bob'].each { new RlikeFoo(name: it).save(flush: true) }
 
         when: 'the pattern is matched'
@@ -79,16 +86,28 @@ class RLikeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
         names == expected
 
         where:
-        db         | container || expected
-        'H2'       | null      || ['alice']
-        'Postgres' | postgres  || ['Alice', 'alice']
-        'MySQL'    | mysql     || ['Alice', 'alice']
-        'MariaDB'  | mariadb   || ['Alice', 'alice']
-        'Oracle'   | oracle    || ['alice']
-        'DB2'      | db2       || ['alice']
+        db                             | container | dialect                                       | database                      || expected
+        'H2'                           | null      | null                                          | SupportedDatabase.H2          || ['alice']
+        'Postgres'                     | postgres  | null                                          | SupportedDatabase.POSTGRESQL  || ['Alice', 'alice']
+        'MySQL'                        | mysql     | null                                          | SupportedDatabase.MYSQL       || ['Alice', 'alice']
+        'MariaDB'                      | mariadb   | null                                          | SupportedDatabase.MARIADB     || ['Alice', 'alice']
+        'Oracle'                       | oracle    | null                                          | SupportedDatabase.ORACLE      || ['alice']
+        'DB2'                          | db2       | null                                          | SupportedDatabase.DB2         || ['alice']
+        'CockroachDB'                  | cockroach | null                                          | SupportedDatabase.POSTGRESQL  || ['Alice', 'alice']
+        'CockroachDB with its dialect' | cockroach | 'org.hibernate.dialect.CockroachDB192Dialect' | SupportedDatabase.COCKROACH   || ['Alice', 'alice']
     }
 
-    private void useDatabase(container, String h2Name) {
+    /**
+     * Both CockroachDB rows render the same ~* as PostgreSQL, so their result cannot show whether the dialect that was set
+     * is the one in use: check which database the session factory resolved. Hibernate detects CockroachDB as PostgreSQL
+     * unless its own dialect is configured.
+     */
+    private void assertResolved(SupportedDatabase database) {
+        def dialect = ((SessionFactoryImplementor) manager.sessionFactory).jdbcServices.dialect
+        assert SupportedDatabase.forDialect(dialect) == database
+    }
+
+    private void useDatabase(container, String h2Name, String dialect) {
         if (container != null && !container.isRunning()) {
             container.start()
         }
@@ -99,6 +118,9 @@ class RLikeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
         manager.grailsConfig.dataSource.username = container?.username ?: 'sa'
         manager.grailsConfig.dataSource.password = container?.password ?: ''
         manager.grailsConfig.dataSource.dbCreate = 'create-drop'
+        if (dialect != null) {
+            manager.grailsConfig.dataSource.dialect = dialect
+        }
         manager.setup(this.class)
     }
 }

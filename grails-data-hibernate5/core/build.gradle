@@ -90,6 +90,8 @@ dependencies {
     // IBM's driver (IPLA licence), for the test rows against the Db2 container only, as ojdbc11 is for Oracle's
     testImplementation 'com.ibm.db2:jcc'
     testImplementation 'org.testcontainers:testcontainers-db2'
+    // CockroachDB speaks the PostgreSQL wire protocol, so the PostgreSQL driver above serves its container too
+    testImplementation 'org.testcontainers:testcontainers-cockroachdb'
 
     testCompileOnly 'org.junit.platform:junit-platform-launcher' // TestExecutionListener, for GrailsDataTckManagerSpec
     testCompileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation

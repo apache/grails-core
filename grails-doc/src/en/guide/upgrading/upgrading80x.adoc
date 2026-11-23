@@ -4966,9 +4966,10 @@ As of Grails 8.0.1, an exception an action throws is recorded as an error on the
 
 ==== 93. `rlike` Is the Same on Hibernate 5 and Hibernate 7
 
-`rlike` is now rendered from one declaration of the supported databases in each Hibernate module, and the two modules agree on which databases fall back to `like`.
+`rlike` is now rendered from one declaration of the supported databases in each Hibernate module, and the two modules agree on which databases fall back to `like`, except CockroachDB.
 
-* With Hibernate 5, a database that has no regular expression operator that Grails uses, such as SQL Server, Sybase, CockroachDB and Db2 for z/OS, no longer fails with `rlike is not supported with the configured dialect`: `rlike` falls back to `like`, as it does with Hibernate 7, so `%` and `_` are the wildcards there and not regular expression characters. Check queries that used `rlike` on such a database, as they now match different rows instead of failing.
+* With Hibernate 5, a database that has no regular expression operator that Grails uses, such as SQL Server, Sybase and Db2 for z/OS, no longer fails with `rlike is not supported with the configured dialect`: `rlike` falls back to `like`, as it does with Hibernate 7, so `%` and `_` are the wildcards there and not regular expression characters. Check queries that used `rlike` on such a database, as they now match different rows instead of failing.
+* With Hibernate 5, CockroachDB, which has PostgreSQL's regular expression operators, matches `rlike` with `~*`, case-insensitively, as PostgreSQL does. With its own dialect (`CockroachDB192Dialect`) an `rlike` used to fail with `rlike is not supported with the configured dialect`; when Hibernate detected the database as PostgreSQL it already matched with `~*`. `%` and `_` are literal characters in the pattern there, so `rlike('ABC%')` matches the text `ABC%` and not every text that starts with `ABC`: use `like` or a `Like` finder where wildcards are meant. Hibernate 7 renders CockroachDB as `like`.
 * Whether case matters follows the database: Oracle, H2 and Db2 match case-sensitively, and MySQL and MariaDB by the collation of the column. PostgreSQL matches with `~` (case-sensitive) with Hibernate 7 and `~*` (case-insensitive) with Hibernate 5; see issue 16882.
 
 See the `rlike` entry of the criteria reference for the databases that match with a regular expression.

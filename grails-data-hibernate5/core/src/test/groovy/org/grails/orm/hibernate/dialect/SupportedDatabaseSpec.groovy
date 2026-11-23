@@ -88,7 +88,7 @@ class SupportedDatabaseSpec extends Specification {
         'DB2_ZOS'     || '?1 LIKE ?2'
         'SQL_SERVER'  || '?1 LIKE ?2'
         'SYBASE'      || '?1 LIKE ?2'
-        'COCKROACH'   || '?1 LIKE ?2'
+        'COCKROACH'   || '?1 ~* ?2'
         'DEFAULT'     || '?1 LIKE ?2'
     }
 }
