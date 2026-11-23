@@ -18,21 +18,15 @@
  */
 package org.grails.orm.hibernate.query;
 
-import java.util.ArrayList;
-import java.util.Collection;
-
 import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.Predicate;
-import jakarta.persistence.criteria.Subquery;
 
 import org.hibernate.query.criteria.HibernateCriteriaBuilder;
 
-import org.springframework.core.convert.ConversionService;
-
 import org.grails.datastore.mapping.core.exceptions.ConfigurationException;
 import org.grails.datastore.mapping.query.Query;
-import org.grails.datastore.mapping.query.api.QueryableCriteria;
 import org.grails.datastore.mapping.query.criteria.FunctionCallingCriterion;
+import org.grails.datastore.mapping.query.criteria.FunctionComparison;
 
 /**
  * Handles criteria that apply a SQL/HQL function to a property before comparison,
@@ -43,77 +37,88 @@ import org.grails.datastore.mapping.query.criteria.FunctionCallingCriterion;
 class FunctionCallingCriterionHandler implements InternalCriterionHandler<FunctionCallingCriterion> {
 
     @Override
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "rawtypes"})
     public Predicate handle(CriterionContext context, FunctionCallingCriterion criterion) {
-        String functionName = criterion.getFunctionName();
-        FunctionCallingCriterion.requireSupported(functionName);
-        if (criterion.isOnValue()) {
-            throw new UnsupportedOperationException("A function on the value of a comparison is not supported: " + functionName);
+        FunctionComparison comparison;
+        try {
+            comparison = FunctionComparison.of(criterion, context.getConversionService());
         }
-        Expression<?> propertyPath = context.resolvePath(criterion.getProperty());
+        catch (FunctionComparison.UnsupportedComparisonException e) {
+            throw new UnsupportedOperationException(e.getMessage(), e);
+        }
+        String functionName = comparison.getFunctionName();
+        Expression<?> propertyPath = context.resolvePath(comparison.getProperty());
         if (propertyPath == null) {
-            throw new ConfigurationException("Cannot resolve property [" + criterion.getProperty() + "] in a " + functionName + " function call");
+            throw new ConfigurationException("Cannot resolve property [" + comparison.getProperty() + "] in a " + functionName + " function call");
         }
-        HibernateCriteriaBuilder criteriaBuilder = context.getCriteriaBuilder();
-        Expression<?> left = applyFunction(criteriaBuilder, functionName, propertyPath);
-        Query.PropertyCriterion wrapped = criterion.getPropertyCriterion();
-        if (wrapped instanceof Query.In in) {
-            if (in.getSubquery() != null) {
-                Subquery<?> subquery = PropertyCriterionHandler.buildSubquery(context, left, in.getSubquery(), criterion.getProperty());
-                return left.in(subquery);
-            }
-            Collection<Object> values = new ArrayList<>();
-            for (Object v : in.getValues()) {
-                if (v != null) {
-                    values.add(convertFunctionValue(context.getConversionService(), functionName, v));
+        HibernateCriteriaBuilder cb = context.getCriteriaBuilder();
+        Expression<?> left = applyFunction(cb, functionName, propertyPath);
+        switch (comparison.getKind()) {
+            case IS_NULL:
+                return cb.isNull(left);
+            case IS_NOT_NULL:
+                return cb.isNotNull(left);
+            case IN_SUBQUERY:
+                return left.in(PropertyCriterionHandler.buildSubquery(context, left, comparison.getSubquery(), comparison.getProperty()));
+            case IN_VALUES:
+                // the parameters of a list take the type of the function, an int, which would not hold a fraction;
+                // a literal keeps its own type
+                if (comparison.getValues().stream().anyMatch(FunctionComparison::needsLiteral)) {
+                    return left.in(comparison.getValues().stream()
+                            .map(value -> value instanceof Number number ? cb.literal(number) : cb.literal(value))
+                            .toArray(Expression[]::new));
                 }
-            }
-            if (values.isEmpty()) {
-                return criteriaBuilder.disjunction();
-            }
-            return left.in(values);
+                return left.in(comparison.getValues());
+            case ILIKE:
+                return cb.ilike((Expression<String>) left, (String) comparison.getOperand());
+            case RLIKE:
+                return PropertyCriterionHandler.handleRLike(cb, (Expression<String>) left,
+                        (Query.RLike) criterion.getPropertyCriterion());
+            case COMPARE_SUBQUERY:
+                return compare(cb, comparison.getOperator(), left, (Expression<? extends Comparable>)
+                        PropertyCriterionHandler.buildSubquery(context, left, comparison.getSubquery(), comparison.getProperty()));
+            default:
+                Object value = comparison.getOperand();
+                if (FunctionComparison.needsLiteral(value)) {
+                    // the parameter of a comparison takes the type of the function, an int, which would cut the
+                    // fraction off; a literal keeps its own type
+                    return compare(cb, comparison.getOperator(), left, (Expression<? extends Comparable>) (Expression<?>) cb.literal((Number) value));
+                }
+                if (comparison.getOperator() == FunctionComparison.Operator.LIKE) {
+                    return cb.like((Expression<String>) left, (String) value);
+                }
+                return compareValue(cb, comparison.getOperator(), left, (Comparable) value);
         }
+    }
 
-        Object rawValue = wrapped.getValue();
-        if (wrapped instanceof Query.Equals) {
-            if (rawValue == null) {
-                return criteriaBuilder.isNull(left);
-            }
-            if (rawValue instanceof QueryableCriteria<?> qc) {
-                Subquery<?> subquery = PropertyCriterionHandler.buildSubquery(context, left, qc, criterion.getProperty());
-                return criteriaBuilder.equal(left, subquery);
-            }
-            Object value = convertFunctionValue(context.getConversionService(), functionName, rawValue);
-            return criteriaBuilder.equal(left, value);
-        } else if (wrapped instanceof Query.NotEquals) {
-            if (rawValue == null) {
-                return criteriaBuilder.isNotNull(left);
-            }
-            if (rawValue instanceof QueryableCriteria<?> qc) {
-                Subquery<?> subquery = PropertyCriterionHandler.buildSubquery(context, left, qc, criterion.getProperty());
-                return criteriaBuilder.notEqual(left, subquery);
-            }
-            Object value = convertFunctionValue(context.getConversionService(), functionName, rawValue);
-            return criteriaBuilder.notEqual(left, value);
-        }
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private static Predicate compareValue(HibernateCriteriaBuilder cb, FunctionComparison.Operator operator, Expression<?> left,
+                                          Comparable value) {
+        Expression<? extends Comparable> l = (Expression<? extends Comparable>) left;
+        return switch (operator) {
+            case EQ -> cb.equal(left, value);
+            case NE -> cb.notEqual(left, value);
+            case GT -> cb.greaterThan(l, value);
+            case GE -> cb.greaterThanOrEqualTo(l, value);
+            case LT -> cb.lessThan(l, value);
+            case LE -> cb.lessThanOrEqualTo(l, value);
+            case LIKE -> throw new UnsupportedOperationException("like takes a text operand");
+        };
+    }
 
-        Object value = convertFunctionValue(context.getConversionService(), functionName, rawValue);
-        if (wrapped instanceof Query.ILike) {
-            return criteriaBuilder.ilike((Expression<String>) left, (String) value);
-        } else if (wrapped instanceof Query.RLike rLike) {
-            return PropertyCriterionHandler.handleRLike(criteriaBuilder, (Expression<String>) left, rLike);
-        } else if (wrapped instanceof Query.Like) {
-            return criteriaBuilder.like((Expression<String>) left, (String) value);
-        } else if (wrapped instanceof Query.GreaterThan) {
-            return criteriaBuilder.greaterThan((Expression<? extends Comparable>) left, (Comparable) value);
-        } else if (wrapped instanceof Query.GreaterThanEquals) {
-            return criteriaBuilder.greaterThanOrEqualTo((Expression<? extends Comparable>) left, (Comparable) value);
-        } else if (wrapped instanceof Query.LessThan) {
-            return criteriaBuilder.lessThan((Expression<? extends Comparable>) left, (Comparable) value);
-        } else if (wrapped instanceof Query.LessThanEquals) {
-            return criteriaBuilder.lessThanOrEqualTo((Expression<? extends Comparable>) left, (Comparable) value);
-        }
-        throw new UnsupportedOperationException("Unsupported criterion in a function call: " + wrapped.getClass().getName());
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private static Predicate compare(HibernateCriteriaBuilder cb, FunctionComparison.Operator operator, Expression<?> left,
+                                     Expression<? extends Comparable> right) {
+        Expression<? extends Comparable> l = (Expression<? extends Comparable>) left;
+        return switch (operator) {
+            case EQ -> cb.equal(left, right);
+            case NE -> cb.notEqual(left, right);
+            case GT -> cb.greaterThan(l, right);
+            case GE -> cb.greaterThanOrEqualTo(l, right);
+            case LT -> cb.lessThan(l, right);
+            case LE -> cb.lessThanOrEqualTo(l, right);
+            case LIKE -> throw new UnsupportedOperationException("like takes a text operand");
+        };
     }
 
     @SuppressWarnings("unchecked")
@@ -123,20 +128,13 @@ class FunctionCallingCriterionHandler implements InternalCriterionHandler<Functi
             case "upper" -> criteriaBuilder.upper((Expression<String>) expression);
             case "trim" -> criteriaBuilder.trim((Expression<String>) expression);
             case "length" -> criteriaBuilder.length((Expression<String>) expression);
+            case "year" -> criteriaBuilder.year((Expression<? extends java.time.temporal.TemporalAccessor>) expression);
+            case "month" -> criteriaBuilder.month((Expression<? extends java.time.temporal.TemporalAccessor>) expression);
+            case "day" -> criteriaBuilder.day((Expression<? extends java.time.temporal.TemporalAccessor>) expression);
+            case "hour" -> criteriaBuilder.hour((Expression<? extends java.time.temporal.TemporalAccessor>) expression);
+            case "minute" -> criteriaBuilder.minute((Expression<? extends java.time.temporal.TemporalAccessor>) expression);
+            case "second" -> criteriaBuilder.second((Expression<? extends java.time.temporal.TemporalAccessor>) expression);
             default -> criteriaBuilder.function(functionName, Integer.class, expression);
         };
-    }
-
-    static Object convertFunctionValue(ConversionService conversionService, String functionName, Object value) {
-        if (value == null) {
-            return null;
-        }
-        Class<?> targetType = switch (functionName) {
-            case "lower", "upper", "trim" -> String.class;
-            default -> Integer.class;
-        };
-        return conversionService != null && conversionService.canConvert(value.getClass(), targetType) ?
-                conversionService.convert(value, targetType) :
-                value;
     }
 }

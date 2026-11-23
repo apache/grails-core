@@ -39,7 +39,7 @@ class AssociationCriterionHandler {
         JpaQueryContext queryContext = context.getQueryContext();
         From<?, ?> associationRoot = queryContext.resolveAssociation(associationName);
 
-        JpaQueryContext nestedContext = new QueryAliasRegistrar(associationCriteria, null).createContext(queryContext, associationRoot);
+        JpaQueryContext nestedContext = new QueryAliasRegistrar(associationCriteria, null).createContext(queryContext, associationRoot, associationName);
         GrailsHibernatePersistentEntity associatedEntity = (GrailsHibernatePersistentEntity) associationCriteria.getAssociation().getAssociatedEntity();
         List<Query.Criterion> criteriaList = associationCriteria.getCriteria();
         if (criteriaList.isEmpty()) {
@@ -54,7 +54,7 @@ class AssociationCriterionHandler {
         JpaQueryContext queryContext = context.getQueryContext();
         From<?, ?> associationRoot = queryContext.resolveAssociation(associationName);
 
-        JpaQueryContext nestedContext = new JpaQueryContext(queryContext, null, associationRoot);
+        JpaQueryContext nestedContext = JpaQueryContext.forBlock(queryContext, null, associationRoot, associationName);
         GrailsHibernatePersistentEntity associatedEntity = associationQuery.getEntity();
         List<Query.Criterion> criteriaList = associationQuery.getAssociationCriteria();
         CriterionContext nestedCriterionContext = context.withRoot(associationRoot, nestedContext, associatedEntity);
