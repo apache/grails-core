@@ -942,6 +942,7 @@ The shell ran builds through the Gradle Tooling API with a Gradle it chose. `gra
   - Run a create line `plugin-info NAME` prints for a pack exactly as printed: it already names the create command for the pack's type, the plugin (`group:artifact#name` when two plugins share a name), the catalog, the repository and `--refresh` where needed. `featurePacks[].applicationType` in `--json` is the type the version was chosen for. With `GRAILS_REPO_URL=mavenLocal()`, `plugin-info group:artifact` describes a plugin installed by `publishToMavenLocal`.
   - A catalog read from `https` is kept for 24 hours in `~/.grails/forge/catalogs` (`--refresh` reads it again); a `file:` index is read every time. An index entry of a later format than this command line reads is skipped, and a faulty version leaves out that version only, not the plugin.
 - Proxy settings for the `grails` JVM go into `GRAILS_OPTS` or `JAVA_OPTS` (`-Dhttps.proxyHost=... -Dhttps.proxyPort=...`); the build takes them from Gradle.
+- The Grails Gradle plugin gives the options of `GRAILS_OPTS`, or of `GRAILS_FORK_OPTS` in its place, to the application, its commands and the tests. They are separated at any run of white space now (two spaces in a row used to end the application with `Could not find or load main class`); quotes are not read. Move an option meant for the `grails` command alone, such as a small `-Xmx`, to `JAVA_OPTS`: an `-Xmx` below `768m` there keeps the application and the tests from starting.
 
 ## Projects Above the Current Directory, and Multi-Project Builds
 

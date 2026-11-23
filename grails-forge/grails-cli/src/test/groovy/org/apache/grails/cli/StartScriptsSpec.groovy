@@ -79,6 +79,26 @@ class StartScriptsSpec extends Specification {
         ['']                                       | true     | 'given'
     }
 
+    @IgnoreIf({ os.windows })
+    @Unroll
+    void "the options of JAVA_OPTS and GRAILS_OPTS separated by #how reach the JVM one by one, and none is empty"() {
+        when:
+        Map started = start(['--version'], [JAVA_OPTS: javaOpts, GRAILS_OPTS: grailsOpts])
+        List<String> jvm = started.arguments as List<String>
+
+        then:
+        jvm.findAll { String argument -> argument.startsWith('-Dprobe.') } == expected
+        !jvm.contains('')
+
+        where:
+        how                       | javaOpts                     | grailsOpts                         || expected
+        'one space'               | '-Dprobe.a=1 -Dprobe.b=2'    | '-Dprobe.c=3 -Dprobe.d=4'          || ['-Dprobe.a=1', '-Dprobe.b=2', '-Dprobe.c=3', '-Dprobe.d=4']
+        'two spaces'              | '-Dprobe.a=1  -Dprobe.b=2'   | '-Dprobe.c=3   -Dprobe.d=4'        || ['-Dprobe.a=1', '-Dprobe.b=2', '-Dprobe.c=3', '-Dprobe.d=4']
+        'spaces around them'      | '  -Dprobe.a=1 '             | ' -Dprobe.c=3  '                   || ['-Dprobe.a=1', '-Dprobe.c=3']
+        'tabs and line breaks'    | '-Dprobe.a=1\t-Dprobe.b=2'   | '\n-Dprobe.c=3\n\t-Dprobe.d=4\n'   || ['-Dprobe.a=1', '-Dprobe.b=2', '-Dprobe.c=3', '-Dprobe.d=4']
+        'spaces only'             | '   '                        | '  '                               || []
+    }
+
     @Unroll
     void "started with #arguments the JVM of the command line compiles #how"() {
         when: 'the JVM the script starts is asked for its flags, and ends before the command line would start'

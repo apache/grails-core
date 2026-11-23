@@ -999,7 +999,7 @@ grails> exit
 - `./grailsw` (`grailsw.bat` on Windows) downloads the command line of the project's `grailsVersion` to `~/.grails/wrapper` and runs it. Commit `grailsw`, `grailsw.bat` and `grails-wrapper.jar`. Use it in the project and in CI: `feature add` and `project regenerate` need the version whose record the project has.
 - To move to a later Grails 9 release: change `grailsVersion` in `gradle.properties`, run `./grailsw update-wrapper` and commit the three files, then `./grailsw project migrate` (it moves the record) and `./grailsw project health`. Upgrading from Grails 8 is the job of the `grails-upgrade` skill.
 - Commit the Gradle wrapper too (`gradlew`, `gradlew.bat`, `gradle/wrapper/`). `grails` has no Gradle of its own: in a project without the wrapper the commands that build end with exit code 1. Change the Gradle version with `./gradlew wrapper --gradle-version VERSION --gradle-distribution-sha256-sum SHA256`, the checksum of that version from https://gradle.org/release-checksums/: the generated wrapper has `distributionSha256Sum` and refuses a download that does not match it.
-- Memory and JVM options: of the build, `org.gradle.jvmargs` in `gradle.properties`; of the application and the tests, the `bootRun` and test tasks in `build.gradle`; of the `grails` command itself, `GRAILS_OPTS`.
+- Memory and JVM options: of the build, `org.gradle.jvmargs` in `gradle.properties`; of the application and the tests, the `bootRun` and test tasks in `build.gradle` and the options of `GRAILS_OPTS` (or of `GRAILS_FORK_OPTS` in its place), which the Grails Gradle plugin gives them and which win over `maxHeapSize` and `systemProperty` of the task; of the `grails` command itself, `GRAILS_OPTS` and `JAVA_OPTS`. Put an option for the `grails` command alone, such as a small `-Xmx`, in `JAVA_OPTS`: an `-Xmx` below `768m` in `GRAILS_OPTS` keeps the application and the tests from starting.
 
 ### Output for Tools and Agents
 
@@ -1018,7 +1018,8 @@ Each writes one JSON document on one line of the standard output and nothing els
 | Variable | Effect |
 |----------|--------|
 | `JAVA_HOME` | The Java that runs `grails` and `grailsw`: 21 or later |
-| `GRAILS_OPTS`, `JAVA_OPTS` | JVM options of the `grails` command, such as `-Dhttps.proxyHost=...`; not of the build or the application |
+| `GRAILS_OPTS`, `JAVA_OPTS` | JVM options of the `grails` command, such as `-Dhttps.proxyHost=...`; not of Gradle. The Grails Gradle plugin also gives the options of `GRAILS_OPTS` to the application, its commands and the tests, separated by white space, quotes not read |
+| `GRAILS_FORK_OPTS` | Read by the Grails Gradle plugin: the JVM options of the application, its commands and the tests in the place of those of `GRAILS_OPTS` |
 | `GRAILSW_OPTS` | JVM options of the Grails wrapper |
 | `GRAILS_REPO_URL` | Maven repositories ahead of the default ones: for the wrapper, and in the build of a project that is generated |
 | `GRAILS_PLUGIN_INDEX` | The plugin index of `list-plugins` and `plugin-info` (an `https` or `file:` address, or `none`), and the feature catalog of the `create-` commands when `GRAILS_FORGE_CATALOG` is not set |

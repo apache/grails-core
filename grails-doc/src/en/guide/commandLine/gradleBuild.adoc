@@ -159,7 +159,7 @@ The two ways at a glance, for whoever runs a command and for whoever writes a co
 |The same. Where the build is given no input, nothing but cancelling the command ends it.
 
 |Environment variables
-|Those of `grails`, and `GRAILS_NON_INTERACTIVE=true` with `--non-interactive`.
+|Those of `grails`, and `GRAILS_NON_INTERACTIVE=true` with `--non-interactive`. The Grails Gradle plugin gives the options of `GRAILS_OPTS`, or of `GRAILS_FORK_OPTS` when that is set, to the application and the tests the build starts, and not to Gradle (see "JVM Options, Memory and Environment Variables" in xref:commandLine[the introduction of this chapter]).
 |The same.
 
 |System properties and JVM options

@@ -125,16 +125,24 @@ Three Java virtual machines are involved when a command of `grails` builds or ru
 
 |The `grails` command
 |The command line itself: creating a project, the `create-*` commands, `feature add`, the interactive mode
-|The environment variables `GRAILS_OPTS` and `JAVA_OPTS`, for example `export GRAILS_OPTS="-Xmx512m -Dhttps.proxyHost=proxy.example.com -Dhttps.proxyPort=3128"`. The Grails wrapper (`grailsw`) reads `GRAILSW_OPTS` and `JAVA_OPTS` for the JVM that downloads and starts the command line. The Java that is used is that of `JAVA_HOME`, or the `java` on the path.
+|The environment variables `GRAILS_OPTS` and `JAVA_OPTS`, for example `export GRAILS_OPTS="-Dhttps.proxyHost=proxy.example.com -Dhttps.proxyPort=3128"`. The Grails wrapper (`grailsw`) reads `GRAILSW_OPTS` and `JAVA_OPTS` for the JVM that downloads and starts the command line. The Java that is used is that of `JAVA_HOME`, or the `java` on the path.
 
 |The build
 |Gradle, which the commands that build, test and run a project start through the Gradle wrapper of the project, or in interactive mode ask for the build through the Gradle Tooling API (see link:commandLine.html#howGradleIsRun[How the `grails` Command Runs Gradle])
-|`org.gradle.jvmargs` in the `gradle.properties` of the project, for example `org.gradle.jvmargs=-Xmx2g`, whichever way the build is started. A `-Dname=value` after the name of a command is a system property of this JVM. `GRAILS_OPTS` does not reach it, in interactive mode either: a build that is run through the Tooling API is given no system property of the JVM of `grails`.
+|`org.gradle.jvmargs` in the `gradle.properties` of the project, for example `org.gradle.jvmargs=-Xmx2g`, whichever way the build is started. A `-Dname=value` after the name of a command is a system property of this JVM. The options of `GRAILS_OPTS` are not given to it, in interactive mode either: a build that is run through the Tooling API is given no system property of the JVM of `grails`. The build reads the variable only to give its options to the application and the tests.
 
 |The application and the tests
 |The application that `run-app` starts, and the tests of `test-app`
-|The build of the project: `jvmArgs`, `maxHeapSize` and `systemProperty` of the `bootRun` task and of the test tasks in `build.gradle`, as shown above. Neither `GRAILS_OPTS` nor `org.gradle.jvmargs` sets the memory of the application.
+|The build of the project: `jvmArgs`, `maxHeapSize` and `systemProperty` of the `bootRun` task and of the test tasks in `build.gradle`, as shown above, and the options of the environment variable `GRAILS_OPTS`, which the Grails Gradle plugin gives to the application, to the commands of the application and to the tests, with either way of running the build. `GRAILS_FORK_OPTS`, when it is set, is given in the place of `GRAILS_OPTS`, so that the application can have other options than the `grails` command. `org.gradle.jvmargs` does not reach the application.
 |===
+
+The Grails Gradle plugin separates the options of `GRAILS_OPTS` and `GRAILS_FORK_OPTS` at spaces, tabs and line breaks, however many stand together, and does not read quotes, so an option whose value has a space in it is set in `build.gradle`. An `-Xms`, `-Xmx` or `-Dname=value` of the variable wins over `minHeapSize`, `maxHeapSize` and `systemProperty` of the task in `build.gradle`; any other option comes before the `jvmArgs` of the task, and the JVM takes the last value it is given. An option that is meant for the `grails` command alone reaches the application too, and a small `-Xmx` keeps the application from starting: the plugin starts the application and the tests with `-Xms768m` unless `build.gradle` sets `minHeapSize`, and the JVM refuses an `-Xmx` below that. Give the application options of its own in `GRAILS_FORK_OPTS`, or set the memory of the `grails` command in `JAVA_OPTS`, which the plugin does not give to the application:
+
+[source,bash]
+----
+export GRAILS_OPTS="-Dhttps.proxyHost=proxy.example.com -Dhttps.proxyPort=3128"
+export GRAILS_FORK_OPTS="-Xmx2g -Dhttps.proxyHost=proxy.example.com -Dhttps.proxyPort=3128"
+----
 
 The scripts that start the command line (`grails` and `grails.bat`, and `grailsw` and `grailsw.bat` of the Grails wrapper) give its JVM one option of their own when they are started with a command: `-XX:TieredStopAtLevel=1`. A command is a short-lived process, and most of its time is the start of the JVM and the loading of classes. With the option the just-in-time compiler of the JVM stops at its first compiler (C1) and never starts the optimizing one (C2), which makes a command 15 to 20 percent faster and takes three quarters off the processor time of `create-app`. The price is that code which runs for long is significantly slower without the optimizing compiler. That does not matter for a command, and it does not reach a build, the tests or the application, which run in the other two JVMs of the table and are not given the option. Interactive mode, the one case in which the JVM of `grails` runs for long, is started without a command and is not given it either: the scripts leave the option out when they are started without an argument, or with `--plain-output` alone (also given more than once), which is how interactive mode is started. Any other argument, `--non-interactive` among them, is a command line that runs one command and ends, and is given the option. The option comes before the ones of `GRAILS_OPTS` and `JAVA_OPTS`, and the JVM takes the last value it is given, so the default of the JVM is restored with:
 
@@ -177,7 +185,7 @@ These are the environment variables the command line and the Grails wrapper read
 |The Java installation that runs the command line and the Grails wrapper, Java 21 or later. Without it the `java` on the path is used.
 
 |`GRAILS_OPTS`, `JAVA_OPTS`
-|JVM options of the `grails` command. They come after the option the script sets itself for a command (`-XX:TieredStopAtLevel=1`, see above), so a value given here is the one the JVM uses.
+|JVM options of the `grails` command. They come after the option the script sets itself for a command (`-XX:TieredStopAtLevel=1`, see above), so a value given here is the one the JVM uses. The Grails Gradle plugin also gives the options of `GRAILS_OPTS` to the application and the tests that the build of a project starts, unless `GRAILS_FORK_OPTS` is set, whose options it gives them instead; see the table of the three JVMs above.
 
 |`GRAILSW_OPTS`
 |JVM options of the Grails wrapper, which come after that option in the same way.

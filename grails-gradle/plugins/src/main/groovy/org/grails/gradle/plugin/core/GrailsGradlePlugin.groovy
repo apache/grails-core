@@ -1101,10 +1101,14 @@ ${importStatements}
             // Copy GRAILS_FORK_OPTS into the fork. Or use GRAILS_OPTS if no fork options provided
             // This allows run-app etc. to run using appropriate settings and allows users to provided
             // different FORK JVM options to the build options.
+            // The options are separated by any run of white space, as a shell separates them: an empty argument, which
+            // two spaces in a row or a leading space gave, is taken by the JVM for the name of its main class, and ends
+            // it before the application starts. Quotes are not read: an option cannot hold a space.
             def envMap = System.getenv()
             String opts = envMap.GRAILS_FORK_OPTS ?: envMap.GRAILS_OPTS
-            if (opts) {
-                task.jvmArgs(opts.split(' '))
+            List<String> forkJvmArgs = opts ? opts.split(/\s+/).findAll { String arg -> !arg.isEmpty() } : []
+            if (forkJvmArgs) {
+                task.jvmArgs(forkJvmArgs)
             }
         }
 
