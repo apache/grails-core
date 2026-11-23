@@ -393,7 +393,7 @@ Upper case and hyphens say where the words begin, so a form that has them is rea
 |A short form stands for one name: `f a` is `feature add`, and no command has two words that start with `f` and `a`.
 |===
 
-* When a short form fits more than one command of the directory, none of them is run. The command line names the commands it fits, each with the shortest form of lower-case letters that fits it alone, and ends with exit code 2: `cc is short for more than one command: create-controller (ccon), create-command (ccom)`. Type more of the name, or that form. Where the Grails shell ran the first command that fits, `grails` asks. In a project this happens with the short forms that come to mind first: `cc` and `cC` fit `create-controller` and `create-command`, `cs` and `cS` fit `create-service` (`cse`) and `create-script` (`csc`), and `c` fits `compile`, `clean` and `console`.
+* When a short form fits more than one command of the directory, none of them is run. The command line names the commands it fits, each with the shortest form of lower-case letters that fits it alone, and ends with exit code 2: `cc is short for more than one command: create-controller (ccon), create-command (ccom)`. Type more of the name, or that form. Where the Grails shell ran the first command that fits, `grails` asks. In a project this happens with the short forms that come to mind first: `cc` and `cC` fit `create-controller` and `create-command`, `s` fits `stats` and `shell`, and `c` fits `compile`, `clean` and `console`.
 * The help of a command, `grails help NAME` and `NAME --help`, ends its description with the shortest form that is that command, as `Short form: ra` for `run-app` and `Short form: f a` for `feature add`. Which form that is depends on the commands of the directory: it is worked out when the help is shown.
 * Only the name of a command is ever looked at, never what follows it: in `create-app cA` the application is called `cA`, and everything after `gradle` reaches Gradle as it was typed.
 * What stands where a command is expected and is neither a command nor the short form of one is refused with exit code 2, together with the commands that are most like it, one line that shows how the command line is used, and `Run 'grails help' for the commands`. The commands it nearly is the short form of come first: one letter more, one less, one other or two the other way round, the first letter kept, so `grails rn` offers `run-app`, `run-script` and `run-command`, and `grails Ra` offers `run-app`. The same holds for every mistake in the use of a command: what is wrong, the one line of the usage of that command, and where its help is. The help itself is shown by `help` and `--help`. After `--help` or `--version` (`-h`, `-V`) it is not looked at: `grails --help anything` shows the help.
@@ -885,7 +885,7 @@ $ grails run-command install-templates
 
 ==== Scripts of the application
 
-The scripts in `src/main/scripts` of a project are commands in the same way, listed after the commands the build lists and marked `(script of the application)`. A script is run by the build of the project, through the Gradle task `runScriptCommand`, and never by the `grails` command, which only reads the names of the files. See xref:commandLine#creatingCustomScripts[Creating Custom Scripts] for the rules and for what a script has where the build runs it.
+The scripts in `src/main/scripts` of a project are commands in the same way, listed after the commands the build lists and marked `(script of the application)`. A script is run by the build of the project, through the Gradle task `runScriptCommand`, and never by the `grails` command, which only reads the names of the files. Script commands are deprecated: the scripts a project has still run, with a warning, and no command creates a new one. A new command is a class of the application that `create-command` writes. See xref:commandLine#creatingCustomScripts[Creating Custom Scripts] for the rules and for what a script has where the build runs it.
 
 [[findingPlugins]]
 === Finding Plugins
@@ -948,6 +948,10 @@ Outside a project these commands are not mistakes: `create-controller`, `install
 |`create-profile`
 |the shell
 |removed: As `create-creator-command`.
+
+|`create-script`
+|the base profile
+|replaced: `create-command NAME`, which writes a command of the application, a class in `grails-app/commands`. Script commands are deprecated: the scripts a project has in `src/main/scripts` and the scripts of plugins still run, and no command creates a new one.
 
 |`create-tag-lib`
 |the web profile, where it is written as another name of `create-taglib` in a place the shell did not read
@@ -1088,11 +1092,9 @@ In the directory of a project the `grails` command has commands that write a cla
 |`create-command <name>`
 |`grails-app/commands/<package>/<Name>Command.groovy`
 |every project
-
-|`create-script <name>`
-|`src/main/scripts/<name>.groovy`
-|every project
 |===
+
+`create-script`, which wrote a script command into `src/main/scripts`, is removed: script commands are deprecated, and a new command is a class of the application that `create-command` writes (see <<commandsOfEarlierVersions,Commands of Earlier Versions>>).
 
 [source,shell]
 ----
@@ -1101,7 +1103,7 @@ $ grails create-domain-resource org.bookstore.Book
 $ grails create-command data-import
 ----
 
-The name is the name of a class, with or without its package; without one, the class goes into the default package of the project. Its first letter is made upper case, and a name with hyphens such as `data-import` becomes `DataImport`. Every one of these commands holds the name to what the name of a new class can be, and refuses anything else as a mistake in the command line (exit code 2) before they write a file: the name and each part of the package have to be identifiers of Java, a package is given with dots and never as a path (a name with `/`, `\` or `:` is refused), and a control character, a name of more than 200 characters and a name Windows keeps for a device (see above) are refused too. The letters of a name are written in the composed form of Unicode (NFC), in which an accented letter is one character. Before Grails 9 `create-controller`, `create-service`, `create-domain-class`, `create-taglib`, `create-interceptor` and `create-job` took any text for a name and made directories and a file of it; a name they accepted and now refuse is a path, a name with a space or another character no identifier has, a package with a hyphen, a name that starts or ends with a hyphen, the name of a file such as `a.B.groovy`, and a device name of Windows where it would name a directory or a file, such as `aux.Book`. `create-unit-test`, `create-integration-test`, `create-functional-test`, `create-restful-controller`, `create-domain-resource` and `create-command` also take a name that already ends with what they add to it: `create-unit-test BookSpec` writes `BookSpec.groovy`, `create-command ImportCommand` writes `ImportCommand.groovy`, and `create-restful-controller BookController` writes the controller of `Book`. A name that ends with `.groovy` or `.java` in lower case, as `Book.groovy`, is refused: the name of the class is given, not the name of its file (`shop.Groovy` is the class `Groovy` in the package `shop`). A name Windows keeps for a device is refused where a directory or a file would be named by it: `create-domain-class con` would write `Con.groovy` and is refused, `create-controller con` writes `ConController.groovy`, and `aux.Book` is refused by every command for its package. The first letter has to be one that has a capital, and a hyphen stands between two words. A script has no package and is named with the letters a to z and digits, in words that capitals or hyphens set apart: `create-script DataImport` and `create-script data-import` both write `src/main/scripts/data-import.groovy`.
+The name is the name of a class, with or without its package; without one, the class goes into the default package of the project. Its first letter is made upper case, and a name with hyphens such as `data-import` becomes `DataImport`. Every one of these commands holds the name to what the name of a new class can be, and refuses anything else as a mistake in the command line (exit code 2) before they write a file: the name and each part of the package have to be identifiers of Java, a package is given with dots and never as a path (a name with `/`, `\` or `:` is refused), and a control character, a name of more than 200 characters and a name Windows keeps for a device (see above) are refused too. The letters of a name are written in the composed form of Unicode (NFC), in which an accented letter is one character. Before Grails 9 `create-controller`, `create-service`, `create-domain-class`, `create-taglib`, `create-interceptor` and `create-job` took any text for a name and made directories and a file of it; a name they accepted and now refuse is a path, a name with a space or another character no identifier has, a package with a hyphen, a name that starts or ends with a hyphen, the name of a file such as `a.B.groovy`, and a device name of Windows where it would name a directory or a file, such as `aux.Book`. `create-unit-test`, `create-integration-test`, `create-functional-test`, `create-restful-controller`, `create-domain-resource` and `create-command` also take a name that already ends with what they add to it: `create-unit-test BookSpec` writes `BookSpec.groovy`, `create-command ImportCommand` writes `ImportCommand.groovy`, and `create-restful-controller BookController` writes the controller of `Book`. A name that ends with `.groovy` or `.java` in lower case, as `Book.groovy`, is refused: the name of the class is given, not the name of its file (`shop.Groovy` is the class `Groovy` in the package `shop`). A name Windows keeps for a device is refused where a directory or a file would be named by it: `create-domain-class con` would write `Con.groovy` and is refused, `create-controller con` writes `ConController.groovy`, and `aux.Book` is refused by every command for its package. The first letter has to be one that has a capital, and a hyphen stands between two words.
 
 A command writes all of its files or none. A file that is there already is not replaced: the command then writes nothing, not the other file either, says which file is in the way and ends with exit code 1. With `-f` or `--force` it replaces what is there. Before Grails 9 `create-controller`, `create-service`, `create-domain-class`, `create-taglib`, `create-interceptor` and `create-job` kept such a file with a warning, wrote the other file and ended with exit code 0.
 
@@ -1166,13 +1168,9 @@ Every file these commands write comes from a template, and a project can have it
 |`artifacts/Command.groovy`
 |`create-command`
 |tokens
-
-|`artifacts/Script.groovy`
-|`create-script`
-|tokens
 |===
 
-The locations are those the templates had before Grails 9, in a profile, in the Quartz plugin and in the Geb plugin, and so are the two ways of writing a name, so a template that only names what it wants can be put under `src/main/templates` as it is. No template is run: a template is text in which names are replaced. The shell ran `Job.groovy`, `FunctionalSpec.groovy` and `artifacts/Script.groovy` as Groovy templates; a template that relied on that, with code or with an expression that is more than a name, has to be written without.
+The locations are those the templates had before Grails 9, in a profile, in the Quartz plugin and in the Geb plugin, and so are the two ways of writing a name, so a template that only names what it wants can be put under `src/main/templates` as it is. No template is run: a template is text in which names are replaced. The shell ran `Job.groovy` and `FunctionalSpec.groovy` as Groovy templates; a template that relied on that, with code or with an expression that is more than a name, has to be written without.
 
 In a template with tokens these are replaced, and everything else, a `$`, `${...}` and `<% %>` included, is written as it is:
 

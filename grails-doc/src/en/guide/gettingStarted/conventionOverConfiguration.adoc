@@ -37,6 +37,6 @@ Grails adopts the "convention over configuration" approach to configure itself. 
 
 4.  `src/integration-test/groovy` - <<integrationTesting,Integration Tests>> - For testing Grails applications at the integration level.
 
-5.  `src/main/scripts` - link:commandLine.html[Code generation scripts].
+5.  `src/main/scripts` - link:commandLine.html[Code generation scripts], which are deprecated: a new command is a class in `grails-app/commands`.
 
 Understanding this directory structure and its conventions is fundamental to efficient Grails development.

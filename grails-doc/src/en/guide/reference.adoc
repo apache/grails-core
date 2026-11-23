@@ -107,13 +107,6 @@ include::ref/Command Line/create-rest-api-plugin.adoc[]
 ==== create-rest-api
 
 include::ref/Command Line/create-rest-api.adoc[]
-// NOTE: These commands share overlapping functionality and are grouped together for CLI reference continuity.
-
-[[ref-command-line-create-script]]
-==== create-script
-
-include::ref/Command Line/create-script.adoc[]
-include::ref/Command Line/create-rest-api.adoc[]
 
 [[ref-command-line-create-service]]
 ==== create-service

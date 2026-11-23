@@ -23,7 +23,7 @@ under the License.
 
 Execute Groovy script(s) in the context of a Grails environment.
 
-WARNING: Groovy scripts intended to be executed this way cannot be located in `src/main/scripts` because that directory is reserved for the script commands created by link:create-script.html[create-script].
+WARNING: Groovy scripts intended to be executed this way cannot be located in `src/main/scripts` because that directory is reserved for script commands, which are deprecated (see link:{guidePath}commandLine.html#creatingCustomScripts[Creating Custom Scripts]).
 
 === Examples
 

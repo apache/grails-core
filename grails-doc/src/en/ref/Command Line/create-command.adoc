@@ -68,6 +68,6 @@ grails run-command my-example
 ./gradlew runCommand -Pargs="my-example"
 ----
 
-Scripts created with `create-script` do not have access to the running application. A command of the application is run with the application started around it, so it can use its beans and its classes. See link:{guidePath}commandLine.html#creatingCustomCommands[Creating Custom Commands].
+Script commands, the scripts in `src/main/scripts`, do not have access to the running application, and are deprecated: no command creates a new one, and `create-command` takes the place of `create-script` of earlier versions. A command of the application is run with the application started around it, so it can use its beans and its classes. See link:{guidePath}commandLine.html#creatingCustomCommands[Creating Custom Commands].
 
 See "Creating Classes with the `grails` Command" in link:{guidePath}commandLine.html[The Command Line] for the names the command takes, what it does when a file is there already, and how a project replaces the template.

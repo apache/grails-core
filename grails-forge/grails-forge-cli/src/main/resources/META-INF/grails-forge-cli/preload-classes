@@ -1029,7 +1029,6 @@ org.grails.forge.cli.command.CreatePluginCommand
 org.grails.forge.cli.command.CreateRestApiCommand
 org.grails.forge.cli.command.CreateRestApiPluginCommand
 org.grails.forge.cli.command.CreateRestfulControllerCommand
-org.grails.forge.cli.command.CreateScriptCommand
 org.grails.forge.cli.command.CreateServiceCommand
 org.grails.forge.cli.command.CreateTagLibCommand
 org.grails.forge.cli.command.CreateUnitTestCommand

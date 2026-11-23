@@ -62,7 +62,7 @@ class ArtefactCommandsSpec extends CommandSpec implements CommandFixture {
 
     static final List<String> ALL_COMMANDS = ['create-controller', 'create-service', 'create-domain-class', 'create-taglib', 'create-interceptor', 'create-job',
                                               'create-unit-test', 'create-integration-test', 'create-functional-test', 'create-restful-controller',
-                                              'create-domain-resource', 'create-command', 'create-script']
+                                              'create-domain-resource', 'create-command']
     // the commands that would write a file another command writes are given a name of their own
     static final Map<String, String> OWN_NAMES = ['create-unit-test': 'Unit', 'create-integration-test': 'Flow', 'create-functional-test': 'Api',
                                                   'create-restful-controller': 'Rest', 'create-domain-resource': 'Res']
@@ -137,8 +137,6 @@ class ArtefactCommandsSpec extends CommandSpec implements CommandFixture {
             assert ForgeCli.execute(beanContext, 'create-integration-test', 'other.pkg.BazFlow') == 0
             assert ForgeCli.execute(beanContext, 'create-command', 'fooBar') == 0
             assert ForgeCli.execute(beanContext, 'create-command', 'other.pkg.Baz') == 0
-            assert ForgeCli.execute(beanContext, 'create-script', 'fooBar') == 0
-            assert ForgeCli.execute(beanContext, 'create-script', 'other-thing') == 0
         }
 
         then:
@@ -151,9 +149,7 @@ class ArtefactCommandsSpec extends CommandSpec implements CommandFixture {
                 '| Rendered command to grails-app/commands/example/grails/FooBarCommand.groovy',
                 '| Run it with: grails-forge-cli foo-bar',
                 '| Rendered command to grails-app/commands/other/pkg/BazCommand.groovy',
-                '| Run it with: grails-forge-cli baz',
-                '| Rendered script to src/main/scripts/foo-bar.groovy',
-                '| Rendered script to src/main/scripts/other-thing.groovy'
+                '| Run it with: grails-forge-cli baz'
         ]
     }
 
@@ -239,7 +235,6 @@ class ArtefactCommandsSpec extends CommandSpec implements CommandFixture {
         'create-integration-test'   | ApplicationType.WEB_PLUGIN
         'create-unit-test'          | ApplicationType.PLUGIN
         'create-command'            | ApplicationType.PLUGIN
-        'create-script'             | ApplicationType.PLUGIN
         'install-templates'         | ApplicationType.PLUGIN
     }
 
@@ -265,6 +260,8 @@ class ArtefactCommandsSpec extends CommandSpec implements CommandFixture {
         'create-restful-controller' | ApplicationType.WEB
         'create-domain-resource'    | ApplicationType.WEB_PLUGIN
         'create-integration-test'   | ApplicationType.PLUGIN
+        'create-script'             | ApplicationType.WEB
+        'create-script'             | ApplicationType.PLUGIN
     }
 
     void "a command that is given an option it does not have says so, and not that its name is missing"() {
@@ -307,7 +304,7 @@ class ArtefactCommandsSpec extends CommandSpec implements CommandFixture {
         dir.list().length == 0
 
         where:
-        command << ['create-unit-test', 'create-command', 'create-script', 'install-templates']
+        command << ['create-unit-test', 'create-command', 'install-templates']
     }
 
     @Unroll
@@ -334,13 +331,6 @@ class ArtefactCommandsSpec extends CommandSpec implements CommandFixture {
         'create-restful-controller' | 'BookController'       | 'grails-app/controllers/example/grails/BookController.groovy'    | 'class BookController extends RestfulController<Book>'
         'create-command'            | 'ImportCommand'        | 'grails-app/commands/example/grails/ImportCommand.groovy'        | 'class ImportCommand implements'
         'create-command'            | 'data-import'          | 'grails-app/commands/example/grails/DataImportCommand.groovy'    | 'class DataImportCommand implements'
-        'create-script'             | 'DataImport'           | 'src/main/scripts/data-import.groovy'                            | 'println'
-        'create-script'             | 'data-import'          | 'src/main/scripts/data-import.groovy'                            | 'println'
-        'create-script'             | 'dataImport'           | 'src/main/scripts/data-import.groovy'                            | 'println'
-        'create-script'             | 'URLMapper'            | 'src/main/scripts/url-mapper.groovy'                             | 'println'
-        'create-script'             | 'FOOBar'               | 'src/main/scripts/foo-bar.groovy'                                | 'println'
-        'create-script'             | 'x'                    | 'src/main/scripts/x.groovy'                                      | 'println'
-        'create-script'             | 'export-2'             | 'src/main/scripts/export2.groovy'                                | 'println'
         'create-unit-test'          | (((char) 0xE9) as String) + 'lan' | 'src/test/groovy/example/grails/' + (((char) 0xC9) as String) + 'lanSpec.groovy' | 'Spec extends'
     }
 
@@ -436,15 +426,6 @@ class ArtefactCommandsSpec extends CommandSpec implements CommandFixture {
         'create-domain-resource'  | 'con'                         | 'Con is the name of a device on Windows'
         'create-domain-resource'  | 'null.Book'                   | 'null is not a package of Java'
         'create-command'          | '../Escape'                   | 'is not a name for a class: it is a path'
-        'create-script'           | '../escape'                   | 'is not a name for a script'
-        'create-script'           | 'a.b'                         | 'is not a name for a script: a script has no package'
-        'create-script'           | 'import.groovy'               | 'its name is given without .groovy'
-        'create-script'           | 'a/b'                         | 'is not a name for a class: it is a path'
-        'create-script'           | 'nul'                         | 'Nul is the name of a device on Windows'
-        'create-script'           | 'a_b'                         | 'a script is named with the letters a to z and digits'
-        'create-script'           | '$Book'                       | 'a script is named with the letters a to z and digits'
-        'create-script'           | (((char) 0xE9) as String) + 'cole' | 'a script is named with the letters a to z and digits'
-        'create-script'           | 'book--store'                 | 'a script is named with the letters a to z and digits'
     }
 
     void "a class without a package, in a project whose record names none"() {
@@ -541,21 +522,6 @@ class ArtefactCommandsSpec extends CommandSpec implements CommandFixture {
         'org.shop.Nightly'    | 'grails-app/jobs/org/shop/NightlyJob.groovy'   | 'Nightly'
         'org.shop.JobRunner'  | 'grails-app/jobs/org/shop/JobRunnerJob.groovy' | 'JobRunner'
         'org.shop.Job'        | 'grails-app/jobs/org/shop/JobJob.groovy'       | 'Job'
-    }
-
-    void "the template of a script has the tokens of the other templates, and what a Groovy template would run is text"() {
-        given:
-        project(ApplicationType.WEB)
-        template('artifacts/Script.groovy', '// @artifact.name@ @artifact.propertyName@ ${className} <% new File("' + outside.absolutePath + '/ran").text = "x" %> $y \\$\n')
-
-        when:
-        Map<String, String> written = writtenBy {
-            assert ForgeCli.execute(beanContext, 'create-script', 'book-store') == 0
-        }
-
-        then:
-        written == ['src/main/scripts/book-store.groovy': '// BookStore bookStore ${className} <% new File("' + outside.absolutePath + '/ran").text = "x" %> $y \\$\n']
-        outside.list().length == 0
     }
 
     void "the templates of a profile and of the Quartz plugin are read as they are"() {
@@ -714,7 +680,7 @@ class ArtefactCommandsSpec extends CommandSpec implements CommandFixture {
         given:
         project(type, features as String[])
         Map<String, List<String>> names = ALL_COMMANDS.collectEntries { String command ->
-            [command, command == 'create-script' ? ['fooBar', 'other-thing'] : ['fooBar' + (OWN_NAMES[command] ?: ''), 'other.pkg.Baz' + (OWN_NAMES[command] ?: '')]]
+            [command, ['fooBar' + (OWN_NAMES[command] ?: ''), 'other.pkg.Baz' + (OWN_NAMES[command] ?: '')]]
         }
         Set<String> has = [] as Set
 
@@ -756,12 +722,12 @@ class ArtefactCommandsSpec extends CommandSpec implements CommandFixture {
 
         where:
         type                     | features          | without                                                                                     | files
-        ApplicationType.WEB      | ['grails-quartz'] | ['create-restful-controller', 'create-domain-resource']                                     | 32
-        ApplicationType.REST_API | []                | ['create-job']                                                                              | 36
+        ApplicationType.WEB      | ['grails-quartz'] | ['create-restful-controller', 'create-domain-resource']                                     | 30
+        ApplicationType.REST_API | []                | ['create-job']                                                                              | 34
 
         templates = (type == ApplicationType.WEB ? ['FunctionalSpec.groovy', 'Job.groovy'] : ['artifacts/Resource.groovy', 'artifacts/RestfulController.groovy', 'testing/Functional.groovy', 'testing/Resource.groovy']) + [
                 'artifacts/Command.groovy', 'artifacts/Controller.groovy', 'artifacts/DomainClass.groovy', 'artifacts/Interceptor.groovy',
-                'artifacts/Script.groovy', 'artifacts/Service.groovy', 'artifacts/TagLib.groovy', 'testing/Controller.groovy', 'testing/DomainClass.groovy',
+                'artifacts/Service.groovy', 'artifacts/TagLib.groovy', 'testing/Controller.groovy', 'testing/DomainClass.groovy',
                 'testing/Generic.groovy', 'testing/Integration.groovy', 'testing/Interceptor.groovy', 'testing/Service.groovy', 'testing/TagLib.groovy']
     }
 
@@ -779,7 +745,7 @@ class ArtefactCommandsSpec extends CommandSpec implements CommandFixture {
         then: 'the templates of a REST API application, without the two that are there'
         installed.keySet() == [
                 'artifacts/Command.groovy', 'artifacts/Controller.groovy', 'artifacts/DomainClass.groovy', 'artifacts/Interceptor.groovy',
-                'artifacts/RestfulController.groovy', 'artifacts/Script.groovy', 'artifacts/Service.groovy', 'artifacts/TagLib.groovy',
+                'artifacts/RestfulController.groovy', 'artifacts/Service.groovy', 'artifacts/TagLib.groovy',
                 'testing/Controller.groovy', 'testing/DomainClass.groovy', 'testing/Functional.groovy', 'testing/Generic.groovy', 'testing/Integration.groovy',
                 'testing/Interceptor.groovy', 'testing/Service.groovy', 'testing/TagLib.groovy'
         ].collect { 'src/main/templates/' + it } as Set
@@ -799,7 +765,7 @@ class ArtefactCommandsSpec extends CommandSpec implements CommandFixture {
         then: 'all of them are written, and those that were the same are the same'
         installed.keySet() == ['src/main/templates/artifacts/Resource.groovy', 'src/main/templates/testing/Resource.groovy'] as Set
         installed['src/main/templates/artifacts/Resource.groovy'].contains('@Resource(readOnly = false')
-        out.toString().readLines().size() == 18
+        out.toString().readLines().size() == 17
         out.toString().readLines().every { it.startsWith('| Copied template to src/main/templates/') }
     }
 
@@ -903,7 +869,6 @@ class ArtefactCommandsSpec extends CommandSpec implements CommandFixture {
         'create-restful-controller' | ['Book']  | ApplicationType.REST_API | []                | 'grails-app/controllers'
         'create-domain-resource'    | ['Book']  | ApplicationType.REST_API | []                | 'src/test/groovy'
         'create-command'            | ['Book']  | ApplicationType.WEB      | []                | 'grails-app/commands'
-        'create-script'             | ['book']  | ApplicationType.WEB      | []                | 'src/main/scripts'
         'install-templates'         | []        | ApplicationType.WEB      | []                | 'src/main/templates'
         'install-templates'         | []        | ApplicationType.WEB      | []                | 'src'
         'install-templates'         | ['-f']    | ApplicationType.WEB      | []                | 'src/main'
@@ -1359,7 +1324,6 @@ class ArtefactCommandsSpec extends CommandSpec implements CommandFixture {
         'create-command'         | 'nul'         | 'grails-app/commands/example/grails/NulCommand.groovy'
         'create-domain-class'    | 'con'         | 'Con is the name of a device on Windows'
         'create-domain-resource' | 'nul'         | 'Nul is the name of a device on Windows'
-        'create-script'          | 'aux'         | 'Aux is the name of a device on Windows'
         'create-controller'      | 'aux.Book'    | 'aux is the name of a device on Windows'
         'create-controller'      | 'a.con.Book'  | 'con is the name of a device on Windows'
         'create-controller'      | 'my.groovy'   | 'it is the name of a file. The name of the class is given, without .groovy'

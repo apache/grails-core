@@ -42,7 +42,7 @@ class CodeGenCommandSpec extends Specification {
                                   CreateTagLibCommand, CreateInterceptorCommand, CreateJobCommand, AddPropertyCommand,
                                   CreateUnitTestCommand, CreateIntegrationTestCommand, CreateFunctionalTestCommand,
                                   CreateRestfulControllerCommand, CreateDomainResourceCommand, CreateCommandCommand,
-                                  CreateScriptCommand, InstallTemplatesCommand])
+                                  InstallTemplatesCommand])
 
         when:
         commandTypes.each { commandType ->

@@ -53,7 +53,6 @@ import org.grails.forge.cli.command.CreateIntegrationTestCommand
 import org.grails.forge.cli.command.CreateInterceptorCommand
 import org.grails.forge.cli.command.CreateJobCommand
 import org.grails.forge.cli.command.CreateRestfulControllerCommand
-import org.grails.forge.cli.command.CreateScriptCommand
 import org.grails.forge.cli.command.CreateServiceCommand
 import org.grails.forge.cli.command.CreateTagLibCommand
 import org.grails.forge.cli.command.CreateUnitTestCommand
@@ -99,7 +98,6 @@ final class ForgeCli {
             CreateRestfulControllerCommand,
             CreateDomainResourceCommand,
             CreateCommandCommand,
-            CreateScriptCommand,
             InstallTemplatesCommand
     ] as List<Class<? extends CodeGenCommand>>
 

@@ -1396,11 +1396,6 @@ include::ref/Command Line/create-job.adoc[]
 
 include::ref/Command Line/create-plugin.adoc[]
 
-[[ref-command-line-create-script]]
-==== create-script
-
-include::ref/Command Line/create-script.adoc[]
-
 [[ref-command-line-create-service]]
 ==== create-service
 

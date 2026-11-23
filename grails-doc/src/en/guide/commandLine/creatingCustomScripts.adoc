@@ -18,12 +18,9 @@ under the License.
 ////
 
 
-You can create your own Command scripts by running the link:{commandLineRef}create-script.html[create-script] command from the root of your project. For example the following command will create a script called `src/main/scripts/hello-world.groovy`:
+WARNING: Script commands are deprecated. The scripts a project has, and the scripts of its plugins, still run, and no command creates a new one: `create-script` of earlier versions is removed. Write a new command as a class of the application with link:{commandLineRef}create-command.html[create-command] (see xref:commandLine#creatingCustomCommands[Creating Custom Commands]).
 
-[source,groovy]
-----
-grails create-script hello-world
-----
+A script command is a Groovy script in `src/main/scripts` of the project, and is a command of the project by the name of its file: `src/main/scripts/hello-world.groovy` is the command `hello-world`.
 
 NOTE: In general Grails scripts should be used for scripting the Gradle based build system and code generation. Scripts cannot load application classes and in fact should not since Gradle is required to construct the application classpath.
 
@@ -62,22 +59,21 @@ Plugins and applications that need to define template generation tasks can do so
 
 Every Grails script has the methods of the link:{api}org/apache/grails/core/cli/template/TemplateRenderer.html[TemplateRenderer] interface which makes it trivial to render templates to the users project workspace.
 
-The following is an example of a script that creates a script from a template, as the `create-script` command of the Grails shell of earlier versions did:
+The following is an example of a script that writes a class from a template, `src/main/templates/artifacts/Report.groovy` of the project:
 
 [source,groovy]
 ----
-description( "Creates a Grails script" ) {
-  usage "grails create-script <<SCRIPT NAME>>"
-  argument name:'Script Name', description:"The name of the script to create"
+description( "Creates a report class" ) {
+  usage "grails create-report <<REPORT NAME>>"
+  argument name:'Report Name', description:"The name of the report to create"
   flag name:'force', description:"Whether to overwrite existing files"
 }
 
-def scriptName = args[0]
-def model = model(scriptName)
+def model = model(args[0])
 def overwrite = flag('force') ? true : false
 
-render  template: template('artifacts/Script.groovy'),
-        destination: file("src/main/scripts/${model.lowerCaseName}.groovy"),
+render  template: template('artifacts/Report.groovy'),
+        destination: file("src/main/groovy/${model.packagePath}/${model.className}Report.groovy"),
         model: model,
         overwrite: overwrite
 ----
@@ -137,7 +133,8 @@ The `grails` command has every script `src/main/scripts/<name>.groovy` of a proj
 
 [source,console]
 ----
-$ grails create-script data-import
+$ ls src/main/scripts
+data-import.groovy
 $ grails help
 ...
 Commands of the application and its plugins:

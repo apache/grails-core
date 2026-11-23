@@ -23,6 +23,7 @@ import java.util.function.Predicate
 import groovy.json.JsonSlurper
 import org.grails.forge.cli.CommandSpec
 import org.grails.forge.cli.ForgeCli
+import picocli.AutoComplete
 import spock.lang.Unroll
 
 /**
@@ -36,6 +37,8 @@ class FormerCommandsSpec extends CommandSpec {
     static final Set<String> TEST_TOOLING = ['generate-unit-test', 'generate-functional-test', 'generate-resource-controller'] as Set
     static final String TEST = 'test was another name of test-app in the Grails shell, and in front of another command it named the environment test, ' +
             'which now follows the command as -Dgrails.env=test. Type: grails-forge-cli test-app'
+    static final String CREATE_SCRIPT = 'create-script wrote a script command into src/main/scripts. Script commands are deprecated, and the scripts a project has still run: ' +
+            'a new command is a class of the application. Type: grails-forge-cli create-command NAME'
     static final String MISSING ='The commands of the application and its plugins are not listed yet: a build that compiles the project lists them, ' +
             'and so does typing the name of one. To list them now: grails-forge-cli gradle grailsCommandCatalog'
     static final Map<String, List<String>> PROJECTS = [
@@ -95,6 +98,7 @@ class FormerCommandsSpec extends CommandSpec {
         'list-profiles'            | 'list-profiles listed the profiles of the Grails shell. Profiles are replaced by application types and features: grails-forge-cli help lists the create commands, and each lists its features with --list-features'
         'open'                     | 'open opened a file with the program the desktop has for it in the Grails shell. It has no replacement in grails-forge-cli'
         'create-profile'           | 'create-profile created a profile for the Grails shell. Profiles are replaced by application types, features and feature packs, and no command creates any of these'
+        'create-script'            | CREATE_SCRIPT
     }
 
     @Unroll
@@ -201,8 +205,8 @@ class FormerCommandsSpec extends CommandSpec {
         (inProjects.values().flatten() as Set<String>).findAll { String name -> inProjects.values().any { !it.contains(name) } }.every { names.contains(it) }
 
         and: 'a command a line tells to type is a command of a web application'
-        table.collect { (it.hint =~ /Type: \{cli\} ([a-z-]+)$/) }.findAll { it.find() }*.group(1).sort() == ['create-taglib', 'test-app']
-        ['create-taglib', 'run-app', 'stop-app', 'test-app', 'help', 'gradle', 'feature', 'create-app', 'create-unit-test'].every { commands.web.contains(it) }
+        table.collect { (it.hint =~ /Type: \{cli\} ([a-z-]+)( NAME)?$/) }.findAll { it.find() }*.group(1).sort() == ['create-command', 'create-taglib', 'test-app']
+        ['create-taglib', 'run-app', 'stop-app', 'test-app', 'help', 'gradle', 'feature', 'create-app', 'create-unit-test', 'create-command'].every { commands.web.contains(it) }
         ['create-restful-controller', 'create-functional-test'].every { commands.rest.contains(it) }
         ['create-restful-controller', 'create-functional-test', 'package-plugin'].every { commands['rest-plugin'].contains(it) }
 
@@ -576,6 +580,46 @@ class FormerCommandsSpec extends CommandSpec {
         guide.isFile()
         rows.keySet() == (gone*.name + 'install') as Set
         gone.every { rows[it.name].startsWith("|${it.status.shown}".toString()) }
+    }
+
+    @Unroll
+    void "create-script, whose scripts are deprecated, is refused with its line in a #kind project and writes nothing, and the command the line names writes a command there"() {
+        given:
+        inProject(kind)
+        File project = new File(top, PROJECTS[kind][1].substring('example.'.length()))
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'create-script', 'data-import')
+        List<String> lines = err.toString().readLines()
+
+        then: 'a mistake in the command line, with the line after what is said about the commands of the application'
+        exit == 2
+        out.toString().isEmpty()
+        lines[0].startsWith('There is no command create-script')
+        lines[1] == MISSING
+        lines[2] == CREATE_SCRIPT
+        lines[3] == 'Usage: grails-forge-cli [-hvVx] [--non-interactive] [--plain-output] [COMMAND]'
+        !new File(project, 'src/main/scripts').exists()
+
+        when: 'what the line says to type'
+        err.reset()
+        exit = ForgeCli.execute(beanContext, 'create-command', 'data-import')
+
+        then:
+        exit == 0
+        err.toString().isEmpty()
+        new File(project, 'grails-app/commands/example/DataImportCommand.groovy').isFile()
+        !new File(project, 'src/main/scripts').exists()
+
+        when: 'the start of the name is completed, as the interactive console asks for it'
+        List<CharSequence> candidates = []
+        AutoComplete.complete(ForgeCli.createCommandLine(beanContext, true).getCommandSpec(), ['create-s'] as String[], 0, 8, 8, candidates)
+
+        then: 'create-service is the one command it starts'
+        candidates*.toString() == ['ervice']
+
+        where:
+        kind << ['web', 'plugin']
     }
 
     void "create-functional-test, which was a script of the Geb plugin in a web application, is a command there, and is refused with its line in a project without Geb"() {

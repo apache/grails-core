@@ -923,7 +923,7 @@ The commands work in every directory of the project. The ones that build, test o
 | `grails compile`, `grails clean` | Gradle `classes`, `clean` |
 | `grails assemble` (also `war`, `package`) | Gradle `assemble`, in `production`; `--clean` runs `clean` first |
 | `grails gradle ARGS` | The Gradle wrapper with exactly these arguments: `grails gradle dependencies --configuration runtimeClasspath` |
-| `grails create-controller Book` | A class and its test, in the default package unless the name has one; likewise `create-domain-class`, `create-service`, `create-taglib`, `create-interceptor`, `create-unit-test`, `create-integration-test`, `create-functional-test`, `create-command`, `create-script`, and `create-restful-controller`, `create-domain-resource`, `create-job` where the project has them |
+| `grails create-controller Book` | A class and its test, in the default package unless the name has one; likewise `create-domain-class`, `create-service`, `create-taglib`, `create-interceptor`, `create-unit-test`, `create-integration-test`, `create-functional-test`, `create-command`, and `create-restful-controller`, `create-domain-resource`, `create-job` where the project has them |
 | `grails create-controller Book --force` | Replaces files that exist. Without `--force` an existing file ends the command with exit code 1 and nothing is written |
 | `grails add-property Book title:String` | Adds a property to a domain class |
 | `grails install-templates` | Copies the templates of the `create-*` commands to `src/main/templates`, where the project can change them |
@@ -958,7 +958,7 @@ grails cDC Book                                      # short form of create-doma
 - Options and tasks of Gradle follow `--`. An option the command does not have is refused with exit code 2, never ignored.
 - In front of the command only the options of `grails` itself are taken: `--plain-output`, `--non-interactive`, `-x` (`--stacktrace`), `-v` (`--verbose`), `-h` (`--help`) and `-V` (`--version`). `-v` is not the version.
 - `--non-interactive`: nothing waits for input; the builds it starts get no input and see `GRAILS_NON_INTERACTIVE=true`, and `shell` and `console` are refused. `--plain-output`: plain text, no colours, no progress display of Gradle. Give both in scripts, CI jobs and agent runs.
-- Short forms are the starts of the words of a name: `cDC` is `create-domain-class`, `rA` is `run-app`, `tA` is `test-app`, `cA` is `create-app`. All-lowercase initials work as well: `ra`, `sa` (`stop-app`), `cdc`. A short form that fits two commands runs neither and ends with exit code 2: in a project `cC` fits `create-controller` and `create-command`, `cS` fits `create-service` and `create-script`, so type more (`cCont`, `cSe`). Write whole names in scripts and documentation.
+- Short forms are the starts of the words of a name: `cDC` is `create-domain-class`, `rA` is `run-app`, `tA` is `test-app`, `cA` is `create-app`. All-lowercase initials work as well: `ra`, `sa` (`stop-app`), `cdc`. A short form that fits two commands runs neither and ends with exit code 2: in a project `cC` fits `create-controller` and `create-command`, and `s` fits `stats` and `shell`, so type more (`cCont`, `st`). Write whole names in scripts and documentation.
 - Exit codes: `0` the command did what it was asked; `2` a mistake in the command line (a command or option there is not, features that cannot be had together), and nothing ran; `1` any other failure (a failed build, no project, a file in the way).
 
 ### Commands of the Application and Its Plugins
@@ -977,7 +977,7 @@ grails run-command -Dgrails.env=production dbm-update
 - `grails run-command NAME ARGS` runs the same command. Use it to put the environment in front of the name, for a command whose name a command of `grails` has (`grails run-command install-templates` copies the scaffolding templates; `grails install-templates` is the built-in one), and in scripts and CI jobs.
 - The build lists these commands every time it compiles the project, in `.grails/cache/command-catalog.json` (not committed). In a checkout that was never built, the first such name you type has the build list them, which compiles the project, and then runs the command; `grails gradle grailsCommandCatalog` lists them on purpose. With `GRAILS_LIST_COMMANDS=false` a name that is not listed is refused at once with exit code 2 and no build is started.
 - `grails help NAME` describes such a command without running it. `grails NAME --help` runs the command and gives it `--help`.
-- Scripts in `src/main/scripts/<name>.groovy`, written by `create-script`, are commands by their names too. The build runs them (`runScriptCommand`) without the application and its classes. They are deprecated: write a new command with `create-command`, which runs with the application started.
+- Scripts in `src/main/scripts/<name>.groovy` are commands by their names too. The build runs them (`runScriptCommand`) without the application and its classes. They are deprecated, and no command creates one (`create-script` is removed): write a new command with `create-command`, which runs with the application started.
 
 ### Interactive Mode
 
@@ -1043,7 +1043,7 @@ Each writes one JSON document on one line of the standard output and nothing els
 - No `open` in interactive mode: `!open FILE`.
 - No `grails -v` for the version: `grails --version`.
 - No hand edits of `.grails`, and no `grails-forge-cli.yml` for a new project.
-- No new script commands: `create-command`.
+- No new script commands, and no `grails create-script` (removed, exit code 2): `grails create-command NAME`.
 - Do not count on an unknown option being ignored, on `cC` meaning `create-controller`, or on `stop-app` stopping `./gradlew bootRun`.
 
 ## Build Commands

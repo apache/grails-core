@@ -21,7 +21,7 @@ under the License.
 ==== Add Command Line Commands
 
 
-A plugin can add new commands to the Grails interactive shell in one of two ways. First, using the link:{commandLineRef}create-script.html[create-script] you can create a code generation script which will become available to the application. The `create-script` command will create the script in the `src/main/scripts` directory:
+A plugin can add new commands to the `grails` command in one of two ways. First, a code generation script in the `src/main/scripts` directory of the plugin becomes available to the application. Script commands are deprecated: the scripts of a plugin still run, and no command creates a new one (see xref:commandLine#creatingCustomScripts[Creating Custom Scripts]). The layout is:
 
 [source,groovy]
 ----

@@ -52,8 +52,7 @@ enum ArtefactTemplate {
     RESTFUL_CONTROLLER('artifacts/RestfulController.groovy', Syntax.TOKENS),
     RESOURCE('artifacts/Resource.groovy', Syntax.TOKENS),
     RESOURCE_TEST('testing/Resource.groovy', Syntax.TOKENS),
-    COMMAND('artifacts/Command.groovy', Syntax.TOKENS),
-    SCRIPT('artifacts/Script.groovy', Syntax.TOKENS)
+    COMMAND('artifacts/Command.groovy', Syntax.TOKENS)
 
     /**
      * How a template says where the names of the class go.

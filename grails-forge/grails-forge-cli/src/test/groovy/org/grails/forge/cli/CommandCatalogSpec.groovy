@@ -84,6 +84,8 @@ class CommandCatalogSpec extends CommandSpec implements CommandFixture {
         'create-rest-a-p' | 'create-rest-api-plugin'
         'rA'        | 'run-app'
         'RA'        | 'run-app'
+        'cS'        | 'create-service'
+        'cSe'       | 'create-service'
         'r-a'       | 'run-app'
         'f'         | 'feature'
         'f a'       | 'feature add'
@@ -135,8 +137,8 @@ class CommandCatalogSpec extends CommandSpec implements CommandFixture {
         'creatapp'    | 'create-app'                | 'more of each word'
         'ccon'        | 'create-controller'         | 'more of the word that tells it from create-command'
         'ccom'        | 'create-command'            | 'more of the word that tells it from create-controller'
-        'cse'         | 'create-service'            | 'more of the word that tells it from create-script'
-        'csc'         | 'create-script'             | 'more of the word that tells it from create-service'
+        'cs'          | 'create-service'            | 'the first letter of each word, of a command of a project'
+        'cse'         | 'create-service'            | 'more of the last word'
         'crestc'      | 'create-restful-controller' | 'more of a word in the middle'
         'he'          | 'help'                      | 'the start of a name of one word, as before'
         'cl'          | 'clean'                     | 'the start of a name of one word, as before'
@@ -160,7 +162,7 @@ class CommandCatalogSpec extends CommandSpec implements CommandFixture {
         !new File(dir, 'grails-app').exists()
 
         where:
-        typed << ['cxA', 'aC', 'cAA', 'cA2', 'c_A', 'Ra', 'rUA', 'fa', 'cxa', 'zz', 'rap-x']
+        typed << ['cxA', 'aC', 'cAA', 'cA2', 'c_A', 'Ra', 'rUA', 'fa', 'cxa', 'zz', 'rap-x', 'cSc', 'csc']
     }
 
     void "a short form creates the application the name would"() {
@@ -312,7 +314,6 @@ class CommandCatalogSpec extends CommandSpec implements CommandFixture {
         where:
         typed    | named
         'cc'     | 'create-controller (ccon), create-command (ccom)'
-        'cs'     | 'create-service (cse), create-script (csc)'
         'creapp' | 'create-app (ca), create-rest-api-plugin (crap)'
         'pp'     | 'package-plugin (pap), publish-plugin (pup)'
         'co'     | 'compile (com), console (con)'
@@ -780,7 +781,7 @@ class CommandCatalogSpec extends CommandSpec implements CommandFixture {
         int unitTest = ForgeCli.execute(beanContext, 'create-unit-test', 'Checkout')
         int installed = ForgeCli.execute(beanContext, 'install-templates')
         new File(project, 'src/main/templates/artifacts/Service.groovy').setText('// ours\n@artifact.package@\n\nclass @artifact.name@Service { }\n', 'UTF-8')
-        int service = ForgeCli.execute(beanContext, 'cSe', 'Checkout')
+        int service = ForgeCli.execute(beanContext, 'cS', 'Checkout')
 
         then: 'the templates are those of the project, read and written at its top'
         unitTest == 0

@@ -63,7 +63,7 @@ class CompletionScriptSpec extends Specification {
         where:
         typed                                | expected                                                                      | absent
         'grails '                            | ['create-app', 'run-app', 'test-app', 'feature', 'help', 'plugin-info', 'run-command', 'create-controller', 'package-plugin'] | []
-        'grails create-'                     | ['create-app', 'create-plugin', 'create-controller', 'create-domain-class', 'create-command', 'create-job'] | ['run-app']
+        'grails create-'                     | ['create-app', 'create-plugin', 'create-controller', 'create-domain-class', 'create-command', 'create-job'] | ['run-app', 'create-script']
         'grails run-'                        | ['run-app', 'run-command', 'run-script']                                     | ['create-app']
         'grails feature '                    | ['add', 'list']                                                              | ['create-app']
         'grails feature add ca'              | ['cache']                                                                    | ['add']
