@@ -289,34 +289,41 @@ class GrailsPluginForgePackTestSpec extends GradleSpecification {
         GradleRunner runner = setupTestResourceProject('plugin-forge-pack')
         File project = runner.projectDir.canonicalFile
 
-        when:
+        when: 'the time given is one in which the fixture beside it is built on a busy machine too'
         long started = System.currentTimeMillis()
-        BuildResult result = runner.withArguments('forgePackTest', '-Pfixtures=slow-beta:web', '-PfixtureTimeout=3').buildAndFail()
+        BuildResult result = runner.withArguments('forgePackTest', '-Pfixtures=slow-beta:web', '-PfixtureTimeout=30').buildAndFail()
         long took = System.currentTimeMillis() - started
 
         then: 'the fixtures beside it are built'
         result.output.contains('was generated into 2 applications, of which 1 could not be built with assemble:')
-        result.output.contains('  - slow-beta: the build was not done after 3 seconds and was stopped, with everything it had started')
+        result.output.contains('  - slow-beta: the build was not done after 30 seconds and was stopped, with everything it had started')
         result.output.contains('      stand-in wrapper does not end')
         new File(project, 'build/forge-pack-test/report.txt').getText('UTF-8') ==
-                'alpha: built\nslow-beta: failed: the build was not done after 3 seconds and was stopped, with everything it had started\n'
+                'alpha: built\nslow-beta: failed: the build was not done after 30 seconds and was stopped, with everything it had started\n'
 
-        and: 'and the task did not wait for what the wrapper had started'
-        took < 120_000
+        and: 'and the task did not wait for what the wrapper had started, which runs for ten minutes'
+        took < 300_000
     }
 
+    // the gradlew.bat of the stand-in leaves nothing behind
+    @IgnoreIf({ os.windows })
     def "a process the build of an application leaves behind, which has its output, does not hold the task"() {
         given:
         GradleRunner runner = setupTestResourceProject('plugin-forge-pack')
+        File project = runner.projectDir.canonicalFile
 
         when:
-        long started = System.currentTimeMillis()
         BuildResult result = executeTask('forgePackTest', ['-Pfixtures=lingering-beta:web'])
-        long took = System.currentTimeMillis() - started
+        Long left = new File(project, 'build/forge-pack-fixtures/lingering-beta/lingering.pid').text.trim() as Long
 
-        then: 'which is left for 45 seconds'
+        then: 'the task has ended, and that process, which runs for ten minutes, is still there'
         assertTaskSuccess('forgePackTest', result)
-        took < 40_000
+        ProcessHandle.of(left).map { ProcessHandle handle -> handle.alive }.orElse(false)
+
+        cleanup:
+        if (left != null) {
+            ProcessHandle.of(left).ifPresent { ProcessHandle handle -> handle.destroyForcibly() }
+        }
     }
 
     def "a repository of the build is taken for what it is and not for its name, and one that cannot be given to an application is left out and said"() {

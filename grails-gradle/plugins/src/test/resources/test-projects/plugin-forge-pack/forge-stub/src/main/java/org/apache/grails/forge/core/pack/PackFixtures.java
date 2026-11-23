@@ -24,7 +24,8 @@ import java.util.zip.ZipFile;
  * {@code failing}, as one that also says what went wrong. A fixture whose name starts with
  * {@code bare} has no wrapper, and one whose name starts with {@code refused} is refused. The wrapper
  * of one whose name starts with {@code slow} does not end, and that of one whose name starts with
- * {@code lingering} ends and leaves a process behind that has its output. Each directory has the
+ * {@code lingering} ends and leaves a process behind that has its output, whose number it writes to
+ * {@code lingering.pid}. Each directory has the
  * repositories the stand-in was given in {@code repositories.txt}, as an application has them in its
  * build file. Without a list there are the four fixtures Forge makes of a pack that names no type of
  * application. A descriptor can tell it to end as a Forge that went
@@ -137,7 +138,8 @@ public final class PackFixtures {
                         "  sleep 600",
                         "fi",
                         "if [ -f lingers ]; then",
-                        "  sleep 45 &",
+                        "  sleep 600 &",
+                        "  echo $! > lingering.pid",
                         "fi",
                         "if [ -f says ]; then",
                         "  echo '> Task :generateI18nDescriptor FAILED'",
