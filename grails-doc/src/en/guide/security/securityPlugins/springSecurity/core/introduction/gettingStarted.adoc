@@ -42,6 +42,8 @@ grails run-command s2-quickstart com.yourapp User Role
 
 `./gradlew runCommand -Pargs="s2-quickstart com.yourapp User Role"` runs the same command without the `grails` command line.
 
+An application created with the `grails-spring-security` feature has the classes and the settings already, so skip this step there: `s2-quickstart` writes nothing in an application whose configuration has the settings it writes, and says which, unless it is given `--force`.
+
 If you are installing into a Grails plugin instead of an application, you must make sure the plugin is a web plugin, one created with `create-web-plugin`. Otherwise dependencies will not be met.
 Running the same command will inject the spring beans into your `GrailsPlugin` classes `doWithSpring` method.
 

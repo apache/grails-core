@@ -29,8 +29,12 @@ import org.apache.grails.core.cli.StandaloneCommand
 
 /**
  * Creates domain classes and updates config settings for the Spring Security plugin.
- * Usage: <code>s2-quickstart DOMAIN_CLASS_PACKAGE USER_CLASS_NAME ROLE_CLASS_NAME [REQUESTMAP_CLASS_NAME] [--groupClassName=GROUP_CLASS_NAME]</code> or
- * <code>s2-quickstart --uiOnly</code>
+ * Usage: <code>s2-quickstart DOMAIN_CLASS_PACKAGE USER_CLASS_NAME ROLE_CLASS_NAME [REQUESTMAP_CLASS_NAME] [--groupClassName=GROUP_CLASS_NAME] [--force]</code> or
+ * <code>s2-quickstart --uiOnly [--force]</code>
+ *
+ * <p>The command writes nothing when the configuration of the project has a setting it would write already, in
+ * {@code application.groovy} or in {@code application.yml}: the settings it appends would replace it. With
+ * {@code --force} it writes all the same.</p>
  *
  * For example:
  * 1. <code>s2-quickstart com.yourapp User Role</code>
@@ -45,12 +49,12 @@ class S2QuickstartCommand implements GrailsApplicationCommand, StandaloneCommand
 
     private static final String SETTINGS = 'grails.plugin.springsecurity'
     private static final String RESOURCES = 'grails-app/conf/spring/resources.groovy'
-    private static final List<String> FLAGS = ['groupClassName', 'uiOnly', 'salt']
+    private static final List<String> FLAGS = ['groupClassName', 'uiOnly', 'salt', 'force']
     private static final List<String> OPEN_PATTERNS = ['/assets/**', '/**/js/**', '/**/css/**', '/**/images/**', '/**/favicon.ico']
 
     private static final String USAGE_MESSAGE = '''
-   s2-quickstart <domain-class-package> <user-class-name> <role-class-name> [requestmap-class-name] [--groupClassName=group-class-name]
-or s2-quickstart --uiOnly
+   s2-quickstart <domain-class-package> <user-class-name> <role-class-name> [requestmap-class-name] [--groupClassName=group-class-name] [--force]
+or s2-quickstart --uiOnly [--force]
 
 Example: s2-quickstart com.yourapp User Role
 Example: s2-quickstart com.yourapp User Role --groupClassName=RoleGroup
@@ -81,16 +85,21 @@ Example: s2-quickstart --uiOnly
             return FAILURE
         }
         boolean uiOnly = isFlagPresent('uiOnly')
+        if (!uiOnly && !readNames()) {
+            return FAILURE
+        }
+        Map<String, Object> settings = settings(uiOnly)
+        if (!isFlagPresent('force') && !hasNoneOf(settings.keySet(), uiOnly ? 'its settings' : 'its classes and settings')) {
+            return FAILURE
+        }
         boolean registered = true
         if (uiOnly) {
             addStatus('\nConfiguring Spring Security; not generating domain classes')
         } else {
-            if (!readNames()) {
-                return FAILURE
-            }
+            addStatus(creating())
             registered = createDomains()
         }
-        String path = appendConfig(settings(uiOnly))
+        String path = appendConfig(settings)
         if (!registered) {
             return FAILURE
         }
@@ -133,15 +142,6 @@ please verify that the values are correct.
         requestmapModel = args.size() == 4 ? model(packageName + '.' + args[3]) : null
         groupModel = groupClassName ? model(packageName + '.' + groupClassName) : null
 
-        String message = "\nCreating User class '${userModel.simpleName}'"
-        message += requestmapModel ?
-                ", Role class '${roleModel.simpleName}', and Requestmap class '${requestmapModel.simpleName}'" :
-                " and Role class '${roleModel.simpleName}'"
-        if (groupModel) {
-            message += ", and role/group classes for '${groupModel.simpleName}'"
-        }
-        addStatus("${message} in package '${packageName}'")
-
         templateAttributes = Collections.unmodifiableMap([
                 packageName: userModel.packageName,
                 userClassName: userModel.simpleName,
@@ -153,6 +153,51 @@ please verify that the values are correct.
                 groupClassProperty: groupModel?.modelName
         ])
         true
+    }
+
+    /**
+     * Says what the configuration of the project has of the settings the command writes, unless it has none of
+     * them. Settings that are appended come after the ones that are there and replace them, so the command writes
+     * nothing when there are any, unless it is given {@code --force}.
+     *
+     * @param keys the full keys of the settings the command writes
+     * @param written what the command writes, as {@code --force} writes it
+     * @return whether the configuration has none of the settings, and could be read
+     */
+    private boolean hasNoneOf(Collection<String> keys, String written) {
+        String newLine = System.lineSeparator()
+        String force = "To write ${written} all the same, run the command again with --force"
+        Map<String, List<String>> present
+        try {
+            present = new ApplicationConfigAppender(file('')).findPresent(keys)
+        } catch (IOException e) {
+            error("${e.message}${newLine}Whether it has settings that s2-quickstart writes is not known, so the command " +
+                    "wrote nothing. Correct the file. ${force}.")
+            return false
+        }
+        if (!present) {
+            return true
+        }
+        StringBuilder message = new StringBuilder('The configuration of the application already has settings that ')
+        message.append('s2-quickstart writes, so the command wrote nothing:').append(newLine)
+        present.each { String path, List<String> set ->
+            message.append('    ').append(path).append(': ').append(set.join(', ')).append(newLine)
+        }
+        message.append('The settings it appends would replace them. ').append(force)
+        message.append(', then merge the settings that were there into the ones it appends.')
+        error(message.toString())
+        false
+    }
+
+    private String creating() {
+        String message = "\nCreating User class '${userModel.simpleName}'"
+        message += requestmapModel ?
+                ", Role class '${roleModel.simpleName}', and Requestmap class '${requestmapModel.simpleName}'" :
+                " and Role class '${roleModel.simpleName}'"
+        if (groupModel) {
+            message += ", and role/group classes for '${groupModel.simpleName}'"
+        }
+        "${message} in package '${userModel.packageName}'"
     }
 
     /**

@@ -21,6 +21,8 @@ package org.apache.grails.security.cli
 
 import groovy.transform.CompileStatic
 
+import org.grails.config.CodeGenConfig
+
 /**
  * Appends settings to the configuration of a project, in the form of the file the project keeps it in.
  *
@@ -31,6 +33,9 @@ import groovy.transform.CompileStatic
  * <p>A setting is named by its full key, {@code grails.plugin.springsecurity.useRoleGroups}. Its value is a
  * string, a boolean, a number, a list of those, or a list of maps of those, which is written one map to a
  * line.</p>
+ *
+ * <p>It also finds which of the settings the configuration has already, see {@link #findPresent}: appended
+ * settings come after them and replace them.</p>
  */
 @CompileStatic
 class ApplicationConfigAppender {
@@ -57,6 +62,54 @@ class ApplicationConfigAppender {
             return GROOVY_CONFIG
         }
         new File(projectDirectory, YAML_CONFIG).isFile() ? YAML_CONFIG : GROOVY_CONFIG
+    }
+
+    /**
+     * Finds which of the settings the configuration of the project has already. Both configuration files are read,
+     * {@code application.groovy} and {@code application.yml}, whichever of them the project has, each as it is
+     * written, with the settings of the environment that is current, and in whatever form the file gives a key:
+     * the full key, nested blocks or maps, or a mix of the two.
+     *
+     * <p>A file has a setting when it gives the key a value: a string, a boolean, a number, a list, or a map with
+     * entries. A key that {@code application.groovy} reads without setting it, which reading makes an empty block,
+     * is not a setting.</p>
+     *
+     * @param keys the full keys of the settings
+     * @return each configuration file that has any of them, by its path in the project, with the keys it has in
+     * the order they are given; {@code application.groovy} comes first. The map is empty when neither file has one.
+     * @throws IOException when a file cannot be read, as Groovy or as YAML; the message names it and says why
+     */
+    Map<String, List<String>> findPresent(Collection<String> keys) throws IOException {
+        Map<String, List<String>> present = [:]
+        for (String path : [GROOVY_CONFIG, YAML_CONFIG]) {
+            File config = new File(projectDirectory, path)
+            if (config.isFile()) {
+                CodeGenConfig read = read(path, config)
+                List<String> set = keys.findAll { String key -> isSetting(read.get(key)) }.toList()
+                if (set) {
+                    present.put(path, set)
+                }
+            }
+        }
+        present
+    }
+
+    private static CodeGenConfig read(String path, File config) throws IOException {
+        CodeGenConfig read = new CodeGenConfig()
+        try {
+            if (path == YAML_CONFIG) {
+                read.loadYml(config)
+            } else {
+                read.loadGroovy(config)
+            }
+        } catch (Exception e) {
+            throw new IOException("${path} could not be read: ${e.message?.trim() ?: e.class.name}", e)
+        }
+        read
+    }
+
+    private static boolean isSetting(Object value) {
+        value != null && !(value instanceof Map && ((Map) value).isEmpty())
     }
 
     /**

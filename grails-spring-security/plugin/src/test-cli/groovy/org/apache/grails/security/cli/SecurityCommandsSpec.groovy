@@ -45,6 +45,55 @@ class SecurityCommandsSpec extends Specification {
     private static final String RESOURCES = 'grails-app/conf/spring/resources.groovy'
     private static final String PRESENT_YAML = 'grails:\n    profile: web\n---\ninfo:\n    app:\n        name: demo\n'
 
+    /** What {@code grails feature add grails-spring-security} writes to application.groovy. */
+    private static final String FEATURE_GROOVY = '''\
+// The plugin denies every URL without a rule (rejectIfNoRule): these rules open
+// the public pages and restrict the user administration to ROLE_ADMIN.
+grails.plugin.springsecurity.userLookup.userDomainClassName = 'com.example.User'
+grails.plugin.springsecurity.userLookup.authorityJoinClassName = 'com.example.UserRole'
+grails.plugin.springsecurity.authority.className = 'com.example.Role'
+grails.plugin.springsecurity.controllerAnnotations.staticRules = [
+    [pattern: '/',                    access: ['permitAll']],
+    [pattern: '/error',               access: ['permitAll']],
+    [pattern: '/assets/**',           access: ['permitAll']],
+    [pattern: '/user/**',             access: ['ROLE_ADMIN']],
+]
+'''
+    private static final String NESTED_GROOVY = '''\
+grails {
+    plugin {
+        springsecurity {
+            userLookup {
+                userDomainClassName = 'com.example.Person'
+            }
+        }
+    }
+}
+'''
+    private static final String USER_YAML = '''\
+---
+grails:
+    plugin:
+        springsecurity:
+            userLookup:
+                userDomainClassName: com.example.User
+            controllerAnnotations:
+                staticRules:
+                    - pattern: /user/**
+                      access: [ROLE_ADMIN]
+'''
+    private static final String DOTTED_YAML = '---\ngrails.plugin.springsecurity.userLookup.userDomainClassName: com.example.User\n'
+    private static final String CHAIN_YAML = '''\
+---
+grails:
+    plugin:
+        springsecurity:
+            filterChain:
+                chainMap:
+                    - pattern: /api/**
+                      filters: JOINED_FILTERS,-exceptionTranslationFilter
+'''
+
     @TempDir
     File project
 
@@ -318,15 +367,15 @@ class SecurityCommandsSpec extends Specification {
         config().getProperty("${SETTINGS}.authority.className", String) == 'com.example.Role'
     }
 
-    def "s2-quickstart keeps the classes that are there, and registers the listener once"() {
+    def "s2-quickstart --force keeps the classes that are there, and registers the listener once"() {
         given: 'what the command created, edited since'
         assert run(new S2QuickstartCommand(), 's2-quickstart com.example User Role Requestmap')
         List<String> files = generated() - RESOURCES
         files.each { String path -> write(path, 'edited') }
         String resources = written(RESOURCES)
 
-        when:
-        boolean result = run(new S2QuickstartCommand(), 's2-quickstart com.example User Role Requestmap')
+        when: 'it is run again, with the option that writes over the settings it wrote the first time'
+        boolean result = run(new S2QuickstartCommand(), 's2-quickstart com.example User Role Requestmap --force')
 
         then: 'a file that is there is passed over, which is no failure'
         result
@@ -552,6 +601,159 @@ class DemoGrailsPlugin extends Plugin {
         S2CreateRoleHierarchyEntryCommand | 's2-create-role-hierarchy-entry com.example.A com.example.B' | 'Too many arguments.'
         S2CreateRoleHierarchyEntryCommand | 's2-create-role-hierarchy-entry RoleHierarchyEntry'     | "'RoleHierarchyEntry' is no full name of a class"
         S2CreateRoleHierarchyEntryCommand | 's2-create-role-hierarchy-entry com.example.RoleHierarchyEntry --force' | 'Unknown option --force.'
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/16348')
+    @Unroll
+    def "s2-quickstart writes nothing when the configuration already has settings it writes: #what"() {
+        given:
+        if (groovy != null) {
+            write(GROOVY, groovy)
+        }
+        write(YAML, yaml)
+
+        when:
+        boolean result = run(new S2QuickstartCommand(), line)
+
+        then: 'the command fails as for a wrong argument'
+        !result
+
+        and: 'it names each file with the keys that it sets, and the option that writes all the same'
+        String said = errors.toString()
+        said.contains('The configuration of the application already has settings that s2-quickstart writes')
+        present.every { String path, List<String> keys ->
+            said.contains("    ${path}: ${keys.collect { String key -> "${SETTINGS}.${key}" }.join(', ')}")
+        }
+        [GROOVY, YAML].findAll { String path -> !present.containsKey(path) }.every { String path -> !said.contains("    ${path}: ") }
+        said.contains('--force')
+        !output.toString().contains('Creating User class')
+
+        and: 'no class, no listener, no bean and no setting is written'
+        generated() == []
+        written(YAML) == yaml
+        groovy == null ? !new File(project, GROOVY).exists() : written(GROOVY) == groovy
+
+        where:
+        what                                                  | line                                             | groovy             | yaml                         || present
+        'the application.groovy of the feature'               | 's2-quickstart com.example.auth Person Authority' | FEATURE_GROOVY     | PRESENT_YAML                 || [(GROOVY): ['userLookup.userDomainClassName', 'userLookup.authorityJoinClassName', 'authority.className', 'controllerAnnotations.staticRules']]
+        'a block of application.groovy'                       | 's2-quickstart com.example User Role'           | NESTED_GROOVY      | PRESENT_YAML                 || [(GROOVY): ['userLookup.userDomainClassName']]
+        'a document of application.yml'                       | 's2-quickstart com.example User Role'           | null               | PRESENT_YAML + USER_YAML     || [(YAML): ['userLookup.userDomainClassName', 'controllerAnnotations.staticRules']]
+        'a dotted key of application.yml'                     | 's2-quickstart com.example User Role'           | null               | PRESENT_YAML + DOTTED_YAML   || [(YAML): ['userLookup.userDomainClassName']]
+        'application.yml beside the application.groovy written' | 's2-quickstart com.example User Role'         | 'grails.gorm.failOnError = true' | PRESENT_YAML + USER_YAML || [(YAML): ['userLookup.userDomainClassName', 'controllerAnnotations.staticRules']]
+        'both files'                                          | 's2-quickstart com.example User Role'           | FEATURE_GROOVY     | PRESENT_YAML + USER_YAML     || [(GROOVY): ['userLookup.userDomainClassName', 'userLookup.authorityJoinClassName', 'authority.className', 'controllerAnnotations.staticRules'], (YAML): ['userLookup.userDomainClassName', 'controllerAnnotations.staticRules']]
+        'the type of the security configuration'              | 's2-quickstart com.example User Role Requestmap' | "grails.plugin.springsecurity.securityConfigType = 'Annotation'" | PRESENT_YAML || [(GROOVY): ['securityConfigType']]
+        'role groups'                                         | 's2-quickstart com.example User Role --groupClassName=RoleGroup' | 'grails.plugin.springsecurity.useRoleGroups = false' | PRESENT_YAML || [(GROOVY): ['useRoleGroups']]
+        'the static rules, with --uiOnly'                     | 's2-quickstart --uiOnly'                         | FEATURE_GROOVY     | PRESENT_YAML                 || [(GROOVY): ['controllerAnnotations.staticRules']]
+        'the filter chain, with --uiOnly'                     | 's2-quickstart --uiOnly'                         | null               | PRESENT_YAML + CHAIN_YAML    || [(YAML): ['filterChain.chainMap']]
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/16348')
+    def "s2-quickstart run a second time writes nothing, and says what the first run wrote"() {
+        given:
+        assert run(new S2QuickstartCommand(), 's2-quickstart com.example User Role')
+        Map<String, String> before = (generated() + [YAML]).collectEntries { String path -> [(path): written(path)] }
+        errors.reset()
+
+        when:
+        boolean result = run(new S2QuickstartCommand(), 's2-quickstart com.example Person Authority')
+
+        then:
+        !result
+        errors.toString().contains("    ${YAML}: ${SETTINGS}.userLookup.userDomainClassName, ${SETTINGS}.userLookup.authorityJoinClassName, " +
+                "${SETTINGS}.authority.className, ${SETTINGS}.controllerAnnotations.staticRules, ${SETTINGS}.filterChain.chainMap")
+        generated() + [YAML] == before.keySet() as List
+        before.every { String path, String text -> written(path) == text }
+        config().getProperty("${SETTINGS}.userLookup.userDomainClassName", String) == 'com.example.User'
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/16348')
+    def "s2-quickstart --force creates the classes and appends the settings after the ones #file has"() {
+        given:
+        String present = file == GROOVY ? FEATURE_GROOVY : PRESENT_YAML + USER_YAML
+        write(file, present)
+
+        when:
+        boolean result = run(new S2QuickstartCommand(), 's2-quickstart com.example.auth Person Authority --force')
+        CodeGenConfig config = config()
+
+        then: 'it does what it does in an application without the settings'
+        result
+        errors.toString() == ''
+        output.toString().contains("Creating User class 'Person' and Role class 'Authority' in package 'com.example.auth'")
+        output.toString().contains("Your ${file}")
+        generated() == [
+                RESOURCES,
+                'grails-app/domain/com/example/auth/Authority.groovy',
+                'grails-app/domain/com/example/auth/Person.groovy',
+                'grails-app/domain/com/example/auth/PersonAuthority.groovy',
+                'src/main/groovy/com/example/auth/PersonPasswordEncoderListener.groovy'
+        ]
+
+        and: 'the settings follow what was there, which is kept, and are the ones read'
+        written(file).startsWith(present)
+        written(file).count('Added by the Spring Security Core plugin:') == 1
+        config.getProperty("${SETTINGS}.userLookup.userDomainClassName", String) == 'com.example.auth.Person'
+        config.getProperty("${SETTINGS}.authority.className", String) == 'com.example.auth.Authority'
+        !config.getProperty("${SETTINGS}.controllerAnnotations.staticRules", List).any { Map rule -> rule.pattern == '/user/**' }
+
+        where:
+        file << [GROOVY, YAML]
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/16348')
+    @Unroll
+    def "s2-quickstart writes as before when the configuration has #what"() {
+        given:
+        write(GROOVY, groovy)
+
+        when:
+        boolean result = run(new S2QuickstartCommand(), line)
+
+        then:
+        result
+        errors.toString() == ''
+        written(GROOVY).startsWith(groovy)
+        written(GROOVY).contains('// Added by the Spring Security Core plugin:')
+        config().getProperty("${SETTINGS}.filterChain.chainMap", List).last() == [pattern: '/**', filters: 'JOINED_FILTERS']
+
+        where:
+        what                                                       | line                                  | groovy
+        'other settings of the plugin'                             | 's2-quickstart com.example User Role' | "grails.plugin.springsecurity.logout.postOnly = false\ngrails.plugin.springsecurity.rejectIfNoRule = true\n"
+        'a key that it reads and does not set'                     | 's2-quickstart com.example User Role' | "String name = grails.plugin.springsecurity.userLookup.userDomainClassName\n"
+        'the names of the domain classes, which --uiOnly does not write' | 's2-quickstart --uiOnly'        | "grails.plugin.springsecurity.userLookup.userDomainClassName = 'com.example.User'\n"
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/16348')
+    @Unroll
+    def "s2-quickstart writes nothing when it cannot read #file, unless it is given --force"() {
+        given:
+        write(file, text)
+        String yaml = written(YAML)
+
+        when:
+        boolean result = run(new S2QuickstartCommand(), 's2-quickstart com.example User Role')
+
+        then:
+        !result
+        errors.toString().contains("${file} could not be read: ")
+        errors.toString().contains('Whether it has settings that s2-quickstart writes is not known, so the command wrote nothing.')
+        errors.toString().contains('--force')
+        generated() == []
+        written(file) == text
+        written(YAML) == yaml
+
+        when:
+        errors.reset()
+        result = run(new S2QuickstartCommand(), 's2-quickstart com.example User Role --force')
+
+        then:
+        result
+        generated().size() == 5
+
+        where:
+        file   | text
+        GROOVY | 'grails.plugin.springsecurity.userLookup = [\n'
+        YAML   | PRESENT_YAML + '---\ngrails: [\n'
     }
 
     /**

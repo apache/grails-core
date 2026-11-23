@@ -25,12 +25,14 @@ under the License.
 Creates a user and role class (and optionally a requestmap class) in the specified package.
 If you specify a role-group name with the `--groupClassName` option, role/group classes will also be generated.
 If you specify the `--uiOnly` flag, no domain classes are created but the plugin settings are initialized (useful with LDAP, Mock, Shibboleth, etc.)
+The command writes nothing when the configuration of the project already has a setting that it writes, unless you specify `--force`.
 
 The general format is:
 
 [source,bash]
 ----
-grails run-command s2-quickstart DOMAIN_CLASS_PACKAGE USER_CLASS_NAME ROLE_CLASS_NAME [REQUESTMAP_CLASS_NAME] [--groupClassName=GROUP_CLASS_NAME]
+grails run-command s2-quickstart DOMAIN_CLASS_PACKAGE USER_CLASS_NAME ROLE_CLASS_NAME [REQUESTMAP_CLASS_NAME] [--groupClassName=GROUP_CLASS_NAME] [--force]
+grails run-command s2-quickstart --uiOnly [--force]
 ----
 
 .Examples
@@ -60,7 +62,20 @@ grails run-command s2-quickstart --uiOnly
 * Creates the domain classes in `grails-app/domain`, in the package that is given, unless the `--uiOnly` flag is specified: the user class, the role class, the class that joins them, the requestmap class when a fourth argument names it, and with `--groupClassName` the role-group class and the two classes that join it to users and to roles. The class names are given without a package.
 * Creates the password encoder listener of the user class, `<User>PasswordEncoderListener` in `src/main/groovy`, which hashes the password when a user is saved, and registers it as a bean in `grails-app/conf/spring/resources.groovy`, creating that file when the project has none. In a plugin project without `resources.groovy` the bean is added to `doWithSpring()` of the plugin class. When `resources.groovy` has no line `beans = {` to add the bean to, the command says which bean and import to add and fails: until the listener is a bean, passwords are stored as they are given.
 * Appends the security settings to the configuration of the project, `grails-app/conf/application.groovy` or `grails-app/conf/application.yml` (see <<core-scripts>>): the names of the domain classes, `useRoleGroups` and `authority.groupAuthorityNameField` with `--groupClassName`, `requestMap.className` and `securityConfigType = 'Requestmap'` when a requestmap class is created, and the default `controllerAnnotations.staticRules` and `filterChain.chainMap`. With `--uiOnly` only the last two are written.
-* A class that already exists is not written again, and the bean of the listener is registered once. The settings are appended again on each run.
-* The command fails without writing anything when it is given fewer than three or more than four arguments, a package or class name that is none, an option it does not have, or `--salt`: that option, which generated a listener that passed a salt to `springSecurityService.encodePassword`, is no longer supported, since the password encoders of the plugin salt a password themselves.
+* Writes nothing, and fails, when the configuration of the project already has a setting that this run would write: the settings it appends come after the ones that are there and replace them. `application.groovy` and `application.yml` are both read, whichever of them the command writes to, with keys written in full, as nested blocks or maps, or as a mix of the two. Only the settings this run writes count: `--uiOnly` fails only for `controllerAnnotations.staticRules` and `filterChain.chainMap`, and other settings of the plugin, such as `rejectIfNoRule` or `logout.postOnly`, never count. The command names each file with the keys it has, and fails in the same way when it cannot read one of the files. No class, no listener, no bean and no setting is written then.
+* With `--force` the command writes all the same: it creates the classes and appends its settings after the ones that are there, which they replace. Merge what was there into what it appended, for example the static rules of the application into the list the command wrote.
+* A class that already exists is not written again, and the bean of the listener is registered once, also with `--force`.
+* The command also fails without writing anything when it is given fewer than three or more than four arguments, a package or class name that is none, an option it does not have, or `--salt`: that option, which generated a listener that passed a salt to `springSecurityService.encodePassword`, is no longer supported, since the password encoders of the plugin salt a password themselves.
 
 A template of the plugin is replaced by a file of the same name in `src/main/templates` of the project, for example `src/main/templates/Authority.groovy.template`.
+
+An application created with the `grails-spring-security` feature, or that has it from `grails feature add grails-spring-security`, has a user, a role and a join class and their settings already, with static rules that restrict `/user/**` to `ROLE_ADMIN`. `grails s2-quickstart com.example.auth Person Authority` fails there and says:
+
+[source,text]
+----
+The configuration of the application already has settings that s2-quickstart writes, so the command wrote nothing:
+    grails-app/conf/application.groovy: grails.plugin.springsecurity.userLookup.userDomainClassName, grails.plugin.springsecurity.userLookup.authorityJoinClassName, grails.plugin.springsecurity.authority.className, grails.plugin.springsecurity.controllerAnnotations.staticRules
+The settings it appends would replace them. To write its classes and settings all the same, run the command again with --force, then merge the settings that were there into the ones it appends.
+----
+
+Use the classes the feature created, or run the command with `--force` and merge the static rules of the feature into the ones the command appends, which replace them.
