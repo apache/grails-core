@@ -26,15 +26,17 @@ import java.util.regex.Matcher
 import org.grails.forge.ApplicationContextSpec
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.fixture.CommandOutputFixture
+import org.grails.forge.util.VersionInfo
 import spock.lang.Requires
 import spock.lang.Unroll
 
 /**
  * The {@code gradle/wrapper/gradle-wrapper.properties} of a generated application names the distribution of Gradle
- * together with its SHA-256, so that the Gradle wrapper refuses a download that is not that distribution. The
- * checksum is held to the version by {@code gradle-distribution-sha256.properties} beside this spec, which has the
- * checksum Gradle publishes for each version: a version that is changed without its checksum fails here, and
- * {@code -PverifyGradleChecksums} compares that file with what Gradle publishes.
+ * together with its SHA-256, so that the Gradle wrapper refuses a download that is not that distribution. Both are
+ * written by the build from the gradle.properties of the root of the repository, the checksum
+ * ({@code gradleDistributionSha256Sum}) beside the version ({@code gradleToolingApiVersion}), so that a change of the
+ * one is seen with the other; {@code -PverifyGradleChecksums} compares the checksum with the one Gradle publishes for
+ * the version, which fails a version that was changed without its checksum.
  */
 class GradleWrapperPropertiesSpec extends ApplicationContextSpec implements CommandOutputFixture {
 
@@ -48,20 +50,24 @@ class GradleWrapperPropertiesSpec extends ApplicationContextSpec implements Comm
 
         then:
         url.matches()
-        wrapper.getProperty('distributionSha256Sum') ==~ /[0-9a-f]{64}/
-
-        and: 'the checksum is the one Gradle publishes for that version'
-        checksums().getProperty(url.group(1)) != null
-        wrapper.getProperty('distributionSha256Sum') == checksums().getProperty(url.group(1))
+        url.group(1) == VersionInfo.gradleVersion
+        wrapper.getProperty('distributionSha256Sum') == VersionInfo.gradleDistributionSha256Sum
 
         where:
         type << ApplicationType.values()
     }
 
+    void "the checksum is a SHA-256 as Gradle publishes it and as the wrapper compares it"() {
+        expect:
+        VersionInfo.gradleDistributionSha256Sum ==~ /[0-9a-f]{64}/
+    }
+
     @Requires(value = { System.getProperty('forge.gradleChecksums.verify') == 'true' },
-            reason = 'downloads the checksums Gradle publishes, and is asked for with -PverifyGradleChecksums')
-    @Unroll
-    void "the checksum of Gradle #version is the one Gradle publishes"() {
+            reason = 'downloads the checksum Gradle publishes, and is asked for with -PverifyGradleChecksums')
+    void "the checksum is the one Gradle publishes for the distribution of the version"() {
+        given:
+        String version = VersionInfo.gradleVersion
+
         when:
         HttpClient client = HttpClient.newBuilder().followRedirects(HttpClient.Redirect.NORMAL).connectTimeout(Duration.ofSeconds(30)).build()
         HttpResponse<String> published = client.send(HttpRequest.newBuilder(URI.create("https://services.gradle.org/distributions/gradle-${version}-bin.zip.sha256"))
@@ -69,23 +75,7 @@ class GradleWrapperPropertiesSpec extends ApplicationContextSpec implements Comm
 
         then:
         published.statusCode() == 200
-        published.body().trim() == checksum
-
-        where:
-        version << checksums().stringPropertyNames().toSorted()
-        checksum = checksums().getProperty(version)
-    }
-
-    void "the table of checksums has one SHA-256 for each version"() {
-        expect:
-        !checksums().isEmpty()
-        checksums().stringPropertyNames().every { String version -> version ==~ /[0-9][0-9A-Za-z.-]*/ && checksums().getProperty(version) ==~ /[0-9a-f]{64}/ }
-    }
-
-    private static Properties checksums() {
-        InputStream table = GradleWrapperPropertiesSpec.getResourceAsStream('gradle-distribution-sha256.properties')
-        assert table != null
-        return table.withCloseable { InputStream it -> properties(it.getText('ISO-8859-1')) }
+        published.body().trim() == VersionInfo.gradleDistributionSha256Sum
     }
 
     private static Properties properties(String text) {

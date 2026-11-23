@@ -63,6 +63,18 @@ class GradleVersionsSpec extends ApplicationContextSpec implements CommandOutput
         VersionInfo.minimumGradleVersion == root.getProperty('gradleMinimumVersion')
     }
 
+    void "the SHA-256 of the distribution a generated application names is gradleDistributionSha256Sum, beside gradleToolingApiVersion"() {
+        given:
+        Properties root = properties(ROOT.resolve('gradle.properties'))
+        Properties wrapper = properties(ROOT.resolve('gradle/wrapper/gradle-wrapper.properties'))
+
+        expect:
+        VersionInfo.gradleDistributionSha256Sum == root.getProperty('gradleDistributionSha256Sum')
+
+        and: 'the wrapper of Grails, which names the same version, names the same checksum where it names one'
+        wrapper.getProperty('distributionSha256Sum') in [null, VersionInfo.gradleDistributionSha256Sum]
+    }
+
     void "the earliest Gradle is a release of Gradle no later than the one applications are generated with"() {
         given:
         List<Integer> minimum = numbers(VersionInfo.minimumGradleVersion)
@@ -77,6 +89,7 @@ class GradleVersionsSpec extends ApplicationContextSpec implements CommandOutput
         expect:
         !VersionInfo.dependencyVersions.containsKey('gradle.version')
         !VersionInfo.dependencyVersions.containsKey('gradle.minimum')
+        !VersionInfo.dependencyVersions.containsKey('gradle.sha256')
         VersionInfo.dependencyVersions.containsKey('grails.version')
     }
 

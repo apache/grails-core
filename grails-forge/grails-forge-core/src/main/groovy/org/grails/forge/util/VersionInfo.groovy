@@ -31,8 +31,9 @@ class VersionInfo {
     private static final String END_OF_SUPPORT = 'grails.endOfSupport'
     private static final String GRADLE_VERSION = 'gradle.version'
     private static final String GRADLE_MINIMUM = 'gradle.minimum'
+    private static final String GRADLE_SHA256 = 'gradle.sha256'
     // what the build writes beside the versions of the BOM, and is no version of a dependency
-    private static final Set<String> NOT_DEPENDENCIES = [END_OF_SUPPORT, GRADLE_VERSION, GRADLE_MINIMUM].toSet().asImmutable()
+    private static final Set<String> NOT_DEPENDENCIES = [END_OF_SUPPORT, GRADLE_VERSION, GRADLE_MINIMUM, GRADLE_SHA256].toSet().asImmutable()
     private static final Properties VERSIONS = new Properties()
     private static final String GENERATOR_SHA256 = generatorSha256()
 
@@ -152,6 +153,20 @@ class VersionInfo {
      */
     static String getGradleVersion() {
         return required(GRADLE_VERSION)
+    }
+
+    /**
+     * The SHA-256 Gradle publishes for the binary distribution of {@link #getGradleVersion()}
+     * ({@code gradle-<version>-bin.zip}), which the wrapper of a generated application names as its
+     * {@code distributionSha256Sum}. The build writes it from {@code gradleDistributionSha256Sum} of
+     * the root of the Grails repository, which is beside the version.
+     *
+     * @return the checksum, as 64 lowercase hexadecimal digits
+     * @throws IllegalStateException for a generator that was not built with it
+     * @since 9.0
+     */
+    static String getGradleDistributionSha256Sum() {
+        return required(GRADLE_SHA256)
     }
 
     /**

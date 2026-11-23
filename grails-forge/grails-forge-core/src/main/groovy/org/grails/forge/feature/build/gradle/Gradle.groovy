@@ -81,7 +81,7 @@ class Gradle implements BuildFeature {
         generatorContext.addTemplate('gitattributes', new GspTemplate('.gitattributes', GspView.of('/forge/feature/build/gitattributes.gsp', [:])))
         generatorContext.addTemplate('projectProperties', new GspTemplate('gradle.properties', GspView.of('/forge/feature/build/gradle/templates/gradleProperties.gsp', [properties: generatorContext.getBuildProperties().getProperties()])))
 
-        generatorContext.addTemplate('gradleWrapperProperties', new GspTemplate(WRAPPER_PROPS, GspView.of('/forge/feature/build/gradle/templates/gradleWrapperProperties.gsp', [project: generatorContext.getProject(), gradleBuild: build, coordinateResolver: coordinateResolver, features: generatorContext.getFeatures(), gradleVersion: VersionInfo.getGradleVersion()])))
+        generatorContext.addTemplate('gradleWrapperProperties', new GspTemplate(WRAPPER_PROPS, GspView.of('/forge/feature/build/gradle/templates/gradleWrapperProperties.gsp', [project: generatorContext.getProject(), gradleBuild: build, coordinateResolver: coordinateResolver, features: generatorContext.getFeatures(), gradleVersion: VersionInfo.getGradleVersion(), gradleDistributionSha256Sum: VersionInfo.getGradleDistributionSha256Sum()])))
     }
 
     private void configureDefaultGradleProps(GeneratorContext generatorContext) {

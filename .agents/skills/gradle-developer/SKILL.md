@@ -159,7 +159,7 @@ Presence-based flags (property **present**, value optional) match `skipFunctiona
 
 ## Gradle Version Sync (Hard Rule)
 
-Current line: **Gradle 9.9.2** (`distributionUrl` + `gradleToolingApiVersion=9.9.2`). Upstream may already ship a newer 9.9.x patch - this repo rides close to latest **only after** a deliberate multi-location bump PR. Do not "helpfully" jump one wrapper ahead of the rest.
+Current line: **Gradle 9.9.2** (`distributionUrl` + `gradleToolingApiVersion=9.9.2` + its `gradleDistributionSha256Sum`). Upstream may already ship a newer 9.9.x patch - this repo rides close to latest **only after** a deliberate multi-location bump PR. Do not "helpfully" jump one wrapper ahead of the rest.
 
 **Two Groovy stacks:** Gradle itself embeds **Groovy 4** for build logic. Application/runtime code on 8.0.x is **Groovy 5**. That is why `dependencies.gradle` keeps separate maps:
 
@@ -169,6 +169,8 @@ Current line: **Gradle 9.9.2** (`distributionUrl` + `gradleToolingApiVersion=9.9
 Never unify those casually.
 
 ### Preferred bump workflow
+
+In short, a bump is the wrappers (the root one through bootstrap), and `gradleToolingApiVersion` with the `gradleDistributionSha256Sum` beside it in the root `gradle.properties`:
 
 1. Set the new Gradle version in **`.sdkmanrc`** (`gradle=…`).
 2. Run the bootstrap project with a system `gradle` **of the new version** to regenerate shared wrappers from `.sdkmanrc`. The `wrapper` task copies the jar from the Gradle that runs it, so an older `gradle` writes its own jar next to the new `distributionUrl`:
@@ -183,12 +185,11 @@ Never unify those casually.
 3. Manually refresh the locations bootstrap does **not** cover. For each tree, keep the **full** wrapper set in sync (`gradle-wrapper.properties`, `gradle-wrapper.jar`, `gradlew`, `gradlew.bat`) - not properties alone:
 
    - `build-logic/` - run its wrapper task or copy the complete set from root after bootstrap
-   - Forge **generated-app** wrapper assets (all of these - properties alone is not enough):
-     - `grails-forge/grails-forge-core/grails-app/views/forge/.../gradleWrapperProperties.gsp` (properties page) takes its version from `gradleToolingApiVersion` through `grails-versions.properties`, but its `distributionSha256Sum` is the SHA-256 Gradle publishes for `gradle-<version>-bin.zip` (https://gradle.org/release-checksums/) and changes with it. Add the line `<version>=<sha256>` to `grails-forge-core/src/test/resources/org/grails/forge/feature/build/gradle/gradle-distribution-sha256.properties`; `GradleWrapperPropertiesSpec` fails while the template's version has no line there or another checksum, and `./gradlew :grails-forge-core:test --tests '*GradleWrapperPropertiesSpec' -PverifyGradleChecksums` (from `grails-forge`) compares the table with what Gradle publishes
+   - `gradle.properties` → `gradleToolingApiVersion` and, beside it, `gradleDistributionSha256Sum`. The version must match the new Gradle version: the `grails` command line runs the builds of projects with that Tooling API. The checksum is the SHA-256 Gradle publishes for `gradle-<version>-bin.zip` (https://gradle.org/release-checksums/, or `https://services.gradle.org/distributions/gradle-<version>-bin.zip.sha256`). `WriteGrailsVersionInfoTask` writes the two into `grails-versions.properties` (`gradle.version`, `gradle.sha256`; one without the other, or a checksum that is not 64 lowercase hexadecimal digits, fails the build), and the wrapper of a generated application (`gradleWrapperProperties.gsp`) names both as `distributionUrl` and `distributionSha256Sum`, so a wrong checksum makes every generated application's wrapper refuse its download. Verify it from `grails-forge`: `./gradlew :grails-forge-core:test --tests '*GradleWrapperPropertiesSpec' -PverifyGradleChecksums` downloads the published checksum of the version and compares. `gradleMinimumVersion` beside them is the earliest Gradle Grails builds with; raise it only when the Grails Gradle plugins need a later Gradle.
+   - Forge **generated-app** wrapper scripts and jar (the properties come from `gradle.properties`, above):
      - `grails-forge/grails-forge-core/src/main/resources/gradle/gradlew`
      - `grails-forge/grails-forge-core/src/main/resources/gradle/gradlew.bat`
      - `grails-forge/grails-forge-core/src/main/resources/gradle/wrapper/gradle-wrapper.jar`
-   - `gradle.properties` → `gradleToolingApiVersion` (must match the new Gradle version: the `grails` command line runs the builds of projects with that Tooling API, and the wrapper of a generated application names it). `gradleMinimumVersion` beside it is the earliest Gradle Grails builds with; raise it only when the Grails Gradle plugins need a later Gradle.
 
 4. Verify every **main-line** tree matches on properties **and** scripts/jars. The only intentional holdout is `end-to-end/legacy-g7-command-plugin` (Gradle 8.x).
 

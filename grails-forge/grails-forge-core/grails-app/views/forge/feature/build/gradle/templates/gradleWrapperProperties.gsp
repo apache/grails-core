@@ -29,13 +29,13 @@ under the License.
 <%@ model="Function<String,Coordinate> coordinateResolver" %>
 <%@ model="Features features" %>
 <%@ model="String gradleVersion" %>
-%{-- The version is gradleToolingApiVersion of the gradle.properties of the root of the Grails repository, see VersionInfo.getGradleVersion() --}%
-%{-- distributionSha256Sum is the SHA-256 Gradle publishes for that distribution (gradle-<version>-bin.zip.sha256). With a new version, --}%
-%{-- add its line to src/test/resources/org/grails/forge/feature/build/gradle/gradle-distribution-sha256.properties: --}%
-%{-- GradleWrapperPropertiesSpec holds the two to each other, and with -PverifyGradleChecksums to what Gradle publishes --}%
+<%@ model="String gradleDistributionSha256Sum" %>
+%{-- The version is gradleToolingApiVersion of the gradle.properties of the root of the Grails repository, see VersionInfo.getGradleVersion(), --}%
+%{-- and distributionSha256Sum the SHA-256 Gradle publishes for that distribution, gradleDistributionSha256Sum beside it, see --}%
+%{-- VersionInfo.getGradleDistributionSha256Sum(). GradleWrapperPropertiesSpec, with -PverifyGradleChecksums, compares it with what Gradle publishes --}%
 distributionBase=GRADLE_USER_HOME
 distributionPath=wrapper/dists
-distributionSha256Sum=971fcd7150ca4ba04852c0b2ca0d2d0ab9468e14b03473eab19528809914c76b
+distributionSha256Sum=${gradleDistributionSha256Sum}
 distributionUrl=https\://services.gradle.org/distributions/gradle-${gradleVersion}-bin.zip
 networkTimeout=10000
 validateDistributionUrl=true

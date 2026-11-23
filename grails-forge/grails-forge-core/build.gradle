@@ -102,9 +102,11 @@ grailsVersionInfoTask.configure { WriteGrailsVersionInfoTask it ->
     it.bomPublicationFile = frameworkOutputs.file('grails-bom/default/build/publications/maven/pom-default.xml')
     it.versionsDirectory = grailsVersionsPath
     it.endOfSupport = findProperty('grailsEndOfSupport') as String
-    // the Gradle the wrapper of a generated application names, and the earliest Gradle Grails is built with: both from the
-    // gradle.properties of the root, so that the generated wrapper, the command line and the guide say the same
+    // the Gradle the wrapper of a generated application names, with the SHA-256 of its distribution, and the earliest Gradle
+    // Grails is built with: all from the gradle.properties of the root, so that the generated wrapper, the command line and
+    // the guide say the same
     it.gradleVersion = findProperty('gradleToolingApiVersion') as String
+    it.gradleDistributionSha256Sum = findProperty('gradleDistributionSha256Sum') as String
     it.gradleMinimumVersion = findProperty('gradleMinimumVersion') as String
 }
 sourceSets.main.resources.srcDir(grailsVersionsPath)
@@ -387,8 +389,8 @@ tasks.named('test', Test).configure { Test test ->
         test.outputs.upToDateWhen { false }
     }
 }
-// -PverifyGradleChecksums has GradleWrapperPropertiesSpec download the SHA-256 Gradle publishes for each version of
-// its table, which it holds the distributionSha256Sum of the generated gradle-wrapper.properties to:
+// -PverifyGradleChecksums has GradleWrapperPropertiesSpec download the SHA-256 Gradle publishes for the distribution of
+// gradleToolingApiVersion and compare it with gradleDistributionSha256Sum, which the generated gradle-wrapper.properties names:
 // ./gradlew :grails-forge-core:test --tests '*GradleWrapperPropertiesSpec' -PverifyGradleChecksums
 tasks.named('test', Test).configure { Test test ->
     if (providers.gradleProperty('verifyGradleChecksums').present) {

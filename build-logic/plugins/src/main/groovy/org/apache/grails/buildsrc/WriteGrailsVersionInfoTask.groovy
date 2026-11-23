@@ -59,8 +59,13 @@ abstract class WriteGrailsVersionInfoTask extends DefaultTask {
     /** The key of the earliest version of Gradle a Grails application is built with */
     static final String GRADLE_MINIMUM = 'gradle.minimum'
 
+    /** The key of the SHA-256 of the binary distribution of the version of Gradle that is {@value #GRADLE_VERSION} */
+    static final String GRADLE_SHA256 = 'gradle.sha256'
+
     // a version of Gradle as a distribution is named by it: 9.7, 9.9.2, 9.10.0-rc-1
     private static final Pattern GRADLE = Pattern.compile(/(\d{1,4})\.(\d{1,4})(?:\.(\d{1,4}))?(?:-[A-Za-z0-9.\-]{1,40})?/)
+    // a SHA-256 as Gradle publishes it for a distribution, and as the Gradle wrapper compares it
+    private static final Pattern SHA256 = Pattern.compile(/[0-9a-f]{64}/)
 
     @Input
     final Property<String> projectVersion
@@ -86,6 +91,17 @@ abstract class WriteGrailsVersionInfoTask extends DefaultTask {
     @Optional
     final Property<String> gradleMinimumVersion
 
+    /**
+     * The SHA-256 Gradle publishes for the binary distribution of {@link #gradleVersion}
+     * ({@code gradle-<version>-bin.zip}), written as {@value #GRADLE_SHA256}: the generator writes
+     * it as the {@code distributionSha256Sum} of the wrapper of an application, so that the wrapper
+     * refuses a download that is not that distribution. It is given with {@link #gradleVersion}, or
+     * neither is.
+     */
+    @Input
+    @Optional
+    final Property<String> gradleDistributionSha256Sum
+
     @InputFile
     @PathSensitive(PathSensitivity.RELATIVE)
     final RegularFileProperty bomPublicationFile
@@ -101,6 +117,7 @@ abstract class WriteGrailsVersionInfoTask extends DefaultTask {
         endOfSupport = objects.property(String)
         gradleVersion = objects.property(String)
         gradleMinimumVersion = objects.property(String)
+        gradleDistributionSha256Sum = objects.property(String)
         bomPublicationFile = objects.fileProperty()
         versionsDirectory = objects.directoryProperty()
     }
@@ -150,27 +167,36 @@ abstract class WriteGrailsVersionInfoTask extends DefaultTask {
         }
     }
 
-    // The two versions of Gradle, each from the one property of the build that has it, after the
-    // properties of the BOM: a property of the BOM of the same name is not taken for one of them
+    // The two versions of Gradle and the SHA-256 of the distribution of the first, each from the one
+    // property of the build that has it, after the properties of the BOM: a property of the BOM of the
+    // same name is not taken for one of them
     private void putGradleVersions(Map<String, String> props) {
-        Map<String, Property<String>> given = [(GRADLE_VERSION): gradleVersion, (GRADLE_MINIMUM): gradleMinimumVersion]
+        Map<String, Property<String>> given = [(GRADLE_VERSION): gradleVersion, (GRADLE_MINIMUM): gradleMinimumVersion, (GRADLE_SHA256): gradleDistributionSha256Sum]
         for (Map.Entry<String, Property<String>> each : given.entrySet()) {
             if (!each.value.present) {
                 continue
             }
             if (props.containsKey(each.key)) {
-                throw new GradleException("The BOM has a property ${each.key}, which is the version of Gradle this task writes itself".toString())
+                throw new GradleException("The BOM has a property ${each.key}, which this task writes itself from the build".toString())
             }
-            String version = each.value.get().trim()
-            if (!GRADLE.matcher(version).matches()) {
-                throw new GradleException("${each.key} must be a version of Gradle, such as 9.9.2, but was: ${version}".toString())
+            String value = each.value.get().trim()
+            if (each.key == GRADLE_SHA256) {
+                if (!SHA256.matcher(value).matches()) {
+                    throw new GradleException("${each.key} must be the SHA-256 Gradle publishes for the distribution, 64 lowercase hexadecimal digits, but was: ${value}".toString())
+                }
+            } else if (!GRADLE.matcher(value).matches()) {
+                throw new GradleException("${each.key} must be a version of Gradle, such as 9.9.2, but was: ${value}".toString())
             }
-            props.put(each.key, version)
+            props.put(each.key, value)
         }
         String version = props.get(GRADLE_VERSION)
         String minimum = props.get(GRADLE_MINIMUM)
         if (version != null && minimum != null && release(minimum) > release(version)) {
             throw new GradleException("The earliest version of Gradle Grails is built with, ${minimum}, is later than the version applications are generated with, ${version}".toString())
+        }
+        if ((version == null) != (props.get(GRADLE_SHA256) == null)) {
+            throw new GradleException("${GRADLE_VERSION} and ${GRADLE_SHA256}, the SHA-256 of its distribution, are given together or not at all, but only ".toString() +
+                    "${version == null ? GRADLE_SHA256 : GRADLE_VERSION} was given")
         }
     }
 
