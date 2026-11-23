@@ -42,7 +42,7 @@ class InstallCommand extends BaseCommand implements Callable<Integer> {
     @Override
     Integer call() throws Exception {
         err('There is no install command any more, and nothing was installed: a plugin is put into the local Maven repository by Gradle. ' +
-                "Run: ${spec.root().name()} ${GradleCommand.NAME} publishToMavenLocal")
+                "Run: ${UsageHelp.toType(spec, "${GradleCommand.NAME} publishToMavenLocal")}")
         return 1
     }
 }

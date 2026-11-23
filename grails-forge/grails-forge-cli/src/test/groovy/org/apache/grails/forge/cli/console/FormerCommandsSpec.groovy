@@ -152,11 +152,11 @@ class FormerCommandsSpec extends CommandSpec {
                 err.reset()
                 int exit = ForgeCli.execute(beanContext, 'help', each.name)
                 List<String> lines = err.toString().readLines()
-                List<String> ofTheTable = lines.findAll { String line -> table.any { it.hint.replace('{cli}', CLI) == line } }
+                List<String> ofTheTable = lines.findAll { String line -> table.any { it.hint.replace('{cli}', CLI).replace('{name}', CLI) == line } }
                 // outside a project a command of some projects is known too: it says there that it needs a project
                 commands[kind].contains(each.name) || (kind == 'outside' && each.status == FormerCommands.Status.ELSEWHERE) ?
                         exit == 0 && lines.isEmpty() :
-                        exit == 2 && lines[0].startsWith("There is no command ${each.name}") && ofTheTable == [each.hint.replace('{cli}', CLI)] &&
+                        exit == 2 && lines[0].startsWith("There is no command ${each.name}") && ofTheTable == [each.hint.replace('{cli}', CLI).replace('{name}', CLI)] &&
                                 lines.indexOf(ofTheTable[0]) == (kind == 'outside' ? 1 : 2)
             }
         }

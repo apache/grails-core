@@ -60,7 +60,11 @@ final class FormerCommands {
         /** Where the Grails shell had it. */
         final String origin
         final Status status
-        /** What is said for it, with {@code {cli}} where the name of this command line stands. */
+        /**
+         * What is said for it: with {@code {cli}} and a space in front of a command line to type, which
+         * stand for the name of this command line on the command line of a shell and for nothing at the
+         * prompt of the interactive console, and with {@code {name}} where the text names this command line.
+         */
         final String hint
 
         Former(String name, String origin, Status status, String hint) {
@@ -100,7 +104,11 @@ final class FormerCommands {
      */
     static String line(CommandLine parent, String typed) {
         Former former = parent == null || parent.getParent() != null ? null : find(typed)
-        return former == null ? '' : System.lineSeparator() + former.hint.replace('{cli}', parent.getCommandSpec().root().name())
+        if (former == null) {
+            return ''
+        }
+        CommandLine.Model.CommandSpec root = parent.getCommandSpec().root()
+        return System.lineSeparator() + former.hint.replace('{cli} ', UsageHelp.toType(root, '')).replace('{name}', root.name())
     }
 
     /**
@@ -135,9 +143,9 @@ final class FormerCommands {
         add('stop', 'base profile, another name of stop-app', Status.REPLACED,
                 'stop was another name of stop-app in the Grails shell. Type: {cli} stop-app')
         add('quit', 'shell, interactive mode', Status.REPLACED,
-                'quit ended the interactive mode of the Grails shell. The interactive mode of {cli} is ended with exit, and there is none to end outside it')
+                'quit ended the interactive mode of the Grails shell. The interactive mode of {name} is ended with exit, and there is none to end outside it')
         add('exit', 'shell, interactive mode', Status.REPLACED,
-                'exit ends the interactive mode, which {cli} starts when it is given no command. It is no command outside it')
+                'exit ends the interactive mode, which {name} starts when it is given no command. It is no command outside it')
         add('list-profiles', 'shell', Status.REPLACED,
                 'list-profiles listed the profiles of the Grails shell. Profiles are replaced by application types and features: {cli} help lists the create commands, ' +
                 'and each lists its features with --list-features')
@@ -158,9 +166,9 @@ final class FormerCommands {
                 'where the application has GORM, {cli} gradle grailsCommandCatalog makes it a command here, and {cli} run-command query-tail runs it before that')
 
         add('open', 'shell', Status.NO_REPLACEMENT,
-                'open opened a file with the program the desktop has for it in the Grails shell. It has no replacement in {cli}')
+                'open opened a file with the program the desktop has for it in the Grails shell. It has no replacement in {name}')
         add('!', 'shell, interactive mode', Status.NO_REPLACEMENT,
-                'An exclamation mark ran a program from the interactive mode of the Grails shell. It has no replacement in {cli}')
+                'An exclamation mark ran a program from the interactive mode of the Grails shell. It has no replacement in {name}')
 
         add('create-profile', 'shell', Status.REMOVED, 'create-profile created a profile for the Grails shell. ' + PROFILES_GONE)
         add('create-creator-command', 'profile profile', Status.REMOVED, 'create-creator-command wrote a command of a profile for the Grails shell. ' + PROFILES_GONE)

@@ -168,10 +168,9 @@ class ApplicationCommandCommand extends InProjectCommand {
                 // Every argument after the name of a command is the command's, and so is this one. Who types
                 // grails dbm-update -Dgrails.env=production means the environment, as after the name of every
                 // command that runs the build, and is told that the command runs for another one.
-                String cli = spec.root().name()
                 said.println(CommandLine.Help.Ansi.AUTO.string('@|bold,red | Warning|@ ' + GradleRunner.line("${ENVIRONMENT_OPTION}... after the name of ${entry.name} is given " +
                         "to the command as an argument, and the command runs for the environment ${ENVIRONMENT}. To run it for another environment, name it before the command: " +
-                        "${cli} run-command ${ENVIRONMENT_OPTION}production ${entry.name}")))
+                        UsageHelp.toType(spec, "run-command ${ENVIRONMENT_OPTION}production ${entry.name}"))))
             }
             said.flush()
             GradleBuild runner = GradleBuild.of(GradleBuild.Purpose.BUILD, { String message -> err(message) } as Consumer<String>, getOperatingSystem() == OperatingSystem.WINDOWS)

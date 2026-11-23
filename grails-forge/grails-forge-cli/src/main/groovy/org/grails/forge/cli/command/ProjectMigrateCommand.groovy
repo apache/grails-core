@@ -26,6 +26,7 @@ import org.apache.grails.forge.cli.console.EarlierGrailsProject
 import org.apache.grails.forge.cli.console.GradleRunner
 import org.apache.grails.forge.cli.console.ProjectCommand
 import org.apache.grails.forge.cli.console.ProjectEvidence
+import org.apache.grails.forge.cli.console.UsageHelp
 import org.apache.grails.forge.core.pack.PackCondition
 import org.apache.grails.forge.core.pack.PackDescriptor.PackDependency
 import org.apache.grails.forge.core.pack.PackFeature
@@ -266,7 +267,6 @@ class ProjectMigrateCommand extends BaseCommand implements Callable<Integer>, Pr
     // not this command's to replace. A project on an earlier version of Grails is given its record all
     // the same: writing it is a step of the upgrade, before the version is changed or after
     private String refusal(Path directory) {
-        String root = spec.root().name()
         List<String> parts = [ProjectState.LOCK, ProjectState.BASELINE].findAll { String each -> Files.exists(directory.resolve(each), LinkOption.NOFOLLOW_LINKS) }
         if (!ProjectState.exists(directory)) {
             return parts.isEmpty() ? null : "The project has ${parts.join(' and ')} and no ${ProjectState.MANIFEST}: that is what is left of a record that was not " +
@@ -282,11 +282,11 @@ class ProjectMigrateCommand extends BaseCommand implements Callable<Integer>, Pr
                     'Nothing was written'
         }
         if (manifest.isTracked()) {
-            return "The application has the record of how it was generated (${ProjectState.MANIFEST}), which this command does not replace: ${root} project show " +
+            return "The application has the record of how it was generated (${ProjectState.MANIFEST}), which this command does not replace: ${UsageHelp.toType(spec, 'project show')} " +
                     'says what it has. Nothing was written'
         }
         if (!overwrite && !dryRun) {
-            return "The application already has a record that ${root} project migrate wrote (${ProjectState.MANIFEST}). Run again with --force to write it anew, " +
+            return "The application already has a record that ${UsageHelp.toType(spec, 'project migrate')} wrote (${ProjectState.MANIFEST}). Run again with --force to write it anew, " +
                     'or with --dry-run to see what it would be. Nothing was written'
         }
         return null
@@ -474,7 +474,7 @@ class ProjectMigrateCommand extends BaseCommand implements Callable<Integer>, Pr
             Feature feature = each == null || each.contains(':') ? null : available.findFeature(each, true).orElse(null)
             if (feature == null) {
                 throw new CommandLine.ParameterException(spec.commandLine(), "${shown(String.valueOf(each))}, given to ${option}, is no feature of Grails for this type of " +
-                        "application; ${spec.root().name()} create-app --list-features lists the features")
+                        "application; ${UsageHelp.toType(spec, 'create-app --list-features')} lists the features")
             }
             if (!names.contains(feature.getName())) {
                 names << feature.getName()
@@ -562,10 +562,9 @@ class ProjectMigrateCommand extends BaseCommand implements Callable<Integer>, Pr
                 assumed << "${option} (--${option})".toString()
             }
         }
-        String root = spec.root().name()
         out('@|blue ||@ ' + (assumed.isEmpty() ? 'Nothing was assumed. ' : "Assumed, because nothing in the project says it: ${assumed.join(', ')}. ") +
                 'The files of the project were read as text and nothing of the build was run, so a feature the build does not declare in a line of its own was ' +
-                "not found. To say it otherwise, run ${root} project migrate --force with the name and the package (com.example.shop), --type, --jdk, --servlet, " +
+                "not found. To say it otherwise, run ${UsageHelp.toType(spec, 'project migrate --force')} with the name and the package (com.example.shop), --type, --jdk, --servlet, " +
                 '--data, --reloading, --features for features that were not found and --exclude-features for features the application does not have')
     }
 
@@ -592,10 +591,9 @@ class ProjectMigrateCommand extends BaseCommand implements Callable<Integer>, Pr
             err("The record was written and cannot be read again: ${GradleRunner.line(e.getMessage())}")
             return 1
         }
-        String root = spec.root().name()
         out("@|blue ||@ The record was written: ${texts.keySet().join(', ')}. No other file of the project was changed. Commit the directory ${ProjectState.DIRECTORY}")
-        out("@|blue ||@ ${root} help lists the commands that create the classes of the application, and ${root} project show says what the record has. " +
-                "The record says what the application is taken to be, not how it was generated: ${root} feature add and ${root} project regenerate are for an " +
+        out("@|blue ||@ ${UsageHelp.toType(spec, 'help')} lists the commands that create the classes of the application, and ${UsageHelp.toType(spec, 'project show')} says what the record has. " +
+                "The record says what the application is taken to be, not how it was generated: ${UsageHelp.toType(spec, 'feature add')} and ${UsageHelp.toType(spec, 'project regenerate')} are for an " +
                 'application this version generated, and change nothing here')
         return 0
     }

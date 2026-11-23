@@ -229,20 +229,19 @@ final class ApplicationCommands {
 
     private String aboutNotAdded(CommandLine root, String name) {
         ApplicationCommandFile.Entry entry = notAddedBy.get(name)
-        String cli = root.getCommandName()
         // the command that runs a command of the application by its name, where the command line has it
         if (entry.isScript()) {
             return "${notAdded.get(name)}, so the script ${entry.name} of ${ScriptCommandFiles.LOCATION} is not a command here. " +
-                    "That one is run with: ${cli} gradle ${ScriptCommandFiles.TASK} --arg=${entry.name}"
+                    "That one is run with: ${UsageHelp.toType(root, "gradle ${ScriptCommandFiles.TASK} --arg=${entry.name}")}"
         }
-        String how = root.getSubcommands().containsKey(RUN_COMMAND) ? "${cli} ${RUN_COMMAND} ${entry.name}" :
-                "${cli} gradle ${ApplicationCommandCommand.TASK} --arg=${entry.name}"
+        String how = root.getSubcommands().containsKey(RUN_COMMAND) ? UsageHelp.toType(root, "${RUN_COMMAND} ${entry.name}") :
+                UsageHelp.toType(root, "gradle ${ApplicationCommandCommand.TASK} --arg=${entry.name}")
         return "${notAdded.get(name)}, so the command ${entry.name} of ${entry.origin} is not a command here. That one is run with: ${how}"
     }
 
     // what keeps the list of the build from being relied on; null when nothing does
     private String aboutFile(CommandLine root) {
-        String gradle = "${root.getCommandName()} gradle ${ApplicationCommandFile.TASK}"
+        String gradle = UsageHelp.toType(root, "gradle ${ApplicationCommandFile.TASK}")
         switch (file.state) {
             case ApplicationCommandFile.State.MISSING:
                 return "${OF_WHAT} are not listed yet. To list them: ${gradle}"

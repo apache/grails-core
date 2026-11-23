@@ -227,10 +227,31 @@ class UsageHelp extends CommandLine.Help {
         String synopsis = own != null && own.length > 0 ? own.collect { String each -> scheme.text(each).plainString().trim() }.join(' ') :
                 every.contains('\n') || every.length() > spec.usageMessage().width() ? help.abbreviatedSynopsis().trim() : every
         err.println("Usage: ${synopsis}")
-        String root = spec.root().name()
-        err.println(spec.parent() == null ? "Run '${root} help' for the commands" : "Run '${root} help ${named(spec)}' for the options")
+        err.println(spec.parent() == null ? "Run '${toType(spec, 'help')}' for the commands" : "Run '${toType(spec, "help ${named(spec)}")}' for the options")
         err.flush()
         return spec.exitCodeOnInvalidInput()
+    }
+
+    /**
+     * A command line of this program as it is typed where a message shows it: on the command line of a
+     * shell after the name of the program, and at the prompt of the interactive console without it,
+     * since the prompt takes the commands themselves and refuses the name of the program.
+     *
+     * @param spec a command of the command line, or the command line itself
+     * @param command what is typed after the name of the program, as {@code help create-app}
+     * @return the command line to type there
+     */
+    static String toType(CommandLine.Model.CommandSpec spec, String command) {
+        return ConsoleCommands.isInteractive() ? command : "${spec.root().name()} ${command}".toString()
+    }
+
+    /**
+     * @param root the command line of the CLI
+     * @param command what is typed after the name of the program
+     * @return the command line to type where the message is shown, see {@link #toType(CommandLine.Model.CommandSpec, String)}
+     */
+    static String toType(CommandLine root, String command) {
+        return toType(root.getCommandSpec(), command)
     }
 
     /**
@@ -287,7 +308,7 @@ class UsageHelp extends CommandLine.Help {
             // a command that writes what the record of a project says, in a project that has none that is read
             if (spec.userObject() instanceof CodeGenCommand && !((CodeGenCommand) spec.userObject()).hasRecord()) {
                 return "${typed(spec)} is a command of a Grails project whose record is read; the project in ${GradleRunner.line(search.project.directory)} " +
-                        "has no ${ProjectState.MANIFEST} or ${ProjectState.EARLIER_RECORD} that is. ${spec.root().name()} project migrate writes the record of " +
+                        "has no ${ProjectState.MANIFEST} or ${ProjectState.EARLIER_RECORD} that is. ${toType(spec, 'project migrate')} writes the record of " +
                         'an application that has none'
             }
             return null

@@ -21,6 +21,7 @@ package org.grails.forge.cli.command
 import groovy.transform.CompileStatic
 import org.apache.grails.forge.cli.console.ConsoleProject
 import org.apache.grails.forge.cli.console.ProjectCommand
+import org.apache.grails.forge.cli.console.UsageHelp
 import org.apache.grails.forge.core.change.ChangePlan
 import org.apache.grails.forge.core.change.ChangePlan.Action
 import org.apache.grails.forge.core.change.ChangePlan.PlannedFile
@@ -140,7 +141,7 @@ class FeatureAddCommand extends BaseCommand implements Callable<Integer>, Projec
     private String noRecord() {
         return "There is no application here that a feature can be added to: ${ProjectState.MANIFEST} is missing. " +
                 'Run the command in the directory of an application that Grails 9 created. For an application that was there before, ' +
-                "${spec.root().name()} ${ProjectGroupCommand.NAME} ${ProjectMigrateCommand.NAME} writes the record the commands that create its classes read; " +
+                "${UsageHelp.toType(spec, "${ProjectGroupCommand.NAME} ${ProjectMigrateCommand.NAME}")} writes the record the commands that create its classes read; " +
                 'a feature is added to such an application by hand'
     }
 

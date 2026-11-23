@@ -131,7 +131,7 @@ class ProjectRegenerateCommand extends BaseCommand implements Callable<Integer>,
         }
         Path directory = search.project.directory
         if (!hasRecord(directory)) {
-            err(ProjectShowCommand.noRecord(spec.root().name()))
+            err(ProjectShowCommand.noRecord(spec))
             return 1
         }
         try {
@@ -165,7 +165,7 @@ class ProjectRegenerateCommand extends BaseCommand implements Callable<Integer>,
         Path directory = search.project.directory
         ChangeDocument document = ChangeDocument.ofRegenerate(directory)
         if (!hasRecord(directory)) {
-            return written(document.ended(ChangeDocument.INVALID_RECORD, ChangeDocument.NO_RECORD, ProjectShowCommand.noRecord(spec.root().name())))
+            return written(document.ended(ChangeDocument.INVALID_RECORD, ChangeDocument.NO_RECORD, ProjectShowCommand.noRecord(spec)))
         }
         RegeneratedProject regenerated
         try {

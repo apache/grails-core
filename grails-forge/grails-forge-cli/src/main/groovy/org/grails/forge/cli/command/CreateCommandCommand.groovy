@@ -21,6 +21,7 @@ package org.grails.forge.cli.command
 import groovy.transform.CompileStatic
 import jakarta.inject.Inject
 import org.apache.grails.forge.cli.artefact.ArtefactTemplate
+import org.apache.grails.forge.cli.console.UsageHelp
 import org.grails.forge.cli.CodeGenConfig
 import org.grails.forge.io.ConsoleOutput
 import org.grails.forge.io.OutputHandler
@@ -69,7 +70,7 @@ class CreateCommandCommand extends CodeGenCommand {
         ])
         if (exit == 0) {
             // the build lists the commands of the application, and is not run for it from here
-            out("@|blue ||@ To make it a command of ${spec.root().name()}, list the commands of the application again: ${spec.root().name()} gradle grailsCommandCatalog")
+            out("@|blue ||@ To make it a command of ${spec.root().name()}, list the commands of the application again: ${UsageHelp.toType(spec, 'gradle grailsCommandCatalog')}")
         }
         return exit
     }

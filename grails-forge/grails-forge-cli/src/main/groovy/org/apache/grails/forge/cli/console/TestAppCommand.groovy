@@ -118,7 +118,6 @@ class TestAppCommand extends GradleEnvironmentCommand {
         CommandLine.Model.CommandSpec spec = command.getCommandSpec()
         TestAppCommand testApp = (TestAppCommand) spec.userObject()
         testApp.listed = file
-        String cli = root.getCommandName()
         List<String> footer = ['']
         Map<String, String> listedPhases = file.testPhases == null ? Collections.<String, String>emptyMap() : file.testPhases
         for (Map.Entry<String, String> phase : listedPhases.entrySet()) {
@@ -127,7 +126,7 @@ class TestAppCommand extends GradleEnvironmentCommand {
                 continue
             }
             if (spec.findOption(LONG + name) != null) {
-                footer.add("The test phase ${name} (the task ${phase.value}) has no switch, since --${name} is an option of test-app. It is run with: ${cli} gradle ${phase.value}".toString())
+                footer.add("The test phase ${name} (the task ${phase.value}) has no switch, since --${name} is an option of test-app. It is run with: ${UsageHelp.toType(root, "gradle ${phase.value}")}".toString())
                 continue
             }
             spec.addOption(CommandLine.Model.OptionSpec.builder(LONG + name)
@@ -137,7 +136,7 @@ class TestAppCommand extends GradleEnvironmentCommand {
                     .setter(new Selected(testApp.phases, name))
                     .build())
         }
-        String gradle = "${cli} gradle ${ApplicationCommandFile.TASK}"
+        String gradle = UsageHelp.toType(root, "gradle ${ApplicationCommandFile.TASK}")
         if (file.testPhases == null) {
             footer.add("The test phases the project adds have a switch each, and are listed here once the build has listed them: ${gradle}".toString())
         } else if (file.state == ApplicationCommandFile.State.STALE) {
@@ -192,12 +191,11 @@ class TestAppCommand extends GradleEnvironmentCommand {
     @Override
     protected void failed(ConsoleProject project) {
         // Which of the reasons a build fails for it was is in what Gradle wrote, and is not read from there
-        String cli = spec.root().name()
         if (!taken.isEmpty()) {
             List<String> switches = taken.collect { String phase -> LONG + phase }
             note("${switches.join(', ')} ${switches.size() == 1 ? 'is no option of test-app and was taken for a test phase' : 'are no options of test-app and were taken for test phases'} " +
                     "of the project: the task ${taskOf(taken.get(0))} for ${switches.get(0)}. If Gradle said that the project has no such phase, it named the phases there are; " +
-                    "an option of Gradle is given after --, as in ${cli} test-app -- --info")
+                    "an option of Gradle is given after --, as in ${UsageHelp.toType(spec, 'test-app -- --info')}")
         }
     }
 
@@ -235,7 +233,6 @@ class TestAppCommand extends GradleEnvironmentCommand {
                 continue
             }
             String name = arg.substring(LONG.length())
-            String cli = commandSpec.root().name()
             String similar = similarTo(arg, commandSpec, known ? 2 : 1)
             String meant = similar == null ? '' : " Did you mean: ${similar}?"
             if (known) {
@@ -246,12 +243,12 @@ class TestAppCommand extends GradleEnvironmentCommand {
                 }.collect { String phase -> LONG + phase }
                 throw new UsageHelp.Lines(commandSpec.commandLine(), "test-app has no option ${arg}, and the project has no test phase of that name: " +
                         "its build lists ${there.join(', ')}.${meant}${System.lineSeparator()}" +
-                        "A phase that was added since is listed with: ${cli} gradle ${ApplicationCommandFile.TASK}")
+                        "A phase that was added since is listed with: ${UsageHelp.toType(commandSpec, "gradle ${ApplicationCommandFile.TASK}")}")
             }
             if (similar != null) {
                 throw new UsageHelp.Lines(commandSpec.commandLine(), "test-app has no option ${arg}.${meant}${System.lineSeparator()}" +
                         "If the project has a test phase of that name, the task ${taskOf(name)}, the switch is taken once the build has listed its phases " +
-                        "(${cli} gradle ${ApplicationCommandFile.TASK}), and the phase is run by its task with: ${cli} gradle ${taskOf(name)}")
+                        "(${UsageHelp.toType(commandSpec, "gradle ${ApplicationCommandFile.TASK}")}), and the phase is run by its task with: ${UsageHelp.toType(commandSpec, "gradle ${taskOf(name)}")}")
             }
             phases.add(name)
             taken.add(name)

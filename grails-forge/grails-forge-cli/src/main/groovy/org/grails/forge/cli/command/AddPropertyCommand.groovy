@@ -24,6 +24,7 @@ import grails.codegen.model.DomainFieldModifier
 import grails.codegen.model.PropertyDefinition
 import org.grails.forge.util.ThrowingSupplier
 import jakarta.inject.Inject
+import org.apache.grails.forge.cli.console.UsageHelp
 import org.grails.forge.cli.CodeGenConfig
 import org.grails.forge.io.ConsoleOutput
 import org.grails.forge.io.OutputFailedException
@@ -146,7 +147,7 @@ class AddPropertyCommand extends CodeGenCommand {
 
         if (domainFile == null || !domainFile.exists()) {
             err('Domain class not found: ' + domainClassName)
-            err("Run '${spec.root().name()} create-domain-class ${domainClassName}' first.")
+            err("Run '${UsageHelp.toType(spec, "create-domain-class ${domainClassName}")}' first.")
             return 1
         }
 

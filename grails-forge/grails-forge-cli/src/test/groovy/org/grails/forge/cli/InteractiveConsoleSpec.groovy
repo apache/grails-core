@@ -133,7 +133,7 @@ class InteractiveConsoleSpec extends Specification {
 
         and: 'the line that is no command was answered as a mistake, and the next one was run with its arguments as they were typed'
         said.contains('no-such-command')
-        said.contains("Run 'grails help' for the commands")
+        said.contains("Run 'help' for the commands")
         said.contains('the wrapper ran with build two  words')
 
         and: 'nothing after exit was read'
