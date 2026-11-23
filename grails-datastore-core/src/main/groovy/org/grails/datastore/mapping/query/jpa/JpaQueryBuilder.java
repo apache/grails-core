@@ -89,7 +89,11 @@ public class JpaQueryBuilder {
     private boolean hibernateCompatible;
 
     public JpaQueryBuilder(QueryableCriteria criteria) {
-        this(criteria.getPersistentEntity(), criteria.getCriteria());
+        this(criteria.getPersistentEntity(), materializedCriteria(criteria));
+    }
+
+    private static List<Query.Criterion> materializedCriteria(QueryableCriteria criteria) {
+        return criteria.materializeLazyCriteria().getCriteria();
     }
 
     public JpaQueryBuilder(PersistentEntity entity, List<Query.Criterion> criteria) {
@@ -885,6 +889,7 @@ public class JpaQueryBuilder {
      * @param comparedProperty the property the subquery is compared with, or {@code null} to select the entity
      */
     private static void buildSubQuery(StringBuilder q, StringBuilder whereClause, int position, List parameters, ConversionService conversionService, boolean allowJoins, boolean hibernateCompatible, QueryableCriteria subquery, String comparedProperty) {
+        subquery = subquery.materializeLazyCriteria();
         PersistentEntity associatedEntity = subquery.getPersistentEntity();
         String associatedEntityName = associatedEntity.getName();
         String associatedEntityLogicalName = associatedEntity.getDecapitalizedName() + position;
