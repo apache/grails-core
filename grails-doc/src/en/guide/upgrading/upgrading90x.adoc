@@ -2849,7 +2849,7 @@ The `.grails/.gitignore` that `create-app`, the other create commands and `proje
 /transactions/
 ----
 
-`grails project health` reports a project in which no `.gitignore` leaves out `.grails/transactions` or `.grails/history` as `git-files.state-ignored`.
+`grails project health` reports a project in which no `.gitignore` leaves out `.grails/transactions` or `.grails/history`, neither that of the project nor that of the record, as `git-files.state-ignored`, and names the lines to add to `.grails/.gitignore`. A record whose `.gitignore` has the lines is in order whatever the `.gitignore` of the project says.
 
 ===== Required Actions
 

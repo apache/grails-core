@@ -46,6 +46,7 @@ abstract class HealthCheck {
     static final String NOTE_GRADLE_WRAPPER = 'upgradingGradleWrapper'
     static final String NOTE_GRADLE_CHECKSUM = 'upgradingGradleChecksum'
     static final String NOTE_RECORD = 'upgradingProjectRecord'
+    static final String NOTE_RECORD_IGNORE = 'upgradingRecordIgnoresMachineState'
     static final String NOTE_COMMAND_CATALOG = 'upgradingCommandCatalog'
     static final String NOTE_SETTINGS_GROOVY = 'upgradingSettingsGroovy'
 

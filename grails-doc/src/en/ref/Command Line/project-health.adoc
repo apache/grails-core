@@ -56,7 +56,7 @@ $ grails project health
 | Project legacy on Grails 9.0.0 (gradle.properties), checked by the command line of Grails 9.0.0, offline
 | Warning java-target.release        build.gradle names Java 17 (compileJava.options.release, line 68), and Grails 9 needs Java 21 or later: a class of the project that uses one of Grails does not compile. Fix: In build.gradle, set compileJava.options.release (line 68) to Java 21 or later
 | Advice  gradle-wrapper.older       The Gradle wrapper names Gradle 9.8.0 (gradle/wrapper/gradle-wrapper.properties), and create-app generates applications with Gradle 9.9.2. Fix: ./gradlew wrapper --gradle-version 9.9.2, and commit the wrapper
-| Advice  git-files.state-ignored    No .gitignore of the project leaves out .grails/transactions and .grails/history, ... Fix: Add .grails/transactions/ and .grails/history to the .gitignore of the project, as create-app writes them
+| Advice  git-files.state-ignored    No .gitignore of the project leaves out .grails/transactions and .grails/history, ... Fix: Add /transactions/ and /history to .grails/.gitignore, as create-app and project migrate write it
 | 9 checks OK (-v lists them). 0 errors, 1 warning, 2 advice, 0 skipped
 ----
 
@@ -278,8 +278,8 @@ The id of a finding is the name of its check and the name of the finding, as `ja
 
 | `git-files.state-ignored`
 | advice
-| No `.gitignore` leaves out `.grails/transactions` or `.grails/history`, which are of one machine.
-| Add `.grails/transactions/` and `.grails/history`, as `create-app` writes them.
+| No `.gitignore` leaves out `.grails/transactions` or `.grails/history`, which are of one machine: neither that of the project nor `.grails/.gitignore`, the record's own, which leaves them out where `create-app` or `project migrate` of this version wrote it.
+| Add `/transactions/` and `/history` to `.grails/.gitignore`, as `create-app` and `project migrate` write it; in a project without a record, `.grails/transactions/` and `.grails/history` to its `.gitignore`.
 
 | `git-files.wrapper-line-endings`
 | advice

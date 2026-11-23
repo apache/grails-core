@@ -43,7 +43,8 @@ final class GitFilesCheck extends HealthCheck {
     private static final String IGNORE = '.gitignore'
     private static final String ATTRIBUTES = '.gitattributes'
     private static final String RECORD = '.grails'
-    // what is under .grails and is of one machine, which create-app has the .gitignore leave out, each with whether it is a directory
+    // what is under .grails and is of one machine, each with whether it is a directory: the record's own .gitignore, which
+    // create-app and project migrate write, leaves it out, and the .gitignore create-app writes does too
     private static final Map<String, Boolean> OF_ONE_MACHINE = ['.grails/transactions': true, '.grails/history': false].asImmutable()
     // a name below a directory, for whether the directory's own .gitignore leaves out everything in it
     private static final String ANY_NAME = 'anything'
@@ -68,10 +69,18 @@ final class GitFilesCheck extends HealthCheck {
         } else {
             List<String> kept = OF_ONE_MACHINE.findAll { String path, Boolean directory -> !leftOut(top, context.directory.resolve(path), directory) }.keySet().toList()
             if (!kept.isEmpty()) {
+                // the lines go where they go with the record, whatever the .gitignore of the project says: into its own .gitignore,
+                // which a record that an earlier version wrote has without them, or, where there is none, into the one of the project
+                String own = "${RECORD}/${IGNORE}"
+                boolean hasOwn = Files.isRegularFile(context.directory.resolve(own), LinkOption.NOFOLLOW_LINKS)
+                String lines = kept.collect { String path ->
+                    String line = hasOwn ? path.substring(RECORD.length()) : path
+                    OF_ONE_MACHINE.get(path) ? line + '/' : line
+                }.join(' and ')
                 findings << found('state-ignored', HealthLevel.ADVICE, "No ${IGNORE} of the project leaves out ${kept.join(' and ')}, which " +
                         "${kept.size() == 1 ? 'is' : 'are'} of one machine: what a change that did not end leaves, and the history of the interactive console",
-                        "Add ${kept.collect { String path -> OF_ONE_MACHINE.get(path) ? path + '/' : path }.join(' and ')} to the ${IGNORE} of the project, as " +
-                                'create-app writes them', null, [IGNORE], NOTE_RECORD)
+                        hasOwn ? "Add ${lines} to ${own}, as create-app and project migrate write it" : "Add ${lines} to the ${IGNORE} of the project, as create-app writes them",
+                        null, [hasOwn ? own : IGNORE], NOTE_RECORD_IGNORE)
             }
         }
         List<String> converted = converted(context, top)

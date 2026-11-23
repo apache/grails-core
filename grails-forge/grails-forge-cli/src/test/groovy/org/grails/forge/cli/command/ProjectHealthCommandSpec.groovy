@@ -244,6 +244,7 @@ class ProjectHealthCommandSpec extends CommandSpec {
         'git-files.state-ignored'              | 'advice'  | 'no .gitignore leaves out what is of one machine'      | { File p, File h -> without(p, '.gitignore', ~/\.grails\/(transactions\/|history)\n/); without(p, '.grails/.gitignore', ~/\/(transactions\/|history)\n/) }
         'git-files.wrapper-line-endings'       | 'advice'  | 'there is no .gitattributes'                           | { File p, File h -> new File(p, '.gitattributes').delete() }
         'git-files.ok'                         | 'ok'      | '.grails/.gitignore leaves out what is of one machine' | { File p, File h -> without(p, '.gitignore', ~/\.grails\/(transactions\/|history)\n/) }
+        'git-files.ok'                         | 'ok'      | '.gitignore does, and the record of a snapshot not'    | { File p, File h -> without(p, '.grails/.gitignore', ~/\/(transactions\/|history)\n/) }
         'command-catalog.missing'              | 'advice'  | 'the build has not listed the commands'                | { File p, File h -> }
         'command-catalog.refused'              | 'advice'  | 'the list is no file'                                  | { File p, File h -> new File(p, '.grails/cache/command-catalog.json').mkdirs() }
         'command-catalog.stale'                | 'advice'  | 'the build file was changed after the list'            | { File p, File h -> catalog(p); new File(p, 'build.gradle').setLastModified(System.currentTimeMillis() + 60_000) }
@@ -316,6 +317,43 @@ class ProjectHealthCommandSpec extends CommandSpec {
         'the toolchain alone'                    | TOOLCHAIN_25                                                                 | ['JavaLanguageVersion']                                     | 'java-target.record' | { List<Integer> l -> "The record says that the application is for Java 21 (.grails/project.yml), and build.gradle compiles for Java 25 (the Java toolchain, line ${l[0]})".toString() }
         'a later release, and the toolchain'     | "compileJava.options.release = 25\n${TOOLCHAIN_21}"                          | ['compileJava.options.release']                             | 'java-target.record' | { List<Integer> l -> "The record says that the application is for Java 21 (.grails/project.yml), and build.gradle compiles for Java 25 (compileJava.options.release, line ${l[0]})".toString() }
         'sourceCompatibility before the toolchain' | "${TOOLCHAIN_21}sourceCompatibility = '25'\n"                              | ['sourceCompatibility']                                     | 'java-target.record' | { List<Integer> l -> "The record says that the application is for Java 21 (.grails/project.yml), and build.gradle compiles for Java 25 (sourceCompatibility, line ${l[0]})".toString() }
+    }
+
+    void "git-files.state-ignored asks for the lines in the record's own .gitignore, and in the one of the project where there is no record"() {
+        given: 'a record that an earlier snapshot wrote, whose .gitignore does not leave out what is of one machine, and a .gitignore of the project that does not either'
+        File project = copyOfTemplate()
+        without(project, '.gitignore', ~/\.grails\/(transactions\/|history)\n/)
+        without(project, '.grails/.gitignore', ~/\/(transactions\/|history)\n/)
+
+        when:
+        run(project, 'project', 'health', '--json')
+        Map finding = (parsed().findings as List<Map>).find { it.id == 'git-files.state-ignored' }
+
+        then: 'the lines go with the record, whatever the .gitignore of the project says'
+        finding.message == 'No .gitignore of the project leaves out .grails/transactions and .grails/history, which are of one machine: what a change that did not end ' +
+                'leaves, and the history of the interactive console'
+        finding.fix == 'Add /transactions/ and /history to .grails/.gitignore, as create-app and project migrate write it'
+        finding.files == ['.grails/.gitignore']
+        finding.upgradeNote.endsWith('#upgradingRecordIgnoresMachineState')
+
+        when: 'the project has no record'
+        new File(project, '.grails').deleteDir()
+        out.reset()
+        run(project, 'project', 'health', '--json')
+        finding = (parsed().findings as List<Map>).find { it.id == 'git-files.state-ignored' }
+
+        then: 'they go into the .gitignore of the project; project migrate writes the record with its own'
+        finding.fix == 'Add .grails/transactions/ and .grails/history to the .gitignore of the project, as create-app writes them'
+        finding.files == ['.gitignore']
+
+        when: 'project migrate writes the record'
+        out.reset()
+        run(project, 'project', 'migrate')
+        out.reset()
+        run(project, 'project', 'health', '--json')
+
+        then: 'its .gitignore leaves them out'
+        (parsed().findings as List<Map>).find { it.check == 'git-files' }.id == 'git-files.ok'
     }
 
     void "the JSON document has every member in one order, and each finding has an id of its check, its level, the fix and the upgrade note"() {
