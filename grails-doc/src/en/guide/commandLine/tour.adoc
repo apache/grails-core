@@ -322,7 +322,7 @@ added    src/test/groovy/com/example/BookSpec.groovy
 ----
 $ grails project health
 | Project shop on Grails 9.0.0 (gradle.properties), checked by the command line of Grails 9.0.0, offline
-| Advice  command-catalog.missing  The commands of the application and its plugins are not listed: ... Fix: Any build of the project lists them, or grails gradle grailsCommandCatalog lists them now
+| Advice  command-catalog.missing  The commands of the application and its plugins are not listed: ... Fix: A build that compiles the project lists them (grails compile, run-app, test-app, assemble), and so does typing the name of one; grails gradle grailsCommandCatalog lists them now
 | 11 checks OK (-v lists them). 0 errors, 0 warnings, 1 advice, 0 skipped
 ----
 

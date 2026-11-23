@@ -210,6 +210,8 @@ class ApplicationCommandListingSpec extends CommandSpec {
         'a command of the command line'                  | ['stats']                | 0        | []
         'what cannot be the name of a command'           | ['greet.groovy']         | 2        | ['There is no command greet.groovy', MISSING]
         'a command of the Grails shell that is replaced' | ['run']                  | 2        | ['Type: grails-forge-cli run-app']
+        'a program of the operating system, after !'     | ['!ls']                  | 2        | ['There is no command']
+        'a program of the operating system, as !name'    | ['!greet']               | 2        | ['There is no command']
     }
 
     void "a command of the command line keeps its name over the command of the application of that name, which is said"() {

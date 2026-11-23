@@ -40,7 +40,7 @@ final class CommandCatalogCheck extends HealthCheck {
     List<HealthFinding> check(HealthContext context) {
         ApplicationCommandFile file = ApplicationCommandFile.read(context.directory)
         String task = context.toType("gradle ${ApplicationCommandFile.TASK}")
-        String fix = "Any build of the project lists them, or ${task} lists them now"
+        String fix = "A build that compiles the project lists them (grails compile, run-app, test-app, assemble), and so does typing the name of one; ${task} lists them now"
         List<String> files = [ApplicationCommandFile.LOCATION]
         switch (file.state) {
             case ApplicationCommandFile.State.MISSING:

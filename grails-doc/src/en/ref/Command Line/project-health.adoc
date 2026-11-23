@@ -286,7 +286,7 @@ The id of a finding is the name of its check and the name of the finding, as `ja
 | `command-catalog.missing`
 | advice
 | There is no list.
-| Any build of the project lists them, or `grails gradle grailsCommandCatalog` now.
+| A build that compiles the project lists them (`grails compile`, `run-app`, `test-app`, `assemble`), and so does typing the name of one; `grails gradle grailsCommandCatalog` lists them now.
 
 | `command-catalog.refused`
 | advice
