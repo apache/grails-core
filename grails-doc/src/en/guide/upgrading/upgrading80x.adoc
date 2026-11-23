@@ -5040,6 +5040,16 @@ As of Grails 8.0.1, with `grails.plugin.springsecurity.rest.token.storage.jwt.us
 * With encrypted JWTs enabled, a signed JWT is rejected as an invalid token, and with signed JWTs, an encrypted JWT is. Previously such a token failed with a `NullPointerException`.
 * An encrypted JWT whose content encryption key is encrypted with `RSA1_5` is rejected unless `grails.plugin.springsecurity.rest.token.generation.jwt.jweAlgorithm` is `RSA1_5`. The plugin passes that setting to the new `jweAlgorithm` property of `JwtService`. A `jwtService` bean that an application defines itself accepts `RSA1_5` as before, unless the application sets that property too.
 
+==== A Subquery Compared With an Association of the Enclosing Root Alias Restricts the Rows
+
+On Hibernate 7, a subquery in a `where` query that compares a property with an association of the enclosing query's
+root alias, such as `exists(Club.where { id == t.club.id }.property('name'))` inside `Team.where { def t = Team ... }`
+or `id == t.club`, dropped that comparison on 8.0.0, so the enclosing query returned rows it should not have. It now
+restricts them, as on Grails 7. An association compared with its identifier (`t.club.id`) or with a value that is not
+an entity, which threw on 8.0.0, now runs. The old result
+contradicted the query, so there is nothing to keep it for; an application that relied on the extra rows adds them back
+with an explicit `or` in the enclosing query.
+
 ==== More GSP tags HTML-encode the attribute values they write
 
 These tags now HTML-encode the values they write into attributes, as `<g:link>` and `<g:textField>` already did and as these tags already encoded their other attributes:
