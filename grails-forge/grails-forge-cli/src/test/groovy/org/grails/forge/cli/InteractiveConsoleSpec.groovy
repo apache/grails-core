@@ -154,6 +154,7 @@ class InteractiveConsoleSpec extends Specification {
         program = console.redirectInput(typed('ra --help\n' +
                 'help sa\n' +
                 'cc\n' +
+                'rn\n' +
                 'g build\n' +
                 'exit\n')).start()
         boolean ended = program.waitFor(SECONDS, TimeUnit.SECONDS)
@@ -167,9 +168,10 @@ class InteractiveConsoleSpec extends Specification {
         said.contains('Usage: grails run-app ')
         said.contains('Usage: grails stop-app ')
 
-        and: 'a form two commands fit runs neither and says how each is typed'
+        and: 'a form two commands fit runs neither and says how each is typed, and one that fits none says what it nearly is'
         said.contains('cc is short for more than one command: create-controller (ccon), create-command (ccom). ' +
                 'Type more of the name of the one that is meant, or the short form in brackets after it')
+        said.contains('There is no command rn. Did you mean: run-app or run-script or run-command?')
         said.contains('the wrapper ran with build')
     }
 

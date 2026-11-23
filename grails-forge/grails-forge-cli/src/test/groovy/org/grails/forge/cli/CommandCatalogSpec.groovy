@@ -345,6 +345,29 @@ class CommandCatalogSpec extends CommandSpec implements CommandFixture {
         'stopp' | 0       | ['stop-point ran with [x]']   | []                                                             | 'short for stop-point'
     }
 
+    @Unroll
+    void "#typed is no command, and the commands it nearly is the short form of are offered first: #why"() {
+        when:
+        int exit = ForgeCli.execute(beanContext, typed.split(' '))
+
+        then:
+        exit == 2
+        err.toString().readLines()[0].startsWith("There is no command ${typed.split(' ').last()}${of}. Did you mean: ${offered}")
+        out.toString().isEmpty()
+
+        where:
+        typed         | of            | offered                                 | why
+        'rn'          | ''            | 'run-app or run-script or run-command?' | 'one letter other than the last of each of their short forms'
+        'raa'         | ''            | 'run-app'                               | 'one letter more than ra'
+        'rpa'         | ''            | 'run-app'                               | 'two letters of rap the other way round'
+        'Ra'          | ''            | 'run-app'                               | 'ra in another case, which the rule of the shell reads as one word'
+        'rUA'         | ''            | 'run-app'                               | 'rua in another case, which the rule of the shell reads as three words'
+        'cdcc'        | ''            | 'create-domain-class'                   | 'one letter more than cdc, of a command of a project'
+        'hlep'        | ''            | 'help'                                  | 'two letters of the name the other way round'
+        'craete-app'  | ''            | 'create-app'                            | 'a name with two letters the other way round'
+        'feature lsit' | ' of feature' | 'list'                                 | 'a command of a command'
+    }
+
     void "help shows what --help shows, for a command of a command too"() {
         expect:
         shownBy(*help) == shownBy(*option)

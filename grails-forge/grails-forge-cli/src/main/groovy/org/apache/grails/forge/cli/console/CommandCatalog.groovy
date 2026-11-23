@@ -115,8 +115,7 @@ final class CommandCatalog {
     static CommandLine.ParameterException unknown(CommandLine parent, String typed) {
         String given = FeatureSelectionException.shown(typed)
         // what was typed is compared, and nothing else: not what stands for an empty name or for one that cannot be shown as it is
-        List<String> similar = typed == null || typed.isEmpty() || given != typed ? Collections.<String>emptyList() :
-                new CommandLine.UnmatchedArgumentException(parent, Collections.singletonList(typed)).getSuggestions()
+        List<String> similar = typed == null || typed.isEmpty() || given != typed ? Collections.<String>emptyList() : suggestions(parent, typed)
         // it may be a command of the application, where the build of the project has not listed those
         String listed = parent.getParent() == null ? ApplicationCommands.whenUnknown(parent, given) : null
         // below a project that is not used its commands are not there, which is then why there is none of that name
@@ -367,6 +366,23 @@ final class CommandCatalog {
         return listed
     }
 
+    // The commands that are most like what was typed and is no command: first those it nearly is the
+    // short form of, then those whose names are most like it, as picocli finds them; three at most.
+    private static List<String> suggestions(CommandLine parent, String typed) {
+        List<CommandLine> suggested = ShortForms.FORM.matcher(typed).matches() ?
+                ShortForms.near(typed, new Known(parent).all()) : new ArrayList<CommandLine>()
+        List<String> names = suggested.collect { CommandLine command -> command.getCommandName() }
+        for (String similar : new CommandLine.UnmatchedArgumentException(parent, Collections.singletonList(typed)).getSuggestions()) {
+            CommandLine command = parent.getSubcommands().get(similar)
+            // once for a command, whichever of its names is most like what was typed
+            if (names.size() < ShortForms.MAX_NEAR && !suggested.any { CommandLine each -> each.is(command) }) {
+                suggested.add(command)
+                names.add(similar)
+            }
+        }
+        return names
+    }
+
     // whether what was typed is the name of a command the Grails shell had, which is answered with what there is in its place and is short for nothing
     private static boolean isFormer(CommandLine parent, String typed) {
         return parent.getParent() == null && FormerCommands.find(typed) != null
@@ -397,6 +413,10 @@ final class CommandCatalog {
             for (CommandLine command : known) {
                 (command.getCommandSpec().userObject() instanceof ApplicationCommandCommand ? ofTheBuild : own).add(command)
             }
+        }
+
+        List<CommandLine> all() {
+            return own + ofTheBuild
         }
 
         // what a form is short for; nothing for anything that cannot be a short form, and for a name of the Grails shell

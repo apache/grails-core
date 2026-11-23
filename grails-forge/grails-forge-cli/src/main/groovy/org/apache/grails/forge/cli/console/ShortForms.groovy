@@ -50,11 +50,19 @@ final class ShortForms {
     /** What can be a short form at all: anything else, a path or an option among them, is short for nothing. */
     public static final Pattern FORM = Pattern.compile('[A-Za-z][A-Za-z-]{0,63}')
 
+    /** How many commands a mistake names as those it was nearly the short form of, at most. */
+    public static final int MAX_NEAR = 3
+
     // a form of lower-case letters only: where its words begin is not marked, and every cut is read
     private static final Pattern LOWER_CASE = Pattern.compile('[a-z]{1,64}')
 
+    // what is looked at for the commands a mistake nearly is the short form of: a longer one is a name typed wrong
+    private static final int MAX_NEAR_LETTERS = 16
+
     // how many forms of a name are tried for the shortest that is short for it alone, at most
     private static final int MAX_TRIED = 4096
+
+    private static final String LETTERS = 'abcdefghijklmnopqrstuvwxyz'
 
     private ShortForms() {
     }
@@ -137,6 +145,61 @@ final class ShortForms {
             }
         }
         return null
+    }
+
+    /**
+     * The commands a form that is short for none of them nearly is the short form of: the commands it
+     * is short for when its case and its hyphens are not read, and then those it would be short for
+     * with one letter more, one less, one other, or two letters the other way round, its first letter
+     * kept. The second kind is given only where it names few commands: a short form of a few letters
+     * is one letter away from that of many.
+     *
+     * @param typed what was typed, which {@link #FORM} matches
+     * @param commands the commands it may nearly be short for
+     * @return the commands, at most {@link #MAX_NEAR}, in their order, as a list that can be added to
+     */
+    static List<CommandLine> near(String typed, List<CommandLine> commands) {
+        String letters = typed.toLowerCase(Locale.ROOT).replace('-', '')
+        if (!LOWER_CASE.matcher(letters).matches() || letters.length() > MAX_NEAR_LETTERS) {
+            return new ArrayList<CommandLine>()
+        }
+        Set<CommandLine> unread = new LinkedHashSet<CommandLine>(fitting(letters, commands))
+        Set<CommandLine> both = new LinkedHashSet<CommandLine>(unread)
+        Set<String> edits = edits(letters)
+        for (CommandLine command : commands) {
+            if (!both.contains(command) && edits.any { String edited -> isCutOfAny(edited, command) }) {
+                both.add(command)
+            }
+        }
+        List<CommandLine> near = new ArrayList<CommandLine>(both.size() <= MAX_NEAR ? both : unread)
+        return near.size() <= MAX_NEAR ? near : new ArrayList<CommandLine>(near.subList(0, MAX_NEAR))
+    }
+
+    // the forms one change away from a form, its first letter kept
+    private static Set<String> edits(String letters) {
+        Set<String> edits = new LinkedHashSet<String>()
+        int length = letters.length()
+        for (int at = 1; at <= length; at++) {
+            if (at < length) {
+                edits.add(letters.substring(0, at) + letters.substring(at + 1))
+                if (at + 1 < length) {
+                    edits.add(letters.substring(0, at) + letters.charAt(at + 1) + letters.charAt(at) + letters.substring(at + 2))
+                }
+            }
+            for (int each = 0; each < LETTERS.length(); each++) {
+                char letter = LETTERS.charAt(each)
+                edits.add(letters.substring(0, at) + letter + letters.substring(at))
+                if (at < length && letters.charAt(at) != letter) {
+                    edits.add(letters.substring(0, at) + letter + letters.substring(at + 1))
+                }
+            }
+        }
+        edits.remove(letters)
+        return edits
+    }
+
+    private static boolean isCutOfAny(String letters, CommandLine command) {
+        return names(command).any { String name -> isCut(letters, name) }
     }
 
     // the name of a command and the other names it has

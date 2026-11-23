@@ -48,6 +48,7 @@ class ConsoleSuggestionsSpec extends Specification {
             'quit'             : ['quit ended the interactive mode of the Grails shell. The interactive mode of grails is ended with exit, and there is none to end outside it'],
             'install'          : ['Run: grails gradle publishToMavenLocal'],
             'create-controller': ['grails project migrate writes the record of an application that has none'],
+            'rn'               : ['There is no command rn. Did you mean: run-app or run-script or run-command?'],
             'cc'               : ['cc is short for more than one command: create-controller (ccon), create-command (ccom). ' +
                                           'Type more of the name of the one that is meant, or the short form in brackets after it']
     ]
