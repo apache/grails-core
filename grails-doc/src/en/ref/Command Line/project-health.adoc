@@ -54,7 +54,7 @@ Options:
 ----
 $ grails project health
 | Project legacy on Grails 9.0.0 (gradle.properties), checked by the command line of Grails 9.0.0, offline
-| Warning java-target.release        build.gradle compiles for Java 17 (compileJava.options.release), and Grails 9 is built for Java 21: a class of the project that uses one of Grails does not compile. Fix: Set compileJava.options.release to 21 or later in build.gradle
+| Warning java-target.release        build.gradle names Java 17 (compileJava.options.release, line 68), and Grails 9 needs Java 21 or later: a class of the project that uses one of Grails does not compile. Fix: In build.gradle, set compileJava.options.release (line 68) to Java 21 or later
 | Advice  gradle-wrapper.older       The Gradle wrapper names Gradle 9.8.0 (gradle/wrapper/gradle-wrapper.properties), and create-app generates applications with Gradle 9.9.2. Fix: ./gradlew wrapper --gradle-version 9.9.2, and commit the wrapper
 | Advice  git-files.state-ignored    No .gitignore of the project leaves out .grails/transactions and .grails/history, ... Fix: Add .grails/transactions/ and .grails/history to the .gitignore of the project, as create-app writes them
 | 9 checks OK (-v lists them). 0 errors, 1 warning, 2 advice, 0 skipped
@@ -142,16 +142,16 @@ The id of a finding is the name of its check and the name of the finding, as `ja
 | The properties have no `distributionSha256Sum`, so the wrapper does not check the distribution it downloads.
 | Add the SHA-256 that gradle.org publishes for the distribution (`--gradle-distribution-sha256-sum` of the `wrapper` task).
 
-4+| `java-target`: the versions of Java `build.gradle` compiles for: `compileJava.options.release` and `options.release`, the toolchain (`JavaLanguageVersion.of`), `targetCompatibility` and `sourceCompatibility`.
+4+| `java-target`: each setting of `build.gradle` (or `build.gradle.kts`) that names a version of Java, read as `project migrate` reads it and named with its line: `compileJava.options.release`, `options.release` and `release` in a block of the options, `targetCompatibility` and `sourceCompatibility`, a `JavaVersion` constant, and the toolchain (`JavaLanguageVersion.of`, `jvmToolchain`). The classes are compiled for the version of the release where the build sets one, else of `targetCompatibility`, of `sourceCompatibility`, of a constant, and of the toolchain, in that order; what is set for other projects (`subprojects`, `configure`, `project`) does not count.
 
 | `java-target.release`
 | warning
 | One of them is before Java 21.
-| Set it to 21 or later.
+| Set it to 21 or later, on the line the message names.
 
 | `java-target.record`
 | advice
-| The record that `project migrate` wrote names another version of Java (`--jdk`) than the build compiles for.
+| The record that `project migrate` wrote names another version of Java (`--jdk`) than the classes are compiled for.
 | `grails project migrate --force --jdk VERSION`, with the name and the options the record was written with.
 
 4+| `sdkmanrc`: the versions the `.sdkmanrc` of the project selects for `sdk env`. A project without one has nothing to check.
@@ -349,8 +349,8 @@ With `--json` the command writes one JSON document and nothing else, and ends wi
 {"format": 1, "command": "project health", "projectDirectory": "/home/me/legacy", "outcome": "checked", "reason": null, "message": null,
  "projectGrailsVersion": "9.0.0", "commandLineVersion": "9.0.0", "online": false, "strict": false, "passed": true,
  "counts": {"error": 0, "warning": 1, "advice": 2, "ok": 9, "skipped": 0},
- "findings": [{"id": "java-target.release", "check": "java-target", "level": "warning", "message": "build.gradle compiles for Java 17 ...",
-               "fix": "Set compileJava.options.release to 21 or later in build.gradle", "command": null, "files": ["build.gradle"],
+ "findings": [{"id": "java-target.release", "check": "java-target", "level": "warning", "message": "build.gradle names Java 17 (compileJava.options.release, line 68) ...",
+               "fix": "In build.gradle, set compileJava.options.release (line 68) to Java 21 or later", "command": null, "files": ["build.gradle"],
                "upgradeNote": "https://grails.apache.org/docs/9.0.0/guide/upgrading.html#upgradingGroovy6", "origin": "built-in"}, ...]}
 ----
 

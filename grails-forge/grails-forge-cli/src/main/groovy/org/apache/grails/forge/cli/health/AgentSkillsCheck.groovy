@@ -22,6 +22,7 @@ import java.nio.file.Files
 import java.nio.file.LinkOption
 import java.nio.file.Path
 import groovy.transform.CompileStatic
+import org.apache.grails.forge.cli.console.ProjectEvidence
 
 /**
  * {@code agent-skills}: whether the {@code grails-upgrade} agent skill, which turns the upgrade notes
@@ -56,7 +57,7 @@ final class AgentSkillsCheck extends HealthCheck {
         if (!upgrading) {
             return [ok('No upgrade is under way, so the agent skill of the upgrade is not looked for')]
         }
-        BuildFacts build = context.build
+        ProjectEvidence build = context.evidence
         List<String> directories = new ArrayList<String>(SKILL_DIRECTORIES)
         if (build.skillsOutputDirectory != null && !directories.contains(build.skillsOutputDirectory)) {
             directories.add(0, build.skillsOutputDirectory)
@@ -65,16 +66,16 @@ final class AgentSkillsCheck extends HealthCheck {
         if (extracted != null) {
             return [ok("The agent skill of the upgrade is extracted for the agents of the project (${extracted})", ["${extracted}/${EXTRACTED}".toString()])]
         }
-        if (build.skillsJarsPlugin && SKILL in context.evidence.dependencies) {
-            return [found('not-extracted', HealthLevel.ADVICE, "${build.file} declares the agent skill of the upgrade (${SKILL}), and it is not extracted: " +
+        if (build.skillsJarsPlugin && SKILL in build.dependencies) {
+            return [found('not-extracted', HealthLevel.ADVICE, "${build.buildFile} declares the agent skill of the upgrade (${SKILL}), and it is not extracted: " +
                     'agents read it from a directory of the project', "${EXTRACT} writes it, as it does in every fresh clone, where extracted skills are not committed",
-                    EXTRACT, [build.file], null)]
+                    EXTRACT, [build.buildFile], null)]
         }
         String version = context.onEarlierMajor ? ":${context.commandLineVersion}" : ''
         return [found('upgrade-skill', HealthLevel.ADVICE, 'The agent skill of the upgrade, which turns the upgrade notes into a checklist for an AI coding agent, ' +
-                'is not there for the agents of the project', "Add id '${BuildFacts.SKILLSJARS_PLUGIN}' version '0.2.0' to the plugins of ${build.file}, " +
+                'is not there for the agents of the project', "Add id '${ProjectEvidence.SKILLSJARS_PLUGIN}' version '0.2.0' to the plugins of ${build.buildFile}, " +
                 "skill '${SKILL}${version}' to its dependencies, and skillsjars { outputDir = layout.projectDirectory.dir('.agents/skills') }, and run ${EXTRACT}",
-                null, [build.file], null)]
+                null, [build.buildFile], null)]
     }
 
     private static boolean isExtracted(Path project, String directory) {

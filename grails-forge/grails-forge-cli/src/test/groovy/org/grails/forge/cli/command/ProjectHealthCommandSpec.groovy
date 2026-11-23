@@ -68,6 +68,9 @@ class ProjectHealthCommandSpec extends CommandSpec {
             'leftover.settings-groovy', 'leftover.earlier-record', 'leftover.earlier-record-differs', 'leftover.profile-config', 'leftover.preferred-shell',
             'agent-skills.upgrade-skill', 'agent-skills.not-extracted'].asImmutable()
 
+    static final String TOOLCHAIN_25 = 'java {\n    toolchain {\n        languageVersion = JavaLanguageVersion.of(25)\n    }\n}\n'
+    static final String TOOLCHAIN_21 = 'java {\n    toolchain {\n        languageVersion = JavaLanguageVersion.of(21)\n    }\n}\n'
+
     @Shared
     File template
 
@@ -199,6 +202,11 @@ class ProjectHealthCommandSpec extends CommandSpec {
         'java-target.release'                  | 'warning' | 'the build compiles for Java 17'                       | { File p, File h -> replace(p, 'build.gradle', ~/compileJava\.options\.release = \d+/, 'compileJava.options.release = 17') }
         'java-target.release'                  | 'warning' | 'the toolchain is of Java 17'                           | { File p, File h -> append(p, 'build.gradle', 'java {\n    toolchain {\n        languageVersion = JavaLanguageVersion.of(17)\n    }\n}\n') }
         'java-target.release'                  | 'warning' | 'the build is for Java 1.8'                            | { File p, File h -> append(p, 'build.gradle', 'java {\n    sourceCompatibility = JavaVersion.VERSION_1_8\n}\n') }
+        'java-target.release'                  | 'warning' | 'the release is set in a block of the options'         | { File p, File h -> append(p, 'build.gradle', 'tasks.withType(JavaCompile).configureEach {\n    options.with {\n        release = 17\n    }\n}\n') }
+        'java-target.release'                  | 'warning' | 'a build in Kotlin has a toolchain of Java 17'         | { File p, File h -> kotlinBuild(p); append(p, 'build.gradle.kts', 'kotlin {\n    jvmToolchain(17)\n}\n') }
+        'java-target.ok'                       | 'ok'      | 'the build compiles for Java 21'                       | { File p, File h -> }
+        'java-target.ok'                       | 'ok'      | 'what is set for other projects is not counted'        | { File p, File h -> append(p, 'build.gradle', 'subprojects {\n    tasks.withType(JavaCompile) {\n        options.release = 17\n    }\n}\n') }
+        'java-target.ok'                       | 'ok'      | 'a setting that is commented out is not counted'       | { File p, File h -> append(p, 'build.gradle', '// compileJava.options.release = 17\n/* sourceCompatibility = 1.8 */\n') }
         'java-target.skipped'                  | 'skipped' | 'the build names no Java and applies another file'     | { File p, File h -> replace(p, 'build.gradle', ~/compileJava\.options\.release = \d+/, "apply from: 'gradle/java.gradle'") }
         'java-target.record'                   | 'advice'  | 'the record migrate wrote is for another Java'         | { File p, File h -> migrated(p); replace(p, 'build.gradle', ~/compileJava\.options\.release = \d+/, 'compileJava.options.release = 25') }
         'sdkmanrc.java'                        | 'warning' | '.sdkmanrc selects Java 17'                            | { File p, File h -> new File(p, '.sdkmanrc').text = 'java=17.0.12-tem\n' }
@@ -241,8 +249,67 @@ class ProjectHealthCommandSpec extends CommandSpec {
         'leftover.preferred-shell'             | 'advice'  | 'GRAILS_PREFERRED_SHELL is set'                        | { File p, File h -> HealthContext.setEnvironment([GRAILS_PREFERRED_SHELL: 'forge']) }
         'agent-skills.upgrade-skill'           | 'advice'  | 'a project of Grails 8 has no upgrade skill'           | { File p, File h -> grailsVersion(p, '8.0.1') }
         'agent-skills.not-extracted'           | 'advice'  | 'the upgrade skill is declared and not extracted'      | { File p, File h -> grailsVersion(p, '8.0.1'); skills(p) }
+        'agent-skills.upgrade-skill'           | 'advice'  | 'the plugin is in a comment only'                      | { File p, File h -> grailsVersion(p, '8.0.1'); skills(p); replace(p, 'build.gradle', ~/    id 'com\.skillsjars/, "    // id 'com.skillsjars") }
         'agent-skills.ok'                      | 'ok'      | 'the upgrade skill is extracted'                       | { File p, File h -> grailsVersion(p, '8.0.1'); skills(p); extracted(p, '.agents/skills') }
+        'agent-skills.ok'                      | 'ok'      | 'the skill is extracted to the outputDir of the build' | { File p, File h -> grailsVersion(p, '8.0.1'); skills(p); append(p, 'build.gradle', "skillsjars {\n    outputDir = layout.projectDirectory.dir('.ai/skills')\n}\n"); extracted(p, '.ai/skills') }
         'agent-skills.ok'                      | 'ok'      | 'no upgrade is under way'                              | { File p, File h -> }
+    }
+
+    void "java-target names a version of Java below the earliest with its setting and line, as project migrate names it"() {
+        given: 'a build that Grails 8 generated for Java 17, with another setting below it'
+        File project = copyOfTemplate()
+        replace(project, 'build.gradle', ~/compileJava\.options\.release = \d+/, 'compileJava.options.release = 17')
+        append(project, 'build.gradle', 'java {\n    targetCompatibility = JavaVersion.VERSION_11\n}\n')
+        String build = new File(project, 'build.gradle').text
+        int release = lineOf(build, 'compileJava.options.release')
+        int target = lineOf(build, 'targetCompatibility')
+        int major = HealthContext.minimumJava
+        String grails = "Grails ${VersionInfo.grailsVersion.tokenize('.').first()}"
+
+        when:
+        run(project, 'project', 'health', '--json')
+        Map finding = (parsed().findings as List<Map>).find { it.id == 'java-target.release' }
+
+        then: 'each setting, with its line, in the order of the build file'
+        finding.message == "build.gradle names Java 17 (compileJava.options.release, line ${release}) and Java 11 (targetCompatibility, line ${target}), and ${grails} needs Java ${major} or later: ".toString() +
+                'a class of the project that uses one of Grails does not compile'
+        finding.fix == "In build.gradle, set compileJava.options.release (line ${release}) and targetCompatibility (line ${target}) to Java ${major} or later".toString()
+        finding.files == ['build.gradle']
+
+        when: 'project migrate reads the build alike'
+        new File(project, '.grails').deleteDir()
+        out.reset()
+        run(project, 'project', 'migrate', '--dry-run')
+
+        then:
+        out.toString().readLines().contains("| build.gradle names Java 17 (compileJava.options.release, line ${release}) and Java 11 (targetCompatibility, line ${target}), and ${grails} ".toString() +
+                "needs Java ${major} or later: change the build to Java ${major} or later, or the application does not build with ${grails}")
+    }
+
+    @Unroll
+    void "java-target goes by the setting the classes are compiled for, the release before targetCompatibility, sourceCompatibility and the toolchain: #what"() {
+        given: 'the record project migrate writes for the generated build, which is for Java 21'
+        File project = copyOfTemplate()
+        migrated(project)
+        replace(project, 'build.gradle', ~/compileJava\.options\.release = \d+\n/, declared)
+        String build = new File(project, 'build.gradle').text
+        List<Integer> lines = markers.collect { String marker -> lineOf(build, marker) }
+
+        when:
+        run(project, 'project', 'health', '--json')
+        List<Map> findings = (parsed().findings as List<Map>).findAll { it.check == 'java-target' }
+
+        then:
+        findings*.id == [id]
+        findings.first().message == message.call(lines)
+
+        where:
+        what                                     | declared                                                                     | markers                                                     | id                   | message
+        'the release, and a later toolchain'     | "${TOOLCHAIN_25}compileJava.options.release = 21\n"                          | ['compileJava.options.release', 'JavaLanguageVersion']      | 'java-target.ok'     | { List<Integer> l -> "build.gradle compiles for Java 21 (compileJava.options.release, line ${l[0]}); it also names Java 25 (the Java toolchain, line ${l[1]})".toString() }
+        'targetCompatibility, and a toolchain'   | "${TOOLCHAIN_25}java {\n    targetCompatibility = JavaVersion.VERSION_21\n}\n" | ['targetCompatibility', 'JavaLanguageVersion']              | 'java-target.ok'     | { List<Integer> l -> "build.gradle compiles for Java 21 (targetCompatibility, line ${l[0]}); it also names Java 25 (the Java toolchain, line ${l[1]})".toString() }
+        'the toolchain alone'                    | TOOLCHAIN_25                                                                 | ['JavaLanguageVersion']                                     | 'java-target.record' | { List<Integer> l -> "The record says that the application is for Java 21 (.grails/project.yml), and build.gradle compiles for Java 25 (the Java toolchain, line ${l[0]})".toString() }
+        'a later release, and the toolchain'     | "compileJava.options.release = 25\n${TOOLCHAIN_21}"                          | ['compileJava.options.release']                             | 'java-target.record' | { List<Integer> l -> "The record says that the application is for Java 21 (.grails/project.yml), and build.gradle compiles for Java 25 (compileJava.options.release, line ${l[0]})".toString() }
+        'sourceCompatibility before the toolchain' | "${TOOLCHAIN_21}sourceCompatibility = '25'\n"                              | ['sourceCompatibility']                                     | 'java-target.record' | { List<Integer> l -> "The record says that the application is for Java 21 (.grails/project.yml), and build.gradle compiles for Java 25 (sourceCompatibility, line ${l[0]})".toString() }
     }
 
     void "the JSON document has every member in one order, and each finding has an id of its check, its level, the fix and the upgrade note"() {
@@ -607,6 +674,18 @@ class ProjectHealthCommandSpec extends CommandSpec {
 
     static void distribution(File project, String url) {
         replace(project, 'gradle/wrapper/gradle-wrapper.properties', ~/distributionUrl=.*/, "distributionUrl=${url}")
+    }
+
+    // the line of the build file that has the marker first, from 1
+    static int lineOf(String build, String marker) {
+        int index = build.readLines().findIndexOf { String line -> line.contains(marker) }
+        assert index >= 0
+        return index + 1
+    }
+
+    // the build file as a build file of Kotlin, which is read where there is no build.gradle
+    static void kotlinBuild(File project) {
+        assert new File(project, 'build.gradle').renameTo(new File(project, 'build.gradle.kts'))
     }
 
     static void dependency(File project, String line) {

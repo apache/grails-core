@@ -149,12 +149,15 @@ dependencies {
         'Groovy' | 'options.release'             | 'options.release = 25'            | 'tasks.withType(JavaCompile).configureEach {\n    options.release = 25\n}\n'
         'Groovy' | 'options.release'             | 'options.release.set(25)'         | 'compileJava {\n    options.release.set(25)\n}\n'
         'Groovy' | 'options.release'             | 'options.release = 25'            | 'tasks.named(\'compileJava\', JavaCompile) {\n    it.options.release = 25\n}\n'
+        'Groovy' | 'release'                     | 'release = 25'                    | 'tasks.withType(JavaCompile).configureEach {\n    options.with {\n        release = 25\n    }\n}\n'
         'Groovy' | 'the Java toolchain'          | 'JavaLanguageVersion'             | 'java {\n    toolchain {\n        languageVersion = JavaLanguageVersion.of(25)\n    }\n}\n'
+        'Groovy' | 'the Java toolchain'          | 'JavaLanguageVersion'             | 'java {\n    toolchain {\n        languageVersion = JavaLanguageVersion .of ( 25 )\n    }\n}\n'
         'Groovy' | 'targetCompatibility'         | 'targetCompatibility'             | 'java {\n    sourceCompatibility = JavaVersion.VERSION_25\n    targetCompatibility = JavaVersion.VERSION_25\n}\n'
         'Groovy' | 'sourceCompatibility'         | 'sourceCompatibility'             | "sourceCompatibility = '25'\n"
         'Groovy' | 'java.sourceCompatibility'    | 'sourceCompatibility'             | 'java.sourceCompatibility = JavaVersion.toVersion(25)\n'
         'Kotlin' | 'options.release'             | 'options.release'                 | 'tasks.withType<JavaCompile> {\n    options.release.set(25)\n}\n'
         'Kotlin' | 'options.release'             | 'options.release'                 | 'tasks.compileJava {\n    options.release = 25\n}\n'
+        'Kotlin' | 'release'                     | 'release.set(25)'                 | 'tasks.withType<JavaCompile>().configureEach {\n    options.apply {\n        release.set(25)\n    }\n}\n'
         'Kotlin' | 'the Java toolchain'          | 'JavaLanguageVersion'             | 'java {\n    toolchain {\n        languageVersion.set(JavaLanguageVersion.of(25))\n    }\n}\n'
         'Kotlin' | 'jvmToolchain'                | 'jvmToolchain'                    | 'kotlin {\n    jvmToolchain(25)\n}\n'
         'Kotlin' | 'java.targetCompatibility'    | 'targetCompatibility'             | 'java.targetCompatibility = JavaVersion.VERSION_25\n'
@@ -199,6 +202,21 @@ dependencies {
         row(said, 'jdk') == ['21', "(compileJava.options.release of build.gradle, line ${lineOf(build, 'compileJava.options.release')})".toString()]
         said.contains("| build.gradle also names Java 25 (the Java toolchain, line ${lineOf(build, 'JavaLanguageVersion')}); the record takes Java 21, ".toString() +
                 'of compileJava.options.release, which is what the classes are compiled for')
+    }
+
+    void "a release that is of something else than a compilation is not read as one"() {
+        given:
+        String build = GRAILS_8_BUILD.replace('compileJava.options.release = 17\n', 'ext.release = 17\nversion.release = 11\ndef releaseNumber = 8\n')
+        new File(dir, 'build.gradle').text = build
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'project', 'migrate', '--dry-run')
+        List<String> said = out.toString().readLines()
+
+        then:
+        exit == 0
+        row(said, 'jdk') == ['21', '(assumed)']
+        !said.any { it.contains('needs Java 21') }
     }
 
     void "a setting that is commented out, or that is for other projects, is not read"() {

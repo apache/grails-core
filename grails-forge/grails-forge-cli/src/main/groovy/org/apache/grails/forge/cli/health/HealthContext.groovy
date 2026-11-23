@@ -45,9 +45,6 @@ final class HealthContext {
     /** How many bytes a file of the project that is read has, at most. */
     static final int MAX_FILE = 1024 * 1024
 
-    /** How many characters a line of such a file has, at most: a longer line is not read. */
-    static final int MAX_LINE = 2000
-
     private static final Function<String, String> SYSTEM = { String name -> System.getenv(name) } as Function<String, String>
     private static volatile Function<String, String> environment = SYSTEM
 
@@ -73,7 +70,6 @@ final class HealthContext {
     private boolean versionRead
     private String projectVersion
     private ProjectEvidence evidence
-    private BuildFacts build
     private boolean recordRead
     private ProjectState record
     private String recordFailure
@@ -152,24 +148,14 @@ final class HealthContext {
     }
 
     /**
-     * @return what the files of the project say of the application, see {@link ProjectEvidence}
+     * @return what the files of the project say of the application, see {@link ProjectEvidence}: the build file
+     * is read there, as {@code project migrate} reads it
      */
     ProjectEvidence getEvidence() {
         if (evidence == null) {
             evidence = ProjectEvidence.of(directory)
         }
         return evidence
-    }
-
-    /**
-     * @return what the build file says that the checks need besides the evidence
-     */
-    BuildFacts getBuild() {
-        if (build == null) {
-            String file = getEvidence().buildFile
-            build = BuildFacts.of(file, getEvidence().buildRead ? lines(directory.resolve(file)) : null)
-        }
-        return build
     }
 
     /**
@@ -250,14 +236,6 @@ final class HealthContext {
         } catch (IOException ignored) {
             return null
         }
-    }
-
-    /**
-     * @return the lines of a text file of the project, without those longer than {@link #MAX_LINE}; {@code null} where there is no such file
-     */
-    static List<String> lines(Path file) {
-        String text = text(file, MAX_FILE)
-        return text == null ? null : text.readLines().findAll { String line -> line.length() <= MAX_LINE }
     }
 
     /**
