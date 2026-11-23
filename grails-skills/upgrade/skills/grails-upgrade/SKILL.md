@@ -1070,6 +1070,7 @@ Generated YAML configuration has a fixed key order (`info`, `dataSource`, `envir
 - [ ] Feature pack descriptors: a full name `group:artifact#name` in `requires`, `conflicts` or a preset's `features` matches only the pack of that plugin taken by coordinates or from a catalog, and a conflict by full name now refuses the application. `feature list` takes `--feature-pack-dir`, `--feature-pack-repository` and `--offline` as `feature add` does
 - [ ] An interrupted `feature add` or `project migrate` that refuses with "has another mode than the change gave it": give the named file the mode the message names (or make it what it was before the change) and run the command again; a journal of an earlier Grails 9 build in `~/.grails/forge/transactions` is not read: restore the project from version control and remove that `journal`
 - [ ] `project regenerate --diff [--json]` reports `unreadable-file` for a file it cannot read: make the file readable before comparing
+- [ ] If `grails help` or `grails project health` says `runtimeClasspath cannot be resolved completely`, fix the dependency it names (`./gradlew dependencies --configuration runtimeClasspath`): the project compiles, but it does not run until then
 - [ ] The full test suite passes on Groovy 6
 
 ## Pitfalls to Avoid
