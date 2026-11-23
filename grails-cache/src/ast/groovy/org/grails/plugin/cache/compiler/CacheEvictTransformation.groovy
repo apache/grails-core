@@ -38,7 +38,10 @@ import org.apache.grails.common.compiler.GroovyTransformOrder
 import static org.codehaus.groovy.ast.ClassHelper.make
 import static org.codehaus.groovy.ast.tools.GeneralUtils.block
 import static org.codehaus.groovy.ast.tools.GeneralUtils.callX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.ifS
+import static org.codehaus.groovy.ast.tools.GeneralUtils.notNullX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.stmt
+import static org.codehaus.groovy.ast.tools.GeneralUtils.varX
 
 /**
  * Implementation of {@link CacheEvict}
@@ -56,16 +59,16 @@ class CacheEvictTransformation extends AbstractCacheTransformation {
     @Override
     protected Expression buildDelegatingMethodCall(SourceUnit sourceUnit, AnnotationNode annotationNode, ClassNode classNode, MethodNode methodNode, MethodCallExpression originalMethodCallExpr, BlockStatement newMethodBody) {
 
-        VariableExpression cacheManagerVariableExpression = cacheManagerVariable(methodNode)
+        VariableExpression cacheManagerVariableExpression = varX(GRAILS_CACHE_MANAGER_PROPERTY_NAME)
         handleCacheCondition(sourceUnit, annotationNode,  methodNode, originalMethodCallExpr, newMethodBody)
 
         BlockStatement cachingBlock = block()
 
         // Cache $_cache_cacheVariable = this.grailsCacheManager.getCache("...");
-        VariableExpression cacheDeclaration = declareCache(annotationNode, methodNode, cacheManagerVariableExpression, cachingBlock)
+        VariableExpression cacheDeclaration = declareCache(annotationNode, cacheManagerVariableExpression, cachingBlock)
 
         // if($_cache_cacheVariable != null) { ... } else { report the missing cache }
-        BlockStatement cacheBlock = whereCacheExists(annotationNode, classNode, cacheManagerVariableExpression, cacheDeclaration, cachingBlock)
+        BlockStatement cacheBlock = whereCacheExists(annotationNode, classNode, cacheDeclaration, cachingBlock)
 
         Statement statement
 
@@ -93,7 +96,12 @@ class CacheEvictTransformation extends AbstractCacheTransformation {
 
         cacheBlock.addStatement(statement)
 
-        ifCacheManager(cacheManagerVariableExpression, cachingBlock, newMethodBody)
+        newMethodBody.addStatement(
+                // if(grailsCacheManager != null)
+                ifS(notNullX(varX(GRAILS_CACHE_MANAGER_PROPERTY_NAME)),
+                        cachingBlock
+                )
+        )
         return originalMethodCallExpr
     }
 

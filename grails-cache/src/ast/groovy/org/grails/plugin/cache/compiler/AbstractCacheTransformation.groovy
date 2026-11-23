@@ -61,7 +61,6 @@ import static org.codehaus.groovy.ast.ClassHelper.int_TYPE
 import static org.codehaus.groovy.ast.ClassHelper.make
 import static org.codehaus.groovy.ast.tools.GeneralUtils.args
 import static org.codehaus.groovy.ast.tools.GeneralUtils.block
-import static org.codehaus.groovy.ast.tools.GeneralUtils.callThisX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.callX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.classX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.constX
@@ -90,7 +89,6 @@ abstract class AbstractCacheTransformation extends AbstractMethodDecoratingTrans
     public static final String CACHE_KEY_LOCAL_VARIABLE_NAME = '$_cache_cacheKey'
     public static final String METHOD_PARAMETER_MAP_LOCAL_VARIABLE_NAME = '$_method_parameter_map'
     public static final String CACHE_VARIABLE_LOCAL_VARIABLE_NAME = '$_cache_cacheVariable'
-    public static final String CACHE_MANAGER_LOCAL_VARIABLE_NAME = '$_cache_cacheManager'
     public static final String GRAILS_CACHE_KEY_GENERATOR_PROPERTY_NAME = 'customCacheKeyGenerator'
 
     private static final Object APPLIED_MARKER = new Object()
@@ -137,7 +135,7 @@ abstract class AbstractCacheTransformation extends AbstractMethodDecoratingTrans
             return null
         }
 
-        VariableExpression parameterMapVar = varX(localName(methodToCache, METHOD_PARAMETER_MAP_LOCAL_VARIABLE_NAME), MAP_TYPE)
+        VariableExpression parameterMapVar = varX(METHOD_PARAMETER_MAP_LOCAL_VARIABLE_NAME, MAP_TYPE)
         Statement parameterMapDec = declS(parameterMapVar, new MapExpression())
         codeBlock.addStatement(
             parameterMapDec
@@ -169,51 +167,8 @@ abstract class AbstractCacheTransformation extends AbstractMethodDecoratingTrans
         return parameterMapVar
     }
 
-    /**
-     * The cache manager the method caches with, read once into a local, so that the check for one, the
-     * cache lookup and the report of a missing cache all use the same one.
-     *
-     * @return the local, which {@link #ifCacheManager} declares
-     */
-    protected VariableExpression cacheManagerVariable(MethodNode methodNode) {
-        varX(localName(methodNode, CACHE_MANAGER_LOCAL_VARIABLE_NAME), make(CacheManager))
-    }
-
-    /**
-     * The name of a local the generated code declares in the method, made unlike the names of the method's
-     * parameters, which are in scope in the same block.
-     *
-     * @param methodNode the annotated method
-     * @param name the name the local has where no parameter has it
-     * @return the name, with as many underscores added as it takes to differ from every parameter's
-     */
-    protected static String localName(MethodNode methodNode, String name) {
-        Set<String> parameterNames = methodNode.parameters*.name as Set<String>
-        String local = name
-        while (local in parameterNames) {
-            local += '_'
-        }
-        local
-    }
-
-    /**
-     * Adds to the method body the read of the cache manager into its local, and the caching block,
-     * which runs where there is one.
-     *
-     * @param cacheManagerVariableExpression the local from {@link #cacheManagerVariable}
-     * @param cachingBlock the caching block
-     * @param newMethodBody the method body
-     */
-    protected void ifCacheManager(VariableExpression cacheManagerVariableExpression, BlockStatement cachingBlock, BlockStatement newMethodBody) {
-        // read through the getter, which a parameter of the method cannot hide as it can the property's name
-        newMethodBody.addStatement(declS(cacheManagerVariableExpression, callThisX('getGrailsCacheManager')))
-        // if($_cache_cacheManager != null)
-        newMethodBody.addStatement(ifS(notNullX(cacheManagerVariableExpression), cachingBlock))
-    }
-
-    protected VariableExpression declareCache(AnnotationNode annotationNode, MethodNode methodNode,
-                                              VariableExpression cacheManagerVariableExpression, BlockStatement cacheBlock) {
-        VariableExpression cacheVariableExpression = varX(localName(methodNode, CACHE_VARIABLE_LOCAL_VARIABLE_NAME), make(Cache))
+    protected VariableExpression declareCache(AnnotationNode annotationNode, VariableExpression cacheManagerVariableExpression, BlockStatement cacheBlock) {
+        VariableExpression cacheVariableExpression = varX(CACHE_VARIABLE_LOCAL_VARIABLE_NAME, make(Cache))
         Expression cacheNameExpression = (ConstantExpression) annotationNode.getMember('value')
 
         MethodCallExpression getCacheMethodCallExpression = callX(cacheManagerVariableExpression, 'getCache', args(cacheNameExpression))
@@ -233,17 +188,16 @@ abstract class AbstractCacheTransformation extends AbstractMethodDecoratingTrans
      *
      * @param annotationNode the cache annotation, whose {@code value} names the cache
      * @param classNode the class the method is in, which the report names
-     * @param cacheManagerVariableExpression the cache manager the cache was looked up in
      * @param cacheVariableExpression the cache declared by {@link #declareCache}
      * @param cacheBlock the caching block
      * @return the block that runs where there is a cache
      */
-    protected BlockStatement whereCacheExists(AnnotationNode annotationNode, ClassNode classNode, VariableExpression cacheManagerVariableExpression,
+    protected BlockStatement whereCacheExists(AnnotationNode annotationNode, ClassNode classNode,
                                               VariableExpression cacheVariableExpression, BlockStatement cacheBlock) {
         BlockStatement whereCacheExists = block()
         Object cacheName = ((ConstantExpression) annotationNode.getMember('value')).value
         MethodCallExpression report = callX(classX(MISSING_CACHE_REPORTER_CLASS_NODE), 'report',
-                args(cacheManagerVariableExpression, constX(cacheName), classX(classNode.plainNodeReference)))
+                args(varX(GRAILS_CACHE_MANAGER_PROPERTY_NAME), constX(cacheName), classX(classNode.plainNodeReference)))
         report.methodTarget = REPORT_MISSING_CACHE_METHOD_NODE
         cacheBlock.addStatement(ifElseS(notNullX(cacheVariableExpression), whereCacheExists, stmt(report)))
         return whereCacheExists
@@ -268,15 +222,15 @@ abstract class AbstractCacheTransformation extends AbstractMethodDecoratingTrans
             createKeyArgs.addExpression(keyGenMember)
         } else {
             generateMethod = GENERATE_FROM_PARAMETERS_METHOD
-            createKeyArgs.addExpression(varX(localName(methodNode, METHOD_PARAMETER_MAP_LOCAL_VARIABLE_NAME)))
+            createKeyArgs.addExpression(varX(METHOD_PARAMETER_MAP_LOCAL_VARIABLE_NAME))
         }
 
         // customCacheKeyGenerator.generate(className, methodName, hashCode, map)
-        MethodCallExpression cacheKeyExpression = callX(callThisX('getCustomCacheKeyGenerator'), generateMethod.name, createKeyArgs)
+        MethodCallExpression cacheKeyExpression = callX(varX(GRAILS_CACHE_KEY_GENERATOR_PROPERTY_NAME), generateMethod.name, createKeyArgs)
         cacheKeyExpression.methodTarget = generateMethod
 
         // def $_cache_cacheKey = .. // generated key
-        VariableExpression cacheKeyVariableExpression = varX(localName(methodNode, CACHE_KEY_LOCAL_VARIABLE_NAME))
+        VariableExpression cacheKeyVariableExpression = varX(CACHE_KEY_LOCAL_VARIABLE_NAME)
         cacheBlock.addStatement(
             declS(cacheKeyVariableExpression, cacheKeyExpression)
         )

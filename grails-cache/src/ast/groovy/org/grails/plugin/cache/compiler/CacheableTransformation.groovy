@@ -42,6 +42,7 @@ import static org.codehaus.groovy.ast.tools.GeneralUtils.args
 import static org.codehaus.groovy.ast.tools.GeneralUtils.block
 import static org.codehaus.groovy.ast.tools.GeneralUtils.declS
 import static org.codehaus.groovy.ast.tools.GeneralUtils.ifElseS
+import static org.codehaus.groovy.ast.tools.GeneralUtils.ifS
 import static org.codehaus.groovy.ast.tools.GeneralUtils.notNullX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.returnS
 import static org.codehaus.groovy.ast.tools.GeneralUtils.stmt
@@ -75,7 +76,7 @@ class CacheableTransformation extends AbstractCacheTransformation {
             return originalMethodCallExpr
         }
 
-        VariableExpression cacheManagerVariableExpression = cacheManagerVariable(methodNode)
+        VariableExpression cacheManagerVariableExpression = varX(GRAILS_CACHE_MANAGER_PROPERTY_NAME)
         handleCacheCondition(sourceUnit, annotationNode,  methodNode, originalMethodCallExpr, newMethodBody)
 
         BlockStatement cachingBlock = block()
@@ -83,10 +84,10 @@ class CacheableTransformation extends AbstractCacheTransformation {
         // Generated logic looks like:
         //
         // Cache $_cache_cacheVariable = this.grailsCacheManager.getCache("...");
-        VariableExpression cacheDeclaration = declareCache(annotationNode, methodNode, cacheManagerVariableExpression, cachingBlock)
+        VariableExpression cacheDeclaration = declareCache(annotationNode, cacheManagerVariableExpression, cachingBlock)
 
         // if($_cache_cacheVariable != null) { ... } else { report the missing cache }
-        BlockStatement cacheBlock = whereCacheExists(annotationNode, classNode, cacheManagerVariableExpression, cacheDeclaration, cachingBlock)
+        BlockStatement cacheBlock = whereCacheExists(annotationNode, classNode, cacheDeclaration, cachingBlock)
 
         // def $_method_parameter_map = [name:value]
         declareAndInitializeParameterValueMap(annotationNode, methodNode, cacheBlock)
@@ -95,7 +96,7 @@ class CacheableTransformation extends AbstractCacheTransformation {
         VariableExpression cacheKeyDeclaration = declareCacheKey(sourceUnit, annotationNode, classNode, methodNode , cacheBlock)
 
         // ValueWrapper $_cache_valueWrapper = $_cache_cacheVariable.get($_cache_cacheKey);
-        VariableExpression cacheValueWrapper = varX(localName(methodNode, CACHE_VALUE_WRAPPER_LOCAL_VARIABLE_NAME), make(Cache.ValueWrapper))
+        VariableExpression cacheValueWrapper = varX(CACHE_VALUE_WRAPPER_LOCAL_VARIABLE_NAME, make(Cache.ValueWrapper))
         cacheBlock.addStatement(
             declS(cacheValueWrapper, callD(cacheDeclaration, 'get', cacheKeyDeclaration))
         )
@@ -107,7 +108,7 @@ class CacheableTransformation extends AbstractCacheTransformation {
         //    $_cache_cacheVariable.put($_cache_cacheKey, $_cache_originalMethodReturnValue);
         //    return $_cache_originalMethodReturnValue;
         // }
-        VariableExpression originalValueExpr = varX(localName(methodNode, CACHE_ORIGINAL_METHOD_RETURN_VALUE_LOCAL_VARIABLE_NAME))
+        VariableExpression originalValueExpr = varX(CACHE_ORIGINAL_METHOD_RETURN_VALUE_LOCAL_VARIABLE_NAME)
         cacheBlock.addStatement(
             ifElseS(notNullX(cacheValueWrapper),
                 returnS(callD(cacheValueWrapper, 'get')),
@@ -119,7 +120,12 @@ class CacheableTransformation extends AbstractCacheTransformation {
             )
         )
 
-        ifCacheManager(cacheManagerVariableExpression, cachingBlock, newMethodBody)
+        newMethodBody.addStatement(
+            // if(grailsCacheManager != null)
+            ifS(notNullX(varX(GRAILS_CACHE_MANAGER_PROPERTY_NAME)),
+                    cachingBlock
+            )
+        )
         return originalMethodCallExpr
     }
 
