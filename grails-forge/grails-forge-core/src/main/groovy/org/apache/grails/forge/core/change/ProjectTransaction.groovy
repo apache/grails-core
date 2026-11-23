@@ -88,7 +88,8 @@ import java.util.stream.Stream
  * file is neither, and the written files put back otherwise.</p>
  *
  * <p>The lock is between the commands that change a project. It does not keep an editor from writing
- * a file while the change is made.</p>
+ * a file while the change is made or undone: a file is compared with what it is to be just before it
+ * is replaced or put back, which leaves only the moment between the two.</p>
  */
 @CompileStatic
 @PackageScope
@@ -343,7 +344,10 @@ final class ProjectTransaction {
      * <li>a file is neither: it was changed by somebody else. Nothing is put back, and the files are
      * named;</li>
      * <li>otherwise some files are what the change makes them and the others what they were: the
-     * first are put back from their copies, each of which has to be what the file was.</li>
+     * first are put back from their copies, each of which has to be what the file was. Each file is
+     * compared once more just before it is put back, as one is before the change writes it: a file
+     * that was changed since it was looked at stops the undoing there, the files that were put back
+     * stay so, and the journal stays for the rest.</li>
      * </ul>
      *
      * @param reached for a change that fails while it is made, how many of its files it wrote: only
@@ -441,6 +445,17 @@ final class ProjectTransaction {
             List<String> putBack = []
             for (Put put : written.reverse()) {
                 Path target = target(project, put.path)
+                // Each file is compared once more just before it is put back, as it is before it is
+                // written: what was saved in it since the files were looked at is not overwritten. The
+                // files put back so far stay so, and the journal stays for the rest
+                if (digest(target) != put.after) {
+                    throw new ProjectChangeException("${put.path} was changed while the change that was interrupted was being undone, and is left as it is. " +
+                            "${putBack.size()} ${putBack.size() == 1 ? 'file was' : 'files were'} put back${putBack.isEmpty() ? '' : " (${named(putBack)})"}; " +
+                            'the others were not, and the record of the change is kept. ' +
+                            "Keep what was changed in ${put.path} elsewhere, make the file what it was before the change (the files that were replaced are kept in " +
+                            "${DIRECTORY}/${change.name}/backup, and a file that was new is to be removed) or what the change makes of it, and run the command again; " +
+                            'or restore the project from version control and ' + removal(journal))
+                }
                 if (put.before == null) {
                     remove(target)
                 } else {

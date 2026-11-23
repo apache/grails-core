@@ -501,6 +501,110 @@ class ProjectTransactionFailuresSpec extends AbstractFeatureAdditionSpec {
         tree(project) == before
     }
 
+    void "a file the undoing has not come to that an editor writes meanwhile is left as written, the undoing stops there, and its record stays"() {
+        given: 'a change that was interrupted after it had written README.md, build.gradle and the configuration'
+        ProjectGenerator generator = generator()
+        Path project = create(generator, 'app', [])
+        Map<String, String> before = tree(project)
+        List<String> written = []
+        try {
+            planOf(generator, project).apply { String path ->
+                written << path
+                if (path == 'grails-app/conf/application.yml') {
+                    throw new Stopped()
+                }
+            }
+        } catch (Stopped ignored) {
+        }
+        String change = left(project).first()
+        byte[] asWritten = Files.readAllBytes(project.resolve('build.gradle'))
+        List<String> told = []
+
+        when: 'every file is looked at, and once the configuration is put back an editor saves the build file, which the undoing comes to next'
+        addition(generator).recover(project) { String path ->
+            told << path
+            if (path == 'grails-app/conf/application.yml') {
+                project.resolve('build.gradle').toFile() << '// saved by an editor while the change was undone\n'
+            }
+        }
+
+        then: 'the undoing stops before the build file, says what to do, and does not tell to edit the record of the change'
+        ProjectChangeException e = thrown()
+        e.message.startsWith('build.gradle was changed while the change that was interrupted was being undone, and is left as it is. 1 file was put back ' +
+                '(grails-app/conf/application.yml); the others were not, and the record of the change is kept. Keep what was changed in build.gradle elsewhere, ' +
+                "make the file what it was before the change (the files that were replaced are kept in .grails/transactions/${change}/backup, and a file that was new " +
+                'is to be removed) or what the change makes of it, and run the command again; or ' + REMOVAL.uncapitalize())
+        !e.message.contains('digest')
+        told == ['grails-app/conf/application.yml']
+
+        and: 'what the editor saved is there, the file that was not come to is as the change wrote it, and the record of the change is there'
+        project.resolve('build.gradle').toFile().text == new String(asWritten, 'UTF-8') + '// saved by an editor while the change was undone\n'
+        differing(tree(project), before).findAll { !it.startsWith('.grails/transactions/') } == ['README.md', 'build.gradle']
+        journals().size() == 1
+        left(project) == [change]
+
+        when: 'the next command finds the file still other than both, and puts nothing back'
+        Map<String, String> stopped = tree(project)
+        addition(generator).recover(project)
+
+        then:
+        ProjectChangeException again = thrown()
+        again.message.startsWith('A file of a change that was interrupted is neither what it was before the change nor what the change makes of it: build.gradle. Nothing was put back.')
+        tree(project) == stopped
+
+        when: 'the file is made what the change wrote, as the message says'
+        Files.write(project.resolve('build.gradle'), asWritten)
+        ProjectRecovery recovery = addition(generator).recover(project)
+
+        then: 'what is left of the change is undone'
+        recovery.undone
+        recovery.putBack == ['README.md', 'build.gradle']
+        tree(project) == before
+        left(project) == []
+        journals() == []
+    }
+
+    void "a file the undoing has not come to that is removed meanwhile is not put back either, and the undoing stops there"() {
+        given:
+        ProjectGenerator generator = withNewFiles()
+        Path project = create(generator, 'app', [])
+        Map<String, String> before = tree(project)
+        try {
+            planOf(generator, project).apply { String path ->
+                if (path == ProjectState.LOCK) {
+                    throw new Stopped()
+                }
+            }
+        } catch (Stopped ignored) {
+        }
+        List<String> told = []
+
+        when: 'once the first file is put back, a file the change added is removed by somebody else'
+        addition(generator).recover(project) { String path ->
+            told << path
+            if (told.size() == 1) {
+                Files.delete(project.resolve('bin/tool.sh'))
+            }
+        }
+
+        then:
+        ProjectChangeException e = thrown()
+        e.message.startsWith('bin/tool.sh was changed while the change that was interrupted was being undone, and is left as it is. ')
+        told.first() == ProjectState.LOCK
+        !told.contains('bin/tool.sh')
+        !told.contains('README.md')
+        !Files.exists(project.resolve('bin/tool.sh'))
+        journals().size() == 1
+
+        when: 'the file that was new is gone, which is what it was before the change'
+        ProjectRecovery recovery = addition(generator).recover(project)
+
+        then:
+        recovery.undone
+        tree(project) == before
+        journals() == []
+    }
+
     static boolean rootIsOfAnother() {
         Path root = Path.of('/')
         if (!root.fileSystem.supportedFileAttributeViews().contains('posix')) {
