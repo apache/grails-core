@@ -44,6 +44,15 @@ import groovy.transform.CompileStatic
 @CompileStatic
 final class ForgeEnvironment {
 
+    /**
+     * The system property {@link #useProduction} sets, which is the one a program that runs Forge in its
+     * own JVM has back when Forge is closed, also after a start that failed.
+     */
+    public static final String PROPERTY = Environment.KEY
+
+    /** The value {@link #useProduction} gives {@link #PROPERTY}. */
+    public static final String PRODUCTION = Environment.PRODUCTION.getName()
+
     private ForgeEnvironment() {
     }
 
@@ -52,6 +61,6 @@ final class ForgeEnvironment {
      * An application of Forge calls this before Grails reads the environment.
      */
     static void useProduction() {
-        System.setProperty(Environment.KEY, Environment.PRODUCTION.getName())
+        System.setProperty(PROPERTY, PRODUCTION)
     }
 }

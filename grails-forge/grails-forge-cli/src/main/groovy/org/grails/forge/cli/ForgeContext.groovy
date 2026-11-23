@@ -20,6 +20,7 @@ package org.grails.forge.cli
 
 import java.util.function.Supplier
 import groovy.transform.CompileStatic
+import org.apache.grails.forge.core.ForgeEnvironment
 import org.grails.forge.feature.FeatureSelectionException
 import org.springframework.context.ApplicationContext
 import org.springframework.context.ConfigurableApplicationContext
@@ -99,6 +100,7 @@ final class ForgeContext implements Supplier<ApplicationContext>, Closeable {
                 context = starter.get()
                 started = (Properties) System.getProperties().clone()
             } catch (RuntimeException | LinkageError e) {
+                restoreEnvironment()
                 String reason = (e.getMessage() ?: '').readLines().find { String line -> !line.trim().isEmpty() }
                 failure = new NotStartedException('The project generator of the command line could not be started' +
                         " (${e.getClass().getSimpleName()}${reason == null ? '' : ': ' + FeatureSelectionException.shown(reason.trim())}). " +
@@ -159,8 +161,8 @@ final class ForgeContext implements Supplier<ApplicationContext>, Closeable {
 
     // Starting the application sets system properties, the environment of Grails among them, and a
     // JVM that runs more than this command line is left as it was: what the start set or changed is
-    // put back, unless something else has changed it again since. A start that
-    // failed is not looked at: what it set before it failed is not known to be its own.
+    // put back, unless something else has changed it again since. Of a start that failed only the
+    // environment is put back, see restoreEnvironment: what else it set is not known to be its own.
     private void restoreProperties() {
         if (before == null) {
             return
@@ -178,6 +180,27 @@ final class ForgeContext implements Supplier<ApplicationContext>, Closeable {
                 } else {
                     System.setProperty(name, earlier)
                 }
+            }
+        }
+    }
+
+    // The application makes the environment of Grails production before anything else is done for its
+    // start (ForgeEnvironment), so a start that failed has done that whatever else it did or did not: it is
+    // put back as soon as the start has failed, while the value is still the one the start gave it. The
+    // command fails, and the program goes on with the environment it had.
+    private void restoreEnvironment() {
+        Properties was = before
+        before = null
+        started = null
+        if (was == null) {
+            return
+        }
+        String earlier = was.getProperty(ForgeEnvironment.PROPERTY)
+        if (earlier != ForgeEnvironment.PRODUCTION && System.getProperty(ForgeEnvironment.PROPERTY) == ForgeEnvironment.PRODUCTION) {
+            if (earlier == null) {
+                System.clearProperty(ForgeEnvironment.PROPERTY)
+            } else {
+                System.setProperty(ForgeEnvironment.PROPERTY, earlier)
             }
         }
     }
