@@ -92,4 +92,26 @@ class EmptyJunctionSpec extends Neo4jGormDatastoreSpec {
         then: 'the block adds no branch, and the node without a parent is left out'
         folders.isEmpty()
     }
+
+    void "a double negation of a block that holds only an empty junction still requires the associated node"() {
+        given:
+        seed()
+
+        when: 'the inner negation is the absence of a parent, and the outer one asks for a parent again'
+        List<NullTestFolder> folders = NullTestFolder.createCriteria().list {
+            not { not { parent { and {} } } }
+        }
+
+        then: 'only Root has a parent: Other, which has none, is not accepted by the outer negation'
+        folders*.name == ['Root']
+    }
+
+    void "an odd number of negations of a block that holds only an empty junction matches no node, as on Hibernate 5"() {
+        given:
+        seed()
+
+        expect: 'the block is a join that requires a parent, and what it asks of the parent is true: its negation is false'
+        NullTestFolder.createCriteria().list { not { parent { and {} } } }.isEmpty()
+        NullTestFolder.createCriteria().list { not { not { not { parent { and {} } } } } }.isEmpty()
+    }
 }

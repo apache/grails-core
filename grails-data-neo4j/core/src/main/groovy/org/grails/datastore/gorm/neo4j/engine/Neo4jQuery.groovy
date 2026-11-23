@@ -235,6 +235,23 @@ class Neo4jQuery extends Query {
             if (criteria.isEmpty()) {
                 throw new IllegalArgumentException('Logical expression [not] must contain at least 1 expression')
             }
+            // Negations that wrap a block whose criteria are only empty junctions: the block is a join on Hibernate 5, so the
+            // associated node has to exist whatever is negated. An odd number of negations of a true condition is false, and an even
+            // number leaves the requirement that the node exists: not { not { child { and {} } } } is the entities that have a child
+            int depth = 1
+            Query.Criterion wrapped = criteria.size() == 1 ? criteria[0] : null
+            while (wrapped instanceof Query.Negation && ((Query.Negation) wrapped).criteria.size() == 1) {
+                depth++
+                wrapped = ((Query.Negation) wrapped).criteria[0]
+            }
+            if (wrapped instanceof AssociationQuery && negatesAsExistence(scope, wrapped) &&
+                    addsNoCondition(((AssociationQuery) wrapped).criteria)) {
+                if (depth % 2 != 0) {
+                    return new CypherExpression('false')
+                }
+                CriterionScope.Existence existence = scope.intoExistence((AssociationQuery) wrapped)
+                return new CypherExpression("size([${existence.pattern} | 1]) > 0".toString())
+            }
             // a block with criteria asks for a neighbour, as a join does, so its negation is a neighbour that fails them: a node
             // without a neighbour is not in it. The other criteria are negated together
             List<Query.Criterion> others = []
@@ -260,6 +277,11 @@ class Neo4jQuery extends Query {
                 throw new IllegalArgumentException('Logical expression [not] must contain at least 1 expression')
             }
             new CypherExpression(parts.size() == 1 ? parts[0] : "( ${parts.join(CriterionHandler.OPERATOR_AND)} )".toString())
+        }
+
+        private static boolean addsNoCondition(Query.Criterion criterion) {
+            criterion instanceof Query.Junction &&
+                    ((Query.Junction) criterion).criteria.every { Query.Criterion child -> addsNoCondition(child) }
         }
 
         private boolean negatesAsExistence(CriterionScope scope, Query.Criterion child) {
