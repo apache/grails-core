@@ -43,8 +43,10 @@ final class GradleWrapperCheck extends HealthCheck {
     private static final String CHECKSUM = 'distributionSha256Sum'
     // where Gradle publishes its distributions, and the checksums of them that the generated wrapper names
     private static final String PUBLISHED = 'https://services.gradle.org/distributions/'
-    // the version a distribution of Gradle is named by, at the end of its address
-    private static final Pattern VERSION = Pattern.compile(/gradle-(\d{1,4}\.\d{1,4}(?:\.\d{1,4})?(?:-[A-Za-z0-9.\-]{1,40})?)-(?:bin|all)\.zip$/)
+    // where Gradle lists the SHA-256 of each of its distributions, for a version the command line does not know it of
+    private static final String CHECKSUMS = 'https://gradle.org/release-checksums/'
+    // the version a distribution of Gradle is named by, and its type, at the end of its address
+    private static final Pattern VERSION = Pattern.compile(/gradle-(\d{1,4}\.\d{1,4}(?:\.\d{1,4})?(?:-[A-Za-z0-9.\-]{1,40})?)-(bin|all)\.zip$/)
 
     @Override
     String getName() {
@@ -55,22 +57,30 @@ final class GradleWrapperCheck extends HealthCheck {
     List<HealthFinding> check(HealthContext context) {
         String generated = VersionInfo.getGradleVersion()
         String minimum = VersionInfo.getMinimumGradleVersion()
-        String command = "./gradlew wrapper --gradle-version ${generated}"
+        String published = VersionInfo.getGradleDistributionSha256Sum()
+        // the wrapper task writes the binary distribution of services.gradle.org of the version it is given, and fails where the
+        // properties have a distributionSha256Sum and it is given none, so what moves the wrapper to the generated Gradle gives its checksum
+        String arguments = "wrapper --gradle-version ${generated} --gradle-distribution-sha256-sum ${published}"
+        String command = "./gradlew ${arguments}"
+        // where no wrapper runs, one that is installed writes it
+        String installed = "gradle ${arguments}"
         ConsoleProject.Wrapper wrapper = context.project.gradleWrapper(context.windows)
         String script = ConsoleProject.wrapperName(context.windows)
         if (wrapper.file == null) {
             return [found('missing', HealthLevel.ERROR, wrapper.refusal + '; the commands that build, test and run the project run nothing',
-                    "Commit the Gradle wrapper (gradlew, gradlew.bat and gradle/wrapper): gradle wrapper --gradle-version ${generated}, run with an installed Gradle, writes it",
-                    "gradle wrapper --gradle-version ${generated}", [script], NOTE_GRADLE_WRAPPER)]
+                    "Commit the Gradle wrapper (gradlew, gradlew.bat and gradle/wrapper): ${installed}, run with an installed Gradle ${minimum} or later, writes it",
+                    installed, [script], NOTE_GRADLE_WRAPPER)]
         }
         Path file = wrapper.file.getParent().resolve(PROPERTIES)
         String properties = context.relative(file)
         Properties read = HealthContext.properties(file)
         String distribution = read == null ? null : read.getProperty(DISTRIBUTION)?.trim()
         if (!distribution) {
+            // the wrapper script stops before it runs a Gradle where it reads no distributionUrl, so it cannot write itself again
             return [found('missing', HealthLevel.ERROR, "The Gradle wrapper ${context.relative(wrapper.file)} names no Gradle: there is no ${properties} beside it that has a " +
                     "${DISTRIBUTION}, so the commands that build, test and run the project run nothing",
-                    "Write the wrapper again: ${command}, or gradle wrapper --gradle-version ${generated} with an installed Gradle", command, [properties], NOTE_GRADLE_WRAPPER)]
+                    "Write the wrapper again with an installed Gradle ${minimum} or later: ${installed}; ./gradlew runs no Gradle without a ${DISTRIBUTION} in ${properties}",
+                    installed, [properties], NOTE_GRADLE_WRAPPER)]
         }
         Matcher named = VERSION.matcher(distribution)
         if (!named.find()) {
@@ -81,25 +91,50 @@ final class GradleWrapperCheck extends HealthCheck {
         List<HealthFinding> findings = []
         if (Versions.compare(version, minimum) < 0) {
             findings << found('version', HealthLevel.ERROR, "The Gradle wrapper names Gradle ${version} (${properties}), and Grails ${context.commandLineMajor} is built " +
-                    "with Gradle ${minimum} or later", "Set the ${DISTRIBUTION} of ${properties} to Gradle ${generated}, as ${command} does, and commit the wrapper",
-                    command, [properties], NOTE_GRADLE_WRAPPER)
+                    "with Gradle ${minimum} or later", "Set the ${DISTRIBUTION} of ${properties} to ${PUBLISHED}gradle-${generated}-bin.zip and its ${CHECKSUM} to " +
+                    "${published}, as ${command} does, and commit the wrapper", command, [properties], NOTE_GRADLE_WRAPPER)
         } else if (Versions.compare(version, generated) < 0) {
             findings << found('older', HealthLevel.ADVICE, "The Gradle wrapper names Gradle ${version} (${properties}), and create-app generates applications with Gradle " +
                     "${generated}", "${command}, and commit the wrapper", command, [properties], NOTE_GRADLE_WRAPPER)
         }
         String checksum = read.getProperty(CHECKSUM)?.trim()
-        String published = VersionInfo.getGradleDistributionSha256Sum()
+        boolean generatedBinary = distribution == "${PUBLISHED}gradle-${generated}-bin.zip".toString()
         if (!checksum) {
-            findings << found('checksum', HealthLevel.ADVICE, "${properties} has no ${CHECKSUM}, so the wrapper does not check the distribution of Gradle it downloads",
-                    "Add the SHA-256 of the distribution that gradle.org publishes for Gradle ${version}, as ./gradlew wrapper --gradle-version ${version} " +
-                            '--gradle-distribution-sha256-sum SHA256 writes it', null, [properties], NOTE_GRADLE_CHECKSUM)
-        } else if (distribution == "${PUBLISHED}gradle-${generated}-bin.zip".toString() && checksum != published) {
-            // the wrapper compares the checksum as it is written with the one it computes, in lowercase
+            String message = "${properties} has no ${CHECKSUM}, so the wrapper does not check the distribution of Gradle it downloads"
+            if (generatedBinary) {
+                findings << found('checksum', HealthLevel.ADVICE, message, "Set ${CHECKSUM} to ${published} in ${properties}, the SHA-256 that gradle.org publishes " +
+                        "for Gradle ${generated}, as ${command} does", command, [properties], NOTE_GRADLE_CHECKSUM)
+            } else {
+                findings << found('checksum', HealthLevel.ADVICE, message, addChecksum(properties, distribution, named.group(0), version, named.group(2)), null,
+                        [properties], NOTE_GRADLE_CHECKSUM)
+            }
+        } else if (generatedBinary && checksum != published) {
+            // the wrapper compares the checksum as it is written with the one it computes, in lowercase; it refuses the download before it
+            // runs Gradle, so no wrapper task can write the checksum where the distribution is not downloaded yet
             findings << found('checksum-differs', HealthLevel.WARNING, "The ${CHECKSUM} of ${properties} is not the SHA-256 Gradle publishes for " +
                     "gradle-${generated}-bin.zip: the wrapper refuses that distribution where it downloads it, as on a new machine or in a job of continuous integration",
                     "Set ${CHECKSUM} to ${published} in ${properties}, the SHA-256 that gradle.org publishes for Gradle ${generated}", null, [properties],
                     NOTE_GRADLE_CHECKSUM)
         }
         return findings ?: [ok("The Gradle wrapper names Gradle ${version} (${properties}) and checks the distribution it downloads", [properties])]
+    }
+
+    /**
+     * @param properties the properties of the wrapper, as the findings name them
+     * @param distribution the {@code distributionUrl} they have
+     * @param name the name of the distribution, as {@code gradle-9.7-bin.zip}
+     * @param version the version of Gradle it is of
+     * @param type {@code bin} or {@code all}
+     * @return what to do for a distribution whose SHA-256 the command line does not know: where Gradle lists it, and, for a distribution
+     * of {@code services.gradle.org}, the command that writes it with the same distribution; for another address the wrapper task would
+     * write that of {@code services.gradle.org} in its place
+     */
+    private static String addChecksum(String properties, String distribution, String name, String version, String type) {
+        String fix = "Add to ${properties} the ${CHECKSUM} of ${name}, the SHA-256 that gradle.org publishes for it (${CHECKSUMS})"
+        if (distribution != "${PUBLISHED}${name}".toString()) {
+            return fix
+        }
+        String typed = type == 'all' ? ' --distribution-type all' : ''
+        return "${fix}, as ./gradlew wrapper --gradle-version ${version}${typed} --gradle-distribution-sha256-sum SHA256 writes it"
     }
 }

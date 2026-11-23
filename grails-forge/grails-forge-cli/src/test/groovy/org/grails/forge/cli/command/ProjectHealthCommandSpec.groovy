@@ -71,6 +71,16 @@ class ProjectHealthCommandSpec extends CommandSpec {
     static final String TOOLCHAIN_25 = 'java {\n    toolchain {\n        languageVersion = JavaLanguageVersion.of(25)\n    }\n}\n'
     static final String TOOLCHAIN_21 = 'java {\n    toolchain {\n        languageVersion = JavaLanguageVersion.of(21)\n    }\n}\n'
 
+    /** The Gradle create-app generates applications with, the SHA-256 Gradle publishes for its binary distribution, and the earliest Gradle of Grails. */
+    static final String GRADLE = VersionInfo.gradleVersion
+    static final String GRADLE_SHA256 = VersionInfo.gradleDistributionSha256Sum
+    static final String GRADLE_MINIMUM = VersionInfo.minimumGradleVersion
+    static final String WRAPPER_PROPERTIES = 'gradle/wrapper/gradle-wrapper.properties'
+
+    /** What moves the wrapper to that Gradle with its SHA-256: the wrapper of the project, and an installed Gradle where no wrapper runs. */
+    static final String WRAPPER_TO_GENERATED = "./gradlew wrapper --gradle-version ${GRADLE} --gradle-distribution-sha256-sum ${GRADLE_SHA256}".toString()
+    static final String INSTALLED_TO_GENERATED = "gradle wrapper --gradle-version ${GRADLE} --gradle-distribution-sha256-sum ${GRADLE_SHA256}".toString()
+
     @Shared
     File template
 
@@ -260,6 +270,46 @@ class ProjectHealthCommandSpec extends CommandSpec {
         'agent-skills.ok'                      | 'ok'      | 'the upgrade skill is extracted'                       | { File p, File h -> grailsVersion(p, '8.0.1'); skills(p); extracted(p, '.agents/skills') }
         'agent-skills.ok'                      | 'ok'      | 'the skill is extracted to the outputDir of the build' | { File p, File h -> grailsVersion(p, '8.0.1'); skills(p); append(p, 'build.gradle', "skillsjars {\n    outputDir = layout.projectDirectory.dir('.ai/skills')\n}\n"); extracted(p, '.ai/skills') }
         'agent-skills.ok'                      | 'ok'      | 'no upgrade is under way'                              | { File p, File h -> }
+    }
+
+    @Unroll
+    void "#id names the whole command that moves the wrapper to the Gradle create-app generates with, with its SHA-256, or where the SHA-256 is: #what"() {
+        given:
+        File project = copyOfTemplate()
+        Closure changed = (Closure) change.clone()
+        changed.delegate = this
+        changed.resolveStrategy = Closure.DELEGATE_FIRST
+        changed.call(project)
+        out.reset()
+        err.reset()
+
+        when:
+        run(project, 'project', 'health', '--json')
+        Map finding = (parsed().findings as List<Map>).find { it.id == id }
+
+        then: 'the fix, and the command of the document, which is the one the fix names'
+        finding.fix == fix.toString()
+        finding.command == command
+
+        when: 'in words'
+        out.reset()
+        run(project, 'project', 'health')
+
+        then:
+        out.toString().readLines().any { String line -> line.contains(" ${id} ") && line.endsWith(". Fix: ${fix}") }
+
+        where:
+        id                                | what                                                         | change                                                                                                                        | fix                                                                                                                                                                                                                                         | command
+        'gradle-wrapper.missing'          | 'there is no Gradle wrapper, so an installed Gradle writes it' | { File p -> new File(p, 'gradlew').delete(); new File(p, 'gradlew.bat').delete() }                                          | "Commit the Gradle wrapper (gradlew, gradlew.bat and gradle/wrapper): ${INSTALLED_TO_GENERATED}, run with an installed Gradle ${GRADLE_MINIMUM} or later, writes it"                                                                        | INSTALLED_TO_GENERATED
+        'gradle-wrapper.missing'          | 'there are no properties, and ./gradlew runs nothing'        | { File p -> new File(p, WRAPPER_PROPERTIES).delete() }                                                                        | "Write the wrapper again with an installed Gradle ${GRADLE_MINIMUM} or later: ${INSTALLED_TO_GENERATED}; ./gradlew runs no Gradle without a distributionUrl in ${WRAPPER_PROPERTIES}"                                                      | INSTALLED_TO_GENERATED
+        'gradle-wrapper.missing'          | 'the properties name no distribution, and ./gradlew runs nothing' | { File p -> without(p, WRAPPER_PROPERTIES, ~/distributionUrl=.*\n/) }                                                    | "Write the wrapper again with an installed Gradle ${GRADLE_MINIMUM} or later: ${INSTALLED_TO_GENERATED}; ./gradlew runs no Gradle without a distributionUrl in ${WRAPPER_PROPERTIES}"                                                      | INSTALLED_TO_GENERATED
+        'gradle-wrapper.version'          | 'the wrapper is of Gradle 8, and keeps the SHA-256 of another' | { File p -> distribution(p, 'https\\://services.gradle.org/distributions/gradle-8.14.3-bin.zip') }                          | "Set the distributionUrl of ${WRAPPER_PROPERTIES} to https://services.gradle.org/distributions/gradle-${GRADLE}-bin.zip and its distributionSha256Sum to ${GRADLE_SHA256}, as ${WRAPPER_TO_GENERATED} does, and commit the wrapper" | WRAPPER_TO_GENERATED
+        'gradle-wrapper.older'            | 'the wrapper is older than create-app generates'             | { File p -> distribution(p, "https\\://services.gradle.org/distributions/gradle-${GRADLE_MINIMUM}-bin.zip") }               | "${WRAPPER_TO_GENERATED}, and commit the wrapper"                                                                                                                                                                                           | WRAPPER_TO_GENERATED
+        'gradle-wrapper.checksum'         | 'the distribution create-app generates with has no SHA-256'  | { File p -> without(p, WRAPPER_PROPERTIES, ~/distributionSha256Sum=.*\n/) }                                                   | "Set distributionSha256Sum to ${GRADLE_SHA256} in ${WRAPPER_PROPERTIES}, the SHA-256 that gradle.org publishes for Gradle ${GRADLE}, as ${WRAPPER_TO_GENERATED} does"                                                                   | WRAPPER_TO_GENERATED
+        'gradle-wrapper.checksum'         | 'an earlier Gradle has none, whose SHA-256 the command line does not know' | { File p -> distribution(p, "https\\://services.gradle.org/distributions/gradle-${GRADLE_MINIMUM}-bin.zip"); without(p, WRAPPER_PROPERTIES, ~/distributionSha256Sum=.*\n/) } | "Add to ${WRAPPER_PROPERTIES} the distributionSha256Sum of gradle-${GRADLE_MINIMUM}-bin.zip, the SHA-256 that gradle.org publishes for it (https://gradle.org/release-checksums/), as ./gradlew wrapper --gradle-version ${GRADLE_MINIMUM} --gradle-distribution-sha256-sum SHA256 writes it" | null
+        'gradle-wrapper.checksum'         | 'the complete distribution has none, and keeps its type'    | { File p -> distribution(p, "https\\://services.gradle.org/distributions/gradle-${GRADLE}-all.zip"); without(p, WRAPPER_PROPERTIES, ~/distributionSha256Sum=.*\n/) } | "Add to ${WRAPPER_PROPERTIES} the distributionSha256Sum of gradle-${GRADLE}-all.zip, the SHA-256 that gradle.org publishes for it (https://gradle.org/release-checksums/), as ./gradlew wrapper --gradle-version ${GRADLE} --distribution-type all --gradle-distribution-sha256-sum SHA256 writes it" | null
+        'gradle-wrapper.checksum'         | 'a mirror has none, which the wrapper task would not keep'   | { File p -> distribution(p, "https\\://repo.example.com/gradle/gradle-${GRADLE}-bin.zip"); without(p, WRAPPER_PROPERTIES, ~/distributionSha256Sum=.*\n/) } | "Add to ${WRAPPER_PROPERTIES} the distributionSha256Sum of gradle-${GRADLE}-bin.zip, the SHA-256 that gradle.org publishes for it (https://gradle.org/release-checksums/)" | null
+        'gradle-wrapper.checksum-differs' | 'the wrapper refuses to download Gradle, so it is written by hand' | { File p -> checksum(p, '0' * 64) }                                                                                     | "Set distributionSha256Sum to ${GRADLE_SHA256} in ${WRAPPER_PROPERTIES}, the SHA-256 that gradle.org publishes for Gradle ${GRADLE}"                                                                                                       | null
     }
 
     void "java-target names a version of Java below the earliest with its setting and line, as project migrate names it"() {

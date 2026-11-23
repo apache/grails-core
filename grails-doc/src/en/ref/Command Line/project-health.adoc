@@ -55,7 +55,7 @@ Options:
 $ grails project health
 | Project legacy on Grails 9.0.0 (gradle.properties), checked by the command line of Grails 9.0.0, offline
 | Warning java-target.release        build.gradle names Java 17 (compileJava.options.release, line 68), and Grails 9 needs Java 21 or later: a class of the project that uses one of Grails does not compile. Fix: In build.gradle, set compileJava.options.release (line 68) to Java 21 or later
-| Advice  gradle-wrapper.older       The Gradle wrapper names Gradle 9.8.0 (gradle/wrapper/gradle-wrapper.properties), and create-app generates applications with Gradle 9.9.2. Fix: ./gradlew wrapper --gradle-version 9.9.2, and commit the wrapper
+| Advice  gradle-wrapper.older       The Gradle wrapper names Gradle 9.8.0 (gradle/wrapper/gradle-wrapper.properties), and create-app generates applications with Gradle 9.9.2. Fix: ./gradlew wrapper --gradle-version 9.9.2 --gradle-distribution-sha256-sum 971fcd7150ca4ba04852c0b2ca0d2d0ab9468e14b03473eab19528809914c76b, and commit the wrapper
 | Advice  git-files.state-ignored    No .gitignore of the project leaves out .grails/transactions and .grails/history, ... Fix: Add /transactions/ and /history to .grails/.gitignore, as create-app and project migrate write it
 | 9 checks OK (-v lists them). 0 errors, 1 warning, 2 advice, 0 skipped
 ----
@@ -125,27 +125,27 @@ The id of a finding is the name of its check and the name of the finding, as `ja
 | `gradle-wrapper.missing`
 | error
 | There is no Gradle wrapper that is run, or it names no Gradle.
-| `gradle wrapper --gradle-version {gradleVersion}` with an installed Gradle, and commit the wrapper.
+| `gradle wrapper --gradle-version {gradleVersion} --gradle-distribution-sha256-sum SHA256`, with the SHA-256 the fix names, run with an installed Gradle {gradleMinimumVersion} or later, and commit the wrapper. A wrapper without a `distributionUrl` runs no Gradle, so `./gradlew` cannot write it again; `update-wrapper` writes the Grails wrapper, not this one.
 
 | `gradle-wrapper.version`
 | error
 | The wrapper names a Gradle before {gradleMinimumVersion}, the earliest Grails is built with.
-| `./gradlew wrapper --gradle-version {gradleVersion}`, or set the `distributionUrl`.
+| Set the `distributionUrl` to the binary distribution of Gradle {gradleVersion} and `distributionSha256Sum` to its SHA-256, which the fix names, as `./gradlew wrapper --gradle-version {gradleVersion} --gradle-distribution-sha256-sum SHA256` does.
 
 | `gradle-wrapper.older`
 | advice
 | The wrapper names a Gradle before {gradleVersion}, which `create-app` generates applications with.
-| `./gradlew wrapper --gradle-version {gradleVersion}`.
+| `./gradlew wrapper --gradle-version {gradleVersion} --gradle-distribution-sha256-sum SHA256`, with the SHA-256 the fix names: the `wrapper` task fails without it where the properties have a `distributionSha256Sum`.
 
 | `gradle-wrapper.checksum`
 | advice
 | The properties have no `distributionSha256Sum`, so the wrapper does not check the distribution it downloads. `create-app` writes it.
-| Add the SHA-256 that gradle.org publishes for the distribution (`--gradle-distribution-sha256-sum` of the `wrapper` task).
+| For the binary distribution of Gradle {gradleVersion} on `services.gradle.org`, set it to the SHA-256 the fix names, as `./gradlew wrapper --gradle-version {gradleVersion} --gradle-distribution-sha256-sum SHA256` does. For another distribution, add the SHA-256 that https://gradle.org/release-checksums/[Gradle's checksums] list for it; the fix names the options of the `wrapper` task that write it for a distribution of `services.gradle.org` (`--distribution-type all` for the complete one), and none for another address, which the task would replace with `services.gradle.org`.
 
 | `gradle-wrapper.checksum-differs`
 | warning
 | The wrapper names the binary distribution of Gradle {gradleVersion} on `services.gradle.org`, which `create-app` generates applications with, and a `distributionSha256Sum` that is not the SHA-256 Gradle publishes for it, so the wrapper refuses the distribution where it downloads it. Another distribution, of another version or from another address, is not compared.
-| Set `distributionSha256Sum` to the SHA-256 the message names, which is the one on https://gradle.org/release-checksums/[Gradle's checksums].
+| Set `distributionSha256Sum` to the SHA-256 the fix names, which is the one on https://gradle.org/release-checksums/[Gradle's checksums], in the file: where the wrapper has to download the distribution it refuses it before the `wrapper` task can run.
 
 4+| `java-target`: each setting of `build.gradle` (or `build.gradle.kts`) that names a version of Java, read as `project migrate` reads it and named with its line: `compileJava.options.release`, `options.release` and `release` in a block of the options, `targetCompatibility` and `sourceCompatibility`, a `JavaVersion` constant, and the toolchain (`JavaLanguageVersion.of`, `jvmToolchain`). The classes are compiled for the version of the release where the build sets one, else of `targetCompatibility`, of `sourceCompatibility`, of a constant, and of the toolchain, in that order; what is set for other projects (`subprojects`, `configure`, `project`) does not count.
 
