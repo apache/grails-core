@@ -107,7 +107,6 @@ dependencies {
 
     testImplementation 'com.h2database:h2'
     testImplementation 'org.junit.platform:junit-platform-suite'
-    testImplementation "org.opentest4j:opentest4j:$openTest4jVersion" // TestAbortedException, which skips a Db2 row
 
     testImplementation 'org.apache.groovy:groovy-test-junit5'
     testImplementation 'org.apache.groovy:groovy-sql'
@@ -139,64 +138,4 @@ apply {
     from rootProject.layout.projectDirectory.file('gradle/hibernate7-test-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/grails-data-tck-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
-}
-
-if (providers.environmentVariable('GITHUB_ACTIONS').orNull == 'true') {
-    tasks.withType(Test).configureEach { Test task ->
-        task.addTestListener(new Db2SkipWarning(task.logger, task.path))
-    }
-}
-
-/**
- * Warns on GitHub Actions when a test task skipped Db2 rows because the runner could not fetch the Db2 image, which
- * {@code grails.gorm.tests.DatabaseContainers} reports with a message that starts with {@link #REASON}. A test report
- * shows a skipped row, but the job and its pull request do not; the warning is a workflow command, so it adds an
- * annotation to the job, which shows on the summary page of the run and on the checks of the pull request.
- */
-class Db2SkipWarning implements TestListener {
-
-    static final String REASON = 'The Db2 image could not be fetched'
-
-    private final Logger logger
-    private final String taskPath
-    private int skippedRows
-    private String reason
-
-    Db2SkipWarning(Logger logger, String taskPath) {
-        this.logger = logger
-        this.taskPath = taskPath
-    }
-
-    @Override
-    void beforeSuite(TestDescriptor suite) {
-    }
-
-    @Override
-    synchronized void afterSuite(TestDescriptor suite, TestResult result) {
-        if (suite.parent == null && skippedRows > 0) {
-            final rows = skippedRows == 1 ? 'row' : 'rows'
-            logger.quiet('::warning title=Db2 rows skipped::{}',
-                    escape("${skippedRows} Db2 ${rows} of ${taskPath} skipped. ${reason}"))
-        }
-    }
-
-    @Override
-    void beforeTest(TestDescriptor test) {
-    }
-
-    @Override
-    synchronized void afterTest(TestDescriptor test, TestResult result) {
-        final message = result.assumptionFailure?.details?.message
-        if (message?.startsWith(REASON)) {
-            skippedRows++
-            reason = message
-        }
-    }
-
-    /**
-     * Encodes the characters that end the message of a workflow command or start an encoded one.
-     */
-    private static String escape(String message) {
-        message.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
-    }
 }
