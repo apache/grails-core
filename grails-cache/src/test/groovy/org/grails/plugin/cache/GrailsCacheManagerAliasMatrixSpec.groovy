@@ -678,6 +678,11 @@ class GrailsCacheManagerAliasMatrixSpec extends Specification {
         ByResourceName   | [(NAMED): 'plain', first: 'primary']           || [seen: [NAMED] * 2, got: 'first'] || wasExpected
         InheritsMethod   | [(NAMED): 'plain']                             || [seen: [NAMED] * 2, got: NAMED]  || wasExpected
         InheritsMethod   | [(NAMED): 'plain', first: 'plain']             || [failed: true]                   || [seen: [NAMED] * 2, got: NAMED]
+        InheritsInject   | [(NAMED): 'plain']                             || [seen: [NAMED] * 2, got: NAMED]  || wasExpected
+        InheritsInject   | [(NAMED): 'plain', first: 'plain']             || [failed: true]                   || [seen: [NAMED] * 2, got: NAMED]
+        InheritsValue    | [(NAMED): 'plain']                             || [seen: [NAMED] * 2, got: NAMED]  || wasExpected
+        InheritsValue    | [(NAMED): 'plain', first: 'plain']             || [failed: true]                   || [seen: [NAMED] * 2, got: NAMED]
+        InheritsBoth     | [(NAMED): 'plain']                             || [seen: [null] * 2, got: NAMED]   || wasExpected
         AwareAgain       | [(NAMED): 'plain']                             || [seen: [null] * 2, got: NAMED]   || wasExpected
         AwareAgain       | [(NAMED): 'plain', first: 'plain']             || [failed: true]                   || [seen: [null] * 2, got: NAMED]
         AwareAgain       | [(NAMED): 'plain', first: 'primary']           || [seen: [null] * 2, got: 'first'] || wasExpected
@@ -1183,6 +1188,55 @@ return CachedSubclass
             initCalls++
             seen = grailsCacheManager
         }
+    }
+
+    /** A cache-aware class with an {@code @Inject} method that reads its cache manager. */
+    static class InjectMethodInClass implements GrailsCacheManagerAware, Seeing {
+        CacheManager seen
+        int initCalls
+
+        @jakarta.inject.Inject
+        void init(BeanFactory beanFactory) {
+            initCalls++
+            seen = grailsCacheManager
+        }
+    }
+
+    /** A subclass of a cache-aware class that inherits its {@code @Inject} method. */
+    static class InheritsInject extends InjectMethodInClass {
+    }
+
+    /** A cache-aware class with a {@code @Value} method that reads its cache manager. */
+    static class ValueMethodInClass implements GrailsCacheManagerAware, Seeing {
+        CacheManager seen
+        int initCalls
+
+        @org.springframework.beans.factory.annotation.Value('a value')
+        void init(String value) {
+            initCalls++
+            seen = grailsCacheManager
+        }
+    }
+
+    /** A subclass of a cache-aware class that inherits its {@code @Value} method. */
+    static class InheritsValue extends ValueMethodInClass {
+    }
+
+    /** A cache-aware class with a method annotated for both {@code @Resource} and {@code @Autowired}, reading the field. */
+    static class BothMethodInClass implements GrailsCacheManagerAware, Seeing {
+        CacheManager seen
+        int initCalls
+
+        @Resource
+        @Autowired
+        void init(BeanFactory beanFactory) {
+            initCalls++
+            seen = grailsCacheManager
+        }
+    }
+
+    /** A subclass of a cache-aware class that inherits its method annotated for both. */
+    static class InheritsBoth extends BothMethodInClass {
     }
 
     /** A subclass of a cache-aware class that inherits its autowired method. */
