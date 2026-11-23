@@ -665,6 +665,7 @@ publishGuideTask.configure { PublishGuideTask publish ->
                 'springAiReference'        : "https://docs.spring.io/spring-ai/reference/${springAiDocsVersion}/",
                 'springVersion'            : springVersion,
                 'gradleVersion'            : gradle.gradleVersion,
+                'gradleMinimumVersion'     : gradleMinimumVersion,
                 'GrailsVersion'            : projectVersion,
                 'grailsMajorVersion'       : grailsMajorVersion,
                 'version'                  : projectVersion,
