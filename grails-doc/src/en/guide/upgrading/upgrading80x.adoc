@@ -5076,3 +5076,22 @@ A value marked with `raw()` is still written as given by the tags that wrote it 
 `<g:radio>` now encodes its `value` once. It encoded it twice, so a value with `&`, `<`, `>`, `"` or `'` was submitted with character references in it, such as `+R&amp;D+` for `R&D`.
 
 A value encoded beforehand is no longer encoded twice in the `value` of `<g:textField>`, `<g:hiddenField>` and the other field tags when a `RequestDataValueProcessor` returns it unchanged, nor in an option of `<g:select>`, with or without a processor. `<g:paginate>` and `<g:sortableColumn>` write a `class` that was encoded beforehand once next to the classes they add, such as `step` and `sortable`; they encoded it twice.
+
+==== Bulk deleteAll and updateAll on a Query
+
+`deleteAll()` and `updateAll(Map)` on a `where` query or a `DetachedCriteria` run one `delete` or `update` statement. The statement has no row limit, so a query that carries `max` or `offset` used to write to every matching row: `Person.where { age > 18 }.max(2).deleteAll()` deleted all of them (issue https://github.com/apache/grails-core/issues/16805[#16805]). `deleteAll()` and `updateAll(Map)` now throw an `InvalidDataAccessResourceUsageException` that names the `max` or `offset` value, and write nothing. Select the ids first, with the limit on that query, and delete or update by id:
+
+[source,groovy]
+----
+def ids = Person.where { age > 18 }.max(2).property('id').list()
+Person.where { id in ids }.deleteAll()
+----
+
+A bulk statement cannot join, so these query shapes are now written as subqueries instead of being refused or corrupting the parameters of the criteria after them:
+
+* a to-one association: an association block (`owner { eq('name', 'Ned') }`), a path (`eq('owner.name', 'Ned')`, `where { owner.name == 'Ned' }`) or an alias made with `createAlias('owner', 'o')`. An association that holds many (`pets { ... }`) is still refused, because a bulk statement cannot join it;
+* `exists` and `notExists`;
+* several criteria in one subquery, which are now joined with `and`; and
+* `sqlRestriction`, including `{alias}` and `?` values.
+
+A bulk statement does not update the entities already loaded in the session. Clear or refresh them before reading them again.

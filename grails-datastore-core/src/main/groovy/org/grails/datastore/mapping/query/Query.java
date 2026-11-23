@@ -923,7 +923,7 @@ public abstract class Query implements Cloneable, Serializable {
     /**
      * A Criterion that applies to a property
      */
-    public static class PropertyNameCriterion implements Criterion {
+    public static class PropertyNameCriterion implements Criterion, Cloneable {
         protected String name;
 
         public PropertyNameCriterion(String name) {
@@ -932,6 +932,25 @@ public abstract class Query implements Cloneable, Serializable {
 
         public String getProperty() {
             return name;
+        }
+
+        /**
+         * Copies this criterion, of the same type and with the same value, onto another property. A path through
+         * an association is split with it: {@code owner.name} becomes {@code name} on the owner.
+         *
+         * @param property the property the copy applies to
+         * @return the copy
+         * @since 8.0.1
+         */
+        public PropertyNameCriterion withProperty(String property) {
+            try {
+                PropertyNameCriterion copy = (PropertyNameCriterion) super.clone();
+                copy.name = property;
+                return copy;
+            }
+            catch (CloneNotSupportedException e) {
+                throw new IllegalStateException(e);
+            }
         }
     }
 

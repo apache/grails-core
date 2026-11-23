@@ -184,6 +184,11 @@ To delete a subset, build a query and delete through it:
 Person.where { age < 18 }.deleteAll()
 ----
 
+NOTE: A bulk `deleteAll()` or `updateAll(Map)` cannot limit the rows it writes to, so it throws an
+`InvalidDataAccessResourceUsageException` for a query that has `max` or `offset`. To delete a limited number of rows,
+select their ids with the limit and delete by id: `def ids = Person.where { age < 18 }.max(10).property('id').list()`
+followed by `Person.where { id in ids }.deleteAll()`.
+
 The other `deleteAll` overloads delete only the instances you hand them:
 
 [source,groovy]
