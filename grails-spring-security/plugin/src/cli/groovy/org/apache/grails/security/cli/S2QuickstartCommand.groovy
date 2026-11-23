@@ -157,8 +157,9 @@ please verify that the values are correct.
 
     /**
      * Says what the configuration of the project has of the settings the command writes, unless it has none of
-     * them. Settings that are appended come after the ones that are there and replace them, so the command writes
-     * nothing when there are any, unless it is given {@code --force}.
+     * them, outside the environment blocks or in the block of any environment. Settings that are appended come
+     * after the ones that are there and apply in every environment, so the command writes nothing when there are
+     * any, unless it is given {@code --force}.
      *
      * @param keys the full keys of the settings the command writes
      * @param written what the command writes, as {@code --force} writes it
@@ -167,7 +168,7 @@ please verify that the values are correct.
     private boolean hasNoneOf(Collection<String> keys, String written) {
         String newLine = System.lineSeparator()
         String force = "To write ${written} all the same, run the command again with --force"
-        Map<String, List<String>> present
+        List<ApplicationConfigAppender.PresentSettings> present
         try {
             present = new ApplicationConfigAppender(file('')).findPresent(keys)
         } catch (IOException e) {
@@ -180,10 +181,17 @@ please verify that the values are correct.
         }
         StringBuilder message = new StringBuilder('The configuration of the application already has settings that ')
         message.append('s2-quickstart writes, so the command wrote nothing:').append(newLine)
-        present.each { String path, List<String> set ->
-            message.append('    ').append(path).append(': ').append(set.join(', ')).append(newLine)
+        present.each { ApplicationConfigAppender.PresentSettings settings ->
+            message.append('    ').append(settings.location).append(': ').append(settings.keys.join(', ')).append(newLine)
         }
-        message.append('The settings it appends would replace them. ').append(force)
+        message.append('The settings it appends would replace them')
+        if (present.any { ApplicationConfigAppender.PresentSettings settings ->
+            settings.environment != null && settings.path == ApplicationConfigAppender.GROOVY_CONFIG
+        }) {
+            message.append(', except in an environment of the top-level environments block of application.groovy, ')
+            message.append('which is applied after them and keeps its own value')
+        }
+        message.append('. ').append(force)
         message.append(', then merge the settings that were there into the ones it appends.')
         error(message.toString())
         false

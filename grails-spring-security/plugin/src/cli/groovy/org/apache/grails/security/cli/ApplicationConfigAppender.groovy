@@ -34,8 +34,9 @@ import org.grails.config.CodeGenConfig
  * string, a boolean, a number, a list of those, or a list of maps of those, which is written one map to a
  * line.</p>
  *
- * <p>It also finds which of the settings the configuration has already, see {@link #findPresent}: appended
- * settings come after them and replace them.</p>
+ * <p>It also finds which of the settings the configuration has already, outside the environment blocks and in the
+ * block of each environment, see {@link #findPresent}: appended settings come after them and apply in every
+ * environment.</p>
  */
 @CompileStatic
 class ApplicationConfigAppender {
@@ -44,6 +45,7 @@ class ApplicationConfigAppender {
     static final String YAML_CONFIG = 'grails-app/conf/application.yml'
 
     private static final String INDENT = '    '
+    private static final String ENVIRONMENTS = 'environments'
 
     private final File projectDirectory
 
@@ -65,47 +67,102 @@ class ApplicationConfigAppender {
     }
 
     /**
-     * Finds which of the settings the configuration of the project has already. Both configuration files are read,
-     * {@code application.groovy} and {@code application.yml}, whichever of them the project has, each as it is
-     * written, with the settings of the environment that is current, and in whatever form the file gives a key:
-     * the full key, nested blocks or maps, or a mix of the two.
+     * Finds which of the settings the configuration of the project has already, in any environment. Both
+     * configuration files are read, {@code application.groovy} and {@code application.yml}, whichever of them the
+     * project has, each as it is written, and in whatever form the file gives a key: the full key, nested blocks or
+     * maps, or a mix of the two.
+     *
+     * <p>Appended settings apply in every environment, so the settings of every environment block count, whichever
+     * environment is current: {@code environments.<name>} of a YAML document, and an {@code environments} block of
+     * {@code application.groovy}, also one inside another block. An environment that sets a key decides its value
+     * there together with the settings that are appended: in {@code application.yml} the appended document replaces
+     * it, while the top-level {@code environments} block of {@code application.groovy} is applied after the whole
+     * file and keeps its own value. The blocks of {@code application.groovy} are read as blocks, so the code in the
+     * block of each environment runs.</p>
      *
      * <p>A file has a setting when it gives the key a value: a string, a boolean, a number, a list, or a map with
      * entries. A key that {@code application.groovy} reads without setting it, which reading makes an empty block,
      * is not a setting.</p>
      *
      * @param keys the full keys of the settings
-     * @return each configuration file that has any of them, by its path in the project, with the keys it has in
-     * the order they are given; {@code application.groovy} comes first. The map is empty when neither file has one.
+     * @return where the configuration has any of them: {@code application.groovy} first, and in each file the
+     * settings outside the environment blocks first, then those of each environment in the order the file first
+     * names it. The list is empty when neither file has one.
      * @throws IOException when a file cannot be read, as Groovy or as YAML; the message names it and says why
      */
-    Map<String, List<String>> findPresent(Collection<String> keys) throws IOException {
-        Map<String, List<String>> present = [:]
+    List<PresentSettings> findPresent(Collection<String> keys) throws IOException {
+        List<PresentSettings> present = []
         for (String path : [GROOVY_CONFIG, YAML_CONFIG]) {
             File config = new File(projectDirectory, path)
             if (config.isFile()) {
                 CodeGenConfig read = read(path, config)
                 List<String> set = keys.findAll { String key -> isSetting(read.get(key)) }.toList()
                 if (set) {
-                    present.put(path, set)
+                    present.add(new PresentSettings(path, null, set))
+                }
+                environmentSettings(read, keys, path == GROOVY_CONFIG).each { String environment, List<String> keysOf ->
+                    present.add(new PresentSettings(path, environment, keysOf))
                 }
             }
         }
         present
     }
 
+    /**
+     * Reads a configuration file without choosing an environment: the YAML documents are merged as they are,
+     * {@code environments} included, and {@code application.groovy} is read with {@code environments} as an
+     * ordinary block, which keeps the settings of each environment under {@code environments.<name>}.
+     */
     private static CodeGenConfig read(String path, File config) throws IOException {
         CodeGenConfig read = new CodeGenConfig()
         try {
             if (path == YAML_CONFIG) {
-                read.loadYml(config)
+                config.withInputStream { InputStream input -> read.loadYml(input) }
             } else {
-                read.loadGroovy(config)
+                ConfigSlurper slurper = new ConfigSlurper()
+                slurper.registerConditionalBlock(ENVIRONMENTS, null)
+                slurper.classLoader = read.groovyClassLoader
+                read.mergeMap(slurper.parse(config.toURI().toURL()), false)
             }
         } catch (Exception e) {
-            throw new IOException("${path} could not be read: ${e.message?.trim() ?: e.class.name}", e)
+            String how = path == YAML_CONFIG ? '' : ' with the blocks of all its environments'
+            throw new IOException("${path} could not be read${how}: ${e.message?.trim() ?: e.class.name}", e)
         }
         read
+    }
+
+    /**
+     * Finds the keys that the block of an environment sets. The configuration that was read holds every value also
+     * under its full key, {@code environments.production.grails.plugin.springsecurity.useRoleGroups}; the key without
+     * the environment is the one the block sets in its environment.
+     *
+     * @param read the file, as {@link #read} read it
+     * @param keys the full keys of the settings
+     * @param nestedBlocks whether an {@code environments} block inside another block counts, as it does in
+     * {@code application.groovy}; the runtime reads {@code environments} only at the top of a YAML document
+     * @return the keys each environment sets, in the order they are given, by the name of the environment
+     */
+    private static Map<String, List<String>> environmentSettings(CodeGenConfig read, Collection<String> keys, boolean nestedBlocks) {
+        Map<String, Set<String>> found = [:]
+        for (String name : read.keySet()) {
+            List<String> parts = name.split(/\./).toList()
+            // where environments can be: followed by the name of an environment, and in YAML only the first part
+            int last = parts.size() - 2
+            if (!nestedBlocks) {
+                last = Math.min(last, 0)
+            }
+            for (int index = 0; index <= last; index++) {
+                if (parts[index] == ENVIRONMENTS) {
+                    String key = (parts.take(index) + parts.drop(index + 2)).join('.')
+                    if (keys.contains(key) && isSetting(read.get(name))) {
+                        found.computeIfAbsent(parts[index + 1]) { String environment -> new LinkedHashSet<String>() }.add(key)
+                    }
+                }
+            }
+        }
+        found.collectEntries { String environment, Set<String> set ->
+            [(environment): keys.findAll { String key -> set.contains(key) }.toList()]
+        } as Map<String, List<String>>
     }
 
     private static boolean isSetting(Object value) {
@@ -221,5 +278,36 @@ class ApplicationConfigAppender {
 
     private static boolean isRows(Object value) {
         value instanceof List && !((List) value).isEmpty() && ((List) value).every { Object each -> each instanceof Map }
+    }
+
+    /**
+     * Settings that a configuration file has in one place: outside the environment blocks, or in the block of one
+     * environment.
+     */
+    @CompileStatic
+    static final class PresentSettings {
+
+        /** The path of the file in the project. */
+        final String path
+
+        /** The environment whose block has the settings, or {@code null} for the settings outside the blocks. */
+        final String environment
+
+        /** The full keys of the settings, in the order they were asked for. */
+        final List<String> keys
+
+        PresentSettings(String path, String environment, List<String> keys) {
+            this.path = path
+            this.environment = environment
+            this.keys = Collections.unmodifiableList(new ArrayList<String>(keys))
+        }
+
+        /**
+         * @return the file, and the environment when the settings are those of one, as in
+         * {@code grails-app/conf/application.yml, environment production}
+         */
+        String getLocation() {
+            environment == null ? path : "${path}, environment ${environment}".toString()
+        }
     }
 }
