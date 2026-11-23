@@ -477,6 +477,40 @@ class LauncherSpec extends Specification {
     }
 
     @Unroll
+    void "the help calls the command line the Grails CLI #where"() {
+        given:
+        if (inProject) {
+            project()
+        }
+        broken.commandName = 'grails'
+        ConsoleCommands.setInteractive(console)
+
+        when:
+        int exit = ForgeCli.execute(broken, args as String[])
+        List<String> lines = out.toString().readLines()
+
+        then: 'its name, what it does, and not the Forge CLI'
+        exit == 0
+        started.get() == 0
+        lines[0] == 'Usage: grails [-hvVx] [--non-interactive] [--plain-output] [COMMAND]'
+        lines[1] == 'Grails CLI: generates projects and runs commands in them.'
+        !out.toString().contains('Forge CLI')
+
+        cleanup:
+        ConsoleCommands.setInteractive(false)
+
+        where:
+        args       | inProject | console
+        ['help']   | false     | false
+        ['--help'] | false     | false
+        ['help']   | true      | false
+        ['-h']     | true      | false
+        ['help']   | true      | true
+        ['help']   | false     | true
+        where = (inProject ? 'in a project' : 'outside a project') + (console ? ' at the prompt of the console' : '') + " with ${args[0]}"
+    }
+
+    @Unroll
     void "#option, which the Grails shell took with one dash, is refused #where with what is typed now, and starts nothing"() {
         given:
         if (inProject) {

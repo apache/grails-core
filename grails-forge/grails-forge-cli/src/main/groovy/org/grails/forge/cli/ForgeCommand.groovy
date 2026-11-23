@@ -41,7 +41,7 @@ import java.util.concurrent.Callable
  * project are added by {@link ForgeCli} when the current directory holds one.
  */
 @CommandLine.Command(name = 'grails-forge-cli', description = [
-        'Grails Forge CLI command line interface for generating projects and services.',
+        'Grails CLI: generates projects and runs commands in them.',
         'Application generation commands are:',
         '',
         '*  @|bold create-app|@ @|yellow NAME|@',

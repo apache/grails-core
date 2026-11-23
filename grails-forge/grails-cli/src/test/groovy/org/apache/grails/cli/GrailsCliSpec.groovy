@@ -64,6 +64,21 @@ class GrailsCliSpec extends Specification {
         err.toString().isEmpty()
     }
 
+    void "the help calls the command line the Grails CLI: #args"() {
+        when:
+        int exit = GrailsCli.execute(args as String[])
+        List<String> lines = out.toString().readLines()
+
+        then:
+        exit == 0
+        lines[0] == 'Usage: grails [-hvVx] [--non-interactive] [--plain-output] [COMMAND]'
+        lines[1] == 'Grails CLI: generates projects and runs commands in them.'
+        !out.toString().contains('Forge CLI')
+
+        where:
+        args << [['--help'], ['-h'], ['help'], [], ['--plain-output', 'help']]
+    }
+
     void "a mistake in the command line is said as the command line says it, through the entry point: #args"() {
         when:
         int exit = GrailsCli.execute(args as String[])
