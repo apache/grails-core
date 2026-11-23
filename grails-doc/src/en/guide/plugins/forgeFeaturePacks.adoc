@@ -736,6 +736,53 @@ Of a plugin, `coords` (at most 120 characters) and `versions` are required; of a
 
 The `format` of a `pack` is read before anything else of it, and says how the rest is written. A pack of another format than `1` is one a later version of the command line reads: nothing else of it is read, by these rules or any other, and its version is passed over, counted in a line of `--list-catalog-features`, and is not an error. The older versions of the plugin, with a pack of format `1`, are still offered, so publishing a release with a pack of a later format does not take the plugin away from those who have this version. Of a pack of format `1`, a `kind` other than `feature` and `preset` and a type of application this version does not know are not errors either: a pack of another kind is never selected by a name, and a pack whose `applicationTypes` are all unknown here is selected for none of the types there are. A `templateApi` that is not `1` is a pack a later version renders, and is passed over in the same way. `create-app`, `plugin-info` and `list-plugins` read the packs of an index by these one set of rules.
 
+[[forgeFeaturePackAfterCreation]]
+==== After the Application Is Created
+
+
+The application keeps a record of how it was generated in `.grails`, which is committed with it (see link:{guidePath}commandLine.html#creatingProject[Creating a Grails Project]). `feature add` and `project regenerate` work from that record by generating the application again as it was, in memory, and holding the result to the copy of every generated file the record has. An application with the feature of a pack that is not part of Grails is generated again only with that very pack, so the pack has to be there again, and has to be the same:
+
+* *A pack of a published plugin* is recorded by the coordinates and the version of the jar and its SHA-256. The command fetches the jar again by them, from the repositories of `GRAILS_REPO_URL`, then Maven Central, then the repository the record names for it; `--feature-pack-repository` names the repositories to ask in their place, and with `--offline` only a repository that is a directory is asked. The command says which jar it fetches and where it asks before it asks. A jar with another SHA-256 is refused before it is opened. Where the jar came from this time does not matter: the record says where it was found when the application was created.
+* *A pack of a directory* is recorded by the SHA-256 of its content: `feature.yml` and the files under `templates` it names, as the bytes they are, each with its path in the pack. The command is given the directory again with `--feature-pack-dir`, wherever it is now. A directory whose content has another digest is refused, and the message names both. Nothing else of the directory counts, so a copy in another place, on another computer, in a clone of the repository that holds it, is the same pack; a template whose line endings Git changed on checkout is not, which `src/main/forge/** eol=lf` in `.gitattributes` keeps from happening.
+
+[source,console]
+----
+$ grails create-app com.example.shop --features acme-audit --feature-pack-dir ../acme-audit/src/main/forge
+...
+| Application created at /home/me/shop
+| The feature acme-audit is that of a feature pack that is not part of Grails: feature add and project regenerate work for the application only with that very pack, which its record names by its SHA-256 (the jar of a plugin is fetched again by its coordinates; the pack of a directory is given again with --feature-pack-dir)
+$ cd shop
+$ grails feature add grails-quartz --feature-pack-dir ../acme-audit/src/main/forge
+----
+
+The `create-` command says this once the application is created, and `project show` says it among its notes, in its `--json` document too, where a feature of a pack of a directory has its `contentSha256`.
+
+What works and what does not, once an application has the feature of such a pack:
+
+[cols="2,3"]
+|===
+|Command |With a pack that is not part of Grails
+
+|`feature add` of a feature of Grails
+|Works, with the same pack; refused without it, or with another, and nothing is changed.
+
+|`project regenerate`
+|Works, with the same pack, as `feature add`.
+
+|`project show`
+|Works without the pack: it reads the record only.
+
+|`feature add` of the feature of a pack
+|Refused: only features of Grails are added. Create the application with the feature, or add what the pack adds by hand.
+
+|A newer version of the pack
+|Not done by a command. The record names one version; to move to another, create the application again with it (the command line `project show` prints, with the new version) and merge the difference, or change the files by hand.
+
+|A command line of another version of Grails
+|`feature add` and `project regenerate` are refused, as they are for every application: a feature is added by the version that generated the application.
+|===
+
+
 [[forgeFeaturePackSameEveryTime]]
 ==== What Is the Same Every Time
 
@@ -781,7 +828,7 @@ So where two packs add to the same place, the one whose feature has the earlier 
 
 *Templates.* A template gives the same text for the same application when it uses the model and nothing else. `features` is sorted. Do not write the time, a random value, an environment variable, a system property, a path of the computer or the name of its user into a file, and do not go through a `HashMap` or `HashSet` to write lines. Text is turned to upper or lower case with `Locale.ROOT` (`name.toLowerCase(Locale.ROOT)`), and numbers and dates are formatted with it (`String.format(Locale.ROOT, ...)`): without it the text depends on the language of whoever generates the application, and `TITLE` in lower case is not `title` in Turkish. `feature add` renders the recorded selection again and checks it against the baseline; when that replay differs, it refuses the addition.
 
-*The record.* In `.grails`, the features that were asked for and those that were left out are sorted by name, each once; the features of the lock are in the order they were applied in; the files of the baseline index are sorted by path. Paths are written with `/`, the files end their lines with a line feed and are UTF-8. A pack that was given as a directory is recorded by the name of its feature only, never by where it was; a pack that was taken from a repository by its coordinates, its version and the SHA-256 of its jar.
+*The record.* In `.grails`, the features that were asked for and those that were left out are sorted by name, each once; the features of the lock are in the order they were applied in; the files of the baseline index are sorted by path. Paths are written with `/`, the files end their lines with a line feed and are UTF-8. A pack that was given as a directory is recorded by the name of its feature and the SHA-256 of its content, never by where it was; a pack that was taken from a repository by its coordinates, its version and the SHA-256 of its jar.
 
 *Resolution inputs.* Catalog and repository order is meaningful: the first catalog that lists a plugin owns that plugin's entry, and repositories are tried in the configured order. For an artifact managed by the application's Grails BOM, catalog selection requires that exact version; otherwise it selects the latest compatible numeric release. Numerically equal versions such as `2.3` and `2.3.0` are distinct coordinates; the lexicographically greatest spelling wins the tie, independently of their order in the catalog. Ranges, `+` and `latest.*` selectors are refused for explicit pack coordinates. Changing a catalog, repository order or `GRAILS_REPO_URL` changes the inputs, so it need not give the same output.
 

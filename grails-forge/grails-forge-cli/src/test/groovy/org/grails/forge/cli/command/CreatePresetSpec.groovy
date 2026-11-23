@@ -457,18 +457,21 @@ class CreatePresetSpec extends CommandSpec {
         !new File(dir, 'shop').exists()
     }
 
-    void "a feature is not added to an application made from a preset, and it is not generated again, as for one with a feature pack"() {
+    void "a feature is added to an application made from a preset in a directory, and it is generated again, only with that very preset"() {
         given:
         File preset = directory('acme-service', PRESET, ['TEAM.md.gsp': TEMPLATE])
         create(dir, 'create-restapi', 'com.example.shop', '--preset', preset.absolutePath)
         Map<String, String> before = tree(new File(dir, 'shop'))
+        String content = (new File(dir, 'shop/.grails/forge.lock.yml').text =~ /- name: acme-service\n  source: pack\n  contentSha256: ([0-9a-f]{64})\n/)[0][1]
 
-        when:
+        when: 'the preset is not given'
         int exit = run('feature', 'add', 'cache')
 
-        then:
+        then: 'nothing is added, and the message names the preset and its digest'
         exit == 1
-        err.toString().contains('The application has the feature acme-service of a feature pack that is not part of Grails; a feature cannot yet be added to such an application')
+        err.toString().contains('The application was made from the preset acme-service, which is not part of Grails, and that preset was not given: such an ' +
+                'application is generated again, to add a feature to it or to compare it, only with the very preset and packs it was generated with. acme-service, ' +
+                "a preset that was given as a directory or a file whose content has the SHA-256 ${content}. Nothing was changed.")
         tree(new File(dir, 'shop')) == before
 
         when: 'nor is it generated again'
@@ -476,7 +479,75 @@ class CreatePresetSpec extends CommandSpec {
 
         then:
         regenerated == 1
-        err.toString().contains('The application has the feature acme-service of a feature pack that is not part of Grails')
+        err.toString().contains('The application was made from the preset acme-service')
+        tree(new File(dir, 'shop')) == before
+
+        when: 'a tool asks for what adding comes to'
+        run('feature', 'add', 'cache', '--dry-run', '--json')
+        Map missing = (Map) new JsonSlurper().parseText(printed)
+
+        then:
+        missing.outcome == 'refused'
+        missing.reason == 'pack-missing'
+
+        when: 'a preset of that name with another content is given'
+        File changed = directory('changed', PRESET.replace('acme.service.team: payments', 'acme.service.team: billing'), ['TEAM.md.gsp': TEMPLATE])
+        run('feature', 'add', 'cache', '--dry-run', '--json', '--feature-pack-dir', changed.absolutePath)
+        Map differs = (Map) new JsonSlurper().parseText(printed)
+
+        then:
+        differs.outcome == 'refused'
+        differs.reason == 'pack-differs'
+        differs.message.contains("acme-service is a preset whose content has the SHA-256 ${content}")
+
+        when: 'the preset is given again'
+        File regeneratedInto = other()
+        int compared = run('project', 'regenerate', '--output', regeneratedInto.absolutePath, '--force', '--feature-pack-dir', preset.absolutePath)
+        exit = run('feature', 'add', 'cache', '--feature-pack-dir', preset.absolutePath)
+
+        then: 'the application is generated again as it was, and gets the feature, and is still that of the preset'
+        compared == 0
+        new File(regeneratedInto, 'TEAM.md').text == new File(dir, 'shop/TEAM.md').text
+        exit == 0
+        new File(dir, 'shop/build.gradle').text.contains('grails-cache')
+        new File(dir, 'shop/build.gradle').text.contains(MONGODB)
+        sha256(new File(dir, 'shop/TEAM.md')) == before['TEAM.md']
+        String manifest = new File(dir, 'shop/.grails/project.yml').text
+        manifest.contains('preset: acme-service\n')
+        manifest.contains('- name: cache')
+        new File(dir, 'shop/.grails/forge.lock.yml').text.contains("- name: acme-service\n  source: pack\n  contentSha256: ${content}\n")
+    }
+
+    void "a feature is added to an application made from the preset of an artifact, which is fetched again by the coordinates and the digest of its record"() {
+        given:
+        File jar = publish(COORDINATES, PRESET, ['TEAM.md.gsp': TEMPLATE])
+        create(dir, 'create-restapi', 'com.example.shop', '--preset', COORDINATES, '--feature-pack-repository', address)
+
+        when: 'it is compared with what it is generated as'
+        int compared = run('project', 'regenerate', '--diff', '--feature-pack-repository', address)
+
+        then: 'the preset is fetched again, and every file is as it was generated'
+        compared == 0
+        printed.contains("The preset acme-service of the application is fetched again as ${COORDINATES}, with the SHA-256 ${sha256(jar)} its record has. " +
+                "Asking ${address}")
+
+        when: 'a feature is added, without the network'
+        int exit = run('feature', 'add', 'cache', '--offline', '--feature-pack-repository', address)
+
+        then:
+        exit == 0
+        new File(dir, 'shop/build.gradle').text.contains('grails-cache')
+        new File(dir, 'shop/.grails/project.yml').text.contains('preset: acme-service\nrequestedFeatures:\n- name: acme-service\n  coordinates: com.acme:acme-preset\n  version: 1.0.0\n')
+        new File(dir, 'shop/.grails/forge.lock.yml').text.contains("- name: acme-service\n  source: pack\n  coordinates: com.acme:acme-preset\n  version: 1.0.0\n  sha256: ${sha256(jar)}\n")
+
+        when: 'the repository has another jar under the coordinates'
+        Map<String, String> before = tree(new File(dir, 'shop'))
+        publish(COORDINATES, PRESET.replace('acme.service.team: payments', 'acme.service.team: billing'), ['TEAM.md.gsp': TEMPLATE])
+        exit = run('feature', 'add', 'views-json', '--feature-pack-repository', address)
+
+        then: 'it is not taken, and the preset is named'
+        exit == 1
+        err.toString().contains('The preset acme-service of the application could not be had again')
         tree(new File(dir, 'shop')) == before
     }
 

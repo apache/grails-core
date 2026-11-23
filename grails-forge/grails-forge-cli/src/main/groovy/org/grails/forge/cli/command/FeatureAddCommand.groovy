@@ -22,11 +22,15 @@ import groovy.transform.CompileStatic
 import org.apache.grails.forge.cli.console.ConsoleProject
 import org.apache.grails.forge.cli.console.ProjectCommand
 import org.apache.grails.forge.cli.console.UsageHelp
+import org.apache.grails.forge.cli.pack.PackArtifactException
+import org.apache.grails.forge.cli.pack.PackArtifacts
+import org.apache.grails.forge.cli.pack.RecordedPackOptions
 import org.apache.grails.forge.core.change.ChangePlan
 import org.apache.grails.forge.core.change.ChangePlan.Action
 import org.apache.grails.forge.core.change.ChangePlan.PlannedFile
 import org.apache.grails.forge.core.change.FeatureAddition
 import org.apache.grails.forge.core.change.ProjectChangeException
+import org.apache.grails.forge.core.pack.Pack
 import org.apache.grails.forge.core.state.ProjectState
 import org.apache.grails.forge.core.state.ProjectStateException
 import org.grails.forge.application.generator.ProjectGenerator
@@ -40,6 +44,7 @@ import org.springframework.stereotype.Component
 import picocli.CommandLine
 import java.nio.file.Path
 import java.util.concurrent.Callable
+import java.util.function.Consumer
 import java.util.function.Supplier
 
 /**
@@ -55,7 +60,9 @@ import java.util.function.Supplier
                 'a feature that was asked for by name, when the application was created or added to, is replaced only with --replace, ' +
                 'and an option the application was created with is never replaced.',
         'The files you changed keep your changes. When a feature changes or takes out what you changed too, or a file it writes is there already, ' +
-                'nothing is written and the files are named.'])
+                'nothing is written and the files are named.',
+        'An application with the feature of a feature pack that is not part of Grails gets a feature only with that very pack: the jar of a plugin is ' +
+                'fetched again by the coordinates and the SHA-256 its record has, and the pack of a directory is given again with --feature-pack-dir.'])
 @Component
 @Scope('prototype')
 @CompileStatic
@@ -85,6 +92,9 @@ class FeatureAddCommand extends BaseCommand implements Callable<Integer>, Projec
     @CommandLine.Option(names = ['--json'], description = 'With --dry-run: write what adding the features comes to as one JSON document for a tool to read, ' +
             'and nothing else: the outcome, the reason, the files with their paths in the project and what would be done to each, and whether the change can be made.')
     boolean json
+
+    @CommandLine.Mixin
+    RecordedPackOptions packOptions = new RecordedPackOptions()
 
     // asked of the Forge application when the command first needs it
     private final Supplier<ProjectGenerator> projectGeneratorSource
@@ -124,12 +134,14 @@ class FeatureAddCommand extends BaseCommand implements Callable<Integer>, Projec
             for (String message : (preview ? Collections.<String>emptyList() : addition.recover(directory).getMessages())) {
                 out("@|blue ||@ ${message}")
             }
-            ChangePlan plan = addition.plan(directory, features, getOperatingSystem(), this, replace)
+            List<Pack> packs = packOptions.packs(directory, createPackArtifacts(), grailsRepoUrl(), { String line -> out("@|blue ||@ ${shown(line)}") } as Consumer<String>,
+                    { String line -> warning(shown(line)) } as Consumer<String>)
+            ChangePlan plan = addition.plan(directory, features, getOperatingSystem(), this, replace, packs)
             return apply(plan, preview)
         } catch (FeatureSelectionException e) {
             // features an application cannot have are a mistake in the command line, as they are when it is created
             throw new CommandLine.ParameterException(spec.commandLine(), shown(e.getMessage()))
-        } catch (ProjectStateException | ProjectChangeException | IllegalArgumentException e) {
+        } catch (ProjectStateException | ProjectChangeException | IllegalArgumentException | PackArtifactException e) {
             err(shown(e.getMessage() ?: e.getClass().getSimpleName()))
             if (showStacktrace()) {
                 e.printStackTrace(spec.commandLine().getErr())
@@ -163,7 +175,10 @@ class FeatureAddCommand extends BaseCommand implements Callable<Integer>, Projec
         Notes notes = new Notes()
         ChangePlan plan
         try {
-            plan = new FeatureAddition(projectGeneratorSource.get()).plan(directory, features, getOperatingSystem(), notes, replace)
+            // which jar of a pack is fetched again is said among the notes: the document is all that is written
+            List<Pack> packs = packOptions.packs(directory, createPackArtifacts(), grailsRepoUrl(), { String line -> notes.out(line) } as Consumer<String>,
+                    { String line -> notes.warning(line) } as Consumer<String>)
+            plan = new FeatureAddition(projectGeneratorSource.get()).plan(directory, features, getOperatingSystem(), notes, replace, packs)
         } catch (Exception e) {
             if (showStacktrace()) {
                 e.printStackTrace(spec.commandLine().getErr())
@@ -244,6 +259,21 @@ class FeatureAddCommand extends BaseCommand implements Callable<Integer>, Projec
                 (plan.replaced.isEmpty() ? '' : ", in the place of ${shown(plan.replaced.join(', '))}") +
                 ". Commit the changes together with the directory ${ProjectState.DIRECTORY}")
         return 0
+    }
+
+    /**
+     * @return what fetches the jar of a plugin the application has the feature pack of
+     */
+    protected PackArtifacts createPackArtifacts() {
+        return new PackArtifacts()
+    }
+
+    /**
+     * @return the repositories of the build of the application, which are asked for such a jar when
+     * the command names none
+     */
+    protected String grailsRepoUrl() {
+        return System.getenv('GRAILS_REPO_URL')
     }
 
     private static String shown(String text) {

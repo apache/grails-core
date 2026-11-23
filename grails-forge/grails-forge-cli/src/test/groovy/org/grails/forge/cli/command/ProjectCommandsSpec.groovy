@@ -372,7 +372,10 @@ class ProjectCommandsSpec extends CommandSpec {
         lines.contains("    acme-audit (pack, com.acme:acme-audit-grails:2.3.0, sha256 ${sha(jar.bytes)})".toString())
         lines.contains('| The record does not name the repository com.acme:acme-audit-grails:2.3.0 was taken from: give it to the command with --feature-pack-repository, ' +
                 'unless it is one of those the command asks anyway')
-        lines.findAll { it.startsWith('| ') }.size() == 6 + ofRepositories().size()
+        lines.contains('| The feature acme-audit is that of a feature pack that is not part of Grails: feature add and project regenerate work for the application ' +
+                'only with that very pack, which its record names by its SHA-256 (the jar of a plugin is fetched again by its coordinates; the pack of a directory is ' +
+                'given again with --feature-pack-dir)')
+        lines.findAll { it.startsWith('| ') }.size() == 7 + ofRepositories().size()
         words(lines[-1]) == ['grails-forge-cli', 'create-app', 'com.example.shop', '--features', 'com.acme:acme-audit-grails:2.3.0,h2',
                              '--feature-pack-sha256', "com.acme:acme-audit-grails:2.3.0=${sha(jar.bytes)}".toString()]
 
@@ -388,13 +391,14 @@ class ProjectCommandsSpec extends CommandSpec {
         created == 0
         tree(new File(again, 'shop')).findAll { it.key.startsWith('.grails/') } == tree(new File(dir, 'shop')).findAll { it.key.startsWith('.grails/') }
 
-        when: 'the application is to be generated again'
+        when: 'the application is generated again, with the jar of its record from the repository'
         err.reset()
-        exit = run('project', 'regenerate', '--diff')
+        out.reset()
+        exit = run('project', 'regenerate', '--diff', '--feature-pack-repository', address)
 
-        then: 'which is refused as adding a feature to it is'
-        exit == 1
-        err.toString().contains('The application has the feature acme-audit of a feature pack that is not part of Grails; a feature cannot yet be added to such an application')
+        then: 'it is the application as it was generated'
+        exit == 0
+        out.toString().contains("The feature pack acme-audit of the application is fetched again as com.acme:acme-audit-grails:2.3.0, with the SHA-256 ${sha(jar.bytes)} its record has")
     }
 
     void "a feature pack that was given as a directory is said to be needed with the command line"() {
@@ -414,8 +418,12 @@ class ProjectCommandsSpec extends CommandSpec {
         exit == 0
         document.command.arguments == ['com.example.shop', '--features', 'acme-audit']
         document.notes == ['The feature acme-audit is that of a feature pack given as a directory or a jar, which the record does not name: ' +
-                                   'give it to the command with --feature-pack-dir'] + ofRepositories()
-        document.features.find { it.name == 'acme-audit' } == [name: 'acme-audit', source: 'pack']
+                                   'give it to the command with --feature-pack-dir',
+                           'The feature acme-audit is that of a feature pack that is not part of Grails: feature add and project regenerate work for the ' +
+                                   'application only with that very pack, which its record names by its SHA-256 (the jar of a plugin is fetched again by its ' +
+                                   'coordinates; the pack of a directory is given again with --feature-pack-dir)'] + ofRepositories()
+        document.features.find { it.name == 'acme-audit' }.subMap(['name', 'source']) == [name: 'acme-audit', source: 'pack']
+        document.features.find { it.name == 'acme-audit' }.contentSha256 ==~ /[0-9a-f]{64}/
         document.effectiveOptions.find { it.name == 'feature-pack-dir' } == [name: 'feature-pack-dir', option: '--feature-pack-dir', default: [], status: 'not-recorded']
         !out.toString().contains(other.name)
     }

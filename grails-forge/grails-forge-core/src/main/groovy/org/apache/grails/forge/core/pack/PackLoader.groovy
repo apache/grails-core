@@ -255,7 +255,7 @@ class PackLoader {
         if (problems) {
             throw new PackDescriptorException(origin, problems)
         }
-        return new Pack(descriptor, origin, files)
+        return new Pack(descriptor, origin, files, descriptorBytes)
     }
 
     private Pack read(Path directory, String origin) {
@@ -303,7 +303,7 @@ class PackLoader {
         if (problems) {
             throw new PackDescriptorException(origin, problems)
         }
-        return new Pack(descriptor, origin, files)
+        return new Pack(descriptor, origin, files, descriptorBytes)
     }
 
     /**

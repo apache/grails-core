@@ -327,7 +327,9 @@ final class ProjectLock {
      * address of the repository the pack was taken from, the coordinates and the version of the
      * artifact it is in, and the digest of that artifact; and, when the coordinates were those a
      * catalog gave for the name of the feature, the address of that catalog and the digest of the
-     * catalog as it was read.
+     * catalog as it was read. A pack that was given as a directory or a file has the digest of its
+     * content in their place ({@code contentSha256}, see {@code Pack.getContentSha256()}): where it was
+     * is a path of the computer it was read on, and what it was is the same on every computer.
      */
     @CompileStatic
     static final class LockedFeature {
@@ -349,9 +351,12 @@ final class ProjectLock {
         final String sha256
         final String catalog
         final String catalogSha256
+        /** The digest of the content of a pack that was given as a directory or a file, or {@code null} */
+        final String contentSha256
 
         LockedFeature(String name, String source, String origin = null, String coordinates = null, String version = null, String sha256 = null,
-                      String catalog = null, String catalogSha256 = null) {
+                      String catalog = null, String catalogSha256 = null, String contentSha256 = null) {
+            this.contentSha256 = contentSha256
             this.catalog = catalog
             this.catalogSha256 = catalogSha256
             this.name = name
@@ -367,6 +372,9 @@ final class ProjectLock {
             Map<String, Object> map = new LinkedHashMap<>()
             map.put('name', name)
             map.put('source', source)
+            if (contentSha256 != null) {
+                map.put('contentSha256', contentSha256)
+            }
             if (origin != null) {
                 map.put('origin', origin)
             }
@@ -392,6 +400,7 @@ final class ProjectLock {
         static LockedFeature read(StateSection section) {
             String name = section.matching('name', ProjectManifest.FEATURE_NAME, 'the name of a feature')
             String source = section.oneOf('source', [FRAMEWORK, BUNDLED_PACK, PACK])
+            String contentSha256 = section.optionalMatching('contentSha256', SHA256, 'a SHA-256 digest in hexadecimal')
             LockedFeature feature = new LockedFeature(
                     name,
                     source,
@@ -400,7 +409,13 @@ final class ProjectLock {
                     section.optionalMatching('version', ProjectManifest.VERSION, 'a version'),
                     section.optionalMatching('sha256', SHA256, 'a SHA-256 digest in hexadecimal'),
                     section.has('catalog') ? section.text('catalog', StateLimits.MAX_ADDRESS) : null,
-                    section.optionalMatching('catalogSha256', SHA256, 'a SHA-256 digest in hexadecimal'))
+                    section.optionalMatching('catalogSha256', SHA256, 'a SHA-256 digest in hexadecimal'),
+                    contentSha256)
+            // the content of a pack of a directory or a file stands for what it was; a jar of a repository has its own digest
+            if (contentSha256 != null && (source != PACK || feature.coordinates != null || feature.sha256 != null)) {
+                throw section.problem('contentSha256', 'is the digest of the content of a feature pack that was given as a directory or a file, ' +
+                        'and only such a feature has one')
+            }
             if (feature.catalog != null && !isPublicAddress(feature.catalog)) {
                 throw section.problem('catalog', 'must be the https address of a catalog, without a name, a password, a query or a fragment')
             }

@@ -19,6 +19,8 @@
 package org.apache.grails.forge.core.pack
 
 import groovy.transform.CompileStatic
+import java.nio.charset.StandardCharsets
+import java.security.MessageDigest
 import org.apache.grails.forge.core.pack.PackDescriptor.PackBuildPlugin
 import org.apache.grails.forge.core.pack.PackDescriptor.PackDependency
 import org.apache.grails.forge.core.pack.PackDescriptor.PackFile
@@ -61,6 +63,7 @@ final class Pack {
     private final Map<String, byte[]> files
     private final boolean bundled
     private final PackArtifact artifact
+    private final String contentSha256
 
     /**
      * @param descriptor the descriptor of the pack
@@ -78,14 +81,24 @@ final class Pack {
      * @param bundled whether the pack is one Forge has in itself
      */
     Pack(PackDescriptor descriptor, String origin, Map<String, byte[]> files, boolean bundled) {
-        this(descriptor, origin, files, bundled, null)
+        this(descriptor, origin, files, bundled, null, null)
     }
 
-    private Pack(PackDescriptor descriptor, String origin, Map<String, byte[]> files, boolean bundled, PackArtifact artifact) {
+    /**
+     * A pack that was read with the bytes of its descriptor, which has a {@link #getContentSha256()}.
+     *
+     * @param descriptorBytes the bytes of {@code feature.yml} as they were read
+     */
+    Pack(PackDescriptor descriptor, String origin, Map<String, byte[]> files, byte[] descriptorBytes) {
+        this(descriptor, origin, files, false, null, contentSha256(descriptorBytes, files))
+    }
+
+    private Pack(PackDescriptor descriptor, String origin, Map<String, byte[]> files, boolean bundled, PackArtifact artifact, String contentSha256) {
         this.artifact = artifact
         this.bundled = bundled
         this.descriptor = descriptor
         this.origin = origin
+        this.contentSha256 = contentSha256
         Map<String, byte[]> copies = new LinkedHashMap<>()
         files.each { String from, byte[] content -> copies.put(from, content.clone()) }
         this.files = Collections.unmodifiableMap(copies)
@@ -119,6 +132,40 @@ final class Pack {
     }
 
     /**
+     * What the pack is, wherever it was read from: the SHA-256, in lowercase hexadecimal, of its
+     * {@code feature.yml} and of the files under {@code templates} the descriptor names, as the bytes
+     * they are. A directory, the jar it is packaged into and a copy of either on another computer have
+     * the same one when their bytes are the same; a line ending Git changed on the way is another byte.
+     * Each file counts with its path in the pack and its length, the files in the order of their paths:
+     * {@code feature.yml}, then {@code templates/<from>}.
+     *
+     * @return the digest, or {@code null} for a pack that was not read with the bytes of its descriptor
+     */
+    String getContentSha256() {
+        return contentSha256
+    }
+
+    private static String contentSha256(byte[] descriptorBytes, Map<String, byte[]> files) {
+        MessageDigest digest = MessageDigest.getInstance('SHA-256')
+        entry(digest, DESCRIPTOR, descriptorBytes)
+        for (String from : new TreeSet<String>(files.keySet())) {
+            entry(digest, "${TEMPLATES}/${from}".toString(), files.get(from))
+        }
+        return HexFormat.of().formatHex(digest.digest())
+    }
+
+    // a path, a byte that is in no path, the length in eight bytes and the content: no two packs give the same bytes
+    private static void entry(MessageDigest digest, String path, byte[] content) {
+        digest.update(path.getBytes(StandardCharsets.UTF_8))
+        digest.update((byte) 0)
+        long length = content.length
+        for (int shift = 56; shift >= 0; shift -= 8) {
+            digest.update((byte) (length >>> shift))
+        }
+        digest.update(content)
+    }
+
+    /**
      * @param artifact the published jar this pack was read from
      * @return this pack, with the jar it was read from
      */
@@ -126,7 +173,7 @@ final class Pack {
         if (bundled) {
             throw new IllegalArgumentException("The feature pack ${origin} is one of Forge and comes from no repository")
         }
-        return new Pack(descriptor, origin, files, false, Objects.requireNonNull(artifact))
+        return new Pack(descriptor, origin, files, false, Objects.requireNonNull(artifact), contentSha256)
     }
 
     /**

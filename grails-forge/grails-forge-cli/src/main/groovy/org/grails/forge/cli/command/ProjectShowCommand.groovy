@@ -261,6 +261,11 @@ class ProjectShowCommand extends BaseCommand implements Callable<Integer>, Proje
             notes << ("The record does not name the repository ${unnamed.join(', ')} was taken from: give it to the command with --feature-pack-repository, " +
                     'unless it is one of those the command asks anyway').toString()
         }
+        List<String> ofPacks = lock.features.findAll { LockedFeature feature -> feature.source == LockedFeature.PACK }
+                .collect { LockedFeature feature -> FeatureSelectionException.shown(feature.name) }
+        if (!ofPacks.isEmpty()) {
+            notes << CreateCommand.laterCommands(ofPacks)
+        }
         if (!lock.repositories.isEmpty() || lock.repositoriesNotNamed > 0) {
             notes << 'The application was generated with the repositories of the environment variable GRAILS_REPO_URL, which are written into its build: ' +
                     'set the variable to the same repositories for the command'
@@ -335,6 +340,9 @@ class ProjectShowCommand extends BaseCommand implements Callable<Integer>, Proje
         for (LockedFeature feature : lock.features) {
             String plugin = feature.coordinates == null ? '' : ", ${shown(feature.coordinates + ':' + feature.version)}, sha256 ${shown(feature.sha256)}" +
                     (feature.origin == null ? '' : ", from ${shown(feature.origin)}")
+            if (feature.contentSha256 != null) {
+                plugin = ", content sha256 ${shown(feature.contentSha256)}"
+            }
             out("    ${shown(feature.name)} (${shown(feature.source)}${plugin})")
         }
     }
@@ -579,7 +587,7 @@ class ProjectShowCommand extends BaseCommand implements Callable<Integer>, Proje
         document.put('repositoriesNotNamed', lock.repositoriesNotNamed)
         document.put('features', lock.features.collect { LockedFeature feature ->
             entries(name: feature.name, source: feature.source, coordinates: feature.coordinates, version: feature.version, sha256: feature.sha256, origin: feature.origin,
-                    catalog: feature.catalog, catalogSha256: feature.catalogSha256)
+                    catalog: feature.catalog, catalogSha256: feature.catalogSha256, contentSha256: feature.contentSha256)
         })
         document.put('command', entries(name: arguments.first(), arguments: arguments.drop(1), line: line))
         document.put('notes', notes)

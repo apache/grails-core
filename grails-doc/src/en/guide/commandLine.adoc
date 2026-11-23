@@ -640,9 +640,13 @@ The exit code is always the one the command ends with without `--json`, so a scr
 | `refused`
 | Another version of Grails generated the project; the message names it.
 
-| `pack-features`
+| `pack-missing`
 | `refused`
-| The application has a feature of a feature pack that is not part of Grails.
+| The application has the feature of a feature pack that is not part of Grails, or was made from a preset, and that pack was not given again (`--feature-pack-dir`), or its jar could not be fetched again by the coordinates and the SHA-256 of the record. The message names each such pack with its digest.
+
+| `pack-differs`
+| `refused`
+| A feature pack that was given again is not the one the application was generated with: its digest is another, it is a directory where the record has a jar or the other way round, or the application has no feature of it.
 
 | `interrupted-change`
 | `refused`

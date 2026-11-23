@@ -1325,7 +1325,7 @@ class FeatureAddCommandSpec extends CommandSpec implements CommandFixture {
         add('grails-quartz', '--dry-run') == 1
     }
 
-    void "an application with the feature of a pack that is not of Grails is refused"() {
+    void "an application with the feature of a pack that is not of Grails is refused without that pack"() {
         given:
         File pack = Files.createTempDirectory(with.toPath(), 'pack').toFile()
         new File(pack, 'templates').mkdirs()
@@ -1341,7 +1341,9 @@ class FeatureAddCommandSpec extends CommandSpec implements CommandFixture {
 
         then:
         exit == 1
-        err.toString().contains('The application has the feature acme-audit of a feature pack that is not part of Grails; a feature cannot yet be added to such an application')
+        err.toString().contains('The application has the feature of feature packs that are not part of Grails, and that pack was not given')
+        err.toString().contains('acme-audit, a feature pack that was given as a directory or a file whose content has the SHA-256 ')
+        err.toString().contains('a pack of a directory is given with --feature-pack-dir')
         tree(dir) == before
     }
 

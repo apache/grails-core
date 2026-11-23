@@ -20,6 +20,7 @@ package org.apache.grails.forge.core.state
 
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.StandardCopyOption
 import java.security.MessageDigest
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
@@ -210,6 +211,60 @@ class ProjectStateSpec extends ApplicationContextSpec {
         locked.sha256 == null
         !target.resolve('.grails/forge.lock.yml').toFile().getText('UTF-8').contains(directory.toString())
         state.baseline.files*.path.contains('grails-app/conf/audit.txt')
+
+        and: 'it is locked by the digest of its content, which is that of the pack wherever it is'
+        locked.contentSha256 ==~ /[0-9a-f]{64}/
+        locked.contentSha256 == pack.contentSha256
+        target.resolve('.grails/forge.lock.yml').toFile().getText('UTF-8').contains("- name: acme-audit\n  source: pack\n  contentSha256: ${pack.contentSha256}\n")
+    }
+
+    void "the digest of the content of a pack is that of its descriptor and the files it names, and of nothing else"() {
+        given:
+        Pack pack = pack('acme-audit')
+        Path copy = Files.createDirectories(directory.resolve('elsewhere/acme-audit'))
+        Path original = directory.resolve('packs/acme-audit')
+        Files.copy(original.resolve('feature.yml'), copy.resolve('feature.yml'))
+        Files.createDirectories(copy.resolve('templates'))
+        Files.copy(original.resolve('templates/audit.txt'), copy.resolve('templates/audit.txt'))
+        // a file the descriptor does not name is no part of the pack
+        Files.writeString(copy.resolve('templates/notes.txt'), 'not of the pack')
+
+        expect: 'a copy elsewhere is the same pack'
+        new PackLoader().fromDirectory(copy).contentSha256 == pack.contentSha256
+
+        when: 'a line ending of a template is another'
+        Files.writeString(copy.resolve('templates/audit.txt'), 'kept as it is\r\n')
+
+        then:
+        new PackLoader().fromDirectory(copy).contentSha256 != pack.contentSha256
+
+        when: 'the descriptor says the same in other bytes'
+        Files.copy(original.resolve('templates/audit.txt'), copy.resolve('templates/audit.txt'), StandardCopyOption.REPLACE_EXISTING)
+        Files.writeString(copy.resolve('feature.yml'), Files.readString(original.resolve('feature.yml')) + '\n')
+
+        then:
+        new PackLoader().fromDirectory(copy).contentSha256 != pack.contentSha256
+    }
+
+    @Unroll
+    void "a lock with the digest of the content of a pack #what is refused"() {
+        given:
+        Path project = generate('shop', [])
+        Path lock = project.resolve('.grails/forge.lock.yml')
+        Files.writeString(lock, sealed(lock.toFile().getText('UTF-8').replace('features:\n', 'features:\n- name: acme-audit\n' + entry)))
+
+        when:
+        ProjectState.read(project)
+
+        then:
+        ProjectStateException e = thrown()
+        e.message.contains(message)
+
+        where:
+        what                           | entry                                                                                                        || message
+        'of the framework'             | "  source: framework\n  contentSha256: ${'ab' * 32}\n"                                                     || 'contentSha256'
+        'and the jar of a repository'  | "  source: pack\n  contentSha256: ${'ab' * 32}\n  coordinates: com.acme:audit\n  version: 1.0\n  sha256: ${'ab' * 32}\n" || 'contentSha256'
+        'that is no digest'            | "  source: pack\n  contentSha256: abc\n"                                                                  || 'contentSha256'
     }
 
     void "a lock can say which artifact the feature of a feature pack came from"() {

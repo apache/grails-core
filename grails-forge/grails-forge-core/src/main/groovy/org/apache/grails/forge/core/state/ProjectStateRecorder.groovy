@@ -321,8 +321,9 @@ final class ProjectStateRecorder {
         PackArtifact artifact = pack.getArtifact()
         if (artifact == null) {
             // the state is committed, and where a pack of a directory was read from is a path of the
-            // machine it was generated on: the lock says no more of it than that the feature is of a pack
-            return new LockedFeature(feature.getName(), LockedFeature.PACK)
+            // machine it was generated on: the lock says what the pack was, by the digest of its content,
+            // which is the same on every computer that has the same pack
+            return new LockedFeature(feature.getName(), LockedFeature.PACK, null, null, null, null, null, null, pack.getContentSha256())
         }
         // a pack that was taken by the coordinates of its plugin: which artifact, and its very bytes.
         // The repository is said when it is an https address, as the repositories of the build are,

@@ -25,9 +25,13 @@ import org.apache.grails.forge.cli.console.ConsoleProject
 import org.apache.grails.forge.cli.console.GradleRunner
 import org.apache.grails.forge.cli.console.OptionRelation
 import org.apache.grails.forge.cli.console.ProjectCommand
+import org.apache.grails.forge.cli.pack.PackArtifactException
+import org.apache.grails.forge.cli.pack.PackArtifacts
+import org.apache.grails.forge.cli.pack.RecordedPackOptions
 import org.apache.grails.forge.core.change.FeatureAddition
 import org.apache.grails.forge.core.change.ProjectChangeException
 import org.apache.grails.forge.core.change.RegeneratedProject
+import org.apache.grails.forge.core.pack.Pack
 import org.apache.grails.forge.core.state.ProjectLock
 import org.apache.grails.forge.core.state.ProjectState
 import org.apache.grails.forge.core.state.ProjectStateException
@@ -52,6 +56,7 @@ import java.nio.file.Path
 import java.nio.file.SimpleFileVisitor
 import java.nio.file.attribute.BasicFileAttributes
 import java.util.concurrent.Callable
+import java.util.function.Consumer
 import java.util.function.Supplier
 import java.util.regex.Pattern
 import java.util.stream.Stream
@@ -88,6 +93,9 @@ class ProjectRegenerateCommand extends BaseCommand implements Callable<Integer>,
             description = 'Write nothing, and name the files of the application that are not those it was generated with. What the .gitignore ' +
                     'it was generated with leaves out is not looked at, and neither is .git. Ends with 1 when there are such files.')
     boolean diff
+
+    @CommandLine.Mixin
+    RecordedPackOptions packOptions = new RecordedPackOptions()
 
     @CommandLine.Option(names = ['-f', '--force'], description = 'Whether to write into a directory that has files, and to overwrite those the application has')
     boolean overwrite
@@ -144,9 +152,11 @@ class ProjectRegenerateCommand extends BaseCommand implements Callable<Integer>,
         try {
             // looked at before the application is generated, which takes a moment
             Path target = diff ? null : target(current, directory)
-            RegeneratedProject regenerated = new FeatureAddition(projectGeneratorSource.get()).regenerate(directory, getOperatingSystem())
+            List<Pack> packs = packOptions.packs(directory, createPackArtifacts(), grailsRepoUrl(), { String line -> out("@|blue ||@ ${GradleRunner.line(line)}") } as Consumer<String>,
+                    { String line -> warning(GradleRunner.line(line)) } as Consumer<String>)
+            RegeneratedProject regenerated = new FeatureAddition(projectGeneratorSource.get()).regenerate(directory, getOperatingSystem(), packs)
             return diff ? compare(directory, regenerated) : write(directory, target, regenerated)
-        } catch (ProjectStateException | ProjectChangeException | IllegalArgumentException e) {
+        } catch (ProjectStateException | ProjectChangeException | IllegalArgumentException | PackArtifactException e) {
             err(GradleRunner.line(e.getMessage() ?: e.getClass().getSimpleName()))
             if (showStacktrace()) {
                 e.printStackTrace(spec.commandLine().getErr())
@@ -176,7 +186,10 @@ class ProjectRegenerateCommand extends BaseCommand implements Callable<Integer>,
         }
         RegeneratedProject regenerated
         try {
-            regenerated = new FeatureAddition(projectGeneratorSource.get()).regenerate(directory, getOperatingSystem())
+            // the document is all that is written: which jar of a pack is fetched again is not said
+            List<Pack> packs = packOptions.packs(directory, createPackArtifacts(), grailsRepoUrl(), { String line -> } as Consumer<String>,
+                    { String line -> } as Consumer<String>)
+            regenerated = new FeatureAddition(projectGeneratorSource.get()).regenerate(directory, getOperatingSystem(), packs)
         } catch (Exception e) {
             if (showStacktrace()) {
                 e.printStackTrace(spec.commandLine().getErr())
@@ -197,6 +210,21 @@ class ProjectRegenerateCommand extends BaseCommand implements Callable<Integer>,
         // written as it is: a document is not markup of the command line
         spec.commandLine().getOut().println(document.toJson())
         return document.outcome == ChangeDocument.NO_CHANGES ? 0 : 1
+    }
+
+    /**
+     * @return what fetches the jar of a plugin the application has the feature pack of
+     */
+    protected PackArtifacts createPackArtifacts() {
+        return new PackArtifacts()
+    }
+
+    /**
+     * @return the repositories of the build of the application, which are asked for such a jar when
+     * the command names none
+     */
+    protected String grailsRepoUrl() {
+        return System.getenv('GRAILS_REPO_URL')
     }
 
     // where the application is written to: no directory that has anything, unless that was asked for, and never the project

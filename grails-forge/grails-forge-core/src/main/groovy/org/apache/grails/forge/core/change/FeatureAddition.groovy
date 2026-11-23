@@ -23,6 +23,8 @@ import jakarta.annotation.Nullable
 import org.apache.grails.forge.core.change.ChangePlan.Action
 import org.apache.grails.forge.core.change.ChangePlan.PlannedFile
 import org.apache.grails.forge.core.change.ProjectTransaction.Write
+import org.apache.grails.forge.core.pack.Pack
+import org.apache.grails.forge.core.pack.PackArtifact
 import org.apache.grails.forge.core.pack.PackDescriptor
 import org.apache.grails.forge.core.state.BaselineIndex
 import org.apache.grails.forge.core.state.BaselineIndex.BaselineFile
@@ -77,8 +79,12 @@ import java.util.function.Predicate
  * name, there is a conflict, and a plan with a conflict writes nothing. A file the features do not
  * change is not looked at.</p>
  *
- * <p>Only features of Grails are added, to an application that has no others and that this very
- * version generated. A feature takes the place of one the application has by default, as a database
+ * <p>Only features of Grails are added, to an application that this very version generated. An
+ * application with the feature of a feature pack that is not part of Grails is generated again only
+ * with that very pack, which the caller gives: the pack of a jar has to be the jar of the coordinates
+ * and the SHA-256 the lock records, and a pack that was given as a directory or a file one whose
+ * content has the SHA-256 the lock records; the application generated again is then held to its
+ * baseline as every other is. A feature takes the place of one the application has by default, as a database
  * driver takes that of the default one: what the default wrote is taken out of the files, as a
  * difference like any other, so that lines of it that were changed in the project are a conflict, and
  * a file only it wrote is removed when the project has it as it was generated. A feature that was
@@ -201,13 +207,24 @@ final class FeatureAddition {
      * @see #plan(Path, List, OperatingSystem, ConsoleOutput)
      */
     ChangePlan plan(Path projectDirectory, List<String> names, @Nullable OperatingSystem operatingSystem, ConsoleOutput console, boolean replace) {
+        return plan(projectDirectory, names, operatingSystem, console, replace, Collections.<Pack>emptyList())
+    }
+
+    /**
+     * @param packs the feature packs that are not part of Grails the application was generated with,
+     * given again: each has to be the pack the lock records, see {@link #recordedPacks}. A feature is
+     * not added from them: they are what the application has
+     * @see #plan(Path, List, OperatingSystem, ConsoleOutput, boolean)
+     */
+    ChangePlan plan(Path projectDirectory, List<String> names, @Nullable OperatingSystem operatingSystem, ConsoleOutput console, boolean replace, List<Pack> packs) {
         ProjectState state = replayable(projectDirectory)
         ProjectManifest manifest = state.manifest
         ProjectLock lock = state.lock
+        List<Pack> ofTheLock = recordedPacks(lock, manifest.preset, packs)
         if (names.isEmpty()) {
             throw new FeatureSelectionException('Name the feature to add')
         }
-        AvailableFeatures available = generator.availableFeatures(manifest.applicationType, [])
+        AvailableFeatures available = generator.availableFeatures(manifest.applicationType, ofTheLock)
         List<String> asked = []
         for (String name : names) {
             if (name != null && name.contains(':')) {
@@ -245,11 +262,11 @@ final class FeatureAddition {
             throw new FeatureRequestException(notReplaced(available, inThePlace, toAdd), FeatureRequestException.REPLACE_REQUIRED)
         }
         Set<String> inAnotherOrder = new TreeSet<>()
-        RenderedProject before = replayed(projectDirectory, state, manifestBytes, lockBytes, indexBytes, operatingSystem, inAnotherOrder)
+        RenderedProject before = replayed(projectDirectory, state, manifestBytes, lockBytes, indexBytes, operatingSystem, inAnotherOrder, ofTheLock)
 
         RenderedProject after
         try {
-            after = render(manifest, selected, operatingSystem, console, true)
+            after = render(manifest, selected, operatingSystem, console, ofTheLock, true)
         } catch (FeatureSelectionException e) {
             if (e.getOption() == null) {
                 throw e
@@ -258,7 +275,7 @@ final class FeatureAddition {
             // would be with the feature in the place of that option is worked out all the same, to
             // show it: it is refused below, because it takes away what the application has
             try {
-                after = render(manifest, selected, operatingSystem, ConsoleOutput.NOOP, false)
+                after = render(manifest, selected, operatingSystem, ConsoleOutput.NOOP, ofTheLock, false)
             } catch (FeatureSelectionException ignored) {
                 throw e
             }
@@ -478,10 +495,98 @@ final class FeatureAddition {
      * @throws ProjectChangeException when the project cannot be generated again as it was
      */
     RegeneratedProject regenerate(Path projectDirectory, @Nullable OperatingSystem operatingSystem) {
+        return regenerate(projectDirectory, operatingSystem, Collections.<Pack>emptyList())
+    }
+
+    /**
+     * @param packs the feature packs that are not part of Grails the application was generated with,
+     * given again: each has to be the pack the lock records, see {@link #recordedPacks}
+     * @see #regenerate(Path, OperatingSystem)
+     */
+    RegeneratedProject regenerate(Path projectDirectory, @Nullable OperatingSystem operatingSystem, List<Pack> packs) {
         ProjectState state = replayable(projectDirectory)
+        List<Pack> ofTheLock = recordedPacks(state.lock, state.manifest.preset, packs)
         RenderedProject rendered = replayed(projectDirectory, state, bytes(projectDirectory, ProjectState.MANIFEST), bytes(projectDirectory, ProjectState.LOCK),
-                bytes(projectDirectory, ProjectState.BASELINE_INDEX), operatingSystem, null)
+                bytes(projectDirectory, ProjectState.BASELINE_INDEX), operatingSystem, null, ofTheLock)
         return new RegeneratedProject(rendered, state)
+    }
+
+    /**
+     * The feature packs that are not part of Grails an application was generated with, as they were
+     * given again, held to what the lock records of each: the pack of a jar of a repository has to be
+     * of the coordinates and the version, and of the SHA-256, the lock has, and is then the pack of
+     * that jar as the lock has it, whichever repository or file it was read from now; a pack that was
+     * given as a directory or a file has to have the digest of its content the lock has. Every such
+     * feature of the lock needs its pack, and a pack the lock has no feature of is not taken. The
+     * preset an application was made from is such a pack, and is named a preset.
+     *
+     * @param lock the lock of the application
+     * @param preset the name of the preset the application was made from, as its manifest has it, or {@code null}
+     * @param given the packs that were given
+     * @return the packs, as the generator is to be given them to generate the application as it was
+     * @throws ProjectChangeException when a pack is missing ({@link ProjectChangeException#PACK_MISSING}),
+     * or is another than the one the lock records or one it has none of ({@link ProjectChangeException#PACK_DIFFERS})
+     */
+    static List<Pack> recordedPacks(ProjectLock lock, String preset, List<Pack> given) {
+        List<LockedFeature> ofPacks = lock.features.findAll { LockedFeature feature -> feature.source == LockedFeature.PACK }
+        for (Pack pack : given) {
+            if (!ofPacks.any { LockedFeature feature -> feature.name == pack.descriptor.name }) {
+                throw new ProjectChangeException("The feature pack ${pack.descriptor.name} was given, and the application has no feature of it: a feature pack is given " +
+                        'again only when the application was generated with it, and a feature of a feature pack is not added to an application',
+                        ProjectChangeException.PACK_DIFFERS, null)
+            }
+        }
+        List<String> missing = []
+        List<String> unlike = []
+        List<Pack> packs = []
+        boolean presetMissing = false
+        for (LockedFeature feature : ofPacks) {
+            Pack pack = given.find { Pack each -> each.descriptor.name == feature.name }
+            String ofJar = feature.coordinates == null ? null : "${feature.coordinates}:${feature.version}".toString()
+            String kind = feature.name == preset ? 'preset' : 'feature pack'
+            if (pack == null) {
+                presetMissing = presetMissing || feature.name == preset
+                missing << (ofJar != null ? "${feature.name}, the ${kind} of the jar ${ofJar} with the SHA-256 ${feature.sha256}" :
+                        "${feature.name}, a ${kind} that was given as a directory or a file" +
+                                (feature.contentSha256 == null ? '' : " whose content has the SHA-256 ${feature.contentSha256}")).toString()
+            } else if (ofJar != null) {
+                if (pack.artifact == null || pack.artifact.sha256 != feature.sha256 || pack.artifact.coordinates != ofJar) {
+                    unlike << ("${feature.name} is the ${kind} of the jar ${ofJar} with the SHA-256 ${feature.sha256}, and the one that was given is " +
+                            (pack.artifact == null ? 'no jar of a repository' : "${pack.artifact.coordinates} with the SHA-256 ${pack.artifact.sha256}")).toString()
+                    continue
+                }
+                // the jar the lock records, wherever it was read from now: the lock says where it was found, and the digest that it is the same
+                PackArtifact recorded = new PackArtifact(feature.name, ofJar, feature.origin, pack.artifact.file, feature.sha256, pack.artifact.checkedAgainst, true)
+                packs << pack.withArtifact(feature.catalogSha256 == null ? recorded : recorded.withCatalog(feature.catalog, feature.catalogSha256))
+            } else if (pack.artifact != null) {
+                unlike << "${feature.name} is a ${kind} that was given as a directory or a file, and the one that was given is the jar ${pack.artifact.coordinates}".toString()
+            } else if (feature.contentSha256 != null && pack.contentSha256 != feature.contentSha256) {
+                unlike << ("${feature.name} is a ${kind} whose content has the SHA-256 ${feature.contentSha256}, and the content of the one that was given, " +
+                        "${pack.origin}, has ${pack.contentSha256 ?: 'none that was read'}").toString()
+            } else {
+                packs << pack
+            }
+        }
+        if (!unlike.isEmpty()) {
+            throw new ProjectChangeException(bounded("The feature ${unlike.size() == 1 ? 'pack that was given is' : 'packs that were given are'} not ${unlike.size() == 1 ? 'the one' : 'those'} " +
+                    "the application was generated with, so it is not generated again with ${unlike.size() == 1 ? 'it' : 'them'}: ${unlike.take(MAX_NAMED).join('; ')}. " +
+                    'Nothing was changed. Give the pack the application has, which its record names by its digest'), ProjectChangeException.PACK_DIFFERS, null)
+        }
+        if (!missing.isEmpty()) {
+            String what = presetMissing ? "The application was made from the preset ${preset}${missing.size() > 1 ? ' and has the features of feature packs' : ''}, which " +
+                    "${missing.size() == 1 ? 'is' : 'are'} not part of Grails, and ${missing.size() == 1 ? 'that preset was' : 'those were'} not given" :
+                    "The application has the ${missing.size() == 1 ? 'feature' : 'features'} of feature packs that are not part of Grails, and " +
+                            "${missing.size() == 1 ? 'that pack was' : 'those packs were'} not given"
+            throw new ProjectChangeException(bounded("${what}: such an application is generated again, to add a feature to it or to compare it, only with the very " +
+                    "${presetMissing ? 'preset and packs' : 'packs'} it was generated with. ${missing.take(MAX_NAMED).join('; ')}. Nothing was changed. The jar of a " +
+                    'plugin is fetched again by its coordinates from the repositories, and a pack of a directory is given with --feature-pack-dir'),
+                    ProjectChangeException.PACK_MISSING, null)
+        }
+        return packs
+    }
+
+    private static String bounded(String message) {
+        return message.length() > MAX_MESSAGE * 2 ? message.substring(0, MAX_MESSAGE * 2) + '...' : message
     }
 
     // the state of a project that can be generated again by this generator
@@ -508,11 +613,6 @@ final class FeatureAddition {
                     "${ProjectLock.GENERATOR} ${VersionInfo.getVersion()} for Grails ${VersionInfo.getGrailsVersion()}: a feature is added by the version the application " +
                     "was generated with. Use the command line of Grails ${lock.generatorVersion} to add the feature", ProjectChangeException.OTHER_GENERATOR, null)
         }
-        List<String> ofPacks = lock.features.findAll { LockedFeature feature -> feature.source == LockedFeature.PACK }*.name
-        if (!ofPacks.isEmpty()) {
-            throw new ProjectChangeException("The application has the ${ofPacks.size() == 1 ? 'feature' : 'features'} ${named(ofPacks)} of a feature pack that is not part " +
-                    'of Grails; a feature cannot yet be added to such an application', ProjectChangeException.PACK_FEATURES, null)
-        }
         return state
     }
 
@@ -526,10 +626,10 @@ final class FeatureAddition {
      * features gave them in
      */
     private RenderedProject replayed(Path projectDirectory, ProjectState state, byte[] manifestBytes, byte[] lockBytes, byte[] indexBytes, @Nullable OperatingSystem operatingSystem,
-                                     @Nullable Set<String> inAnotherOrder) {
+                                     @Nullable Set<String> inAnotherOrder, List<Pack> packs) {
         RenderedProject before
         try {
-            before = render(state.manifest, state.manifest.requestedFeatures*.name, operatingSystem, ConsoleOutput.NOOP)
+            before = render(state.manifest, state.manifest.requestedFeatures*.name, operatingSystem, ConsoleOutput.NOOP, packs)
         } catch (ProjectChangeException e) {
             throw e
         } catch (Exception e) {
@@ -617,7 +717,8 @@ final class FeatureAddition {
                 "${lostFeatures.size() == 1 ? 'was' : 'were'} asked for when it was created: a feature that was asked for is not replaced by adding another.${how}"
     }
 
-    private RenderedProject render(ProjectManifest manifest, List<String> features, OperatingSystem operatingSystem, ConsoleOutput console, boolean optionsAreChoices = true) {
+    private RenderedProject render(ProjectManifest manifest, List<String> features, OperatingSystem operatingSystem, ConsoleOutput console, List<Pack> packs,
+                                   boolean optionsAreChoices = true) {
         Project project = NameUtils.parse(manifest.defaultPackage + '.' + manifest.name)
         GenerationOptions recorded = manifest.options
         // The options of the manifest are what the application has, so each of them is a choice: a
@@ -627,7 +728,7 @@ final class FeatureAddition {
                 .withGiven(optionsAreChoices ? EnumSet.allOf(OptionName) : EnumSet.noneOf(OptionName))
                 // an application that was created without the files of the root of a build stays without them
                 .withSubproject(recorded.subproject)
-        GeneratorContext context = generator.createGeneratorContext(manifest.applicationType, project, options, operatingSystem, features, console, [],
+        GeneratorContext context = generator.createGeneratorContext(manifest.applicationType, project, options, operatingSystem, features, console, packs,
                 manifest.excludedFeatures*.name)
         RenderedProject rendered = new RenderedProject()
         generator.generate(manifest.applicationType, project, rendered, context)

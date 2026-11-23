@@ -182,6 +182,8 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer>, O
     private Pack presetPack
     private String notInCatalog = ''
     private String bomOfCatalogPacks
+    // the features of the application that are of packs that are not part of Grails
+    private List<String> notOfGrails = []
 
     private final ApplicationType applicationType
     // what the Forge application has, asked of it when the command first needs it
@@ -325,6 +327,9 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer>, O
         generate(project, outputHandler)
 
         out('@|blue ||@ Application created at ' + outputHandler.getOutputLocation())
+        if (!notOfGrails.isEmpty()) {
+            out('@|blue ||@ ' + laterCommands(notOfGrails))
+        }
         if (subproject) {
             included(place, build)
         } else if (build != null && ConsoleProject.build(directory).getBuildRoot() != null) {
@@ -375,6 +380,8 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer>, O
             throw mistake(e)
         }
         heldToItsBom(context)
+        notOfGrails = packs.findAll { Pack pack -> !pack.bundled && context.getFeatures().contains(pack.descriptor.name) }
+                .collect { Pack pack -> FeatureSelectionException.shown(pack.descriptor.name) }
         List<String> warnings = []
         // a pack is not part of the framework: say which ones this application is made with, which are
         // the selected ones and those they require. What a descriptor says is not markup of this command
@@ -398,6 +405,20 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer>, O
         for (String each : warnings) {
             warning(each)
         }
+    }
+
+    /**
+     * What an application with features of feature packs that are not part of Grails needs of the
+     * commands that generate it again, which is said when it is created and by {@code project show}.
+     *
+     * @param features the names of those features, as they can be shown
+     * @return one line
+     */
+    static String laterCommands(List<String> features) {
+        return ("The ${features.size() == 1 ? 'feature' : 'features'} ${features.take(5).join(', ')}${features.size() > 5 ? " and ${features.size() - 5} more" : ''} " +
+                "${features.size() == 1 ? 'is that of a feature pack' : 'are those of feature packs'} that ${features.size() == 1 ? 'is' : 'are'} not part of Grails: " +
+                'feature add and project regenerate work for the application only with that very pack, which its record names by its SHA-256 ' +
+                '(the jar of a plugin is fetched again by its coordinates; the pack of a directory is given again with --feature-pack-dir)').toString()
     }
 
     /**

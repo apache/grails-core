@@ -77,7 +77,8 @@ final class ChangeDocument {
     private static final Map<String, String> OUTCOMES = [
             (ProjectChangeException.UNTRACKED_RECORD): REFUSED,
             (ProjectChangeException.OTHER_GENERATOR): REFUSED,
-            (ProjectChangeException.PACK_FEATURES): REFUSED,
+            (ProjectChangeException.PACK_MISSING): REFUSED,
+            (ProjectChangeException.PACK_DIFFERS): REFUSED,
             (ProjectChangeException.INTERRUPTED_CHANGE): REFUSED,
             (ProjectChangeException.NOT_REGENERABLE): INVALID_RECORD,
             (ProjectChangeException.BASELINE_DIFFERS): INVALID_RECORD,

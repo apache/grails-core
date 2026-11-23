@@ -225,7 +225,7 @@ class FeatureAddJsonSpec extends AbstractFeatureAddCommandSpec {
         document.reason == 'untracked-record'
     }
 
-    void "an application with the feature of a pack that is not of Grails is refused, and the reason says so"() {
+    void "an application with the feature of a pack that is not of Grails is refused without that pack, and the reason says so"() {
         given:
         File pack = Files.createTempDirectory(with.toPath(), 'pack').toFile()
         new File(pack, 'templates').mkdirs()
@@ -243,7 +243,19 @@ class FeatureAddJsonSpec extends AbstractFeatureAddCommandSpec {
         then:
         exit == 1
         document.outcome == 'refused'
-        document.reason == 'pack-features'
+        document.reason == 'pack-missing'
+        document.message.contains('acme-audit, a feature pack that was given as a directory or a file whose content has the SHA-256 ')
+
+        when: 'with the pack'
+        reset()
+        exit = add('grails-quartz', '--dry-run', '--json', '--feature-pack-dir', pack.absolutePath)
+        // the method, and not the variable of the document above
+        Map withThePack = this.document()
+
+        then:
+        exit == 0
+        withThePack.outcome == 'changes'
+        withThePack.reason == null
     }
 
     void "an application that is half changed by an interrupted change is refused until the change is ended"() {
