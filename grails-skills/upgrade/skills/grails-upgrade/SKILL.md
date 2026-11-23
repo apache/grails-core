@@ -70,7 +70,7 @@ Start every Grails 8 upgrade by checking these platform requirements:
 
 - Use JDK 21 or later to build and run ordinary Grails 8 applications.
 - Use JDK 25 or later if the application uses `grails-micronaut`, `micronaut-http-client`, or other Micronaut features.
-- Update the Gradle wrapper to the Grails 8 managed line, currently Gradle 9.9.1. The Grails 8 Gradle plugins require Gradle 9.7 or later.
+- Update the Gradle wrapper to the Grails 8 managed line, currently Gradle 9.9.2. The Grails 8 Gradle plugins require Gradle 9.7 or later.
 - Expect Spring Boot 4.1.x, Spring Framework 7.0.x, Spring Security 7.1.x, Spring Data 2026.0.x, Micrometer 1.17.x, Jackson 3.1.x, Tomcat 11.0.x, and Jakarta Servlet 6.1.
 - Keep using `jakarta.*` APIs. Do not reintroduce `javax.*` packages.
 - Add `runtimeOnly 'org.springframework.boot:spring-boot-properties-migrator'` temporarily during the migration, boot once, fix reported configuration properties, then remove it.
@@ -1663,6 +1663,17 @@ java -XX:MaxRAMPercentage=60.0 -XX:MaxMetaspaceSize=256m -Dgrails.env=prod -jar 
   - For an encrypted JWT, `JwtService.parse` and the `accessTokenJwt` property of an `AccessToken` now return a `grails.plugin.springsecurity.rest.token.generation.jwt.NestedJwt` instead of a `com.nimbusds.jwt.EncryptedJWT`. Its claims are those of the signed JWT inside, and its header is that of the encrypted JWT.
   - With encrypted JWTs enabled, a signed JWT is rejected as an invalid token, and with signed JWTs, an encrypted JWT is. Previously such a token failed with a `NullPointerException`.
   - An encrypted JWT whose content encryption key is encrypted with `RSA1_5` is rejected unless `grails.plugin.springsecurity.rest.token.generation.jwt.jweAlgorithm` is `RSA1_5`. A `jwtService` bean that the application defines itself accepts `RSA1_5` as before, unless the application sets the new `jweAlgorithm` property of `JwtService` too.
+
+## GSP Tag Attributes
+
+- **More GSP tags HTML-encode the attribute values they write**, as `<g:link>` and `<g:textField>` already did: the URL in `action` and `formaction` of `<g:form>`, `<g:uploadForm>` and `<g:formActionSubmit>`, and the hidden fields that a `RequestDataValueProcessor` adds to a form; `name`, `value`, `form` and the `id` taken from the name of `<g:checkBox>`, on the checkbox and its hidden field; `value`, the `action` in the button's name and `src` of `<g:actionSubmitImage>`; `name`, `id` and `selectDateClass` of `<g:datePicker>`; `name` of `<g:radio>` and `<g:radioGroup>`, and the `id` taken from it; the `noSelection` key of `<g:select>`; `type` of `<g:field>`; the values of `attrs` of `<g:withTag>` that are not closures; `uri` of `<g:external>` and `src` of `<g:javascript>`; `class` of `<g:paginate>` on the current step; the `title` of `<g:sortableColumn>`, which it writes as the text of the column's link (a text from `titleKey` is written as the message source returns it); and the `*Class` attributes of `<g:renderException>`. The browser decodes the attribute, so a value without a character reference reaches it unchanged. A value encoded with `encodeAsHTML()` before it reaches the tag, a value captured from a GSP body with `<g:set>`, and the output of `fieldValue()` are written once, also when a `RequestDataValueProcessor` returns the value unchanged. Search the GSP views, layouts and tag libraries for these tags and check:
+  - A character reference written in the page, as in `name="a&amp;b"`, is now encoded as well. Write the character itself.
+  - `<g:form>` and `<g:formActionSubmit>` build their URL from `uri`, `base`, `controller` and their other link attributes and only then encode it, so a value encoded beforehand is encoded twice there, as in the `href` of `<g:link>`. Pass those values unencoded. A `url` attribute that the tag writes as it is given is written once.
+  - When a `RequestDataValueProcessor` changes a value, the tag encodes what the processor returns, so a value encoded beforehand is encoded twice, as `<g:textField>` already did.
+  - A `title` of `<g:sortableColumn>` that holds markup must be marked with `raw()`.
+  - A value marked with `raw()`, and the text and `default` of `message()`, which comes back marked raw, are still written as given by the tags that wrote them so before. Do not pass request data through `raw()` or as the `default` of `message()`.
+  - Tests that compare rendered markup: an `&` in the URL of a form is now written as `&amp;`, as `<g:link>` writes it in an `href`.
+- **Values that were encoded twice are encoded once.** `<g:radio>` encoded its `value` twice, so a value with `&`, `<`, `>`, `"` or `'` was submitted with character references in it, such as `R&amp;D` for `R&D`; remove any code that decoded the submitted value to undo this. A value encoded beforehand is no longer encoded twice in the `value` of `<g:textField>`, `<g:hiddenField>` and the other field tags when a `RequestDataValueProcessor` returns it unchanged, nor in an option of `<g:select>`. `<g:paginate>` and `<g:sortableColumn>` write a `class` that was encoded beforehand once next to the classes they add, such as `step` and `sortable`.
 
 ## Placeholders That Name a Configuration List
 

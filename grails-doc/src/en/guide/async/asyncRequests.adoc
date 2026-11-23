@@ -31,6 +31,8 @@ The raw `AsyncController.startAsync()` API and its Grails-specific Servlet wrapp
 
 Both `WebPromises.task { }` and promises returned from actions honor `spring.mvc.async.request-timeout` (for example, `30s`). When unset, the Servlet container's default applies (normally 30 seconds on Tomcat). This replaces the previous infinite timeout for `WebPromises`. A timeout produces HTTP 503 (Service Unavailable), without logging an application-error stack trace. An application can customize its response with a `503` URL mapping, optionally restricted to `org.springframework.web.context.request.async.AsyncRequestTimeoutException`. The timeout ends the response lifecycle; it does not cancel the underlying task. Tasks must not continue writing to the response after timeout.
 
+NOTE: With GORM for MongoDB, what an action saves is written when the request goes asynchronous, as when the action returns. A failure to write it then only reaches the log, though, and the response still succeeds. So an action that needs to handle a database failure itself should flush, or commit, before it returns a `Promise` or calls `startAsync()`.
+
 
 ==== Async Models
 

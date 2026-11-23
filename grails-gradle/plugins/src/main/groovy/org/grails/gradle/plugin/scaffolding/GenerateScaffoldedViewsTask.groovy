@@ -89,7 +89,9 @@ import org.gradle.process.JavaExecSpec
  *
  * <p>No application class is loaded: the controllers are read with ASM, and the pages are expanded
  * and named by {@code org.apache.grails.scaffolding.ScaffoldedPagesGenerator}, run in a JVM on the
- * application's runtime classpath, from the same code and the same Groovy as the resolver's.</p>
+ * application's runtime classpath, from the same code and the same Groovy as the resolver's. Where
+ * that classpath has no servlet API, as a plugin's has none, the JVM is also given the one the pages
+ * are compiled against.</p>
  *
  * @since 8.0
  */
@@ -105,6 +107,9 @@ abstract class GenerateScaffoldedViewsTask extends DefaultTask {
 
     /** What marks an artifact as a Grails plugin, whose controllers are artefacts of the application. */
     private static final String PLUGIN_DESCRIPTOR = 'META-INF/grails-plugin.xml'
+
+    /** What marks a classpath entry as one providing the servlet API. */
+    private static final String SERVLET_API = 'jakarta/servlet/ServletRequest.class'
 
     /** The class that expands and names the pages, from the application's scaffolding library. */
     static final String GENERATOR = 'org.apache.grails.scaffolding.ScaffoldedPagesGenerator'
@@ -156,7 +161,8 @@ abstract class GenerateScaffoldedViewsTask extends DefaultTask {
     /**
      * The classpath the pages are compiled against: normally {@code compileGroovyPages}'. A page
      * names the type of its model, so a plugin's controller has its pages expanded only where the
-     * domain class it scaffolds is on it. Left empty, no plugin's domain class is checked.
+     * domain class it scaffolds is on it. Left empty, no plugin's domain class is checked. Where the
+     * runtime classpath has no servlet API, the generator also takes this classpath's.
      */
     @CompileClasspath
     abstract ConfigurableFileCollection getPageClasspath()
@@ -264,19 +270,59 @@ abstract class GenerateScaffoldedViewsTask extends DefaultTask {
         File reportFile = new File(work, 'report.txt')
         reportFile.delete()
 
+        List<File> generatorClasspath = generatorClasspath()
         execOperations.javaexec(new Action<JavaExecSpec>() {
             @Override
             void execute(JavaExecSpec spec) {
                 if (javaLauncher.present) {
                     spec.executable = javaLauncher.get().executablePath.asFile.absolutePath
                 }
-                spec.classpath = runtimeClasspath
+                spec.classpath(generatorClasspath)
                 spec.mainClass.set(GENERATOR)
                 spec.args(planFile.absolutePath, originsFile.absolutePath, outputDir.absolutePath, pageEncoding.get(),
                         reportFile.absolutePath)
             }
         }).assertNormalExitValue()
         report(templates, reportFile)
+    }
+
+    /**
+     * The classpath the generator runs on: the runtime classpath, followed by the servlet API from
+     * the classpath the pages are compiled against when the runtime classpath has none.
+     *
+     * <p>A plugin compiles against the servlet API and leaves it to the container of the
+     * application that installs it, so its runtime classpath carries none. Groovy reads the
+     * extension methods Grails adds to the servlet types as it starts, and without their types it
+     * cannot, and logs a stack trace for each. The generator calls none of them, but the resolver
+     * expands templates with them all in place, so the generator should as well. The API goes after
+     * the runtime classpath, so that whatever is on both still loads from the runtime classpath, as
+     * it does in the application. An application whose runtime classpath has the API, as one
+     * running in an embedded container does, runs the generator on it alone.</p>
+     */
+    private List<File> generatorClasspath() {
+        List<File> runtime = runtimeClasspath.files.toList()
+        if (runtime.any { File entry -> providesServletApi(entry) }) {
+            return runtime
+        }
+        File servletApi = pageClasspath.files.find { File entry -> providesServletApi(entry) }
+        servletApi == null ? runtime : runtime + servletApi
+    }
+
+    /** Whether a classpath entry, a directory or an archive, holds the servlet API. */
+    private static boolean providesServletApi(File entry) {
+        if (entry.isDirectory()) {
+            return new File(entry, SERVLET_API).isFile()
+        }
+        if (!entry.isFile()) {
+            return false
+        }
+        try {
+            return new JarFile(entry).withCloseable { JarFile jar -> jar.getJarEntry(SERVLET_API) != null }
+        }
+        catch (ZipException ignored) {
+            // not an archive, so it holds no classes
+            return false
+        }
     }
 
     /**
