@@ -59,6 +59,7 @@ import static org.codehaus.groovy.ast.ClassHelper.STRING_TYPE
 import static org.codehaus.groovy.ast.ClassHelper.int_TYPE
 import static org.codehaus.groovy.ast.ClassHelper.make
 import static org.codehaus.groovy.ast.tools.GeneralUtils.args
+import static org.codehaus.groovy.ast.tools.GeneralUtils.callThisX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.callX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.classX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.constX
@@ -158,7 +159,21 @@ abstract class AbstractCacheTransformation extends AbstractMethodDecoratingTrans
         return parameterMapVar
     }
 
+    /**
+     * The cache manager the class caches with, read through its getter. A parameter of the annotated method
+     * named {@code grailsCacheManager} hides the property's name in the method, but not the getter.
+     *
+     * @return the call of the getter on {@code this}
+     */
+    protected static Expression grailsCacheManagerExpression() {
+        callThisX('getGrailsCacheManager')
+    }
+
     protected VariableExpression declareCache(AnnotationNode annotationNode, VariableExpression cacheManagerVariableExpression, BlockStatement cacheBlock) {
+        declareCache(annotationNode, (Expression) cacheManagerVariableExpression, cacheBlock)
+    }
+
+    protected VariableExpression declareCache(AnnotationNode annotationNode, Expression cacheManagerVariableExpression, BlockStatement cacheBlock) {
         VariableExpression cacheVariableExpression = varX(CACHE_VARIABLE_LOCAL_VARIABLE_NAME, make(Cache))
         Expression cacheNameExpression = (ConstantExpression) annotationNode.getMember('value')
 
@@ -194,7 +209,8 @@ abstract class AbstractCacheTransformation extends AbstractMethodDecoratingTrans
         }
 
         // customCacheKeyGenerator.generate(className, methodName, hashCode, map)
-        MethodCallExpression cacheKeyExpression = callX(varX(GRAILS_CACHE_KEY_GENERATOR_PROPERTY_NAME), generateMethod.name, createKeyArgs)
+        // the key generator read through its getter, which a parameter named like it cannot hide
+        MethodCallExpression cacheKeyExpression = callX(callThisX('getCustomCacheKeyGenerator'), generateMethod.name, createKeyArgs)
         cacheKeyExpression.methodTarget = generateMethod
 
         // def $_cache_cacheKey = .. // generated key
