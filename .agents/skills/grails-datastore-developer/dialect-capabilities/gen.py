@@ -56,7 +56,7 @@ def table(rows, classes, caps):
     out = ['| capability | ' + ' | '.join(dialects) + ' | relied on when |', '|---|' + '---|' * (len(dialects) + 1)]
     for cap, why in caps:
         vals = [rows[d].get(cap, 'n/a') for d in dialects]
-        mark = '' if len(set(vals)) == 1 else ' **differs**'
+        mark = ' **not reported**' if set(vals) == {'n/a'} else ('' if len(set(vals)) == 1 else ' **differs**')
         out.append(f'| `{cap}`{mark} | ' + ' | '.join(vals) + f' | {why} |')
     return '\n'.join(out)
 
@@ -67,7 +67,7 @@ def main():
              'Source of every cell: **Dialect API**. No cell is verified on a container; the table says what Hibernate reports, not what a database does.', '',
              '## How to use it', '',
              '1. List the capabilities your change relies on (SQL text, literals, IN lists, null order, pagination, concat, identifiers, locks).',
-             '2. Look each one up below. If every dialect has the same value, the change is dialect-independent for that capability: no container run.',
+             '2. Look each one up below. If every dialect has the same reported value, the change is dialect-independent for that capability: no container run. A row marked **not reported** (every cell `n/a`) means that this Hibernate version has no such method; it says nothing about the databases and is not agreement. Look the capability up in the other Hibernate table, and if no table reports it, treat it as dialect-dependent. Null ordering is the example: Hibernate 5 reports no `getNullOrdering`, and Hibernate 7 shows that the databases differ.',
              '3. If the values differ, the dialects that differ need a Testcontainers run, or the PR says why the difference cannot matter.',
              '4. A change that relies on nothing in the table because it builds JPA predicates and never renders SQL is independent; say so in the PR.', '',
              '**Empty IN list.** Hibernate 5 reports it as `supportsEmptyInList`; Hibernate 7 has no such method and renders an empty list itself, so a change that can emit one is dialect-dependent on H7 until a container run says otherwise.', '']

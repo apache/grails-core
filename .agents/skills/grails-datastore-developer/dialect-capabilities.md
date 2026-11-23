@@ -13,7 +13,7 @@ Source of every cell: **Dialect API**. No cell is verified on a container; the t
 ## How to use it
 
 1. List the capabilities your change relies on (SQL text, literals, IN lists, null order, pagination, concat, identifiers, locks).
-2. Look each one up below. If every dialect has the same value, the change is dialect-independent for that capability: no container run.
+2. Look each one up below. If every dialect has the same reported value, the change is dialect-independent for that capability: no container run. A row marked **not reported** (every cell `n/a`) means that this Hibernate version has no such method; it says nothing about the databases and is not agreement. Look the capability up in the other Hibernate table, and if no table reports it, treat it as dialect-dependent. Null ordering is the example: Hibernate 5 reports no `getNullOrdering`, and Hibernate 7 shows that the databases differ.
 3. If the values differ, the dialects that differ need a Testcontainers run, or the PR says why the difference cannot matter.
 4. A change that relies on nothing in the table because it builds JPA predicates and never renders SQL is independent; say so in the PR.
 
@@ -27,23 +27,23 @@ Dialect class used: H2=H2Dialect, PostgreSQL=PostgreSQLDialect, MySQL=MySQLDiale
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | `supportsEmptyInList` **differs** | true | false | false | false | false | false | false | false | false | false | an empty IN () is legal SQL (H5 reports it; H7 renders the empty list itself) |
 | `getInExpressionCountLimit` **differs** | 0 | 0 | 0 | 0 | 1000 | 2100 | 32767 | 0 | 32767 | 250000 | IN-list size; 0 = unlimited. An empty IN () is a separate question, see the note below |
-| `getNullOrdering` | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | where nulls sort by default |
-| `supportsNullPrecedence` | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | nulls first / nulls last accepted in ORDER BY |
+| `getNullOrdering` **not reported** | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | where nulls sort by default |
+| `supportsNullPrecedence` **not reported** | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | nulls first / nulls last accepted in ORDER BY |
 | `toBooleanValueString(true)` **differs** | true | true | 1 | 1 | 1 | 1 | 1 | true | 1 | 1 | boolean literal |
-| `isEmptyStringTreatedAsNull` | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | '' is NULL (Oracle): unique and not-null checks differ |
+| `isEmptyStringTreatedAsNull` **not reported** | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | '' is NULL (Oracle): unique and not-null checks differ |
 | `supportsCaseInsensitiveLike` **differs** | false | true | false | false | false | false | false | false | false | false | native ilike |
 | `getCaseInsensitiveLike` **differs** | like | ilike | like | like | like | like | like | like | like | like | ilike spelling |
-| `supportsOrderByInSubquery` | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | order by inside a subquery |
-| `supportsOffsetInSubquery` | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | offset or limit inside a subquery |
+| `supportsOrderByInSubquery` **not reported** | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | order by inside a subquery |
+| `supportsOffsetInSubquery` **not reported** | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | offset or limit inside a subquery |
 | `supportsRowValueConstructorSyntaxInInList` **differs** | false | true | false | true | false | false | false | false | false | false | (a, b) in ((..), (..)) |
 | `supportsTupleCounts` | false | false | false | false | false | false | false | false | false | false | count((a, b)) |
-| `supportsSubqueryInSelect` | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | a subquery in the select list |
-| `supportsNestedSubqueryCorrelation` | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | a correlated subquery inside a subquery |
+| `supportsSubqueryInSelect` **not reported** | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | a subquery in the select list |
+| `supportsNestedSubqueryCorrelation` **not reported** | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | a correlated subquery inside a subquery |
 | `supportsUnionAll` **differs** | true | true | false | true | true | true | true | true | true | true | union all |
-| `supportsOrdinalSelectItemReference` | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | order by 1 |
-| `requiresCastForConcatenatingNonStrings` | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | concat of a number needs a cast |
-| `getMaxIdentifierLength` | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | longest table / column / alias name |
-| `getParameterCountLimit` | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | bind parameters per statement; 0 = unlimited |
+| `supportsOrdinalSelectItemReference` **not reported** | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | order by 1 |
+| `requiresCastForConcatenatingNonStrings` **not reported** | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | concat of a number needs a cast |
+| `getMaxIdentifierLength` **not reported** | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | longest table / column / alias name |
+| `getParameterCountLimit` **not reported** | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | bind parameters per statement; 0 = unlimited |
 | `supportsLockTimeouts` **differs** | true | true | false | false | true | true | false | false | false | true | lock timeouts |
 | `getNativeIdentifierGeneratorStrategy` **differs** | identity | sequence | identity | identity | sequence | identity | identity | identity | identity | identity | identity versus sequence |
 
@@ -59,7 +59,7 @@ Dialect class used: H2=H2Dialect, PostgreSQL=PostgreSQLDialect, MySQL=MySQLDiale
 
 | capability | H2 | PostgreSQL | MySQL | MariaDB | Oracle | SQLServer | DB2 | HSQL | Sybase | CockroachDB | relied on when |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| `supportsEmptyInList` | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | an empty IN () is legal SQL (H5 reports it; H7 renders the empty list itself) |
+| `supportsEmptyInList` **not reported** | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | n/a | an empty IN () is legal SQL (H5 reports it; H7 renders the empty list itself) |
 | `getInExpressionCountLimit` **differs** | 0 | 0 | 0 | 0 | 1000 | 2048 | 32767 | 0 | 250000 | 0 | IN-list size; 0 = unlimited. An empty IN () is a separate question, see the note below |
 | `getNullOrdering` **differs** | SMALLEST | GREATEST | SMALLEST | SMALLEST | GREATEST | SMALLEST | GREATEST | FIRST | SMALLEST | SMALLEST | where nulls sort by default |
 | `supportsNullPrecedence` **differs** | true | true | false | false | true | false | false | true | false | false | nulls first / nulls last accepted in ORDER BY |
