@@ -2273,11 +2273,11 @@ The command lines that are typed most often, and what they are in Grails 9. `sho
 
 |`grails prod war`
 |`grails war -Dgrails.env=production`
-|The environment follows the name of the command. In front of it, it is refused with exit code 2 (43).
+|The environment follows the name of the command. In front of it, it is refused with exit code 2 and the line to type, `Type: grails war -Dgrails.env=production` (43).
 
 |`grails test run-app`
 |`grails run-app -Dgrails.env=test`
-|The same rule; the refusal names `test-app` and `-Dgrails.env=test` (43).
+|The same rule; the refusal ends with `Type: grails run-app -Dgrails.env=test` (43).
 
 |`grails run`, `grails stop`
 |The same
