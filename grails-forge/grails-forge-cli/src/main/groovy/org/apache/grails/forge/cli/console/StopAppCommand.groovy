@@ -21,6 +21,7 @@ package org.apache.grails.forge.cli.console
 import java.nio.file.Path
 import java.util.concurrent.TimeUnit
 import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
 import org.grails.forge.application.OperatingSystem
 import picocli.CommandLine
 
@@ -49,7 +50,9 @@ import picocli.CommandLine
 class StopAppCommand extends InProjectCommand {
 
     private static final int STOP_SECONDS = 30
-    private static final int PORT_SECONDS = 30
+    /** How long the end of an application is waited for at its port, see {@link #closed}. */
+    @PackageScope
+    static final int PORT_SECONDS = 30
     // between two looks at whether the run-app that was asked has ended, or the port is free: a user waits half of it on average
     private static final int POLL_MILLIS = 50
     private static final String RECORD = "${RunDirectory.LOCATION}/${RunningApplication.RECORD}"
@@ -170,7 +173,17 @@ class StopAppCommand extends InProjectCommand {
         }
     }
 
-    private static boolean closed(int port, String address) {
+    /**
+     * Waits until nothing takes connections on a port of this computer any more, for {@link #PORT_SECONDS} at most:
+     * the end of an application whose process is not below what was ended, as under a Gradle daemon, which is seen
+     * there and only there.
+     *
+     * @param port the port the application answered on
+     * @param address the loopback address the application is bound to, or {@code null} for 127.0.0.1 and ::1
+     * @return whether the port is free; {@code false} also when the thread is interrupted
+     */
+    @PackageScope
+    static boolean closed(int port, String address) {
         long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(PORT_SECONDS)
         while (ApplicationPort.isOpen(port, address)) {
             if (System.nanoTime() > deadline) {

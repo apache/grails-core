@@ -127,12 +127,20 @@ class EmbeddedConsoleSessionSpec extends Specification {
     /**
      * A program that runs the command line in its own JVM, without a command, as {@code GrailsCli.execute()}
      * does: the console in the project of its directory. It writes the exit code when the console has
-     * returned, and goes on for a while, as an IDE does.
+     * returned, and goes on for a while, as an IDE does. Given the system property {@link #PORT}, it
+     * first writes, to {@code at-return.txt}, the instant the console returned and whether something
+     * took connections on that port then, as a program that starts the next application on it would find.
      */
     static class Host {
 
+        static final String PORT = 'grails.spec.port'
+
         static void main(String[] args) {
             int exit = ForgeCli.launch('grails', true)
+            String port = System.getProperty(PORT)
+            if (port != null) {
+                new File(System.getProperty('user.dir'), 'at-return.txt').text = "${System.currentTimeMillis()} ${ApplicationPort.isOpen(port as int)}\n"
+            }
             new File(System.getProperty('user.dir'), 'returned.txt').text = "${exit}\n"
             Thread.sleep(TimeUnit.SECONDS.toMillis(SECONDS))
             System.exit(0)

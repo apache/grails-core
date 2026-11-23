@@ -22,8 +22,10 @@ import java.nio.file.Files
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import groovy.json.JsonSlurper
+import org.grails.forge.cli.Application
 import org.grails.forge.cli.CommandSpec
 import org.grails.forge.cli.ForgeCli
+import org.grails.forge.cli.ForkedCli
 import spock.lang.IgnoreIf
 import spock.lang.Timeout
 import spock.lang.Unroll
@@ -65,6 +67,19 @@ class WarmGradleDaemonSpec extends CommandSpec {
                     exchange.close();
                 });
                 server.start();
+                Path slow = Path.of("shutdown-millis.txt");
+                if (Files.exists(slow)) {
+                    // an application that takes a while to shut down when it is asked to, and closes its port last
+                    long millis = Long.parseLong(Files.readString(slow).trim());
+                    Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+                        try {
+                            Thread.sleep(millis);
+                            Files.writeString(Path.of("shut-down.txt"), System.currentTimeMillis() + "\\n");
+                        } catch (Exception ignored) {
+                        }
+                        server.stop(0);
+                    }));
+                }
                 Files.writeString(Path.of("server.pid"), ProcessHandle.current().pid() + "\\n");
             }
         }
@@ -90,6 +105,8 @@ class WarmGradleDaemonSpec extends CommandSpec {
     IsolatedGradle isolated = new IsolatedGradle()
     File registry = isolated.registry
     long daemon
+    // a program that runs the command line in its own JVM, which a feature started
+    Process program
 
     void setup() {
         originalOut = System.out
@@ -109,6 +126,11 @@ class WarmGradleDaemonSpec extends CommandSpec {
         System.setErr(originalErr)
         List<Long> left = []
         try {
+            if (program != null) {
+                program.descendants().forEach { ProcessHandle each -> each.destroyForcibly() }
+                program.destroyForcibly()
+                program.waitFor(60, TimeUnit.SECONDS)
+            }
             ForgeCli.execute(beanContext, 'stop-app')
             gradle('--stop')
         } finally {
@@ -211,6 +233,45 @@ class WarmGradleDaemonSpec extends CommandSpec {
         'the Gradle of run-app is ended'     | { ProcessHandle gradle, Thread run -> gradle.destroy() }               | '| Error Gradle did not succeed: it ended with exit code 143'
         'the Gradle of run-app is killed'    | { ProcessHandle gradle, Thread run -> gradle.destroyForcibly() }       | '| Error Gradle did not succeed: it ended with exit code 137'
         'the command is cancelled'           | { ProcessHandle gradle, Thread run -> run.interrupt() }                | '| Error Gradle was stopped before it finished, because the command was cancelled'
+    }
+
+    @IgnoreIf({ !ForkedCli.available() })
+    void "when the console of a program is left, the application its run-app started through the daemon has shut down before the call returns"() {
+        given: 'an application that takes three seconds to shut down, and closes its port last'
+        int port = freePort()
+        new File(dir, 'shutdown-millis.txt').text = '3000\n'
+        new File(dir, 'typed.txt').text = "run-app --port ${port} -- --daemon\nexit\n"
+        File returned = new File(dir, 'returned.txt')
+        ProcessBuilder builder = ForkedCli.builder(dir, ["-D${EmbeddedConsoleSessionSpec.Host.PORT}=${port}".toString()], [] as String[])
+                .redirectOutput(new File(dir, 'out.txt')).redirectErrorStream(true).redirectInput(new File(dir, 'typed.txt'))
+        builder.command().set(builder.command().indexOf(Application.name), EmbeddedConsoleSessionSpec.Host.name)
+        builder.environment().remove('GRAILS_SAFE_DIRECTORY')
+        builder.environment().remove(GradleBuild.RUNNER)
+
+        when: 'the console has returned to the program, which goes on'
+        program = builder.start()
+        new PollingConditions(timeout: 300, delay: 0.2).eventually {
+            assert returned.isFile() && returned.text.endsWith('\n')
+        }
+        long server = pid('server.pid')
+        List<String> atReturn = new File(dir, 'at-return.txt').text.trim().split(' ') as List<String>
+
+        then: 'the console started the application through the daemon that was there, and ended with 0'
+        new File(dir, 'out.txt').text.contains("| Application answers on port ${port}")
+        returned.text == '0\n'
+        pid('build-daemon.pid') == daemon
+        program.alive
+
+        and: 'when the call returned the port was free, and the application had finished its shutdown'
+        atReturn[1] == 'false'
+        new File(dir, 'shut-down.txt').isFile()
+        (new File(dir, 'shut-down.txt').text.trim() as long) <= (atReturn[0] as long)
+        new PollingConditions(timeout: 10, delay: 0.05).eventually {
+            assert !alive(server)
+        }
+
+        and: 'the daemon is still there, and has nothing to do'
+        daemonIsIdle()
     }
 
     // the daemon that was there before is alive, and Gradle says of it that it is idle

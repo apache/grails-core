@@ -132,6 +132,18 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
                 try (ServerSocket server = listen(keyStore, Integer.parseInt(port), address)) {
                     Files.writeString(home.resolve("server.pid"), ProcessHandle.current().pid() + "\\n");
                     System.out.println("listening on " + port);
+                    if (Files.exists(home.resolve("shutdown-millis.txt"))) {
+                        // an application that takes a while to shut down when it is asked to, and closes its port last
+                        long millis = Long.parseLong(Files.readString(home.resolve("shutdown-millis.txt")).trim());
+                        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+                            try {
+                                Thread.sleep(millis);
+                                Files.writeString(home.resolve("shut-down.txt"), System.currentTimeMillis() + "\\n");
+                                server.close();
+                            } catch (Exception ignored) {
+                            }
+                        }));
+                    }
                     while (true) {
                         try (Socket socket = server.accept()) {
                             socket.setSoTimeout(2000);
@@ -891,6 +903,71 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
         then:
         exit == 2
         out.toString().contains('--detach and --foreground are two answers to one question')
+    }
+
+    void "when the interactive shell ends, it waits until an application that is not below Gradle has shut down, as with a daemon that was there before"() {
+        given: 'an application that takes three seconds to shut down, and closes its port last'
+        daemonProject()
+        new File(dir, 'shutdown-millis.txt').text = '3000\n'
+        int port = freePort()
+        ConsoleCommands.setInteractive(true)
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'run-app', '--port', port as String)
+        long server = pid('server.pid')
+        Map record = record()
+
+        then: 'the application is no process below the one that was recorded'
+        exit == 0
+        ApplicationPort.isOpen(port)
+        !ProcessHandle.of(record.pid as long).get().descendants().anyMatch { ProcessHandle each -> each.pid() == server }
+
+        when: 'what the shell does when it ends'
+        out.reset()
+        RunAppCommand.stopWhatTheShellStarted()
+        long returned = System.currentTimeMillis()
+
+        then: 'it has returned when the application has shut down and its port is free, and says nothing'
+        !ApplicationPort.isOpen(port)
+        new File(dir, 'shut-down.txt').isFile()
+        (new File(dir, 'shut-down.txt').text.trim() as long) <= returned
+        !alive(record.pid as long)
+        out.toString() == ''
+        new PollingConditions(timeout: 30, delay: 0.1).eventually {
+            assert !alive(server)
+        }
+    }
+
+    void "when the interactive shell ends, it waits for an application that is not below Gradle for 30 seconds at most, and says so when it still answers"() {
+        given: 'an application that does not end with Gradle'
+        daemonProject()
+        new File(dir, 'keep').text = ''
+        int port = freePort()
+        ConsoleCommands.setInteractive(true)
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'run-app', '--port', port as String)
+        long server = pid('server.pid')
+        Map record = record()
+        out.reset()
+        long asked = System.nanoTime()
+        RunAppCommand.stopWhatTheShellStarted()
+        long waited = TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - asked)
+
+        then:
+        exit == 0
+        waited >= 30 && waited < 60
+        !alive(record.pid as long)
+        alive(server)
+        ApplicationPort.isOpen(port)
+        out.toString().readLines() == ["| Warning The shell ended the build of the application that run-app started in it for port ${port}, but something answers on that port still after 30 seconds: ".toString() +
+                                           'the application may take longer to end, or it is another one']
+
+        cleanup:
+        ProcessHandle.of(server).ifPresent { ProcessHandle handle -> handle.destroyForcibly() }
+        new PollingConditions(timeout: 30, delay: 0.1).eventually {
+            assert !alive(server)
+        }
     }
 
     void "a record of a process that has ended is no application, and run-app starts one over it"() {

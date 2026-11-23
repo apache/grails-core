@@ -112,7 +112,7 @@ class RunAppCommand extends GradleEnvironmentCommand implements OptionRelation.D
     // makes a text of any object with, which costs every start of the command line some 70 ms
     private static final Function<String, String> ENVIRONMENT = (String name) -> System.getenv(name)
 
-    private static final List<ProcessHandle> STARTED_IN_SHELL = new CopyOnWriteArrayList<ProcessHandle>()
+    private static final List<InShell> STARTED_IN_SHELL = new CopyOnWriteArrayList<InShell>()
     // what stops them when the JVM ends while the shell runs; guarded by STARTED_IN_SHELL
     private static Thread stopsWithJvm
     private static volatile Function<String, String> environmentVariables = ENVIRONMENT
@@ -173,14 +173,21 @@ class RunAppCommand extends GradleEnvironmentCommand implements OptionRelation.D
      * before it returns, also where the JVM goes on after it, as that of a program that runs the
      * command line does; and the JVM does it when it ends while the shell runs. An application that
      * {@code run-app --detach} started is not among them and goes on.
+     *
+     * <p>It ends them as {@code stop-app} does: the Gradle that was started, with every process below
+     * it, and then it waits, for a while at most, until nothing answers on the port of each of them any
+     * more. A Gradle daemon that runs the build is no process below that Gradle; it cancels the build
+     * when the Gradle it worked for is gone, and the application ends then, which is seen at its port
+     * alone. So what runs the shell finds the port free when the shell has returned, also where the
+     * application takes a while to shut down.</p>
      */
     static void stopWhatTheShellStarted() {
         Thread hook
-        List<ProcessHandle> started
+        List<InShell> started
         synchronized (STARTED_IN_SHELL) {
             hook = stopsWithJvm
             stopsWithJvm = null
-            started = new ArrayList<ProcessHandle>(STARTED_IN_SHELL)
+            started = new ArrayList<InShell>(STARTED_IN_SHELL)
             STARTED_IN_SHELL.clear()
         }
         if (hook != null && !hook.is(Thread.currentThread())) {
@@ -191,7 +198,15 @@ class RunAppCommand extends GradleEnvironmentCommand implements OptionRelation.D
                 // the JVM is shutting down, and the hook runs
             }
         }
-        started.findAll { ProcessHandle each -> each.isAlive() }.each { ProcessHandle each -> GradleRunner.stop(each, STOP_SECONDS) }
+        List<InShell> stopped = started.findAll { InShell each -> each.build.isAlive() }
+        stopped.each { InShell each -> GradleRunner.stop(each.build, STOP_SECONDS) }
+        stopped.each { InShell each ->
+            if (!StopAppCommand.closed(each.port, each.address)) {
+                System.err.println(CommandLine.Help.Ansi.AUTO.string('@|bold,red | Warning|@ ' +
+                        "The shell ended the build of the application that run-app started in it for port ${each.port}, " +
+                        "but something answers on that port still after ${StopAppCommand.PORT_SECONDS} seconds: the application may take longer to end, or it is another one"))
+            }
+        }
     }
 
     /**
@@ -555,7 +570,7 @@ class RunAppCommand extends GradleEnvironmentCommand implements OptionRelation.D
             }
             boolean withShell = ConsoleCommands.isInteractive() && !detach
             if (withShell) {
-                stopWithShell(started)
+                stopWithShell(new InShell(started, answersOn, address))
             }
             out("| Application answers on port ${answersOn}: ${https ? 'https' : 'http'}://${ApplicationPort.urlHost(address)}:${answersOn}. " +
                     "It runs until stop-app${withShell ? ', or until the shell ends' : ''}")
@@ -622,7 +637,7 @@ class RunAppCommand extends GradleEnvironmentCommand implements OptionRelation.D
         }
     }
 
-    private static void stopWithShell(ProcessHandle started) {
+    private static void stopWithShell(InShell started) {
         synchronized (STARTED_IN_SHELL) {
             STARTED_IN_SHELL.add(started)
             if (stopsWithJvm == null) {
@@ -698,6 +713,28 @@ class RunAppCommand extends GradleEnvironmentCommand implements OptionRelation.D
             }
         } catch (IOException | RuntimeException ignored) {
             // a file of another owner stays as its owner has it
+        }
+    }
+
+    /** An application that {@code run-app} started in the interactive shell, which ends with the shell. */
+    private static final class InShell {
+
+        /** The Gradle that was started, which is ended. */
+        final ProcessHandle build
+
+        /** The port the application answered on, which is free when the application has ended. */
+        final int port
+
+        /**
+         * The address the application binds to as the command knows it (--host, -Dgrails.server.address,
+         * SERVER_ADDRESS or server.address); {@code null} where nothing names one.
+         */
+        final String address
+
+        InShell(ProcessHandle build, int port, String address) {
+            this.build = build
+            this.port = port
+            this.address = address
         }
     }
 
