@@ -926,6 +926,8 @@ The shell ran builds through the Gradle Tooling API with a Gradle it chose. `gra
 
 - `~/.grails/settings.groovy` is not read. Remove `grails.profiles.repositories` and profile defaults from provisioning scripts and developer setup documents.
 - A repository for the feature pack of a plugin given by coordinates is named with `GRAILS_REPO_URL` or `--feature-pack-repository`; a feature catalog with `GRAILS_FORGE_CATALOG` or `--feature-catalog`. `~/.m2/settings.xml` is not read for them.
+- An application created with an external feature pack or a preset (`--feature-pack-dir`, plugin coordinates, `--preset`, or a catalog name) needs that same pack for `grails feature add` and `grails project regenerate`: the jar is fetched again by the coordinates and SHA-256 in `.grails/forge.lock.yml` (`--feature-pack-repository`, `--offline` with a `file:` repository), and a directory pack is passed again with `--feature-pack-dir` and must match the recorded `contentSha256`. Keep pack templates at `eol=lf` in `.gitattributes`. With `--json` the refusal reason is `pack-missing` or `pack-differs`.
+- `GRAILS_PLUGIN_INDEX` names the plugin index of `list-plugins`/`plugin-info` and, unless `GRAILS_FORGE_CATALOG` is set, the feature catalog of the create commands.
 - Proxy settings for the `grails` JVM go into `GRAILS_OPTS` or `JAVA_OPTS` (`-Dhttps.proxyHost=... -Dhttps.proxyPort=...`); the build takes them from Gradle.
 
 ## Projects Above the Current Directory, and Multi-Project Builds
