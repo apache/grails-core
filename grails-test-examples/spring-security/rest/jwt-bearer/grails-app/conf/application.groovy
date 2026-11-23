@@ -55,7 +55,8 @@ grails {
                             privateKeyPath = 'grails-app/conf/private_key.der'
                             publicKeyPath = 'grails-app/conf/public_key.der'
 
-                            expiration = 5
+                            // Long enough for a spec to use a token it was given on a slow machine; JwtSpec waits it out
+                            expiration = 30
                         }
                     }
                 }

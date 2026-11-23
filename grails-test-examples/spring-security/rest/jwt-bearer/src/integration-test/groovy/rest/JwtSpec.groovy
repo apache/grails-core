@@ -33,7 +33,7 @@ import grails.testing.mixin.integration.Integration
 import org.apache.grails.testing.http.client.TestHttpResponse
 
 /**
- * Encrypted JWTs that expire after five seconds, and their refresh tokens.
+ * Encrypted JWTs that expire after 30 seconds, and their refresh tokens.
  */
 @Integration
 class JwtSpec extends AbstractRestSpec {
@@ -59,8 +59,9 @@ class JwtSpec extends AbstractRestSpec {
         response.json().access_token
         response.json().roles.size() == 2
 
-        expect: 'the token is refused once its five seconds are over'
-        new PollingConditions(timeout: 20, delay: 0.5).eventually {
+        expect: 'the token is refused once its 30 seconds are over'
+        // the minute beyond them only bounds a token that is never refused
+        new PollingConditions(timeout: 90, delay: 1).eventually {
             assert validate(accessToken).statusCode() == 401
         }
     }
@@ -76,7 +77,7 @@ class JwtSpec extends AbstractRestSpec {
         then:
         response.statusCode() == 200
         response.json().expires_in
-        response.json().expires_in < 5
+        response.json().expires_in < 30
     }
 
     void "refresh tokens are generated"() {
