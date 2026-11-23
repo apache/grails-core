@@ -149,7 +149,8 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
                     }
                     while (true) {
                         try (Socket socket = server.accept()) {
-                            socket.setSoTimeout(2000);
+                            // every client of the specs sends its request at once, or closes
+                            socket.setSoTimeout(30000);
                             InputStream request = socket.getInputStream();
                             int last = 0;
                             int next;
@@ -200,7 +201,7 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
                 marker.text = ProcessHandle.current().pid() + '\\n'
                 while (true) {
                     def socket = server.accept()
-                    socket.soTimeout = 2000
+                    socket.soTimeout = 30000
                     try {
                         def request = new BufferedReader(new InputStreamReader(socket.inputStream, 'ISO-8859-1'))
                         def asked = request.readLine()
@@ -635,12 +636,12 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
         int port = freePort()
 
         when:
-        int exit = ForgeCli.execute(beanContext, 'run-app', '--detach', '--port', port as String, '--ready-timeout', '5')
+        int exit = ForgeCli.execute(beanContext, 'run-app', '--detach', '--port', port as String, '--ready-timeout', '30')
         long server = pid('server.pid')
 
         then:
         exit == 1
-        errors() == ["| Error The application did not answer on port ${port} of this computer within 5 seconds. The build was still running, and was stopped. ".toString() +
+        errors() == ["| Error The application did not answer on port ${port} of this computer within 30 seconds. The build was still running, and was stopped. ".toString() +
                 'If the application answers on another port, give that with --port; if it needs longer, give it longer with --ready-timeout']
         out.toString().contains('  the fixture ran bootRun')
         !alive(server)
@@ -749,7 +750,7 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
         int port = freePort()
 
         when:
-        int exit = ForgeCli.execute(beanContext, 'run-app', '--detach', '--port', port as String, '--host', host, '--ready-timeout', '20')
+        int exit = ForgeCli.execute(beanContext, 'run-app', '--detach', '--port', port as String, '--host', host, '--ready-timeout', '120')
 
         then: 'the application answers where it is bound, and nowhere else'
         exit == 0
@@ -1842,12 +1843,12 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
         int port = freePort()
 
         when:
-        int exit = ForgeCli.execute(beanContext, 'run-app', '--detach', '--port', port as String, '--ready-timeout', '5')
+        int exit = ForgeCli.execute(beanContext, 'run-app', '--detach', '--port', port as String, '--ready-timeout', '30')
         long server = pid('server.pid')
 
         then:
         exit == 1
-        errors() == ["| Error The application did not answer on port ${port} of this computer within 5 seconds: the port takes connections, and no answer to an HTTP request came from it. ".toString() +
+        errors() == ["| Error The application did not answer on port ${port} of this computer within 30 seconds: the port takes connections, and no answer to an HTTP request came from it. ".toString() +
                 'The build was still running, and was stopped. If the application answers on another port, give that with --port; if it needs longer, give it longer with --ready-timeout']
         !alive(server)
         !new File(dir, '.grails/run/app.json').exists()

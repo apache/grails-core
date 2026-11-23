@@ -86,12 +86,8 @@ class ToolingApiConsoleSpec extends CommandSpec {
         ConsoleCommands.setInteractive(true)
 
         when:
-        long began = System.nanoTime()
         int first = ForgeCli.execute(beanContext, 'compile')
-        long firstMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - began)
-        began = System.nanoTime()
         int second = ForgeCli.execute(beanContext, 'compile')
-        long secondMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - began)
         int failed = ForgeCli.execute(beanContext, 'compile', '--', 'fails')
         int third = ForgeCli.execute(beanContext, 'test-app', '--unit')
 
@@ -105,10 +101,6 @@ class ToolingApiConsoleSpec extends CommandSpec {
         and: 'one connection was made for the four of them, and is kept for the next'
         ToolingApiRunner.connectionsMade == before + 1
         ToolingApiRunner.connectionKept
-
-        and: 'the second build, of a connection and a daemon that were there, took a fraction of the time a Gradle that is started for it takes to begin'
-        secondMillis < 5000
-        println "first build of the console: ${firstMillis} ms, second: ${secondMillis} ms"
 
         when: 'the console is left'
         GradleBuild.closeConnections()

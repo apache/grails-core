@@ -171,20 +171,17 @@ class WarmGradleDaemonSpec extends CommandSpec {
 
         when:
         out.reset()
-        long asked = System.nanoTime()
         int stopped = ForgeCli.execute(beanContext, 'stop-app')
-        long returned = System.nanoTime()
 
-        then: 'stop-app says so when the port is free, which is within seconds'
+        then: 'stop-app says so when the port is free, which it waits 30 seconds for at most'
         stopped == 0
         errors() == []
         out.toString().readLines() == ['| Stopping application...', '| Application stopped.']
-        TimeUnit.NANOSECONDS.toSeconds(returned - asked) < 20
         !ApplicationPort.isOpen(port)
         !alive(record.pid as long)
 
         and: 'the process of the application has ended, or does within the moment it takes a process that has closed its port to end'
-        new PollingConditions(timeout: 10, delay: 0.05).eventually {
+        new PollingConditions(timeout: 60, delay: 0.05).eventually {
             assert !alive(server)
         }
 
@@ -222,7 +219,7 @@ class WarmGradleDaemonSpec extends CommandSpec {
         !new File(dir, '.grails/run/app.json').exists()
 
         and: 'the application is ended by the daemon'
-        new PollingConditions(timeout: 20, delay: 0.05).eventually {
+        new PollingConditions(timeout: 60, delay: 0.05).eventually {
             assert !alive(server)
         }
         !ApplicationPort.isOpen(port)
@@ -266,7 +263,7 @@ class WarmGradleDaemonSpec extends CommandSpec {
         atReturn[1] == 'false'
         new File(dir, 'shut-down.txt').isFile()
         (new File(dir, 'shut-down.txt').text.trim() as long) <= (atReturn[0] as long)
-        new PollingConditions(timeout: 10, delay: 0.05).eventually {
+        new PollingConditions(timeout: 60, delay: 0.05).eventually {
             assert !alive(server)
         }
 

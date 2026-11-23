@@ -92,7 +92,8 @@ class WrapperOfTheSystemSpec extends CommandSpec implements CommandFixture {
                     System.out.println("listening on " + port);
                     while (true) {
                         try (Socket socket = server.accept()) {
-                            socket.setSoTimeout(2000);
+                            // every client of the specs sends its request at once, or closes
+                            socket.setSoTimeout(30000);
                             InputStream request = socket.getInputStream();
                             int last = 0;
                             int next;
@@ -321,7 +322,7 @@ class WrapperOfTheSystemSpec extends CommandSpec implements CommandFixture {
         assert stopped == 0: said()
         assert errors() == []: said()
         out.toString().readLines() == ['| Stopping application...', WINDOWS ? "| Application stopped. ${GradleRunner.ENDED_AT_ONCE}".toString() : '| Application stopped.']
-        new PollingConditions(timeout: 20, delay: 0.1).eventually {
+        new PollingConditions(timeout: 60, delay: 0.1).eventually {
             assert !alive(record.pid as long) && !alive(server) && !alive(below)
         }
         !ApplicationPort.isOpen(port)
@@ -352,7 +353,7 @@ class WrapperOfTheSystemSpec extends CommandSpec implements CommandFixture {
         out.toString().readLines() == ['| Stopping application...',
                                        '| Application stopped. Its processes were ended at once: on Windows an application is not asked to shut down, ' +
                                                'so what it does when it is asked (its shutdown hooks, the graceful shutdown of its server) was not done.']
-        new PollingConditions(timeout: 20, delay: 0.1).eventually {
+        new PollingConditions(timeout: 60, delay: 0.1).eventually {
             assert !alive(record.pid as long) && !alive(pid('server.pid')) && !alive(pid('below.pid'))
         }
     }

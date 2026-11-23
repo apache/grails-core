@@ -122,9 +122,7 @@ class ToolingApiContinuousBuildSpec extends CommandSpec {
         }
 
         then: 'the build waits for a change, and is not taken for one that has ended'
-        new PollingConditions(timeout: 30, delay: 0.2).within(3) {
-            assert command.alive
-        }
+        command.alive
         GradleBuild.isRunning()
 
         when: 'a file the build reads changes'

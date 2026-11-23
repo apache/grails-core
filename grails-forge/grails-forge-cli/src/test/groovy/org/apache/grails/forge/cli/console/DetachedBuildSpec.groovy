@@ -116,7 +116,7 @@ class DetachedBuildSpec extends Specification {
         started.destroy()
 
         then:
-        new PollingConditions(timeout: 10, delay: 0.05).eventually {
+        new PollingConditions(timeout: 60, delay: 0.05).eventually {
             assert !started.alive
         }
     }

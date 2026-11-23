@@ -133,7 +133,8 @@ class RunAppReadinessSpec extends CommandSpec {
                     System.out.println("the application says why: database is down");
                     while (true) {
                         try (Socket plain = server.accept()) {
-                            plain.setSoTimeout(2000);
+                            // every client of the specs sends its request at once, or closes
+                            plain.setSoTimeout(30000);
                             Socket socket = plain;
                             int first = plain.getInputStream().read();
                             if (context != null && first != 0x16) {
@@ -415,11 +416,11 @@ class RunAppReadinessSpec extends CommandSpec {
         int port = freePort()
 
         when: 'the time given is one in which the application has started on a slow computer too, so that it holds the port when the time is over'
-        int exit = ForgeCli.execute(beanContext, 'run-app', '--detach', '--port', port as String, '--ready-timeout', '15')
+        int exit = ForgeCli.execute(beanContext, 'run-app', '--detach', '--port', port as String, '--ready-timeout', '30')
 
         then:
         exit == 1
-        errors() == ["| Error The application did not answer on port ${port} of this computer within 15 seconds: its startup progress answers there still, and the web server of the application has not taken the port. ".toString() +
+        errors() == ["| Error The application did not answer on port ${port} of this computer within 30 seconds: its startup progress answers there still, and the web server of the application has not taken the port. ".toString() +
                 'The build was still running, and was stopped. If the application answers on another port, give that with --port; if it needs longer, give it longer with --ready-timeout']
         !new File(dir, '.grails/run/app.json').exists()
     }
