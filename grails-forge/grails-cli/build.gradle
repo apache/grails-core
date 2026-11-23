@@ -204,6 +204,8 @@ cliStartScripts.configure { CreateStartScripts t ->
     // -XX:TieredStopAtLevel=1 when grails is started with a command: why it is there, what it costs and how it
     // is overridden is said in CommandLineStartScripts, and in the scripts
     CommandLineStartScripts.compileForShortRuns(t, 'GRAILS_OPTS')
+    // the command line is compiled for javaVersion: an earlier Java is named by the scripts, see CommandLineStartScripts
+    CommandLineStartScripts.requireJava(t)
 }
 
 // PreloadClassesSpec holds the lists of the classes the command line loads ahead, which are files of the sources of

@@ -18,8 +18,11 @@
  */
 package org.apache.grails.buildsrc
 
+import java.nio.file.Files
+
 import org.gradle.api.GradleException
 import spock.lang.IgnoreIf
+import spock.lang.Requires
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -130,5 +133,303 @@ class CommandLineStartScriptsSpec extends Specification {
 
         where:
         script << ['#!/bin/sh\nexec java\n', UNIX + UNIX]
+    }
+
+    // the lines of the script Gradle generates that find the java command and start it, which the check goes between
+    static final String UNIX_JAVA = '#!/bin/sh\n' +
+            'APP_BASE_NAME=${0##*/}\n' +
+            'die () {\n' +
+            '    echo\n' +
+            '    echo "$*"\n' +
+            '    echo\n' +
+            '    exit 1\n' +
+            '} >&2\n' +
+            'if [ -n "$JAVA_HOME" ] ; then\n' +
+            '    JAVACMD=$JAVA_HOME/bin/java\n' +
+            'else\n' +
+            '    JAVACMD=java\n' +
+            'fi\n' +
+            '\n' +
+            '# Increase the maximum file descriptors if we can.\n' +
+            'exec "$JAVACMD" "$@"\n'
+
+    static final String WINDOWS_JAVA = '@if "%DEBUG%"=="" @echo off\r\n' +
+            'setlocal EnableExtensions\r\n' +
+            'set APP_BASE_NAME=%~n0\r\n' +
+            'if defined JAVA_HOME goto findJavaFromJavaHome\r\n' +
+            'set JAVA_EXE=java.exe\r\n' +
+            'goto execute\r\n' +
+            ':findJavaFromJavaHome\r\n' +
+            'set JAVA_HOME=%JAVA_HOME:"=%\r\n' +
+            'set JAVA_EXE=%JAVA_HOME%/bin/java.exe\r\n' +
+            'if exist "%JAVA_EXE%" goto execute\r\n' +
+            '"%COMSPEC%" /c exit 1\r\n' +
+            'goto exitWithErrorLevel\r\n' +
+            '\r\n' +
+            ':execute\r\n' +
+            '@rem Setup the command line\r\n' +
+            'echo started %JAVA_EXE%\r\n' +
+            '"%COMSPEC%" /c exit 0\r\n' +
+            'goto exitWithErrorLevel\r\n' +
+            '\r\n' +
+            ':exitWithErrorLevel\r\n' +
+            '"%COMSPEC%" /c exit %ERRORLEVEL%\r\n'
+
+    @IgnoreIf({ os.windows })
+    @Unroll
+    void "a script started with a Java whose release file says #release is #what"() {
+        given: 'a Java that says it was started'
+        File home = File.createTempDir('grailsjava', '')
+        javaIn(home)
+        if (release != null) {
+            new File(home, 'release').text = "IMPLEMENTOR=\"Someone\"\n${release}\nOS_NAME=\"Linux\"\n"
+        }
+
+        when:
+        Map started = startUnix(['--version'], [JAVA_HOME: home.path])
+
+        then:
+        started.exit == (refused ? 1 : 0)
+        (started.said as String).contains("started --version") == !refused
+        !refused || (started.said as String).readLines() == ['', "ERROR: grails needs Java 21 or later, and JAVA_HOME (${home.path}) is Java ${version}.".toString(), '',
+                                                              'Please set the JAVA_HOME variable in your environment to the location of',
+                                                              'a Java 21 or later installation.', '']
+
+        cleanup:
+        home?.deleteDir()
+
+        where:
+        release                                       | refused | version      | what
+        'JAVA_VERSION="17.0.2"'                       | true    | '17.0.2'     | 'refused'
+        'JAVA_VERSION="11"'                           | true    | '11'         | 'refused'
+        'JAVA_VERSION="1.8.0_402"'                    | true    | '1.8.0_402'  | 'refused'
+        'JAVA_VERSION="20.0.2"'                       | true    | '20.0.2'     | 'refused'
+        'JAVA_VERSION="21.0.12"'                      | false   | null         | 'started'
+        'JAVA_VERSION="21"'                           | false   | null         | 'started'
+        'JAVA_VERSION="26-ea"'                        | false   | null         | 'started'
+        'JAVA_VERSION="100.1"'                        | false   | null         | 'started'
+        'JAVA_RUNTIME_VERSION="17.0.2+8"'             | false   | null         | 'started: it names no JAVA_VERSION'
+        'JAVA_VERSION="unknown"'                      | false   | null         | 'started: it is no version'
+        null                                          | false   | null         | 'started: there is no release file'
+    }
+
+    @IgnoreIf({ os.windows })
+    @Unroll
+    void "a JDK 8 without a release file is told by its #jar"() {
+        given:
+        File jdk = File.createTempDir('grailsjava', '')
+        javaIn(jdk)
+        new File(jdk, jar).parentFile.mkdirs()
+        new File(jdk, jar).text = ''
+
+        when:
+        Map started = startUnix([], [JAVA_HOME: jdk.path])
+
+        then:
+        started.exit == 1
+        (started.said as String).contains("ERROR: grails needs Java 21 or later, and JAVA_HOME (${jdk.path}) is Java 8 or earlier.")
+
+        cleanup:
+        jdk?.deleteDir()
+
+        where:
+        jar << ['jre/lib/rt.jar', 'lib/rt.jar']
+    }
+
+    @IgnoreIf({ os.windows })
+    void "the jre directory of a JDK 8, which has no release file, is told by its rt.jar"() {
+        given:
+        File jdk = File.createTempDir('grailsjava', '')
+        File jre = new File(jdk, 'jre')
+        javaIn(jre)
+        new File(jre, 'lib').mkdirs()
+        new File(jre, 'lib/rt.jar').text = ''
+        new File(jdk, 'release').text = 'JAVA_VERSION="1.8.0_402"\n'
+
+        when:
+        Map started = startUnix([], [JAVA_HOME: jre.path])
+
+        then:
+        started.exit == 1
+        (started.said as String).contains("ERROR: grails needs Java 21 or later, and JAVA_HOME (${jre.path}) is Java 8 or earlier.")
+
+        cleanup:
+        jdk?.deleteDir()
+    }
+
+    @IgnoreIf({ os.windows })
+    @Unroll
+    void "without JAVA_HOME, the java command on the PATH is followed through its links to the release file of its installation, #how"() {
+        given: 'a java on the PATH that is a link to a link of the java of an installation, as /usr/bin/java is on Linux'
+        File root = File.createTempDir('grailsjava', '')
+        File home = new File(root, 'jvm/java-17')
+        File java = javaIn(home)
+        new File(home, 'release').text = 'JAVA_VERSION="17.0.2"\n'
+        File alternatives = new File(root, 'alternatives')
+        alternatives.mkdirs()
+        Files.createSymbolicLink(new File(alternatives, 'java').toPath(), java.toPath())
+        File bin = new File(root, 'bin')
+        bin.mkdirs()
+        Files.createSymbolicLink(new File(bin, 'java').toPath(), bin.toPath().relativize(new File(alternatives, 'java').toPath()))
+        // a readlink that has no -f, as that of macOS before 12.3
+        File tools = new File(root, 'tools')
+        tools.mkdirs()
+        if (!readlinkF) {
+            new File(tools, 'readlink').text = '#!/bin/sh\necho "readlink: illegal option -- f" >&2\nexit 1\n'
+            new File(tools, 'readlink').setExecutable(true)
+        }
+        String path = "${bin.path}:${tools.path}:/usr/bin:/bin".toString()
+
+        when:
+        Map started = startUnix(['compile'], [PATH: path])
+
+        then:
+        started.exit == 1
+        (started.said as String).contains("ERROR: grails needs Java 21 or later, and the java command on the PATH (${bin.path}/java) is Java 17.0.2.")
+
+        when: 'the installation is of Java 21'
+        new File(home, 'release').text = 'JAVA_VERSION="21.0.12"\n'
+        started = startUnix(['compile'], [PATH: path])
+
+        then:
+        started.exit == 0
+        (started.said as String).contains('started compile')
+
+        cleanup:
+        root?.deleteDir()
+
+        where:
+        readlinkF << [true, false]
+        how = readlinkF ? 'with readlink -f' : 'with ls where readlink has no -f'
+    }
+
+    @IgnoreIf({ os.windows })
+    void "without JAVA_HOME, a java on the PATH in the bin directory of an installation, also through a link to the directory, is read there"() {
+        given: 'an installation reached through a link to its directory, as the current Java of SDKMAN'
+        File root = File.createTempDir('grailsjava', '')
+        File home = new File(root, 'candidates/17.0.2')
+        javaIn(home)
+        new File(home, 'release').text = 'JAVA_VERSION="17.0.2"\n'
+        Files.createSymbolicLink(new File(root, 'candidates/current').toPath(), new File(root, 'candidates/17.0.2').toPath())
+        File bin = new File(root, 'candidates/current/bin')
+
+        when:
+        Map started = startUnix([], [PATH: "${bin.path}:/usr/bin:/bin".toString()])
+
+        then:
+        started.exit == 1
+        (started.said as String).contains("ERROR: grails needs Java 21 or later, and the java command on the PATH (${bin.path}/java) is Java 17.0.2.")
+
+        cleanup:
+        root?.deleteDir()
+    }
+
+    void "the check of the version of Java is between the lines that find Java and those that start it, and names the version of the build"() {
+        when:
+        List<String> unix = CommandLineStartScripts.unixJavaCheck(UNIX_JAVA, 25).readLines()
+        String windows = CommandLineStartScripts.windowsJavaCheck(WINDOWS_JAVA, 25)
+        List<String> batch = windows.split('\r\n').toList()
+
+        then:
+        unix.indexOf('if [ -n "$JAVA_HOME" ] ; then') < unix.indexOf('if [ -n "$GRAILS_JAVA_MAJOR" ] && [ "$GRAILS_JAVA_MAJOR" -lt 25 ] ; then')
+        unix.indexOf('if [ -n "$GRAILS_JAVA_MAJOR" ] && [ "$GRAILS_JAVA_MAJOR" -lt 25 ] ; then') < unix.indexOf('# Increase the maximum file descriptors if we can.')
+        unix.any { String line -> line.contains('needs Java 25 or later') }
+
+        and: 'the batch file keeps its line ends, and checks once java.exe is found, before the command line is set up'
+        !windows.replace('\r\n', '').contains('\n')
+        batch.indexOf(':execute') < batch.indexOf('if defined GRAILS_JAVA_MAJOR if %GRAILS_JAVA_MAJOR% LSS 25 goto grailsJavaTooOld')
+        batch.indexOf(':grailsJavaChecked') < batch.indexOf('@rem Setup the command line')
+        batch.any { String line -> line.contains('needs Java 25 or later') }
+        // nothing reads the numbered arguments, which the lines before may have shifted
+        !batch.any { String line -> line ==~ /.*%[1-9].*/ }
+    }
+
+    @Requires({ os.windows })
+    @Unroll
+    void "a batch file started with a Java whose release file says #release is #what"() {
+        given:
+        File home = File.createTempDir('grailsjava', '')
+        new File(home, 'bin').mkdirs()
+        new File(home, 'bin/java.exe').text = ''
+        if (release != null) {
+            new File(home, 'release').text = "IMPLEMENTOR=\"Someone\"\r\n${release}\r\n"
+        }
+        File script = new File(home, 'grails.bat')
+        script.text = CommandLineStartScripts.windowsJavaCheck(WINDOWS_JAVA, 21)
+
+        when:
+        ProcessBuilder builder = new ProcessBuilder(['cmd.exe', '/c', script.path]).redirectErrorStream(true)
+        builder.environment().put('JAVA_HOME', home.path)
+        Process process = builder.start()
+        String said = process.inputStream.text
+        int exit = process.waitFor()
+
+        then:
+        exit == (refused ? 1 : 0)
+        said.contains('started ') == !refused
+        !refused || said.contains("ERROR: grails needs Java 21 or later, and JAVA_HOME (${home.path}) is Java ${version}.")
+
+        cleanup:
+        home?.deleteDir()
+
+        where:
+        release                     | refused | version     | what
+        'JAVA_VERSION="17.0.2"'     | true    | '17.0.2'    | 'refused'
+        'JAVA_VERSION="1.8.0_402"'  | true    | '1.8.0_402' | 'refused'
+        'JAVA_VERSION="21.0.12"'    | false   | null        | 'started'
+        'JAVA_VERSION="26-ea"'      | false   | null        | 'started'
+        null                        | false   | null        | 'started: there is no release file'
+    }
+
+    @Requires({ os.windows })
+    void "a batch file started with a JDK 8 without a release file tells it by its rt.jar"() {
+        given:
+        File home = File.createTempDir('grailsjava', '')
+        new File(home, 'bin').mkdirs()
+        new File(home, 'bin/java.exe').text = ''
+        new File(home, 'jre/lib').mkdirs()
+        new File(home, 'jre/lib/rt.jar').text = ''
+        File script = new File(home, 'grails.bat')
+        script.text = CommandLineStartScripts.windowsJavaCheck(WINDOWS_JAVA, 21)
+
+        when:
+        ProcessBuilder builder = new ProcessBuilder(['cmd.exe', '/c', script.path]).redirectErrorStream(true)
+        builder.environment().put('JAVA_HOME', home.path)
+        Process process = builder.start()
+        String said = process.inputStream.text
+
+        then:
+        process.waitFor() == 1
+        said.contains("ERROR: grails needs Java 21 or later, and JAVA_HOME (${home.path}) is Java 8 or earlier.")
+
+        cleanup:
+        home?.deleteDir()
+    }
+
+    // a java that says what it was started with, in the bin directory of an installation
+    private static File javaIn(File home) {
+        File java = new File(home, 'bin/java')
+        java.parentFile.mkdirs()
+        java.text = '#!/bin/sh\necho started "$@"\n'
+        java.setExecutable(true)
+        return java
+    }
+
+    // the script with the check, named as the command line is, started with the environment it is given
+    private static Map startUnix(List<String> arguments, Map<String, String> environment) {
+        File directory = File.createTempDir('grailsstart', '')
+        File script = new File(directory, 'grails')
+        script.text = CommandLineStartScripts.unixJavaCheck(UNIX_JAVA, 21)
+        script.setExecutable(true)
+        try {
+            ProcessBuilder builder = new ProcessBuilder(['/bin/sh', script.path] + arguments).redirectErrorStream(true)
+            builder.environment().remove('JAVA_HOME')
+            builder.environment().putAll(environment)
+            Process process = builder.start()
+            String said = process.inputStream.text
+            return [exit: process.waitFor(), said: said]
+        } finally {
+            directory.deleteDir()
+        }
     }
 }

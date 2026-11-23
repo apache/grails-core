@@ -28,7 +28,8 @@ import org.gradle.api.tasks.application.CreateStartScripts
 /**
  * What the start scripts of the Grails command line ({@code grails}, {@code grails.bat}) and of the Grails
  * wrapper ({@code grailsw}, {@code grailsw.bat}) have besides what Gradle generates: the JVM option
- * {@code -XX:TieredStopAtLevel=1} for a command line that runs one command.
+ * {@code -XX:TieredStopAtLevel=1} for a command line that runs one command, and a check of the version of the
+ * Java they start, see {@link #requireJava(CreateStartScripts)}.
  *
  * <p><strong>Why.</strong> A command of the command line is a short-lived process. Its time is the start of
  * the JVM and the loading of classes, not the running of hot code: the work of a command itself takes
@@ -84,7 +85,175 @@ class CommandLineStartScripts {
             'of the command line, is not given it either.',
     ]
 
+    // the line of the script Gradle generates for a POSIX shell that follows the lines that find the java command
+    private static final String UNIX_AFTER_JAVA = '# Increase the maximum file descriptors if we can.'
+
+    // the label of the batch file Gradle generates that is reached once java.exe is found
+    private static final String WINDOWS_JAVA_FOUND = ':execute'
+
     private CommandLineStartScripts() {
+    }
+
+    /**
+     * Has a task write into the scripts it generates a check of the version of the Java they start. The classes the
+     * scripts start are compiled for the release {@code javaVersion} of the build, which an earlier Java cannot load:
+     * it ends with an {@code UnsupportedClassVersionError} before any class of the command line runs. The scripts
+     * name that Java and the version that is needed instead.
+     *
+     * <p>No JVM is started for the check. The version is read from the {@code release} file of the installation of the
+     * Java, which every installation of Java 9 or later has, and most of Java 8: {@code $JAVA_HOME/release}, or the one
+     * of the {@code java} on the {@code PATH}. A {@code java} on the {@code PATH} that is a link, and is not in the
+     * {@code bin} directory of an installation, is followed to the one it is of, with {@code readlink -f}; that is the
+     * one process the check can start, the rest is builtins of the shell. A Java 8 without a {@code release} file, as
+     * Corretto 8 or the {@code jre} directory of a JDK 8, is told by its {@code rt.jar}, which later versions do not
+     * have. A Java whose installation has neither, as the stub {@code /usr/bin/java} of macOS when {@code JAVA_HOME} is
+     * not set, is started as before: finding its installation would take another process on every start.</p>
+     *
+     * @param task the task that generates the scripts
+     */
+    static void requireJava(CreateStartScripts task) {
+        Integer version = GradleUtils.lookupPropertyByType(task.project, 'javaVersion', Integer)
+        if (version == null) {
+            throw new GradleException('The start scripts check the version of Java against javaVersion of the build, which is not set')
+        }
+        int required = version
+        task.inputs.property('requiredJavaVersion', required)
+        task.doLast { Task generated ->
+            CreateStartScripts scripts = (CreateStartScripts) generated
+            scripts.unixScript.text = CommandLineStartScripts.unixJavaCheck(scripts.unixScript.text, required)
+            scripts.windowsScript.text = CommandLineStartScripts.windowsJavaCheck(scripts.windowsScript.text, required)
+        }
+    }
+
+    /**
+     * @param script the script Gradle generates for a POSIX shell
+     * @param version the lowest version of Java the classes it starts run on
+     * @return the script with a check, after the java command is found, that the Java is not of an earlier version
+     */
+    static String unixJavaCheck(String script, int version) {
+        String line = lineOf(script, UNIX_AFTER_JAVA, '\n', 'the check of the version of Java is added before the one that does')
+        // Builtins of the shell only, but for a java on the PATH that is a link and is not in the bin directory of its
+        // installation, which takes one readlink (or, where readlink has no -f, one ls for each link)
+        List<String> added = [
+                "# The classes this script starts are compiled for Java ${version}, which an earlier Java cannot load. Such a Java is".toString(),
+                '# named here, from the release file of its installation, instead of failing with UnsupportedClassVersionError.',
+                '# No JVM is started for the check; a Java whose version it cannot read is started as before.',
+                'if [ -n "$JAVA_HOME" ] ; then',
+                '    GRAILS_JAVA=$JAVA_HOME',
+                '    GRAILS_JAVA_FOUND="JAVA_HOME ($JAVA_HOME)"',
+                'else',
+                '    # the java command on the PATH, as the shell finds it',
+                '    GRAILS_JAVA=',
+                '    GRAILS_JAVA_PATH=$PATH:',
+                '    while [ -n "$GRAILS_JAVA_PATH" ] ; do',
+                '        GRAILS_JAVA_LINK=${GRAILS_JAVA_PATH%%:*}',
+                '        GRAILS_JAVA_LINK=${GRAILS_JAVA_LINK:-.}/java',
+                '        GRAILS_JAVA_PATH=${GRAILS_JAVA_PATH#*:}',
+                '        if [ -f "$GRAILS_JAVA_LINK" ] && [ -x "$GRAILS_JAVA_LINK" ] ; then',
+                '            GRAILS_JAVA=$GRAILS_JAVA_LINK',
+                '            break',
+                '        fi',
+                '    done',
+                '    GRAILS_JAVA_FOUND="the java command on the PATH ($GRAILS_JAVA)"',
+                '    # a link to the java of an installation, as /usr/bin/java on Linux, unless it is in the bin directory of one',
+                '    if [ -h "$GRAILS_JAVA" ] && [ ! -f "${GRAILS_JAVA%/*}/../release" ] ; then',
+                '        GRAILS_JAVA_LINK=$( readlink -f "$GRAILS_JAVA" 2>/dev/null ) && [ -n "$GRAILS_JAVA_LINK" ] && GRAILS_JAVA=$GRAILS_JAVA_LINK',
+                '        while [ -h "$GRAILS_JAVA" ] ; do',
+                '            GRAILS_JAVA_LINK=$( ls -ld "$GRAILS_JAVA" )',
+                '            GRAILS_JAVA_LINK=${GRAILS_JAVA_LINK#*\' -> \'}',
+                '            case $GRAILS_JAVA_LINK in',
+                '              /*) GRAILS_JAVA=$GRAILS_JAVA_LINK ;;',
+                '              *)  GRAILS_JAVA=${GRAILS_JAVA%/*}/$GRAILS_JAVA_LINK ;;',
+                '            esac',
+                '        done',
+                '    fi',
+                '    GRAILS_JAVA=${GRAILS_JAVA:+${GRAILS_JAVA%/*}/..}',
+                'fi',
+                'GRAILS_JAVA_VERSION=',
+                'if [ -n "$GRAILS_JAVA" ] && [ -f "$GRAILS_JAVA/release" ] ; then',
+                '    while IFS= read -r GRAILS_JAVA_LINE || [ -n "$GRAILS_JAVA_LINE" ] ; do',
+                '        case $GRAILS_JAVA_LINE in',
+                '          JAVA_VERSION=*) GRAILS_JAVA_VERSION=${GRAILS_JAVA_LINE#JAVA_VERSION=} ;;',
+                '        esac',
+                '    done < "$GRAILS_JAVA/release"',
+                'fi',
+                'GRAILS_JAVA_VERSION=${GRAILS_JAVA_VERSION#\\"}',
+                'GRAILS_JAVA_VERSION=${GRAILS_JAVA_VERSION%\\"}',
+                '# a Java 8 that has no release file, as Corretto 8 or the jre directory of a JDK 8, has the rt.jar that later',
+                '# versions do not have',
+                'if [ -n "$GRAILS_JAVA" ] && [ -z "$GRAILS_JAVA_VERSION" ] && { [ -f "$GRAILS_JAVA/lib/rt.jar" ] || [ -f "$GRAILS_JAVA/jre/lib/rt.jar" ] ; } ; then',
+                '    GRAILS_JAVA_VERSION=\'8 or earlier\'',
+                'fi',
+                '# 1.8.0_402 is Java 8, 17.0.2 Java 17, 26-ea Java 26',
+                'GRAILS_JAVA_MAJOR=${GRAILS_JAVA_VERSION#1.}',
+                'GRAILS_JAVA_MAJOR=${GRAILS_JAVA_MAJOR%%[!0-9]*}',
+                "if [ -n \"\$GRAILS_JAVA_MAJOR\" ] && [ \"\$GRAILS_JAVA_MAJOR\" -lt ${version} ] ; then".toString(),
+                "    die \"ERROR: \$APP_BASE_NAME needs Java ${version} or later, and \$GRAILS_JAVA_FOUND is Java \$GRAILS_JAVA_VERSION.".toString(),
+                '',
+                'Please set the JAVA_HOME variable in your environment to the location of',
+                "a Java ${version} or later installation.\"".toString(),
+                'fi',
+                'unset GRAILS_JAVA GRAILS_JAVA_FOUND GRAILS_JAVA_PATH GRAILS_JAVA_LINK GRAILS_JAVA_LINE GRAILS_JAVA_VERSION GRAILS_JAVA_MAJOR',
+                '',
+        ]
+        return script.replace(line, added.join('\n') + '\n' + line)
+    }
+
+    /**
+     * @param script the batch file Gradle generates
+     * @param version the lowest version of Java the classes it starts run on
+     * @return the batch file with a check, once java.exe is found, that the Java is not of an earlier version
+     */
+    static String windowsJavaCheck(String script, int version) {
+        String end = script.contains('\r\n') ? '\r\n' : '\n'
+        String line = lineOf(script, WINDOWS_JAVA_FOUND, end, 'the check of the version of Java is added after the one that does')
+        if (line != WINDOWS_JAVA_FOUND) {
+            throw new GradleException("The start scripts Gradle generates have changed: the label ${WINDOWS_JAVA_FOUND} has more on its line, " +
+                    'and the check of the version of Java is added after it')
+        }
+        // What is read is held by a variable of FOR, whose value the command interpreter does not read again, until only
+        // the major version is left. JAVA_HOME was read by the lines above, without its quotes.
+        List<String> added = [
+                "@rem The classes this script starts are compiled for Java ${version}, which an earlier Java cannot load. Such a Java is".toString(),
+                '@rem named here, from the release file of its installation, instead of failing with UnsupportedClassVersionError.',
+                '@rem No JVM is started for the check; a Java whose version it cannot read is started as before.',
+                'set GRAILS_JAVA=',
+                'set GRAILS_JAVA_FOUND=',
+                'if defined JAVA_HOME set "GRAILS_JAVA=%JAVA_HOME%"',
+                'if defined JAVA_HOME set "GRAILS_JAVA_FOUND=JAVA_HOME (%JAVA_HOME%)"',
+                'if not defined JAVA_HOME for %%i in (java.exe) do if not "%%~$PATH:i"=="" set "GRAILS_JAVA=%%~dp$PATH:i.."',
+                'if not defined JAVA_HOME for %%i in (java.exe) do if not "%%~$PATH:i"=="" set "GRAILS_JAVA_FOUND=the java command on the PATH (%%~$PATH:i)"',
+                'set GRAILS_JAVA_VERSION=',
+                'if defined GRAILS_JAVA if exist "%GRAILS_JAVA%\\release" for /f "usebackq tokens=1,* delims==" %%a in ("%GRAILS_JAVA%\\release") do ' +
+                        'if "%%a"=="JAVA_VERSION" set "GRAILS_JAVA_VERSION=%%~b"',
+                '@rem a Java 8 that has no release file, as Corretto 8 or the jre directory of a JDK 8, has the rt.jar that later',
+                '@rem versions do not have',
+                'if not defined GRAILS_JAVA_VERSION if defined GRAILS_JAVA if exist "%GRAILS_JAVA%\\lib\\rt.jar" set "GRAILS_JAVA_VERSION=8 or earlier"',
+                'if not defined GRAILS_JAVA_VERSION if defined GRAILS_JAVA if exist "%GRAILS_JAVA%\\jre\\lib\\rt.jar" set "GRAILS_JAVA_VERSION=8 or earlier"',
+                '@rem 1.8.0_402 is Java 8, 17.0.2 Java 17, 26-ea Java 26',
+                'set GRAILS_JAVA_MAJOR=',
+                'if defined GRAILS_JAVA_VERSION for /f "tokens=1,2 delims=.-+_ " %%a in ("%GRAILS_JAVA_VERSION%") do ' +
+                        'if "%%a"=="1" (set "GRAILS_JAVA_MAJOR=%%b") else set "GRAILS_JAVA_MAJOR=%%a"',
+                "if defined GRAILS_JAVA_MAJOR if %GRAILS_JAVA_MAJOR% LSS ${version} goto grailsJavaTooOld".toString(),
+                'goto grailsJavaChecked',
+                '',
+                ':grailsJavaTooOld',
+                '1>&2 echo.',
+                "1>&2 echo ERROR: %APP_BASE_NAME% needs Java ${version} or later, and %GRAILS_JAVA_FOUND% is Java %GRAILS_JAVA_VERSION%.".toString(),
+                '1>&2 echo.',
+                '1>&2 echo Please set the JAVA_HOME variable in your environment to the location of',
+                "1>&2 echo a Java ${version} or later installation.".toString(),
+                '',
+                '"%COMSPEC%" /c exit 1',
+                'goto exitWithErrorLevel',
+                '',
+                ':grailsJavaChecked',
+                'set GRAILS_JAVA=',
+                'set GRAILS_JAVA_FOUND=',
+                'set GRAILS_JAVA_VERSION=',
+                'set GRAILS_JAVA_MAJOR=',
+        ]
+        return script.replace(line + end, line + end + added.collect { String each -> each + end }.join(''))
     }
 
     /**
@@ -109,7 +278,7 @@ class CommandLineStartScripts {
      * @return the script with the option, for a start with an argument other than {@link #INTERACTIVE_OPTIONS}
      */
     static String unix(String script, String optionsVariable) {
-        String line = lineOf(script, UNIX_DEFAULTS, '\n')
+        String line = lineOf(script, UNIX_DEFAULTS, '\n', "${OPTION} is added after the one that does")
         // the word of a case is neither split nor expanded as a path, so an argument is compared as it is
         String added = WHY.collect { String each -> "# ${each}\n" }.join('') +
                 "# To override it: ${optionsVariable}=-XX:TieredStopAtLevel=4 (what ${optionsVariable} and JAVA_OPTS hold comes later\n" +
@@ -129,7 +298,7 @@ class CommandLineStartScripts {
      */
     static String windows(String script, String optionsVariable) {
         String end = script.contains('\r\n') ? '\r\n' : '\n'
-        String line = lineOf(script, WINDOWS_DEFAULTS, end)
+        String line = lineOf(script, WINDOWS_DEFAULTS, end, "${OPTION} is added after the one that does")
         // Each argument is read into a variable while delayed expansion is off, so that an exclamation mark in it
         // stays one, and compared while it is on: the value of !variable! is not read again by the command
         // interpreter, so a quote, an equals sign or an ampersand in it does not break the comparison. What Java
@@ -155,12 +324,11 @@ class CommandLineStartScripts {
         return script.replace(line, line + end + added)
     }
 
-    // the one line of a script that sets the JVM options the script has by itself, without its end
-    private static String lineOf(String script, String start, String end) {
+    // the one line of a script that starts as given, without its end
+    private static String lineOf(String script, String start, String end, String added) {
         List<String> lines = script.split(end).findAll { String each -> each.startsWith(start) }.toList()
         if (lines.size() != 1) {
-            throw new GradleException("The start scripts Gradle generates have changed: ${lines.size()} lines start with ${start}, " +
-                    "and ${OPTION} is added after the one that does")
+            throw new GradleException("The start scripts Gradle generates have changed: ${lines.size()} lines start with ${start}, and ${added}")
         }
         return lines[0]
     }

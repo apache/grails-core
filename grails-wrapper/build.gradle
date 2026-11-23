@@ -93,6 +93,8 @@ startScripts.configure { CreateStartScripts t ->
     // -XX:TieredStopAtLevel=1 when the wrapper is started with a command, which then runs in this JVM: why it is
     // there, what it costs and how it is overridden is said in CommandLineStartScripts, and in the scripts
     CommandLineStartScripts.compileForShortRuns(t, 'GRAILSW_OPTS')
+    // grails.init.Start is compiled for javaVersion: an earlier Java is named by the scripts, see CommandLineStartScripts
+    CommandLineStartScripts.requireJava(t)
 
     // See gradle tickets such as for lib https://github.com/gradle/gradle/issues/7033
     doLast {

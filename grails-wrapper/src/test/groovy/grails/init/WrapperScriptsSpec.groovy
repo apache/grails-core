@@ -141,6 +141,77 @@ class WrapperScriptsSpec extends Specification {
         lines.subList(start + 15, lines.size()).every { String line -> !(line ==~ /.*%[1-9].*/) }
     }
 
+    @Unroll
+    void "started with Java #version the script names it and the version it needs, and starts nothing"() {
+        given: 'an installation of Java whose release file says what it is, with a java that would say it was started'
+        File home = new File(dir, 'java')
+        File java = fakeJava(home)
+        new File(home, 'release').text = "IMPLEMENTOR=\"Someone\"\nJAVA_VERSION=\"${version}\"\n"
+
+        when:
+        Map started = run(['--version'], home)
+
+        then:
+        started.exit == 1
+        (started.said as String).contains("ERROR: grailsw needs Java 21 or later, and JAVA_HOME (${home.path}) is Java ${version}.")
+        (started.said as String).contains('Please set the JAVA_HOME variable in your environment to the location of')
+        !(started.said as String).contains('started')
+        java.file
+
+        where:
+        version << ['17.0.2', '11.0.22', '1.8.0_402']
+    }
+
+    @IgnoreIf({ os.windows })
+    @Unroll
+    void "started with Java #version, or a Java without a release file, the script starts it"() {
+        given:
+        File home = new File(dir, 'java')
+        fakeJava(home)
+        if (version != null) {
+            new File(home, 'release').text = "JAVA_VERSION=\"${version}\"\n"
+        }
+
+        when:
+        Map started = run(['--version'], home)
+
+        then:
+        started.exit == 0
+        (started.said as String).contains('started')
+
+        where:
+        version << ['21.0.12', '25', '26-ea', null]
+    }
+
+    // a java in the bin directory of an installation, which says that it was started: a script, or on Windows a file
+    // that only has the name, which a script that refuses the Java does not start
+    private static File fakeJava(File home) {
+        boolean windows = System.getProperty('os.name').toLowerCase(Locale.ROOT).contains('windows')
+        File java = new File(home, windows ? 'bin/java.exe' : 'bin/java')
+        java.parentFile.mkdirs()
+        java.text = windows ? '' : '#!/bin/sh\necho started\n'
+        java.setExecutable(true)
+        return java
+    }
+
+    // Starts the script, as an installation has it, with JAVA_HOME the installation of Java it is given
+    private Map run(List<String> arguments, File javaHome) {
+        File bin = new File(dir, 'home/bin')
+        bin.mkdirs()
+        boolean windows = System.getProperty('os.name').toLowerCase(Locale.ROOT).contains('windows')
+        File script = new File(bin, windows ? 'grailsw.bat' : 'grailsw')
+        script.bytes = new File(scripts, script.name).bytes
+        script.setExecutable(true)
+        List<String> command = windows ? ['cmd.exe', '/c', script.path] : [script.path]
+        ProcessBuilder builder = new ProcessBuilder(command + arguments).directory(dir).redirectErrorStream(true)
+        builder.environment().put('JAVA_HOME', javaHome.path)
+        builder.environment().remove('JAVA_OPTS')
+        builder.environment().remove('GRAILSW_OPTS')
+        Process process = builder.start()
+        String said = process.inputStream.text
+        return [exit: process.waitFor(), said: said]
+    }
+
     // Starts the script with the Java that runs this specification, which is asked to print its flags and the version
     // and to end before it would start the wrapper
     private Map flagsOf(List<String> arguments) {

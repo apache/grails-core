@@ -153,6 +153,20 @@ export GRAILS_OPTS="-Dgrails.cli.preload=false"
 
 The port of the application is an option of `run-app`: `grails run-app --port=8081`. The Grails environment of a project is `-Dgrails.env=NAME` after the name of the command, and where that is not given it is the command's own, such as `development` for `run-app`, `test` for `test-app` and `production` for `assemble`. The command line does not read the environment variable `GRAILS_ENV`, which is how an application that is started with `java -jar` or in a container is given its environment; see link:conf.html#environments[Environments].
 
+The command line and the Grails wrapper are compiled for Java 21, which an earlier Java cannot load. Before the scripts start Java, they read its version from the `release` file of its installation, `$JAVA_HOME/release` or that of the `java` on the path (through its links), which starts no JVM and costs nothing measurable. An earlier version is refused with a message that names the Java and the version that is needed, instead of the `UnsupportedClassVersionError` the JVM would end with, and exit code 1:
+
+[source,console]
+----
+$ ./grailsw --version
+
+ERROR: grailsw needs Java 21 or later, and JAVA_HOME (/opt/java/jdk-17.0.18) is Java 17.0.18.
+
+Please set the JAVA_HOME variable in your environment to the location of
+a Java 21 or later installation.
+----
+
+A JDK 8 that has no `release` file is told by its `rt.jar`. A Java whose installation the scripts cannot find, such as `/usr/bin/java` of macOS when `JAVA_HOME` is not set, is started as before.
+
 These are the environment variables the command line and the Grails wrapper read or set:
 
 [cols="2,5"]
@@ -160,7 +174,7 @@ These are the environment variables the command line and the Grails wrapper read
 |Variable |Meaning
 
 |`JAVA_HOME`
-|The Java installation that runs the command line and the Grails wrapper. Without it the `java` on the path is used.
+|The Java installation that runs the command line and the Grails wrapper, Java 21 or later. Without it the `java` on the path is used.
 
 |`GRAILS_OPTS`, `JAVA_OPTS`
 |JVM options of the `grails` command. They come after the option the script sets itself for a command (`-XX:TieredStopAtLevel=1`, see above), so a value given here is the one the JVM uses.
