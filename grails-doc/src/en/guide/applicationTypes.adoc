@@ -43,7 +43,7 @@ There is one command for each type of application:
 
 |`create-rest-api-plugin`
 |`rest-api-plugin`
-|A plugin with the content of a REST API application: controllers, JSON views and the REST URL mappings, and nothing for HTML.
+|A plugin for REST endpoints, set up as a REST API application is: JSON views, and nothing for HTML. Its `UrlMappings` class is empty and it has no controller or views of its own.
 |===
 
 All of them take the same options, which xref:commandLine#creatingProject[Creating a Grails Project] describes. https://start.grails.org/[The Grails Forge website] creates projects from the same types and features.

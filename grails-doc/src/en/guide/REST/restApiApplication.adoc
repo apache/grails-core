@@ -34,7 +34,7 @@ The application this creates differs from the one `create-app` creates:
 
 In the `grails-app/views` directory there are `*.gson` files in place of GSP pages: `application/index.gson` renders the index page, which `ApplicationController` serves, and `error.gson` and `notFound.gson` render the 500 and 404 responses.
 
-A plugin with the same content, for REST endpoints that several applications share, is created with link:{commandLineRef}create-rest-api-plugin.html[create-rest-api-plugin]. It has the plugin descriptor class and the build of a plugin, the same default features and the same commands as a REST API application; see link:plugins.html#creatingAndInstallingPlugins[Creating and Installing Plugins].
+A plugin for REST endpoints that several applications share is created with link:{commandLineRef}create-rest-api-plugin.html[create-rest-api-plugin]. It has the plugin descriptor class and the build of a plugin, is set up for JSON views and nothing for HTML as a REST API application is, and has the commands of a REST API application. Unlike the application it has an empty `UrlMappings` class and none of the controller and views above, because everything in a plugin becomes part of the applications that use it; see link:plugins.html#creatingAndInstallingPlugins[Creating and Installing Plugins].
 
 The commands that only a REST API application and a REST API plugin have are:
 
