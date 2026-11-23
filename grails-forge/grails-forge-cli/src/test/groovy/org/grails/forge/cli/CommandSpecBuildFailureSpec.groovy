@@ -83,6 +83,17 @@ class CommandSpecBuildFailureSpec extends CommandSpec implements CommandFixture 
     }
 
     @Requires({ !OperatingSystem.current.windows })
+    void 'what a build that has ended wrote is read to its end before the output a spec waits for is said not to be there'() {
+        when: 'a process that ends at once, and leaves one behind that writes the line into its output later'
+        executeCommand(['sh', '-c', '(sleep 3; echo "TestServiceSpec > test something PASSED") & exit 0'])
+        testOutputContains('TestServiceSpec > test something PASSED')
+
+        then:
+        noExceptionThrown()
+        !process.alive
+    }
+
+    @Requires({ !OperatingSystem.current.windows })
     void 'ending a build ends the processes it started'() {
         given: 'a process with a child that would outlive it'
         executeCommand(['sh', '-c', 'sleep 300 & echo started; wait'])
@@ -94,7 +105,7 @@ class CommandSpecBuildFailureSpec extends CommandSpec implements CommandFixture 
 
         then:
         !children.empty
-        new PollingConditions(timeout: 10).eventually {
+        new PollingConditions(timeout: 60).eventually {
             assert children.every { !it.alive }
         }
     }

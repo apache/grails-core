@@ -35,6 +35,8 @@ class CommandSpec extends Specification {
     File dir = Files.createTempDirectory('grailsforgetmp').toFile()
     StringBuilder output
     Process process
+    // what reads the output of the process into output: it has read all of it when it has ended
+    Thread outputReader
     String previousUsrDir
 
     void setupSpec() {
@@ -78,10 +80,13 @@ class CommandSpec extends Specification {
     private static final int POLL_INITIAL_DELAY_MILLIS = 100
     private static final int POLL_DELAY_MILLIS = 100
 
-    // Once the process has exited the output can no longer grow, so allow the stdout and stderr
-    // consumer threads started by consumeProcessOutput a moment to drain before deciding the
-    // value is absent.
-    private static final int OUTPUT_DRAIN_MILLIS = 2000
+    // Once the process has exited the output can no longer grow: the reader is waited for until it has read
+    // the rest, which it has at once, unless a process the build left behind still has the output open. A
+    // fixed moment instead races the reader: on a busy machine a value that was written could be said not to be.
+    private static final int OUTPUT_READ_SECONDS = 60
+    // How long a Gradle client is given to end after the last line of its build. Only what a failure says
+    // depends on it: nothing a spec waits for is written after that line.
+    private static final int EXIT_MILLIS = 2000
     // The line Gradle ends every build with. Nothing a spec waits for is written after it.
     private static final List<String> BUILD_END_MARKERS = ['BUILD SUCCESSFUL', 'BUILD FAILED']
 
@@ -114,7 +119,7 @@ class CommandSpec extends Specification {
                 return
             }
             if (process != null && !process.alive) {
-                sleep(OUTPUT_DRAIN_MILLIS)
+                outputReader?.join(TimeUnit.SECONDS.toMillis(OUTPUT_READ_SECONDS))
                 String finalOutput = output.toString()
                 if (finalOutput.contains(value)) {
                     return
@@ -126,9 +131,9 @@ class CommandSpec extends Specification {
                 // The last line of a build is written a moment before its process ends. The process is
                 // given that moment, so that a build that has ended is reported with its exit code, as
                 // it is when the process is seen to have ended first.
-                boolean exited = process == null || process.waitFor(OUTPUT_DRAIN_MILLIS, TimeUnit.MILLISECONDS)
+                boolean exited = process == null || process.waitFor(EXIT_MILLIS, TimeUnit.MILLISECONDS)
                 if (process == null || !exited) {
-                    sleep(OUTPUT_DRAIN_MILLIS)
+                    sleep(EXIT_MILLIS)
                 }
                 String finalOutput = output.toString()
                 if (finalOutput.contains(value)) {
@@ -161,7 +166,8 @@ class CommandSpec extends Specification {
         pb.environment().put('JAVA_HOME', System.getenv('JAVA_HOME') ?: System.getProperty('java.home'))
         pb.environment().put('GRAILS_REPO_URL', System.getenv('GRAILS_REPO_URL') ?: null)
         process = pb.directory(dir).start()
-        process.consumeProcessOutput(output, output)
+        // the error stream is in this one, so its reader reads all the build says
+        outputReader = process.consumeProcessOutputStream(output)
         process
     }
 
