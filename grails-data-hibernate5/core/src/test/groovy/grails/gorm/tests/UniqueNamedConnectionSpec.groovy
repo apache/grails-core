@@ -43,7 +43,7 @@ class UniqueNamedConnectionSpec extends Specification {
             'dataSource.dialect'  : H2Dialect.name,
             'dataSources.second'  : [url: 'jdbc:h2:mem:uncSecond;LOCK_TIMEOUT=10000'],
             'dataSources.third'   : [url: 'jdbc:h2:mem:uncThird;LOCK_TIMEOUT=10000']
-    ]), UncBook)
+    ]), UncBook, UncAudit)
 
     void setup() {
         UncBook.withNewTransaction { new UncBook(name: 'onDefault').save(validate: false, flush: true) }
@@ -54,6 +54,9 @@ class UniqueNamedConnectionSpec extends Specification {
         UncBook.withNewTransaction { UncBook.executeUpdate('delete from UncBook') }
         UncBook.second.withNewTransaction { UncBook.second.executeUpdate('delete from UncBook') }
         UncBook.third.withNewTransaction { UncBook.third.executeUpdate('delete from UncBook') }
+        UncAudit.withNewTransaction { UncAudit.executeUpdate('delete from UncAudit') }
+        UncAudit.third.withNewTransaction { UncAudit.third.executeUpdate('delete from UncAudit') }
+        UncBook.innerSaved = null
     }
 
     private <T> T withSessions(Closure<T> work) {
@@ -106,6 +109,33 @@ class UniqueNamedConnectionSpec extends Specification {
         saved != null
     }
 
+    void 'a save through the default connection made while a save on the third connection runs checks the default connection'() {
+        given: 'the value of the inner save is taken on the third connection and free on the default one'
+        UncAudit.third.withNewTransaction { new UncAudit(code: 'free').third.save(validate: false, flush: true) }
+
+        when: 'the validation of a book saved on the third connection saves an audit through the default connection'
+        UncBook book = new UncBook(name: 'newBook', innerSave: true)
+        UncBook saved = withSessions { book.third.save() }
+
+        then: 'the inner save is checked on the default connection, so it is not refused'
+        saved != null
+        UncBook.innerSaved != null
+        !UncBook.innerSaved.hasErrors()
+    }
+
+    void 'the connection of the outer save is checked again after an inner save through the default connection'() {
+        given:
+        UncBook.third.withNewTransaction { new UncBook(name: 'onThird').third.save(validate: false, flush: true) }
+
+        when: 'a book that is taken on the third connection is saved there while its validation saves an audit by default'
+        UncBook book = new UncBook(name: 'onThird', innerSave: true)
+        UncBook saved = withSessions { book.third.save() }
+
+        then: 'the outer save is still checked on the third connection and refused'
+        saved == null
+        book.hasErrors()
+    }
+
     void 'a save through the default connection still checks the default connection'() {
         when:
         UncBook onDefault = new UncBook(name: 'onDefault')
@@ -123,8 +153,36 @@ class UncBook {
 
     String name
 
+    // set by the validation below: the audit that the validator of a book with innerSave saves through the default connection
+    static UncAudit innerSaved
+
+    boolean innerSave
+
+    static transients = ['innerSave']
+
     static constraints = {
-        name(unique: true)
+        name(unique: true, validator: { String value, UncBook book ->
+            if (book.innerSave) {
+                UncBook.innerSaved = new UncAudit(code: 'free')
+                UncBook.innerSaved.save()
+            }
+            true
+        })
+    }
+
+    static mapping = {
+        version false
+        datasource(ConnectionSource.ALL)
+    }
+}
+
+@Entity
+class UncAudit {
+
+    String code
+
+    static constraints = {
+        code(unique: true)
     }
 
     static mapping = {

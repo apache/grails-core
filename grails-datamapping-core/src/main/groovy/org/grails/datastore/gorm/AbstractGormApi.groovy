@@ -78,15 +78,21 @@ abstract class AbstractGormApi<D> extends AbstractDatastoreApi {
     /**
      * Runs the callable with the connection this API names as that of the validation, so that the {@code unique}
      * constraint checks the connection a save or a validation names and not the default connection. An API of the
-     * default connection leaves it as it is.
+     * default connection names none: a save through it, made while a save on another connection runs, is checked on
+     * the default connection and not on the one the outer save named.
      */
     protected <T1> T1 inConnection(Closure<T1> callable) {
         String connection = connectionName()
-        if (connection == null || ConnectionSource.DEFAULT == connection) {
+        String named = connection == null || ConnectionSource.DEFAULT == connection ? null : connection
+        String previous = VALIDATION_CONNECTION.get()
+        if (named == previous) {
             return callable.call()
         }
-        String previous = VALIDATION_CONNECTION.get()
-        VALIDATION_CONNECTION.set(connection)
+        if (named == null) {
+            VALIDATION_CONNECTION.remove()
+        } else {
+            VALIDATION_CONNECTION.set(named)
+        }
         try {
             return callable.call()
         } finally {
