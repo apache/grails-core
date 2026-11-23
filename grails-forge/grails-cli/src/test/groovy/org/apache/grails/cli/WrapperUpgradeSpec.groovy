@@ -107,8 +107,8 @@ class WrapperUpgradeSpec extends Specification {
         Modifier.isPublic(main.getModifiers()) && Modifier.isStatic(main.getModifiers())
         main.getReturnType() == void
 
-        and: 'the jar still names the command line as its start class, which is what the wrapper of this version starts'
-        new JarFile(allJar).withCloseable { JarFile jar -> jar.manifest.mainAttributes.getValue('Main-Class') } == 'org.apache.grails.cli.GrailsCli'
+        and: 'the jar names the command line as its start class, which is what the class starts'
+        new JarFile(allJar).withCloseable { JarFile jar -> jar.manifest.mainAttributes.getValue('Main-Class') } == 'org.apache.grails.forge.cli.GrailsCli'
 
         and: 'the wrapper it writes is in the jar too'
         new JarFile(allJar).withCloseable { JarFile jar -> WRAPPER.every { String name -> jar.getEntry("grails-wrapper/${name}") != null } }

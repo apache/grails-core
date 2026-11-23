@@ -247,7 +247,7 @@ Extracts the zip file and verifies the contents:
 * Ensure the `LICENSE` & `NOTICE` files are present to ensure license compliance.
 
 Generates an application using the CLI and verifies all dependencies resolve:
-* Checks that `bin` has the `grails` command, which starts `org.apache.grails.cli.GrailsCli`, and neither `grails-shell-cli` nor `grails-forge-cli`.
+* Checks that `bin` has the `grails` command, which starts `org.apache.grails.forge.cli.GrailsCli`, and neither `grails-shell-cli` nor `grails-forge-cli`.
 * Starts the `grails` command (`--version`, `help`) and creates an app with it against the staging repository.
 * Runs `./gradlew dependencies` in the generated app to confirm all dependencies resolve successfully. The build will fail if any dependency is marked as `FAILED`.
 

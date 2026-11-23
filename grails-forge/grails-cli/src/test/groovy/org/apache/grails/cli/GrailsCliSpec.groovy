@@ -21,6 +21,7 @@ package org.apache.grails.cli
 import java.nio.file.Files
 import java.util.jar.JarFile
 import groovy.json.JsonSlurper
+import org.apache.grails.forge.cli.GrailsCli
 import spock.lang.Specification
 
 /**
@@ -145,12 +146,13 @@ class GrailsCliSpec extends Specification {
         GrailsCli.classLoader.getResources('META-INF/services/org.slf4j.spi.SLF4JServiceProvider').toList().size() == 1
     }
 
-    void "the jar of the artifact names the entry point as its start class, which is what the Grails wrapper starts"() {
+    void "the jar of the artifact names the entry point as its start class, which is what java -jar and the Grails wrapper start"() {
         given:
         File jar = new File(System.getProperty('grails.cli.jar'))
 
         expect:
-        new JarFile(jar).withCloseable { it.manifest.mainAttributes.getValue('Main-Class') } == 'org.apache.grails.cli.GrailsCli'
+        new JarFile(jar).withCloseable { it.manifest.mainAttributes.getValue('Main-Class') } == 'org.apache.grails.forge.cli.GrailsCli'
+        GrailsCli.name == 'org.apache.grails.forge.cli.GrailsCli'
     }
 
     private static boolean classThere(String name) {

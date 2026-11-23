@@ -16,11 +16,12 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.apache.grails.cli
+package org.apache.grails.forge.cli
 
 import groovy.transform.CompileStatic
-import org.apache.grails.forge.cli.StartupPreload
 import org.apache.grails.forge.cli.console.GradleBuild
+import org.apache.grails.forge.cli.console.PlainOutput
+import org.apache.grails.forge.cli.console.WrapperFiles
 import org.grails.forge.cli.ForgeCli
 
 /**
@@ -57,6 +58,13 @@ import org.grails.forge.cli.ForgeCli
  * that generates, as {@code create-app} and {@code feature add} do, starts the project generator,
  * when it runs.</p>
  *
+ * <p><strong>The Grails wrapper.</strong> {@code Main-Class} of the jars of {@code org.apache.grails:grails-cli}
+ * names this class, and every Grails wrapper starts it through {@code org.apache.grails.cli.DelegatingShellApplication}
+ * of the jar it downloads. For the wrapper of Grails 7 and 8, which does not say that it started that class,
+ * {@link #main} first replaces the wrapper of the project by the one of this version, with {@code update-wrapper},
+ * where the current directory is in a Grails project of a version this command line works with that has a
+ * wrapper; without arguments the JVM then ends with the exit code of that.</p>
+ *
  * @since 9.0
  */
 @CompileStatic
@@ -67,6 +75,9 @@ final class GrailsCli {
 
     private static final List<String> FORMER_TYPE_OPTIONS = ['-t', '--type']
 
+    // what org.apache.grails.cli.DelegatingShellApplication sets to true when the wrapper of Grails 7 or 8 started it
+    private static final String EARLIER_WRAPPER = 'grails.cli.earlierWrapper'
+
     private GrailsCli() {
     }
 
@@ -76,11 +87,54 @@ final class GrailsCli {
      * @param args the command line
      */
     static void main(String[] args) {
+        if (Boolean.parseBoolean(System.clearProperty(EARLIER_WRAPPER))) {
+            mainOfEarlierWrapper(args)
+            return
+        }
         // first: the classes the command is about to load are loaded beside it from here on, see StartupPreload
         StartupPreload.start(GrailsCli.classLoader, args)
         // Gradle is given the output of the process for as long as it is the output of the command line
         GradleBuild.outputOfProcess(System.out, System.err)
         System.exit(execute(args))
+    }
+
+    /**
+     * The step from the wrapper of Grails 7 and 8 to the one of this version: replaces the wrapper of the
+     * project of the current directory, runs the command line and ends the JVM with its exit code. The
+     * earlier wrapper takes {@code update-wrapper} from the front of the command line, so a command line
+     * without arguments is what is left of {@code ./grailsw update-wrapper}, and ends once the wrapper is
+     * replaced.
+     */
+    private static void mainOfEarlierWrapper(String[] args) {
+        // Gradle is given the output of the process for as long as it is the output of the command line
+        GradleBuild.outputOfProcess(System.out, System.err)
+        Integer updated = updateWrapper(args)
+        if (updated != null && args.length == 0) {
+            System.exit(updated)
+        }
+        System.exit(execute(args))
+    }
+
+    /**
+     * Runs {@code update-wrapper} where it applies.
+     *
+     * @param args the command line that is run after it
+     * @return the exit code of {@code update-wrapper}, or {@code null} where the current directory is
+     * in no project whose wrapper is replaced
+     */
+    private static Integer updateWrapper(String[] args) {
+        if (!WrapperFiles.appliesHere()) {
+            return null
+        }
+        // --plain-output among the options in front of the command holds for update-wrapper too
+        boolean plain = false
+        for (String arg : args) {
+            if (!arg.startsWith('-')) {
+                break
+            }
+            plain = plain || arg == PlainOutput.OPTION
+        }
+        return execute(plain ? [PlainOutput.OPTION, WrapperFiles.COMMAND] as String[] : [WrapperFiles.COMMAND] as String[])
     }
 
     /**

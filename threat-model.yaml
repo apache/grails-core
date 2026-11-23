@@ -84,7 +84,7 @@ components:
     in_model: true
     notes: "Developer surface; see §7 supply-chain caveats."
     representative_files:
-      - grails-forge/grails-cli/src/main/groovy/org/apache/grails/cli/GrailsCli.groovy
+      - grails-forge/grails-forge-cli/src/main/groovy/org/apache/grails/forge/cli/GrailsCli.groovy
       - grails-forge/grails-forge-cli/src/main/groovy/org/apache/grails/forge/cli/pack/PackArtifacts.groovy
   - name: interactive_consoles_grails_console
     in_model: false

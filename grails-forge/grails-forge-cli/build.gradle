@@ -190,17 +190,18 @@ buildCompletion.configure { PicocliBuildCompletionTask it ->
     it.outputDirectory.set(layout.buildDirectory.dir('build-completion'))
     it.classpath.from(sourceSets.main.runtimeClasspath)
     it.mainClass.set('org.grails.forge.cli.CompletionScript')
-    // the name of the program, as org.apache.grails.cli.GrailsCli of grails-cli starts the command line
+    // the name of the program, as org.apache.grails.forge.cli.GrailsCli starts the command line
     it.commandName.set('grails')
 }
 
 // The CLI is distributed through the shadow jar of grails-cli and consumed as a library by it and by
 // test-core, so the plain jar keeps its name, and the executable jar Spring Boot would build is not made.
+// Its module name is that of the package of its entry point, GrailsCli, which no other jar of Grails has.
 TaskProvider<Jar> jarTask = tasks.named('jar', Jar)
 jarTask.configure { Jar it ->
     it.archiveClassifier.set('')
     it.manifest {
-        attributes 'Main-Class': project.property('startMainClass')
+        attributes 'Main-Class': project.property('startMainClass'), 'Automatic-Module-Name': 'org.apache.grails.forge.cli'
     }
 }
 tasks.named('bootJar').configure {

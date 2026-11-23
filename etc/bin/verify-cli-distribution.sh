@@ -99,8 +99,8 @@ for REQUIRED in grails grails.bat; do
     exit 1
   fi
 done
-if ! grep -q 'org.apache.grails.cli.GrailsCli' grails; then
-  echo "❌ The grails command does not start org.apache.grails.cli.GrailsCli"
+if ! grep -q 'org.apache.grails.forge.cli.GrailsCli' grails; then
+  echo "❌ The grails command does not start org.apache.grails.forge.cli.GrailsCli"
   exit 1
 fi
 echo "✅ Only the grails command is in the distribution"

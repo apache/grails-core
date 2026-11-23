@@ -39,7 +39,8 @@ ext {
     pomTitle = 'Apache Grails® CLI'
     pomDescription = 'The grails command line: creates Grails projects and runs the commands of a Grails project.'
     cliProject = true
-    startMainClass = 'org.apache.grails.cli.GrailsCli'
+    // the command line, which grails-forge-cli has; the Grails wrapper starts org.apache.grails.cli.DelegatingShellApplication of this project, which starts this class
+    startMainClass = 'org.apache.grails.forge.cli.GrailsCli'
     sbomProjectType = org.cyclonedx.model.Component.Type.APPLICATION.name()
 }
 
@@ -53,9 +54,12 @@ configurations {
 evaluationDependsOn(':grails-cli-shadow')
 dependencies {
     implementation platform("org.apache.grails:grails-bom:$projectVersion")
-    implementation 'org.apache.groovy:groovy'
 
-    implementation project(':grails-forge-cli'), {
+    // The one class of this project, org.apache.grails.cli.DelegatingShellApplication, is compiled against the JDK
+    // alone: it starts the command line by the Main-Class of its jar. What a tool resolves for this artifact, and the
+    // jar the Grails wrapper downloads, have the command line all the same.
+    runtimeOnly 'org.apache.groovy:groovy'
+    runtimeOnly project(':grails-forge-cli'), {
         // the Forge CLI on its own binds slf4j-nop; the launcher binds the simple implementation below,
         // and two bindings on one class path make SLF4J warn on every start
         exclude group: 'org.slf4j', module: 'slf4j-nop'
@@ -70,11 +74,11 @@ dependencies {
     shadowCombined 'org.apache.groovy:groovy'
     shadowCombined files(rootProject.project(':grails-cli-shadow').tasks.named('shadowJar'))
 
-    // GrailsCli is compiled against ForgeCli, whose methods name types of picocli and of Spring; at run time both come with grails-forge-cli
-    compileOnly "info.picocli:picocli:$picocliVersion"
-    compileOnly 'org.springframework:spring-context'
-
     // GrailsCliSpec: the entry point on the class path this artifact is published with
+    testImplementation project(':grails-forge-cli'), {
+        exclude group: 'org.slf4j', module: 'slf4j-nop'
+    }
+    testImplementation 'org.apache.groovy:groovy'
     testImplementation 'org.spockframework:spock-core', {
         exclude group: 'org.apache.groovy', module: 'groovy-all'
     }
@@ -83,20 +87,24 @@ dependencies {
 
 apply {
     from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
+    // the Groovy that runs Groovydoc, which the class path of this project, the JDK alone, does not have
+    from rootProject.layout.projectDirectory.file('gradle/doc-config.gradle')
 }
 
 
 // It's surprisingly hard to generate start scripts and *not* have them nested into a bin / lib directory
 // rather than defining the application and then having to add tasks to rework it, just define a distribution and
 // create the scripts in the right location from the start
+// The jar has one package, org.apache.grails.cli, which no other jar of Grails has. The shadow jar inherits the
+// manifest, and so the module name, of this one.
 TaskProvider<Jar> jarTask = tasks.named('jar', Jar)
 jarTask.configure { Jar it ->
     it.manifest {
-        attributes 'Main-Class': findProperty('startMainClass')
+        attributes 'Main-Class': findProperty('startMainClass'), 'Automatic-Module-Name': 'org.apache.grails.cli'
     }
 }
 
-// GrailsCliSpec reads the start class in the manifest of the jar, which is what the Grails wrapper starts.
+// GrailsCliSpec reads the start class in the manifest of the jar, which is what java -jar and the Grails wrapper start.
 // The content of the jar is the input; its path is given apart from the inputs so that it is in no cache key.
 tasks.named('test', Test).configure { Test it ->
     it.inputs.files(jarTask).withPropertyName('cliJar').withPathSensitivity(PathSensitivity.NONE)

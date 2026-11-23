@@ -162,8 +162,8 @@ jakarta.annotation.Nonnull
 jakarta.annotation.Nullable
 jakarta.inject.Named
 jakarta.inject.Qualifier
-org.apache.grails.cli.GrailsCli
 org.apache.grails.forge.cli.Diagnostics
+org.apache.grails.forge.cli.GrailsCli
 org.apache.grails.forge.cli.StartupPreload
 org.apache.grails.forge.cli.artefact.ArtefactName
 org.apache.grails.forge.cli.artefact.ArtefactName$_parse_closure1

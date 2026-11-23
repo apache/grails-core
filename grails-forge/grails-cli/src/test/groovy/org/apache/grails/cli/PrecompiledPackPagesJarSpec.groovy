@@ -85,7 +85,7 @@ class PrecompiledPackPagesJarSpec extends Specification {
         File classes = new File(dir, 'classes.log')
         File out = new File(dir, 'out.log')
         List<String> command = [new File(System.getProperty('java.home'), 'bin/java').path, "-Duser.home=${userHome.path}".toString(),
-                                "-Xlog:class+load:file=${classes.path}".toString(), '-cp', allJar.path, 'org.apache.grails.cli.GrailsCli',
+                                "-Xlog:class+load:file=${classes.path}".toString(), '-cp', allJar.path, 'org.apache.grails.forge.cli.GrailsCli',
                                 'create-app', 'com.example.demo', '--features=asciidoctor']
         ProcessBuilder builder = new ProcessBuilder(command).directory(dir).redirectErrorStream(true).redirectOutput(out)
         ['COLORTERM', 'JAVA_OPTS', 'GRAILS_OPTS', 'JAVA_TOOL_OPTIONS'].each { builder.environment().remove(it) }

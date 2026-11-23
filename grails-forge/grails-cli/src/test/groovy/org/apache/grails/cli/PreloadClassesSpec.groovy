@@ -256,7 +256,7 @@ class PreloadClassesSpec extends Specification {
     private Process java(File directory, List<String> options, String[] arguments, File err = null, Map<String, String> environment = [:]) {
         List<String> command = [new File(System.getProperty('java.home'), 'bin/java').path, '--enable-native-access=ALL-UNNAMED',
                                 "-Duser.home=${new File(dir, 'home').path}".toString()] + options +
-                ['-cp', allJar.path, 'org.apache.grails.cli.GrailsCli'] + arguments.toList()
+                ['-cp', allJar.path, 'org.apache.grails.forge.cli.GrailsCli'] + arguments.toList()
         ProcessBuilder builder = new ProcessBuilder(command).directory(directory)
         builder.redirectError(err == null ? ProcessBuilder.Redirect.DISCARD : ProcessBuilder.Redirect.to(err))
         builder.redirectInput(ProcessBuilder.Redirect.from(new File(File.separatorChar == ('\\' as char) ? 'NUL' : '/dev/null')))

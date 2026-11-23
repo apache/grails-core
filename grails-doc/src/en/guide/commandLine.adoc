@@ -485,20 +485,20 @@ After a mistake in the command line of a command that creates an application, on
 
 ==== Starting the Command Line from a Tool
 
-An IDE, a script or a build that starts the Grails command line itself, without the `grails` script of the distribution, uses the artifact `org.apache.grails:grails-cli` of the version of Grails and its class `org.apache.grails.cli.GrailsCli`:
+An IDE, a script or a build that starts the Grails command line itself, without the `grails` script of the distribution, uses the artifact `org.apache.grails:grails-cli` of the version of Grails with its dependencies, and the class the `Main-Class` attribute of the manifest of its jar names: `org.apache.grails.forge.cli.GrailsCli`. A tool that starts more than one version of Grails reads the name from the manifest rather than keeping it.
 
 As a program, the JVM ends with the exit code of the command:
 
 [source,console]
 ----
-$ java -cp <the class path of org.apache.grails:grails-cli> org.apache.grails.cli.GrailsCli --plain-output --non-interactive help --json
+$ java -cp <the class path of org.apache.grails:grails-cli> org.apache.grails.forge.cli.GrailsCli --plain-output --non-interactive help --json
 ----
 
 In a JVM of your own, the exit code is returned:
 
 [source,groovy]
 ----
-int exitCode = org.apache.grails.cli.GrailsCli.execute('--plain-output', 'create-app', 'com.example.myapp')
+int exitCode = org.apache.grails.forge.cli.GrailsCli.execute('--plain-output', 'create-app', 'com.example.myapp')
 ----
 
 Started this way the command line is called `grails` in its help, and takes the commands of this chapter as they are given here. Without a command it starts the interactive console in a Grails project and shows the help elsewhere, and always the help with `--non-interactive`. `execute` runs one command line at a time, in the current directory of the JVM, and writes to the standard output and the standard error of the JVM.
