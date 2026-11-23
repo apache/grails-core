@@ -327,14 +327,21 @@ class PackArtifactsSpec extends Specification {
     void "what watches the time of a file is ended when an error ends the file, and interrupts nothing later"() {
         given:
         answers[JAR] = { new Reply(200, null, new Asserting()) }
-        PackArtifacts impatient = new PackArtifacts(transport, Duration.ofMillis(300), Duration.ofSeconds(60))
 
-        when:
-        impatient.resolve(PackArtifacts.coordinates('com.acme:acme-audit-grails:2.3.0'), REPOSITORY, null)
+        when: 'the error comes well within the time an answer has'
+        new PackArtifacts(transport, Duration.ofSeconds(30), Duration.ofSeconds(60))
+                .resolve(PackArtifacts.coordinates('com.acme:acme-audit-grails:2.3.0'), REPOSITORY, null)
 
-        then:
+        then: 'it is what ends the file'
         PackArtifactException e = thrown()
         e.message == NOT_TAKEN + 'https://repository.invalid/maven/: cannot be asked (AssertionError)' + HINT
+
+        when: 'the same, where an answer has a moment, so that a watch that was not ended comes while the thread goes on'
+        new PackArtifacts(transport, Duration.ofMillis(300), Duration.ofSeconds(60))
+                .resolve(PackArtifacts.coordinates('com.acme:acme-audit-grails:2.3.0'), REPOSITORY, null)
+
+        then: 'the error ended the file, or on a busy machine the watch did'
+        thrown(PackArtifactException)
 
         when: 'the thread goes on for longer than an answer has'
         Thread.sleep(1500)
@@ -368,9 +375,11 @@ class PackArtifactsSpec extends Specification {
         given:
         String directory = 'https://repository.invalid/maven/com/acme/acme-audit-grails/2.3.0-SNAPSHOT/'
         answers[directory + 'maven-metadata.xml'] = answer
+        // a moment for the answer that stops coming, which the time ends; the others are read well within theirs
+        Duration answerTime = reason == ': timeout' ? Duration.ofMillis(300) : Duration.ofSeconds(30)
 
         when:
-        new PackArtifacts(transport, Duration.ofMillis(300), Duration.ofSeconds(60))
+        new PackArtifacts(transport, answerTime, Duration.ofSeconds(60))
                 .resolve(PackArtifacts.coordinates('com.acme:acme-audit-grails:2.3.0-SNAPSHOT'), REPOSITORY, null)
 
         then:

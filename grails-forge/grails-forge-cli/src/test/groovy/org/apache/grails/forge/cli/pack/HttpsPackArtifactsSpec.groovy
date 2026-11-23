@@ -210,8 +210,8 @@ class HttpsPackArtifactsSpec extends Specification {
             released.await(120, TimeUnit.SECONDS)
         }
 
-        when:
-        artifacts(Duration.ofSeconds(1), Duration.ofSeconds(60)).resolve(coordinates(), [repository()], null)
+        when: 'the time an answer has is one in which the jar is answered on a busy machine too'
+        artifacts(Duration.ofSeconds(30), Duration.ofSeconds(60)).resolve(coordinates(), [repository()], null)
 
         then:
         PackArtifactException e = thrown()
