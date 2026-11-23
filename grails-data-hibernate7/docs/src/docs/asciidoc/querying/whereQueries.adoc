@@ -264,33 +264,25 @@ Operator,Criteria Method,Description
 
 ==== Query Aliases and Sorting
 
-If you define a query for an association an alias is automatically generated for the query. For example the following query:
+To sort by a property of an associated entity, use the association path, such as `owner.lastName`. This also works when the `where` query uses the same association:
 
 [source,groovy]
 ----
-def query = Pet.where {
+def results = Pet.where {
     owner.firstName == "Fred"
-}
+}.list(sort: "owner.lastName")
 ----
 
-Will generate an alias for the `owner` association such as `owner_alias_0`. These generated aliases are fine for most cases, but are not useful if you want to later sort or use a projection on the results. For example the following query will fail:
+The path can go through more than one association, such as `owner.employer.name`, where both `owner` and `employer` are associations.
 
-[source,groovy]
-----
-// fails because a dynamic alias is used
-Pet.where {
-    owner.firstName == "Fred"
-}.list(sort:"owner.lastName")
-----
-
-If you plan to sort the results then an explicit alias should be used and these can be defined by simply declaring a variable in the `where` query:
+You can also define an explicit alias for an association by declaring a variable in the `where` query, and sort by the alias:
 
 [source,groovy]
 ----
-def query = Pet.where {
+def results = Pet.where {
     def o1 = owner <1>
     o1.firstName == "Fred" <2>
-}.list(sort:'o1.lastName') <3>
+}.list(sort: 'o1.lastName') <3>
 ----
 
 <1> Define an alias called `o1`

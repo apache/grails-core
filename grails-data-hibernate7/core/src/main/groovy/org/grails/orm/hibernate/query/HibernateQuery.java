@@ -542,7 +542,7 @@ public class HibernateQuery extends Query {
             JpaSubQuery<Tuple> innerSubquery = countQuery.subquery(Tuple.class);
 
             ConversionService cs = getSession().getMappingContext().getConversionService();
-            var creator = new JpaCriteriaQueryCreator<>(projections, cb, (GrailsHibernatePersistentEntity) entity, detachedCriteria, cs);
+            var creator = new JpaCriteriaQueryCreator<>(projections, cb, (GrailsHibernatePersistentEntity) entity, detachedCriteria, cs, this);
             creator.populateSubquery(innerSubquery);
 
             countQuery.from(innerSubquery);
@@ -877,9 +877,7 @@ public class HibernateQuery extends Query {
                         hibernateQuery.offset(this.offset);
                     }
                     hibernateQuery.setDetachedCriteria(this.detachedCriteria.clone());
-                    // the aliases belong to the query, not to its criteria: a copy without them cannot resolve a
-                    // projection or a restriction that names one
-                    this.aliases.forEach(hibernateQuery::addAlias);
+                    hibernateQuery.aliases.addAll(this.aliases);
 
                     return hibernateQuery;
                 });

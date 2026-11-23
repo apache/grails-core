@@ -315,5 +315,10 @@ Concerning when a review is required for a `protected` branch:
    * Mandated Waiting Period: 3 days if over a weekend, 1 day if during the week.
 * Otherwise - `Review then Commit` with only 1 reviewer required. 
 
+An approval covers the changes that were reviewed. When a later push changes a pull request, the approvals given
+before it are dismissed automatically and the pull request has to be approved again; a rebase, or a merge of the base
+branch, that leaves the changes of the pull request as they were keeps them. A dismissed approval does not block the
+merge button, so check the review state of a pull request before merging it.
+
 ## Join The Project Team
 For people willing to contribute more than an occasional pull request, consider joining our core team.  Inquire in the `questions` channel in slack to learn more.

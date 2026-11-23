@@ -18,6 +18,7 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
+import java.util.List;
 import java.util.Map;
 
 import org.hibernate.boot.spi.InFlightMetadataCollector;
@@ -28,7 +29,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.grails.datastore.mapping.model.types.Association;
-import org.grails.orm.hibernate.cfg.ColumnConfig;
 import org.grails.orm.hibernate.cfg.JoinTable;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
@@ -100,12 +100,12 @@ public class CollectionBinder {
         this.collectionHolder = collectionHolder;
         this.mappings = mappings;
         this.tableForManyCalculator = tableForManyCalculator;
-        GrailsPropertyResolver grailsPropertyResolver = new GrailsPropertyResolver();
-        CollectionForPropertyConfigBinder collectionForPropertyConfigBinder = new CollectionForPropertyConfigBinder();
+        var grailsPropertyResolver = new GrailsPropertyResolver();
+        var collectionForPropertyConfigBinder = new CollectionForPropertyConfigBinder();
         UnidirectionalOneToManyInverseValuesBinder unidirectionalOneToManyInverseValuesBinder =
                 new UnidirectionalOneToManyInverseValuesBinder(metadataBuildingContext);
         var simpleValueColumnBinder = new SimpleValueColumnBinder();
-        CollectionWithJoinTableBinder collectionWithJoinTableBinder = new CollectionWithJoinTableBinder(
+        var collectionWithJoinTableBinder = new CollectionWithJoinTableBinder(
                 namingStrategy,
                 unidirectionalOneToManyInverseValuesBinder,
                 compositeIdentifierToManyToOneBinder,
@@ -168,7 +168,7 @@ public class CollectionBinder {
     }
 
     private void bindOneToManyElement(HibernateToManyEntityProperty property, Collection collection) {
-        OneToMany oneToMany = new OneToMany(metadataBuildingContext, collection.getOwner());
+        var oneToMany = new OneToMany(metadataBuildingContext, collection.getOwner());
         oneToMany.setReferencedEntityName(property.getHibernateAssociatedEntity().getName());
         oneToMany.setIgnoreNotFound(true);
         collection.setElement(oneToMany);
@@ -203,9 +203,9 @@ public class CollectionBinder {
             inherited.setCatalog(owner.getCatalog());
         }
         if ((inherited.getKeys() == null || inherited.getKeys().isEmpty()) && owner.getColumn() != null) {
-            inherited.setKeys(java.util.List.of(owner.getColumn()));
+            inherited.setKeys(List.of(owner.getColumn()));
         }
-        java.util.List<ColumnConfig> ownerKeys = owner.getKeys();
+        var ownerKeys = owner.getKeys();
         if (inherited.getColumn() == null && ownerKeys != null && ownerKeys.size() == 1) {
             inherited.setColumn(ownerKeys.get(0));
         }
