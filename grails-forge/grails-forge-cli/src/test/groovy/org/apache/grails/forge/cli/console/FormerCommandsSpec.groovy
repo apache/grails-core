@@ -216,7 +216,7 @@ class FormerCommandsSpec extends CommandSpec {
     void "a command the build of the project lists is that command, whatever the table says about its name"() {
         given:
         inProject('web')
-        File catalog = new File(top, 'web/build/grails/command-catalog.json')
+        File catalog = new File(top, 'web/.grails/cache/command-catalog.json')
         catalog.parentFile.mkdirs()
         catalog.text = '{"format":1,"complete":true,"diagnostics":[],"commands":[{"name":"generate-all","aliases":[],"description":"Generates all",' +
                 '"origin":"org.apache.grails:grails-scaffolding-cli:9.0.0","target":"application","registration":"descriptor"}]}'

@@ -89,7 +89,7 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
 
     static final Map HELLO = [name: 'hello-world', aliases: [], description: 'Says hello', origin: 'org.example:hello-cli:1.2.3', target: 'application', registration: 'descriptor']
     static final String MISSING = 'The commands of the application and its plugins are not listed yet. To list them: grails-forge-cli gradle grailsCommandCatalog'
-    static final String REFUSED = 'The commands of the application and its plugins are not listed: build/grails/command-catalog.json '
+    static final String REFUSED = 'The commands of the application and its plugins are not listed: .grails/cache/command-catalog.json '
 
     // One Gradle daemon, of this specification alone, runs the builds of its features: they have nothing to
     // compile, and without it every one of them would wait for a JVM of Gradle to start. A feature that looks
@@ -156,8 +156,9 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
         out.toString().contains('Everything after the name of the command is given to the command as it is, the options too.')
 
         and: 'nothing was run for any of it, and nothing written'
-        dir.list().sort() == ['build', 'grails-app']
-        new File(dir, 'build/grails').list() == ['command-catalog.json']
+        dir.list().sort() == ['.grails', 'grails-app']
+        new File(dir, '.grails').list() == ['cache']
+        new File(dir, '.grails/cache').list() == ['command-catalog.json']
 
         where:
         name           | usage                                                          | from
@@ -293,7 +294,7 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
         for (File each = newer.parentFile; each != dir && written.contains('/'); each = each.parentFile) {
             assert each.setLastModified(System.currentTimeMillis() - 240_000)
         }
-        String stale = "The commands of the application and its plugins may have changed: ${changed} is newer than build/grails/command-catalog.json. " +
+        String stale = "The commands of the application and its plugins may have changed: ${changed} is newer than .grails/cache/command-catalog.json. " +
                 'To list them again: grails-forge-cli gradle grailsCommandCatalog --rerun'
 
         when:
@@ -462,7 +463,7 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
     void "a command that is not as the build writes one is left out, and the others are used: #what"() {
         given: 'the command between two that are as they should be'
         write(JsonOutput.toJson([format: 1, complete: true, diagnostics: [], commands: [HELLO, bad, FINE]]))
-        String leftOut = 'Command 2 of build/grails/command-catalog.json is not used: ' + reason
+        String leftOut = 'Command 2 of .grails/cache/command-catalog.json is not used: ' + reason
 
         when:
         int exit = ForgeCli.execute(beanContext, 'help', '--json')
@@ -544,11 +545,11 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
         exit == 0
         described.complete == false
         described.diagnostics == [
-                'Command 1 of build/grails/command-catalog.json is not used: ' + NAME,
-                'Command 2 of build/grails/command-catalog.json is not used: ' + NAME,
-                'Command 3 of build/grails/command-catalog.json is not used: ' + NAME,
-                '2 more commands of build/grails/command-catalog.json are not used, for reasons like these',
-                'The commands of build/grails/command-catalog.json after the first 512 are not used: 88 of them']
+                'Command 1 of .grails/cache/command-catalog.json is not used: ' + NAME,
+                'Command 2 of .grails/cache/command-catalog.json is not used: ' + NAME,
+                'Command 3 of .grails/cache/command-catalog.json is not used: ' + NAME,
+                '2 more commands of .grails/cache/command-catalog.json are not used, for reasons like these',
+                'The commands of .grails/cache/command-catalog.json after the first 512 are not used: 88 of them']
         ((List<Map>) described.commands).findAll { it.origin != 'built-in' }*.name == (1..512).collect { 'fine-' + it }
     }
 
@@ -610,7 +611,7 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
     @Unroll
     void "a file of the build that is #what is not read"() {
         given: 'a file with a command, somewhere else'
-        File elsewhere = new File(dir, 'elsewhere/grails')
+        File elsewhere = new File(dir, 'elsewhere/cache')
         elsewhere.mkdirs()
         new File(elsewhere, 'command-catalog.json').text = doc([HELLO])
         place.call(dir.toPath(), elsewhere.toPath())
@@ -627,11 +628,11 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
 
         where:
         what                                  | reason                               | place
-        'a link'                              | 'is a link'                          | { Path project, Path other -> Files.createDirectories(project.resolve('build/grails')); Files.createSymbolicLink(project.resolve('build/grails/command-catalog.json'), other.resolve('command-catalog.json')) }
-        'in a directory that is a link'       | 'is behind build/grails, which is a link' | { Path project, Path other -> Files.createDirectories(project.resolve('build')); Files.createSymbolicLink(project.resolve('build/grails'), other) }
-        'in a build directory that is a link' | 'is behind build, which is a link'   | { Path project, Path other -> Files.createSymbolicLink(project.resolve('build'), other.getParent()) }
-        'a pipe'                              | 'is not a file'                      | { Path project, Path other -> Files.createDirectories(project.resolve('build/grails')); assert new ProcessBuilder('mkfifo', project.resolve('build/grails/command-catalog.json').toString()).start().waitFor() == 0 }
-        'a directory'                         | 'is not a file'                      | { Path project, Path other -> Files.createDirectories(project.resolve('build/grails/command-catalog.json')) }
+        'a link'                              | 'is a link'                          | { Path project, Path other -> Files.createDirectories(project.resolve('.grails/cache')); Files.createSymbolicLink(project.resolve('.grails/cache/command-catalog.json'), other.resolve('command-catalog.json')) }
+        'in a directory that is a link'       | 'is behind .grails/cache, which is a link' | { Path project, Path other -> Files.createDirectories(project.resolve('.grails')); Files.createSymbolicLink(project.resolve('.grails/cache'), other) }
+        'in a .grails that is a link'         | 'is behind .grails, which is a link' | { Path project, Path other -> Files.createSymbolicLink(project.resolve('.grails'), other.getParent()) }
+        'a pipe'                              | 'is not a file'                      | { Path project, Path other -> Files.createDirectories(project.resolve('.grails/cache')); assert new ProcessBuilder('mkfifo', project.resolve('.grails/cache/command-catalog.json').toString()).start().waitFor() == 0 }
+        'a directory'                         | 'is not a file'                      | { Path project, Path other -> Files.createDirectories(project.resolve('.grails/cache/command-catalog.json')) }
     }
 
     void "a description is shown as the text it is, also where it has what the command line or a terminal would read"() {
@@ -1165,7 +1166,8 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
         err.toString().readLines() == ['The command cannot be given these arguments: ' + message,
                                        'Usage: grails-forge-cli hello-world [ARGS...]',
                                        "Run 'grails-forge-cli help hello-world' for the options"]
-        dir.list().sort() == ['build', 'grails-app']
+        dir.list().sort() == ['.grails', 'grails-app']
+        new File(dir, '.grails').list() == ['cache']
 
         where:
         what                    | arguments                         | message
@@ -1277,7 +1279,7 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
     }
 
     private File catalogFile() {
-        return new File(dir, 'build/grails/command-catalog.json')
+        return new File(dir, '.grails/cache/command-catalog.json')
     }
 
     private void catalog(List commands, Map others = [:]) {

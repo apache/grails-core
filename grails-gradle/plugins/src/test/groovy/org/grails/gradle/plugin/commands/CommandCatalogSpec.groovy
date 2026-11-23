@@ -32,7 +32,7 @@ import org.gradle.testkit.runner.TaskOutcome
 class CommandCatalogSpec extends CommandProjectSpecification {
 
     private static final String LEGACY_KEY = 'grails.dev.commands.ApplicationCommand'
-    private static final String CATALOG = 'build/grails/command-catalog.json'
+    private static final String CATALOG = '.grails/cache/command-catalog.json'
 
     private static final String EVERY_SOURCE = '''
         // what the compiler does with a registration written by hand: it copies it into the classes
@@ -130,6 +130,7 @@ class CommandCatalogSpec extends CommandProjectSpecification {
 
         when: 'the catalog is written from nothing, in a build without the configuration cache'
         new File(projectDir, 'build').deleteDir()
+        new File(projectDir, '.grails').deleteDir()
         BuildResult clean = executeTask('grailsCommandCatalog', ['--no-configuration-cache'])
 
         then:

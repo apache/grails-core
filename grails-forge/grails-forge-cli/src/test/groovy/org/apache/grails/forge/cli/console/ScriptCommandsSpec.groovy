@@ -129,7 +129,8 @@ class ScriptCommandsSpec extends CommandSpec implements CommandFixture {
         candidates*.toString() == ['ly-report']
 
         and: 'nothing was run for any of it, and nothing written'
-        dir.list().sort() == ['build', 'grails-app', 'src']
+        dir.list().sort() == ['.grails', 'grails-app', 'src']
+        new File(dir, '.grails').list() == ['cache']
         notEvaluated()
     }
 
@@ -440,7 +441,8 @@ class ScriptCommandsSpec extends CommandSpec implements CommandFixture {
         err.toString().readLines() == ['The command cannot be given these arguments: ' + message,
                                        'Usage: grails-forge-cli report [ARGS...]',
                                        "Run 'grails-forge-cli help report' for the options"]
-        dir.list().sort() == ['build', 'grails-app', 'src']
+        dir.list().sort() == ['.grails', 'grails-app', 'src']
+        new File(dir, '.grails').list() == ['cache']
         notEvaluated()
 
         where:
@@ -647,7 +649,7 @@ class ScriptCommandsSpec extends CommandSpec implements CommandFixture {
     }
 
     private void catalog(List commands) {
-        File file = new File(dir, 'build/grails/command-catalog.json')
+        File file = new File(dir, '.grails/cache/command-catalog.json')
         file.parentFile.mkdirs()
         file.bytes = ApplicationCommandsSpec.doc(commands).getBytes(StandardCharsets.UTF_8)
     }

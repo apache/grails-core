@@ -35,8 +35,13 @@ import groovy.transform.CompileStatic
 
 /**
  * The file in which the build of a project lists the commands of the application and of its plugins:
- * {@code build/grails/command-catalog.json}, written by the Gradle task {@code grailsCommandCatalog}.
+ * {@code .grails/cache/command-catalog.json}, written by the Gradle task {@code grailsCommandCatalog}.
  * The CLI reads it and never writes it, and runs nothing to have it.
+ *
+ * <p>The file is in the directory of the project and not in its build directory, which the build of
+ * the project can move: where that is cannot be known without running the build, so the task writes
+ * the file in this one place in every project, and the CLI reads it there and nowhere else. A file
+ * that an earlier build left in a build directory is not read.</p>
  *
  * <p>The file is in a directory every build writes to, so nothing in it is taken as it is: it is a
  * file, not a link and not behind one, of a bounded size, and it is read strictly as the document the
@@ -49,8 +54,8 @@ import groovy.transform.CompileStatic
 @CompileStatic
 final class ApplicationCommandFile {
 
-    /** Where the file is, in the directory of the project. */
-    public static final String LOCATION = 'build/grails/command-catalog.json'
+    /** Where the file is, in the directory of the project, whatever the build directory of the project is. */
+    public static final String LOCATION = '.grails/cache/command-catalog.json'
 
     /** The Gradle task that writes the file. */
     public static final String TASK = 'grailsCommandCatalog'
@@ -118,7 +123,8 @@ final class ApplicationCommandFile {
     private static final List<String> SOURCES = ['build.gradle', 'build.gradle.kts', 'settings.gradle', 'settings.gradle.kts', 'gradle.properties']
     // The directories the commands of the application are in, as sources and as what the compiler says
     // of them: every directory below them and every file of these endings is looked at, since a
-    // command is written into the directory of its package.
+    // command is written into the directory of its package. What the compiler says is looked for where
+    // it is unless the build moves its build directory, which is not known here; the sources are where they are.
     private static final Map<String, String> COMMAND_DIRECTORIES = ['grails-app/commands': '.groovy', 'build/classes/groovy/main/META-INF/grails-commands': '.json']
 
     /** What there is of the file. */
@@ -206,7 +212,7 @@ final class ApplicationCommandFile {
                 return refused('is not a file')
             }
             if (file.toRealPath() != project.toRealPath().resolve(LOCATION)) {
-                return refused('is not in the build directory of the project')
+                return refused('is not in the directory of the project')
             }
             if (attributes.size() > MAX_BYTES) {
                 return refused("has more than the ${MAX_BYTES} bytes it can have")

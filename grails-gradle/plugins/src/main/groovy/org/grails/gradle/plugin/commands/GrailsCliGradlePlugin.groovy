@@ -195,7 +195,10 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
                 task.origins.set(task.originsByPath.map(new GrailsCommandCatalogTask.Origins()))
                 // the names of the Test tasks there are when the task is about to run: none is created for them
                 task.testPhases.set(project.provider({ TestPhaseNames.phases(project.tasks.withType(Test).names) } as Callable<Map<String, String>>))
-                task.catalogFile.convention(project.layout.buildDirectory.file(GrailsCommandCatalogTask.CATALOG_LOCATION))
+                // in the directory of the project and not in its build directory, which the build can move: the
+                // command line reads the catalog there without running the build to ask where that is
+                task.catalogFile.convention(project.layout.projectDirectory.file(GrailsCommandCatalogTask.CATALOG_LOCATION))
+                task.ignoreFile.convention(project.layout.projectDirectory.file(GrailsCommandCatalogTask.IGNORE_LOCATION))
             }
         }
     }

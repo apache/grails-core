@@ -537,7 +537,7 @@ Write the name in lower case letters and digits, in words joined by single hyphe
 
 `target` is `application`, or `standalone` for a command that runs without the application; a descriptor without it is of a command of the application.
 
-The `grailsCommandCatalog` task of an application or plugin project writes the list of the commands the project can run with `runCommand` to `build/grails/command-catalog.json`:
+The `grailsCommandCatalog` task of an application or plugin project writes the list of the commands the project can run with `runCommand` to `.grails/cache/command-catalog.json` in the directory of the project. That is where the `grails` command reads it, and it is the same place whatever the build directory of the project is, so the task writes there also in a build that moves its build directory. Next to the file the task writes a `.gitignore` that keeps the directory out of a commit:
 
 [source,shell]
 ----

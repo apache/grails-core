@@ -230,14 +230,14 @@ class TestAppPhasesSpec extends CommandSpec implements CommandFixture {
 
         then:
         help.contains('--functional Run the test phase functional: the task functionalTest.')
-        help.contains('The test phases may have changed: build.gradle is newer than build/grails/command-catalog.json. To list them again: grails-forge-cli gradle grailsCommandCatalog')
+        help.contains('The test phases may have changed: build.gradle is newer than .grails/cache/command-catalog.json. To list them again: grails-forge-cli gradle grailsCommandCatalog')
     }
 
     @Unroll
     void "a list that #says nothing of the phases is as none: a switch is taken for a phase, and the help says how the phases are listed"() {
         given:
         if (content != null) {
-            File file = new File(dir, 'build/grails/command-catalog.json')
+            File file = new File(dir, '.grails/cache/command-catalog.json')
             file.parentFile.mkdirs()
             file.text = content
         }
@@ -331,7 +331,7 @@ class TestAppPhasesSpec extends CommandSpec implements CommandFixture {
     }
 
     private void catalog(List phases) {
-        File file = new File(dir, 'build/grails/command-catalog.json')
+        File file = new File(dir, '.grails/cache/command-catalog.json')
         file.parentFile.mkdirs()
         file.text = JsonOutput.toJson([format: 1, complete: true, diagnostics: [], commands: [], testPhases: phases])
     }

@@ -662,8 +662,8 @@ class CommandCatalogSpec extends CommandSpec implements CommandFixture {
         List<String> features = (new File(project, '.grails/forge.lock.yml').getText('UTF-8') =~ /(?m)^- name: (.+)$/).collect { List<String> match -> match[1] }
         new File(project, 'grails-forge-cli.yml').setText("applicationType: web\ndefaultPackage: other.pkg\nfeatures: [${features.join(', ')}]\n", 'UTF-8')
         // the build of the project has listed the commands of the application, of which there are none
-        new File(project, 'build/grails').mkdirs()
-        new File(project, 'build/grails/command-catalog.json').text = '{"format":1,"complete":true,"diagnostics":[],"commands":[]}'
+        new File(project, '.grails/cache').mkdirs()
+        new File(project, '.grails/cache/command-catalog.json').text = '{"format":1,"complete":true,"diagnostics":[],"commands":[]}'
         System.setProperty('user.dir', project.absolutePath)
         out.reset()
 

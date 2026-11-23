@@ -30,7 +30,7 @@ import org.gradle.testkit.runner.TaskOutcome
  */
 class TestPhaseCatalogSpec extends CommandProjectSpecification {
 
-    private static final String CATALOG = 'build/grails/command-catalog.json'
+    private static final String CATALOG = '.grails/cache/command-catalog.json'
 
     def "the catalog lists the phases of the project in their order, each with its task, and no task whose name cannot be a switch"() {
         given:

@@ -164,7 +164,7 @@ class StandaloneCommandsSpec extends CommandSpec implements CommandFixture {
     }
 
     private void catalog(String content) {
-        File file = new File(dir, 'build/grails/command-catalog.json')
+        File file = new File(dir, '.grails/cache/command-catalog.json')
         file.parentFile.mkdirs()
         file.bytes = content.getBytes(StandardCharsets.UTF_8)
     }

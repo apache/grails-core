@@ -53,6 +53,13 @@ class CommandCatalogBuilder {
     /** The format of the document, which is that of {@code help --json} of the command line. */
     public static final int FORMAT = 1
 
+    /**
+     * Where the catalog of a project is, in the directory of the project: where the task of the build
+     * writes it and the command line reads it. It is not in the build directory, which a build can
+     * move, so that the command line finds it without running the build to ask where that is.
+     */
+    public static final String LOCATION = '.grails/cache/command-catalog.json'
+
     /** The origin of a command of the project itself. */
     public static final String ORIGIN_APPLICATION = 'application'
 

@@ -50,11 +50,16 @@ import org.apache.grails.gradle.model.cli.CommandCatalogBuilder
  * the companion {@code -cli} artifacts of its plugins, and the Grails 7 plugins on its class path.
  *
  * <p>The catalog is one JSON document, {@link CommandCatalogBuilder#FORMAT format 1} of the document
- * {@code help --json} of the command line writes, in {@link #CATALOG_LOCATION} of the build
- * directory, which also lists the test phases of the project, its {@code Test} tasks, by the names
+ * {@code help --json} of the command line writes, in {@link #CATALOG_LOCATION} of the directory of the
+ * project, which also lists the test phases of the project, its {@code Test} tasks, by the names
  * {@code grails test-app} selects them with. The task reads registrations and descriptors and loads no class, so it starts no
  * application and runs no code of a dependency. The document has no time and no path of this
  * machine in it: the same commands give the same bytes.</p>
+ *
+ * <p>The catalog is not in the build directory: the command line reads it at that one place in every
+ * project, also where the build has moved its build directory, and never runs the build to find out
+ * where that is. Beside it the task writes {@link #IGNORE_LOCATION}, which keeps the directory out of a
+ * commit: what is in it is of one machine.</p>
  *
  * @since 9.0
  */
@@ -65,8 +70,14 @@ abstract class GrailsCommandCatalogTask extends DefaultTask {
     /** The name of the task. */
     public static final String TASK_NAME = 'grailsCommandCatalog'
 
-    /** Where the catalog is written, below the build directory of the project. */
-    public static final String CATALOG_LOCATION = 'grails/command-catalog.json'
+    /** Where the catalog is written, in the directory of the project, whatever its build directory is. */
+    public static final String CATALOG_LOCATION = CommandCatalogBuilder.LOCATION
+
+    /** The file that keeps the directory of the catalog out of a commit, in the directory of the project. */
+    public static final String IGNORE_LOCATION = '.grails/cache/.gitignore'
+
+    /** What {@link #IGNORE_LOCATION} says: that nothing in its directory is committed, itself included. */
+    public static final String IGNORE_CONTENT = '*\n'
 
     /** What is read from the output of the project: registrations and descriptors, not classes. */
     public static final List<String> REGISTRATION_PATTERNS = [
@@ -113,8 +124,13 @@ abstract class GrailsCommandCatalogTask extends DefaultTask {
     @Input
     abstract MapProperty<String, String> getTestPhases()
 
+    /** Where the catalog is written: {@link #CATALOG_LOCATION}, where the command line reads it. */
     @OutputFile
     abstract RegularFileProperty getCatalogFile()
+
+    /** The file that keeps the directory of the catalog out of a commit: {@link #IGNORE_LOCATION}. */
+    @OutputFile
+    abstract RegularFileProperty getIgnoreFile()
 
     @TaskAction
     void write() {
@@ -139,6 +155,9 @@ abstract class GrailsCommandCatalogTask extends DefaultTask {
         File target = catalogFile.get().asFile
         target.parentFile.mkdirs()
         target.setBytes(catalog.toJson().getBytes(StandardCharsets.US_ASCII))
+        File ignore = ignoreFile.get().asFile
+        ignore.parentFile.mkdirs()
+        ignore.setBytes(IGNORE_CONTENT.getBytes(StandardCharsets.US_ASCII))
         Map<String, Object> document = catalog.build()
         for (Object diagnostic : (List) document.diagnostics) {
             logger.warn('{}', diagnostic)
