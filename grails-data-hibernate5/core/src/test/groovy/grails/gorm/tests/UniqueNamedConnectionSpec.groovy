@@ -23,6 +23,8 @@ import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.orm.hibernate.HibernateDatastore
 import org.hibernate.dialect.H2Dialect
+import org.springframework.validation.BeanPropertyBindingResult
+import org.springframework.validation.Errors
 import spock.lang.AutoCleanup
 import spock.lang.Issue
 import spock.lang.Shared
@@ -43,7 +45,7 @@ class UniqueNamedConnectionSpec extends Specification {
             'dataSource.dialect'  : H2Dialect.name,
             'dataSources.second'  : [url: 'jdbc:h2:mem:uncSecond;LOCK_TIMEOUT=10000'],
             'dataSources.third'   : [url: 'jdbc:h2:mem:uncThird;LOCK_TIMEOUT=10000']
-    ]), UncBook, UncAudit)
+    ]), UncBook, UncAudit, UncPlain)
 
     void setup() {
         UncBook.withNewTransaction { new UncBook(name: 'onDefault').save(validate: false, flush: true) }
@@ -57,6 +59,7 @@ class UniqueNamedConnectionSpec extends Specification {
         UncAudit.withNewTransaction { UncAudit.executeUpdate('delete from UncAudit') }
         UncAudit.third.withNewTransaction { UncAudit.third.executeUpdate('delete from UncAudit') }
         UncBook.innerSaved = null
+        UncBook.cascadeErrors = null
     }
 
     private <T> T withSessions(Closure<T> work) {
@@ -136,6 +139,19 @@ class UniqueNamedConnectionSpec extends Specification {
         book.hasErrors()
     }
 
+    void 'a validator that the validation of a book on the third connection calls for an entity that is not mapped to it checks its own connection'() {
+        given: 'an entity of the default connection only, as the child of a cascaded validation would be'
+        UncBook book = new UncBook(name: 'newBook', cascadeCheck: true)
+
+        when:
+        UncBook saved = withSessions { book.third.save() }
+
+        then: 'the check of the other entity does not ask for the third connection, which it is not mapped to, and the save goes on'
+        saved != null
+        UncBook.cascadeErrors != null
+        !UncBook.cascadeErrors.hasErrors()
+    }
+
     void 'a save through the default connection still checks the default connection'() {
         when:
         UncBook onDefault = new UncBook(name: 'onDefault')
@@ -157,14 +173,25 @@ class UncBook {
     static UncAudit innerSaved
 
     boolean innerSave
+    boolean cascadeCheck
 
-    static transients = ['innerSave']
+    // set by the validation below: the errors of the check of an entity that is mapped to the default connection only
+    static Errors cascadeErrors
+
+    static transients = ['innerSave', 'cascadeCheck']
 
     static constraints = {
         name(unique: true, validator: { String value, UncBook book ->
             if (book.innerSave) {
                 UncBook.innerSaved = new UncAudit(code: 'free')
                 UncBook.innerSaved.save()
+            }
+            if (book.cascadeCheck) {
+                // the validator of the entity is called directly, as the validation of an association cascades to it
+                UncPlain plain = new UncPlain(code: 'plain')
+                Errors errors = new BeanPropertyBindingResult(plain, 'plain')
+                UncPlain.gormPersistentEntity.mappingContext.getEntityValidator(UncPlain.gormPersistentEntity).validate(plain, errors)
+                UncBook.cascadeErrors = errors
             }
             true
         })
@@ -188,5 +215,15 @@ class UncAudit {
     static mapping = {
         version false
         datasource(ConnectionSource.ALL)
+    }
+}
+
+@Entity
+class UncPlain {
+
+    String code
+
+    static constraints = {
+        code(unique: true)
     }
 }

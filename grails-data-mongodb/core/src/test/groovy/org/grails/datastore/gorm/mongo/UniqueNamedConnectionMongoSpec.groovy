@@ -22,6 +22,7 @@ import grails.gorm.annotation.Entity
 import grails.mongodb.MongoEntity
 import org.apache.grails.testing.mongo.AutoStartedMongoSpec
 import org.bson.types.ObjectId
+import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.mongo.MongoDatastore
 import org.grails.datastore.mapping.mongo.config.MongoSettings
 import spock.lang.Issue
@@ -101,6 +102,6 @@ class UniqueNamedItem implements MongoEntity<UniqueNamedItem> {
     }
 
     static mapping = {
-        connections 'default', 'archive'
+        connections ConnectionSource.DEFAULT, 'archive'
     }
 }
