@@ -373,8 +373,7 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
      * Runs the callback against the given session. {@link #getSession()} is not called for a session the caller
      * has just bound itself: it would register the holder with the surrounding synchronization, and a transaction
      * manager that begins inside the callback would then open a second session instead of using this one.
-     */
-    /**
+     *
      * @param newSessionScope true when the session was opened by {@code withNewSession}: the closure may begin and
      *        commit its own write transaction on it, so the session is not marked read-only, and it is flushed
      *        after the callback only while a transaction is still active on it
