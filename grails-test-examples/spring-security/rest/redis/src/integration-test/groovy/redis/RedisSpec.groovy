@@ -20,6 +20,7 @@
 package redis
 
 import rest.AbstractRestSpec
+import spock.util.concurrent.PollingConditions
 
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.security.core.userdetails.User
@@ -49,39 +50,50 @@ class RedisSpec extends AbstractRestSpec {
     }
 
     void "Objects stored expire after the expiration time"() {
-        given:
+        given: 'a token stored for one second'
         tokenStorageService.expiration = 1
         UserDetails principal = new User('username', 'password', [])
         String token = 'abcd' + System.currentTimeMillis()
         tokenStorageService.storeToken(token, principal)
-        sleep(2500)
 
-        when:
-        tokenStorageService.loadUserByToken(token)
-
-        then:
-        thrown(TokenNotFoundException)
+        expect: 'it is not found once that second has passed'
+        // A read that still finds the token keeps it for another second, so the reads are three seconds apart; a busy
+        // machine only makes them further apart. The minute bounds a token that never expires.
+        new PollingConditions(timeout: 60, initialDelay: 3, delay: 3).eventually {
+            !isFound(token)
+        }
     }
 
     void "Objects are refreshed when accessed"() {
-        given:
-        tokenStorageService.expiration = 3
+        given: 'a token stored for 30 seconds'
+        tokenStorageService.expiration = 30
         UserDetails principal = new User('username', 'password', [])
         String token = 'efgh' + System.currentTimeMillis()
         tokenStorageService.storeToken(token, principal)
-        sleep(2000)
 
-        when: 'it is accessed within the expiration time'
+        when: 'it is read at once, while the expiration is an hour'
+        tokenStorageService.expiration = 3600
         UserDetails details = tokenStorageService.loadUserByToken(token)
 
-        then: 'it is found, and its expiration time is three seconds again'
+        then: 'it is found'
         details
 
-        when: 'it is accessed two seconds later, four seconds after it was stored'
-        sleep(2000)
+        when: 'it is read again 40 seconds later, when the 30 seconds it was stored for are over'
+        // The token was stored before the read above, so without that read it would be gone now. A busy machine only
+        // makes this read later, well within the hour.
+        sleep(40_000)
         tokenStorageService.loadUserByToken(token)
 
-        then: 'it is still found'
+        then: 'it is still found: the first read keeps it for an hour from then'
         notThrown(TokenNotFoundException)
+    }
+
+    private boolean isFound(String token) {
+        try {
+            tokenStorageService.loadUserByToken(token)
+            return true
+        } catch (TokenNotFoundException ignored) {
+            return false
+        }
     }
 }
