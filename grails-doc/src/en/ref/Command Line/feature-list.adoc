@@ -43,27 +43,47 @@ grails feature list
 
 [source,console]
 ----
+$ grails create-app com.example.shop --features postgres,grails-quartz
+$ cd shop
 $ grails feature list
-| The application shop (web) has 33 features, as its record in .grails says:
+| The application shop (web) has 31 features, as its record in .grails says:
     asked for                      grails-quartz, postgres
-    with them                      asset-pipeline-grails, ..., testcontainers
-| 61 features can be added to it with: grails feature add FEATURE
-  Cache
-    cache                          The Grails Cache plugin provides powerful and easy to use caching ...
+    with them                      app-name, asset-pipeline-grails, base, geb-with-testcontainers,
+                                   ...
+                                   spring-resources, testcontainers, yaml
+| 35 features can be added to it with: grails feature add FEATURE
+  AI
+    grails-spring-ai               Integrates Spring AI: a chat client over the provider of your
+                                   choice, chat responses streamed from controller actions, and
+                                   scripted models for tests.
+    spring-ai-anthropic            Uses Anthropic Claude models through Spring AI, which reads the
+                                   API key from the ANTHROPIC_API_KEY environment variable.
+                                   and with it grails-spring-ai
+  ...
   Database
-    mysql                          Adds the MySQL driver and default config
-                                   with --replace only: it takes the place of postgres, which was asked
-                                   for by name (group database-driver)
+    ...
+    mysql                          Add MySQL driver and default configuration
+                                   with --replace only: it takes the place of postgres, which was
+                                   asked for by name (group database-driver)
+  ...
+  View Rendering
+    grails-layout                  Adds support for legacy SiteMesh 2 based GSP layouts
+                                   (grails-layout) instead of SiteMesh 3
+                                   in the place of sitemesh3, the default of the group gsp-layout
   ...
 | 4 features of Grails for this type of application cannot be added to it:
-    gorm-hibernate7                The feature gorm-hibernate7 ... Adding a feature does not change the
-                                   options the application was created with
-    ...
+    gorm-hibernate7                ... Adding a feature does not change the options the application
+                                   was created with
+    grails-micronaut               grails-micronaut requires JDK 25 or later (selected: JDK 21).
+    micronaut-http-client          micronaut-http-client requires JDK 25 or later (selected: JDK
+                                   21).
+    mongodb-testing-support        mongodb-testing-support requires mongo-sync or gorm-mongodb to be
+                                   selected.
 ----
 
 * The features the application has are those of its record: the ones that were asked for by name, with `--features` when it was created or with an earlier `feature add`, and the ones that came with them, by default or because a feature requires them.
 * A feature that can be added is listed by category, with what adding it comes to beside the feature: the default it takes the place of, as `postgres` that of `h2`; a feature that was asked for by name that it takes the place of, which `feature add` does only with `--replace`; and the features that come with it.
-* A feature that cannot be added is listed with the reason: it would change an option the application was created with (`--servlet`, `--data`, `--reloading`, `--jdk`), it was left out with `--exclude-features`, it cannot be used with a feature the application has, or a feature the application keeps requires the feature it would take the place of.
+* A feature that cannot be added is listed with the reason: it would change an option the application was created with (`--servlet`, `--data`, `--reloading`, `--jdk`), it was left out with `--exclude-features`, it cannot be used with a feature the application has, it needs what the application does not have, such as a later JDK or another feature, or a feature the application keeps requires the feature it would take the place of.
 * When the record does not let `feature add` add anything, as the record that link:project-migrate.html[project migrate] writes, the record of an application that another version of Grails generated, or one that has the feature of a feature pack that is not part of Grails, the list says why after the features the application has, and lists no others.
 
 The list is worked out from the record alone, as `feature add` selects features: the files of the application are not read. A change of yours that is in the way of a feature, which `feature add` reports as a conflict, is therefore not seen here; `feature add FEATURE --dry-run` shows it.

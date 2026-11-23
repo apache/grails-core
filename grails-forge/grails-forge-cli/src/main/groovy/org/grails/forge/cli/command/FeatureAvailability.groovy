@@ -131,7 +131,8 @@ final class FeatureAvailability {
             context = generator.createGeneratorContext(manifest.applicationType, NameUtils.parse(manifest.defaultPackage + '.' + manifest.name), options(manifest.options, operatingSystem),
                     operatingSystem, selected, ConsoleOutput.NOOP, [], manifest.excludedFeatures*.name)
         } catch (FeatureSelectionException e) {
-            String said = FeatureSelectionException.shown(e.getMessage())
+            // the message names what was given, and is made one line that is no markup where it is shown
+            String said = e.getMessage() ?: e.getClass().getSimpleName()
             return new Verdict(feature, false, [e.getOption() == null ? said :
                     "${said}. Adding a feature does not change the options the application was created with".toString()])
         } catch (RuntimeException e) {
@@ -151,8 +152,13 @@ final class FeatureAvailability {
         }
         for (String each : lost.findAll { String other -> !making.contains(other) }) {
             String group = groupOf(available, each)
-            notes.add(group.isEmpty() ? "it takes out ${each}, which the application has by default".toString() :
-                    "in the place of ${each}, the default of the group ${group}".toString())
+            if (!group.isEmpty()) {
+                notes.add("in the place of ${each}, the default of the group ${group}".toString())
+            } else if (!making.isEmpty()) {
+                notes.add("it takes out ${each}, which the application does not have with it in the place of ${making.join(', ')}".toString())
+            } else {
+                notes.add("it takes out ${each}, which the application has without having asked for it and does not have with it".toString())
+            }
         }
         List<String> with = would.findAll { String each -> !has.contains(each) && each != name && available.findFeature(each).isPresent() }.sort()
         if (!with.isEmpty()) {
