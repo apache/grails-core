@@ -80,9 +80,11 @@ class CommandSpec extends Specification {
     private static final int POLL_INITIAL_DELAY_MILLIS = 100
     private static final int POLL_DELAY_MILLIS = 100
 
-    // Once the process has exited the output can no longer grow: the reader is waited for until it has read
-    // the rest, which it has at once, unless a process the build left behind still has the output open. A
-    // fixed moment instead races the reader: on a busy machine a value that was written could be said not to be.
+    // Once the process has exited the output can no longer grow: the JDK keeps what is left in the pipe and closes
+    // it, and the reader is waited for until it has read that, which it has at once. A fixed moment instead races
+    // the reader: on a busy machine a value that was written could be said not to be. The minute is for a reader
+    // that was in a read as the process ended, which goes on while a process the build left behind has the output
+    // open; what such a process writes later is read only then, so no spec waits for it.
     private static final int OUTPUT_READ_SECONDS = 60
     // How long a Gradle client is given to end after the last line of its build. Only what a failure says
     // depends on it: nothing a spec waits for is written after that line.

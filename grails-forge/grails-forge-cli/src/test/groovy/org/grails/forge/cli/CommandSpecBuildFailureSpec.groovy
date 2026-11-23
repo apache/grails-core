@@ -82,10 +82,14 @@ class CommandSpecBuildFailureSpec extends CommandSpec implements CommandFixture 
         !output.toString().contains('BUILD FAILED')
     }
 
+    // What a process the build left behind writes after the build has ended is not part of this: when the process
+    // ends, the JDK keeps what is in the pipe and closes it, so a later line reaches the reader only if the reader
+    // happened to be in a read at that moment.
     @Requires({ !OperatingSystem.current.windows })
     void 'what a build that has ended wrote is read to its end before the output a spec waits for is said not to be there'() {
-        when: 'a process that ends at once, and leaves one behind that writes the line into its output later'
-        executeCommand(['sh', '-c', '(sleep 3; echo "TestServiceSpec > test something PASSED") & exit 0'])
+        when: 'a process that writes a thousand lines and then the line, and ends before the reader can have read them all'
+        executeCommand(['sh', '-c', 'i=0; while [ $i -lt 1000 ]; do echo "line $i of the build"; i=$((i + 1)); done; ' +
+                'echo "TestServiceSpec > test something PASSED"'])
         testOutputContains('TestServiceSpec > test something PASSED')
 
         then:
