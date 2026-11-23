@@ -65,8 +65,9 @@ ext {
     testForkHeapMb = findProperty('testForkHeapMb') as Integer ?:
             (isCiBuild ? 768 : localTestForkHeapMb(gradle.startParameter.maxWorkerCount))
     if (testForkHeapMb < 768) {
-        throw new GradleException("-PtestForkHeapMb must be at least 768 (got ${testForkHeapMb}): Grails Test " +
-                'tasks start with -Xms768m. Lower -PmaxTestParallel or --max-workers to use less memory.')
+        throw new GradleException("-PtestForkHeapMb must be at least 768 (got ${testForkHeapMb}): 768m is the heap the " +
+                'Grails Gradle plugin gives a test JVM by default, which the test suites are sized for. ' +
+                'Lower -PmaxTestParallel or --max-workers to use less memory.')
     }
     excludeUnusedTransDeps = findProperty('excludeUnusedTransDeps')
 
