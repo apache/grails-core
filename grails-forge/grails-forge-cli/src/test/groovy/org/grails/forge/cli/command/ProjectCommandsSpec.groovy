@@ -819,14 +819,17 @@ class ProjectCommandsSpec extends CommandSpec {
                                                '.grails/baseline/extra.txt is a file of the project only']
     }
 
+    @Unroll
     @IgnoreIf({ os.windows || System.getProperty('user.name') == 'root' })
-    void "project regenerate --diff names a directory of the project it cannot read, and names no file as added, removed or changed"() {
+    void "project regenerate --diff names #what that it cannot read, and names no file as added, removed or changed"() {
         given:
         create(dir, ['create-app', 'com.example.shop'])
         File project = new File(dir, 'shop')
-        File closed = new File(project, 'src/main/groovy/closed')
-        closed.mkdirs()
-        new File(closed, 'Mine.groovy').text = 'class Mine {}\n'
+        File mine = new File(project, 'src/main/groovy/closed')
+        mine.mkdirs()
+        new File(mine, 'Mine.groovy').text = 'class Mine {}\n'
+        File closed = new File(project, path)
+        String mode = PosixFilePermissions.toString(Files.getPosixFilePermissions(closed.toPath()))
         Files.setPosixFilePermissions(closed.toPath(), PosixFilePermissions.fromString('---------'))
         out.reset()
 
@@ -836,7 +839,7 @@ class ProjectCommandsSpec extends CommandSpec {
         then:
         exit == 1
         out.toString().isEmpty()
-        err.toString().readLines() == ['| Error The files of the project cannot be read: src/main/groovy/closed cannot be opened']
+        err.toString().readLines() == ["| Error The files of the project cannot be read: ${path} cannot be opened".toString()]
 
         when: 'with -x, where it failed is said after it'
         err.reset()
@@ -844,12 +847,18 @@ class ProjectCommandsSpec extends CommandSpec {
 
         then:
         exit == 1
-        err.toString().readLines().first() == '| Error The files of the project cannot be read: src/main/groovy/closed cannot be opened'
+        err.toString().readLines().first() == "| Error The files of the project cannot be read: ${path} cannot be opened".toString()
         err.toString().contains('AccessDeniedException')
         err.toString().contains('\tat ')
 
         cleanup:
-        Files.setPosixFilePermissions(new File(dir, 'shop/src/main/groovy/closed').toPath(), PosixFilePermissions.fromString('rwxr-xr-x'))
+        Files.setPosixFilePermissions(new File(dir, "shop/${path}").toPath(), PosixFilePermissions.fromString(mode))
+
+        where:
+        what                                                    | path
+        'a directory of the project'                            | 'src/main/groovy/closed'
+        'a file of the project that the baseline has'           | 'build.gradle'
+        'a file of the record that the baseline has no copy of' | ProjectState.IGNORE
     }
 
     void "with -x a record that cannot be used is said with where it failed, by both commands"() {

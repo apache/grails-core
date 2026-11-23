@@ -18,9 +18,11 @@
  */
 package org.apache.grails.forge.core.state
 
+import java.nio.file.AccessDeniedException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
+import java.nio.file.attribute.PosixFilePermissions
 import java.security.MessageDigest
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
@@ -1392,6 +1394,35 @@ class ProjectStateSpec extends ApplicationContextSpec {
         then:
         ProjectStateException e = thrown()
         e.message == 'grails-forge-cli.yml is not a file the baseline of the project has'
+    }
+
+    @IgnoreIf({ os.windows || System.getProperty('user.name') == 'root' })
+    void "a file of the project that cannot be read is said to be one, by its path, and not taken for a baseline that cannot be read"() {
+        given:
+        Path project = generate('shop', [])
+        ProjectState state = ProjectState.read(project)
+        Path build = project.resolve('build.gradle')
+        Files.setPosixFilePermissions(build, PosixFilePermissions.fromString('---------'))
+
+        when:
+        state.isAsGenerated(project, 'build.gradle')
+
+        then:
+        AccessDeniedException e = thrown()
+        Path.of(e.file) == build
+
+        when: 'its copy in the baseline is what cannot be read'
+        Files.setPosixFilePermissions(build, PosixFilePermissions.fromString('rw-r--r--'))
+        Files.setPosixFilePermissions(project.resolve('.grails/baseline/files/build.gradle'), PosixFilePermissions.fromString('---------'))
+        state.isAsGenerated(project, 'build.gradle')
+
+        then:
+        ProjectStateException baseline = thrown()
+        baseline.message == 'The baseline of the project cannot be read: AccessDeniedException'
+
+        cleanup:
+        Files.setPosixFilePermissions(build, PosixFilePermissions.fromString('rw-r--r--'))
+        Files.setPosixFilePermissions(project.resolve('.grails/baseline/files/build.gradle'), PosixFilePermissions.fromString('rw-r--r--'))
     }
 
     void "the files that were kept and are not as generated are named, and no others"() {

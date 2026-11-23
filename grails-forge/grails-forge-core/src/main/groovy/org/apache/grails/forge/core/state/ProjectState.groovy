@@ -373,27 +373,30 @@ final class ProjectState {
      * @param path the path of a file of the application, with {@code /} between its steps
      * @return whether the file is there with the content the baseline has for it
      * @throws ProjectStateException for a path the baseline has not, and for a baseline that is not
-     * what its index says
+     * what its index says or cannot be read
+     * @throws IOException when the file of the project is there and cannot be read: a file of the
+     * application, and not the record, which the exception names by its path
      */
-    boolean isAsGenerated(Path projectDirectory, String path) {
+    boolean isAsGenerated(Path projectDirectory, String path) throws IOException {
         BaselineFile file = getBaseline().find(path)
         if (file == null) {
             throw new ProjectStateException("${StateYaml.shown(path, StateYaml.MAX_ECHO)} is not a file the baseline of the project has")
         }
+        byte[] generated
         try {
-            byte[] generated = copy(directory(projectDirectory, BASELINE_FILES), file)
-            Path working = projectDirectory
-            for (String step : path.split('/')) {
-                working = working.resolve(step)
-            }
-            if (!Files.isRegularFile(working, LinkOption.NOFOLLOW_LINKS) || Files.size(working) > StateLimits.MAX_BASELINE_FILE) {
-                return false
-            }
-            byte[] current = Files.readAllBytes(working)
-            return file.binary ? Arrays.equals(generated, current) : Arrays.equals(withLineFeeds(generated), withLineFeeds(current))
+            generated = copy(directory(projectDirectory, BASELINE_FILES), file)
         } catch (IOException e) {
             throw new ProjectStateException("The baseline of the project cannot be read: ${e.class.simpleName}")
         }
+        Path working = projectDirectory
+        for (String step : path.split('/')) {
+            working = working.resolve(step)
+        }
+        if (!Files.isRegularFile(working, LinkOption.NOFOLLOW_LINKS) || Files.size(working) > StateLimits.MAX_BASELINE_FILE) {
+            return false
+        }
+        byte[] current = Files.readAllBytes(working)
+        return file.binary ? Arrays.equals(generated, current) : Arrays.equals(withLineFeeds(generated), withLineFeeds(current))
     }
 
     // a carriage return before a line feed is dropped; one that stands alone is content

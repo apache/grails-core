@@ -23,7 +23,14 @@ import java.nio.file.Files
 import java.nio.file.attribute.PosixFilePermissions
 import org.apache.grails.forge.core.state.ProjectLock
 import org.apache.grails.forge.core.state.ProjectState
+import org.grails.forge.application.ApplicationType
+import org.grails.forge.application.Project
+import org.grails.forge.application.generator.GeneratorContext
+import org.grails.forge.application.generator.ProjectGenerator
 import org.grails.forge.cli.ForgeCli
+import org.grails.forge.cli.GrailsPicocliFactory
+import org.grails.forge.io.OutputHandler
+import picocli.CommandLine
 import spock.lang.IgnoreIf
 import spock.lang.Unroll
 
@@ -35,6 +42,8 @@ import spock.lang.Unroll
 class ProjectRegenerateJsonSpec extends AbstractFeatureAddCommandSpec {
 
     static final List<String> MEMBERS = ['format', 'command', 'projectDirectory', 'outcome', 'reason', 'message', 'hasChanges', 'files']
+
+    static final String MESSAGE = '.grails/baseline/files/build.gradle is not what the generator wrote: its content does not have the digest of the index'
 
     void "a project as it was generated has no changes"() {
         given:
@@ -209,12 +218,14 @@ class ProjectRegenerateJsonSpec extends AbstractFeatureAddCommandSpec {
         'has a file the generator does not write so' | true | { File it -> FeatureAddJsonSpec.rewriteGenerated(it, 'README.md', '# another readme\n') } || 'baseline-differs' | '1 file is not what the baseline of the project has (README.md)'
     }
 
+    @Unroll
     @IgnoreIf({ os.windows || System.getProperty('user.name') == 'root' })
-    void "a directory of the project that cannot be read is a failure, not a difference"() {
+    void "#what that cannot be read is a failure, not a difference"() {
         given:
         create(dir, CreateAppCommand, [])
-        File views = new File(dir, 'grails-app/views')
-        Files.setPosixFilePermissions(views.toPath(), PosixFilePermissions.fromString('---------'))
+        File closed = new File(dir, path)
+        String mode = PosixFilePermissions.toString(Files.getPosixFilePermissions(closed.toPath()))
+        Files.setPosixFilePermissions(closed.toPath(), PosixFilePermissions.fromString('---------'))
         reset()
 
         when:
@@ -223,14 +234,61 @@ class ProjectRegenerateJsonSpec extends AbstractFeatureAddCommandSpec {
 
         then:
         exit == 1
+        err.toString().isEmpty()
+        document.keySet().toList() == MEMBERS
         document.outcome == 'failed'
         document.reason == 'unreadable-file'
-        document.message == 'The files of the project cannot be read: grails-app/views cannot be opened'
+        document.message == "The files of the project cannot be read: ${path} cannot be opened".toString()
         document.hasChanges == null
         document.files == null
 
         cleanup:
-        Files.setPosixFilePermissions(views.toPath(), PosixFilePermissions.fromString('rwxr-xr-x'))
+        Files.setPosixFilePermissions(closed.toPath(), PosixFilePermissions.fromString(mode))
+
+        where:
+        what                                                       | path
+        'a directory of the project'                               | 'grails-app/views'
+        'a file of the project that the baseline has'              | 'build.gradle'
+        'a file of the record that the baseline has no copy of'    | ProjectState.IGNORE
+    }
+
+    @Unroll
+    void "a copy of the baseline that is changed once the application was generated again is a record that does not read #how"() {
+        given: 'a generator that changes the copy of the build file while it generates the application again, after the baseline was verified'
+        create(dir, CreateAppCommand, [])
+        File copy = new File(dir, '.grails/baseline/files/build.gradle')
+        Changing changing = new Changing(real: beanContext.getBean(ProjectGenerator), file: copy)
+        reset()
+
+        when:
+        String current = System.getProperty('user.dir')
+        System.setProperty('user.dir', dir.absolutePath)
+        int exit
+        try {
+            exit = new CommandLine(new ProjectRegenerateCommand(changing), new GrailsPicocliFactory(beanContext)).execute((['--diff'] + options) as String[])
+        } finally {
+            System.setProperty('user.dir', current)
+        }
+
+        then: 'the comparison reads the copy again, and says what the record is, as the command does before it generates the application'
+        changing.changed
+        exit == 1
+        if (options) {
+            Map document = document()
+            assert err.toString().isEmpty()
+            assert document.outcome == 'invalid-record'
+            assert document.reason == 'unreadable-record'
+            assert document.message == MESSAGE
+            assert document.files == null
+        } else {
+            assert out.toString().isEmpty()
+            assert err.toString().readLines() == ["| Error ${MESSAGE}".toString()]
+        }
+
+        where:
+        how                | options
+        'in the document'  | ['--json']
+        'in the text'      | []
     }
 
     @Unroll
@@ -259,5 +317,21 @@ class ProjectRegenerateJsonSpec extends AbstractFeatureAddCommandSpec {
         List<String> lines = out.toString().readLines()
         assert lines.size() == 1: out.toString()
         return (Map) new JsonSlurper().parseText(lines[0])
+    }
+
+    // generates as the generator of Forge does, and adds a line to a file while it does
+    static class Changing implements ProjectGenerator {
+
+        @Delegate
+        ProjectGenerator real
+        File file
+        boolean changed
+
+        @Override
+        void generate(ApplicationType applicationType, Project project, OutputHandler outputHandler, GeneratorContext generatorContext) throws Exception {
+            file << '// changed while the application was generated again\n'
+            changed = true
+            real.generate(applicationType, project, outputHandler, generatorContext)
+        }
     }
 }

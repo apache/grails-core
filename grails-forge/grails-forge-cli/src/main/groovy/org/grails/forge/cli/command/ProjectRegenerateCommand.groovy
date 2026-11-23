@@ -204,6 +204,12 @@ class ProjectRegenerateCommand extends BaseCommand implements Callable<Integer>,
                 e.printStackTrace(spec.commandLine().getErr())
             }
             return written(document.ended(ChangeDocument.FAILED, ProjectChangeException.UNREADABLE_FILE, "The files of the project cannot be read: ${unread(directory, e)}"))
+        } catch (ProjectStateException e) {
+            // a copy of the baseline that is no longer what was read before the application was generated: the record, as above
+            if (showStacktrace()) {
+                e.printStackTrace(spec.commandLine().getErr())
+            }
+            return written(document.ended(e, ProjectMigrateCommand.withMove(spec, directory, e)))
         }
     }
 
@@ -374,7 +380,8 @@ class ProjectRegenerateCommand extends BaseCommand implements Callable<Integer>,
      * the project: {@code added}, {@code removed} or {@code changed}. What the {@code .gitignore} the
      * application was generated with leaves out is not looked at, and neither is {@code .git}.
      *
-     * @throws IOException when a directory of the project cannot be read
+     * @throws IOException when a directory or a file of the project cannot be read
+     * @throws ProjectStateException when a copy of the baseline cannot be read
      */
     private static Map<String, String> differences(Path project, RegeneratedProject regenerated) throws IOException {
         byte[] ignore = regenerated.content(IGNORE_FILE)
@@ -429,22 +436,19 @@ class ProjectRegenerateCommand extends BaseCommand implements Callable<Integer>,
         return failure instanceof AccessDeniedException ? 'a directory of it cannot be opened' : OutputFailedException.reason(failure)
     }
 
-    // a file of the baseline as the state compares it, which allows a clone the line endings of its platform; another byte by byte
-    private static boolean same(Path project, RegeneratedProject regenerated, String path) {
+    // A file of the baseline as the state compares it, which allows a clone the line endings of its platform; another byte by byte.
+    // A file that cannot be read is not compared, and is no difference: the comparison fails, with the file named
+    private static boolean same(Path project, RegeneratedProject regenerated, String path) throws IOException {
         if (regenerated.state.baseline.find(path) != null) {
             return regenerated.state.isAsGenerated(project, path)
         }
         Path file = resolved(project, path)
-        try {
-            if (path == ProjectState.LOCK) {
-                // the lock of the record is what was generated when another build of the version, that generates the same, would write it but for its identity
-                return Files.isRegularFile(file, LinkOption.NOFOLLOW_LINKS) && ProjectLock.sameButForTheBuild(Files.readAllBytes(file), regenerated.content(path))
-            }
-            return Files.isRegularFile(file, LinkOption.NOFOLLOW_LINKS) && Files.size(file) == regenerated.content(path).length &&
-                    Arrays.equals(Files.readAllBytes(file), regenerated.content(path))
-        } catch (IOException ignored) {
-            return false
+        if (path == ProjectState.LOCK) {
+            // the lock of the record is what was generated when another build of the version, that generates the same, would write it but for its identity
+            return Files.isRegularFile(file, LinkOption.NOFOLLOW_LINKS) && ProjectLock.sameButForTheBuild(Files.readAllBytes(file), regenerated.content(path))
         }
+        return Files.isRegularFile(file, LinkOption.NOFOLLOW_LINKS) && Files.size(file) == regenerated.content(path).length &&
+                Arrays.equals(Files.readAllBytes(file), regenerated.content(path))
     }
 
     /** A file as it was generated. */
