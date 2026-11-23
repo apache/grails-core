@@ -45,7 +45,8 @@ import groovy.transform.CompileStatic
  * which is that of a command line and of no Gradle. It is never ended on the word of a record: it is
  * asked, through a file beside the record that it looks for, and ends its build itself.</p>
  *
- * <p>The record holds the number, the instant and the port, and nothing of the command line the
+ * <p>The record holds the number, the instant and the port, and for an application that is bound to
+ * one loopback address that address, where the port is asked; nothing of the command line the
  * process was started with: that can have a password in it, and nothing reads it.</p>
  *
  * @since 9.0
@@ -128,6 +129,13 @@ final class RunningApplication {
     /** The port the application was started for, or 0. */
     final int port
 
+    /**
+     * The loopback address the application was bound to, where the port is asked, as
+     * {@link ApplicationPort#boundLoopback} gives it; {@code null} where it is asked at
+     * {@code 127.0.0.1} and {@code ::1}.
+     */
+    final String address
+
     /** Whether {@code run-app} did not stay with the application. */
     final boolean detached
 
@@ -139,7 +147,8 @@ final class RunningApplication {
 
     private final Path record
 
-    private RunningApplication(State state, String reason, Path record, ProcessHandle process, long pid, long started, int port, boolean detached, boolean commandLine = false) {
+    private RunningApplication(State state, String reason, Path record, ProcessHandle process, long pid, long started, int port, boolean detached,
+                               boolean commandLine = false, String address = null) {
         this.state = state
         this.reason = reason
         this.record = record
@@ -149,6 +158,7 @@ final class RunningApplication {
         this.port = port
         this.detached = detached
         this.commandLine = commandLine
+        this.address = address
     }
 
     /**
@@ -167,19 +177,20 @@ final class RunningApplication {
         if (record == null || !Files.exists(record, LinkOption.NOFOLLOW_LINKS)) {
             return new RunningApplication(State.NONE, null, null, null, 0L, 0L, 0, false)
         }
-        Map<String, Long> said
+        Map<String, Object> said
         try {
             said = read(record, project)
         } catch (IOException e) {
             return new RunningApplication(State.UNREADABLE, e.getMessage(), record, null, 0L, 0L, 0, false)
         }
-        long pid = said.pid
-        long started = said.started
-        int port = (int) said.port.longValue()
-        boolean detached = said.detached == 1L
-        boolean commandLine = said.commandLine == 1L
+        long pid = said.pid as long
+        long started = said.started as long
+        int port = said.port as int
+        boolean detached = said.detached as boolean
+        boolean commandLine = said.commandLine as boolean
+        String address = said.address as String
         Closure<RunningApplication> not = { State state, String why ->
-            new RunningApplication(state, why, record, null, pid, started, port, detached, commandLine)
+            new RunningApplication(state, why, record, null, pid, started, port, detached, commandLine, address)
         }
         Optional<ProcessHandle> found = ProcessHandle.of(pid)
         if (!found.isPresent() || !found.get().isAlive()) {
@@ -199,7 +210,7 @@ final class RunningApplication {
         if (!commandLine && !isGradleOf(project, windows, process.info())) {
             return not(State.UNCONFIRMED, "process ${pid} began when the record says, but its command line is not that of the Gradle wrapper of this project running ${TASK}".toString())
         }
-        return new RunningApplication(State.RUNNING, null, record, process, pid, started, port, detached, commandLine)
+        return new RunningApplication(State.RUNNING, null, record, process, pid, started, port, detached, commandLine, address)
     }
 
     /**
@@ -210,18 +221,21 @@ final class RunningApplication {
      * @param port the port the application was started for, or 0
      * @param detached whether {@code run-app} does not stay with the application
      * @param commandLine whether the process is the command line that runs {@code run-app} itself
+     * @param address the loopback address the application is bound to, as {@link ApplicationPort#boundLoopback}
+     * gives it, or {@code null}
      * @return the instant the process began as the record has it, in milliseconds: what the record is
      * found by again when it is to be removed, which the system no longer says of a process that has ended
      * @throws IOException with one line, when the record cannot be written
      */
-    static long record(Path run, ProcessHandle process, int port, boolean detached, boolean commandLine = false) throws IOException {
+    static long record(Path run, ProcessHandle process, int port, boolean detached, boolean commandLine = false, String address = null) throws IOException {
         Optional<Instant> began = process.info().startInstant()
         if (!began.isPresent()) {
             throw new IOException("${RunDirectory.LOCATION}/${RECORD} cannot be written: the system does not say when process ${process.pid()} began, and without that it cannot be told from another one later")
         }
-        // said only where it is so: a record of a Gradle that was started is what it has been
+        // said only where it is so: a record of a Gradle that was started, for no address of its own, is what it has been
+        String boundTo = address == null ? '' : ",\"address\":\"${address}\""
         String said = "{\"format\":${FORMAT},\"pid\":${process.pid()},\"started\":${began.get().toEpochMilli()},\"port\":${port},\"detached\":${detached}" +
-                "${commandLine ? ',\"commandLine\":true' : ''}}\n"
+                "${commandLine ? ',\"commandLine\":true' : ''}${boundTo}}\n"
         // written beside the record and moved, so that whoever reads the record reads all of it
         Path written = RunDirectory.create(run, RECORD + '.new')
         try {
@@ -355,8 +369,8 @@ final class RunningApplication {
         return value instanceof Long ? (Long) value : null
     }
 
-    // the numbers of a record; whether run-app left the application is 1 or 0
-    private static Map<String, Long> read(Path record, ConsoleProject project) throws IOException {
+    // what a record says: its numbers, whether run-app left the application and whether it recorded itself, and the address, or null
+    private static Map<String, Object> read(Path record, ConsoleProject project) throws IOException {
         if (!Files.isRegularFile(record, LinkOption.NOFOLLOW_LINKS)) {
             throw new IOException('it is not a file')
         }
@@ -390,7 +404,13 @@ final class RunningApplication {
                 pid < 2L || pid > MAX_PID || started < 1L || port < 0L || port > 65535L) {
             throw new IOException('it does not name a process, an instant and a port')
         }
-        return [pid: pid, started: started, port: port, detached: said.get('detached') ? 1L : 0L, commandLine: commandLine ? 1L : 0L] as Map<String, Long>
+        // the port is asked there, and so the address is one of the loopback, as run-app records it, and nothing else
+        Object address = said.get('address')
+        String bound = address instanceof String ? ApplicationPort.boundLoopback((String) address) : null
+        if (address != null && bound == null) {
+            throw new IOException('it names an address that is no loopback address of this computer')
+        }
+        return [pid: pid, started: started, port: port, detached: said.get('detached'), commandLine: Boolean.TRUE.equals(commandLine), address: bound] as Map<String, Object>
     }
 
     private static boolean isThisCommand(ProcessHandle process) {

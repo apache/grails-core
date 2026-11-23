@@ -295,7 +295,7 @@ class RunAppCommand extends GradleEnvironmentCommand implements OptionRelation.D
         arguments.addAll(passedOn)
         try {
             return detached ? startAndReturn(project, windows, directory, arguments, answersOn, configured.address) :
-                    stayWith(project, windows, directory, arguments, answersOn)
+                    stayWith(project, windows, directory, arguments, answersOn, configured.address)
         } catch (GradleRunner.RefusedArgumentException e) {
             throw new CommandLine.ParameterException(spec.commandLine(), e.getMessage())
         }
@@ -417,7 +417,7 @@ class RunAppCommand extends GradleEnvironmentCommand implements OptionRelation.D
     // time Gradle has ended, another run-app can have started and recorded another one. Where the build
     // is run from this JVM there is no process for stop-app to end: the record names this command, which
     // looks for what stop-app says while the build runs, and cancels the build itself.
-    private int stayWith(ConsoleProject project, boolean windows, Path directory, List<String> arguments, int answersOn) throws GradleRunner.RefusedArgumentException {
+    private int stayWith(ConsoleProject project, boolean windows, Path directory, List<String> arguments, int answersOn, String address) throws GradleRunner.RefusedArgumentException {
         List<String> failures = []
         long[] recorded = [0L, 0L] as long[]
         AtomicBoolean asked = new AtomicBoolean()
@@ -427,7 +427,7 @@ class RunAppCommand extends GradleEnvironmentCommand implements OptionRelation.D
         int exit = runner.run(project, arguments, { GradleBuild.Running started ->
             try {
                 // the instant as it was recorded: of a process that has ended by now the system says none
-                recorded[1] = RunningApplication.record(directory, started.process, answersOn, false, started.commandLine)
+                recorded[1] = RunningApplication.record(directory, started.process, answersOn, false, started.commandLine, ApplicationPort.boundLoopback(address))
                 recorded[0] = started.process.pid()
                 if (started.commandLine) {
                     looking[0] = lookForStop(directory, recorded[0], recorded[1], asked, started)
@@ -480,7 +480,7 @@ class RunAppCommand extends GradleEnvironmentCommand implements OptionRelation.D
                     'on the loopback address of this computer, where it would not answer. Nothing was started; give --foreground to stay with the application instead')
             return 1
         }
-        if (ApplicationPort.isOpen(answersOn)) {
+        if (ApplicationPort.isOpen(answersOn, address)) {
             err("Something answers on port ${answersOn} of this computer already, so the command could not tell when the application does. " +
                     'Nothing was started; stop what has the port, or give another one with --port')
             return 1
@@ -528,7 +528,7 @@ class RunAppCommand extends GradleEnvironmentCommand implements OptionRelation.D
             }
             try {
                 // the instant as it was recorded: of a process that has ended by now the system says none
-                recorded[1] = RunningApplication.record(directory, started, answersOn, true)
+                recorded[1] = RunningApplication.record(directory, started, answersOn, true, false, ApplicationPort.boundLoopback(address))
                 recorded[0] = started.pid()
             } catch (IOException e) {
                 if (!started.isAlive()) {
@@ -542,7 +542,7 @@ class RunAppCommand extends GradleEnvironmentCommand implements OptionRelation.D
                 return 1
             }
             out("| Running application... Its output is in ${LOG}")
-            String ended = waitFor(started, answersOn, ending)
+            String ended = waitFor(started, answersOn, address, ending)
             if (ending.get()) {
                 // the hook says it, ends the build and removes the record
                 return 1
@@ -557,7 +557,7 @@ class RunAppCommand extends GradleEnvironmentCommand implements OptionRelation.D
             if (withShell) {
                 stopWithShell(started)
             }
-            out("| Application answers on port ${answersOn}: ${https ? 'https' : 'http'}://localhost:${answersOn}. " +
+            out("| Application answers on port ${answersOn}: ${https ? 'https' : 'http'}://${ApplicationPort.urlHost(address)}:${answersOn}. " +
                     "It runs until stop-app${withShell ? ', or until the shell ends' : ''}")
             return 0
         } finally {
@@ -572,9 +572,9 @@ class RunAppCommand extends GradleEnvironmentCommand implements OptionRelation.D
     }
 
     // null when the application answers; otherwise why it does not, after what was started has ended
-    private String waitFor(ProcessHandle started, int answersOn, AtomicBoolean ending) {
+    private String waitFor(ProcessHandle started, int answersOn, String address, AtomicBoolean ending) {
         long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(readyTimeout)
-        ApplicationPort.Start start = ApplicationPort.start(answersOn)
+        ApplicationPort.Start start = ApplicationPort.start(answersOn, address)
         while (!ending.get()) {
             if (!started.isAlive()) {
                 return "Gradle ended before the application answered on port ${answersOn}"
@@ -593,7 +593,7 @@ class RunAppCommand extends GradleEnvironmentCommand implements OptionRelation.D
                 return "The application failed to start: its startup progress says so on port ${answersOn}. What was started was stopped"
             }
             if (System.nanoTime() > deadline) {
-                boolean accepts = ApplicationPort.isOpen(answersOn)
+                boolean accepts = ApplicationPort.isOpen(answersOn, address)
                 GradleRunner.stop(started, STOP_SECONDS)
                 String seen = !accepts ? '' : start.isReported() ?
                         ': its startup progress answers there still, and the web server of the application has not taken the port' :

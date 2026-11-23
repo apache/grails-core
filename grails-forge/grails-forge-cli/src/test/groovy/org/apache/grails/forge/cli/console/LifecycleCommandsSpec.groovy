@@ -33,6 +33,7 @@ import org.grails.forge.cli.ForgeCli
 import org.grails.forge.cli.ForkedCli
 import org.opentest4j.TestAbortedException
 import spock.lang.IgnoreIf
+import spock.lang.Requires
 import spock.lang.Unroll
 import spock.util.concurrent.PollingConditions
 
@@ -66,9 +67,11 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
 
         public class Server {
 
-            static ServerSocket listen(String keyStore, int port) throws Exception {
+            // bound where the application is told, read as Spring Boot reads server.address; the loopback address otherwise
+            static ServerSocket listen(String keyStore, int port, String address) throws Exception {
+                InetAddress bound = address == null ? InetAddress.getLoopbackAddress() : InetAddress.getByName(address);
                 if (keyStore == null) {
-                    return new ServerSocket(port, 50, InetAddress.getLoopbackAddress());
+                    return new ServerSocket(port, 50, bound);
                 }
                 KeyStore keys = KeyStore.getInstance(KeyStore.getDefaultType());
                 try (FileInputStream file = new FileInputStream(keyStore)) {
@@ -78,11 +81,12 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
                 factory.init(keys, "123456".toCharArray());
                 SSLContext context = SSLContext.getInstance("TLS");
                 context.init(factory.getKeyManagers(), null, null);
-                return context.getServerSocketFactory().createServerSocket(port, 50, InetAddress.getLoopbackAddress());
+                return context.getServerSocketFactory().createServerSocket(port, 50, bound);
             }
 
             public static void main(String[] args) throws Exception {
                 String keyStore = null;
+                String address = null;
                 Path home = Path.of("").toAbsolutePath();
                 StringBuilder invoked = new StringBuilder();
                 String port = Files.exists(home.resolve("port.txt")) ? Files.readString(home.resolve("port.txt")).trim() : "0";
@@ -93,6 +97,9 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
                     }
                     if (arg.startsWith("-Dgrails.server.ssl.key-store=")) {
                         keyStore = arg.substring(30);
+                    }
+                    if (arg.startsWith("-Dgrails.server.address=")) {
+                        address = arg.substring(24);
                     }
                     if (arg.startsWith("--args-file=")) {
                         Path file = home.resolve(arg.substring(12));
@@ -122,7 +129,7 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
                     Thread.sleep(300000);
                     return;
                 }
-                try (ServerSocket server = listen(keyStore, Integer.parseInt(port))) {
+                try (ServerSocket server = listen(keyStore, Integer.parseInt(port), address)) {
                     Files.writeString(home.resolve("server.pid"), ProcessHandle.current().pid() + "\\n");
                     System.out.println("listening on " + port);
                     while (true) {
@@ -688,6 +695,107 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
         taken?.close()
     }
 
+    // Linux answers on every address of 127.0.0.0/8 without anything being configured; macOS has only 127.0.0.1
+    @Unroll
+    @Requires({ os.linux })
+    void "run-app --detach waits for an application bound to #host at that address, and stop-app sees its end there"() {
+        given:
+        scriptedProject('serve')
+        int port = freePort()
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'run-app', '--detach', '--port', port as String, '--host', host, '--ready-timeout', '20')
+
+        then: 'the application answers where it is bound, and nowhere else'
+        exit == 0
+        errors() == []
+        out.toString().contains("| Application answers on port ${port}: http://127.0.0.2:${port}. It runs until stop-app")
+        record().address == '127.0.0.2'
+        !ApplicationPort.isOpen(port)
+
+        when:
+        long server = pid('server.pid')
+        out.reset()
+        int stopped = ForgeCli.execute(beanContext, 'stop-app')
+
+        then: 'stop-app saw the application end at its address'
+        stopped == 0
+        out.toString().readLines() == ['| Stopping application...', '| Application stopped.']
+        !alive(server)
+        !new File(dir, '.grails/run/app.json').exists()
+
+        where:
+        host << ['127.0.0.2', '::ffff:127.0.0.2', '::ffff:7f00:2']
+    }
+
+    @Unroll
+    @Requires({ LifecycleCommandsSpec.hasIpv6Loopback() })
+    void "an application bound to #host is waited for there alone, and a program that has the port at #other is not taken for it"() {
+        given: 'a program that has the port at the other loopback address'
+        scriptedProject('serve')
+        int port = freePort()
+        ServerSocket taken = new ServerSocket(port, 50, InetAddress.getByName(other))
+        taken.setSoTimeout(200)
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'run-app', '--detach', '--port', port as String, '--host', host, '--ready-timeout', '30')
+
+        then: 'the port was free where the application is bound, and it answers there'
+        exit == 0
+        errors() == []
+        out.toString().contains("| Application answers on port ${port}: http://${shown}:${port}. It runs until stop-app")
+        record().address == recorded
+
+        and: 'the other program was asked nothing'
+        nothingAsked(taken)
+
+        when:
+        long server = pid('server.pid')
+        out.reset()
+        int stopped = ForgeCli.execute(beanContext, 'stop-app')
+
+        then: 'stop-app waits for the address of the application, where the other program does not answer'
+        stopped == 0
+        out.toString().readLines() == ['| Stopping application...', '| Application stopped.']
+        !alive(server)
+        nothingAsked(taken)
+
+        cleanup:
+        taken?.close()
+
+        where:
+        host               | other       | shown       | recorded
+        '::1'              | '127.0.0.1' | '[::1]'     | '::1'
+        '[::1]'            | '127.0.0.1' | '[::1]'     | '::1'
+        '0:0:0:0:0:0:0:1'  | '127.0.0.1' | '[::1]'     | '::1'
+        '127.0.0.1'        | '::1'       | '127.0.0.1' | '127.0.0.1'
+        '::ffff:127.0.0.1' | '::1'       | '127.0.0.1' | '127.0.0.1'
+    }
+
+    @Unroll
+    void "an application bound to #host is waited for at 127.0.0.1 and ::1, and the record names no address"() {
+        given:
+        scriptedProject('serve')
+        int port = freePort()
+
+        when:
+        int exit = ForgeCli.execute(beanContext, (['run-app', '--detach', '--port', port as String] + options) as String[])
+
+        then:
+        exit == 0
+        errors() == []
+        out.toString().contains("| Application answers on port ${port}: http://localhost:${port}. It runs until stop-app")
+        !record().containsKey('address')
+
+        cleanup:
+        ForgeCli.execute(beanContext, 'stop-app')
+
+        where:
+        host         | options
+        'no address' | []
+        'localhost'  | ['--host', 'localhost']
+    }
+
     @Unroll
     void "run-app waits on the port #where names"() {
         given:
@@ -826,6 +934,9 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
         'has a negative number'                          | '{"format":1,"pid":-OTHER,"started":OTHER_BEGAN,"port":0,"detached":true}'              | false | 'it does not name a process, an instant and a port'
         'has a number with a fraction'                   | '{"format":1,"pid":OTHER.0,"started":OTHER_BEGAN,"port":0,"detached":true}'             | false | 'it does not name a process, an instant and a port'
         'has a port that is none'                        | '{"format":1,"pid":OTHER,"started":OTHER_BEGAN,"port":65536,"detached":true}'           | false | 'it does not name a process, an instant and a port'
+        'has an address that is not of this computer'    | '{"format":1,"pid":OTHER,"started":OTHER_BEGAN,"port":0,"detached":true,"address":"192.0.2.1"}' | false | 'it names an address that is no loopback address of this computer'
+        'has an address that is a name'                  | '{"format":1,"pid":OTHER,"started":OTHER_BEGAN,"port":0,"detached":true,"address":"localhost"}' | false | 'it names an address that is no loopback address of this computer'
+        'has an address that is no text'                 | '{"format":1,"pid":OTHER,"started":OTHER_BEGAN,"port":0,"detached":true,"address":2130706434}'  | false | 'it names an address that is no loopback address of this computer'
         'is of another format'                           | '{"format":2,"pid":OTHER,"started":OTHER_BEGAN,"port":0,"detached":true}'               | false | 'it is not of format 1, the one this command reads'
         'is a list'                                      | '[OTHER]'                                                                               | false | 'it is not a record of an application'
         'is not JSON'                                    | 'pid=OTHER\u0000\u001b[31m'                                                             | false | 'it is not a record of an application'
@@ -1799,6 +1910,25 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
 
     private static int freePort() {
         return new ServerSocket(0, 1, InetAddress.getLoopbackAddress()).withCloseable { ServerSocket socket -> socket.localPort }
+    }
+
+    static boolean hasIpv6Loopback() {
+        try {
+            new ServerSocket(0, 1, InetAddress.getByName('::1')).close()
+            return true
+        } catch (IOException ignored) {
+            return false
+        }
+    }
+
+    // whether nothing has connected to a server that accepts nothing itself: a connection waits for it to be accepted
+    private static boolean nothingAsked(ServerSocket server) {
+        try {
+            server.accept().close()
+            return false
+        } catch (SocketTimeoutException ignored) {
+            return true
+        }
     }
 
     private long pid(String name) {

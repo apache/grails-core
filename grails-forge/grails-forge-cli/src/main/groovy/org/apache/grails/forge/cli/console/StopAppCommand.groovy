@@ -91,7 +91,7 @@ class StopAppCommand extends InProjectCommand {
     // which is no such run-app costs a wait and nothing else.
     private int ask(ConsoleProject project, RunningApplication running) {
         out('| Stopping application...')
-        boolean answered = running.port > 0 && ApplicationPort.isOpen(running.port)
+        boolean answered = running.port > 0 && ApplicationPort.isOpen(running.port, running.address)
         Path directory
         try {
             directory = RunDirectory.existing(project)
@@ -132,7 +132,7 @@ class StopAppCommand extends InProjectCommand {
             }
         }
         // what the port says afterwards is the end of the application only when it had the port before
-        boolean answered = running.port > 0 && ApplicationPort.isOpen(running.port)
+        boolean answered = running.port > 0 && ApplicationPort.isOpen(running.port, running.address)
         if (!GradleRunner.stop(running.process, STOP_SECONDS)) {
             err("Process ${running.pid}, or one it started, has not ended. The record was kept: run stop-app again")
             return 1
@@ -145,7 +145,7 @@ class StopAppCommand extends InProjectCommand {
     // for it: it cancels the build when the Gradle it worked for is gone or asks for it, and ends the
     // application then. That it did is seen at the port, and only there.
     private int seenAtPort(RunningApplication running, boolean answered, String stopped) {
-        if (running.port > 0 && !closed(running.port)) {
+        if (running.port > 0 && !closed(running.port, running.address)) {
             err("${stopped}, but something answers on port ${running.port} still after ${PORT_SECONDS} seconds: the application may take longer to end, or it is another one. " +
                     'Nothing else was stopped')
             return 1
@@ -170,9 +170,9 @@ class StopAppCommand extends InProjectCommand {
         }
     }
 
-    private static boolean closed(int port) {
+    private static boolean closed(int port, String address) {
         long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(PORT_SECONDS)
-        while (ApplicationPort.isOpen(port)) {
+        while (ApplicationPort.isOpen(port, address)) {
             if (System.nanoTime() > deadline) {
                 return false
             }

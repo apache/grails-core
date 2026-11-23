@@ -28,8 +28,11 @@ import javax.net.ssl.X509TrustManager
 import groovy.transform.CompileStatic
 
 /**
- * Asks whether an application answers on a port of this computer. Only the loopback addresses are
- * asked, {@code 127.0.0.1} and {@code ::1}: nothing is sent anywhere else, and no name is looked up.
+ * Asks whether an application answers on a port of this computer. Only loopback addresses are asked,
+ * and no name is looked up: the one the application is bound to, where that is a loopback address, as
+ * {@code 127.0.0.2} or {@code ::1} are; and {@code 127.0.0.1} and {@code ::1} where it is bound to
+ * none that is given, to {@code localhost} or to the address that stands for all. Nothing is sent
+ * anywhere else.
  *
  * @since 9.0
  */
@@ -75,7 +78,8 @@ final class ApplicationPort {
             return new X509Certificate[0]
         }
     }
-    private static final List<byte[]> LOOPBACK = [[127, 0, 0, 1] as byte[], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1] as byte[]]
+    private static final List<InetAddress> LOOPBACK = [InetAddress.getByAddress([127, 0, 0, 1] as byte[]),
+                                                       InetAddress.getByAddress([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1] as byte[])]
 
     private ApplicationPort() {
     }
@@ -86,30 +90,54 @@ final class ApplicationPort {
      * {@code localhost}, or is the text of a loopback address or of the address that stands for all
      */
     static boolean isReachedOnLoopback(String host) {
-        if (host == null || host.isEmpty() || host.equalsIgnoreCase('localhost')) {
-            return true
+        return !asked(host).isEmpty()
+    }
+
+    /**
+     * @param host the address an application is bound to, as it was given
+     * @return the one loopback address an application bound to it answers on, as {@code 127.0.0.2} for
+     * {@code 127.0.0.2} or {@code ::ffff:127.0.0.2} and {@code ::1} for {@code [::1]}; {@code null} where
+     * it answers on {@code 127.0.0.1} and {@code ::1} alike, as it does bound to no address that is
+     * given, to {@code localhost} or to the address that stands for all, and where it answers on no
+     * loopback address
+     */
+    static String boundLoopback(String host) {
+        List<InetAddress> asked = asked(host)
+        return asked.size() == 1 ? textOf(asked[0]) : null
+    }
+
+    /**
+     * @param host the address an application is bound to, as it was given
+     * @return how a client names the address it answers on: the one loopback address it is bound to, as
+     * {@code 127.0.0.2} or {@code [::1]}, and {@code localhost} otherwise
+     */
+    static String urlHost(String host) {
+        List<InetAddress> asked = asked(host)
+        if (asked.size() != 1) {
+            return 'localhost'
         }
-        // only the text of an address is read, which asks no name server
-        if (!(host ==~ /[0-9.]{1,15}/) && !(host ==~ /\[?[0-9A-Fa-f:.]{2,45}]?/ && host.contains(':'))) {
-            return false
-        }
-        try {
-            InetAddress address = InetAddress.getByName(host)
-            return address.isLoopbackAddress() || address.isAnyLocalAddress()
-        } catch (UnknownHostException ignored) {
-            return false
-        }
+        return asked[0] instanceof Inet6Address ? "[${textOf(asked[0])}]".toString() : textOf(asked[0])
     }
 
     /**
      * @param port the port
-     * @return whether anything accepts a connection on the port
+     * @return whether anything accepts a connection on the port, at {@code 127.0.0.1} or {@code ::1}
      */
     static boolean isOpen(int port) {
-        for (byte[] address : LOOPBACK) {
+        return isOpen(port, null)
+    }
+
+    /**
+     * @param port the port
+     * @param host the address an application is bound to, as it was given; {@code null} for none
+     * @return whether anything accepts a connection on the port where an application bound to that
+     * address answers; {@code false} where that is no loopback address
+     */
+    static boolean isOpen(int port, String host) {
+        for (InetAddress address : asked(host)) {
             Socket socket = new Socket()
             try {
-                socket.connect(new InetSocketAddress(InetAddress.getByAddress(address), port), CONNECT_MILLIS)
+                socket.connect(new InetSocketAddress(address, port), CONNECT_MILLIS)
                 return true
             } catch (IOException ignored) {
                 // nothing there
@@ -118,6 +146,34 @@ final class ApplicationPort {
             }
         }
         return false
+    }
+
+    // The loopback addresses an application bound to the address answers on, which are the ones asked:
+    // only the text of an address is read, which asks no name server, and it is read as the application
+    // reads it (Spring Boot, with InetAddress), so that an IPv4 address written as one of IPv6 is that
+    // address of IPv4. None where it is bound to an address that is not of the loopback.
+    private static List<InetAddress> asked(String host) {
+        if (host == null || host.isEmpty() || host.equalsIgnoreCase('localhost')) {
+            return LOOPBACK
+        }
+        if (!(host ==~ /[0-9.]{1,15}/) && !(host ==~ /\[?[0-9A-Fa-f:.]{2,45}]?/ && host.contains(':'))) {
+            return []
+        }
+        try {
+            InetAddress address = InetAddress.getByName(host)
+            if (address.isAnyLocalAddress()) {
+                return LOOPBACK
+            }
+            // the address alone, without the text it was read from
+            return address.isLoopbackAddress() ? [InetAddress.getByAddress(address.getAddress())] : []
+        } catch (UnknownHostException ignored) {
+            return []
+        }
+    }
+
+    // the one loopback address of IPv6 is ::1, which InetAddress writes out in full
+    private static String textOf(InetAddress address) {
+        return address instanceof Inet6Address ? '::1' : address.getHostAddress()
     }
 
     /**
@@ -132,10 +188,21 @@ final class ApplicationPort {
 
     /**
      * @param port the port
-     * @return what is asked, as often as it takes, how far the start of the application on the port is
+     * @return what is asked, as often as it takes, how far the start of the application on the port is,
+     * at {@code 127.0.0.1} and {@code ::1}
      */
     static Start start(int port) {
-        return new Start(port)
+        return start(port, null)
+    }
+
+    /**
+     * @param port the port
+     * @param host the address the application is bound to, as it was given; {@code null} for none
+     * @return what is asked, as often as it takes, how far the start of the application on the port is,
+     * where an application bound to that address answers
+     */
+    static Start start(int port, String host) {
+        return new Start(port, asked(host))
     }
 
     /** How far the start of an application is, as its port says. */
@@ -187,20 +254,22 @@ final class ApplicationPort {
     static final class Start {
 
         private final int port
+        private final List<InetAddress> addresses
         private boolean reported
         // once an answer came over TLS, plain HTTP is not tried again
         private boolean tls
 
-        private Start(int port) {
+        private Start(int port, List<InetAddress> addresses) {
             this.port = port
+            this.addresses = addresses
         }
 
         /**
          * @return how far the start is now
          */
         Started ask() {
-            for (byte[] address : LOOPBACK) {
-                Started started = ask(new InetSocketAddress(InetAddress.getByAddress(address), port))
+            for (InetAddress address : addresses) {
+                Started started = ask(new InetSocketAddress(address, port))
                 if (started != null) {
                     return started
                 }
