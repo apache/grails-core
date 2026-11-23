@@ -33,9 +33,9 @@ import jakarta.annotation.Priority
 import jakarta.annotation.Resource
 
 import org.springframework.aot.AotDetector
-import org.springframework.aot.generate.ClassNameGenerator
 import org.springframework.aot.generate.DefaultGenerationContext
 import org.springframework.aot.generate.FileSystemGeneratedFiles
+import org.springframework.aot.generate.NameGenerator
 import org.springframework.aot.hint.RuntimeHints
 import org.springframework.aot.hint.predicate.RuntimeHintsPredicates
 import org.springframework.beans.BeansException
@@ -389,7 +389,7 @@ class GrailsCacheManagerAliasMatrixSpec extends Specification {
             }
             processed.registerBean('probe', (Class<Object>) subject)
             RuntimeHints hints = new RuntimeHints()
-            DefaultGenerationContext generation = new DefaultGenerationContext(new ClassNameGenerator(ClassName.get(GrailsCacheManagerAliasMatrixSpec)),
+            DefaultGenerationContext generation = new DefaultGenerationContext(new NameGenerator(ClassName.get(GrailsCacheManagerAliasMatrixSpec)),
                     new FileSystemGeneratedFiles(dir.resolve('sources')), hints)
             ClassName initializer = new ApplicationContextAotGenerator().processAheadOfTime(processed, generation)
             generation.writeGeneratedContent()
