@@ -76,6 +76,8 @@ class CreateAppFeatureCatalogSpec extends CommandSpec implements CommandFixture 
     boolean answered = true
     boolean pluginIndex = false
     String chosenFor = null
+    // what GRAILS_PLUGIN_INDEX names: nothing, whatever the build gives the specifications
+    String indexVariable = null
 
     void setup() {
         originalOut = System.out
@@ -447,7 +449,8 @@ class CreateAppFeatureCatalogSpec extends CommandSpec implements CommandFixture 
         'as a snapshot'           | ['2.4.0-SNAPSHOT': [:]]                                               | [:]                         || "${PLUGIN} has it in no release, and a version that is none is used only by its coordinates, such as ${PLUGIN}:2.4.0-SNAPSHOT"
         'for another Grails'      | ['2.3.0': [compatibility: [grails: '[7.0.0,8.0.0)', forge: RANGE]]]   | [:]                         || "${PLUGIN} has it in no version for Grails"
         'for another application' | ['2.3.0': [applicationTypes: ['plugin']]]                             | [:]                         || "${PLUGIN} has it for applications of type plugin, and this is web"
-        'in a later format'       | ['2.3.0': [format: 2]]                                                | [:]                         || "${PLUGIN} has it in no version this Forge reads the pack of (2.3.0 needs another Forge)"
+        // a pack of a later format is not read at all, and its name is not known: PluginDiscoveryContractSpec
+        'for a later template API' | ['2.3.0': [templateApi: 2]]                                          | [:]                         || "${PLUGIN} has it in no version this Forge reads the pack of (2.3.0 needs another Forge)"
     }
 
     void "a deprecated plugin and a snapshot are used by their coordinates, for which no catalog is read"() {
@@ -626,7 +629,7 @@ class CreateAppFeatureCatalogSpec extends CommandSpec implements CommandFixture 
     }
 
     @Unroll
-    void "a plugin of the catalog with #what is left out, and the others are still found"() {
+    void "a plugin of the catalog with #what is left out, or that one version of it, and the others are still found"() {
         given:
         File jar = publish(COORDINATES)
         File good = publish('org.good:good-audit:1.0.0', pack(CreateAppFeaturePackSpec.DESCRIPTOR.replace('name: acme-audit', 'name: good-audit')))
@@ -641,7 +644,7 @@ class CreateAppFeatureCatalogSpec extends CommandSpec implements CommandFixture 
         exit == 2
         String said = err.toString()
         said.contains('The requested feature does not exist: acme-audit. acme-audit was not found in the feature catalog ' +
-                "${catalog.toPath().toUri()} (1 plugin left out for what the catalog says of it; the first: plugin 1: ${problem}")
+                "${catalog.toPath().toUri()} (1 ${of} left out for what the catalog says of it; the first: plugin 1: ${problem}")
         !said.contains('@|')
         !said.contains('secret')
         !said.contains('\u001b')
@@ -656,44 +659,42 @@ class CreateAppFeatureCatalogSpec extends CommandSpec implements CommandFixture 
         out.toString().contains("Feature pack good-audit from org.good:good-audit:1.0.0 (${address})")
 
         where:
-        what                                  | change                                                                         || problem
-        'coordinates that are none'           | { it.coords = 'com.acme' }                                                     || 'coords is not group:artifact of at most 120 characters, but com.acme'
-        'coordinates that are markup'         | { it.coords = '@|red x|@:\u001b[31my' }                                        || 'coords is not group:artifact of at most 120 characters, but @ |red x|@:?[31my'
-        'coordinates that go up a directory'  | { it.coords = 'com.acme:../../etc' }                                           || 'coords is not group:artifact of at most 120 characters, but com.acme:../../etc'
-        'coordinates of three parts'          | { it.coords = COORDINATES }                                                    || "coords is not group:artifact of at most 120 characters, but ${COORDINATES}"
-        'coordinates that are a number'       | { it.coords = 7 }                                                              || 'coords is not a text'
-        'no coordinates'                      | { it.remove('coords') }                                                        || 'coords is not a text'
-        'a version that is a range'           | { it.versions[0].version = '[2.0,3.0)' }                                       || "${PLUGIN}: version [2.0,3.0) is not one version of a plugin"
-        'a version that is the latest'        | { it.versions[0].version = 'latest.release' }                                  || "${PLUGIN}: version latest.release is not one version of a plugin"
-        'a version that is markup'            | { it.versions[0].version = '@|red 1|@' }                                       || "${PLUGIN}: version @ |red 1|@ is not one version of a plugin"
-        'a version twice'                     | { it.versions << it.versions[0] }                                              || "${PLUGIN}: has the version 2.3.0 more than once"
-        'a version that is a text'            | { it.versions << 'x' }                                                         || "${PLUGIN}: has a version that is not an object"
-        'a pack that is a text'               | { it.versions[0].pack = 'yes' }                                                || "${PLUGIN}: the pack of version 2.3.0 is not an object"
-        'a name that is none'                 | { it.versions[0].pack.name = 'Acme Audit' }                                    || "${PLUGIN}: the pack of version 2.3.0: name is not the name of a feature, but Acme Audit"
-        'a name that is markup'               | { it.versions[0].pack.name = '@|red x|@\u0007' }                               || "${PLUGIN}: the pack of version 2.3.0: name is not the name of a feature, but @ |red x|@?"
-        'a name that is a list'               | { it.versions[0].pack.name = ['acme-audit'] }                                  || "${PLUGIN}: the pack of version 2.3.0: name is not a text"
-        'a kind there is not'                 | { it.versions[0].pack.kind = 'profile' }                                       || "${PLUGIN}: the pack of version 2.3.0: kind is neither feature nor preset"
-        'no digest'                           | { it.versions[0].pack.remove('sha256') }                                       || "${PLUGIN}: the pack of version 2.3.0: sha256 is not a text"
-        'a digest that is none'               | { it.versions[0].pack.sha256 = 'z' * 64 }                                      || "${PLUGIN}: the pack of version 2.3.0: sha256 is not a SHA-256, which is 64 hexadecimal digits"
-        'a format that is a text'             | { it.versions[0].pack.format = '1' }                                           || "${PLUGIN}: the pack of version 2.3.0: format is not a whole number from 1"
-        'a template API that is a fraction'   | { it.versions[0].pack.templateApi = 1.5 }                                      || "${PLUGIN}: the pack of version 2.3.0: templateApi is not a whole number from 1"
-        'no compatibility'                    | { it.versions[0].pack.remove('compatibility') }                                || "${PLUGIN}: the pack of version 2.3.0: compatibility is not an object"
-        'a range that is none'                | { it.versions[0].pack.compatibility.grails = '@|red 9|@' }                     || "${PLUGIN}: the pack of version 2.3.0: compatibility.grails is not a range of versions"
-        'a type of application there is not'  | { it.versions[0].pack.applicationTypes = ['web', 'desktop'] }                  || "${PLUGIN}: the pack of version 2.3.0: applicationTypes is not an array of web, rest-api, web-plugin, plugin, rest-api-plugin"
-        'coordinates longer than a plugin has' | { it.coords = "com.${'a' * 120}:acme" }                                       || 'coords is not group:artifact of at most 120 characters, but com.aaaa'
-        'coordinates longer than a text'      | { it.coords = "com.${'a' * 5000}:acme" }                                       || 'coords has more than 4096 characters'
-        'a version longer than a version has' | { it.versions[0].version = '1.' + ('0' * 60) }                                 || "${PLUGIN}: has a version of more than 60 characters"
-        'more versions than a plugin has'     | { (1..PackCatalog.MAX_VERSIONS).each { n -> it.versions << [version: "1.0.${n}"] } } || "${PLUGIN}: has more than the ${PackCatalog.MAX_VERSIONS} versions a plugin can have"
-        'a repository with a password'        | { it['maven-repo'] = 'https://user:secret@repo.acme.invalid/maven' }           || "${PLUGIN}: maven-repo is not the https address of a repository that a catalog can name"
-        'a repository that is a directory'    | { it['maven-repo'] = 'file:/tmp/repository' }                                  || "${PLUGIN}: maven-repo is not the https address of a repository that a catalog can name"
-        'a repository without TLS'            | { it['maven-repo'] = 'http://repo.acme.invalid/maven' }                        || "${PLUGIN}: maven-repo is not the https address of a repository that a catalog can name"
-        'a repository of this computer'       | { it.versions[0]['maven-repo'] = 'https://localhost:8443/maven' }              || "${PLUGIN}: version 2.3.0: maven-repo is not the https address of a repository that a catalog can name"
-        'coordinates of a version that are none' | { it.versions[0].coords = 'com.acme:audit:2.3.0' }                           || "${PLUGIN}: the coords of version 2.3.0 is not group:artifact of at most 120 characters, but com.acme:audit:2.3.0"
-        'a version that is said to be there by a text' | { it.versions[0].artifactAvailable = 'no' }                            || "${PLUGIN}: has a version whose artifactAvailable is neither true nor false"
-        'a repository of a private network'   | { it['maven-repo'] = 'https://192.168.1.10/maven' }                            || "${PLUGIN}: maven-repo is not the https address of a repository that a catalog can name"
-        'a repository with a token'           | { it['maven-repo'] = 'https://repo.acme.invalid/maven?token=secret' }          || "${PLUGIN}: maven-repo is not the https address of a repository that a catalog can name"
-        'deprecated as a number'              | { it.deprecated = 1 }                                                          || "${PLUGIN}: deprecated is neither true, false nor a text"
-        'a description that is a list'        | { it.desc = ['x'] }                                                            || "${PLUGIN}: desc is not a text"
+        what                                  | change                                                                         || problem | of
+        'coordinates that are none'           | { it.coords = 'com.acme' }                                                     || 'coords is not group:artifact of at most 120 characters, but com.acme' | 'plugin'
+        'coordinates that are markup'         | { it.coords = '@|red x|@:\u001b[31my' }                                        || 'coords is not group:artifact of at most 120 characters, but @ |red x|@:?[31my' | 'plugin'
+        'coordinates that go up a directory'  | { it.coords = 'com.acme:../../etc' }                                           || 'coords is not group:artifact of at most 120 characters, but com.acme:../../etc' | 'plugin'
+        'coordinates of three parts'          | { it.coords = COORDINATES }                                                    || "coords is not group:artifact of at most 120 characters, but ${COORDINATES}" | 'plugin'
+        'coordinates that are a number'       | { it.coords = 7 }                                                              || 'coords is not a text' | 'plugin'
+        'no coordinates'                      | { it.remove('coords') }                                                        || 'coords is not a text' | 'plugin'
+        'a version that is a range'           | { it.versions[0].version = '[2.0,3.0)' }                                       || "${PLUGIN}: version [2.0,3.0) is not one version of a plugin" | 'version'
+        'a version that is the latest'        | { it.versions[0].version = 'latest.release' }                                  || "${PLUGIN}: version latest.release is not one version of a plugin" | 'version'
+        'a version that is markup'            | { it.versions[0].version = '@|red 1|@' }                                       || "${PLUGIN}: version @ |red 1|@ is not one version of a plugin" | 'version'
+        'a version twice'                     | { it.versions << it.versions[0] }                                              || "${PLUGIN}: has the version 2.3.0 more than once" | 'plugin'
+        'a version that is a text'            | { it.versions << 'x' }                                                         || "${PLUGIN}: has a version that is not an object" | 'plugin'
+        'a pack that is a text'               | { it.versions[0].pack = 'yes' }                                                || "${PLUGIN}: the pack of version 2.3.0 is not an object" | 'version'
+        'a name that is none'                 | { it.versions[0].pack.name = 'Acme Audit' }                                    || "${PLUGIN}: the pack of version 2.3.0: name is not the name of a feature, but Acme Audit" | 'version'
+        'a name that is markup'               | { it.versions[0].pack.name = '@|red x|@\u0007' }                               || "${PLUGIN}: the pack of version 2.3.0: name is not the name of a feature, but @ |red x|@?" | 'version'
+        'a name that is a list'               | { it.versions[0].pack.name = ['acme-audit'] }                                  || "${PLUGIN}: the pack of version 2.3.0: name is not a text" | 'version'
+        'no digest'                           | { it.versions[0].pack.remove('sha256') }                                       || "${PLUGIN}: the pack of version 2.3.0: sha256 is not a text" | 'version'
+        'a digest that is none'               | { it.versions[0].pack.sha256 = 'z' * 64 }                                      || "${PLUGIN}: the pack of version 2.3.0: sha256 is not a SHA-256, which is 64 hexadecimal digits" | 'version'
+        'a format that is a text'             | { it.versions[0].pack.format = '1' }                                           || "${PLUGIN}: the pack of version 2.3.0: format is not a whole number from 1" | 'version'
+        'a template API that is a fraction'   | { it.versions[0].pack.templateApi = 1.5 }                                      || "${PLUGIN}: the pack of version 2.3.0: templateApi is not a whole number from 1" | 'version'
+        'no compatibility'                    | { it.versions[0].pack.remove('compatibility') }                                || "${PLUGIN}: the pack of version 2.3.0: compatibility is not an object" | 'version'
+        'a range that is none'                | { it.versions[0].pack.compatibility.grails = '@|red 9|@' }                     || "${PLUGIN}: the pack of version 2.3.0: compatibility.grails is not a range of versions" | 'version'
+        'coordinates longer than a plugin has' | { it.coords = "com.${'a' * 120}:acme" }                                       || 'coords is not group:artifact of at most 120 characters, but com.aaaa' | 'plugin'
+        'coordinates longer than a text'      | { it.coords = "com.${'a' * 5000}:acme" }                                       || 'coords has more than 4096 characters' | 'plugin'
+        'a version longer than a version has' | { it.versions[0].version = '1.' + ('0' * 60) }                                 || "${PLUGIN}: has a version of more than 60 characters" | 'version'
+        'more versions than a plugin has'     | { (1..PackCatalog.MAX_VERSIONS).each { n -> it.versions << [version: "1.0.${n}"] } } || "${PLUGIN}: has more than the ${PackCatalog.MAX_VERSIONS} versions a plugin can have" | 'plugin'
+        'a repository with a password'        | { it['maven-repo'] = 'https://user:secret@repo.acme.invalid/maven' }           || "${PLUGIN}: maven-repo is not the https address of a repository that a catalog can name" | 'plugin'
+        'a repository that is a directory'    | { it['maven-repo'] = 'file:/tmp/repository' }                                  || "${PLUGIN}: maven-repo is not the https address of a repository that a catalog can name" | 'plugin'
+        'a repository without TLS'            | { it['maven-repo'] = 'http://repo.acme.invalid/maven' }                        || "${PLUGIN}: maven-repo is not the https address of a repository that a catalog can name" | 'plugin'
+        'a repository of this computer'       | { it.versions[0]['maven-repo'] = 'https://localhost:8443/maven' }              || "${PLUGIN}: version 2.3.0: maven-repo is not the https address of a repository that a catalog can name" | 'version'
+        'coordinates of a version that are none' | { it.versions[0].coords = 'com.acme:audit:2.3.0' }                           || "${PLUGIN}: the coords of version 2.3.0 is not group:artifact of at most 120 characters, but com.acme:audit:2.3.0" | 'version'
+        'a version that is said to be there by a text' | { it.versions[0].artifactAvailable = 'no' }                            || "${PLUGIN}: has a version whose artifactAvailable is neither true nor false" | 'version'
+        'a repository of a private network'   | { it['maven-repo'] = 'https://192.168.1.10/maven' }                            || "${PLUGIN}: maven-repo is not the https address of a repository that a catalog can name" | 'plugin'
+        'a repository with a token'           | { it['maven-repo'] = 'https://repo.acme.invalid/maven?token=secret' }          || "${PLUGIN}: maven-repo is not the https address of a repository that a catalog can name" | 'plugin'
+        'deprecated as a number'              | { it.deprecated = 1 }                                                          || "${PLUGIN}: deprecated is neither true, false nor a text" | 'plugin'
+        'a description that is a list'        | { it.desc = ['x'] }                                                            || "${PLUGIN}: desc is not a text" | 'plugin'
     }
 
     void "a plugin that is in the catalog twice is there once"() {
@@ -735,7 +736,7 @@ class CreateAppFeatureCatalogSpec extends CommandSpec implements CommandFixture 
         lines.contains('  1 more is not offered: of a deprecated plugin, without a release, not in the version org.apache.grails:grails-bom manages it at, or not for this application, Grails ' +
                 "${org.grails.forge.util.VersionInfo.grailsVersion} and Forge ${org.grails.forge.util.VersionInfo.version}".toString())
         lines.contains('  1 more has the name of a feature of the framework, which is the one that is selected by that name')
-        lines.contains('  1 plugin is left out for what the catalog says of it:')
+        lines.contains('  1 version is left out for what the catalog says of it:')
         lines.contains('    plugin 6: org.bad:bad: the pack of version 1.0.0: sha256 is not a SHA-256, which is 64 hexadecimal digits')
         !out.toString().contains('old-audit')
         !out.toString().contains('\u001b[31m')
@@ -749,7 +750,7 @@ class CreateAppFeatureCatalogSpec extends CommandSpec implements CommandFixture 
 
         then:
         exit == 0
-        out.toString().contains('No feature catalog is read: --feature-catalog or GRAILS_FORGE_CATALOG names one')
+        out.toString().contains('No feature catalog is read: --feature-catalog, GRAILS_FORGE_CATALOG or GRAILS_PLUGIN_INDEX names one')
     }
 
     void "a jar that is not the one the catalog records is refused before it is opened, and nothing is created"() {
@@ -1060,7 +1061,8 @@ class CreateAppFeatureCatalogSpec extends CommandSpec implements CommandFixture 
         File later = publish("${managed}:99.0.0")
         File both = catalog([plugin(managed, [(version): pack(ofTheBom), '99.0.0': pack(later)])], 'both.json')
         File onlyLater = catalog([plugin(managed, ['99.0.0': pack(later), '98.0.0': pack(later)])], 'later.json')
-        File unreadable = catalog([plugin(managed, [(version): pack(ofTheBom, [format: 2]), '99.0.0': pack(later)])], 'unreadable.json')
+        File unreadable = catalog([plugin(managed, [(version): pack(ofTheBom, [templateApi: 2]), '99.0.0': pack(later)])], 'unreadable.json')
+        File laterFormat = catalog([plugin(managed, [(version): pack(ofTheBom, [format: 2]), '99.0.0': pack(later)])], 'later-format.json')
         File otherGroup = catalog([plugin('org.other:grails-cache', ['99.0.0': pack(publish('org.other:grails-cache:99.0.0')), '1.0.0': pack(later)])], 'other.json')
         File underAnother = catalog([plugin('org.evil:wrapper', ['0.0.1': pack(publish("${managed}:0.0.1")), '0.0.2': pack(later)]).tap {
             it.versions.each { it.coords = managed }
@@ -1092,6 +1094,14 @@ class CreateAppFeatureCatalogSpec extends CommandSpec implements CommandFixture 
         then:
         exit == 2
         err.toString().contains("org.apache.grails:grails-bom, which the application gets, manages ${managed} at ${version}, and the pack of ${version} is not one this Forge reads")
+
+        when: 'the pack of that version has a format a later Forge reads'
+        exit = run('shop', '--features', 'acme-audit', '--feature-catalog', laterFormat.toURI().toString(), '--feature-pack-repository', address)
+
+        then: 'it is not read, and no other version is chosen'
+        exit == 2
+        err.toString().contains("org.apache.grails:grails-bom, which the application gets, manages ${managed} at ${version}, and the catalog has no pack for ${version} " +
+                '(it has one for 99.0.0)')
 
         when: 'the coordinates are given'
         exit = run('--list-features', '--features', "${managed}:99.0.0", '--feature-pack-repository', address)
@@ -1260,7 +1270,7 @@ class CreateAppFeatureCatalogSpec extends CommandSpec implements CommandFixture 
 
         then:
         exit == 0
-        out.toString().contains('No feature catalog is read: --feature-catalog or GRAILS_FORGE_CATALOG names one')
+        out.toString().contains('No feature catalog is read: --feature-catalog, GRAILS_FORGE_CATALOG or GRAILS_PLUGIN_INDEX names one')
         asked.isEmpty()
     }
 
@@ -1283,7 +1293,7 @@ class CreateAppFeatureCatalogSpec extends CommandSpec implements CommandFixture 
         catalog.setText(catalog.getText('UTF-8').replace('"templateApi": 1', '"templateApi": 1e99999999999'), 'UTF-8')
         exit = run('shop', '--features', 'acme-audit', '--feature-catalog', catalog.toURI().toString(), '--feature-pack-repository', address)
 
-        then: 'the plugin is left out'
+        then: 'that version is left out'
         exit == 2
         err.toString().readLines()[0].contains("plugin 2: ${PLUGIN}: the pack of version 2.3.0: templateApi is not a whole number from 1")
     }
@@ -1782,6 +1792,7 @@ class CreateAppFeatureCatalogSpec extends CommandSpec implements CommandFixture 
             ProcessBuilder builder = ForkedCli.builder(dir, jvm, line as String[]).redirectErrorStream(true)
             // the build names no catalog for the specifications; here nothing at all does, as for a user
             builder.environment().remove('GRAILS_FORGE_CATALOG')
+            builder.environment().remove('GRAILS_PLUGIN_INDEX')
             Process program = builder.start()
             String text = program.inputStream.getText('UTF-8')
             assert program.waitFor(300, java.util.concurrent.TimeUnit.SECONDS)
@@ -1790,7 +1801,7 @@ class CreateAppFeatureCatalogSpec extends CommandSpec implements CommandFixture 
 
         then:
         said[0].startsWith('0 ')
-        said[0].contains('No feature catalog is read: --feature-catalog or GRAILS_FORGE_CATALOG names one')
+        said[0].contains('No feature catalog is read: --feature-catalog, GRAILS_FORGE_CATALOG or GRAILS_PLUGIN_INDEX names one')
         !said[1].startsWith('0 ')
         said[1].contains('acme-audit')
         !new File(dir, 'shop').exists()
@@ -1803,9 +1814,10 @@ class CreateAppFeatureCatalogSpec extends CommandSpec implements CommandFixture 
 
     private int run(String... args) {
         String catalogs = setting
+        String index = indexVariable
         String repositories = environment
         Path home = work.toPath()
-        boolean index = pluginIndex
+        boolean defaultIndex = pluginIndex
         String otherBom = chosenFor
         Duration waited = within
         boolean fake = answered
@@ -1823,13 +1835,18 @@ class CreateAppFeatureCatalogSpec extends CommandSpec implements CommandFixture 
             }
 
             @Override
+            protected String pluginIndexSetting() {
+                return index
+            }
+
+            @Override
             protected Path featureCatalogHome() {
                 return home
             }
 
             @Override
             protected boolean readsPluginIndexUnnamed() {
-                return index
+                return defaultIndex
             }
 
             @Override

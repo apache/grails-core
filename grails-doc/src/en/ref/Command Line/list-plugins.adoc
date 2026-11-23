@@ -73,10 +73,10 @@ The plugins come from two lists:
 
 When the plugin index cannot be read, because there is no network, the server does not answer within 20 seconds, or what it answers is no plugin index, the command says so in a warning, lists the plugins of this release of Grails, and ends with exit code 0.
 
-The plugin index is named by the `--plugin-index` option, else by the `GRAILS_PLUGIN_INDEX` environment variable, else it is the plugin index of Grails. An address that is neither `https` nor `file:`, or that has a user, a password or a query, is refused. Only `list-plugins` and link:plugin-info.html[plugin-info] read the plugin index; no other command asks the network for it.
+The plugin index is named by the `--plugin-index` option, else by the `GRAILS_PLUGIN_INDEX` environment variable, else it is the plugin index of Grails. An address that is neither `https` nor `file:`, or that has a user, a password or a query, is refused. Only `list-plugins` and link:plugin-info.html[plugin-info] read the plugin index of Grails; no other command asks the network for it. A plugin index that `GRAILS_PLUGIN_INDEX` names is also the feature catalog of the `create-` commands, see link:{guidePath}plugins.html#forgeFeaturePacks[Adding a Feature to Application Creation].
 
 What the plugin index says is shown as text: it is not run, a plugin is not downloaded, and control characters are taken out of every name and description before it is written to the terminal.
 
-With `--json` the document has `format` (1), `grailsVersion`, `pluginIndex` (its `address`, whether it was `read`, and the `problem` when it was not), `notes`, `deprecatedNotListed` and `plugins`, each with `name`, `coordinates`, `version`, `description`, `ofGrails` and `deprecated`.
+With `--json` the document has `format` (1), `grailsVersion`, `pluginIndex` (its `address`, whether it was `read`, and the `problem` when it was not), `notes`, `deprecatedNotListed` and `plugins`, each with `name`, `coordinates`, `version`, `description`, `ofGrails`, `deprecated` and `featurePacks`, the names of the features of the feature packs the plugin index records for the plugin that an application of this Grails is created with. The last line of the list says how many plugins have such a feature, when any has.
 
 For more about one plugin use the link:plugin-info.html[plugin-info] command.

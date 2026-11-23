@@ -20,10 +20,12 @@ package org.apache.grails.forge.cli.plugin
 
 import java.time.Duration
 import java.util.concurrent.Callable
+import java.util.function.Function
 import groovy.transform.CompileStatic
 import org.apache.grails.forge.cli.console.GradleRunner
 import org.apache.grails.forge.cli.pack.PackArtifactException
 import org.apache.grails.forge.cli.pack.PackArtifacts
+import org.apache.grails.forge.cli.pack.PackCatalog
 import org.apache.grails.forge.cli.pack.PackCatalogs
 import org.apache.grails.forge.core.bom.BomVersions
 import org.grails.forge.cli.command.BaseCommand
@@ -35,8 +37,11 @@ import picocli.CommandLine
  * them from. There are two lists. The plugins of this release of Grails are in the command line
  * itself ({@link BundledPlugins}), with the versions the Grails BOM manages them at, and are always
  * there. The plugins of everyone else are in the plugin index of Grails ({@link PluginIndex}), which
- * is read from its address when one of the two commands runs, and by no other command; when it
- * cannot be read the command says so and answers with the first list.
+ * is read from its address when one of the two commands runs; when it cannot be read the command
+ * says so and answers with the first list. The feature packs the index records for a plugin are read
+ * from it as the create commands read a feature catalog ({@link PackCatalog}), so that what these
+ * commands say a plugin offers is what an application is created with; the plugin index that
+ * {@code GRAILS_PLUGIN_INDEX} names is the feature catalog of those commands too.
  *
  * @since 9.0
  */
@@ -77,6 +82,8 @@ abstract class PluginsCommand extends BaseCommand implements Callable<Integer> {
 
     private PackArtifacts packArtifacts
     private String indexAddress
+    private URI indexUri
+    private boolean indexOfEnvironment
     private String indexProblem
     private List<BomVersions> boms
 
@@ -103,38 +110,112 @@ abstract class PluginsCommand extends BaseCommand implements Callable<Integer> {
         for (PluginRecord each : BundledPlugins.all()) {
             plugins.put(each.coordinates, each)
         }
-        PluginIndex index = index()
+        Map<String, PackCatalog.Plugin> packs = new HashMap<>()
+        PluginIndex index = index(packs)
         if (index != null) {
             for (PluginRecord each : index.plugins) {
                 PluginRecord ofGrails = plugins.get(each.coordinates)
                 if (ofGrails == null) {
+                    each.packs = packs.get(each.coordinates)
                     plugins.put(each.coordinates, each)
                 } else {
                     ofGrails.versions = each.versions
                     ofGrails.documentation = ofGrails.documentation ?: each.documentation
                     ofGrails.deprecated = each.deprecated
                     ofGrails.repository = each.repository
+                    ofGrails.packs = packs.get(each.coordinates)
                 }
             }
         }
         return new ArrayList<PluginRecord>(plugins.values())
     }
 
-    private PluginIndex index() {
-        String named = pluginIndex ?: (pluginIndexSetting() ?: '').trim()
+    /**
+     * @param packs given the plugins the index records a feature pack for, by their {@code group:artifact}
+     */
+    private PluginIndex index(Map<String, PackCatalog.Plugin> packs) {
+        String option = pluginIndex
+        String named = option ?: (pluginIndexSetting() ?: '').trim()
         if (named == NONE) {
             return null
         }
         URI address = PackArtifacts.pluginIndex(named ?: PackCatalogs.PLUGIN_INDEX)
         indexAddress = PackArtifacts.shownAddress(address)
+        indexUri = address
+        indexOfEnvironment = !option && named
+        byte[] bytes
+        PluginIndex read
         try {
-            return PluginIndex.parse(artifacts().file(address, PluginIndex.MAX_BYTES, 'the plugin index', indexWithin()))
+            bytes = artifacts().file(address, PluginIndex.MAX_BYTES, 'the plugin index', indexWithin())
+            read = PluginIndex.parse(bytes)
         } catch (PackArtifactException e) {
             indexProblem = GradleRunner.line(e.message)
             notes << ("The plugin index ${indexAddress} was not read (${indexProblem}), so the plugins of the community are not known to this command: " +
                     'only the plugins of this release of Grails are').toString()
             return null
         }
+        // the packs as a create command reads them from the same bytes, by the one reading there is of them
+        try {
+            for (PackCatalog.Plugin each : PackCatalog.parse(bytes, address).plugins) {
+                packs.put(each.coordinates, each)
+            }
+        } catch (PackArtifactException e) {
+            notes << "The feature packs of the plugin index ${indexAddress} were not read (${GradleRunner.line(e.message)}): no feature of a plugin of it is named".toString()
+        }
+        return read
+    }
+
+    /**
+     * What a plugin of the plugin index offers to the create commands: for each feature its packs
+     * have, the version an application of this Grails and this Forge is created with, as those
+     * commands choose it, or why none is chosen.
+     *
+     * @return one entry for each feature: its {@code name}, whether it is {@code offered}, and the
+     * {@code version}, {@code coordinates} and {@code applicationTypes} of the pack that is, or the
+     * {@code reason} none is
+     */
+    protected List<Map<String, Object>> featurePacks(PluginRecord plugin) {
+        if (plugin.packs == null) {
+            return Collections.<Map<String, Object>>emptyList()
+        }
+        List<Map<String, Object>> offered = []
+        String bom = managed(plugin.coordinates)?.key ?: "${BomVersions.GROUP}:${BomVersions.SHIPPED.first()}".toString()
+        for (String name : plugin.packs.versions.findAll { PackCatalog.Version each -> each.feature }*.name.unique()) {
+            Object chosen = PackCatalogs.offered(plugin.packs, name, null, grailsVersion(), forgeVersion(), bom,
+                    { String artifact -> managed(artifact)?.value } as Function<String, String>)
+            Map<String, Object> entry = new LinkedHashMap<>()
+            entry.put('name', name)
+            entry.put('offered', chosen instanceof PackCatalog.Version)
+            if (chosen instanceof PackCatalog.Version) {
+                PackCatalog.Version version = (PackCatalog.Version) chosen
+                entry.put('version', version.version)
+                entry.put('coordinates', version.coordinates.toString())
+                entry.put('applicationTypes', version.applicationTypes == null ? null : new ArrayList<String>(version.applicationTypes))
+            } else {
+                entry.put('reason', GradleRunner.line((String) chosen))
+            }
+            offered << entry
+        }
+        return offered
+    }
+
+    /**
+     * @return how a feature of the plugin index is selected by its name in a create command: with
+     * nothing more when the environment names the index for those commands too, and else with the
+     * index as the feature catalog; {@code null} when the index is not one a command can be given
+     */
+    protected String byName(String name) {
+        if (indexOfEnvironment) {
+            return "--features ${name}".toString()
+        }
+        return indexUri == null ? null : "--features ${name} --feature-catalog ${indexUri}".toString()
+    }
+
+    /**
+     * @return the version of this Forge, which a pack has to be for
+     */
+    protected String forgeVersion() {
+        return VersionInfo.getVersion()
     }
 
     /**

@@ -22,6 +22,7 @@ import java.util.regex.Matcher
 import java.util.regex.Pattern
 import groovy.transform.CompileStatic
 import org.apache.grails.forge.cli.console.GradleRunner
+import org.apache.grails.forge.cli.pack.PackCatalog
 
 /**
  * What is known of one Grails plugin, from the list this command line has in itself or from the plugin
@@ -72,6 +73,11 @@ final class PluginRecord {
     List<String> features = []
     /** The versions the plugin index has, in its order */
     List<Release> versions = []
+    /**
+     * The feature packs the plugin index records for the plugin, read as the create commands read
+     * them when the index is their feature catalog, or {@code null} when it records none
+     */
+    PackCatalog.Plugin packs
 
     String getGroup() {
         return coordinates.substring(0, coordinates.indexOf(':'))

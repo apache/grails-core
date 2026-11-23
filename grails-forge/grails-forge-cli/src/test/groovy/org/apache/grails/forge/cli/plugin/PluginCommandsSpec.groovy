@@ -159,7 +159,7 @@ class PluginCommandsSpec extends Specification {
         document.notes == []
         document.deprecatedNotListed == 0
         document.plugins == [[name: 'Audit Logging', coordinates: 'org.example.plugins:audit-logging', version: '5.10.0',
-                              description: 'Tracks changes to domain objects', ofGrails: false, deprecated: false]]
+                              description: 'Tracks changes to domain objects', ofGrails: false, deprecated: false, featurePacks: []]]
 
         when: 'the index is not there'
         served[INDEX] = new ConnectException('refused')
@@ -173,7 +173,7 @@ class PluginCommandsSpec extends Specification {
         document.notes.size() == 1
         document.plugins.find { it.coordinates == CACHE } == [name: 'Cache', coordinates: CACHE, version: managed(CACHE),
                                                                description: BundledPlugins.all().find { it.coordinates == CACHE }.description,
-                                                               ofGrails: true, deprecated: false]
+                                                               ofGrails: true, deprecated: false, featurePacks: []]
     }
 
     @Unroll
@@ -488,7 +488,7 @@ class PluginCommandsSpec extends Specification {
                             versions     : ['7.0.0', '8.0.0-RC1', '8.0.0', '8.0.1'], versionsFrom: REPOSITORY, requiresGrails: '8.0.0 > *',
                             license      : 'Apache 2.0 License', documentation: 'https://docs.example.org/cache',
                             issueTracker : 'https://github.com/example/cache/issues', source: 'https://github.com/example/cache', deprecated: null,
-                            dependency   : "implementation '${CACHE}'", features: ['cache']]
+                            dependency   : "implementation '${CACHE}'", features: ['cache'], featurePacks: []]
 
         when: 'a plugin nobody knows'
         exit = info('--plugin-index', INDEX, 'nothing-like-it', '--json')

@@ -20,6 +20,7 @@ package org.apache.grails.forge.cli.plugin
 
 import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
+import org.apache.grails.forge.cli.console.UsageHelp
 import picocli.CommandLine
 
 /**
@@ -89,13 +90,18 @@ class ListPluginsCommand extends PluginsCommand {
             }
         }
         int ofGrails = listed.count { PluginRecord plugin -> plugin.ofGrails } as int
+        int withPacks = listed.count { PluginRecord plugin -> offeredPacks(plugin) } as int
         out("${listed.size()} ${listed.size() == 1 ? 'plugin' : 'plugins'}: ${ofGrails} of this release of Grails, with the version the Grails BOM manages" +
                 (indexRead ? ", and ${listed.size() - ofGrails} of the plugin index, with the latest version that says it is for this Grails (${NO_VERSION} where none does)" : ''))
+        if (withPacks > 0) {
+            out("${withPacks} of the plugin index ${withPacks == 1 ? 'has' : 'have'} a feature pack an application of this Grails is created with, " +
+                    "which ${PluginInfoCommand.NAME} names")
+        }
         if (notListed > 0) {
             out("${notListed} deprecated ${notListed == 1 ? 'plugin is' : 'plugins are'} not listed: --deprecated lists ${notListed == 1 ? 'it' : 'them'}")
         }
         if (!listed.isEmpty()) {
-            out("More of one plugin: ${spec.root().name()} ${PluginInfoCommand.NAME} NAME")
+            out("More of one plugin: ${UsageHelp.toType(spec, "${PluginInfoCommand.NAME} NAME")}")
         }
         return 0
     }
@@ -108,6 +114,12 @@ class ListPluginsCommand extends PluginsCommand {
         described.put('description', plugin.description)
         described.put('ofGrails', plugin.ofGrails)
         described.put('deprecated', plugin.deprecated != null)
+        described.put('featurePacks', offeredPacks(plugin))
         return described
+    }
+
+    // the names of the features of the packs of the plugin an application of this Grails is created with
+    private List<String> offeredPacks(PluginRecord plugin) {
+        return featurePacks(plugin).findAll { Map<String, Object> pack -> pack.get('offered') }.collect { Map<String, Object> pack -> (String) pack.get('name') }
     }
 }

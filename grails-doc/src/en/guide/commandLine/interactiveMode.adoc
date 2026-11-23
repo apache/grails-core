@@ -94,8 +94,9 @@ Creates an application
                             catalog only when you trust whoever writes it as you would trust the
                             plugins themselves. The address is https, or file: for a file; none is
                             for no catalog. Without the option, the catalogs of the
-                            GRAILS_FORGE_CATALOG environment variable are read, and without that
-                            none. Can be given more than once.
+                            GRAILS_FORGE_CATALOG environment variable are read, else the plugin
+                            index the GRAILS_PLUGIN_INDEX environment variable names, and without
+                            either none. Can be given more than once.
       --feature-pack-dir=DIRECTORY
                           A directory that holds a feature pack (feature.yml and its templates
                             directory), whose feature can then be selected like one of the

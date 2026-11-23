@@ -20,6 +20,7 @@ package org.apache.grails.forge.cli.plugin
 
 import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
+import org.apache.grails.forge.cli.console.UsageHelp
 import org.apache.grails.forge.cli.pack.PackArtifacts
 import org.apache.grails.forge.cli.plugin.PluginRecord.Release
 import org.grails.forge.cli.command.FeatureCommand
@@ -113,6 +114,7 @@ class PluginInfoCommand extends PluginsCommand {
         info.put('deprecated', record.deprecated)
         info.put('dependency', dependency(record, managed, forGrails ?: latest))
         info.put('features', record.features)
+        info.put('featurePacks', featurePacks(record))
         if (json) {
             Map<String, Object> document = new LinkedHashMap<>()
             document.put('format', FORMAT)
@@ -165,7 +167,21 @@ class PluginInfoCommand extends PluginsCommand {
         }
         if (record.features) {
             out("* ${record.features.size() == 1 ? 'Feature' : 'Features'}: ${record.features.join(', ')}. In the directory of an application: " +
-                    "${spec.root().name()} ${FeatureCommand.NAME} add ${record.features.first()}")
+                    "${UsageHelp.toType(spec, "${FeatureCommand.NAME} add ${record.features.first()}")}")
+        }
+        for (Map<String, Object> pack : (List<Map<String, Object>>) info.get('featurePacks')) {
+            if (pack.get('offered')) {
+                List<String> types = (List<String>) pack.get('applicationTypes')
+                out("* Feature pack: ${pack.get('name')}, of version ${pack.get('version')}${types ? ", for applications of type ${types.join(', ')}" : ''}. " +
+                        'An application is created with it by:')
+                out("    ${UsageHelp.toType(spec, "create-app NAME --features ${pack.get('coordinates')}")}")
+                String named = byName((String) pack.get('name'))
+                if (named != null) {
+                    out("    ${UsageHelp.toType(spec, "create-app NAME ${named}")}")
+                }
+            } else {
+                out("* Feature pack: ${pack.get('name')}, which an application of Grails ${grailsVersion()} is not created with: ${pack.get('reason')}")
+            }
         }
         out('* Definition:')
         out('')
@@ -227,7 +243,7 @@ class PluginInfoCommand extends PluginsCommand {
         return "No plugin ${FeatureSelectionException.shown(plugin)} is known among the plugins of this release of Grails" +
                 (indexRead ? ' and of the plugin index' : '') + '.' +
                 (close ? " Did you mean: ${close.take(MAX_NAMED).join(', ')}${close.size() > MAX_NAMED ? " (and ${close.size() - MAX_NAMED} more)" : ''}?" : '') +
-                " ${spec.root().name()} ${ListPluginsCommand.NAME} lists the plugins, and a plugin that is in neither list is looked for in the repositories " +
+                " ${UsageHelp.toType(spec, ListPluginsCommand.NAME)} lists the plugins, and a plugin that is in neither list is looked for in the repositories " +
                 'when it is given by its coordinates, as group:artifact'
     }
 

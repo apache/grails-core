@@ -63,6 +63,13 @@ import org.grails.forge.feature.FeatureSelectionException
  * and its own range have: neither is taken over the other. A field that is not named here is not
  * read. No order of the versions is relied on: which is the latest is found by comparing them.</p>
  *
+ * <p>The {@code format} of a pack says how the rest of it is written, and is read first: a pack of
+ * another format than {@link #FORMAT} is one a later Forge reads, and nothing else of it is read
+ * here; the version is passed over and counted, and the other versions of the plugin are read as
+ * they are. Of a pack of this format a {@code kind} or a type of application this Forge does not know
+ * is no fault: a pack of another kind is never selected by a name, and one for types of application
+ * this Forge does not know is selected for none of them.</p>
+ *
  * <p>A catalog is read from elsewhere and is not trusted. What is wrong with the document as a whole
  * refuses it; a plugin with a pack that has something wrong with it is left out, with one line that
  * says what, and so is one version whose {@code grailsVersion} is not such a range; of a plugin without
@@ -176,9 +183,13 @@ final class PackCatalog {
     /** How many versions of plugins that are not left out are left out */
     final int versionsLeftOut
 
+    /** How many versions have a pack of another format than {@link #FORMAT}, which a later Forge reads and of which nothing else is read */
+    final int versionsOfOtherFormats
+
     private PackCatalog(String address, String recordableAddress, String sha256, boolean withoutPacks, List<Plugin> plugins, Set<String> withoutPack,
-                        List<String> problems, int leftOut, int versionsLeftOut) {
+                        List<String> problems, int leftOut, int versionsLeftOut, int versionsOfOtherFormats) {
         this.versionsLeftOut = versionsLeftOut
+        this.versionsOfOtherFormats = versionsOfOtherFormats
         this.address = address
         this.recordableAddress = recordableAddress
         this.sha256 = sha256
@@ -218,7 +229,7 @@ final class PackCatalog {
         Set<String> withoutPack = new LinkedHashSet<>()
         List<String> problems = []
         Set<String> seen = new HashSet<>()
-        int[] counts = new int[3]
+        int[] counts = new int[4]
         Json json
         try {
             String text = StandardCharsets.UTF_8.newDecoder().onMalformedInput(CodingErrorAction.REPORT)
@@ -242,7 +253,7 @@ final class PackCatalog {
                         if (counts[1] + counts[2]++ < MAX_PROBLEMS) {
                             problems << bounded("plugin ${number}: ${line}")
                         }
-                    } as Consumer<String>)
+                    } as Consumer<String>, { counts[3]++ } as Runnable)
                     if (!seen.add(plugin.coordinates)) {
                         throw new Problem("${plugin.coordinates} is in the catalog more than once")
                     }
@@ -269,7 +280,7 @@ final class PackCatalog {
             throw new PackArtifactException('it is not a catalog: the document is not an array of plugins, as the plugin index is')
         }
         withoutPack.removeAll(seen)
-        return new PackCatalog(shown, recordable, digest, plugins.isEmpty(), plugins, withoutPack, problems, counts[1], counts[2])
+        return new PackCatalog(shown, recordable, digest, plugins.isEmpty() && counts[3] == 0, plugins, withoutPack, problems, counts[1], counts[2], counts[3])
     }
 
     private static String bounded(String line) {
@@ -331,7 +342,12 @@ final class PackCatalog {
                 !parts[0].contains('..') && !parts[0].endsWith('.')
     }
 
-    private static Plugin plugin(Map<String, Object> entry, Consumer<String> versionLeftOut) {
+    /**
+     * @param versionLeftOut told what is wrong with each version that is left out. What a version has
+     * leaves out that version, and the other versions of the plugin are read as they are
+     * @param ofOtherFormat told of each version whose pack has a format this Forge does not read
+     */
+    private static Plugin plugin(Map<String, Object> entry, Consumer<String> versionLeftOut, Runnable ofOtherFormat) {
         String coordinates = text(entry, 'coords', true, MAX_TEXT)
         if (!isPlugin(coordinates)) {
             throw new Problem("coords is not group:artifact of at most ${MAX_PLUGIN} characters, but ${shown(coordinates)}")
@@ -359,13 +375,17 @@ final class PackCatalog {
                 if (!listedVersion.containsKey('pack') || available == false) {
                     continue
                 }
-                if (available != null && available != true) {
-                    throw new Problem('has a version whose artifactAvailable is neither true nor false')
-                }
                 Version read
                 try {
+                    if (available != null && available != true) {
+                        throw new Problem('has a version whose artifactAvailable is neither true nor false')
+                    }
                     read = version(coordinates, listedVersion, repositoryOfAll)
-                } catch (OfOneVersion e) {
+                } catch (OfOtherFormat ignored) {
+                    ofOtherFormat.run()
+                    continue
+                } catch (Problem e) {
+                    // what one version says leaves out that version: the others of the plugin, older ones a Forge reads among them, are still offered
                     versionLeftOut.accept("${coordinates}: ${e.message}".toString())
                     continue
                 }
@@ -386,6 +406,21 @@ final class PackCatalog {
         String version = text(entry, 'version', true, MAX_TEXT)
         if (version.length() > MAX_VERSION) {
             throw new Problem("has a version of more than ${MAX_VERSION} characters")
+        }
+        Object value = entry.get('pack')
+        if (!(value instanceof Map)) {
+            throw new Problem("the pack of version ${shown(version)} is not an object")
+        }
+        Map<String, Object> pack = (Map<String, Object>) value
+        // the format says how the rest of the pack is written: of another one nothing more is read, by the rules of this one or any other
+        int format
+        try {
+            format = whole(pack, 'format')
+        } catch (Problem e) {
+            throw new Problem("the pack of version ${shown(version)}: ${e.message}")
+        }
+        if (format != FORMAT) {
+            throw new OfOtherFormat()
         }
         // a version can have been published under other coordinates than the plugin has now
         String own = text(entry, 'coords', false, MAX_TEXT)
@@ -415,15 +450,11 @@ final class PackCatalog {
                         "${ofDescriptor instanceof String ? shown((String) ofDescriptor) : 'no text'}")
             }
         }
-        Object value = entry.get('pack')
-        if (!(value instanceof Map)) {
-            throw new Problem("the pack of version ${version} is not an object")
-        }
-        Map<String, Object> pack = (Map<String, Object>) value
         try {
-            String kind = text(pack, 'kind', true, MAX_NAME)
-            if (kind != FEATURE && kind != PRESET) {
-                throw new Problem("kind is neither ${FEATURE} nor ${PRESET}")
+            // a kind of pack this Forge does not know is one it never selects by a name
+            String kind = text(pack, 'kind', true, MAX_TEXT)
+            if (kind.length() > MAX_NAME || !NAME.matcher(kind).matches()) {
+                throw new Problem("kind is not the name of a kind of pack, such as ${FEATURE} or ${PRESET}, but ${shown(kind)}")
             }
             String name = text(pack, 'name', true, MAX_TEXT)
             if (name.length() > MAX_NAME || !NAME.matcher(name).matches()) {
@@ -440,12 +471,15 @@ final class PackCatalog {
             Set<String> applicationTypes = null
             Object types = pack.get('applicationTypes')
             if (types != null) {
-                if (!(types instanceof List) || ((List) types).isEmpty() || !((List) types).every { Object type -> APPLICATION_TYPES.contains(type) }) {
-                    throw new Problem("applicationTypes is not an array of ${APPLICATION_TYPES.join(', ')}")
+                // a type this Forge does not know is kept, and is the type of no application it creates
+                if (!(types instanceof List) || ((List) types).isEmpty() || !((List) types).every { Object type ->
+                    type instanceof String && ((String) type).length() <= MAX_NAME && NAME.matcher((String) type).matches()
+                }) {
+                    throw new Problem("applicationTypes is not an array of names of types of application, such as ${APPLICATION_TYPES.join(', ')}")
                 }
                 applicationTypes = new LinkedHashSet<String>((List<String>) types)
             }
-            return new Version(version, kind, name, whole(pack, 'format'), whole(pack, 'templateApi'), applicationTypes,
+            return new Version(version, kind, name, format, whole(pack, 'templateApi'), applicationTypes,
                     range((Map<String, Object>) compatibility, 'grails'), range((Map<String, Object>) compatibility, 'forge'),
                     sha256.toLowerCase(Locale.ROOT), ofVersion, repository, grailsVersion,
                     ofDescriptor == null ? null : ((String) ofDescriptor).trim().replaceAll(/\s+/, ' '))
@@ -669,6 +703,14 @@ final class PackCatalog {
 
         OfOneVersion(String message) {
             super(message)
+        }
+    }
+
+    // a version whose pack has a format this Forge does not read: passed over, and not wrong
+    private static final class OfOtherFormat extends Problem {
+
+        OfOtherFormat() {
+            super('of another format')
         }
     }
 

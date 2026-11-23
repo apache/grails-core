@@ -66,6 +66,12 @@ import java.util.regex.Pattern
 @CompileStatic
 abstract class CreateCommand extends BaseCommand implements Callable<Integer>, OptionRelation.Declared {
 
+    /** The environment variable that names the plugin index, which the create commands read as a feature catalog */
+    public static final String PLUGIN_INDEX_VARIABLE = 'GRAILS_PLUGIN_INDEX'
+
+    /** What {@code --list-catalog-features} says when no catalog is named */
+    public static final String NO_CATALOG = 'No feature catalog is read: --feature-catalog, GRAILS_FORGE_CATALOG or GRAILS_PLUGIN_INDEX names one'
+
     /** The create command of each type of application, which a preset of that type is given to */
     static final Map<ApplicationType, String> CREATE_COMMANDS = Collections.unmodifiableMap([
             (ApplicationType.WEB): CreateAppCommand.NAME,
@@ -144,7 +150,8 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer>, O
                     'which SHA-256, and can name a repository to take it from, and the feature pack of that plugin is then used. A pack is ' +
                     'code: name a catalog only when you trust whoever writes it as you would trust the plugins themselves. The address is ' +
                     'https, or file: for a file; none is for no catalog. Without the option, the catalogs of the GRAILS_FORGE_CATALOG ' +
-                    'environment variable are read, and without that none. Can be given more than once.')
+                    'environment variable are read, else the plugin index the GRAILS_PLUGIN_INDEX environment variable names, and without ' +
+                    'either none. Can be given more than once.')
     List<String> featureCatalogs = new ArrayList<>()
 
     @CommandLine.Option(names = ['--list-catalog-features'],
@@ -264,7 +271,7 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer>, O
                 // the list was asked for, and there is none
                 throw new PackArtifactException(catalogs.getUnread())
             }
-            List<String> lines = catalogs.isEmpty() ? ['No feature catalog is read: --feature-catalog or GRAILS_FORGE_CATALOG names one'] :
+            List<String> lines = catalogs.isEmpty() ? [NO_CATALOG] :
                     catalogs.listing(applicationTypeName(), VersionInfo.getGrailsVersion(), VersionInfo.getVersion(), this.&isOfTheFramework,
                             "${BomVersions.GROUP}:${bomOfTheSelection()}", this.&managedIfKnown)
             saidOf(catalogs)
@@ -792,9 +799,11 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer>, O
             }
             packArtifacts().offline = offline
             String setting = featureCatalogSetting()
+            // the plugin index the environment names for the commands that list plugins is the catalog of these too
+            String index = pluginIndexSetting()
             boolean pluginIndex = readsPluginIndexUnnamed()
-            return new PackCatalogs(packArtifacts(), PackCatalogs.addresses(featureCatalogs, setting, pluginIndex), featureCatalogHome(), refresh,
-                    PackCatalogs.isByDefault(featureCatalogs, setting, pluginIndex), defaultCatalogWithin())
+            return new PackCatalogs(packArtifacts(), PackCatalogs.addresses(featureCatalogs, setting, index, pluginIndex), featureCatalogHome(), refresh,
+                    PackCatalogs.isByDefault(featureCatalogs, setting, index, pluginIndex), defaultCatalogWithin())
         } catch (IllegalArgumentException e) {
             throw new CommandLine.ParameterException(this.spec.commandLine(), e.getMessage())
         }
@@ -892,6 +901,15 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer>, O
      */
     protected String featureCatalogSetting() {
         return System.getenv('GRAILS_FORGE_CATALOG')
+    }
+
+    /**
+     * @return the plugin index the environment names for every command that reads one
+     * ({@code GRAILS_PLUGIN_INDEX}): an address, {@code none}, or {@code null} when it names none. It
+     * is the catalog when neither {@code --feature-catalog} nor {@link #featureCatalogSetting()} names one
+     */
+    protected String pluginIndexSetting() {
+        return System.getenv(PLUGIN_INDEX_VARIABLE)
     }
 
     /**

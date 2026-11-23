@@ -138,7 +138,24 @@ final class PackCatalogs {
      * @throws IllegalArgumentException when one is not the address of a catalog
      */
     static List<URI> addresses(List<String> given, String environment, boolean pluginIndex) {
+        return addresses(given, environment, null, pluginIndex)
+    }
+
+    /**
+     * @param indexVariable the plugin index the environment names for every command that reads one
+     * ({@code GRAILS_PLUGIN_INDEX}): one address or {@link #NONE}, or {@code null}. It is the catalog
+     * when neither the command nor the variable of the catalogs names one
+     * @return the addresses of the catalogs to read: those that were given, else those of the
+     * environment, else the plugin index the environment names, else the plugin index of Grails or
+     * none; none when {@link #NONE} is what is said
+     * @see #addresses(List, String, boolean)
+     */
+    static List<URI> addresses(List<String> given, String environment, String indexVariable, boolean pluginIndex) {
         List<String> named = given ?: (environment ?: '').split(';')*.trim().findAll { String each -> !each.isEmpty() }
+        if (named.isEmpty() && indexVariable != null && !indexVariable.trim().isEmpty()) {
+            // one address, as the commands that list the plugins read it: a semicolon in it is part of it
+            named = [indexVariable.trim()]
+        }
         if (named.isEmpty()) {
             return pluginIndex ? [PackArtifacts.catalog(PLUGIN_INDEX)] : Collections.<URI>emptyList()
         }
@@ -162,7 +179,15 @@ final class PackCatalogs {
      * @return whether {@link #addresses} gives the catalog nobody named for these
      */
     static boolean isByDefault(List<String> given, String environment, boolean pluginIndex) {
-        return pluginIndex && !given && (environment ?: '').split(';')*.trim().every { String each -> each.isEmpty() }
+        return isByDefault(given, environment, null, pluginIndex)
+    }
+
+    /**
+     * @return whether {@link #addresses(List, String, String, boolean)} gives the catalog nobody named for these
+     */
+    static boolean isByDefault(List<String> given, String environment, String indexVariable, boolean pluginIndex) {
+        return pluginIndex && !given && (environment ?: '').split(';')*.trim().every { String each -> each.isEmpty() } &&
+                (indexVariable == null || indexVariable.trim().isEmpty())
     }
 
     /**
@@ -362,6 +387,22 @@ final class PackCatalogs {
     }
 
     /**
+     * What a plugin of a catalog offers for the name of a feature, by the rule {@link #choose} has.
+     * The commands that list and describe plugins say it with this, so that what they say a plugin
+     * offers is what an application is created with.
+     *
+     * @param applicationType the type of the application, or {@code null} for whichever type
+     * @return the version that is chosen, or why none is, as one line
+     */
+    static Object offered(Plugin plugin, String name, String applicationType, String grails, String forge, String bom, Function<String, String> managed) {
+        List<Version> withIt = plugin.versions.findAll { Version version -> version.name == name && version.feature }
+        if (withIt.isEmpty()) {
+            return "${plugin.coordinates} has no feature ${name}".toString()
+        }
+        return of(plugin, withIt, applicationType, grails, forge, bom, managed)
+    }
+
+    /**
      * @param name the name of a feature
      * @return the plugins the catalogs have a pack of that name for, as {@code group:artifact}
      */
@@ -429,6 +470,9 @@ final class PackCatalogs {
                 lines << ("  ${ofAnEarlier} ${ofAnEarlier == 1 ? 'plugin is' : 'plugins are'} not looked at: a catalog that is named before this one lists " +
                         "${ofAnEarlier == 1 ? 'it' : 'them'}").toString()
             }
+            if (catalog.versionsOfOtherFormats > 0) {
+                lines << ("  ${otherFormats(catalog.versionsOfOtherFormats)}").toString()
+            }
             if (catalog.leftOut + catalog.versionsLeftOut > 0) {
                 lines << "  ${leftOutAs(catalog.leftOut, catalog.versionsLeftOut, true)}:".toString()
                 for (String problem : catalog.problems) {
@@ -447,11 +491,19 @@ final class PackCatalogs {
         List<PackCatalog> all = read()
         int leftOut = (all*.leftOut.sum() ?: 0) as int
         int versionsLeftOut = (all*.versionsLeftOut.sum() ?: 0) as int
+        int ofOtherFormats = (all*.versionsOfOtherFormats.sum() ?: 0) as int
         return bounded("the feature ${all.size() == 1 ? 'catalog' : 'catalogs'} ${all*.address.take(MAX_REASONS).join(', ')}" +
                 (all.size() > MAX_REASONS ? " and ${all.size() - MAX_REASONS} more" : '') +
                 (all.every { PackCatalog catalog -> catalog.withoutPacks } ? ' (which records no feature pack)' : '') +
+                (ofOtherFormats > 0 ? " (${otherFormats(ofOtherFormats).uncapitalize()})" : '') +
                 (leftOut + versionsLeftOut > 0 ? " (${leftOutAs(leftOut, versionsLeftOut, false)}; " +
                         "the first: ${all.collectMany { PackCatalog catalog -> catalog.problems }.first()})" : ''))
+    }
+
+    // what is said of the versions whose packs a later Forge reads: whose names are not known here
+    private static String otherFormats(int versions) {
+        return "${versions} ${versions == 1 ? 'version has' : 'versions have'} a feature pack of a format this Forge does not read, which a later Forge can " +
+                "read; what ${versions == 1 ? 'it has' : 'they have'} is not looked at"
     }
 
     private static String leftOutAs(int plugins, int versions, boolean sentence) {
@@ -513,7 +565,7 @@ final class PackCatalogs {
                         "${withIt*.version.take(MAX_REASONS).join(', ')}${withIt.size() > MAX_REASONS ? " and ${withIt.size() - MAX_REASONS} more" : ''}); another version " +
                         "is used only by its coordinates, such as ${(latest ?: withIt.first()).coordinates}").toString()
             }
-            if (!ofForge.readable || (ofForge.applicationTypes != null && !ofForge.applicationTypes.contains(applicationType)) ||
+            if (!ofForge.readable || !isFor(ofForge, applicationType) ||
                     !ofForge.isForGrails(grails) || !ofForge.forge.contains(forge)) {
                 return ("${bom}, which the application gets, manages ${ofForgeArtifact} at ${managed}, and the pack of ${managed} is not one this Forge reads for this " +
                         "application, Grails ${grails} and Forge ${forge}").toString()
@@ -524,7 +576,7 @@ final class PackCatalogs {
             return "${plugin.coordinates} has it in no release, and a version that is none is used only by its coordinates, such as ${withIt.first().coordinates}".toString()
         }
         List<Version> usable = releases.findAll { Version version ->
-            version.readable && (version.applicationTypes == null || version.applicationTypes.contains(applicationType)) &&
+            version.readable && isFor(version, applicationType) &&
                     version.isForGrails(grails) && version.forge.contains(forge)
         }
         if (!usable.isEmpty()) {
@@ -533,11 +585,16 @@ final class PackCatalogs {
         if (!latest.readable) {
             return "${plugin.coordinates} has it in no version this Forge reads the pack of (${latest.version} needs another Forge)".toString()
         }
-        if (latest.applicationTypes != null && !latest.applicationTypes.contains(applicationType)) {
+        if (!isFor(latest, applicationType)) {
             return "${plugin.coordinates} has it for applications of type ${latest.applicationTypes.join(', ')}, and this is ${applicationType}".toString()
         }
         return ("${plugin.coordinates} has it in no version for Grails ${grails} and Forge ${forge} (${latest.version} is for Grails ${latest.grails}" +
                 "${latest.grailsVersion == null ? '' : ", which the descriptor of the plugin gives as ${latest.grailsVersion}"} and Forge ${latest.forge})").toString()
+    }
+
+    // a type of application that is not given is any
+    private static boolean isFor(Version version, String applicationType) {
+        return version.applicationTypes == null || applicationType == null || version.applicationTypes.contains(applicationType)
     }
 
     private static Version latestOf(List<Version> releases) {

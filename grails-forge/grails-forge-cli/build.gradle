@@ -141,7 +141,8 @@ tasks.named('test', Test).configure { Test test ->
     // a project that is added to its build, which is where a new plugin comes from, runs the spec again
     test.inputs.files(rootProject.layout.projectDirectory.file('../settings.gradle'), rootProject.layout.projectDirectory.file('../gradle/publish-root-config.gradle'))
             .withPropertyName('frameworkProjects').withPathSensitivity(PathSensitivity.NONE)
-    // -PpluginIndex=<file> has PluginIndexCatalogSpec and PluginIndexSpec read a whole copy of grails-plugins-index.json besides the part among the test resources:
+    // -PpluginIndex=<file> has PluginIndexCatalogSpec, PluginIndexSpec and PluginDiscoveryContractSpec read a whole copy of grails-plugins-index.json besides the part
+    // among the test resources, such as the index the indexer of apache/grails-plugins-metadata writes with the packs it records:
     // ./gradlew :grails-forge-cli:test --tests '*PluginIndexCatalogSpec' -PpluginIndex=/path/to/grails-plugins-index.json
     if (providers.gradleProperty('pluginIndex').present) {
         test.systemProperty('forge.pluginIndex', providers.gradleProperty('pluginIndex').get())
