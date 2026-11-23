@@ -197,6 +197,30 @@ class ScriptCommandTaskSpec extends CommandProjectSpecification {
         other.output.contains('Configuration cache entry reused')
     }
 
+    def "a system property the task sets as it starts is kept over the one the build is given, with the configuration cache disabled, stored and reused"() {
+        given:
+        setupCommandProject(WITH_STAND_IN + '''
+            tasks.named('runScriptCommand') {
+                doFirst { systemProperty 'grails.probe.one', 'task' }
+            }
+        ''')
+        List<String> arguments = ['--arg=data-import', '-Dgrails.probe.one=given']
+
+        when:
+        BuildResult disabled = executeTask('runScriptCommand', arguments + ['--no-configuration-cache'])
+        BuildResult stored = executeTask('runScriptCommand', arguments)
+        BuildResult reused = executeTask('runScriptCommand', arguments)
+
+        then:
+        stored.output.contains('Configuration cache entry stored')
+        reused.output.contains('Configuration cache entry reused')
+        verifyAll {
+            probe(disabled) == ['task']
+            probe(stored) == ['task']
+            probe(reused) == ['task']
+        }
+    }
+
     def "a script that fails is a failed build"() {
         given:
         setupCommandProject(WITH_STAND_IN)
@@ -258,6 +282,11 @@ class ScriptCommandTaskSpec extends CommandProjectSpecification {
 
     private static List<String> started(BuildResult result) {
         said(result, 'STARTED')
+    }
+
+    // the value of grails.probe.one the JVM of the script was started with
+    private static List<String> probe(BuildResult result) {
+        result.output.readLines().findAll { String line -> line.startsWith('PROBE=') }.collect { String line -> line.substring('PROBE='.length()) }
     }
 
     private static List<String> said(BuildResult result, String what) {

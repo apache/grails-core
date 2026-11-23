@@ -1061,8 +1061,8 @@ ${importStatements}
             // -Dgrails.server.port=9090 on the command line of the build reaches the JVM as server.port. The
             // properties are read when the task runs: read here they were written into the configuration cache
             // entry, which a later build that gave another property reused without it
-            task.jvmArgumentProviders.add(new GrailsSystemPropertyArgumentProvider(
-                    project.providers.systemPropertiesPrefixedBy(GrailsSystemPropertyArgumentProvider.PREFIX), task.systemProperties))
+            GrailsSystemPropertyArgumentProvider.addTo((Task) task,
+                    project.providers.systemPropertiesPrefixedBy(GrailsSystemPropertyArgumentProvider.PREFIX))
 
             task.systemProperty(Metadata.APPLICATION_NAME, project.name)
             task.systemProperty(Metadata.APPLICATION_VERSION, (project.version instanceof Serializable ? project.version : project.version.toString()))

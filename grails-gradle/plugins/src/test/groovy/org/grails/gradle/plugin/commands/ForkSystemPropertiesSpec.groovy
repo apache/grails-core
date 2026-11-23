@@ -145,6 +145,55 @@ class ForkSystemPropertiesSpec extends CommandProjectSpecification {
         forked(result, 'runCommand') == ['server.port': '9090', 'probe.one': 'null', 'grails.server.port': '9090', 'grails.probe.one': 'null']
     }
 
+    def "a system property a task sets when it runs is kept over the one the build is given, with the configuration cache disabled, stored and reused"() {
+        given: 'tasks that set, as they start, a property the build is also given: under the name the JVM sees it by, which is the name without the prefix for every task and the full name too for a command and a script'
+        new File(projectDir, 'commands.gradle') << '''
+            tasks.named('probe') {
+                doFirst { systemProperty 'server.port', '7070' }
+            }
+            tasks.named('bootRun') {
+                doFirst { systemProperty 'probe.one', 'task' }
+            }
+            tasks.named('runCommand') {
+                doFirst { systemProperty 'grails.probe.one', 'task' }
+            }
+            tasks.named('runScript') {
+                doFirst {
+                    systemProperty 'server.port', '7171'
+                    systemProperty 'grails.server.port', '7272'
+                }
+            }
+        '''
+        List<String> arguments = TASKS.tail() + ['-Dgrails.server.port=9090', '-Dgrails.probe.one=given']
+
+        when:
+        BuildResult disabled = executeTask(TASKS[0], arguments + ['--no-configuration-cache'])
+        BuildResult stored = executeTask(TASKS[0], arguments)
+        BuildResult reused = executeTask(TASKS[0], arguments)
+
+        then:
+        !disabled.output.contains('Configuration cache entry')
+        stored.output.contains('Configuration cache entry stored')
+        reused.output.contains('Configuration cache entry reused')
+
+        and: 'the value of the task, in every one of them'
+        Map<String, Map<String, String>> kept = [
+                probe: ['server.port': '7070', 'probe.one': 'given', 'grails.server.port': 'null', 'grails.probe.one': 'null'],
+                bootRun: ['server.port': '9090', 'probe.one': 'task', 'grails.server.port': 'null', 'grails.probe.one': 'null'],
+                runCommand: ['server.port': '9090', 'probe.one': 'given', 'grails.server.port': '9090', 'grails.probe.one': 'task'],
+                runScript: ['server.port': '7171', 'probe.one': 'given', 'grails.server.port': '7272', 'grails.probe.one': 'given'],
+        ]
+        verifyAll {
+            forkedByTask(disabled) == kept
+            forkedByTask(stored) == kept
+            forkedByTask(reused) == kept
+        }
+    }
+
+    private static Map<String, Map<String, String>> forkedByTask(BuildResult result) {
+        ['probe', 'bootRun', 'runCommand', 'runScript'].collectEntries { String task -> [(task): forked(result, task)] }
+    }
+
     private static Map<String, String> forked(BuildResult result, String label) {
         result.output.readLines().findAll { it.startsWith("FORK ${label} ") }.collectEntries { String line ->
             String said = line.substring("FORK ${label} ".length())

@@ -40,4 +40,11 @@ abstract class ApplicationContextScriptTask extends JavaExec {
                 project.providers.systemPropertiesPrefixedBy(GrailsSystemPropertyArgumentProvider.PREFIX), systemProperties, true))
     }
 
+    @Override
+    void exec() {
+        // a property the task was given as it started, also with a reused configuration cache entry, is kept
+        GrailsSystemPropertyArgumentProvider.readTaskSystemProperties(this)
+        super.exec()
+    }
+
 }

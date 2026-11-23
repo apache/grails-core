@@ -150,6 +150,8 @@ abstract class ScriptCommandTask extends JavaExec {
         if (Boolean.getBoolean(FULL_STACKTRACE)) {
             systemProperty(FULL_STACKTRACE, 'true')
         }
+        // a property the task was given as it started, also with a reused configuration cache entry, is kept
+        GrailsSystemPropertyArgumentProvider.readTaskSystemProperties(this)
         super.exec()
     }
 }

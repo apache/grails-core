@@ -81,6 +81,13 @@ abstract class ApplicationContextCommandTask extends JavaExec {
         argumentsFileBase.convention(project.layout.projectDirectory)
     }
 
+    @Override
+    void exec() {
+        // a property the task was given as it started, also with a reused configuration cache entry, is kept
+        GrailsSystemPropertyArgumentProvider.readTaskSystemProperties(this)
+        super.exec()
+    }
+
     void setCommand(String commandName) {
         args(commandName)
     }
