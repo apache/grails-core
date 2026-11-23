@@ -1820,7 +1820,7 @@ Notes 42 to 55 are about what differs for someone who types `grails` commands, o
 Most commands of the Grails shell and of its profiles are commands of `grails` under the name they had. The ones that are not are answered when they are typed: `grails` refuses the name with exit code 2, as it refuses anything that is no command, and adds one line that says what there is in its place. <<cliMappingGrails8,Note 55>> has a table with every command of the shell and of the profiles, the unchanged ones included, and the table "Commands of Earlier Versions" in xref:commandLine[The Command Line] has what the command line says for each name that is gone. In short, these names are no commands any more:
 
 * `test`, `run` and `stop`, the other names of `test-app`, `run-app` and `stop-app`. `war` and `package` are still other names of `assemble`, and `sh` still runs `shell`, as the short form of its name (note 43).
-* `quit`, `!` and `open` of interactive mode (note 47).
+* `quit` and `open` of interactive mode (note 47). `!` is kept: it runs a program of the operating system there, through your shell now.
 * `install` in a plugin: it runs nothing, says to run `grails gradle publishToMavenLocal`, and ends with exit code 1.
 * `create-profile`, `create-feature`, `create-template`, `create-creator-command`, `create-generator-command`, `create-gradle-command`, `list-profiles` and `profile-info`, which are removed with the profiles (note 37).
 * What `generate-all`, `generate-controller` and `generate-views` of the `rest-api` profile did: the commands of these names are those of the scaffolding plugin, which generate GSP views (notes 41 and 46), and nothing generates JSON views for a domain class.
@@ -1841,7 +1841,7 @@ New for someone who comes from the Grails shell are `create-restapi`, `create-re
 * Search scripts, continuous integration jobs, documentation of your own and the run configurations of an IDE for `grails` and `grailsw`, look each command up in the tables of <<cliMappingGrails8,note 55>>, and replace it as the table says. A job that called a removed command now ends with exit code 2 and has run nothing.
 * Replace `grails test` with `grails test-app`, `grails run` with `grails run-app` and `grails stop` with `grails stop-app`.
 * Replace `grails install` with `grails gradle publishToMavenLocal`, or `./gradlew publishToMavenLocal`.
-* A step that ran `open` or `!` from input that was piped into interactive mode runs the program itself.
+* A step that ran `open` from input that was piped into interactive mode opens the file itself, or runs `open`, `xdg-open` or `start` of the operating system after `!` (note 47).
 * A script that read the output of `list-plugins` or `plugin-info` reads the output of `--json`.
 
 ==== 43. The Environment, Short Forms, Options and Exit Codes of the `grails` Command
@@ -1975,18 +1975,19 @@ The Grails shell found the commands of the plugins of an application itself, on 
 * *It starts in a project only.* Outside a project, `grails` without a command shows the help. With `--non-interactive` it shows the help everywhere.
 * *It is left with `exit`*, with Ctrl-D, or with Ctrl-C at the prompt. `quit` is no command.
 * *Its builds are asked of one connection to Gradle*, through the Tooling API, as those of the Grails shell were, but with the Gradle that the wrapper of the project names: a build after the first begins at once. Gradle writes plain text there, without its colors and its display of progress; a failed build is reported as `Gradle did not succeed: the build failed`, where a command line of its own names the exit code of Gradle; and a build does not read what is typed at the terminal. `gradle`, `shell` and `run-app`, which leaves the application running there, start the Gradle wrapper as they do on a command line of their own. The environment variable `GRAILS_GRADLE_RUNNER=process` has every command of interactive mode start the wrapper. See link:commandLine.html#howGradleIsRun[How the `grails` Command Runs Gradle]. `test-app --continuous` runs there until Ctrl-C cancels it. With `GRAILS_CLI_DIAGNOSTICS=true` the command line says on its error output which way it runs Gradle for each command, and why: see link:commandLine.html#gradleRunnerDiagnostics[Seeing How a Command Runs].
-* *`!` and `open` are gone* (note 42).
+* *`open` is gone* (note 42).
+* *`!` runs a program of the operating system through your shell.* As in the Grails shell, a line that starts with `!` runs the rest of the line, and `!` alone runs the last command again (the last line that did not start with `!`). The Grails shell split the line into words and ran the first one as the program, without a shell; the line now goes as it was typed to the shell that the `SHELL` environment variable names, or to `/bin/sh` where it names none by its absolute path, and on Windows to `cmd.exe`, so quotes, variables, patterns such as `*.groovy`, pipes and redirections work as in a terminal. The program has the terminal: its output and its error output are shown as it writes them, where the Grails shell showed both together in the output once the program had ended, it reads what is typed, so a program that asks a question works, and Ctrl-C goes to the program and not to interactive mode. An exit code other than 0 is shown in one line, `| Exit code 1`, which the Grails shell did not show. In lines that are piped into `grails` the input of the program is empty. On a command line of its own `grails '!ls'` is refused as a command there is not. The line runs with your rights, as everything you type in interactive mode does. See link:commandLine.html#interactiveModePrograms[Running a Program of the Operating System].
 * *The prompt is `grails>`*, and the line `Enter a command name to run. Use TAB for completion:` is not printed before the first one.
 * *Commands are completed, with their options.* The commands are those of the current directory, the commands of the application and its plugins that the build has listed among them. The names of Gradle tasks after `gradle` are not completed.
 * *`run-app` returns to the prompt* once the application answers on its port, and the application is stopped when interactive mode is left, unless it was started with `run-app --detach`. `run-app --foreground` stays with the application. With the `grails-startup-progress` feature, a start that fails while the progress page has the port is reported at once.
-* *Ctrl-C while a command runs Gradle* stops Gradle and returns to the prompt. During another command it ends interactive mode.
+* *Ctrl-C while a command runs Gradle* stops Gradle and returns to the prompt. During another command it ends interactive mode, and while the program of a `!` line runs it is the program's.
 * *A line that starts with `#` is ignored.*
 * *What it tells you to type fits its prompt:* `Run 'help' for the commands`, `To list them: gradle grailsCommandCatalog`; a command line of its own says the same with `grails` in front.
 * *`feature add` completes the names of the features the project does not have.*
 
 ===== Required Actions
 
-* A script that pipes commands into `grails` ends them with `exit`, not `quit`, and does not use `!`. Better, give each command to `grails` on its own command line, with `--non-interactive`, and check its exit code.
+* A script that pipes commands into `grails` ends them with `exit`, not `quit`. Its lines that start with `!` are read by the shell now: quote a `*`, `$`, `|`, `;` or `>` there that the program was given as it was. Better, give each command to `grails` on its own command line, with `--non-interactive`, and check its exit code.
 
 ==== 48. `~/.grails/settings.groovy` Is Not Read
 
@@ -2205,7 +2206,7 @@ Every command the Grails shell of Grails 8 had, of itself and of the profiles `b
 
 |`!`, `!program`
 |interactive mode
-|Removed. Run the program in another terminal (47).
+|Kept. `!program` runs the rest of the line in your shell, with the terminal, and shows an exit code other than 0; `!` alone runs the last command again (47).
 
 |`add-property`
 |every project
@@ -2669,7 +2670,10 @@ The other `dbm-*` commands are `dbm-changelog-sync`, `dbm-changelog-sync-sql`, `
 |Other names: `test`, `run`, `stop`, `quit`
 |`test-app`, `run-app`, `stop-app`, `exit`. `war`, `package` and `sh` still work (42).
 
-|`!program` and `open FILE` in interactive mode
+|`!program` in interactive mode: split into words, run without a shell, its output shown when it ended
+|Kept: the line is run by your shell, with the terminal (47).
+
+|`open FILE` in interactive mode
 |Removed (47).
 
 |`grails` without a command: interactive mode, in every directory

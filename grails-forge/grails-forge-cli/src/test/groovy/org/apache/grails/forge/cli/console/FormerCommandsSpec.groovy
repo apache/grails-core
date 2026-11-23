@@ -121,7 +121,7 @@ class FormerCommandsSpec extends CommandSpec {
         table*.name == table*.name.sort(false)
         table.every { FormerCommands.Former each ->
             each.hint.length() <= 400 && each.hint ==~ /[\x20-\x7e]+/ && !each.hint.contains('@|') && !each.hint.contains('%') &&
-                    (each.hint.startsWith(each.name + ' ') || each.name == '!') && !each.origin.isEmpty()
+                    each.hint.startsWith(each.name + ' ') && !each.origin.isEmpty()
         }
 
         and: 'what the shell had and this command line does not have is a command nowhere'
@@ -302,23 +302,29 @@ class FormerCommandsSpec extends CommandSpec {
     }
 
     @Unroll
-    void "what follows an exclamation mark is not repeated: #shown"() {
+    void "on a command line of its own an exclamation mark, which runs a program in the interactive console only, is no command and has no line of the table: #shown"() {
         when:
         int exit = ForgeCli.execute(beanContext, typed)
         List<String> lines = err.toString().readLines()
 
-        then:
+        then: 'refused as anything that is no command, and what follows the mark is not repeated'
         exit == 2
+        FormerCommands.find(typed) == null
         lines[0].startsWith('There is no command ')
-        lines[1] == 'An exclamation mark ran a program from the interactive mode of the Grails shell. It has no replacement in grails-forge-cli'
-        lines[2] == 'Usage: grails-forge-cli [-hvVx] [--non-interactive] [--plain-output] [COMMAND]'
+        lines[1] == 'Usage: grails-forge-cli [-hvVx] [--non-interactive] [--plain-output] [COMMAND]'
+        lines[2] == "Run 'grails-forge-cli help' for the commands"
+        lines.size() == 3
         !err.toString().contains('\u001b')
         lines.findAll { it.contains('/etc') }.size() <= 1
+
+        and: 'nothing was run'
+        dir.list().length == 0
 
         where:
         typed                         | shown
         '!'                           | 'alone'
         '!ls'                         | 'a program'
+        '!touch made'                 | 'a program that would write a file'
         '!rm -rf /etc\u001b[2J@|red x|@' | 'a program with what a terminal acts on'
     }
 
@@ -398,8 +404,8 @@ class FormerCommandsSpec extends CommandSpec {
         ofProfiles.containsAll(['run-app', 'run', 'stop', 'sh', 'war', 'test', 'create-controller', 'generate-all', 'create-feature', 'package-plugin'])
         ofProfiles.size() == 48
 
-        and: 'none of them is typed without an answer: it is a command somewhere, or the table has a line for it'
-        (ofShell + ofProfiles).findAll { String name ->
+        and: 'none of them is typed without an answer: it is a command somewhere, or the table has a line for it; an exclamation mark is neither, as it runs a program on a line of the interactive console and nowhere else'
+        (ofShell + ofProfiles - [ConsoleProgram.MARK]).findAll { String name ->
             FormerCommands.find(name) == null && !(['outside'] + PROJECTS.keySet()).any { String kind -> isCommand(kind, name) }
         } == TEST_TOOLING
 

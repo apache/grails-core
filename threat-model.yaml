@@ -445,6 +445,10 @@ known_non_findings:
   - pattern: "Production @RestController / @Controller beans shipped in framework JARs"
     discharged_by: "§2 (framework ships no Spring HTTP-handler beans; every endpoint is user-defined)"
     disposition: "KNOWN-NON-FINDING"
+  - pattern: "ProcessBuilder runs a shell with -c (cmd.exe /c on Windows) and a string in ConsoleProgram of the CLI"
+    discharged_by: "§6 (the string is a line the developer typed after ! in the interactive console of their own grails command, or piped into it, and runs with their rights in their shell; nothing of a project, build, pack or the network becomes such a line, and a command line of its own runs nothing for it)"
+    disposition: "OUT-OF-MODEL: trusted-input"
+    file: grails-forge/grails-forge-cli/src/main/groovy/org/apache/grails/forge/cli/console/ConsoleProgram.groovy
 
 # §13 - closed set of triage dispositions.
 dispositions:

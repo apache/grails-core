@@ -119,8 +119,7 @@ final class FormerCommands {
         if (typed == null) {
             return null
         }
-        // the shell ran what followed an exclamation mark as a program: whatever follows, it is that command
-        return TABLE.get(typed.startsWith('!') ? '!' : typed)
+        return TABLE.get(typed)
     }
 
     private static Map<String, Former> table() {
@@ -167,8 +166,6 @@ final class FormerCommands {
 
         add('open', 'shell', Status.NO_REPLACEMENT,
                 'open opened a file with the program the desktop has for it in the Grails shell. It has no replacement in {name}')
-        add('!', 'shell, interactive mode', Status.NO_REPLACEMENT,
-                'An exclamation mark ran a program from the interactive mode of the Grails shell. It has no replacement in {name}')
 
         add('create-profile', 'shell', Status.REMOVED, 'create-profile created a profile for the Grails shell. ' + PROFILES_GONE)
         add('create-creator-command', 'profile profile', Status.REMOVED, 'create-creator-command wrote a command of a profile for the Grails shell. ' + PROFILES_GONE)

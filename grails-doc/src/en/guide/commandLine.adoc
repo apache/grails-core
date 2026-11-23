@@ -820,10 +820,6 @@ Outside a project these commands are not mistakes: `create-controller`, `install
 |===
 |Command |Was a command of |Now
 
-|`!`
-|the shell, in interactive mode
-|no replacement: removed. `!ls` ran a program from the interactive mode, and `!` alone repeated the last command. Run the program in another terminal, or leave the interactive mode for it.
-
 |`create-creator-command`
 |the profile for writing profiles
 |removed: Profiles are replaced by application types, features and feature packs (see xref:plugins#forgeFeaturePacks[Adding a Feature to Application Creation]). No command creates any of these.
@@ -878,7 +874,7 @@ Outside a project these commands are not mistakes: `create-controller`, `install
 
 |`open`
 |the shell
-|no replacement: removed. Open the file with the command of the operating system (`open` on macOS, `xdg-open` on Linux, `start` on Windows) or from your editor: a test report, for example, is `build/reports/tests/test/index.html`.
+|no replacement: removed. Open the file with the command of the operating system (`open` on macOS, `xdg-open` on Linux, `start` on Windows), which interactive mode runs after `!`, as in `!open FILE`, or from your editor: a test report, for example, is `build/reports/tests/test/index.html`.
 
 |`profile-info`
 |the shell

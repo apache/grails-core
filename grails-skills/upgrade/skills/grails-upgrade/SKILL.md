@@ -758,7 +758,7 @@ Where an unchanged name is a command:
 | `grails stop` (other name of `stop-app`) | `grails stop-app` |
 | `grails sh` | still runs `shell`, as its short form; write `grails shell` |
 | `quit` in interactive mode | `exit` |
-| `!program`, `!` in interactive mode | removed: run the program directly |
+| `!program`, `!` in interactive mode | kept: `!program` runs the rest of the line in the user's shell (`$SHELL`, else `/bin/sh`; `cmd.exe` on Windows) with the terminal, and shows a non-zero exit code; `!` alone runs the last command again |
 | `grails open <file>` | removed: `open`, `xdg-open` or `start` of the operating system |
 | `grails install` (plugin) | `./gradlew publishToMavenLocal` (`grails install` runs nothing and exits 1) |
 | `create-app NAME --profile web` | `grails create-app NAME` |
@@ -920,7 +920,7 @@ The shell ran builds through the Gradle Tooling API with a Gradle it chose. `gra
 ## Interactive Mode
 
 - `grails` without a command starts interactive mode only inside a project; elsewhere, and with `--non-interactive`, it prints the help.
-- Replace `quit` with `exit` in input that is piped into `grails`, and remove `!` and `open` lines. Better: one `grails --non-interactive <command>` call for each command.
+- Replace `quit` with `exit` in input that is piped into `grails`, and remove `open` lines. A `!` line there is run by the shell now, with an empty input: quote `*`, `$`, `|`, `;` and `>` that the program was given as they were. Better: one `grails --non-interactive <command>` call for each command.
 - `run-app` at the prompt returns once the application answers (with the `grails-startup-progress` feature, a start that fails while the progress page has the port is reported at once) and stops it when interactive mode ends; use `run-app --detach` to leave it running.
 - Gradle task names after `gradle` are not completed.
 
@@ -1037,7 +1037,7 @@ Generated YAML configuration has a fixed key order (`info`, `dataSource`, `envir
 - [ ] Commands that read an option followed by an empty argument, or quoted arguments with spaces at their ends, expect the Grails 9 values, and no command works around a value cut at its second `=`
 - [ ] No build file declares a `profile` dependency, depends on `grails-shell-cli` or `org.apache.grails.profiles`, applies `grails-profile` or `grails-publish-profile`, or declares `spring-boot-cli` without a version
 - [ ] No client or test of an application with Redis or Grails cache token storage expects 200 from the REST logout endpoint for a token that is not stored
-- [ ] No script, CI job, container file or document calls a removed or renamed command: `grails test`, `grails run`, `grails stop`, `grails install`, `grails open`, `quit` or `!` in piped input, `create-profile` and the other profile commands, `list-profiles`, `profile-info`, `create-app --profile`, `-t forge`, `grails-forge-cli`
+- [ ] No script, CI job, container file or document calls a removed or renamed command: `grails test`, `grails run`, `grails stop`, `grails install`, `grails open`, `quit` or `open` in piped input, `create-profile` and the other profile commands, `list-profiles`, `profile-info`, `create-app --profile`, `-t forge`, `grails-forge-cli`
 - [ ] No call of `grails` or `grailsw` has an environment (`test`, `prod`, `dev`) or a command's option in front of the command, and Gradle options a command does not have follow `--`
 - [ ] No script uses a short form that fits two commands (`cC`, `cS`, `s`, `co`), and scripts check the exit code of `grails` (2: nothing ran)
 - [ ] The Gradle wrapper (`gradlew`, `gradlew.bat`, `gradle/wrapper/`) is committed

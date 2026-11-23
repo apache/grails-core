@@ -19,11 +19,14 @@
 package org.grails.forge.cli
 
 import groovy.transform.CompileStatic
+import org.apache.grails.forge.cli.console.ConsoleProgram
 import org.apache.grails.forge.cli.console.GradleBuild
 import org.apache.grails.forge.cli.console.PlainOutput
+import org.jline.builtins.Completers
 import org.jline.reader.Candidate
 import org.jline.reader.Completer
 import org.jline.reader.EndOfFileException
+import org.jline.reader.History
 import org.jline.reader.LineReader
 import org.jline.reader.LineReaderBuilder
 import org.jline.reader.MaskingCallback
@@ -44,6 +47,8 @@ class InteractiveShell {
 
     private static final String DEFAULT_PROMPT = '@|blue grails>|@ '
     private static final int INTERRUPTED = 130
+    private static final String NOTHING_TO_REPEAT = 'There is no command to run again: ! alone runs the last command again, ' +
+            'and ! followed by a command line runs that command line in the shell of the operating system, as !ls does'
 
     private final CommandLine commandLine
     private final Consumer<String[]> executor
@@ -104,12 +109,26 @@ class InteractiveShell {
 
     /**
      * @return what completes a line of the shell: with the commands, options and values of the
-     * command line as it was when the shell started or when {@link #refresh} was last called
+     * command line as it was when the shell started or when {@link #refresh} was last called, and on
+     * a line that runs a program ({@link ConsoleProgram}) with the paths of files after the program
      */
     Completer completer() {
         return { LineReader reader, ParsedLine line, List<Candidate> candidates ->
-            new CommandLineCompleter(completed.getCommandSpec()).complete(reader, line, candidates)
+            if (ConsoleProgram.of(line.line()) != null) {
+                completeProgram(reader, line, candidates)
+            } else {
+                new CommandLineCompleter(completed.getCommandSpec()).complete(reader, line, candidates)
+            }
         } as Completer
+    }
+
+    // On a line that runs a program the words after the program are completed as the paths of files, which is
+    // what such a command line mostly takes; the program itself and the exclamation mark are not completed.
+    private static void completeProgram(LineReader reader, ParsedLine line, List<Candidate> candidates) {
+        int program = line.words().isEmpty() || line.words()[0] != ConsoleProgram.MARK ? 0 : 1
+        if (reader != null && line.wordIndex() > program) {
+            new Completers.FileNameCompleter().complete(reader, line, candidates)
+        }
     }
 
     /**
@@ -154,6 +173,57 @@ class InteractiveShell {
     }
 
     /**
+     * Runs the command line of a line that starts with an exclamation mark in the shell of the user,
+     * in the current directory, and waits for it (see {@link ConsoleProgram}). The interrupt of the
+     * terminal, Ctrl-C, is the program's while it runs: the terminal sends it to the program, which
+     * does what it does with it, and the shell goes on once the program has ended.
+     *
+     * @param terminal the terminal of the shell
+     * @param command what follows the exclamation mark
+     * @return the exit code of the program, or -1 when the shell could not be started
+     */
+    int runProgram(Terminal terminal, String command) {
+        Terminal.SignalHandler before = terminal.handle(Terminal.Signal.INT, { Terminal.Signal signal ->
+            // the program was sent the interrupt as well, by the terminal: the shell waits for it as before
+        } as Terminal.SignalHandler)
+        boolean paused = false
+        try {
+            terminal.writer().flush()
+            // a terminal that reads its input ahead stops doing so, so that what is typed reaches the program
+            if (terminal.canPauseResume() && !terminal.paused()) {
+                terminal.pause(true)
+                paused = true
+            }
+            return ConsoleProgram.run(command, new File(System.getProperty('user.dir')), readsTerminal(terminal))
+        } finally {
+            if (paused) {
+                terminal.resume()
+            }
+            terminal.handle(Terminal.Signal.INT, before)
+            // an interrupt that came when nothing waited for one is not kept for the next line
+            Thread.interrupted()
+        }
+    }
+
+    // whether what the shell reads is a terminal a user types into, and not lines that were piped into it
+    private static boolean readsTerminal(Terminal terminal) {
+        String type = terminal.getType()
+        return type != null && type != Terminal.TYPE_DUMB && type != Terminal.TYPE_DUMB_COLOR
+    }
+
+    // the last line of the history that was a command: not one that ran a program, not the mark alone, and no comment
+    private static String lastCommand(History history) {
+        Iterator<History.Entry> entries = history.reverseIterator()
+        while (entries.hasNext()) {
+            String line = entries.next().line()
+            if (!line.isBlank() && ConsoleProgram.of(line) == null && !line.matches('^\\s*#.*')) {
+                return line
+            }
+        }
+        return null
+    }
+
+    /**
      * Called for the interrupt of the terminal while a command runs that does not wait for Gradle:
      * ends the JVM as the interrupt does when nothing handles it, with the exit code a shell gives
      * for it.
@@ -190,6 +260,9 @@ class InteractiveShell {
                     .completer(completer())
                     .parser(new DefaultParser())
                     .variable(LineReader.LIST_MAX, 50)   // max tab completion candidates
+                    // A line is what was typed: an exclamation mark refers to no line of the history, and a
+                    // backslash is read once, by the parser, or by the shell on a line that runs a program.
+                    .option(LineReader.Option.DISABLE_EVENT_EXPANSION, true)
                     .build()
 
             // Applied to the command line as well as the prompt, so command help and usage text agree
@@ -210,6 +283,23 @@ class InteractiveShell {
                     }
                     if (line.trim() == 'exit') {
                         return 0
+                    }
+                    String program = ConsoleProgram.of(line)
+                    if (program != null && !program.isBlank()) {
+                        runProgram(terminal, program)
+                        refresh()
+                        continue
+                    }
+                    if (program != null) {
+                        // the mark alone runs the last command again, as it did in the Grails shell
+                        line = lastCommand(reader.getHistory())
+                        if (line == null) {
+                            System.err.println(CommandLine.Help.Ansi.AUTO.string('@|bold,red | Error|@ ') + NOTHING_TO_REPEAT)
+                            System.err.flush()
+                            continue
+                        }
+                        terminal.writer().println(line)
+                        terminal.writer().flush()
                     }
                     ParsedLine pl = reader.getParser().parse(line, 0)
                     String[] arguments = pl.words().toArray(new String[0])
