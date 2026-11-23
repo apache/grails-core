@@ -24,6 +24,8 @@ import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
+import org.apache.grails.forge.core.pack.PackPreset
+import org.apache.grails.forge.core.state.GenerationOptions
 import org.grails.forge.cli.CommandSpec
 import org.grails.forge.cli.ForgeCli
 import org.grails.forge.feature.FeatureSelectionException
@@ -284,11 +286,11 @@ class CreatePresetSpec extends CommandSpec {
         int shown = run('project', 'show')
         List<String> lines = printed.readLines()
 
-        then: 'project show names the preset, and the command has it with --preset and its SHA-256'
+        then: 'project show names the preset, and the command has it with --preset and its SHA-256, and every option the preset can give a default'
         shown == 0
         lines.any { String line -> line.trim() == "preset        acme-service (${COORDINATES})" }
         lines.any { String line -> line.trim().startsWith('--preset') && line.contains(COORDINATES) && line.contains('(differs from the current default: (none))') }
-        lines.last() == "grails-forge-cli create-restapi com.example.shop --jdk 25 --data mongodb --preset ${COORDINATES} " +
+        lines.last() == "grails-forge-cli create-restapi com.example.shop --jdk 25 --servlet tomcat --data mongodb --reloading devtools --preset ${COORDINATES} " +
                 "--feature-pack-sha256 ${COORDINATES}=${sha256(jar)}"
 
         when: 'the JSON document'
@@ -309,6 +311,66 @@ class CreatePresetSpec extends CommandSpec {
 
         cleanup:
         other?.deleteDir()
+    }
+
+    @Unroll
+    void "the command project show prints for an application made from the preset of #form with #given creates the same application"() {
+        given: 'a preset that gives every option a default of its own, none of them that of Grails'
+        String descriptor = PRESET.replace('options: { data: mongodb, jdk: 25 }', 'options: { data: mongodb, servlet: undertow, reloading: none, jdk: 25 }')
+        File preset = directory('acme-service', descriptor, ['TEAM.md.gsp': TEMPLATE])
+        File onJetty = directory('acme-jetty', """\
+            format: 1
+            kind: feature
+            templateApi: 1
+            name: acme-jetty
+            compatibility:
+              grails: '${RANGE}'
+              forge: '${RANGE}'
+            requires: [spring-boot-starter-jetty]
+            """.stripIndent(), [:])
+        publish(COORDINATES, descriptor, ['TEAM.md.gsp': TEMPLATE])
+        List<String> packs = given.contains('acme-jetty') ? ['--feature-pack-dir', onJetty.absolutePath] : []
+        // what the record does not name, and is given to the command again: the preset of a directory, a repository that is a directory, a pack of a directory
+        List<String> notRecorded = (form == 'a directory' ? ['--preset', preset.absolutePath] : ['--feature-pack-repository', address]) + packs
+        List<String> made = ['create-restapi', 'com.example.shop'] +
+                (form == 'a directory' ? ['--preset', preset.absolutePath] : ['--preset', COORDINATES, '--feature-pack-repository', address]) + packs + given
+        assert create(dir, made as String[]) == 0, err.toString()
+        File first = new File(dir, 'shop')
+        Map recorded = options(first)
+
+        when:
+        int shown = run('project', 'show', '--json')
+        Map command = (Map) ((Map) new JsonSlurper().parseText(printed)).command
+        File elsewhere = other()
+        int again = create(elsewhere, ([command.name] + command.arguments + notRecorded) as String[])
+
+        then: 'the application is the same, its record among its files'
+        shown == 0
+        again == 0
+        options(new File(elsewhere, 'shop')) == recorded
+        tree(new File(elsewhere, 'shop')) == tree(first)
+
+        and: 'the command gives every option the value the application has, whatever the preset or Grails would give it'
+        List<String> arguments = (List<String>) command.arguments
+        ['jdk', 'servlet', 'data', 'reloading'].every { String option -> arguments.indexOf("--${option}".toString()) > 0 &&
+                arguments[arguments.indexOf("--${option}".toString()) + 1] == String.valueOf(recorded[option]) }
+
+        where:
+        [form, given] << [['a directory', 'its coordinates'], [
+                [],
+                ['--data', 'hibernate5', '--jdk', '21'],
+                ['--servlet', 'tomcat'],
+                ['--reloading', 'devtools'],
+                ['--data', 'hibernate5', '--servlet', 'tomcat', '--reloading', 'devtools', '--jdk', '21'],
+                ['--data', 'mongodb', '--servlet', 'undertow', '--reloading', 'none', '--jdk', '25'],
+                ['--data', 'hibernate7', '--servlet', 'jetty', '--reloading', 'jrebel'],
+                ['--features', 'acme-jetty']]].combinations()
+    }
+
+    void "every option a preset can give a default is one the record has, which project show gives the command whatever its value"() {
+        expect:
+        GenerationOptions.RECORDED.containsAll(PackPreset.OPTIONS)
+        ProjectShowCommand.SHOWN_OPTIONS.containsAll(PackPreset.OPTIONS.collect { String option -> "--${option}".toString() })
     }
 
     void "a preset whose artifact does not have the SHA-256 that was asked for is refused before it is opened"() {
@@ -614,6 +676,12 @@ class CreatePresetSpec extends CommandSpec {
         File catalog = new File(work, 'catalog.json')
         catalog.setText(JsonOutput.toJson(plugins), 'UTF-8')
         return catalog
+    }
+
+    // the options the record of an application has
+    private static Map options(File project) {
+        String manifest = new File(project, '.grails/project.yml').text
+        return ['jdk', 'servlet', 'data', 'reloading'].collectEntries { String option -> [option, (manifest =~ /(?m)^  ${option}: (\S+)$/)[0][1]] }
     }
 
     // every file of an application by its path, with its content

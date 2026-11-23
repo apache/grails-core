@@ -99,6 +99,7 @@ class ProjectCommandsSpec extends CommandSpec {
         where:
         command             | options                                                                                 || expected
         'create-app'        | []                                                                                      || []
+        'create-app'        | ['--jdk', '21', '--servlet', 'tomcat', '--data', 'hibernate5', '--reloading', 'devtools'] || []
         'create-app'        | ['--jdk', '25', '--servlet', 'undertow', '--data', 'mongodb', '--reloading', 'none',
                                '--features', 'grails-quartz,asciidoctor', '--exclude-features', 'mockito,scaffolding'] || ['--jdk', '25', '--servlet', 'undertow', '--data', 'mongodb', '--reloading', 'none', '--features', 'asciidoctor,grails-quartz', '--exclude-features', 'mockito,scaffolding']
         'create-app'        | ['--servlet', 'tomcat', '--data', 'hibernate7', '--features', 'grails-web-console']      || ['--data', 'hibernate7', '--features', 'grails-web-console']
@@ -352,6 +353,35 @@ class ProjectCommandsSpec extends CommandSpec {
         then:
         exit == 1
         err.toString().contains('.grails/project.yml: options.reloading')
+    }
+
+    void "the command for an application made from a preset has every option the record has, and leaves one the record lacks to the default"() {
+        given: 'an application of a preset that gives Grails Data and Java defaults of its own, with Hibernate 5 given in place of the one of the preset'
+        File preset = new File(other, 'acme-service')
+        new File(preset, 'templates').mkdirs()
+        new File(preset, 'feature.yml').setText('format: 1\nkind: preset\nname: acme-service\ntemplateApi: 1\ntitle: Acme Service\ndescription: How Acme makes a service\n' +
+                "compatibility:\n  grails: '[9.0.0,10.0.0)'\n  forge: '[9.0.0,10.0.0)'\napplicationType: rest-api\noptions: { data: mongodb, jdk: 25 }\n", 'UTF-8')
+        create(dir, ['create-restapi', 'com.example.shop', '--preset', preset.absolutePath, '--data', 'hibernate5'])
+
+        when:
+        int exit = run('project', 'show', '--json')
+        Map document = (Map) new JsonSlurper().parseText(out.toString())
+
+        then: 'each option is on the command line, the one of Grails as well: left out, it would be the preset\'s'
+        exit == 0
+        document.command.arguments == ['com.example.shop', '--jdk', '25', '--servlet', 'tomcat', '--data', 'hibernate5', '--reloading', 'devtools']
+        document.effectiveOptions.find { it.name == 'data' } == [name: 'data', option: '--data', value: 'hibernate5', default: 'hibernate5', status: 'default']
+
+        when: 'a record as a build that did not write the option left it'
+        withoutOption(new File(dir, 'shop'), 'data')
+        out.reset()
+        exit = run('project', 'show', '--json')
+        document = (Map) new JsonSlurper().parseText(out.toString())
+
+        then: 'the value is not known, and the command takes the default, as for an application without a preset'
+        exit == 0
+        document.command.arguments == ['com.example.shop', '--jdk', '25', '--servlet', 'tomcat', '--reloading', 'devtools']
+        document.notes.any { it.startsWith('The record does not have the option --data: the command takes the default') }
     }
 
     void "the plugin of a feature pack is named by its coordinates with the SHA-256 of its jar, and the command line gives the same application"() {

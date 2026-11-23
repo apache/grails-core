@@ -26,6 +26,7 @@ import org.apache.grails.forge.cli.console.GradleRunner
 import org.apache.grails.forge.cli.console.ProjectCommand
 import org.apache.grails.forge.cli.console.UsageHelp
 import org.apache.grails.forge.core.change.RecordMigration
+import org.apache.grails.forge.core.pack.PackPreset
 import org.apache.grails.forge.core.state.GenerationOptions
 import org.apache.grails.forge.core.state.ProjectLock
 import org.apache.grails.forge.core.state.ProjectLock.LockedFeature
@@ -164,25 +165,27 @@ class ProjectShowCommand extends BaseCommand implements Callable<Integer>, Proje
     /**
      * @param state the state of a project
      * @return the arguments that create the application again, the name of the create command first:
-     * the name with the package, each option whose value in the record is not what a create command of
+     * the name with the package; each option whose value in the record is not what a create command of
      * this version takes when the option is not given, whatever the default was when the application
-     * was generated, the features that were asked for, a plugin by its coordinates with the SHA-256 of
-     * its jar and the repository it came from, and the features that were left out
+     * was generated, and for an application made from a preset every option of the record that a preset
+     * can give, since the preset gives it a default of its own, which the record does not have; the
+     * features that were asked for; a plugin by its coordinates with the SHA-256 of its jar and the
+     * repository it came from; and the features that were left out
      */
     static List<String> arguments(ProjectState state) {
         ProjectManifest manifest = state.manifest
         GenerationOptions options = manifest.options
         List<String> arguments = [CREATE.get(manifest.applicationType), "${manifest.defaultPackage}.${manifest.name}".toString()]
-        if (options.jdk != JdkVersion.DEFAULT_OPTION) {
+        if (options.jdk != JdkVersion.DEFAULT_OPTION || ofPreset(manifest, 'jdk')) {
             arguments << '--jdk' << String.valueOf(options.jdk.majorVersion())
         }
-        if (options.servlet != ServletImpl.DEFAULT_OPTION) {
+        if (options.servlet != ServletImpl.DEFAULT_OPTION || ofPreset(manifest, 'servlet')) {
             arguments << '--servlet' << written(options.servlet)
         }
-        if (options.data != GormImpl.DEFAULT_OPTION) {
+        if (options.data != GormImpl.DEFAULT_OPTION || ofPreset(manifest, 'data')) {
             arguments << '--data' << written(options.data)
         }
-        if (options.reloading != DevelopmentReloading.DEFAULT_OPTION) {
+        if (options.reloading != DevelopmentReloading.DEFAULT_OPTION || ofPreset(manifest, 'reloading')) {
             arguments << '--reloading' << written(options.reloading)
         }
         if (options.subproject) {
@@ -205,6 +208,17 @@ class ProjectShowCommand extends BaseCommand implements Callable<Integer>, Proje
             arguments << '--exclude-features' << manifest.excludedFeatures*.name.join(',')
         }
         return arguments
+    }
+
+    /**
+     * Whether the create command is given an option of the record whatever its value: the application
+     * was made from a preset, which can give the option a default of its own, and the record has the
+     * value the application has, not whether it was given or what the preset gives. Left out, the option
+     * would be the preset's again. An option the record does not have is left to the default, as for
+     * any application.
+     */
+    private static boolean ofPreset(ProjectManifest manifest, String option) {
+        return manifest.preset != null && PackPreset.OPTIONS.contains(option) && !manifest.options.notRecorded.contains(option)
     }
 
     /**
