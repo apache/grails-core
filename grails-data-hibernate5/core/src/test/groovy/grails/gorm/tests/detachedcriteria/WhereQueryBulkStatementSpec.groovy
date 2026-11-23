@@ -35,7 +35,7 @@ import spock.lang.Specification
  * The bulk statements of {@code updateAll} and {@code deleteAll} are written by the datastore core for both Hibernate
  * versions, so what they do with a subquery and a function is pinned here against Hibernate 5 as well.
  */
-@Issue('https://github.com/apache/grails-core/pull/16816')
+@Issue('https://github.com/apache/grails-core/issues/16811')
 class WhereQueryBulkStatementSpec extends Specification {
 
     @Shared @AutoCleanup HibernateDatastore datastore = new HibernateDatastore(BulkStatementItem)

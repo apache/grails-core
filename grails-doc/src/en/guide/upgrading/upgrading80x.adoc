@@ -1477,22 +1477,6 @@ Removing one element of a unidirectional `hasMany` set or bag, with `removeFrom*
 
 Under Hibernate 7, calling a collection criterion such as `isNotEmpty('pets')`, `isEmpty('pets')`, or `sizeEq('pets', n)` next to an association block for the same collection (`pets { ... }`) threw a `ClassCastException` because the path resolved to the join rather than the collection attribute (issue https://github.com/apache/grails-core/issues/16633[#16633]). Collection criteria now resolve to the collection property on the parent whether they appear before or after an association block of the same name.
 
-===== 26.14 Not-Equal Comparisons Leave Out Null Rows
-
-As of Grails 8.0.1, a comparison that says a property is not equal to a value does not return the rows whose property is `null`, whichever way the query is run. On Hibernate 7 this restores the result of Hibernate 5 and of Grails 7, which always left them out; Hibernate 5 is not changed by this. `where { qty != 2 }`, `ne('qty', 2)`, `findAllByQtyNotEqual(2)` and the negations `!(qty == 2)`, `not { eq('qty', 2) }`, `!(qty in [2])` and `findAllByQtyNotInList([2])` return the rows whose `qty` is something other than 2, as SQL does, where a `null` is neither equal nor not equal to 2. The same holds inside `||`.
-
-Before, the same where query returned the rows with a `null` when it was read with `list()` or `count()` and left them out when it ran as `updateAll` or `deleteAll`, so a query could select one set of rows to read and another to change. All the forms and all the operations now agree.
-
-An application on 8.0.0 that relied on the rows with a `null` being returned adds them back with an explicit test:
-
-[source,groovy]
-----
-Item.where { qty != 2 || qty == null }.list()
-Item.createCriteria().list { or { ne('qty', 2); isNull('qty') } }
-----
-
-The functions that a where query calls on a property are `lower`, `upper`, `trim`, `length`, `second`, `hour`, `minute`, `day`, `month` and `year`. A criterion that names any other function throws an `InvalidDataAccessResourceUsageException`, in a read and in `updateAll` and `deleteAll`; before, Hibernate 7 passed the name to the database and a bulk statement wrote it into the query as it was given. A function over an `rlike` is rejected in `updateAll` and `deleteAll`, which have no regular expression operator, and is applied in a read.
-
 ==== 27. GORM Properties Are Nullable by Default
 
 Grails 8 changes the validation default so that an *unconstrained persistent (domain) property is nullable by default* rather than required.
@@ -4830,6 +4814,22 @@ Removing one element of a unidirectional `hasMany` set or bag, with `removeFrom*
 
 Under Hibernate 7, calling a collection criterion such as `isNotEmpty('pets')`, `isEmpty('pets')`, or `sizeEq('pets', n)` next to an association block for the same collection (`pets { ... }`) threw a `ClassCastException` because the path resolved to the join rather than the collection attribute (issue https://github.com/apache/grails-core/issues/16633[#16633]). Collection criteria now resolve to the collection property on the parent whether they appear before or after an association block of the same name.
 
+==== Not-Equal Comparisons Leave Out Null Rows
+
+From Grails 8.0.1, a comparison that says a property is not equal to a value does not return the rows whose property is `null`, whichever way the query is run. On Hibernate 7 this restores the result of Hibernate 5 and of Grails 7, which always left them out; Hibernate 5 is not changed by this. `where { qty != 2 }`, `ne('qty', 2)`, `findAllByQtyNotEqual(2)` and the negations `!(qty == 2)`, `not { eq('qty', 2) }`, `!(qty in [2])` and `findAllByQtyNotInList([2])` return the rows whose `qty` is something other than 2, as SQL does, where a `null` is neither equal nor not equal to 2. The same holds inside `||`.
+
+Before, the same where query returned the rows with a `null` when it was read with `list()` or `count()` and left them out when it ran as `updateAll` or `deleteAll`, so a query could select one set of rows to read and another to change. All the forms and all the operations now agree.
+
+An application on 8.0.0 that relied on the rows with a `null` being returned adds them back with an explicit test:
+
+[source,groovy]
+----
+Item.where { qty != 2 || qty == null }.list()
+Item.createCriteria().list { or { ne('qty', 2); isNull('qty') } }
+----
+
+The functions that a where query calls on a property are `lower`, `upper`, `trim`, `length`, `second`, `hour`, `minute`, `day`, `month` and `year`. A criterion that names any other function throws an `InvalidDataAccessResourceUsageException`, in a read and in `updateAll` and `deleteAll`; before, Hibernate 7 passed the name to the database and a bulk statement wrote it into the query as it was given. A function over an `rlike` is rejected in `updateAll` and `deleteAll`, which have no regular expression operator, and is applied in a read.
+
 ==== Map entries named `properties` or `metaClass`
 
 The accessor-first resolution described above applies to every `Map`, not only to a class that declares an accessor of its own, because every Groovy object has the `properties` and `metaClass` properties.
@@ -5049,3 +5049,30 @@ restricts them, as on Grails 7. An association compared with its identifier (`t.
 an entity, which threw on 8.0.0, now runs. The old result
 contradicted the query, so there is nothing to keep it for; an application that relied on the extra rows adds them back
 with an explicit `or` in the enclosing query.
+
+==== More GSP tags HTML-encode the attribute values they write
+
+These tags now HTML-encode the values they write into attributes, as `<g:link>` and `<g:textField>` already did and as these tags already encoded their other attributes:
+
+* `<g:form>`, `<g:uploadForm>` and `<g:formActionSubmit>`: the URL in `action` and `formaction`, and the hidden fields that a `RequestDataValueProcessor` adds to a form.
+* `<g:checkBox>`: `name`, `value`, `form`, and the `id` taken from the name, on the checkbox and on its hidden field.
+* `<g:actionSubmitImage>`: `value`, the `action` in the button's name, and `src`.
+* `<g:datePicker>`: `name`, `id` and `selectDateClass`, on the labels, the hidden field and each select.
+* `<g:radio>` and `<g:radioGroup>`: `name`, and on `<g:radio>` the `id` taken from it.
+* `<g:select>`: the key of `noSelection`.
+* `<g:field>`: `type`.
+* `<g:withTag>`: the values of `attrs` that are not closures.
+* `<g:external>`: `uri`, and `<g:javascript>`: `src`.
+* `<g:paginate>`: `class`, on the current step.
+* `<g:sortableColumn>`: `title`, which it writes as the text of the column's link. A text from `titleKey` is written as the message source returns it. Mark a `title` that holds markup with `raw()`.
+* `<g:renderException>`: `detailsClass`, `stackClass`, `filenameClass`, `snippetClass`, `lineClass`, `lineNumberClass` and `lineErrorClass`.
+
+The browser decodes the attribute, so a value without a character reference reaches it unchanged. The markup changes, though: an `&` in the URL of a form is written as `+&amp;+`, as `<g:link>` writes it in an `href`.
+
+A value encoded with `encodeAsHTML()` before it reaches the tag is written once, not encoded again. That holds for a String, for a value captured from a GSP body with `<g:set>`, and for the output of a tag such as `fieldValue()`, also when a `RequestDataValueProcessor` returns the value unchanged. When the processor changes the value, the tag encodes what the processor returns, so a value encoded beforehand is encoded twice, as `<g:textField>` already did. There is one more exception: `<g:form>` and `<g:formActionSubmit>` build their URL from `uri`, `base`, `controller` and their other link attributes and only then encode it, so a value encoded beforehand is encoded twice there, as it already was in the `href` of `<g:link>`. Pass those values unencoded. A `url` attribute that the tag writes as it is given is written once. A character reference written in the page, as in `+name="a&amp;b"+`, is encoded as well: write the character itself.
+
+A value marked with `raw()` is still written as given by the tags that wrote it so before, and so are the text and the `default` of `message()`, which comes back marked raw. Where a `RequestDataValueProcessor` is registered, `<g:textField>` and the other field tags encode what the processor returns, as before, and `<g:radio>` encodes such a value in any case, as before. Do not pass request data through `raw()` or as the `default` of `message()`.
+
+`<g:radio>` now encodes its `value` once. It encoded it twice, so a value with `&`, `<`, `>`, `"` or `'` was submitted with character references in it, such as `+R&amp;D+` for `R&D`.
+
+A value encoded beforehand is no longer encoded twice in the `value` of `<g:textField>`, `<g:hiddenField>` and the other field tags when a `RequestDataValueProcessor` returns it unchanged, nor in an option of `<g:select>`, with or without a processor. `<g:paginate>` and `<g:sortableColumn>` write a `class` that was encoded beforehand once next to the classes they add, such as `step` and `sortable`; they encoded it twice.

@@ -82,6 +82,10 @@ dependencies {
 
     compileOnly project(':grails-bootstrap')
     compileOnly project(':grails-core')
+    compileOnly 'jakarta.servlet:jakarta.servlet-api', {
+        // GrailsOpenSessionInViewInterceptor closes the sessions of an asynchronous request from an AsyncListener,
+        // and the servlet container of the application provides the API at runtime
+    }
 
     compileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
     compileOnly 'org.spockframework:spock-core', {
