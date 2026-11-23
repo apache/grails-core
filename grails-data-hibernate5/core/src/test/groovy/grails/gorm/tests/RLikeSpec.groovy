@@ -26,7 +26,8 @@ import spock.lang.Shared
 
 /**
  * The H2 rows run everywhere; a row that starts a container is skipped when no Docker daemon answers the client that starts
- * it, and the Db2 rows are skipped on arm64 machines, as IBM publishes the image for amd64 only.
+ * it, and the Db2 and SQL Server rows are skipped on arm64 machines, where their amd64-only images need emulation, unless
+ * {@code -Dgrails.test.amd64.emulation=true} says it works.
  */
 class RLikeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
 
@@ -35,12 +36,13 @@ class RLikeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
     @Shared mariadb = DatabaseContainers.MARIADB
     @Shared oracle = DatabaseContainers.ORACLE
     @Shared db2 = DatabaseContainers.DB2
+    @Shared sqlServer = DatabaseContainers.SQL_SERVER
 
     void setupSpec() {
         manager.registerDomainClasses(RlikeFoo)
     }
 
-    @IgnoreIf({ data.container != null && (!DatabaseContainers.isDockerAvailable() || (data.db == 'DB2' && System.getProperty('os.arch') in ['aarch64', 'arm64'])) })
+    @IgnoreIf({ DatabaseContainers.cannotRun(data.db, data.container) })
     void "test rlike works with #db"() {
         given:
         useDatabase(container, 'rlikeDB')
@@ -52,20 +54,21 @@ class RLikeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
         manager.session.clear()
         List<RlikeFoo> allFoos = RlikeFoo.findAllByNameRlike("ABCD.*")
 
-        then:
-        allFoos.size() == 2
+        then: 'SQL Server has no regular expression operator Grails uses, so rlike is a like and the pattern matches nothing'
+        allFoos.size() == expected
 
         where:
-        db         | container
-        'H2'       | null
-        'Postgres' | postgres
-        'MySQL'    | mysql
-        'MariaDB'  | mariadb
-        'Oracle'   | oracle
-        'DB2'      | db2
+        db           | container || expected
+        'H2'         | null      || 2
+        'Postgres'   | postgres  || 2
+        'MySQL'      | mysql     || 2
+        'MariaDB'    | mariadb   || 2
+        'Oracle'     | oracle    || 2
+        'DB2'        | db2       || 2
+        'SQL Server' | sqlServer || 0
     }
 
-    @IgnoreIf({ data.container != null && (!DatabaseContainers.isDockerAvailable() || (data.db == 'DB2' && System.getProperty('os.arch') in ['aarch64', 'arm64'])) })
+    @IgnoreIf({ DatabaseContainers.cannotRun(data.db, data.container) })
     void "test rlike on #db matches #expected of Alice, alice and bob for the pattern ^al.*"() {
         given:
         useDatabase(container, 'rlikeCaseDB')
@@ -79,13 +82,28 @@ class RLikeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
         names == expected
 
         where:
-        db         | container || expected
-        'H2'       | null      || ['alice']
-        'Postgres' | postgres  || ['Alice', 'alice']
-        'MySQL'    | mysql     || ['Alice', 'alice']
-        'MariaDB'  | mariadb   || ['Alice', 'alice']
-        'Oracle'   | oracle    || ['alice']
-        'DB2'      | db2       || ['alice']
+        db           | container || expected
+        'H2'         | null      || ['alice']
+        'Postgres'   | postgres  || ['Alice', 'alice']
+        'MySQL'      | mysql     || ['Alice', 'alice']
+        'MariaDB'    | mariadb   || ['Alice', 'alice']
+        'Oracle'     | oracle    || ['alice']
+        'DB2'        | db2       || ['alice']
+        'SQL Server' | sqlServer || []
+    }
+
+    @IgnoreIf({ DatabaseContainers.cannotRun('SQL Server', DatabaseContainers.SQL_SERVER) })
+    void "rlike on SQL Server falls back to like, so the wildcard % selects rows"() {
+        given:
+        useDatabase(sqlServer, 'rlikeFallbackDB')
+        ['Alice', 'alice', 'bob'].each { new RlikeFoo(name: it).save(flush: true) }
+
+        when: 'a pattern that a like matches is used, as the fallback is a like'
+        manager.session.clear()
+        List<String> names = RlikeFoo.findAllByNameRlike('al%')*.name.sort()
+
+        then: 'the fallback selects the rows, and the default collation of the image ignores case'
+        names == ['Alice', 'alice']
     }
 
     private void useDatabase(container, String h2Name) {

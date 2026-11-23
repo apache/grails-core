@@ -24,6 +24,7 @@ import groovy.transform.CompileStatic
 import org.testcontainers.DockerClientFactory
 import org.testcontainers.db2.Db2Container
 import org.testcontainers.mariadb.MariaDBContainer
+import org.testcontainers.mssqlserver.MSSQLServerContainer
 import org.testcontainers.mysql.MySQLContainer
 import org.testcontainers.oracle.OracleContainer
 import org.testcontainers.postgresql.PostgreSQLContainer
@@ -60,6 +61,32 @@ final class DatabaseContainers {
     static final Db2Container DB2 = new Db2Container('icr.io/db2_community/db2:11.5.9.0')
             .acceptLicense()
             .withStartupTimeout(Duration.ofMinutes(10))
+
+    /**
+     * SQL Server. Microsoft publishes the image for amd64 only, so on an arm64 machine Docker runs it under emulation, which
+     * makes it slow to start, and fails to start it at all where emulation is not set up; the startup timeout allows for the
+     * first, and {@link #cannotRun} skips the rows on arm64 unless the {@value #AMD64_EMULATION_PROPERTY} system property
+     * says that emulation works.
+     */
+    static final MSSQLServerContainer SQL_SERVER = new MSSQLServerContainer('mcr.microsoft.com/mssql/server:2022-latest')
+            .acceptLicense()
+            .withStartupTimeout(Duration.ofMinutes(10))
+
+    /** Set to {@code true} to run the SQL Server and Db2 rows on an arm64 machine where Docker runs amd64 images. */
+    static final String AMD64_EMULATION_PROPERTY = 'grails.test.amd64.emulation'
+
+    /**
+     * Whether a row of a data-driven feature cannot run: it starts a container and no Docker daemon answers the client that
+     * starts it, or its database is published for amd64 only and this machine is arm64 without the opt-in.
+     */
+    static boolean cannotRun(String db, Object container) {
+        if (container == null) {
+            return false
+        }
+        boolean arm64 = System.getProperty('os.arch') in ['aarch64', 'arm64']
+        boolean amd64Only = db in ['DB2', 'SQL Server']
+        return !isDockerAvailable() || (amd64Only && arm64 && System.getProperty(AMD64_EMULATION_PROPERTY) != 'true')
+    }
 
     /**
      * Whether a Docker daemon is reachable by the client that starts the containers. The gate and the startup use the same
