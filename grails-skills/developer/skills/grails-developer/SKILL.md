@@ -913,9 +913,9 @@ The commands work in every directory of the project. The ones that build, test o
 
 | Command | Does |
 |---------|------|
-| `grails run-app` | Gradle `bootRun` in `development`, until Ctrl-C. `--port 9090`, `--https` (a self-signed certificate, port 8443 unless one is given), `--debug-jvm` |
+| `grails run-app` (also `run`) | Gradle `bootRun` in `development`, until Ctrl-C. `--port 9090`, `--https` (a self-signed certificate, port 8443 unless one is given), `--debug-jvm` |
 | `grails run-app --detach` | Returns once the application answers on its port and leaves it running; its output is in `.grails/run/app.log` |
-| `grails stop-app` | Stops what `grails run-app` started; not an application of `./gradlew bootRun` |
+| `grails stop-app` (also `stop`) | Stops what `grails run-app` started; not an application of `./gradlew bootRun` |
 | `grails test-app` | Every test phase, which is every `Test` task of the build (Gradle `testApp`), in `test` |
 | `grails test-app --unit`, `--integration`, `--functional` | Only those phases: a phase is the name of its task without `Test`, so `--functional` is `functionalTest` |
 | `grails test-app BookSpec`, `grails test-app --unit "*ControllerSpec"` | The named tests, in whichever phase has them. `--clean` runs them again, `--continuous` on every change |
@@ -1034,7 +1034,7 @@ Each writes one JSON document on one line of the standard output and nothing els
 
 - No `--profile`, `list-profiles`, `profile-info` or `create-profile`: use the `create-` command of the type, `--list-features` and `feature list`, and `--preset` for a starting point of your own.
 - No `profile` dependency in `build.gradle` (the build fails with it) and no `grails.profile` in `application.yml` (nothing reads it).
-- No `grails run`, `grails test` or `grails stop`: `run-app`, `test-app`, `stop-app`.
+- No `grails test`: `grails test-app`; `test` in front of a command is no environment either. (`grails run` and `grails stop` still work as other names of `run-app` and `stop-app`; write the whole names in scripts.)
 - No environment in front of the command (`grails prod war`, `grails test run-app`, `grails -Dgrails.env=staging war`): `grails war -Dgrails.env=production`.
 - No Gradle options without `--` (`grails --offline run-app`): `grails run-app -- --offline`.
 - No `grails install`: `grails gradle publishToMavenLocal`.
