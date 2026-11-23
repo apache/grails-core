@@ -276,7 +276,7 @@ class PackPresetSpec extends ApplicationContextSpec {
 
         then:
         PackRefusedException e = thrown()
-        e.message == message.replace('DIR', directory.toString())
+        e.message.replace(directory.toString(), 'DIR').replace(File.separator, '/') == message
         !e.ofThePack
 
         where:
