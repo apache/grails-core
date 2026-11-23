@@ -42,6 +42,12 @@ import picocli.CommandLine
  * {@code ccon} is {@code create-controller}.</li>
  * </ol>
  *
+ * <p>A form is read against the name of a command and the other names it has, as {@code w} against
+ * {@code war} of {@code assemble}, except another name that is the first word of the name: {@code run}
+ * of {@code run-app} and {@code stop} of {@code stop-app} are those commands when they are typed
+ * whole, and nothing is short for them, so that {@code r} and {@code ru}, which start
+ * {@code run-script} and {@code run-command} too, are no command, and {@code st} is {@code stats}.</p>
+ *
  * @since 9.0
  */
 @CompileStatic
@@ -202,11 +208,18 @@ final class ShortForms {
         return names(command).any { String name -> isCut(letters, name) }
     }
 
-    // the name of a command and the other names it has
+    // The name of a command and the other names it has, but for another name that is the first word of
+    // the name, as run is of run-app: what starts it starts that word of every command that has it, ru
+    // that of run-script and run-command as much as that of run-app, and st that of stats as well as
+    // that of stop. Such a name is that command when it is typed whole, and short for nothing.
     private static List<String> names(CommandLine command) {
         CommandLine.Model.CommandSpec spec = command.getCommandSpec()
         List<String> names = [spec.name()]
-        names.addAll(spec.aliases().toList())
+        for (String alias : spec.aliases()) {
+            if (!spec.name().startsWith(alias + '-')) {
+                names.add(alias)
+            }
+        }
         return names
     }
 

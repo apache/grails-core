@@ -337,12 +337,43 @@ class CommandCatalogSpec extends CommandSpec implements CommandFixture {
         where:
         typed  | expected | ran                           | said                                                           | what
         'ra'   | 0        | ['ra ran with [x]']           | []                                                             | 'the command of that name, which is not run-app'
-        'run'  | 2        | []                            | ['There is no command run', 'Type: grails-forge-cli run-app']   | 'answered with what the Grails shell had, and is not run-now'
+        'run'  | 2        | []                            | ['run-app takes no argument x']                                | 'run-app, which it is another name of as in the Grails shell, and not run-now'
         'test' | 2        | []                            | ['There is no command test', 'Type: grails-forge-cli test-app'] | 'answered with what the Grails shell had, and is not test-tool'
-        'stop' | 2        | []                            | ['There is no command stop', 'Type: grails-forge-cli stop-app'] | 'answered with what the Grails shell had, and is not stop-point'
+        'stop' | 2        | []                            | ['stop-app takes no argument x']                               | 'stop-app, which it is another name of as in the Grails shell, and not stop-point'
         'rn'   | 0        | ['run-now ran with [x]']      | []                                                             | 'short for run-now'
         'tt'   | 0        | ['test-tool ran with [x]']    | []                                                             | 'short for test-tool'
         'stopp' | 0       | ['stop-point ran with [x]']   | []                                                             | 'short for stop-point'
+        'ru'   | 2        | []                            | ['There is no command ru']                                     | 'short for nothing: run is a name and no form of it is short for run-app'
+        'sto'  | 2        | []                            | ['There is no command sto']                                    | 'short for nothing: stop is a name and no form of it is short for stop-app'
+    }
+
+    @Unroll
+    void "#typed is #what, as run and stop are names of run-app and stop-app that no short form is read from"() {
+        when:
+        int exit = ForgeCli.execute(beanContext, 'help', typed)
+        String said = (out.toString() + err.toString()).readLines()[0]
+
+        then:
+        exit == expected
+        said.startsWith(first)
+
+        where:
+        typed  | expected | first                                                                       | what
+        'run'  | 0        | 'Usage: grails-forge-cli run-app [-hvVx]'                                   | 'run-app'
+        'stop' | 0        | 'Usage: grails-forge-cli stop-app [-hvVx]'                                  | 'stop-app'
+        'Run'  | 2        | 'There is no command Run. Did you mean: run-app or run-script or run-command?' | 'no name in another case'
+        'r'    | 2        | 'There is no command r. Did you mean: run-app or run-script or run-command?' | 'no command: it starts run as much as run-script and run-command'
+        'ru'   | 2        | 'There is no command ru. Did you mean: run-app or run-script or run-command?' | 'no command either'
+        'st'   | 0        | 'Usage: grails-forge-cli stats '                                            | 'stats still, which no command of one word but stats starts'
+        'sto'  | 2        | 'There is no command sto. Did you mean: '                                   | 'no command: it starts stop and stop-app, which have no short form of one part'
+        's'    | 2        | 's is short for more than one command: stats (st), shell (sh).'             | 'stats and shell, as before'
+        'ra'   | 0        | 'Usage: grails-forge-cli run-app [-hvVx]'                                   | 'run-app, by the first letters of its words'
+        'sa'   | 0        | 'Usage: grails-forge-cli stop-app [-hvVx]'                                  | 'stop-app, by the first letters of its words'
+        'rA'   | 0        | 'Usage: grails-forge-cli run-app [-hvVx]'                                   | 'run-app, by the rule of the Grails shell'
+        'sA'   | 0        | 'Usage: grails-forge-cli stop-app [-hvVx]'                                  | 'stop-app, by the rule of the Grails shell'
+        'runa' | 0        | 'Usage: grails-forge-cli run-app [-hvVx]'                                   | 'run-app, by the starts of its words'
+        'w'    | 0        | 'Usage: grails-forge-cli assemble '                                         | 'assemble, by the start of war, another name that is no word of its name'
+        'wa'   | 0        | 'Usage: grails-forge-cli assemble '                                         | 'assemble, by more of war'
     }
 
     @Unroll
@@ -383,6 +414,8 @@ class CommandCatalogSpec extends CommandSpec implements CommandFixture {
         ['h', 'f', 'a']          | ['feature', 'add', '--help'] | ' feature add'
         ['help', 'ra']           | ['run-app', '--help']        | ' run-app'
         ['help', 'sa']           | ['stop-app', '--help']       | ' stop-app'
+        ['help', 'run']          | ['run', '--help']            | ' run-app'
+        ['help', 'stop']         | ['stop-app', '--help']       | ' stop-app'
         ['help', 'cdc']          | ['create-domain-class', '--help'] | ' create-domain-class'
         ['help', 'pr', 'h']      | ['project', 'health', '--help'] | ' project health'
         ['he', 'ra']             | ['ra', '--help']             | ' run-app'
@@ -683,6 +716,9 @@ class CommandCatalogSpec extends CommandSpec implements CommandFixture {
         commands*.name.unique(false) == commands*.name
         commands.every { it.origin == 'built-in' && it.aliases instanceof List && it.description }
         commands.find { it.name == 'assemble' }.aliases == ['war', 'package']
+        commands.find { it.name == 'run-app' }.aliases == ['run']
+        commands.find { it.name == 'stop-app' }.aliases == ['stop']
+        !commands*.name.any { it in ['run', 'stop'] }
         commands.find { it.name == 'gradle' }.project == true
         commands.find { it.name == 'create-app' }.project == false
         commands.find { it.name == 'help' }.project == false

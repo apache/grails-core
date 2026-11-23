@@ -223,6 +223,10 @@ class LauncherSpec extends Specification {
         ['dependency-report']                 | 1
         ['run-app']                           | 1
         ['stop-app']                          | 1
+        ['run']                               | 1
+        ['stop']                              | 1
+        ['help', 'run']                       | 0
+        ['run', 'app.groovy']                 | 2
         ['console']                           | 1
         ['shell']                             | 1
         ['run-script', 'x.groovy']            | 1

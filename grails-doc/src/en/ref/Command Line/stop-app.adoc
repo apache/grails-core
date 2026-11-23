@@ -42,6 +42,6 @@ $ grails stop-app
 
 === Description
 
-Use `stop-app` to stop the application for the current project after it has been started with `run-app`. The command can be run from interactive mode or as a separate command from another terminal.
+Use `stop-app` to stop the application for the current project after it has been started with `run-app`. The command can be run from interactive mode or as a separate command from another terminal. `stop` is another name of the command, as in the Grails shell: `grails stop` is `grails stop-app`.
 
 `stop-app` ends the application that `run-app` started for the project, with the Gradle that ran it, and nothing else: it goes by the record `run-app` wrote to `.grails/run/app.json` and ends a process only when it is the recorded one, by its number, the instant it began, its user and its command line. A `run-app` that ran its build through the Gradle Tooling API (`run-app --foreground` in interactive mode, and with `GRAILS_GRADLE_RUNNER=tooling-api`) started no Gradle and recorded itself: `stop-app` asks it to end its build, which it does, and ends no process. It waits until nothing takes connections on the port of the application any more before it says that the application stopped. It does not stop an application that `gradlew bootRun` or an IDE started. Without a running application it says so and ends with exit code 1. See the user guide section on link:{guidePath}commandLine.html#gradleBuild[Building with Gradle] for the details.

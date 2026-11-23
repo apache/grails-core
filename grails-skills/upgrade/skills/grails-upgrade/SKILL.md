@@ -694,7 +694,7 @@ git add gradle.properties grailsw grailsw.bat grails-wrapper.jar
 Outside a project, `grails run app.groovy` compiled a loose Groovy script and started it as a Spring Boot application. Grails 9 removes it with no replacement, and with it `org.grails.datastore.gorm.boot.compiler.GormCompilerAutoConfiguration` of `grails-data-hibernate5-spring-boot` and `grails-data-hibernate7-spring-boot`, which added GORM to such a script that had an `@Entity` class, and the `META-INF/services/org.grails.cli.compiler.CompilerAutoConfiguration` file that registered it.
 
 - Scripts inside a project are unaffected: `run-script` and the script commands run through `runScriptCommand` work as before. `HibernateGormAutoConfiguration` is unchanged.
-- A script that was started with `grails run` becomes a project: create an application with the features it needs and move the code into it, or run it in an existing application with `run-script`.
+- A script that was started with `grails run` becomes a project: create an application with the features it needs and move the code into it, or run it in an existing application with `run-script`. `run` is another name of `run-app` again, so `grails run app.groovy` is refused with exit code 2 and the `grails run-script app.groovy` to type instead.
 - Remove code that names `GormCompilerAutoConfiguration`. Nothing takes its place.
 
 ## The Grails Shell and the Profiles Are Not Published
@@ -755,8 +755,8 @@ Where an unchanged name is a command:
 | Grails 8 | Grails 9 |
 |----------|----------|
 | `grails test ...` (other name of `test-app`) | `grails test-app ...` |
-| `grails run` (other name of `run-app`) | `grails run-app` |
-| `grails stop` (other name of `stop-app`) | `grails stop-app` |
+| `grails test run-app` (`test` as the environment) | `grails run-app -Dgrails.env=test` |
+| `grails run`, `grails stop` (other names of `run-app`, `stop-app`) | unchanged: still other names; nothing is short for them (`r` is no command, `st` is `stats`) |
 | `grails sh` | still runs `shell`, as its short form; write `grails shell` |
 | `quit` in interactive mode | `exit` |
 | `!program`, `!` in interactive mode | kept: `!program` runs the rest of the line in the user's shell (`$SHELL`, else `/bin/sh`; `cmd.exe` on Windows) with the terminal, and shows a non-zero exit code; `!` alone runs the last command again |
@@ -772,7 +772,7 @@ Where an unchanged name is a command:
 | `profile-info` | removed: `grails create-app --list-features` (and the other `create-` commands) |
 | `generate-all`, `generate-controller`, `generate-views` of the `rest-api` profile (JSON views) | no replacement for JSON views; the names are the scaffolding plugin's commands, for GSP views |
 | `grails install-templates` (scaffolding templates) | `grails run-command install-templates`; `grails install-templates` now copies the templates of the `create-*` commands |
-| `grails run <file>.groovy` outside a project | removed, no replacement |
+| `grails run <file>.groovy` outside a project | removed, no replacement; refused with exit code 2 and `grails run-script <file>.groovy`, which runs it in an application |
 | `test-app` (ran `test` and `integrationTest`) | runs every `Test` task; `grails test-app --unit --integration` for the two |
 | `shell` (only said to run `gradle shell -q`) | runs the Groovy shell of the application |
 | `stop-app` | stops only what `grails run-app` of Grails 9 started: start with `run-app --detach` |
@@ -849,7 +849,7 @@ Never run a script of the framework's plugins with `runScriptCommand` in Grails 
 - Put a Gradle option that the command does not have behind `--`: `grails compile -- --offline`. Without the `--` it is refused.
 - `--verbose` on a build command adds Gradle's `--info`; `--stacktrace` adds `--stacktrace` and `-Dgrails.full.stacktrace=true`; Gradle's debug log is `-- --debug`.
 - Write out short forms in scripts. A short form that fits two commands is refused with exit code 2 where the shell ran the first: `cC` (`create-controller`, `create-command`), `cS` (`create-service`, `create-script`), `s` (`stats`, `shell`), `co` (`compile`, `console`). The refusal names each command with the shortest form that fits it alone.
-- Grails 9 also takes short forms in lower case: the first letters of the words (`ra` is `run-app`, `cdc` is `create-domain-class`) or the start of each word (`ccon` is `create-controller`). A form with an upper-case letter or a hyphen is read as the shell read it. `run`, `test` and `stop` are never short forms: they are refused with the name to type. A command of the application or a plugin whose name is a short form of a `grails` command (such as `ra`) is run with `grails run-command NAME`.
+- Grails 9 also takes short forms in lower case: the first letters of the words (`ra` is `run-app`, `cdc` is `create-domain-class`) or the start of each word (`ccon` is `create-controller`). A form with an upper-case letter or a hyphen is read as the shell read it. `test` is never a short form: it is refused with the name to type. `run` and `stop` are still other names of `run-app` and `stop-app`, and nothing is short for them (`r` and `ru` are no command, `st` is `stats`). A command of the application or a plugin whose name is a short form of a `grails` command (such as `ra`) is run with `grails run-command NAME`.
 - Exit codes: 0 done, 2 mistake in the command line (nothing ran), 1 any other failure. Make scripts check them.
 - `gradle`, `run-command`, `run-script` and test filters pass each argument on unchanged. Remove quoting or escaping that worked around the shell splitting and joining arguments. A leading `@file` argument is expanded from the file; write `@@` for a literal `@`.
 - In CI use `grails --plain-output --non-interactive <command>`.

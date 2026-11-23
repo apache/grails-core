@@ -44,7 +44,10 @@ class ConsoleSuggestionsSpec extends Specification {
                                           'and so does typing the name of one. To list them now: grails gradle grailsCommandCatalog'],
             'compile --nothing': ["Run 'grails help compile' for the options"],
             'feature add'      : ["Run 'grails help feature add' for the options"],
-            'test'             : ['test was another name of test-app in the Grails shell. Type: grails test-app'],
+            'test'             : ['test was another name of test-app in the Grails shell, and in front of another command it named the environment test, ' +
+                                          'which now follows the command as -Dgrails.env=test. Type: grails test-app'],
+            'run app.groovy'   : ['run-app takes no argument app.groovy. A Groovy script is run in a Grails project with run-script, ' +
+                                          'with the application started around it. Type: grails run-script app.groovy'],
             'quit'             : ['quit ended the interactive mode of the Grails shell. The interactive mode of grails is ended with exit, and there is none to end outside it'],
             'install'          : ['Run: grails gradle publishToMavenLocal'],
             'create-controller': ['grails project migrate writes the record of an application that has none'],

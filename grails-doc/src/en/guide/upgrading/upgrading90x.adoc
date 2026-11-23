@@ -1766,7 +1766,7 @@ $ git add gradle.properties grailsw grailsw.bat grails-wrapper.jar
 
 Outside a project, the `run` command of the Grails shell compiled a loose Groovy script and started it as a Spring Boot application: `grails run app.groovy`. Dependencies and imports were added to such a script from the annotations it used, and `GormCompilerAutoConfiguration` of `grails-data-hibernate5-spring-boot` and `grails-data-hibernate7-spring-boot` added GORM for Hibernate and the `grails.gorm` imports to a script that had an `@Entity` class.
 
-Grails 9 has neither. The command is removed with the shell and has no replacement, and the two artifacts no longer contain `org.grails.datastore.gorm.boot.compiler.GormCompilerAutoConfiguration` or the `META-INF/services/org.grails.cli.compiler.CompilerAutoConfiguration` file that registered it. `HibernateGormAutoConfiguration`, the Spring Boot auto-configuration of the same artifacts, is unchanged.
+Grails 9 has neither. The command is removed with the shell and has no replacement: `run` is another name of `run-app` again, as it was in a project, and `grails run app.groovy` is refused with exit code 2, in a project and outside one, with the command that runs the script in an application, `grails run-script app.groovy`. The two artifacts no longer contain `org.grails.datastore.gorm.boot.compiler.GormCompilerAutoConfiguration` or the `META-INF/services/org.grails.cli.compiler.CompilerAutoConfiguration` file that registered it. `HibernateGormAutoConfiguration`, the Spring Boot auto-configuration of the same artifacts, is unchanged.
 
 Scripts inside a project are not affected: `run-script` runs a Groovy script with the application context of the project as before, and the script commands of a project and of its plugins run through `runScriptCommand` as note 33 describes.
 
@@ -1839,7 +1839,7 @@ Notes 42 to 55 are about what differs for someone who types `grails` commands, o
 
 Most commands of the Grails shell and of its profiles are commands of `grails` under the name they had. The ones that are not are answered when they are typed: `grails` refuses the name with exit code 2, as it refuses anything that is no command, and adds one line that says what there is in its place. <<cliMappingGrails8,Note 55>> has a table with every command of the shell and of the profiles, the unchanged ones included, and the table "Commands of Earlier Versions" in xref:commandLine[The Command Line] has what the command line says for each name that is gone. In short, these names are no commands any more:
 
-* `test`, `run` and `stop`, the other names of `test-app`, `run-app` and `stop-app`. `war` and `package` are still other names of `assemble`, and `sh` still runs `shell`, as the short form of its name (note 43).
+* `test`, the other name of `test-app`, which the shell also read as the environment in front of another command, as in `grails test run-app` (note 43). `run` and `stop` are still other names of `run-app` and `stop-app`, `war` and `package` of `assemble`, and `sh` still runs `shell`, as the short form of its name (note 43).
 * `quit` and `open` of interactive mode (note 47). `!` is kept: it runs a program of the operating system there, through your shell now.
 * `install` in a plugin: it runs nothing, says to run `grails gradle publishToMavenLocal`, and ends with exit code 1.
 * `create-profile`, `create-feature`, `create-template`, `create-creator-command`, `create-generator-command`, `create-gradle-command`, `list-profiles` and `profile-info`, which are removed with the profiles (note 37).
@@ -1865,7 +1865,7 @@ New for someone who comes from the Grails shell are `create-restapi`, `create-re
 ===== Required Actions
 
 * Search scripts, continuous integration jobs, documentation of your own and the run configurations of an IDE for `grails` and `grailsw`, look each command up in the tables of <<cliMappingGrails8,note 55>>, and replace it as the table says. A job that called a removed command now ends with exit code 2 and has run nothing.
-* Replace `grails test` with `grails test-app`, `grails run` with `grails run-app` and `grails stop` with `grails stop-app`.
+* Replace `grails test` with `grails test-app`. `grails run` and `grails stop` need no change.
 * Replace `grails install` with `grails gradle publishToMavenLocal`, or `./gradlew publishToMavenLocal`.
 * A step that ran `open` from input that was piped into interactive mode opens the file itself, or runs `open`, `xdg-open` or `start` of the operating system after `!` (note 47).
 * A script that read the output of `list-plugins` or `plugin-info` reads the output of `--json`.
@@ -1874,12 +1874,12 @@ New for someone who comes from the Grails shell are `create-restapi`, `create-re
 
 What stands after `grails` is read by other rules than the Grails shell had.
 
-* *The environment is not given in front of the command.* `grails test run-app`, `grails prod war` and `grails dev run-app` are refused with exit code 2: `test`, `prod` and `dev` are no commands. The environment is a system property after the name of the command: `grails run-app -Dgrails.env=test`, `grails war -Dgrails.env=staging`. `-Dgrails.env=NAME` in front of the command, which the shell took wherever it stood, is a mistake as well. Without it `run-app`, `console`, `shell`, `run-command` and `run-script` run for `development`, `test-app` for `test`, and `assemble` (`war`, `package`) for `production`.
+* *The environment is not given in front of the command.* `grails test run-app`, `grails prod war` and `grails dev run-app` are refused with exit code 2: `test`, `prod` and `dev` are no commands, and the line `test` is answered with says where the environment is given now. The environment is a system property after the name of the command: `grails run-app -Dgrails.env=test`, `grails war -Dgrails.env=staging`. `-Dgrails.env=NAME` in front of the command, which the shell took wherever it stood, is a mistake as well. Without it `run-app`, `console`, `shell`, `run-command` and `run-script` run for `development`, `test-app` for `test`, and `assemble` (`war`, `package`) for `production`.
 * *An option of a command stands after its name.* In front of the name only the options of the command line itself are taken: `--plain-output`, `--non-interactive`, `-x` (`--stacktrace`), `-v` (`--verbose`), `-h` and `-V`.
 * *`-v` is `--verbose`, and the version is `-V` or `--version`.* The shell printed the version for `grails -v`; `grails -v` without a command is now refused with exit code 2.
 * *An option has two dashes, and one that a command does not have is refused.* The shell took every option with one dash or with two, in front of the command or after it, and ignored the ones it did not know. Only these are still taken with one dash: `-port`, `-host`, `-https` and `-debug-jvm` of `run-app`, `-unit`, `-integration`, `-clean`, `-continuous` and `-debug-jvm` of `test-app`, `-clean` of `assemble`, and `-debug-jvm` of `console` and `shell`. `-stacktrace`, `-verbose`, `-version`, `-plain-output` and `-non-interactive` are refused: write them with two dashes. `--offline` and `--refresh-dependencies` in front of a command are refused as well; for Gradle they stand after `--`, as in `grails compile -- --offline`.
 * *`--verbose` asks Gradle for `--info`.* For a command that is a build (`compile`, `test-app`, `assemble` and the others), `-v` or `--verbose` adds `--info` to the arguments of Gradle, and `-x` or `--stacktrace` adds `--stacktrace` and `-Dgrails.full.stacktrace=true`. `run-app --verbose` leaves out the `--quiet` the command otherwise gives Gradle. The debug log of Gradle is `-- --debug`.
-* *Short forms in lower case are taken, and a short form that fits two commands is refused.* A command can still be shortened to the first letters of its words with the start of every word after the first in upper case (`cA`, `cDC`, `rA`), as in the Grails shell. Now it can be shortened in lower case as well, which the shell refused: `ra` is `run-app`, `sa` is `stop-app`, `ta` is `test-app` and `cdc` is `create-domain-class`, and more letters of a word tell two commands apart, as `ccon` for `create-controller`. A form with an upper-case letter or a hyphen is read as the shell read it, so `Ra` is still no command. A name the shell had for a command, such as `run`, `test` or `stop`, is never read as a short form: it is answered with what there is in its place (note 42). Where a short form fits more than one command the Grails shell ran the first, and `grails` runs none, names the commands, each with the shortest form that fits it alone, and ends with exit code 2. In a project `cC` and `cc` fit `create-controller` (`ccon`) and `create-command` (`ccom`), `cS` and `cs` fit `create-service` (`cse`) and `create-script` (`csc`), `s` fits `stats` and `shell`, and `co` fits `compile` and `console`; `tA` is still `test-app` and `rA` is still `run-app`. `grails help NAME` ends with the shortest form of the command, as `Short form: ra`. A command of the application or of a plugin whose name is a short form of a command of `grails`, as `ra` is, is not a command by that name, which `help` says; it is run with `grails run-command ra` (note 46).
+* *Short forms in lower case are taken, and a short form that fits two commands is refused.* A command can still be shortened to the first letters of its words with the start of every word after the first in upper case (`cA`, `cDC`, `rA`), as in the Grails shell. Now it can be shortened in lower case as well, which the shell refused: `ra` is `run-app`, `sa` is `stop-app`, `ta` is `test-app` and `cdc` is `create-domain-class`, and more letters of a word tell two commands apart, as `ccon` for `create-controller`. A form with an upper-case letter or a hyphen is read as the shell read it, so `Ra` is still no command. A name the shell had for a command that is gone, such as `test`, is never read as a short form: it is answered with what there is in its place (note 42). `run` and `stop` are other names of `run-app` and `stop-app`, as in the shell, and, as in the shell, nothing is short for them: `r` and `ru`, which start `run-script` and `run-command` as well, are no command, and `st` is still `stats`. Where a short form fits more than one command the Grails shell ran the first, and `grails` runs none, names the commands, each with the shortest form that fits it alone, and ends with exit code 2. In a project `cC` and `cc` fit `create-controller` (`ccon`) and `create-command` (`ccom`), `cS` and `cs` fit `create-service` (`cse`) and `create-script` (`csc`), `s` fits `stats` and `shell`, and `co` fits `compile` and `console`; `tA` is still `test-app` and `rA` is still `run-app`. `grails help NAME` ends with the shortest form of the command, as `Short form: ra`. A command of the application or of a plugin whose name is a short form of a command of `grails`, as `ra` is, is not a command by that name, which `help` says; it is run with `grails run-command ra` (note 46).
 * *What is no command is a failure.* A name that is no command, an option a command does not have and a value it does not take end with exit code 2 and one line of usage, and nothing is run. An option that is meant for Gradle and that the command does not have stands after `--`: `grails compile -- --offline`.
 * *Exit codes.* 0 when the command did what it was asked, 2 for a mistake in the command line, 1 for every other failure (a build that failed, no project, a file that is in the way). A command of a project that is given outside a project ends with 1 and `<name> is a command of a Grails project; there is none in <directory> or above it`.
 * *Arguments are kept as they are.* `gradle`, `run-command`, `run-script` and the test filters of `test-app` give each argument to Gradle or to the command as the one argument it was: an argument with spaces or quotes is not split and joined again, and an argument that starts with a dash reaches the command. An argument that starts with `@` and names a file is replaced by the arguments in that file; write `@@` for an `@` that is meant.
@@ -2444,11 +2444,11 @@ Every command the Grails shell of Grails 8 had, of itself and of the profiles `b
 
 |`run`
 |every project, another name of `run-app`
-|`run-app`
+|Unchanged: another name of `run-app` (42).
 
 |`run <file>.groovy`
 |the shell, outside a project
-|Removed, no replacement (38).
+|Removed, no replacement (38). Refused with exit code 2, with `run-script <file>.groovy`, which runs the script in an application.
 
 |`run-app`
 |every project
@@ -2476,7 +2476,7 @@ Every command the Grails shell of Grails 8 had, of itself and of the profiles `b
 
 |`stop`
 |every project, another name of `stop-app`
-|`stop-app`
+|Unchanged: another name of `stop-app` (42).
 
 |`stop-app`
 |every project
@@ -2484,7 +2484,7 @@ Every command the Grails shell of Grails 8 had, of itself and of the profiles `b
 
 |`test`
 |every project, another name of `test-app`
-|`test-app`
+|`test-app`. In front of another command, where the shell read it as the environment: `-Dgrails.env=test` after the command (43).
 
 |`test-app`
 |every project
@@ -2716,8 +2716,8 @@ The other `dbm-*` commands are `dbm-changelog-sync`, `dbm-changelog-sync-sql`, `
 |Short forms in lower case: `grails ra`, `grails sa`, `grails cdc`: no command
 |`run-app`, `stop-app`, `create-domain-class`: the first letters of the words, or more of each word, as `ccon` for `create-controller`. `cc` and `cs` fit two commands and are refused like `cC` and `cS` (43).
 
-|Other names: `test`, `run`, `stop`, `quit`
-|`test-app`, `run-app`, `stop-app`, `exit`. `war`, `package` and `sh` still work (42).
+|Other names: `test`, `quit`
+|`test-app`, `exit`. `run`, `stop`, `war`, `package` and `sh` still work (42).
 
 |`!program` in interactive mode: split into words, run without a shell, its output shown when it ended
 |Kept: the line is run by your shell, with the terminal (47).

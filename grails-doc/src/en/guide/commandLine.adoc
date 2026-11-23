@@ -336,13 +336,13 @@ $ grails f a grails-quartz       <5>
 
 A short form is read in the following order, and the first reading that fits a command is the one that counts:
 
-. The name of a command, or another name it has, is that command, also when it happens to be the short form of another one.
-. At the top of the command line, a name a command of the Grails shell had, such as `run`, `test` or `stop`, is answered with what there is in its place (see <<commandsOfEarlierVersions,Commands of Earlier Versions>>) and is never read as a short form.
+. The name of a command, or another name it has, is that command, also when it happens to be the short form of another one. `run` and `stop` are other names of `run-app` and `stop-app`, as in the Grails shell.
+. At the top of the command line, a name a command of the Grails shell had that is gone or has another name now, such as `test`, `quit` or `list-profiles`, is answered with what there is in its place (see <<commandsOfEarlierVersions,Commands of Earlier Versions>>) and is never read as a short form.
 . The rule the Grails shell went by: the form is cut into parts before every upper-case letter and at every hyphen, there have to be as many parts as the name has words, and each part is the start of its word, whatever its case. `cA`, `creA`, `creat-app` and `CA` are all `create-app`. A form of lower-case letters only is one part, so here it is the start of the name of a command of one word: `h` is `help`, `cl` is `clean`.
 . A form of lower-case letters only that starts no such name is read as the first letters of the words of a name: `ra` is `run-app`, `sa` is `stop-app`, `cdc` is `create-domain-class`.
 . Failing that, a form of lower-case letters only is cut into as many parts as the name has words, each part the start of its word and the parts in the order of the words: `runa`, `rapp` and `runapp` are `run-app`, `ccon` is `create-controller`.
 
-Upper case and hyphens say where the words begin, so a form that has them is read by the rule of the Grails shell alone. A short form has nothing but letters and hyphens in it. Some forms and what they are:
+Upper case and hyphens say where the words begin, so a form that has them is read by the rule of the Grails shell alone. A short form has nothing but letters and hyphens in it. A form is read against the other names of a command as well, so `w` is `war` and so `assemble`, except another name that is the first word of the name of its command: `run` and `stop` are short for nothing, as the Grails shell read no short form of them, because what starts `run` starts `run-script` and `run-command` too. Some forms and what they are:
 
 [cols="2,3,5"]
 |===
@@ -367,6 +367,18 @@ Upper case and hyphens say where the words begin, so a form that has them is rea
 |`h`, `he`
 |`help`
 |The start of the name of a command of one word.
+
+|`w`, `wa`
+|`assemble`
+|The start of `war`, another name of `assemble`.
+
+|`st`
+|`stats`
+|The start of the name of a command of one word. `stop`, another name of `stop-app`, is short for nothing.
+
+|`r`, `ru`, `sto`
+|none
+|`run` and `stop` are names of `run-app` and `stop-app` only when they are typed whole: `ru` starts `run-script` and `run-command` as much as `run`.
 
 |`cc`
 |none
@@ -861,7 +873,7 @@ The file is in the directory of the project and not in its build directory. A bu
 
 ==== When a command has the name of a command of `grails`
 
-A command of `grails` keeps its name, the other names it has and the short forms of its name. A command of the application or of a plugin that is called `install-templates`, `war` (another name of `assemble`), `stat` (short for `stats`) or `ra` (short for `run-app`) is therefore not a command of `grails`. This is never silent: `help` and `help --json` name the command, where it comes from and what has the name, and typing the name runs the command of `grails` after one warning line on the standard error. The command of the application is still run through Gradle:
+A command of `grails` keeps its name, the other names it has and the short forms of its name. A command of the application or of a plugin that is called `install-templates`, `war` (another name of `assemble`), `stop` (another name of `stop-app`), `stat` (short for `stats`) or `ra` (short for `run-app`) is therefore not a command of `grails`. This is never silent: `help` and `help --json` name the command, where it comes from and what has the name, and typing the name runs the command of `grails` after one warning line on the standard error. The command of the application is still run through Gradle:
 
 [source,console]
 ----
@@ -908,7 +920,7 @@ Run 'grails help' for the commands
 
 In a project the first line may name the commands that are most like what was typed, and a line about the commands of the application may stand before the line of this table.
 
-The same line is added for a command that the `grails` command has in projects of some kinds only, when it is typed in a project of another kind: `create-restful-controller` in an application that is no REST API application, `create-job` in a project without the `grails-quartz` feature, `publish-plugin` in a project that is no plugin. Only the name of a command, exactly as it was, is looked up; nothing is run for it. Such a name is never read as a short form: `run` is answered with its line also in a project that has a command `run-now`, which `rn` is short for.
+The same line is added for a command that the `grails` command has in projects of some kinds only, when it is typed in a project of another kind: `create-restful-controller` in an application that is no REST API application, `create-job` in a project without the `grails-quartz` feature, `publish-plugin` in a project that is no plugin. Only the name of a command, exactly as it was, is looked up; nothing is run for it. Such a name is never read as a short form: `test` is answered with its line also in a project that has a command `test-tool`, which `tt` is short for.
 
 Outside a project these commands are not mistakes: `create-controller`, `install-templates` and the others that write into a project, and `package-plugin` and `publish-plugin`, are known by their names everywhere and end with exit code 1 and the line every command of a project has there, `create-controller is a command of a Grails project; there is none in /home/me or above it`. The ones that write into a project are not in the list of `help` outside a project, which says in its last line that a project has more commands; they are found by their short forms there as in a project, show their help with `--help`, and answer a mistake in their use with exit code 2 like every command. A command of a project that is not given what it needs, such as `run-command` without a name, says outside a project that it is a command of a project, with exit code 1, before anything is said of what is missing. A command says so by the name that was typed: `war` for `assemble`.
 
@@ -984,17 +996,9 @@ Outside a project these commands are not mistakes: `create-controller`, `install
 |the shell, in interactive mode
 |replaced: `exit`
 
-|`run`
-|the base profile, another name of `run-app`
-|replaced: `run-app`. Outside a project the shell ran a Groovy script with Spring Boot under this name, which has no replacement.
-
-|`stop`
-|the base profile, another name of `stop-app`
-|replaced: `stop-app`
-
 |`test`
-|the base profile, another name of `test-app`
-|replaced: `test-app`
+|the base profile, another name of `test-app`; in front of another command the shell read it as the environment
+|replaced: `test-app`. In front of another command, as in `grails test run-app`, the environment follows the command now: `grails run-app -Dgrails.env=test`.
 
 |`update-cli-config`
 |the Grails Forge CLI of Grails 7, which told to run it in a warning and did not have it
@@ -1002,7 +1006,9 @@ Outside a project these commands are not mistakes: `create-controller`, `install
 
 |===
 
-Every other command of the shell and of the profiles is a command of `grails` under its name: the commands that create a project, the `create-*` commands of a project, `add-property`, `run-app`, `stop-app`, `test-app`, `compile`, `clean`, `assemble` with `war` and `package`, `console`, `shell`, `run-command`, `run-script`, `dependency-report`, `stats`, `bug-report`, `package-plugin`, `publish-plugin`, `list-plugins`, `plugin-info`, `gradle` and `help`. `sh`, another name of `shell` in the shell, is what is short for `shell` here.
+Every other command of the shell and of the profiles is a command of `grails` under its name: the commands that create a project, the `create-*` commands of a project, `add-property`, `run-app` with `run`, `stop-app` with `stop`, `test-app`, `compile`, `clean`, `assemble` with `war` and `package`, `console`, `shell`, `run-command`, `run-script`, `dependency-report`, `stats`, `bug-report`, `package-plugin`, `publish-plugin`, `list-plugins`, `plugin-info`, `gradle` and `help`. `sh`, another name of `shell` in the shell, is what is short for `shell` here.
+
+Outside a project the shell also ran a loose Groovy script with Spring Boot, as `grails run app.groovy`, which has no replacement (note 38 of link:upgrading.html#upgrading90x[Upgrading from Grails 8 to Grails 9]). `run` is `run-app` now, which takes no such argument: `grails run app.groovy` is refused with exit code 2, and the refusal says that a script is run in a Grails project with `run-script`, the application started around it: `grails run-script app.groovy`.
 
 === Grails Default Package Configuration
 

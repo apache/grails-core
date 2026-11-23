@@ -131,16 +131,13 @@ final class FormerCommands {
             return null
         }
 
-        add('test', 'base profile, another name of test-app', Status.REPLACED,
-                'test was another name of test-app in the Grails shell. Type: {cli} test-app')
+        // run and stop are other names of run-app and stop-app here too; test is not, because the shell also read it as the environment
+        add('test', 'base profile, another name of test-app, and the environment in front of another command', Status.REPLACED,
+                'test was another name of test-app in the Grails shell, and in front of another command it named the environment test, ' +
+                        'which now follows the command as -Dgrails.env=test. Type: {cli} test-app')
         add('create-tag-lib', 'web profile, written as another name of create-taglib where the shell did not read it', Status.REPLACED,
                 'create-tag-lib is written in the web profile of the Grails shell as another name of create-taglib, in a place the shell did not read, ' +
                         'so it was no command there either. Type: {cli} create-taglib')
-        add('run', 'base profile, another name of run-app', Status.REPLACED,
-                'run was another name of run-app in a project in the Grails shell; outside a project it ran a Groovy script with Spring Boot, which has no replacement. ' +
-                        'Type: {cli} run-app')
-        add('stop', 'base profile, another name of stop-app', Status.REPLACED,
-                'stop was another name of stop-app in the Grails shell. Type: {cli} stop-app')
         add('quit', 'shell, interactive mode', Status.REPLACED,
                 'quit ended the interactive mode of the Grails shell. The interactive mode of {name} is ended with exit, and there is none to end outside it')
         add('exit', 'shell, interactive mode', Status.REPLACED,

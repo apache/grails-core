@@ -47,8 +47,8 @@ import org.yaml.snakeyaml.reader.ReaderException
 import picocli.CommandLine
 
 /**
- * {@code run-app}: the Gradle task {@code bootRun} of the project, for the development environment
- * unless another one is given.
+ * {@code run-app}, also {@code run} as in the Grails shell: the Gradle task {@code bootRun} of the
+ * project, for the development environment unless another one is given.
  *
  * <p>The command either stays with the application until it ends, or starts it, waits until it
  * answers on its port and returns, leaving it running for {@code stop-app}. Either way it writes a
@@ -62,7 +62,7 @@ import picocli.CommandLine
  *
  * @since 9.0
  */
-@CommandLine.Command(name = 'run-app',
+@CommandLine.Command(name = 'run-app', aliases = ['run'],
         description = [
                 'Runs the Grails application: the Gradle task bootRun.',
                 'Stays with the application until it ends or the command is cancelled.',
@@ -78,7 +78,7 @@ import picocli.CommandLine
         ],
         preprocessor = GradleTaskCommand.PassedOn)
 @CompileStatic
-class RunAppCommand extends GradleEnvironmentCommand implements OptionRelation.Declared {
+class RunAppCommand extends GradleEnvironmentCommand implements OptionRelation.Declared, UsageHelp.ArgumentAdvice {
 
     private static final int DEFAULT_PORT = 8080
     private static final int DEFAULT_HTTPS_PORT = 8443
@@ -115,6 +115,8 @@ class RunAppCommand extends GradleEnvironmentCommand implements OptionRelation.D
     private static final String SYSTEM_PROPERTY_LONG = '--system-prop'
     // the option of the task bootRun, of the JavaExec of Gradle, that gives the application its arguments
     private static final String APPLICATION_ARGUMENTS = '--args'
+    // what a file the Grails shell ran as a script ends with, as in grails run app.groovy
+    private static final String SCRIPT_ENDING = '.groovy'
     private static final String LOG = RunDirectory.LOCATION + '/' + RunningApplication.LOG
     private static final Map<String, String> ENVIRONMENTS = [dev: 'development', prod: 'production']
     // a lambda, and no closure made into a function when the class is loaded: that goes through what Groovy
@@ -170,6 +172,21 @@ class RunAppCommand extends GradleEnvironmentCommand implements OptionRelation.D
     List<OptionRelation> getOptionRelations() {
         // see check
         return [OptionRelation.exclusive(false, '--detach', '--foreground')]
+    }
+
+    /**
+     * A Groovy script, which {@code grails run FILE.groovy} ran in the Grails shell, is given to
+     * {@code run-script}: the refusal of the file as an argument of this command says so, with the file
+     * where it is typed as it is on the command line of a shell, and with {@code FILE} where it is not.
+     */
+    @Override
+    String adviceFor(String argument) {
+        if (argument == null || !argument.endsWith(SCRIPT_ENDING)) {
+            return null
+        }
+        String file = argument ==~ /[A-Za-z0-9._\/-]{1,200}/ ? argument : 'FILE'
+        return 'A Groovy script is run in a Grails project with run-script, with the application started around it. ' +
+                "Type: ${UsageHelp.toType(spec, "run-script ${file}")}"
     }
 
     @CommandLine.Option(names = ['--ready-timeout'], paramLabel = 'SECONDS', defaultValue = '300',

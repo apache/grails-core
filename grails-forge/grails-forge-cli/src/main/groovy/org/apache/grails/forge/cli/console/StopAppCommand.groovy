@@ -26,9 +26,10 @@ import org.grails.forge.application.OperatingSystem
 import picocli.CommandLine
 
 /**
- * {@code stop-app}: ends the application that {@code run-app} started for the project, and nothing
- * else. It goes by the record {@code run-app} wrote and by what the system says of the recorded
- * process, see {@link RunningApplication}; it never looks for whatever listens on a port.
+ * {@code stop-app}, also {@code stop} as in the Grails shell: ends the application that
+ * {@code run-app} started for the project, and nothing else. It goes by the record {@code run-app}
+ * wrote and by what the system says of the recorded process, see {@link RunningApplication}; it
+ * never looks for whatever listens on a port.
  *
  * <p>A {@code run-app} that left the application running recorded the Gradle it started, and that
  * process is ended. A {@code run-app} that stays with its application recorded itself: it is asked to
@@ -36,7 +37,7 @@ import picocli.CommandLine
  *
  * @since 9.0
  */
-@CommandLine.Command(name = 'stop-app',
+@CommandLine.Command(name = 'stop-app', aliases = ['stop'],
         description = [
                 'Stops the Grails application that run-app started for this project.',
                 'A run-app that stays with the application is asked to end its build, and does.',

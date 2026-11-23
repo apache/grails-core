@@ -177,6 +177,42 @@ class InteractiveConsoleSpec extends Specification {
         said.contains('the wrapper ran with build')
     }
 
+    void "the console takes run and stop for run-app and stop-app, as the Grails shell did, and answers test and a Groovy script with what to type"() {
+        given:
+        project()
+
+        when:
+        ProcessBuilder console = command(true, [], [])
+        console.environment().put(ApplicationCommands.LISTING, 'false')
+        console.environment().put('NO_COLOR', '1')
+        program = console.redirectInput(typed('run --help\n' +
+                'help stop\n' +
+                'test\n' +
+                'run app.groovy\n' +
+                'ru\n' +
+                'exit\n')).start()
+        boolean ended = program.waitFor(SECONDS, TimeUnit.SECONDS)
+        String said = written.text
+
+        then:
+        ended
+        program.exitValue() == 0
+
+        and: 'the help of the commands they are other names of'
+        said.contains('Usage: grails run-app ')
+        said.contains('Usage: grails stop-app ')
+
+        and: 'test is no command, and run with a Groovy script is no script, each with what is typed at the prompt instead'
+        said.contains('test was another name of test-app in the Grails shell, and in front of another command it named the environment test, ' +
+                'which now follows the command as -Dgrails.env=test. Type: test-app')
+        said.contains('run-app takes no argument app.groovy. A Groovy script is run in a Grails project with run-script, ' +
+                'with the application started around it. Type: run-script app.groovy')
+
+        and: 'no short form is read from run'
+        said.contains('There is no command ru. Did you mean: run-app or run-script or run-command?')
+        !said.contains('the wrapper ran with')
+    }
+
     void "the console ends with the input also after its last line was a command"() {
         given:
         project()

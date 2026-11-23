@@ -34,7 +34,9 @@ class FormerCommandsSpec extends CommandSpec {
     static final String CLI = 'grails-forge-cli'
     static final String RECORD = '/former-commands-grails-8.tsv'
     static final Set<String> TEST_TOOLING = ['generate-unit-test', 'generate-functional-test', 'generate-resource-controller'] as Set
-    static final String MISSING = 'The commands of the application and its plugins are not listed yet: a build that compiles the project lists them, ' +
+    static final String TEST = 'test was another name of test-app in the Grails shell, and in front of another command it named the environment test, ' +
+            'which now follows the command as -Dgrails.env=test. Type: grails-forge-cli test-app'
+    static final String MISSING ='The commands of the application and its plugins are not listed yet: a build that compiles the project lists them, ' +
             'and so does typing the name of one. To list them now: grails-forge-cli gradle grailsCommandCatalog'
     static final Map<String, List<String>> PROJECTS = [
             web        : ['create-app', 'example.web'],
@@ -86,15 +88,38 @@ class FormerCommandsSpec extends CommandSpec {
 
         where:
         typed                      | said
-        'test'                     | 'test was another name of test-app in the Grails shell. Type: grails-forge-cli test-app'
+        'test'                     | TEST
         'create-tag-lib'           | 'create-tag-lib is written in the web profile of the Grails shell as another name of create-taglib, in a place the shell did not read, so it was no command there either. Type: grails-forge-cli create-taglib'
-        'run'                      | 'run was another name of run-app in a project in the Grails shell; outside a project it ran a Groovy script with Spring Boot, which has no replacement. Type: grails-forge-cli run-app'
-        'stop'                     | 'stop was another name of stop-app in the Grails shell. Type: grails-forge-cli stop-app'
         'quit'                     | 'quit ended the interactive mode of the Grails shell. The interactive mode of grails-forge-cli is ended with exit, and there is none to end outside it'
         'exit'                     | 'exit ends the interactive mode, which grails-forge-cli starts when it is given no command. It is no command outside it'
         'list-profiles'            | 'list-profiles listed the profiles of the Grails shell. Profiles are replaced by application types and features: grails-forge-cli help lists the create commands, and each lists its features with --list-features'
         'open'                     | 'open opened a file with the program the desktop has for it in the Grails shell. It has no replacement in grails-forge-cli'
         'create-profile'           | 'create-profile created a profile for the Grails shell. Profiles are replaced by application types, features and feature packs, and no command creates any of these'
+    }
+
+    @Unroll
+    void "test in front of #command, where the Grails shell read it as the environment, is refused with its line #where, and nothing is run"() {
+        given:
+        if (inAProject) {
+            inProject('web')
+        }
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'test', command)
+        List<String> lines = err.toString().readLines()
+
+        then: 'a mistake in the command line, whose line says where the environment is given now'
+        exit == 2
+        out.toString().isEmpty()
+        lines[0].startsWith('There is no command test')
+        lines.contains(TEST)
+        lines.count { it.startsWith('Usage: ') } == 1
+
+        where:
+        command   | inAProject | where
+        'run-app' | false      | 'outside a project'
+        'run-app' | true       | 'in a project'
+        'run'     | true       | 'before the other name of run-app'
     }
 
     @Unroll
@@ -144,7 +169,7 @@ class FormerCommandsSpec extends CommandSpec {
         (inProjects.values().flatten() as Set<String>).findAll { String name -> inProjects.values().any { !it.contains(name) } }.every { names.contains(it) }
 
         and: 'a command a line tells to type is a command of a web application'
-        table.collect { (it.hint =~ /Type: \{cli\} ([a-z-]+)$/) }.findAll { it.find() }*.group(1).sort() == ['create-taglib', 'run-app', 'stop-app', 'test-app']
+        table.collect { (it.hint =~ /Type: \{cli\} ([a-z-]+)$/) }.findAll { it.find() }*.group(1).sort() == ['create-taglib', 'test-app']
         ['create-taglib', 'run-app', 'stop-app', 'test-app', 'help', 'gradle', 'feature', 'create-app', 'create-unit-test'].every { commands.web.contains(it) }
         ['create-restful-controller', 'create-functional-test'].every { commands.rest.contains(it) }
         ['create-restful-controller', 'create-functional-test', 'package-plugin'].every { commands['rest-plugin'].contains(it) }
@@ -272,9 +297,49 @@ class FormerCommandsSpec extends CommandSpec {
 
         where:
         name   | form | command
-        'run'  | 'rn' | 'run-now'
         'test' | 'tt' | 'test-tool'
-        'stop' | 'sp' | 'stop-point'
+    }
+
+    @Unroll
+    void "#name is another name of #command, as in the Grails shell, also where the application has a command it starts, which is found by a short form of its own"() {
+        given: 'commands of the application whose names start with the name and the rest of it'
+        inProject('web')
+        File catalog = new File(top, 'web/.grails/cache/command-catalog.json')
+        catalog.parentFile.mkdirs()
+        catalog.text = ApplicationCommandsSpec.doc(['run-now', 'stop-point'].collect { String each ->
+            [name: each, aliases: [], description: '', origin: 'application', target: 'application', registration: 'factories']
+        })
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'help', name)
+
+        then: 'the help of the command of the command line, and no line of the table'
+        exit == 0
+        err.toString().isEmpty()
+        out.toString().readLines()[0].startsWith("Usage: grails-forge-cli ${command} [-hvVx]")
+        FormerCommands.find(name) == null
+
+        when: 'it is typed with the option of the help'
+        out.reset()
+        exit = ForgeCli.execute(beanContext, name, '--help')
+
+        then:
+        exit == 0
+        err.toString().isEmpty()
+        out.toString().readLines()[0].startsWith("Usage: grails-forge-cli ${command} [-hvVx]")
+
+        when:
+        out.reset()
+        exit = ForgeCli.execute(beanContext, 'help', form)
+
+        then:
+        exit == 0
+        out.toString().readLines()[0] == "Usage: grails-forge-cli ${ofTheApplication} [ARGS...]".toString()
+
+        where:
+        name   | command    | form | ofTheApplication
+        'run'  | 'run-app'  | 'rn' | 'run-now'
+        'stop' | 'stop-app' | 'sp' | 'stop-point'
     }
 
     void "below a project that is not used the reason comes first"() {
@@ -455,6 +520,11 @@ class FormerCommandsSpec extends CommandSpec {
         and: 'sh, which was another name of shell, is what is short for shell'
         FormerCommands.find('sh') == null
         isCommand('web', 'sh')
+
+        and: 'run and stop, which were other names of run-app and stop-app, are those here too, in a project and outside one'
+        ['run', 'stop'].every { String name ->
+            FormerCommands.find(name) == null && isCommand('web', name) && isCommand('outside', name)
+        }
     }
 
     void "the guide lists the commands of earlier versions the table has, each with what became of it"() {

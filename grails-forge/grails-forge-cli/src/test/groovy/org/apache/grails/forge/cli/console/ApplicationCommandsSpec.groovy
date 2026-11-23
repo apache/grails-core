@@ -677,6 +677,7 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
                  [name: 'war', origin: 'application', target: 'application', registration: 'factories'],
                  [name: 'stat', origin: 'file:stat.jar', target: 'application', registration: 'legacy'],
                  [name: 'ra', origin: 'application', target: 'application', registration: 'factories'],
+                 [name: 'stop', origin: 'application', target: 'application', registration: 'factories'],
                  [name: 'c', origin: 'application', target: 'application', registration: 'factories'],
                  [name: 'help', origin: 'org.example:helper:1', target: 'application', registration: 'descriptor'],
                  [name: 'gradle', origin: 'org.example:helper:1', target: 'application', registration: 'descriptor'],
@@ -693,6 +694,7 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
                 "install-templates is a command of the CLI itself (built-in), so the command install-templates of org.apache.grails:grails-scaffolding:9.0.0 is not a command here. ${how}install-templates",
                 "ra is short for run-app, a command of the CLI itself (built-in), so the command ra of application is not a command here. ${how}ra",
                 "stat is short for stats, a command of the CLI itself (built-in), so the command stat of file:stat.jar is not a command here. ${how}stat",
+                "stop is another name of stop-app, a command of the CLI itself (built-in), so the command stop of application is not a command here. ${how}stop",
                 "war is another name of assemble, a command of the CLI itself (built-in), so the command war of application is not a command here. ${how}war"]
 
         when:
@@ -709,6 +711,7 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
         commands.findAll { it.origin != 'built-in' }*.name == ['hello-world']
         commands.find { it.name == 'install-templates' }.origin == 'built-in'
         commands.find { it.name == 'assemble' }.aliases == ['war', 'package']
+        commands.find { it.name == 'stop-app' }.aliases == ['stop']
 
         when: 'the help a person reads'
         out.reset()
@@ -735,6 +738,7 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
         'war'               | 'assemble'
         'stat'              | 'stats'
         'ra'                | 'run-app'
+        'stop'              | 'stop-app'
     }
 
     void "a command of the build that is not there is said to be run with run-command"() {

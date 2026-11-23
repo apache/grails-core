@@ -385,5 +385,6 @@ These things differ from the Grails shell:
 * `stop-app` ends the Gradle that `run-app` started with everything below it, and goes by the record in `.grails/run`; the shell ends the process whose number the application wrote to `build/run-app.pid`. An application that was started by the shell or by `gradlew bootRun` is not stopped by the `stop-app` of the `grails` command, and the other way round.
 * `shell` runs the shell. In the Grails shell the command only says to run `gradle shell -q`.
 * `run-script` and `run-command` keep each argument as it was. The shell joins the arguments with spaces, the task splits them again, and arguments that start with a dash do not reach the command.
-* `run-app`, `stop-app` and `shell` do not have the other names `run`, `stop` and `sh` of the shell: with `run`, the short form `r` would start the application.
+* `run` and `stop` are other names of `run-app` and `stop-app`, as in the shell, and nothing is short for them: `r` and `ru` start no application, since they start `run-script` and `run-command` as well, and `st` is `stats`. `shell` does not have the other name `sh` of the shell; `sh` is the short form of `shell`.
+* `run` with a Groovy script, as `grails run app.groovy`, which ran the script outside a project in the shell, is refused with exit code 2 and the command that runs it in a project: `grails run-script app.groovy`.
 * `s` and `co` are no short forms of one command any more: `s` fits `stats` and `shell`, and `co` fits `compile` and `console`.

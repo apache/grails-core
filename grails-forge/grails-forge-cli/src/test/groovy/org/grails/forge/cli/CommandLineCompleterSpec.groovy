@@ -70,6 +70,14 @@ class CommandLineCompleterSpec extends Specification {
         !offered.contains('create-plugin')
     }
 
+    void 'the other names of a command are offered with the names, and an option after one is completed from its command'() {
+        expect:
+        complete('ru').containsAll(['run', 'run-app', 'run-script', 'run-command'])
+        complete('st').containsAll(['stats', 'stop', 'stop-app'])
+        complete('run --de').contains('--detach')
+        complete('stop --he').contains('--help')
+    }
+
     void 'the completer needs a command to complete from'() {
         when:
         new CommandLineCompleter(null)

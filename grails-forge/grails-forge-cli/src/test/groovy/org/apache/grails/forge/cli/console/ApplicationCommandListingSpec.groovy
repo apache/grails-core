@@ -237,7 +237,9 @@ class ApplicationCommandListingSpec extends CommandSpec {
         'a form several commands of the command line fit' | ['cc']                  | 2        | ['cc is short for more than one command: create-controller (ccon), create-command (ccom)']
         'a command of the command line'                  | ['stats']                | 0        | []
         'what cannot be the name of a command'           | ['greet.groovy']         | 2        | ['There is no command greet.groovy', MISSING]
-        'a command of the Grails shell that is replaced' | ['run']                  | 2        | ['Type: grails-forge-cli run-app']
+        'a command of the Grails shell that is replaced' | ['test']                 | 2        | ['Type: grails-forge-cli test-app']
+        'another name of a command of the command line'  | ['run', '--help']        | 0        | ['Usage: grails-forge-cli run-app']
+        'another name the Grails shell had too'          | ['stop', '--help']       | 0        | ['Usage: grails-forge-cli stop-app']
         'a program of the operating system, after !'     | ['!ls']                  | 2        | ['There is no command']
         'a program of the operating system, as !name'    | ['!greet']               | 2        | ['There is no command']
     }

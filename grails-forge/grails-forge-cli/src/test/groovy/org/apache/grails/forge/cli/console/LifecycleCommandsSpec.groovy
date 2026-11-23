@@ -50,6 +50,9 @@ import spock.util.concurrent.PollingConditions
 @IgnoreIf({ os.windows })
 class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
 
+    // what follows the refusal of a Groovy script as an argument of run-app, which grails run FILE.groovy ran in the Grails shell
+    static final String SCRIPT_ADVICE = 'A Groovy script is run in a Grails project with run-script, with the application started around it. Type:'
+
     static final String SERVER = '''\
         import java.io.FileInputStream;
         import java.io.IOException;
@@ -269,6 +272,8 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
         ['run-app', '-port=9091', '-host=::1', '-debug-jvm', '-query-tail']                        | '<bootRun><--debug-jvm><--quiet><-Dgrails.env=development><-Dgrails.server.port=9091><-Dgrails.server.address=::1><-Pgrails.gorm.queryTail.enabled>'
         ['run-app', '-Dgrails.env=test', '-Da=b  "c"', '-Pone=two words', '-Pflag', '--query-tail'] | '<bootRun><--quiet><-Dgrails.env=test><-Da=b  "c"><-Pgrails.gorm.queryTail.enabled><-Pone=two words><-Pflag=>'
         ['run-app', '-x', '--', '--offline', '-Pz=$HOME *', '--port']                              | '<bootRun><--quiet><-Dgrails.env=development><--stacktrace><-Dgrails.full.stacktrace=true><--offline><-Pz=$HOME *><--port>'
+        ['run']                                                                                    | '<bootRun><--quiet><-Dgrails.env=development>'
+        ['run', '-port=9092', '-Dgrails.env=test', '--', '--offline']                              | '<bootRun><--quiet><-Dgrails.env=test><-Dgrails.server.port=9092><--offline>'
         ['console']                                                                                | '<console><--quiet><-Dgrails.env=development>'
         ['console', '--debug-jvm', '-v', '-Dgrails.env=test', '--', '--offline']                   | '<console><--debug-jvm><-Dgrails.env=test><--offline>'
         ['shell']                                                                                  | '<shell><--quiet><-Dgrails.env=development>'
@@ -1435,7 +1440,8 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
         !new File(dir, '.grails').exists()
 
         where:
-        line << [['run-app'], ['run-app', '--detach'], ['stop-app'], ['console'], ['shell'], ['run-script', 'scripts/one.groovy'], ['run-command', 'name', 'argument']]
+        line << [['run-app'], ['run-app', '--detach'], ['stop-app'], ['console'], ['shell'], ['run-script', 'scripts/one.groovy'], ['run-command', 'name', 'argument'],
+                 ['run'], ['run', '--detach'], ['stop']]
         command = line[0..<(line.size() > 1 && line[1].startsWith('--') ? 2 : 1)].join(' ')
     }
 
@@ -1464,6 +1470,45 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
         ['stop-app', '--port', '8080']           | '--port'
         ['console', 'extra']                     | 'extra'
         ['shell', '--bogus']                     | '--bogus'
+        ['run', 'extra']                         | 'run-app takes no argument extra'
+        ['run', '--detach', '--foreground']      | '--detach and --foreground are two answers to one question: give one of them'
+        ['stop', '--port', '8080']               | 'stop-app has no option --port'
+        ['run', 'app.groovy']                    | "run-app takes no argument app.groovy. ${SCRIPT_ADVICE} grails-forge-cli run-script app.groovy"
+        ['run-app', 'scripts/one.groovy']        | "run-app takes no argument scripts/one.groovy. ${SCRIPT_ADVICE} grails-forge-cli run-script scripts/one.groovy"
+        ['run', 'app.groovy', 'two']             | "run-app takes no argument app.groovy, or the 1 after it. ${SCRIPT_ADVICE} grails-forge-cli run-script app.groovy"
+        ['run', 'my script.groovy']              | "run-app takes no argument my script.groovy. ${SCRIPT_ADVICE} grails-forge-cli run-script FILE"
+    }
+
+    @Unroll
+    void "#line, of a Groovy script, is answered with run-script outside a project too, where the Grails shell ran the script, and nothing is run"() {
+        when:
+        int exit = ForgeCli.execute(beanContext, line as String[])
+
+        then:
+        exit == 2
+        out.toString().readLines()[0] == "run-app takes no argument app.groovy. ${SCRIPT_ADVICE} grails-forge-cli run-script app.groovy".toString()
+        dir.list().length == 0
+
+        where:
+        line << [['run', 'app.groovy'], ['run-app', 'app.groovy']]
+    }
+
+    @Unroll
+    void "#line is no Groovy script, and is refused as an argument run-app does not take, and nothing more"() {
+        given:
+        scriptedProject('record')
+
+        when:
+        int exit = ForgeCli.execute(beanContext, line as String[])
+
+        then:
+        exit == 2
+        out.toString().readLines()[0] == "run-app takes no argument ${line[1]}".toString()
+        !out.toString().contains('run-script')
+        !new File(dir, 'invoked.txt').exists()
+
+        where:
+        line << [['run', 'app.groovy.txt'], ['run', 'groovy'], ['run-app', 'App.Groovy']]
     }
 
     void "the commands are listed, described for a program, and found by their short forms"() {
@@ -1476,8 +1521,8 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
 
         then:
         exit == 0
-        listed.any { String line -> line =~ /^  run-app +Runs the Grails application: the Gradle task bootRun\./ }
-        listed.any { String line -> line =~ /^  stop-app +Stops the Grails application that run-app started for this project\./ }
+        listed.any { String line -> line =~ /^  run-app, run +Runs the Grails application: the Gradle task bootRun\./ }
+        listed.any { String line -> line =~ /^  stop-app, stop +Stops the Grails application that run-app started for this project\./ }
         listed.any { String line -> line =~ /^  console +Runs the Swing console of the Grails application: the Gradle task console\./ }
         listed.any { String line -> line =~ /^  shell +Runs the Groovy shell of the Grails application: the Gradle task shell\./ }
         listed.any { String line -> line =~ /^  run-script +Runs Groovy scripts in the Grails application: the Gradle task runScript\.$/ }
@@ -1492,15 +1537,18 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
         then:
         exit == 0
         ['run-app', 'stop-app', 'console', 'shell', 'run-script', 'run-command'].every { String name -> commands[name].project == true && commands[name].origin == 'built-in' }
-        ['run-app', 'stop-app', 'shell'].every { String name -> commands[name].aliases == [] }
+        commands['run-app'].aliases == ['run']
+        commands['stop-app'].aliases == ['stop']
+        commands['shell'].aliases == []
+        !commands.containsKey('run') && !commands.containsKey('stop')
         !(commands['run-app'].options as List<Map>).collectMany { Map option -> option.names as List<String> }.any { String name -> name in ['-port', '-host', '-https', '-debug-jvm', '-query-tail'] }
         (commands['run-app'].options as List<Map>).collectMany { Map option -> option.names as List<String> }.containsAll(
                 ['--port', '--host', '--https', '--debug-jvm', '--query-tail', '-P', '-D', '--detach', '--foreground', '--ready-timeout'])
         (commands['run-command'].parameters as List<Map>)*.label == ['NAME', 'ARG']
         (commands['run-script'].parameters as List<Map>)*.label == ['FILE']
 
-        when: 'the short forms of the shell, and those of lower-case letters'
-        Map<String, Integer> exits = ['rA', 'sA', 'rS', 'rC', 'con', 'she', 'ra', 'sa', 'rs', 'rc'].collectEntries { String form ->
+        when: 'the other names of the shell, its short forms, and those of lower-case letters'
+        Map<String, Integer> exits = ['run', 'stop', 'rA', 'sA', 'rS', 'rC', 'con', 'she', 'ra', 'sa', 'rs', 'rc'].collectEntries { String form ->
             out.reset()
             [(form): ForgeCli.execute(beanContext, form, '--help')]
         }
@@ -1542,13 +1590,14 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
         usage['run-command'].endsWith(' run-command [-hvVx] [--non-interactive] [--plain-output] [-DNAME=VALUE]... NAME [ARG...]')
 
         when: 'the short forms that fit one of these commands and another one'
-        Map<String, String> ambiguous = ['s', 'co', 'c', 'r', 'st'].collectEntries { String form ->
+        Map<String, String> ambiguous = ['s', 'co', 'c', 'r', 'st', 'ru', 'sto'].collectEntries { String form ->
             out.reset()
             int code = ForgeCli.execute(beanContext, form, '--help')
             [(form): "${code} ${out.toString().readLines()[0]}".toString()]
         }
 
-        then: 'before these commands s was stats and co was compile; r is no command, so it starts nothing, and st is stats still'
+        then: 'before these commands s was stats and co was compile; r and ru, which start run as much as run-script and run-command, are no command ' +
+                'of the command line, so they start nothing, sto is none either, and st is stats still'
         ambiguous.s == '2 s is short for more than one command: stats (st), shell (sh). ' +
                 'Type more of the name of the one that is meant, or the short form in brackets after it'
         ambiguous.co == '2 co is short for more than one command: compile (com), console (con). ' +
@@ -1556,7 +1605,50 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
         ambiguous.c == '2 c is short for more than one command: compile (com), clean (cl), console (con). ' +
                 'Type more of the name of the one that is meant, or the short form in brackets after it'
         ambiguous.r.startsWith('2 ')
+        ambiguous.ru.startsWith('2 ')
+        ambiguous.sto.startsWith('2 ')
         ambiguous.st.startsWith('0 ') && ambiguous.st.contains(' stats ')
+    }
+
+    void "run and stop, the other names the Grails shell had, start the application and stop it as run-app and stop-app do"() {
+        given:
+        scriptedProject('serve')
+        int port = freePort()
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'run', '--detach', '--port', port as String)
+        long server = pid('server.pid')
+        Map record = record()
+
+        then: 'what run-app --detach does, and says by the name of run-app'
+        exit == 0
+        errors() == []
+        ApplicationPort.isOpen(port)
+        out.toString().contains("| Application answers on port ${port}: http://localhost:${port}. It runs until stop-app")
+        new File(dir, 'invoked.txt').text.startsWith('<bootRun>')
+        new File(dir, 'invoked.txt').text.contains("<-Dgrails.env=development><-Dgrails.server.port=${port}>")
+        record.port == port && record.detached == true
+        alive(server)
+
+        when:
+        out.reset()
+        int stopped = ForgeCli.execute(beanContext, 'stop')
+
+        then: 'what stop-app does'
+        stopped == 0
+        errors() == []
+        out.toString().readLines() == ['| Stopping application...', '| Application stopped.']
+        !alive(server) && !alive(record.pid as long)
+        !ApplicationPort.isOpen(port)
+        !new File(dir, '.grails/run/app.json').exists()
+
+        when: 'there is nothing to stop any more'
+        out.reset()
+        int twice = ForgeCli.execute(beanContext, 'stop')
+
+        then:
+        twice == 1
+        errors() == ['| Error No application that run-app started is running for this project: there is no record of one, .grails/run/app.json. Nothing was stopped']
     }
 
     void "a run-app that stayed with its application leaves the record and the stop request of another one alone"() {

@@ -354,12 +354,28 @@ class UsageHelp extends CommandLine.Help {
             if (unmatched != null && !unmatched.isEmpty()) {
                 String first = unmatched.get(0)
                 String more = unmatched.size() > 1 ? ", or the ${unmatched.size() - 1} after it" : ''
-                return first.startsWith('-') && first.length() > 1 ?
-                        "${named(spec)} has no option ${FeatureSelectionException.shown(optionOf(first))}${more}" :
-                        "${named(spec)} takes no argument ${FeatureSelectionException.shown(first)}${more}"
+                if (first.startsWith('-') && first.length() > 1) {
+                    return "${named(spec)} has no option ${FeatureSelectionException.shown(optionOf(first))}${more}"
+                }
+                String advice = spec.userObject() instanceof ArgumentAdvice ? ((ArgumentAdvice) spec.userObject()).adviceFor(first) : null
+                return "${named(spec)} takes no argument ${FeatureSelectionException.shown(first)}${more}${advice == null ? '' : '. ' + advice}"
             }
         }
         return mistake.getMessage()
+    }
+
+    /**
+     * A command that can say, of an argument it does not take, what was meant by it: the refusal of the
+     * argument ends with that.
+     */
+    static interface ArgumentAdvice {
+
+        /**
+         * @param argument the first argument the command does not take, as it was typed
+         * @return one or two sentences, the last without its full stop, that say what to type instead;
+         * {@code null} where nothing can be told of the argument
+         */
+        String adviceFor(String argument)
     }
 
     private static String optionOf(String argument) {

@@ -36,7 +36,7 @@ class HelpJsonMetadataSpec extends CommandSpec {
     // project of a feature has a wrapper that says when it ran: a command line that breaks a rule runs nothing.
     @Shared
     Map<String, List<List<String>>> breaking = [
-            'run-app exclusive --detach --foreground'                    : [['run-app', '--detach', '--foreground']],
+            'run-app exclusive --detach --foreground'                    : [['run-app', '--detach', '--foreground'], ['run', '--foreground', '--detach']],
             'project regenerate exclusive --output --diff'               : [['project', 'regenerate', '--output', 'elsewhere', '--diff'],
                                                                             ['project', 'regenerate']],
             'project regenerate requires --force --output'               : [['project', 'regenerate', '--diff', '--force']],

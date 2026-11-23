@@ -71,6 +71,9 @@ class CompletionScriptSpec extends Specification {
         'grails create-app --servlet '       | ['tomcat', 'jetty', 'undertow', 'none']                                      | []
         'grails create-app --features grails-q' | ['grails-quartz']                                                         | []
         'grails run-app --'                  | ['--detach', '--foreground', '--port']                                       | []
+        'grails ru'                          | ['run', 'run-app', 'run-command', 'run-script']                              | ['create-app']
+        'grails st'                          | ['stats', 'stop', 'stop-app']                                                | ['run']
+        'grails run --'                      | ['--detach', '--foreground', '--port']                                       | []
         'grails project migrate --type '     | ['web', 'rest-api', 'plugin', 'web-plugin', 'rest-api-plugin']               | []
     }
 
