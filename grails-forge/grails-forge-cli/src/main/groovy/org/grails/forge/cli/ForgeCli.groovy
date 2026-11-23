@@ -28,6 +28,7 @@ import org.apache.grails.forge.cli.console.ConsoleCommands
 import org.apache.grails.forge.cli.console.ConsoleProject
 import org.apache.grails.forge.cli.console.EarlierGrailsProject
 import org.apache.grails.forge.cli.console.PlainOutput
+import org.apache.grails.forge.cli.console.RunAppCommand
 import org.apache.grails.forge.cli.plugin.ListPluginsCommand
 import org.apache.grails.forge.core.change.FeatureAddition
 import org.apache.grails.forge.cli.plugin.PluginInfoCommand
@@ -393,7 +394,10 @@ final class ForgeCli {
             return shell.start()
         } finally {
             ConsoleCommands.setInteractive(false)
-            // the builds of the console were asked of one connection to the Gradle of the project, which ends with the console
+            // What belongs to the session ends with it, before this returns: where a program runs the console in its
+            // own JVM, that JVM goes on. The applications run-app started there without --detach, and the connection
+            // to the Gradle of the project its builds were asked of.
+            RunAppCommand.stopWhatTheShellStarted()
             GradleBuild.closeConnections()
         }
     }

@@ -100,7 +100,8 @@ class RunAppCommand extends GradleEnvironmentCommand {
     private static final Function<String, String> ENVIRONMENT = (String name) -> System.getenv(name)
 
     private static final List<ProcessHandle> STARTED_IN_SHELL = new CopyOnWriteArrayList<ProcessHandle>()
-    private static volatile boolean stopsWithShell
+    // what stops them when the JVM ends while the shell runs; guarded by STARTED_IN_SHELL
+    private static Thread stopsWithJvm
     private static volatile Function<String, String> environmentVariables = ENVIRONMENT
 
     @CommandLine.Option(names = ['--port'], paramLabel = 'PORT', description = 'The port the application answers on. Without it, the port its configuration names, or 8080.')
@@ -149,11 +150,28 @@ class RunAppCommand extends GradleEnvironmentCommand {
 
     /**
      * Stops the applications that {@code run-app} started in the interactive shell without
-     * {@code --detach}. The shell does it when it ends, as the Grails shell does.
+     * {@code --detach}, which belong to the session of the shell. The shell does it when it is left,
+     * before it returns, also where the JVM goes on after it, as that of a program that runs the
+     * command line does; and the JVM does it when it ends while the shell runs. An application that
+     * {@code run-app --detach} started is not among them and goes on.
      */
     static void stopWhatTheShellStarted() {
-        List<ProcessHandle> started = new ArrayList<ProcessHandle>(STARTED_IN_SHELL)
-        STARTED_IN_SHELL.clear()
+        Thread hook
+        List<ProcessHandle> started
+        synchronized (STARTED_IN_SHELL) {
+            hook = stopsWithJvm
+            stopsWithJvm = null
+            started = new ArrayList<ProcessHandle>(STARTED_IN_SHELL)
+            STARTED_IN_SHELL.clear()
+        }
+        if (hook != null && !hook.is(Thread.currentThread())) {
+            // a JVM that goes on after the shell is left no hook of it
+            try {
+                Runtime.getRuntime().removeShutdownHook(hook)
+            } catch (IllegalStateException ignored) {
+                // the JVM is shutting down, and the hook runs
+            }
+        }
         started.findAll { ProcessHandle each -> each.isAlive() }.each { ProcessHandle each -> GradleRunner.stop(each, STOP_SECONDS) }
     }
 
@@ -502,11 +520,12 @@ class RunAppCommand extends GradleEnvironmentCommand {
     }
 
     private static void stopWithShell(ProcessHandle started) {
-        STARTED_IN_SHELL.add(started)
         synchronized (STARTED_IN_SHELL) {
-            if (!stopsWithShell) {
-                stopsWithShell = true
-                Runtime.getRuntime().addShutdownHook(new Thread({ stopWhatTheShellStarted() } as Runnable, 'grails-run-app-stop'))
+            STARTED_IN_SHELL.add(started)
+            if (stopsWithJvm == null) {
+                Thread hook = new Thread({ stopWhatTheShellStarted() } as Runnable, 'grails-run-app-stop')
+                Runtime.getRuntime().addShutdownHook(hook)
+                stopsWithJvm = hook
             }
         }
     }
