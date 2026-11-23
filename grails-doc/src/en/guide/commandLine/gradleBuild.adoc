@@ -263,7 +263,7 @@ These things differ from the Grails shell:
 * `test-app --continuous` is the continuous build of Gradle: the tests run once, and again whenever a file they depend on changes, until the command is cancelled. The shell watches four source directories itself and does not run the tests when it starts.
 * `test-app --integration` in a project that has no `src/integration-test` directory runs nothing and ends with exit code 1.
 * `test-app` runs every test phase of the project, also the ones the project adds: every `Test` task of its build, and not the tasks `test` and `integrationTest` alone, as the shell did. A phase the project adds is selected as the two others are, with a switch of its name: `test-app --functional` for the task `functionalTest`.
-* `test-app BookControllerSpec`, like the shell, asks every phase it runs for the test, and the test runs where it is found: a phase that has no test of the name passes, and the build fails only when no phase ran a test.
+* `test-app BookControllerSpec`, like the shell, asks every phase it runs for the test, and the test runs where it is found: a phase that has no test of the name passes, and the build fails only when no phase ran a test. A phase that is left out (`-- -x TASK`) or skipped by the build runs none.
 * `test-app --clean` runs the tests of every phase again, also where the build cache of Gradle has their results.
 * `test-app` needs the Grails Gradle plugin of Grails 9, which has the task `testApp`. In a project whose build has an earlier one Gradle says that there is no such task.
 * Every command that is a build takes `-Dname=value`, `compile` and `clean` too, and shows it in its help as it is typed, `-DNAME=VALUE`.

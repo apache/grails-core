@@ -84,7 +84,7 @@ You can combine multiple patterns as needed:
 
 NOTE: You might need to specify the package name before the class name and append "Spec" to it. For instance, to run the test for the ProductController, use ./gradlew test *.ProductControllerSpec. You can also use the star wildcard if you want to avoid typing the entire package hierarchy.
 
-Gradle fails a test task that has no test for its filter (`No tests found for given includes`), so one filter for the unit tests and the integration tests fails when only one of them has such a test. The task `testApp` of the Grails Gradle plugin, described below, gives one filter to every test phase. For test tasks that are named one by one there is the project property `grails.test.filter.lenient`: with it the Grails Gradle plugin lets a test task without a match pass, and its task `checkTestFilterMatched`, which runs after the test tasks, fails the build when a filter was given with `--tests` and no test task of the project ran a test.
+Gradle fails a test task that has no test for its filter (`No tests found for given includes`), so one filter for the unit tests and the integration tests fails when only one of them has such a test. The task `testApp` of the Grails Gradle plugin, described below, gives one filter to every test phase. For test tasks that are named one by one there is the project property `grails.test.filter.lenient`: with it the Grails Gradle plugin lets a test task without a match pass, and its task `checkTestFilterMatched`, which runs after the test tasks, fails the build when a filter was given with `--tests` and no test task of the project ran a test. A test task that is up to date or taken from the build cache counts the tests of the run whose results it has; one that is left out of the build (`-x`) or skipped (by an `onlyIf` or `enabled = false`) ran none, whatever it found in an earlier build.
 
 [source,shell]
 ----
@@ -112,7 +112,7 @@ The Grails Gradle plugin adds the task `testApp` to an application and to a plug
 |Runs this phase and no other; can be given more than once. `unit` is the task `test` and `integration` the task `integrationTest`. Any other task whose name ends in `Test` is the phase of the name without that ending, and a task of another name the phase of its own name, written in lower case with hyphens: `functionalTest` is `functional`, `endToEndTest` is `end-to-end` (`endToEnd` is taken too) and a test suite `smoke` is `smoke`. A name that is no phase of the project fails the build before a test is run, with the phases the project has.
 
 |`--tests PATTERN`
-|The filter of every phase that is run, as the `--tests` of a test task; can be given more than once. A phase that has no test for it passes, and `testApp` fails when no phase ran a test, naming the filter.
+|The filter of every phase that is run, as the `--tests` of a test task; can be given more than once. A phase that has no test for it passes, and `testApp` fails when no phase ran a test, naming the filter. A phase that is up to date or taken from the build cache counts the tests of the run whose results it has. A phase that is left out of the build (`-x`) or skipped (by an `onlyIf` or `enabled = false`) runs no test, whatever it found in an earlier build: a filter that only such a phase has fails, and so does any filter when no phase runs.
 
 |`--rerun-tests`
 |Runs the tests of every phase that is run again, also where nothing changed and where the build cache has their results.

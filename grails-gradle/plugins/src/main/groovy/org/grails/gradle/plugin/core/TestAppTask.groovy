@@ -21,8 +21,9 @@ package org.grails.gradle.plugin.core
 import groovy.transform.CompileStatic
 
 import org.gradle.api.DefaultTask
-import org.gradle.api.file.ConfigurableFileCollection
+import org.gradle.api.file.RegularFile
 import org.gradle.api.provider.ListProperty
+import org.gradle.api.provider.MapProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.TaskAction
@@ -37,7 +38,9 @@ import org.gradle.work.DisableCachingByDefault
  *
  * <p>The task itself runs after the test tasks and fails when tests were named with
  * {@code --tests} and no phase ran a test: each phase passes without a test of that name, since the
- * names are given to every phase.</p>
+ * names are given to every phase. A phase ran when it ran its tests, was up to date or was taken
+ * from the build cache; one that is left out of the build ({@code -x}) or skipped (an
+ * {@code onlyIf}, {@code enabled = false}) ran no test, whatever it found in an earlier build.</p>
  *
  * @since 9.0
  */
@@ -68,19 +71,23 @@ abstract class TestAppTask extends DefaultTask {
     @Option(option = 'debug-jvm', description = 'Starts the JVM of the tests suspended, waiting for a debugger on port 5005. With several phases they are run one at a time, each waiting in its turn.')
     abstract Property<Boolean> getDebugJvm()
 
-    /** The paths of the test tasks that are run. */
+    /** The paths of the test tasks of the phases that are part of the build. */
     @Internal
     abstract ListProperty<String> getTestTasks()
 
     /**
-     * The files those tasks write the number of tests they ran to. They are not inputs: the task
-     * runs every time.
+     * The files those tasks write the number of tests they ran to, by the paths of the tasks. They
+     * are not inputs: the task runs every time.
      */
     @Internal
-    abstract ConfigurableFileCollection getCounts()
+    abstract MapProperty<String, RegularFile> getCounts()
+
+    /** The test tasks of the build that ran, which are the ones whose count is of this build. */
+    @Internal
+    abstract Property<TestFilterAcrossTasks.TestRuns> getRuns()
 
     @TaskAction
     void check() {
-        TestFilterMatchCheck.check(getTests().get(), getTestTasks().get(), getCounts().files)
+        TestFilterMatchCheck.check(getTests().get(), getTestTasks().get(), getCounts(), getRuns())
     }
 }

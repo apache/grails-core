@@ -44,7 +44,8 @@ import org.gradle.language.base.plugins.LifecycleBasePlugin
  *
  * <p>The task depends on every {@code Test} task of the project, or on the ones of the phases that
  * were named, and a name that is no phase of the project fails the build with the phases there are.
- * Its options are given to the test tasks it runs once Gradle knows which tasks the build is of:
+ * Its options are given to the test tasks it runs once Gradle knows which tasks the build is of, to
+ * those of them that are part of the build (a task left out with {@code -x} is not):
  * the names of tests are the {@code --tests} of each, with which a task without such a test passes;
  * the tests are run again where nothing changed; the JVMs of the tests wait for a debugger, one at
  * a time. The unit tests are run first, then the integration tests, then the other phases, in
@@ -64,12 +65,15 @@ class TestAppEntryPoint {
             return
         }
         TaskCollection<Test> testTasks = project.tasks.withType(Test)
+        Provider<TestFilterAcrossTasks.TestRuns> runs = TestFilterAcrossTasks.runs(project)
         TaskProvider<TestAppTask> testApp = project.tasks.register(TestAppTask.TASK_NAME, TestAppTask) { TestAppTask task ->
             task.group = LifecycleBasePlugin.VERIFICATION_GROUP
             task.description = 'Runs the test phases of the project: every Test task, or the phases named with --phase.'
             task.rerunTests.convention(false)
             task.debugJvm.convention(false)
             task.dependsOn({ selected(project, task) } as Callable<List<TaskProvider<Test>>>)
+            task.runs.set(runs)
+            task.usesService(runs)
         }
         // Not shouldRunAfter, which Gradle sets aside where tasks of a project run in parallel, as they do
         // with the configuration cache: the phases would start together.
@@ -97,13 +101,19 @@ class TestAppEntryPoint {
             List<String> patterns = task.tests.get()
             for (TaskProvider<Test> each : selected(project, task)) {
                 Test test = each.get()
+                // a phase left out with -x runs no test, and the count an earlier build left for it is not of this one
+                if (!graph.hasTask(test)) {
+                    continue
+                }
                 task.testTasks.add(test.path)
                 if (!patterns.isEmpty()) {
                     test.setTestNameIncludePatterns(patterns)
                     Provider<RegularFile> count = TestFilterAcrossTasks.countFile(project, test.name)
-                    task.counts.from(count)
+                    task.counts.put(test.path, count)
+                    // with the property, TestFilterAcrossTasks counts and tracks every test task of the build
                     if (!counted) {
                         TestFilterAcrossTasks.count(test, count)
+                        TestFilterAcrossTasks.track(test, runs)
                     }
                 }
                 if (task.rerunTests.get()) {

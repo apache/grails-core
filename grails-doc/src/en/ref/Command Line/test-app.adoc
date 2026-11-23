@@ -56,7 +56,7 @@ grails test-app *Foo* *Bar*
 
 The first example will execute a test called `FooSpec.groovy` whilst the second will execute `FooSpec.groovy` and `BarSpec.groovy` if they exist.
 
-A name is looked for in every phase that is run, and the tests are run where they are found: a test that is among the unit tests alone does not fail the integration tests, nor the other way round. The command ends with 1 when no phase has a test for a name, and Gradle names the filter that matched nothing.
+A name is looked for in every phase that is run, and the tests are run where they are found: a test that is among the unit tests alone does not fail the integration tests, nor the other way round. The command ends with 1 when no phase has a test for a name, and Gradle names the filter that matched nothing. A phase that is left out with `-- -x TASK`, or that the build skips (an `onlyIf`, `enabled = false`), is not looked in: what it found in an earlier build does not count.
 
 The task of finding tests that match the pattern you provide is passed to Gradle. Take a look at the section in their docs titled link:https://docs.gradle.org/current/userguide/java_plugin.html#test_filtering[Test filtering] for more information.
 

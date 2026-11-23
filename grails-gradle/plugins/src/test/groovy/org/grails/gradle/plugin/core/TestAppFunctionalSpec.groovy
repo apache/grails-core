@@ -164,6 +164,93 @@ class TestAppFunctionalSpec extends GradleSpecification {
         result.output.contains('No tests found for the given filter (*IntegrationOnly*) in the test task :test:')
     }
 
+    @Unroll
+    def "after a filter the unit tests matched, a filter that matches nothing fails where the unit tests are #how, #cache"() {
+        given:
+        run(['testApp', '--tests', '*UnitOnly*'] + cacheArguments)
+
+        when: 'what the unit tests counted in the build before is no match of this one'
+        BuildResult result = fail(['testApp', '--tests', '*Nope*'] + phaseArguments + cacheArguments)
+
+        then:
+        result.task(':testApp').outcome == TaskOutcome.FAILED
+        result.output.contains("No tests found for the given filter (*Nope*) in any of the test tasks ${searched}:")
+        passed(result) == []
+
+        when: 'asked again'
+        result = fail(['testApp', '--tests', '*Nope*'] + phaseArguments + cacheArguments)
+
+        then:
+        result.output.contains('Reusing configuration cache') == cacheArguments.isEmpty()
+        result.task(':testApp').outcome == TaskOutcome.FAILED
+        result.output.contains("No tests found for the given filter (*Nope*) in any of the test tasks ${searched}:")
+
+        where:
+        how                                   | phaseArguments           | cacheArguments                 || searched
+        'run again'                           | []                       | []                             || ':test, :integrationTest, :functionalTest, :smoke'
+        'left out of the build (-x)'          | ['-x', 'test']           | []                             || ':integrationTest, :functionalTest, :smoke'
+        'skipped by an onlyIf'                | ['-PskipPhase=test']     | []                             || ':integrationTest, :functionalTest, :smoke; :test was skipped'
+        'turned off (enabled = false)'        | ['-PdisablePhase=test']  | []                             || ':integrationTest, :functionalTest, :smoke; :test was skipped'
+        'run again'                           | []                       | ['--no-configuration-cache']   || ':test, :integrationTest, :functionalTest, :smoke'
+        'left out of the build (-x)'          | ['-x', 'test']           | ['--no-configuration-cache']   || ':integrationTest, :functionalTest, :smoke'
+        'skipped by an onlyIf'                | ['-PskipPhase=test']     | ['--no-configuration-cache']   || ':integrationTest, :functionalTest, :smoke; :test was skipped'
+        'turned off (enabled = false)'        | ['-PdisablePhase=test']  | ['--no-configuration-cache']   || ':integrationTest, :functionalTest, :smoke; :test was skipped'
+
+        cache = cacheArguments ? 'without the configuration cache' : 'with the configuration cache stored and reused'
+    }
+
+    @Unroll
+    def "where no phase that is asked for runs, a filter that matched in an earlier build fails: the unit tests #how, #cache"() {
+        given:
+        run(['testApp', '--phase', 'unit', '--tests', '*UnitOnly*'] + cacheArguments)
+
+        when:
+        BuildResult result = fail(['testApp', '--phase', 'unit', '--tests', '*UnitOnly*'] + phaseArguments + cacheArguments)
+
+        then:
+        result.task(':testApp').outcome == TaskOutcome.FAILED
+        result.output.contains("No test task ran for the given filter (*UnitOnly*): ${why}")
+        passed(result) == []
+
+        where:
+        how                                   | phaseArguments           | cacheArguments                 || why
+        'left out of the build (-x)'          | ['-x', 'test']           | []                             || 'none of the test tasks is part of the build'
+        'skipped by an onlyIf'                | ['-PskipPhase=test']     | []                             || ':test was skipped'
+        'left out of the build (-x)'          | ['-x', 'test']           | ['--no-configuration-cache']   || 'none of the test tasks is part of the build'
+        'skipped by an onlyIf'                | ['-PskipPhase=test']     | ['--no-configuration-cache']   || ':test was skipped'
+
+        cache = cacheArguments ? 'without the configuration cache' : 'with the configuration cache'
+    }
+
+    @Unroll
+    def "a phase that is up to date or taken from the build cache counts the tests it ran, where another phase is skipped, #cache"() {
+        given:
+        run(['testApp', '--tests', '*IntegrationOnly*', '--build-cache'] + cacheArguments)
+
+        when: 'nothing changed, and the unit tests are skipped'
+        BuildResult result = run(['testApp', '--tests', '*IntegrationOnly*', '--build-cache', '-PskipPhase=test'] + cacheArguments)
+
+        then:
+        result.task(':test').outcome == TaskOutcome.SKIPPED
+        result.task(':integrationTest').outcome == TaskOutcome.UP_TO_DATE
+        result.task(':testApp').outcome == TaskOutcome.SUCCESS
+
+        when: 'the build directory is gone, and the results of the tests are taken from the build cache'
+        new File(runner.projectDir, 'build').deleteDir()
+        result = run(['testApp', '--tests', '*IntegrationOnly*', '--build-cache', '-PskipPhase=test'] + cacheArguments)
+
+        then:
+        result.output.contains('Reusing configuration cache') == cacheArguments.isEmpty()
+        result.task(':test').outcome == TaskOutcome.SKIPPED
+        result.task(':integrationTest').outcome == TaskOutcome.FROM_CACHE
+        result.task(':testApp').outcome == TaskOutcome.SUCCESS
+        passed(result) == []
+
+        where:
+        cacheArguments << [[], ['--no-configuration-cache']]
+        cache = cacheArguments ? 'without the configuration cache' : 'with the configuration cache stored and reused'
+    }
+
     def "a test task that is asked for by its own name is as Gradle has it: without a test for its filter it fails"() {
         when:
         BuildResult result = runner.withArguments(['integrationTest', '--tests', '*UnitOnly*']).forwardOutput().buildAndFail()
@@ -238,6 +325,10 @@ class TestAppFunctionalSpec extends GradleSpecification {
 
     private BuildResult run(List<String> arguments) {
         runner.withArguments(arguments + ['--stacktrace']).forwardOutput().build()
+    }
+
+    private BuildResult fail(List<String> arguments) {
+        runner.withArguments(arguments).forwardOutput().buildAndFail()
     }
 
     // the test classes Gradle logged a passed test of

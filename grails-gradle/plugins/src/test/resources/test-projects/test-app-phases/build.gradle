@@ -39,3 +39,14 @@ tasks.withType(Test).configureEach {
         println "debug of ${name}: ${debugged.get()}"
     }
 }
+
+// a test task the build script skips with an onlyIf (-PskipPhase=NAME) or turns off (-PdisablePhase=NAME)
+def skipPhase = providers.gradleProperty('skipPhase')
+def disablePhase = providers.gradleProperty('disablePhase').getOrElse('')
+tasks.withType(Test).configureEach {
+    def name = it.name
+    onlyIf { skipPhase.getOrElse('') != name }
+    if (disablePhase == name) {
+        enabled = false
+    }
+}

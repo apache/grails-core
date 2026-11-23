@@ -129,7 +129,7 @@ $ grails test-app BookControllerSpex
 > No tests found for the given filter (BookControllerSpex) in any of the test tasks :test, :integrationTest: ...
 ----
 
-This is the work of the Gradle task `testApp` of the Grails Gradle plugin, which the command runs: it gives the names to every test task it runs, lets a test task pass that has no test for them, and fails when none of them ran a test. Gradle alone fails every test task that has no test for its filter (`No tests found for given includes`), which is what you see when you give two test tasks one filter with `./gradlew test integrationTest --tests ...` (the section on running tests with Gradle describes the task and its options).
+This is the work of the Gradle task `testApp` of the Grails Gradle plugin, which the command runs: it gives the names to every test task it runs, lets a test task pass that has no test for them, and fails when none of them ran a test. A phase that is left out with `-- -x TASK`, or that the build skips, is not looked in, so a name that only such a phase has fails as well. Gradle alone fails every test task that has no test for its filter (`No tests found for given includes`), which is what you see when you give two test tasks one filter with `./gradlew test integrationTest --tests ...` (the section on running tests with Gradle describes the task and its options).
 
 NOTE: In Grails 2.x, adding `-rerun` as an argument would only run those tests which failed in the previous test-app run. This argument is no longer supported.
 
