@@ -2249,7 +2249,94 @@ What the commands do differently from the scripts:
 [[cliMappingGrails8]]
 ==== 55. Every Command Line of Grails 8 and What It Is in Grails 9
 
-These tables are for looking up a command line of Grails 8, typed or found in a script, a continuous integration job, a container file or a document, and reading off what to write for Grails 9. They have every command, also the ones that did not change, so that a name that is in none of them was no command of Grails 8 or of a plugin of the framework. "Unchanged" means that the name is a command of `grails` and does what it did; how it is written (the environment, the options, the exit codes) still follows the last table, which applies to every row. The numbers are the notes above that say more.
+The command lines that are typed most often, and what they are in Grails 9. `shop`, `Book` and `com.example` stand for names of your own, and the numbers are the notes above that say more.
+
+[cols="4,4,5"]
+|===
+|Grails 8 |Grails 9 |Note
+
+|`grails create-app shop --profile rest-api`
+|`grails create-restapi shop`
+|One `create-` command for each type of application. `--profile` is refused with exit code 2 (37).
+
+|`grails create-app shop --profile com.acme:acme-profile:1.0.0`
+|`grails create-restapi shop --preset com.acme:acme-preset:1.0.0`
+|A profile of your own is converted to a preset (37).
+
+|`grails -t forge create-app shop`
+|`grails create-app shop`
+|There is one command line. `-t` and `--type` are refused with exit code 2 (37).
+
+|`grails create-app shop --features postgres`
+|The same
+|`--features` adds to the default features of the type, and refuses a name that is no feature (37).
+
+|`grails prod war`
+|`grails war -Dgrails.env=production`
+|The environment follows the name of the command. In front of it, it is refused with exit code 2 (43).
+
+|`grails test run-app`
+|`grails run-app -Dgrails.env=test`
+|The same rule; the refusal names `test-app` and `-Dgrails.env=test` (43).
+
+|`grails run`, `grails stop`
+|The same
+|Other names of `run-app` and `stop-app` (43).
+
+|`grails test`
+|`grails test-app`
+|`test-app` runs every test phase of the build; `grails test-app --unit --integration` runs the two that Grails 8 ran (42, 53).
+
+|`grails create-script data-import`
+|`grails create-command data-import`
+|`create-script` is refused with exit code 2. A new command is a class of the application; the scripts a project has still run (33).
+
+|`grails dbm-update`, `grails s2-quickstart com.example User Role`
+|The same
+|The commands of plugins and of the application are run by the build of the project (46, 54).
+
+|`grails prod dbm-update`
+|`grails run-command -Dgrails.env=production dbm-update`
+|A command of a plugin takes everything after its name as its own, so its environment stands in front of its name, after `run-command` (43).
+
+|`grails install`
+|`grails gradle publishToMavenLocal`
+|`install` runs nothing, says what to run and ends with exit code 1 (42).
+
+|`grails -v`, `grails -version`
+|`grails --version`, `grails -V`
+|`-v` is `--verbose`. Both are refused with exit code 2 (43).
+
+|`grails rA`, `grails cDC Book`
+|The same, and in lower case: `grails ra`, `grails cdc Book`
+|Short forms are taken in lower case as well. `grails help ra` names the command and its short form (43).
+
+|`grails cC Book`
+|`grails ccon Book`
+|`cC` fits `create-controller` and `create-command`, and is refused with exit code 2 and the short form of each (43).
+
+|`./grailsw update-wrapper`
+|The same
+|Once `grailsVersion` names Grails 9, it replaces `grailsw`, `grailsw.bat` and `grails-wrapper.jar`: commit them. It takes no arguments (37).
+
+|`grails create-controller Book`, in an application the Grails shell created
+|`grails project migrate`, then `grails create-controller Book`
+|`project migrate` writes the record that the commands which create classes read, once (45).
+
+|No command of Grails 8
+|`grails project health`
+|Says what is left of the upgrade, each finding with what to do (57).
+
+|`grails> exit`, `grails> quit`
+|The same
+|Both end interactive mode (47).
+
+|`grails> !ls`
+|The same
+|The rest of the line runs in your shell (47).
+|===
+
+The tables after this one are for looking up a command line of Grails 8, typed or found in a script, a continuous integration job, a container file or a document, and reading off what to write for Grails 9. They have every command, also the ones that did not change, so that a name that is in none of them was no command of Grails 8 or of a plugin of the framework. "Unchanged" means that the name is a command of `grails` and does what it did; how it is written (the environment, the options, the exit codes) still follows the last table, which applies to every row. The numbers are the notes above that say more.
 
 Four things hold for every row:
 
