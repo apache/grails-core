@@ -50,6 +50,9 @@ final class JoinPlan {
      */
     void configure(String path, JoinType joinType) {
         configured.put(path, joinType);
+        // the caller named the join, so a left join an earlier block in an or chose for the path is no longer the
+        // planner's: the entities without the association are kept by the join the caller named
+        alternatives.remove(path);
     }
 
     /**
