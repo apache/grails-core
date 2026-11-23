@@ -23,6 +23,7 @@ import java.util.concurrent.Callable
 import java.util.function.Predicate
 import java.util.function.Supplier
 import groovy.json.JsonSlurper
+import org.apache.grails.forge.cli.console.ConsoleCommands
 import org.apache.grails.forge.cli.console.ConsoleProject
 import org.apache.grails.forge.cli.console.ProjectCommand
 import org.grails.forge.cli.command.BaseCommand
@@ -551,6 +552,52 @@ class CommandCatalogSpec extends CommandSpec implements CommandFixture {
         'an option of the command line'       | ['--bogus', 'compile']                             | 'grails-forge-cli has no option --bogus'
         'a value that is none'                | ['run-app', '--port', '9\nUsage: fake\u001b[1m']   | "Invalid value for option '--port': '9?Usage: fake?[1m'"
         'a value of 5000 characters'          | ['run-app', '--ready-timeout', 'y' * 5000]         | ("Invalid value for option '--ready-timeout': '" + 'y' * 5000).substring(0, 600)
+        'arguments after an option that is none, with line breaks and escape sequences' |
+                ['create-app', 'x', '--bogus', 'a\nUsage: fake', '\u001b[31mb', '@|red c|@'] | 'create-app has no option --bogus, and does not take a?Usage: fake, ?[31mb or @ |red c|@ after it'
+        'arguments of 5000 characters after an option that is none' |
+                ['create-app', 'x', '--bogus'] + ['z' * 5000] * 4                                  | 'create-app has no option --bogus, and does not take ' + 'z' * 80 + '..., ' + 'z' * 80 + '..., ' +
+                                                                                                         'z' * 80 + '... or 1 more after it'
+        'five thousand arguments after an option that is none' |
+                ['create-app', 'x', '--bogus'] + ['w'] * 5000                                      | 'create-app has no option --bogus, and does not take w, w, w or 4997 more after it'
+    }
+
+    @Unroll
+    void "the arguments a command does not take after the first one are named as they were typed, #where: #line"() {
+        given:
+        ConsoleCommands.setInteractive(console)
+
+        when:
+        int exit = ForgeCli.execute(beanContext, line as String[])
+        List<String> lines = err.toString().readLines()
+
+        then: 'what follows the first is named, and not counted'
+        exit == 2
+        out.toString().isEmpty()
+        lines[0] == said
+        !lines[0].contains(' the 1 ')
+        lines.count { it.startsWith('Usage: ') } == 1
+
+        and: 'nothing was created'
+        dir.list().length == 0
+
+        cleanup:
+        ConsoleCommands.setInteractive(false)
+
+        where:
+        line                                                         | console || said
+        ['--plain-output', '-t', 'forge', 'create-app', 'x']         | false   || 'grails-forge-cli has no option -t, and does not take forge after it'
+        ['create-app', 'x', '--profile', 'rest-api']                 | false   || 'create-app has no option --profile, and does not take rest-api after it'
+        ['create-app', 'x', '--profile', 'rest-api', '--other']      | false   || 'create-app has no option --profile, and does not take rest-api or --other after it'
+        ['create-app', 'x', '--profile', 'a', 'b', 'c']              | false   || 'create-app has no option --profile, and does not take a, b or c after it'
+        ['create-app', 'x', '--profile', 'a', 'b', 'c', 'd', 'e']    | false   || 'create-app has no option --profile, and does not take a, b, c or 2 more after it'
+        ['create-app', 'x', '--profile']                             | false   || 'create-app has no option --profile'
+        ['create-app', 'a', 'b']                                     | false   || 'create-app takes no argument b'
+        ['create-app', 'a', 'b', 'c']                                | false   || 'create-app takes no argument b, and does not take c after it'
+        ['create-app', 'a', 'b', 'c', 'd', 'e', 'f', 'g']            | false   || 'create-app takes no argument b, and does not take c, d, e or 2 more after it'
+        ['-t', 'forge', 'create-app', 'x']                           | true    || 'grails-forge-cli has no option -t, and does not take forge after it'
+        ['create-app', 'x', '--profile', 'rest-api']                 | true    || 'create-app has no option --profile, and does not take rest-api after it'
+        ['create-app', 'a', 'b', 'c']                                | true    || 'create-app takes no argument b, and does not take c after it'
+        where = console ? 'at the prompt of the console' : 'on the command line'
     }
 
     @Unroll

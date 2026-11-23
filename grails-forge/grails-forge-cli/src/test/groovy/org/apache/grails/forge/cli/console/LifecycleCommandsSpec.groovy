@@ -1476,7 +1476,7 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
         ['stop', '--port', '8080']               | 'stop-app has no option --port'
         ['run', 'app.groovy']                    | "run-app takes no argument app.groovy. ${SCRIPT_ADVICE} grails-forge-cli run-script app.groovy"
         ['run-app', 'scripts/one.groovy']        | "run-app takes no argument scripts/one.groovy. ${SCRIPT_ADVICE} grails-forge-cli run-script scripts/one.groovy"
-        ['run', 'app.groovy', 'two']             | "run-app takes no argument app.groovy, or the 1 after it. ${SCRIPT_ADVICE} grails-forge-cli run-script app.groovy"
+        ['run', 'app.groovy', 'two']             | "run-app takes no argument app.groovy, and does not take two after it. ${SCRIPT_ADVICE} grails-forge-cli run-script app.groovy"
         ['run', 'my script.groovy']              | "run-app takes no argument my script.groovy. ${SCRIPT_ADVICE} grails-forge-cli run-script FILE"
     }
 

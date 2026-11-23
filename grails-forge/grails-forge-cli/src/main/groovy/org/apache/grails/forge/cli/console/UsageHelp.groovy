@@ -216,6 +216,9 @@ class UsageHelp extends CommandLine.Help {
     /** How many characters of a mistake are said, at most: what was typed can be of any length. */
     public static final int MAX_MISTAKE = 600
 
+    // how many of the arguments a command does not take are named after the first of them
+    private static final int MAX_FOLLOWING = 3
+
     private static final Pattern NOT_SHOWN = Pattern.compile(/[\p{Cc}\p{Cf}\p{Cs}\p{Co}\p{Zl}\p{Zp}]/)
 
     /**
@@ -353,7 +356,7 @@ class UsageHelp extends CommandLine.Help {
             List<String> unmatched = ((CommandLine.UnmatchedArgumentException) mistake).getUnmatched()
             if (unmatched != null && !unmatched.isEmpty()) {
                 String first = unmatched.get(0)
-                String more = unmatched.size() > 1 ? ", or the ${unmatched.size() - 1} after it" : ''
+                String more = following(unmatched.subList(1, unmatched.size()))
                 if (first.startsWith('-') && first.length() > 1) {
                     return "${named(spec)} has no option ${FeatureSelectionException.shown(optionOf(first))}${more}"
                 }
@@ -362,6 +365,17 @@ class UsageHelp extends CommandLine.Help {
             }
         }
         return mistake.getMessage()
+    }
+
+    // What else the command does not take after the first such argument, named as it was typed: a few
+    // of them, and how many more there are, since what was typed can be of any length.
+    private static String following(List<String> rest) {
+        if (rest.isEmpty()) {
+            return ''
+        }
+        List<String> named = rest.take(MAX_FOLLOWING).collect { String each -> FeatureSelectionException.shown(each) }
+        String last = rest.size() > MAX_FOLLOWING ? "${rest.size() - MAX_FOLLOWING} more".toString() : named.remove(named.size() - 1)
+        return ", and does not take ${named.isEmpty() ? last : "${named.join(', ')} or ${last}"} after it"
     }
 
     /**

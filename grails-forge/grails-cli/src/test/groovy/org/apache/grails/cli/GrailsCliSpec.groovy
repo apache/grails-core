@@ -64,6 +64,25 @@ class GrailsCliSpec extends Specification {
         err.toString().isEmpty()
     }
 
+    void "a mistake in the command line is said as the command line says it, through the entry point: #args"() {
+        when:
+        int exit = GrailsCli.execute(args as String[])
+        List<String> lines = err.toString().readLines()
+
+        then:
+        exit == 2
+        out.toString().isEmpty()
+        lines.contains(said)
+        lines.count { it.startsWith('Usage: grails') } == 1
+        !new File(dir, 'x').exists()
+
+        where:
+        args                                              | said
+        ['--plain-output', '-t', 'forge', 'create-app', 'x'] | 'grails has no option -t, and does not take forge after it'
+        ['create-app', 'x', '--profile', 'rest-api']      | 'create-app has no option --profile, and does not take rest-api after it'
+        ['create-app', 'x', '--profile', 'rest-api', '--other'] | 'create-app has no option --profile, and does not take rest-api or --other after it'
+    }
+
     void "without a command the help is shown outside a project, and nothing waits for what is typed"() {
         when:
         int exit = GrailsCli.execute(args as String[])
