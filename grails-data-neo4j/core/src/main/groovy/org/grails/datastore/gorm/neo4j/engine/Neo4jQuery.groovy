@@ -317,6 +317,10 @@ class Neo4jQuery extends Query {
         @Override
         @CompileStatic
         CypherExpression handle(CriterionScope scope, Query.IsNull criterion) {
+            String end = scope.endReference(criterion.property)
+            if (end != null) {
+                return new CypherExpression("${end} IS NULL")
+            }
             String relationship = scope.associationPattern(criterion.property)
             if (relationship != null) {
                 return new CypherExpression("NOT ${relationship}")
@@ -353,6 +357,10 @@ class Neo4jQuery extends Query {
         @Override
         @CompileStatic
         CypherExpression handle(CriterionScope scope, Query.IsNotNull criterion) {
+            String end = scope.endReference(criterion.property)
+            if (end != null) {
+                return new CypherExpression("${end} IS NOT NULL")
+            }
             String relationship = scope.associationPattern(criterion.property)
             if (relationship != null) {
                 return new CypherExpression(relationship)
