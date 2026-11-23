@@ -22,6 +22,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.security.MessageDigest
+import java.util.concurrent.TimeUnit
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 import groovy.json.JsonSlurper
@@ -32,8 +33,11 @@ import org.grails.forge.application.generator.ProjectGenerator
 import org.grails.forge.cli.CliRunner
 import org.grails.forge.cli.CommandFixture
 import org.grails.forge.cli.CommandSpec
+import org.grails.forge.cli.ForkedCli
 import org.grails.forge.cli.GrailsPicocliFactory
 import picocli.CommandLine
+import spock.lang.IgnoreIf
+import spock.lang.Unroll
 
 /**
  * An application with the feature of a feature pack that is not part of Grails, from its creation to a
@@ -53,6 +57,18 @@ class ExternalPackJourneySpec extends CommandSpec implements CommandFixture {
             'description: The base of the Acme plugins\n' +
             'dependencies:\n  - scope: implementation\n    coordinates: com.acme:acme-base-grails\n    version: 1.4.0\n' +
             'files:\n  - from: audit.txt\n    to: grails-app/conf/base.txt\n'
+
+    // the steps of After the Application Is Created, in the guide on feature packs, as they are typed there
+    static final List<String> AFTER_CREATION = [
+            'grails create-app com.example.shop --features acme-audit --feature-pack-dir ~/acme-audit/src/main/forge',
+            'cd shop',
+            'grails feature add grails-quartz --feature-pack-dir ~/acme-audit/src/main/forge']
+
+    // and those of a pack kept in the repository of the applications, of A Pack of Your Organisation, from Start to Finish
+    static final List<String> IN_THE_REPOSITORY = [
+            'grails create-app com.example.shop --features acme-audit --feature-pack-dir forge/acme-audit',
+            'cd shop',
+            'grails feature add grails-quartz --feature-pack-dir ../forge/acme-audit']
 
     PrintStream originalOut
     PrintStream originalErr
@@ -357,6 +373,37 @@ class ExternalPackJourneySpec extends CommandSpec implements CommandFixture {
         document.notes.any { String note -> note.startsWith('The feature acme-audit is that of a feature pack that is not part of Grails: feature add and project regenerate') }
     }
 
+    @IgnoreIf({ os.windows || !ForkedCli.available() })
+    @Unroll
+    void "the steps of the guide for a pack of a directory work as they are typed into a shell: #section"() {
+        given: 'the pack where the steps have it, and grails, the command line as the program it is'
+        File me = new File(work, 'home/me')
+        me.mkdirs()
+        pack(new File(me, packAt).toPath().normalize().toFile(), 'kept as it is')
+        File bin = grails(new File(work, 'bin'), me)
+        File start = new File(me, from)
+        start.mkdirs()
+
+        when: 'the steps run one after the other in one shell, in the directory the first one is typed in'
+        ProcessBuilder builder = new ProcessBuilder('/bin/sh', '-c', 'set -e\n' + steps.join('\n')).directory(start).redirectErrorStream(true)
+        builder.environment().put('HOME', me.absolutePath)
+        builder.environment().put('PATH', bin.absolutePath + File.pathSeparator + System.getenv('PATH'))
+        builder.environment().remove('CLASSPATH')
+        Process shell = builder.start()
+        String said = shell.inputStream.getText('UTF-8')
+
+        then: 'each of them works, and the application gets the feature'
+        shell.waitFor(600, TimeUnit.SECONDS)
+        assert shell.exitValue() == 0: said
+        new File(start, 'shop/build.gradle').text.contains('quartz')
+        new File(start, 'shop/.grails/project.yml').text.contains('- name: grails-quartz')
+
+        where:
+        section                                       | from         | packAt                        | steps
+        'After the Application Is Created'            | '.'          | 'acme-audit/src/main/forge'   | AFTER_CREATION
+        'A Pack of Your Organisation, kept beside it' | 'repository' | 'repository/forge/acme-audit' | IN_THE_REPOSITORY
+    }
+
     private int create(File directory, String... arguments) {
         directory.mkdirs()
         String current = System.getProperty('user.dir')
@@ -461,6 +508,16 @@ class ExternalPackJourneySpec extends CommandSpec implements CommandFixture {
             }
         }
         return jar
+    }
+
+    // a script named grails that starts the command line of this build, with the home it is given
+    private static File grails(File bin, File userHome) {
+        bin.mkdirs()
+        List<String> command = ForkedCli.builder(bin, ["-Duser.home=${userHome.absolutePath}".toString()]).command()
+        File script = new File(bin, 'grails')
+        script.setText('#!/bin/sh\nexec ' + command.collect { String each -> "'" + each.replace("'", "'\\''") + "'" }.join(' ') + ' "$@"\n', 'UTF-8')
+        script.setExecutable(true)
+        return bin
     }
 
     // a copy of a directory, as a clone of it elsewhere has it

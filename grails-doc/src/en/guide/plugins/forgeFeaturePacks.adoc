@@ -747,15 +747,19 @@ The application keeps a record of how it was generated in `.grails`, which is co
 * *A pack of a published plugin* is recorded by the coordinates and the version of the jar and its SHA-256. The command fetches the jar again by them, from the repositories of `GRAILS_REPO_URL`, then Maven Central, then the repository the record names for it; `--feature-pack-repository` names the repositories to ask in their place, and with `--offline` only a repository that is a directory is asked. The command says which jar it fetches and where it asks before it asks. A jar with another SHA-256 is refused before it is opened. Where the jar came from this time does not matter: the record says where it was found when the application was created.
 * *A pack of a directory* is recorded by the SHA-256 of its content: `feature.yml` and the files under `templates` it names, as the bytes they are, each with its path in the pack. The command is given the directory again with `--feature-pack-dir`, wherever it is now. A directory whose content has another digest is refused, and the message names both. Nothing else of the directory counts, so a copy in another place, on another computer, in a clone of the repository that holds it, is the same pack; a template whose line endings Git changed on checkout is not, which `src/main/forge/** eol=lf` in `.gitattributes` keeps from happening.
 
+Here the plugin is in `acme-audit` in the home directory, and the application is created beside it:
+
 [source,console]
 ----
-$ grails create-app com.example.shop --features acme-audit --feature-pack-dir ../acme-audit/src/main/forge
+$ grails create-app com.example.shop --features acme-audit --feature-pack-dir ~/acme-audit/src/main/forge
 ...
 | Application created at /home/me/shop
 | The feature acme-audit is that of a feature pack that is not part of Grails: feature add and project regenerate work for the application only with that very pack, which its record names by its SHA-256 (the jar of a plugin is fetched again by its coordinates; the pack of a directory is given again with --feature-pack-dir)
 $ cd shop
-$ grails feature add grails-quartz --feature-pack-dir ../acme-audit/src/main/forge
+$ grails feature add grails-quartz --feature-pack-dir ~/acme-audit/src/main/forge
 ----
+
+A relative path is read from the directory the command runs in, and `feature add` runs in the directory of the application: after `cd shop`, the same pack is one directory further up than it was for the `create-` command. A path from the home directory, as here, or an absolute path, is the same in both.
 
 The `create-` command says this once the application is created, and `project show` says it among its notes, in its `--json` document too, where a feature of a pack of a directory has its `contentSha256`.
 
@@ -814,7 +818,7 @@ With `GRAILS_PLUGIN_INDEX` set, `list-plugins` and `plugin-info` list the plugin
 . *Add a feature.* `grails feature add grails-quartz` fetches the jar again by the coordinates and the digest of the record, generates the application again with it, and adds the feature, keeping what you changed in the files.
 . *Upgrade.* A new version of the pack, or a new version of Grails, is not applied by a command: create the application again with the new version and merge the difference, following the upgrade notes of Grails for a new release of Grails.
 
-A pack that is not published, but kept in the same Git repository as the applications, beside them (`forge/acme-audit` next to `shop`, say), goes the same way without steps 2 to 4: the application is created and changed with `--feature-pack-dir ../forge/acme-audit`, and its record holds the digest of the content of the pack, so everyone who clones the repository gives the same pack, and a pack that was changed since is refused until the application is created again with it.
+A pack that is not published, but kept in the same Git repository as the applications, beside them (`forge/acme-audit` next to `shop`, say), goes the same way without steps 2 to 4: the application is created in the root of the repository with `--feature-pack-dir forge/acme-audit`, and changed in `shop` with `--feature-pack-dir ../forge/acme-audit`, and its record holds the digest of the content of the pack, so everyone who clones the repository gives the same pack, and a pack that was changed since is refused until the application is created again with it.
 
 What this way does not have, today: a repository or a catalog that needs credentials cannot be read by the command line (an address with a user and a password is refused, and `~/.m2/settings.xml` is not read), and the command line keeps no copy of a jar it fetched, so every `feature add` and `project regenerate` fetches the jar again, or needs a repository that is a directory without the network.
 
