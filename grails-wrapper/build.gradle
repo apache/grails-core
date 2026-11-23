@@ -127,11 +127,15 @@ startScripts.configure { CreateStartScripts t ->
     }
 }
 
-// WrapperScriptsSpec starts the scripts this build generates. Their content is the input; where they are is not.
+// WrapperScriptsSpec starts the scripts this build generates, and StartClassSpec the jar. Their content is the input;
+// where they are is not.
 tasks.named('test', Test).configure { Test it ->
     it.inputs.files(startScripts).withPropertyName('wrapperScripts').withPathSensitivity(PathSensitivity.NONE)
     Provider<String> scriptsPath = startScripts.map { CreateStartScripts scripts -> scripts.outputDir.absolutePath }
     it.jvmArgumentProviders.add({ ["-Dgrails.wrapper.scripts=${scriptsPath.get()}".toString()] } as CommandLineArgumentProvider)
+    it.inputs.files(jarTask).withPropertyName('wrapperJar').withPathSensitivity(PathSensitivity.NONE)
+    Provider<String> jarPath = jarTask.flatMap { Jar jar -> jar.archiveFile }.map { RegularFile file -> file.asFile.absolutePath }
+    it.jvmArgumentProviders.add({ ["-Dgrails.wrapper.jar=${jarPath.get()}".toString()] } as CommandLineArgumentProvider)
 }
 
 project.extensions.getByType(DistributionContainer).configureEach {

@@ -20,8 +20,10 @@ package grails.init
 
 import java.net.Authenticator
 import java.nio.file.Files
+import java.util.concurrent.TimeUnit
 import java.util.jar.Attributes
 import java.util.jar.JarEntry
+import java.util.jar.JarFile
 import java.util.jar.JarOutputStream
 import java.util.jar.Manifest
 
@@ -34,14 +36,19 @@ import spock.lang.Unroll
 import uk.org.webcompere.systemstubs.SystemStubs
 
 /**
- * The class the wrapper starts in the {@code grails-cli} jar it downloaded: the one the jar names,
- * so that a wrapper committed in an application starts a later version of Grails.
+ * The class the wrapper starts in the {@code grails-cli} jar it downloaded: always
+ * {@code org.apache.grails.cli.DelegatingShellApplication}, which every {@code grails-cli} jar since Grails 7 has
+ * and which starts the command line of its jar, with the system property {@code grails.wrapper.version} set to the
+ * version of the wrapper. The wrapper reads nothing else of the jar.
  */
 class StartClassSpec extends Specification {
 
+    private static final String START_CLASS = 'org.apache.grails.cli.DelegatingShellApplication'
     private static final String STARTED = 'grails.wrapper.test.started'
     // whether the context class loader of the thread was that of the downloaded jar when the command line started
     private static final String CONTEXT = 'grails.wrapper.test.contextClassLoader'
+    // what the system property the wrapper sets for the start class was when it started
+    private static final String SIGNAL = 'grails.wrapper.test.signal'
 
     @TempDir
     File dir
@@ -49,94 +56,105 @@ class StartClassSpec extends Specification {
     void cleanup() {
         System.clearProperty(STARTED)
         System.clearProperty(CONTEXT)
+        System.clearProperty(SIGNAL)
+        System.clearProperty(StartClass.WRAPPER_VERSION_PROPERTY)
     }
 
-    def "the start class is the Main-Class of the manifest of the jar"() {
-        given:
-        File jar = cliJar('grails-cli-all.jar', 'org.example.cli.Moved', ['org.example.cli.Moved', StartClass.DEFAULT])
-
+    def "the start class has the name the wrappers of Grails 7 and 8 start, and the system property is that the command line reads"() {
         expect:
-        StartClass.resolve(jar) == 'org.example.cli.Moved'
-        StartClass.load(jar).name == 'org.example.cli.Moved'
-    }
-
-    def "a jar of Grails 7 or 8 names the class those versions start with"() {
-        given:
-        File jar = cliJar('grails-cli-all.jar', 'org.apache.grails.cli.DelegatingShellApplication', ['org.apache.grails.cli.DelegatingShellApplication'])
-
-        expect:
-        StartClass.resolve(jar) == 'org.apache.grails.cli.DelegatingShellApplication'
+        StartClass.NAME == START_CLASS
+        StartClass.WRAPPER_VERSION_PROPERTY == 'grails.wrapper.version'
     }
 
     @Unroll
-    def "the start class is that of Grails 9 when the manifest #situation"() {
+    def "the start class is loaded from the jar whatever the manifest #situation"() {
         given:
-        File jar = cliJar('grails-cli-all.jar', mainClass, [StartClass.DEFAULT], manifest)
+        File jar = cliJar('grails-cli-all.jar', mainClass, [START_CLASS, 'org.example.cli.Moved'], manifest)
 
-        expect:
-        StartClass.resolve(jar) == 'org.apache.grails.cli.GrailsCli'
-        StartClass.load(jar).name == 'org.apache.grails.cli.GrailsCli'
+        when:
+        Class<?> loaded = StartClass.load(jar)
+
+        then:
+        loaded.name == START_CLASS
+        loaded.classLoader instanceof URLClassLoader
+        (loaded.classLoader as URLClassLoader).URLs.toList() == [jar.toURI().toURL()]
+        StartClass.defect(jar) == null
+
+        cleanup:
+        (loaded?.classLoader as URLClassLoader)?.close()
 
         where:
-        situation                               | manifest | mainClass
-        'is absent'                             | false    | null
-        'names no start class'                  | true     | null
-        'has an empty start class'              | true     | '   '
-        'names a class the jar does not have'   | true     | 'org.example.cli.Missing'
-        'names a class of the JDK'              | true     | 'java.lang.Runtime'
-        'names a class of the wrapper'          | true     | 'grails.init.Start'
-        'names a path and not a class'          | true     | '../../etc/passwd'
-        'names a resource of the jar'           | true     | 'org/apache/grails/cli/GrailsCli'
-        'has markup where the name should be'   | true     | '@|red org.example|@'
-        'has a name longer than any class has'  | true     | (['a'] * 400).join('.')
+        situation                          | manifest | mainClass
+        'is absent'                        | false    | null
+        'names no start class'             | true     | null
+        'names another class of the jar'   | true     | 'org.example.cli.Moved'
+        'names the start class'            | true     | START_CLASS
+        'names a class the jar lacks'      | true     | 'org.example.cli.Missing'
+        'names a class of the wrapper'     | true     | 'grails.init.Start'
     }
 
-    def "a jar that has a class by the name of a class of the wrapper does not start the wrapper again"() {
-        given: 'the jar has grails.init.Start and names it, and the class loader of the jar asks its parent first'
-        File jar = cliJar('grails-cli-all.jar', 'grails.init.Start', ['grails.init.Start'])
-
-        when:
-        StartClass.load(jar)
-
-        then:
-        IllegalStateException e = thrown()
-        e.message == "The start class [grails.init.Start] of the Grails command line at [${jar.absolutePath}] is not a class of that file."
-    }
-
-    def "a jar without a start class is refused with the file and what to do"() {
+    @Unroll
+    def "a jar without the start class is refused with the file and what to do, although its manifest #situation"() {
         given:
-        File jar = cliJar('grails-cli-all.jar', null, ['org.example.cli.Other'])
+        File jar = cliJar('grails-cli-all.jar', mainClass, ['org.example.cli.Other', 'org.apache.grails.cli.GrailsCli'])
 
         when:
         StartClass.load(jar)
 
         then:
         IllegalStateException e = thrown()
-        e.message == "The Grails command line at [${jar.absolutePath}] has no start class [org.apache.grails.cli.GrailsCli]. " +
+        e.message == "The Grails command line at [${jar.absolutePath}] has no start class [${START_CLASS}]. " +
                 'It is not a version of Grails this wrapper can start, or the download is incomplete: delete the file and run the command again.'
         e.cause instanceof ClassNotFoundException
+
+        and: 'a download that is so is not installed, and an installed jar that is so is downloaded again'
+        StartClass.defect(jar) == "it has no start class [${START_CLASS}]"
+
+        where:
+        situation                             | mainClass
+        'names no start class'                | null
+        'names a class the jar has'           | 'org.example.cli.Other'
+        'names the start class of earlier builds of Grails 9' | 'org.apache.grails.cli.GrailsCli'
     }
 
-    def "a file that is no jar is refused"() {
+    def "a file that is no jar, and one that is not there, cannot be started"() {
         given:
         File jar = new File(dir, 'grails-cli-all.jar')
         jar.text = 'not a jar'
 
+        expect:
+        StartClass.defect(jar) == 'it does not open as a jar: ZipException'
+        StartClass.defect(new File(dir, 'missing.jar')) == 'it is not a file'
+        StartClass.defect(dir) == 'it is not a file'
+    }
+
+    def "a start class on the class path of the wrapper is not started for the jar"() {
+        given: 'a class of the name on the class path the wrapper is started with, and the jar of a version that is installed'
+        File other = new File(dir, 'other-classes')
+        compile(other, START_CLASS, 'System.out.println("the class of the class path");')
+        File home = new File(dir, 'home')
+        File installed = new File(home, 'wrapper/9.0.0/grails-cli-9.0.0-all.jar')
+        installed.parentFile.mkdirs()
+        Files.copy(cliJar('published.jar', null, [START_CLASS]).toPath(), installed.toPath())
+        String wrapperClasses = new File(StartClass.protectionDomain.codeSource.location.toURI()).path
+
         when:
-        StartClass.resolve(jar)
+        Map result = run([wrapperClasses, other.path].join(File.pathSeparator), home, ['help'])
 
         then:
-        thrown(IOException)
+        result.status == 1
+        result.out.contains("Unable to execute Grails Wrapper: The start class [${START_CLASS}] of the Grails command line at [${installed.canonicalPath}] is not a class of that file.")
+        !result.out.contains('the class of the class path')
     }
 
     @Unroll
-    def "the wrapper downloads the command line and starts #startClass, with the arguments it was given"() {
-        given: 'a repository with the jar of a version, and a wrapper home that has nothing'
+    def "the wrapper downloads the command line of Grails #version and starts the start class in it, with the arguments, the context class loader and the property"() {
+        given: 'a repository with the jar of the version, and a wrapper home that has nothing'
         File repository = new File(dir, 'repository')
-        File versionDirectory = new File(repository, 'org/apache/grails/grails-cli/9.0.0')
+        File versionDirectory = new File(repository, "org/apache/grails/grails-cli/${version}")
         versionDirectory.mkdirs()
-        File published = cliJar('published.jar', mainClass, [startClass])
-        Files.copy(published.toPath(), new File(versionDirectory, 'grails-cli-9.0.0-all.jar').toPath())
+        File published = cliJar('published.jar', mainClass, [START_CLASS])
+        Files.copy(published.toPath(), new File(versionDirectory, "grails-cli-${version}-all.jar").toPath())
         File home = new File(dir, 'home')
         home.mkdirs()
         Authenticator authenticator = Authenticator.getDefault()
@@ -145,15 +163,16 @@ class StartClassSpec extends Specification {
 
         when:
         SystemStubs.withEnvironmentVariable('GRAILS_WRAPPER_HOME', home.absolutePath)
-                .and('PREFERRED_GRAILS_VERSION', '9.0.0')
+                .and('PREFERRED_GRAILS_VERSION', version)
                 .execute {
                     new GrailsWrapper().execute(['help', 'create-app'] as String[])
                 }
 
-        then:
-        System.getProperty(STARTED) == "${startClass}:help,create-app"
+        then: 'a wrapper that runs from its classes, as here, says that its version is unknown'
+        System.getProperty(STARTED) == "${START_CLASS}:help,create-app"
         System.getProperty(CONTEXT) == 'true'
-        new File(home, 'wrapper/9.0.0/grails-cli-9.0.0-all.jar').isFile()
+        System.getProperty(SIGNAL) == 'unknown'
+        new File(home, "wrapper/${version}/grails-cli-${version}-all.jar").isFile()
 
         cleanup:
         System.clearProperty('grails.repo.url')
@@ -161,10 +180,10 @@ class StartClassSpec extends Specification {
         Thread.currentThread().contextClassLoader = contextClassLoader
 
         where:
-        mainClass                                          | startClass
-        'org.example.cli.Moved'                            | 'org.example.cli.Moved'
-        'org.apache.grails.cli.DelegatingShellApplication' | 'org.apache.grails.cli.DelegatingShellApplication'
-        null                                               | 'org.apache.grails.cli.GrailsCli'
+        version | mainClass
+        '9.0.0' | 'org.apache.grails.forge.cli.GrailsCli'
+        '8.1.0' | START_CLASS
+        '7.0.0' | START_CLASS
     }
 
     @Unroll
@@ -173,7 +192,7 @@ class StartClassSpec extends Specification {
         File repository = new File(dir, 'repository')
         File versionDirectory = new File(repository, "org/apache/grails/grails-cli/${version}")
         versionDirectory.mkdirs()
-        File published = cliJar('published.jar', startClass, [startClass])
+        File published = cliJar('published.jar', null, [START_CLASS])
         Files.copy(published.toPath(), new File(versionDirectory, "grails-cli-${version}-all.jar").toPath())
         File home = new File(dir, 'home')
         home.mkdirs()
@@ -198,7 +217,7 @@ class StartClassSpec extends Specification {
 
         then: 'it is downloaded again, and started with the command or without it'
         new File(home, "wrapper/${version}/grails-cli-${version}-all.jar").bytes == published.bytes
-        System.getProperty(STARTED) == "${startClass}:${given.join(',')}"
+        System.getProperty(STARTED) == "${START_CLASS}:${given.join(',')}"
 
         cleanup:
         System.clearProperty('grails.repo.url')
@@ -206,17 +225,96 @@ class StartClassSpec extends Specification {
         Thread.currentThread().contextClassLoader = contextClassLoader
 
         where:
-        version          | startClass                                         | typed                                | given                                | does
-        '9.0.0'          | 'org.apache.grails.cli.GrailsCli'                  | ['update-wrapper']                   | ['update-wrapper']                   | 'has the command'
-        '9.1.0-RC1'      | 'org.apache.grails.cli.GrailsCli'                  | ['update-wrapper', '--plain-output'] | ['update-wrapper', '--plain-output'] | 'has the command'
-        '10.0.0'         | 'org.example.cli.Moved'                            | ['update-wrapper']                   | ['update-wrapper']                   | 'has the command'
-        '8.1.0'          | 'org.apache.grails.cli.DelegatingShellApplication' | ['update-wrapper']                   | []                                   | 'has no such command and is started without it'
-        '7.0.14'         | 'org.apache.grails.cli.DelegatingShellApplication' | ['update-wrapper', 'help']           | ['help']                             | 'has no such command and is started without it'
-        '9.0.0'          | 'org.apache.grails.cli.GrailsCli'                  | ['help', 'update-wrapper']           | ['help', 'update-wrapper']           | 'is given every command line as it is'
+        version          | typed                                | given                                | does
+        '9.0.0'          | ['update-wrapper']                   | ['update-wrapper']                   | 'has the command'
+        '9.1.0-RC1'      | ['update-wrapper', '--plain-output'] | ['update-wrapper', '--plain-output'] | 'has the command'
+        '10.0.0'         | ['update-wrapper']                   | ['update-wrapper']                   | 'has the command'
+        '8.1.0'          | ['update-wrapper']                   | []                                   | 'has no such command and is started without it'
+        '7.0.14'         | ['update-wrapper', 'help']           | ['help']                             | 'has no such command and is started without it'
+        '9.0.0'          | ['help', 'update-wrapper']           | ['help', 'update-wrapper']           | 'is given every command line as it is'
+    }
+
+    def "the jar of the wrapper gives the start class its version, and the exit code of the command line is the one of the wrapper"() {
+        given: 'the jar this build makes, and a command line that is installed and ends the JVM with an exit code of its own'
+        File wrapperJar = new File(System.getProperty('grails.wrapper.jar'))
+        String version = new JarFile(wrapperJar).withCloseable { JarFile jar -> jar.manifest.mainAttributes.getValue('Implementation-Version') }
+        File classes = new File(dir, 'exiting')
+        compile(classes, START_CLASS, """\
+            System.out.println("started with " + String.join(",", args) + " by the wrapper of " + System.getProperty("grails.wrapper.version"));
+            System.exit(Integer.parseInt(args[0]));
+            """)
+        File home = new File(dir, 'home')
+        File installed = new File(home, 'wrapper/9.0.0/grails-cli-9.0.0-all.jar')
+        installed.parentFile.mkdirs()
+        jar(installed, classes, [START_CLASS])
+
+        when:
+        Map result = run(wrapperJar.path, home, ['3', 'more'])
+
+        then:
+        version
+        result.status == 3
+        result.out.readLines() == ["started with 3,more by the wrapper of ${version}".toString()]
     }
 
     /**
-     * A jar with a class for each name, whose {@code main} records its name and its arguments.
+     * Runs the wrapper in a JVM of its own with the class path, for the version 9.0.0, which is installed in the home.
+     */
+    private Map run(String classPath, File home, List<String> arguments) {
+        File working = new File(dir, 'working')
+        working.mkdirs()
+        List<String> command = [new File(System.getProperty('java.home'), 'bin/java').path, "-Duser.home=${new File(dir, 'user').path}".toString(),
+                                '-cp', classPath, 'grails.init.Start'] + arguments
+        File out = new File(dir, 'out.txt')
+        File err = new File(dir, 'err.txt')
+        ProcessBuilder builder = new ProcessBuilder(command).directory(working).redirectOutput(out).redirectError(err)
+        ['GRAILS_REPO_URL', 'GRAILS_WRAPPER_ALLOWED_TYPES', 'JAVA_TOOL_OPTIONS'].each { String name -> builder.environment().remove(name) }
+        builder.environment().put('GRAILS_WRAPPER_HOME', home.path)
+        builder.environment().put('PREFERRED_GRAILS_VERSION', '9.0.0')
+        Process process = builder.start()
+        try {
+            assert process.waitFor(2, TimeUnit.MINUTES)
+            return [status: process.exitValue(), out: out.text, err: err.text]
+        } finally {
+            process.destroyForcibly()
+        }
+    }
+
+    /**
+     * Compiles a class whose {@code main} has the body.
+     */
+    private static void compile(File classes, String className, String body) {
+        int dot = className.lastIndexOf('.')
+        File source = new File(classes.parentFile, "sources-${classes.name}/${className.replace('.', '/')}.java")
+        source.parentFile.mkdirs()
+        source.text = """\
+            package ${className.substring(0, dot)};
+            public class ${className.substring(dot + 1)} {
+                public static void main(String[] args) {
+            ${body}
+                }
+            }
+            """.stripIndent()
+        classes.mkdirs()
+        assert ToolProvider.getSystemJavaCompiler().run(null, null, null, '-d', classes.path, source.path) == 0
+    }
+
+    private static void jar(File jar, File classes, List<String> classNames) {
+        jar.withOutputStream { OutputStream stream ->
+            JarOutputStream out = new JarOutputStream(stream)
+            classNames.each { String className ->
+                String entry = className.replace('.', '/') + '.class'
+                out.putNextEntry(new JarEntry(entry))
+                out << new File(classes, entry).bytes
+                out.closeEntry()
+            }
+            out.close()
+        }
+    }
+
+    /**
+     * A jar with a class for each name, whose {@code main} records its name, its arguments, whether the context
+     * class loader was its own and the property the wrapper sets.
      */
     private File cliJar(String fileName, String mainClass, List<String> classNames, boolean withManifest = true) {
         File sources = new File(dir, "sources-${fileName}")
@@ -234,6 +332,7 @@ class StartClassSpec extends Specification {
                     public static void main(String[] args) {
                         System.setProperty("${STARTED}", "${className}:" + String.join(",", args));
                         System.setProperty("${CONTEXT}", String.valueOf(Thread.currentThread().getContextClassLoader() == ${simpleName}.class.getClassLoader()));
+                        System.setProperty("${SIGNAL}", String.valueOf(System.getProperty("${StartClass.WRAPPER_VERSION_PROPERTY}")));
                     }
                 }
                 """.stripIndent()

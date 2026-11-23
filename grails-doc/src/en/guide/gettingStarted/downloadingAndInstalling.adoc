@@ -100,10 +100,12 @@ The wrapper downloads the command line of the version of Grails the project is o
 The environment variable `GRAILS_WRAPPER_HOME` names another directory than `~/.grails` for the downloads. Unless it is told to, the wrapper keeps nothing in the project. If you name the `.grails` directory of a project, which also holds the record of how the project was generated, the downloads are in `.grails/wrapper`: add that directory to `.gitignore` to keep them out of version control.
 It is meant to be a lightweight option if SDKMAN is not available, and it gives everyone who works on the project the command line of the same version.
 
+The wrapper only downloads the command line and starts it. It starts the class `org.apache.grails.cli.DelegatingShellApplication` of the jar it downloaded, which every `grails-cli` jar since Grails 7 has, and that class starts the command line of its jar, the class the `Main-Class` attribute of the manifest of the jar names. So the wrapper of one version starts the command line of another, earlier or later, without being replaced, and nothing in `grails-wrapper.jar` has to change when the command line does. Before it starts the class, the wrapper of Grails 9 and later sets the system property `grails.wrapper.version` to its version; the command line then runs the command it is given and nothing else. The wrapper of Grails 7 and 8 sets nothing, and the command line of Grails 9 replaces that wrapper first, see below.
+
 The command line is looked for in the repositories that the `GRAILS_REPO_URL` environment variable (or the `grails.repo.url` system property) names, then in Maven Central and then in the ASF repository. A download is installed only when it is whole:
 
 * it is compared with the strongest checksum file the repository has beside the jar (`.sha512`, `.sha256`, `.sha1`, `.md5`). Where the repository has none, as a local Maven repository does not, every entry of the jar is read and compared with the CRC the jar records for it;
-* it opens as a jar and has the class the command line starts with.
+* it opens as a jar and has the class the wrapper starts, `org.apache.grails.cli.DelegatingShellApplication`.
 
 The checksum file comes from the repository the jar comes from. The comparison finds a download that was cut off or damaged on the way; it does not tell whether the repository is to be trusted. Name only repositories you trust.
 

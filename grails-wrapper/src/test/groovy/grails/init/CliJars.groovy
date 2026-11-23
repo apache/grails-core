@@ -33,15 +33,15 @@ import javax.tools.ToolProvider
 
 /**
  * Jars of a command line for the repositories of the tests, and the checksum files a repository has beside
- * them. The jar has the start class of Grails 9, which prints the line {@link #STARTED} with its arguments, and
- * an entry that tells one jar from another.
+ * them. The jar has the start class the wrapper starts, which prints the line {@link #STARTED} with its
+ * arguments, and an entry that tells one jar from another.
  */
 class CliJars {
 
     static final String STARTED = 'the command line was started with: '
 
     private static final String MARKER_ENTRY = 'marker.txt'
-    private static final String START_CLASS_ENTRY = 'org/apache/grails/cli/GrailsCli.class'
+    private static final String START_CLASS_ENTRY = StartClass.NAME.replace('.', '/') + '.class'
     private static final Map<String, String> ALGORITHMS = [sha512: 'SHA-512', sha256: 'SHA-256', sha1: 'SHA-1', md5: 'MD5']
 
     private static byte[] startClass
@@ -53,7 +53,6 @@ class CliJars {
     static byte[] jar(String marker, byte[] padding = null) {
         Manifest manifest = new Manifest()
         manifest.mainAttributes.put(Attributes.Name.MANIFEST_VERSION, '1.0')
-        manifest.mainAttributes.put(Attributes.Name.MAIN_CLASS, StartClass.DEFAULT)
         ByteArrayOutputStream bytes = new ByteArrayOutputStream()
         JarOutputStream out = new JarOutputStream(bytes, manifest)
         out.putNextEntry(new JarEntry(START_CLASS_ENTRY))
@@ -107,11 +106,11 @@ class CliJars {
         if (startClass == null) {
             File directory = Files.createTempDirectory('cli-jars').toFile()
             try {
-                File source = new File(directory, 'org/apache/grails/cli/GrailsCli.java')
+                File source = new File(directory, 'org/apache/grails/cli/DelegatingShellApplication.java')
                 source.parentFile.mkdirs()
                 source.text = """\
                     package org.apache.grails.cli;
-                    public class GrailsCli {
+                    public class DelegatingShellApplication {
                         public static void main(String[] args) {
                             System.out.println("${STARTED}" + String.join(",", args));
                         }

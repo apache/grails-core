@@ -49,6 +49,8 @@ The command line has the three files of the wrapper with it, the ones a new appl
 
 Typed to the wrapper, `./grailsw update-wrapper` first makes the wrapper download the command line of the version the project names, the `grailsVersion` of its `gradle.properties`, again, also when it is there already. That command line then runs the command. This is how the wrapper of a project follows the version of the project: change `grailsVersion`, run `./grailsw update-wrapper`, commit the files it names. Typed to an installed command line, `grails update-wrapper` writes the wrapper of the version that is installed.
 
+The wrapper of Grails 9 and later is replaced by this command only: any other command typed to it leaves the three files as they are, whatever the version of the command line it downloads.
+
 The wrapper of Grails 7 and 8 replaces itself in the same way. Once `grailsVersion` names Grails 9, whatever is typed to that wrapper first replaces the three files and then runs the command, and `./grailsw update-wrapper`, or `./grailsw` without a command, ends after the replacement. See the upgrade notes of Grails 9.
 
 The files:

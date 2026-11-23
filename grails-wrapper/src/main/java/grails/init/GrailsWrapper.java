@@ -38,6 +38,9 @@ public class GrailsWrapper {
 
     private static final int FIRST_MAJOR_WITH_UPDATE_WRAPPER = 9;
 
+    // the version a wrapper says it is of when it runs from its classes and not from its jar, which only its development does
+    private static final String UNKNOWN_VERSION = "unknown";
+
     public GrailsWrapper() {
         Authenticator.setDefault(new SystemPropertiesAuthenticator());
     }
@@ -82,13 +85,17 @@ public class GrailsWrapper {
                     (installedDefect != null ? ", and downloading it again did not replace it" : "") + ". Delete the file and run the command again.");
         }
 
-        // the downloaded jar names its start class, so a wrapper committed in an application starts
-        // the command line of a later version of Grails that has moved it
+        // every grails-cli jar has the start class at one name, and the class starts the command line of its jar,
+        // so a wrapper committed in an application starts a later version of Grails wherever that has its command line
         Class<?> classToLoad = StartClass.load(updater.getExecutedJarFile());
         Method main = classToLoad.getMethod("main", String[].class);
         // what the command line finds through the context class loader (services, the configuration of
         // its logging, the generator it starts) is in the downloaded jar and not on the class path of the wrapper
         Thread.currentThread().setContextClassLoader(classToLoad.getClassLoader());
+        // the start class of Grails 9 and later replaces the wrapper of a project when the wrapper does not say it
+        // is no wrapper of Grails 7 or 8; that of Grails 7 and 8 reads nothing
+        String version = getVersion();
+        System.setProperty(StartClass.WRAPPER_VERSION_PROPERTY, version != null ? version : UNKNOWN_VERSION);
         main.invoke(null, (Object) adjustedArgs);
     }
 

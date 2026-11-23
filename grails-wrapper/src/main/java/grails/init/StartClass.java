@@ -22,45 +22,31 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.net.URLClassLoader;
-import java.util.jar.Attributes;
 import java.util.jar.JarFile;
-import java.util.jar.Manifest;
-import java.util.regex.Pattern;
 
 /**
- * Finds the class that starts the command line in a downloaded {@code grails-cli} jar.
+ * The class the wrapper starts in a downloaded {@code grails-cli} jar.
  * <p>
  * The wrapper jar is committed in every application and outlives the version of Grails it was
- * generated with, so the name of the start class is not compiled into it: the jar says it in the
- * {@code Main-Class} attribute of its manifest, as every {@code grails-cli} jar since Grails 7 does.
- * {@link #DEFAULT} is used when the jar does not say, or says something that is not a class of the jar.
+ * generated with, so it only downloads: it starts {@link #NAME}, which every {@code grails-cli} jar
+ * since Grails 7 has, and that class starts the command line of its jar, wherever a version of Grails has it.
  */
 public final class StartClass {
 
     /**
-     * The class that starts the command line since Grails 9.
+     * The class the wrapper starts, by the name the wrapper of Grails 7 and 8 starts it by too.
      */
-    public static final String DEFAULT = "org.apache.grails.cli.GrailsCli";
-
-    private static final int MAX_NAME_LENGTH = 512;
-    private static final Pattern BINARY_NAME = Pattern.compile("[A-Za-z_$][A-Za-z0-9_$]*(\\.[A-Za-z_$][A-Za-z0-9_$]*)*");
-
-    private StartClass() {
-    }
+    public static final String NAME = "org.apache.grails.cli.DelegatingShellApplication";
 
     /**
-     * @param cliJar a {@code grails-cli} jar
-     * @return the {@code Main-Class} of the manifest of the jar when it names a class the jar has, {@link #DEFAULT} otherwise
-     * @throws IOException if the jar cannot be read
+     * The system property the wrapper sets to its version before it starts {@link #NAME}: the command line
+     * of Grails 9 and later then knows that the wrapper is not one of Grails 7 or 8, which it replaces.
      */
-    public static String resolve(File cliJar) throws IOException {
-        try (JarFile jar = new JarFile(cliJar)) {
-            String declared = declaredMainClass(jar.getManifest());
-            if (declared != null && isBinaryName(declared) && jar.getEntry(declared.replace('.', '/') + ".class") != null) {
-                return declared;
-            }
-            return DEFAULT;
-        }
+    public static final String WRAPPER_VERSION_PROPERTY = "grails.wrapper.version";
+
+    private static final String ENTRY = NAME.replace('.', '/') + ".class";
+
+    private StartClass() {
     }
 
     /**
@@ -76,9 +62,7 @@ public final class StartClass {
             return "it is not a file";
         }
         try (JarFile jar = new JarFile(cliJar)) {
-            String declared = declaredMainClass(jar.getManifest());
-            String name = declared != null && isBinaryName(declared) && jar.getEntry(declared.replace('.', '/') + ".class") != null ? declared : DEFAULT;
-            return jar.getEntry(name.replace('.', '/') + ".class") != null ? null : "it has no start class [" + name + "]";
+            return jar.getEntry(ENTRY) != null ? null : "it has no start class [" + NAME + "]";
         } catch (IOException | RuntimeException e) {
             // the text of the JDK, and never content of the file
             return "it does not open as a jar: " + e.getClass().getSimpleName();
@@ -91,34 +75,21 @@ public final class StartClass {
      * @param cliJar a {@code grails-cli} jar
      * @return the start class, defined by the jar
      * @throws IOException           if the jar cannot be read
-     * @throws IllegalStateException if the jar has no start class, or the name is that of a class of the wrapper or of the JDK
+     * @throws IllegalStateException if the jar has no start class, or the class path of the wrapper has one
      */
     public static Class<?> load(File cliJar) throws IOException {
-        String name = resolve(cliJar);
         URLClassLoader loader = new URLClassLoader(new URL[]{cliJar.toURI().toURL()});
         Class<?> startClass;
         try {
-            startClass = Class.forName(name, true, loader);
+            startClass = Class.forName(NAME, true, loader);
         } catch (ClassNotFoundException e) {
-            throw new IllegalStateException("The Grails command line at [" + cliJar.getAbsolutePath() + "] has no start class [" + name + "]. " +
+            throw new IllegalStateException("The Grails command line at [" + cliJar.getAbsolutePath() + "] has no start class [" + NAME + "]. " +
                     "It is not a version of Grails this wrapper can start, or the download is incomplete: delete the file and run the command again.", e);
         }
-        // the parent is asked first: a name the wrapper or the JDK also has would not start the downloaded command line
+        // the parent is asked first: a class of that name on the class path of the wrapper would not start the downloaded command line
         if (startClass.getClassLoader() != loader) {
-            throw new IllegalStateException("The start class [" + name + "] of the Grails command line at [" + cliJar.getAbsolutePath() + "] is not a class of that file.");
+            throw new IllegalStateException("The start class [" + NAME + "] of the Grails command line at [" + cliJar.getAbsolutePath() + "] is not a class of that file.");
         }
         return startClass;
-    }
-
-    private static String declaredMainClass(Manifest manifest) {
-        if (manifest == null) {
-            return null;
-        }
-        String value = manifest.getMainAttributes().getValue(Attributes.Name.MAIN_CLASS);
-        return value == null ? null : value.trim();
-    }
-
-    private static boolean isBinaryName(String name) {
-        return name.length() <= MAX_NAME_LENGTH && BINARY_NAME.matcher(name).matches();
     }
 }
