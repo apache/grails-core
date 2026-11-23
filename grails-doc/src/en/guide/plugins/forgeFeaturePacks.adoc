@@ -504,8 +504,6 @@ The applications are built with the plugin as this build has just built it. When
 
 Each application is a _fixture_. Without configuration there is one for each of the `applicationTypes` of the descriptor, named after its type (`web`, `rest-api`, `web-plugin`, `plugin`, `rest-api-plugin`), with the options every application has by default and no feature but that of the pack and the ones every application of the type has. All of them are named `com.example.shop`. In each the task runs `assemble`, which compiles the application and packages it and runs none of its tests.
 
-WARNING: A descriptor without `applicationTypes` is for all five types, so its default fixtures include `web-plugin`, `plugin` and `rest-api-plugin`. A generated plugin does not pass `assemble` at present, whatever the pack: its task `generateI18nDescriptor` fails for the `messages.properties` every generated plugin has. Until that is put right, name the fixtures of such a pack, as shown below, and leave the two plugin types out; or give the descriptor the `applicationTypes` the pack is meant for.
-
 Fixtures, and how they are built, are configured in the `grails` block of the plugin. Once a fixture is named, the named ones are the only ones, and they are generated and built in the order of their names:
 
 [source,groovy]
