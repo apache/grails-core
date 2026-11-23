@@ -136,7 +136,7 @@ Three Java virtual machines are involved when a command of `grails` builds or ru
 
 |The `grails` command
 |The command line itself: creating a project, the `create-*` commands, `feature add`, the interactive mode
-|The environment variables `GRAILS_OPTS` and `JAVA_OPTS`, for example `export GRAILS_OPTS="-Dhttps.proxyHost=proxy.example.com -Dhttps.proxyPort=3128"`. The Grails wrapper (`grailsw`) reads `GRAILSW_OPTS` and `JAVA_OPTS` for the JVM that downloads and starts the command line. The Java that is used is that of `JAVA_HOME`, or the `java` on the path.
+|The environment variables `GRAILS_OPTS` and `JAVA_OPTS`, for example `export GRAILS_OPTS="-Xmx512m -Dhttps.proxyHost=proxy.example.com -Dhttps.proxyPort=3128"`. The Grails wrapper (`grailsw`) reads `GRAILSW_OPTS` and `JAVA_OPTS` for the JVM that downloads and starts the command line. The Java that is used is that of `JAVA_HOME`, or the `java` on the path.
 
 |The build
 |Gradle, which the commands that build, test and run a project start through the Gradle wrapper of the project, or in interactive mode ask for the build through the Gradle Tooling API (see link:commandLine.html#howGradleIsRun[How the `grails` Command Runs Gradle])
@@ -147,7 +147,16 @@ Three Java virtual machines are involved when a command of `grails` builds or ru
 |The build of the project: `jvmArgs`, `maxHeapSize` and `systemProperty` of the `bootRun` task and of the test tasks in `build.gradle`, as shown above, and the options of the environment variable `GRAILS_OPTS`, which the Grails Gradle plugin gives to the application, to the commands of the application and to the tests, with either way of running the build. `GRAILS_FORK_OPTS`, when it is set, is given in the place of `GRAILS_OPTS`, so that the application can have other options than the `grails` command. `org.gradle.jvmargs` does not reach the application.
 |===
 
-The Grails Gradle plugin separates the options of `GRAILS_OPTS` and `GRAILS_FORK_OPTS` at spaces, tabs and line breaks, however many stand together, and does not read quotes, so an option whose value has a space in it is set in `build.gradle`. An `-Xms`, `-Xmx` or `-Dname=value` of the variable wins over `minHeapSize`, `maxHeapSize` and `systemProperty` of the task in `build.gradle`; any other option comes before the `jvmArgs` of the task, and the JVM takes the last value it is given. An option that is meant for the `grails` command alone reaches the application too, and a small `-Xmx` keeps the application from starting: the plugin starts the application and the tests with `-Xms768m` unless `build.gradle` sets `minHeapSize`, and the JVM refuses an `-Xmx` below that. Give the application options of its own in `GRAILS_FORK_OPTS`, or set the memory of the `grails` command in `JAVA_OPTS`, which the plugin does not give to the application:
+The Grails Gradle plugin separates the options of `GRAILS_OPTS` and `GRAILS_FORK_OPTS` at spaces, tabs and line breaks, however many stand together, and does not read quotes, so an option whose value has a space in it is set in `build.gradle`. An `-Xms`, `-Xmx` or `-Dname=value` of the variable wins over `minHeapSize`, `maxHeapSize` and `systemProperty` of the task in `build.gradle`; any other option comes before the `jvmArgs` of the task, and the JVM takes the last value it is given.
+
+The plugin starts the application and the tests with a heap of 768 MB, `-Xms768m -Xmx768m`, where their options do not name the heap themselves. The options of a task name the maximum with `maxHeapSize`, or with an `-Xmx` or `-XX:MaxHeapSize=` in its `jvmArgs` or in `GRAILS_OPTS` (`GRAILS_FORK_OPTS` when that is set), and the initial heap with `minHeapSize`, or with an `-Xms`, `-XX:InitialHeapSize=` or `-XX:MinHeapSize=` there; a value that a `doFirst` of the task sets as the task starts counts too.
+
+* Where the options name a maximum, the plugin gives no heap at all, and the JVM chooses an initial heap below that maximum itself: with `GRAILS_OPTS="-Xmx512m"` the application and the tests start with at most 512 MB. Set `minHeapSize = '768m'` beside a `maxHeapSize` of your own to keep the initial heap of the plugin.
+* Where they name only the initial heap, the plugin gives only its maximum, `-Xmx768m`, or the initial heap that is named when that is larger: `-Xms1g` alone starts the JVM with `-Xms1g -Xmx1g`. The JVM refuses an initial heap above its maximum, and the plugin never gives it one.
+
+In a test task, give the maximum with `maxHeapSize` or `-Xmx`: Gradle gives the JVM of a test task that has no `maxHeapSize` an `-Xmx512m` of its own, after the `jvmArgs` of the task, so that an `-XX:MaxHeapSize=` there does not take effect.
+
+An option that is meant for the `grails` command alone reaches the application too. Give the application options of its own in `GRAILS_FORK_OPTS`, or set the memory of the `grails` command in `JAVA_OPTS`, which the plugin does not give to the application:
 
 [source,bash]
 ----

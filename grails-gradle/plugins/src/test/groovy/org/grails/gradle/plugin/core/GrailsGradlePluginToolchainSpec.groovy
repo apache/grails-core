@@ -118,8 +118,11 @@ class GrailsGradlePluginToolchainSpec extends GradleSpecification {
 
         then:
         result.output.contains('HAS_ENV=true')
-        result.output.contains('MIN_HEAP=768m')
-        result.output.contains('MAX_HEAP=768m')
+
+        and: 'the JVM is given the default heap, which leaves the heap sizes of the task unset'
+        result.output.contains('HEAP_ARGS=[-Xms768m, -Xmx768m]')
+        result.output.contains('MIN_HEAP=null')
+        result.output.contains('MAX_HEAP=null')
     }
 
     def "BootRun tasks enable Spring Boot console colors"() {
@@ -300,6 +303,7 @@ class GrailsGradlePluginToolchainSpec extends GradleSpecification {
         then:
         result.output.contains('MIN_HEAP=512m')
         result.output.contains('MAX_HEAP=2g')
+        result.output.contains('HEAP_ARGS=[-Xms512m, -Xmx2g]')
     }
 
     def "bootRun supplies the default run-app PID file under the project build directory"() {

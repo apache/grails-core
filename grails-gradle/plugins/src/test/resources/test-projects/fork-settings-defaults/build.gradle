@@ -13,12 +13,14 @@ tasks.register('inspectSysProps') {
         [
                 hasEnv: task.systemProperties.containsKey('grails.env'),
                 min: String.valueOf(task.minHeapSize),
-                max: String.valueOf(task.maxHeapSize)
+                max: String.valueOf(task.maxHeapSize),
+                heapArgs: task.allJvmArgs.findAll { it.startsWith('-Xms') || it.startsWith('-Xmx') }
         ]
     }
     doLast {
         println "HAS_ENV=${settings.get().hasEnv}"
         println "MIN_HEAP=${settings.get().min}"
         println "MAX_HEAP=${settings.get().max}"
+        println "HEAP_ARGS=${settings.get().heapArgs}"
     }
 }

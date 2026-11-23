@@ -12,10 +12,12 @@ tasks.register('customHeap', JavaExec) {
 tasks.register('inspectHeap') {
     def heap = providers.provider {
         def task = tasks.named('customHeap', JavaExec).get()
-        [min: String.valueOf(task.minHeapSize), max: String.valueOf(task.maxHeapSize)]
+        [min: String.valueOf(task.minHeapSize), max: String.valueOf(task.maxHeapSize),
+         heapArgs: task.allJvmArgs.findAll { it.startsWith('-Xms') || it.startsWith('-Xmx') }]
     }
     doLast {
         println "MIN_HEAP=${heap.get().min}"
         println "MAX_HEAP=${heap.get().max}"
+        println "HEAP_ARGS=${heap.get().heapArgs}"
     }
 }

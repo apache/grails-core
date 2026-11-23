@@ -25,11 +25,22 @@ grails {
     cliAutoProvision = false
 }
 
+// The build has no repositories: JUnit is given as the jars of the specification that runs this build.
 dependencies {
     implementation localGroovy()
+    testImplementation files(providers.gradleProperty('junitClasspath').get().split(File.pathSeparator).toList())
 }
 
-// the JVM arguments of the test task, which is given the same options as the application but not run here
+// the tests print the arguments of their JVM, so they are run by every build and their output is shown
+tasks.named('test', Test) {
+    useJUnitPlatform()
+    testLogging {
+        showStandardStreams = true
+    }
+    outputs.upToDateWhen { false }
+}
+
+// the JVM arguments of the test task, which is given the same options as the application, as it is configured
 tasks.register('inspectTestJvmArgs') {
     def testJvmArgs = providers.provider { tasks.named('test', Test).get().allJvmArgs }
     doLast {

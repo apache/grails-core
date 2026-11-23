@@ -1091,12 +1091,9 @@ ${importStatements}
                     project.providers.gradlePropertiesPrefixedBy(QUERY_TAIL_PROPERTY_PREFIX), [QUERY_TAIL_ENABLED]))
             task.systemProperty(Environment.KEY, defaultGrailsEnv)
             task.systemProperty(Environment.FULL_STACKTRACE, System.getProperty(Environment.FULL_STACKTRACE) ?: '')
-            if (task.minHeapSize == null) {
-                task.minHeapSize = '768m'
-            }
-            if (task.maxHeapSize == null) {
-                task.maxHeapSize = '768m'
-            }
+            // -Xms768m -Xmx768m where the options of the task do not name the heap, read once build.gradle has set them
+            // and as the task starts: the JVM refuses an initial heap above the maximum
+            GrailsDefaultHeapProvider.addTo((Task) task, project.providers)
 
             // Copy GRAILS_FORK_OPTS into the fork. Or use GRAILS_OPTS if no fork options provided
             // This allows run-app etc. to run using appropriate settings and allows users to provided
