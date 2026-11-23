@@ -33,7 +33,9 @@ import spock.lang.Unroll
  * those are held to the rule a wrapper above is held to, and so are the ones beside the link, as before.
  * Here the project is the current directory, and the root of its build above it has a {@code gradlew}
  * that is a link to {@code tools/gradlew}; {@code gradle/wrapper} beside the link and
- * {@code tools/gradle/wrapper} beside its file have files of their own.
+ * {@code tools/gradle/wrapper} beside its file have files of their own. The directories {@code gradle}
+ * and {@code gradle/wrapper} of either place can be links themselves, which the script follows: what
+ * they lead to is held to what an ordinary directory there is held to, and so is the way to it.
  */
 @IgnoreIf({ os.windows || System.getProperty('user.name') == 'root' })
 class LinkedWrapperSpec extends CommandSpec {
@@ -160,6 +162,80 @@ class LinkedWrapperSpec extends CommandSpec {
         errors() == []
         out.toString().contains('the wrapper ran with build')
     }
+
+    @Unroll
+    void "#entry beside a wrapper that is #wrapper is held to what it leads to when #what"() {
+        given: 'the directory is moved to KEPT, and ENTRY leads there, or stays where it is'
+        if (wrapper == 'a file') {
+            File script = new File(root, 'gradlew')
+            script.delete()
+            script.text = new File(root, 'tools/gradlew').text
+            script.setExecutable(true, false)
+        }
+        Path at = root.toPath().resolve(entry)
+        String flat = entry.replace('/', '-')
+        Path kept = arrange == 'outside' ? Files.createTempDirectory(root.parentFile.toPath(), 'grailsforgeoutside').resolve(flat) : root.toPath().resolve("kept/${flat}")
+        Files.createDirectories(kept.parent)
+        if (arrange != 'plain') {
+            Files.move(at, kept)
+            if (arrange == 'chained') {
+                Path hop = root.toPath().resolve("hop-${flat}")
+                Files.createSymbolicLink(hop, hop.parent.relativize(kept))
+                Files.createSymbolicLink(at, at.parent.relativize(hop))
+            } else {
+                Files.createSymbolicLink(at, arrange == 'outside' ? kept : at.parent.relativize(kept))
+            }
+        }
+        if (mode != null) {
+            Files.setPosixFilePermissions(root.toPath().resolve(mode == 'way' ? 'kept' : mode == 'entry' ? entry : "kept/${flat}"), PosixFilePermissions.fromString('rwxrwxrwx'))
+        }
+        if (arrange == 'another user') {
+            ConsoleProject.setOwnedByUser({ Path path -> path != kept && ProcessUser.current().owns(path) } as Predicate<Path>)
+        }
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'gradle', 'build')
+
+        then:
+        exit == (said == null ? 0 : 1)
+        out.toString().contains('the wrapper ran with build') == (said == null)
+        said == null || (errors().size() == 1 && errors()[0].contains(said.replace('ROOT', root.path).replace('ENTRY', entry).replace('KEPT', "kept/${flat}")))
+        said == null || errors()[0].contains("name ${root.path} in the environment variable GRAILS_SAFE_DIRECTORY to run it all the same")
+
+        when: 'the root is named as a directory to use whoever owns it'
+        out.reset()
+        ConsoleProject.setSafeDirectories(root.path)
+        exit = ForgeCli.execute(beanContext, 'gradle', 'build')
+
+        then:
+        exit == 0
+        out.toString().contains('the wrapper ran with build')
+
+        cleanup:
+        if (arrange == 'outside') {
+            kept.parent.toFile().deleteDir()
+        }
+
+        where:
+        [wrapper, entry, row] << [['a link'], ['gradle', 'gradle/wrapper', 'tools/gradle', 'tools/gradle/wrapper'], DIRECTORY_LINKS].combinations() +
+                [['a file'], ['gradle', 'gradle/wrapper'], DIRECTORY_LINKS].combinations()
+        what = row[0]
+        arrange = row[1]
+        mode = row[2]
+        said = row[3]
+    }
+
+    // what ENTRY is, what of it everybody can write to, and what the command says; null where the wrapper is run
+    static final List<List<String>> DIRECTORY_LINKS = [
+            ['it is a directory everybody can write to', 'plain', 'entry', 'ROOT/ENTRY can be written to by everybody'],
+            ['it is a directory of the user\'s own', 'plain', null, null],
+            ['it is a link to a directory everybody can write to', 'link', 'kept', 'ROOT/KEPT can be written to by everybody'],
+            ['it is a link to a directory of the user\'s own', 'link', null, null],
+            ['it is a link to a directory in a directory everybody can write to', 'link', 'way', 'ROOT/kept can be written to by everybody'],
+            ['it is a link to a directory of another user', 'another user', null, 'ROOT/KEPT is owned by '],
+            ['it is a link to a second link', 'chained', null, 'ROOT/ENTRY is a link that leads to its directory through another link'],
+            ['it is a link to a directory outside the root', 'outside', null, 'ROOT/ENTRY is a link to a directory outside ROOT']
+    ]
 
     private List<String> errors() {
         return out.toString().readLines().findAll { String line -> line.contains('| Error') }

@@ -95,6 +95,8 @@ final class ConsoleProject {
     private static final int MAX_NAMED = 10
     // what the wrapper script of a directory runs
     private static final List<String> WRAPPER_FILES = ['gradle', 'gradle/wrapper', 'gradle/wrapper/gradle-wrapper.jar', 'gradle/wrapper/gradle-wrapper.properties']
+    // the directories of those, which the script reaches through whatever link they are
+    private static final List<String> WRAPPER_DIRECTORIES = ['gradle', 'gradle/wrapper']
     private static final Supplier<String> ENVIRONMENT = { System.getenv(SAFE_DIRECTORY) } as Supplier<String>
 
     private static volatile Predicate<Path> ownedByUser = OWNED_BY_USER
@@ -349,7 +351,10 @@ final class ConsoleProject {
      * a link names its file itself, through no second link, and the file and every directory from the
      * link down to it are the user's own as well: who can write to a directory on the way decides
      * which file the link leads to. So are the jar and the properties beside that file, which are the
-     * ones the script runs, besides those beside the link.
+     * ones the script runs, besides those beside the link. The directories {@code gradle} and
+     * {@code gradle/wrapper} of either place are held to the same where they are links: what they lead
+     * to is a directory within the directory of the wrapper, named itself, and it and every directory on
+     * the way to it are the user's own, as an ordinary {@code gradle} directory there is.
      *
      * @param windows whether the script for Windows is asked for
      * @return the wrapper script, or why there is none that is run
@@ -438,13 +443,16 @@ final class ConsoleProject {
             }
             looked.addAll(WRAPPER_FILES)
             String distrusted = distrust(holder, looked)
-            if (distrusted == null && target != null && !isSafeDirectory(holder)) {
-                distrusted = distrustLinked(holder, wrapper, target)
-                if (distrusted == null) {
+            if (distrusted == null && !isSafeDirectory(holder)) {
+                distrusted = distrustLinkedDirectories(holder, holder)
+                if (distrusted == null && target != null) {
+                    distrusted = distrustLinked(holder, wrapper, target, 'it', 'file')
+                }
+                if (distrusted == null && target != null) {
                     // The script finds the jar it runs from where its file really is, and the jar reads the
                     // properties beside itself: a link does not take them with it. Those beside the link are
                     // what the batch file of Windows runs, which finds its jar from where it was started.
-                    distrusted = distrust(target.getParent(), WRAPPER_FILES)
+                    distrusted = distrust(target.getParent(), WRAPPER_FILES) ?: distrustLinkedDirectories(holder, target.getParent())
                 }
             }
             if (distrusted != null) {
@@ -475,25 +483,50 @@ final class ConsoleProject {
         return null
     }
 
-    // Why the file a link in a directory above leads to is not the user's own. The file is held to what
-    // a file there is held to, and so is the way to it: whoever can write to a directory on the way, or
-    // put a second link there, decides which file the link leads to, and can make that any file of the
-    // user. So the link names its file by directories alone, and each of them is the user's own.
-    private static String distrustLinked(Path holder, Path link, Path target) {
+    // Why a directory of the wrapper in a directory above, which the script reaches through whatever
+    // link it is, is not the user's own, where it is a link: what it leads to is held to what an
+    // ordinary directory there is held to, and so is the way to it, as for a wrapper that is a link.
+    private static String distrustLinkedDirectories(Path holder, Path directory) {
+        for (String name : WRAPPER_DIRECTORIES) {
+            Path link = directory.resolve(name)
+            if (!Files.isSymbolicLink(link)) {
+                continue
+            }
+            Path target
+            try {
+                target = link.toRealPath()
+                if (!target.startsWith(holder.toRealPath())) {
+                    return "${GradleRunner.line(link)} is a link to a directory outside ${GradleRunner.line(holder)}"
+                }
+            } catch (IOException | RuntimeException ignored) {
+                return "${GradleRunner.line(link)} is a link that cannot be followed"
+            }
+            String distrusted = distrustLinked(holder, link, target, GradleRunner.line(link), 'directory')
+            if (distrusted != null) {
+                return distrusted
+            }
+        }
+        return null
+    }
+
+    // Why what a link in a directory above leads to is not the user's own. It is held to what a file
+    // or a directory there is held to, and so is the way to it: whoever can write to a directory on the
+    // way, or put a second link there, decides what the link leads to, and can make that any file of the
+    // user. So the link names its file by directories alone, and each of them is the user's own. A link
+    // that names a path of its own is read from the directory it really is in, as the system reads it.
+    private static String distrustLinked(Path holder, Path link, Path target, String subject, String kind) {
         Path root
         Path named
         try {
             root = holder.toRealPath()
             named = Files.readSymbolicLink(link)
-            if (named.isAbsolute()) {
-                named = within(root, named)
-            }
+            named = named.isAbsolute() ? within(root, named) : root.relativize(link.getParent().toRealPath()).resolve(named)
         } catch (IOException | RuntimeException ignored) {
-            return "it is a link that cannot be read, so it is not known to lead to a file of the user's own"
+            return "${subject} is a link that cannot be read, so it is not known to lead to a ${kind} of the user's own"
         }
         // the path a link is followed to has no link in it: the one the link names is that path only when it has none either
         if (named == null || root.resolve(named).normalize() != target) {
-            return "it is a link that leads to its file through another link, and where a second link leads need not be the user's choice (link it to the file itself)"
+            return "${subject} is a link that leads to its ${kind} through another link, and where a second link leads need not be the user's choice (link it to the ${kind} itself)"
         }
         List<Path> way = []
         for (Path each = target.getParent(); each != null && each != root && each.startsWith(root); each = each.getParent()) {
