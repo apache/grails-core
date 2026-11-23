@@ -638,7 +638,8 @@ class LauncherSpec extends Specification {
         exit == 0
         document.format == 1
         document.options.find { it.names == ['--plain-output'] } == [names: ['--plain-output'], arity: '0', label: null, required: false,
-                description: 'Write plain text for a program to read: no colour or other terminal markup, and no progress display of Gradle.']
+                description: 'Write plain text for a program to read: no colour or other terminal markup, and no progress display of Gradle.',
+                repeatable: false, split: null, choices: null, default: null]
         document.options.find { it.names == ['--non-interactive'] }.arity == '0'
         document.options.find { it.names == ['-h', '--help'] } != null
 

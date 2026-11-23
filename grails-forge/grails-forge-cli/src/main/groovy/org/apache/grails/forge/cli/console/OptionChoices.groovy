@@ -28,5 +28,4 @@ import groovy.transform.CompileStatic
  * @since 9.0
  */
 @CompileStatic
-interface OptionChoices {
-}
+interface OptionChoices {}
