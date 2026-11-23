@@ -707,7 +707,7 @@ Grails 9 has no profiles: remove the 'profile' dependency 'org.apache.grails.pro
 - Remove every `profile ...` line from the `dependencies` block of each `build.gradle`, and every `dependencies.add('profile', ...)` of the project's build logic. Nothing replaces it.
 - Remove dependencies on `org.apache.grails:grails-shell-cli` and `org.apache.grails.profiles:*` from every configuration.
 - Give a dependency on `org.springframework.boot:spring-boot-cli` an explicit version, or remove it when only the shell needed it.
-- Remove the plugin ids `org.apache.grails.gradle.grails-profile` and `org.apache.grails.gradle.grails-publish-profile`; there is nothing to apply in their place. A profile of the project's own becomes a plugin with a feature pack.
+- Remove the plugin ids `org.apache.grails.gradle.grails-profile` and `org.apache.grails.gradle.grails-publish-profile`; there is nothing to apply in their place. A profile of the project's own becomes a preset (a preset-only project with the `grails-plugin` Gradle plugin and a `kind: preset` descriptor in `src/main/forge`: `applicationType`, `options`, `features`, dependencies, configuration, files), and what only some applications need a plugin with a feature pack. Skeleton files that replace Grails-generated files, multi-project skeletons, profile inheritance and profile commands are converted by hand (guide: Making Applications from a Preset).
 - Remove references to `BuildSettings.PROFILE` and `BuildSettings.PROFILE_REPOSITORIES`, which are removed. A subclass of `GrailsGradlePlugin`, `GrailsWebGradlePlugin` or `GrailsPluginGradlePlugin` no longer passes a `ToolingModelBuilderRegistry` to the constructor.
 
 ## Spring Security REST: Logout of an Unknown Token Answers 404
@@ -764,7 +764,7 @@ Where an unchanged name is a command:
 | `create-app NAME --profile web` | `grails create-app NAME` |
 | `create-app NAME --profile rest-api` | `grails create-restapi NAME` |
 | `create-app NAME --profile plugin` / `web-plugin` / `rest-api-plugin` | `grails create-plugin NAME` / `create-web-plugin NAME` / `create-rest-api-plugin NAME` |
-| `create-app --profile <own profile>` | no replacement: a plugin with a feature pack, `create-app --features group:artifact:version` |
+| `create-app --profile <own profile>` | `grails create-<type> NAME --preset <coordinates>`: the profile converted to a preset; a plugin with a feature pack for what only some applications need (`--features group:artifact:version`) |
 | `create-profile`, `create-feature`, `create-template`, `create-creator-command`, `create-generator-command`, `create-gradle-command` | removed with the profiles; a feature pack is written by hand |
 | `list-profiles` | removed: `grails help` lists the `create-` commands |
 | `profile-info` | removed: `grails create-app --list-features` (and the other `create-` commands) |
