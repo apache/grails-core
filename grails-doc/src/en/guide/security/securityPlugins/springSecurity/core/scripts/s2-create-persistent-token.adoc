@@ -26,14 +26,14 @@ Creates a persistent token domain class for storing remember-me cookie informati
 
 [source,bash]
 ----
-grails run-command s2-create-persistent-token <classname>
+grails s2-create-persistent-token <classname>
 ----
 
 .Example
 
 [source,bash]
 ----
-grails run-command s2-create-persistent-token com.yourapp.PersistentLogin
+grails s2-create-persistent-token com.yourapp.PersistentLogin
 ----
 
 .Description

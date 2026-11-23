@@ -26,12 +26,12 @@ A command is run in one of three ways, here for `s2-quickstart`:
 
 [source,bash]
 ----
+grails s2-quickstart com.yourapp User Role
 grails run-command s2-quickstart com.yourapp User Role
 ./gradlew runCommand -Pargs="s2-quickstart com.yourapp User Role"
-grails s2-quickstart com.yourapp User Role
 ----
 
-The first two work as soon as the plugin is a dependency of the project. `grails` has the commands under their own names, as in the third line, once the build of the project has listed the commands of the application and its plugins, which `grails gradle grailsCommandCatalog` does.
+All three work as soon as the plugin is a dependency of the project: `grails` has the commands under their own names, as in the first line, and in a project the build has not compiled yet it has the build list the commands of the application and its plugins first.
 
 The settings are appended to `grails-app/conf/application.groovy` when the project has that file. A project without it that has `grails-app/conf/application.yml` gets them there, as one more YAML document at the end of the file, and a project with neither file gets `application.groovy`. A domain class that already exists is kept as it is. `s2-create-persistent-token` and `s2-create-role-hierarchy-entry` append their settings again when they are run again; `s2-quickstart` writes nothing when the configuration already has a setting that it writes, unless it is given `--force` (see <<core-s2-quickstart>>).
 

@@ -69,7 +69,7 @@ dependencies {
 +
 [source,bash]
 ```
-grails run-command s2-quickstart com.yourapp User Role
+grails s2-quickstart com.yourapp User Role
 ```
 
 === Spring Boot Auto-Configuration

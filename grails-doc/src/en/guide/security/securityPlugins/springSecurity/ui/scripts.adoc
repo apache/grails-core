@@ -27,7 +27,7 @@ The plugin has two commands. They only write files of the project, so they are r
 ./gradlew runCommand -Pargs="s2ui-override user com.yourcompany.yourapp"
 ----
 
-The `grails` command runs the same task: `grails run-command s2ui-override user com.yourcompany.yourapp`, or, once the Gradle task `grailsCommandCatalog` has listed the commands of the project (`grails gradle grailsCommandCatalog`), `grails s2ui-override user com.yourcompany.yourapp`.
+The `grails` command runs the same task: `grails s2ui-override user com.yourcompany.yourapp`, or `grails run-command s2ui-override user com.yourcompany.yourapp`.
 
 Up to Grails 8 the two were scripts of the plugin, which the Grails shell ran by their names, as in `grails s2ui-override user com.yourcompany.yourapp`. The commands take the same arguments and write the same files; the Gradle task `runScriptCommand`, which ran the scripts in earlier builds of Grails 9, does not run them any more.
 

@@ -37,10 +37,10 @@ capture and use the application:
 
 [source,shell]
 ----
-grails run-command query-tail
+grails query-tail
 ----
 
-`query-tail` is a command of Grails Data, which the build of the project runs with the Gradle task `runCommand`: `./gradlew runCommand --arg=query-tail` is the same without the `grails` command, with each option as a further `--arg`. Once the build has listed the commands of the project (`grails gradle grailsCommandCatalog`), `grails query-tail` is a command too. The command is one that runs without the application: nothing of the application is started for it, no data source is opened and `BootStrap` does not run, so it can follow an application that is running without being a second one. The summary is written again as requests are served:
+`query-tail` is a command of Grails Data, which the build of the project runs with the Gradle task `runCommand`: `./gradlew runCommand --arg=query-tail` is the same without the `grails` command, with each option as a further `--arg`. `grails run-command query-tail` runs it too. The command is one that runs without the application: nothing of the application is started for it, no data source is opened and `BootStrap` does not run, so it can follow an application that is running without being a second one. The summary is written again as requests are served:
 
 ----
 query-tail build/query-tail/capture.log  312 statements in 14 requests  (refreshes as statements run; Ctrl-C to stop)

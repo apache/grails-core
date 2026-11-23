@@ -66,7 +66,7 @@ grails run-command [-Dgrails.env=<<environment>>] schema-export <<action>> ['std
 
 Arguments:
 
-* `environment` - The environment containing the database configuration to use (`development`, `production`, etc...), given as `-Dgrails.env` before the name of the command. `schema-export` is a command of the Hibernate plugin, which link:run-command.html[run-command] runs in the application; once the Gradle task `grailsCommandCatalog` has listed the commands of the project it is also a command of `grails` by its name.
+* `environment` - The environment containing the database configuration to use (`development`, `production`, etc...), given as `-Dgrails.env` before the name of the command. `schema-export` is a command of the Hibernate plugin, which `grails schema-export` runs in the application; an environment is named in front of the name with link:run-command.html[run-command].
 * `action` - Either 'generate' or 'export'.  The default is 'generate'. Specifying 'export' will execute the script against the specified environment's database instead of just generating the ddl file.
 * `stdout` - Passing 'stdout' will cause the script to dump the ddl to stdout.
 * `filename` - The name of the file to write the ddl to.  The default is ddl.sql in the project's 'target' directory.

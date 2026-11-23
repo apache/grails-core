@@ -34,12 +34,12 @@ link:{guidePath}conf.html#queryTail[Finding Query-Heavy Pages with query-tail].
 ----
 grails run-app --query-tail                                                 // in one terminal: run the application with capture on
 
-grails run-command query-tail                       // in another: the pages, as requests are served
-grails run-command query-tail --statements          // the statements themselves, the most run first
-grails run-command query-tail --page=book/show      // the statements of one page
-grails run-command query-tail --stream              // every statement as it runs, grouped by request
-grails run-command query-tail --all --once          // a report of everything captured so far, then exit
-grails run-command query-tail --help                // the options
+grails query-tail                       // in another: the pages, as requests are served
+grails query-tail --statements          // the statements themselves, the most run first
+grails query-tail --page=book/show      // the statements of one page
+grails query-tail --stream              // every statement as it runs, grouped by request
+grails query-tail --all --once          // a report of everything captured so far, then exit
+grails query-tail --help                // the options
 ----
 
 === Description
@@ -48,13 +48,13 @@ Usage:
 
 [source,groovy]
 ----
-grails run-command query-tail [--statements | --stream] [--page=<controller/action>] [--top=<n>] [--all] [--once] [--file=<path>]
+grails query-tail [--statements | --stream] [--page=<controller/action>] [--top=<n>] [--all] [--once] [--file=<path>]
 ----
 
 `query-tail` is a command of Grails Data (its command line artifact, `grails-datamapping-core-cli`, which the Grails Gradle plugin adds to the commands of every application that has GORM). The build of the project runs it with the Gradle task `runCommand`, as it runs every command of the application and its plugins:
 
-* `grails run-command query-tail`, with the options after the name, in any directory of the project;
-* `grails query-tail`, once the build has listed the commands of the project: `grails gradle grailsCommandCatalog`;
+* `grails query-tail`, with the options after the name, in any directory of the project;
+* `grails run-command query-tail`, the same;
 * `./gradlew runCommand --arg=query-tail`, with each option as a further `--arg`, such as `--arg=--once`, or `./gradlew runCommand -Pargs="query-tail --all --once"`.
 
 Each option is given with its two dashes: `--statements`, `--stream`, `--page=<controller/action>`, `--top=<n>`, `--all`, `--once`, `--file=<path>`, and `--help`, which prints them. The build is no terminal, so the summary is written as plain text again each time it changes and is not redrawn in place: `--once` and `--stream` read best.

@@ -207,26 +207,20 @@ An application can have commands of its own, and so can each of its plugins. A c
 ----
 $ grails create-command data-import
 | Rendered command to grails-app/commands/com/example/DataImportCommand.groovy
-| To make it a command of grails, list the commands of the application again: grails gradle grailsCommandCatalog
-----
-
-The last line is how these commands become known. The command line never starts a build to find out which commands a project has, so that `help` and a mistyped name answer at once. The build writes the list instead, with the Gradle task `grailsCommandCatalog`; run it once, and again when the commands or the plugins of the project have changed:
-
-[source,console]
-----
-$ grails gradle grailsCommandCatalog
-$ grails help
+| Run it with: grails data-import
 $ grails data-import orders.csv
 ----
 
-`help` then lists the commands of the application and of its plugins after its own, each with where it comes from, and each is run by its name. `grails help data-import` describes the command from that list and runs nothing, while `grails data-import --help` gives `--help` to the command and runs it. Such a command runs in the `development` environment. Everything after its name is its own, so `-Dgrails.env=production` after the name does not select an environment: it reaches the command as an argument, and `grails` warns that the command runs in `development`. Name the environment in front of the command with `run-command`:
+The build of the project lists these commands, with the Gradle task `grailsCommandCatalog`, every time it compiles the project. A command the build has not listed yet, as in a checkout that was never built or right after `create-command`, is listed when its name is typed: `grails` has the build list the commands once, which compiles the project, and runs the command. In a project that was built, `help` and a mistyped name answer at once, without a build.
+
+`help` lists the commands of the application and of its plugins after its own, each with where it comes from, and each is run by its name. `grails help data-import` describes the command from that list and runs nothing, while `grails data-import --help` gives `--help` to the command and runs it. Such a command runs in the `development` environment. Everything after its name is its own, so `-Dgrails.env=production` after the name does not select an environment: it reaches the command as an argument, and `grails` warns that the command runs in `development`. Name the environment in front of the command with `run-command`:
 
 [source,console]
 ----
 $ grails run-command -Dgrails.env=production data-import orders.csv
 ----
 
-The scaffolding plugin, which a web application has by default, brings link:{commandLineRef}generate-all.html[generate-all], link:{commandLineRef}generate-controller.html[generate-controller] and link:{commandLineRef}generate-views.html[generate-views] this way. `run-command NAME` runs a command without the list, and is also how to reach a command of a plugin whose name a command of `grails` itself has. A command that needs no application, because it only works on the files of the project, can say so and is then run without starting it; `query-tail` of Grails Data is one.
+The scaffolding plugin, which a web application has by default, brings link:{commandLineRef}generate-all.html[generate-all], link:{commandLineRef}generate-controller.html[generate-controller] and link:{commandLineRef}generate-views.html[generate-views] this way. `run-command NAME` is also how to reach a command of a plugin whose name a command of `grails` itself has. A command that needs no application, because it only works on the files of the project, can say so and is then run without starting it; `query-tail` of Grails Data is one.
 
 A project can also have _scripts_ in `src/main/scripts`, created with `create-script`. A script is run by the build without the application and cannot use the classes of the application. Scripts are deprecated: write a new command as a class with `create-command`.
 

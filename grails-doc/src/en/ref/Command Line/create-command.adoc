@@ -50,19 +50,22 @@ Options:
 
 The name can be given with hyphens (`data-import` becomes `DataImportCommand`), and a name that ends with `Command` already is taken without it.
 
-The command that was created is run with `run-command`, by its name with hyphens, or as a Gradle task:
+The command that was created is a command of `grails` by its name with hyphens, as are the commands of the plugins the application depends on. The command says the name in its last line:
+
+[source,console]
+----
+$ grails create-command MyExample
+| Rendered command to grails-app/commands/com/example/MyExampleCommand.groovy
+| Run it with: grails my-example
+$ grails my-example
+----
+
+The build has not listed the new command yet, so `grails my-example` has it list the commands of the application and its plugins first, which compiles the project; a build that compiles the project lists it as well. `run-command`, which takes an environment in front of the name, and the Gradle task run the same command:
 
 [source,console]
 ----
 grails run-command my-example
 ./gradlew runCommand -Pargs="my-example"
-----
-
-Once the Gradle task `grailsCommandCatalog` has listed the commands of the project (`grails gradle grailsCommandCatalog`), it is also a command of `grails` by its name, as are the commands of the plugins the application depends on:
-
-[source,console]
-----
-grails my-example
 ----
 
 Scripts created with `create-script` do not have access to the running application. A command of the application is run with the application started around it, so it can use its beans and its classes. See link:{guidePath}commandLine.html#creatingCustomCommands[Creating Custom Commands].

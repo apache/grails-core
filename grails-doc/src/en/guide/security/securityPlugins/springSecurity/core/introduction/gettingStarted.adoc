@@ -37,7 +37,7 @@ After installation, execute the `s2-quickstart` initialization command (<<core-s
 
 [source,bash]
 ----
-grails run-command s2-quickstart com.yourapp User Role
+grails s2-quickstart com.yourapp User Role
 ----
 
 `./gradlew runCommand -Pargs="s2-quickstart com.yourapp User Role"` runs the same command without the `grails` command line.

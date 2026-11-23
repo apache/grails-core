@@ -26,14 +26,14 @@ Creates a persistent role hierarchy entry domain class for storing role hierarch
 
 [source,bash]
 ----
-grails run-command s2-create-role-hierarchy-entry <classname>
+grails s2-create-role-hierarchy-entry <classname>
 ----
 
 .Example
 
 [source,bash]
 ----
-grails run-command s2-create-role-hierarchy-entry com.yourapp.RoleHierarchyEntry
+grails s2-create-role-hierarchy-entry com.yourapp.RoleHierarchyEntry
 ----
 
 .Description

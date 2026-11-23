@@ -31,30 +31,30 @@ The general format is:
 
 [source,bash]
 ----
-grails run-command s2-quickstart DOMAIN_CLASS_PACKAGE USER_CLASS_NAME ROLE_CLASS_NAME [REQUESTMAP_CLASS_NAME] [--groupClassName=GROUP_CLASS_NAME] [--force]
-grails run-command s2-quickstart --uiOnly [--force]
+grails s2-quickstart DOMAIN_CLASS_PACKAGE USER_CLASS_NAME ROLE_CLASS_NAME [REQUESTMAP_CLASS_NAME] [--groupClassName=GROUP_CLASS_NAME] [--force]
+grails s2-quickstart --uiOnly [--force]
 ----
 
 .Examples
 
 [source,bash]
 ----
-grails run-command s2-quickstart com.yourapp User Role
+grails s2-quickstart com.yourapp User Role
 ----
 
 [source,bash]
 ----
-grails run-command s2-quickstart com.yourapp User Role --groupClassName=RoleGroup
+grails s2-quickstart com.yourapp User Role --groupClassName=RoleGroup
 ----
 
 [source,bash]
 ----
-grails run-command s2-quickstart com.yourapp Person Authority Requestmap
+grails s2-quickstart com.yourapp Person Authority Requestmap
 ----
 
 [source,bash]
 ----
-grails run-command s2-quickstart --uiOnly
+grails s2-quickstart --uiOnly
 ----
 
 .Description

@@ -192,6 +192,9 @@ These are the environment variables the command line and the Grails wrapper read
 |`GRAILS_CLI_DIAGNOSTICS`
 |When `true`, the command line says on its error output how it runs each command: which way it runs Gradle and why, whether it made a connection to Gradle or reused one, whether it loaded its classes ahead, and whether the project generator runs and compiled templates. See link:commandLine.html#gradleRunnerDiagnostics[Seeing How a Command Runs].
 
+|`GRAILS_LIST_COMMANDS`
+|When `false`, a name that is none of the commands of a project is refused at once, and `grails` does not run the build to list the commands of the application and its plugins for it. With any other value, or not set, it does. See "Commands of the Application and its Plugins" below.
+
 |`GRAILS_NON_INTERACTIVE`
 |Set to `true` by the command line for the build it starts when `--non-interactive` was given, so that a command of the application or a script knows that nothing may wait for what a user types. The command line itself does not read it.
 
@@ -736,32 +739,46 @@ These lines, and what there is to say about the record of a project (`grails-for
 
 === Commands of the Application and its Plugins
 
-An application and its plugins can have commands of their own (see xref:commandLine#creatingCustomCommands[Creating Custom Commands]). In a project, the `grails` command has each of them as a command, by the name the command has:
+An application and its plugins can have commands of their own (see xref:commandLine#creatingCustomCommands[Creating Custom Commands]). In a project, the `grails` command has each of them as a command, by the name the command has, as it has its own commands:
 
 [source,console]
 ----
-$ grails gradle grailsCommandCatalog
+$ grails greet "Alice Smith" --loud
+$ grails audit-report
 $ grails help
 ...
 Commands of the application and its plugins:
   audit-report  Writes the audit report (com.example:my-plugin-cli:1.0.0)
   greet         Greets someone (application)
-$ grails greet "Alice Smith" --loud
 $ grails help greet
 ----
 
-The commands are the ones the Gradle task `grailsCommandCatalog` of the project has written to `.grails/cache/command-catalog.json`. The `grails` command reads that file and runs nothing to have it, so that asking for help or mistyping a command never starts a build: run the task once, and again when the commands of the project have changed.
+`grails run-command NAME` runs the same command by the same Gradle task, and is the form for an environment in front of the name, as in `grails run-command -Dgrails.env=production audit-report` (a command of the application takes everything after its name as its own), and for a script that should not depend on the list of the commands described below. `./gradlew runCommand --arg=NAME` is what both run, without the `grails` command. See link:{commandLineRef}run-command.html[run-command].
 
-The file is in the directory of the project and not in its build directory. A build can move its build directory (`layout.buildDirectory = ...` in `build.gradle` or `build.gradle.kts`, also for every project of a build at once), and where it is cannot be known without running the build; so the task writes the file to that one place whatever the build directory is, and the `grails` command reads it there and nowhere else. In a build of several projects each Grails project has a file of its own, in its own directory, and `grails gradle grailsCommandCatalog` in the directory of the build writes all of them. `clean` does not delete the file. `.grails/cache` holds a `.gitignore` that keeps it out of a commit, as the `.gitignore` of a generated application does: what is in it is of one machine. A `build/grails/command-catalog.json` that an earlier build wrote is not read.
+The build of the project lists the commands: the Gradle task `grailsCommandCatalog` writes them to `.grails/cache/command-catalog.json`, and every build that compiles the project runs it after `classes`, so `grails compile`, `run-app`, `test-app` and `assemble`, `./gradlew build` and a build from an IDE leave the list current. The task is up to date when nothing it reads has changed, so a build in which nothing changed costs nothing more. The `grails` command reads the file and runs nothing to read it, so that `help` and the commands of `grails` itself never start a build.
+
+A name that is none of the commands there are, in a project whose list is missing or may be out of date (see below), has `grails` run the task once, with the Gradle wrapper of the project as for every build, after one line that says so, and look for the name again:
+
+[source,console]
+----
+$ grails greet
+| Listing the commands of the application and its plugins, of which greet may be one, with the Gradle task grailsCommandCatalog
+...
+| Running the command greet of the application, with the Gradle task runCommand
+----
+
+In a checkout that was never built, the first command of the application or of a plugin that is typed therefore lists the commands, which compiles the project, and then runs. A name that is still none of them is refused as any other, with exit code 2 and a line that says that the build has just listed the commands; with a list that is current, a mistyped name is refused at once and no build is started. A build that fails while it lists ends the command with exit code 1 after what Gradle said, and nothing is run. No build is started for `help`, `help NAME`, `--help` or `--version` in front of a name, for a command of `grails` itself, outside a project, in a project without a Gradle wrapper, for what cannot be the name of a command, or for a name the Grails shell had for a command that is gone or has another name now (see "Commands of Earlier Versions" below). `--help` after a name is an argument of the command, as below, so `grails greet --help` lists the commands as `grails greet` does. With the environment variable `GRAILS_LIST_COMMANDS` set to `false`, a name that is none of the commands is refused at once without a build: a check of the names that a script or a continuous integration job types.
+
+The file is in the directory of the project and not in its build directory. A build can move its build directory (`layout.buildDirectory = ...` in `build.gradle` or `build.gradle.kts`, also for every project of a build at once), and where it is cannot be known without running the build; so the task writes the file to that one place whatever the build directory is, and the `grails` command reads it there and nowhere else. In a build of several projects each Grails project has a file of its own, in its own directory, and `grails gradle grailsCommandCatalog` in the directory of the build writes all of them by hand. `clean` does not delete the file. `.grails/cache` holds a `.gitignore` that keeps it out of a commit, as the `.gitignore` of a generated application does: what is in it is of one machine. A `build/grails/command-catalog.json` that an earlier build wrote is not read.
 
 * `help` lists the commands after those of `grails`, each with where it comes from, `help NAME` shows one of them from that list, without starting the build or the command (`NAME --help` gives `--help` to the command, which runs it), and `help --json` describes them. They have short forms too, after the commands of `grails`: a short form is first looked for among the commands of the command line itself, and is one of the commands of the application and its plugins only when it fits none of those. So what a plugin calls a command never changes what `cA` or `comp` means, and never makes it fit two commands.
 * Before the command is started, one line on the standard error says which command is run, where it comes from and by which Gradle task: `| Running the command greet of the application, with the Gradle task runCommand`. A name that was mistyped into the name of a command of a plugin is seen there before anything runs. `run-command greet` says the same line, and is the same build to Gradle as `greet`: both give Gradle the same arguments (the task, the file of the arguments, `-Dgrails.env=development`), so a build with the configuration cache configures once for the two.
 * Everything after the name of the command is given to the command as it is, each argument as the one argument it is: spaces, quotes, a leading dash and line breaks are kept, and no option of `grails` is read from it, so `--help`, `-x` and `--stacktrace` after the name are the command's. Not given are the character U+0000, more than 4095 arguments, or more than 1 MiB of them; the command line refuses those with exit code 2.
 * The command runs in the application, or without it when it is a command that needs none (its `target` is `standalone`, and its help says so), started by the Gradle task `runCommand` of the project, with the Gradle wrapper of the project and everything that holds for the `gradle` command. The arguments are handed to Gradle in a file that only you can read, `.grails/run/command-args-0.json` in the project, which is deleted when the command ends, fails or is cancelled; `.grails/run` holds a `.gitignore` that keeps it out of a commit. The file has the same name every time, so a build with the configuration cache configures once for a command and reuses that whatever the arguments are the next time. When two commands run at once the second takes the next number, up to sixteen, and a file that a command left behind because it was killed is removed by the next one. The exit code is 0 when the command succeeded and 1, after one line, when it failed or Gradle did.
-* `create-command` writes a command into `grails-app/commands` and says in one line that the task has to list the commands again before it is a command here.
-* While there is no `.grails/cache/command-catalog.json`, the project has no such commands. `help` and `help --json` say so and name the task, and what is typed for a command and is none is refused with the same line added, since it may be a command of the application.
-* A file that is older than `build.gradle`, `build.gradle.kts`, `settings.gradle`, `settings.gradle.kts` or `gradle.properties`, than a `.groovy` file or a directory anywhere below `grails-app/commands` (a command is written into the directory of its package), or than what the compiler writes of the commands under `build/classes/groovy/main/META-INF/grails-commands` (in a build that keeps its build directory where it is), is still used, and `help` and `help --json` say that the commands may have changed. `gradle grailsCommandCatalog --rerun` writes the file again also when Gradle finds the task up to date. A change that none of these files shows, such as a new version of a plugin from a version catalog or a changed description, is not noticed.
-* The file is read as something that anything in the build may have written. A file that is a link, is behind a link, is not a plain file, has more than 512 KiB, or is not the JSON document of format `1` the task writes is not used at all: the project then has no such commands, and one line says what is wrong with the file without repeating anything of it.
+* `create-command` writes a command into `grails-app/commands` and says how it is run: `| Run it with: grails greet`. Its source is newer than the list, so typing its name lists the commands again and runs it.
+* While there is no `.grails/cache/command-catalog.json`, the project has no such commands yet. `help` and `help --json` say so, and how the commands are listed, and start no build: they answer at once. `help NAME` of a command that is not listed yet is refused with the same line, as is a name when no build can be run to list the commands.
+* A file that is older than `build.gradle`, `build.gradle.kts`, `settings.gradle`, `settings.gradle.kts` or `gradle.properties`, than a `.groovy` file or a directory anywhere below `grails-app/commands` (a command is written into the directory of its package), or than what the compiler writes of the commands under `build/classes/groovy/main/META-INF/grails-commands` (in a build that keeps its build directory where it is), is still used, and `help` and `help --json` say that the commands may have changed; a name that is none of the commands has them listed again, as above. The task holds itself to the same rule: a build that compiles the project writes a file that is older than one of these files again, also where what it lists is the same, so that after a build `grails` takes the list for current. `gradle grailsCommandCatalog --rerun` writes the file again in any case. A change that none of these files shows, such as a new version of a plugin from a version catalog or a changed description, is noticed by the next build that compiles the project.
+* The file is read as something that anything in the build may have written. A file that is a link, is behind a link, is not a plain file, has more than 512 KiB, or is not the JSON document of format `1` the task writes is not used at all: the project then has no such commands, a name that is none of the commands is refused without a build, and one line says what is wrong with the file without repeating anything of it and how to write it again.
 * One command in the file that is not as the task writes one (a name that is not lower case with single hyphens, a description of more than one line, a name another command has) is left out alone, and the others are used. `help` and `help --json` say which, by its place in the file, and `complete` is `false`. Where a command comes from can be any name a jar or a project has: it is only shown, as text, in the help of the command as in the list; a file cannot give `built-in` or, in other letters, `application` as where a command comes from. The task writes no file that is not read: at most 512 commands, the first by name, in at most 512 KiB, and it says in its diagnostics how many it left out.
 
 ==== When a command has the name of a command of `grails`
@@ -882,7 +899,7 @@ Outside a project these commands are not mistakes: `create-controller`, `install
 
 |`query-tail`
 |a script command of Grails Data in earlier builds of Grails 9; Grails 8 has no `query-tail`
-|a command of a plugin: `query-tail` of Grails Data, which the build of the project runs without starting the application (see the section before this one for how the command of a plugin becomes a command here). `run-command query-tail` runs it before the build has listed it.
+|a command of a plugin: `query-tail` of Grails Data, which the build of the project runs without starting the application (see the section before this one for how the command of a plugin becomes a command here).
 
 |`quit`
 |the shell, in interactive mode

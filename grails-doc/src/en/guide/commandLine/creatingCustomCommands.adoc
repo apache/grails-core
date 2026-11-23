@@ -47,19 +47,19 @@ boolean handle()
 
 NOTE: Commands defined this way still have access to the execution context via a variable called "executionContext".
 
-Custom commands can be executed using *grails run-command*:
+A command is run by its name with the `grails` command:
+
+[source]
+----
+grails my-example
+----
+
+The build lists the commands of the application and its plugins whenever it compiles the project, and `grails` has the build list them when a name it does not know yet is typed, so a new command is run by its name at once (see xref:commandLine[The Command Line], the section on the commands of the application and its plugins). `grails run-command` runs the same command, and takes an environment in front of its name:
 
 [source]
 ----
 grails run-command my-example
-----
-
-With the `grails` command a command is run by its own name, once the Gradle task `grailsCommandCatalog` has listed the commands of the project (see xref:commandLine[The Command Line], the section on the commands of the application and its plugins):
-
-[source]
-----
-grails gradle grailsCommandCatalog
-grails my-example
+grails run-command -Dgrails.env=production my-example
 ----
 
 Commands can also be executed using the *runCommand* gradle task. Note that the gradle task uses camelCase:
@@ -339,7 +339,7 @@ class CreateReportCommand implements GrailsApplicationCommand, StandaloneCommand
 }
 ----
 
-The template is `src/main/templates/artifacts/Report.groovy` of the project, or `META-INF/templates/artifacts/Report.groovy` of a plugin, with `${packageName}` and `${className}` where the package and the class name go. The command is created, registered, listed and run as every command is: `grails run-command create-report Sales`, `./gradlew runCommand --arg=create-report --arg=Sales`, and `grails create-report Sales` once `grailsCommandCatalog` has listed it. What differs is what the `runCommand` task does for it:
+The template is `src/main/templates/artifacts/Report.groovy` of the project, or `META-INF/templates/artifacts/Report.groovy` of a plugin, with `${packageName}` and `${className}` where the package and the class name go. The command is created, registered, listed and run as every command is: `grails create-report Sales`, `grails run-command create-report Sales` and `./gradlew runCommand --arg=create-report --arg=Sales`. What differs is what the `runCommand` task does for it:
 
 * The application is not started: no application context, no plugins, no data source, no `BootStrap`. The `Application` class is not initialized.
 * `applicationContext` is `null`, and nothing is injected into the command. A `skipBootstrap` property is not read.
@@ -537,7 +537,7 @@ Write the name in lower case letters and digits, in words joined by single hyphe
 
 `target` is `application`, or `standalone` for a command that runs without the application; a descriptor without it is of a command of the application.
 
-The `grailsCommandCatalog` task of an application or plugin project writes the list of the commands the project can run with `runCommand` to `.grails/cache/command-catalog.json` in the directory of the project. That is where the `grails` command reads it, and it is the same place whatever the build directory of the project is, so the task writes there also in a build that moves its build directory. Next to the file the task writes a `.gitignore` that keeps the directory out of a commit:
+The `grailsCommandCatalog` task of an application or plugin project writes the list of the commands the project can run with `runCommand` to `.grails/cache/command-catalog.json` in the directory of the project. That is where the `grails` command reads it, and it is the same place whatever the build directory of the project is, so the task writes there also in a build that moves its build directory. Next to the file the task writes a `.gitignore` that keeps the directory out of a commit. Every build that compiles the project runs the task, after `classes`, and it is up to date when nothing it reads has changed; it can also be run by itself:
 
 [source,shell]
 ----

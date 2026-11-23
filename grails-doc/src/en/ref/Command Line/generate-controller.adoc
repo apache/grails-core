@@ -70,8 +70,8 @@ $ grails generate-controller org.bookstore.Book                              <1>
 $ grails run-command generate-controller org.bookstore.Book                  <2>
 $ ./gradlew runCommand -Pargs="generate-controller org.bookstore.Book"       <3>
 ----
-<1> By its name, once the build has listed the commands of the application and its plugins: `grails gradle grailsCommandCatalog` does that, and `grails help` then lists the command. See "Commands of the Application and its Plugins" in link:{guidePath}commandLine.html[The Command Line].
-<2> With `run-command`, which needs no list.
+<1> By its name. The build lists the commands of the application and its plugins whenever it compiles the project, and in a project it has not compiled yet `grails` has it list them first. See "Commands of the Application and its Plugins" in link:{guidePath}commandLine.html[The Command Line].
+<2> With `run-command`, which also takes an environment in front of the name.
 <3> With Gradle alone. `--arg=generate-controller --arg=org.bookstore.Book` in place of `-Pargs` gives each argument as it is.
 
 === Failures

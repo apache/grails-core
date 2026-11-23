@@ -870,7 +870,7 @@ It covers every store GORM runs statements on: SQL through Hibernate 5 and 7, Cy
 through MongoDB. With the GORM GraphQL plugin, each GraphQL operation is a page of its own, such as
 `graphql/index (query BookList)`.
 Start the application with `grails run-app --query-tail` (or `./gradlew bootRun -Pgrails.gorm.queryTail.enabled`), then
-`grails run-command query-tail` in a second terminal follows the capture and writes the summary again as requests are served. `--statements`
+`grails query-tail` in a second terminal follows the capture and writes the summary again as requests are served. `--statements`
 ranks the statements, `--page=book/show` shows one page's, `--stream` prints each statement as it runs, and
 `--all --once` reports a whole run, including an integration test run. The command reads a capture file and does
 not boot the application. Capture is off unless the application is started with it, and an application started

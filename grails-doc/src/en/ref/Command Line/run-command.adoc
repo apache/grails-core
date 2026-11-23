@@ -23,10 +23,13 @@ under the License.
 
 Execute Grails Commands defined in `grails-app/commands` or in plugins.
 
+A command of the application or of a plugin is run by its name, `grails hello-world`, which is what you type every day: see "Commands of the Application and its Plugins" in link:{guidePath}commandLine.html[The Command Line]. `run-command` runs the same command by the same Gradle task, and is the form for an environment in front of the name, for a command of a plugin whose name a command of `grails` itself has, and for automation that should not depend on the list of the commands. `./gradlew runCommand` is what both run.
+
 === Examples
 
 [source,console]
 ----
+grails hello-world
 grails run-command hello-world
 grails run-command -Dgrails.env=test hello-world
 ./gradlew runCommand -Pargs="hello-world"

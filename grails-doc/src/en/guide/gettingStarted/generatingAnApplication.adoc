@@ -23,11 +23,10 @@ To get started quickly with Grails it is often useful to use a feature called li
 
 [source,console]
 ----
-$ grails gradle grailsCommandCatalog
 $ grails generate-all helloworld.Book
 ----
 
-`generate-all` is a command of the scaffolding plugin. The first line has the build list the commands of the application and its plugins, once, so that `grails` has them by their names; `grails run-command generate-all helloworld.Book` runs the command without that.
+`generate-all` is a command of the scaffolding plugin. In a project that was never built, `grails` first has the build list the commands of the application and its plugins, which compiles the project, and then runs it.
 
 
 
