@@ -885,6 +885,12 @@ These bugs are fixed, which changes what the browser submits or what the page co
 - A value encoded beforehand is no longer encoded twice in the `value` of `<g:textField>`, `<g:hiddenField>` and the other field tags when a `RequestDataValueProcessor` returns it unchanged, nor in an option of `<g:select>`.
 - `<g:paginate>` and `<g:sortableColumn>` write a `class` that was encoded beforehand once next to the classes they add, such as `step` and `sortable`. They encoded it twice.
 
+## Subqueries in MongoDB where queries
+
+- `where { age > avg(age) }` and the other aggregate subqueries returned no rows on MongoDB, because the subquery was compared as an object. MongoDB runs the subquery first now: `==`, `!=`, `>`, `>=`, `<`, `<=` against `avg`, `max`, `min` and `sum`, and `inList` / `notIn` against a subquery that selects a property. A `!=` against an empty subquery returned every row, and `notIn` threw; both give the SQL result now. Search the application for `where` queries with an aggregate on the right of a comparison and review what each returns.
+- A comparison against a subquery that returns more than one row, and the `exists`, `notExists`, `all` and `some` forms, throw an `InvalidDataAccessResourceUsageException` that names the form. A subquery runs on the connection of its own criteria, so for a query on another connection build the subquery with `withConnection`.
+- `deleteAll()` and `updateAll()` of such a query run the subquery too, so they select the rows a `list()` of the same query finds. `where { age != max(age) }.deleteAll()` deleted every row.
+
 # After the Upgrade
 
 ## Verification Checklist
