@@ -79,6 +79,10 @@ class FailingController {
         throw new IllegalMonitorStateException('answered by an error controller that fails with a server error')
     }
 
+    def answeredByControllerFailingWithServerErrorAsynchronously() {
+        failAsynchronously(new IllegalMonitorStateException('answered by an error controller that fails with a server error'))
+    }
+
     def answeredByForwardingController() {
         throw new ArithmeticException('answered by an error controller that forwards')
     }

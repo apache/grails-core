@@ -29,6 +29,7 @@ import io.micrometer.observation.ObservationHandler
 import io.micrometer.observation.ObservationRegistry
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.server.observation.ServerRequestObservationContext
+import spock.lang.PendingFeature
 import spock.lang.Specification
 import spock.lang.Tag
 import spock.util.concurrent.PollingConditions
@@ -120,6 +121,29 @@ class FailedActionObservationSpec extends Specification implements HttpClientSup
         when                             | path
         'on a request dispatch'          | '/failing/answeredByControllerFailingWithServerError'
         'after the action started async' | '/failing/answeredByControllerFailingWithServerErrorAfterStartingAsync'
+    }
+
+    /**
+     * Tomcat tells the listeners of an asynchronous dispatch that ends in {@code sendError} that the processing
+     * completed, then that it failed, then that it completed again, with or without Grails. So the observation reports
+     * the failure three times and stops twice, and Grails can't add a listener during that dispatch to correct it.
+     */
+    @PendingFeature(reason = 'https://bz.apache.org/bugzilla/show_bug.cgi?id=70362')
+    void 'a failed action is reported once with its own exception when its error controller fails with a server error Spring MVC resolves, asynchronously'() {
+        given:
+        def path = '/failing/answeredByControllerFailingWithServerErrorAsynchronously'
+
+        when:
+        def response = http([(REQUEST_HEADER): path], path)
+
+        then: 'Spring MVC answered the failure of the error controller'
+        response.assertStatus(503)
+
+        and: 'the observation stopped with what the action threw, and the handlers heard of it once'
+        new PollingConditions(timeout: 30).eventually {
+            assert STOPPED[path]?.last() == 'IllegalMonitorStateException'
+        }
+        NOTIFIED[path] == ['IllegalMonitorStateException']
     }
 
     void 'a failure #handler answers inside an include is not the failure of the page that included it'() {
