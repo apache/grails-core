@@ -313,6 +313,44 @@ class AggregateSubquerySpec extends Neo4jGormDatastoreSpec {
         then: 'the age of Maggie is null, which no node has'
         found*.firstName == ['Homer']
     }
+
+    void "deleteAll of a where query with a != against a subquery deletes the rows the read finds"() {
+        given:
+        seed()
+
+        when: 'every age but the highest, as the list of the same query reads'
+        long deleted = AggSubNode.where { age != max(age) }.deleteAll()
+
+        then: 'the rows that match are deleted and the highest age stays, and the count says what was deleted'
+        deleted == 4
+        AggSubNode.list()*.firstName == ['Barney']
+    }
+
+    void "updateAll of a where query with a comparison against a subquery updates the rows the read finds"() {
+        given:
+        seed()
+
+        when:
+        long above = AggSubNode.where { age > avg(age) }.updateAll(age: 99)
+        List<AggSubNode> updated = AggSubNode.where { age == 99 }.list(sort: 'firstName')
+
+        then: 'the ages above the average of 30 are the three that changed'
+        above == 3
+        updated*.firstName == ['Barney', 'Homer', 'Marge']
+    }
+
+    void "updateAll of a where query with an equality against the maximum updates the rows that have it"() {
+        given:
+        seed()
+
+        when:
+        long changed = AggSubNode.where { age == max(age) }.updateAll(age: 99)
+        List<AggSubNode> updated = AggSubNode.where { age == 99 }.list()
+
+        then:
+        changed == 1
+        updated*.firstName == ['Barney']
+    }
 }
 
 @Entity

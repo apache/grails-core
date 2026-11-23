@@ -480,7 +480,8 @@ public class MongoQuery extends BsonQuery implements QueryArgumentsAware {
      * @return The Mongo query
      */
     public Document getMongoQuery() {
-        return getMongoQuery(criteria);
+        // the subqueries are run first, as for a read, so that deleteAll and updateAll select the rows a list of the same query finds
+        return getMongoQuery(resolveSubqueries(criteria));
     }
 
     private Document getMongoQuery(Junction queryCriteria) {
