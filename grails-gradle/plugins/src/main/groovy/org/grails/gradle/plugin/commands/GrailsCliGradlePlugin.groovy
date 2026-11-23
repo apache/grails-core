@@ -29,6 +29,7 @@ import org.gradle.api.GradleException
 import org.gradle.api.NamedDomainObjectProvider
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.Task
 import org.gradle.api.artifacts.ArtifactCollection
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.ConfigurationContainer
@@ -166,6 +167,12 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
      * Registers the task that writes the catalog of the application commands of the project (see
      * {@link GrailsCommandCatalogTask}). It reads the class path {@code runCommand} runs a command
      * with: the output of the project, {@code runtimeClasspath} and {@code grailsCliClasspath}.
+     *
+     * <p>The task finalizes {@code classes}: every build that compiles the project, whether it runs
+     * the application, its tests or an archive, or an IDE builds it, leaves the catalog current, and
+     * the command line has the commands of the application and its plugins by their names without a
+     * step of its own. A finalizer adds nothing that {@code classes} waits for, and is up to date when
+     * nothing it reads changed.</p>
      */
     protected void configureCommandCatalog(Project project) {
         project.pluginManager.withPlugin('java') {
@@ -175,7 +182,7 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
                         project.path, GrailsCommandCatalogTask.TASK_NAME)
                 return
             }
-            project.tasks.register(GrailsCommandCatalogTask.TASK_NAME, GrailsCommandCatalogTask) { GrailsCommandCatalogTask task ->
+            TaskProvider<GrailsCommandCatalogTask> catalog = project.tasks.register(GrailsCommandCatalogTask.TASK_NAME, GrailsCommandCatalogTask) { GrailsCommandCatalogTask task ->
                 task.group = GRAILS_COMMAND_GROUP
                 task.description = 'Writes the catalog of the application commands of the project, without loading or running them'
                 SourceSet mainSourceSet = SourceSets.findMainSourceSet(project)
@@ -199,6 +206,10 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
                 // command line reads the catalog there without running the build to ask where that is
                 task.catalogFile.convention(project.layout.projectDirectory.file(GrailsCommandCatalogTask.CATALOG_LOCATION))
                 task.ignoreFile.convention(project.layout.projectDirectory.file(GrailsCommandCatalogTask.IGNORE_LOCATION))
+                task.projectDirectory.convention(project.layout.projectDirectory)
+            }
+            project.tasks.named(JavaPlugin.CLASSES_TASK_NAME).configure { Task classes ->
+                classes.finalizedBy(catalog)
             }
         }
     }

@@ -19,19 +19,24 @@
 package org.grails.gradle.plugin.commands
 
 import java.nio.charset.StandardCharsets
+import java.nio.file.Files
+import java.nio.file.attribute.FileTime
 
 import groovy.transform.CompileStatic
 
 import org.gradle.api.DefaultTask
+import org.gradle.api.Task
 import org.gradle.api.Transformer
 import org.gradle.api.artifacts.component.ComponentIdentifier
 import org.gradle.api.artifacts.component.ModuleComponentIdentifier
 import org.gradle.api.artifacts.result.ResolvedArtifactResult
 import org.gradle.api.capabilities.Capability
 import org.gradle.api.file.ConfigurableFileCollection
+import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.MapProperty
+import org.gradle.api.specs.Spec
 import org.gradle.api.tasks.CacheableTask
 import org.gradle.api.tasks.Classpath
 import org.gradle.api.tasks.Input
@@ -43,6 +48,7 @@ import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
 
 import org.apache.grails.gradle.model.cli.CommandCatalogBuilder
+import org.apache.grails.gradle.model.cli.CommandCatalogFreshness
 
 /**
  * Writes the catalog of the application commands of the project: the commands that
@@ -60,6 +66,12 @@ import org.apache.grails.gradle.model.cli.CommandCatalogBuilder
  * project, also where the build has moved its build directory, and never runs the build to find out
  * where that is. Beside it the task writes {@link #IGNORE_LOCATION}, which keeps the directory out of a
  * commit: what is in it is of one machine.</p>
+ *
+ * <p>The Grails Gradle plugin has the task run after {@code classes}, so every build that compiles the
+ * project leaves the catalog current. The command line takes a catalog for out of date when a file it is
+ * made from was changed after it was written ({@link CommandCatalogFreshness}), which a compiler that
+ * writes a descriptor again with the same content does; the task holds itself to that rule as well, and
+ * writes a catalog that is older than one of those files again, although what it lists is the same.</p>
  *
  * @since 9.0
  */
@@ -132,6 +144,17 @@ abstract class GrailsCommandCatalogTask extends DefaultTask {
     @OutputFile
     abstract RegularFileProperty getIgnoreFile()
 
+    /**
+     * The directory of the project, in which the command line looks at what the catalog is made from
+     * to tell whether it may be out of date (see {@link CommandCatalogFreshness}).
+     */
+    @Internal
+    abstract DirectoryProperty getProjectDirectory()
+
+    GrailsCommandCatalogTask() {
+        outputs.upToDateWhen(new NotOlderThanItsSources())
+    }
+
     @TaskAction
     void write() {
         CommandCatalogBuilder catalog = new CommandCatalogBuilder()
@@ -161,6 +184,37 @@ abstract class GrailsCommandCatalogTask extends DefaultTask {
         Map<String, Object> document = catalog.build()
         for (Object diagnostic : (List) document.diagnostics) {
             logger.warn('{}', diagnostic)
+        }
+    }
+
+    /**
+     * Whether the catalog is as new as everything the command line compares it with: a catalog that is
+     * older than one of those is out of date for the command line, whatever its content is, and is
+     * written again. Without a catalog Gradle decides, which runs the task. A class of its own and not a
+     * closure, which the configuration cache would have to store with what it encloses.
+     */
+    static class NotOlderThanItsSources implements Spec<Task>, Serializable {
+
+        private static final long serialVersionUID = 1L
+
+        @Override
+        boolean isSatisfiedBy(Task task) {
+            GrailsCommandCatalogTask catalogTask = (GrailsCommandCatalogTask) task
+            File catalog = catalogTask.catalogFile.get().asFile
+            if (!catalog.isFile() || !catalogTask.projectDirectory.isPresent()) {
+                return true
+            }
+            FileTime written
+            try {
+                written = Files.getLastModifiedTime(catalog.toPath())
+            } catch (IOException ignored) {
+                return true
+            }
+            String changed = CommandCatalogFreshness.changedSince(catalogTask.projectDirectory.get().asFile, catalogTask.applicationOutput.files, written)
+            if (changed != null) {
+                task.logger.info('{} is newer than the catalog of the commands, which is written again', changed)
+            }
+            return changed == null
         }
     }
 
