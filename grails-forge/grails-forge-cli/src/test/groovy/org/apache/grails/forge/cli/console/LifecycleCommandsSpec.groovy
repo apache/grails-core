@@ -845,11 +845,12 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
         new File(dir, 'grails-app/conf').mkdirs()
         new File(dir, 'grails-app/conf/application.yml').text = configuration.replace('PORT', port as String)
 
-        when:
-        int exit = ForgeCli.execute(beanContext, (['run-app', '--detach'] + options.collect { String option -> option.replace('PORT', port as String) }) as String[])
+        when: 'an application that does not answer on the port the command waits on is stopped after the time it is given'
+        int exit = ForgeCli.execute(beanContext, (['run-app', '--detach', '--ready-timeout', '30'] + options.collect { String option -> option.replace('PORT', port as String) }) as String[])
 
         then:
         exit == 0
+        errors() == []
         record().port == port
 
         cleanup:
@@ -862,6 +863,26 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
         'the configuration of the environment'   | 'server:\n    port: 1\nenvironments:\n    test:\n        server:\n            port: PORT\n' | ['-Dgrails.env=test']
         'a later document of the configuration'  | 'server:\n    port: 1\n---\nserver:\n    port: PORT\n'                                   | []
         'the system property'                    | 'server:\n    port: 1\n'                                                                 | ['-Dgrails.server.port=PORT']
+        // each document as the application reads it: what it says for the environment over what it says for all, then a later document over an earlier one
+        'a later document, over the environment of an earlier one'          | forEnvironment('development', '1') + '---\n' + forAll('PORT')                       | []
+        'the environment of a later document, over an earlier one'          | forAll('1') + '---\n' + forEnvironment('development', 'PORT')                       | []
+        'a later document, over one that names a port for all and for the environment' | forAll('1') + forEnvironment('development', '2') + '---\n' + forAll('PORT') | []
+        'the environment of a document, over the document, when no later one names a port' | forAll('1') + forEnvironment('development', 'PORT') + '---\ninfo:\n    app: shop\n' | []
+        'the environment of the last of three documents'                    | forEnvironment('development', '1') + '---\n' + forAll('2') + '---\n' + forEnvironment('development', 'PORT') | []
+        'a document, over the environment of an earlier one that is given after --' | forEnvironment('test', '1') + '---\n' + forAll('PORT')                    | ['--', '-Dgrails.env=test']
+        'the environment given after --, of a later document'               | forAll('1') + '---\nenvironments:\n    test:\n        server:\n            port: PORT\n    development:\n        server:\n            port: 2\n' | ['--', '-Dgrails.env=test']
+        'the environment, in one key'                                       | 'server.port: 1\nenvironments.development.server.port: PORT\n'                      | []
+        'the key that is written later in a document'                       | 'server.port: 1\nserver:\n    port: PORT\n'                                          | []
+        'the environment of a document, and not another one of a later document' | forEnvironment('development', 'PORT') + '---\n' + forEnvironment('production', '1') | []
+        // a document for a Spring profile counts when the profile is active, as -Dgrails.spring.profiles.active makes it for the application
+        'not a document of a profile that is not active'                    | forAll('PORT') + '---\n' + forProfile('other') + forAll('1')                         | []
+        'a document of the profile that is active'                          | forAll('1') + '---\n' + forProfile('other') + forAll('PORT')                         | ['-Dgrails.spring.profiles.active=other']
+        'a document of the profile that is active after --'                 | forAll('1') + '---\n' + forProfile('other') + forAll('PORT')                         | ['--', '-Dgrails.spring.profiles.active=other']
+        'a document of one of the profiles that are active'                 | forAll('1') + '---\n' + forProfile('other') + forAll('PORT')                         | ['-Dgrails.spring.profiles.active=one, other']
+        'the environment of a document of the profile that is active'       | forAll('1') + '---\n' + forProfile('other') + forEnvironment('development', 'PORT') + forAll('2') | ['-Dgrails.spring.profiles.active=other']
+        'a document of a profile expression that is met'                    | forAll('1') + '---\n' + forProfile('"!other"') + forAll('PORT')                      | []
+        'not a document of a profile expression that is not met'            | forAll('PORT') + '---\n' + forProfile('"!other"') + forAll('1')                      | ['-Dgrails.spring.profiles.active=other']
+        'a document of the profile that is active, by the former key'       | forAll('1') + '---\nspring:\n    profiles: other\n' + forAll('PORT')                 | ['-Dgrails.spring.profiles.active=other']
     }
 
     void "in the interactive shell run-app returns to the prompt, and the application ends with the shell"() {
@@ -1976,6 +1997,21 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
         File wrapper = new File(dir, 'gradlew')
         wrapper.text = "#!/bin/sh\n\"${System.getProperty('java.home')}/bin/java\" \"${dir.canonicalPath}/Server.java\" \"\$@\"\n"
         wrapper.setExecutable(true, false)
+    }
+
+    // what a document of application.yml says for all environments
+    private static String forAll(String port) {
+        return "server:\n    port: ${port}\n".toString()
+    }
+
+    // what a document of application.yml says for one environment
+    private static String forEnvironment(String environment, String port) {
+        return "environments:\n    ${environment}:\n        server:\n            port: ${port}\n".toString()
+    }
+
+    // what makes a document of application.yml one for the profiles a selector names
+    private static String forProfile(String selector) {
+        return "spring:\n    config:\n        activate:\n            on-profile: ${selector}\n".toString()
     }
 
     // A wrapper that becomes the one process it names in server.pid and stays, so that ending it leaves nothing behind

@@ -67,8 +67,10 @@ public class YamlPropertySourceLoader extends YamlProcessor implements PropertyS
     public List<PropertySource<?>> load(String name, Resource resource, List<String> filteredKeys) throws IOException {
         setResources(resource);
         // Select source documents once; merging resolved configuration must not re-evaluate JVM profiles.
+        final String profilesActive = activeProfiles();
         final List<String> activeProfiles = Arrays.asList(
-                StringUtils.tokenizeToStringArray(System.getProperty("spring.profiles.active", ""), ","));
+                StringUtils.tokenizeToStringArray(profilesActive != null ? profilesActive : "", ","));
+        final String currentEnvironment = environmentName();
         setDocumentMatchers((DocumentMatcher) properties -> {
             final String[] profiles = profileSelectors(properties, PROFILE_SELECTOR);
             final String[] legacyProfiles = profileSelectors(properties, LEGACY_PROFILE_SELECTOR);
@@ -86,8 +88,6 @@ public class YamlPropertySourceLoader extends YamlProcessor implements PropertyS
         NavigableMap propertySource = new NavigableMap();
         //Now merge the environment config over the top of the normal stuff
         loaded.forEach(map -> {
-            final Environment env = Environment.getCurrentEnvironment();
-            String currentEnvironment = env != null ? env.getName() : null;
             if (currentEnvironment != null) {
                 final String prefix = GrailsPlugin.ENVIRONMENTS + "." + currentEnvironment + ".";
                 final Set<String> environmentSpecificEntries =
@@ -110,6 +110,33 @@ public class YamlPropertySourceLoader extends YamlProcessor implements PropertyS
                 new NavigableMapPropertySource(name, propertySource));
 
         return propertySources;
+    }
+
+    /**
+     * The environment whose settings a document gives under {@code environments.NAME} are applied over the other
+     * settings of that document, before the document is merged over the ones before it. By default the current
+     * environment of this JVM; a subclass that reads the configuration of an application which runs elsewhere, as
+     * the command line does for the application it starts, gives the environment of that application.
+     *
+     * @return the name of the environment, or {@code null} for none
+     * @since 9.0
+     */
+    protected String environmentName() {
+        final Environment env = Environment.getCurrentEnvironment();
+        return env != null ? env.getName() : null;
+    }
+
+    /**
+     * The active profiles a document that names profiles ({@code spring.config.activate.on-profile}, or
+     * {@code spring.profiles}) is read for, as the system property {@code spring.profiles.active} gives them: names
+     * separated by commas. By default that system property of this JVM; a subclass that reads the configuration of
+     * an application which runs elsewhere gives the value that application is started with.
+     *
+     * @return the active profiles, or {@code null} for none
+     * @since 9.0
+     */
+    protected String activeProfiles() {
+        return System.getProperty("spring.profiles.active", "");
     }
 
     /**

@@ -270,6 +270,111 @@ sample:
         Binder.get(environment).bind('app.names', Bindable.listOf(String)).get() == ['replacement']
     }
 
+    def "each document is read for the environment, its settings for the environment over its others, and merged over the documents before it: #what"() {
+        given:
+        def resource = new ByteArrayResource(yaml.bytes)
+
+        expect:
+        new YamlPropertySourceLoader().load('application.yml', resource).first().getProperty('server.port') == port
+
+        where:
+        what                                                         | yaml                                                                                              | port
+        'a later document over the environment of an earlier one'    | 'environments:\n  development:\n    server:\n      port: 1\n---\nserver:\n  port: 2\n'                | 2
+        'the environment of a later document over an earlier one'    | 'server:\n  port: 2\n---\nenvironments:\n  development:\n    server:\n      port: 1\n'                | 1
+        'the environment of a document over the document'            | 'environments:\n  development:\n    server:\n      port: 1\nserver:\n  port: 2\n---\ninfo:\n  app: x\n' | 1
+        'not the environment of another environment'                 | 'server:\n  port: 2\n---\nenvironments:\n  production:\n    server:\n      port: 1\n'                | 2
+    }
+
+    def "a subclass reads the documents for the environment and the profiles it gives, whatever this JVM's are: #what"() {
+        given: 'this JVM runs for development, with the profile alpha'
+        System.setProperty('spring.profiles.active', 'alpha')
+        def resource = new ByteArrayResource('''\
+            server:
+              port: 1
+            environments:
+              test:
+                server:
+                  port: 2
+            ---
+            spring:
+              config:
+                activate:
+                  on-profile: beta
+            server:
+              port: 3
+            environments:
+              production:
+                server:
+                  port: 4
+            ---
+            spring:
+              config:
+                activate:
+                  on-profile: "!alpha"
+            info:
+              app: other
+            '''.stripIndent().bytes)
+        String givenEnvironment = environment
+        String givenProfiles = profiles
+        def loader = new YamlPropertySourceLoader() {
+            @Override
+            protected String environmentName() {
+                givenEnvironment
+            }
+
+            @Override
+            protected String activeProfiles() {
+                givenProfiles
+            }
+        }
+
+        when:
+        def source = loader.load('application.yml', resource).first()
+
+        then:
+        source.getProperty('server.port') == port
+        source.getProperty('info.app') == app
+
+        and: 'the environment and the profiles of this JVM are as they were'
+        Environment.current == Environment.DEVELOPMENT
+        System.getProperty('spring.profiles.active') == 'alpha'
+
+        where:
+        what                                                 | environment   | profiles      | port | app
+        'no environment and no profile'                      | null          | null          | 1    | 'other'
+        'an environment'                                     | 'test'        | ''            | 2    | 'other'
+        'a profile'                                          | 'test'        | 'beta'        | 3    | 'other'
+        'an environment of the document of a profile'        | 'production'  | 'beta'        | 4    | 'other'
+        'profiles that are separated by commas'              | 'development' | 'alpha, beta' | 3    | null
+        'the environment of a document that is not read'     | 'production'  | 'alpha'       | 1    | null
+    }
+
+    def "a loader reads the documents for the current environment of this JVM and the profiles its system property activates"() {
+        given:
+        System.setProperty(Environment.KEY, Environment.TEST.name)
+        Environment.reset()
+        System.setProperty('spring.profiles.active', 'beta')
+        def resource = new ByteArrayResource('''\
+            server:
+              port: 1
+            ---
+            spring:
+              config:
+                activate:
+                  on-profile: beta
+            environments:
+              test:
+                server:
+                  port: 2
+            '''.stripIndent().bytes)
+
+        expect:
+        new YamlPropertySourceLoader().load('application.yml', resource).first().getProperty('server.port') == 2
+
+        cleanup:
+        Environment.reset()
+    }
+
     private static final String ITEMS_YAML = '''\
         app:
           items:

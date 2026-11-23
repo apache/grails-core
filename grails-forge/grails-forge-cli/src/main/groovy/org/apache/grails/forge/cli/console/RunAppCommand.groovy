@@ -19,6 +19,7 @@
 package org.apache.grails.forge.cli.console
 
 import java.nio.charset.CharacterCodingException
+import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.LinkOption
 import java.nio.file.Path
@@ -29,8 +30,11 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.function.Consumer
 import java.util.function.Function
 import groovy.transform.CompileStatic
+import org.grails.config.yaml.YamlPropertySourceLoader
 import org.grails.forge.application.OperatingSystem
 import org.grails.forge.feature.FeatureSelectionException
+import org.springframework.core.env.PropertySource
+import org.springframework.core.io.ByteArrayResource
 import org.yaml.snakeyaml.LoaderOptions
 import org.yaml.snakeyaml.Yaml
 import org.yaml.snakeyaml.constructor.ConstructorException
@@ -102,6 +106,11 @@ class RunAppCommand extends GradleEnvironmentCommand implements OptionRelation.D
     private static final String BUILD_PORT_PROPERTY = 'server.port'
     private static final String BUILD_ADDRESS_PROPERTY = 'server.address'
     private static final String ENVIRONMENT_PROPERTY = 'grails.env'
+    // the system property of the build that the Grails Gradle plugin hands the application as spring.profiles.active
+    private static final String PROFILES_PROPERTY = 'grails.spring.profiles.active'
+    // the settings of application.yml
+    private static final String PORT_SETTING = 'server.port'
+    private static final String ADDRESS_SETTING = 'server.address'
     private static final String SYSTEM_PROPERTY = '-D'
     private static final String SYSTEM_PROPERTY_LONG = '--system-prop'
     // the option of the task bootRun, of the JavaExec of Gradle, that gives the application its arguments
@@ -738,6 +747,43 @@ class RunAppCommand extends GradleEnvironmentCommand implements OptionRelation.D
         }
     }
 
+    /**
+     * {@code application.yml} as the application reads it: by the loader of its runtime, for the
+     * environment and the active profiles it is started with, and not those of this JVM. The YAML is
+     * parsed within the limits of the command, by a parser that makes no object of a tag.
+     */
+    private static final class ApplicationYaml extends YamlPropertySourceLoader {
+
+        private final String environment
+        private final String profiles
+
+        ApplicationYaml(String environment, String profiles) {
+            this.environment = environment
+            this.profiles = profiles
+        }
+
+        @Override
+        protected Yaml createYaml() {
+            LoaderOptions options = new LoaderOptions()
+            options.setAllowDuplicateKeys(false)
+            options.setMaxAliasesForCollections(MAX_ALIASES)
+            options.setNestingDepthLimit(MAX_NESTING)
+            options.setCodePointLimit(MAX_CONFIGURATION)
+            options.setProcessComments(false)
+            return new Yaml(new SafeConstructor(options))
+        }
+
+        @Override
+        protected String environmentName() {
+            return environment
+        }
+
+        @Override
+        protected String activeProfiles() {
+            return profiles
+        }
+    }
+
     /** The port and the address the application will answer on, as far as the command can know them. */
     private static final class Configured {
 
@@ -756,11 +802,10 @@ class RunAppCommand extends GradleEnvironmentCommand implements OptionRelation.D
 
     // What the application is told, in the order it listens to it: the system properties the build
     // hands it (--port and --host are given as these, and -Dgrails.server.port is handed on as
-    // server.port), then the environment the build runs it in, then its application.yml, where what is
-    // said for the environment it runs for comes before what is said for all. What names a port and is
-    // not plainly one, as a placeholder that the application resolves when it starts, is not guessed at.
-    // The system properties are those the build is told, by the options of the command and by what
-    // follows --, as Gradle reads them.
+    // server.port), then the environment the build runs it in, then its application.yml, read as the
+    // application reads it, see ofFile. What names a port and is not plainly one, as a placeholder that
+    // the application resolves when it starts, is not guessed at. The system properties are those the
+    // build is told, by the options of the command and by what follows --, as Gradle reads them.
     private Configured configured(ConsoleProject project, Map<String, String> told) {
         Configured found = new Configured()
         Map<String, Object> inFile = null
@@ -812,35 +857,24 @@ class RunAppCommand extends GradleEnvironmentCommand implements OptionRelation.D
             // --, or development), and not the one of Forge, which is production whatever the project's is
             String named = told.get(ENVIRONMENT_PROPERTY) ?: environment()
             String environment = ENVIRONMENTS.get(named) ?: named
-            LoaderOptions options = new LoaderOptions()
-            options.setAllowDuplicateKeys(false)
-            options.setMaxAliasesForCollections(MAX_ALIASES)
-            options.setNestingDepthLimit(MAX_NESTING)
-            options.setCodePointLimit(MAX_CONFIGURATION)
-            options.setProcessComments(false)
-            Object[] ports = new Object[2]
-            Object[] addresses = new Object[2]
             text = Files.readString(file)
-            for (Object document : new Yaml(new SafeConstructor(options)).loadAll(text)) {
-                List<Object> levels = [document, value(document, ['environments', environment])]
-                for (int level = 0; level < 2; level++) {
-                    // a key can be written in one piece or as a map in a map
-                    Object settings = levels.get(level)
-                    Object namedPort = value(settings, ['server.port']) != null ? value(settings, ['server.port']) : value(settings, ['server', 'port'])
-                    Object namedAddress = value(settings, ['server.address']) != null ? value(settings, ['server.address']) : value(settings, ['server', 'address'])
-                    ports[level] = namedPort != null ? namedPort : ports[level]
-                    addresses[level] = namedAddress != null ? namedAddress : addresses[level]
-                }
-            }
-            Object namedPort = ports[1] != null ? ports[1] : ports[0]
-            if (namedPort != null) {
+            // Read as the application reads it, by the same loader: each document with what it says for the environment
+            // over what it says for all, and a later document over an earlier one; a document for a Spring profile only
+            // where the profiles the application is given (-Dgrails.spring.profiles.active, which the Grails Gradle
+            // plugin hands it as spring.profiles.active) select it. A value that is empty names nothing, as for the
+            // application, which takes no port and no address from it.
+            List<PropertySource<?>> read = new ApplicationYaml(environment, told.get(PROFILES_PROPERTY))
+                    .load(CONFIGURATION, new ByteArrayResource(text.getBytes(StandardCharsets.UTF_8)))
+            Map<?, ?> settings = read.isEmpty() ? [:] : (Map<?, ?>) read.get(0).getSource()
+            Object namedPort = settings.get(PORT_SETTING)
+            Object namedAddress = settings.get(ADDRESS_SETTING)
+            if (namedPort != null && namedPort != '') {
                 Integer plain = namedPort instanceof Integer || namedPort instanceof String ? portOf(namedPort.toString()) : null
                 found.port = plain
                 found.portUnknown = plain != null ? null :
                         "server.port of ${CONFIGURATION} is not plainly a port, a number from 1 to 65535, but something the application works out when it starts".toString()
             }
-            Object namedAddress = addresses[1] != null ? addresses[1] : addresses[0]
-            if (namedAddress != null) {
+            if (namedAddress != null && namedAddress != '') {
                 boolean plain = namedAddress instanceof String && namedAddress ==~ /[A-Za-z0-9.:\[\]-]{1,255}/
                 found.address = plain ? namedAddress : null
                 found.addressUnknown = plain ? null :
@@ -910,14 +944,6 @@ class RunAppCommand extends GradleEnvironmentCommand implements OptionRelation.D
             column = breaks ? 1 : column + 1
         }
         return " at line ${line}, column ${column}".toString()
-    }
-
-    private static Object value(Object from, List<String> path) {
-        Object each = from
-        for (String step : path) {
-            each = each instanceof Map ? ((Map) each).get(step) : null
-        }
-        return each
     }
 
     private static Integer portOf(String text) {
