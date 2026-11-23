@@ -71,19 +71,19 @@ class SiblingAssociationPropertyComparisonSpec extends HibernateGormDatastoreSpe
         SpcHolder.withCriteria { eqProperty('plainLeft', 'plainRight') }*.name == (sameId ? ['plain'] : [])
     }
 
-    def 'an association with a composite id is not compared with one that has a generated id'() {
+    def 'an association with a composite id and one with a generated id are never equal, and are not an error'() {
         given:
         SpcLeft left = new SpcLeft(area: 'a', code: 'b').save(flush: true)
         SpcPlainLeft plain = new SpcPlainLeft(name: 'l').save(flush: true)
         new SpcHolder(name: 'mixed', left: left, plainLeft: plain).save(flush: true)
+        new SpcHolder(name: 'no plain', left: left).save(flush: true)
         manager.session.clear()
 
-        when:
-        SpcHolder.withCriteria { eqProperty('left', 'plainLeft') }
-
-        then: 'the message names both classes and the number of properties of each identifier'
-        IllegalArgumentException e = thrown()
-        e.message.contains('SpcLeft') && e.message.contains('SpcPlainLeft') && e.message.contains('2 and 1')
+        expect: 'nothing matches ==, and != matches the row that has both associations, not the one with a null'
+        SpcHolder.withCriteria { eqProperty('left', 'plainLeft') }.isEmpty()
+        SpcHolder.withCriteria { neProperty('left', 'plainLeft') }*.name == ['mixed']
+        new DetachedCriteria(SpcHolder).build { eqProperty('left', 'plainLeft') }.list().isEmpty()
+        SpcHolder.withCriteria { not { eqProperty('left', 'plainLeft') } }*.name.sort() == ['mixed', 'no plain']
     }
 
     private void seedAssociationParts() {

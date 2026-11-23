@@ -132,15 +132,17 @@ class PropertyComparisonCriterionHandler implements InternalCriterionHandler<Que
      * Hibernate does not compare two entities of classes that are not related, so two associations to such classes
      * are compared by their identifiers, one part at a time: a generated identifier is one part, and a composite
      * identifier has one part for each of its properties, paired in the order of their names. This is what
-     * Hibernate 5 does with the columns of the two foreign keys.
+     * Hibernate 5 does with the columns of the two foreign keys. Identifiers with a different number of parts are never
+     * equal, so such a comparison matches no row, and its negation matches the rows that have both associations.
      */
     private static Predicate compareIdentifiers(HibernateCriteriaBuilder criteriaBuilder, Path<?> left, Path<?> right, boolean negate) {
         List<Expression<?>> leftParts = identifierParts(left, entityTypeOf(left));
         List<Expression<?>> rightParts = identifierParts(right, entityTypeOf(right));
         if (leftParts.size() != rightParts.size()) {
-            throw new IllegalArgumentException("Cannot compare [" + left.getJavaType().getName() + "] with [" +
-                    right.getJavaType().getName() + "]: their identifiers have " + leftParts.size() + " and " +
-                    rightParts.size() + " properties");
+            // identifiers of different shapes are never equal: nothing matches ==, and every row that has both associations
+            // matches !=, a null being unknown as it is in SQL
+            return negate ? criteriaBuilder.and(criteriaBuilder.isNotNull(left), criteriaBuilder.isNotNull(right)) :
+                    criteriaBuilder.disjunction();
         }
         List<Predicate> parts = new ArrayList<>();
         for (int i = 0; i < leftParts.size(); i++) {
