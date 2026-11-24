@@ -318,31 +318,65 @@ class GrailsCacheManagerQualifierSpec extends CacheManagerArrangementsSpec {
         'where there is none of the name'           | [:]                | true      || 'registered'
     }
 
-    void 'run from the code Spring\'s AOT processing generates, the field is grailsCacheManager beside a primary cache manager #primary.simpleName'() {
+    void 'run from the code Spring\'s AOT processing generates, the field is grailsCacheManager beside a primary cache manager'() {
         when: 'the context processed ahead of time, and the code it generates compiled and run'
-        Map<String, Object> result = aheadOfTime([other: OtherCacheManager, primary: primary])
+        Map<String, Object> result = aheadOfTime([other: OtherCacheManager, primary: OtherCacheManager])
 
         then: 'the generated injection resolves the qualified field among the class\'s other members'
         result.injection.contains("forField(\"${GrailsCacheManagerAliasRegistrar.ALIAS}\")")
         result.seen == NAMED
         result.got == NAMED
+    }
 
-        where: 'the primary one of a plain class, and of a class that declares Spring\'s qualifier grailsCacheManager'
-        primary << [OtherCacheManager, QualifiedCacheManager]
+    void 'run from the code Spring\'s AOT processing generates, a cache manager that declares Spring\'s qualifier grailsCacheManager #declared is not taken for the field: #marked, alias #withAlias'() {
+        when: 'the context processed ahead of time, and the code it generates compiled and run'
+        Map<String, Object> result = aheadOfTime([other: OtherCacheManager], withAlias) { GenericApplicationContext processed ->
+            declaringTheQualifier(processed, declared, marked)
+        }
+
+        then:
+        !result.failed
+        result.seen == NAMED
+        result.got == NAMED
+
+        where:
+        [declared, marked, withAlias] << [DECLARED, ['marked primary', 'with a priority', 'plain'], [true, false]].combinations()
+    }
+
+    void 'run from the code Spring\'s AOT processing generates, with no grailsCacheManager, a cache manager that declares Spring\'s qualifier grailsCacheManager #declared is not taken for the field'() {
+        when: 'the context processed ahead of time, and the code it generates compiled and run'
+        Map<String, Object> result = aheadOfTime([:], true, { GenericApplicationContext processed ->
+            declaringTheQualifier(processed, declared, 'plain')
+        }, false)
+
+        then: 'the class has no cache manager, so its cached methods run uncached'
+        !result.failed
+        result.declaring
+        result.seen == null
+        result.got == null
+
+        where:
+        declared << DECLARED
     }
 
     /** Processes a context ahead of time, compiles the code it generates, and starts a context from it. */
-    private Map<String, Object> aheadOfTime(Map<String, Class<?>> others) {
+    private Map<String, Object> aheadOfTime(Map<String, Class<?>> others, boolean withAlias = true,
+                                            Closure<?> beforeProcessing = null, boolean withNamed = true) {
         Path dir = Files.createTempDirectory('grails-cache-aot')
         try {
             GenericApplicationContext processed = new GenericApplicationContext()
             AnnotationConfigUtils.registerAnnotationConfigProcessors(processed)
-            processed.registerBean(GrailsCacheManagerAliasRegistrar)
-            processed.registerBean(NAMED, ConcurrentMapCacheManager)
+            if (withAlias) {
+                processed.registerBean(GrailsCacheManagerAliasRegistrar)
+            }
+            if (withNamed) {
+                processed.registerBean(NAMED, ConcurrentMapCacheManager)
+            }
             others.each { String name, Class<?> type ->
                 processed.registerBean(name, (Class<Object>) type,
                         { BeanDefinition definition -> definition.primary = name == 'primary' } as BeanDefinitionCustomizer)
             }
+            beforeProcessing?.call(processed)
             processed.registerBean('probe', MethodInClass)
             DefaultGenerationContext generation = new DefaultGenerationContext(new NameGenerator(ClassName.get(GrailsCacheManagerQualifierSpec)),
                     new FileSystemGeneratedFiles(dir.resolve('sources')), new RuntimeHints())
@@ -365,9 +399,9 @@ class GrailsCacheManagerQualifierSpec extends CacheManagerArrangementsSpec {
                 ((ApplicationContextInitializer<GenericApplicationContext>) loader.loadClass(initializer.reflectionName())
                         .getDeclaredConstructor().newInstance()).initialize(started)
                 started.refresh()
-                Map<String, CacheManager> instances = ([NAMED] + others.keySet()).collectEntries { String name ->
-                    [(name): started.getBean(name, CacheManager)]
-                }
+                result.declaring = started.containsBean('declaring')
+                Map<String, CacheManager> instances = ([NAMED, 'declaring'] + others.keySet()).findAll { String name -> started.containsBean(name) }
+                        .collectEntries { String name -> [(name): started.getBean(name, CacheManager)] }
                 MethodInClass probe = started.getBean('probe', MethodInClass)
                 result.seen = nameOf(probe.seen, instances)
                 result.got = nameOf(probe.grailsCacheManager, instances)
