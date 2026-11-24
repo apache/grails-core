@@ -20,8 +20,10 @@ package org.apache.grails.core.cli.script
 
 import java.nio.file.Files
 import java.util.concurrent.TimeUnit
+import java.util.jar.Attributes
 import java.util.jar.JarEntry
 import java.util.jar.JarOutputStream
+import java.util.jar.Manifest
 
 import groovy.json.JsonOutput
 
@@ -650,32 +652,72 @@ class ScriptCommandRunnerSpec extends Specification {
     }
 
     @Unroll
-    def 'a script in a jar without entries for its directories is found by the name #name: #found'() {
-        given: 'a jar that has the files and no entry for META-INF/commands'
-        File jar = new File(plugin, 'plugin-cli.jar')
-        jar.withOutputStream { OutputStream output ->
-            JarOutputStream written = new JarOutputStream(output)
-            ['CreateThing', 'plain-name'].each { String each ->
-                written.putNextEntry(new JarEntry("META-INF/commands/${each}.groovy"))
-                written.write("new File(baseDir, 'ran.txt').text = '${each}'".getBytes('UTF-8'))
-                written.closeEntry()
-            }
-            written.close()
-        }
+    def 'a script whose file is named #file, in a jar without entries for its directories #withManifest, is #found as #name'() {
+        given: 'a jar that has the file and no entry for META-INF/commands'
+        File jar = jar('plugin-cli.jar', manifest ? 'example.com' : null, false, [(file): file])
         URLClassLoader loader = new URLClassLoader([jar.toURI().toURL()] as URL[], getClass().classLoader)
 
         expect:
-        new ScriptCommandRunner(project, loader, new PrintStream(err, true)).start('--', name) == (found ? 0 : 1)
-        (new File(project, 'ran.txt').isFile() ? new File(project, 'ran.txt').text : null) == found
+        new ScriptCommandRunner(project, loader, new PrintStream(err, true)).start('--', name) == (found == 'found' ? 0 : 1)
+        (new File(project, 'ran.txt').isFile() ? new File(project, 'ran.txt').text : null) == (found == 'found' ? file : null)
 
         cleanup:
         loader?.close()
 
         where:
-        name           | found
-        'create-thing' | 'CreateThing'
-        'plain-name'   | 'plain-name'
-        'absent'       | null
+        file                | name                  | manifest || found
+        'createThing'       | 'create-thing'        | true     || 'found'
+        'CreateThing'       | 'create-thing'        | true     || 'found'
+        'XMLImport'         | 'xmli-mport'          | true     || 'found'
+        'plain-name'        | 'plain-name'          | true     || 'found'
+        'plain-name'        | 'absent'              | true     || 'not found'
+        // a jar without a manifest is found only by the names a command has as a file
+        'createThing'       | 'create-thing'        | false    || 'found'
+        'CreateThing'       | 'create-thing'        | false    || 'found'
+        'plain-name'        | 'plain-name'          | false    || 'found'
+        'XMLImport'         | 'xmli-mport'          | false    || 'not found'
+
+        withManifest = manifest ? 'with a manifest' : 'without a manifest'
+    }
+
+    @Unroll
+    def 'a script of a jar of Grails is run before one of the same name in another jar, whatever the order of the class path: #order'() {
+        given: 'a jar of Grails, whose name comes after that of the other, and another jar without entries for its directories'
+        Map<String, File> jars = [
+                grails: jar('zz-grails-thing.jar', 'grails.apache.org', true, [both: 'grails']),
+                other : jar('aa-plugin.jar', 'example.com', false, [both: 'other']),
+        ]
+        URLClassLoader loader = new URLClassLoader(order.collect { String each -> jars[each].toURI().toURL() } as URL[], getClass().classLoader)
+
+        expect:
+        new ScriptCommandRunner(project, loader, new PrintStream(err, true)).start('--', 'both') == 0
+        new File(project, 'ran.txt').text == 'grails'
+
+        cleanup:
+        loader?.close()
+
+        where:
+        order << [['grails', 'other'], ['other', 'grails']]
+    }
+
+    @Unroll
+    def 'of two jars that are not of Grails, the script of the jar whose name comes first is run, whatever the order of the class path: #order'() {
+        given: 'a jar with entries for its directories, and one without them whose name comes first'
+        Map<String, File> jars = [
+                b: jar('b-plugin.jar', 'example.com', true, [both: 'b']),
+                a: jar('a-plugin.jar', 'example.org', false, [both: 'a']),
+        ]
+        URLClassLoader loader = new URLClassLoader(order.collect { String each -> jars[each].toURI().toURL() } as URL[], getClass().classLoader)
+
+        expect:
+        new ScriptCommandRunner(project, loader, new PrintStream(err, true)).start('--', 'both') == 0
+        new File(project, 'ran.txt').text == 'a'
+
+        cleanup:
+        loader?.close()
+
+        where:
+        order << [['a', 'b'], ['b', 'a']]
     }
 
     def 'a script that asks is asked once and has no answer: the build gives it nothing to read'() {
@@ -823,6 +865,35 @@ class ScriptCommandRunnerSpec extends Specification {
                 copy.bytes = each.bytes
             }
         }
+    }
+
+    // a jar of a plugin: each script writes ran.txt with the text it is given; a vendor of null writes no manifest
+    private File jar(String fileName, String vendor, boolean directories, Map<String, String> scripts) {
+        File jar = new File(plugin, fileName)
+        jar.withOutputStream { OutputStream output ->
+            JarOutputStream written
+            if (vendor == null) {
+                written = new JarOutputStream(output)
+            } else {
+                Manifest manifest = new Manifest()
+                manifest.mainAttributes.put(Attributes.Name.MANIFEST_VERSION, '1.0')
+                manifest.mainAttributes.put(Attributes.Name.IMPLEMENTATION_VENDOR, vendor)
+                written = new JarOutputStream(output, manifest)
+            }
+            if (directories) {
+                ['META-INF/commands/'].each { String directory ->
+                    written.putNextEntry(new JarEntry(directory))
+                    written.closeEntry()
+                }
+            }
+            scripts.each { String base, String text ->
+                written.putNextEntry(new JarEntry("META-INF/commands/${base}.groovy"))
+                written.write("new File(baseDir, 'ran.txt').text = '${text}'".getBytes('UTF-8'))
+                written.closeEntry()
+            }
+            written.close()
+        }
+        jar
     }
 
     private void script(String base, String source) {

@@ -24,6 +24,7 @@ import java.nio.file.LinkOption
 import java.nio.file.Path
 import java.util.jar.JarEntry
 import java.util.jar.JarFile
+import java.util.jar.Manifest
 import java.util.regex.Pattern
 
 import groovy.transform.CompileStatic
@@ -52,7 +53,10 @@ import org.grails.build.parsing.DefaultCommandLine
  *
  * <p>A script is found by the name of the command it is: first among the files
  * {@code src/main/scripts/*.groovy} of the project, then among the files of
- * {@code META-INF/commands} on the class path, where plugins have theirs. The name of a file gives
+ * {@code META-INF/commands} on the class path, where plugins have theirs: those of the jars Grails
+ * publishes first, then those of every other jar and directory, each group in the order of the names
+ * of the jars (of a directory, its path) and then of the files, whatever order the class path has. A
+ * jar is searched also when it has no entry for the directory. The name of a file gives
  * the name of the command as the Grails shell made it: a name with a hyphen in lower case, any
  * other with a hyphen in front of each of its words ({@code DataImport.groovy} is
  * {@code data-import}). A script of the project is a plain file in a directory that is reached
@@ -83,6 +87,8 @@ class ScriptCommandRunner {
     public static final String CLASSPATH_LOCATION = 'META-INF/commands'
 
     private static final String ENDING = '.groovy'
+    // the vendor in the manifest of every jar Grails publishes
+    private static final String GRAILS_VENDOR = 'grails.apache.org'
     private static final int MAX_NAME = 64
     private static final Pattern FILE_NAME = Pattern.compile('[A-Za-z][A-Za-z0-9]*(-[A-Za-z0-9]+)*')
     private static final Pattern NAME = Pattern.compile('[a-z][a-z0-9]*(-[a-z0-9]+)*')
@@ -365,22 +371,39 @@ class ScriptCommandRunner {
         return null
     }
 
-    // The script of a plugin: among the files of META-INF/commands of each place on the class path, in
-    // the order of the class path, the first in the order of file names whose name gives the name.
+    // The script of a plugin: among the files of META-INF/commands of every jar and directory on the
+    // class path, those of the jars Grails publishes first and those of every other place after them.
+    // Within each, the places are taken by the name of the jar (a directory by its path) and the files
+    // of a place by their names, so the script that is run does not depend on the order the class
+    // loader returns places in, which another build of the same class path need not keep. A jar that
+    // has no entry for the directory is found by its manifest, which nearly every jar has; one without
+    // either is found last, by the file names a command of that name has.
     private URL pluginScript(String name) {
-        Enumeration<URL> places = classLoader.getResources(CLASSPATH_LOCATION)
-        while (places.hasMoreElements()) {
-            URL place = places.nextElement()
-            for (String fileName : fileNames(place).sort()) {
+        Map<String, Place> places = new LinkedHashMap<String, Place>()
+        for (URL each : Collections.list(classLoader.getResources(CLASSPATH_LOCATION))) {
+            add(places, each)
+        }
+        for (URL each : Collections.list(classLoader.getResources(JarFile.MANIFEST_NAME))) {
+            // a directory with a manifest has its scripts in a directory the first search finds
+            if (each.protocol == 'jar') {
+                add(places, each)
+            }
+        }
+        List<Place> ordered = new ArrayList<Place>(places.values())
+        ordered.sort { Place a, Place b ->
+            a.grails != b.grails ? (a.grails ? -1 : 1) : a.sortName != b.sortName ? a.sortName <=> b.sortName : a.location <=> b.location
+        }
+        for (Place place : ordered) {
+            for (String fileName : place.fileNames) {
                 if (commandName(fileName) == name) {
-                    String at = place.toExternalForm()
-                    return new URL(at + (at.endsWith('/') ? '' : '/') + fileName)
+                    return new URL(place.commands, fileName)
                 }
             }
         }
-        // a jar without entries for its directories is not among the places
-        for (String fileName : [name, GrailsNameUtils.getNameFromScript(name)]) {
-            URL resource = classLoader.getResource("${CLASSPATH_LOCATION}/${fileName}${ENDING}")
+        // a jar without an entry for its directory and without a manifest is in neither search
+        String className = GrailsNameUtils.getNameFromScript(name)
+        for (String fileName : [name, className, GrailsNameUtils.getPropertyName(className)].unique()) {
+            URL resource = commandName(fileName + ENDING) == name ? classLoader.getResource("${CLASSPATH_LOCATION}/${fileName}${ENDING}") : null
             if (resource != null) {
                 return resource
             }
@@ -388,26 +411,41 @@ class ScriptCommandRunner {
         return null
     }
 
-    private static List<String> fileNames(URL place) {
-        List<String> names = []
+    // adds the place a resource of the class path is in, unless it is there already or has no scripts
+    private static void add(Map<String, Place> places, URL resource) {
         try {
-            if (place.protocol == 'file') {
-                String[] listed = new File(place.toURI()).list()
-                if (listed != null) {
-                    names.addAll(listed)
+            if (resource.protocol == 'file') {
+                File commands = new File(resource.toURI())
+                File root = commands.parentFile?.parentFile
+                String location = root?.toURI()?.toString()
+                if (root != null && !places.containsKey(location)) {
+                    String[] listed = commands.list()
+                    File manifest = new File(root, JarFile.MANIFEST_NAME)
+                    boolean grails = manifest.isFile() && manifest.withInputStream { InputStream input -> isGrails(new Manifest(input)) }
+                    places.put(location, new Place(location, root.path, grails, listed == null ? [] : listed.toList(),
+                            new URL(resource.toExternalForm().endsWith('/') ? resource.toExternalForm() : resource.toExternalForm() + '/')))
                 }
-            } else if (place.protocol == 'jar') {
-                JarURLConnection connection = (JarURLConnection) place.openConnection()
+            } else if (resource.protocol == 'jar') {
+                JarURLConnection connection = (JarURLConnection) resource.openConnection()
+                String location = connection.jarFileURL.toExternalForm()
+                if (places.containsKey(location)) {
+                    return
+                }
+                // the class loader has the file open already, and a JarFile of it shares what it read of the file
                 connection.setUseCaches(false)
-                String prefix = connection.entryName.endsWith('/') ? connection.entryName : connection.entryName + '/'
                 JarFile jar = connection.jarFile
                 try {
+                    String prefix = CLASSPATH_LOCATION + '/'
+                    List<String> names = []
                     for (JarEntry entry : Collections.list(jar.entries())) {
                         String entryName = entry.name
                         if (entryName.startsWith(prefix) && entryName.indexOf('/', prefix.length()) < 0 && entryName.length() > prefix.length()) {
                             names.add(entryName.substring(prefix.length()))
                         }
                     }
+                    String path = connection.jarFileURL.path
+                    places.put(location, new Place(location, path.substring(path.lastIndexOf('/') + 1), !names.isEmpty() && isGrails(jar.manifest), names,
+                            new URL("jar:${location}!/${prefix}")))
                 } finally {
                     jar.close()
                 }
@@ -415,7 +453,31 @@ class ScriptCommandRunner {
         } catch (IOException | URISyntaxException | RuntimeException ignored) {
             // a place that cannot be listed has no scripts
         }
-        return names
+    }
+
+    // Whether a manifest is that of a jar Grails publishes: the build of Grails writes this vendor into the
+    // manifest of every jar it publishes (CompilePlugin of build-logic).
+    private static boolean isGrails(Manifest manifest) {
+        return manifest != null && manifest.mainAttributes.getValue('Implementation-Vendor') == GRAILS_VENDOR
+    }
+
+    // a jar or a directory of the class path, with the names of the files of META-INF/commands in it in their order
+    @CompileStatic
+    private static final class Place {
+
+        final String location
+        final String sortName
+        final boolean grails
+        final List<String> fileNames
+        final URL commands
+
+        Place(String location, String sortName, boolean grails, List<String> fileNames, URL commands) {
+            this.location = location
+            this.sortName = sortName
+            this.grails = grails
+            this.fileNames = fileNames.sort(false)
+            this.commands = commands
+        }
     }
 
     private ScriptCommand compile(URL source, String name) {
