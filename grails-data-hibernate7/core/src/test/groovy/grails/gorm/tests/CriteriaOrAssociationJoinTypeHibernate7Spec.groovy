@@ -32,7 +32,7 @@ import grails.gorm.annotation.Entity
 class CriteriaOrAssociationJoinTypeHibernate7Spec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
-        manager.registerDomainClasses(OjParent, OjChild, OjCompositeParent, OjCompositeChild)
+        manager.registerDomainClasses(OjParent, OjChild, OjCompositeParent, OjCompositeChild, OjTop, OjMid, OjLeaf)
     }
 
     private void createParents() {
@@ -113,6 +113,29 @@ class CriteriaOrAssociationJoinTypeHibernate7Spec extends HibernateGormDatastore
         }*.name == ['orphan']
     }
 
+    private void createTops() {
+        new OjTop(name: 'full', mid: new OjMid(name: 'm1', leaf: new OjLeaf(name: 'leaf'))).save(flush: true)
+        new OjTop(name: 'no-leaf', mid: new OjMid(name: 'm2')).save(flush: true)
+        new OjTop(name: 'no-mid').save(flush: true)
+    }
+
+    void 'a later block that names a left join for a path an earlier block in an or left joined keeps the entities without the association'() {
+        given:
+        createTops()
+
+        when:
+        def found = OjTop.createCriteria().list {
+            or {
+                mid { leaf { isNull('name') } }
+                eq('name', 'nobody')
+            }
+            mid { join('leaf', JoinType.LEFT) }
+        }
+
+        then: 'the join the caller named keeps the mid without a leaf, so its top matches the null test; the mid itself is still required'
+        found*.name == ['no-leaf']
+    }
+
     void 'a block in or on an association whose entity has a composite id still requires the associated entity'() {
         given:
         OjCompositeChild kid = new OjCompositeChild(area: 'a', code: 'b', name: null).save(flush: true)
@@ -183,6 +206,34 @@ class OjParent {
 
 @Entity
 class OjChild {
+
+    String name
+}
+
+@Entity
+class OjTop {
+
+    String name
+    OjMid mid
+
+    static constraints = {
+        mid(nullable: true)
+    }
+}
+
+@Entity
+class OjMid {
+
+    String name
+    OjLeaf leaf
+
+    static constraints = {
+        leaf(nullable: true)
+    }
+}
+
+@Entity
+class OjLeaf {
 
     String name
 }
