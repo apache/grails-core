@@ -19,6 +19,8 @@
 
 package org.apache.grails.security.cli
 
+import java.util.regex.Pattern
+
 import groovy.transform.CompileStatic
 
 import grails.build.logging.ConsoleLogger
@@ -49,6 +51,8 @@ class S2QuickstartCommand implements GrailsApplicationCommand, StandaloneCommand
 
     private static final String SETTINGS = 'grails.plugin.springsecurity'
     private static final String RESOURCES = 'grails-app/conf/spring/resources.groovy'
+    // what opens a closure without parameters: { -> or {->
+    private static final Pattern CLOSURE_OPENING = Pattern.compile('\\{\\s*->')
     private static final List<String> FLAGS = ['groupClassName', 'uiOnly', 'salt', 'force']
     private static final List<String> OPEN_PATTERNS = ['/assets/**', '/**/js/**', '/**/css/**', '/**/images/**', '/**/favicon.ico']
 
@@ -266,6 +270,9 @@ please verify that the values are correct.
     /**
      * Makes the password encoder listener a bean: in {@code resources.groovy} of an application, in the plugin
      * class of a plugin that has no {@code resources.groovy}, and otherwise in a new {@code resources.groovy}.
+     * The bean is written once, at the start of the closure {@code beans = {} of {@code resources.groovy}, or of
+     * the closure {@code doWithSpring()} returns, which is opened on its line or on one after it; what a comment
+     * holds is not looked at.
      *
      * @return whether the listener is a bean now
      */
@@ -277,7 +284,6 @@ please verify that the values are correct.
         File resources = file(RESOURCES)
         File pluginClass = resources.isFile() ? null : findPluginClass()
         File target = pluginClass ?: resources
-        String marker = pluginClass ? 'doWithSpring()' : 'beans = {'
         String indent = pluginClass ? '            ' : '    '
         if (!target.isFile()) {
             target.parentFile.mkdirs()
@@ -289,8 +295,10 @@ please verify that the values are correct.
         if (present.any { String line -> line.trim() == definition }) {
             return true
         }
-        if (!present.any { String line -> line.contains(marker) }) {
-            error("The password encoder listener is not registered: ${projectPath(target)} has no line with '${marker}'. " +
+        int opening = pluginClass ? closureOfDoWithSpring(present) : firstWith(code(present), 'beans = {', 0)
+        if (opening < 0) {
+            String where = pluginClass ? "no closure that 'doWithSpring()' returns, opened with '{ ->'" : "no line with 'beans = {'"
+            error("The password encoder listener is not registered: ${projectPath(target)} has ${where}. " +
                     "Until it has the bean '${definition}', with '${beanImport}', passwords are stored as they are given.")
             return false
         }
@@ -305,12 +313,67 @@ please verify that the values are correct.
                 lines.add('')
                 lines.add(beanImport)
             }
-            if (line.contains(marker)) {
+            if (index == opening) {
                 lines.add(indent + definition)
             }
         }
         write(target, lines)
         true
+    }
+
+    // the line that opens the closure doWithSpring() returns: on the line of doWithSpring() after it, or on a later one
+    private static int closureOfDoWithSpring(List<String> lines) {
+        List<String> code = code(lines)
+        int method = firstWith(code, 'doWithSpring()', 0)
+        if (method < 0) {
+            return -1
+        }
+        String rest = code[method].substring(code[method].indexOf('doWithSpring()') + 'doWithSpring()'.length())
+        if (CLOSURE_OPENING.matcher(rest).find()) {
+            return method
+        }
+        for (int index = method + 1; index < code.size(); index++) {
+            if (CLOSURE_OPENING.matcher(code[index]).find()) {
+                return index
+            }
+        }
+        return -1
+    }
+
+    private static int firstWith(List<String> code, String text, int from) {
+        for (int index = from; index < code.size(); index++) {
+            if (code[index].contains(text)) {
+                return index
+            }
+        }
+        return -1
+    }
+
+    // each line without what a comment holds in it, so that what a comment names is not taken for code
+    private static List<String> code(List<String> lines) {
+        List<String> code = []
+        boolean inComment = false
+        for (String line : lines) {
+            StringBuilder kept = new StringBuilder()
+            int at = 0
+            while (at < line.length()) {
+                if (inComment) {
+                    int end = line.indexOf('*/', at)
+                    inComment = end < 0
+                    at = end < 0 ? line.length() : end + 2
+                } else if (line.startsWith('//', at)) {
+                    at = line.length()
+                } else if (line.startsWith('/*', at)) {
+                    inComment = true
+                    at += 2
+                } else {
+                    kept.append(line.charAt(at))
+                    at++
+                }
+            }
+            code.add(kept.toString())
+        }
+        code
     }
 
     private static void write(File target, List<String> lines) {

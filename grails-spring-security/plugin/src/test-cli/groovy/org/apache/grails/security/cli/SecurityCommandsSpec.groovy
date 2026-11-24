@@ -593,6 +593,100 @@ class DemoGrailsPlugin extends Plugin {
 '''
     }
 
+    def "s2-quickstart adds the bean of the listener to the closure doWithSpring() returns when the closure is opened on a line of its own"() {
+        given: 'a plugin class that names doWithSpring() in a comment first'
+        String pluginClass = 'src/main/groovy/demo/DemoGrailsPlugin.groovy'
+        write(pluginClass, '''package demo
+
+import grails.plugins.Plugin
+
+class DemoGrailsPlugin extends Plugin {
+
+    // doWithSpring() { -> } returns the beans of the plugin
+    Closure doWithSpring() {
+        { ->
+            other(Object)
+        }
+    }
+}
+''')
+
+        when:
+        boolean result = run(new S2QuickstartCommand(), 's2-quickstart com.example User Role')
+
+        then:
+        result
+        written(pluginClass) == '''package demo
+
+import com.example.UserPasswordEncoderListener
+
+import grails.plugins.Plugin
+
+class DemoGrailsPlugin extends Plugin {
+
+    // doWithSpring() { -> } returns the beans of the plugin
+    Closure doWithSpring() {
+        { ->
+            userPasswordEncoderListener(UserPasswordEncoderListener)
+            other(Object)
+        }
+    }
+}
+'''
+    }
+
+    def "s2-quickstart fails and says so when the doWithSpring() of the plugin class returns no closure it can add the bean of the listener to"() {
+        given:
+        String pluginClass = 'src/main/groovy/demo/DemoGrailsPlugin.groovy'
+        String text = 'package demo\n\nimport grails.plugins.Plugin\n\nclass DemoGrailsPlugin extends Plugin {\n    Closure doWithSpring() { null }\n}\n'
+        write(pluginClass, text)
+
+        when:
+        boolean result = run(new S2QuickstartCommand(), 's2-quickstart com.example User Role')
+
+        then:
+        !result
+        written(pluginClass) == text
+        errors.toString().contains("The password encoder listener is not registered: ${pluginClass} has no closure that 'doWithSpring()' returns, opened with '{ ->'.")
+    }
+
+    def "s2-quickstart adds the bean of the listener once, to the first beans = { that is not in a comment"() {
+        given: 'a resources.groovy that names the closure in comments, and has it twice'
+        write(RESOURCES, '''// beans = { is where the beans go
+/*
+beans = {
+    old(Object)
+}
+*/
+beans = { // the beans of the application
+    other(Object)
+}
+beans = {
+}
+''')
+
+        when:
+        boolean result = run(new S2QuickstartCommand(), 's2-quickstart com.example User Role')
+
+        then:
+        result
+        written(RESOURCES).readLines() == [
+                'import com.example.UserPasswordEncoderListener',
+                '// beans = { is where the beans go',
+                '/*',
+                'beans = {',
+                '    old(Object)',
+                '}',
+                '*/',
+                'beans = { // the beans of the application',
+                '    userPasswordEncoderListener(UserPasswordEncoderListener)',
+                '    other(Object)',
+                '}',
+                'beans = {',
+                '}'
+        ]
+    }
+
     def "a template of the project is rendered in place of the one of the plugin"() {
         given:
         write('src/main/templates/Authority.groovy.template', 'package ${packageName}\n\nclass ${roleClassName} { /* of the project */ }\n')
