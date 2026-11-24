@@ -83,7 +83,9 @@ class EhcacheBuildSpec extends CommandSpec {
     private static final String SPEC = '''\
         package example.grails
 
+        import javax.cache.CacheException
         import javax.cache.CacheManager
+        import javax.cache.configuration.Configuration
 
         import org.ehcache.config.CacheRuntimeConfiguration
         import org.ehcache.config.ResourceType
@@ -147,6 +149,23 @@ class EhcacheBuildSpec extends CommandSpec {
                 applicationContext.getBean('grailsCacheManager').cacheExists('grailsTemplatesCache')
             }
 
+            void 'a cache that cannot be created is not taken for one another thread created: what JCache threw is thrown'() {
+                given: 'a cache manager of JCache that has no cache of the name and refuses to create one'
+                CacheException refused = new CacheException('the configuration is refused')
+                CacheManager refusing = [getCacheNames: { -> [] },
+                                         getCache     : { String name -> null },
+                                         createCache  : { String name, Configuration configuration -> throw refused }] as CacheManager
+                JCacheGrailsCacheManager manager = new JCacheGrailsCacheManager(refusing)
+                manager.afterPropertiesSet()
+
+                when:
+                manager.getCache('refused')
+
+                then:
+                CacheException thrown = thrown()
+                thrown.is(refused)
+            }
+
             private static javax.cache.Cache<Object, Object> nativeCacheOf(Object grailsCacheManager, String name) {
                 (javax.cache.Cache<Object, Object>) ((JCacheCache) grailsCacheManager.getCache(name)).nativeCache
             }
@@ -187,7 +206,7 @@ class EhcacheBuildSpec extends CommandSpec {
 
         and: 'every feature method ran and passed'
         ['tests', 'failures', 'errors', 'skipped'].collectEntries { String count -> [(count): suite().getAttribute(count)] } ==
-                [tests: '3', failures: '0', errors: '0', skipped: '0']
+                [tests: '4', failures: '0', errors: '0', skipped: '0']
 
         when: 'the runtime class path is resolved'
         List<String> runtime = executeGradle('dependencies', '--configuration', 'runtimeClasspath').output.readLines()

@@ -66,9 +66,12 @@ class JCacheGrailsCacheManager extends JCacheCacheManager implements GrailsCache
         if (cache == null) {
             try {
                 cache = cacheManager.createCache(name, new MutableConfiguration<Object, Object>().setStoreByValue(false))
-            } catch (CacheException ignored) {
-                // another thread created it first
+            } catch (CacheException e) {
+                // another thread created it first; if none did, the cache could not be created, and this says why
                 cache = cacheManager.getCache(name)
+                if (cache == null) {
+                    throw e
+                }
             }
         }
         new JCacheCache(cache, allowNullValues)
