@@ -64,7 +64,7 @@ class PlainClassInTenantBlockSpec extends AutoStartedMongoSpec {
                         foo: [url: "mongodb://${mongoHost}:${mongoPort}/plainClassFooDb".toString()],
                         bar: [url: "mongodb://${mongoHost}:${mongoPort}/plainClassBarDb".toString()]
                 ]
-        ], PlainMongoNote, TenantMongoNote)
+        ], PlainMongoNote, TenantMongoNote, NamedPlainMongoNote)
         seed = new PlainMongoNote(text: 'seed').save(flush: true)
     }
 
@@ -254,6 +254,28 @@ class PlainClassInTenantBlockSpec extends AutoStartedMongoSpec {
             },
     ]
 
+    @Unroll
+    void 'a named-only plain class can be flushed with tenant #tenantId and boundSession=#boundSession'() {
+        given:
+        Closure write = {
+            Tenants.withTenant(NamedPlainMongoNote, tenantId) {
+                new NamedPlainMongoNote(text: 'flushed').save(flush: true)
+            }
+        }
+
+        when:
+        NamedPlainMongoNote saved = boundSession ? NamedPlainMongoNote.withSession { write.call() } : write.call()
+
+        then:
+        NamedPlainMongoNote.get(saved.id)?.text == 'flushed'
+        textsIn('plainClassFooDb', NamedPlainMongoNote) == ['flushed']
+        documentsIn('plainClassDefaultDb', NamedPlainMongoNote) == 0
+        documentsIn('plainClassBarDb', NamedPlainMongoNote) == 0
+
+        where:
+        [tenantId, boundSession] << [['foo', 'bar', 'unregistered'], [false, true]].combinations()
+    }
+
     void 'a multi-tenant class still reaches the tenant\'s database inside a tenant block'() {
         given:
         Datastore foo = datastore.getDatastoreForConnection('foo')
@@ -296,6 +318,16 @@ class PlainMongoNote {
 class TenantMongoNote implements MultiTenant<TenantMongoNote> {
 
     String text
+}
+
+@Entity
+class NamedPlainMongoNote {
+
+    String text
+
+    static mapping = {
+        connections(['foo'])
+    }
 }
 
 @Service(PlainMongoNote)

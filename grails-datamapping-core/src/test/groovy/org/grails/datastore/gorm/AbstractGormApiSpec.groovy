@@ -181,6 +181,30 @@ class AbstractGormApiSpec extends Specification {
         [tenantId, unrelatedTransaction] << [['tenant', 'unregistered'], [false, true]].combinations()
     }
 
+    void 'a named-only plain class can be flushed with tenant #tenantId bound'() {
+        given:
+        datastore.close()
+        datastore = new SimpleMapDatastore(
+                DatastoreUtils.createPropertyResolver(['grails.gorm.multiTenancy.mode': 'DATABASE']),
+                [ConnectionSource.DEFAULT, 'tenant', 'named'], AbstractGormApiNamedThing)
+
+        when:
+        def saved = GormRegistry.withConnectionScope(AbstractGormApiNamedThing, 'named') {
+            Tenants.withTenant(AbstractGormApiNamedThing, tenantId) {
+                new AbstractGormApiNamedThing(name: 'flushed').save(flush: true)
+            }
+        }
+
+        then:
+        AbstractGormApiNamedThing.named.get(saved.id)?.name == 'flushed'
+        AbstractGormApiNamedThing.named.withSession { Session session ->
+            session.datastore.is(datastore.getDatastoreForConnection('named'))
+        }
+
+        where:
+        tenantId << ['tenant', 'named', 'unregistered']
+    }
+
     void 'a plain class #operation is refused in a tenant transaction without synchronization'() {
         given:
         datastore.close()
@@ -250,6 +274,15 @@ class AbstractGormApiSpec extends Specification {
 class AbstractGormApiThing {
     Long id
     String name
+}
+
+@Entity
+class AbstractGormApiNamedThing {
+    String name
+
+    static mapping = {
+        datasources(['named'])
+    }
 }
 
 class AbstractGormApiTenantThing implements grails.gorm.MultiTenant<AbstractGormApiTenantThing> {

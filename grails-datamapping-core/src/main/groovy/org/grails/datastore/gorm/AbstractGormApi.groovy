@@ -176,7 +176,8 @@ abstract class AbstractGormApi<D> extends AbstractDatastoreApi {
      * tenant's transaction belongs to the tenant's datastore: a change left pending there would be lost, or written
      * although the tenant's transaction rolled back. Such a write runs in a transaction of the class's own datastore.
      * Flushing does not enlist the write in the tenant's transaction and does not replace that transaction.
-     * An unregistered tenant does not require a tenant datastore lookup.
+     * An unregistered tenant does not require a tenant datastore lookup. A named connection's sole connection
+     * is not necessarily the bound tenant, and a transaction of this datastore already covers its own writes.
      * Session holders identify active transactions even when transaction synchronization is disabled.
      */
     protected void requireTransactionForWrite() {
@@ -197,10 +198,11 @@ abstract class AbstractGormApi<D> extends AbstractDatastoreApi {
             return
         }
         ConnectionSource tenantConnection = multiTenantDatastore.connectionSources.getConnectionSource(tenantId.toString())
-        if (tenantConnection == null) {
+        if (tenantConnection == null || tenantConnection.name != tenantId.toString()) {
             return
         }
-        if (!isTransactionActive(multiTenantDatastore.getDatastoreForTenantId(tenantId))) {
+        Datastore tenantDatastore = multiTenantDatastore.getDatastoreForTenantId(tenantId)
+        if (tenantDatastore == null || tenantDatastore.is(ds) || !isTransactionActive(tenantDatastore)) {
             return
         }
         throw new IllegalTransactionStateException("${persistentClass.name} is not multi-tenant, so inside a block of " +

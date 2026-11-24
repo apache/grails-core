@@ -32,6 +32,7 @@ import grails.gorm.multitenancy.Tenants
 import grails.gorm.services.Service
 import grails.gorm.transactions.Transactional
 import org.grails.datastore.gorm.GormEnhancer
+import org.grails.datastore.gorm.GormRegistry
 import org.grails.datastore.mapping.config.Settings
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.DatastoreUtils
@@ -63,7 +64,7 @@ class PlainClassInTenantBlockSpec extends Specification {
                         (Settings.SETTING_MULTI_TENANT_RESOLVER): new SystemPropertyTenantResolver()
                 ]),
                 schema ? [ConnectionSource.DEFAULT] : [ConnectionSource.DEFAULT, 'foo', 'bar'],
-                TenantNote, PlainNote
+                TenantNote, PlainNote, NamedPlainNote
         )
         if (schema) {
             datastore.addTenantForSchema('foo')
@@ -301,6 +302,29 @@ class PlainClassInTenantBlockSpec extends Specification {
         [mode, synchronization, unrelatedTransaction] << [MODES, SYNCHRONIZATION_MODES, [false, true]].combinations()
     }
 
+    @Unroll
+    void 'with #mode multi-tenancy, a named-only plain class can be flushed with tenant #tenantId and boundSession=#boundSession'() {
+        given:
+        startDatastore(mode)
+        Closure write = {
+            Tenants.withTenant(NamedPlainNote, tenantId) {
+                new NamedPlainNote(text: 'flushed').save(flush: true)
+            }
+        }
+
+        when:
+        NamedPlainNote saved = GormRegistry.withConnectionScope(NamedPlainNote, 'foo') {
+            boundSession ? NamedPlainNote.withSession { write.call() } : write.call()
+        }
+
+        then:
+        NamedPlainNote.foo.get(saved.id)?.text == 'flushed'
+        holder(NamedPlainNote, saved.id).is(datastore.getDatastoreForConnection('foo'))
+
+        where:
+        [mode, tenantId, boundSession] << [MODES, ['foo', 'bar', 'unregistered'], [false, true]].combinations()
+    }
+
     static final List<Integer> SYNCHRONIZATION_MODES = [
             AbstractPlatformTransactionManager.SYNCHRONIZATION_ALWAYS,
             AbstractPlatformTransactionManager.SYNCHRONIZATION_NEVER
@@ -376,6 +400,16 @@ class PlainNote {
 class TenantNote implements MultiTenant<TenantNote> {
 
     String text
+}
+
+@Entity
+class NamedPlainNote {
+
+    String text
+
+    static mapping = {
+        datasources(['foo'])
+    }
 }
 
 @Service(PlainNote)
