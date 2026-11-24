@@ -31,7 +31,7 @@ class SiblingAssociationPropertyComparisonSpec extends HibernateGormDatastoreSpe
 
     def setupSpec() {
         manager.registerDomainClasses(SpcLeft, SpcRight, SpcPlainLeft, SpcPlainRight, SpcHolder, SpcOwnerA, SpcOwnerB, SpcRefLeft, SpcRefRight, SpcRefHolder,
-                SpcMixed, SpcTextNum, SpcLongPair, SpcIntPair, SpcTypeHolder)
+                SpcMixed, SpcTextNum, SpcLongPair, SpcIntPair, SpcDoublePair, SpcTypeHolder, SpcInexactHolder)
     }
 
     private void seedComposite() {
@@ -120,6 +120,24 @@ class SiblingAssociationPropertyComparisonSpec extends HibernateGormDatastoreSpe
             [{ not { eqProperty('leftText', 'mixed') } }, ['nulls', 'texts', 'widened', 'widened differs']],
             [{ or { eqProperty('longPair', 'intPair'); eqProperty('leftText', 'mixed') } }, ['widened']]
         ]
+    }
+
+    def 'an integral identifier part and a floating point one are refused, as a database would round the integral one'() {
+        given:
+        SpcLongPair longPair = new SpcLongPair(amount: 9007199254740993L, code: 'x').save(flush: true)
+        SpcDoublePair doublePair = new SpcDoublePair(amount: 9007199254740992d, code: 'x').save(flush: true)
+        new SpcInexactHolder(name: 'big', longPair: longPair, doublePair: doublePair).save(flush: true)
+        manager.session.clear()
+
+        when:
+        SpcInexactHolder.withCriteria(criteria)
+
+        then:
+        IllegalArgumentException e = thrown()
+        e.message.contains('floating point')
+
+        where:
+        criteria << [{ eqProperty('longPair', 'doublePair') }, { neProperty('longPair', 'doublePair') }]
     }
 
     private void seedAssociationParts() {
@@ -433,4 +451,34 @@ class SpcTypeHolder {
         longPair(nullable: true)
         intPair(nullable: true)
     }
+}
+
+@Entity
+class SpcDoublePair implements Serializable {
+
+    Double amount
+    String code
+
+    static mapping = {
+        id composite: ['amount', 'code']
+        version false
+    }
+
+    @Override
+    boolean equals(Object other) {
+        other instanceof SpcDoublePair && other.amount == amount && other.code == code
+    }
+
+    @Override
+    int hashCode() {
+        Objects.hash(amount, code)
+    }
+}
+
+@Entity
+class SpcInexactHolder {
+
+    String name
+    SpcLongPair longPair
+    SpcDoublePair doublePair
 }
