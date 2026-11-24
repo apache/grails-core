@@ -27,13 +27,16 @@ import org.codehaus.groovy.ast.ClassHelper
 import org.codehaus.groovy.ast.ClassNode
 import org.codehaus.groovy.ast.CodeVisitorSupport
 import org.codehaus.groovy.ast.ConstructorNode
+import org.codehaus.groovy.ast.FieldNode
 import org.codehaus.groovy.ast.InnerClassNode
 import org.codehaus.groovy.ast.MethodNode
 import org.codehaus.groovy.ast.Parameter
 import org.codehaus.groovy.ast.PropertyNode
+import org.codehaus.groovy.ast.expr.ArgumentListExpression
 import org.codehaus.groovy.ast.expr.BinaryExpression
 import org.codehaus.groovy.ast.expr.ClassExpression
 import org.codehaus.groovy.ast.expr.ConstantExpression
+import org.codehaus.groovy.ast.expr.DeclarationExpression
 import org.codehaus.groovy.ast.expr.Expression
 import org.codehaus.groovy.ast.expr.MethodCallExpression
 import org.codehaus.groovy.ast.expr.PropertyExpression
@@ -56,11 +59,16 @@ import org.apache.grails.gradle.model.cli.CommandDescriptor
  * <p>Only what the source says as a constant is written. The name of a command is the one its
  * class name gives unless the class, or a class it extends, declares {@code name} or
  * {@code getName()}; the description is the name unless one of them declares {@code description}
- * or {@code getDescription()}. A declaration is read when it is a property with a string constant
- * for its value, or a method that does nothing but return one. A name that is declared in another
- * way cannot be known without running the command, so that command gets no descriptor and is listed
- * from its registration alone; a description declared in another way is left out of the
- * descriptor.</p>
+ * or {@code getDescription()}. The declaration nearest to the command is read, as it is the one
+ * that is called: a method that does nothing but return a string constant, or a property. A
+ * property that can be set is what the class nearest to the command that sets it when an instance
+ * is made sets it to, since the constructors and initializer blocks of a class run after those of
+ * the class it extends; that is read when every statement of the class that sets it does nothing
+ * but assign or pass the same string constant, and one of them always runs: in an initializer
+ * block, or in every constructor. A property that no class sets is the string constant it is
+ * declared with. A name that is declared or set in another way cannot be known without running the
+ * command, so that command gets no descriptor and is listed from its registration alone; a
+ * description declared or set in another way is left out of the descriptor.</p>
  *
  * <p>The execution target of the descriptor is {@code standalone} for a class that implements
  * {@code StandaloneCommand}, itself or through a class it extends or an interface, and
@@ -78,6 +86,8 @@ class CommandDescriptorWriter {
     private static final String STANDALONE_COMMAND = 'org.apache.grails.core.cli.StandaloneCommand'
 
     private static final Object UNKNOWN = new Object()
+
+    private static final Object NOT_SET = new Object()
 
     /**
      * Writes the descriptor of a command class, or removes the one an earlier compilation wrote
@@ -153,8 +163,11 @@ class CommandDescriptorWriter {
     // a String: the constant the nearest declaration gives; UNKNOWN: declared, and not a constant
     private static Object declared(ClassNode classNode, String property) {
         String getter = 'get' + property.capitalize()
+        // the classes from the command up to the one that declares the property, each of which can set it
+        List<ClassNode> chain = []
         ClassNode current = classNode
         while (current != null && current != ClassHelper.OBJECT_TYPE) {
+            chain << current
             MethodNode method = current.getDeclaredMethod(getter, Parameter.EMPTY_ARRAY)
             boolean declaresMethod = method != null && !method.isStatic()
             // a method the class writes itself is what is called, also when the class has the property too
@@ -163,9 +176,8 @@ class CommandDescriptorWriter {
             }
             PropertyNode propertyNode = current.getProperty(property)
             if (propertyNode != null && !propertyNode.isStatic()) {
-                // a property that can be set is what it starts as unless the class sets it when an instance is made
-                boolean set = !Modifier.isFinal(propertyNode.modifiers) && setsWhenMade(current, property)
-                return set ? UNKNOWN : constant(propertyNode.initialExpression)
+                Object initial = constant(propertyNode.initialExpression)
+                return Modifier.isFinal(propertyNode.modifiers) ? initial : whenMade(chain, property, initial)
             }
             // a method a trait weaves into the class: the default when the trait is the command contract's
             if (declaresMethod) {
@@ -176,16 +188,136 @@ class CommandDescriptorWriter {
         null
     }
 
-    // whether a constructor or an initializer block of the class assigns to the property
-    private static boolean setsWhenMade(ClassNode classNode, String property) {
+    // what a property that can be set is once an instance is made: the constructors and initializers of a
+    // class run after those of the class it extends, so the class nearest to the command that sets it
+    // decides, and the property is what it starts as when no class sets it
+    private static Object whenMade(List<ClassNode> chain, String property, Object initial) {
+        for (ClassNode made : chain) {
+            Object set = setWhenMade(made, property, chain)
+            if (!set.is(NOT_SET)) {
+                return set
+            }
+        }
+        initial
+    }
+
+    // NOT_SET: no constructor or initializer block of the class assigns to the property; a String: every
+    // assignment is a statement of its own that sets the property to that constant, and one of them always
+    // runs; UNKNOWN: the class sets the property in another way
+    private static Object setWhenMade(ClassNode classNode, String property, List<ClassNode> chain) {
+        List<Statement> constructors = classNode.declaredConstructors.collect { ConstructorNode constructor -> constructor.code }
+        List<Statement> initializers = classNode.objectInitializerStatements
+        // in a class with a field of its own of that name, what is assigned by the name goes into that field
+        boolean byName = classNode.is(chain.last()) || classNode.getDeclaredField(property) == null
+        int assignments = assignments(constructors + initializers, property, byName)
+        if (assignments == 0) {
+            return NOT_SET
+        }
         String setter = 'set' + property.capitalize()
-        boolean[] found = [false] as boolean[]
+        // a setter written by hand may make of a value something else
+        if (chain.any { ClassNode type -> type.getDeclaredMethods(setter).any { MethodNode method -> !method.isStatic() } }) {
+            return UNKNOWN
+        }
+        Set<String> values = new HashSet<>()
+        int read = 0
+        boolean always = false
+        for (Statement initializer : initializers) {
+            Settings settings = settings(initializer, property, byName)
+            read += settings.count
+            values.addAll(settings.values)
+            always = always || settings.always
+        }
+        boolean everyConstructor = !constructors.isEmpty()
+        for (Statement constructor : constructors) {
+            Settings settings = settings(constructor, property, byName)
+            read += settings.count
+            values.addAll(settings.values)
+            everyConstructor = everyConstructor && settings.always
+        }
+        read == assignments && values.size() == 1 && (always || everyConstructor) ? values.first() : UNKNOWN
+    }
+
+    // the statements of a constructor or an initializer block that set the property to a string constant and do
+    // nothing else, and whether one of them always runs, which it does when no statement before it can skip it
+    private static Settings settings(Statement code, String property, boolean byName) {
+        Settings settings = new Settings()
+        boolean reached = true
+        for (Statement statement : statements(code)) {
+            String value = statement instanceof ExpressionStatement ?
+                    constantSet(((ExpressionStatement) statement).expression, property, byName) : null
+            if (value != null) {
+                settings.count++
+                settings.values << value
+                settings.always = settings.always || reached
+            }
+            reached = reached && statement instanceof ExpressionStatement
+        }
+        settings
+    }
+
+    // the statements of the code in the order they run, those of a block in it included: an initializer
+    // block is a block in a block
+    private static List<Statement> statements(Statement code) {
+        if (code instanceof BlockStatement) {
+            return ((BlockStatement) code).statements.collectMany { Statement statement -> statements(statement) }
+        }
+        code == null ? [] : [code]
+    }
+
+    // the string constant that name = '...', this.name = '...', setName('...') or this.setName('...')
+    // sets the property to, and null for every other expression
+    private static String constantSet(Expression expression, String property, boolean byName) {
+        if (expression instanceof BinaryExpression && !(expression instanceof DeclarationExpression)) {
+            BinaryExpression assignment = (BinaryExpression) expression
+            if (byName && assignment.operation.type == Types.ASSIGN && isProperty(assignment.leftExpression, property)) {
+                return stringConstant(assignment.rightExpression)
+            }
+            return null
+        }
+        if (expression instanceof MethodCallExpression) {
+            MethodCallExpression call = (MethodCallExpression) expression
+            if (call.methodAsString == 'set' + property.capitalize() && !call.safe && !call.spreadSafe &&
+                    (call.implicitThis || isThis(call.objectExpression)) && call.arguments instanceof ArgumentListExpression) {
+                List<Expression> arguments = ((ArgumentListExpression) call.arguments).expressions
+                return arguments.size() == 1 ? stringConstant(arguments[0]) : null
+            }
+        }
+        null
+    }
+
+    // the property itself, not a parameter or a local variable of that name, nor one of another object
+    private static boolean isProperty(Expression target, String property) {
+        if (target instanceof VariableExpression) {
+            VariableExpression variable = (VariableExpression) target
+            return variable.name == property &&
+                    (variable.accessedVariable instanceof FieldNode || variable.accessedVariable instanceof PropertyNode)
+        }
+        if (target instanceof PropertyExpression) {
+            PropertyExpression access = (PropertyExpression) target
+            return access.propertyAsString == property && !access.safe && !access.spreadSafe && isThis(access.objectExpression)
+        }
+        false
+    }
+
+    private static boolean isThis(Expression expression) {
+        expression instanceof VariableExpression && ((VariableExpression) expression).isThisExpression()
+    }
+
+    private static String stringConstant(Expression expression) {
+        Object value = constant(expression)
+        value.is(UNKNOWN) ? null : (String) value
+    }
+
+    // how many times the code assigns to something of the property's name, or calls a method that sets one
+    private static int assignments(List<Statement> code, String property, boolean byName) {
+        String setter = 'set' + property.capitalize()
+        int[] found = [0] as int[]
         CodeVisitorSupport visitor = new CodeVisitorSupport() {
 
             @Override
             void visitBinaryExpression(BinaryExpression expression) {
-                if (Types.ofType(expression.operation.type, Types.ASSIGNMENT_OPERATOR) && names(expression.leftExpression, property)) {
-                    found[0] = true
+                if (Types.ofType(expression.operation.type, Types.ASSIGNMENT_OPERATOR) && names(expression.leftExpression, property, byName)) {
+                    found[0]++
                 }
                 super.visitBinaryExpression(expression)
             }
@@ -193,26 +325,24 @@ class CommandDescriptorWriter {
             @Override
             void visitMethodCallExpression(MethodCallExpression call) {
                 if (call.methodAsString == setter) {
-                    found[0] = true
+                    found[0]++
                 }
                 super.visitMethodCallExpression(call)
             }
         }
-        for (ConstructorNode constructor : classNode.declaredConstructors) {
-            constructor.code?.visit(visitor)
-        }
-        for (Statement statement : classNode.objectInitializerStatements) {
-            statement.visit(visitor)
+        for (Statement statement : code) {
+            statement?.visit(visitor)
         }
         found[0]
     }
 
-    private static boolean names(Expression target, String property) {
+    private static boolean names(Expression target, String property, boolean byName) {
         if (target instanceof VariableExpression) {
-            return ((VariableExpression) target).name == property
+            return byName && ((VariableExpression) target).name == property
         }
         if (target instanceof PropertyExpression) {
-            return ((PropertyExpression) target).propertyAsString == property
+            PropertyExpression access = (PropertyExpression) target
+            return access.propertyAsString == property && (byName || !isThis(access.objectExpression))
         }
         false
     }
@@ -251,5 +381,15 @@ class CommandDescriptorWriter {
             return ((ConstantExpression) expression).value
         }
         UNKNOWN
+    }
+
+    // what the statements of one constructor or initializer block set the property to
+    private static final class Settings {
+
+        int count
+
+        final List<String> values = []
+
+        boolean always
     }
 }

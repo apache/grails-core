@@ -537,9 +537,10 @@ the plain `-cli` coordinate, e.g. `grailsCli 'com.example:my-plugin-cli:1.0.0'`.
 
 When a command is compiled, from `grails-app/commands` of an application or from `src/cli/groovy` of a plugin, the compiler writes a descriptor of it beside its registration: `META-INF/grails-commands/<class name>.json`, with the name and the description of the command. Tools read it to list the command without loading its class or starting the application. The descriptor holds what the source says as a constant:
 
-* The name is the one the class name gives (`AuditReportCommand` is `audit-report`), or the string that `getName()` returns or that the property `name` is set to.
-* The description is the string that `getDescription()` returns or that the property `description` is set to. Without one, the description is the name.
-* A `getName()` that works the name out when it is called cannot be described: such a command has no descriptor and is listed by the name its class name gives. A description that is worked out is left out of the descriptor.
+* The name is the one the class name gives (`AuditReportCommand` is `audit-report`), or the string that `getName()` returns or that the property `name` is set to: where the property is declared, or when the command is made, by statements such as `name = 'audit'` or `setName('audit')` in an initializer block or in every constructor.
+* The description is the string that `getDescription()` returns or that the property `description` is set to, in the same ways. Without one, the description is the name.
+* Of a command that extends another class, what the command declares or sets itself comes before what it inherits, as it does when the command runs: a command that sets `name` in its constructor is described by that name, whatever name the class it extends gives.
+* A name that is worked out, that is set only under a condition or to more than one string, or whose `name` or `getName()` is declared by a class compiled in another project or jar, cannot be described: such a command has no descriptor and is listed by the name its class name gives. A description given in such a way is left out of the descriptor.
 
 Write the name in lower case letters and digits, in words joined by single hyphens, with at most 64 characters, and the description on one line of at most 512 characters; a command whose descriptor has anything else is left out of the list, with the reason. A command whose name or description is not written that way gets a descriptor without the description, or none when it is the name. A command written in Java, or registered by hand in `META-INF/grails-cli.factories`, has no generated descriptor. Add the file to the resources next to the registration:
 

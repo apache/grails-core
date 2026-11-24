@@ -32,7 +32,7 @@ import spock.lang.Timeout
  * name, in a project that was never built: the build lists the commands of the application, which
  * compiles it, and the command is run in the application. As {@code create-command} writes it, the command says
  * what it was given and succeeds. Once the build has compiled the project the list is current, also for a
- * command added since.
+ * command added since. A command that extends another is listed, and run, by the name it has when it runs.
  */
 @IgnoreIf({ os.windows })
 @Timeout(900)
@@ -109,6 +109,51 @@ class GeneratedApplicationCommandSpec extends CommandSpec implements CommandFixt
         !((List<String>) described.diagnostics).any { String line -> line.contains(ApplicationCommandFile.LOCATION) }
         ((List<Map>) described.commands).findAll { it.origin == 'application' }*.name.containsAll(['data-import', 'wave'])
         !err.toString().contains('| Listing')
+    }
+
+    void "a command that extends another is listed by the name it sets over the one it inherits, and is run by it"() {
+        given: 'a generated application with a command that sets its name in its constructor, over the name the command it extends has'
+        generateProject(ApplicationType.WEB)
+        new File(dir, 'settings.gradle') << '\n' + gradle.recording
+        new File(dir, 'gradle.properties') << "\norg.gradle.daemon.registry.base=${gradle.registry.canonicalPath}\norg.gradle.daemon.idletimeout=${IsolatedGradle.IDLE_MILLIS}\n"
+        File commands = new File(dir, 'grails-app/commands/example/grails')
+        commands.mkdirs()
+        new File(commands, 'OldNameCommand.groovy').text = '''\
+            package example.grails
+
+            import org.apache.grails.core.cli.GrailsApplicationCommand
+
+            abstract class OldNameCommand implements GrailsApplicationCommand {
+
+                String name = 'old-name'
+            }
+            '''.stripIndent()
+        new File(commands, 'LegacyImportCommand.groovy').text = '''\
+            package example.grails
+
+            class LegacyImportCommand extends OldNameCommand {
+
+                LegacyImportCommand() {
+                    name = 'import-data'
+                }
+
+                boolean handle() {
+                    println "Ran ${name} with the arguments ${args}"
+                    return true
+                }
+            }
+            '''.stripIndent()
+        out.reset()
+        err.reset()
+
+        when: 'it is run by the name it sets'
+        int exit = ForgeCli.execute(beanContext, 'import-data', 'orders.csv')
+
+        then: 'the build listed it by that name only, and the command that ran is the one listed'
+        exit == 0
+        ((List<Map>) catalog().commands).findAll { it.origin == 'application' }*.name == ['import-data']
+        err.toString().contains('| Running the command import-data of the application, with the Gradle task runCommand')
+        out.toString().readLines().contains('Ran import-data with the arguments [orders.csv]')
     }
 
     private Map catalog() {

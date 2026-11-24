@@ -28,6 +28,7 @@ import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.Phases
 
 import org.apache.grails.core.cli.ApplicationCommand
+import org.apache.grails.core.cli.ApplicationContextCommandRegistry
 import org.apache.grails.core.cli.ConfigReportCommand
 import org.apache.grails.gradle.model.cli.CommandCatalogBuilder
 import org.apache.grails.gradle.model.cli.CommandDescriptor
@@ -215,8 +216,6 @@ class CommandDescriptorWriterSpec extends Specification {
         'a name that is not the name of a command'   | 'GreetCommand' | 'example.GreetCommand' | "class GreetCommand implements ${CONTRACT} { String name = 'Say Hello'; ${HANDLE} }"
         'a name of 65 characters'                    | 'GreetCommand' | 'example.GreetCommand' | "class GreetCommand implements ${CONTRACT} { String name = '${'a' * 65}'; ${HANDLE} }"
         'a class without a name of its own'          | 'Holder'       | 'example.Holder$1'  | "class Holder { def command = new ${CONTRACT}() { ${HANDLE} } }"
-        'a name its constructor can change'          | 'GreetCommand' | 'example.GreetCommand' | "class GreetCommand implements ${CONTRACT} { String name = 'say-hello'; GreetCommand() { name = 'other' }; ${HANDLE} }"
-        'a name an initializer can change'           | 'GreetCommand' | 'example.GreetCommand' | "class GreetCommand implements ${CONTRACT} { String name = 'say-hello'; { name = 'other' }; ${HANDLE} }"
     }
 
     def "a final property is what it starts as, whatever else the class has"() {
@@ -313,20 +312,164 @@ class CommandDescriptorWriterSpec extends Specification {
     }
 
     @Unroll
-    def "a name the class can change when an instance is made is not known: #how"() {
+    def "a name the class sets when an instance is made is the name recorded, and the name it runs under: #how"() {
         when:
-        compile('GreetCommand', "class GreetCommand implements ${CONTRACT} { String name = 'say-hello'; GreetCommand() { ${statement} }; ${HANDLE} }")
+        compile('GreetCommand', "class GreetCommand implements ${CONTRACT} {\nString name = 'say-hello';\n${members}\n${HANDLE}\n}", Phases.ALL)
+
+        then:
+        descriptor('example.GreetCommand') == [format: 1, class: 'example.GreetCommand', name: 'other',
+                                               description: 'other', target: 'application']
+        made('example.GreetCommand') == [name: 'other', description: 'other']
+
+        where:
+        how                                                  | members
+        'its constructor assigns it'                         | "GreetCommand() { name = 'other' }"
+        'its constructor assigns it through this'            | "GreetCommand() { this.name = 'other' }"
+        'its constructor calls its setter'                   | "GreetCommand() { setName('other') }"
+        'its constructor calls its setter through this'      | "GreetCommand() { this.setName('other') }"
+        'an initializer block assigns it'                    | "{ name = 'other' }"
+        'an initializer block calls its setter'              | "{ setName('other') }"
+        'a statement before it cannot skip it'               | "GreetCommand() { println 'made'; name = 'other' }"
+        'every constructor sets it'                          | "GreetCommand() { name = 'other' }\nGreetCommand(int times) { setName('other') }"
+        'an initializer block and the constructor set it alike' | "{ name = 'other' }\nGreetCommand() { name = 'other' }"
+    }
+
+    @Unroll
+    def "a name the class sets in another way when an instance is made is not known: #how"() {
+        when:
+        compile('GreetCommand', "class GreetCommand implements ${CONTRACT} {\nString name = 'say-hello';\n${members}\n${HANDLE}\n}")
 
         then:
         !descriptorFile('example.GreetCommand').exists()
         registered() == ['example.GreetCommand']
 
         where:
-        how                            | statement
-        'its setter is called'         | "setName('other')"
-        'it is assigned through this'  | "this.name = 'other'"
-        'it is added to'               | "name += '-loudly'"
-        'it is assigned in a closure'  | "[1].each { name = 'other' }"
+        how                                                | members
+        'it is added to'                                   | "GreetCommand() { name += '-loudly' }"
+        'it is assigned in a closure'                      | "GreetCommand() { [1].each { name = 'other' } }"
+        'it is assigned when a condition holds'            | "GreetCommand() { if (System.getProperty('greet.other')) { name = 'other' } }"
+        'a statement before it can end the constructor'    | "GreetCommand() { if (System.getProperty('greet.same')) { return }; name = 'other' }"
+        'it is assigned what is worked out'                | "GreetCommand() { name = System.getProperty('greet.name') }"
+        'it is assigned two names'                         | "GreetCommand() { name = 'other'; name = 'another' }"
+        'one constructor sets it and another does not'     | "GreetCommand() { name = 'other' }\nGreetCommand(int times) { }"
+        'its setter is written by hand'                    | "GreetCommand() { name = 'other' }\nvoid setName(String name) { this.name = name + '-loudly' }"
+    }
+
+    @Unroll
+    def "a command that extends another is described by what it declares or sets itself before what it inherits: #how"() {
+        when:
+        compile('ImportDataCommand', "abstract class OldNameCommand implements ${CONTRACT} {\n${base}\n}\n" +
+                "class ImportDataCommand extends OldNameCommand {\n${members}\n${HANDLE}\n}", Phases.ALL)
+
+        then: 'what is recorded is what the command has when it runs'
+        descriptor('example.ImportDataCommand') == [format: 1, class: 'example.ImportDataCommand', name: name,
+                                                    description: description, target: 'application']
+        made('example.ImportDataCommand') == [name: name, description: description]
+        registered() == ['example.ImportDataCommand']
+
+        where:
+        how                                                         | base                                                         | members                                                                      || name          | description
+        'it declares the property again'                            | "String name = 'old-name'"                                   | "String name = 'import-data'"                                                || 'import-data' | 'import-data'
+        'it declares the property over a final one'                 | "final String name = 'old-name'"                             | "String name = 'import-data'"                                                || 'import-data' | 'import-data'
+        'it declares the property over the method'                  | "String getName() { 'old-name' }"                            | "String name = 'import-data'"                                                || 'import-data' | 'import-data'
+        'it writes the method over the property'                    | "String name = 'old-name'"                                   | "String getName() { 'import-data' }"                                         || 'import-data' | 'import-data'
+        'it writes the method again'                                | "String getName() { 'old-name' }"                            | "String getName() { 'import-data' }"                                         || 'import-data' | 'import-data'
+        'its constructor assigns the property'                      | "String name = 'old-name'"                                   | "ImportDataCommand() { name = 'import-data' }"                               || 'import-data' | 'import-data'
+        'its constructor assigns the property through this'        | "String name = 'old-name'"                                   | "ImportDataCommand() { this.name = 'import-data' }"                          || 'import-data' | 'import-data'
+        'its constructor calls the setter'                          | "String name = 'old-name'"                                   | "ImportDataCommand() { setName('import-data') }"                             || 'import-data' | 'import-data'
+        'an initializer block assigns the property'                 | "String name = 'old-name'"                                   | "{ name = 'import-data' }"                                                   || 'import-data' | 'import-data'
+        'it sets the property the class it extends sets'           | "String name\nOldNameCommand() { name = 'old-name' }"        | "ImportDataCommand() { name = 'import-data' }"                               || 'import-data' | 'import-data'
+        'it sets the property the class it extends works out'      | "String name\nOldNameCommand() { name = System.getProperty('old.name', 'old-name') }" | "ImportDataCommand() { name = 'import-data' }" || 'import-data' | 'import-data'
+        'its constructor sets the description'                      | "String description = 'Imports old data'"                    | "ImportDataCommand() { description = 'Imports the data' }"                   || 'import-data' | 'Imports the data'
+        'an initializer block sets the description'                 | "String description = 'Imports old data'"                    | "{ description = 'Imports the data' }"                                       || 'import-data' | 'Imports the data'
+        'its constructor sets both'                                 | "String name = 'old-name'\nString description = 'Imports old data'" | "ImportDataCommand() { name = 'import-data'; description = 'Imports the data' }" || 'import-data' | 'Imports the data'
+        'it declares nothing, and has the property'                 | "String name = 'old-name'"                                   | ''                                                                           || 'old-name'    | 'old-name'
+        'it declares nothing, and has the method'                   | "String getName() { 'old-name' }"                            | ''                                                                           || 'old-name'    | 'old-name'
+        'it declares nothing, and has what the class it extends sets' | "String name\nOldNameCommand() { name = 'old-name' }"      | ''                                                                           || 'old-name'    | 'old-name'
+        'it sets the property, which the method it has does not read' | "String name\nString getName() { 'old-name' }"             | "ImportDataCommand() { name = 'import-data' }"                               || 'old-name'    | 'old-name'
+        'it assigns a field of its own of that name'               | "String name = 'old-name'"                                   | "private String name\nImportDataCommand() { name = 'import-data'; this.name = 'import-data' }" || 'old-name' | 'old-name'
+        'it has a field of its own of that name, and calls the setter' | "String name = 'old-name'"                               | "private String name\nImportDataCommand() { setName('import-data') }"       || 'import-data' | 'import-data'
+    }
+
+    @Unroll
+    def "of three classes the one nearest to the command that declares or sets the name decides: #how"() {
+        when:
+        compile('ImportDataCommand', "abstract class OldNameCommand implements ${CONTRACT} {\n${first}\n}\n" +
+                "abstract class RenamedCommand extends OldNameCommand {\n${second}\n}\n" +
+                "class ImportDataCommand extends RenamedCommand {\n${third}\n${HANDLE}\n}", Phases.ALL)
+
+        then:
+        descriptor('example.ImportDataCommand').name == name
+        made('example.ImportDataCommand').name == name
+
+        where:
+        how                                                  | first                      | second                                       | third                                          || name
+        'the second sets what the first declares'            | "String name = 'old-name'" | "RenamedCommand() { name = 'middle-name' }"  | ''                                             || 'middle-name'
+        'the third sets it after the second'                 | "String name = 'old-name'" | "RenamedCommand() { name = 'middle-name' }"  | "ImportDataCommand() { name = 'import-data' }" || 'import-data'
+        'the third sets it after the second works it out'    | "String name = 'old-name'" | "RenamedCommand() { name = System.getProperty('middle.name', 'middle-name') }" | "ImportDataCommand() { name = 'import-data' }" || 'import-data'
+        'the third sets what the first declares'             | "String name = 'old-name'" | ''                                           | "{ setName('import-data') }"                   || 'import-data'
+        'the second declares it again'                       | "String name = 'old-name'" | "String name = 'middle-name'"                | ''                                             || 'middle-name'
+        'the third sets what the second declares again'      | "String name = 'old-name'" | "String name = 'middle-name'"                | "ImportDataCommand() { name = 'import-data' }" || 'import-data'
+        'the second writes the method, which nothing changes' | "String name = 'old-name'" | "String getName() { 'middle-name' }"        | "ImportDataCommand() { name = 'import-data' }" || 'middle-name'
+    }
+
+    @Unroll
+    def "a command that extends another and sets the name in a way that cannot be read gets no descriptor and keeps its registration: #how"() {
+        when:
+        compile('ImportDataCommand', "abstract class OldNameCommand implements ${CONTRACT} {\n${base}\n}\n" +
+                "class ImportDataCommand extends OldNameCommand {\n${members}\n${HANDLE}\n}")
+
+        then:
+        !descriptorFile('example.ImportDataCommand').exists()
+        registered() == ['example.ImportDataCommand']
+
+        where:
+        how                                          | base                                                                                   | members
+        'it assigns what is worked out'              | "String name = 'old-name'"                                                             | "ImportDataCommand() { name = System.getProperty('import.name') }"
+        'it assigns when a condition holds'          | "String name = 'old-name'"                                                             | "ImportDataCommand() { if (System.getProperty('import.name')) { name = 'import-data' } }"
+        'it assigns through super'                   | "String name = 'old-name'"                                                             | "ImportDataCommand() { super.name = 'import-data' }"
+        'the class it extends writes the setter'     | "String name = 'old-name'\nvoid setName(String name) { this.name = 'legacy-' + name }" | "ImportDataCommand() { name = 'import-data' }"
+    }
+
+    @Unroll
+    def "of a command that extends a class compiled before, what the command declares itself is read, and what it sets over that class is not: #how"() {
+        given: 'the class it extends, compiled on its own'
+        File classes = new File(tempDir, 'build/classes/groovy/base')
+        compile('OldNameCommand', "abstract class OldNameCommand implements ${CONTRACT} {\n${base}\n}", Phases.ALL, classes)
+
+        when:
+        compile('ImportDataCommand', "class ImportDataCommand extends OldNameCommand {\n${members}\n${HANDLE}\n}", Phases.ALL, targetDirectory, [classes])
+
+        then:
+        (descriptorFile('example.ImportDataCommand').isFile() ? descriptor('example.ImportDataCommand').name : null) == recorded
+        made('example.ImportDataCommand', classes).name == name
+        registered() == ['example.ImportDataCommand']
+
+        where:
+        how                                                   | base                       | members                                        || recorded      | name
+        'it declares the property'                            | "String name = 'old-name'" | "String name = 'import-data'"                  || 'import-data' | 'import-data'
+        'it writes the method'                                | "String name = 'old-name'" | "String getName() { 'import-data' }"           || 'import-data' | 'import-data'
+        'it declares nothing, and the name is the contract\'s' | ''                        | ''                                             || 'import-data' | 'import-data'
+        'it sets the property'                                | "String name = 'old-name'" | "ImportDataCommand() { name = 'import-data' }" || null          | 'import-data'
+        'it declares nothing, and has the property'           | "String name = 'old-name'" | ''                                             || null          | 'old-name'
+    }
+
+    def "a command that extends another is listed under the name it is found by when it is run"() {
+        given: 'a command that sets its name in its constructor over the one of the class it extends, compiled'
+        compile('ImportDataCommand', "abstract class OldNameCommand implements ${CONTRACT} { String name = 'old-name' }\n" +
+                "class ImportDataCommand extends OldNameCommand { ImportDataCommand() { name = 'import-data' }; ${HANDLE} }", Phases.ALL)
+
+        when: 'the build lists the commands of the compiled classes'
+        CommandCatalogBuilder catalog = new CommandCatalogBuilder()
+        catalog.add(CommandCatalogBuilder.ORIGIN_APPLICATION, targetDirectory)
+        List<Map> listed = (List<Map>) catalog.build().commands
+
+        and: 'the command is looked for by the name listed, as the runner of runCommand looks for it'
+        ApplicationCommand found = withCompiledCommands { new ApplicationContextCommandRegistry().findCommand((String) listed[0].name) }
+
+        then:
+        listed == [[name: 'import-data', aliases: [], description: 'import-data', origin: 'application', target: 'application', registration: 'descriptor']]
+        found?.getClass()?.name == 'example.ImportDataCommand'
     }
 
     @Unroll
@@ -410,13 +553,39 @@ class CommandDescriptorWriterSpec extends Specification {
         factories.getProperty(CONTRACT).tokenize(',').sort()
     }
 
-    private void compile(String fileName, String source, int phase = Phases.CANONICALIZATION) {
+    private void compile(String fileName, String source, int phase = Phases.CANONICALIZATION, File target = null, List<File> classpath = []) {
         File sourceFile = new File(tempDir, "src/cli/groovy/example/${fileName}.groovy")
         sourceFile.parentFile.mkdirs()
         sourceFile.text = "package example\n${source}"
-        CompilationUnit unit = new CompilationUnit(new CompilerConfiguration(targetDirectory: targetDirectory))
+        // a directory that is not there yet is false to Groovy
+        CompilationUnit unit = new CompilationUnit(new CompilerConfiguration(targetDirectory: target != null ? target : targetDirectory,
+                classpathList: classpath*.absolutePath))
         unit.addSource(sourceFile)
         unit.compile(phase)
+    }
+
+    // the name and the description a compiled command has when it is made, as the registry of commands makes it
+    private Map<String, String> made(String className, File... classpath) {
+        URL[] urls = ([targetDirectory] + (classpath as List<File>)).collect { File directory -> directory.toURI().toURL() } as URL[]
+        new URLClassLoader(urls, ApplicationCommand.classLoader).withCloseable { URLClassLoader loader ->
+            ApplicationCommand command = (ApplicationCommand) loader.loadClass(className).getDeclaredConstructor().newInstance()
+            [name: command.getName(), description: command.getDescription()]
+        }
+    }
+
+    // runs the action with the compiled commands on the class path the registry of commands reads
+    private <T> T withCompiledCommands(Closure<T> action) {
+        Thread thread = Thread.currentThread()
+        ClassLoader original = thread.contextClassLoader
+        new URLClassLoader([targetDirectory.toURI().toURL()] as URL[], ApplicationCommand.classLoader).withCloseable { URLClassLoader loader ->
+            thread.contextClassLoader = loader
+            try {
+                action.call()
+            }
+            finally {
+                thread.contextClassLoader = original
+            }
+        }
     }
 
     private String compiledName(String className) {
