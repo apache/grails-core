@@ -61,7 +61,6 @@ import static org.codehaus.groovy.ast.ClassHelper.int_TYPE
 import static org.codehaus.groovy.ast.ClassHelper.make
 import static org.codehaus.groovy.ast.tools.GeneralUtils.args
 import static org.codehaus.groovy.ast.tools.GeneralUtils.block
-import static org.codehaus.groovy.ast.tools.GeneralUtils.callThisX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.callX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.classX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.constX
@@ -71,6 +70,7 @@ import static org.codehaus.groovy.ast.tools.GeneralUtils.ifS
 import static org.codehaus.groovy.ast.tools.GeneralUtils.notNullX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.notX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.param
+import static org.codehaus.groovy.ast.tools.GeneralUtils.propX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.params
 import static org.codehaus.groovy.ast.tools.GeneralUtils.returnS
 import static org.codehaus.groovy.ast.tools.GeneralUtils.stmt
@@ -169,13 +169,15 @@ abstract class AbstractCacheTransformation extends AbstractMethodDecoratingTrans
     }
 
     /**
-     * The cache manager the class caches with, read through its getter. A parameter of the annotated method
-     * named {@code grailsCacheManager} hides the property's name in the method, but not the getter.
+     * The cache manager the class caches with, read as {@code this.grailsCacheManager}: a field of that name the
+     * class declares, otherwise what {@link org.grails.plugin.cache.GrailsCacheManagerAware} holds, through its
+     * getter. A parameter of the annotated method named {@code grailsCacheManager} hides the bare name in the
+     * method, but not the property of {@code this}.
      *
-     * @return the call of the getter on {@code this}
+     * @return the read of the property on {@code this}
      */
     protected static Expression grailsCacheManagerExpression() {
-        callThisX('getGrailsCacheManager')
+        propX(varX('this'), GRAILS_CACHE_MANAGER_PROPERTY_NAME)
     }
 
     protected VariableExpression declareCache(AnnotationNode annotationNode, VariableExpression cacheManagerVariableExpression, BlockStatement cacheBlock) {
@@ -241,8 +243,8 @@ abstract class AbstractCacheTransformation extends AbstractMethodDecoratingTrans
         }
 
         // customCacheKeyGenerator.generate(className, methodName, hashCode, map)
-        // the key generator read through its getter, which a parameter named like it cannot hide
-        MethodCallExpression cacheKeyExpression = callX(callThisX('getCustomCacheKeyGenerator'), generateMethod.name, createKeyArgs)
+        // the key generator read as a property of this, which a parameter named like it cannot hide
+        MethodCallExpression cacheKeyExpression = callX(propX(varX('this'), GRAILS_CACHE_KEY_GENERATOR_PROPERTY_NAME), generateMethod.name, createKeyArgs)
         cacheKeyExpression.methodTarget = generateMethod
 
         // def $_cache_cacheKey = .. // generated key

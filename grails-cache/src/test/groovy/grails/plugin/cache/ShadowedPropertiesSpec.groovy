@@ -34,10 +34,21 @@ import org.grails.plugin.cache.MissingCacheReporter
 
 /**
  * A parameter of a cached method named like the cache manager or the key generator a cache-aware class has
- * hides that property's name in the method; the code the cache annotations generate reads both through their
- * getters, so it caches with the class's own.
+ * hides that name in the method; the code the cache annotations generate reads both as properties of
+ * {@code this}, so it caches with the class's own: a field the class declares, otherwise what the trait holds.
  */
 class ShadowedPropertiesSpec extends Specification {
+
+    /** What a class declares, the declaration, whether a superclass declares it, and whether it is the cache manager to use. */
+    private static final List<List<Object>> DECLARED = [
+        ['a private cache manager field', 'private CacheManager grailsCacheManager = new OwnCacheManager()', false, true],
+        ['a protected cache manager field', 'protected CacheManager grailsCacheManager = new OwnCacheManager()', false, true],
+        ['a cache manager property', 'CacheManager grailsCacheManager = new OwnCacheManager()', false, true],
+        ['a private key generator field', 'private GrailsCacheKeyGenerator customCacheKeyGenerator = new CountingKeyGenerator()', false, false],
+        ['a key generator property', 'GrailsCacheKeyGenerator customCacheKeyGenerator = new CountingKeyGenerator()', false, false],
+        // as in 8.0.0, a superclass's field is not the class's: the trait's getter, which the class gets, is read
+        ['a superclass\'s private cache manager field', 'private CacheManager grailsCacheManager = new OwnCacheManager()', true, false],
+    ]
 
     @Unroll
     void 'a cached method with parameters named like the cache manager and the key generator caches with the class\'s own, compiled #mode'() {
@@ -108,6 +119,50 @@ class ShadowedPropertiesSpec extends Specification {
         mode << ['statically', 'dynamically']
     }
 
+    @Unroll
+    void 'a class that declares #declared caches with it, with and without parameters named like it, compiled #mode'() {
+        given: 'the class created as a bean beside a cache manager named grailsCacheManager'
+        CacheManager bean = new ConcurrentMapCacheManager('configured')
+        GenericApplicationContext context = new GenericApplicationContext()
+        AnnotationConfigUtils.registerAnnotationConfigProcessors(context)
+        context.registerBean('grailsCacheManager', CacheManager, { -> bean } as Supplier<CacheManager>)
+        context.registerBean('service', (Class<Object>) compileDeclaring(mode, members, inBase))
+        context.refresh()
+        def service = context.getBean('service')
+        CacheManager own = service.respondsTo('ownCacheManager') ? (CacheManager) service.ownCacheManager() : null
+        CacheManager expected = expectsOwnCacheManager ? own : bean
+
+        and: 'another cache manager and another key generator, passed to the method with parameters'
+        CacheManager passed = new ConcurrentMapCacheManager('configured')
+        def passedKeyGenerator = service.newKeyGenerator()
+        LogCapture log = new LogCapture(MissingCacheReporter, Level.WARN)
+
+        when: 'a method without the parameters and one with them are called'
+        List<Object> results = [service.cached(1), service.cachedWithParameters(2, passed, passedKeyGenerator)]
+
+        then: 'both cached in the cache manager the class means, with the key generator it means'
+        results == [2, 4]
+        nativeCache(expected).size() == 2
+        [bean, passed, own].findAll { it != null && !it.is(expected) }.every { nativeCache(it).isEmpty() }
+        passedKeyGenerator.count == 0
+        !service.respondsTo('ownKeyGenerator') || service.ownKeyGenerator().count == 2
+
+        when: 'a method whose cache is missing is called with the parameters'
+        service.uncached(3, passed, passedKeyGenerator)
+
+        then: 'the cache manager the class means is reported'
+        log.events*.formattedMessage.collect { it.find(/cache manager, (\S+),/) { all, name -> name } } == [expected.getClass().name]
+
+        cleanup:
+        log?.close()
+        context?.close()
+
+        where:
+        [declared, members, inBase, expectsOwnCacheManager, mode] << DECLARED.collectMany { row ->
+            ['statically', 'dynamically'].collect { compiled -> row + compiled }
+        }
+    }
+
     private static Map<?, ?> nativeCache(CacheManager cacheManager) {
         (Map<?, ?>) cacheManager.getCache('configured').nativeCache
     }
@@ -146,6 +201,79 @@ class ShadowingService {
     }
 }
 return ShadowingService
+""") as Class<?>
+    }
+
+    /**
+     * A cache-aware class that declares the members given, or whose superclass does, with an accessor for what
+     * it declares, and methods with and without parameters named like the cache manager and the key generator.
+     */
+    private static Class<?> compileDeclaring(String mode, String members, boolean inBase) {
+        String accessor = members.contains('grailsCacheManager') ?
+                'CacheManager ownCacheManager() { grailsCacheManager }' :
+                'CountingKeyGenerator ownKeyGenerator() { (CountingKeyGenerator) customCacheKeyGenerator }'
+        String declaration = inBase ?
+                """
+class DeclaringBase {
+    $members
+    $accessor
+}
+
+${mode == 'statically' ? '@CompileStatic' : ''}
+class DeclaringService extends DeclaringBase {
+""" :
+                """
+${mode == 'statically' ? '@CompileStatic' : ''}
+class DeclaringService {
+    $members
+    $accessor
+"""
+        new GroovyShell().evaluate("""
+import grails.plugin.cache.*
+import groovy.transform.CompileStatic
+import org.springframework.cache.CacheManager
+import org.springframework.cache.concurrent.ConcurrentMapCacheManager
+
+class OwnCacheManager extends ConcurrentMapCacheManager {
+    OwnCacheManager() {
+        super('configured')
+    }
+}
+
+class CountingKeyGenerator implements GrailsCacheKeyGenerator {
+    int count
+
+    Serializable generate(String className, String methodName, int objHashCode, Closure keyGenerator) {
+        count++
+        methodName
+    }
+
+    Serializable generate(String className, String methodName, int objHashCode, Map methodParams) {
+        count++
+        methodName + methodParams
+    }
+}
+$declaration
+    CountingKeyGenerator newKeyGenerator() {
+        new CountingKeyGenerator()
+    }
+
+    @Cacheable('configured')
+    int cached(int x) {
+        x * 2
+    }
+
+    @Cacheable('configured')
+    int cachedWithParameters(int x, CacheManager grailsCacheManager, GrailsCacheKeyGenerator customCacheKeyGenerator) {
+        x * 2
+    }
+
+    @Cacheable('missing')
+    int uncached(int x, CacheManager grailsCacheManager, GrailsCacheKeyGenerator customCacheKeyGenerator) {
+        x * 2
+    }
+}
+return DeclaringService
 """) as Class<?>
     }
 }
