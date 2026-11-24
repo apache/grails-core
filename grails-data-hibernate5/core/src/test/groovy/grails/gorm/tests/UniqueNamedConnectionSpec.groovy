@@ -19,16 +19,22 @@
 package grails.gorm.tests
 
 import grails.gorm.annotation.Entity
+import org.grails.datastore.gorm.events.ConfigurableApplicationEventPublisher
 import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.datastore.mapping.core.connections.ConnectionSource
+import org.grails.datastore.mapping.engine.event.ValidationEvent
+import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.orm.hibernate.HibernateDatastore
 import org.hibernate.dialect.H2Dialect
+import org.springframework.context.ApplicationEvent
+import org.springframework.context.ApplicationListener
 import org.springframework.validation.BeanPropertyBindingResult
 import org.springframework.validation.Errors
 import spock.lang.AutoCleanup
 import spock.lang.Issue
 import spock.lang.Shared
 import spock.lang.Specification
+import spock.lang.Unroll
 
 /**
  * A save that names a connection, such as {@code book.second.save()}, checks the {@code unique} constraint on that
@@ -152,6 +158,55 @@ class UniqueNamedConnectionSpec extends Specification {
         !UncBook.cascadeErrors.hasErrors()
     }
 
+    @Unroll
+    void 'a listener of the validation event that checks the target during #entry sees the connection that is named'() {
+        given: 'a listener that runs the validator of the entity on the target of each event, as a listener that checks it would'
+        UncEventChecker checker = new UncEventChecker()
+        ((ConfigurableApplicationEventPublisher) datastore.applicationEventPublisher).addApplicationListener(checker)
+
+        when: 'a value that exists only on the default connection is saved or validated on the second one'
+        UncBook book = new UncBook(name: 'onDefault')
+        def result = withSessions { call.call(book) }
+
+        then: 'the check of the listener is made on the second connection, which has no such value'
+        result
+        checker.errors != null
+        !checker.errors.hasErrors()
+
+        cleanup:
+        checker.active = false
+
+        where:
+        entry                    | call
+        'a save of the instance' | { UncBook b -> b.second.save() }
+        'a save of the API'      | { UncBook b -> UncBook.second.save(b) }
+    }
+
+    @Unroll
+    void 'a listener that checks an audit #entry through the default connection while a save on the third connection runs sees the default connection'() {
+        given: 'the audit code is taken on the third connection and free on the default one'
+        UncAudit.third.withNewTransaction { new UncAudit(code: 'free').third.save(validate: false, flush: true) }
+        UncEventChecker checker = new UncEventChecker(target: UncAudit)
+        ((ConfigurableApplicationEventPublisher) datastore.applicationEventPublisher).addApplicationListener(checker)
+
+        when:
+        UncBook book = new UncBook(name: 'newBook', innerSave: save, innerValidate: !save)
+        UncBook saved = withSessions { book.third.save() }
+
+        then: 'the check of the listener is made on the default connection, so the code is free'
+        saved != null
+        checker.errors != null
+        !checker.errors.hasErrors()
+
+        cleanup:
+        checker.active = false
+
+        where:
+        entry         | save
+        'saved'       | true
+        'validated'   | false
+    }
+
     void 'a save through the default connection still checks the default connection'() {
         when:
         UncBook onDefault = new UncBook(name: 'onDefault')
@@ -164,6 +219,24 @@ class UniqueNamedConnectionSpec extends Specification {
     }
 }
 
+class UncEventChecker implements ApplicationListener<ApplicationEvent> {
+
+    boolean active = true
+    Class target = UncBook
+    Errors errors
+
+    @Override
+    void onApplicationEvent(ApplicationEvent event) {
+        if (active && event instanceof ValidationEvent && target.isInstance(((ValidationEvent) event).entityObject)) {
+            Object entity = ((ValidationEvent) event).entityObject
+            Errors found = new BeanPropertyBindingResult(entity, 'entity')
+            PersistentEntity persistent = (PersistentEntity) target.gormPersistentEntity
+            persistent.mappingContext.getEntityValidator(persistent).validate(entity, found)
+            errors = found
+        }
+    }
+}
+
 @Entity
 class UncBook {
 
@@ -173,18 +246,22 @@ class UncBook {
     static UncAudit innerSaved
 
     boolean innerSave
+    boolean innerValidate
     boolean cascadeCheck
 
     // set by the validation below: the errors of the check of an entity that is mapped to the default connection only
     static Errors cascadeErrors
 
-    static transients = ['innerSave', 'cascadeCheck']
+    static transients = ['innerSave', 'innerValidate', 'cascadeCheck']
 
     static constraints = {
         name(unique: true, validator: { String value, UncBook book ->
             if (book.innerSave) {
                 UncBook.innerSaved = new UncAudit(code: 'free')
                 UncBook.innerSaved.save()
+            }
+            if (book.innerValidate) {
+                new UncAudit(code: 'free').validate()
             }
             if (book.cascadeCheck) {
                 // the validator of the entity is called directly, as the validation of an association cascades to it

@@ -124,10 +124,11 @@ abstract class AbstractHibernateGormInstanceApi<D> extends GormInstanceApi<D> {
             Errors errors = HibernateRuntimeUtils.setupErrorsProperty(target)
 
             if (validator) {
-                datastore.applicationEventPublisher?.publishEvent(new ValidationEvent(datastore, target))
-
-                // on the connection this API names, which a connection block around the save does not decide
+                // on the connection this API names, which a connection block around the save does not decide, and the
+                // listeners of the event run on it too: one that checks the target checks that connection
                 inConnection {
+                    datastore.applicationEventPublisher?.publishEvent(new ValidationEvent(datastore, target))
+
                     if (validator instanceof CascadingValidator) {
                         ((CascadingValidator) validator).validate(target, errors, deepValidate)
                     } else if (validator instanceof org.grails.datastore.gorm.validation.CascadingValidator) {

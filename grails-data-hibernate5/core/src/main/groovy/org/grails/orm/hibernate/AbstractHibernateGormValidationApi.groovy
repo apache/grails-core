@@ -76,7 +76,8 @@ abstract class AbstractHibernateGormValidationApi<D> extends GormValidationApi<D
 
         evict = ClassUtils.getBooleanFromMap(ARGUMENT_EVICT, arguments)
 
-        fireEvent(instance, validatedFieldsList)
+        // the listeners of the event run on the connection this API names, as the validation does
+        inConnection { fireEvent(instance, validatedFieldsList) }
 
         hibernateTemplate.execute { Session session ->
 
