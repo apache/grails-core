@@ -442,6 +442,8 @@ locally, you can use the following command (substitute `<git-tag-of-release` wit
     verify.sh <git-tag-of-release> .
 ```
 
+Build the image from a checkout of the release tag (`git checkout <git-tag-of-release>`), because the image takes its verification scripts from `etc/bin` and its JDK from the `FROM` instruction in `etc/bin/Dockerfile` of the checkout it is built from; an image built from another branch can look for release files that the release does not have, or build the release with a different JDK.
+
 Please note that the argument `-p 8080:8080` is used to expose the port 8080 of the container to the host machine's port 8080 (fromContainerPort:toHostPort). This allows you to access any running Grails application in the container from your host. If you have another application on port 8080, you can change the port mapping to avoid conflicts, e.g., `-p 8080:8081`. 
 
 In the event that artifacts differ, simply copy them to your project directory and work on your local machine instead of the docker image: 
