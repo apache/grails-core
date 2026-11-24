@@ -1210,7 +1210,8 @@ class PackArtifacts {
 
         private final SSLContext context
         private final Duration answerTimeout
-        private HttpClient client
+        // the client of a transport with certificates of its own, made when it is first asked for
+        private HttpClient own
 
         HttpTransport(SSLContext context, Duration answerTimeout) {
             this.context = context
@@ -1223,21 +1224,41 @@ class PackArtifacts {
             if (before != null) {
                 before.accept(address)
             }
-            if (client == null) {
-                HttpClient.Builder builder = HttpClient.newBuilder().followRedirects(HttpClient.Redirect.NEVER).connectTimeout(CONNECT_TIMEOUT)
-                client = (context == null ? builder : builder.sslContext(context)).build()
-            }
             // the file as it is: its bytes are what is hashed
             HttpRequest request = HttpRequest.newBuilder(address).timeout(answerTimeout).header('User-Agent', 'grails-forge')
                     .header('Accept-Encoding', 'identity').GET().build()
             try {
-                HttpResponse<InputStream> response = client.send(request, HttpResponse.BodyHandlers.ofInputStream())
+                HttpResponse<InputStream> response = client().send(request, HttpResponse.BodyHandlers.ofInputStream())
                 return new Reply(response.statusCode(), response.headers().firstValue('Location').orElse(null), response.body(),
                         response.headers().firstValue('Content-Encoding').orElse(null))
             } catch (InterruptedException ignored) {
                 Thread.currentThread().interrupt()
                 throw new InterruptedIOException()
             }
+        }
+
+        // a transport that trusts the certificates of the JVM, which every command has, asks with the one client of all of
+        // them: a client has a thread and connections of its own, and those of a client for each command that an
+        // interactive console runs would add up while the console runs
+        private synchronized HttpClient client() {
+            if (context == null) {
+                return OfTheJvm.CLIENT
+            }
+            if (own == null) {
+                own = newClient(context)
+            }
+            return own
+        }
+
+        private static HttpClient newClient(SSLContext context) {
+            HttpClient.Builder builder = HttpClient.newBuilder().followRedirects(HttpClient.Redirect.NEVER).connectTimeout(CONNECT_TIMEOUT)
+            return (context == null ? builder : builder.sslContext(context)).build()
+        }
+
+        // made when it is first asked for, once
+        private static final class OfTheJvm {
+
+            static final HttpClient CLIENT = newClient(null)
         }
     }
 

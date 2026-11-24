@@ -131,6 +131,26 @@ class HttpsPackArtifactsSpec extends Specification {
         e.message.contains("${repository()}: TLS failure (SSLHandshakeException)")
     }
 
+    void "the commands that trust what the JVM trusts ask with one client, however many of them a console runs"() {
+        given: 'the threads of the clients there are, one each'
+        Set<String> before = clientThreads()
+
+        when: 'four commands ask a repository, and are all kept'
+        List<PackArtifacts> commands = (1..4).collect { new PackArtifacts() }
+        List<String> failures = commands.collect { PackArtifacts command ->
+            try {
+                command.resolve(coordinates(), [repository()], null)
+                return null
+            } catch (PackArtifactException e) {
+                return e.message
+            }
+        }
+
+        then: 'each was answered, and no more than one client was made for them all'
+        failures.every { String failure -> failure?.contains('TLS failure') }
+        (clientThreads() - before).size() <= 1
+    }
+
     void "an answer that begins and then stops is ended at the time an answer has"() {
         given:
         handlers[PATH] = { HttpExchange exchange ->
@@ -330,6 +350,12 @@ class HttpsPackArtifactsSpec extends Specification {
     private PackArtifacts artifacts(Duration answer, Duration file) {
         // the client has far longer for an answer than what watches it: what ends a stall here is the watch
         return new PackArtifacts(PackArtifacts.https(context, Duration.ofSeconds(120)), answer, file)
+    }
+
+    // the names of the threads that the HTTP clients of the JDK have, one for each client while it is kept
+    private static Set<String> clientThreads() {
+        return Thread.getAllStackTraces().keySet().findAll { Thread thread -> thread.name ==~ /HttpClient-\d+-SelectorManager/ }
+                .collect { Thread thread -> thread.name } as Set<String>
     }
 
     private static PackArtifacts.Coordinates coordinates() {
