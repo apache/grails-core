@@ -366,7 +366,7 @@ final class ForgeCli {
      */
     private static String refusedIn(String... args) {
         Class<?> type = declared(args)
-        if (args.any { String arg -> arg == '-V' || arg == '--version' } || (type != null && CreateCommand.isAssignableFrom(type))) {
+        if (asksForVersion(args) || (type != null && CreateCommand.isAssignableFrom(type))) {
             return null
         }
         List<String> words = optionsOf(args).findAll { String arg -> !arg.startsWith('-') }
@@ -379,6 +379,21 @@ final class ForgeCli {
             // without a current directory there is no project to refuse
             return null
         }
+    }
+
+    // whether the command line asks for the version of the command line, which it then says and runs nothing:
+    // -V or --version in front of the command. After the command, or after --, it is an argument of the
+    // command, as it is of gradle and of the build a command runs
+    private static boolean asksForVersion(String... args) {
+        for (String arg : args) {
+            if (arg == '-V' || arg == '--version') {
+                return true
+            }
+            if (arg == '--' || !arg.startsWith('-')) {
+                return false
+            }
+        }
+        return false
     }
 
     /**

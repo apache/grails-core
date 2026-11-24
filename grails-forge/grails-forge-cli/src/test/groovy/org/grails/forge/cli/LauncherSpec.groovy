@@ -824,6 +824,11 @@ class LauncherSpec extends Specification {
         ['project', 'regenerate', '--diff'] | false
         ['compile']                      | true
         ['create-controller', 'Book']    | true
+        // the version an argument asks for is that of what the command runs, which is the project's
+        ['gradle', '--version']          | false
+        ['gradle', '-V']                 | false
+        ['compile', '--', '--version']   | false
+        ['--plain-output', 'gradle', '--version'] | false
     }
 
     @IgnoreIf({ os.windows })
@@ -841,7 +846,7 @@ class LauncherSpec extends Specification {
         !(out.toString() + err.toString()).contains('This project is on Grails')
 
         where:
-        line << [['--version'], ['-V']]
+        line << [['--version'], ['-V'], ['--plain-output', '--version'], ['-V', 'compile']]
     }
 
     void "a project of the first version of this command line or a later one is told of a command line that is later still, and one before it is not"() {
