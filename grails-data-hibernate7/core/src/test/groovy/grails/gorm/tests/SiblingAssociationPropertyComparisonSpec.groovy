@@ -122,22 +122,19 @@ class SiblingAssociationPropertyComparisonSpec extends HibernateGormDatastoreSpe
         ]
     }
 
-    def 'an integral identifier part and a floating point one are refused, as a database would round the integral one'() {
-        given:
+    def 'an integral identifier part and a floating point one are never equal, and are not an error'() {
+        given: 'a long that a double cannot hold, against the double next to it'
         SpcLongPair longPair = new SpcLongPair(amount: 9007199254740993L, code: 'x').save(flush: true)
         SpcDoublePair doublePair = new SpcDoublePair(amount: 9007199254740992d, code: 'x').save(flush: true)
         new SpcInexactHolder(name: 'big', longPair: longPair, doublePair: doublePair).save(flush: true)
+        new SpcInexactHolder(name: 'no double', longPair: longPair).save(flush: true)
         manager.session.clear()
 
-        when:
-        SpcInexactHolder.withCriteria(criteria)
-
-        then:
-        IllegalArgumentException e = thrown()
-        e.message.contains('floating point')
-
-        where:
-        criteria << [{ eqProperty('longPair', 'doublePair') }, { neProperty('longPair', 'doublePair') }]
+        expect: 'nothing matches ==, and != matches the row that has both associations, not the one with a null'
+        SpcInexactHolder.withCriteria { eqProperty('longPair', 'doublePair') }.isEmpty()
+        SpcInexactHolder.withCriteria { neProperty('longPair', 'doublePair') }*.name == ['big']
+        new DetachedCriteria(SpcInexactHolder).build { eqProperty('longPair', 'doublePair') }.list().isEmpty()
+        new DetachedCriteria(SpcInexactHolder).build { neProperty('longPair', 'doublePair') }.list()*.name == ['big']
     }
 
     private void seedAssociationParts() {

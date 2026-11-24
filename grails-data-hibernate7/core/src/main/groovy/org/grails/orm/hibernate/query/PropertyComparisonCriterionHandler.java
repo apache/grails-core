@@ -147,9 +147,6 @@ class PropertyComparisonCriterionHandler implements InternalCriterionHandler<Que
             return negate ? criteriaBuilder.and(criteriaBuilder.isNotNull(left), criteriaBuilder.isNotNull(right)) :
                     criteriaBuilder.disjunction();
         }
-        for (int i = 0; i < leftParts.size(); i++) {
-            refuseInexactNumbers(leftParts.get(i).getJavaType(), rightParts.get(i).getJavaType());
-        }
         List<Predicate> parts = new ArrayList<>();
         for (int i = 0; i < leftParts.size(); i++) {
             parts.add(negate ? criteriaBuilder.notEqual(leftParts.get(i), rightParts.get(i)) :
@@ -176,20 +173,6 @@ class PropertyComparisonCriterionHandler implements InternalCriterionHandler<Que
         return true;
     }
 
-    /**
-     * A database compares an integral number with a floating point one by converting the integral one, which rounds a
-     * value that a double cannot hold, so two parts that are not the same value can compare equal. Such a comparison is
-     * refused and not answered wrongly.
-     */
-    private static void refuseInexactNumbers(Class<?> left, Class<?> right) {
-        boolean numbers = Number.class.isAssignableFrom(ClassUtils.resolvePrimitiveIfNecessary(left)) &&
-                Number.class.isAssignableFrom(ClassUtils.resolvePrimitiveIfNecessary(right));
-        if (numbers && floatingPoint(left) != floatingPoint(right)) {
-            throw new IllegalArgumentException("Cannot compare identifier parts of type " + left.getName() + " and " +
-                    right.getName() + ": a floating point number and an integral one are not compared exactly");
-        }
-    }
-
     private static boolean floatingPoint(Class<?> type) {
         Class<?> boxed = ClassUtils.resolvePrimitiveIfNecessary(type);
         return Float.class.equals(boxed) || Double.class.equals(boxed);
@@ -198,7 +181,12 @@ class PropertyComparisonCriterionHandler implements InternalCriterionHandler<Que
     private static boolean comparableTypes(Class<?> left, Class<?> right) {
         Class<?> a = ClassUtils.resolvePrimitiveIfNecessary(left);
         Class<?> b = ClassUtils.resolvePrimitiveIfNecessary(right);
-        return a.isAssignableFrom(b) || b.isAssignableFrom(a) || Number.class.isAssignableFrom(a) && Number.class.isAssignableFrom(b);
+        if (Number.class.isAssignableFrom(a) && Number.class.isAssignableFrom(b)) {
+            // an integral number and a floating point one are not compared: a database converts the integral one, which
+            // rounds a value that a double cannot hold, so two parts that are not the same value could compare equal
+            return floatingPoint(a) == floatingPoint(b);
+        }
+        return a.isAssignableFrom(b) || b.isAssignableFrom(a);
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
