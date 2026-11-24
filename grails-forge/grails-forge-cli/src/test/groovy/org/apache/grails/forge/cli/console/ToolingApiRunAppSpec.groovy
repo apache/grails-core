@@ -45,6 +45,9 @@ import spock.util.concurrent.PollingConditions
 @Timeout(600)
 class ToolingApiRunAppSpec extends CommandSpec {
 
+    // how long an application of the build has to answer: the build compiles it first, on a runner that can be slow
+    static final int ANSWER_SECONDS = 300
+
     PrintStream originalOut
     PrintStream originalErr
     ByteArrayOutputStream out = new ByteArrayOutputStream()
@@ -199,9 +202,7 @@ class ToolingApiRunAppSpec extends CommandSpec {
 
         when:
         command.start()
-        new PollingConditions(timeout: 300, delay: 0.1).eventually {
-            assert ApplicationPort.isReady(port) && new File(dir, '.grails/run/app.json').isFile()
-        }
+        answers(port, { command.alive }, { "it ended with ${exit.get()} and wrote: ${out}" })
         long server = pid('server.pid')
 
         then: 'the record names this JVM, which is the command line here'
@@ -232,9 +233,7 @@ class ToolingApiRunAppSpec extends CommandSpec {
 
         when:
         command.start()
-        new PollingConditions(timeout: 300, delay: 0.1).eventually {
-            assert ApplicationPort.isReady(port) && new File(dir, '.grails/run/app.json').isFile()
-        }
+        answers(port, { command.alive }, { "it ended with ${exit.get()} and wrote: ${out}" })
         long server = pid('server.pid')
         out.reset()
         int stopped = ForgeCli.execute(beanContext, 'stop-app')
@@ -349,9 +348,21 @@ class ToolingApiRunAppSpec extends CommandSpec {
                 .redirectInput(ProcessBuilder.Redirect.from(new File('/dev/null')))
         builder.environment().put(GradleBuild.RUNNER, GradleBuild.TOOLING_API)
         commandLine = builder.start()
-        new PollingConditions(timeout: 300, delay: 0.1).eventually {
-            assert commandLine.alive
-            assert ApplicationPort.isReady(port) && new File(dir, '.grails/run/app.json').isFile()
+        answers(port, { commandLine.alive }, { "it ended with ${commandLine.alive ? 'nothing yet' : commandLine.exitValue()} and wrote: ${said.text}" })
+    }
+
+    // waits for the application of a run-app to answer and for the record of the run-app, and fails at once, with what
+    // the run-app wrote, when the run-app has ended first: an application that is then not there never answers
+    private void answers(int port, Closure<Boolean> running, Closure<String> told) {
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(ANSWER_SECONDS)
+        while (!(ApplicationPort.isReady(port) && new File(dir, '.grails/run/app.json').isFile())) {
+            if (!running.call()) {
+                throw new AssertionError("run-app ended before its application answered on port ${port}: ${told.call()}".toString())
+            }
+            if (System.nanoTime() > deadline) {
+                throw new AssertionError("The application of run-app did not answer on port ${port} within ${ANSWER_SECONDS} seconds: ${told.call()}".toString())
+            }
+            Thread.sleep(100)
         }
     }
 
@@ -382,8 +393,30 @@ class ToolingApiRunAppSpec extends CommandSpec {
         return file.text.trim() as long
     }
 
+    // a port that nothing has on the loopback address, where the application binds, nor on every address. Java binds a
+    // ServerSocket with SO_REUSEADDR, which does not refuse a port another process holds on one of them only, and the
+    // application, given such a port, would not get it
     private static int freePort() {
-        return new ServerSocket(0, 1, InetAddress.getLoopbackAddress()).withCloseable { ServerSocket socket -> socket.localPort }
+        for (int attempt = 0; attempt < 100; attempt++) {
+            int candidate = new ServerSocket(0, 1, InetAddress.getLoopbackAddress()).withCloseable { ServerSocket socket -> socket.localPort }
+            if (bindsAlone(new InetSocketAddress(InetAddress.getLoopbackAddress(), candidate)) && bindsAlone(new InetSocketAddress(candidate))) {
+                return candidate
+            }
+        }
+        throw new IllegalStateException('No port is free on the loopback address and on every address')
+    }
+
+    private static boolean bindsAlone(InetSocketAddress address) {
+        ServerSocket socket = new ServerSocket()
+        try {
+            socket.reuseAddress = false
+            socket.bind(address)
+            return true
+        } catch (IOException ignored) {
+            return false
+        } finally {
+            socket.close()
+        }
     }
 
     private static boolean alive(long pid) {
