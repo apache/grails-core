@@ -105,7 +105,9 @@ abstract class AbstractGormApi<D> extends AbstractDatastoreApi {
     }
 
     private String connectionName() {
-        Datastore current = getDatastore()
+        // an API built from a mapping context has no datastore, and validating through it names no connection: it is
+        // the default one, so the field is read directly: the property would call getDatastore(), which throws for it
+        Datastore current = this.@datastore
         if (current instanceof ConnectionSourcesProvider) {
             return ((ConnectionSourcesProvider) current).getConnectionSources()?.getDefaultConnectionSource()?.getName()
         }

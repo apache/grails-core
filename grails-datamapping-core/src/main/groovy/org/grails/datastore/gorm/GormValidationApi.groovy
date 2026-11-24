@@ -198,6 +198,10 @@ class GormValidationApi<D> extends AbstractGormApi<D> {
      * @param fields The list of fields being validated, or null.
      */
     private void fireEvent(target, List fields) {
+        if (!hasDatastore) {
+            // the source of the event is a datastore, and an API built from a mapping context has none to name
+            return
+        }
         ValidationEvent event = createValidationEvent(target)
         event.validatedFields = fields
         eventPublisher?.publishEvent(event)
