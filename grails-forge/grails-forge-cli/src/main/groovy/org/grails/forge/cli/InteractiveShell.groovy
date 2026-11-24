@@ -240,12 +240,23 @@ class InteractiveShell {
      * JVM that is not the shell's own
      */
     int start() {
-        try {
-            return start(TerminalBuilder.terminal())
+        // the terminal is closed when the shell is left: what reads it ends and it is set back as it was, also in a
+        // JVM that goes on after the shell, as one that runs the command line of its own does
+        try (Terminal terminal = openTerminal()) {
+            return start(terminal)
         } catch (Throwable t) {
             onError.apply(t, commandLine)
         }
         return 0
+    }
+
+    /**
+     * @return the terminal {@link #start()} runs the shell on, which it closes when the shell is left: that
+     * of the JVM
+     * @throws IOException when the terminal of the JVM cannot be opened
+     */
+    protected Terminal openTerminal() throws IOException {
+        return TerminalBuilder.terminal()
     }
 
     /**

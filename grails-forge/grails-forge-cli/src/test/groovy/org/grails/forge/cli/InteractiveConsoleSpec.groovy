@@ -21,6 +21,8 @@ package org.grails.forge.cli
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.function.BiFunction
 import java.util.function.Consumer
 import org.apache.grails.forge.cli.console.ApplicationCommands
 import org.apache.grails.forge.cli.console.GradleRunner
@@ -247,6 +249,46 @@ class InteractiveConsoleSpec extends Specification {
         'quit now' | false
         shown = "'${line}'"
         what = ends ? 'ends' : 'is a command line of'
+    }
+
+    @Unroll
+    void "the terminal the console opens is closed when the console is left #how, also in a JVM that goes on after it"() {
+        given:
+        List<List<String>> commands = []
+        List<Throwable> failures = []
+        AtomicInteger closings = new AtomicInteger()
+        Terminal terminal = new ExternalTerminal('console', 'xterm-256color',
+                new ByteArrayInputStream(typed.getBytes('UTF-8')), new ByteArrayOutputStream(), StandardCharsets.UTF_8) {
+
+            @Override
+            protected void doClose() throws IOException {
+                closings.incrementAndGet()
+                super.doClose()
+            }
+        }
+        InteractiveShell shell = new InteractiveShell(new CommandLine(new ConsoleProgramSpec.Root()),
+                { String[] args -> commands.add(args.toList()) } as Consumer<String[]>,
+                { Throwable failure, CommandLine commandLine -> failures.add(failure); 1 } as BiFunction<Throwable, CommandLine, Integer>) {
+
+            @Override
+            protected Terminal openTerminal() {
+                return terminal
+            }
+        }
+
+        when:
+        int exit = shell.start()
+
+        then:
+        exit == 0
+        failures == []
+        commands == [['create-app', 'first']]
+        closings.get() == 1
+
+        where:
+        how                       | typed
+        'at exit'                 | 'create-app first\nexit\n'
+        'at the end of its input' | 'create-app first\n'
     }
 
     void "the console reads the short forms the command line reads, of lower-case letters too"() {
