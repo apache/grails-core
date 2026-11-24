@@ -132,7 +132,7 @@ shadowJarTask.configure { ShadowJar it ->
     it.exclude(
             'META-INF/DEPENDENCIES', // until we publish our own SBOM, this won't be correct so exclude
             'META-INF/grails/plugins.imports', // the Forge CLI declares the plugins it runs instead of discovering them (see org.grails.forge.cli.Application)
-            'META-INF/grails/plugins/**',
+            'META-INF/grails/plugins/*/plugin.properties', // keep META-INF/grails/plugins/forge/views.properties for compiled Forge templates
             'META-INF/sbom.json', // re-introduced below from this project's own cyclonedxDirectBom output to avoid the wrong transitive SBOM winning the shadow merge
             'about.html' // restatement of the Eclipse Distribution License - Version 1.0 for jakarta
     )

@@ -32,7 +32,8 @@ import org.grails.taglib.encoder.DefaultOutputContextLookup
 
 /**
  * Renders the generator's pages: the GSPs of {@code grails-app/views/forge}, compiled when the module
- * declaring them is built and registered in its {@code gsp/views.properties}. They are rendered by
+ * declaring them is built and registered in its {@code gsp/views.properties} (for applications) or
+ * {@code META-INF/grails/plugins/forge/views.properties} (for the Forge plugin). They are rendered by
  * the GSP engine alone, without a web request, so the generator renders them the same way inside the
  * web application, the command line application and a test.
  */
@@ -41,10 +42,17 @@ import org.grails.taglib.encoder.DefaultOutputContextLookup
 final class ForgePages {
 
     /**
-     * The views registry every module compiling pages writes, the Forge plugin's and the command line
-     * application's among them.
+     * The views registry written by application modules compiling pages, such as the command line
+     * application.
      */
     static final String VIEWS_REGISTRY = 'gsp/views.properties'
+
+    /**
+     * The namespaced views registry written by the Forge plugin module.
+     */
+    static final String PLUGIN_VIEWS_REGISTRY = 'META-INF/grails/plugins/forge/views.properties'
+
+    private static final List<String> VIEWS_REGISTRIES = [VIEWS_REGISTRY, PLUGIN_VIEWS_REGISTRY]
 
     /**
      * The URI prefix, in the registry, of the generator's pages.
@@ -87,12 +95,14 @@ final class ForgePages {
 
     private static Map<String, String> compiledPages(ClassLoader classLoader) {
         Map<String, String> compiled = [:]
-        for (URL registry : Collections.list(classLoader.getResources(VIEWS_REGISTRY))) {
-            Properties views = new Properties()
-            registry.withInputStream { InputStream input -> views.load(input) }
-            for (String name : views.stringPropertyNames()) {
-                if (name.startsWith(PAGES_PREFIX)) {
-                    compiled[name] = views.getProperty(name)
+        for (String location : VIEWS_REGISTRIES) {
+            for (URL registry : Collections.list(classLoader.getResources(location))) {
+                Properties views = new Properties()
+                registry.withInputStream { InputStream input -> views.load(input) }
+                for (String name : views.stringPropertyNames()) {
+                    if (name.startsWith(PAGES_PREFIX)) {
+                        compiled[name] = views.getProperty(name)
+                    }
                 }
             }
         }
