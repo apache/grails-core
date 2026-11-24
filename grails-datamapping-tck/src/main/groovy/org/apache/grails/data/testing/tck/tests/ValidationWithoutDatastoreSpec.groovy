@@ -81,6 +81,7 @@ class ValidationWithoutDatastoreSpec extends GrailsDataTckSpec {
 
 @Entity
 class VwdItem {
+
     String name
     Integer rank
 
