@@ -224,11 +224,15 @@ include(
         // Test Report
         'grails-test-report',
 
+        // JUnit Platform listeners for the test JVMs of this repository (not published)
+        'grails-test-listener',
+
         // wrapper
         'grails-wrapper',
 
         // Agent Skills (published for consumption by AI coding agents)
         'grails-skills-developer',
+        'grails-skills-upgrade',
         'grails-skills-upgrade-guide-8',
 )
 
@@ -257,6 +261,7 @@ project(':grails-async-rxjava3').projectDir = file('grails-async/rxjava3')
 project(':grails-async').projectDir = file('grails-async/plugin')
 
 project(':grails-skills-developer').projectDir = file('grails-skills/developer')
+project(':grails-skills-upgrade').projectDir = file('grails-skills/upgrade')
 project(':grails-skills-upgrade-guide-8').projectDir = file('grails-skills/upgrade-guide-8')
 
 project(':grails-dependencies-starter-web').projectDir = file('grails-dependencies/starter-web')

@@ -62,7 +62,11 @@ class SpringBootStarterSecuritySpec extends ApplicationContextSpec implements Co
         def service = output['grails-app/services/example/grails/UserService.groovy']
         service.contains('@Scaffold(User)')
         service.contains('class UserService implements UserDetailsService')
-        service.contains("User.findByUsername(username, [fetch: [roles: 'join']])")
+        service.contains('''        Optional.ofNullable(User.findByUsername(username, [fetch: [roles: 'join']]))
+                .orElseThrow { new UsernameNotFoundException(username) }''')
+
+        and: 'an unknown username throws through a typed expression, so the service compiles statically'
+        !service.contains('?: {')
 
         and: 'no separate configuration class is generated'
         !output.containsKey('src/main/groovy/example/grails/SecurityConfig.groovy')

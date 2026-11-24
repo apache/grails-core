@@ -18,18 +18,24 @@
  */
 package grails.gorm.services
 
+import grails.gorm.multitenancy.CurrentTenantHolder
 import grails.gorm.multitenancy.TenantService
 import grails.gorm.transactions.ReadOnly
 import grails.gorm.transactions.TransactionService
 import grails.gorm.transactions.Transactional
 import org.codehaus.groovy.control.MultipleCompilationErrorsException
+import org.grails.datastore.gorm.GormRegistry
 import org.grails.datastore.gorm.services.Implemented
 import org.grails.datastore.gorm.services.implementers.FindAllImplementer
 import org.grails.datastore.gorm.services.implementers.FindOneImplementer
 import org.grails.datastore.gorm.services.implementers.FindOneInterfaceProjectionImplementer
 import org.grails.datastore.mapping.core.Datastore
+import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.services.DefaultServiceRegistry
 import org.grails.datastore.mapping.services.ServiceRegistry
+import org.grails.datastore.mapping.transactions.TransactionCapableDatastore
+import org.springframework.transaction.PlatformTransactionManager
+import spock.lang.Issue
 import spock.lang.Specification
 
 /**
@@ -179,6 +185,59 @@ return BookService
 
         then:"The service was transformed correctly"
         impl.getMethod("find", Serializable).getAnnotation(Implemented).by() == FindOneImplementer
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/16801')
+    void 'the transaction manager of a data service is the one of the tenant bound for its datastore while another datastore has a different tenant'() {
+        given:
+        var service = new GroovyClassLoader().parseClass('''
+import grails.gorm.services.Service
+import grails.gorm.annotation.Entity
+
+@Service(TenantBook)
+interface TenantBookService {
+
+    TenantBook find(Serializable id)
+}
+
+@Entity
+class TenantBook {
+
+    String title
+}
+''')
+        var instance = service.classLoader.loadClass('$TenantBookServiceImplementation').getDeclaredConstructor().newInstance()
+        var serviceTransactionManager = Stub(PlatformTransactionManager)
+        var tenantTransactionManager = Stub(PlatformTransactionManager)
+        var defaultDatastore = Stub(TransactionCapableDatastore) {
+            getTransactionManager() >> Stub(PlatformTransactionManager)
+        }
+        var serviceDatastore = Stub(TransactionCapableDatastore) {
+            getTransactionManager() >> serviceTransactionManager
+        }
+        GormRegistry.instance.initializeDatastore(defaultDatastore)
+        GormRegistry.instance.registerEntityDatastore(service.classLoader.loadClass('TenantBook').name, ConnectionSource.DEFAULT, serviceDatastore)
+        GormRegistry.instance.registerDatastore('ds1', Stub(TransactionCapableDatastore) {
+            getTransactionManager() >> tenantTransactionManager
+        })
+
+        expect: 'the datastore of the service is not the default one'
+        instance.datastore.is(serviceDatastore)
+
+        and:
+        CurrentTenantHolder.withTenant(serviceDatastore, 'ds1') {
+            CurrentTenantHolder.withTenant(defaultDatastore, 'ds2') {
+                instance.transactionManager
+            }
+        } == tenantTransactionManager
+
+        and: 'a tenant bound for the default datastore only does not count'
+        CurrentTenantHolder.withTenant(defaultDatastore, 'ds1') {
+            instance.transactionManager
+        } == serviceTransactionManager
+
+        cleanup:
+        GormRegistry.instance.reset()
     }
 
     void "test service transform on abstract protected methods"() {

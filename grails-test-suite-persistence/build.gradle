@@ -89,29 +89,6 @@ dependencies {
     testImplementation 'org.spockframework:spock-core'
 }
 
-test {
-    maxParallelForks = rootProject.ext.configuredTestParallel
-    forkEvery = isCiBuild ? 25 : 100
-    if(!isCiBuild) {
-        maxHeapSize = '2048m'
-    }
-    excludes = ['**/GrailsDomainBinderTests.class',
-                '**/ComponentValidationTests.class',
-                '**/HibernateMappingUniqueConstraintTests.class']
-}
-
-task testGrailsDomainBinder(type: Test) { includes = [
-        '**/GrailsDomainBinderTests.class'
-    ] }
-
-
-task testIsolatedPersistentOne(type: Test) {
-    includes = ['**/ComponentValidationTests.class']
-    includes = ['**/HibernateMappingUniqueConstraintTests.class']
-}
-
-test.dependsOn testGrailsDomainBinder, testIsolatedPersistentOne
-
 tasks.withType(Groovydoc).configureEach {
     // tests do not have groovydoc
     enabled = false
