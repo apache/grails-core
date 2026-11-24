@@ -40,6 +40,7 @@ import org.gradle.api.tasks.util.PatternFilterable
 import org.gradle.language.jvm.tasks.ProcessResources
 import org.gradle.tooling.provider.model.ToolingModelBuilderRegistry
 
+import org.apache.grails.gradle.publish.GrailsPublishExtension
 import org.springframework.boot.gradle.tasks.bundling.BootJar
 
 import org.grails.gradle.plugin.commands.GrailsCliArtifactGradlePlugin
@@ -136,8 +137,24 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
         configureAssembleTask(project)
         configurePluginResources(project)
         configurePluginDescriptorGeneration(project)
+        configurePluginPublishing(project)
         configureJarTask(project)
         configureSourcesJarTask(project)
+    }
+
+    /**
+     * Clears {@code grails-publish}'s legacy {@code META-INF/grails-plugin.xml} sidecar convention.
+     * Grails 9 plugins package {@code META-INF/grails/plugins.imports} and
+     * {@code META-INF/grails/plugins/<name>/plugin.properties} directly inside the JAR.
+     *
+     * @since 9.0
+     */
+    protected void configurePluginPublishing(Project project) {
+        project.pluginManager.withPlugin('org.apache.grails.gradle.grails-publish') {
+            project.extensions.configure(GrailsPublishExtension) { GrailsPublishExtension publishExtension ->
+                publishExtension.pluginDescriptor.unsetConvention()
+            }
+        }
     }
 
     /**
