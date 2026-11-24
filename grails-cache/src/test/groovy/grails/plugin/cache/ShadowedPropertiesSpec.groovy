@@ -120,7 +120,7 @@ class ShadowedPropertiesSpec extends Specification {
     }
 
     @Unroll
-    void 'a class that declares #declared caches with it, with and without parameters named like it, compiled #mode'() {
+    void 'a class that declares #declared caches, puts and evicts with it, with and without parameters named like it, compiled #mode'() {
         given: 'the class created as a bean beside a cache manager named grailsCacheManager'
         CacheManager bean = new ConcurrentMapCacheManager('configured')
         GenericApplicationContext context = new GenericApplicationContext()
@@ -146,6 +146,17 @@ class ShadowedPropertiesSpec extends Specification {
         [bean, passed, own].findAll { it != null && !it.is(expected) }.every { nativeCache(it).isEmpty() }
         passedKeyGenerator.count == 0
         !service.respondsTo('ownKeyGenerator') || service.ownKeyGenerator().count == 2
+
+        when: 'a put and an eviction of every entry, with the parameters'
+        service.put(5, passed, passedKeyGenerator)
+        int afterPut = nativeCache(expected).size()
+        service.evictAll(passed, passedKeyGenerator)
+
+        then: 'both act on the cache manager the class means, the put with the key generator it means'
+        afterPut == 3
+        [bean, passed, own].findAll { it != null }.every { nativeCache(it).isEmpty() }
+        passedKeyGenerator.count == 0
+        !service.respondsTo('ownKeyGenerator') || service.ownKeyGenerator().count == 3
 
         when: 'a method whose cache is missing is called with the parameters'
         service.uncached(3, passed, passedKeyGenerator)
@@ -266,6 +277,15 @@ $declaration
     @Cacheable('configured')
     int cachedWithParameters(int x, CacheManager grailsCacheManager, GrailsCacheKeyGenerator customCacheKeyGenerator) {
         x * 2
+    }
+
+    @CachePut('configured')
+    int put(int x, CacheManager grailsCacheManager, GrailsCacheKeyGenerator customCacheKeyGenerator) {
+        x * 2
+    }
+
+    @CacheEvict(value = 'configured', allEntries = true)
+    void evictAll(CacheManager grailsCacheManager, GrailsCacheKeyGenerator customCacheKeyGenerator) {
     }
 
     @Cacheable('missing')
