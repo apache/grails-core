@@ -121,6 +121,53 @@ class StartClassSpec extends Specification {
         'names the start class of earlier builds of Grails 9' | 'org.apache.grails.cli.GrailsCli'
     }
 
+    def "the jar of a start class is held by its class loader, and a jar that is refused is let go of at once"() {
+        given:
+        File started = cliJar('started.jar', null, [START_CLASS])
+        File refused = cliJar('refused.jar', null, ['org.example.cli.Other'])
+
+        when: 'the start class is loaded'
+        Class<?> loaded = StartClass.load(started)
+
+        then: 'its class loader has the jar open until it is closed'
+        isOpen(started)
+
+        when:
+        (loaded.classLoader as URLClassLoader).close()
+
+        then:
+        !isOpen(started)
+
+        when: 'a jar without the start class is refused'
+        StartClass.load(refused)
+
+        then: 'nothing holds it, so that on Windows another wrapper can put its download in its place'
+        thrown(IllegalStateException)
+        !isOpen(refused)
+    }
+
+    @Unroll
+    def "a file that cannot be read as a jar is said to be one, and not one without the start class: #situation"() {
+        given:
+        File jar = new File(dir, 'grails-cli-all.jar')
+        if (text != null) {
+            jar.text = text
+        }
+
+        when:
+        StartClass.load(jar)
+
+        then:
+        IOException e = thrown()
+        e.message.startsWith("The Grails command line at [${jar.absolutePath}] cannot be read (")
+        e.cause instanceof IOException
+
+        where:
+        situation       | text
+        'it is no jar'  | 'not a jar'
+        'it is not there' | null
+    }
+
     def "a file that is no jar, and one that is not there, cannot be started"() {
         given:
         File jar = new File(dir, 'grails-cli-all.jar')
@@ -322,6 +369,33 @@ class StartClassSpec extends Specification {
         } finally {
             process.destroyForcibly()
         }
+    }
+
+    /**
+     * Whether this JVM has the file open: on Windows a file that is open cannot be moved, elsewhere the system says.
+     */
+    private static boolean isOpen(File file) {
+        String path = file.canonicalPath
+        if (File.separatorChar == ('\\' as char)) {
+            File moved = new File(file.parentFile, file.name + '.moved')
+            boolean open = !file.renameTo(moved)
+            assert open || moved.renameTo(file)
+            return open
+        }
+        File descriptors = new File('/proc/self/fd')
+        if (descriptors.isDirectory()) {
+            return descriptors.listFiles().any { File each ->
+                try {
+                    return Files.readSymbolicLink(each.toPath()).toString() == path
+                } catch (IOException ignored) {
+                    return false
+                }
+            }
+        }
+        Process lsof = new ProcessBuilder('lsof', '-w', '-n', '-P', '-Fn', '-p', String.valueOf(ProcessHandle.current().pid())).redirectErrorStream(true).start()
+        String listed = lsof.inputStream.text
+        assert lsof.waitFor(1, TimeUnit.MINUTES)
+        return listed.readLines().contains('n' + path)
     }
 
     private static boolean opens(File jar) {

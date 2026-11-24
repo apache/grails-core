@@ -87,21 +87,37 @@ public final class StartClass {
      */
     public static Class<?> load(File cliJar) throws IOException {
         URLClassLoader loader = new URLClassLoader(new URL[]{cliJar.toURI().toURL()});
-        Class<?> startClass;
-        // the jar is held open while the class loader opens it: on Windows no other wrapper can then move its
-        // download into the place of the jar, which would keep the class loader from opening it, and the class
-        // loader takes a jar it cannot open for one without the class
-        try (JarFile held = open(cliJar)) {
-            startClass = Class.forName(NAME, true, loader);
-        } catch (ClassNotFoundException | IOException e) {
-            throw new IllegalStateException("The Grails command line at [" + cliJar.getAbsolutePath() + "] has no start class [" + NAME + "]. " +
-                    "It is not a version of Grails this wrapper can start, or the download is incomplete: delete the file and run the command again.", e);
+        boolean loaded = false;
+        try {
+            Class<?> startClass;
+            // the jar is held open while the class loader opens it: on Windows no other wrapper can then move its
+            // download into the place of the jar, which would keep the class loader from opening it, and the class
+            // loader takes a jar it cannot open for one without the class
+            try (JarFile held = open(cliJar)) {
+                startClass = Class.forName(NAME, true, loader);
+            } catch (ClassNotFoundException e) {
+                throw new IllegalStateException("The Grails command line at [" + cliJar.getAbsolutePath() + "] has no start class [" + NAME + "]. " +
+                        "It is not a version of Grails this wrapper can start, or the download is incomplete: delete the file and run the command again.", e);
+            } catch (IOException e) {
+                throw new IOException("The Grails command line at [" + cliJar.getAbsolutePath() + "] cannot be read (" + e + ")", e);
+            }
+            // the parent is asked first: a class of that name on the class path of the wrapper would not start the downloaded command line
+            if (startClass.getClassLoader() != loader) {
+                throw new IllegalStateException("The start class [" + NAME + "] of the Grails command line at [" + cliJar.getAbsolutePath() + "] is not a class of that file.");
+            }
+            loaded = true;
+            return startClass;
+        } finally {
+            // the class loader is the start class's once it is returned; on any other way out it lets the jar go, which
+            // on Windows would otherwise keep another wrapper from moving its download into the place of the jar
+            if (!loaded) {
+                try {
+                    loader.close();
+                } catch (IOException ignored) {
+                    // what cannot be let go of now is let go of when the JVM ends
+                }
+            }
         }
-        // the parent is asked first: a class of that name on the class path of the wrapper would not start the downloaded command line
-        if (startClass.getClassLoader() != loader) {
-            throw new IllegalStateException("The start class [" + NAME + "] of the Grails command line at [" + cliJar.getAbsolutePath() + "] is not a class of that file.");
-        }
-        return startClass;
     }
 
     /**
