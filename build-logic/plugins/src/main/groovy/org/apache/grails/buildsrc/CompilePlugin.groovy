@@ -96,7 +96,7 @@ class CompilePlugin implements Plugin<Project> {
         if (main == null) {
             return
         }
-        def generatedDir = project.layout.buildDirectory.dir('generated/resources/grailsPluginDescriptor')
+        def generatedDir = project.layout.buildDirectory.dir('generated/resources/grailsLibraryPluginDescriptor')
         def task = project.tasks.register('generateGrailsPluginDescriptor', GeneratePluginDescriptorTask) { GeneratePluginDescriptorTask t ->
             t.group = 'build'
             t.description = 'Generates META-INF/grails/plugins.imports and per-plugin plugin.properties descriptors from compiled classes'

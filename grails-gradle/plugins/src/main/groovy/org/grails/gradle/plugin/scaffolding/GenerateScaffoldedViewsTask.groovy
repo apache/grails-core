@@ -108,6 +108,12 @@ abstract class GenerateScaffoldedViewsTask extends DefaultTask {
     /** What marks an artifact as a Grails plugin, whose controllers are artefacts of the application. */
     private static final String PLUGIN_DESCRIPTOR = 'META-INF/grails/plugins.imports'
 
+    /** Legacy Grails plugin descriptor marker supported as a Grails 9 fallback. */
+    private static final String LEGACY_PLUGIN_DESCRIPTOR = 'META-INF/grails-plugin.xml'
+
+    private static final String PLUGIN_DESCRIPTORS_PREFIX = 'META-INF/grails/plugins/'
+    private static final String PLUGIN_PROPERTIES_FILE = 'plugin.properties'
+
     /** What marks a classpath entry as one providing the servlet API. */
     private static final String SERVLET_API = 'jakarta/servlet/ServletRequest.class'
 
@@ -455,14 +461,20 @@ abstract class GenerateScaffoldedViewsTask extends DefaultTask {
                 // none where a task registered by hand leaves pageClasspath empty, as one written
                 // before it existed does: every plugin controller is then expanded, as it was
                 ClassLoader compilable = checksPageTypes ? pageLoader : null
+                Set<String> seenPluginControllers = [] as Set
                 for (File entry : runtimeClasspath.files) {
                     if (entry.isFile()) {
                         openArchive(entry)?.withCloseable { JarFile jar ->
-                            if (jar.getJarEntry(PLUGIN_DESCRIPTOR) == null) {
+                            if (jar.getJarEntry(PLUGIN_DESCRIPTOR) == null &&
+                                    jar.getJarEntry(LEGACY_PLUGIN_DESCRIPTOR) == null) {
                                 return
                             }
                             for (JarEntry e : jar.entries()) {
                                 if (!e.directory && e.name.endsWith('Controller.class')) {
+                                    String fqcn = e.name.substring(0, e.name.length() - 6).replace('/' as char, '.' as char)
+                                    if (!seenPluginControllers.add(fqcn)) {
+                                        continue
+                                    }
                                     byte[] bytes = jar.getInputStream(e).withCloseable { InputStream input -> input.bytes }
                                     Controller controller = readPluginController(bytes, "${entry.name}!/${e.name}", resources,
                                             compilable, ancestors)
@@ -473,20 +485,79 @@ abstract class GenerateScaffoldedViewsTask extends DefaultTask {
                             }
                         }
                     }
-                    else if (entry.isDirectory() && new File(entry, PLUGIN_DESCRIPTOR).isFile()) {
-                        entry.eachFileRecurse { File f ->
-                            if (f.name.endsWith('Controller.class')) {
-                                Controller controller = readPluginController(f.bytes, f.path, resources, compilable, ancestors)
-                                if (controller != null) {
-                                    controllers.add(controller)
+                    else if (entry.isDirectory()) {
+                        File importsFile = new File(entry, PLUGIN_DESCRIPTOR)
+                        boolean hasModern = importsFile.isFile()
+                        boolean hasLegacy = new File(entry, LEGACY_PLUGIN_DESCRIPTOR).isFile()
+                        if (hasModern || hasLegacy) {
+                            entry.eachFileRecurse { File f ->
+                                if (f.name.endsWith('Controller.class')) {
+                                    String rel = entry.toPath().relativize(f.toPath()).toString()
+                                            .replace(File.separatorChar, '/' as char)
+                                    String fqcn = rel.substring(0, rel.length() - 6).replace('/' as char, '.' as char)
+                                    if (!seenPluginControllers.add(fqcn)) {
+                                        return
+                                    }
+                                    Controller controller = readPluginController(f.bytes, f.path, resources, compilable, ancestors)
+                                    if (controller != null) {
+                                        controllers.add(controller)
+                                    }
                                 }
                             }
+                        }
+                        if (hasModern) {
+                            readExplodedPluginControllers(entry, importsFile, resources, compilable, ancestors,
+                                    seenPluginControllers, controllers)
                         }
                     }
                 }
             }
         }
         controllers
+    }
+
+    private void readExplodedPluginControllers(
+            File descriptorRoot,
+            File importsFile,
+            ClassLoader resources,
+            ClassLoader compilable,
+            Map<String, Boolean> ancestors,
+            Set<String> seenPluginControllers,
+            List<Controller> controllers) {
+        for (String rawLine : importsFile.readLines('UTF-8')) {
+            int hash = rawLine.indexOf('#')
+            String pluginName = (hash >= 0 ? rawLine.substring(0, hash) : rawLine).trim()
+            if (pluginName.isEmpty() || pluginName.contains('/') || pluginName.contains('\\') || pluginName.contains('..')) {
+                continue
+            }
+            File propsFile = new File(descriptorRoot, "${PLUGIN_DESCRIPTORS_PREFIX}${pluginName}/${PLUGIN_PROPERTIES_FILE}")
+            if (!propsFile.isFile()) {
+                continue
+            }
+            Properties props = new Properties()
+            propsFile.withInputStream { InputStream input -> props.load(input) }
+            String controllerList = props.getProperty('artefacts.Controller')
+            if (!controllerList) {
+                continue
+            }
+            for (String token : controllerList.split(',')) {
+                String fqcn = token.trim()
+                if (fqcn.isEmpty() || !seenPluginControllers.add(fqcn)) {
+                    continue
+                }
+                String classPath = "${fqcn.replace('.', '/')}.class"
+                InputStream stream = resources.getResourceAsStream(classPath)
+                if (stream == null) {
+                    continue
+                }
+                byte[] bytes = stream.withCloseable { InputStream input -> input.bytes }
+                Controller controller = readPluginController(bytes, "${propsFile.path}!/${classPath}",
+                        resources, compilable, ancestors)
+                if (controller != null) {
+                    controllers.add(controller)
+                }
+            }
+        }
     }
 
     /**

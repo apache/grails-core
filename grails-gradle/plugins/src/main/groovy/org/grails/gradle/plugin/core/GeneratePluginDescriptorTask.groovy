@@ -33,12 +33,10 @@ import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
-import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.CacheableTask
 import org.gradle.api.tasks.IgnoreEmptyDirectories
 import org.gradle.api.tasks.Input
-import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.Nested
 import org.gradle.api.tasks.Optional
@@ -85,10 +83,10 @@ abstract class GeneratePluginDescriptorTask extends DefaultTask {
     @PathSensitive(PathSensitivity.RELATIVE)
     abstract ConfigurableFileCollection getClassesDirs()
 
-    @InputFile
+    @InputFiles
     @Optional
     @PathSensitive(PathSensitivity.NAME_ONLY)
-    abstract RegularFileProperty getPluginConfigFile()
+    abstract ConfigurableFileCollection getPluginConfigFiles()
 
     @Input
     abstract Property<String> getProjectName()
@@ -114,18 +112,19 @@ abstract class GeneratePluginDescriptorTask extends DefaultTask {
         ScanResult result = scan(classesDirs.files)
         List<ScannedPlugin> plugins = new ArrayList<>(result.plugins)
 
-        String configuredVersion = pluginOptions.version.getOrNull() ?: projectVersion.getOrNull()
+        String configuredName = trimToNull(pluginOptions.name.getOrNull())
+        String configuredVersion = trimToNull(pluginOptions.version.getOrNull()) ?: trimToNull(projectVersion.getOrNull())
         List<String> extraExcludes = pluginOptions.pluginExcludes.getOrElse([])
 
         if (plugins.isEmpty()) {
             // Descriptor-less starter plugin
-            String rawName = pluginOptions.name.getOrNull() ?: projectName.get()
+            String rawName = configuredName ?: projectName.get()
             String logicalName = normalizePluginName(rawName)
             plugins.add(new ScannedPlugin(
                     null,
                     logicalName,
                     configuredVersion ?: '0.1',
-                    pluginOptions.grailsVersion.getOrNull(),
+                    trimToNull(pluginOptions.grailsVersion.getOrNull()),
                     pluginOptions.loadAfter.getOrElse([]),
                     pluginOptions.loadBefore.getOrElse([]),
                     pluginOptions.dependsOn.getOrElse([:]),
@@ -138,12 +137,27 @@ abstract class GeneratePluginDescriptorTask extends DefaultTask {
                     true
             ))
         }
-        else if (extraExcludes) {
-            plugins = plugins.collect { ScannedPlugin p -> p.withExtraExcludes(extraExcludes) }
+        else {
+            if (configuredName != null && plugins.size() == 1) {
+                plugins = [plugins[0].withLogicalName(normalizePluginName(configuredName))]
+            }
+            if (extraExcludes) {
+                plugins = plugins.collect { ScannedPlugin p -> p.withExtraExcludes(extraExcludes) }
+            }
         }
 
-        File configFile = pluginConfigFile.asFile.getOrNull()
+        File configFile = resolvePluginConfigFile(pluginConfigFiles.files)
         writeDescriptors(plugins, result.artefactsByType, configuredVersion, configFile, outDir)
+    }
+
+    private static File resolvePluginConfigFile(Set<File> candidates) {
+        Collection<File> existing = candidates.findAll { File f -> f.isFile() }
+        if (existing.size() > 1) {
+            throw new GradleException(
+                    "A plugin may define a plugin.yml or a plugin.groovy, but not both: ${existing*.name.sort().join(', ')}"
+            )
+        }
+        existing ? existing.iterator().next() : null
     }
 
     static ScanResult scan(Set<File> classesDirs) {
@@ -494,6 +508,15 @@ abstract class GeneratePluginDescriptorTask extends DefaultTask {
             this.pluginExcludes = pluginExcludes
             this.enabled = enabled
             this.metadataComplete = metadataComplete
+        }
+
+        ScannedPlugin withLogicalName(String overrideName) {
+            new ScannedPlugin(
+                    className, overrideName, version, grailsVersion,
+                    loadAfter, loadBefore, dependsOn, evict, observe,
+                    environmentsIncludes, environmentsExcludes, pluginExcludes,
+                    enabled, metadataComplete
+            )
         }
 
         ScannedPlugin withExtraExcludes(List<String> extra) {

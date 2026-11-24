@@ -42,6 +42,7 @@ import org.gradle.api.tasks.bundling.War
 import org.gradle.jvm.toolchain.JavaLauncher
 import org.gradle.jvm.toolchain.JavaToolchainService
 
+import org.grails.gradle.plugin.core.GeneratePluginDescriptorTask
 import org.grails.gradle.plugin.core.GrailsCompileStaticOptions
 import org.grails.gradle.plugin.core.GrailsGradlePlugin
 import org.grails.gradle.plugin.core.GrailsPluginGradlePlugin
@@ -414,8 +415,23 @@ class GroovyPagePlugin implements Plugin<Project> {
         wireCompileStaticOptions(project, [compileGroovyPages, compileWebappGroovyPages])
 
         project.plugins.withId(GrailsPluginGradlePlugin.PLUGIN_ID) {
-            Provider<String> pluginViewsPath = project.provider {
-                String logicalName = GrailsPluginGradlePlugin.resolveLogicalPluginName(project)
+            TaskProvider<GeneratePluginDescriptorTask> descriptorTask = project.tasks.named(
+                    'generatePluginDescriptor', GeneratePluginDescriptorTask)
+            Provider<String> fallbackName = descriptorTask.flatMap { GeneratePluginDescriptorTask t ->
+                t.pluginOptions.name.orElse(t.projectName)
+            }
+            Provider<String> pluginViewsPath = descriptorTask.flatMap { GeneratePluginDescriptorTask t ->
+                t.outputDirectory
+            }.zip(fallbackName) { Directory dir, String fallback ->
+                File importsFile = dir.file(GeneratePluginDescriptorTask.PLUGINS_IMPORTS_PATH).asFile
+                String resolvedName = null
+                if (importsFile.isFile()) {
+                    resolvedName = importsFile.readLines('UTF-8').collect { String line ->
+                        int hash = line.indexOf('#')
+                        (hash >= 0 ? line.substring(0, hash) : line).trim()
+                    }.find { String line -> !line.isEmpty() }
+                }
+                String logicalName = resolvedName ?: GeneratePluginDescriptorTask.normalizePluginName(fallback)
                 "META-INF/grails/plugins/${logicalName}/views.properties".toString()
             }
             compileGroovyPages.configure { GroovyPageForkCompileTask task ->

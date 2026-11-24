@@ -91,16 +91,7 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
     @Override
     protected Provider<String> grailsArtifactName(Project project) {
         project.provider {
-            GrailsExtension ext = project.extensions.findByType(GrailsExtension)
-            String configured = ext?.plugin?.name?.getOrNull()
-            if (configured) {
-                return GrailsNameUtils.getScriptName(configured)
-            }
-            SourceSet mainSourceSet = SourceSets.findMainSourceSet(project)
-            File descriptor = mainSourceSet?.allSource?.matching { PatternFilterable pattern ->
-                pattern.include('**/*GrailsPlugin.groovy')
-            }?.files?.sort { File file -> file.name }?.find()
-            descriptor ? GrailsNameUtils.getPluginName(descriptor.name) : project.name
+            GrailsNameUtils.getScriptName(resolveLogicalPluginName(project))
         }
     }
 
@@ -112,18 +103,31 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
     static String resolveLogicalPluginName(Project project) {
         GrailsExtension ext = project.extensions.findByType(GrailsExtension)
         String configured = ext?.plugin?.name?.getOrNull()
-        if (configured) {
+        if (configured != null && !configured.isBlank()) {
             return GeneratePluginDescriptorTask.normalizePluginName(configured)
         }
         SourceSet mainSourceSet = SourceSets.findMainSourceSet(project)
-        File descriptor = mainSourceSet?.allSource?.matching { PatternFilterable pattern ->
-            pattern.include('**/*GrailsPlugin.groovy')
-        }?.files?.sort { File file -> file.name }?.find()
+        File descriptor = findConcretePluginDescriptorSource(mainSourceSet)
         if (descriptor) {
-            String baseName = descriptor.name.substring(0, descriptor.name.length() - '.groovy'.length())
+            String fileName = descriptor.name
+            String baseName = fileName.endsWith('.groovy')
+                    ? fileName.substring(0, fileName.length() - '.groovy'.length())
+                    : fileName.substring(0, fileName.length() - '.java'.length())
             return GrailsNameUtils.getLogicalPropertyName(baseName, 'GrailsPlugin')
         }
         GeneratePluginDescriptorTask.normalizePluginName(project.name)
+    }
+
+    private static File findConcretePluginDescriptorSource(SourceSet mainSourceSet) {
+        if (mainSourceSet == null) {
+            return null
+        }
+        List<File> candidates = mainSourceSet.allSource.matching { PatternFilterable pattern ->
+            pattern.include('**/*GrailsPlugin.groovy', '**/*GrailsPlugin.java')
+        }.files.sort { File file -> file.name }
+        candidates.find { File file ->
+            !(file.text =~ /\babstract\s+class\b/)
+        }
     }
 
     @Override
@@ -194,27 +198,16 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
             task.pluginOptions.environmentsIncludes.convention(grailsExt.plugin.environmentsIncludes)
             task.pluginOptions.environmentsExcludes.convention(grailsExt.plugin.environmentsExcludes)
             task.pluginOptions.pluginExcludes.convention(grailsExt.plugin.pluginExcludes)
-            task.pluginConfigFile.fileProvider(project.provider {
-                findPluginConfigFile(project)
-            })
+            task.pluginConfigFiles.from(
+                    project.layout.projectDirectory.file('grails-app/conf/plugin.yml'),
+                    project.layout.projectDirectory.file('grails-app/conf/plugin.groovy'),
+                    project.layout.projectDirectory.file('src/main/resources/plugin.yml'),
+                    project.layout.projectDirectory.file('src/main/resources/plugin.groovy')
+            )
             task.outputDirectory.set(generatedDir)
         }
 
         mainSourceSet.output.dir(Collections.<String, Object> singletonMap('builtBy', descriptorTask), generatedDir)
-    }
-
-    private static File findPluginConfigFile(Project project) {
-        List<File> candidates = [
-                project.layout.projectDirectory.file('grails-app/conf/plugin.yml').asFile,
-                project.layout.projectDirectory.file('grails-app/conf/plugin.groovy').asFile,
-                project.layout.projectDirectory.file('src/main/resources/plugin.yml').asFile,
-                project.layout.projectDirectory.file('src/main/resources/plugin.groovy').asFile,
-        ]
-        List<File> existing = candidates.findAll { File f -> f.isFile() }
-        if (existing.size() > 1) {
-            throw new RuntimeException('A plugin may define a plugin.yml or a plugin.groovy, but not both')
-        }
-        existing ? existing.first() : null
     }
 
     @Override

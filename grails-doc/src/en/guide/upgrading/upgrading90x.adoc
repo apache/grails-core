@@ -1667,5 +1667,5 @@ grails {
   deprecated read-only fallback support remains in Grails 9 (logging a warning) for external plugins not yet rebuilt
   and will be removed in Grails 10.
 * Remove any custom publishing configuration or shadow/fat-JAR rules that reference `META-INF/grails-plugin.xml`.
-* Migrate overrides of `doWithDynamicMethods()` and `doWithApplicationContext()` to compile-time traits/extension
-  modules and Spring lifecycle beans ahead of Grails 10.
+* Migrate overrides of `doWithDynamicMethods()` and `doWithApplicationContext()` (deprecated in Grails 9.0) to
+  compile-time traits/extension modules and Spring lifecycle beans.

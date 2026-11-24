@@ -52,7 +52,7 @@ final class ForgePages {
      */
     static final String PLUGIN_VIEWS_REGISTRY = 'META-INF/grails/plugins/forge/views.properties'
 
-    private static final List<String> VIEWS_REGISTRIES = [VIEWS_REGISTRY, PLUGIN_VIEWS_REGISTRY]
+    private static final List<String> VIEWS_REGISTRIES = [PLUGIN_VIEWS_REGISTRY, VIEWS_REGISTRY]
 
     /**
      * The URI prefix, in the registry, of the generator's pages.

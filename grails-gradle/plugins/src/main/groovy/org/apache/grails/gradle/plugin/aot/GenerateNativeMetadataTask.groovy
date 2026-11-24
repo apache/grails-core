@@ -147,7 +147,15 @@ abstract class GenerateNativeMetadataTask extends DefaultTask {
     }
 
     private static boolean isViewsManifestEntry(String name) {
-        name == VIEWS_MANIFEST || (name.startsWith(PLUGIN_VIEWS_PREFIX) && name.endsWith(PLUGIN_VIEWS_SUFFIX))
+        if (name == VIEWS_MANIFEST) {
+            return true
+        }
+        if (name.startsWith(PLUGIN_VIEWS_PREFIX) && name.endsWith(PLUGIN_VIEWS_SUFFIX) &&
+                name.length() > PLUGIN_VIEWS_PREFIX.length() + PLUGIN_VIEWS_SUFFIX.length()) {
+            String pluginName = name.substring(PLUGIN_VIEWS_PREFIX.length(), name.length() - PLUGIN_VIEWS_SUFFIX.length())
+            return !pluginName.contains('/')
+        }
+        false
     }
 
     /** Every compiled application class, including the closures its artefacts declare. */
@@ -174,13 +182,16 @@ abstract class GenerateNativeMetadataTask extends DefaultTask {
     private Set<String> pageClasses() {
         Set<String> found = [] as Set
         for (File dir : pageClassesDirs.files) {
-            File manifest = new File(dir, VIEWS_MANIFEST)
-            if (!manifest.isFile()) {
+            List<File> manifests = collectViewsManifests(dir)
+            if (manifests.isEmpty()) {
                 continue
             }
-            Properties views = new Properties()
-            manifest.withInputStream { views.load(it) }
-            Set<String> pages = views.values().collect { it.toString() } as Set
+            Set<String> pages = [] as Set
+            for (File manifest : manifests) {
+                Properties views = new Properties()
+                manifest.withInputStream { views.load(it) }
+                pages.addAll(views.values().collect { it.toString() })
+            }
             found.addAll(pages)
             // a page's closures are reached the same way its body is; the directory is walked once
             // rather than per page, which matters for an application with many views
@@ -196,5 +207,28 @@ abstract class GenerateNativeMetadataTask extends DefaultTask {
             }
         }
         found
+    }
+
+    private static List<File> collectViewsManifests(File dir) {
+        List<File> manifests = []
+        File appManifest = new File(dir, VIEWS_MANIFEST)
+        if (appManifest.isFile()) {
+            manifests << appManifest
+        }
+        File pluginsDir = new File(dir, PLUGIN_VIEWS_PREFIX)
+        if (pluginsDir.isDirectory()) {
+            File[] children = pluginsDir.listFiles()
+            if (children != null) {
+                for (File child : children) {
+                    if (child.isDirectory()) {
+                        File pluginManifest = new File(child, 'views.properties')
+                        if (pluginManifest.isFile()) {
+                            manifests << pluginManifest
+                        }
+                    }
+                }
+            }
+        }
+        manifests
     }
 }

@@ -73,7 +73,7 @@ class GeneratePluginDescriptorTaskSpec extends Specification {
         GeneratePluginDescriptorTask task = project.tasks.register('generatePluginDescriptor', GeneratePluginDescriptorTask) {
             GeneratePluginDescriptorTask t ->
                 t.classesDirs.from(classesDir)
-                t.pluginConfigFile.set(configFile)
+                t.pluginConfigFiles.from(configFile)
                 t.projectName.set('my-starter')
                 t.projectVersion.set('1.2.3')
                 t.pluginOptions.grailsVersion.set('9.0.0 > *')

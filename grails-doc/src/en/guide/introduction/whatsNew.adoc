@@ -79,7 +79,7 @@ Grails 9 replaces compile-time `META-INF/grails-plugin.xml` generation with a bu
 * **Descriptor-less starter plugins:** A Spring Boot-style plugin can declare metadata in `build.gradle` via `grails { plugin { ... } }` (or infer name and version from project coordinates) without writing a `*GrailsPlugin` class at all.
 * **Typed Java and `@CompileStatic` descriptors:** Annotate any Java or Groovy class with `@GrailsPluginDescriptor` (`grails.plugins.metadata.GrailsPluginDescriptor`) to provide plugin metadata without the `*GrailsPlugin` suffix or reflective instantiation during discovery.
 
-Existing `*GrailsPlugin` classes continue to work when rebuilt against Grails 9; `Plugin.doWithDynamicMethods()` and `Plugin.doWithApplicationContext()` are deprecated for removal in favor of Spring beans, `@EventListener`, and Spring Boot auto-configuration. See xref:plugins#creatingAndInstallingPlugins[Creating and Installing Plugins] and xref:upgrading#upgrading90x[Upgrading from Grails 8 to Grails {grailsMajorVersion}].
+Existing `*GrailsPlugin` classes continue to work when rebuilt against Grails 9; `Plugin.doWithDynamicMethods()` and `Plugin.doWithApplicationContext()` are deprecated in Grails 9.0 in favor of Spring beans, `@EventListener`, and Spring Boot auto-configuration. See xref:plugins#creatingAndInstallingPlugins[Creating and Installing Plugins] and xref:upgrading#upgrading90x[Upgrading from Grails 8 to Grails {grailsMajorVersion}].
 
 ==== Spring Boot 4.2 and Spring Framework 7.1
 
