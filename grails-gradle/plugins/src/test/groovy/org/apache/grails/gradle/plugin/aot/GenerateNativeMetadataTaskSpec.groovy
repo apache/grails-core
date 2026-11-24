@@ -165,6 +165,38 @@ class GenerateNativeMetadataTaskSpec extends Specification {
             recordedTypes(task([pluginJar])).contains('gsp_modern_widget_gsp')
     }
 
+    void 'ignores malformed plugin views manifest paths under META-INF/grails/plugins'() {
+        given: 'a jar with empty or nested plugin segment paths under META-INF/grails/plugins/'
+            File pluginJar = new File(projectDir, 'malformed-plugin.jar')
+            Properties properties = new Properties()
+            properties.setProperty('/WEB-INF/grails-app/views/bad.gsp', 'gsp_bad_gsp')
+            new JarOutputStream(pluginJar.newOutputStream()).withCloseable { JarOutputStream out ->
+                out.putNextEntry(new JarEntry('META-INF/grails/plugins/views.properties'))
+                properties.store(out, null)
+                out.closeEntry()
+                out.putNextEntry(new JarEntry('META-INF/grails/plugins/nested/extra/views.properties'))
+                properties.store(out, null)
+                out.closeEntry()
+            }
+
+        expect:
+            !recordedTypes(task([pluginJar])).contains('gsp_bad_gsp')
+    }
+
+    void 'records local plugin pages from namespaced META-INF/grails/plugins/<name>/views.properties in pageClassesDirs'() {
+        given: 'a plugin build whose compiled pages manifest lives under its plugin namespace'
+            File manifest = new File(pageClassesDir, 'META-INF/grails/plugins/myPlugin/views.properties')
+            manifest.parentFile.mkdirs()
+            Properties properties = new Properties()
+            properties.setProperty('/WEB-INF/grails-app/views/my/show.gsp', 'gsp_myPlugin_show_gsp')
+            manifest.withOutputStream { properties.store(it, null) }
+            writeClass(pageClassesDir, 'gsp_myPlugin_show_gsp')
+            writeClass(pageClassesDir, 'gsp_myPlugin_show_gsp$_run_closure1')
+
+        expect:
+            recordedTypes(task()).containsAll(['gsp_myPlugin_show_gsp', 'gsp_myPlugin_show_gsp$_run_closure1'])
+    }
+
     void 'an artifact carrying no pages is passed over'() {
         given:
             File plainJar = new File(projectDir, 'plain.jar')

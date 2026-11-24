@@ -18,11 +18,13 @@
  */
 package org.apache.grails.buildsrc
 
+import org.gradle.api.GradleException
 import org.objectweb.asm.AnnotationVisitor
 import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.Opcodes
 import spock.lang.Specification
 import spock.lang.TempDir
+import spock.lang.Unroll
 
 class GeneratePluginDescriptorTaskSpec extends Specification {
 
@@ -158,7 +160,7 @@ class GeneratePluginDescriptorTaskSpec extends Specification {
         result.plugins.isEmpty()
     }
 
-    void 'ignores generic or non-default-constructor @Artefact base classes unless stamped with @GrailsPlugin'() {
+    void 'ignores generic @Artefact base classes unless stamped with @GrailsPlugin, while keeping constructor-injected artefacts'() {
         given:
         File classesDir = new File(tempDir, 'classes')
         writeClass(classesDir, 'grails/rest/RestResponderGrailsPlugin')
@@ -178,7 +180,6 @@ class GeneratePluginDescriptorTaskSpec extends Specification {
         AnnotationVisitor av2 = injectedService.visitAnnotation('Lgrails/artefact/Artefact;', true)
         av2.visit('value', 'Service')
         av2.visitEnd()
-        injectedService.visitAnnotation('Lgrails/plugins/metadata/GrailsPlugin;', true).visitEnd()
         injectedService.visitEnd()
         new File(classesDir, 'com/example/InjectedService.class').tap { parentFile.mkdirs(); bytes = injectedService.toByteArray() }
 
@@ -188,5 +189,115 @@ class GeneratePluginDescriptorTaskSpec extends Specification {
         then:
         result.artefactsByType['Controller'] == null
         result.artefactsByType['Service'] == ['com.example.InjectedService'] as SortedSet
+    }
+
+    void 'applies Ant glob patterns with double-star, single-char wildcard, and regex metacharacters'() {
+        given:
+        File classesDir = new File(tempDir, 'classes')
+        File outDir = new File(tempDir, 'out')
+        writeClass(classesDir, 'com/example/GlobGrailsPlugin') { ClassWriter cw ->
+            AnnotationVisitor av = cw.visitAnnotation('Lgrails/plugins/metadata/PluginExcludes;', false)
+            AnnotationVisitor arr = av.visitArray('value')
+            arr.visit(null, '**/internal/**')
+            arr.visit(null, 'com/example/V?Controller')
+            arr.visit(null, 'com/example/Special$Controller')
+            arr.visitEnd()
+            av.visitEnd()
+        }
+        ['com/example/internal/HiddenController',
+         'com/example/sub/internal/deep/AlsoHiddenController',
+         'com/example/V1Controller',
+         'com/example/Special$Controller',
+         'com/example/PublicController',
+         'com/example/V10Controller'].each { String internalName ->
+            writeClass(classesDir, internalName) { ClassWriter cw ->
+                AnnotationVisitor av = cw.visitAnnotation('Lgrails/artefact/Artefact;', true)
+                av.visit('value', 'Controller')
+                av.visitEnd()
+            }
+        }
+
+        when:
+        def result = GeneratePluginDescriptorTask.scan([classesDir] as Set)
+        GeneratePluginDescriptorTask.writeDescriptors(result, '9.0.0', outDir)
+        def props = loadProperties(new File(outDir, 'META-INF/grails/plugins/glob/plugin.properties'))
+
+        then:
+        props.getProperty('artefacts.Controller') == 'com.example.PublicController,com.example.V10Controller'
+    }
+
+    void 'fails when two plugin classes resolve to the same logical plugin name'() {
+        given:
+        File classesDir = new File(tempDir, 'classes')
+        File outDir = new File(tempDir, 'out')
+        writeClass(classesDir, 'com/one/DuplicateGrailsPlugin')
+        writeClass(classesDir, 'com/two/DuplicateGrailsPlugin')
+
+        when:
+        def result = GeneratePluginDescriptorTask.scan([classesDir] as Set)
+        GeneratePluginDescriptorTask.writeDescriptors(result, '9.0.0', outDir)
+
+        then:
+        def e = thrown(GradleException)
+        e.message.contains('duplicate')
+    }
+
+    void 'ignores enums and bare GrailsPlugin classes during scanning'() {
+        given:
+        File classesDir = new File(tempDir, 'classes')
+        writeClass(classesDir, 'com/example/ModeGrailsPlugin', Opcodes.ACC_PUBLIC | Opcodes.ACC_FINAL | Opcodes.ACC_ENUM)
+        writeClass(classesDir, 'com/example/GrailsPlugin')
+
+        when:
+        def result = GeneratePluginDescriptorTask.scan([classesDir] as Set)
+
+        then:
+        result.plugins.isEmpty()
+    }
+
+    @Unroll
+    void "normalizes plugin name '#rawName' to '#expected'"() {
+        given:
+        File classesDir = new File(tempDir, "classes-${expected}")
+        File outDir = new File(tempDir, "out-${expected}")
+        writeClass(classesDir, 'com/example/NamedStarter') { ClassWriter cw ->
+            AnnotationVisitor av = cw.visitAnnotation('Lgrails/plugins/metadata/GrailsPluginDescriptor;', true)
+            av.visit('name', rawName)
+            av.visitEnd()
+        }
+
+        when:
+        def result = GeneratePluginDescriptorTask.scan([classesDir] as Set)
+        GeneratePluginDescriptorTask.writeDescriptors(result, '9.0.0', outDir)
+
+        then:
+        new File(outDir, 'META-INF/grails/plugins.imports').text == "${expected}\n"
+
+        where:
+        rawName                || expected
+        'a-b'                  || 'AB'
+        'e-commerce'           || 'ECommerce'
+        '-foo'                 || 'foo'
+        'spring-security-core' || 'springSecurityCore'
+    }
+
+    void 'escapes leading whitespace and control characters in generated properties files'() {
+        given:
+        File classesDir = new File(tempDir, 'classes')
+        File outDir = new File(tempDir, 'out')
+        writeClass(classesDir, 'com/example/EscapedStarter') { ClassWriter cw ->
+            AnnotationVisitor av = cw.visitAnnotation('Lgrails/plugins/metadata/GrailsPluginDescriptor;', true)
+            av.visit('name', 'escaped')
+            av.visit('grailsVersion', '  9.0.0\t>\n*')
+            av.visitEnd()
+        }
+
+        when:
+        def result = GeneratePluginDescriptorTask.scan([classesDir] as Set)
+        GeneratePluginDescriptorTask.writeDescriptors(result, '9.0.0', outDir)
+        def props = loadProperties(new File(outDir, 'META-INF/grails/plugins/escaped/plugin.properties'))
+
+        then:
+        props.getProperty('grailsVersion') == '9.0.0\t>\n*'
     }
 }

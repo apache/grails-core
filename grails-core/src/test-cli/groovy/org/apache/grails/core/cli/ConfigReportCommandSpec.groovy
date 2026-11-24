@@ -457,6 +457,42 @@ class ConfigReportCommandSpec extends Specification {
         classLoader?.close()
     }
 
+    def "loadPropertyMetadata maps grailsLibraryPluginDescriptor to Java, Groovy, and resource outputs and detects legacy XML roots"() {
+        given: "a library plugin using grailsLibraryPluginDescriptor with metadata in classes/java/main"
+        File libraryDescriptor = classpathRoot('libplugin/build/generated/resources/grailsLibraryPluginDescriptor', [
+                'META-INF/grails/plugins.imports': 'libmod\n'
+        ])
+        File libraryJavaClasses = classpathRoot('libplugin/build/classes/java/main', [
+                'META-INF/spring-configuration-metadata.json': '''{
+                    "groups": [{"name": "libmod", "description": "LibMod"}],
+                    "properties": [{"name": "libmod.enabled", "type": "java.lang.Boolean", "description": "Whether LibMod is enabled."}]
+                }'''
+        ])
+
+        and: "a legacy plugin with META-INF/grails-plugin.xml"
+        File legacyPlugin = classpathRoot('legacy-plugin', [
+                'META-INF/grails-plugin.xml': '<plugin name="legacy" version="1.0.0"/>',
+                'META-INF/spring-configuration-metadata.json': '''{
+                    "groups": [{"name": "legacy", "description": "Legacy"}],
+                    "properties": [{"name": "legacy.flag", "type": "java.lang.Boolean", "description": "Legacy flag."}]
+                }'''
+        ])
+
+        URL[] urls = [libraryDescriptor, libraryJavaClasses, legacyPlugin].collect { it.toURI().toURL() } as URL[]
+        URLClassLoader classLoader = new URLClassLoader(urls, (ClassLoader) null)
+
+        when:
+        ConfigReportCommand.MetadataResult metadataResult = command.loadPropertyMetadata(classLoader)
+        List<String> names = metadataResult.properties*.name
+
+        then:
+        names.contains('libmod.enabled')
+        names.contains('legacy.flag')
+
+        cleanup:
+        classLoader?.close()
+    }
+
     def "writeReport documents plugin properties in their own section"() {
         given: "the metadata of a plugin outside the Grails namespaces"
         File plugin = classpathRoot('plugin', [

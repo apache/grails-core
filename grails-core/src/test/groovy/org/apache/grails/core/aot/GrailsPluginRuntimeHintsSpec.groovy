@@ -159,4 +159,37 @@ class GrailsPluginRuntimeHintsSpec extends Specification {
         cleanup:
             loader?.close()
     }
+
+    void 'registers hints for both the imported plugin name and an aliased descriptor name'() {
+        given: 'a plugins.imports entry whose descriptor declares an aliased name with its own config resource'
+            def imports = new File(classpathRoot, PluginUtils.PLUGINS_IMPORTS_PATH)
+            imports.parentFile.mkdirs()
+            imports.text = 'my-plugin\n'
+            def descriptor = new File(classpathRoot, PluginUtils.getPluginDescriptorPath('myPlugin'))
+            descriptor.parentFile.mkdirs()
+            descriptor.text = 'format.version=1\nname=customAlias\nversion=1.0.0\n'
+            def aliasedConfig = new File(classpathRoot, PluginUtils.getPluginConfigPath('customAlias', PluginUtils.PLUGIN_YML_CONFIG))
+            aliasedConfig.parentFile.mkdirs()
+            aliasedConfig.text = 'custom:\n  enabled: true\n'
+            def loader = new URLClassLoader([classpathRoot.toURI().toURL()] as URL[], getClass().classLoader)
+
+        when:
+            new GrailsPluginRuntimeHints().registerHints(hints, loader)
+
+        then: 'both the import path and the aliased descriptor namespace resources are registered'
+            RuntimeHintsPredicates.resource().forResource('META-INF/grails/plugins/myPlugin/plugin.properties').test(hints)
+            RuntimeHintsPredicates.resource().forResource('META-INF/grails/plugins/customAlias/plugin.yml').test(hints)
+
+        cleanup:
+            loader?.close()
+    }
+
+    void 'handles a null classLoader safely by falling back to the context class loader'() {
+        when:
+            new GrailsPluginRuntimeHints().registerHints(hints, null)
+
+        then:
+            noExceptionThrown()
+            RuntimeHintsPredicates.resource().forResource(PluginUtils.PLUGINS_IMPORTS_PATH).test(hints)
+    }
 }

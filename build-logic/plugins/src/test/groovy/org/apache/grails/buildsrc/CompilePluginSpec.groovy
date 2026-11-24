@@ -186,6 +186,25 @@ class CompilePluginSpec extends Specification {
         result.output.contains('TEST_INDY=true')
     }
 
+    def "places generateGrailsPluginDescriptor output in grailsLibraryPluginDescriptor directory"() {
+        given:
+        testProjectDir.resolve('build.gradle').toFile().append('''
+            tasks.register('printDescriptorDir') {
+                def descTask = tasks.named('generateGrailsPluginDescriptor', org.apache.grails.buildsrc.GeneratePluginDescriptorTask)
+                doLast {
+                    println "DESCRIPTOR_DIR=${descTask.get().outputDirectory.get().asFile.path}"
+                }
+            }
+        ''')
+
+        when:
+        def result = run(['printDescriptorDir'])
+
+        then:
+        result.task(':printDescriptorDir').outcome == TaskOutcome.SUCCESS
+        result.output.replace('\\', '/').contains('generated/resources/grailsLibraryPluginDescriptor')
+    }
+
     private def run(List<String> arguments) {
         GradleRunner.create()
                 .withProjectDir(testProjectDir.toFile())

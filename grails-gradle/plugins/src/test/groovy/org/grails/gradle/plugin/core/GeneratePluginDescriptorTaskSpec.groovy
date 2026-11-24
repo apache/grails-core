@@ -21,6 +21,7 @@ package org.grails.gradle.plugin.core
 import groovyjarjarasm.asm.AnnotationVisitor
 import groovyjarjarasm.asm.ClassWriter
 import groovyjarjarasm.asm.Opcodes
+import org.gradle.api.GradleException
 import org.gradle.api.Project
 import org.gradle.testfixtures.ProjectBuilder
 import spock.lang.Specification
@@ -146,5 +147,131 @@ class GeneratePluginDescriptorTaskSpec extends Specification {
         props.getProperty('class') == 'com.example.AuditPlugin'
         props.getProperty('metadata.complete') == 'true'
         props.getProperty('artefacts.Controller') == 'com.example.AuditController'
+    }
+
+    void 'writes all GrailsPluginOptions fields, defaults blank dependsOn to wildcard, and applies glob pluginExcludes'() {
+        given:
+        File classesDir = new File(tempDir, 'classes').tap { mkdirs() }
+        File outDir = new File(tempDir, 'out')
+        ['com/example/internal/SkipService',
+         'com/example/V1Service',
+         'com/example/Dollar$Service',
+         'com/example/KeepService'].each { String internalName ->
+            writeClass(classesDir, internalName) { ClassWriter cw ->
+                AnnotationVisitor av = cw.visitAnnotation('Lgrails/artefact/Artefact;', true)
+                av.visit('value', 'Service')
+                av.visitEnd()
+            }
+        }
+
+        Project project = ProjectBuilder.builder().withProjectDir(tempDir).withName('full-options').build()
+        GeneratePluginDescriptorTask task = project.tasks.register('generatePluginDescriptor', GeneratePluginDescriptorTask) {
+            GeneratePluginDescriptorTask t ->
+                t.classesDirs.from(classesDir)
+                t.projectName.set('full-options')
+                t.projectVersion.set('1.0.0')
+                t.pluginOptions.loadBefore.set(['controllers'])
+                t.pluginOptions.evict.set(['old-plugin'])
+                t.pluginOptions.observe.set(['spring-security-core', '*'])
+                t.pluginOptions.dependsOn.set(['core': ''])
+                t.pluginOptions.enabled.set(false)
+                t.pluginOptions.environmentsIncludes.set(['development', 'test'])
+                t.pluginOptions.environmentsExcludes.set(['production'])
+                t.pluginOptions.pluginExcludes.set(['**/internal/**', 'com/example/V?Service', 'com/example/Dollar$Service'])
+                t.outputDirectory.set(outDir)
+        }.get()
+
+        when:
+        task.generate()
+        def props = loadProperties(new File(outDir, 'META-INF/grails/plugins/fullOptions/plugin.properties'))
+
+        then:
+        props.getProperty('loadBefore') == 'controllers'
+        props.getProperty('evict') == 'oldPlugin'
+        props.getProperty('observe') == 'springSecurityCore,*'
+        props.getProperty('dependsOn.core') == '*'
+        props.getProperty('enabled') == 'false'
+        props.getProperty('environments.includes') == 'development,test'
+        props.getProperty('environments.excludes') == 'production'
+        props.getProperty('artefacts.Service') == 'com.example.KeepService'
+    }
+
+    void 'allows pluginOptions.name to override the logical name of a single plugin class and cleans stale outputs'() {
+        given:
+        File classesDir = new File(tempDir, 'classes').tap { mkdirs() }
+        File outDir = new File(tempDir, 'out')
+        File stale = new File(outDir, 'META-INF/grails/plugins/staleOld/plugin.properties')
+        stale.parentFile.mkdirs()
+        stale.text = 'name=staleOld\n'
+
+        writeClass(classesDir, 'com/example/OriginalGrailsPlugin')
+
+        Project project = ProjectBuilder.builder().withProjectDir(tempDir).withName('override-plugin').build()
+        GeneratePluginDescriptorTask task = project.tasks.register('generatePluginDescriptor', GeneratePluginDescriptorTask) {
+            GeneratePluginDescriptorTask t ->
+                t.classesDirs.from(classesDir)
+                t.projectName.set('override-plugin')
+                t.projectVersion.set('1.0.0')
+                t.pluginOptions.name.set('custom-alias')
+                t.outputDirectory.set(outDir)
+        }.get()
+
+        when:
+        task.generate()
+
+        then:
+        !stale.exists()
+        new File(outDir, 'META-INF/grails/plugins.imports').text == 'customAlias\n'
+        loadProperties(new File(outDir, 'META-INF/grails/plugins/customAlias/plugin.properties')).getProperty('name') == 'customAlias'
+    }
+
+    void 'fails when both plugin.yml and plugin.groovy are present in pluginConfigFiles'() {
+        given:
+        File classesDir = new File(tempDir, 'classes').tap { mkdirs() }
+        File outDir = new File(tempDir, 'out')
+        File yml = new File(tempDir, 'plugin.yml').tap { text = 'a: 1\n' }
+        File groovyCfg = new File(tempDir, 'plugin.groovy').tap { text = 'a = 1\n' }
+
+        Project project = ProjectBuilder.builder().withProjectDir(tempDir).withName('clash-plugin').build()
+        GeneratePluginDescriptorTask task = project.tasks.register('generatePluginDescriptor', GeneratePluginDescriptorTask) {
+            GeneratePluginDescriptorTask t ->
+                t.classesDirs.from(classesDir)
+                t.pluginConfigFiles.from(yml, groovyCfg)
+                t.projectName.set('clash-plugin')
+                t.projectVersion.set('1.0.0')
+                t.outputDirectory.set(outDir)
+        }.get()
+
+        when:
+        task.generate()
+
+        then:
+        def e = thrown(GradleException)
+        e.message.contains('plugin.yml')
+        e.message.contains('plugin.groovy')
+    }
+
+    void 'fails when two plugin classes resolve to the same logical plugin name'() {
+        given:
+        File classesDir = new File(tempDir, 'classes').tap { mkdirs() }
+        File outDir = new File(tempDir, 'out')
+        writeClass(classesDir, 'com/one/SharedGrailsPlugin')
+        writeClass(classesDir, 'com/two/SharedGrailsPlugin')
+
+        Project project = ProjectBuilder.builder().withProjectDir(tempDir).withName('dup-plugin').build()
+        GeneratePluginDescriptorTask task = project.tasks.register('generatePluginDescriptor', GeneratePluginDescriptorTask) {
+            GeneratePluginDescriptorTask t ->
+                t.classesDirs.from(classesDir)
+                t.projectName.set('dup-plugin')
+                t.projectVersion.set('1.0.0')
+                t.outputDirectory.set(outDir)
+        }.get()
+
+        when:
+        task.generate()
+
+        then:
+        def e = thrown(GradleException)
+        e.message.contains('shared')
     }
 }

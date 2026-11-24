@@ -198,6 +198,30 @@ class PluginConfigurationBeanFactoryInitializationAotProcessorSpec extends Speci
             RuntimeHintsPredicates.resource().forResource(namespacedPath).test(generation.runtimeHints)
     }
 
+    void 'a plugin with both namespaced plugin.yml and plugin.groovy fails AOT processing'() {
+        given: 'a starter plugin whose namespace contains both plugin.yml and plugin.groovy'
+            Path root = temp.resolve('dualStarter')
+            PluginClassFixtures.write(root, PluginUtils.getPluginConfigPath('dualStarter', PluginUtils.PLUGIN_YML_CONFIG), 'dual: true')
+            PluginClassFixtures.write(root, PluginUtils.getPluginConfigPath('dualStarter', PluginUtils.PLUGIN_GROOVY_CONFIG), 'dual = true')
+            URLClassLoader loader = PluginClassFixtures.loaderOver(root)
+            loaders << loader
+            context.beanFactory.setBeanClassLoader(loader)
+            GrailsPlugin starterPlugin = Stub(GrailsPlugin) {
+                getName() >> 'dualStarter'
+                getPluginClass() >> null
+            }
+            context.beanFactory.registerSingleton(GrailsPluginManager.BEAN_NAME, Stub(GrailsPluginManager) {
+                getAllPlugins() >> ([starterPlugin] as GrailsPlugin[])
+            })
+
+        when:
+            new PluginConfigurationBeanFactoryInitializationAotProcessor().processAheadOfTime(context.beanFactory)
+
+        then:
+            def e = thrown(RuntimeException)
+            e.message.contains('dualStarter')
+    }
+
     void 'a context that is not a Grails application contributes nothing'() {
         expect: 'a plain Spring application being generated has no plugins to ask'
             new PluginConfigurationBeanFactoryInitializationAotProcessor().processAheadOfTime(context.beanFactory) == null

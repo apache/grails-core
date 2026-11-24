@@ -122,4 +122,31 @@ class GroovyPageForkedCompilerSpec extends Specification {
         previous == null ? System.clearProperty(BuildSettings.OPTIONAL_GSP_PAGES) :
                 System.setProperty(BuildSettings.OPTIONAL_GSP_PAGES, previous)
     }
+
+    void 'writes compiled views manifest to the namespaced path configured by BuildSettings.GSP_VIEWS_MANIFEST_PATH'() {
+        given:
+        File views = new File(dir, 'views')
+        File classes = new File(dir, 'classes')
+        File work = new File(dir, 'work')
+        [views, classes, work]*.mkdirs()
+        new File(views, 'sample.gsp').text = '<p>sample</p>'
+        String manifestPath = 'META-INF/grails/plugins/samplePlugin/views.properties'
+        String previous = System.getProperty(BuildSettings.GSP_VIEWS_MANIFEST_PATH)
+        System.setProperty(BuildSettings.GSP_VIEWS_MANIFEST_PATH, manifestPath)
+
+        when:
+        GroovyPageForkedCompiler.run([views.path, classes.path, work.path, '21', 'samplePlugin', '/', '', 'UTF-8'] as String[])
+        File namespacedManifest = new File(classes, manifestPath)
+        Properties registry = new Properties()
+        namespacedManifest.withInputStream { registry.load(it) }
+
+        then:
+        namespacedManifest.isFile()
+        !new File(classes, 'gsp/views.properties').exists()
+        registry.keySet() == ['/sample.gsp'] as Set
+
+        cleanup:
+        previous == null ? System.clearProperty(BuildSettings.GSP_VIEWS_MANIFEST_PATH) :
+                System.setProperty(BuildSettings.GSP_VIEWS_MANIFEST_PATH, previous)
+    }
 }

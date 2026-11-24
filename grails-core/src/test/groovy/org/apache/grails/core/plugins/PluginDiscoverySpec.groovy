@@ -218,11 +218,227 @@ class PluginDiscoverySpec extends Specification {
         descriptors[0].pluginVersion == '2.0.0'
         descriptors[1].providedPlugins == ['com.example.BetaGrailsPlugin']
         descriptors[1].pluginVersion == '1.0.0'
+        descriptors[1].pluginName == null
 
         cleanup:
         classLoader?.close()
         modernDir.deleteDir()
         legacyDir.deleteDir()
+    }
+
+    def 'rejects invalid plugin names and skips path traversal entries in plugins.imports'() {
+        given: 'a plugins.imports file containing invalid path-traversal entries alongside a valid entry'
+        def tempDir = File.createTempDir()
+        def imports = new File(tempDir, PluginUtils.PLUGINS_IMPORTS_PATH)
+        imports.parentFile.mkdirs()
+        imports.text = '''
+            ../evil
+            foo/bar
+            a..b
+            validPlugin
+        '''.stripIndent()
+        def validDesc = new File(tempDir, PluginUtils.getPluginDescriptorPath('validPlugin'))
+        validDesc.parentFile.mkdirs()
+        validDesc.text = 'format.version=1\nname=validPlugin\nversion=1.0.0\n'
+        def classLoader = new URLClassLoader([tempDir.toURI().toURL()] as URL[], (ClassLoader) null)
+
+        when: 'plugin descriptors are scanned'
+        def descriptors = PluginUtils.scanPluginDescriptorResources(classLoader)
+
+        then: 'only the valid entry is discovered'
+        descriptors*.pluginName == ['validPlugin']
+
+        and: 'path helper methods reject invalid plugin names and config file names'
+        !PluginUtils.isValidPluginName('../evil')
+        !PluginUtils.isValidPluginName('foo/bar')
+        !PluginUtils.isValidPluginName('a..b')
+        !PluginUtils.isValidPluginName('   ')
+        PluginUtils.isValidPluginName('spring-security-core')
+
+        when:
+        PluginUtils.getPluginDescriptorPath('../evil')
+        then:
+        thrown(IllegalArgumentException)
+
+        when:
+        PluginUtils.getPluginConfigPath('validPlugin', '../secret.yml')
+        then:
+        thrown(IllegalArgumentException)
+
+        when:
+        PluginUtils.getPluginViewsPath('foo/bar')
+        then:
+        thrown(IllegalArgumentException)
+
+        cleanup:
+        classLoader?.close()
+        tempDir.deleteDir()
+    }
+
+    def 'rejects DOCTYPE declarations and skips malformed legacy XML descriptors without blocking valid ones'() {
+        given: 'a legacy XML with DOCTYPE, a malformed legacy XML, and a valid legacy XML'
+        def xxeDir = File.createTempDir()
+        def xxeXml = new File(xxeDir, 'META-INF/grails-plugin.xml')
+        xxeXml.parentFile.mkdirs()
+        xxeXml.text = '''<?xml version="1.0"?>
+            <!DOCTYPE plugin [<!ENTITY xxe SYSTEM "file:///etc/passwd">]>
+            <plugin name="xxe" version="1.0.0"><type>com.example.XxeGrailsPlugin</type></plugin>
+        '''.stripIndent()
+
+        def brokenDir = File.createTempDir()
+        def brokenXml = new File(brokenDir, 'META-INF/grails-plugin.xml')
+        brokenXml.parentFile.mkdirs()
+        brokenXml.text = '<plugin name="broken"><type>unclosed'
+
+        def validDir = File.createTempDir()
+        def validXml = new File(validDir, 'META-INF/grails-plugin.xml')
+        validXml.parentFile.mkdirs()
+        validXml.text = '''
+            <plugin name='good-legacy' version='1.2.3'>
+                <type>com.example.GoodLegacyGrailsPlugin</type>
+            </plugin>
+        '''.stripIndent()
+
+        def classLoader = new URLClassLoader(
+                [xxeDir.toURI().toURL(), brokenDir.toURI().toURL(), validDir.toURI().toURL()] as URL[],
+                (ClassLoader) null
+        )
+
+        when: 'plugin descriptors are scanned'
+        def descriptors = PluginUtils.scanPluginDescriptorResources(classLoader)
+
+        then: 'only the valid legacy descriptor is returned'
+        descriptors.size() == 1
+        descriptors[0].pluginName == 'goodLegacy'
+        descriptors[0].providedPlugins == ['com.example.GoodLegacyGrailsPlugin']
+
+        cleanup:
+        classLoader?.close()
+        xxeDir.deleteDir()
+        brokenDir.deleteDir()
+        validDir.deleteDir()
+    }
+
+    def 'defaults empty dependsOn version to wildcard and normalizes observe entries'() {
+        given: 'a descriptor with an empty dependsOn version and hyphenated observe entries'
+        def tempDir = File.createTempDir()
+        writePluginDescriptor(tempDir, 'edgeMeta', '''
+            format.version=1
+            name=edgeMeta
+            version=1.0.0
+            grailsVersion=9.0.0 > *
+            dependsOn.core=
+            observe=spring-security-core, *,  
+            metadata.complete=true
+        ''')
+        def classLoader = new URLClassLoader([tempDir.toURI().toURL()] as URL[], (ClassLoader) null)
+
+        when: 'classpath plugins are discovered'
+        def plugins = new ClasspathPluginFinder().findClasspathPlugins(classLoader, '9.0.0')
+
+        then: 'empty dependsOn defaults to * and observe normalizes names while preserving *'
+        plugins.size() == 1
+        plugins[0].metadata.getDependentVersion('core') == '*'
+        plugins[0].observedPluginNames as List == ['springSecurityCore', '*']
+
+        cleanup:
+        classLoader?.close()
+        tempDir.deleteDir()
+    }
+
+    def 'sanitizes blank dependsOn names, normalizes observe, and uses descriptor grailsVersion fallback for annotations'() {
+        given: 'a descriptor with a grailsVersion range and an annotated class that omits grailsVersion'
+        def props = new Properties()
+        props.load(new StringReader('''
+            format.version=1
+            name=edgeAnnotated
+            version=1.0.0
+            grailsVersion=9.0.0 > *
+            class=org.apache.grails.core.plugins.EdgeAnnotatedDescriptor
+        '''.stripIndent()))
+        def descriptor = PluginDescriptor.fromProperties('edgeAnnotated', null, props)
+
+        when: 'metadata is extracted with the descriptor'
+        def metadata = PluginUtils.extractPluginMetadata(descriptor, EdgeAnnotatedDescriptor)
+
+        then: 'blank dependsOn names are ignored, bare dependency defaults to *, observe is normalized, and grailsVersion falls back'
+        metadata != null
+        metadata.grailsVersionRange == '9.0.0 > *'
+        metadata.dependsOnNames as List == ['i18n']
+        metadata.getDependentVersion('i18n') == '*'
+        metadata.observedPluginNames as List == ['springSecurityCore', '*']
+    }
+
+    def 'handles null elements safely in Groovy plugin loadAfter arrays'() {
+        given: 'a Groovy plugin class whose loadAfter list contains a null element'
+        def gcl = new GroovyClassLoader()
+        def pluginClass = gcl.parseClass('''
+            class NullSafeLoadAfterGrailsPlugin {
+                def version = '1.0.0'
+                def loadAfter = [null, 'core', 'spring-security-core']
+            }
+        ''')
+
+        when: 'metadata is extracted'
+        def metadata = PluginUtils.extractPluginMetadata(pluginClass)
+
+        then: 'null elements are converted safely without throwing'
+        metadata != null
+        metadata.loadAfterNames as List == ['', 'core', 'spring-security-core']
+    }
+
+    def 'loads namespaced plugin.groovy and fails when both plugin.yml and plugin.groovy exist'() {
+        given: 'a starter plugin with namespaced plugin.groovy'
+        def groovyDir = File.createTempDir()
+        writePluginDescriptor(groovyDir, 'groovyStarter', '''
+            format.version=1
+            name=groovyStarter
+            version=1.0.0
+            metadata.complete=true
+        ''')
+        def groovyCfg = new File(groovyDir, PluginUtils.getPluginConfigPath('groovyStarter', PluginUtils.PLUGIN_GROOVY_CONFIG))
+        groovyCfg.parentFile.mkdirs()
+        groovyCfg.text = 'starter.flag = true\n'
+        def groovyLoader = new URLClassLoader([groovyDir.toURI().toURL()] as URL[], (ClassLoader) null)
+
+        and: 'a starter plugin with both plugin.yml and plugin.groovy'
+        def bothDir = File.createTempDir()
+        writePluginDescriptor(bothDir, 'clashStarter', '''
+            format.version=1
+            name=clashStarter
+            version=1.0.0
+            metadata.complete=true
+        ''')
+        def ymlCfg = new File(bothDir, PluginUtils.getPluginConfigPath('clashStarter', PluginUtils.PLUGIN_YML_CONFIG))
+        ymlCfg.parentFile.mkdirs()
+        ymlCfg.text = 'starter:\n  flag: true\n'
+        def secondGroovyCfg = new File(bothDir, PluginUtils.getPluginConfigPath('clashStarter', PluginUtils.PLUGIN_GROOVY_CONFIG))
+        secondGroovyCfg.text = 'starter.flag = true\n'
+        def bothLoader = new URLClassLoader([bothDir.toURI().toURL()] as URL[], (ClassLoader) null)
+
+        when: 'the plugin.groovy starter is discovered'
+        def plugins = new ClasspathPluginFinder().findClasspathPlugins(groovyLoader, '9.0.0')
+
+        then: 'its namespaced plugin.groovy config resource is returned'
+        plugins.size() == 1
+        plugins[0].configResource != null
+        plugins[0].configResource.filename == 'plugin.groovy'
+
+        when: 'configuration is read directly for a plugin with both config files'
+        PluginUtils.readPluginConfiguration('clashStarter', null, bothLoader)
+
+        then: 'a RuntimeException is thrown'
+        def e = thrown(RuntimeException)
+        e.message.contains('clashStarter')
+
+        and: 'tolerant classpath discovery skips the misconfigured plugin'
+        new ClasspathPluginFinder().findClasspathPlugins(bothLoader, '9.0.0').isEmpty()
+
+        cleanup:
+        groovyLoader?.close()
+        bothLoader?.close()
+        groovyDir.deleteDir()
+        bothDir.deleteDir()
     }
 
     def 'ignores comments and blank lines in plugins.imports'() {
@@ -686,4 +902,13 @@ class AnnotatedNonInstantiableDescriptor {
     AnnotatedNonInstantiableDescriptor() {
         throw new AssertionError('Constructor must not be invoked when reading @GrailsPluginDescriptor metadata')
     }
+}
+
+@GrailsPluginDescriptor(
+        name = 'edge-annotated',
+        version = '1.0.0',
+        dependsOn = [':1.0', ' :2.0', 'i18n'],
+        observe = ['spring-security-core', '*', ' ']
+)
+class EdgeAnnotatedDescriptor {
 }
