@@ -85,6 +85,19 @@ class HqlListQueryBuilderSpec extends Specification {
         builder.buildCountHql() == "select count(distinct e) from Person e"
     }
 
+    void 'a count keeps sort joins without ordering and can be built after the list'() {
+        given:
+        leftJoinSort = false
+        final club = associated(entity, 'club')
+        property(club, 'name', String)
+        final builder = new HqlListQueryBuilder(entity, [sort: 'club.name'])
+
+        expect:
+        builder.buildListHql() == 'from Person e join e.club s0 order by upper(s0.name) asc'
+        builder.buildCountHql() == 'select count(distinct e) from Person e join e.club s0'
+        builder.buildListHql() == 'from Person e join e.club s0 order by upper(s0.name) asc'
+    }
+
     void "test buildListHql with no arguments"() {
         given:
         def builder = new HqlListQueryBuilder(entity, [:])

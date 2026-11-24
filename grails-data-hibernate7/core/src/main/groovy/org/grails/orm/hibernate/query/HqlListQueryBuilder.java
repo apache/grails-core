@@ -56,7 +56,17 @@ public class HqlListQueryBuilder {
     }
 
     public String buildListHql() {
-        StringBuilder hql = new StringBuilder("from ");
+        return buildHql(false);
+    }
+
+    public String buildCountHql() {
+        return buildHql(true);
+    }
+
+    private String buildHql(boolean count) {
+        sortJoins.clear();
+        fetchJoins.clear();
+        StringBuilder hql = new StringBuilder(count ? "select count(distinct e) from " : "from ");
         hql.append(entity.getName()).append(" e");
 
         Object fetchObj = params.get(HibernateQueryArgument.FETCH.value());
@@ -75,7 +85,7 @@ public class HqlListQueryBuilder {
         // the sort comes first: it gives an alias to a fetch that it sorts through
         String sortHql = buildSortClause();
         fetchJoins.forEach((path, alias) -> {
-            hql.append(" left join fetch ").append(path);
+            hql.append(count ? " left join " : " left join fetch ").append(path);
             if (!alias.isEmpty()) {
                 hql.append(' ').append(alias);
             }
@@ -83,15 +93,11 @@ public class HqlListQueryBuilder {
         // with the leftJoinAssociationSort setting, a left join, which keeps the rows where the association is null
         String sortJoin = ((HibernateMappingContext) entity.getMappingContext()).isLeftJoinAssociationSort() ? " left join " : " join ";
         sortJoins.forEach((path, alias) -> hql.append(sortJoin).append(path).append(' ').append(alias));
-        if (!sortHql.isEmpty()) {
+        if (!count && !sortHql.isEmpty()) {
             hql.append(" order by ").append(sortHql);
         }
 
         return hql.toString();
-    }
-
-    public String buildCountHql() {
-        return "select count(distinct e) from " + entity.getName() + " e";
     }
 
     private String buildSortClause() {

@@ -177,12 +177,12 @@ public class ExpressionResolver {
         // the path of the association from the root, by which a join type is requested for it
         String associationPath = "";
         int first = 0;
-        if (aliasRegistry.isDefined(tokens[0])) {
+        HibernateAlias definition = aliasRegistry.getDefinition(tokens[0]);
+        if (definition != null && definition.explicit() || definition == null && aliasRegistry.hasRealized(tokens[0])) {
             if (!(resolveFromAlias(tokens[0], null) instanceof From<?, ?> aliased)) {
                 return resolve(path);
             }
             from = aliased;
-            HibernateAlias definition = aliasRegistry.getDefinition(tokens[0]);
             associationPath = definition != null ? definition.path() : null;
             first = 1;
         }
@@ -235,7 +235,8 @@ public class ExpressionResolver {
         if (component) {
             return from.join(attributeName);
         }
-        HibernateAlias requested = associationPath != null ? aliasRegistry.getDefinition(associationPath) : null;
+        HibernateAlias requested = associationPath != null && aliasRegistry.isOwnDefined(associationPath) ?
+                aliasRegistry.getDefinition(associationPath) : null;
         if (requested != null && !requested.explicit()) {
             return from.join(attributeName, requested.joinType());
         }
