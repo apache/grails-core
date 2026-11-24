@@ -20,8 +20,10 @@ package org.grails.forge.cli
 
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.function.BiFunction
 import java.util.function.Consumer
 import org.jline.reader.Candidate
 import org.jline.reader.LineReader
@@ -299,6 +301,68 @@ class ConsoleProgramSpec extends Specification {
         out.toString().contains('after it')
 
         cleanup:
+        terminal?.close()
+        if (started.isFile() && started.text.trim()) {
+            ProcessHandle.of(started.text.trim() as long).ifPresent { ProcessHandle each -> each.destroyForcibly() }
+        }
+    }
+
+    @IgnoreIf({ os.windows })
+    void "a console whose thread is interrupted while a program runs, in a JVM whose output is not that of the process, waits for what the program wrote, says its exit code and goes on"() {
+        given: 'a program that writes and then does not end by itself, and a line after it'
+        List<Throwable> failures = []
+        InteractiveShell shell = new InteractiveShell(new CommandLine(new Root()), { String[] args -> } as Consumer<String[]>,
+                { Throwable failure, CommandLine commandLine -> failures.add(failure); 1 } as BiFunction<Throwable, CommandLine, Integer>)
+        System.setProperty('user.dir', dir.path)
+        File started = new File(dir, 'started.txt')
+        captureOutput()
+        // what the program writes is given to an output that takes it only once it is let: the console is still
+        // handing it on when the interrupt has come and the program has been ended
+        CountDownLatch handing = new CountDownLatch(1)
+        CountDownLatch let = new CountDownLatch(1)
+        PrintStream console = System.out
+        System.setOut(new PrintStream(new OutputStream() {
+
+            @Override
+            void write(int b) {
+                write([(byte) b] as byte[], 0, 1)
+            }
+
+            @Override
+            void write(byte[] bytes, int offset, int length) {
+                if (Thread.currentThread().name == 'grails-console-program-output') {
+                    handing.countDown()
+                    let.await(60, TimeUnit.SECONDS)
+                }
+                console.write(bytes, offset, length)
+            }
+        }, true))
+        Terminal terminal = terminal('!echo before it; echo $$ > started.txt; exec sleep 300\n!echo after" "it\nexit\n')
+        AtomicInteger exit = new AtomicInteger(-1)
+        Thread shellThread = new Thread({ exit.set(shell.start(terminal)) })
+
+        when: 'the thread of the console is interrupted, as a program that runs the console in its own JVM does, and the output takes what was written a second later'
+        shellThread.start()
+        new PollingConditions(timeout: 60, delay: 0.2).eventually {
+            assert started.isFile() && started.text.endsWith('\n') && handing.count == 0
+        }
+        shellThread.interrupt()
+        Thread.start {
+            Thread.sleep(1000)
+            let.countDown()
+        }
+        shellThread.join(60_000)
+
+        then: 'what the program wrote and its exit code were said, and the console ran the next line and left at exit'
+        !shellThread.alive
+        failures == []
+        exit.get() == 0
+        out.toString().contains('before it')
+        out.toString().contains('| Exit code 130')
+        out.toString().contains('after it')
+
+        cleanup:
+        let.countDown()
         terminal?.close()
         if (started.isFile() && started.text.trim()) {
             ProcessHandle.of(started.text.trim() as long).ifPresent { ProcessHandle each -> each.destroyForcibly() }

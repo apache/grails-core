@@ -123,6 +123,7 @@ final class ConsoleProgram {
         Thread output = inherited ? null : copy(process.getInputStream(), out)
         Thread errors = inherited ? null : copy(process.getErrorStream(), err)
         int exit
+        boolean interrupted = false
         try {
             exit = process.waitFor()
         } catch (InterruptedException ignored) {
@@ -130,19 +131,34 @@ final class ConsoleProgram {
             // console asked for the program to end with it
             process.descendants().forEach { ProcessHandle each -> each.destroy() }
             process.destroy()
-            Thread.currentThread().interrupt()
+            interrupted = true
             exit = 130
         }
         if (!inherited) {
-            output.join(TimeUnit.SECONDS.toMillis(OUTPUT_SECONDS))
-            errors.join(TimeUnit.SECONDS.toMillis(OUTPUT_SECONDS))
+            // what the program wrote before it ended is copied whole, also after an interrupt: the thread is
+            // interrupted again only once it is, or a wait for the copy would end at once
+            interrupted = join(output) || interrupted
+            interrupted = join(errors) || interrupted
         }
         out.flush()
         if (exit != 0) {
             err.println("| Exit code ${exit}")
         }
         err.flush()
+        if (interrupted) {
+            Thread.currentThread().interrupt()
+        }
         return exit
+    }
+
+    // waits for a copy of what the program writes; true when the wait was interrupted, which it then is no longer
+    private static boolean join(Thread copy) {
+        try {
+            copy.join(TimeUnit.SECONDS.toMillis(OUTPUT_SECONDS))
+            return false
+        } catch (InterruptedException ignored) {
+            return true
+        }
     }
 
     private static boolean isWindows() {
