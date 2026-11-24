@@ -81,9 +81,19 @@ class QueryTailCommand implements ApplicationCommand, StandaloneCommand {
 
         // The build that runs the command is no terminal: the summary is plain text of the default width.
         QueryTailRunner runner = new QueryTailRunner(options, out, false)
-        // The run ends when the command is cancelled, which is the end of the JVM the build runs it in.
-        Runtime.runtime.addShutdownHook(new Thread({ -> runner.stop() } as Runnable, 'query-tail-stop'))
-        runner.run() == 0
+        // The run ends when the command is cancelled, which is the end of the JVM the build runs it in. The hook is
+        // there while the command runs: a JVM that runs the command again keeps no hook of a run that has ended.
+        Thread stopping = new Thread({ -> runner.stop() } as Runnable, 'query-tail-stop')
+        Runtime.runtime.addShutdownHook(stopping)
+        try {
+            return runner.run() == 0
+        } finally {
+            try {
+                Runtime.runtime.removeShutdownHook(stopping)
+            } catch (IllegalStateException ignored) {
+                // the JVM is ending, and the hook stops the run
+            }
+        }
     }
 
     /**

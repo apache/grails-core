@@ -174,6 +174,34 @@ class QueryTailCommandSpec extends Specification {
         !refused.out.contains('book/show')
     }
 
+    void "a JVM that runs the command again and again keeps no shutdown hook of a run that has ended"() {
+        given:
+        File capture = capture(new File(tempDir, 'capture.log'))
+        List<String> command = [new File(System.getProperty('java.home'), 'bin/java').path,
+                                '--add-opens', 'java.base/java.lang=ALL-UNNAMED',
+                                '-cp', System.getProperty('java.class.path'), "-Dbase.dir=${tempDir.path}".toString()]
+        String coverage = System.getProperty('grails.test.fork.jacoco')
+        if (coverage) {
+            command.add(coverage.replace('@fork@', UUID.randomUUID().toString()))
+        }
+        command.addAll([QueryTailHooksMain.name, capture.path, '3'])
+        File out = File.createTempFile('out', '.txt', tempDir)
+        File err = File.createTempFile('err', '.txt', tempDir)
+
+        when:
+        Process process = new ProcessBuilder(command).directory(tempDir).redirectOutput(out).redirectError(err).start()
+        boolean ended = process.waitFor(TIMEOUT_SECONDS, TimeUnit.SECONDS)
+        if (!ended) {
+            process.destroyForcibly().waitFor()
+        }
+
+        then: 'each run printed its summary, and took its hook away when it ended'
+        ended
+        process.exitValue() == 0
+        out.text.count('book/show') == 3
+        out.text.readLines().last() == 'hooks left: 0'
+    }
+
     void "the command says what its options are"() {
         when:
         Map help = run(tempDir, 'query-tail', '--help')
