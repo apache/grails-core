@@ -21,11 +21,11 @@ package org.apache.grails.forge.cli.health
 import java.nio.file.Files
 import java.nio.file.LinkOption
 import java.nio.file.Path
-import java.util.regex.Pattern
 import groovy.transform.CompileStatic
 import org.apache.grails.forge.cli.console.ConsoleProject
 import org.apache.grails.forge.cli.console.WrapperFiles
 import org.grails.forge.cli.command.ProjectRegenerateCommand
+import org.grails.forge.cli.util.GitPattern
 
 /**
  * {@code git-files}: what the {@code .gitignore} and {@code .gitattributes} files of the project
@@ -186,7 +186,7 @@ final class GitFilesCheck extends HealthCheck {
             String text = HealthContext.text(holder.resolve(ATTRIBUTES), HealthContext.MAX_FILE)
             for (String line : (text == null ? Collections.<String>emptyList() : text.readLines())) {
                 List<String> words = line.trim().split(/\s+/).toList()
-                if (words.size() < 2 || words[0].startsWith('#') || !matches(words[0], holder.relativize(file).join('/'))) {
+                if (words.size() < 2 || words[0].startsWith('#') || !GitPattern.of(words[0]).matches(holder.relativize(file).join('/'))) {
                     continue
                 }
                 for (String word : words.drop(1)) {
@@ -201,17 +201,6 @@ final class GitFilesCheck extends HealthCheck {
             }
         }
         return attributes.get('text') == 'unset' || (eol != null && attributes.get('eol') == eol)
-    }
-
-    // whether a pattern of .gitattributes matches a path below the directory of the file: one without a slash matches the name anywhere
-    private static boolean matches(String pattern, String path) {
-        boolean anywhere = !pattern.contains('/')
-        String glob = pattern.startsWith('/') ? pattern.substring(1) : pattern
-        StringBuilder expression = new StringBuilder(anywhere ? '(?:.*/)?' : '')
-        for (String part : glob.split(/(?<=[*?])|(?=[*?])/)) {
-            expression.append(part == '*' ? '[^/]*' : part == '?' ? '[^/]' : part.isEmpty() ? '' : Pattern.quote(part))
-        }
-        return path ==~ expression.toString()
     }
 
     /** Whether a path is left out, and the .gitignore that leaves it out. */

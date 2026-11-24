@@ -37,6 +37,7 @@ import org.apache.grails.forge.core.state.ProjectState
 import org.apache.grails.forge.core.state.ProjectStateException
 import org.grails.forge.application.generator.ProjectGenerator
 import org.grails.forge.cli.ForgeContext
+import org.grails.forge.cli.util.GitPattern
 import org.grails.forge.feature.FeatureSelectionException
 import org.grails.forge.io.FileSystemOutputHandler
 import org.grails.forge.io.OutputFailedException
@@ -58,7 +59,6 @@ import java.nio.file.attribute.BasicFileAttributes
 import java.util.concurrent.Callable
 import java.util.function.Consumer
 import java.util.function.Supplier
-import java.util.regex.Pattern
 import java.util.stream.Stream
 
 /**
@@ -497,14 +497,13 @@ class ProjectRegenerateCommand extends BaseCommand implements Callable<Integer>,
         private static final int MAX_LINES = 2000
         private static final int MAX_LINE = 1000
 
-        private final List<Pattern> patterns = []
+        private final List<GitPattern> patterns = []
         private final List<Boolean> negated = []
         private final List<Boolean> directories = []
 
         IgnoreRules(String text) {
             for (String each : text.split('\n', MAX_LINES + 1).toList().take(MAX_LINES)) {
-                String line = each.endsWith('\r') ? each.substring(0, each.length() - 1) : each
-                line = line.replaceAll(/[ \t]+$/, '')
+                String line = withoutTrailingBlanks(each.endsWith('\r') ? each.substring(0, each.length() - 1) : each)
                 if (line.isEmpty() || line.startsWith('#') || line.length() > MAX_LINE || line.contains('[') || line.contains('\\')) {
                     continue
                 }
@@ -512,36 +511,24 @@ class ProjectRegenerateCommand extends BaseCommand implements Callable<Integer>,
                 String pattern = negates ? line.substring(1) : line
                 boolean directory = pattern.endsWith('/')
                 pattern = directory ? pattern.substring(0, pattern.length() - 1) : pattern
-                boolean fromRoot = pattern.contains('/')
-                pattern = pattern.startsWith('/') ? pattern.substring(1) : pattern
-                if (pattern.isEmpty()) {
+                if (pattern.isEmpty() || pattern == '/') {
                     continue
                 }
-                patterns << Pattern.compile((fromRoot ? '' : '(?:.*/)?') + expression(pattern))
+                patterns << GitPattern.of(pattern)
                 negated << negates
                 directories << directory
             }
         }
 
-        private static String expression(String pattern) {
-            StringBuilder expression = new StringBuilder()
-            List<String> steps = pattern.split('/', -1).toList()
-            for (int i = 0; i < steps.size(); i++) {
-                String step = steps[i]
-                boolean last = i == steps.size() - 1
-                if (step == '**') {
-                    // any number of directories, none among them; at the end, everything below
-                    expression.append(last ? '.*' : '(?:.*/)?')
-                    continue
-                }
-                for (String part : step.split(/(?<=[*?])|(?=[*?])/)) {
-                    expression.append(part == '*' ? '[^/]*' : part == '?' ? '[^/]' : part.isEmpty() ? '' : Pattern.quote(part))
-                }
-                if (!last) {
-                    expression.append('/')
-                }
+        // the spaces and tabs at the end of a line, which Git does not read, are left out by looking back from the
+        // end once: a regular expression that looks for them from every blank takes half an hour for a line of a
+        // megabyte of blanks and one letter, which a file read whole can be
+        private static String withoutTrailingBlanks(String line) {
+            int end = line.length()
+            while (end > 0 && (line.charAt(end - 1) == (char) ' ' || line.charAt(end - 1) == (char) '\t')) {
+                end--
             }
-            return expression.toString()
+            return line.substring(0, end)
         }
 
         /**
@@ -563,7 +550,7 @@ class ProjectRegenerateCommand extends BaseCommand implements Callable<Integer>,
         Boolean decides(String path, boolean directory) {
             Boolean ignored = null
             for (int i = 0; i < patterns.size(); i++) {
-                if ((directory || !directories[i]) && patterns[i].matcher(path).matches()) {
+                if ((directory || !directories[i]) && patterns[i].matches(path)) {
                     ignored = !negated[i]
                 }
             }

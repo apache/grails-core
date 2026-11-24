@@ -34,6 +34,7 @@ import org.grails.forge.cli.CommandSpec
 import org.grails.forge.cli.ForgeCli
 import org.grails.forge.util.VersionInfo
 import spock.lang.Shared
+import spock.lang.Timeout
 import spock.lang.Unroll
 
 /**
@@ -410,6 +411,23 @@ class ProjectHealthCommandSpec extends CommandSpec {
         run(project, 'project', 'health', '--json')
 
         then: 'its .gitignore leaves them out'
+        (parsed().findings as List<Map>).find { it.check == 'git-files' }.id == 'git-files.ok'
+    }
+
+    // the time is no part of what is checked, only a bound: the patterns made regular expressions took hours on the paths of the record and the wrapper
+    @Timeout(120)
+    void "git-files reads a .gitignore and a .gitattributes of stars and letters in moments, and ** in a .gitattributes as Git does"() {
+        given: 'lines of many stars and a long line of blanks, and the lines of the wrappers written for every directory'
+        File project = copyOfTemplate()
+        String stars = ('*' * 33) + 'x\n' + ('*a' * 14) + '*b\n'
+        append(project, '.gitignore', stars + (' ' * 200_000) + 'x\n')
+        new File(project, '.gitattributes').text = stars.readLines().collect { String line -> "${line} text\n" }.join('') +
+                '**/*.bat text eol=crlf\n**/gradlew text eol=lf\n**/grailsw text eol=lf\n**/*.jar binary\n'
+
+        when:
+        run(project, 'project', 'health', '--json')
+
+        then: 'what is of one machine is still left out, and the wrappers keep their line endings'
         (parsed().findings as List<Map>).find { it.check == 'git-files' }.id == 'git-files.ok'
     }
 

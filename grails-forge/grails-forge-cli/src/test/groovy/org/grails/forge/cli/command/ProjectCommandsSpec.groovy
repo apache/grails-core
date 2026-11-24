@@ -35,6 +35,7 @@ import org.grails.forge.util.VersionInfo
 import org.jline.reader.Candidate
 import org.jline.reader.impl.DefaultParser
 import spock.lang.IgnoreIf
+import spock.lang.Timeout
 import spock.lang.Unroll
 
 /**
@@ -951,6 +952,27 @@ class ProjectCommandsSpec extends CommandSpec {
         'Bin/tool'                           || false
         'x' * 1001                           || false
         'src/main/groovy/A.groovy'           || false
+    }
+
+    // the time is no part of what is checked, only a bound: a pattern made a regular expression took hours for the first rows
+    @Timeout(60)
+    void "a .gitignore of stars and letters, or with a long line of blanks, is read in moments and as Git reads it: #path"() {
+        given:
+        ProjectRegenerateCommand.IgnoreRules rules = new ProjectRegenerateCommand.IgnoreRules(
+                ('*' * 33) + 'x\n' + ('*a' * 14) + '*b\n' + (' ' * 200_000) + 'x\n' + 'one***two\n')
+
+        expect:
+        rules.ignoresWithin(path) == ignored
+
+        where:
+        path                   || ignored
+        '.grails/transactions' || false
+        'a' * 30               || false
+        ('a' * 30) + 'b'       || true
+        'box'                  || true
+        'onetwo'               || true
+        'one-and-two'          || true
+        'one/two'              || false
     }
 
     void "a file that a later line of a .gitignore takes back is one again where its directory is not left out"() {
