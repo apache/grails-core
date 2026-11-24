@@ -120,6 +120,7 @@ class UndertowFailedActionObservationSpec extends Specification implements HttpC
         when                             | path
         'on a request dispatch'          | '/failing/answeredByControllerFailingWithServerError'
         'after the action started async' | '/failing/answeredByControllerFailingWithServerErrorAfterStartingAsync'
+        'asynchronously'                 | '/failing/answeredByControllerFailingWithServerErrorAsynchronously'
     }
 
     void 'a failure #handler answers inside an include is not the failure of the page that included it'() {
