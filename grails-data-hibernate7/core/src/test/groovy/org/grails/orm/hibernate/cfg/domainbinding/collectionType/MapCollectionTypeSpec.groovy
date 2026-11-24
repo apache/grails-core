@@ -28,6 +28,7 @@ import org.hibernate.boot.spi.InFlightMetadataCollector
 import org.hibernate.mapping.Map as HibernateMap
 import org.hibernate.mapping.RootClass
 import org.hibernate.mapping.Table
+import org.hibernate.usertype.UserCollectionType
 import spock.lang.Subject
 
 class MapCollectionTypeSpec extends HibernateGormDatastoreSpec {
@@ -71,6 +72,28 @@ class MapCollectionTypeSpec extends HibernateGormDatastoreSpec {
         collectionType.getTypeName(property) == null
     }
 
+    def "#kind names its #outcome when the mapped type of a collection of basic values is #mapped"() {
+        given:
+        def collectionType = collection.newInstance(getGrailsDomainBinder().metadataBuildingContext)
+        def property = Mock(HibernateToManyCollectionProperty) {
+            getTypeName() >> typeName
+            getUserType() >> userType
+        }
+
+        expect:
+        collectionType.getTypeName(property) == expected
+
+        where:
+        kind   | collection         | mapped                                   | typeName                    | userType                    | expected                    | outcome
+        'a map'  | MapCollectionType  | 'text, the type of the values'           | 'text'                      | null                        | null                        | 'values'
+        'a set'  | SetCollectionType  | 'text, the type of the elements'         | 'text'                      | null                        | null                        | 'elements'
+        'a list' | ListCollectionType | 'text, the type of the elements'         | 'text'                      | null                        | null                        | 'elements'
+        'a map'  | MapCollectionType  | 'a registered collection type'           | RegisteredType.name         | RegisteredType              | RegisteredType.name         | 'collection type'
+        'a set'  | SetCollectionType  | 'a registered collection type'           | RegisteredType.name         | RegisteredType              | RegisteredType.name         | 'collection type'
+        'a list' | ListCollectionType | 'a registered collection type'           | RegisteredType.name         | RegisteredType              | RegisteredType.name         | 'collection type'
+        'a map'  | MapCollectionType  | 'a user type that is not a collection'   | String.name                 | String                      | null                        | 'values'
+    }
+
     def "create does not give a map of basic values a collection type from its mapped type"() {
         given:
         def metadataBuildingContext = getGrailsDomainBinder().getMetadataBuildingContext()
@@ -85,4 +108,7 @@ class MapCollectionTypeSpec extends HibernateGormDatastoreSpec {
         then:
         result.getTypeName() == null
     }
+}
+
+abstract class RegisteredType implements UserCollectionType {
 }
