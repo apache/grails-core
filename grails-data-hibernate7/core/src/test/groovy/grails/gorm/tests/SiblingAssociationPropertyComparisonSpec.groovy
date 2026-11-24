@@ -30,7 +30,8 @@ import grails.gorm.annotation.Entity
 class SiblingAssociationPropertyComparisonSpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
-        manager.registerDomainClasses(SpcLeft, SpcRight, SpcPlainLeft, SpcPlainRight, SpcHolder, SpcOwnerA, SpcOwnerB, SpcRefLeft, SpcRefRight, SpcRefHolder)
+        manager.registerDomainClasses(SpcLeft, SpcRight, SpcPlainLeft, SpcPlainRight, SpcHolder, SpcOwnerA, SpcOwnerB, SpcRefLeft, SpcRefRight, SpcRefHolder,
+                SpcMixed, SpcTextNum, SpcLongPair, SpcIntPair, SpcTypeHolder)
     }
 
     private void seedComposite() {
@@ -84,6 +85,41 @@ class SiblingAssociationPropertyComparisonSpec extends HibernateGormDatastoreSpe
         SpcHolder.withCriteria { neProperty('left', 'plainLeft') }*.name == ['mixed']
         new DetachedCriteria(SpcHolder).build { eqProperty('left', 'plainLeft') }.list().isEmpty()
         SpcHolder.withCriteria { not { eqProperty('left', 'plainLeft') } }*.name.sort() == ['mixed', 'no plain']
+    }
+
+    private void seedTypes() {
+        SpcLeft text = new SpcLeft(area: 'a', code: 'b').save(flush: true)
+        SpcMixed mixed = new SpcMixed(amount: 1L, code: 'b').save(flush: true)
+        SpcTextNum textNum = new SpcTextNum(code: 't', number: 1L).save(flush: true)
+        SpcLongPair longPair = new SpcLongPair(amount: 5L, code: 'x').save(flush: true)
+        SpcIntPair samePair = new SpcIntPair(amount: 5, code: 'x').save(flush: true)
+        SpcIntPair otherPair = new SpcIntPair(amount: 6, code: 'x').save(flush: true)
+        new SpcTypeHolder(name: 'texts', leftText: text, mixed: mixed, textNum: textNum).save(flush: true)
+        new SpcTypeHolder(name: 'widened', longPair: longPair, intPair: samePair).save(flush: true)
+        new SpcTypeHolder(name: 'widened differs', longPair: longPair, intPair: otherPair).save(flush: true)
+        new SpcTypeHolder(name: 'nulls', leftText: text).save(flush: true)
+        manager.session.clear()
+    }
+
+    def 'two composite identifiers are compared part by part when each part can be, and never equal when one cannot'() {
+        given:
+        seedTypes()
+
+        expect: 'the criteria builder and a detached criteria answer alike'
+        SpcTypeHolder.withCriteria(criteria)*.name.sort() == expected
+        new DetachedCriteria(SpcTypeHolder).build(criteria).list()*.name.sort() == expected
+
+        where:
+        [criteria, expected] << [
+            [{ eqProperty('leftText', 'mixed') }, []],
+            [{ neProperty('leftText', 'mixed') }, ['texts']],
+            [{ eqProperty('leftText', 'textNum') }, []],
+            [{ neProperty('leftText', 'textNum') }, ['texts']],
+            [{ eqProperty('longPair', 'intPair') }, ['widened']],
+            [{ neProperty('longPair', 'intPair') }, ['widened differs']],
+            [{ not { eqProperty('leftText', 'mixed') } }, ['nulls', 'texts', 'widened', 'widened differs']],
+            [{ or { eqProperty('longPair', 'intPair'); eqProperty('leftText', 'mixed') } }, ['widened']]
+        ]
     }
 
     private void seedAssociationParts() {
@@ -289,5 +325,112 @@ class SpcRefHolder {
             column name: 'right_code'
             column name: 'right_owner_id'
         }
+    }
+}
+
+@Entity
+class SpcMixed implements Serializable {
+
+    Long amount
+    String code
+
+    static mapping = {
+        id composite: ['amount', 'code']
+        version false
+    }
+
+    @Override
+    boolean equals(Object other) {
+        other instanceof SpcMixed && other.amount == amount && other.code == code
+    }
+
+    @Override
+    int hashCode() {
+        Objects.hash(amount, code)
+    }
+}
+
+@Entity
+class SpcTextNum implements Serializable {
+
+    String code
+    Long number
+
+    static mapping = {
+        id composite: ['code', 'number']
+        version false
+    }
+
+    @Override
+    boolean equals(Object other) {
+        other instanceof SpcTextNum && other.code == code && other.number == number
+    }
+
+    @Override
+    int hashCode() {
+        Objects.hash(code, number)
+    }
+}
+
+@Entity
+class SpcLongPair implements Serializable {
+
+    Long amount
+    String code
+
+    static mapping = {
+        id composite: ['amount', 'code']
+        version false
+    }
+
+    @Override
+    boolean equals(Object other) {
+        other instanceof SpcLongPair && other.amount == amount && other.code == code
+    }
+
+    @Override
+    int hashCode() {
+        Objects.hash(amount, code)
+    }
+}
+
+@Entity
+class SpcIntPair implements Serializable {
+
+    Integer amount
+    String code
+
+    static mapping = {
+        id composite: ['amount', 'code']
+        version false
+    }
+
+    @Override
+    boolean equals(Object other) {
+        other instanceof SpcIntPair && other.amount == amount && other.code == code
+    }
+
+    @Override
+    int hashCode() {
+        Objects.hash(amount, code)
+    }
+}
+
+@Entity
+class SpcTypeHolder {
+
+    String name
+    SpcLeft leftText
+    SpcMixed mixed
+    SpcTextNum textNum
+    SpcLongPair longPair
+    SpcIntPair intPair
+
+    static constraints = {
+        leftText(nullable: true)
+        mixed(nullable: true)
+        textNum(nullable: true)
+        longPair(nullable: true)
+        intPair(nullable: true)
     }
 }

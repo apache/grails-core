@@ -32,6 +32,8 @@ import jakarta.persistence.metamodel.SingularAttribute;
 
 import org.hibernate.query.criteria.HibernateCriteriaBuilder;
 
+import org.springframework.util.ClassUtils;
+
 import org.grails.datastore.mapping.core.exceptions.ConfigurationException;
 import org.grails.datastore.mapping.query.Query;
 
@@ -132,13 +134,14 @@ class PropertyComparisonCriterionHandler implements InternalCriterionHandler<Que
      * Hibernate does not compare two entities of classes that are not related, so two associations to such classes
      * are compared by their identifiers, one part at a time: a generated identifier is one part, and a composite
      * identifier has one part for each of its properties, paired in the order of their names. This is what
-     * Hibernate 5 does with the columns of the two foreign keys. Identifiers with a different number of parts are never
-     * equal, so such a comparison matches no row, and its negation matches the rows that have both associations.
+     * Hibernate 5 does with the columns of the two foreign keys. Identifiers with a different number of parts, or with parts
+     * of types that are never equal, are never equal, so such a comparison matches no row, and its negation matches the rows
+     * that have both associations.
      */
     private static Predicate compareIdentifiers(HibernateCriteriaBuilder criteriaBuilder, Path<?> left, Path<?> right, boolean negate) {
         List<Expression<?>> leftParts = identifierParts(left, entityTypeOf(left));
         List<Expression<?>> rightParts = identifierParts(right, entityTypeOf(right));
-        if (leftParts.size() != rightParts.size()) {
+        if (!comparable(leftParts, rightParts)) {
             // identifiers of different shapes are never equal: nothing matches ==, and every row that has both associations
             // matches !=, a null being unknown as it is in SQL
             return negate ? criteriaBuilder.and(criteriaBuilder.isNotNull(left), criteriaBuilder.isNotNull(right)) :
@@ -151,6 +154,29 @@ class PropertyComparisonCriterionHandler implements InternalCriterionHandler<Que
         }
         Predicate[] predicates = parts.toArray(new Predicate[0]);
         return negate ? criteriaBuilder.or(predicates) : criteriaBuilder.and(predicates);
+    }
+
+    /**
+     * Whether two identifiers have the same number of parts and, part by part, types that a database compares: numbers of
+     * any width with each other, and otherwise a type with itself or with its subtype. A text part and a number part are
+     * never equal, so identifiers that differ in a part's type are not compared at all, as a different number of parts is not.
+     */
+    private static boolean comparable(List<Expression<?>> leftParts, List<Expression<?>> rightParts) {
+        if (leftParts.size() != rightParts.size()) {
+            return false;
+        }
+        for (int i = 0; i < leftParts.size(); i++) {
+            if (!comparableTypes(leftParts.get(i).getJavaType(), rightParts.get(i).getJavaType())) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static boolean comparableTypes(Class<?> left, Class<?> right) {
+        Class<?> a = ClassUtils.resolvePrimitiveIfNecessary(left);
+        Class<?> b = ClassUtils.resolvePrimitiveIfNecessary(right);
+        return a.isAssignableFrom(b) || b.isAssignableFrom(a) || Number.class.isAssignableFrom(a) && Number.class.isAssignableFrom(b);
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
