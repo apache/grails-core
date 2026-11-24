@@ -18,6 +18,8 @@
  */
 package org.apache.grails.buildsrc
 
+import java.nio.file.Files
+
 import groovy.transform.CompileStatic
 
 import org.gradle.api.Action
@@ -97,8 +99,12 @@ class TestRepositoryMarkerPlugin implements Plugin<Project> {
 
         @Override
         void execute(Task task) {
-            if (marker.exists() && !marker.delete()) {
-                throw new GradleException("Cannot invalidate test repository record ${marker}")
+            // Every publish task of the build runs this, and with --parallel several at once: a record another
+            // one has just deleted is no failure, only a record that is still there after this is.
+            try {
+                Files.deleteIfExists(marker.toPath())
+            } catch (IOException e) {
+                throw new GradleException("Cannot invalidate test repository record ${marker}", e)
             }
         }
     }
