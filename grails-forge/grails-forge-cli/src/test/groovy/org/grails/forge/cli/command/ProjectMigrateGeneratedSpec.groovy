@@ -49,6 +49,12 @@ class ProjectMigrateGeneratedSpec extends CommandSpec {
 
     private static final String CACHE = '    implementation "org.apache.grails:grails-cache"'
 
+    // the settings of the cache plugin as Grails 8 and earlier builds of Grails 9 wrote them: a key the plugin does not read, and the class of the cache manager
+    private static final List<String> EARLIER_CACHE_SETTINGS = ['    cacheManager: grails.plugin.cache.GrailsConcurrentMapCacheManager', '    cleanAtStartup: false']
+
+    // and as this version writes them, under the keys and with the name the plugin reads
+    private static final List<String> CACHE_SETTINGS = ['    cacheManager: GrailsConcurrentMapCacheManager', '    clearAtStartup: false']
+
     PrintStream originalOut
     PrintStream originalErr
     ByteArrayOutputStream out = new ByteArrayOutputStream()
@@ -319,6 +325,97 @@ class ProjectMigrateGeneratedSpec extends CommandSpec {
         added == 0
         readme.text.contains('Written by another build')
         readme.text.contains('## Feature cache documentation')
+    }
+
+    void "an application with cache whose build wrote cleanAtStartup keeps that key as a change of its own once the record is moved, until it is renamed"() {
+        given: 'an application with cache, whose configuration and baseline another build of this version wrote with the earlier settings'
+        File config = cacheApplicationOfAnotherBuild()
+        Map<String, String> application = applicationFiles(project)
+
+        when: 'a feature is added with this build'
+        int refused = run('feature', 'add', 'grails-quartz')
+
+        then: 'the configuration is not what this build generates for the record, so it is refused, and the command that moves the record is named'
+        refused == 1
+        err.toString().contains('The application cannot be generated again as it was: 1 file is not what the baseline of the project has (grails-app/conf/application.yml)')
+        err.toString().contains('grails-forge-cli project migrate moves the record to this version')
+        applicationFiles(project) == application
+
+        when: 'it is compared with what its record generates'
+        err.reset()
+        out.reset()
+        int notCompared = run('project', 'regenerate', '--diff')
+
+        then: 'it is not compared, and the command that moves the record is named'
+        notCompared == 1
+        err.toString().contains('grails-forge-cli project migrate moves the record to this version')
+
+        when: 'the record is moved'
+        err.reset()
+        out.reset()
+        int moved = run('project', 'migrate')
+
+        then: 'the configuration is a file of the baseline that changes, and no file of the application is written'
+        moved == 0
+        out.toString().readLines().contains('    changed  grails-app/conf/application.yml')
+        applicationFiles(project) == application
+
+        when:
+        out.reset()
+        int compared = run('project', 'regenerate', '--diff')
+
+        then: 'the settings the other build wrote are a change of the application now'
+        compared == 1
+        out.toString().readLines() == ['changed  grails-app/conf/application.yml', '| 1 file is not as the application was generated: 1 changed']
+
+        when: 'a feature is added'
+        out.reset()
+        int added = run('feature', 'add', 'grails-quartz')
+
+        then: 'the settings are kept, as every change of the application is, and the feature is merged among them'
+        added == 0
+        out.toString().contains('    merge    grails-app/conf/application.yml (your changes are kept)')
+        Collections.indexOfSubList(config.readLines(), EARLIER_CACHE_SETTINGS) > 0
+        config.readLines().contains('quartz.autoStartup: true')
+
+        when: 'the settings are renamed as the upgrade note says'
+        config.text = config.text.replace(text(EARLIER_CACHE_SETTINGS), text(CACHE_SETTINGS))
+        out.reset()
+        int renamed = run('project', 'regenerate', '--diff')
+
+        then: 'the application is what this build generates with the feature'
+        renamed == 0
+    }
+
+    void "cache-ehcache takes out the cache manager that the build of the application named by its class: a conflict once the record is moved, and added once the settings are renamed"() {
+        given:
+        File config = cacheApplicationOfAnotherBuild()
+        assert run('project', 'migrate') == 0
+        String before = config.text
+        out.reset()
+
+        when:
+        int added = run('feature', 'add', 'cache-ehcache')
+
+        then: 'the line the feature takes out is one the other build wrote otherwise, next to the key it wrote otherwise: a conflict, and nothing is written'
+        added == 1
+        out.toString().contains('    conflict grails-app/conf/application.yml: the feature changes lines of this file that were changed in the project too, or lines next to them')
+        err.toString().contains('The feature was not added: 1 file cannot be written without losing what the application has. Nothing was changed.')
+        config.text == before
+        !new File(project, 'grails-app/conf/ehcache.xml').exists()
+
+        when: 'the settings are renamed as the upgrade note says'
+        config.text = config.text.replace(text(EARLIER_CACHE_SETTINGS), text(CACHE_SETTINGS))
+        out.reset()
+        err.reset()
+        int again = run('feature', 'add', 'cache-ehcache')
+        create(other, 'create-app', 'com.example.shop', '--features', 'cache,cache-ehcache')
+
+        then: 'the feature is added, and the configuration is that of an application created with it'
+        again == 0
+        err.toString().isEmpty()
+        config.text == new File(other, 'shop/grails-app/conf/application.yml').text
+        new File(project, 'grails-app/conf/ehcache.xml').isFile()
     }
 
     void "the record of a later version is not moved to this one, and the commands name the version that wrote it"() {
@@ -639,6 +736,22 @@ class ProjectMigrateGeneratedSpec extends CommandSpec {
         List<String> withCache = lines(new File(other, 'shop/build.gradle').text)
         assert withCache.count(CACHE) == 1
         return withCache
+    }
+
+    /**
+     * Creates the application with cache, and makes its configuration and the copy in the baseline what
+     * another build of this version wrote, with the settings of the cache plugin as Grails 8 and earlier
+     * builds of Grails 9 wrote them, and the record that build wrote.
+     */
+    private File cacheApplicationOfAnotherBuild() {
+        create(dir, 'create-app', 'com.example.shop', '--features', 'cache')
+        File config = new File(project, 'grails-app/conf/application.yml')
+        assert config.text.count(text(CACHE_SETTINGS)) == 1
+        String earlier = config.text.replace(text(CACHE_SETTINGS), text(EARLIER_CACHE_SETTINGS))
+        config.setText(earlier, 'UTF-8')
+        earlierBaseline('grails-app/conf/application.yml', earlier)
+        writtenBy(VersionInfo.version, 'ab' * 32)
+        return config
     }
 
     /**

@@ -28,7 +28,7 @@ dependentFeatures: [cache]
 +     implementation("org.ehcache:ehcache") { capabilities { requireCapability("org.ehcache:ehcache-jakarta") } }
 == grails-app/conf/application.yml
 +   cache:
-+     cleanAtStartup: false
++     clearAtStartup: false
 +     enabled: true
 == grails-app/conf/ehcache.xml
 + <?xml version="1.0" encoding="UTF-8"?>
@@ -158,7 +158,7 @@ dependentFeatures: [cache]
 - grails.codegen.defaultPackage: example.grails
 + grails:
 +   cache:
-+     cleanAtStartup: false
++     clearAtStartup: false
 +     enabled: true
 +   codegen:
 +     defaultPackage: example.grails

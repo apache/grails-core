@@ -28,11 +28,13 @@ guideOfGrails: guide/cache.html
 dependencies:
   - scope: implementation
     coordinates: org.apache.grails:grails-cache
+# the keys the cache plugin reads: enabled gates its beans, clearAtStartup is bound to CachePluginConfiguration
 configuration:
   - values:
       grails.cache.enabled: true
-      grails.cache.cleanAtStartup: false
-  # beside a cache provider the cache manager is the grailsCacheManager that resources.groovy defines, which this does not choose
+      grails.cache.clearAtStartup: false
+  # beside a cache provider the cache manager is the grailsCacheManager that resources.groovy defines, which this does not choose;
+  # the plugin compares the name of its class without the package, and takes GrailsConcurrentMapCacheManager for any other value
   - when: { not: { group: cache-provider } }
     values:
-      grails.cache.cacheManager: grails.plugin.cache.GrailsConcurrentMapCacheManager
+      grails.cache.cacheManager: GrailsConcurrentMapCacheManager

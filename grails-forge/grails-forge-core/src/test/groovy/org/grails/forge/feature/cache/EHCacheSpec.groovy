@@ -101,12 +101,12 @@ class EHCacheSpec extends ApplicationContextSpec implements CommandOutputFixture
         !commandContext.configuration.keySet().any { String key -> key.startsWith('grails.cache.ehcache') }
     }
 
-    void 'the Cache plugin alone still chooses its cache manager'() {
+    void 'the Cache plugin alone still chooses its cache manager, by the name the plugin compares'() {
         when:
         GeneratorContext commandContext = buildGeneratorContext(['cache'])
 
         then:
-        commandContext.configuration.get('grails.cache.cacheManager') == 'grails.plugin.cache.GrailsConcurrentMapCacheManager'
+        commandContext.configuration.get('grails.cache.cacheManager') == 'GrailsConcurrentMapCacheManager'
     }
 
     @Unroll

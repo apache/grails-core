@@ -1016,7 +1016,7 @@ class FeatureAddCommandSpec extends CommandSpec implements CommandFixture {
         then: 'the diff of the file removes no line'
         shown == 0
         ofConfig.findAll { it.startsWith('-') } == []
-        ofConfig.findAll { it.startsWith('+') }*.substring(1) == ['  cache:', '    cacheManager: grails.plugin.cache.GrailsConcurrentMapCacheManager', '    cleanAtStartup: false', '    enabled: true']
+        ofConfig.findAll { it.startsWith('+') }*.substring(1) == ['  cache:', '    cacheManager: GrailsConcurrentMapCacheManager', '    clearAtStartup: false', '    enabled: true']
 
         when:
         out.reset()
@@ -1025,8 +1025,8 @@ class FeatureAddCommandSpec extends CommandSpec implements CommandFixture {
 
         then: 'every line that was there is there, in its order, and the only new lines are those of the feature, under the key they belong to'
         exit == 0
-        without(now, ['  cache:', '    cacheManager: grails.plugin.cache.GrailsConcurrentMapCacheManager', '    cleanAtStartup: false', '    enabled: true']) == generated
-        Collections.indexOfSubList(now, ['  cache:', '    cacheManager: grails.plugin.cache.GrailsConcurrentMapCacheManager']) == now.indexOf('grails:') + 1
+        without(now, ['  cache:', '    cacheManager: GrailsConcurrentMapCacheManager', '    clearAtStartup: false', '    enabled: true']) == generated
+        Collections.indexOfSubList(now, ['  cache:', '    cacheManager: GrailsConcurrentMapCacheManager']) == now.indexOf('grails:') + 1
     }
 
     @Unroll
@@ -1086,8 +1086,8 @@ class FeatureAddCommandSpec extends CommandSpec implements CommandFixture {
 
         where:
         added   | edit                                                                                   || after        | arrive
-        'cache' | { String text -> text }                                                                || 'grails:'    | ['  cache:', '    cacheManager: grails.plugin.cache.GrailsConcurrentMapCacheManager', '    cleanAtStartup: false', '    enabled: true']
-        'cache' | { String text -> 'ours: 1\n' + text.replace('pooled: true', 'pooled: false # ours') } || 'grails:'    | ['  cache:', '    cacheManager: grails.plugin.cache.GrailsConcurrentMapCacheManager', '    cleanAtStartup: false', '    enabled: true']
+        'cache' | { String text -> text }                                                                || 'grails:'    | ['  cache:', '    cacheManager: GrailsConcurrentMapCacheManager', '    clearAtStartup: false', '    enabled: true']
+        'cache' | { String text -> 'ours: 1\n' + text.replace('pooled: true', 'pooled: false # ours') } || 'grails:'    | ['  cache:', '    cacheManager: GrailsConcurrentMapCacheManager', '    clearAtStartup: false', '    enabled: true']
     }
 
     @Unroll
