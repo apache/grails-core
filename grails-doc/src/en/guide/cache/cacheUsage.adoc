@@ -45,6 +45,6 @@ share cache keys.
 This 'core' cache plugin uses an in-memory implementation where the caches and
 cache manager are backed by a thread-safe `java.util.concurrent.ConcurrentMap`.
 This is fine for testing and possibly for low-traffic sites, but you should
-consider using one of the extension plugins if you need clustering, disk
+consider another cache provider if you need clustering, disk
 storage, persistence between restarts, and more configurability of features like
-time-to-live, maximum cache size, etc. Currently, the only extension plugin available for Grails is https://github.com/grails-plugins/grails-cache-ehcache[cache-ehcache].
+time-to-live, maximum cache size, etc. The `cache-ehcache` feature gives an application Ehcache through JCache, see <<cacheEhcache,Ehcache through JCache>>.

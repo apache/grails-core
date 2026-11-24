@@ -21,16 +21,25 @@ name: cache-ehcache
 compatibility:
   grails: '[9.0.0,10.0.0)'
   forge: '[9.0.0,10.0.0)'
-title: Ehcache Plugin
-description: The Grails Ehcache Plugin extends the Cache Plugin and uses Ehcache as the storage provider for cached content.
+title: Ehcache
+description: "Caches with Ehcache 3 through JCache (JSR-107): the cache manager of the Cache plugin, grailsCacheManager, is defined in grails-app/conf/spring/resources.groovy over the caches of grails-app/conf/ehcache.xml, and a cache that file does not configure is created from its default template when it is first used."
 category: Cache
-documentation: 'https://grails-plugins.github.io/grails-cache-ehcache/latest/'
+guideOfGrails: guide/cache.html#cacheEhcache
 thirdPartyDocumentation: 'https://www.ehcache.org/'
+# the cache provider is the choice of the application: what a plugin declares would reach every application that uses it,
+# and a plugin does not define the beans of an application
+applicationTypes: [web, rest-api]
 oneOf: cache-provider
+# the Cache plugin, whose cache manager this replaces; spring-resources writes the beans that do it
+requires:
+  - cache
 dependencies:
+  # the variant built for Jakarta EE, whose XML configuration reads with the JAXB of Jakarta EE that the BOM manages
   - scope: implementation
-    coordinates: org.grails.plugins:cache-ehcache
-    versionOfForge: true
-configuration:
-  grails.cache.ehcache.ehcacheXmlLocation: 'classpath:ehcache.xml'
-  grails.cache.ehcache.lockTimeout: 200
+    coordinates: org.ehcache:ehcache
+    capabilities: ['org.ehcache:ehcache-jakarta']
+files:
+  - from: ehcache.xml.gsp
+    to: grails-app/conf/ehcache.xml
+  - from: JCacheGrailsCacheManager.groovy.gsp
+    to: src/main/groovy/{packagePath}/JCacheGrailsCacheManager.groovy

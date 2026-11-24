@@ -85,7 +85,7 @@ Available Features
 
   Cache
   cache                               The Grails Cache plugin provides powerful and easy to use caching functionality to Grails applications and plugins.
-  cache-ehcache                       The Grails Cache Ehcache plugin extends the Cache plugin and uses Ehcache as the storage provider for cached content.
+  cache-ehcache                       Caches with Ehcache 3 through JCache (JSR-107): the cache manager of the Cache plugin, grailsCacheManager, is defined in grails-app/conf/spring/resources.groovy over the caches of grails-app/conf/ehcache.xml, and a cache that file does not configure is created from its default template when it is first used.
 
   Client
   micronaut-http-client               Adds support for the Micronaut HTTP client

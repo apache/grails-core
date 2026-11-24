@@ -1,0 +1,143 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+The `cache-ehcache` feature gives an application the cache plugin with https://www.ehcache.org/[Ehcache] 3 as the storage of its caches, reached through JCache (JSR-107). No plugin of its own is added: the application defines the `grailsCacheManager` bean, which the plugin then uses in the place of its default cache manager, as <<cacheImplementation,Implementation Details>> describes.
+
+Create an application with the feature, or add it to an application:
+
+[source,bash]
+----
+grails create-app myapp --features=cache-ehcache
+grails feature add cache-ehcache
+----
+
+The feature requires the `cache` feature and is offered for applications (`web` and `rest-api`). A plugin leaves the choice of a cache provider to the application that uses it.
+
+==== What the Application Has
+
+`build.gradle` has the cache plugin and the Jakarta EE variant of Ehcache, both in the versions the Grails BOM manages:
+
+[source,groovy]
+----
+implementation "org.apache.grails:grails-cache"
+implementation("org.ehcache:ehcache") { capabilities { requireCapability("org.ehcache:ehcache-jakarta") } }
+----
+
+The capability selects the variant of Ehcache built for Jakarta EE, which reads its XML configuration with the Jakarta XML Binding the BOM manages. The default variant is built for `javax.xml.bind` and cannot read the configuration with it.
+
+`grails-app/conf/spring/resources.groovy` defines the JCache cache manager of Ehcache, configured by `grails-app/conf/ehcache.xml`, and the cache manager of the plugin over it:
+
+[source,groovy]
+----
+import org.springframework.cache.jcache.JCacheManagerFactoryBean
+
+import myapp.JCacheGrailsCacheManager
+
+beans = {
+    jCacheManager(JCacheManagerFactoryBean) {
+        cacheManagerUri = 'classpath:ehcache.xml'
+    }
+    grailsCacheManager(JCacheGrailsCacheManager, ref('jCacheManager'))
+}
+----
+
+Spring's `JCacheManagerFactoryBean` closes the JCache cache manager when the application stops. `JCacheGrailsCacheManager` is a class of the application, in `src/main/groovy` in its package: a `JCacheCacheManager` of Spring that implements `GrailsCacheManager`. The cache annotations, the cache tags and `GrailsCacheAdminService` cache with it. Change it as the application needs.
+
+`application.yml` has the settings of the `cache` feature except `grails.cache.cacheManager`, which chooses between the cache managers of the plugin and has no effect beside a `grailsCacheManager` of the application.
+
+==== Configuring the Caches
+
+`grails-app/conf/ehcache.xml` is an https://www.ehcache.org/documentation/[Ehcache 3 XML configuration]. The generated file has a template, which the JCache extension of Ehcache (`jsr107:defaults`) gives every cache the file does not configure, and one cache:
+
+[source,xml]
+----
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xmlns="http://www.ehcache.org/v3"
+        xmlns:jsr107="http://www.ehcache.org/v3/jsr107"
+        xsi:schemaLocation="http://www.ehcache.org/v3 https://www.ehcache.org/schema/ehcache-core.xsd
+                            http://www.ehcache.org/v3/jsr107 https://www.ehcache.org/schema/ehcache-107-ext.xsd">
+
+    <service>
+        <jsr107:defaults default-template="default"/>
+    </service>
+
+    <cache-template name="default">
+        <expiry>
+            <ttl unit="minutes">10</ttl>
+        </expiry>
+        <heap unit="entries">1000</heap>
+    </cache-template>
+
+    <cache alias="example" uses-template="default">
+        <heap unit="entries">100</heap>
+    </cache>
+</config>
+----
+
+To configure the cache of an annotation, `@Cacheable('books')` for example, add a `cache` element with the name of the cache as its `alias`. It has what the template has, except what it says itself:
+
+[source,xml]
+----
+<cache alias="books" uses-template="default">
+    <expiry>
+        <ttl unit="hours">1</ttl>
+    </expiry>
+    <heap unit="entries">5000</heap>
+</cache>
+----
+
+A cache the file does not configure is created when it is first used, from the template that `default-template` names, so the name of a new cache in an annotation caches at once, as it does with the default cache manager of the plugin. The caches of the tags, `grailsBlocksCache` and `grailsTemplatesCache`, are created so when the application starts. Without `default-template` such a cache has the configuration Ehcache gives a JCache cache by default, which does not limit the number of its entries.
+
+The values of a cache are kept as they are, in the caches the file configures and in those `JCacheGrailsCacheManager` creates, as the default cache manager of the plugin keeps them: a cached value need not be `Serializable`, and every caller gets the same object, which it must not change.
+
+==== The Hibernate Second-Level Cache
+
+The feature does not turn the second-level cache of Hibernate on: `gorm-hibernate5` and `gorm-hibernate7` set `hibernate.cache.use_second_level_cache` to `false`. To keep the instances of domain classes in Ehcache, add the JCache module of Hibernate:
+
+[source,groovy]
+.build.gradle, Hibernate 7
+----
+runtimeOnly 'org.hibernate.orm:hibernate-jcache'
+----
+
+[source,groovy,subs="attributes"]
+.build.gradle, Hibernate 5
+----
+runtimeOnly('org.hibernate:hibernate-jcache:{hibernate5Version}') {
+    exclude group: 'org.hibernate', module: 'hibernate-core' // the javax variant, which hibernate-core-jakarta replaces
+}
+----
+
+The Hibernate 7 module is in the versions the Hibernate 7 BOM manages; the Hibernate 5 module is not managed, and takes the version of the `hibernate-core-jakarta` of the application. Then turn the cache on with the same configuration file:
+
+[source,yaml]
+.grails-app/conf/application.yml
+----
+hibernate:
+    cache:
+        use_second_level_cache: true
+        region:
+            factory_class: jcache
+    javax:
+        cache:
+            uri: ehcache.xml
+            missing_cache_strategy: create
+----
+
+and cache the domain classes that are to be cached, with `cache true` in their `mapping` (see link:{hibernate7Guide}index.html#caching[Caching] in the GORM for Hibernate guide). `hibernate.javax.cache.uri` is the name of a resource on the class path. Hibernate reads the file into a JCache cache manager of its own: a region is a cache named after its class or collection, `myapp.Book` for example, and a region the file does not configure is created from the default template (`missing_cache_strategy: create`). To cache the results of queries too, set `hibernate.cache.use_query_cache` to `true`.

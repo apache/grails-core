@@ -29,6 +29,10 @@ dependencies:
   - scope: implementation
     coordinates: org.apache.grails:grails-cache
 configuration:
-  grails.cache.enabled: true
-  grails.cache.cleanAtStartup: false
-  grails.cache.cacheManager: grails.plugin.cache.GrailsConcurrentMapCacheManager
+  - values:
+      grails.cache.enabled: true
+      grails.cache.cleanAtStartup: false
+  # beside a cache provider the cache manager is the grailsCacheManager that resources.groovy defines, which this does not choose
+  - when: { not: { group: cache-provider } }
+    values:
+      grails.cache.cacheManager: grails.plugin.cache.GrailsConcurrentMapCacheManager

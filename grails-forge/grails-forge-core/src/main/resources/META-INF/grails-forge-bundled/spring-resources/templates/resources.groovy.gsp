@@ -16,6 +16,20 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 --}%
+<% if (features.contains('cache-ehcache')) { %>
+import org.springframework.cache.jcache.JCacheManagerFactoryBean
+
+import ${project.packageName}.JCacheGrailsCacheManager
+
+<% } %>
 // Place your Spring DSL code here
 beans = {
+<% if (features.contains('cache-ehcache')) { %>
+    // the caches of grails-app/conf/ehcache.xml, through JCache (JSR-107)
+    jCacheManager(JCacheManagerFactoryBean) {
+        cacheManagerUri = 'classpath:ehcache.xml'
+    }
+    // the cache manager of the Grails Cache plugin, which its annotations, tags and admin service cache with
+    grailsCacheManager(JCacheGrailsCacheManager, ref('jCacheManager'))
+<% } %>
 }
