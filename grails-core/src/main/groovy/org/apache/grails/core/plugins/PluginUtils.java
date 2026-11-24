@@ -223,7 +223,6 @@ public final class PluginUtils {
      */
     public static List<PluginDescriptor> scanPluginDescriptorResources(ClassLoader classLoader) {
         List<PluginDescriptor> descriptors = new ArrayList<>();
-        Set<String> discoveredNames = new HashSet<>();
         Set<String> discoveredPluginClasses = new HashSet<>();
 
         Set<String> pluginNames = scanPluginImports(classLoader);
@@ -240,9 +239,6 @@ public final class PluginUtils {
                         Resource descriptorResource = new UrlResource(url);
                         PluginDescriptor descriptor = PluginDescriptor.fromProperties(pluginName, descriptorResource, props);
                         descriptors.add(descriptor);
-                        if (descriptor.getPluginName() != null) {
-                            discoveredNames.add(normalizePluginName(descriptor.getPluginName()));
-                        }
                         discoveredPluginClasses.addAll(descriptor.getProvidedPlugins());
                     } catch (IOException | IllegalArgumentException e) {
                         LOG.debug("Error parsing plugin descriptor at [{}]: {}", url, e.getMessage());
@@ -253,7 +249,7 @@ public final class PluginUtils {
             }
         }
 
-        scanLegacyXmlPluginDescriptors(classLoader, descriptors, discoveredNames, discoveredPluginClasses);
+        scanLegacyXmlPluginDescriptors(classLoader, descriptors, discoveredPluginClasses);
         return descriptors;
     }
 
@@ -261,7 +257,6 @@ public final class PluginUtils {
     private static void scanLegacyXmlPluginDescriptors(
             ClassLoader classLoader,
             List<PluginDescriptor> descriptors,
-            Set<String> discoveredNames,
             Set<String> discoveredPluginClasses) {
         try {
             Enumeration<URL> legacyResources = classLoader.getResources(LEGACY_PLUGIN_DESCRIPTOR_PATH);
@@ -280,11 +275,6 @@ public final class PluginUtils {
                     if (pluginClasses.isEmpty()) {
                         continue;
                     }
-                    String xmlPluginName = handler.getPluginName();
-                    String normalizedName = xmlPluginName != null ? normalizePluginName(xmlPluginName) : null;
-                    if (normalizedName != null && discoveredNames.contains(normalizedName)) {
-                        continue;
-                    }
                     List<String> remainingClasses = new ArrayList<>();
                     for (String pluginClass : pluginClasses) {
                         if (!discoveredPluginClasses.contains(pluginClass)) {
@@ -295,7 +285,10 @@ public final class PluginUtils {
                         continue;
                     }
 
-                    String label = normalizedName != null ? normalizedName : String.join(", ", remainingClasses);
+                    String xmlPluginName = handler.getPluginName();
+                    String normalizedName = xmlPluginName != null ? normalizePluginName(xmlPluginName) : null;
+                    String label = (normalizedName != null && remainingClasses.size() == pluginClasses.size()) ?
+                            normalizedName : String.join(", ", remainingClasses);
                     LOG.warn("Plugin [{}] was discovered via legacy {} at [{}], which is deprecated in Grails 9.0 " +
                                     "and will be removed in Grails 10.0. Rebuild this plugin against Grails 9 to " +
                                     "generate {} and META-INF/grails/plugins/<name>/plugin.properties.",
@@ -320,9 +313,6 @@ public final class PluginUtils {
                             true,
                             false
                     ));
-                    if (normalizedName != null) {
-                        discoveredNames.add(normalizedName);
-                    }
                     discoveredPluginClasses.addAll(remainingClasses);
                 } catch (IOException | ParserConfigurationException | SAXException e) {
                     LOG.debug("Error parsing legacy plugin descriptor at [{}]: {}", url, e.getMessage());

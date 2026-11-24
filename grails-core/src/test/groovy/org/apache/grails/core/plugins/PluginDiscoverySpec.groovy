@@ -186,6 +186,45 @@ class PluginDiscoverySpec extends Specification {
         dualDir.deleteDir()
     }
 
+    def 'skips only already-discovered plugin classes when a legacy XML descriptor shares a name with a modern descriptor'() {
+        given: 'a modern descriptor for alpha and a legacy XML descriptor named alpha that lists both alpha and beta'
+        def modernDir = File.createTempDir()
+        writePluginDescriptor(modernDir, 'alpha', '''
+            format.version=1
+            name=alpha
+            version=2.0.0
+            class=com.example.AlphaGrailsPlugin
+        ''')
+
+        def legacyDir = File.createTempDir()
+        def legacyXml = new File(legacyDir, 'META-INF/grails-plugin.xml')
+        legacyXml.parentFile.mkdirs()
+        legacyXml.text = '''
+            <plugin name='alpha' version='1.0.0'>
+                <type>com.example.AlphaGrailsPlugin</type>
+                <type>com.example.BetaGrailsPlugin</type>
+            </plugin>
+        '''.stripIndent()
+
+        def classLoader = new URLClassLoader(
+                [modernDir.toURI().toURL(), legacyDir.toURI().toURL()] as URL[], (ClassLoader) null)
+
+        when: 'plugin descriptor resources are scanned'
+        def descriptors = PluginUtils.scanPluginDescriptorResources(classLoader)
+
+        then: 'alpha is loaded from the modern descriptor and beta is still discovered from the legacy descriptor'
+        descriptors.size() == 2
+        descriptors[0].providedPlugins == ['com.example.AlphaGrailsPlugin']
+        descriptors[0].pluginVersion == '2.0.0'
+        descriptors[1].providedPlugins == ['com.example.BetaGrailsPlugin']
+        descriptors[1].pluginVersion == '1.0.0'
+
+        cleanup:
+        classLoader?.close()
+        modernDir.deleteDir()
+        legacyDir.deleteDir()
+    }
+
     def 'ignores comments and blank lines in plugins.imports'() {
         given: 'a plugins.imports index containing comments and blank lines'
         def tempDir = File.createTempDir()
