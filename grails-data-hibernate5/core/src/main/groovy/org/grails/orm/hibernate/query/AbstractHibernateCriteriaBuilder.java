@@ -64,6 +64,7 @@ import org.hibernate.criterion.Restrictions;
 import org.hibernate.criterion.SimpleExpression;
 import org.hibernate.criterion.Subqueries;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
+import org.hibernate.internal.CriteriaImpl;
 import org.hibernate.transform.ResultTransformer;
 import org.hibernate.type.ManyToOneType;
 import org.hibernate.type.Type;
@@ -370,7 +371,6 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
         for (Map.Entry<String, JoinType> requestedJoinType : requestedJoinTypes.entrySet()) {
             GrailsHibernateUtil.applyJoinType(datastore, targetClass, criteria, requestedJoinType.getKey(), requestedJoinType.getValue());
         }
-        requestedJoinTypes.clear();
     }
 
     /**
@@ -1590,11 +1590,35 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
     }
 
     /**
+     * Makes the joins of an explicit sort that uses a requested left join before the argument
+     * utilities apply the sort. A collection request alone does not create a join, so the utilities
+     * would otherwise create their default inner join after the requested types have been applied.
+     */
+    private void applyRequestedSortJoins(Map<?, ?> arguments) {
+        if (arguments == null || datastore == null) {
+            return;
+        }
+        Object sort = arguments.get(HibernateQueryConstants.ARGUMENT_SORT);
+        Collection<?> properties = sort instanceof Map ? ((Map<?, ?>) sort).keySet() :
+                sort instanceof String ? Collections.singletonList(sort) : Collections.emptyList();
+        for (Object property : properties) {
+            String sortProperty = (String) property;
+            String wholePath = getWholeAssociationPath(sortProperty);
+            for (Map.Entry<String, JoinType> requested : requestedJoinTypes.entrySet()) {
+                if (requested.getValue() == JoinType.LEFT && wholePath.startsWith(requested.getKey() + '.')) {
+                    calculateOrderPropertyName(new RequestedOrder(sortProperty.split("\\."), Order::asc, targetClass, "", null));
+                    break;
+                }
+            }
+        }
+    }
+
+    /**
      * Qualifies the property of an order with the alias that Hibernate resolves it through. A property
      * of an association is resolved through the alias of the join of the association: a join that the
      * criteria already have for the association is used, and an association that they do not join is
      * joined for the order. Without the <code>grails.gorm.leftJoinAssociationSort</code> setting it is
-     * joined with an inner join. With the setting it is joined with a left join, so that the order
+     * joined with an inner join unless a left join is explicitly requested. With the setting it is joined with a left join, so that the order
      * keeps the rows where the association is null, and a collection is joined without being fetched,
      * since a row limit would leave elements out of it, unless the query fetches it or another
      * collection: see {@link GrailsHibernateUtil#keepsSortedCollectionUnfetched(Criteria, String)}. An association
@@ -1640,17 +1664,17 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
                 alias = tokens[i] + ALIAS + aliasCount;
                 aliasMap.put(associationPath, alias);
                 String joinPath = parentAlias != null ? parentAlias + '.' + tokens[i] : associationPath;
-                if (!GrailsHibernateUtil.isLeftJoinAssociationSort(property.getOwner())) {
-                    criteria.createAlias(joinPath, alias, org.hibernate.sql.JoinType.INNER_JOIN);
-                }
-                else {
-                    if (property instanceof ToMany) {
-                        GrailsHibernateUtil.checkSortedCollection(criteria, associationPath);
-                    }
-                    criteria.createAlias(joinPath, alias, org.hibernate.sql.JoinType.LEFT_OUTER_JOIN);
-                    if (property instanceof ToMany && GrailsHibernateUtil.keepsSortedCollectionUnfetched(criteria, associationPath)) {
-                        GrailsHibernateUtil.keepCollectionUnfetched(criteria, alias);
-                    }
+                boolean requestedLeftJoin = requestedJoinTypes.get(associationPath) == JoinType.LEFT;
+                boolean leftJoin = requestedLeftJoin || GrailsHibernateUtil.isLeftJoinAssociationSort(property.getOwner());
+                CriteriaImpl root = criteria instanceof CriteriaImpl ? (CriteriaImpl) criteria : null;
+                boolean pagedCollection = requestedLeftJoin && property instanceof ToMany && root != null &&
+                        (root.getMaxResults() != null || root.getFirstResult() != null && root.getFirstResult() > 0);
+                // Hibernate fetches an unrestricted left collection join even with FetchMode.SELECT.
+                // A neutral with-clause keeps it a sort join and leaves the collection to load separately.
+                criteria.createAlias(joinPath, alias, leftJoin ? org.hibernate.sql.JoinType.LEFT_OUTER_JOIN : org.hibernate.sql.JoinType.INNER_JOIN,
+                        pagedCollection ? Restrictions.sqlRestriction("1=1") : null);
+                if (leftJoin && property instanceof ToMany && GrailsHibernateUtil.keepsSortedCollectionUnfetched(criteria, associationPath)) {
+                    GrailsHibernateUtil.keepCollectionUnfetched(criteria, alias);
                 }
             }
             entity = ((Association) property).getAssociatedEntity();
@@ -1928,7 +1952,9 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
                 invokeClosureNode(args[0]);
             }
             applyRequestedJoinTypes();
+            applyRequestedSortJoins(listArguments);
             applyRequestedOrders();
+            requestedJoinTypes.clear();
 
             if (resultTransformer != null) {
                 criteria.setResultTransformer(resultTransformer);
@@ -1998,11 +2024,19 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
                     result = createPagedResultList(argMap);
                 }
                 else {
+                    List<String> deferred = GrailsHibernateUtil.deferSortedCollectionFetches(criteria);
                     result = criteria.list();
+                    if (!deferred.isEmpty()) {
+                        GrailsHibernateUtil.initializeCollections(datastore.getMappingContext().getPersistentEntity(targetClass.getName()), (List) result, deferred);
+                    }
                 }
             }
             else {
+                List<String> deferred = GrailsHibernateUtil.deferSortedCollectionFetches(criteria);
                 result = executeUniqueResultWithProxyUnwrap();
+                if (!deferred.isEmpty()) {
+                    GrailsHibernateUtil.initializeCollections(datastore.getMappingContext().getPersistentEntity(targetClass.getName()), Collections.singletonList(result), deferred);
+                }
             }
             if (!participate) {
                 closeSession();
@@ -2241,6 +2275,7 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
         criteriaClosure.call();
         applyRequestedJoinTypes();
         applyRequestedOrders();
+        requestedJoinTypes.clear();
         return criteria;
     }
 

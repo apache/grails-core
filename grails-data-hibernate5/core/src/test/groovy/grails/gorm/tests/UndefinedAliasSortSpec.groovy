@@ -113,6 +113,44 @@ class UndefinedAliasSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckMa
         results*.name - 'Unattached First Team' == ['Manchester United First Team', 'Chelsea First Team', 'Arsenal First Team']
     }
 
+    void 'a root alias matching #alias preserves the full #property path with #sortForm and pagination #paged'() {
+        given:
+        final first = new Team(name: 'Collision Z', club: Club.findByName('Arsenal')).save(failOnError: true)
+        final second = new Team(name: 'Collision A', club: Club.findByName('Chelsea')).save(failOnError: true)
+        [first, second].eachWithIndex { Team team, int index ->
+            final player = new Player(name: "Collision player ${index}", team: team)
+            player.contract = new Contract(salary: 100G, player: player)
+            player.save(failOnError: true)
+        }
+        manager.session.flush()
+        manager.session.clear()
+        def criteria = new DetachedCriteria(domain, alias).like('name', 'Collision%')
+        final arguments = paged ? [max: 1] : [:]
+        if (sortForm == 'stored') {
+            criteria = criteria.sort(property)
+        }
+        else {
+            arguments.sort = sortForm == 'map' ? [(property): 'asc'] : property
+        }
+
+        when:
+        final results = criteria.list(arguments)
+
+        then:
+        results*.name == (paged ? expected.take(1) : expected)
+        !paged || results.totalCount == 2
+
+        where:
+        [domain, alias, property, expected, sortForm, paged] << [
+                [
+                        [Team, 'players', 'players.team.name', ['Collision A', 'Collision Z']],
+                        [Player, 'team', 'team.club.name', ['Collision player 0', 'Collision player 1']],
+                ],
+                ['argument', 'stored', 'map'],
+                [false, true],
+        ].combinations().collect { List row -> row[0] + row[1..2] }
+    }
+
     private static final List<String> TEAMS_BY_NAME = ['Arsenal First Team', 'Chelsea First Team', 'Manchester United First Team', 'Unattached First Team']
 
     void 'a sort by an alias that the query defines still sorts'() {

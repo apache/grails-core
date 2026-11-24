@@ -27,6 +27,7 @@ import jakarta.persistence.criteria.CriteriaQuery
 import jakarta.persistence.criteria.Root
 
 import org.hibernate.Criteria
+import org.hibernate.criterion.CriteriaSpecification
 import org.hibernate.FlushMode
 import org.hibernate.LockMode
 import org.hibernate.Session
@@ -47,6 +48,7 @@ import org.grails.datastore.mapping.query.api.BuildableCriteria as GrailsCriteri
 import org.grails.datastore.mapping.query.event.PostQueryEvent
 import org.grails.datastore.mapping.query.event.PreQueryEvent
 import org.grails.orm.hibernate.exceptions.GrailsQueryException
+import org.grails.orm.hibernate.cfg.GrailsHibernateUtil
 import org.grails.orm.hibernate.query.GrailsHibernateQueryUtils
 import org.grails.orm.hibernate.query.HibernateHqlQuery
 import org.grails.orm.hibernate.query.HibernateQuery
@@ -91,7 +93,7 @@ class HibernateGormStaticApi<D> extends AbstractHibernateGormStaticApi<D> {
             CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder()
             CriteriaQuery criteriaQuery = criteriaBuilder.createQuery(persistentEntity.javaClass)
             Root queryRoot = criteriaQuery.from(persistentEntity.javaClass)
-            GrailsHibernateQueryUtils.populateArgumentsForCriteria(
+            List<String> deferred = GrailsHibernateQueryUtils.populateArgumentsForCriteria(
                     sessionFactory,
                     persistentEntity,
                     criteriaQuery,
@@ -106,6 +108,10 @@ class HibernateGormStaticApi<D> extends AbstractHibernateGormStaticApi<D> {
                 // a query that fetches a collection returns each instance once, without a distinct in the SQL,
                 // which would compare every fetched column and reject an order by a column that it does not select
                 query.setHint(QueryHints.HINT_PASS_DISTINCT_THROUGH, false)
+                if (!deferred.isEmpty()) {
+                    // Without a collection fetch Hibernate no longer deduplicates the joined rows.
+                    query.setResultTransformer(CriteriaSpecification.DISTINCT_ROOT_ENTITY)
+                }
             }
 
             GrailsHibernateQueryUtils.populateArgumentsForCriteria(
@@ -124,8 +130,9 @@ class HibernateGormStaticApi<D> extends AbstractHibernateGormStaticApi<D> {
             hibernateTemplate.applySettings(query)
 
             params = params ? new HashMap(params) : Collections.emptyMap()
+            List<D> results
             if (params.containsKey(DynamicFinder.ARGUMENT_MAX)) {
-                return new PagedResultList(
+                results = new PagedResultList(
                         hibernateTemplate,
                         persistentEntity,
                         hibernateQuery,
@@ -135,8 +142,10 @@ class HibernateGormStaticApi<D> extends AbstractHibernateGormStaticApi<D> {
                 )
             }
             else {
-                return hibernateQuery.list()
+                results = hibernateQuery.list()
             }
+            GrailsHibernateUtil.initializeCollections(persistentEntity, results, deferred)
+            return results
         }
     }
 

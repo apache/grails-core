@@ -173,7 +173,12 @@ public class HibernateCriteriaBuilder extends AbstractHibernateCriteriaBuilder {
     protected List createPagedResultList(Map args) {
         GrailsHibernateUtil.populateArgumentsForCriteria(datastore, targetClass, criteria, args, conversionService);
         GrailsHibernateTemplate ght = new GrailsHibernateTemplate(sessionFactory, (HibernateDatastore) datastore, getDefaultFlushMode());
-        return new PagedResultList(ght, criteria);
+        List<String> deferred = GrailsHibernateUtil.deferSortedCollectionFetches(criteria);
+        List results = new PagedResultList(ght, criteria);
+        if (!deferred.isEmpty()) {
+            GrailsHibernateUtil.initializeCollections(datastore.getMappingContext().getPersistentEntity(targetClass.getName()), results, deferred);
+        }
+        return results;
     }
 
     /**

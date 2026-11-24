@@ -35,6 +35,7 @@ import groovy.lang.MetaClass;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Fetch;
 import jakarta.persistence.criteria.FetchParent;
+import jakarta.persistence.criteria.From;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.Root;
 import jakarta.persistence.metamodel.Attribute;
@@ -324,7 +325,7 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
      * With the setting it is a left join, so that the sort keeps the rows where the association is
      * null, and a collection is joined without being fetched, unless the query fetches it: see
      * {@link #keepsSortedCollectionUnfetched(Criteria, String)} and
-     * {@link #checkSortedCollection(Criteria, String)}.
+     * {@link #deferSortedCollectionFetches(Criteria)}.
      */
     private static Criteria getOrCreateSortCriteria(Criteria root, Criteria parent, String associationPath, String associationName, boolean collection,
                                                     boolean leftJoin) {
@@ -334,9 +335,6 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
         }
         if (!leftJoin) {
             return root.createCriteria(getJoinPath(parent, associationPath, associationName), newJoinAlias(root, associationPath, "_sort"), JoinType.INNER_JOIN);
-        }
-        if (collection) {
-            checkSortedCollection(root, associationPath);
         }
         Criteria join = root.createCriteria(getJoinPath(parent, associationPath, associationName), newJoinAlias(root, associationPath, "_sort"), JoinType.LEFT_OUTER_JOIN);
         if (collection && keepsSortedCollectionUnfetched(root, associationPath)) {
@@ -391,88 +389,126 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
     }
 
     /**
-     * Throws an {@link UnsupportedOperationException} when a query sorts by a property of one collection
-     * while it fetches another, and the additional join would multiply a fetched bag. A bag is a collection without an order of
-     * its own, such as one declared as a {@code Collection}. The join for the sort and the fetch repeat
-     * each other's rows, and a bag cannot tell a repeated row from a repeated element, so a bag that is
-     * read from those rows would hold its elements more than once. That is why Hibernate does not
-     * support fetching more than one bag in a query. A collection that the query fetches anyway, because
-     * the query or the mapping asks for it, is not joined again by the sort, so it is only rejected next
-     * to another bag. A query that projects values loads no collection, so it is not rejected.
+     * Defers collection fetches that a collection sort would multiply into a bag. Call after the
+     * orders and joins have been built, and initialize the returned paths after executing the query.
+     * Projections load no collections. The sort joins and their join types are kept.
      *
-     * @param criteria The criteria of the query
-     * @param associationPath The path, from the root entity, of the collection that the query sorts by
-     * @throws UnsupportedOperationException if a fetched bag would be read from repeated rows
+     * @param criteria The completed criteria
+     * @return Collection paths to initialize after the query
      */
-    public static void checkSortedCollection(Criteria criteria, String associationPath) {
+    public static List<String> deferSortedCollectionFetches(Criteria criteria) {
         CriteriaImpl root = getRootCriteria(criteria);
-        if (root != null && root.getProjection() != null) {
-            return;
+        if (root == null || root.getProjection() != null || root.getSession() == null) {
+            return Collections.emptyList();
         }
-        String fetched = findOtherFetchedCollection(criteria, associationPath, true);
-        if (fetched != null) {
-            throw new UnsupportedOperationException(sortedCollectionMessage(associationPath, getRootCriteria(criteria).getEntityOrClassName(), fetched));
+        List<String> deferred = new ArrayList<>();
+        List<String> fetchedPaths = findFetchedCollections(root);
+        Set<String> sortedPaths = new HashSet<>();
+        Iterator<CriteriaImpl.OrderEntry> orders = root.iterateOrderings();
+        while (orders.hasNext()) {
+            CriteriaImpl.OrderEntry entry = orders.next();
+            String property = entry.getOrder().getPropertyName();
+            Criteria owner = entry.getCriteria();
+            int dot = property.indexOf('.');
+            if (dot > 0) {
+                Criteria aliased = findCriteriaByAlias(root, property.substring(0, dot));
+                if (aliased != null) {
+                    owner = aliased;
+                    property = property.substring(dot + 1);
+                }
+            }
+            String path = owner instanceof CriteriaImpl.Subcriteria ? getWholePath(root, (CriteriaImpl.Subcriteria) owner) + '.' + property : property;
+            dot = path.lastIndexOf('.');
+            while (dot > 0) {
+                sortedPaths.add(path.substring(0, dot));
+                dot = path.lastIndexOf('.', dot - 1);
+            }
         }
+        SessionFactoryImplementor factory = root.getSession().getFactory();
+        EntityPersister persister = factory.getMetamodel().entityPersister(root.getEntityOrClassName());
+        for (String sorted : sortedPaths) {
+            if (getCollectionRole(factory, persister, sorted) == null) {
+                continue;
+            }
+            String fetched;
+            while ((fetched = findOtherFetchedCollection(root, sorted, true)) != null) {
+                for (String path : fetchedPaths) {
+                    if ((path.equals(fetched) || path.startsWith(fetched + '.')) && !deferred.contains(path)) {
+                        deferred.add(path);
+                    }
+                }
+                root.setFetchMode(fetched, FetchMode.SELECT);
+                Criteria joined = findCriteria(root, fetched);
+                if (joined != null) {
+                    keepCollectionUnfetched(joined);
+                }
+            }
+            CriteriaImpl.Subcriteria join = findCriteria(root, sorted);
+            if (join != null && join.getJoinType() == JoinType.LEFT_OUTER_JOIN && keepsSortedCollectionUnfetched(root, sorted)) {
+                keepCollectionUnfetched(join);
+            }
+        }
+        return deferred;
     }
 
     /**
-     * Throws an {@link UnsupportedOperationException} when a JPA criteria query, which is what
-     * {@code list} runs, makes a join to sort by a property of one collection while it fetches another,
-     * and the fetched collection is a bag: see {@link #checkSortedCollection(Criteria, String)}.
-     * <p>
-     * Such a query does not fetch what the mapping fetches, so it joins a collection that the mapping
-     * fetches for the sort as well, but it does not read the collection from the rows of that join. A
-     * query that applies the fetches of the mapping, such as a where query, is only rejected next to
-     * another bag then, and this query is rejected when the collection that it fetches is a bag, which
-     * the rows of the join for the sort would repeat.
+     * Defers bag fetches multiplied by the collection joins of a static {@code list} query. Its
+     * distinct result and any restrictions requested by a join type remain in the query. Unlike
+     * legacy criteria, a JPA sort join does not implicitly fetch a collection of the same element type.
      *
-     * @param sessionFactory The session factory, which knows what the mapping fetches, or null
-     * @param fetchArguments The {@code fetch} argument of the query, or null
      * @param query The query
-     * @param sortJoin The join that the query makes for the sort
-     * @throws UnsupportedOperationException if a fetched bag would be read from repeated rows
+     * @return Paths to initialize after the query, including fetches below a deferred bag
      */
-    public static void checkSortedCollection(SessionFactory sessionFactory, Map<?, ?> fetchArguments, CriteriaQuery<?> query, Join<?, ?> sortJoin) {
-        Attribute<?, ?> sorted = sortJoin.getAttribute();
-        if (!(sorted instanceof PluralAttribute)) {
-            return;
-        }
+    public static List<String> deferSortedCollectionFetches(CriteriaQuery<?> query) {
+        List<String> deferred = new ArrayList<>();
         for (Root<?> root : query.getRoots()) {
-            String fetched = findFetchNextToSortedCollection(root, "");
-            if (fetched != null) {
-                throw new UnsupportedOperationException(sortedCollectionMessage(sorted.getName(), root.getJavaType().getName(), fetched));
+            if (hasCollectionJoin(root)) {
+                deferBagFetches(root, "", deferred);
+            }
+        }
+        return deferred;
+    }
+
+    private static boolean hasCollectionJoin(From<?, ?> parent) {
+        for (Join<?, ?> join : parent.getJoins()) {
+            if (join.getAttribute() instanceof PluralAttribute || hasCollectionJoin(join)) {
+                return true;
+            }
+        }
+        for (Fetch<?, ?> fetch : parent.getFetches()) {
+            if (fetch instanceof From && hasCollectionJoin((From<?, ?>) fetch)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static void deferBagFetches(FetchParent<?, ?> parent, String prefix, List<String> deferred) {
+        Iterator<? extends Fetch<?, ?>> fetches = parent.getFetches().iterator();
+        while (fetches.hasNext()) {
+            Fetch<?, ?> fetch = fetches.next();
+            String path = prefix + fetch.getAttribute().getName();
+            if (fetch.getAttribute() instanceof PluralAttribute && isBag(fetch.getAttribute())) {
+                deferred.add(path);
+                collectFetchPaths(fetch, path + '.', deferred);
+                fetches.remove();
+            }
+            else {
+                deferBagFetches(fetch, path + '.', deferred);
             }
         }
     }
 
-    /**
-     * Returns the path of a collection that the given parent fetches, at any depth, that a query cannot
-     * fetch next to a sort by a collection, or null. Only a fetched bag is read from repeated rows;
-     * a bag used just for sorting stays unfetched.
-     */
-    private static String findFetchNextToSortedCollection(FetchParent<?, ?> parent, String prefix) {
+    private static void collectFetchPaths(FetchParent<?, ?> parent, String prefix, List<String> paths) {
         for (Fetch<?, ?> fetch : parent.getFetches()) {
-            Attribute<?, ?> attribute = fetch.getAttribute();
-            String path = prefix + attribute.getName();
-            if (attribute instanceof PluralAttribute && isBag(attribute)) {
-                return path;
-            }
-            String nested = findFetchNextToSortedCollection(fetch, path + '.');
-            if (nested != null) {
-                return nested;
-            }
+            String path = prefix + fetch.getAttribute().getName();
+            paths.add(path);
+            collectFetchPaths(fetch, path + '.', paths);
         }
-        return null;
     }
 
     private static boolean isBag(Attribute<?, ?> attribute) {
         return ((PluralAttribute<?, ?, ?>) attribute).getCollectionType() == PluralAttribute.CollectionType.COLLECTION;
-    }
-
-    private static String sortedCollectionMessage(String sorted, String entityName, String fetched) {
-        return "Cannot sort by a property of [" + sorted + "] of [" + entityName + "] while the query fetches [" + fetched + "], because at least one of them is a bag. The join " +
-                "for the sort and the fetch repeat each other's rows, and a bag cannot tell a repeated row from a repeated element, which is why Hibernate does not support " +
-                "fetching more than one bag in a query. Declare both of them as a Set or a List instead of a Collection, or do not fetch [" + fetched + "].";
     }
 
     /**
@@ -487,7 +523,7 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
      * It is fetched as well when the query fetches another collection of the same element type, because Hibernate then reads
      * the elements of the collection that it fetches from the columns of the join that it does not
      * fetch, when both collections hold elements of the same table. That is not possible when either
-     * collection is a bag: see {@link #checkSortedCollection(Criteria, String)}.
+     * collection is a bag: see {@link #deferSortedCollectionFetches(Criteria)}.
      *
      * @param criteria The criteria of the query
      * @param associationPath The path of the collection from the root entity
@@ -559,8 +595,8 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
 
     /**
      * Returns the path of a collection, other than the one at the given path, that the query fetches at
-     * any depth, or null. When a bag must be involved, it returns one only when either collection is a
-     * bag, or when both are if the query or the mapping fetches the collection at the path itself.
+     * any depth, or null. When a bag must be involved, a fetched bag cannot share the multiplying
+     * rows, and a sorted bag cannot be implicitly fetched alongside a collection of the same type.
      */
     private static String findOtherFetchedCollection(Criteria criteria, String associationPath, boolean bagInvolved) {
         CriteriaImpl root = getRootCriteria(criteria);
@@ -589,7 +625,7 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
             Type fetchedElement = factory.getMetamodel().collectionPersister(collection.getValue()).getElementType();
             boolean sameElements = sortedElement instanceof EntityType && fetchedElement instanceof EntityType &&
                     ((EntityType) sortedElement).getAssociatedEntityName(factory).equals(((EntityType) fetchedElement).getAssociatedEntityName(factory));
-            if (bagInvolved ? (sortedFetched ? sortedBag && otherBag : otherBag || sortedBag && sameElements) : sameElements) {
+            if (bagInvolved ? otherBag || sortedBag && (sortedFetched || sameElements) : sameElements) {
                 return collection.getKey();
             }
         }
