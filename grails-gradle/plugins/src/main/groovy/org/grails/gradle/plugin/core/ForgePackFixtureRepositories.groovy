@@ -19,6 +19,8 @@
 package org.grails.gradle.plugin.core
 
 import java.nio.charset.StandardCharsets
+import java.nio.file.FileSystemNotFoundException
+import java.nio.file.Paths
 import java.security.MessageDigest
 
 import groovy.transform.CompileStatic
@@ -81,8 +83,14 @@ class ForgePackFixtureRepositories implements Serializable {
                         'do not get it').toString()
             } else if (sameAddress(url, URI.create(ArtifactRepositoryContainer.MAVEN_CENTRAL_URL))) {
                 used << MAVEN_CENTRAL
-            } else if (url.scheme == 'file') {
-                used << new File(url).absolutePath
+            } else if ('file'.equalsIgnoreCase(url.scheme)) {
+                String path = localPath(url)
+                if (path == null) {
+                    leftOut << ("The repository of the build at ${url} is a file address that is no path of this computer, and the " +
+                            'applications of forgePackTest do not get it').toString()
+                } else {
+                    used << path
+                }
             } else if (url.rawUserInfo != null || (url.rawAuthority ?: '').contains('@')) {
                 leftOut << ("The repository of the build at ${url.host ?: 'a host that cannot be read'} has a user or a password in its " +
                         'address, and the applications of forgePackTest do not get it: an address is written into their build files as ' +
@@ -109,6 +117,15 @@ class ForgePackFixtureRepositories implements Serializable {
             digest.update(bytes)
         }
         return digest.digest().encodeHex().toString()
+    }
+
+    // the path of a file address: one with a host is a share of Windows, which is no path on another system
+    private static String localPath(URI url) {
+        try {
+            return Paths.get(url).toFile().absolutePath
+        } catch (IllegalArgumentException | FileSystemNotFoundException ignored) {
+            return null
+        }
     }
 
     private static boolean isLocal(MavenArtifactRepository repository) {

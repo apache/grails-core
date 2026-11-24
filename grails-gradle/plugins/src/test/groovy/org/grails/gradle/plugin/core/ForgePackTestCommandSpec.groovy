@@ -18,7 +18,13 @@
  */
 package org.grails.gradle.plugin.core
 
+import org.gradle.api.Project
+import org.gradle.api.artifacts.repositories.MavenArtifactRepository
+import org.gradle.testfixtures.ProjectBuilder
+import spock.lang.IgnoreIf
+import spock.lang.Requires
 import spock.lang.Specification
+import spock.lang.TempDir
 import spock.lang.Unroll
 
 /**
@@ -27,6 +33,9 @@ import spock.lang.Unroll
  * that no test of this build runs.
  */
 class ForgePackTestCommandSpec extends Specification {
+
+    @TempDir
+    File directory
 
     void "the wrapper is started by itself, with each argument as one argument, whatever spaces the paths have"() {
         given:
@@ -74,5 +83,49 @@ class ForgePackTestCommandSpec extends Specification {
         ForgePackFixtureRepositories.digest(['a', 'b']) != ForgePackFixtureRepositories.digest(['ab'])
         ForgePackFixtureRepositories.digest(['a', 'b']) != ForgePackFixtureRepositories.digest(['b', 'a'])
         ForgePackFixtureRepositories.digest([]) == ForgePackFixtureRepositories.digest([])
+    }
+
+    void "a repository at a file address is given to the applications as its path, whatever the case of the scheme"() {
+        given:
+        File repository = new File(directory, 'repository')
+        Project project = ProjectBuilder.builder().withProjectDir(new File(directory, 'project')).build()
+        project.repositories.maven { MavenArtifactRepository each -> each.url = repository.toURI() }
+        project.repositories.maven { MavenArtifactRepository each -> each.url = URI.create('FILE:' + repository.toURI().rawPath + 'upper') }
+
+        when:
+        ForgePackFixtureRepositories of = ForgePackFixtureRepositories.of(project.repositories.withType(MavenArtifactRepository))
+
+        then:
+        of.used == [repository.absolutePath, new File(directory, 'repositoryupper').absolutePath]
+        of.leftOut == []
+    }
+
+    @IgnoreIf({ os.windows })
+    void "a file address with a host, a share of Windows, is left out with the reason on another system, and fails nothing"() {
+        given:
+        Project project = ProjectBuilder.builder().withProjectDir(new File(directory, 'project')).build()
+        project.repositories.maven { MavenArtifactRepository each -> each.url = URI.create('file://server/share/repository') }
+
+        when:
+        ForgePackFixtureRepositories of = ForgePackFixtureRepositories.of(project.repositories.withType(MavenArtifactRepository))
+
+        then:
+        of.used == []
+        of.leftOut == ['The repository of the build at file://server/share/repository is a file address that is no path of this computer, ' +
+                               'and the applications of forgePackTest do not get it']
+    }
+
+    @Requires({ os.windows })
+    void "on Windows a file address with a host is the path of the share"() {
+        given:
+        Project project = ProjectBuilder.builder().withProjectDir(new File(directory, 'project')).build()
+        project.repositories.maven { MavenArtifactRepository each -> each.url = URI.create('file://server/share/repository') }
+
+        when:
+        ForgePackFixtureRepositories of = ForgePackFixtureRepositories.of(project.repositories.withType(MavenArtifactRepository))
+
+        then:
+        of.used == ['\\\\server\\share\\repository']
+        of.leftOut == []
     }
 }
