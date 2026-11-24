@@ -423,6 +423,9 @@ class PackFeature implements Feature {
             int colon = exclusion.indexOf(':')
             dependency.exclude(colon < 0 ? exclusion : exclusion.substring(0, colon), colon < 0 ? null : exclusion.substring(colon + 1))
         }
+        for (String capability : declared.capabilities) {
+            dependency.requireCapability(capability)
+        }
         return dependency
     }
 

@@ -93,6 +93,9 @@ class PackDescriptorParserSpec extends Specification {
                 excludes: ['org.slf4j:slf4j-simple', commons-logging]
               - scope: testImplementation
                 coordinates: com.acme:acme-audit-h2
+              - scope: implementation
+                coordinates: org.ehcache:ehcache
+                capabilities: ['org.ehcache:ehcache-jakarta']
             platforms:
               - coordinates: com.acme:acme-bom
                 version: 2.3.0-RC1
@@ -139,10 +142,11 @@ class PackDescriptorParserSpec extends Specification {
         descriptor.oneOf == 'com.acme:audit'
 
         and:
-        descriptor.dependencies.collect { [it.scope, it.groupId, it.artifactId, it.version, it.excludes] } == [
-                ['implementation', 'com.acme', 'acme-audit-grails', '2.3.0', []],
-                ['runtimeOnly', 'com.acme', 'acme-audit-h2', null, ['org.slf4j:slf4j-simple', 'commons-logging']],
-                ['testImplementation', 'com.acme', 'acme-audit-h2', null, []],
+        descriptor.dependencies.collect { [it.scope, it.groupId, it.artifactId, it.version, it.excludes, it.capabilities] } == [
+                ['implementation', 'com.acme', 'acme-audit-grails', '2.3.0', [], []],
+                ['runtimeOnly', 'com.acme', 'acme-audit-h2', null, ['org.slf4j:slf4j-simple', 'commons-logging'], []],
+                ['testImplementation', 'com.acme', 'acme-audit-h2', null, [], []],
+                ['implementation', 'org.ehcache', 'ehcache', null, [], ['org.ehcache:ehcache-jakarta']],
         ]
         descriptor.dependencies.every { PackDescriptorParser.SCOPES.containsKey(it.scope) }
         descriptor.platforms.collect { [it.scope, it.groupId, it.artifactId, it.version] } == [[null, 'com.acme', 'acme-bom', '2.3.0-RC1']]
@@ -175,7 +179,7 @@ class PackDescriptorParserSpec extends Specification {
         first.hashCode() == second.hashCode()
         first != parser.parse(text.replace('com.acme:a', 'com.acme:b'), 'three.yml')
         first.toString().contains('name:acme-audit')
-        first.dependencies.first().toString() == 'PackDescriptor$PackDependency(scope:implementation, groupId:com.acme, artifactId:a, version:null, excludes:[], versionOfForge:false, when:always)'
+        first.dependencies.first().toString() == 'PackDescriptor$PackDependency(scope:implementation, groupId:com.acme, artifactId:a, version:null, excludes:[], capabilities:[], versionOfForge:false, when:always)'
     }
 
     @Unroll
@@ -183,6 +187,7 @@ class PackDescriptorParserSpec extends Specification {
         given:
         PackDescriptor descriptor = parser.parse(MINIMAL + DEPENDENCY + '''com.acme:a
     excludes: [org.slf4j]
+    capabilities: ['com.acme:a-jakarta']
 requires: [gsp]
 files:
   - from: a
@@ -208,6 +213,7 @@ configuration:
         'build properties'            | { PackDescriptor it -> it.buildProperties.put('a', 'b') }
         'dependencies'                | { PackDescriptor it -> it.dependencies.clear() }
         'exclusions of a dependency'  | { PackDescriptor it -> it.dependencies.first().excludes << 'x' }
+        'capabilities of a dependency' | { PackDescriptor it -> it.dependencies.first().capabilities << 'x:y' }
         'files'                       | { PackDescriptor it -> it.files.clear() }
     }
 
@@ -275,6 +281,10 @@ configuration:
         'a dependency is declared twice'           | null                  | DEPENDENCY + 'com.acme:a\n  - scope: implementation\n    coordinates: com.acme:a\n    version: 2.0.0\n' || "dependencies[1].coordinates: 'com.acme:a' is declared by an earlier entry too"
         'an exclusion has a version'               | null                  | DEPENDENCY + "com.acme:a\n    excludes: ['a:b:1']\n"           || "dependencies[0].excludes[0]: must be 'group' or 'group:artifact', but is 'a:b:1'"
         'an exclusion has an empty artifact'       | null                  | DEPENDENCY + "com.acme:a\n    excludes: ['a:']\n"              || "dependencies[0].excludes[0]: must be 'group' or 'group:artifact', but is 'a:'"
+        'a capability has no name'                 | null                  | DEPENDENCY + "com.acme:a\n    capabilities: [com.acme]\n"      || "dependencies[0].capabilities[0]: must be the capability 'group:name', but is 'com.acme'"
+        'a capability ends a Groovy string'        | null                  | DEPENDENCY + "com.acme:a\n    capabilities: ['a:b\")']\n"      || "dependencies[0].capabilities[0]: must be the capability 'group:name', but is 'a:b\")'"
+        'the capabilities are not a list'          | null                  | DEPENDENCY + "com.acme:a\n    capabilities: a:b\n"            || "dependencies[0].capabilities: must be a list, but is 'a:b'"
+        'a platform has capabilities'              | null                  | "platforms:\n  - coordinates: com.acme:bom\n    capabilities: ['a:b']\n" || "platforms[0]: has the key 'capabilities', which this version of Forge does not read here; the keys are [coordinates, version]"
         'a version ends a Groovy string'           | null                  | DEPENDENCY + "com.acme:a\n    version: '1.0\"); println(\"x'\n" || "dependencies[0].version: ${VERSION_RULE}'1.0\"); println(\"x'"
         'a version holds a Groovy expression'      | null                  | DEPENDENCY + "com.acme:a\n    version: '\${pack.version}'\n"   || "dependencies[0].version: ${VERSION_RULE}'\${pack.version}'"
         'a version has a second line'              | null                  | DEPENDENCY + 'com.acme:a\n    version: "1.0\\nexec { }"\n'      || "dependencies[0].version: ${LINE_RULE}'1.0?exec { }'"

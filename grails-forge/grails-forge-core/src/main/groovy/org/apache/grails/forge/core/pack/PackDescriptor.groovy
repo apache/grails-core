@@ -250,6 +250,8 @@ final class PackDescriptor {
         final String version
         /** Each {@code group} or {@code group:artifact} */
         final List<String> excludes
+        /** Each {@code group:name}: the capabilities that select the variant of the dependency, none for its default variant */
+        final List<String> capabilities
         /**
          * Whether the group and version are those Forge knows for the artifact. Only a pack Forge has
          * in itself can say so: a feature of the framework names its versions in one place.
@@ -268,6 +270,12 @@ final class PackDescriptor {
 
         PackDependency(String scope, String groupId, String artifactId, String version, List<String> excludes, boolean versionOfForge,
                        PackCondition when) {
+            this(scope, groupId, artifactId, version, excludes, versionOfForge, when, [])
+        }
+
+        @SuppressWarnings('ParameterCount')
+        PackDependency(String scope, String groupId, String artifactId, String version, List<String> excludes, boolean versionOfForge,
+                       PackCondition when, List<String> capabilities) {
             this.when = when
             this.versionOfForge = versionOfForge
             this.scope = scope
@@ -275,6 +283,7 @@ final class PackDescriptor {
             this.artifactId = artifactId
             this.version = version
             this.excludes = List.copyOf(excludes)
+            this.capabilities = List.copyOf(capabilities)
         }
     }
 

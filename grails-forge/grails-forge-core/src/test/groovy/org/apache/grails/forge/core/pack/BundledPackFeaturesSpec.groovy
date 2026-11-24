@@ -80,7 +80,7 @@ class BundledPackFeaturesSpec extends ApplicationContextSpec {
         then:
         PackDescriptorException e = thrown()
         e.problems == ["dependencies[0]: has the key 'versionOfForge', which this version of Forge does not read here; " +
-                               'the keys are [scope, coordinates, version, excludes]']
+                               'the keys are [scope, coordinates, version, excludes, capabilities]']
     }
 
     void "a pack of Forge that asks for the version Forge knows names no version of its own"() {

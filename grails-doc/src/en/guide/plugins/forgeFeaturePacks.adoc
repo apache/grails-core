@@ -110,7 +110,7 @@ readme: The audit trail is configured in `AuditConfig`.
 |An exclusive group the feature belongs to, such as `acme-audit-store`: only one feature of a group can be selected. The group is one of packs; a pack cannot join a group of Grails, such as `database-driver`.
 
 |`dependencies`
-|Dependencies of the application. `scope` is a Gradle configuration (`implementation`, `compileOnly`, `runtimeOnly`, `developmentOnly`, `testImplementation`, `testCompileOnly`, `testRuntimeOnly`), `coordinates` is `group:artifact`, `version` is optional and left out when the Grails BOM or a platform manages it, and `excludes` lists `group:artifact` or `group` to exclude.
+|Dependencies of the application. `scope` is a Gradle configuration (`implementation`, `compileOnly`, `runtimeOnly`, `developmentOnly`, `testImplementation`, `testCompileOnly`, `testRuntimeOnly`), `coordinates` is `group:artifact`, `version` is optional and left out when the Grails BOM or a platform manages it, `excludes` lists `group:artifact` or `group` to exclude, and `capabilities` lists `group:name` capabilities that select a variant of the dependency, as `requireCapability` does in a Gradle build: `capabilities: ['org.ehcache:ehcache-jakarta']` declares `implementation("org.ehcache:ehcache") { capabilities { requireCapability("org.ehcache:ehcache-jakarta") } }`. Two features that declare one dependency with different exclusions or capabilities cannot be selected together.
 
 |`platforms`
 |BOMs to import, with `coordinates` and `version`.

@@ -21,9 +21,13 @@ package org.grails.forge.build.dependencies
 import groovy.transform.CompileStatic
 import jakarta.annotation.Nonnull
 import jakarta.annotation.Nullable
+import java.util.regex.Pattern
 
 @CompileStatic
 final class Dependency {
+
+    /** A capability as a build file names it: {@code group:name}, of the characters of coordinates */
+    private static final Pattern CAPABILITY = Pattern.compile(/[A-Za-z0-9][A-Za-z0-9_.\-]*:[A-Za-z0-9][A-Za-z0-9_.\-]*/)
 
     private final Scope scope
     private final String groupId
@@ -31,6 +35,7 @@ final class Dependency {
     private final String version
     private final String versionProperty
     private final List<DependencyExclusion> exclusions
+    private final List<String> capabilities
     private final boolean requiresLookup
     private final int order
     private final boolean annotationProcessorPriority
@@ -43,6 +48,7 @@ final class Dependency {
                        String version,
                        String versionProperty,
                        List<DependencyExclusion> exclusions,
+                       List<String> capabilities,
                        boolean requiresLookup,
                        boolean annotationProcessorPriority,
                        int order,
@@ -54,6 +60,7 @@ final class Dependency {
         this.version = version
         this.versionProperty = versionProperty
         this.exclusions = Collections.unmodifiableList(new ArrayList<DependencyExclusion>(exclusions))
+        this.capabilities = Collections.unmodifiableList(new ArrayList<String>(capabilities))
         this.requiresLookup = requiresLookup
         this.annotationProcessorPriority = annotationProcessorPriority
         this.order = order
@@ -95,6 +102,15 @@ final class Dependency {
         return exclusions
     }
 
+    /**
+     * @return the capabilities, each {@code group:name}, that the variant of this dependency is selected by, in the
+     * order they were added; none for the variant Gradle selects by default
+     */
+    @Nonnull
+    List<String> getCapabilities() {
+        return capabilities
+    }
+
     boolean isPom() {
         return pom
     }
@@ -119,6 +135,7 @@ final class Dependency {
                 coordinate.getVersion(),
                 null,
                 exclusions,
+                capabilities,
                 false,
                 annotationProcessorPriority,
                 order,
@@ -134,6 +151,7 @@ final class Dependency {
                 version,
                 versionProperty,
                 exclusions,
+                capabilities,
                 requiresLookup,
                 annotationProcessorPriority,
                 order,
@@ -173,6 +191,7 @@ final class Dependency {
         private String version
         private String versionProperty
         private final List<DependencyExclusion> exclusions = new ArrayList<>()
+        private final List<String> capabilities = new ArrayList<>()
         private boolean requiresLookup
         private int order = 0
         private boolean template = false
@@ -318,6 +337,26 @@ final class Dependency {
             return this
         }
 
+        /**
+         * Selects the variant of this dependency that has the capability, as Gradle's
+         * {@code capabilities { requireCapability('group:name') }} does: the Jakarta EE variant of a library that
+         * publishes one beside its default variant, for example.
+         *
+         * @param capability the capability, {@code group:name}
+         */
+        @Nonnull
+        Builder requireCapability(@Nonnull String capability) {
+            if (template) {
+                return copy().requireCapability(capability)
+            }
+            Objects.requireNonNull(capability, 'The capability of a dependency must be set')
+            if (!CAPABILITY.matcher(capability).matches()) {
+                throw new IllegalArgumentException("The capability of a dependency is 'group:name', but is '${capability}'")
+            }
+            this.capabilities.add(capability)
+            return this
+        }
+
         Builder order(int order) {
             if (template) {
                 return copy().order(order)
@@ -367,6 +406,7 @@ final class Dependency {
                     version,
                     versionProperty,
                     exclusions,
+                    capabilities,
                     requiresLookup,
                     annotationProcessorPriority,
                     order,
@@ -387,6 +427,7 @@ final class Dependency {
                 }
             }
             builder.exclusions.addAll(exclusions)
+            builder.capabilities.addAll(capabilities)
             return builder.order(order).pom(pom).enforced(enforced)
         }
     }

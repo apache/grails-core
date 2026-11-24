@@ -94,4 +94,56 @@ class GeneratorContextDependencySpec extends ApplicationContextSpec implements C
         IllegalArgumentException e = thrown()
         e.message == 'The dependency com.acme:acme-audit is declared twice with different exclusions: [] and [org.slf4j:slf4j-simple]'
     }
+
+    void "the capabilities of a dependency reach the dependencies of the build"() {
+        given:
+        GeneratorContext context = buildGeneratorContext([]) { GeneratorContext it ->
+            it.addDependency(Dependency.builder().groupId('org.ehcache').artifactId('ehcache').implementation()
+                    .requireCapability('org.ehcache:ehcache-jakarta'))
+        }
+
+        when:
+        GradleBuild build = beanContext.getBean(GradleBuildCreator).create(context)
+
+        then:
+        build.dependencies*.toSnippet().contains(
+                'implementation("org.ehcache:ehcache") { capabilities { requireCapability("org.ehcache:ehcache-jakarta") } }')
+    }
+
+    void "the capabilities of a dependency whose coordinates are looked up are kept"() {
+        given:
+        GeneratorContext context = buildGeneratorContext([]) { GeneratorContext it ->
+            it.addDependency(Dependency.builder().lookupArtifactId('grails-web-console').implementation()
+                    .requireCapability('org.grails.plugins:grails-web-console-jakarta'))
+        }
+
+        expect:
+        context.dependencies.find { it.artifactId == 'grails-web-console' }.capabilities == ['org.grails.plugins:grails-web-console-jakarta']
+    }
+
+    void "a dependency declared twice with the same capabilities is declared once"() {
+        when:
+        GeneratorContext context = buildGeneratorContext([]) { GeneratorContext generatorContext ->
+            2.times {
+                generatorContext.addDependency(Dependency.builder().groupId('org.ehcache').artifactId('ehcache').implementation()
+                        .requireCapability('org.ehcache:ehcache-jakarta'))
+            }
+        }
+
+        then:
+        context.dependencies.count { it.artifactId == 'ehcache' } == 1
+    }
+
+    void "a dependency declared twice with different capabilities is an error, as one of its variants would be dropped"() {
+        when:
+        buildGeneratorContext([]) { GeneratorContext it ->
+            it.addDependency(Dependency.builder().groupId('org.ehcache').artifactId('ehcache').implementation())
+            it.addDependency(Dependency.builder().groupId('org.ehcache').artifactId('ehcache').implementation()
+                    .requireCapability('org.ehcache:ehcache-jakarta'))
+        }
+
+        then:
+        IllegalArgumentException e = thrown()
+        e.message == 'The dependency org.ehcache:ehcache is declared twice with different capabilities: [] and [org.ehcache:ehcache-jakarta]'
+    }
 }

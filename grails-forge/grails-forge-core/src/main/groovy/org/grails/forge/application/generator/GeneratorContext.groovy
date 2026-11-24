@@ -495,9 +495,9 @@ class GeneratorContext implements DependencyContext {
 
     /**
      * Adds a dependency unless the same one, by group, artifact and scope, is already declared. The one
-     * declared first is kept, but two declarations of different versions or kinds, or that exclude
-     * different transitive dependencies, are an error, since keeping either would silently drop what
-     * the other asked for.
+     * declared first is kept, but two declarations of different versions or kinds, that exclude
+     * different transitive dependencies, or that select different variants by their capabilities, are an
+     * error, since keeping either would silently drop what the other asked for.
      */
     private static void addDeclared(Set<Dependency> declared, Dependency dependency) {
         if (declared.add(dependency)) {
@@ -514,6 +514,11 @@ class GeneratorContext implements DependencyContext {
             throw new IllegalArgumentException(
                     "The dependency ${dependency.getGroupId()}:${dependency.getArtifactId()} is declared twice " +
                     "with different exclusions: ${existing.getExclusions()} and ${dependency.getExclusions()}")
+        }
+        if (new HashSet<>(existing.getCapabilities()) != new HashSet<>(dependency.getCapabilities())) {
+            throw new IllegalArgumentException(
+                    "The dependency ${dependency.getGroupId()}:${dependency.getArtifactId()} is declared twice " +
+                    "with different capabilities: ${existing.getCapabilities()} and ${dependency.getCapabilities()}")
         }
     }
 

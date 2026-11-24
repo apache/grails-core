@@ -54,6 +54,9 @@ class PackGenerationSpec extends ApplicationContextSpec {
               - scope: runtimeOnly
                 coordinates: com.acme:acme-audit-h2
                 excludes: ['org.slf4j:slf4j-simple', commons-logging]
+              - scope: implementation
+                coordinates: com.acme:acme-audit-store
+                capabilities: ['com.acme:acme-audit-store-jakarta']
             platforms:
               - coordinates: com.acme:acme-bom
                 version: 2.3.0
@@ -88,9 +91,10 @@ class PackGenerationSpec extends ApplicationContextSpec {
         Map<String, String> output = generate(['acme-audit'], [pack])
         String buildGradle = output['build.gradle']
 
-        then: 'the dependencies, with their exclusions, the platform and the plugin'
+        then: 'the dependencies, with their exclusions and capabilities, the platform and the plugin'
         buildGradle.contains('    implementation "com.acme:acme-audit-grails:2.3.0"\n')
         buildGradle.contains('    runtimeOnly("com.acme:acme-audit-h2") { exclude group: "org.slf4j", module: "slf4j-simple"; exclude group: "commons-logging" }\n')
+        buildGradle.contains('    implementation("com.acme:acme-audit-store") { capabilities { requireCapability("com.acme:acme-audit-store-jakarta") } }\n')
         buildGradle.contains('    implementation platform("com.acme:acme-bom:2.3.0")\n')
         buildGradle.contains('    id "com.acme.audit" version "2.3.0"\n')
 
@@ -414,6 +418,7 @@ class PackGenerationSpec extends ApplicationContextSpec {
         String many = (1..40).collect { "  - from: plain.txt\n    to: 'src/main/groovy/file${it}.txt'\n" }.join('')
         Pack audit = pack('acme-audit', 'requires: [postgres]\nconflicts: [mysql]\n' +
                 "dependencies:\n  - scope: implementation\n    coordinates: com.acme:acme-audit\n    version: '1.0'\n    excludes: ['org.slf4j:slf4j-simple']\n" +
+                "  - scope: runtimeOnly\n    coordinates: com.acme:acme-store\n    capabilities: ['com.acme:acme-store-jakarta']\n" +
                 "platforms:\n  - coordinates: com.acme:acme-bom\n    version: '1.0'\n" +
                 "buildPlugins:\n  - id: com.acme.audit\n    version: '2.0'\n" +
                 "build:\n  properties:\n    systemProp.http.proxyHost: proxy.example\n  extensions:\n    assets: minifyJs = false\n" +
@@ -435,7 +440,8 @@ class PackGenerationSpec extends ApplicationContextSpec {
         summary.contains('build plugins: com.acme.audit:2.0')
         summary.contains('build properties: systemProp.http.proxyHost=proxy.example')
         summary.contains('platforms: com.acme:acme-bom:1.0')
-        summary.contains('dependencies: implementation com.acme:acme-audit:1.0 without org.slf4j:slf4j-simple')
+        summary.contains('dependencies: implementation com.acme:acme-audit:1.0 without org.slf4j:slf4j-simple, ' +
+                'runtimeOnly com.acme:acme-store with the capability com.acme:acme-store-jakarta')
         summary.contains('configuration: 1 setting')
         summary.contains('a section of the readme')
         summary.contains('requires the features postgres')

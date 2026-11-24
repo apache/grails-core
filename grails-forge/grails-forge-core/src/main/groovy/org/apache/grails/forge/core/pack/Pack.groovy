@@ -275,12 +275,19 @@ final class Pack {
         if (dependency.version) {
             coordinates += ':' + dependency.version
         }
+        if (dependency.capabilities) {
+            coordinates += " with ${dependency.capabilities.size() == 1 ? 'the capability' : 'the capabilities'} ${few(dependency.capabilities)}"
+        }
         if (!dependency.excludes) {
             return coordinates
         }
-        List<String> shown = dependency.excludes.take(3)
-        String more = dependency.excludes.size() > shown.size() ? " and ${dependency.excludes.size() - shown.size()} more" : ''
-        return "${coordinates} without ${shown.join(' and ')}${more}"
+        return "${coordinates} without ${few(dependency.excludes)}"
+    }
+
+    private static String few(List<String> all) {
+        List<String> shown = all.take(3)
+        String more = all.size() > shown.size() ? " and ${all.size() - shown.size()} more" : ''
+        return "${shown.join(' and ')}${more}"
     }
 
     private static int leaves(Object value) {

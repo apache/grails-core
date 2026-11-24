@@ -628,7 +628,7 @@ class PackDescriptorParser {
         Set<String> declared = new HashSet<>()
         maps(root, key, problems).each { int index, Map<String, Object> entry ->
             String at = "${key}[${index}]."
-            List<String> keys = scoped ? ['scope', 'coordinates', 'version', 'excludes'] : ['coordinates', 'version']
+            List<String> keys = scoped ? ['scope', 'coordinates', 'version', 'excludes', 'capabilities'] : ['coordinates', 'version']
             unknownKeys(entry, ofForge ? keys + ['versionOfForge', WHEN] : keys, at, problems)
             Map<String, Scope> scopes = ofForge ? SCOPES_OF_FORGE : SCOPES
             boolean versionOfForge = ofForge && entry.containsKey('versionOfForge')
@@ -648,15 +648,22 @@ class PackDescriptorParser {
                 problems << "${at}coordinates: ${describe(coordinates)} is declared by an earlier entry too".toString()
             }
             List<String> excludes = []
+            List<String> capabilities = []
             if (scoped) {
                 texts(entry, 'excludes', at, problems).each { int excluded, String exclude ->
                     if (matching(exclude, EXCLUSION, "${at}excludes[${excluded}]", "must be 'group' or 'group:artifact'", problems) != null) {
                         excludes << exclude
                     }
                 }
+                // a capability selects a variant of the dependency, as the Jakarta EE variant of a library that has one
+                texts(entry, 'capabilities', at, problems).each { int required, String capability ->
+                    if (matching(capability, COORDINATES, "${at}capabilities[${required}]", "must be the capability 'group:name'", problems) != null) {
+                        capabilities << capability
+                    }
+                }
             }
             dependencies << new PackDependency(scope, parts[0], parts[1], version(entry, at, problems), excludes, versionOfForge,
-                    ofForge ? when(entry, at, problems) : PackCondition.ALWAYS)
+                    ofForge ? when(entry, at, problems) : PackCondition.ALWAYS, capabilities)
         }
         return dependencies
     }

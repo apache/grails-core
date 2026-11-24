@@ -45,6 +45,8 @@ class GradleDependency extends DependencyCoordinate {
 
     private final List<DependencyExclusion> exclusions
 
+    private final List<String> capabilities
+
     @Nonnull
     private final GradleConfiguration gradleConfiguration
 
@@ -57,6 +59,7 @@ class GradleDependency extends DependencyCoordinate {
         ).orElseThrow(() ->
             new IllegalArgumentException(String.format('Cannot map the dependency scope: [%s] to a Gradle specific scope', dependency.getScope())))
         this.exclusions = dependency.getExclusions()
+        this.capabilities = dependency.getCapabilities()
     }
 
     @Nonnull
@@ -70,6 +73,14 @@ class GradleDependency extends DependencyCoordinate {
     @Nonnull
     List<DependencyExclusion> getExclusions() {
         return exclusions
+    }
+
+    /**
+     * @return the capabilities, each {@code group:name}, that select the variant of the dependency
+     */
+    @Nonnull
+    List<String> getCapabilities() {
+        return capabilities
     }
 
     @Override
@@ -97,8 +108,8 @@ class GradleDependency extends DependencyCoordinate {
 
     @Nonnull
     String toSnippet() {
-        if (!exclusions.isEmpty()) {
-            return withComment(toSnippetWithExclusions())
+        if (!exclusions.isEmpty() || !capabilities.isEmpty()) {
+            return withComment(toSnippetWithClosure())
         }
         String optionalSpace = gradleConfiguration == INTEGRATION_TEST_IMPLEMENTATION_TEST_FIXTURES ? '' : ' '
         String snippet = gradleConfiguration.getConfigurationName() + optionalSpace
@@ -118,10 +129,11 @@ class GradleDependency extends DependencyCoordinate {
     }
 
     /**
-     * A dependency with exclusions is declared with parentheses and a closure, on one line so that it
-     * needs no indentation of its own: {@code implementation("g:a") { exclude group: "x", module: "y" }}.
+     * A dependency with exclusions or capabilities is declared with parentheses and a closure, on one line so
+     * that it needs no indentation of its own: {@code implementation("g:a") { exclude group: "x", module: "y" }},
+     * and the capabilities first, {@code implementation("g:a") { capabilities { requireCapability("g:a-b") } }}.
      */
-    private String toSnippetWithExclusions() {
+    private String toSnippetWithClosure() {
         boolean testFixtures = gradleConfiguration == INTEGRATION_TEST_IMPLEMENTATION_TEST_FIXTURES
         String notation = '"' + getGroupId() + ':' + getArtifactId() +
             (getVersion() != null ? (':' + getVersion()) : '') + '"'
@@ -136,11 +148,16 @@ class GradleDependency extends DependencyCoordinate {
         if (testFixtures) {
             configurationName = configurationName.substring(0, configurationName.indexOf(' '))
         }
-        String excludes = exclusions.collect { DependencyExclusion exclusion ->
+        List<String> statements = []
+        if (!capabilities.isEmpty()) {
+            String required = capabilities.collect { String capability -> 'requireCapability("' + capability + '")' }.join('; ')
+            statements << 'capabilities { ' + required + ' }'
+        }
+        statements.addAll(exclusions.collect { DependencyExclusion exclusion ->
             'exclude group: "' + exclusion.getGroupId() + '"' +
                 (exclusion.getArtifactId() != null ? ', module: "' + exclusion.getArtifactId() + '"' : '')
-        }.join('; ')
-        return configurationName + '(' + notation + ') { ' + excludes + ' }'
+        })
+        return configurationName + '(' + notation + ') { ' + statements.join('; ') + ' }'
     }
 
     private String withComment(String snippet) {
