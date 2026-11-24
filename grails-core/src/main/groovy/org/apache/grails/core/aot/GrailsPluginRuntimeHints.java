@@ -39,13 +39,15 @@ import org.apache.grails.core.plugins.PluginUtils;
 public class GrailsPluginRuntimeHints implements RuntimeHintsRegistrar {
 
     @Override
+    @SuppressWarnings("deprecation")
     public void registerHints(RuntimeHints hints, @Nullable ClassLoader classLoader) {
         hints.resources().registerPattern(PluginUtils.PLUGINS_IMPORTS_PATH);
         ClassLoader loader = (classLoader != null) ? classLoader : ClassUtils.getDefaultClassLoader();
+        registerResourceIfPresent(hints, loader, PluginUtils.LEGACY_PLUGIN_DESCRIPTOR_PATH);
         for (PluginDescriptor descriptor : PluginUtils.scanPluginDescriptorResources(loader)) {
             String pluginName = descriptor.getPluginName();
             if (pluginName != null && !pluginName.isBlank()) {
-                hints.resources().registerPattern(PluginUtils.getPluginDescriptorPath(pluginName));
+                registerResourceIfPresent(hints, loader, PluginUtils.getPluginDescriptorPath(pluginName));
                 registerResourceIfPresent(hints, loader, PluginUtils.getPluginConfigPath(pluginName, PluginUtils.PLUGIN_YML_CONFIG));
                 registerResourceIfPresent(hints, loader, PluginUtils.getPluginConfigPath(pluginName, PluginUtils.PLUGIN_GROOVY_CONFIG));
                 registerResourceIfPresent(hints, loader, PluginUtils.getPluginViewsPath(pluginName));

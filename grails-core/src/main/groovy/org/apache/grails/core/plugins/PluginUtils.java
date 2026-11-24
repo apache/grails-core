@@ -39,11 +39,17 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.function.Function;
 
+import javax.xml.XMLConstants;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.parsers.SAXParser;
+import javax.xml.parsers.SAXParserFactory;
+
 import groovy.transform.Internal;
 
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.xml.sax.SAXException;
 
 import org.springframework.beans.BeanWrapper;
 import org.springframework.beans.BeanWrapperImpl;
@@ -150,6 +156,16 @@ public final class PluginUtils {
     public static final String GENERATED_CONFIG_PATH = "META-INF/grails/plugin-configuration/";
 
     /**
+     * The legacy classpath location for XML plugin descriptors generated prior to Grails 9.
+     *
+     * @deprecated Replaced in Grails 9.0 by {@link #PLUGINS_IMPORTS_PATH} and
+     *             {@code META-INF/grails/plugins/<name>/plugin.properties}. Read-only fallback support
+     *             will be removed in Grails 10.0.
+     */
+    @Deprecated(since = "9.0", forRemoval = true)
+    public static final String LEGACY_PLUGIN_DESCRIPTOR_PATH = "META-INF/grails-plugin.xml";
+
+    /**
      * The naming suffix required for traditional Grails plugin implementation classes.
      */
     public static final String GRAILS_PLUGIN_SUFFIX = "GrailsPlugin";
@@ -196,6 +212,10 @@ public final class PluginUtils {
      * Scans all {@code META-INF/grails/plugins.imports} index resources visible to the supplied class loader
      * and loads each named plugin's {@code META-INF/grails/plugins/<name>/plugin.properties} descriptor.
      *
+     * <p>As a deprecated Grails 9 transition fallback (scheduled for removal in Grails 10), legacy
+     * {@code META-INF/grails-plugin.xml} descriptors are also read for plugins that were not already
+     * discovered through {@code META-INF/grails/plugins.imports}.</p>
+     *
      * <p>Invalid descriptors are logged and skipped so discovery of remaining plugins can continue.</p>
      *
      * @param classLoader the class loader to scan for plugin descriptors
@@ -203,11 +223,10 @@ public final class PluginUtils {
      */
     public static List<PluginDescriptor> scanPluginDescriptorResources(ClassLoader classLoader) {
         List<PluginDescriptor> descriptors = new ArrayList<>();
-        Set<String> pluginNames = scanPluginImports(classLoader);
-        if (pluginNames.isEmpty()) {
-            return descriptors;
-        }
+        Set<String> discoveredNames = new HashSet<>();
+        Set<String> discoveredPluginClasses = new HashSet<>();
 
+        Set<String> pluginNames = scanPluginImports(classLoader);
         for (String pluginName : pluginNames) {
             String descriptorPath = getPluginDescriptorPath(pluginName);
             try {
@@ -219,7 +238,12 @@ public final class PluginUtils {
                         Properties props = new Properties();
                         props.load(reader);
                         Resource descriptorResource = new UrlResource(url);
-                        descriptors.add(PluginDescriptor.fromProperties(pluginName, descriptorResource, props));
+                        PluginDescriptor descriptor = PluginDescriptor.fromProperties(pluginName, descriptorResource, props);
+                        descriptors.add(descriptor);
+                        if (descriptor.getPluginName() != null) {
+                            discoveredNames.add(normalizePluginName(descriptor.getPluginName()));
+                        }
+                        discoveredPluginClasses.addAll(descriptor.getProvidedPlugins());
                     } catch (IOException | IllegalArgumentException e) {
                         LOG.debug("Error parsing plugin descriptor at [{}]: {}", url, e.getMessage());
                     }
@@ -229,7 +253,97 @@ public final class PluginUtils {
             }
         }
 
+        scanLegacyXmlPluginDescriptors(classLoader, descriptors, discoveredNames, discoveredPluginClasses);
         return descriptors;
+    }
+
+    @SuppressWarnings("deprecation")
+    private static void scanLegacyXmlPluginDescriptors(
+            ClassLoader classLoader,
+            List<PluginDescriptor> descriptors,
+            Set<String> discoveredNames,
+            Set<String> discoveredPluginClasses) {
+        try {
+            Enumeration<URL> legacyResources = classLoader.getResources(LEGACY_PLUGIN_DESCRIPTOR_PATH);
+            if (!legacyResources.hasMoreElements()) {
+                return;
+            }
+            SAXParserFactory factory = createSecureSaxParserFactory();
+            while (legacyResources.hasMoreElements()) {
+                URL url = legacyResources.nextElement();
+                try (InputStream input = url.openStream()) {
+                    SAXParser parser = factory.newSAXParser();
+                    PluginXmlHandler handler = new PluginXmlHandler();
+                    parser.parse(input, handler);
+
+                    List<String> pluginClasses = handler.getPluginClassNames();
+                    if (pluginClasses.isEmpty()) {
+                        continue;
+                    }
+                    String xmlPluginName = handler.getPluginName();
+                    String normalizedName = xmlPluginName != null ? normalizePluginName(xmlPluginName) : null;
+                    if (normalizedName != null && discoveredNames.contains(normalizedName)) {
+                        continue;
+                    }
+                    List<String> remainingClasses = new ArrayList<>();
+                    for (String pluginClass : pluginClasses) {
+                        if (!discoveredPluginClasses.contains(pluginClass)) {
+                            remainingClasses.add(pluginClass);
+                        }
+                    }
+                    if (remainingClasses.isEmpty()) {
+                        continue;
+                    }
+
+                    String label = normalizedName != null ? normalizedName : String.join(", ", remainingClasses);
+                    LOG.warn("Plugin [{}] was discovered via legacy {} at [{}], which is deprecated in Grails 9.0 " +
+                                    "and will be removed in Grails 10.0. Rebuild this plugin against Grails 9 to " +
+                                    "generate {} and META-INF/grails/plugins/<name>/plugin.properties.",
+                            label, LEGACY_PLUGIN_DESCRIPTOR_PATH, url, PLUGINS_IMPORTS_PATH);
+
+                    Resource descriptorResource = new UrlResource(url);
+                    descriptors.add(new PluginDescriptor(
+                            descriptorResource,
+                            normalizedName,
+                            handler.getPluginVersion(),
+                            null,
+                            remainingClasses,
+                            handler.getProvidedClasses(),
+                            Map.of(),
+                            List.of(),
+                            List.of(),
+                            Map.of(),
+                            List.of(),
+                            List.of(),
+                            List.of(),
+                            List.of(),
+                            true,
+                            false
+                    ));
+                    if (normalizedName != null) {
+                        discoveredNames.add(normalizedName);
+                    }
+                    discoveredPluginClasses.addAll(remainingClasses);
+                } catch (IOException | ParserConfigurationException | SAXException e) {
+                    LOG.debug("Error parsing legacy plugin descriptor at [{}]: {}", url, e.getMessage());
+                }
+            }
+        } catch (IOException | ParserConfigurationException | SAXException e) {
+            LOG.debug("Error scanning legacy plugin descriptors: {}", e.getMessage());
+        }
+    }
+
+    private static SAXParserFactory createSecureSaxParserFactory()
+            throws ParserConfigurationException, SAXException {
+        SAXParserFactory factory = SAXParserFactory.newInstance();
+        factory.setNamespaceAware(false);
+        factory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
+        factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+        factory.setFeature("http://xml.org/sax/features/external-general-entities", false);
+        factory.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
+        factory.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false);
+        factory.setXIncludeAware(false);
+        return factory;
     }
 
     /**

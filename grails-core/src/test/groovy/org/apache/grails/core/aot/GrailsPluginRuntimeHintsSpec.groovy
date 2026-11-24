@@ -139,4 +139,24 @@ class GrailsPluginRuntimeHintsSpec extends Specification {
             hints.reflection().typeHints().noneMatch { it.type.name == 'com.example.AbsentGrailsPlugin' }
             !RuntimeHintsPredicates.resource().forResource('com/example/AbsentGrailsPlugin.class').test(hints)
     }
+
+    void 'a legacy META-INF/grails-plugin.xml descriptor is carried when present on the classpath'() {
+        given: 'a legacy XML plugin descriptor on the classpath'
+            def legacyXml = new File(classpathRoot, 'META-INF/grails-plugin.xml')
+            legacyXml.parentFile.mkdirs()
+            legacyXml.text = "<plugin name='legacyCore' version='1.0.0'><type>${CoreGrailsPlugin.name}</type></plugin>"
+            def loader = new URLClassLoader([classpathRoot.toURI().toURL()] as URL[], getClass().classLoader)
+
+        when:
+            new GrailsPluginRuntimeHints().registerHints(hints, loader)
+
+        then:
+            RuntimeHintsPredicates.resource().forResource('META-INF/grails-plugin.xml').test(hints)
+            RuntimeHintsPredicates.reflection().onType(CoreGrailsPlugin)
+                    .withMemberCategories(MemberCategory.INVOKE_DECLARED_CONSTRUCTORS)
+                    .test(hints)
+
+        cleanup:
+            loader?.close()
+    }
 }

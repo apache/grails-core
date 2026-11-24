@@ -131,6 +131,61 @@ class PluginDiscoverySpec extends Specification {
         goodDir.deleteDir()
     }
 
+    def 'falls back to legacy META-INF/grails-plugin.xml when a plugin has not migrated yet and avoids duplicates'() {
+        given: 'one legacy XML-only plugin and one plugin that has both modern and legacy descriptors'
+        def legacyDir = File.createTempDir()
+        def legacyXml = new File(legacyDir, 'META-INF/grails-plugin.xml')
+        legacyXml.parentFile.mkdirs()
+        legacyXml.text = '''
+            <plugin name='legacy-asset' version='5.2.3'>
+                <type>com.example.LegacyAssetGrailsPlugin</type>
+                <resources>
+                    <resource>com.example.AssetTagLib</resource>
+                </resources>
+            </plugin>
+        '''.stripIndent()
+
+        def dualDir = File.createTempDir()
+        writePluginDescriptor(dualDir, 'modern', '''
+            format.version=1
+            name=modern
+            version=2.0.0
+            class=com.example.ModernGrailsPlugin
+            artefacts.Service=com.example.ModernService
+        ''')
+        def dualXml = new File(dualDir, 'META-INF/grails-plugin.xml')
+        dualXml.parentFile.mkdirs()
+        dualXml.text = '''
+            <plugin name='modern' version='1.0.0'>
+                <type>com.example.ModernGrailsPlugin</type>
+            </plugin>
+        '''.stripIndent()
+
+        def classLoader = new URLClassLoader(
+                [legacyDir.toURI().toURL(), dualDir.toURI().toURL()] as URL[], (ClassLoader) null)
+
+        when: 'plugin descriptor resources are scanned'
+        def descriptors = PluginUtils.scanPluginDescriptorResources(classLoader)
+
+        then: 'the modern plugin is loaded once from plugin.properties and the legacy XML-only plugin is discovered via fallback'
+        descriptors.size() == 2
+        with(descriptors.find { it.pluginName == 'modern' }) {
+            pluginVersion == '2.0.0'
+            providedPlugins == ['com.example.ModernGrailsPlugin']
+            providedClasses == ['com.example.ModernService']
+        }
+        with(descriptors.find { it.pluginName == 'legacyAsset' }) {
+            pluginVersion == '5.2.3'
+            providedPlugins == ['com.example.LegacyAssetGrailsPlugin']
+            providedClasses == ['com.example.AssetTagLib']
+        }
+
+        cleanup:
+        classLoader?.close()
+        legacyDir.deleteDir()
+        dualDir.deleteDir()
+    }
+
     def 'ignores comments and blank lines in plugins.imports'() {
         given: 'a plugins.imports index containing comments and blank lines'
         def tempDir = File.createTempDir()
