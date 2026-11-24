@@ -431,6 +431,44 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManag
         offset << [0, 2, 10]
     }
 
+    void 'reusing a builder preserves the association order and deferred total of its earlier page'() {
+        given:
+        final criteria = Team.createCriteria()
+        final page = criteria.list(max: 2) {
+            club { order('name', 'desc') }
+        }
+
+        when:
+        final next = criteria.list { order('name') }
+
+        then:
+        page*.name == ['Manchester United First Team', 'Chelsea First Team']
+        page.totalCount == 3
+        next*.name == ['Arsenal First Team', 'Chelsea First Team', 'Manchester United First Team', 'Unattached First Team']
+    }
+
+    void 'a failed association block inside an embedded block does not affect the next sorted query'() {
+        given:
+        final criteria = AssociationSortBook.createCriteria()
+
+        when:
+        criteria.list {
+            details {
+                author { throw new IllegalStateException('Failed association block') }
+            }
+        }
+
+        then:
+        thrown(IllegalStateException)
+
+        when:
+        final results = criteria.list { order('details.author.name') }*.title
+
+        then:
+        results.contains('Anonymous') == leftJoinSort
+        results - 'Anonymous' == ['Guide', 'It']
+    }
+
     void 'a sort by #sort reuses an explicit #joinType fetch'() {
         given:
         sqlCapture.statements.clear()

@@ -84,6 +84,14 @@ public class CriteriaMethodInvoker {
             return UNHANDLED;
         }
 
+        try {
+            return runCriteriaConstruction(method, args);
+        } finally {
+            builder.resetQueryState();
+        }
+    }
+
+    private Object runCriteriaConstruction(CriteriaMethods method, Object... args) {
         HibernateQuery hibernateQuery = builder.getHibernateQuery();
         switch (method) {
             case GET_CALL -> builder.setUniqueResult(true);
@@ -211,45 +219,46 @@ public class CriteriaMethodInvoker {
                 Class<?> oldTargetClass = builder.getTargetClass();
                 Class<?> associationClass = builder.getClassForAssociationType(attribute);
                 builder.setTargetClass(associationClass);
-                if (!embedded) {
-                    JoinType joinType;
-                    if (hasMoreThanOneArg) {
-                        joinType = builder.convertFromInt((Integer) args[0]);
-                    } else if (associationClass.equals(oldTargetClass)) {
-                        joinType = JoinType.LEFT; // default to left join if joining on the same table
+                try {
+                    if (!embedded) {
+                        JoinType joinType;
+                        if (hasMoreThanOneArg) {
+                            joinType = builder.convertFromInt((Integer) args[0]);
+                        } else if (associationClass.equals(oldTargetClass)) {
+                            joinType = JoinType.LEFT; // default to left join if joining on the same table
+                        } else {
+                            joinType = builder.convertFromInt(0);
+                        }
+
+                        hibernateQuery.join(name, joinType);
+                    }
+
+                    DetachedCriteria<?> oldDetachedCriteria = hibernateQuery.getDetachedCriteria();
+                    // inside an embedded block the component's entity is not registered by its class
+                    PersistentEntity parentEntity = oldDetachedCriteria instanceof DetachedAssociationCriteria<?> enclosing ?
+                            enclosing.getAssociation().getAssociatedEntity() :
+                            hibernateQuery.getSession().getMappingContext().getPersistentEntity(oldTargetClass.getName());
+                    PersistentProperty<?> property = parentEntity.getPropertyByName(name);
+                    if (property instanceof Association<?> association) {
+                        DetachedAssociationCriteria<?> associationCriteria =
+                                new DetachedAssociationCriteria<>(associationClass, association);
+                        hibernateQuery.setDetachedCriteria(associationCriteria);
+                        try {
+                            invokeClosureNode(callable);
+                        } finally {
+                            hibernateQuery.setDetachedCriteria(oldDetachedCriteria);
+                        }
+                        // keep block orders in their declaration position before adding the block
+                        AssociationOrders.moveOutOf(associationCriteria, hibernateQuery::order);
+                        hibernateQuery.add((Query.Criterion) associationCriteria);
                     } else {
-                        joinType = builder.convertFromInt(0);
+                        // Fallback for non-GORM associations if any
+                        hibernateQuery.in(name, new DetachedCriteria<>(associationClass).build(callable));
                     }
 
-                    hibernateQuery.join(name, joinType);
+                } finally {
+                    builder.setTargetClass(oldTargetClass);
                 }
-
-                DetachedCriteria<?> oldDetachedCriteria = hibernateQuery.getDetachedCriteria();
-                // inside the block of an embedded component the entity is the one of the component, which the
-                // mapping context does not know by the class of the component
-                PersistentEntity parentEntity = oldDetachedCriteria instanceof DetachedAssociationCriteria<?> enclosing ?
-                        enclosing.getAssociation().getAssociatedEntity() :
-                        hibernateQuery.getSession().getMappingContext().getPersistentEntity(oldTargetClass.getName());
-                PersistentProperty<?> property = parentEntity.getPropertyByName(name);
-                if (property instanceof Association<?> association) {
-                    DetachedAssociationCriteria<?> associationCriteria =
-                            new DetachedAssociationCriteria<>(associationClass, association);
-                    hibernateQuery.setDetachedCriteria(associationCriteria);
-                    try {
-                        invokeClosureNode(callable);
-                    } finally {
-                        hibernateQuery.setDetachedCriteria(oldDetachedCriteria);
-                    }
-                    // the orders of the block become orders of the enclosing criteria, in the place they
-                    // were declared in, since only the orders of the root criteria reach the query
-                    AssociationOrders.moveOutOf(associationCriteria, hibernateQuery::order);
-                    hibernateQuery.add((Query.Criterion) associationCriteria);
-                } else {
-                    // Fallback for non-GORM associations if any
-                    hibernateQuery.in(name, new DetachedCriteria<>(associationClass).build(callable));
-                }
-
-                builder.setTargetClass(oldTargetClass);
 
                 return name;
             }
