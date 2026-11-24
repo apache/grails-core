@@ -70,6 +70,17 @@ dependencies {
 
 An application that keeps the default never ships the module. The same dependency is needed, whatever the application's own setting, for a library that was compiled with classic call sites, because Groovy 6 can load such a class only with the module: `org.testcontainers:testcontainers-spock` is one, so declare the module as `testRuntimeOnly` next to it.
 
+==== Modernized Plugin Descriptors, Packaging, and Starter Plugins
+
+Grails 9 replaces compile-time `META-INF/grails-plugin.xml` generation with a build-time, collision-free plugin layout designed for Gradle caching, fat JARs, and GraalVM native images:
+
+* **Build-time descriptor & discovery index:** Instead of mutating XML during `compileGroovy`, the Gradle plugin scans compiled bytecode in a cacheable task and emits `META-INF/grails/plugins.imports` (matching Spring Boot's `AutoConfiguration.imports`) alongside per-plugin `META-INF/grails/plugins/<name>/plugin.properties`.
+* **Namespaced plugin resources:** Plugin configuration (`plugin.yml` or `plugin.groovy`) and precompiled plugin GSP manifests (`views.properties`) are packaged under `META-INF/grails/plugins/<name>/`, eliminating collisions at the JAR root and `gsp/views.properties` in shadow JARs and native images.
+* **Descriptor-less starter plugins:** A Spring Boot-style plugin can declare metadata in `build.gradle` via `grails { plugin { ... } }` (or infer name and version from project coordinates) without writing a `*GrailsPlugin` class at all.
+* **Typed Java and `@CompileStatic` descriptors:** Annotate any Java or Groovy class with `@GrailsPluginDescriptor` (`grails.plugins.metadata.GrailsPluginDescriptor`) to provide plugin metadata without the `*GrailsPlugin` suffix or reflective instantiation during discovery.
+
+Existing `*GrailsPlugin` classes continue to work when rebuilt against Grails 9; `Plugin.doWithDynamicMethods()` and `Plugin.doWithApplicationContext()` are deprecated for removal in favor of Spring beans, `@EventListener`, and Spring Boot auto-configuration. See xref:plugins#creatingAndInstallingPlugins[Creating and Installing Plugins] and xref:upgrading#upgrading90x[Upgrading from Grails 8 to Grails {grailsMajorVersion}].
+
 ==== Spring Boot 4.2 and Spring Framework 7.1
 
 Grails {grailsMajorVersion} is built on Spring Boot {springBootVersion} and Spring Framework {springVersion}.

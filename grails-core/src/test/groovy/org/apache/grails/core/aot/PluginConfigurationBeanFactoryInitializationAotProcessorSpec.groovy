@@ -152,6 +152,52 @@ class PluginConfigurationBeanFactoryInitializationAotProcessorSpec extends Speci
             new PluginConfigurationBeanFactoryInitializationAotProcessor().processAheadOfTime(context.beanFactory) == null
     }
 
+    void 'namespaced plugin configuration registers a resource hint without copying'() {
+        given: 'a plugin whose plugin.yml is already packaged under META-INF/grails/plugins/<name>/'
+            String namespacedPath = PluginUtils.getPluginConfigPath('namespaced', PluginUtils.PLUGIN_YML_CONFIG)
+            Class<?> pluginClass = plugin('fixture.namespaced.NamespacedGrailsPlugin', namespacedPath, 'namespaced: true')
+            GrailsPlugin stubPlugin = Stub(GrailsPlugin) {
+                getName() >> 'namespaced'
+                getPluginClass() >> pluginClass
+            }
+            context.beanFactory.registerSingleton(GrailsPluginManager.BEAN_NAME, Stub(GrailsPluginManager) {
+                getAllPlugins() >> ([stubPlugin] as GrailsPlugin[])
+            })
+
+        when:
+            def generation = generate()
+
+        then: 'no duplicate copy is generated'
+            ((InMemoryGeneratedFiles) generation.generatedFiles).getGeneratedFiles(Kind.RESOURCE).isEmpty()
+
+        and: 'the namespaced path itself is registered as a runtime hint'
+            RuntimeHintsPredicates.resource().forResource(namespacedPath).test(generation.runtimeHints)
+    }
+
+    void 'descriptor-less starter plugin configuration registers a resource hint through the bean class loader'() {
+        given: 'a starter plugin with no pluginClass and namespaced plugin.yml on the bean class loader'
+            String namespacedPath = PluginUtils.getPluginConfigPath('starterOnly', PluginUtils.PLUGIN_YML_CONFIG)
+            Path root = temp.resolve('starterOnly')
+            PluginClassFixtures.write(root, namespacedPath, 'starter: enabled')
+            URLClassLoader loader = PluginClassFixtures.loaderOver(root)
+            loaders << loader
+            context.beanFactory.setBeanClassLoader(loader)
+            GrailsPlugin starterPlugin = Stub(GrailsPlugin) {
+                getName() >> 'starterOnly'
+                getPluginClass() >> null
+            }
+            context.beanFactory.registerSingleton(GrailsPluginManager.BEAN_NAME, Stub(GrailsPluginManager) {
+                getAllPlugins() >> ([starterPlugin] as GrailsPlugin[])
+            })
+
+        when:
+            def generation = generate()
+
+        then:
+            ((InMemoryGeneratedFiles) generation.generatedFiles).getGeneratedFiles(Kind.RESOURCE).isEmpty()
+            RuntimeHintsPredicates.resource().forResource(namespacedPath).test(generation.runtimeHints)
+    }
+
     void 'a context that is not a Grails application contributes nothing'() {
         expect: 'a plain Spring application being generated has no plugins to ask'
             new PluginConfigurationBeanFactoryInitializationAotProcessor().processAheadOfTime(context.beanFactory) == null

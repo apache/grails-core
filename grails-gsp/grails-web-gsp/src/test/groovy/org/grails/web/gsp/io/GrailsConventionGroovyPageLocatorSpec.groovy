@@ -228,16 +228,12 @@ class GrailsConventionGroovyPageLocatorSpec extends Specification {
 
     GrailsConventionGroovyPageLocator getPageLocator() {
         GrailsConventionGroovyPageLocator locator = new GrailsConventionGroovyPageLocator()
-        def str = '''
-<plugin name='testBinary'>
-  <class>TestBinaryGrailsPlugin</class>
-  <resources>
-         <resource>org.grails.web.gsp.io.TestBinaryResource</resource>
-  </resources>
-</plugin>
+        def str = '''format=1
+name=testBinary
+version=1.0
+class=org.grails.web.gsp.io.TestBinaryGrailsPlugin
+artefacts.Resource=org.grails.web.gsp.io.TestBinaryResource
 '''
-
-        def xml = new XmlSlurper().parseText(str)
 
         def resource = new MockBinaryPluginResource(str.bytes)
         def descriptor = new PluginDescriptor(resource, ['org.grails.web.gsp.io.TestBinaryGrailsPlugin'], ['org.grails.web.gsp.io.TestBinaryResource'])
