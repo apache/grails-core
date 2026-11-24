@@ -46,8 +46,10 @@ class ShadowedPropertiesSpec extends Specification {
         ['a cache manager property', 'CacheManager grailsCacheManager = new OwnCacheManager()', false, true],
         ['a private key generator field', 'private GrailsCacheKeyGenerator customCacheKeyGenerator = new CountingKeyGenerator()', false, false],
         ['a key generator property', 'GrailsCacheKeyGenerator customCacheKeyGenerator = new CountingKeyGenerator()', false, false],
-        // as in 8.0.0, a superclass's field is not the class's: the trait's getter, which the class gets, is read
+        // as in 8.0.0, a superclass's field or property is not the class's: the trait's getter, which the class gets, is read
         ['a superclass\'s private cache manager field', 'private CacheManager grailsCacheManager = new OwnCacheManager()', true, false],
+        ['a superclass\'s protected cache manager field', 'protected CacheManager grailsCacheManager = new OwnCacheManager()', true, false],
+        ['a superclass\'s cache manager property', 'CacheManager grailsCacheManager = new OwnCacheManager()', true, false],
     ]
 
     @Unroll
@@ -73,13 +75,23 @@ class ShadowedPropertiesSpec extends Specification {
         nativeCache(cacheManager).size() == 1
         nativeCache(passed).isEmpty()
 
-        when: 'a put and an eviction of every entry, with the same parameters'
+        when: 'a put, an eviction of its key and a put again, with the same parameters'
         service.put(5, passed, null)
         int afterPut = nativeCache(cacheManager).size()
+        service.evict(5, passed, null)
+        int afterEvict = nativeCache(cacheManager).size()
+        service.put(5, passed, null)
+
+        then: 'all act on the class\'s cache manager'
+        afterPut == 2
+        afterEvict == 1
+        nativeCache(cacheManager).size() == 2
+        nativeCache(passed).isEmpty()
+
+        when: 'an eviction of every entry, with the same parameters'
         service.evictAll(passed, null)
 
-        then: 'both act on the class\'s cache manager'
-        afterPut == 2
+        then: 'it acts on the class\'s cache manager'
         nativeCache(cacheManager).isEmpty()
         nativeCache(passed).isEmpty()
 
@@ -120,7 +132,7 @@ class ShadowedPropertiesSpec extends Specification {
     }
 
     @Unroll
-    void 'a class that declares #declared caches, puts and evicts with it, with and without parameters named like it, compiled #mode'() {
+    void 'a class that declares #declared caches, puts, evicts and reports with it, with and without parameters named like it, compiled #mode'() {
         given: 'the class created as a bean beside a cache manager named grailsCacheManager'
         CacheManager bean = new ConcurrentMapCacheManager('configured')
         GenericApplicationContext context = new GenericApplicationContext()
@@ -132,37 +144,58 @@ class ShadowedPropertiesSpec extends Specification {
         CacheManager own = service.respondsTo('ownCacheManager') ? (CacheManager) service.ownCacheManager() : null
         CacheManager expected = expectsOwnCacheManager ? own : bean
 
-        and: 'another cache manager and another key generator, passed to the method with parameters'
-        CacheManager passed = new ConcurrentMapCacheManager('configured')
+        and: 'another cache manager and another key generator, passed to the methods with parameters'
+        CacheManager passed = new PassedCacheManager()
         def passedKeyGenerator = service.newKeyGenerator()
+        List<CacheManager> others = [bean, passed, own].findAll { it != null && !it.is(expected) }
         LogCapture log = new LogCapture(MissingCacheReporter, Level.WARN)
 
-        when: 'a method without the parameters and one with them are called'
+        when: 'each annotation is used without the parameters and with them, each with a key of its own'
         List<Object> results = [service.cached(1), service.cachedWithParameters(2, passed, passedKeyGenerator)]
+        service.put(3)
+        service.putWithParameters(4, passed, passedKeyGenerator)
+        service.evict(1)
+        service.evictWithParameters(2, passed, passedKeyGenerator)
 
-        then: 'both cached in the cache manager the class means, with the key generator it means'
+        then: 'they cached, put and evicted in the cache manager the class means, with the key generator it means'
         results == [2, 4]
+        service.calls == 2
         nativeCache(expected).size() == 2
-        [bean, passed, own].findAll { it != null && !it.is(expected) }.every { nativeCache(it).isEmpty() }
+        others.every { nativeCache(it).isEmpty() }
         passedKeyGenerator.count == 0
-        !service.respondsTo('ownKeyGenerator') || service.ownKeyGenerator().count == 2
+        !service.respondsTo('ownKeyGenerator') || service.ownKeyGenerator().count == 6
 
-        when: 'a put and an eviction of every entry, with the parameters'
-        service.put(5, passed, passedKeyGenerator)
-        int afterPut = nativeCache(expected).size()
-        service.evictAll(passed, passedKeyGenerator)
+        when: 'the entries evicted and those put are asked for'
+        service.cached(1)
+        service.cachedWithParameters(2, passed, passedKeyGenerator)
+        service.cached(3)
+        service.cachedWithParameters(4, passed, passedKeyGenerator)
 
-        then: 'both act on the cache manager the class means, the put with the key generator it means'
-        afterPut == 3
-        [bean, passed, own].findAll { it != null }.every { nativeCache(it).isEmpty() }
+        then: 'the evicted ones ran again, and the ones put came from the cache'
+        service.calls == 4
+        nativeCache(expected).size() == 4
+
+        when: 'every entry is evicted without the parameters, then, after a put, with them'
+        service.evictAll()
+        int afterEvictAll = nativeCache(expected).size()
+        service.put(5)
+        service.evictAllWithParameters(passed, passedKeyGenerator)
+
+        then: 'both evicted from the cache manager the class means'
+        afterEvictAll == 0
+        nativeCache(expected).isEmpty()
+        others.every { nativeCache(it).isEmpty() }
         passedKeyGenerator.count == 0
-        !service.respondsTo('ownKeyGenerator') || service.ownKeyGenerator().count == 3
 
-        when: 'a method whose cache is missing is called with the parameters'
-        service.uncached(3, passed, passedKeyGenerator)
+        when: 'a method whose cache is missing is called without the parameters and with them'
+        service.uncached(6)
+        service.uncachedWithParameters(7, passed, passedKeyGenerator)
 
-        then: 'the cache manager the class means is reported'
+        then: 'the cache manager the class means is reported, once, and no key was made'
         log.events*.formattedMessage.collect { it.find(/cache manager, (\S+),/) { all, name -> name } } == [expected.getClass().name]
+        service.calls == 6
+        passedKeyGenerator.count == 0
+        !service.respondsTo('ownKeyGenerator') || service.ownKeyGenerator().count == 11
 
         cleanup:
         log?.close()
@@ -171,6 +204,14 @@ class ShadowedPropertiesSpec extends Specification {
         where:
         [declared, members, inBase, expectsOwnCacheManager, mode] << DECLARED.collectMany { row ->
             ['statically', 'dynamically'].collect { compiled -> row + compiled }
+        }
+    }
+
+    /** A cache manager of its own class, so a report names it apart from the others. */
+    static class PassedCacheManager extends ConcurrentMapCacheManager {
+
+        PassedCacheManager() {
+            super('configured')
         }
     }
 
@@ -194,10 +235,15 @@ class ShadowingService {
         x * 2
     }
 
-    @CachePut('configured')
+    @CachePut(value = 'configured', key = { x })
     int put(int x, CacheManager grailsCacheManager, GrailsCacheKeyGenerator customCacheKeyGenerator) {
         calls++
         x * 2
+    }
+
+    @CacheEvict(value = 'configured', key = { x })
+    void evict(int x, CacheManager grailsCacheManager, GrailsCacheKeyGenerator customCacheKeyGenerator) {
+        calls++
     }
 
     @Cacheable('missing')
@@ -256,7 +302,7 @@ class CountingKeyGenerator implements GrailsCacheKeyGenerator {
 
     Serializable generate(String className, String methodName, int objHashCode, Closure keyGenerator) {
         count++
-        methodName
+        (Serializable) keyGenerator.call()
     }
 
     Serializable generate(String className, String methodName, int objHashCode, Map methodParams) {
@@ -269,27 +315,55 @@ $declaration
         new CountingKeyGenerator()
     }
 
-    @Cacheable('configured')
+    int calls
+
+    @Cacheable(value = 'configured', key = { x })
     int cached(int x) {
+        calls++
         x * 2
     }
 
-    @Cacheable('configured')
+    @Cacheable(value = 'configured', key = { x })
     int cachedWithParameters(int x, CacheManager grailsCacheManager, GrailsCacheKeyGenerator customCacheKeyGenerator) {
+        calls++
         x * 2
     }
 
-    @CachePut('configured')
-    int put(int x, CacheManager grailsCacheManager, GrailsCacheKeyGenerator customCacheKeyGenerator) {
+    @CachePut(value = 'configured', key = { x })
+    int put(int x) {
         x * 2
+    }
+
+    @CachePut(value = 'configured', key = { x })
+    int putWithParameters(int x, CacheManager grailsCacheManager, GrailsCacheKeyGenerator customCacheKeyGenerator) {
+        x * 2
+    }
+
+    @CacheEvict(value = 'configured', key = { x })
+    void evict(int x) {
+    }
+
+    @CacheEvict(value = 'configured', key = { x })
+    void evictWithParameters(int x, CacheManager grailsCacheManager, GrailsCacheKeyGenerator customCacheKeyGenerator) {
     }
 
     @CacheEvict(value = 'configured', allEntries = true)
-    void evictAll(CacheManager grailsCacheManager, GrailsCacheKeyGenerator customCacheKeyGenerator) {
+    void evictAll() {
+    }
+
+    @CacheEvict(value = 'configured', allEntries = true)
+    void evictAllWithParameters(CacheManager grailsCacheManager, GrailsCacheKeyGenerator customCacheKeyGenerator) {
     }
 
     @Cacheable('missing')
-    int uncached(int x, CacheManager grailsCacheManager, GrailsCacheKeyGenerator customCacheKeyGenerator) {
+    int uncached(int x) {
+        calls++
+        x * 2
+    }
+
+    @Cacheable('missing')
+    int uncachedWithParameters(int x, CacheManager grailsCacheManager, GrailsCacheKeyGenerator customCacheKeyGenerator) {
+        calls++
         x * 2
     }
 }
