@@ -36,6 +36,8 @@ grails:
         version: 3.0
 ----
 
+NOTE: With GORM for MongoDB, what an action saves is written when the request goes asynchronous, as when the action returns. A failure to write it then only reaches the log, though, and the response still succeeds. So an action that needs to handle a database failure itself should flush, or commit, before it returns a `Promise` or calls `startAsync()`.
+
 
 ==== Async Models
 
