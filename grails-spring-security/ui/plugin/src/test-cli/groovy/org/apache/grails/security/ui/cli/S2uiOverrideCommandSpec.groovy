@@ -161,8 +161,8 @@ class S2uiOverrideCommandSpec extends Specification {
         's2ui-override nothing com.example'                  | "Unknown type 'nothing'"                                             | true
         's2ui-override nothing'                              | "Unknown type 'nothing'"                                             | true
         's2ui-override User'                                 | "The controller package is required for type 'User'"                 | true
-        's2ui-override auth com.example'                     | "Unknown type 'auth'"                                                | true
-        's2ui-override layout com.example'                   | "Unknown type 'layout'"                                              | true
+        's2ui-override auth com.example'                     | "The type 'auth' has no controller and takes no controller package: com.example" | true
+        's2ui-override Layout com.example'                   | "The type 'Layout' has no controller and takes no controller package: com.example" | true
         's2ui-override user grails.plugin.springsecurity.ui' | 'The controller package cannot be the same as the plugin controller' | false
         's2ui-override user ../../outside'                   | "The controller package '../../outside' is not the name of a package" | true
         's2ui-override user com..example'                    | "The controller package 'com..example' is not the name of a package" | true

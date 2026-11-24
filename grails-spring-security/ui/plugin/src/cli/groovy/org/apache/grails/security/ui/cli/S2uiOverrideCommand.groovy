@@ -107,16 +107,19 @@ Example: grails s2ui-override user com.yourcompany.yourapp
         final String controllerPackage = args.size() > 1 ? args[1] : ''
 
         try {
-            if (!controllerPackage) {
+            if (type == 'layout' || type == 'auth') {
+                // the two types that are views alone: a package given with them is a mistake, which is said as one
+                if (controllerPackage) {
+                    consoleLogger.error("The type '${givenType}' has no controller and takes no controller package: ${controllerPackage}\n\nUsage:\n$USAGE_MESSAGE")
+                    return FAILURE
+                }
                 if (type == 'layout') {
                     copyView('layouts/springSecurityUI.gsp')
                     copyView('includes/_ajaxLogin.gsp')
-                    return SUCCESS
-                }
-                if (type == 'auth') {
+                } else {
                     copyView('login/auth.gsp')
-                    return SUCCESS
                 }
+                return SUCCESS
             }
 
             final String controller = CONTROLLERS[type]
