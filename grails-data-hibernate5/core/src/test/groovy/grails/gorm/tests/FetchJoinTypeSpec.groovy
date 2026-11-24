@@ -144,6 +144,15 @@ class FetchJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager
         loaded = row.loaded
     }
 
+    void 'findAll by example reuses a requested left collection join for every sort property'() {
+        when:
+        final results = Team.findAll(new Team(), [fetch: [players: JoinType.LEFT], sort: ['players.name': 'asc', 'players.id': 'desc']])
+
+        then:
+        results*.name.countBy { it } == ['Clubless Team': 1, 'Contracted Team': 2, 'Playerless Team': 1, 'Uncontracted Team': 1]
+        results.every { Hibernate.isInitialized(it.players) && it.players*.name.sort() == PLAYERS[it.name] }
+    }
+
     void '#api with the fetch mode join on a collection that can be empty returns every team with its players'() {
         when:
         final List<Team> results = QUERIES[api].call([players: 'join'])

@@ -22,6 +22,7 @@ import grails.gorm.DetachedCriteria
 import grails.gorm.annotation.Entity
 import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
+import org.grails.datastore.mapping.query.Query
 import org.hibernate.Hibernate
 import spock.lang.IgnoreIf
 import spock.lang.Requires
@@ -129,6 +130,136 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
 
         where:
         [associationForm, request] << [['block', 'alias'], ['before', 'after', 'fetch']].combinations()
+    }
+
+    void '#api keeps an empty collection requested with LEFT when sorting by it'() {
+        when:
+        final result = query.call('Playerless First Team', [fetch: [players: JoinType.LEFT], sort: sort])
+        final results = result instanceof List ? result : result == null ? [] : [result]
+
+        then:
+        results*.name == ['Playerless First Team']
+        results.first().players.empty
+
+        where:
+        [api, sort] << [['findAllWhere', 'findWhere', 'findAll by example', 'find by example'], ['players.name', ['players.name': 'asc', name: 'asc']]].combinations()
+        query = exampleQuery(api)
+    }
+
+    void '#api keeps every collection element when its requested left sort has pagination #paged'() {
+        given:
+        saveTeamWithAPlayerWithoutContract()
+        final arguments = [fetch: [players: JoinType.LEFT], sort: 'players.name']
+        if (paged) {
+            arguments.max = 2
+            arguments.offset = 1
+        }
+
+        when:
+        final result = query.call('Squad Team', arguments)
+        final results = result instanceof List ? result : [result]
+
+        then:
+        results.every { it?.name == 'Squad Team' }
+        results.size() == (api == 'findAll by example' ? (paged ? 2 : 3) : 1)
+        results.first().players*.name.sort() == ['Squad Player A', 'Squad Player B', 'Squad Player without contract']
+
+        where:
+        [api, paged] << [['findAllWhere', 'findWhere', 'findAll by example', 'find by example'], [false, true]].combinations()
+        query = exampleQuery(api)
+    }
+
+    private static Closure exampleQuery(String api) {
+        switch (api) {
+            case 'findAllWhere':
+                return { String name, Map arguments -> Team.findAllWhere([name: name], arguments) }
+            case 'findWhere':
+                return { String name, Map arguments -> Team.findWhere([name: name], arguments) }
+            case 'findAll by example':
+                return { String name, Map arguments -> Team.findAll(new Team(name: name), arguments) }
+            default:
+                return { String name, Map arguments -> Team.find(new Team(name: name), arguments) }
+        }
+    }
+
+    void 'a criteria #ordering keeps the left collection join from #request with pagination #paged'() {
+        given:
+        saveTeamWithAPlayerWithoutContract()
+        final arguments = paged ? [max: 10] : [:]
+        if (request == 'fetch') {
+            arguments.fetch = [players: JoinType.LEFT]
+        }
+        if (ordering == 'sort') {
+            arguments.sort = 'players.name'
+        }
+        else if (ordering == 'sort map') {
+            arguments.sort = ['players.name': 'asc', name: 'asc']
+        }
+
+        when:
+        final results = Team.createCriteria().list(arguments) {
+            if (request == 'before') {
+                join('players', JoinType.LEFT)
+            }
+            if (ordering == 'order') {
+                order('players.name')
+            }
+            else if (ordering == 'Query.Order') {
+                order(Query.Order.asc('players.name'))
+            }
+            if (request == 'after') {
+                join('players', JoinType.LEFT)
+            }
+        }
+
+        then: 'the empty collection stays and the collection sort retains its row multiplicity'
+        results*.name.countBy { it } == ALL_TEAMS.collectEntries { [(it): 1] } + ['Squad Team': 3]
+
+        and: 'pagination cannot initialize a collection from limited joined rows'
+        results.every { Hibernate.isInitialized(it.players) == !paged }
+        results.find { it.name == 'Playerless First Team' }.players.empty
+        results.find { it.name == 'Squad Team' }.players*.name.sort() == ['Squad Player A', 'Squad Player B', 'Squad Player without contract']
+
+        where:
+        [request, ordering, paged] << [['fetch', 'before', 'after'], ['order', 'Query.Order', 'sort', 'sort map'], [false, true]].combinations()
+    }
+
+    void 'a requested left collection sort keeps the complete collection on a small page at offset #offset'() {
+        given:
+        saveTeamWithAPlayerWithoutContract()
+
+        when:
+        final results = Team.createCriteria().list(max: 2, offset: offset, sort: 'players.name', fetch: [players: JoinType.LEFT]) {
+            eq('name', 'Squad Team')
+        }
+
+        then:
+        results*.name == ['Squad Team', 'Squad Team']
+        !Hibernate.isInitialized(results.first().players)
+        results.first().players*.name.sort() == ['Squad Player A', 'Squad Player B', 'Squad Player without contract']
+
+        where:
+        offset << [0, 1]
+    }
+
+    void 'a replacement fetch mode restores the collection-sort compatibility behavior'() {
+        when:
+        final arguments = request == 'fetch' ? [sort: 'players.name', fetch: [players: 'join']] : [sort: 'players.name']
+        final results = Team.createCriteria().list(arguments) {
+            join('players', JoinType.LEFT)
+            if (request == 'join') {
+                join('players')
+            }
+            else if (request == 'select') {
+                select('players')
+            }
+        }
+
+        then:
+        results*.name.sort() == (leftJoinSort ? ALL_TEAMS : TEAMS_WITH_PLAYERS)
+
+        where:
+        request << ['fetch', 'join', 'select']
     }
 
     void 'a paged criteria requested join keeps every element of a collection on its path'() {

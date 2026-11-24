@@ -620,7 +620,7 @@ public abstract class AbstractHibernateQuery extends Query {
      * its rows lack the elements that the criteria leave out, and when only a sort or a projection
      * uses it, unless the query fetches the collection or another one: see
      * {@link GrailsHibernateUtil#keepsSortedCollectionUnfetched(Criteria, String)} and
-     * {@link GrailsHibernateUtil#checkSortedCollection(Criteria, String)}.
+     * {@link GrailsHibernateUtil#deferSortedCollectionFetches(Criteria)}.
      */
     private void createJoin(CriteriaAndAlias join) {
         String associationPath = join.associationPath;
@@ -628,9 +628,6 @@ public abstract class AbstractHibernateQuery extends Query {
         JoinType joinType = getRequestedJoinType(join);
         if (joinType == null) {
             joinType = join.usedByCriteria ? JoinType.INNER : JoinType.LEFT;
-            if (!join.usedByCriteria && join.criteria != null && collection) {
-                GrailsHibernateUtil.checkSortedCollection(join.criteria, associationPath);
-            }
         }
         else if (joinType == JoinType.RIGHT && collection) {
             joinType = JoinType.INNER;
@@ -1194,6 +1191,7 @@ public abstract class AbstractHibernateQuery extends Query {
         if (keepNullRows) {
             criteria.setResultTransformer(CriteriaSpecification.ROOT_ENTITY);
         }
+        collectionsLoadedAfterQuery.addAll(GrailsHibernateUtil.deferSortedCollectionFetches(criteria));
         List results = criteria.list();
         if (keepNullRows) {
             Set<Object> seen = Collections.newSetFromMap(new IdentityHashMap<>());
@@ -1291,6 +1289,7 @@ public abstract class AbstractHibernateQuery extends Query {
         }
         applyDeferredJoins();
 
+        collectionsLoadedAfterQuery.addAll(GrailsHibernateUtil.deferSortedCollectionFetches(criteria));
         Object result;
         if (hasJoins) {
             try {

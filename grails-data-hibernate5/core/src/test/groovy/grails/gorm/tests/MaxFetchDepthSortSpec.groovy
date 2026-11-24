@@ -20,12 +20,13 @@ package grails.gorm.tests
 
 import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.orm.hibernate.HibernateDatastore
+import org.hibernate.Hibernate
 import spock.lang.Specification
 
 /**
  * A fetch that a mapping declares is joined by Hibernate only up to {@code hibernate.max_fetch_depth}
- * joins away from the queried class. A sort by a collection is rejected next to a bag that the query
- * joins, and must not be rejected for a bag that Hibernate loads with a query of its own.
+ * joins away from the queried class. A collection sort must preserve the complete bag whether the
+ * mapping joins it or Hibernate loads it with another query.
  */
 class MaxFetchDepthSortSpec extends Specification {
 
@@ -51,15 +52,15 @@ class MaxFetchDepthSortSpec extends Specification {
         datastore
     }
 
-    void 'with hibernate.max_fetch_depth #maxFetchDepth, a sort by a collection is #outcome when the mapping fetches a bag through an association'() {
+    void 'with hibernate.max_fetch_depth #maxFetchDepth, a collection sort keeps the mapped bag complete'() {
         given:
         def datastore = createDatastore(maxFetchDepth)
         def statistics = datastore.sessionFactory.statistics
 
         when: 'the query without the sort shows whether Hibernate joins the bag, with one statement, or loads it with another'
         long statements = 0
-        UnsupportedOperationException rejected = null
         List<String> awards = null
+        boolean initialized = false
         AssociationSortEagerAuthor.withNewSession {
             statistics.clear()
             final author = AssociationSortEagerAuthor.where { name ==~ '%' }.list().first()
@@ -67,19 +68,15 @@ class MaxFetchDepthSortSpec extends Specification {
             statements = statistics.prepareStatementCount
         }
         AssociationSortEagerAuthor.withNewSession {
-            try {
-                final author = AssociationSortEagerAuthor.where { name ==~ '%' }.list(sort: 'books.title').first()
-                awards = author.publisher.awards*.title
-            }
-            catch (UnsupportedOperationException e) {
-                rejected = e
-            }
+            final author = AssociationSortEagerAuthor.where { name ==~ '%' }.list(sort: 'books.title').first()
+            initialized = Hibernate.isInitialized(author.publisher.awards)
+            awards = author.publisher.awards*.title
         }
 
         then:
         (statements == 1) == bagJoined
-        (rejected != null) == bagJoined
-        bagJoined || awards.sort() == ['W1', 'W2']
+        !bagJoined || initialized
+        awards.sort() == ['W1', 'W2']
 
         cleanup:
         datastore.close()
@@ -90,7 +87,5 @@ class MaxFetchDepthSortSpec extends Specification {
         0             | false
         1             | false
         2             | true
-
-        outcome = bagJoined ? 'rejected' : 'not rejected'
     }
 }
