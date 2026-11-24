@@ -728,6 +728,7 @@ public class MongoQuery extends BsonQuery implements QueryArgumentsAware {
      * {@code $or} that holds it, and not the whole query, which would drop the owners that match another branch.
      */
     private static void requireEmbeddedValuesOfNegations(PersistentEntity entity, Document level) {
+        distributeNegations(level);
         Set<String> required = new LinkedHashSet<>();
         for (Map.Entry<String, Object> entry : level.entrySet()) {
             String key = entry.getKey();
@@ -757,6 +758,81 @@ public class MongoQuery extends BsonQuery implements QueryArgumentsAware {
                 level.put(path, new Document("$ne", null));
             }
         }
+    }
+
+    /**
+     * Pushes a {@code $nor} over an {@code $and}, an {@code $or} or several fields down to the conditions it holds, as
+     * De Morgan does: the negation of a conjunction is a disjunction of the negations, and of a disjunction a conjunction
+     * of them. A negated condition on an embedded property requires the embedded value, and that requirement belongs to
+     * the one condition, not to the whole negated group: {@code not { and { eq('name', 'Bob'); eq('address.city', 'Paris') } }}
+     * holds for an owner named Nina with no address, because her name is not Bob, as it does where the address is a join.
+     */
+    private static void distributeNegations(Document level) {
+        Object nor = level.get(NOR_OPERATOR);
+        if (!(nor instanceof List)) {
+            return;
+        }
+        List<Object> kept = new ArrayList<>();
+        List<Document> conjuncts = new ArrayList<>();
+        for (Object element : (List<?>) nor) {
+            List<Document> negated = negationOf(element);
+            if (negated == null) {
+                kept.add(element);
+            }
+            else {
+                conjuncts.addAll(negated);
+            }
+        }
+        if (conjuncts.isEmpty()) {
+            return;
+        }
+        if (kept.isEmpty()) {
+            level.remove(NOR_OPERATOR);
+        }
+        else {
+            level.put(NOR_OPERATOR, kept);
+        }
+        Object and = level.get("$and");
+        List<Object> all = new ArrayList<>();
+        if (and instanceof List) {
+            all.addAll((List<?>) and);
+        }
+        all.addAll(conjuncts);
+        level.put("$and", all);
+    }
+
+    /** The conditions, all of which must hold, that say the same as the negation of a group; null for a single condition. */
+    private static List<Document> negationOf(Object element) {
+        if (!(element instanceof Document)) {
+            return null;
+        }
+        Document group = (Document) element;
+        if (group.size() == 1 && group.get("$and") instanceof List) {
+            return List.of(new Document("$or", negationsOf((List<?>) group.get("$and"))));
+        }
+        if (group.size() == 1 && group.get("$or") instanceof List) {
+            List<Document> conjuncts = new ArrayList<>();
+            for (Object negation : negationsOf((List<?>) group.get("$or"))) {
+                conjuncts.add((Document) negation);
+            }
+            return conjuncts;
+        }
+        if (group.size() > 1 && group.keySet().stream().noneMatch(key -> key.startsWith("$"))) {
+            List<Object> fields = new ArrayList<>();
+            for (Map.Entry<String, Object> field : group.entrySet()) {
+                fields.add(new Document(field.getKey(), field.getValue()));
+            }
+            return List.of(new Document("$or", negationsOf(fields)));
+        }
+        return null;
+    }
+
+    private static List<Object> negationsOf(List<?> conditions) {
+        List<Object> negations = new ArrayList<>();
+        for (Object condition : conditions) {
+            negations.add(new Document(NOR_OPERATOR, new ArrayList<>(List.of(condition))));
+        }
+        return negations;
     }
 
     private static boolean negates(Document condition) {

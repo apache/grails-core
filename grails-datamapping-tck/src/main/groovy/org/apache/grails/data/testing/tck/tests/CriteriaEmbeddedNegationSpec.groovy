@@ -76,9 +76,51 @@ class CriteriaEmbeddedNegationSpec extends GrailsDataTckSpec {
         [form, query, expected] << QUERIES
     }
 
+    /**
+     * Amelie lives in Paris, a Bob in Rome and a Bob in Paris, Nina has no address. An owner is named by her name and her city, so that the two Bobs are told apart.
+     */
+    private void seedGroups() {
+        new NegationOwner(name: 'Amelie', address: new NegationAddress(city: 'Paris', country: 'FR')).save(flush: true, failOnError: true)
+        new NegationOwner(name: 'Bob', address: new NegationAddress(city: 'Rome', country: 'IT')).save(flush: true, failOnError: true)
+        new NegationOwner(name: 'Bob', address: new NegationAddress(city: 'Paris', country: 'FR')).save(flush: true, failOnError: true)
+        new NegationOwner(name: 'Nina').save(flush: true, failOnError: true)
+        manager.session.clear()
+    }
+
+    @Unroll
+    void 'a negated group of conditions that holds an embedded value in #form'() {
+        given:
+        seedGroups()
+
+        expect:
+        outcome(query) == expected
+
+        where:
+        [form, query, expected] << GROUPS
+    }
+
     private static List names(List<NegationOwner> owners) {
         owners*.name
     }
+
+    private static List labels(List<NegationOwner> owners) {
+        owners.collect { "${it.name}/${it.address?.city ?: '-'}".toString() }
+    }
+
+    private static final List<List> GROUPS = [
+        ['an and of a name and a dotted property', { -> labels(NegationOwner.createCriteria().list { not { and { eq('name', 'Bob'); eq('address.city', 'Paris') } } }) },
+            ['Amelie/Paris', 'Bob/Rome', 'Nina/-']],
+        ['an and of a name and a block', { -> labels(NegationOwner.createCriteria().list { not { and { eq('name', 'Bob'); address { eq('city', 'Paris') } } } }) },
+            ['Amelie/Paris', 'Bob/Rome', 'Nina/-']],
+        ['a detached and of a name and a dotted property', { -> labels(new DetachedCriteria(NegationOwner).build { not { and { eq('name', 'Bob'); eq('address.city', 'Paris') } } }.list()) },
+            ['Amelie/Paris', 'Bob/Rome', 'Nina/-']],
+        ['an and whose name condition is the one that fails for the owner without an address', { -> labels(NegationOwner.createCriteria().list { not { and { eq('name', 'Nina'); eq('address.city', 'Paris') } } }) },
+            ['Amelie/Paris', 'Bob/Paris', 'Bob/Rome']],
+        ['an or of a name and a dotted property', { -> labels(NegationOwner.createCriteria().list { not { or { eq('name', 'Bob'); eq('address.city', 'Paris') } } }) }, []],
+        ['an or beside a name that matches the owner without an address', { -> labels(NegationOwner.createCriteria().list { or { eq('name', 'Nina'); not { and { eq('name', 'Bob'); eq('address.city', 'Paris') } } } }) },
+            ['Amelie/Paris', 'Bob/Rome', 'Nina/-']],
+        ['two conditions in one not, each of which is negated', { -> labels(NegationOwner.createCriteria().list { not { eq('name', 'Bob'); eq('address.city', 'Paris') } }) }, []],
+    ]
 
     private static final List<List> QUERIES = [
         ['a block with eq, the positive control', { -> names(NegationOwner.createCriteria().list { address { eq('city', 'Paris') } }) }, ['Amelie']],
