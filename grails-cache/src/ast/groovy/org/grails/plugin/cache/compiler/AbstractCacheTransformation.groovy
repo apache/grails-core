@@ -212,7 +212,7 @@ abstract class AbstractCacheTransformation extends AbstractMethodDecoratingTrans
         BlockStatement whereCacheExists = block()
         Object cacheName = ((ConstantExpression) annotationNode.getMember('value')).value
         MethodCallExpression report = callX(classX(MISSING_CACHE_REPORTER_CLASS_NODE), 'report',
-                args(varX(GRAILS_CACHE_MANAGER_PROPERTY_NAME), constX(cacheName), classX(classNode.plainNodeReference)))
+                args(grailsCacheManagerExpression(), constX(cacheName), classX(classNode.plainNodeReference)))
         report.methodTarget = REPORT_MISSING_CACHE_METHOD_NODE
         cacheBlock.addStatement(ifElseS(notNullX(cacheVariableExpression), whereCacheExists, stmt(report)))
         return whereCacheExists

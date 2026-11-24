@@ -20,12 +20,17 @@ package grails.plugin.cache
 
 import java.util.function.Supplier
 
+import ch.qos.logback.classic.Level
 import org.springframework.cache.CacheManager
 import org.springframework.cache.concurrent.ConcurrentMapCacheManager
+import org.springframework.cache.support.NoOpCacheManager
 import org.springframework.context.annotation.AnnotationConfigUtils
 import org.springframework.context.support.GenericApplicationContext
 import spock.lang.Specification
 import spock.lang.Unroll
+
+import org.apache.grails.core.testing.support.LogCapture
+import org.grails.plugin.cache.MissingCacheReporter
 
 /**
  * A parameter of a cached method named like the cache manager or the key generator a cache-aware class has
@@ -74,6 +79,35 @@ class ShadowedPropertiesSpec extends Specification {
         mode << ['statically', 'dynamically']
     }
 
+    @Unroll
+    void 'a cache the class\'s cache manager does not have is reported for that cache manager, compiled #mode'() {
+        given: 'the class created as a bean beside its cache manager, which has no cache named missing'
+        CacheManager cacheManager = new ConcurrentMapCacheManager('configured')
+        GenericApplicationContext context = new GenericApplicationContext()
+        AnnotationConfigUtils.registerAnnotationConfigProcessors(context)
+        context.registerBean('grailsCacheManager', CacheManager, { -> cacheManager } as Supplier<CacheManager>)
+        context.registerBean('service', (Class<Object>) compile(mode))
+        context.refresh()
+        def service = context.getBean('service')
+        LogCapture log = new LogCapture(MissingCacheReporter, Level.WARN)
+
+        when: 'the method is called with no cache manager, then with another one'
+        List<Object> results = [service.uncached(1, null, null), service.uncached(1, new NoOpCacheManager(), null)]
+
+        then: 'it ran uncached both times, and the class\'s cache manager was reported once'
+        results == [2, 2]
+        service.calls == 2
+        log.events*.formattedMessage == ["ShadowingService does not cache with missing: its cache manager, ${ConcurrentMapCacheManager.name}, ".toString() +
+                'has no cache of that name, so the methods run uncached. Configure the cache in that cache manager.']
+
+        cleanup:
+        log?.close()
+        context?.close()
+
+        where:
+        mode << ['statically', 'dynamically']
+    }
+
     private static Map<?, ?> nativeCache(CacheManager cacheManager) {
         (Map<?, ?>) cacheManager.getCache('configured').nativeCache
     }
@@ -96,6 +130,12 @@ class ShadowingService {
 
     @CachePut('configured')
     int put(int x, CacheManager grailsCacheManager, GrailsCacheKeyGenerator customCacheKeyGenerator) {
+        calls++
+        x * 2
+    }
+
+    @Cacheable('missing')
+    int uncached(int x, CacheManager grailsCacheManager, GrailsCacheKeyGenerator customCacheKeyGenerator) {
         calls++
         x * 2
     }
