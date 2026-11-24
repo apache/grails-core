@@ -27,7 +27,6 @@ import groovy.transform.CompileStatic
 import groovyjarjarasm.asm.AnnotationVisitor
 import groovyjarjarasm.asm.ClassReader
 import groovyjarjarasm.asm.ClassVisitor
-import groovyjarjarasm.asm.MethodVisitor
 import groovyjarjarasm.asm.Opcodes
 
 import org.gradle.api.DefaultTask
@@ -171,8 +170,12 @@ abstract class GeneratePluginDescriptorTask extends DefaultTask {
 
                 if (scanner.isConcrete()) {
                     String fqcn = reader.className.replace('/' as char, '.' as char)
+                    int lastDot = fqcn.lastIndexOf('.')
+                    String simpleName = lastDot >= 0 ? fqcn.substring(lastDot + 1) : fqcn
+                    boolean matchesSuffix = simpleName.endsWith(GRAILS_PLUGIN_SUFFIX) &&
+                            simpleName.length() > GRAILS_PLUGIN_SUFFIX.length()
                     if (!scanner.frameworkPluginWrapper &&
-                            (scanner.hasPluginDescriptorAnnotation || fqcn.endsWith(GRAILS_PLUGIN_SUFFIX))) {
+                            (scanner.hasPluginDescriptorAnnotation || matchesSuffix)) {
                         plugins.add(scanner.toScannedPlugin(fqcn))
                     }
                     else if (scanner.isProvidedArtefact()) {
@@ -182,7 +185,10 @@ abstract class GeneratePluginDescriptorTask extends DefaultTask {
             }
         }
 
-        plugins.sort { ScannedPlugin a, ScannedPlugin b -> a.logicalName <=> b.logicalName }
+        plugins.sort { ScannedPlugin a, ScannedPlugin b ->
+            int cmp = a.logicalName <=> b.logicalName
+            cmp != 0 ? cmp : ((a.className ?: '') <=> (b.className ?: ''))
+        }
         new ScanResult(plugins, artefactsByType)
     }
 
@@ -193,7 +199,14 @@ abstract class GeneratePluginDescriptorTask extends DefaultTask {
             File pluginConfigFile,
             File outDir) {
         SortedSet<String> importNames = new TreeSet<>()
+        Map<String, String> seenPluginNames = new LinkedHashMap<>()
         for (ScannedPlugin plugin : plugins) {
+            String previous = seenPluginNames.putIfAbsent(plugin.logicalName, plugin.className ?: 'grails.plugin')
+            if (previous != null) {
+                throw new GradleException(
+                        "Duplicate Grails plugin logical name '${plugin.logicalName}' declared by [${previous}] and [${plugin.className ?: 'grails.plugin'}]"
+                )
+            }
             importNames.add(plugin.logicalName)
             File pluginDir = new File(outDir, "${PLUGIN_DESCRIPTORS_PREFIX}${plugin.logicalName}")
             pluginDir.mkdirs()
@@ -223,7 +236,7 @@ abstract class GeneratePluginDescriptorTask extends DefaultTask {
         entries.put('format.version', FORMAT_VERSION)
         entries.put('name', plugin.logicalName)
 
-        String version = plugin.version ?: defaultVersion
+        String version = trimToNull(plugin.version) ?: trimToNull(defaultVersion)
         if (version) {
             entries.put('version', version)
         }
@@ -232,29 +245,33 @@ abstract class GeneratePluginDescriptorTask extends DefaultTask {
         }
         entries.put('metadata.complete', Boolean.toString(plugin.metadataComplete))
 
-        if (plugin.grailsVersion) {
-            entries.put('grailsVersion', plugin.grailsVersion)
+        String grailsVer = trimToNull(plugin.grailsVersion)
+        if (grailsVer) {
+            entries.put('grailsVersion', grailsVer)
         }
         if (plugin.loadAfter) {
-            entries.put('loadAfter', plugin.loadAfter.collect { normalizePluginName(it) }.join(','))
+            entries.put('loadAfter', plugin.loadAfter.collect { normalizePluginName(it) }.findAll { it }.join(','))
         }
         if (plugin.loadBefore) {
-            entries.put('loadBefore', plugin.loadBefore.collect { normalizePluginName(it) }.join(','))
+            entries.put('loadBefore', plugin.loadBefore.collect { normalizePluginName(it) }.findAll { it }.join(','))
         }
         for (Map.Entry<String, String> dep : plugin.dependsOn.entrySet()) {
-            entries.put("dependsOn.${normalizePluginName(dep.key)}".toString(), dep.value)
+            String depKey = trimToNull(dep.key)
+            if (depKey) {
+                entries.put("dependsOn.${normalizePluginName(depKey)}".toString(), trimToNull(dep.value) ?: '*')
+            }
         }
         if (plugin.evict) {
-            entries.put('evict', plugin.evict.collect { normalizePluginName(it) }.join(','))
+            entries.put('evict', plugin.evict.collect { normalizePluginName(it) }.findAll { it }.join(','))
         }
         if (plugin.observe) {
-            entries.put('observe', plugin.observe.join(','))
+            entries.put('observe', plugin.observe.collect { normalizePluginName(it) }.findAll { it }.join(','))
         }
         if (plugin.environmentsIncludes) {
-            entries.put('environments.includes', plugin.environmentsIncludes.join(','))
+            entries.put('environments.includes', plugin.environmentsIncludes.collect { trimToNull(it) }.findAll { it }.join(','))
         }
         if (plugin.environmentsExcludes) {
-            entries.put('environments.excludes', plugin.environmentsExcludes.join(','))
+            entries.put('environments.excludes', plugin.environmentsExcludes.collect { trimToNull(it) }.findAll { it }.join(','))
         }
         if (!plugin.enabled) {
             entries.put('enabled', 'false')
@@ -278,13 +295,21 @@ abstract class GeneratePluginDescriptorTask extends DefaultTask {
     }
 
     static String normalizePluginName(String raw) {
-        if (!raw) {
-            return raw
+        String trimmed = trimToNull(raw)
+        if (trimmed == null) {
+            return null
         }
-        String trimmed = raw.trim()
         trimmed.contains('-')
                 ? GrailsNameUtils.getPropertyNameForLowerCaseHyphenSeparatedName(trimmed)
                 : trimmed
+    }
+
+    private static String trimToNull(String value) {
+        if (value == null) {
+            return null
+        }
+        String trimmed = value.trim()
+        trimmed.isEmpty() ? null : trimmed
     }
 
     static String deriveLogicalName(String fqcn, String explicitName) {
@@ -308,21 +333,110 @@ abstract class GeneratePluginDescriptorTask extends DefaultTask {
     }
 
     static boolean antMatch(String pattern, String path) {
-        String regex = pattern
-                .replace('.', '\\.')
-                .replace('**/', '(.+/)?')
-                .replace('**', '.*')
-                .replace('*', '[^/]*')
-                .replace('?', '.')
-        path.matches(regex)
+        if (pattern == null || path == null) {
+            return false
+        }
+        StringBuilder regex = new StringBuilder(pattern.length() * 2)
+        int i = 0
+        int len = pattern.length()
+        while (i < len) {
+            if (pattern.startsWith('**/', i)) {
+                regex.append('(?:.*/)?')
+                i += 3
+            }
+            else if (pattern.startsWith('**', i)) {
+                regex.append('.*')
+                i += 2
+            }
+            else {
+                char ch = pattern.charAt(i)
+                if (ch == ('*' as char)) {
+                    regex.append('[^/]*')
+                }
+                else if (ch == ('?' as char)) {
+                    regex.append('[^/]')
+                }
+                else if ('\\.^$+()[]{}|'.indexOf(ch as int) >= 0) {
+                    regex.append('\\').append(ch)
+                }
+                else {
+                    regex.append(ch)
+                }
+                i++
+            }
+        }
+        path.matches(regex.toString())
     }
 
     private static String escapeKey(String key) {
-        key.replace('\\', '\\\\').replace('=', '\\=').replace(':', '\\:').replace(' ', '\\ ')
+        StringBuilder sb = new StringBuilder(key.length())
+        for (int i = 0; i < key.length(); i++) {
+            char ch = key.charAt(i)
+            if (ch == ('\\' as char)) {
+                sb.append('\\\\')
+            }
+            else if (ch == ('=' as char)) {
+                sb.append('\\=')
+            }
+            else if (ch == (':' as char)) {
+                sb.append('\\:')
+            }
+            else if (ch == (' ' as char)) {
+                sb.append('\\ ')
+            }
+            else if (ch == ('\t' as char)) {
+                sb.append('\\t')
+            }
+            else if (ch == ('\n' as char)) {
+                sb.append('\\n')
+            }
+            else if (ch == ('\r' as char)) {
+                sb.append('\\r')
+            }
+            else if (ch == ('\f' as char)) {
+                sb.append('\\f')
+            }
+            else {
+                sb.append(ch)
+            }
+        }
+        sb.toString()
     }
 
     private static String escapeValue(String value) {
-        value.replace('\\', '\\\\').replace('\n', '\\n').replace('\r', '\\r')
+        StringBuilder sb = new StringBuilder(value.length())
+        boolean leading = true
+        for (int i = 0; i < value.length(); i++) {
+            char ch = value.charAt(i)
+            if (ch == (' ' as char)) {
+                sb.append(leading ? '\\ ' : ' ')
+            }
+            else if (ch == ('\\' as char)) {
+                sb.append('\\\\')
+                leading = false
+            }
+            else if (ch == ('\t' as char)) {
+                sb.append('\\t')
+                leading = false
+            }
+            else if (ch == ('\n' as char)) {
+                sb.append('\\n')
+                leading = false
+            }
+            else if (ch == ('\r' as char)) {
+                sb.append('\\r')
+                leading = false
+            }
+            else if (ch == ('\f' as char)) {
+                sb.append('\\f')
+                leading = false
+            }
+            else {
+                sb.append(ch)
+                leading = false
+            }
+        }
+        sb.toString()
     }
 
     static class ScanResult {
@@ -407,7 +521,6 @@ abstract class GeneratePluginDescriptorTask extends DefaultTask {
         int access
         boolean frameworkPluginWrapper
         boolean genericClass
-        boolean hasNoArgConstructor
         boolean hasGrailsPluginAnnotation
         boolean hasPluginDescriptorAnnotation
         String explicitName
@@ -436,20 +549,13 @@ abstract class GeneratePluginDescriptorTask extends DefaultTask {
                     (interfaces != null && GRAILS_PLUGIN_INTERFACE in interfaces)
         }
 
-        @Override
-        MethodVisitor visitMethod(int access, String name, String descriptor, String signature, String[] exceptions) {
-            if ('<init>' == name && '()V' == descriptor && (access & Opcodes.ACC_PRIVATE) == 0) {
-                hasNoArgConstructor = true
-            }
-            null
-        }
-
         boolean isConcrete() {
-            (access & (Opcodes.ACC_ABSTRACT | Opcodes.ACC_INTERFACE | Opcodes.ACC_ANNOTATION)) == 0
+            (access & (Opcodes.ACC_ABSTRACT | Opcodes.ACC_INTERFACE | Opcodes.ACC_ANNOTATION |
+                    Opcodes.ACC_ENUM | Opcodes.ACC_SYNTHETIC | Opcodes.ACC_MODULE)) == 0
         }
 
         boolean isProvidedArtefact() {
-            artefactType != null && (hasGrailsPluginAnnotation || (!genericClass && hasNoArgConstructor))
+            artefactType != null && (hasGrailsPluginAnnotation || !genericClass)
         }
 
         @Override
