@@ -186,7 +186,6 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
         null
     }
 
-
     /**
      * Specifies whether a join query should be used (if join queries are supported by the underlying datastore)
      *
