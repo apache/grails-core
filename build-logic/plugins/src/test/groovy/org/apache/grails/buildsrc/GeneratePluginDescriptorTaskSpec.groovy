@@ -36,6 +36,9 @@ class GeneratePluginDescriptorTaskSpec extends Specification {
     private static void writeClass(File classesDir, String internalName, int access = Opcodes.ACC_PUBLIC, Closure<?> customize = null) {
         ClassWriter cw = new ClassWriter(0)
         cw.visit(Opcodes.V21, access, internalName, null, 'java/lang/Object', null)
+        if ((access & (Opcodes.ACC_INTERFACE | Opcodes.ACC_ANNOTATION)) == 0) {
+            cw.visitMethod(Opcodes.ACC_PUBLIC, '<init>', '()V', null, null).visitEnd()
+        }
         if (customize) {
             customize.call(cw)
         }
@@ -153,5 +156,37 @@ class GeneratePluginDescriptorTaskSpec extends Specification {
 
         then:
         result.plugins.isEmpty()
+    }
+
+    void 'ignores generic or non-default-constructor @Artefact base classes unless stamped with @GrailsPlugin'() {
+        given:
+        File classesDir = new File(tempDir, 'classes')
+        writeClass(classesDir, 'grails/rest/RestResponderGrailsPlugin')
+
+        ClassWriter restfulBase = new ClassWriter(0)
+        restfulBase.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, 'grails/rest/RestfulController', '<T:Ljava/lang/Object;>Ljava/lang/Object;', 'java/lang/Object', null)
+        restfulBase.visitMethod(Opcodes.ACC_PUBLIC, '<init>', '(Ljava/lang/Class;)V', null, null).visitEnd()
+        AnnotationVisitor av1 = restfulBase.visitAnnotation('Lgrails/artefact/Artefact;', true)
+        av1.visit('value', 'Controller')
+        av1.visitEnd()
+        restfulBase.visitEnd()
+        new File(classesDir, 'grails/rest/RestfulController.class').tap { parentFile.mkdirs(); bytes = restfulBase.toByteArray() }
+
+        ClassWriter injectedService = new ClassWriter(0)
+        injectedService.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, 'com/example/InjectedService', null, 'java/lang/Object', null)
+        injectedService.visitMethod(Opcodes.ACC_PUBLIC, '<init>', '(Ljava/lang/String;)V', null, null).visitEnd()
+        AnnotationVisitor av2 = injectedService.visitAnnotation('Lgrails/artefact/Artefact;', true)
+        av2.visit('value', 'Service')
+        av2.visitEnd()
+        injectedService.visitAnnotation('Lgrails/plugins/metadata/GrailsPlugin;', true).visitEnd()
+        injectedService.visitEnd()
+        new File(classesDir, 'com/example/InjectedService.class').tap { parentFile.mkdirs(); bytes = injectedService.toByteArray() }
+
+        when:
+        def result = GeneratePluginDescriptorTask.scan([classesDir] as Set)
+
+        then:
+        result.artefactsByType['Controller'] == null
+        result.artefactsByType['Service'] == ['com.example.InjectedService'] as SortedSet
     }
 }

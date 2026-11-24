@@ -38,6 +38,9 @@ class GeneratePluginDescriptorTaskSpec extends Specification {
     private static void writeClass(File classesDir, String internalName, int access = Opcodes.ACC_PUBLIC, Closure<?> customize = null) {
         ClassWriter cw = new ClassWriter(0)
         cw.visit(Opcodes.V21, access, internalName, null, 'java/lang/Object', null)
+        if ((access & (Opcodes.ACC_INTERFACE | Opcodes.ACC_ANNOTATION)) == 0) {
+            cw.visitMethod(Opcodes.ACC_PUBLIC, '<init>', '()V', null, null).visitEnd()
+        }
         if (customize) {
             customize.call(cw)
         }

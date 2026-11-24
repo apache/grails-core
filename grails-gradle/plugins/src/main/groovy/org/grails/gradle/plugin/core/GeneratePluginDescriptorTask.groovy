@@ -27,6 +27,7 @@ import groovy.transform.CompileStatic
 import groovyjarjarasm.asm.AnnotationVisitor
 import groovyjarjarasm.asm.ClassReader
 import groovyjarjarasm.asm.ClassVisitor
+import groovyjarjarasm.asm.MethodVisitor
 import groovyjarjarasm.asm.Opcodes
 
 import org.gradle.api.DefaultTask
@@ -174,7 +175,7 @@ abstract class GeneratePluginDescriptorTask extends DefaultTask {
                             (scanner.hasPluginDescriptorAnnotation || fqcn.endsWith(GRAILS_PLUGIN_SUFFIX))) {
                         plugins.add(scanner.toScannedPlugin(fqcn))
                     }
-                    else if (scanner.artefactType != null) {
+                    else if (scanner.isProvidedArtefact()) {
                         artefactsByType.computeIfAbsent(scanner.artefactType) { new TreeSet<String>() }.add(fqcn)
                     }
                 }
@@ -401,9 +402,13 @@ abstract class GeneratePluginDescriptorTask extends DefaultTask {
                 'org/grails/plugins/BinaryGrailsPlugin',
         ].toSet()
         private static final String GRAILS_PLUGIN_INTERFACE = 'grails/plugins/GrailsPlugin'
+        private static final String GRAILS_PLUGIN_METADATA_ANNOTATION = 'Lgrails/plugins/metadata/GrailsPlugin;'
 
         int access
         boolean frameworkPluginWrapper
+        boolean genericClass
+        boolean hasNoArgConstructor
+        boolean hasGrailsPluginAnnotation
         boolean hasPluginDescriptorAnnotation
         String explicitName
         String version
@@ -426,12 +431,25 @@ abstract class GeneratePluginDescriptorTask extends DefaultTask {
         @Override
         void visit(int version, int access, String name, String signature, String superName, String[] interfaces) {
             this.access = access
+            this.genericClass = signature != null && signature.startsWith('<')
             this.frameworkPluginWrapper = (superName in FRAMEWORK_PLUGIN_SUPERCLASSES) ||
                     (interfaces != null && GRAILS_PLUGIN_INTERFACE in interfaces)
         }
 
+        @Override
+        MethodVisitor visitMethod(int access, String name, String descriptor, String signature, String[] exceptions) {
+            if ('<init>' == name && '()V' == descriptor && (access & Opcodes.ACC_PRIVATE) == 0) {
+                hasNoArgConstructor = true
+            }
+            null
+        }
+
         boolean isConcrete() {
             (access & (Opcodes.ACC_ABSTRACT | Opcodes.ACC_INTERFACE | Opcodes.ACC_ANNOTATION)) == 0
+        }
+
+        boolean isProvidedArtefact() {
+            artefactType != null && (hasGrailsPluginAnnotation || (!genericClass && hasNoArgConstructor))
         }
 
         @Override
@@ -511,6 +529,10 @@ abstract class GeneratePluginDescriptorTask extends DefaultTask {
                         null
                     }
                 }
+            }
+            if (GRAILS_PLUGIN_METADATA_ANNOTATION == descriptor) {
+                hasGrailsPluginAnnotation = true
+                return null
             }
             if (ARTEFACT_ANNOTATION == descriptor) {
                 return new AnnotationVisitor(Opcodes.ASM9) {
