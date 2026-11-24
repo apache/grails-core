@@ -56,6 +56,7 @@ class GormValidationApi<D> extends AbstractGormApi<D> {
     protected final MappingContext mappingContext
     protected final ApplicationEventPublisher eventPublisher
     protected final boolean hasDatastore
+    private final Map<Object, Errors> unattachedErrors = Collections.synchronizedMap(new WeakHashMap<Object, Errors>())
 
     GormValidationApi(Class<D> persistentClass, Datastore datastore) {
         super(persistentClass, datastore)
@@ -237,7 +238,7 @@ class GormValidationApi<D> extends AbstractGormApi<D> {
         }
         else {
 
-            Errors errors = (Errors) datastore.currentSession.getAttribute(instance, GormProperties.ERRORS)
+            Errors errors = readErrors(instance)
             if (errors == null) {
                 errors = resetErrors(instance)
             }
@@ -262,7 +263,27 @@ class GormValidationApi<D> extends AbstractGormApi<D> {
             gv.errors = errors
         }
         else {
+            writeErrors(instance, errors)
+        }
+    }
+
+    /**
+     * The errors of an instance that cannot carry its own. They live on the session when there is a datastore, and on
+     * this API when there is none, so that validating a plain bean through an API built from a mapping context
+     * records its failures as it does through one with a datastore.
+     */
+    private Errors readErrors(Object instance) {
+        if (hasDatastore) {
+            return (Errors) datastore.currentSession.getAttribute(instance, GormProperties.ERRORS)
+        }
+        return unattachedErrors.get(instance)
+    }
+
+    private void writeErrors(Object instance, Errors errors) {
+        if (hasDatastore) {
             datastore.currentSession.setAttribute(instance, GormProperties.ERRORS, errors)
+        } else {
+            unattachedErrors.put(instance, errors)
         }
     }
 
@@ -285,8 +306,7 @@ class GormValidationApi<D> extends AbstractGormApi<D> {
             return gv.hasErrors()
         }
         else {
-            Errors errors = (Errors) datastore.currentSession.getAttribute(instance, GormProperties.ERRORS)
-            errors?.hasErrors()
+            readErrors(instance)?.hasErrors()
         }
     }
 }
