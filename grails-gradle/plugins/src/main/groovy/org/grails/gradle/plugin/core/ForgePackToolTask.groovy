@@ -187,9 +187,12 @@ abstract class ForgePackToolTask extends DefaultTask {
                     spec.environment(name, value)
                 }
             }
-            // what Forge writes is read as UTF-8, whatever the platform writes its output in
+            // what Forge writes is read as UTF-8, whatever the platform writes its output in: both outputs,
+            // since what it says of a pack, which can have any letters, is on the standard error
             spec.systemProperty('stdout.encoding', StandardCharsets.UTF_8.name())
             spec.systemProperty('sun.stdout.encoding', StandardCharsets.UTF_8.name())
+            spec.systemProperty('stderr.encoding', StandardCharsets.UTF_8.name())
+            spec.systemProperty('sun.stderr.encoding', StandardCharsets.UTF_8.name())
             spec.systemProperty('java.awt.headless', 'true')
             // Forge is published without a logging implementation, which SLF4J says in three lines each time
             spec.systemProperty('slf4j.internal.verbosity', 'ERROR')
