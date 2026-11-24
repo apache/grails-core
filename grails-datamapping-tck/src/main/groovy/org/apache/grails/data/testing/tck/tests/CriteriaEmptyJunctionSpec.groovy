@@ -114,6 +114,7 @@ class CriteriaEmptyJunctionSpec extends GrailsDataTckSpec {
         ['child { not { or {} } }', { -> child { not { or { } } } }, [], ['simple', 'neo4j', 'mongodb']],
         ['child { not { and {} } }', { -> child { not { and { } } } }, [], ['simple', 'neo4j', 'mongodb']],
         ['child { or {}; eq name=kid }', { -> child { or { }; eq('name', 'kid') } }, ['with'], ['simple', 'neo4j', 'mongodb']],
+        ['child { or { or {}; eq name=kid } }', { -> child { or { or { }; eq('name', 'kid') } } }, ['other', 'with'], ['simple', 'neo4j', 'mongodb']],
         ['child { and {}; eq name=kid }', { -> child { and { }; eq('name', 'kid') } }, ['with'], ['simple', 'neo4j', 'mongodb']],
         ['child { not { and {} }; eq name=kid }', { -> child { not { and { } }; eq('name', 'kid') } }, [], ['simple', 'neo4j', 'mongodb']],
         ['child { not { or {} }; eq name=kid }', { -> child { not { or { } }; eq('name', 'kid') } }, [], ['simple', 'neo4j', 'mongodb']],
