@@ -50,6 +50,7 @@ public final class GroovyPageForkedCompiler {
         RecordingForkedCompiler.record(args[0], args[1],
                 "generatedViews=" + System.getProperty("grails.views.gsp.generatedViewDirectories"),
                 "optionalPages=" + String.join(",", optional),
+                "viewsManifestPath=" + System.getProperty("grails.views.gsp.viewsManifestPath"),
                 "encoding=" + args[7]);
     }
 }

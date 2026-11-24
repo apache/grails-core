@@ -30,6 +30,7 @@ import org.gradle.api.tasks.compile.GroovyCompile
 import org.gradle.api.file.Directory
 import org.gradle.api.file.DuplicatesStrategy
 import org.gradle.api.file.FileCollection
+import org.gradle.api.file.RegularFile
 import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.api.provider.Provider
@@ -417,28 +418,14 @@ class GroovyPagePlugin implements Plugin<Project> {
         project.plugins.withId(GrailsPluginGradlePlugin.PLUGIN_ID) {
             TaskProvider<GeneratePluginDescriptorTask> descriptorTask = project.tasks.named(
                     'generatePluginDescriptor', GeneratePluginDescriptorTask)
-            Provider<String> fallbackName = descriptorTask.flatMap { GeneratePluginDescriptorTask t ->
-                t.pluginOptions.name.orElse(t.projectName)
-            }
-            Provider<String> pluginViewsPath = descriptorTask.flatMap { GeneratePluginDescriptorTask t ->
-                t.outputDirectory
-            }.zip(fallbackName) { Directory dir, String fallback ->
-                File importsFile = dir.file(GeneratePluginDescriptorTask.PLUGINS_IMPORTS_PATH).asFile
-                String resolvedName = null
-                if (importsFile.isFile()) {
-                    resolvedName = importsFile.readLines('UTF-8').collect { String line ->
-                        int hash = line.indexOf('#')
-                        (hash >= 0 ? line.substring(0, hash) : line).trim()
-                    }.find { String line -> !line.isEmpty() }
-                }
-                String logicalName = resolvedName ?: GeneratePluginDescriptorTask.normalizePluginName(fallback)
-                "META-INF/grails/plugins/${logicalName}/views.properties".toString()
+            Provider<RegularFile> importsFile = descriptorTask.flatMap { GeneratePluginDescriptorTask t ->
+                t.outputDirectory.file(GeneratePluginDescriptorTask.PLUGINS_IMPORTS_PATH)
             }
             compileGroovyPages.configure { GroovyPageForkCompileTask task ->
-                task.viewsManifestPath.convention(pluginViewsPath)
+                task.pluginImportsFiles.from(importsFile)
             }
             compileWebappGroovyPages.configure { GroovyPageForkCompileTask task ->
-                task.viewsManifestPath.convention(pluginViewsPath)
+                task.pluginImportsFiles.from(importsFile)
             }
         }
 

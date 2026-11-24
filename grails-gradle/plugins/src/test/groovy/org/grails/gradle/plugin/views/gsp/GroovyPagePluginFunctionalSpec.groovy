@@ -553,4 +553,61 @@ class GroovyPagePluginFunctionalSpec extends GradleSpecification {
         then: 'there is nothing to compile, as there was before any page was generated'
         compilation.task(':compileGroovyPages').outcome == TaskOutcome.NO_SOURCE
     }
+
+    def "a plugin derives its namespaced views manifest path from the generated descriptor on clean builds with configuration cache"() {
+        given: 'a plugin whose Gradle project name differs from its *GrailsPlugin descriptor class'
+        def runner = setupTestResourceProject('gsp-compile-classpath-grails')
+        File projectDir = runner.projectDir
+        new File(projectDir, 'settings.gradle').text = "rootProject.name = 'custom-module-name'\n"
+        new File(projectDir, 'build.gradle').text = """
+            plugins {
+                id 'org.apache.grails.gradle.grails-plugin'
+                id 'org.apache.grails.gradle.grails-gsp'
+            }
+            group = 'org.example.test'
+            version = '1.0.0'
+            grails {
+                bom = null
+                cliAutoProvision = false
+            }
+            dependencies {
+                implementation localGroovy()
+                implementation files('compiler')
+            }
+        """.stripIndent()
+        [['compiler', 'org/grails/web/pages/GroovyPageForkedCompiler.class'],
+         ['compiler', 'org/grails/gradle/plugin/views/RecordingForkedCompiler.class']].each { String dir, String standIn ->
+            File standInClass = new File(projectDir, "${dir}/${standIn}")
+            standInClass.parentFile.mkdirs()
+            standInClass.bytes = getClass().classLoader.getResource(standIn).bytes
+        }
+        File pluginSource = new File(projectDir, 'src/main/groovy/com/example/SpringSecurityCoreGrailsPlugin.groovy')
+        pluginSource.parentFile.mkdirs()
+        pluginSource.text = '''
+            package com.example
+            class SpringSecurityCoreGrailsPlugin {
+                def version = '1.0.0'
+            }
+        '''.stripIndent()
+        File view = new File(projectDir, 'grails-app/views/login/auth.gsp')
+        view.parentFile.mkdirs()
+        view.text = '<p>Login</p>'
+        File recorded = new File(projectDir, 'build/gsp-classes/main/compiler.txt')
+
+        when: 'compiling pages from a clean build with configuration cache enabled'
+        def result = executeTask('compileGroovyPages', ['--configuration-cache'])
+
+        then: 'the manifest path uses the compiled plugin logical name rather than the Gradle project name'
+        assertTaskSuccess('generatePluginDescriptor', result)
+        assertTaskSuccess('compileGroovyPages', result)
+        recorded.readLines('UTF-8').contains('viewsManifestPath=META-INF/grails/plugins/springSecurityCore/views.properties')
+
+        when: 'running again from the configuration cache after deleting compiled page outputs'
+        new File(projectDir, 'build/gsp-classes').deleteDir()
+        def reused = executeTask('compileGroovyPages', ['--configuration-cache'])
+
+        then: 'the configuration cache entry is reused and the plugin logical name is still resolved'
+        reused.output.contains('Configuration cache entry reused')
+        recorded.readLines('UTF-8').contains('viewsManifestPath=META-INF/grails/plugins/springSecurityCore/views.properties')
+    }
 }

@@ -117,14 +117,27 @@ abstract class GroovyPageForkCompileTask extends AbstractCompile {
 
     /**
      * Relative path within {@link #destinationDirectory} where the precompiled view manifest is written.
-     * Unset for applications (which default to {@code gsp/views.properties}); set by {@link GroovyPagePlugin}
-     * to {@code META-INF/grails/plugins/<name>/views.properties} for plugins.
+     * Unset for applications (which default to {@code gsp/views.properties}); when unset on a plugin
+     * project, derived at execution time from {@link #pluginImportsFiles} as
+     * {@code META-INF/grails/plugins/<name>/views.properties}.
      *
      * @since 9.0
      */
     @Input
     @Optional
     final Property<String> viewsManifestPath
+
+    /**
+     * Generated {@code META-INF/grails/plugins.imports} file(s) produced by {@code generatePluginDescriptor}.
+     * Read at execution time when {@link #viewsManifestPath} is not explicitly set so that the manifest
+     * namespace matches the compiled plugin's logical name even on clean builds with the configuration cache.
+     *
+     * @since 9.0
+     */
+    @InputFiles
+    @Optional
+    @PathSensitive(PathSensitivity.NAME_ONLY)
+    final ConfigurableFileCollection pluginImportsFiles
 
     /**
      * Whether the pages this task compiles are compiled statically.
@@ -214,6 +227,7 @@ abstract class GroovyPageForkCompileTask extends AbstractCompile {
         compileOptions = objectFactory.newInstance(ViewCompileOptions)
         serverpath = objectFactory.property(String)
         viewsManifestPath = objectFactory.property(String)
+        pluginImportsFiles = objectFactory.fileCollection()
         grailsEnvironment = objectFactory.property(String).convention(ViewCompileEnvironment.defaultFor(project.providers, compileOptions))
         // the input is what the compiler gets: a change to it once the input is read would be compiled but not keyed
         grailsEnvironment.finalizeValueOnRead()
@@ -298,6 +312,7 @@ abstract class GroovyPageForkCompileTask extends AbstractCompile {
 
     protected void compile() {
         String environment = statedEnvironment
+        String resolvedViewsManifestPath = resolveViewsManifestPath()
         logger.info('Compiling the pages for the {} environment', environment)
         ViewCompileDestination.empty(fileSystemOperations, destinationDirectory.get().asFile, buildDirectory.get().asFile, classpath.files, path)
         ExecResult result = execOperations.javaexec(
@@ -331,8 +346,8 @@ abstract class GroovyPageForkCompileTask extends AbstractCompile {
                                 javaExecSpec.systemProperty(BuildSettings.COMPILE_STATIC_GSP_STRICT, 'true')
                             }
                         }
-                        if (viewsManifestPath.present) {
-                            javaExecSpec.systemProperty(BuildSettings.GSP_VIEWS_MANIFEST_PATH, viewsManifestPath.get())
+                        if (resolvedViewsManifestPath != null) {
+                            javaExecSpec.systemProperty(BuildSettings.GSP_VIEWS_MANIFEST_PATH, resolvedViewsManifestPath)
                         }
 
                         String configFiles = grailsConfigurationPaths.files.collect { it.canonicalPath }.join(',')
@@ -360,6 +375,24 @@ abstract class GroovyPageForkCompileTask extends AbstractCompile {
         )
         result.assertNormalExitValue()
 
+    }
+
+    private String resolveViewsManifestPath() {
+        if (viewsManifestPath.present) {
+            return viewsManifestPath.get()
+        }
+        for (File importsFile : pluginImportsFiles.files) {
+            if (importsFile.isFile()) {
+                for (String rawLine : importsFile.readLines('UTF-8')) {
+                    int hash = rawLine.indexOf('#')
+                    String pluginName = (hash >= 0 ? rawLine.substring(0, hash) : rawLine).trim()
+                    if (!pluginName.isEmpty()) {
+                        return "META-INF/grails/plugins/${pluginName}/views.properties".toString()
+                    }
+                }
+            }
+        }
+        null
     }
 
     void prepareArguments(List<String> arguments) {
