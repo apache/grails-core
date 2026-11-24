@@ -61,7 +61,7 @@ jobs:
       - name: "📥 Checkout repository"
         uses: actions/checkout@v7.0.1
       - name: "☕️ Setup JDK"
-        uses: actions/setup-java@v6.1.0
+        uses: actions/setup-java@v6.3.0
         with:
           distribution: liberica
           java-version: 21
@@ -81,7 +81,7 @@ jobs:
           --stacktrace
           -PskipCodeStyle
       - name: "📤 Upload coverage artifact"
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: coverage-core-${{ matrix.os }}
           path: build/reports/jacoco/aggregate/jacocoAggregateReport.xml
@@ -118,7 +118,7 @@ jobs:
       - name: "📥 Checkout repository"
         uses: actions/checkout@v7.0.1
       - name: "☕️ Setup JDK"
-        uses: actions/setup-java@v6.1.0
+        uses: actions/setup-java@v6.3.0
         with:
           distribution: liberica
           java-version: 21
@@ -139,7 +139,7 @@ jobs:
           --stacktrace
           -PskipCodeStyle
       - name: "📤 Upload coverage artifact"
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: coverage-gradle-${{ matrix.os }}
           path: grails-gradle/build/reports/jacoco/aggregate/jacocoAggregateReport.xml
@@ -169,7 +169,7 @@ jobs:
           name: forge-coverage-test-repository
           path: build/local-maven/
       - name: "☕️ Setup JDK"
-        uses: actions/setup-java@v6.1.0
+        uses: actions/setup-java@v6.3.0
         with:
           distribution: liberica
           java-version: 21
@@ -195,7 +195,7 @@ jobs:
           -PskipCodeStyle
           -x :test-core:test
       - name: "📤 Upload coverage artifact"
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: coverage-forge-${{ matrix.os }}
           path: grails-forge/build/reports/jacoco/aggregate/jacocoAggregateReport.xml

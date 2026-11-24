@@ -61,7 +61,7 @@ jobs:
       - name: "📥 Checkout repository"
         uses: actions/checkout@v7.0.1
       - name: "☕️ Setup JDK"
-        uses: actions/setup-java@v6.1.0
+        uses: actions/setup-java@v6.3.0
         with:
           distribution: liberica
           java-version: 21
@@ -98,7 +98,7 @@ jobs:
       - name: "📥 Checkout repository"
         uses: actions/checkout@v7.0.1
       - name: "☕️ Setup JDK"
-        uses: actions/setup-java@v6.1.0
+        uses: actions/setup-java@v6.3.0
         with:
           distribution: liberica
           java-version: 21
@@ -161,7 +161,7 @@ jobs:
       - name: "📥 Checkout repository"
         uses: actions/checkout@v7.0.1
       - name: "☕️ Setup JDK"
-        uses: actions/setup-java@v6.1.0
+        uses: actions/setup-java@v6.3.0
         with:
           distribution: liberica
           java-version: ${{ matrix.java }}
@@ -205,7 +205,7 @@ jobs:
       - name: "📥 Checkout repository"
         uses: actions/checkout@v7.0.1
       - name: "☕️ Setup JDK"
-        uses: actions/setup-java@v6.1.0
+        uses: actions/setup-java@v6.3.0
         with:
           distribution: liberica
           java-version: 21
@@ -281,7 +281,7 @@ jobs:
       - name: "📥 Checkout repository"
         uses: actions/checkout@v7.0.1
       - name: "☕️ Setup JDK"
-        uses: actions/setup-java@v6.1.0
+        uses: actions/setup-java@v6.3.0
         with:
           distribution: liberica
           java-version: ${{ matrix.java }}
@@ -343,7 +343,7 @@ jobs:
       - name: "📥 Checkout repository"
         uses: actions/checkout@v7.0.1
       - name: "☕️ Setup JDK"
-        uses: actions/setup-java@v6.1.0
+        uses: actions/setup-java@v6.3.0
         with:
           distribution: liberica
           java-version: ${{ matrix.java }}
@@ -441,7 +441,7 @@ jobs:
           name: forge-test-repository-indy-${{ matrix.indy }}
           path: build/local-maven/
       - name: "☕️ Setup JDK"
-        uses: actions/setup-java@v6.1.0
+        uses: actions/setup-java@v6.3.0
         with:
           distribution: 'liberica'
           java-version: ${{ matrix.java }}
@@ -489,7 +489,7 @@ jobs:
           ./tmp1/cli/bin/grails --version
       - name: "📤 Upload CLI Zip to Workflow Summary Page"
         if: ${{ matrix.java == '21' && matrix.indy == false }}
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: 'apache-grails-SNAPSHOT-bin.zip'
           include-hidden-files: true
@@ -529,7 +529,7 @@ jobs:
           name: forge-test-repository-indy-true
           path: build/local-maven/
       - name: "☕️ Setup JDK"
-        uses: actions/setup-java@v6.1.0
+        uses: actions/setup-java@v6.3.0
         with:
           distribution: liberica
           java-version: 21
@@ -614,7 +614,7 @@ jobs:
       - name: "📥 Checkout repository"
         uses: actions/checkout@v7.0.1
       - name: "☕️ Setup JDK"
-        uses: actions/setup-java@v6.1.0
+        uses: actions/setup-java@v6.3.0
         with:
           distribution: liberica
           java-version: ${{ matrix.java }}
@@ -690,7 +690,7 @@ jobs:
           exit "$code"
       - name: "📤 Upload Geb Reports"
         if: failure()
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: geb-reports-functional-${{ matrix.artifact_suffix }}
           path: '**/build/geb-reports/'
@@ -722,7 +722,7 @@ jobs:
       - name: "📥 Checkout repository"
         uses: actions/checkout@v7.0.1
       - name: "☕️ Setup JDK"
-        uses: actions/setup-java@v6.1.0
+        uses: actions/setup-java@v6.3.0
         with:
           distribution: liberica
           java-version: ${{ matrix.java }}
@@ -767,7 +767,7 @@ jobs:
       - name: "📥 Checkout repository"
         uses: actions/checkout@v7.0.1
       - name: "☕️ Setup JDK"
-        uses: actions/setup-java@v6.1.0
+        uses: actions/setup-java@v6.3.0
         with:
           distribution: liberica
           java-version: 21
@@ -814,7 +814,7 @@ jobs:
       - name: "📥 Checkout repository"
         uses: actions/checkout@v7.0.1
       - name: "☕️ Setup JDK"
-        uses: actions/setup-java@v6.1.0
+        uses: actions/setup-java@v6.3.0
         with:
           distribution: liberica
           java-version: 21
@@ -855,7 +855,7 @@ jobs:
       - name: "📥 Checkout repository"
         uses: actions/checkout@v7.0.1
       - name: "☕️ Setup JDK"
-        uses: actions/setup-java@v6.1.0
+        uses: actions/setup-java@v6.3.0
         with:
           distribution: liberica
           java-version: ${{ matrix.java }}
@@ -914,7 +914,7 @@ jobs:
       - name: "📥 Checkout the repository"
         uses: actions/checkout@v7.0.1
       - name: "☕️ Setup JDK"
-        uses: actions/setup-java@v6.1.0
+        uses: actions/setup-java@v6.3.0
         with:
           distribution: liberica
           java-version: ${{ matrix.java }}
@@ -979,7 +979,7 @@ jobs:
       - name: "📥 Checkout the repository"
         uses: actions/checkout@v7.0.1
       - name: "☕️ Setup JDK"
-        uses: actions/setup-java@v6.1.0
+        uses: actions/setup-java@v6.3.0
         with:
           distribution: liberica
           java-version: ${{ matrix.java }}
@@ -1054,7 +1054,7 @@ jobs:
       - name: "📥 Checkout the repository"
         uses: actions/checkout@v7.0.1
       - name: "☕️ Setup JDK"
-        uses: actions/setup-java@v6.1.0
+        uses: actions/setup-java@v6.3.0
         with:
           distribution: liberica
           java-version: ${{ matrix.java }}
@@ -1099,7 +1099,7 @@ jobs:
       - name: "📥 Checkout the repository"
         uses: actions/checkout@v7.0.1
       - name: "☕️ Setup JDK"
-        uses: actions/setup-java@v6.1.0
+        uses: actions/setup-java@v6.3.0
         with:
           distribution: liberica
           java-version: ${{ matrix.java }}
@@ -1139,7 +1139,7 @@ jobs:
       - name: "📥 Checkout repository"
         uses: actions/checkout@v7.0.1
       - name: "☕️ Setup JDK"
-        uses: actions/setup-java@v6.1.0
+        uses: actions/setup-java@v6.3.0
         with:
           distribution: liberica
           java-version: 21
@@ -1166,12 +1166,12 @@ jobs:
           --no-build-cache
           --rerun-tasks
       - name: "📤 Upload grails-gradle checksums"
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: grails-gradle-checksums
           path: grails-gradle/build/grails-gradle-checksums.txt
       - name: "📤 Upload grails-gradle published artifacts"
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: grails-gradle-artifacts.txt
           path: grails-gradle/build/grails-gradle-artifacts.txt
@@ -1206,7 +1206,7 @@ jobs:
       - name: "📥 Checkout repository"
         uses: actions/checkout@v7.0.1
       - name: "☕️ Setup JDK"
-        uses: actions/setup-java@v6.1.0
+        uses: actions/setup-java@v6.3.0
         with:
           distribution: liberica
           java-version: 21
@@ -1234,12 +1234,12 @@ jobs:
           retry_wait_seconds: 180
           command: ./gradlew publish aggregateChecksums aggregatePublishedArtifacts --no-build-cache --rerun-tasks
       - name: "📤 Upload grails-core checksums"
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: grails-core-checksums.txt
           path: build/grails-core-checksums.txt
       - name: "📤 Upload grails-core published artifacts"
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: grails-core-artifacts.txt
           path: build/grails-core-artifacts.txt
@@ -1251,7 +1251,7 @@ jobs:
           unzip wrapper -d tmp
           mv tmp/apache-grails-wrapper-* tmp/wrapper
       - name: "📤 Upload Wrapper Zip to Workflow Summary Page"
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: apache-grails-wrapper-SNAPSHOT-bin
           path: build/tmp/wrapper
@@ -1275,7 +1275,7 @@ jobs:
       - name: "📥 Checkout repository"
         uses: actions/checkout@v7.0.1
       - name: "☕️ Setup JDK"
-        uses: actions/setup-java@v6.1.0
+        uses: actions/setup-java@v6.3.0
         with:
           distribution: liberica
           java-version: 21
@@ -1302,12 +1302,12 @@ jobs:
           --no-build-cache
           --rerun-tasks
       - name: "📤 Upload grails-forge checksums"
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: grails-forge-checksums
           path: grails-forge/build/grails-forge-checksums.txt
       - name: "📤 Upload grails-gradle published artifacts"
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: grails-forge-artifacts.txt
           path: grails-forge/build/grails-forge-artifacts.txt
@@ -1331,7 +1331,7 @@ jobs:
       - name: "📥 Checkout repository"
         uses: actions/checkout@v7.0.1
       - name: "☕️ Setup JDK"
-        uses: actions/setup-java@v6.1.0
+        uses: actions/setup-java@v6.3.0
         with:
           distribution: liberica
           java-version: 21
@@ -1392,7 +1392,7 @@ jobs:
           echo "NOW=${NOW}" >> $GITHUB_ENV
           echo "Current date: ${NOW}"
       - name: "☕️ Setup JDK"
-        uses: actions/setup-java@v6.1.0
+        uses: actions/setup-java@v6.3.0
         with:
           distribution: liberica
           java-version: 21
@@ -1410,7 +1410,7 @@ jobs:
           ./gradlew grails-doc:build
           -PgithubBranch=${{ env.TARGET_BRANCH }}
       - name: "📤 Upload Generated Docs to Workflow Result Page"
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: grails-docs-${{ env.NOW }}.zip
           path: ./build/distributions/*.zip

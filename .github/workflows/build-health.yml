@@ -43,7 +43,7 @@ jobs:
       - name: "📥 Checkout repository"
         uses: actions/checkout@v7.0.1
       - name: "☕️ Setup JDK"
-        uses: actions/setup-java@v6.1.0
+        uses: actions/setup-java@v6.3.0
         with:
           distribution: liberica
           java-version: 21
@@ -66,7 +66,7 @@ jobs:
           -Dorg.gradle.jvmargs="-Dfile.encoding=UTF-8 -Xmx5G"
       - name: "📤 Upload Reports"
         if: always()
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: core-build-health
           path: |
@@ -95,7 +95,7 @@ jobs:
       - name: "📥 Checkout repository"
         uses: actions/checkout@v7.0.1
       - name: "☕️ Setup JDK"
-        uses: actions/setup-java@v6.1.0
+        uses: actions/setup-java@v6.3.0
         with:
           distribution: liberica
           java-version: 21
@@ -113,7 +113,7 @@ jobs:
         run: ./gradlew buildHealth --continue
       - name: "📤 Upload Reports"
         if: always()
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: gradle-plugin-build-health
           path: grails-gradle/build/reports/dependency-analysis/
@@ -140,7 +140,7 @@ jobs:
       - name: "📥 Checkout repository"
         uses: actions/checkout@v7.0.1
       - name: "☕️ Setup JDK"
-        uses: actions/setup-java@v6.1.0
+        uses: actions/setup-java@v6.3.0
         with:
           distribution: liberica
           java-version: 21
@@ -158,7 +158,7 @@ jobs:
         run: ./gradlew buildHealth --continue
       - name: "📤 Upload Reports"
         if: always()
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: forge-build-health
           path: grails-forge/build/reports/dependency-analysis/
