@@ -22,8 +22,8 @@ limitations under the License.
 [![Groovy Joint Validation Build](https://github.com/apache/grails-core/actions/workflows/groovy-joint-workflow.yml/badge.svg?event=push)](https://github.com/apache/grails-core/actions/workflows/groovy-joint-workflow.yml)
 [![Users Mailing List](https://img.shields.io/badge/Users_Mailing_List-feb571)](https://lists.apache.org/list.html?users@grails.apache.org)
 [![Dev Mailing List](https://img.shields.io/badge/Dev_Mailing_List-feb571)](https://lists.apache.org/list.html?dev@grails.apache.org)
-[![Slack](https://img.shields.io/badge/Join_Slack-e01d5a)](https://slack.grails.org/)
-[![GitHub Discussions](https://img.shields.io/github/discussions/apache/grails-core)](https://github.com/apache/grails-core/discussions)
+[![Community Chat](https://img.shields.io/badge/Community_Chat-feb571)](https://slack.grails.org/)
+[![GitHub Discussions](https://img.shields.io/badge/GitHub_Discussions-feb571)](https://github.com/apache/grails-core/discussions)
 
 ## Introduction
 
