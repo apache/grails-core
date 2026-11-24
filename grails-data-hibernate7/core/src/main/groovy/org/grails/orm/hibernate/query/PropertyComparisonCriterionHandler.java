@@ -182,10 +182,11 @@ class PropertyComparisonCriterionHandler implements InternalCriterionHandler<Que
      * refused and not answered wrongly.
      */
     private static void refuseInexactNumbers(Class<?> left, Class<?> right) {
-        if (floatingPoint(left) != floatingPoint(right) && Number.class.isAssignableFrom(ClassUtils.resolvePrimitiveIfNecessary(left))
-                && Number.class.isAssignableFrom(ClassUtils.resolvePrimitiveIfNecessary(right))) {
-            throw new IllegalArgumentException("Cannot compare identifier parts of type " + left.getName() + " and "
-                    + right.getName() + ": a floating point number and an integral one are not compared exactly");
+        boolean numbers = Number.class.isAssignableFrom(ClassUtils.resolvePrimitiveIfNecessary(left)) &&
+                Number.class.isAssignableFrom(ClassUtils.resolvePrimitiveIfNecessary(right));
+        if (numbers && floatingPoint(left) != floatingPoint(right)) {
+            throw new IllegalArgumentException("Cannot compare identifier parts of type " + left.getName() + " and " +
+                    right.getName() + ": a floating point number and an integral one are not compared exactly");
         }
     }
 
