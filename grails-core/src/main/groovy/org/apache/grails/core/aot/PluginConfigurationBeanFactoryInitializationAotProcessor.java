@@ -77,15 +77,22 @@ public class PluginConfigurationBeanFactoryInitializationAotProcessor implements
         for (GrailsPlugin plugin : pluginManager.getAllPlugins()) {
             Class<?> pluginClass = plugin.getPluginClass();
             String pluginName = plugin.getName();
-            ClassLoader loader = pluginClass != null ? pluginClass.getClassLoader() : beanClassLoader;
-            if (loader != null && pluginName != null) {
+            ClassLoader pluginLoader = pluginClass != null ? pluginClass.getClassLoader() : null;
+            ClassLoader loader = pluginLoader != null ? pluginLoader : beanClassLoader;
+            if (loader != null && PluginUtils.isValidPluginName(pluginName)) {
                 String ymlPath = PluginUtils.getPluginConfigPath(pluginName, PluginUtils.PLUGIN_YML_CONFIG);
-                if (loader.getResource(ymlPath) != null) {
+                String groovyPath = PluginUtils.getPluginConfigPath(pluginName, PluginUtils.PLUGIN_GROOVY_CONFIG);
+                boolean hasYml = loader.getResource(ymlPath) != null;
+                boolean hasGroovy = loader.getResource(groovyPath) != null;
+                if (hasYml && hasGroovy) {
+                    throw new RuntimeException("A plugin [" + pluginName +
+                            "] may define a plugin.yml or a plugin.groovy, but not both");
+                }
+                if (hasYml) {
                     namespacedPaths.add(ymlPath);
                     continue;
                 }
-                String groovyPath = PluginUtils.getPluginConfigPath(pluginName, PluginUtils.PLUGIN_GROOVY_CONFIG);
-                if (loader.getResource(groovyPath) != null) {
+                if (hasGroovy) {
                     namespacedPaths.add(groovyPath);
                     continue;
                 }

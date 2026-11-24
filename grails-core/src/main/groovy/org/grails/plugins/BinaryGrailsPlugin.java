@@ -62,6 +62,16 @@ import org.grails.core.io.StaticResourceLoader;
 @SuppressWarnings("rawtypes")
 public class BinaryGrailsPlugin extends DefaultGrailsPlugin {
 
+    /**
+     * Legacy XML plugin descriptor path.
+     *
+     * @deprecated Replaced in Grails 9.0 by {@link PluginUtils#PLUGINS_IMPORTS_PATH} and
+     *             {@code META-INF/grails/plugins/<name>/plugin.properties}.
+     */
+    @Deprecated(since = "9.0", forRemoval = true)
+    @SuppressWarnings("removal")
+    public static final String PLUGIN_DESCRIPTOR_PATH = PluginUtils.LEGACY_PLUGIN_DESCRIPTOR_PATH;
+
     public static final String VIEWS_PROPERTIES = "views.properties";
     public static final String RELATIVE_VIEWS_PROPERTIES = "gsp/views.properties";
     public static final char UNDERSCORE = '_';
@@ -123,12 +133,38 @@ public class BinaryGrailsPlugin extends DefaultGrailsPlugin {
     public BinaryGrailsPlugin(PluginDescriptor descriptor, PluginMetadata metadata, GrailsApplication application) {
         super(metadata, descriptor.getResource(), application);
         this.descriptor = descriptor;
-        this.baseResource = descriptor.getResource();
+        Resource archiveRoot = resolveArchiveRootResource(descriptor.getResource());
+        this.baseResource = archiveRoot != null ? archiveRoot : descriptor.getResource();
         this.isJar = resolveIsJar(this.baseResource, descriptor, null);
         this.projectDirectory = null;
-        this.baseResourcesResource = null;
+        this.baseResourcesResource = archiveRoot;
         initializeProvidedArtefacts(descriptor.getProvidedClasses());
         initializeViewMap(descriptor);
+    }
+
+    @SuppressWarnings({"deprecation", "removal"})
+    private static @Nullable Resource resolveArchiveRootResource(@Nullable Resource descriptorResource) {
+        if (descriptorResource == null) {
+            return null;
+        }
+        try {
+            String urlStr = descriptorResource.getURL().toString();
+            int markerIdx = urlStr.lastIndexOf(PluginUtils.PLUGIN_DESCRIPTORS_PREFIX);
+            if (markerIdx < 0) {
+                markerIdx = urlStr.lastIndexOf(PluginUtils.LEGACY_PLUGIN_DESCRIPTOR_PATH);
+            }
+            if (markerIdx > 0) {
+                return new UrlResource(urlStr.substring(0, markerIdx));
+            }
+        } catch (IOException e) {
+            // fall through
+        }
+        return null;
+    }
+
+    @Override
+    public void refresh() {
+        // Binary plugins are pre-compiled and cannot be re-parsed from their descriptor resource
     }
 
     private static boolean resolveIsJar(
@@ -247,10 +283,11 @@ public class BinaryGrailsPlugin extends DefaultGrailsPlugin {
      * @return the resource or {@code null} if it doesn't exist
      */
     public @Nullable Resource getResource(String path) {
+        String normalizedPath = path.startsWith("/") ? path : "/" + path;
         final Resource descriptorResource = descriptor != null ? descriptor.getResource() : null;
         if (descriptorResource != null) {
             try {
-                Resource resource = descriptorResource.createRelative("static" + path);
+                Resource resource = descriptorResource.createRelative("static" + normalizedPath);
                 if (resource != null && resource.exists()) {
                     return resource;
                 }
@@ -260,7 +297,11 @@ public class BinaryGrailsPlugin extends DefaultGrailsPlugin {
         }
         if (baseResource != null) {
             try {
-                Resource resource = baseResource.createRelative("static" + path);
+                Resource metaInfStatic = baseResource.createRelative("META-INF/static" + normalizedPath);
+                if (metaInfStatic != null && metaInfStatic.exists()) {
+                    return metaInfStatic;
+                }
+                Resource resource = baseResource.createRelative("static" + normalizedPath);
                 if (resource != null && resource.exists()) {
                     return resource;
                 }

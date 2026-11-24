@@ -52,9 +52,9 @@ import org.springframework.util.StringUtils;
 import grails.artefact.Enhanced;
 import grails.core.ArtefactHandler;
 import grails.core.GrailsApplication;
+import grails.core.GrailsApplicationLifeCycle;
 import grails.plugins.GrailsPlugin;
 import grails.plugins.GrailsPluginManager;
-import grails.plugins.Plugin;
 import grails.plugins.exceptions.PluginException;
 import grails.util.Environment;
 import grails.util.GrailsNameUtils;
@@ -357,8 +357,9 @@ public abstract class AbstractGrailsPluginManager implements GrailsPluginManager
 
     public void onStartup(Map<String, Object> event) {
         for (GrailsPlugin plugin : getOrderedPlugins()) {
-            if (plugin.getInstance() instanceof Plugin) {
-                ((Plugin) plugin.getInstance()).onStartup(event);
+            Object instance = plugin.getPluginInstance();
+            if (instance instanceof GrailsApplicationLifeCycle lifeCycle) {
+                lifeCycle.onStartup(event);
             }
         }
     }

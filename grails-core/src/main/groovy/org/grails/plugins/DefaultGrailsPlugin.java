@@ -65,6 +65,7 @@ import grails.core.support.ParentApplicationContextAware;
 import grails.plugins.GrailsPlugin;
 import grails.plugins.GrailsPluginManager;
 import grails.plugins.Plugin;
+import grails.plugins.PluginManagerAware;
 import grails.plugins.exceptions.PluginException;
 import grails.plugins.metadata.GrailsPluginDescriptor;
 import grails.spring.BeanBuilder;
@@ -173,6 +174,9 @@ public class DefaultGrailsPlugin extends AbstractGrailsPlugin implements ParentA
         evictionList = metadata.getEvictions() != null ? metadata.getEvictions() : new String[0];
         observedPlugins = metadata.getObservedPluginNames() != null ? metadata.getObservedPluginNames() : new String[0];
         status = metadata.getEnabled() ? STATUS_ENABLED : STATUS_DISABLED;
+        if (plugin instanceof Plugin p) {
+            p.enabled = metadata.getEnabled();
+        }
         pluginEnvs = metadata.getEnvironments() != null ? new HashMap(metadata.getEnvironments()) : new HashMap();
     }
 
@@ -218,8 +222,8 @@ public class DefaultGrailsPlugin extends AbstractGrailsPlugin implements ParentA
     @Override
     public void setManager(GrailsPluginManager manager) {
         super.setManager(manager);
-        if (plugin instanceof Plugin) {
-            ((Plugin) plugin).setPluginManager(manager);
+        if (plugin instanceof PluginManagerAware aware) {
+            aware.setPluginManager(manager);
         }
     }
 
@@ -442,6 +446,9 @@ public class DefaultGrailsPlugin extends AbstractGrailsPlugin implements ParentA
             pluginObject.doWithApplicationContext();
         }
         else if (plugin instanceof GrailsApplicationLifeCycle lifeCycle) {
+            if (lifeCycle instanceof ApplicationContextAware aware) {
+                aware.setApplicationContext(ctx);
+            }
             lifeCycle.doWithApplicationContext();
         }
         else {
@@ -499,6 +506,14 @@ public class DefaultGrailsPlugin extends AbstractGrailsPlugin implements ParentA
             }
             // Method-based hook: doWithSpring(BeanBuilder) registers beans directly against the builder
             pluginObject.doWithSpring(bb);
+        } else if (plugin instanceof GrailsApplicationLifeCycle lifeCycle) {
+            Closure c = lifeCycle.doWithSpring();
+            if (c != null) {
+                BeanBuilder bb = new BeanBuilder(getParentCtx(), springConfig, grailsApplication.getClassLoader());
+                bb.setBinding(b);
+                c.setDelegate(bb);
+                bb.invokeMethod("beans", new Object[]{c});
+            }
         } else if (plugin instanceof GroovyObject groovyPlugin) {
             if (!pluginBean.isReadableProperty(DO_WITH_SPRING)) {
                 return;
@@ -668,7 +683,8 @@ public class DefaultGrailsPlugin extends AbstractGrailsPlugin implements ParentA
         }
     }
 
-    public GroovyObject getInstance() {
+    @Override
+    public @Nullable GroovyObject getInstance() {
         return plugin instanceof GroovyObject ? (GroovyObject) plugin : null;
     }
 
@@ -679,6 +695,7 @@ public class DefaultGrailsPlugin extends AbstractGrailsPlugin implements ParentA
      * @return the plugin instance, or {@code null}
      * @since 9.0
      */
+    @Override
     public @Nullable Object getPluginInstance() {
         return plugin;
     }
@@ -713,8 +730,8 @@ public class DefaultGrailsPlugin extends AbstractGrailsPlugin implements ParentA
     }
 
     public void notifyOfEvent(Map event) {
-        if (plugin instanceof Plugin) {
-            ((Plugin) plugin).onChange(event);
+        if (plugin instanceof Plugin p) {
+            p.onChange(event);
         }
         else if (onChangeListener != null) {
             invokeOnChangeListener(event);
@@ -732,8 +749,8 @@ public class DefaultGrailsPlugin extends AbstractGrailsPlugin implements ParentA
 
         switch (eventKind) {
             case EVENT_ON_CHANGE:
-                if (plugin instanceof Plugin) {
-                    ((Plugin) plugin).onChange(event);
+                if (plugin instanceof Plugin p) {
+                    p.onChange(event);
                 }
                 else {
                     notifyOfEvent(event);
@@ -741,8 +758,8 @@ public class DefaultGrailsPlugin extends AbstractGrailsPlugin implements ParentA
                 getManager().informObservers(getName(), event);
                 break;
             case EVENT_ON_SHUTDOWN:
-                if (plugin instanceof Plugin) {
-                    ((Plugin) plugin).onShutdown(event);
+                if (plugin instanceof GrailsApplicationLifeCycle lifeCycle) {
+                    lifeCycle.onShutdown(event);
                 }
                 else {
                     invokeOnShutdownEventListener(event);
@@ -750,11 +767,10 @@ public class DefaultGrailsPlugin extends AbstractGrailsPlugin implements ParentA
                 break;
 
             case EVENT_ON_CONFIG_CHANGE:
-                if (plugin instanceof Plugin) {
-                    ((Plugin) plugin).onConfigChange(event);
+                if (plugin instanceof GrailsApplicationLifeCycle lifeCycle) {
+                    lifeCycle.onConfigChange(event);
                 }
                 else {
-
                     invokeOnConfigChangeListener(event);
                 }
                 break;
@@ -862,15 +878,18 @@ public class DefaultGrailsPlugin extends AbstractGrailsPlugin implements ParentA
         return getName() + '-' + getVersion();
     }
 
-    public org.grails.io.support.Resource getDescriptor() {
-        return new SpringResource(pluginDescriptor);
+    public org.grails.io.support.@Nullable Resource getDescriptor() {
+        return pluginDescriptor != null ? new SpringResource(pluginDescriptor) : null;
     }
 
-    public void setDescriptor(Resource descriptor) {
+    public void setDescriptor(@Nullable Resource descriptor) {
         pluginDescriptor = descriptor;
     }
 
-    public org.grails.io.support.Resource getPluginDir() {
+    public org.grails.io.support.@Nullable Resource getPluginDir() {
+        if (pluginDescriptor == null) {
+            return null;
+        }
         try {
             return new SpringResource(pluginDescriptor.createRelative("."));
         }

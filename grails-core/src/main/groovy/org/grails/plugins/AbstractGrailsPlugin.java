@@ -25,6 +25,7 @@ import java.util.Map;
 
 import groovy.lang.GroovyObjectSupport;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -158,7 +159,7 @@ public abstract class AbstractGrailsPlugin extends GroovyObjectSupport implement
         return GrailsNameUtils.getScriptName(getName());
     }
 
-    public Class<?> getPluginClass() {
+    public @Nullable Class<?> getPluginClass() {
         return pluginClass;
     }
 

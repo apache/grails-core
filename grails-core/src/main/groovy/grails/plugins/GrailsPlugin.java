@@ -24,6 +24,8 @@ import java.util.Map;
 
 import groovy.lang.GroovyObject;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.beans.factory.BeanRegistrar;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
@@ -302,10 +304,23 @@ public interface GrailsPlugin extends ApplicationContextAware, Comparable, Grail
     GrailsPluginManager getManager();
 
     /**
-     * Retrieves the wrapped plugin instance for this plugin
-     * @return The plugin instance
+     * Retrieves the wrapped Groovy plugin instance for this plugin, or {@code null} if backed by a
+     * Java descriptor class or a descriptor-less starter plugin.
+     *
+     * @return The Groovy plugin instance, or {@code null}
      */
-    GroovyObject getInstance();
+    @Nullable GroovyObject getInstance();
+
+    /**
+     * Retrieves the underlying plugin descriptor instance, which may be a Groovy or Java object,
+     * or {@code null} for descriptor-less starter plugins.
+     *
+     * @return The plugin instance, or {@code null}
+     * @since 9.0
+     */
+    default @Nullable Object getPluginInstance() {
+        return getInstance();
+    }
 
     /**
      * Sets the plugin manager for this plugin
@@ -391,11 +406,11 @@ public interface GrailsPlugin extends ApplicationContextAware, Comparable, Grail
     String getFileSystemShortName();
 
     /**
-     * Returns the underlying class that represents this plugin
+     * Returns the underlying class that represents this plugin, or {@code null} for descriptor-less starter plugins.
      *
-     * @return The plugin class
+     * @return The plugin class, or {@code null}
      */
-    Class<?> getPluginClass();
+    @Nullable Class<?> getPluginClass();
 
     /**
      * A list of resources that the plugin should exclude from the packaged distribution

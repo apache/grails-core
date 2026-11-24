@@ -38,6 +38,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.regex.Pattern;
 
 import javax.xml.XMLConstants;
 import javax.xml.parsers.ParserConfigurationException;
@@ -156,6 +157,11 @@ public final class PluginUtils {
     public static final String GENERATED_CONFIG_PATH = "META-INF/grails/plugin-configuration/";
 
     /**
+     * Strict pattern for logical plugin names used as path segments under {@link #PLUGIN_DESCRIPTORS_PREFIX}.
+     */
+    private static final Pattern VALID_PLUGIN_NAME_PATTERN = Pattern.compile("^[A-Za-z0-9][A-Za-z0-9._-]*$");
+
+    /**
      * The legacy classpath location for XML plugin descriptors generated prior to Grails 9.
      *
      * @deprecated Replaced in Grails 9.0 by {@link #PLUGINS_IMPORTS_PATH} and
@@ -163,7 +169,17 @@ public final class PluginUtils {
      *             will be removed in Grails 10.0.
      */
     @Deprecated(since = "9.0", forRemoval = true)
-    public static final String LEGACY_PLUGIN_DESCRIPTOR_PATH = "META-INF/grails-plugin.xml";
+    public static final String PLUGIN_XML_PATTERN = "META-INF/grails-plugin.xml";
+
+    /**
+     * The legacy classpath location for XML plugin descriptors generated prior to Grails 9.
+     *
+     * @deprecated Replaced in Grails 9.0 by {@link #PLUGINS_IMPORTS_PATH} and
+     *             {@code META-INF/grails/plugins/<name>/plugin.properties}. Read-only fallback support
+     *             will be removed in Grails 10.0.
+     */
+    @Deprecated(since = "9.0", forRemoval = true)
+    public static final String LEGACY_PLUGIN_DESCRIPTOR_PATH = PLUGIN_XML_PATTERN;
 
     /**
      * The naming suffix required for traditional Grails plugin implementation classes.
@@ -175,6 +191,37 @@ public final class PluginUtils {
     }
 
     /**
+     * Returns {@code true} if the given plugin name is safe to use as a single path segment under
+     * {@link #PLUGIN_DESCRIPTORS_PREFIX}.
+     *
+     * @param pluginName the raw or normalized plugin name
+     * @return {@code true} if valid and free of path traversal characters
+     * @since 9.0
+     */
+    public static boolean isValidPluginName(@Nullable String pluginName) {
+        if (pluginName == null || pluginName.isBlank()) {
+            return false;
+        }
+        String trimmed = pluginName.trim();
+        return VALID_PLUGIN_NAME_PATTERN.matcher(trimmed).matches() && !trimmed.contains("..");
+    }
+
+    private static String validateNormalizedPluginName(String pluginName) {
+        if (!isValidPluginName(pluginName)) {
+            throw new IllegalArgumentException("Invalid Grails plugin name: [" + pluginName + "]");
+        }
+        return normalizePluginName(pluginName.trim());
+    }
+
+    private static String validateConfigFileName(String configFileName) {
+        if (configFileName == null || configFileName.isBlank() ||
+                configFileName.contains("/") || configFileName.contains("\\") || configFileName.contains("..")) {
+            throw new IllegalArgumentException("Invalid plugin configuration file name: [" + configFileName + "]");
+        }
+        return configFileName;
+    }
+
+    /**
      * Returns the classpath location of a plugin's descriptor properties file.
      *
      * @param pluginName the logical plugin name
@@ -182,7 +229,7 @@ public final class PluginUtils {
      * @since 9.0
      */
     public static String getPluginDescriptorPath(String pluginName) {
-        return PLUGIN_DESCRIPTORS_PREFIX + normalizePluginName(pluginName) + "/" + PLUGIN_PROPERTIES_FILE;
+        return PLUGIN_DESCRIPTORS_PREFIX + validateNormalizedPluginName(pluginName) + "/" + PLUGIN_PROPERTIES_FILE;
     }
 
     /**
@@ -194,7 +241,8 @@ public final class PluginUtils {
      * @since 9.0
      */
     public static String getPluginConfigPath(String pluginName, String configFileName) {
-        return PLUGIN_DESCRIPTORS_PREFIX + normalizePluginName(pluginName) + "/" + configFileName;
+        return PLUGIN_DESCRIPTORS_PREFIX + validateNormalizedPluginName(pluginName) + "/" +
+                validateConfigFileName(configFileName);
     }
 
     /**
@@ -205,7 +253,7 @@ public final class PluginUtils {
      * @since 9.0
      */
     public static String getPluginViewsPath(String pluginName) {
-        return PLUGIN_DESCRIPTORS_PREFIX + normalizePluginName(pluginName) + "/" + PLUGIN_VIEWS_FILE;
+        return PLUGIN_DESCRIPTORS_PREFIX + validateNormalizedPluginName(pluginName) + "/" + PLUGIN_VIEWS_FILE;
     }
 
     /**
@@ -253,7 +301,7 @@ public final class PluginUtils {
         return descriptors;
     }
 
-    @SuppressWarnings("deprecation")
+    @SuppressWarnings({"deprecation", "removal"})
     private static void scanLegacyXmlPluginDescriptors(
             ClassLoader classLoader,
             List<PluginDescriptor> descriptors,
@@ -286,9 +334,11 @@ public final class PluginUtils {
                     }
 
                     String xmlPluginName = handler.getPluginName();
-                    String normalizedName = xmlPluginName != null ? normalizePluginName(xmlPluginName) : null;
-                    String label = (normalizedName != null && remainingClasses.size() == pluginClasses.size()) ?
-                            normalizedName : String.join(", ", remainingClasses);
+                    String normalizedName = (xmlPluginName != null && isValidPluginName(xmlPluginName)) ?
+                            normalizePluginName(xmlPluginName) : null;
+                    boolean partialDedupe = remainingClasses.size() != pluginClasses.size();
+                    String descriptorName = partialDedupe ? null : normalizedName;
+                    String label = descriptorName != null ? descriptorName : String.join(", ", remainingClasses);
                     LOG.warn("Plugin [{}] was discovered via legacy {} at [{}], which is deprecated in Grails 9.0 " +
                                     "and will be removed in Grails 10.0. Rebuild this plugin against Grails 9 to " +
                                     "generate {} and META-INF/grails/plugins/<name>/plugin.properties.",
@@ -297,7 +347,7 @@ public final class PluginUtils {
                     Resource descriptorResource = new UrlResource(url);
                     descriptors.add(new PluginDescriptor(
                             descriptorResource,
-                            normalizedName,
+                            descriptorName,
                             handler.getPluginVersion(),
                             null,
                             remainingClasses,
@@ -360,7 +410,12 @@ public final class PluginUtils {
                         }
                         String trimmed = line.trim();
                         if (!trimmed.isEmpty()) {
-                            pluginNames.add(normalizePluginName(trimmed));
+                            if (isValidPluginName(trimmed)) {
+                                pluginNames.add(normalizePluginName(trimmed));
+                            } else {
+                                LOG.warn("Ignoring invalid plugin name [{}] in {} at [{}]",
+                                        trimmed, PLUGINS_IMPORTS_PATH, url);
+                            }
                         }
                     }
                 } catch (IOException e) {
@@ -396,9 +451,39 @@ public final class PluginUtils {
      */
     public static PluginInfo createPluginInfoByDescriptor(Class<?> pluginClass, PluginDescriptor descriptor, boolean dynamic) {
         PluginMetadata metadata = PluginUtils.extractPluginMetadata(descriptor, pluginClass);
+        if (metadata == null) {
+            throw new IllegalArgumentException(
+                    "Could not extract plugin metadata for class [" + pluginClass.getName() + "]");
+        }
         ClassLoader loader = pluginClass.getClassLoader();
-        String name = metadata != null ? metadata.getName() : descriptor.getPluginName();
-        Resource configResource = PluginUtils.readPluginConfiguration(name, pluginClass, loader);
+        Resource configResource = PluginUtils.readPluginConfiguration(metadata.getName(), pluginClass, loader);
+        return new PluginInfo(
+                descriptor,
+                metadata,
+                configResource,
+                dynamic
+        );
+    }
+
+    /**
+     * Creates a {@link PluginInfo} for a descriptor-less starter plugin.
+     *
+     * @param descriptor the plugin descriptor
+     * @param classLoader optional class loader used to locate namespaced plugin configuration
+     * @param dynamic whether the plugin originated from a dynamic plugin configuration
+     * @return the created plugin info
+     * @since 9.0
+     */
+    public static PluginInfo createPluginInfoForDescriptor(
+            PluginDescriptor descriptor,
+            @Nullable ClassLoader classLoader,
+            boolean dynamic) {
+        PluginMetadata metadata = PluginUtils.extractPluginMetadata(descriptor, null);
+        if (metadata == null) {
+            throw new IllegalArgumentException(
+                    "Could not extract plugin metadata for descriptor [" + descriptor.getPluginName() + "]");
+        }
+        Resource configResource = PluginUtils.readPluginConfiguration(metadata.getName(), null, classLoader);
         return new PluginInfo(
                 descriptor,
                 metadata,
@@ -486,7 +571,11 @@ public final class PluginUtils {
             return extractPluginMetadataFromDescriptor(descriptor, null);
         }
         if (pluginClass.isAnnotationPresent(GrailsPluginDescriptor.class)) {
-            return extractPluginMetadataFromAnnotation(pluginClass, descriptor.getPluginVersion());
+            return extractPluginMetadataFromAnnotation(
+                    pluginClass, descriptor.getPluginVersion(), descriptor.getGrailsVersionRange());
+        }
+        if (!isGrailsPluginClassNamedCorrectly(pluginClass)) {
+            return null;
         }
         if (descriptor.isMetadataComplete() && descriptor.getPluginName() != null) {
             return extractPluginMetadataFromDescriptor(descriptor, pluginClass);
@@ -514,7 +603,7 @@ public final class PluginUtils {
             return null;
         }
         if (pluginClass.isAnnotationPresent(GrailsPluginDescriptor.class)) {
-            return extractPluginMetadataFromAnnotation(pluginClass, fallbackVersion);
+            return extractPluginMetadataFromAnnotation(pluginClass, fallbackVersion, null);
         }
 
         String pluginName = getLogicalPluginName(pluginClass);
@@ -566,27 +655,33 @@ public final class PluginUtils {
 
     private static PluginMetadata extractPluginMetadataFromAnnotation(
             Class<?> pluginClass,
-            @Nullable String fallbackVersion) {
+            @Nullable String fallbackVersion,
+            @Nullable String fallbackGrailsVersion) {
         GrailsPluginDescriptor annotation = pluginClass.getAnnotation(GrailsPluginDescriptor.class);
         String pluginName = getLogicalPluginName(pluginClass);
         String pluginVersion = !annotation.version().isBlank() ? annotation.version().trim() : fallbackVersion;
         if (pluginVersion == null || pluginVersion.isBlank()) {
             throw new PluginException("Plugin [" + pluginName + "] must specify a version!");
         }
-        String grailsVersion = !annotation.grailsVersion().isBlank() ? annotation.grailsVersion().trim() : null;
+        String grailsVersion = !annotation.grailsVersion().isBlank() ?
+                annotation.grailsVersion().trim() : fallbackGrailsVersion;
 
         Map<String, Object> dependencies = new LinkedHashMap<>();
         for (String depSpec : annotation.dependsOn()) {
             if (depSpec == null || depSpec.isBlank()) {
                 continue;
             }
-            int sep = depSpec.indexOf(':');
-            if (sep > 0) {
-                String depName = normalizePluginName(depSpec.substring(0, sep).trim());
-                String depVersion = depSpec.substring(sep + 1).trim();
-                dependencies.put(depName, depVersion.isEmpty() ? "*" : depVersion);
+            String trimmedSpec = depSpec.trim();
+            int sep = trimmedSpec.indexOf(':');
+            if (sep >= 0) {
+                String rawName = trimmedSpec.substring(0, sep).trim();
+                if (rawName.isEmpty()) {
+                    continue;
+                }
+                String depVersion = trimmedSpec.substring(sep + 1).trim();
+                dependencies.put(normalizePluginName(rawName), depVersion.isEmpty() ? "*" : depVersion);
             } else {
-                dependencies.put(normalizePluginName(depSpec.trim()), "*");
+                dependencies.put(normalizePluginName(trimmedSpec), "*");
             }
         }
 
@@ -605,7 +700,7 @@ public final class PluginUtils {
                 dependencies,
                 dependencies.keySet().toArray(new String[0]),
                 normalizeNameArray(annotation.evict()),
-                annotation.observe(),
+                normalizeNameArray(annotation.observe()),
                 environments,
                 annotation.enabled()
         );
@@ -639,18 +734,20 @@ public final class PluginUtils {
                 dependencies,
                 dependencies.keySet().toArray(new String[0]),
                 normalizeNameArray(descriptor.getEvict().toArray(new String[0])),
-                descriptor.getObserve().toArray(new String[0]),
+                normalizeNameArray(descriptor.getObserve().toArray(new String[0])),
                 environments,
                 descriptor.isEnabled()
         );
     }
 
     private static String[] normalizeNameArray(String[] names) {
-        String[] result = new String[names.length];
-        for (int i = 0; i < names.length; i++) {
-            result[i] = normalizePluginName(names[i].trim());
+        List<String> result = new ArrayList<>(names.length);
+        for (String name : names) {
+            if (name != null && !name.isBlank()) {
+                result.add(normalizePluginName(name.trim()));
+            }
         }
-        return result;
+        return result.toArray(new String[0]);
     }
 
     private static Map<String, Set<Object>> buildEnvironmentsMap(List<String> includes, List<String> excludes) {
@@ -900,7 +997,7 @@ public final class PluginUtils {
         ClassLoader loader = classLoader != null ? classLoader :
                 (pluginClass != null ? pluginClass.getClassLoader() : Thread.currentThread().getContextClassLoader());
 
-        if (effectiveName != null && loader != null) {
+        if (effectiveName != null && isValidPluginName(effectiveName) && loader != null) {
             URL namespacedYml = loader.getResource(getPluginConfigPath(effectiveName, PLUGIN_YML_CONFIG));
             URL namespacedGroovy = loader.getResource(getPluginConfigPath(effectiveName, PLUGIN_GROOVY_CONFIG));
             if (namespacedYml != null && namespacedGroovy != null) {
@@ -919,7 +1016,7 @@ public final class PluginUtils {
             return null;
         }
 
-        Resource generatedResource = findGeneratedConfiguration(pluginClass);
+        Resource generatedResource = findGeneratedConfiguration(pluginClass, loader);
         if (generatedResource != null) {
             return generatedResource;
         }
@@ -955,8 +1052,8 @@ public final class PluginUtils {
         return GENERATED_CONFIG_PATH + pluginClassName + "/" + configFileName;
     }
 
-    private static @Nullable Resource findGeneratedConfiguration(Class<?> pluginClass) {
-        ClassLoader classLoader = pluginClass.getClassLoader();
+    private static @Nullable Resource findGeneratedConfiguration(Class<?> pluginClass, @Nullable ClassLoader loader) {
+        ClassLoader classLoader = loader != null ? loader : pluginClass.getClassLoader();
         if (classLoader == null) {
             return null;
         }
@@ -1173,13 +1270,13 @@ public final class PluginUtils {
 
     private static String[] toStringArray(Object value) {
         if (value instanceof List<?> list) {
-            return list.stream().map(Object::toString).toArray(String[]::new);
+            return list.stream().map(o -> o == null ? "" : o.toString()).toArray(String[]::new);
         }
         if (value instanceof String[] array) {
             return array;
         }
         if (value instanceof Collection<?> collection) {
-            return collection.stream().map(Object::toString).toArray(String[]::new);
+            return collection.stream().map(o -> o == null ? "" : o.toString()).toArray(String[]::new);
         }
         if (value instanceof String s) {
             return new String[]{s};

@@ -39,18 +39,21 @@ import org.apache.grails.core.plugins.PluginUtils;
 public class GrailsPluginRuntimeHints implements RuntimeHintsRegistrar {
 
     @Override
-    @SuppressWarnings("deprecation")
+    @SuppressWarnings({"deprecation", "removal"})
     public void registerHints(RuntimeHints hints, @Nullable ClassLoader classLoader) {
         hints.resources().registerPattern(PluginUtils.PLUGINS_IMPORTS_PATH);
         ClassLoader loader = (classLoader != null) ? classLoader : ClassUtils.getDefaultClassLoader();
+        if (loader == null) {
+            return;
+        }
         registerResourceIfPresent(hints, loader, PluginUtils.LEGACY_PLUGIN_DESCRIPTOR_PATH);
+        for (String importName : PluginUtils.scanPluginImports(loader)) {
+            registerPluginResources(hints, loader, importName);
+        }
         for (PluginDescriptor descriptor : PluginUtils.scanPluginDescriptorResources(loader)) {
             String pluginName = descriptor.getPluginName();
-            if (pluginName != null && !pluginName.isBlank()) {
-                registerResourceIfPresent(hints, loader, PluginUtils.getPluginDescriptorPath(pluginName));
-                registerResourceIfPresent(hints, loader, PluginUtils.getPluginConfigPath(pluginName, PluginUtils.PLUGIN_YML_CONFIG));
-                registerResourceIfPresent(hints, loader, PluginUtils.getPluginConfigPath(pluginName, PluginUtils.PLUGIN_GROOVY_CONFIG));
-                registerResourceIfPresent(hints, loader, PluginUtils.getPluginViewsPath(pluginName));
+            if (PluginUtils.isValidPluginName(pluginName)) {
+                registerPluginResources(hints, loader, pluginName);
             }
             for (String pluginClass : descriptor.getProvidedPlugins()) {
                 if (RegistrableTypes.loads(pluginClass, loader)) {
@@ -64,6 +67,13 @@ public class GrailsPluginRuntimeHints implements RuntimeHintsRegistrar {
                 }
             }
         }
+    }
+
+    private static void registerPluginResources(RuntimeHints hints, ClassLoader loader, String pluginName) {
+        registerResourceIfPresent(hints, loader, PluginUtils.getPluginDescriptorPath(pluginName));
+        registerResourceIfPresent(hints, loader, PluginUtils.getPluginConfigPath(pluginName, PluginUtils.PLUGIN_YML_CONFIG));
+        registerResourceIfPresent(hints, loader, PluginUtils.getPluginConfigPath(pluginName, PluginUtils.PLUGIN_GROOVY_CONFIG));
+        registerResourceIfPresent(hints, loader, PluginUtils.getPluginViewsPath(pluginName));
     }
 
     private static void registerResourceIfPresent(RuntimeHints hints, ClassLoader loader, String resourcePath) {

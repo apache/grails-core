@@ -36,7 +36,7 @@ public final class PluginMetadata {
 
     private final String name;
     private final String pluginVersion;
-    private final String grailsVersionRange;
+    private final @Nullable String grailsVersionRange;
     private final @Nullable Class<?> pluginClass;
     private final String[] loadAfterNames;
     private final String[] loadBeforeNames;
@@ -66,8 +66,8 @@ public final class PluginMetadata {
     public PluginMetadata(
             String name,
             String pluginVersion,
-            String grailsVersionRange,
-            Class<?> pluginClass,
+            @Nullable String grailsVersionRange,
+            @Nullable Class<?> pluginClass,
             String[] loadAfterNames,
             String[] loadBeforeNames,
             Map<String, Object> dependencies,
@@ -113,16 +113,16 @@ public final class PluginMetadata {
      *
      * @return the supported Grails version
      */
-    public String getGrailsVersionRange() {
+    public @Nullable String getGrailsVersionRange() {
         return grailsVersionRange;
     }
 
     /**
      * Returns the plugin implementation class.
      *
-     * @return the plugin class
+     * @return the plugin class, or {@code null} for descriptor-less starter plugins
      */
-    public Class<?> getPluginClass() {
+    public @Nullable Class<?> getPluginClass() {
         return pluginClass;
     }
 

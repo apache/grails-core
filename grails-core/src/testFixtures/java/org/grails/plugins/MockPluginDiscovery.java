@@ -18,8 +18,12 @@
  */
 package org.grails.plugins;
 
+import java.util.List;
+import java.util.Map;
+
 import grails.plugins.GrailsPlugin;
 import org.apache.grails.core.plugins.DefaultPluginDiscovery;
+import org.apache.grails.core.plugins.PluginDescriptor;
 import org.apache.grails.core.plugins.PluginInfo;
 import org.apache.grails.core.plugins.PluginUtils;
 
@@ -35,11 +39,50 @@ public class MockPluginDiscovery extends DefaultPluginDiscovery {
     }
 
     public void registerMockPlugin(GrailsPlugin plugin) {
-        registerMockPlugin(PluginUtils.createPluginInfo(plugin.getPluginClass(), null, true));
+        if (plugin instanceof BinaryGrailsPlugin binaryPlugin) {
+            registerMockPlugin(binaryPlugin);
+            return;
+        }
+        Class<?> pluginClass = plugin.getPluginClass();
+        if (pluginClass != null) {
+            registerMockPlugin(PluginUtils.createPluginInfo(pluginClass, null, true));
+            return;
+        }
+        PluginDescriptor descriptor = syntheticDescriptor(plugin);
+        registerMockPlugin(PluginUtils.createPluginInfoForDescriptor(descriptor, null, true));
     }
 
     public void registerMockPlugin(BinaryGrailsPlugin plugin) {
-        registerMockPlugin(PluginUtils.createPluginInfo(plugin.getPluginClass(), plugin.getPluginDescriptor().getResource(), false));
+        PluginDescriptor descriptor = plugin.getPluginDescriptor();
+        Class<?> pluginClass = plugin.getPluginClass();
+        if (pluginClass != null) {
+            registerMockPlugin(PluginUtils.createPluginInfo(
+                    pluginClass, descriptor != null ? descriptor.getResource() : null, false));
+            return;
+        }
+        PluginDescriptor effectiveDescriptor = descriptor != null ? descriptor : syntheticDescriptor(plugin);
+        registerMockPlugin(PluginUtils.createPluginInfoForDescriptor(effectiveDescriptor, null, false));
+    }
+
+    private static PluginDescriptor syntheticDescriptor(GrailsPlugin plugin) {
+        return new PluginDescriptor(
+                null,
+                plugin.getName(),
+                plugin.getVersion(),
+                null,
+                List.of(),
+                List.of(),
+                Map.of(),
+                List.of(),
+                List.of(),
+                Map.of(),
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(),
+                plugin.isEnabled(),
+                true
+        );
     }
 
     public void registerMockPlugin(PluginInfo pluginInfo) {

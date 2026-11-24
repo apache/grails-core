@@ -18,6 +18,8 @@
  */
 package org.apache.grails.core.plugins;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.core.io.Resource;
 
 /**
@@ -31,7 +33,7 @@ public final class PluginInfo {
 
     private final PluginMetadata metadata;
     private final PluginDescriptor pluginDescriptor;
-    private final Resource configResource;
+    private final @Nullable Resource configResource;
     private final boolean dynamic;
 
     /**
@@ -43,7 +45,11 @@ public final class PluginInfo {
      *        {@code plugin.groovy}), or {@code null} if no config file exists
      * @param dynamic {@code true} if this plugin came from dynamically supplied classes or resources
      */
-    PluginInfo(PluginDescriptor pluginDescriptor, PluginMetadata metadata, Resource configResource, boolean dynamic) {
+    PluginInfo(
+            PluginDescriptor pluginDescriptor,
+            PluginMetadata metadata,
+            @Nullable Resource configResource,
+            boolean dynamic) {
         this.metadata = metadata;
         this.pluginDescriptor = pluginDescriptor;
         this.configResource = configResource;
@@ -73,7 +79,7 @@ public final class PluginInfo {
      *
      * @return the plugin class
      */
-    public Class<?> getPluginClass() {
+    public @Nullable Class<?> getPluginClass() {
         return metadata.getPluginClass();
     }
 
@@ -82,7 +88,7 @@ public final class PluginInfo {
      *
      * @return the plugin configuration resource, or {@code null} if the plugin has no external config resource
      */
-    public Resource getConfigResource() {
+    public @Nullable Resource getConfigResource() {
         return configResource;
     }
 
@@ -146,7 +152,7 @@ public final class PluginInfo {
      *
      * @return the declared Grails version
      */
-    public String getGrailsVersionRange() {
+    public @Nullable String getGrailsVersionRange() {
         return getMetadata().getGrailsVersionRange();
     }
 

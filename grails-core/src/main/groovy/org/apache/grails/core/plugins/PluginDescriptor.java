@@ -60,7 +60,7 @@ public class PluginDescriptor {
     public static final String ARTEFACTS_PREFIX = "artefacts.";
     public static final String METADATA_COMPLETE_KEY = "metadata.complete";
 
-    private final Resource resource;
+    private final @Nullable Resource resource;
     private final @Nullable String pluginName;
     private final @Nullable String pluginVersion;
     private final @Nullable String grailsVersionRange;
@@ -168,8 +168,9 @@ public class PluginDescriptor {
         }
 
         String rawName = trimToNull(properties.getProperty(NAME_KEY));
+        String trimmedDefaultName = trimToNull(defaultPluginName);
         String pluginName = rawName != null ? PluginUtils.normalizePluginName(rawName) :
-                (defaultPluginName != null ? PluginUtils.normalizePluginName(defaultPluginName) : null);
+                (trimmedDefaultName != null ? PluginUtils.normalizePluginName(trimmedDefaultName) : null);
         String pluginVersion = trimToNull(properties.getProperty(VERSION_KEY));
         String grailsVersion = trimToNull(properties.getProperty(GRAILS_VERSION_KEY));
 
@@ -187,7 +188,8 @@ public class PluginDescriptor {
                 String depName = key.substring(DEPENDS_ON_PREFIX.length()).trim();
                 String depVersion = properties.getProperty(key);
                 if (!depName.isEmpty() && depVersion != null) {
-                    dependsOn.put(PluginUtils.normalizePluginName(depName), depVersion.trim());
+                    String trimmedVersion = depVersion.trim();
+                    dependsOn.put(PluginUtils.normalizePluginName(depName), trimmedVersion.isEmpty() ? "*" : trimmedVersion);
                 }
             } else if (key.startsWith(ARTEFACTS_PREFIX)) {
                 String artefactType = key.substring(ARTEFACTS_PREFIX.length()).trim();
@@ -402,15 +404,30 @@ public class PluginDescriptor {
         if (!(o instanceof PluginDescriptor that)) {
             return false;
         }
-        return Objects.equals(resource, that.resource) &&
+        return enabled == that.enabled &&
+                metadataComplete == that.metadataComplete &&
+                Objects.equals(resource, that.resource) &&
                 Objects.equals(pluginName, that.pluginName) &&
+                Objects.equals(pluginVersion, that.pluginVersion) &&
+                Objects.equals(grailsVersionRange, that.grailsVersionRange) &&
                 Objects.equals(providedPlugins, that.providedPlugins) &&
-                Objects.equals(providedClasses, that.providedClasses);
+                Objects.equals(providedClasses, that.providedClasses) &&
+                Objects.equals(providedArtefactsByType, that.providedArtefactsByType) &&
+                Objects.equals(loadAfter, that.loadAfter) &&
+                Objects.equals(loadBefore, that.loadBefore) &&
+                Objects.equals(dependsOn, that.dependsOn) &&
+                Objects.equals(evict, that.evict) &&
+                Objects.equals(observe, that.observe) &&
+                Objects.equals(environmentsIncludes, that.environmentsIncludes) &&
+                Objects.equals(environmentsExcludes, that.environmentsExcludes);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(resource, pluginName, providedPlugins, providedClasses);
+        return Objects.hash(resource, pluginName, pluginVersion, grailsVersionRange,
+                providedPlugins, providedClasses, providedArtefactsByType,
+                loadAfter, loadBefore, dependsOn, evict, observe,
+                environmentsIncludes, environmentsExcludes, enabled, metadataComplete);
     }
 
     @Override
