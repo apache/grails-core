@@ -19,7 +19,9 @@
 package grails.init
 
 import java.net.Authenticator
+import java.nio.channels.FileChannel
 import java.nio.file.Files
+import java.nio.file.StandardOpenOption
 import java.util.concurrent.TimeUnit
 import java.util.jar.Attributes
 import java.util.jar.JarEntry
@@ -30,6 +32,8 @@ import java.util.jar.Manifest
 import javax.tools.JavaCompiler
 import javax.tools.ToolProvider
 
+import com.sun.nio.file.ExtendedOpenOption
+import spock.lang.Requires
 import spock.lang.Specification
 import spock.lang.TempDir
 import spock.lang.Unroll
@@ -126,6 +130,46 @@ class StartClassSpec extends Specification {
         StartClass.defect(jar) == 'it does not open as a jar: ZipException'
         StartClass.defect(new File(dir, 'missing.jar')) == 'it is not a file'
         StartClass.defect(dir) == 'it is not a file'
+    }
+
+    // While a wrapper moves its download into the place of the jar, Windows holds the file in a way that an open
+    // by a reader does not share, and such an open fails as if the file were not there. A channel that does not
+    // share reading holds the file the same way, for as long as the test wants.
+    @Requires({ os.windows })
+    @Unroll
+    def "a jar that cannot be opened for a moment, as on Windows while another wrapper moves its download into its place, is #outcome once it opens"() {
+        given: 'the jar, held so that no other open of it can read it'
+        File jar = cliJar('grails-cli-all.jar', null, [START_CLASS])
+        FileChannel held = FileChannel.open(jar.toPath(), StandardOpenOption.READ, ExtendedOpenOption.NOSHARE_READ)
+        assert !opens(jar)
+        Object result = 'nothing yet'
+        Thread looking = new Thread({ result = look(jar) } as Runnable, 'looking at the jar')
+
+        when: 'the jar is let go once the look has found that it cannot open it, and waits'
+        looking.start()
+        boolean waiting = false
+        long deadline = System.nanoTime() + TimeUnit.MINUTES.toNanos(1)
+        while (!waiting && looking.alive && System.nanoTime() < deadline) {
+            waiting = looking.state == Thread.State.TIMED_WAITING
+            if (!waiting) {
+                Thread.sleep(10)
+            }
+        }
+        held.close()
+        looking.join(TimeUnit.MINUTES.toMillis(1))
+
+        then:
+        waiting
+        !looking.alive
+        result == expected
+
+        cleanup:
+        held?.close()
+
+        where:
+        outcome       | look                                   || expected
+        'found whole' | { File file -> StartClass.defect(file) } || null
+        'started'     | { File file -> startedClassName(file) } || START_CLASS
     }
 
     def "a start class on the class path of the wrapper is not started for the jar"() {
@@ -278,6 +322,24 @@ class StartClassSpec extends Specification {
         } finally {
             process.destroyForcibly()
         }
+    }
+
+    private static boolean opens(File jar) {
+        try {
+            new JarFile(jar).close()
+            return true
+        } catch (FileNotFoundException ignored) {
+            return false
+        }
+    }
+
+    /**
+     * Loads the start class of a jar and lets the jar go, as a wrapper that has ended does.
+     */
+    private static String startedClassName(File jar) {
+        Class<?> loaded = StartClass.load(jar)
+        (loaded.classLoader as URLClassLoader).close()
+        loaded.name
     }
 
     /**

@@ -504,6 +504,8 @@ class GrailsUpdaterRepositoriesSpec extends Specification {
             start.await()
             while (!done.get()) {
                 if (installed('9.0.0').exists()) {
+                    // as a wrapper looks: on Windows it waits through the moment in which the move of another
+                    // wrapper keeps the file from being opened, and finds the jar as it is after the move
                     String defect = StartClass.defect(installed('9.0.0'))
                     if (defect != null) {
                         defects.add(defect)

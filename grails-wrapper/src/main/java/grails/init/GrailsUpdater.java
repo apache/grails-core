@@ -569,8 +569,10 @@ public class GrailsUpdater {
         try {
             Files.move(part, jarFile, ATOMIC_MOVE);
         } catch (IOException e) {
-            // On Windows a jar that a running command line has open cannot be replaced. The jar is the one it
-            // was: when that one is whole it is used, and what was downloaded is dropped.
+            // On Windows a jar that a running command line has open cannot be replaced, nor one that another
+            // wrapper is moving its download into. The jar is the one it was, or that of the other wrapper: when
+            // it is whole it is used, and what was downloaded is dropped. StartClass waits for the move of
+            // another wrapper to end before it says whether the jar is whole.
             if (StartClass.defect(jarFile.toFile()) == null) {
                 System.out.println("...The Grails command line at [" + jarFile.toAbsolutePath() + "] could not be replaced by the download (" + describe(e) + ") and is used as it is: it may be in use by a command that is running.");
                 return false;

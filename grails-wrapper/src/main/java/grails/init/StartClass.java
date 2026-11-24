@@ -19,6 +19,7 @@
 package grails.init;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -46,6 +47,13 @@ public final class StartClass {
 
     private static final String ENTRY = NAME.replace('.', '/') + ".class";
 
+    // Of the systems the wrapper runs on, only Windows refuses to open a file that is there for a moment: while
+    // another wrapper moves its download into the place of the jar, the move holds the file in a way an open by a
+    // reader does not share
+    private static final boolean WINDOWS = File.separatorChar == '\\';
+    private static final long OPEN_RETRY_MILLIS = 30_000;
+    private static final long OPEN_PAUSE_MILLIS = 50;
+
     private StartClass() {
     }
 
@@ -61,7 +69,7 @@ public final class StartClass {
         if (!cliJar.isFile()) {
             return "it is not a file";
         }
-        try (JarFile jar = new JarFile(cliJar)) {
+        try (JarFile jar = open(cliJar)) {
             return jar.getEntry(ENTRY) != null ? null : "it has no start class [" + NAME + "]";
         } catch (IOException | RuntimeException e) {
             // the text of the JDK, and never content of the file
@@ -80,9 +88,12 @@ public final class StartClass {
     public static Class<?> load(File cliJar) throws IOException {
         URLClassLoader loader = new URLClassLoader(new URL[]{cliJar.toURI().toURL()});
         Class<?> startClass;
-        try {
+        // the jar is held open while the class loader opens it: on Windows no other wrapper can then move its
+        // download into the place of the jar, which would keep the class loader from opening it, and the class
+        // loader takes a jar it cannot open for one without the class
+        try (JarFile held = open(cliJar)) {
             startClass = Class.forName(NAME, true, loader);
-        } catch (ClassNotFoundException e) {
+        } catch (ClassNotFoundException | IOException e) {
             throw new IllegalStateException("The Grails command line at [" + cliJar.getAbsolutePath() + "] has no start class [" + NAME + "]. " +
                     "It is not a version of Grails this wrapper can start, or the download is incomplete: delete the file and run the command again.", e);
         }
@@ -91,5 +102,28 @@ public final class StartClass {
             throw new IllegalStateException("The start class [" + NAME + "] of the Grails command line at [" + cliJar.getAbsolutePath() + "] is not a class of that file.");
         }
         return startClass;
+    }
+
+    /**
+     * Opens a jar. On Windows an open fails as if the file were not there while another wrapper moves its
+     * download into the place of the jar; it is tried again until the file opens, for a while.
+     */
+    private static JarFile open(File cliJar) throws IOException {
+        long deadline = System.currentTimeMillis() + OPEN_RETRY_MILLIS;
+        while (true) {
+            try {
+                return new JarFile(cliJar);
+            } catch (FileNotFoundException e) {
+                if (!WINDOWS || !cliJar.isFile() || System.currentTimeMillis() > deadline) {
+                    throw e;
+                }
+                try {
+                    Thread.sleep(OPEN_PAUSE_MILLIS);
+                } catch (InterruptedException interrupted) {
+                    Thread.currentThread().interrupt();
+                    throw e;
+                }
+            }
+        }
     }
 }
