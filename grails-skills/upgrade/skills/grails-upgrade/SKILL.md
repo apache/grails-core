@@ -893,6 +893,11 @@ These bugs are fixed, which changes what the browser submits or what the page co
 
 # After the Upgrade
 
+## Negated conditions on an embedded value in MongoDB
+
+- A negated condition on an embedded value (`address { ne('city', x) }`, `notIn`, `not { eq('address.city', x) }`, `where { address.city != x }`) also matched an owner with no embedded value, because MongoDB's `$ne`, `$nin`, `$not` and `$nor` match a missing field. That owner no longer matches, as with Hibernate: the embedded value is required in the `or` branch that holds the negation.
+- An owner that has the value with the property unset still matches a negated condition, as before. Queries that returned owners without an embedded value return fewer rows, and `deleteAll()` and `updateAll()` select the same rows.
+
 ## Verification Checklist
 
 Run verification through public application behavior, not only compilation.

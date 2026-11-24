@@ -23,9 +23,11 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
+import java.util.Set;
 
 import groovy.lang.Closure;
 import org.codehaus.groovy.runtime.DefaultGroovyMethods;
@@ -669,6 +671,7 @@ public class MongoQuery extends BsonQuery implements QueryArgumentsAware {
         }
 
         populateMongoQuery(queryEncoder, query, criteria, entity);
+        requireEmbeddedValuesOfNegations(entity, query);
     }
 
     @SuppressWarnings("unchecked")
@@ -711,6 +714,96 @@ public class MongoQuery extends BsonQuery implements QueryArgumentsAware {
             } else {
                 throw new InvalidDataAccessResourceUsageException("Queries of type " + criterion.getClass().getSimpleName() + " are not supported by this implementation");
             }
+        }
+    }
+
+    private static final Set<String> NEGATING_OPERATORS = Set.of("$ne", "$nin", NOT_OPERATOR);
+
+    /**
+     * MongoDB matches a missing field with {@code $ne}, {@code $nin}, {@code $not} and {@code $nor}, so a negated
+     * condition on a property of an embedded value also matches an owner that has no such value. An embedded value is the
+     * columns of its owner for a join-based store, where a negated condition on a missing value is unknown and does not
+     * match, as the condition itself does not. A negation on a path through an embedded property therefore also requires
+     * that embedded value, at the level of the query document that holds the negation: the branch of an {@code $and} or
+     * {@code $or} that holds it, and not the whole query, which would drop the owners that match another branch.
+     */
+    private static void requireEmbeddedValuesOfNegations(PersistentEntity entity, Document level) {
+        Set<String> required = new LinkedHashSet<>();
+        for (Map.Entry<String, Object> entry : level.entrySet()) {
+            String key = entry.getKey();
+            Object value = entry.getValue();
+            if (NOR_OPERATOR.equals(key)) {
+                collectEmbeddedPaths(entity, value, required);
+            }
+            else if (key.startsWith("$")) {
+                if (value instanceof List) {
+                    for (Object element : (List<?>) value) {
+                        if (element instanceof Document) {
+                            requireEmbeddedValuesOfNegations(entity, (Document) element);
+                        }
+                    }
+                }
+            }
+            else if (value instanceof Document && negates((Document) value)) {
+                addEmbeddedPrefix(entity, key, required);
+            }
+        }
+        for (String path : required) {
+            Object existing = level.get(path);
+            if (existing instanceof Document) {
+                ((Document) existing).put("$ne", null);
+            }
+            else if (existing == null) {
+                level.put(path, new Document("$ne", null));
+            }
+        }
+    }
+
+    private static boolean negates(Document condition) {
+        for (String operator : NEGATING_OPERATORS) {
+            if (condition.containsKey(operator)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** The paths through embedded properties of every field a {@code $nor} negates, however deep its branches nest. */
+    private static void collectEmbeddedPaths(PersistentEntity entity, Object negated, Set<String> required) {
+        if (negated instanceof List) {
+            for (Object element : (List<?>) negated) {
+                collectEmbeddedPaths(entity, element, required);
+            }
+        }
+        else if (negated instanceof Document) {
+            for (Map.Entry<String, Object> entry : ((Document) negated).entrySet()) {
+                if (entry.getKey().startsWith("$")) {
+                    collectEmbeddedPaths(entity, entry.getValue(), required);
+                }
+                else {
+                    addEmbeddedPrefix(entity, entry.getKey(), required);
+                }
+            }
+        }
+    }
+
+    /** The innermost embedded property that a dotted field goes through, such as {@code address} for {@code address.city}. */
+    private static void addEmbeddedPrefix(PersistentEntity entity, String field, Set<String> required) {
+        String[] parts = field.split("\\.");
+        PersistentEntity current = entity;
+        StringBuilder path = new StringBuilder();
+        String innermost = null;
+        for (int i = 0; i < parts.length - 1 && current != null; i++) {
+            PersistentProperty property = current.getPropertyByName(parts[i]);
+            if (!(property instanceof Embedded)) {
+                break;
+            }
+            path.append(path.length() == 0 ? "" : ".").append(parts[i]);
+            innermost = path.toString();
+            current = ((Embedded) property).getAssociatedEntity();
+        }
+        if (innermost != null) {
+            required.add(innermost);
         }
     }
 
