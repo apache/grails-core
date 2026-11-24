@@ -18,7 +18,6 @@
  */
 package org.apache.grails.data.mongo.core
 
-import com.github.dockerjava.api.model.Ulimit
 import com.mongodb.BasicDBObject
 import com.mongodb.client.MongoClient
 import com.mongodb.client.MongoDatabase
@@ -45,17 +44,13 @@ import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.datastore.mapping.mongo.MongoDatastore
 import org.grails.datastore.mapping.mongo.config.MongoSettings
 import org.grails.datastore.mapping.query.Query
-import org.slf4j.LoggerFactory
 import org.springframework.context.support.GenericApplicationContext
 import org.springframework.context.support.StaticMessageSource
 import org.springframework.validation.Validator
 import org.testcontainers.containers.MongoDBContainer
-import org.testcontainers.containers.output.Slf4jLogConsumer
 
 @Slf4j
 class GrailsDataMongoTckManager extends GrailsDataTckManager {
-
-    private static final long MONGOD_OPEN_FILES_LIMIT = 65536L
 
     MongoDBContainer mongoDBContainer
 
@@ -71,14 +66,7 @@ class GrailsDataMongoTckManager extends GrailsDataTckManager {
     @Override
     void setupSpec() {
         super.setupSpec()
-        // Docker's default soft limit of 1024 open files is easily exhausted by WiredTiger, and a crashed
-        // mongod leaves the test worker waiting for server selection indefinitely
-        mongoDBContainer = new MongoDBContainer(AbstractMongoGrailsExtension.desiredMongoDockerName)
-                .withCreateContainerCmdModifier { cmd ->
-                    cmd.hostConfig.withUlimits([new Ulimit('nofile', MONGOD_OPEN_FILES_LIMIT, MONGOD_OPEN_FILES_LIMIT)])
-                }
-        mongoDBContainer.start()
-        mongoDBContainer.followOutput(new Slf4jLogConsumer(LoggerFactory.getLogger("testcontainers")))
+        mongoDBContainer = MongoContainers.shared()
 
         configuration = [
                 (MongoSettings.SETTING_DATABASE_NAME): 'test',
@@ -91,7 +79,8 @@ class GrailsDataMongoTckManager extends GrailsDataTckManager {
     @Override
     void cleanupSpec() {
         super.cleanupSpec()
-        mongoDBContainer.stop()
+        // the container is shared by the specs of this JVM, so the next one finds the server empty
+        MongoContainers.dropUserDatabases(mongoDBContainer)
     }
 
     @Override

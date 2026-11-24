@@ -29,15 +29,19 @@ import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.model.types.Basic;
+import org.grails.datastore.mapping.model.types.Embedded;
 import org.grails.datastore.mapping.query.Query;
 
 /**
- * Works out which aliases a criteria query declares and registers them, with their join types, in the
- * {@link JpaQueryContext} the query is built against.
+ * Works out which aliases a criteria query declares and registers them in the {@link JpaQueryContext} the query
+ * is built against. The join type of each association path is decided separately, for the whole query, by
+ * {@link JoinPlanner}.
  *
  * <p>An alias comes from three places: one created explicitly with {@code createAlias}, an association
  * criterion that names an alias, and a dotted property name whose first segment is an implicit alias. A join
- * type configured on the {@link DetachedCriteria} is applied to the alias of the same path.</p>
+ * type configured on the {@link DetachedCriteria} is applied to the alias of the same path. An association
+ * block without an alias is registered as an implicit alias of its path, so that its join keeps its join type
+ * when an alias on a nested path goes through the same association.</p>
  *
  * @since 8.0.1
  */
@@ -68,8 +72,26 @@ final class QueryAliasRegistrar {
      * @return the context, with its aliases registered and explicit entity association joins materialized
      */
     JpaQueryContext createContext(JpaQueryContext parent, From<?, ?> root) {
+        return createContext(parent, root, null);
+    }
+
+    /**
+     * Creates the context of an association block, which knows its path in the enclosing query before its aliases
+     * are materialized, so that an alias of the block for an association the enclosing query already joins uses
+     * that join.
+     *
+     * @param parent the context of the enclosing query
+     * @param root the join of the block's association
+     * @param blockPath the association path of the block, relative to the enclosing context, or {@code null}
+     * @return the context, with its aliases registered and explicit entity association joins materialized
+     */
+    JpaQueryContext createContext(JpaQueryContext parent, From<?, ?> root, String blockPath) {
         List<HibernateAlias> aliases = explicitAliases();
-        JpaQueryContext context = JpaQueryContext.forSubquery(parent, aliases, root);
+        JpaQueryContext context = blockPath != null ? JpaQueryContext.forBlock(parent, aliases, root, blockPath) :
+                JpaQueryContext.forSubquery(parent, aliases, root);
+        if (blockPath == null) {
+            context.setJoinPlan(JoinPlanner.plan(detachedCriteria, hibernateQuery));
+        }
         registerDetachedJoins(context);
         discover(detachedCriteria.getCriteria(), context);
         for (HibernateAlias alias : aliases) {
@@ -102,11 +124,7 @@ final class QueryAliasRegistrar {
      * @param context the context to register the aliases in
      */
     void registerDetachedJoins(JpaQueryContext context) {
-        detachedCriteria.getJoinTypes().forEach((path, joinType) -> {
-            if (!context.getAliasRegistry().isOwnDefined(path)) {
-                context.registerAlias(path, new HibernateAlias(path, path, joinType, false));
-            }
-        });
+        detachedCriteria.getJoinTypes().forEach((path, joinType) -> registerImplicit(context, path, joinType));
     }
 
     /**
@@ -119,32 +137,51 @@ final class QueryAliasRegistrar {
      * @param context the context to register the aliases in
      */
     void discover(List<Query.Criterion> criteria, JpaQueryContext context) {
-        if (criteria == null) {
+        CriteriaVisitor.walk(criteria, new CriteriaVisitor() {
+            @Override
+            public void alias(HibernateAlias alias) {
+                if (!context.hasAlias(alias.alias())) {
+                    context.registerAlias(alias.alias(), alias);
+                }
+            }
+
+            @Override
+            public void block(DetachedAssociationCriteria<?> block) {
+                String associationPath = block.getAssociationPath();
+                if (block.getAlias() != null) {
+                    JoinType joinType = detachedCriteria.getJoinTypes().getOrDefault(associationPath, JoinType.INNER);
+                    context.registerAlias(block.getAlias(), new HibernateAlias(associationPath, block.getAlias(), joinType));
+                }
+                else if (!(block.getAssociation() instanceof Embedded)) {
+                    // The block joins its association with an inner join, whichever part of the query
+                    // joins the association first. A configured join type is already registered.
+                    registerImplicit(context, associationPath, JoinType.INNER);
+                }
+            }
+
+            @Override
+            public void property(String property) {
+                discoverProperty(property, context);
+            }
+        });
+    }
+
+    /**
+     * Registers an implicit alias, named after the path it joins, unless this query declares an alias of that name
+     * or an enclosing query has an explicit one: an implicit alias never hides an explicit alias that is visible
+     * from the scope it is registered in, so a reference to the name still reaches the alias the user declared.
+     *
+     * @param context the context to register the alias in
+     * @param path the association path the alias joins, which is also its name
+     * @param joinType the join type of the alias
+     */
+    private void registerImplicit(JpaQueryContext context, String path, JoinType joinType) {
+        AliasRegistry registry = context.getAliasRegistry();
+        HibernateAlias visible = registry.getDefinition(path);
+        if (registry.isOwnDefined(path) || visible != null && visible.explicit()) {
             return;
         }
-        for (Query.Criterion criterion : criteria) {
-            if (criterion instanceof HibernateAlias ha) {
-                if (!context.hasAlias(ha.alias())) {
-                    context.registerAlias(ha.alias(), ha);
-                }
-            }
-            else if (criterion instanceof DetachedAssociationCriteria<?> dac) {
-                if (dac.getAlias() != null) {
-                    String associationPath = dac.getAssociationPath();
-                    JoinType joinType = detachedCriteria.getJoinTypes().getOrDefault(associationPath, JoinType.INNER);
-                    context.registerAlias(dac.getAlias(), new HibernateAlias(associationPath, dac.getAlias(), joinType));
-                }
-            }
-            else if (criterion instanceof Query.PropertyNameCriterion pnc) {
-                discoverProperty(pnc.getProperty(), context);
-                if (pnc instanceof Query.PropertyComparisonCriterion comparison) {
-                    discoverProperty(comparison.getOtherProperty(), context);
-                }
-            }
-            else if (criterion instanceof Query.Junction junction) {
-                discover(junction.getCriteria(), context);
-            }
-        }
+        context.registerAlias(path, new HibernateAlias(path, path, joinType, false));
     }
 
     private void discoverProperty(String propertyName, JpaQueryContext context) {

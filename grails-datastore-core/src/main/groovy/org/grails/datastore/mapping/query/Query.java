@@ -706,6 +706,9 @@ public abstract class Query implements Cloneable, Serializable {
      * rejected. Subqueries inside an association block are resolved too. {@code exists}, {@code notExists} and the {@code all} and {@code some} forms are rejected
      * with an {@link InvalidDataAccessResourceUsageException}, as they are not supported.</p>
      *
+     * <p>This is for the implementations of a query, which build the statement of a read, an update and a delete from
+     * the result; an application does not call it.</p>
+     *
      * @param criteria the criteria of this query
      * @return the same instance when it holds no subquery, otherwise a copy with the subqueries resolved
      * @throws InvalidDataAccessResourceUsageException for a form that cannot be resolved
