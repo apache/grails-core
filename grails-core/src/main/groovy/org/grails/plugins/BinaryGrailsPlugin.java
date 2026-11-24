@@ -97,7 +97,8 @@ public class BinaryGrailsPlugin extends DefaultGrailsPlugin {
         super(pluginClass,
                 descriptor != null ? descriptor.getResource() : null,
                 application,
-                descriptor != null ? descriptor.getPluginVersion() : null);
+                descriptor != null ? descriptor.getPluginVersion() : null,
+                descriptor != null && descriptor.getProvidedPlugins().size() <= 1 ? descriptor.getPluginName() : null);
         this.descriptor = descriptor;
         URL rootResource = IOUtils.findRootResource(pluginClass);
         this.baseResource = rootResource != null ? new UrlResource(rootResource) : null;

@@ -325,6 +325,42 @@ class BinaryPluginSpec extends Specification {
         loader?.close()
     }
 
+    def "Test BinaryGrailsPlugin honors overridden descriptor name for views and propertySource"() {
+        given: 'a *GrailsPlugin class whose descriptor declares an overridden logical name bar'
+        File root = new File(tempDir, 'renamed-binary-root')
+        File descFile = new File(root, PluginUtils.getPluginDescriptorPath('bar'))
+        descFile.parentFile.mkdirs()
+        descFile.text = """
+            format.version=1
+            name=bar
+            version=1.0.0
+            class=${TestBinaryGrailsPlugin.name}
+            metadata.complete=false
+        """.stripIndent()
+        File viewsFile = new File(root, PluginUtils.getPluginViewsPath('bar'))
+        viewsFile.text = "/bar/index.gsp=${MyView.name}\n"
+
+        def props = new Properties()
+        descFile.withInputStream { props.load(it) }
+        def descriptor = PluginDescriptor.fromProperties('bar', new UrlResource(descFile.toURI().toURL()), props)
+        def loader = new URLClassLoader([root.toURI().toURL()] as URL[], getClass().classLoader)
+        def grailsApp = new DefaultGrailsApplication(loader)
+        def appCtx = new GenericApplicationContext()
+        appCtx.environment.propertySources.addLast(new MapPropertySource('bar-plugin.yml', [renamed: 'yes']))
+        grailsApp.mainContext = appCtx
+
+        when:
+        def binaryPlugin = new BinaryGrailsPlugin(TestBinaryGrailsPlugin, descriptor, grailsApp)
+
+        then: 'the binary plugin uses the overridden name for registration, views, and config lookup'
+        binaryPlugin.name == 'bar'
+        binaryPlugin.resolveView('/bar/index.gsp') == MyView
+        binaryPlugin.propertySource?.getProperty('renamed') == 'yes'
+
+        cleanup:
+        loader?.close()
+    }
+
 }
 
 @GrailsPluginDescriptor(name = 'lifecycle-starter', version = '1.0.0')

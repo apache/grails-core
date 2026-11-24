@@ -127,7 +127,7 @@ public class DefaultGrailsPlugin extends AbstractGrailsPlugin implements ParentA
     private List<WatchPattern> watchedResourcePatterns;
 
     public DefaultGrailsPlugin(Class<?> pluginClass, Resource resource, GrailsApplication application) {
-        this(pluginClass, resource, application, null);
+        this(pluginClass, resource, application, null, null);
     }
 
     protected DefaultGrailsPlugin(
@@ -135,7 +135,19 @@ public class DefaultGrailsPlugin extends AbstractGrailsPlugin implements ParentA
             @Nullable Resource resource,
             GrailsApplication application,
             @Nullable String fallbackVersion) {
+        this(pluginClass, resource, application, fallbackVersion, null);
+    }
+
+    protected DefaultGrailsPlugin(
+            Class<?> pluginClass,
+            @Nullable Resource resource,
+            GrailsApplication application,
+            @Nullable String fallbackVersion,
+            @Nullable String overrideName) {
         super(pluginClass, application);
+        if (overrideName != null && !overrideName.isBlank()) {
+            this.pluginName = PluginUtils.normalizePluginName(overrideName);
+        }
         dependencies = Collections.emptyMap();
         pluginDescriptor = resource;
         resolver = CachingPathMatchingResourcePatternResolver.INSTANCE;
@@ -247,7 +259,7 @@ public class DefaultGrailsPlugin extends AbstractGrailsPlugin implements ParentA
             PluginMetadata metadata = PluginUtils.extractPluginMetadata(
                     new org.apache.grails.core.plugins.PluginDescriptor(
                             pluginDescriptor,
-                            PluginUtils.getLogicalPluginName(clazz),
+                            pluginName != null ? pluginName : PluginUtils.getLogicalPluginName(clazz),
                             fallbackVersion,
                             null,
                             List.of(clazz.getName()),

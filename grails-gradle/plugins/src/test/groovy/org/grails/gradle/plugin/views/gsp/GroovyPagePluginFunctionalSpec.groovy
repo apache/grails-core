@@ -610,4 +610,58 @@ class GroovyPagePluginFunctionalSpec extends GradleSpecification {
         reused.output.contains('Configuration cache entry reused')
         recorded.readLines('UTF-8').contains('viewsManifestPath=META-INF/grails/plugins/springSecurityCore/views.properties')
     }
+
+    def "a multi-plugin jar writes a views manifest for every plugin listed in plugins.imports"() {
+        given: 'a plugin project declaring two plugin descriptor classes'
+        def runner = setupTestResourceProject('gsp-compile-classpath-grails')
+        File projectDir = runner.projectDir
+        new File(projectDir, 'settings.gradle').text = "rootProject.name = 'multi-plugin-jar'\n"
+        new File(projectDir, 'build.gradle').text = """
+            plugins {
+                id 'org.apache.grails.gradle.grails-plugin'
+                id 'org.apache.grails.gradle.grails-gsp'
+            }
+            group = 'org.example.test'
+            version = '1.0.0'
+            grails {
+                bom = null
+                cliAutoProvision = false
+            }
+            dependencies {
+                implementation localGroovy()
+                implementation files('compiler')
+            }
+        """.stripIndent()
+        [['compiler', 'org/grails/web/pages/GroovyPageForkedCompiler.class'],
+         ['compiler', 'org/grails/gradle/plugin/views/RecordingForkedCompiler.class']].each { String dir, String standIn ->
+            File standInClass = new File(projectDir, "${dir}/${standIn}")
+            standInClass.parentFile.mkdirs()
+            standInClass.bytes = getClass().classLoader.getResource(standIn).bytes
+        }
+        ['AlphaGrailsPlugin', 'BetaGrailsPlugin'].each { String className ->
+            File src = new File(projectDir, "src/main/groovy/com/example/${className}.groovy")
+            src.parentFile.mkdirs()
+            src.text = """
+                package com.example
+                class ${className} {
+                    def version = '1.0.0'
+                }
+            """.stripIndent()
+        }
+        File view = new File(projectDir, 'grails-app/views/shared/index.gsp')
+        view.parentFile.mkdirs()
+        view.text = '<p>Shared</p>'
+
+        when: 'compiling pages'
+        def result = executeTask('compileGroovyPages', ['--configuration-cache'])
+
+        then: 'every plugin in plugins.imports gets its own views.properties manifest'
+        assertTaskSuccess('generatePluginDescriptor', result)
+        assertTaskSuccess('compileGroovyPages', result)
+        File alphaViews = new File(projectDir, 'build/gsp-classes/main/META-INF/grails/plugins/alpha/views.properties')
+        File betaViews = new File(projectDir, 'build/gsp-classes/main/META-INF/grails/plugins/beta/views.properties')
+        alphaViews.isFile()
+        betaViews.isFile()
+        betaViews.text == alphaViews.text
+    }
 }

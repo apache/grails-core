@@ -21,6 +21,7 @@ package org.grails.gradle.plugin.views.gsp
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.nio.file.StandardCopyOption
 
 import javax.inject.Inject
 
@@ -312,7 +313,8 @@ abstract class GroovyPageForkCompileTask extends AbstractCompile {
 
     protected void compile() {
         String environment = statedEnvironment
-        String resolvedViewsManifestPath = resolveViewsManifestPath()
+        List<String> resolvedViewsManifestPaths = resolveViewsManifestPaths()
+        String primaryViewsManifestPath = resolvedViewsManifestPaths.isEmpty() ? null : resolvedViewsManifestPaths.first()
         logger.info('Compiling the pages for the {} environment', environment)
         ViewCompileDestination.empty(fileSystemOperations, destinationDirectory.get().asFile, buildDirectory.get().asFile, classpath.files, path)
         ExecResult result = execOperations.javaexec(
@@ -346,8 +348,8 @@ abstract class GroovyPageForkCompileTask extends AbstractCompile {
                                 javaExecSpec.systemProperty(BuildSettings.COMPILE_STATIC_GSP_STRICT, 'true')
                             }
                         }
-                        if (resolvedViewsManifestPath != null) {
-                            javaExecSpec.systemProperty(BuildSettings.GSP_VIEWS_MANIFEST_PATH, resolvedViewsManifestPath)
+                        if (primaryViewsManifestPath != null) {
+                            javaExecSpec.systemProperty(BuildSettings.GSP_VIEWS_MANIFEST_PATH, primaryViewsManifestPath)
                         }
 
                         String configFiles = grailsConfigurationPaths.files.collect { it.canonicalPath }.join(',')
@@ -374,25 +376,42 @@ abstract class GroovyPageForkCompileTask extends AbstractCompile {
                 }
         )
         result.assertNormalExitValue()
-
+        replicateViewsManifests(resolvedViewsManifestPaths)
     }
 
-    private String resolveViewsManifestPath() {
-        if (viewsManifestPath.present) {
-            return viewsManifestPath.get()
+    private void replicateViewsManifests(List<String> manifestPaths) {
+        if (manifestPaths.size() <= 1) {
+            return
         }
+        File destDir = destinationDirectory.get().asFile
+        File primaryManifest = new File(destDir, manifestPaths.first())
+        if (!primaryManifest.isFile()) {
+            return
+        }
+        for (int i = 1; i < manifestPaths.size(); i++) {
+            File target = new File(destDir, manifestPaths.get(i))
+            target.parentFile.mkdirs()
+            Files.copy(primaryManifest.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING)
+        }
+    }
+
+    private List<String> resolveViewsManifestPaths() {
+        if (viewsManifestPath.present) {
+            return [viewsManifestPath.get()]
+        }
+        Set<String> paths = new LinkedHashSet<>()
         for (File importsFile : pluginImportsFiles.files) {
             if (importsFile.isFile()) {
                 for (String rawLine : importsFile.readLines('UTF-8')) {
                     int hash = rawLine.indexOf('#')
                     String pluginName = (hash >= 0 ? rawLine.substring(0, hash) : rawLine).trim()
                     if (!pluginName.isEmpty()) {
-                        return "META-INF/grails/plugins/${pluginName}/views.properties".toString()
+                        paths.add("META-INF/grails/plugins/${pluginName}/views.properties".toString())
                     }
                 }
             }
         }
-        null
+        new ArrayList<>(paths)
     }
 
     void prepareArguments(List<String> arguments) {

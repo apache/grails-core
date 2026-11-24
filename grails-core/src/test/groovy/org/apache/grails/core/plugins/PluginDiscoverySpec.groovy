@@ -441,6 +441,44 @@ class PluginDiscoverySpec extends Specification {
         bothDir.deleteDir()
     }
 
+    def 'honors descriptor plugin name override for class-backed plugins and resolves config under the overridden name'() {
+        given: 'a *GrailsPlugin class packaged under a custom logical name via grails { plugin { name = ... } }'
+        def gcl = new GroovyClassLoader()
+        gcl.parseClass('''
+            package com.example
+            class RenamedSourceGrailsPlugin {
+                def version = '1.0.0'
+            }
+        ''')
+        def tempDir = File.createTempDir()
+        writePluginDescriptor(tempDir, 'bar', '''
+            format.version=1
+            name=bar
+            version=1.0.0
+            class=com.example.RenamedSourceGrailsPlugin
+            metadata.complete=false
+        ''')
+        def ymlCfg = new File(tempDir, PluginUtils.getPluginConfigPath('bar', PluginUtils.PLUGIN_YML_CONFIG))
+        ymlCfg.parentFile.mkdirs()
+        ymlCfg.text = 'bar:\n  enabled: true\n'
+        def classLoader = new URLClassLoader([tempDir.toURI().toURL()] as URL[], gcl)
+
+        when: 'classpath plugins are discovered'
+        def plugins = new ClasspathPluginFinder().findClasspathPlugins(classLoader, '9.0.0')
+
+        then: 'the plugin registers under the overridden descriptor name and finds its namespaced plugin.yml'
+        def barPlugin = plugins.find { it.pluginClass?.name == 'com.example.RenamedSourceGrailsPlugin' }
+        barPlugin != null
+        barPlugin.name == 'bar'
+        plugins.every { it.name != 'renamedSource' }
+        barPlugin.configResource != null
+        barPlugin.configResource.inputStream.text.contains('enabled: true')
+
+        cleanup:
+        classLoader?.close()
+        tempDir.deleteDir()
+    }
+
     def 'ignores comments and blank lines in plugins.imports'() {
         given: 'a plugins.imports index containing comments and blank lines'
         def tempDir = File.createTempDir()

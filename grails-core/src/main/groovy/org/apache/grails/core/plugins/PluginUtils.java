@@ -570,9 +570,13 @@ public final class PluginUtils {
         if (pluginClass == null) {
             return extractPluginMetadataFromDescriptor(descriptor, null);
         }
+        String descriptorNameOverride = (descriptor.getProvidedPlugins().size() <= 1 &&
+                descriptor.getPluginName() != null && !descriptor.getPluginName().isBlank()) ?
+                normalizePluginName(descriptor.getPluginName()) :
+                null;
         if (pluginClass.isAnnotationPresent(GrailsPluginDescriptor.class)) {
             return extractPluginMetadataFromAnnotation(
-                    pluginClass, descriptor.getPluginVersion(), descriptor.getGrailsVersionRange());
+                    pluginClass, descriptor.getPluginVersion(), descriptor.getGrailsVersionRange(), descriptorNameOverride);
         }
         if (!isGrailsPluginClassNamedCorrectly(pluginClass)) {
             return null;
@@ -580,7 +584,7 @@ public final class PluginUtils {
         if (descriptor.isMetadataComplete() && descriptor.getPluginName() != null) {
             return extractPluginMetadataFromDescriptor(descriptor, pluginClass);
         }
-        return extractPluginMetadata(pluginClass, descriptor.getPluginVersion());
+        return extractPluginMetadata(pluginClass, descriptor.getPluginVersion(), descriptorNameOverride);
     }
 
     /**
@@ -595,18 +599,23 @@ public final class PluginUtils {
      * @return a {@link PluginMetadata} instance, or {@code null} if the class is not a valid Grails plugin
      */
     public static @Nullable PluginMetadata extractPluginMetadata(Class<?> pluginClass) {
-        return extractPluginMetadata(pluginClass, null);
+        return extractPluginMetadata(pluginClass, null, null);
     }
 
-    private static @Nullable PluginMetadata extractPluginMetadata(Class<?> pluginClass, @Nullable String fallbackVersion) {
+    private static @Nullable PluginMetadata extractPluginMetadata(
+            Class<?> pluginClass,
+            @Nullable String fallbackVersion,
+            @Nullable String overrideName) {
         if (!isGrailsPluginClassNamedCorrectly(pluginClass)) {
             return null;
         }
         if (pluginClass.isAnnotationPresent(GrailsPluginDescriptor.class)) {
-            return extractPluginMetadataFromAnnotation(pluginClass, fallbackVersion, null);
+            return extractPluginMetadataFromAnnotation(pluginClass, fallbackVersion, null, overrideName);
         }
 
-        String pluginName = getLogicalPluginName(pluginClass);
+        String pluginName = (overrideName != null && !overrideName.isBlank()) ?
+                normalizePluginName(overrideName) :
+                getLogicalPluginName(pluginClass);
         String pluginVersion;
         String grailsVersion;
 
@@ -656,9 +665,12 @@ public final class PluginUtils {
     private static PluginMetadata extractPluginMetadataFromAnnotation(
             Class<?> pluginClass,
             @Nullable String fallbackVersion,
-            @Nullable String fallbackGrailsVersion) {
+            @Nullable String fallbackGrailsVersion,
+            @Nullable String overrideName) {
         GrailsPluginDescriptor annotation = pluginClass.getAnnotation(GrailsPluginDescriptor.class);
-        String pluginName = getLogicalPluginName(pluginClass);
+        String pluginName = (overrideName != null && !overrideName.isBlank()) ?
+                normalizePluginName(overrideName) :
+                getLogicalPluginName(pluginClass);
         String pluginVersion = !annotation.version().isBlank() ? annotation.version().trim() : fallbackVersion;
         if (pluginVersion == null || pluginVersion.isBlank()) {
             throw new PluginException("Plugin [" + pluginName + "] must specify a version!");
