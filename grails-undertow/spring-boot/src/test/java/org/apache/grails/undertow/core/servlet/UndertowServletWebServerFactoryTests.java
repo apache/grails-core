@@ -22,8 +22,6 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -327,6 +325,20 @@ class UndertowServletWebServerFactoryTests {
         this.webServer.start();
 
         assertThat(getStatus("http://localhost:" + this.webServer.getPort() + "/sendsError")).isEqualTo(503);
+
+        Awaitility.await().untilAsserted(() -> assertThat(events).containsExactly("onComplete"));
+        Thread.sleep(200);
+        assertThat(events).containsExactly("onComplete");
+    }
+
+    @Test
+    void asynchronousProcessingThatAnAsynchronousDispatchCompletesAfterSendingAnErrorCompletesOnce() throws Exception {
+        List<String> events = new CopyOnWriteArrayList<>();
+        UndertowServletWebServerFactory factory = new UndertowServletWebServerFactory(0);
+        this.webServer = factory.getWebServer(dispatchesAsynchronously(), sendsErrorAfterStartingAsync(events, true));
+        this.webServer.start();
+
+        assertThat(getStatus("http://localhost:" + this.webServer.getPort() + "/dispatches")).isEqualTo(503);
 
         Awaitility.await().untilAsserted(() -> assertThat(events).containsExactly("onComplete"));
         Thread.sleep(200);
@@ -649,18 +661,16 @@ class UndertowServletWebServerFactoryTests {
      * the dispatch to {@code /startsAsync} left started, and asserts that the listeners hear of it once, after the
      * error page has answered. {@code /startsAsync} is requested directly, or dispatched to from {@code /dispatches}.
      */
-    private void assertCompletesOnceTheErrorPageHasAnswered(String path, UndertowDeploymentInfoCustomizer customizer,
-            ServletContextInitializer... initializers) throws Exception {
+    private void assertCompletesOnceTheErrorPageHasAnswered(String path, UndertowDeploymentInfoCustomizer customizer)
+            throws Exception {
         List<String> events = new CopyOnWriteArrayList<>();
         UndertowServletWebServerFactory factory = new UndertowServletWebServerFactory(0);
         factory.addErrorPages(new ErrorPage("/errorPage"));
         if (customizer != null) {
             factory.addDeploymentInfoCustomizers(customizer);
         }
-        List<ServletContextInitializer> all = new ArrayList<>(List.of(recordingErrorPage(events),
-            dispatchesAsynchronously("/startsAsync"), startsAsync(events), sendsError()));
-        all.addAll(Arrays.asList(initializers));
-        this.webServer = factory.getWebServer(all.toArray(new ServletContextInitializer[0]));
+        this.webServer = factory.getWebServer(recordingErrorPage(events), dispatchesAsynchronously("/startsAsync"),
+            startsAsync(events), sendsError());
         this.webServer.start();
 
         assertThat(getResponse("http://localhost:" + this.webServer.getPort() + path)).isEqualTo("Error page");
