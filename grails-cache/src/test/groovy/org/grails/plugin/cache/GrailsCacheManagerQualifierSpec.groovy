@@ -18,6 +18,8 @@
  */
 package org.grails.plugin.cache
 
+import java.lang.annotation.ElementType
+import java.lang.annotation.Target
 import java.lang.reflect.Field
 import java.nio.file.Files
 import java.nio.file.Path
@@ -28,6 +30,8 @@ import javax.tools.StandardJavaFileManager
 import javax.tools.ToolProvider
 
 import groovy.io.FileType
+
+import jakarta.annotation.Priority
 
 import org.springframework.aot.AotDetector
 import org.springframework.aot.generate.DefaultGenerationContext
@@ -40,9 +44,14 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.beans.factory.config.BeanDefinition
 import org.springframework.beans.factory.config.BeanDefinitionCustomizer
+import org.springframework.beans.factory.support.AbstractBeanDefinition
+import org.springframework.beans.factory.support.AutowireCandidateQualifier
 import org.springframework.cache.CacheManager
 import org.springframework.cache.concurrent.ConcurrentMapCacheManager
 import org.springframework.context.ApplicationContextInitializer
+import org.springframework.context.annotation.Bean
+import org.springframework.context.annotation.Configuration
+import org.springframework.context.annotation.Primary
 import org.springframework.context.annotation.AnnotationConfigUtils
 import org.springframework.context.aot.ApplicationContextAotGenerator
 import org.springframework.context.support.GenericApplicationContext
@@ -56,7 +65,9 @@ import org.springframework.javapoet.ClassName
  * <p>Over the arrangements of {@link CacheManagerArrangementsSpec}, what the class, three instances of a prototype
  * of it, and a cache-aware {@code grailsCacheManager} get depends only on how {@code grailsCacheManager} is defined,
  * with the alias registrar and without it: no other cache manager, primary, with a {@code @Priority} or not, is
- * taken or created for the field.</p>
+ * taken or created for the field. Nor is one that declares Spring's {@code @Qualifier('grailsCacheManager')} on its
+ * class, its {@code @Bean} method or its bean definition, which Spring would match a field qualified with that
+ * annotation to.</p>
  */
 class GrailsCacheManagerQualifierSpec extends CacheManagerArrangementsSpec {
 
@@ -76,13 +87,18 @@ class GrailsCacheManagerQualifierSpec extends CacheManagerArrangementsSpec {
         CacheAware
     }
 
-    void 'the trait\'s field is qualified with the name grailsCacheManager'() {
+    void 'the trait\'s field is qualified with the name grailsCacheManager, by a qualifier only a field can declare'() {
         given:
         Field field = CacheAware.getDeclaredField(GrailsCacheManagerAliasRegistrar.ALIAS)
 
         expect:
-        field.getAnnotation(Qualifier).value() == NAMED
+        field.getAnnotation(GrailsCacheManagerQualifier).value() == NAMED
         field.getAnnotation(Autowired).required() == false
+        !field.isAnnotationPresent(Qualifier)
+
+        and: 'no class or @Bean method can declare it, and Spring\'s @Qualifier that marks it has no name of its own'
+        GrailsCacheManagerQualifier.getAnnotation(Target).value() as List == [ElementType.FIELD]
+        GrailsCacheManagerQualifier.getAnnotation(Qualifier).value() == ''
     }
 
     void 'the cache manager a cache-aware class gets depends only on how grailsCacheManager is defined'() {
@@ -185,6 +201,102 @@ class GrailsCacheManagerQualifierSpec extends CacheManagerArrangementsSpec {
         context?.close()
     }
 
+    void 'a cache manager that declares Spring\'s qualifier grailsCacheManager #declared is not taken for the field: #marked, alias #withAlias'() {
+        given: 'grailsCacheManager, and beside it a cache manager that declares the qualifier of that name'
+        Map<String, CacheManager> instances = [:]
+        GenericApplicationContext context = context([(NAMED): 'plain'], instances, [], withAlias) { GenericApplicationContext it ->
+            declaringTheQualifier(it, declared, marked)
+        }
+        instances.declaring = context.getBean('declaring', CacheManager)
+        GrailsCacheManagerAware autowired = new CacheAware()
+        context.autowireCapableBeanFactory.autowireBean(autowired)
+
+        expect: 'the bean, its prototypes and an instance the bean factory autowires get grailsCacheManager, as the cache tags do'
+        nameOf(context.getBean('probe', CacheAware).grailsCacheManager, instances) == NAMED
+        (1..3).collect { nameOf(context.getBean('prototype', CacheAware).grailsCacheManager, instances) } == [NAMED] * 3
+        nameOf(autowired.grailsCacheManager, instances) == NAMED
+
+        cleanup:
+        context?.close()
+
+        where:
+        [declared, marked, withAlias] << [DECLARED, ['marked primary', 'with a priority', 'plain'], [true, false]].combinations()
+    }
+
+    void 'with no grailsCacheManager, a cache manager that declares Spring\'s qualifier grailsCacheManager #declared is not taken for the field'() {
+        given:
+        Map<String, CacheManager> instances = [:]
+        GenericApplicationContext context = context([:], instances, [], true) { GenericApplicationContext it ->
+            declaringTheQualifier(it, declared, 'plain')
+        }
+
+        expect: 'the class has no cache manager, so its cached methods run uncached'
+        context.getBean('probe', CacheAware).grailsCacheManager == null
+
+        cleanup:
+        context?.close()
+
+        where:
+        declared << DECLARED
+    }
+
+    void 'a primary cache manager given the alias grailsCacheManager beside a bean of that name is the one the field and a lookup by name get, registered #order'() {
+        given:
+        CacheManager named = new ConcurrentMapCacheManager()
+        CacheManager aliased = new ConcurrentMapCacheManager()
+        GenericApplicationContext context = new GenericApplicationContext()
+        AnnotationConfigUtils.registerAnnotationConfigProcessors(context)
+        Closure<Void> registerAliased = { ->
+            context.registerBean('aliased', CacheManager, { -> aliased } as Supplier<CacheManager>,
+                    { BeanDefinition definition -> definition.primary = true } as BeanDefinitionCustomizer)
+            context.registerAlias('aliased', NAMED)
+        }
+        if (order == 'alias first') {
+            registerAliased()
+        }
+        context.registerBean(NAMED, CacheManager, { -> named } as Supplier<CacheManager>)
+        if (order == 'bean first') {
+            registerAliased()
+        }
+        context.registerBean('probe', CacheAware)
+        context.refresh()
+
+        expect: 'the name is the bean\'s or the alias\'s, whichever was registered last, for the cache tags and the field alike'
+        context.getBean(NAMED).is(expected == 'named' ? named : aliased)
+        context.getBean('probe', CacheAware).grailsCacheManager.is(context.getBean(NAMED))
+
+        cleanup:
+        context?.close()
+
+        where:
+        order         || expected
+        'alias first' || 'named'
+        'bean first'  || 'aliased'
+    }
+
+    private static final List<String> DECLARED = ['on its @Bean method', 'on its class', 'on its bean definition']
+
+    /** Registers the cache manager {@code declaring}, which declares {@code @Qualifier('grailsCacheManager')} as given. */
+    private static void declaringTheQualifier(GenericApplicationContext context, String declared, String marked) {
+        if (declared == 'on its @Bean method') {
+            context.registerBean([
+                    'marked primary': DeclaringPrimaryConfiguration, 'with a priority': DeclaringPriorityConfiguration,
+                    plain: DeclaringConfiguration][marked])
+            return
+        }
+        Map<String, Class<? extends CacheManager>> types = declared == 'on its class' ?
+                [priority: QualifiedHighPriorityCacheManager, plain: QualifiedCacheManager] :
+                [priority: HighPriorityCacheManager, plain: ConcurrentMapCacheManager]
+        Class<? extends CacheManager> type = types[marked == 'with a priority' ? 'priority' : 'plain']
+        BeanDefinitionCustomizer customizer = { BeanDefinition definition ->
+            definition.primary = marked == 'marked primary'
+            if (declared == 'on its bean definition') {
+                ((AbstractBeanDefinition) definition).addQualifier(new AutowireCandidateQualifier(Qualifier, NAMED))
+            }
+        } as BeanDefinitionCustomizer
+        context.registerBean('declaring', (Class<CacheManager>) type, customizer)
+    }
+
     void 'a cache manager registered as a resolvable dependency, which Spring applies no qualifier to, is passed over only for grailsCacheManager: #where'() {
         given:
         CacheManager registered = new ConcurrentMapCacheManager()
@@ -206,14 +318,17 @@ class GrailsCacheManagerQualifierSpec extends CacheManagerArrangementsSpec {
         'where there is none of the name'           | [:]                | true      || 'registered'
     }
 
-    void 'run from the code Spring\'s AOT processing generates, the field is grailsCacheManager beside a primary cache manager'() {
+    void 'run from the code Spring\'s AOT processing generates, the field is grailsCacheManager beside a primary cache manager #primary.simpleName'() {
         when: 'the context processed ahead of time, and the code it generates compiled and run'
-        Map<String, Object> result = aheadOfTime([other: OtherCacheManager, primary: OtherCacheManager])
+        Map<String, Object> result = aheadOfTime([other: OtherCacheManager, primary: primary])
 
         then: 'the generated injection resolves the qualified field among the class\'s other members'
         result.injection.contains("forField(\"${GrailsCacheManagerAliasRegistrar.ALIAS}\")")
         result.seen == NAMED
         result.got == NAMED
+
+        where: 'the primary one of a plain class, and of a class that declares Spring\'s qualifier grailsCacheManager'
+        primary << [OtherCacheManager, QualifiedCacheManager]
     }
 
     /** Processes a context ahead of time, compiles the code it generates, and starts a context from it. */
@@ -324,6 +439,48 @@ class GrailsCacheManagerQualifierSpec extends CacheManagerArrangementsSpec {
     }
 
     static class TraitBelowMethod extends MethodAbove implements GrailsCacheManagerAware {
+    }
+
+    /** A cache manager whose class declares the qualifier {@code grailsCacheManager}. */
+    @Qualifier('grailsCacheManager')
+    static class QualifiedCacheManager extends ConcurrentMapCacheManager {
+    }
+
+    /** A cache manager whose class declares the qualifier {@code grailsCacheManager} and a priority. */
+    @Qualifier('grailsCacheManager')
+    @Priority(1)
+    static class QualifiedHighPriorityCacheManager extends ConcurrentMapCacheManager {
+    }
+
+    /** Defines a cache manager whose {@code @Bean} method declares the qualifier {@code grailsCacheManager}. */
+    @Configuration(proxyBeanMethods = false)
+    static class DeclaringConfiguration {
+        @Bean
+        @Qualifier('grailsCacheManager')
+        CacheManager declaring() {
+            new ConcurrentMapCacheManager()
+        }
+    }
+
+    /** As {@link DeclaringConfiguration}, the {@code @Bean} method also marked primary. */
+    @Configuration(proxyBeanMethods = false)
+    static class DeclaringPrimaryConfiguration {
+        @Bean
+        @Primary
+        @Qualifier('grailsCacheManager')
+        CacheManager declaring() {
+            new ConcurrentMapCacheManager()
+        }
+    }
+
+    /** As {@link DeclaringConfiguration}, the cache manager of a class with a priority. */
+    @Configuration(proxyBeanMethods = false)
+    static class DeclaringPriorityConfiguration {
+        @Bean
+        @Qualifier('grailsCacheManager')
+        CacheManagerArrangementsSpec.HighPriorityCacheManager declaring() {
+            new CacheManagerArrangementsSpec.HighPriorityCacheManager()
+        }
     }
 
     /** A second cache manager of a class of its own. */

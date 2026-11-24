@@ -1626,6 +1626,6 @@ Where there is no `grailsCacheManager`, as with `grails.cache.enabled: false`, t
 
 ===== Required Actions
 
-* To keep the cache annotations caching with a cache manager of the application's own, name it `grailsCacheManager`, or register `grailsCacheManager` as its alias. With caching enabled that replaces the plugin's, which a cache provider plugin does too; it must then implement `GrailsCacheManager`, as the plugin's startup hook requires.
+* To keep the cache annotations caching with a cache manager of the application's own, name it `grailsCacheManager`, or register `grailsCacheManager` as its alias. Declaring `@Qualifier("grailsCacheManager")` on its `@Bean` method or its class is not enough: the annotations take no cache manager by that qualifier, only by the name or the alias. With caching enabled that replaces the plugin's, which a cache provider plugin does too; it must then implement `GrailsCacheManager`, as the plugin's startup hook requires.
 * A `grailsCacheManager` cannot be created from a bean with cached methods, as that bean is given `grailsCacheManager` while it is created; the context does not start. Create it from the dependencies of that bean instead.
 * A plugin compiled against Grails 8 keeps the Grails 8.0.1 behaviour for its cached classes until it is compiled against Grails 9.

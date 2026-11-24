@@ -29,12 +29,16 @@ import org.springframework.beans.factory.BeanCurrentlyInCreationException
 import org.springframework.beans.factory.BeanFactory
 import org.springframework.beans.factory.FactoryBean
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.beans.factory.config.BeanDefinition
 import org.springframework.beans.factory.config.BeanDefinitionCustomizer
 import org.springframework.cache.CacheManager
 import org.springframework.cache.concurrent.ConcurrentMapCacheManager
 import org.springframework.context.SmartLifecycle
 import org.springframework.context.annotation.AnnotationConfigApplicationContext
+import org.springframework.context.annotation.Bean
+import org.springframework.context.annotation.Configuration
+import org.springframework.context.annotation.Primary
 import org.springframework.core.NestedExceptionUtils
 import org.springframework.core.env.MapPropertySource
 
@@ -376,8 +380,11 @@ class CacheAutoConfigurationSpec extends Specification {
             context.registerBean('cacheManager', ConcurrentMapCacheManager,
                     { BeanDefinition definition -> definition.primary = true } as BeanDefinitionCustomizer)
         }
-        else {
+        else if (preferred == 'with a priority') {
             context.registerBean('cacheManager', HighPriorityCacheManager)
+        }
+        else {
+            context.register(QualifiedPrimaryConfiguration)
         }
         context.registerBean(CacheAware)
         context.register(CacheAutoConfiguration)
@@ -391,7 +398,26 @@ class CacheAutoConfigurationSpec extends Specification {
         context.close()
 
         where:
-        preferred << ['marked primary', 'with a priority']
+        preferred << ['marked primary', 'with a priority',
+                      // Spring matches a field qualified with @Qualifier('grailsCacheManager') to it too, and prefers it
+                      'marked primary, whose @Bean method declares @Qualifier(\'grailsCacheManager\')']
+    }
+
+    void 'with caching disabled, a cache manager whose @Bean method declares @Qualifier(\'grailsCacheManager\') is not taken for the cache annotations'() {
+        given: 'no bean named grailsCacheManager'
+        AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext()
+        context.environment.propertySources.addFirst(new MapPropertySource('test', ['grails.cache.enabled': 'false']))
+        context.register(QualifiedPrimaryConfiguration)
+        context.registerBean(CacheAware)
+        context.register(CacheAutoConfiguration)
+        context.refresh()
+
+        expect:
+        !context.containsBean('grailsCacheManager')
+        context.getBean(CacheAware).grailsCacheManager == null
+
+        cleanup:
+        context.close()
     }
 
     void 'a lazy cache manager is not created to find the Grails one'() {
@@ -421,6 +447,17 @@ class CacheAutoConfigurationSpec extends Specification {
     private static final Supplier<CacheManager> STORE_DOWN = { ->
         throw new IllegalStateException('the cache store is down')
     } as Supplier<CacheManager>
+
+    /** An application's own cache manager, marked primary, whose {@code @Bean} method declares Spring's qualifier {@code grailsCacheManager}. */
+    @Configuration(proxyBeanMethods = false)
+    static class QualifiedPrimaryConfiguration {
+        @Bean
+        @Primary
+        @Qualifier('grailsCacheManager')
+        CacheManager cacheManager() {
+            new ConcurrentMapCacheManager()
+        }
+    }
 
     /** A cache manager Spring prefers over others by the priority of its class. */
     @Priority(1)

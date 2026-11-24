@@ -22,7 +22,6 @@ package org.grails.plugin.cache
 import groovy.transform.CompileStatic
 
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.cache.CacheManager
 
 import grails.plugin.cache.CustomCacheKeyGenerator
@@ -33,8 +32,9 @@ import grails.plugin.cache.GrailsCacheKeyGenerator
  *
  * <p>The cache manager such a class caches with is the bean named {@code grailsCacheManager}, or the bean
  * with that alias, which the plugin defines and a cache provider plugin or the application replaces. Spring
- * injects it by that name, so another cache manager in the context, marked primary or with a
- * {@code @Priority} or not, is never taken for it. Where there is no such bean, as with
+ * injects it by that name, as the field is qualified with {@link GrailsCacheManagerQualifier}, so another cache
+ * manager in the context, marked primary or with a {@code @Priority} or not, and declaring Spring's
+ * {@code @Qualifier('grailsCacheManager')} or not, is never taken for it. Where there is no such bean, as with
  * {@code grails.cache.enabled: false}, the class has no cache manager and its cached methods run
  * uncached.</p>
  *
@@ -53,7 +53,7 @@ trait GrailsCacheManagerAware {
 
     /** The bean named {@code grailsCacheManager}, as the cache tags and the plugin use it. */
     @Autowired(required = false)
-    @Qualifier('grailsCacheManager')
+    @GrailsCacheManagerQualifier
     private CacheManager grailsCacheManager
 
     /**
