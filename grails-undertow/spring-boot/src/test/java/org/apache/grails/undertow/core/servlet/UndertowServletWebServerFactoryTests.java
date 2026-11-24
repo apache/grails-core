@@ -37,6 +37,7 @@ import io.undertow.servlet.api.Deployment;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.core.ServletExtensionHolder;
 import io.undertow.servlet.handlers.ServletRequestContext;
+import io.undertow.servlet.spec.HttpServletResponseImpl;
 
 import jakarta.servlet.AsyncContext;
 import jakarta.servlet.AsyncEvent;
@@ -481,9 +482,9 @@ class UndertowServletWebServerFactoryTests {
     }
 
     /**
-     * Undertow's error dispatch completes the processing once the error page has run, which tells the listeners before
-     * the dispatch the request asked for runs. That is Undertow's own, with or without the handler, which keeps the
-     * error from being sent a second time once that dispatch has returned.
+     * Undertow's error dispatch completes the processing once the error page has run, before it has sent the response,
+     * which tells the listeners before the dispatch the request asked for runs. That is Undertow's own, with or without
+     * the handler, which keeps the error from being sent a second time once that dispatch has returned.
      */
     @Test
     void asynchronousProcessingADispatchDispatchesAfterSendingAnErrorAnErrorPageAnswersCompletesOnce()
@@ -498,9 +499,9 @@ class UndertowServletWebServerFactoryTests {
             .isEqualTo("Error page");
 
         Awaitility.await().untilAsserted(() -> assertThat(events)
-            .containsExactly("errorPage", "onComplete", "dispatched", "sent again"));
+            .containsExactly("errorPage", "onComplete before the response", "dispatched", "sent again"));
         Thread.sleep(200);
-        assertThat(events).containsExactly("errorPage", "onComplete", "dispatched", "sent again");
+        assertThat(events).containsExactly("errorPage", "onComplete before the response", "dispatched", "sent again");
     }
 
     @ParameterizedTest
@@ -765,12 +766,18 @@ class UndertowServletWebServerFactoryTests {
         return registration;
     }
 
+    /**
+     * Records the events of asynchronous processing. A completion Undertow tells the listeners of before it has sent
+     * the response is recorded as such: the status a sent error sets is there before the error is sent.
+     */
     private static AsyncListener recordingListener(List<String> events) {
         return new AsyncListener() {
 
             @Override
             public void onComplete(AsyncEvent event) {
-                events.add("onComplete");
+                boolean responseSent = ((HttpServletResponseImpl) event.getSuppliedResponse()).getExchange()
+                    .isResponseComplete();
+                events.add(responseSent ? "onComplete" : "onComplete before the response");
             }
 
             @Override
