@@ -111,16 +111,22 @@ class GrailsUpdaterRemoteRepositoriesSpec extends Specification {
         proxy.requests.first() == "${RepositoryProxy.CENTRAL} org/apache/grails/grails-cli/9.0.0-SNAPSHOT/maven-metadata.xml".toString()
     }
 
-    def "a download of Maven Central that breaks off ends the wrapper with status 1, and the ASF repository is not asked"() {
+    @Unroll
+    def "a download of Maven Central that breaks off when #ending ends the wrapper with status 1, and the ASF repository is not asked"() {
         given: 'Maven Central sends the length of the jar and half of it'
         long length = jar(central, RELEASE_JAR, 'the jar of Maven Central').length()
         jar(asf, RELEASE_JAR, 'the jar of the ASF repository')
-        proxy.serve(RepositoryProxy.CENTRAL, central).serve(RepositoryProxy.ASF, asf).cutOff(RepositoryProxy.CENTRAL, RELEASE_JAR)
+        proxy.serve(RepositoryProxy.CENTRAL, central).serve(RepositoryProxy.ASF, asf)
+        if (tlsFails) {
+            proxy.breakTls(RepositoryProxy.CENTRAL, RELEASE_JAR)
+        } else {
+            proxy.cutOff(RepositoryProxy.CENTRAL, RELEASE_JAR)
+        }
 
         when:
         Map result = runWrapper([PREFERRED_GRAILS_VERSION: '9.0.0'], ['help'])
 
-        then:
+        then: 'the message is the same whichever layer found the end: the wrapper, the HTTP stream of the JDK, or TLS'
         result.status == 1
         result.out.contains("Unable to execute Grails Wrapper: The Grails CLI that the repository [${CENTRAL}] gave is not installed: " +
                 "the download failed: IOException: it was cut off after ${length.intdiv(2)} of ${length} bytes. ${NOT_WHOLE}")
@@ -128,6 +134,11 @@ class GrailsUpdaterRemoteRepositoriesSpec extends Specification {
         new File(home, 'wrapper').list().length == 0
         proxy.requests == ["${RepositoryProxy.CENTRAL} ${RELEASE_JAR}".toString()]
         proxy.requestedHosts == [RepositoryProxy.CENTRAL]
+
+        where:
+        ending                | tlsFails
+        'the connection ends' | false
+        'its TLS fails'       | true
     }
 
     @Unroll

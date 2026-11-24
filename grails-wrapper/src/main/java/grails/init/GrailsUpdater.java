@@ -379,7 +379,7 @@ public class GrailsUpdater {
             long lastMillis = System.currentTimeMillis();
             long lastBytes = 0;
 
-            while ((bytesRead = inputStream.read(buffer)) != -1) {
+            while ((bytesRead = read(inputStream, buffer, totalBytesRead, expectedSize)) != -1) {
                 try {
                     fos.write(buffer, 0, bytesRead);
                 } catch (IOException e) {
@@ -414,9 +414,29 @@ public class GrailsUpdater {
             System.out.print("\n");
 
             if (expectedSize >= 0 && totalBytesRead != expectedSize) {
-                throw new IOException("it was cut off after " + totalBytesRead + " of " + expectedSize + " bytes");
+                throw cutOff(totalBytesRead, expectedSize, null);
             }
         }
+    }
+
+    /**
+     * Reads the next bytes of a download. One whose length is known and that ends early is said to be cut off,
+     * whichever layer finds that it ended: the HTTP stream of an older JDK returns its end there and that of a
+     * newer one throws, and TLS or the socket can throw before either.
+     */
+    private static int read(InputStream inputStream, byte[] buffer, long totalBytesRead, long expectedSize) throws IOException {
+        try {
+            return inputStream.read(buffer);
+        } catch (IOException e) {
+            if (expectedSize >= 0 && totalBytesRead < expectedSize) {
+                throw cutOff(totalBytesRead, expectedSize, e);
+            }
+            throw e;
+        }
+    }
+
+    private static IOException cutOff(long totalBytesRead, long expectedSize, IOException reason) {
+        return new IOException("it was cut off after " + totalBytesRead + " of " + expectedSize + " bytes", reason);
     }
 
     public static String readableSize(long bytes, boolean addSeconds) {

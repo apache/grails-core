@@ -47,11 +47,16 @@ class RepositoryProxy implements Closeable {
     private static final String PASSWORD = 'repositories'
     private static final int LINE_FEED = 10
     private static final int CARRIAGE_RETURN = 13
+    // a whole TLS record of application data, 32 bytes that no key decrypts. Bytes that are no record would not do:
+    // once a connection is set up, TLS takes any five bytes as the header of a record, and a stream that ends before
+    // the length that header gives is read as the end of the connection
+    private static final byte[] FORGED_RECORD = ([0x17, 0x03, 0x03, 0x00, 0x20] + [0] * 32) as byte[]
 
     private final ServerSocket socket = new ServerSocket(0, 50, InetAddress.loopbackAddress)
     private final Map<String, File> served = new ConcurrentHashMap<>()
     private final Map<String, Integer> statuses = new ConcurrentHashMap<>()
     private final Set<String> cutOff = ConcurrentHashMap.newKeySet()
+    private final Set<String> brokenTls = ConcurrentHashMap.newKeySet()
     private final List<String> requestedHosts = new CopyOnWriteArrayList<>()
     private final List<String> requests = new CopyOnWriteArrayList<>()
     private final File trustStore
@@ -107,6 +112,18 @@ class RepositoryProxy implements Closeable {
      */
     RepositoryProxy cutOff(String host, String path) {
         cutOff.add(key(host, path))
+        this
+    }
+
+    /**
+     * Answers the request for a file of a repository with the length of the file and half of its bytes, and then
+     * writes a whole TLS record that was not encrypted with the key of the connection to the connection under TLS:
+     * the TLS of the client fails on it, before its HTTP stream can find that the content ended early.
+     *
+     * @param path the path of the file in the repository
+     */
+    RepositoryProxy breakTls(String host, String path) {
+        brokenTls.add(key(host, path))
         this
     }
 
@@ -177,10 +194,10 @@ class RepositoryProxy implements Closeable {
         write(out, 'HTTP/1.1 200 Connection established\r\n\r\n', null)
         SSLSocket tls = (SSLSocket) context.socketFactory.createSocket(connection, host, connection.port, true)
         tls.useClientMode = false
-        tls.withCloseable { respond(host, tls) }
+        tls.withCloseable { respond(host, tls, connection) }
     }
 
-    private void respond(String host, SSLSocket tls) {
+    private void respond(String host, SSLSocket tls, Socket connection) {
         // GET /maven2/org/apache/grails/grails-cli/9.0.0/grails-cli-9.0.0-all.jar HTTP/1.1
         String requestLine = readHead(tls.inputStream)
         if (!requestLine) {
@@ -198,8 +215,12 @@ class RepositoryProxy implements Closeable {
             write(tls.outputStream, 'HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n', null)
         } else {
             byte[] content = file.bytes
-            byte[] sent = cutOff.contains(key(host, path)) ? Arrays.copyOf(content, content.length.intdiv(2) as int) : content
+            boolean half = cutOff.contains(key(host, path)) || brokenTls.contains(key(host, path))
+            byte[] sent = half ? Arrays.copyOf(content, content.length.intdiv(2) as int) : content
             write(tls.outputStream, "HTTP/1.1 200 OK\r\nContent-Length: ${content.length}\r\nConnection: close\r\n\r\n", sent)
+            if (brokenTls.contains(key(host, path))) {
+                write(connection.outputStream, '', FORGED_RECORD)
+            }
         }
     }
 
