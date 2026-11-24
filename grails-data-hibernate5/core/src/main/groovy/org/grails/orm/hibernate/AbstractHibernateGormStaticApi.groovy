@@ -569,6 +569,8 @@ abstract class AbstractHibernateGormStaticApi<D> extends GormStaticApi<D> {
             Criteria crit = session.createCriteria(persistentEntity.javaClass)
             hibernateTemplate.applySettings(crit)
             crit.add(example)
+            // Collection-sort joins must know about find's implicit limit before they are created.
+            crit.maxResults = 1
             GrailsHibernateQueryUtils.populateArgumentsForCriteria(persistentEntity, crit, args, datastore.mappingContext.conversionService, true)
             crit.maxResults = 1
             firePreQueryEvent(session, crit)

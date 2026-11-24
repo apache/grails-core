@@ -401,6 +401,32 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManag
         true  | true
     }
 
+    void 'an unpaged criteria #ordering keeps a requested left collection join'() {
+        given:
+        new Team(name: 'Playerless Team').save(failOnError: true, flush: true)
+        manager.session.clear()
+
+        when:
+        final results = Team.createCriteria().list {
+            if (ordering == 'Query.Order') {
+                order(Query.Order.desc('players.name'))
+            }
+            else {
+                order('players.name', 'desc')
+            }
+            join('players', JoinType.LEFT)
+        }
+
+        then:
+        'Playerless Team' in results*.name
+        results*.name - 'Playerless Team' == ['Unattached First Team', 'MU First Team', 'Chelsea First Team', 'Arsenal First Team']
+        results.every { Hibernate.isInitialized(it.players) }
+        results.find { it.name == 'Playerless Team' }.players.empty
+
+        where:
+        ordering << ['order', 'Query.Order']
+    }
+
     void 'a paged criteria query can be sorted by a map of properties'() {
         given:
         new Team(club: Club.findByName('Arsenal'), name: 'Arsenal Second Team').save(failOnError: true, flush: true)
