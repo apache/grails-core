@@ -266,6 +266,8 @@ class CommandLineStartScripts {
         task.inputs.property('shortRunOption', OPTION)
         task.inputs.property('shortRunComment', WHY)
         task.inputs.property('interactiveOptions', INTERACTIVE_OPTIONS)
+        // named in what is written into both scripts
+        task.inputs.property('shortRunOptionsVariable', optionsVariable)
         task.doLast { Task generated ->
             CreateStartScripts scripts = (CreateStartScripts) generated
             scripts.unixScript.text = CommandLineStartScripts.unix(scripts.unixScript.text, optionsVariable)

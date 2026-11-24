@@ -21,6 +21,9 @@ package org.apache.grails.buildsrc
 import java.nio.file.Files
 
 import org.gradle.api.GradleException
+import org.gradle.api.Project
+import org.gradle.api.tasks.application.CreateStartScripts
+import org.gradle.testfixtures.ProjectBuilder
 import spock.lang.IgnoreIf
 import spock.lang.Requires
 import spock.lang.Specification
@@ -431,5 +434,18 @@ class CommandLineStartScriptsSpec extends Specification {
         } finally {
             directory.deleteDir()
         }
+    }
+
+    void "the variable the scripts name is an input of the task, so that another one writes them again"() {
+        given:
+        Project project = ProjectBuilder.builder().build()
+        CreateStartScripts task = project.tasks.register('startScripts', CreateStartScripts).get()
+
+        when:
+        CommandLineStartScripts.compileForShortRuns(task, 'GRAILSW_OPTS')
+
+        then:
+        task.inputs.properties.shortRunOptionsVariable == 'GRAILSW_OPTS'
+        task.inputs.properties.shortRunOption == CommandLineStartScripts.OPTION
     }
 }
