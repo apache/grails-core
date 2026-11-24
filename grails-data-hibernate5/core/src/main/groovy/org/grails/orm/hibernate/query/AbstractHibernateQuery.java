@@ -933,6 +933,16 @@ public abstract class AbstractHibernateQuery extends Query {
         return getOrCreateAlias(associationName, alias).alias;
     }
 
+    /**
+     * An alias declared inside a junction names the association by its path from the root of the query, which for an alias
+     * that continues another one, {@code createAlias('c.related', 'r')}, is {@code children.related}, and not by the name of
+     * the association alone, which only the root could resolve.
+     */
+    String handleAssociationQuery(Association<?> association, List<Criterion> criteriaList, String alias, String associationPath) {
+        String associationName = calculatePropertyName(associationPath != null ? associationPath : association.getName());
+        return getOrCreateAlias(associationName, alias).alias;
+    }
+
     protected CriteriaAndAlias getCriteriaAndAlias(Association<?> association) {
         String associationName = calculatePropertyName(association.getName());
         String newAlias = generateAlias(associationName);

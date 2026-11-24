@@ -82,23 +82,41 @@ class DetachedCriteriaAliasChainSpec extends GrailsDataTckSpec<GrailsDataHiberna
         }.list()*.name == ['with related']
     }
 
-    def 'a path that continues an alias declared inside #block is refused with the way to declare it'() {
+    def 'an alias declared #where is found by the path that continues it'() {
+        given:
+        seed()
+
+        expect:
+        new DetachedCriteria(DcChainParent).build(criteria).list()*.name.sort() == expected
+
+        where:
+        [where, criteria, expected] << BLOCK_ALIASES
+    }
+
+    def 'the criteria builder finds an alias declared #where as well'() {
+        given:
+        seed()
+
+        expect:
+        DcChainParent.withCriteria(criteria)*.name.sort() == expected
+
+        where:
+        [where, criteria, expected] << BLOCK_ALIASES
+    }
+
+    def 'a path that cannot continue an alias is refused whether the alias is in a block or not'() {
         when:
         new DetachedCriteria(DcChainParent).build(criteria)
 
         then:
-        IllegalArgumentException e = thrown()
-        e.message.contains('Declare the alias at the top level')
+        thrown(IllegalArgumentException)
 
         where:
-        block   | criteria
-        'and'   | { and { createAlias('children', 'c'); createAlias('c.related', 'r') } }
-        'or'    | { or { createAlias('children', 'c'); createAlias('c.related', 'r') } }
-        'not'   | { not { createAlias('children', 'c'); createAlias('c.related', 'r') } }
-        'a nested block' | { and { or { createAlias('children', 'c'); createAlias('c.related', 'r') } } }
-        'and, with an alias named like a property of the class' | { and { createAlias('children', 'name'); createAlias('name.related', 'r') } }
-        'or, with an alias named like a property of the class' | { or { createAlias('children', 'name'); createAlias('name.related', 'r') } }
-        'a nested block, with an alias named like a property of the class' | { and { or { createAlias('children', 'name'); createAlias('name.related', 'r') } } }
+        criteria << [
+            { and { createAlias('children', 'c'); createAlias('c.name', 'n') } },
+            { and { createAlias('zzz.related', 'r') } },
+            { createAlias('zzz.related', 'r') }
+        ]
     }
 
     def 'an alias declared at the top level and used inside a block still works'() {
@@ -126,6 +144,16 @@ class DetachedCriteriaAliasChainSpec extends GrailsDataTckSpec<GrailsDataHiberna
         then:
         thrown(IllegalArgumentException)
     }
+
+    private static final List<List> BLOCK_ALIASES = [
+        ['inside an and', { and { createAlias('children', 'c'); createAlias('c.related', 'r') }; isNotNull('r.name') }, ['with related']],
+        ['inside an or', { or { createAlias('children', 'c'); createAlias('c.related', 'r') }; isNotNull('r.name') }, ['with related']],
+        ['inside a nested block', { and { or { createAlias('children', 'c'); createAlias('c.related', 'r') } }; isNotNull('r.name') }, ['with related']],
+        ['inside a block, continued twice', { and { createAlias('children', 'c'); createAlias('c.related', 'r'); createAlias('r.tag', 't') }; eq('t.label', 'blue') }, ['with related']],
+        ['inside a block, and used there', { and { createAlias('children', 'c'); createAlias('c.related', 'r'); isNotNull('r.name') } }, ['with related']],
+        ['in one block and continued in another', { and { createAlias('children', 'c') }; or { createAlias('c.related', 'r') }; isNotNull('r.name') }, ['with related']],
+        ['in a block, with a name that is a class property', { and { createAlias('children', 'name'); createAlias('name.related', 'r') }; isNotNull('r.name') }, ['with related']]
+    ]
 }
 
 @Entity

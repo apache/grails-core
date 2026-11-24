@@ -153,8 +153,9 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
 
     /**
      * A path that starts with an alias this criteria declared earlier continues the path of that alias, so after
-     * {@code createAlias('children', 'c')} the path {@code c.related} is {@code children.related}. A first segment
-     * that is both an alias and a property of the entity names the alias.
+     * {@code createAlias('children', 'c')} the path {@code c.related} is {@code children.related}. An alias belongs to
+     * the whole query, so one declared inside an {@code and}, {@code or} or {@code not} block, whether the block is still
+     * open or closed, is found as well. A first segment that is both an alias and a property of the entity names the alias.
      */
     private String pathFromDeclaredAlias(String associationPath) {
         int dot = associationPath.indexOf('.')
@@ -162,36 +163,29 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
             return associationPath
         }
         String head = associationPath.substring(0, dot)
-        for (Query.Criterion criterion in criteria) {
-            if (criterion instanceof DetachedAssociationCriteria && ((DetachedAssociationCriteria) criterion).alias == head) {
-                return ((DetachedAssociationCriteria) criterion).associationPath + associationPath.substring(dot)
-            }
-        }
+        DetachedAssociationCriteria declared = aliasDeclaredIn(criteria, head)
         // a block that is still open is not in the criteria yet
-        List<Query.Criterion> inBlocks = new ArrayList<Query.Criterion>(criteria)
-        inBlocks.addAll(junctions)
-        if (declaredInBlock(inBlocks, head)) {
-            // the alias names the first segment, also where the class has a property of the same name, and it cannot be
-            // continued from here: the path would start from the root and fail further on, or find the wrong association,
-            // so say what to do
-            throw new IllegalArgumentException("The alias [$head] is declared inside a block (and, or, not), and the path [$associationPath] cannot continue from it there. Declare the alias at the top level of the query and use it inside the block.")
+        for (int i = 0; declared == null && i < junctions.size(); i++) {
+            declared = aliasDeclaredIn(junctions[i].criteria, head)
         }
-        associationPath
+        declared == null ? associationPath : declared.associationPath + associationPath.substring(dot)
     }
 
-    private static boolean declaredInBlock(List<Query.Criterion> criteria, String alias) {
-        for (Query.Criterion criterion in criteria) {
+    private static DetachedAssociationCriteria aliasDeclaredIn(Collection<Query.Criterion> candidates, String head) {
+        for (Query.Criterion criterion in candidates) {
+            if (criterion instanceof DetachedAssociationCriteria && ((DetachedAssociationCriteria) criterion).alias == head) {
+                return (DetachedAssociationCriteria) criterion
+            }
             if (criterion instanceof Query.Junction) {
-                for (Query.Criterion inner in ((Query.Junction) criterion).criteria) {
-                    if ((inner instanceof DetachedAssociationCriteria && ((DetachedAssociationCriteria) inner).alias == alias) ||
-                            (inner instanceof Query.Junction && declaredInBlock([inner], alias))) {
-                        return true
-                    }
+                DetachedAssociationCriteria inner = aliasDeclaredIn(((Query.Junction) criterion).criteria, head)
+                if (inner != null) {
+                    return inner
                 }
             }
         }
-        false
+        null
     }
+
 
     /**
      * Specifies whether a join query should be used (if join queries are supported by the underlying datastore)
