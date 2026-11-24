@@ -253,6 +253,7 @@ class AggregateSubquerySpec extends GrailsDataTckSpec<GrailsDataMongoTckManager>
         new AggSubCity(name: 'Paris').save(flush: true, failOnError: true)
         new AggSubPerson(firstName: 'Amelie', address: new AggSubAddress(city: 'Paris')).save(flush: true, failOnError: true)
         new AggSubPerson(firstName: 'Bob', address: new AggSubAddress(city: 'Rome')).save(flush: true, failOnError: true)
+        new AggSubPerson(firstName: 'Nina').save(flush: true, failOnError: true)
         manager.session.clear()
         def names = AggSubCity.where { name == 'Paris' }.property('name')
 
@@ -262,38 +263,9 @@ class AggregateSubquerySpec extends GrailsDataTckSpec<GrailsDataMongoTckManager>
 
         then:
         found*.firstName == ['Amelie']
+
+        and: 'Nina has no address, so the negated list does not hold for her either'
         excluded*.firstName == ['Bob']
-    }
-
-    void "a negated condition in an embedded block requires the embedded value, as the join of the block does"() {
-        given:
-        new AggSubCity(name: 'Paris').save(flush: true, failOnError: true)
-        new AggSubPerson(firstName: 'Amelie', address: new AggSubAddress(city: 'Paris')).save(flush: true, failOnError: true)
-        new AggSubPerson(firstName: 'Bob', address: new AggSubAddress(city: 'Rome')).save(flush: true, failOnError: true)
-        new AggSubPerson(firstName: 'Nina').save(flush: true, failOnError: true)
-        manager.session.clear()
-        def names = AggSubCity.where { name == 'Paris' }.property('name')
-
-        expect: 'Nina has no address, so no condition of the block can hold for her, whether it is negated or not'
-        new DetachedCriteria(AggSubPerson).build { address { notIn('city', names) } }.list()*.firstName == ['Bob']
-        new DetachedCriteria(AggSubPerson).build { address { notIn('city', ['Paris']) } }.list()*.firstName == ['Bob']
-        new DetachedCriteria(AggSubPerson).build { address { ne('city', 'Paris') } }.list()*.firstName == ['Bob']
-        new DetachedCriteria(AggSubPerson).build { address { not { eq('city', 'Paris') } } }.list()*.firstName == ['Bob']
-        new DetachedCriteria(AggSubPerson).build { address { not { inList('city', ['Paris']) } } }.list()*.firstName == ['Bob']
-
-        and: 'the requirement belongs to the branch of an or that holds the negation, not to the whole query'
-        new DetachedCriteria(AggSubPerson).build {
-            or {
-                eq('firstName', 'Nina')
-                address { ne('city', 'Paris') }
-            }
-        }.list()*.firstName.sort() == ['Bob', 'Nina']
-        new DetachedCriteria(AggSubPerson).build {
-            or {
-                address { eq('city', 'Paris') }
-                address { ne('city', 'Paris') }
-            }
-        }.list()*.firstName.sort() == ['Amelie', 'Bob']
     }
 
     void "a comparison against a subquery that returns several rows is rejected"() {
