@@ -242,7 +242,6 @@ class WhereQueryWithAssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibe
         results*.name == ['Arsenal First Team', 'Chelsea First Team', 'Manchester United First Team']
     }
 
-    @Requires({ instance.leftJoinSort })
     void 'a paged list sorted by an association property returns the rows that it counts'() {
         given:
         saveTeamWithoutClub()
@@ -253,8 +252,22 @@ class WhereQueryWithAssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibe
         }.list(sort: 'club.name', max: 10)
 
         then:
-        results.size() == 4
-        results.totalCount == 4
+        results.size() == (leftJoinSort ? 4 : 3)
+        results.totalCount == results.size()
+    }
+
+    void 'an alias-prefixed foreign key sort does not join its final association'() {
+        given:
+        saveTeamWithoutClub()
+
+        when:
+        final results = Player.where {
+            final t = team
+            t.name ==~ '%First%'
+        }.list(sort: 't.club.id')
+
+        then:
+        results*.name.sort() == ['Bruno', 'Bukayo', 'Cole', 'Unattached Player']
     }
 
     @Requires({ instance.leftJoinSort })

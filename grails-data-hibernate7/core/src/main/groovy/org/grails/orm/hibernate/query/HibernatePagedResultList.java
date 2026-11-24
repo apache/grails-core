@@ -92,6 +92,12 @@ public class HibernatePagedResultList extends grails.gorm.PagedResultList {
             Query query = getQuery();
             if (query == null) {
                 totalCount = 0;
+            } else if (query instanceof SelectHqlQuery hqlQuery) {
+                // Static list uses HQL; cloning it as a criteria query loses its sort and fetch joins.
+                String countHql = new HqlListQueryBuilder(entity, hqlQuery.queryContext.settings().settings()).buildCountHql();
+                Number result = ((GrailsHibernateTemplate) hqlQuery.getHibernateTemplate()).execute(session ->
+                        session.createSelectionQuery(countHql, Long.class).getSingleResult());
+                totalCount = result.intValue();
             } else {
                 Object clonedQuery = query.clone();
                 if (!(clonedQuery instanceof Query)) {

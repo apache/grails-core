@@ -462,7 +462,9 @@ class ExpressionResolverSpec extends Specification {
         def root = Mock(SqmFrom)
         def fetch = joinOf('club', true)
         def namePath = Mock(SqmPath)
-        def resolver = new ExpressionResolver(new AliasRegistry(), new JoinTracker(root))
+        def registry = new AliasRegistry()
+        registry.define('club', new HibernateAlias('club', 'club', JoinType.LEFT, false))
+        def resolver = new ExpressionResolver(registry, new JoinTracker(root))
 
         when:
         def result = resolver.resolveSort('club.name')

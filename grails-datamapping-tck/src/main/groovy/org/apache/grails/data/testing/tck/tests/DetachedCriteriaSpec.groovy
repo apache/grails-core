@@ -120,7 +120,7 @@ class DetachedCriteriaSpec extends GrailsDataTckSpec {
 
     }
 
-    void 'Test list method with sort and max applies sort exactly once'() {
+    void 'a sorted detached page at offset #offset counts all matching rows without changing its order'() {
         given: 'A bunch of people'
         createPeople()
 
@@ -129,13 +129,17 @@ class DetachedCriteriaSpec extends GrailsDataTckSpec {
         criteria.with {
             eq 'lastName', 'Simpson'
         }
-        def results = criteria.list(sort: 'firstName', order: 'asc', max: 4)
+        final results = criteria.list(sort: 'firstName', order: 'asc', max: 2, offset: offset)
 
         then: 'Results are a PagedResultList sorted correctly, totalCount does not include ORDER BY'
         results instanceof PagedResultList
         results.totalCount == 4
-        results.size() == 4
-        results*.firstName == ['Bart', 'Homer', 'Lisa', 'Marge']
+        results.size() == Math.max(0, Math.min(2, 4 - offset))
+        results*.firstName == ['Bart', 'Homer', 'Lisa', 'Marge'].drop(offset).take(2)
+        results.totalCount == 4
+
+        where:
+        offset << [0, 2, 6]
     }
 
     void 'Test exists method'() {

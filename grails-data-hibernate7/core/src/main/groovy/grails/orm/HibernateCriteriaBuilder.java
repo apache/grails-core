@@ -250,7 +250,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
         var entity = criteria instanceof DetachedAssociationCriteria<?> block ?
                 block.getAssociation().getAssociatedEntity() : criteria.getPersistentEntity();
         JoinType convertedJoinType = convertFromInt(joinType);
-        String path = pathFromDeclaredAlias(criteria, associationPath, alias);
+        String path = pathFromDeclaredAlias(criteria, entity, associationPath, alias);
         if (path.contains(ALIAS_SEPARATOR)) {
             criteria.getCriteria().add(new HibernateAlias(path, alias, convertedJoinType));
             return this;
@@ -276,7 +276,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
      *
      * @return the path the alias is registered with, which is the given path when it starts with an association
      */
-    private static String pathFromDeclaredAlias(DetachedCriteria<?> criteria, String associationPath, String alias) {
+    private static String pathFromDeclaredAlias(DetachedCriteria<?> criteria, PersistentEntity queried, String associationPath, String alias) {
         int dot = associationPath.indexOf('.');
         if (dot < 0 || associationPath.substring(0, dot).equals(alias)) {
             return associationPath;
@@ -292,7 +292,7 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
             return associationPath;
         }
         String rest = associationPath.substring(dot + 1);
-        PersistentEntity entity = aliasedEntity(criteria.getPersistentEntity(), declared, rootIndex);
+        PersistentEntity entity = aliasedEntity(queried, declared, rootIndex);
         for (String segment : rest.split("\\.")) {
             if (entity == null || !(entity.getPropertyByName(segment) instanceof Association<?> association)) {
                 throw new IllegalArgumentException("Argument [" + associationPath + "] is not an association");

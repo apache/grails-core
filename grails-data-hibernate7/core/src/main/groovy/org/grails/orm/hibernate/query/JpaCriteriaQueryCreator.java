@@ -27,8 +27,10 @@ import jakarta.persistence.criteria.AbstractQuery;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Expression;
+import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.ParameterExpression;
+import jakarta.persistence.criteria.Path;
 import jakarta.persistence.criteria.Root;
 
 import org.hibernate.query.criteria.HibernateCriteriaBuilder;
@@ -288,6 +290,7 @@ public class JpaCriteriaQueryCreator<T> {
         boolean distinctEntities = isDistinctEntities();
         boolean orderedBySelection = !countOnly && !distinctEntities && isOrderedBySelection();
         List<jakarta.persistence.criteria.Order> jpaOrders = new ArrayList<>();
+        boolean collectionSort = false;
         for (Query.Order order : orders) {
             var propertyName = order.getProperty();
             // an order of an association block, and the context that the criteria of its block were built against
@@ -324,12 +327,13 @@ public class JpaCriteriaQueryCreator<T> {
                 // tell apart from the joins of another block of the same association
                 String property = blockOrder.getAssociationProperty();
                 PersistentEntity associated = blockOrder.getAssociation().getAssociation().getAssociatedEntity();
-                expression = blockContext.getSortExpression(property, endsWithForeignKey(associated, property));
+                expression = blockContext.getSortExpression(property, endsWithForeignKey(associated, property, blockContext));
             } else {
-                expression = context.getSortExpression(propertyName, endsWithForeignKey(entity, propertyName));
+                expression = context.getSortExpression(propertyName, endsWithForeignKey(entity, propertyName, context));
             }
             if (countOnly) {
                 // Keep the joins of the sort, which can restrict the rows, without ordering the aggregate.
+                collectionSort |= crossesCollection(expression);
                 continue;
             }
             if (expression == null) {
@@ -349,6 +353,11 @@ public class JpaCriteriaQueryCreator<T> {
             } else {
                 jpaOrders.add(ascending ? criteriaBuilder.asc(expression) : criteriaBuilder.desc(expression));
             }
+        }
+        if (collectionSort && projections.getProjectionList().size() == 1 &&
+                projections.getProjectionList().getFirst().getClass() == Query.CountProjection.class) {
+            // A collection sort can multiply rows, but an entity list returns each root once.
+            ((CriteriaQuery<Long>) cq).select(criteriaBuilder.countDistinct(context.getRoot()));
         }
         if (distinctInMemory) {
             // SQL only orders a distinct query by what it selects, and an order through a join is not among
@@ -383,12 +392,19 @@ public class JpaCriteriaQueryCreator<T> {
 
     /**
      * Whether a sort path from an entity ends with a foreign key: the identifier of an association that has its
-     * key in the table before it on the path. A path that starts with an alias is not such a path.
+     * key in the table before it on the path. An explicit alias starts at its associated entity.
      */
-    private static boolean endsWithForeignKey(PersistentEntity from, String propertyName) {
+    private static boolean endsWithForeignKey(PersistentEntity from, String propertyName, JpaQueryContext context) {
         String[] tokens = propertyName.split("\\.");
         PersistentEntity current = from;
-        for (int i = 0; i < tokens.length - 1 && current != null; i++) {
+        int first = 0;
+        HibernateAlias alias = context.getAliasRegistry().getDefinition(tokens[0]);
+        if (alias != null && alias.explicit()) {
+            Expression<?> expression = context.getAliasedExpression(tokens[0]);
+            current = expression == null ? null : from.getMappingContext().getPersistentEntity(expression.getJavaType().getName());
+            first = 1;
+        }
+        for (int i = first; i < tokens.length - 1 && current != null; i++) {
             if (!(current.getPropertyByName(tokens[i]) instanceof Association<?> association)) {
                 return false;
             }
@@ -396,6 +412,15 @@ public class JpaCriteriaQueryCreator<T> {
                 return HqlListQueryBuilder.isForeignKey(association, tokens[i + 1]);
             }
             current = association.getAssociatedEntity();
+        }
+        return false;
+    }
+
+    private static boolean crossesCollection(Expression<?> expression) {
+        for (Path<?> path = expression instanceof Path<?> p ? p : null; path != null; path = path.getParentPath()) {
+            if (path instanceof Join<?, ?> join && join.getAttribute().isCollection()) {
+                return true;
+            }
         }
         return false;
     }

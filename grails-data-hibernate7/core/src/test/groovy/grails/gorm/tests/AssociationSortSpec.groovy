@@ -27,13 +27,18 @@ import grails.gorm.tests.entities.Team
 import org.apache.grails.data.hibernate7.core.GrailsDataHibernate7TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import spock.lang.Requires
+import spock.lang.Shared
 
 import jakarta.persistence.criteria.JoinType
+import org.hibernate.resource.jdbc.spi.StatementInspector
 
 /**
  * A sort by a property of an association must not leave out the instances whose association is null.
  */
 class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManager> {
+
+    @Shared
+    final AssociationSortSqlCapture sqlCapture = new AssociationSortSqlCapture()
 
     /**
      * Whether the specification runs with the {@code grails.gorm.leftJoinAssociationSort} setting, with which
@@ -45,8 +50,9 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManag
 
     void setupSpec() {
         manager.grailsConfig.grails.gorm.leftJoinAssociationSort = leftJoinSort
+        manager.grailsConfig.hibernate.session_factory.statement_inspector = sqlCapture
         manager.registerDomainClasses(Club, Team, Player, Contract, AssociationSortBook, AssociationSortAuthor,
-                AssociationSortOwner, AssociationSortScore, AssociationSortPet)
+                AssociationSortOwner, AssociationSortScore, AssociationSortPet, AssociationSortEmployee)
     }
 
     void setup() {
@@ -111,24 +117,13 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManag
         results*.name - 'Unattached First Team' == ['Arsenal Second Team', 'Arsenal First Team', 'Chelsea First Team', 'Manchester United First Team']
     }
 
-    @Requires({ instance.leftJoinSort })
     void 'a paged list sorted by an association property returns the teams that it counts'() {
         when:
         final results = Team.list(sort: 'club.name', max: 10)
 
         then:
-        results.size() == 4
-        results.totalCount == 4
-    }
-
-    void 'findAllWhere sorted by an association property finds a team without a club'() {
-        expect:
-        Team.findAllWhere([name: 'Unattached First Team'], [sort: 'club.name'])*.name == ['Unattached First Team']
-    }
-
-    void 'findWhere sorted by an association property finds a team without a club'() {
-        expect:
-        Team.findWhere([name: 'Unattached First Team'], [sort: 'club.name'])?.name == 'Unattached First Team'
+        results.size() == (leftJoinSort ? 4 : 3)
+        results.totalCount == results.size()
     }
 
     void 'a criteria page counts the rows selected by its association sort in either setting mode'() {
@@ -381,6 +376,10 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManag
     }
 
     void 'an order by the identifier of an association in a criteria query keeps the instances without it'() {
+        given:
+        new Player(name: 'No team').save(failOnError: true, flush: true)
+        manager.session.clear()
+
         expect: 'the identifier is the foreign key, which is read without a join'
         Team.withCriteria {
             order('club.id', 'desc')
@@ -390,10 +389,123 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManag
             order('club.id', 'desc')
         }*.name == ['Chelsea First Team', 'Arsenal First Team', 'Manchester United First Team']
 
-        and: 'the association before it on the path is joined with a left join'
-        Player.withCriteria {
+        and: 'the setting decides the join of the intermediate association'
+        final players = Player.withCriteria {
             order('team.club.id')
-        }*.name.sort() == ['Bruno', 'Bukayo', 'Cole', 'Unattached Player']
+        }*.name
+        players.contains('No team') == leftJoinSort
+        (players - 'No team').sort() == ['Bruno', 'Bukayo', 'Cole', 'Unattached Player']
+    }
+
+    void 'a collection sort counts roots once through #api'() {
+        given:
+        new AssociationSortOwner(name: 'Empty').save(failOnError: true, flush: true)
+        manager.session.clear()
+
+        when:
+        final result = query.call()
+
+        then:
+        result == (leftJoinSort ? 3 : 2)
+
+        where:
+        api               | query
+        'where count'     | { AssociationSortOwner.where { name ==~ '%' }.sort('scores.score').count() }
+        'criteria page'   | { AssociationSortOwner.createCriteria().list(max: 10, sort: 'scores.score') {}.totalCount }
+        'detached page'   | { new DetachedCriteria(AssociationSortOwner).list(max: 10, sort: 'scores.score').totalCount }
+        'static page'     | { AssociationSortOwner.list(max: 10, sort: 'scores.score').totalCount }
+    }
+
+    void 'a detached page retains its sort restriction when counting at offset #offset'() {
+        given:
+        final query = new DetachedCriteria(Team).like('name', '%First%').sort('club.name')
+
+        when:
+        final page = query.list(max: 2, offset: offset)
+
+        then:
+        page.totalCount == (leftJoinSort ? 4 : 3)
+        page.size() == Math.max(0, Math.min(2, page.totalCount - offset))
+
+        where:
+        offset << [0, 2, 10]
+    }
+
+    void 'a sort by #sort reuses an explicit #joinType fetch'() {
+        given:
+        sqlCapture.statements.clear()
+
+        when:
+        final results = Team.where { name ==~ '%First%' }.list(fetch: [club: joinType], sort: sort)
+
+        then:
+        results.size() == (joinType == JoinType.LEFT ? 4 : 3)
+        sqlCapture.statements.find { it.startsWith('select') }.findAll(/(?i)\bjoin club\b/).size() == 1
+
+        where:
+        [sort, joinType] << [['club.name', 'club.id'], [JoinType.LEFT, JoinType.INNER]].combinations()
+    }
+
+    void 'an implicit manager path stays relative to its block with root restriction #restricted'() {
+        given:
+        final first = new AssociationSortEmployee(name: 'A supervisor').save(failOnError: true)
+        final last = new AssociationSortEmployee(name: 'Z supervisor').save(failOnError: true)
+        final managerA = new AssociationSortEmployee(name: 'A manager', manager: last).save(failOnError: true)
+        final managerZ = new AssociationSortEmployee(name: 'Z manager', manager: first).save(failOnError: true)
+        final managerEmpty = new AssociationSortEmployee(name: 'Empty manager').save(failOnError: true)
+        new AssociationSortEmployee(name: 'Worker A', manager: managerA).save(failOnError: true)
+        new AssociationSortEmployee(name: 'Worker Z', manager: managerZ).save(failOnError: true)
+        new AssociationSortEmployee(name: 'Worker Empty', manager: managerEmpty).save(failOnError: true, flush: true)
+        manager.session.clear()
+
+        when:
+        final results = AssociationSortEmployee.withCriteria {
+            like('name', 'Worker%')
+            if (restricted) {
+                eq('manager.active', true)
+            }
+            manager { order('manager.name') }
+        }*.name
+
+        then:
+        results.contains('Worker Empty') == leftJoinSort
+        results - 'Worker Empty' == ['Worker Z', 'Worker A']
+
+        where:
+        restricted << [false, true]
+    }
+
+    void 'an alias-prefixed foreign key sort keeps the missing association'() {
+        when:
+        final results = Player.withCriteria {
+            createAlias('team', 't')
+            order('t.club.id')
+        }
+
+        then:
+        results*.name.sort() == ['Bruno', 'Bukayo', 'Cole', 'Unattached Player']
+    }
+
+    void 'an embedded block can chain aliases and order by the last alias'() {
+        given:
+        final adams = AssociationSortAuthor.findByName('Adams')
+        final king = AssociationSortAuthor.findByName('King')
+        adams.mentor = king
+        king.mentor = adams
+        manager.session.flush()
+        manager.session.clear()
+
+        when:
+        final results = AssociationSortBook.withCriteria {
+            details {
+                createAlias('author', 'a')
+                createAlias('a.mentor', 'm')
+                order('m.name')
+            }
+        }
+
+        then:
+        results*.title == ['It', 'Guide']
     }
 
     void 'an order inside an association block of a detached criteria sorts by the property of the association'() {
@@ -1144,6 +1256,10 @@ class AssociationSortBookDetails {
 @Entity
 class AssociationSortAuthor {
     String name
+    AssociationSortAuthor mentor
+    static constraints = {
+        mentor nullable: true
+    }
 }
 
 @Entity
@@ -1163,4 +1279,24 @@ class AssociationSortScore {
 class AssociationSortPet {
     String name
     AssociationSortOwner owner
+}
+
+@Entity
+class AssociationSortEmployee {
+    String name
+    boolean active = true
+    AssociationSortEmployee manager
+    static constraints = {
+        manager nullable: true
+    }
+}
+
+class AssociationSortSqlCapture implements StatementInspector {
+    final List<String> statements = Collections.synchronizedList([])
+
+    @Override
+    String inspect(String sql) {
+        statements.add(sql)
+        sql
+    }
 }
