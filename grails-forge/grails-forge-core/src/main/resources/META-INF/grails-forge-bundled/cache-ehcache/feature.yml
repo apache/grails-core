@@ -34,10 +34,15 @@ oneOf: cache-provider
 requires:
   - cache
 dependencies:
-  # the variant built for Jakarta EE, whose XML configuration reads with the JAXB of Jakarta EE that the BOM manages
+  # the variant built for Jakarta EE, whose XML configuration reads with the JAXB of Jakarta EE. The variant asks for
+  # jaxb-runtime in the range [3,3.1), which has the build list the versions of the repository, so it is declared
+  # without it, and the application has jaxb-runtime, and through it jakarta.xml.bind-api, in the version the BOM manages
   - scope: implementation
     coordinates: org.ehcache:ehcache
     capabilities: ['org.ehcache:ehcache-jakarta']
+    excludes: ['org.glassfish.jaxb:jaxb-runtime']
+  - scope: runtimeOnly
+    coordinates: org.glassfish.jaxb:jaxb-runtime
 files:
   - from: ehcache.xml.gsp
     to: grails-app/conf/ehcache.xml

@@ -3,6 +3,7 @@ requires: [cache]
 conflicts: []
 oneOf: cache-provider
 dependency: implementation org.ehcache:ehcache without a version
+dependency: runtimeOnly org.glassfish.jaxb:jaxb-runtime without a version
 
 # web
 title: Ehcache
@@ -25,7 +26,8 @@ dependentFeatures: [cache]
 + 
 == build.gradle
 +     implementation "org.apache.grails:grails-cache"
-+     implementation("org.ehcache:ehcache") { capabilities { requireCapability("org.ehcache:ehcache-jakarta") } }
++     implementation("org.ehcache:ehcache") { capabilities { requireCapability("org.ehcache:ehcache-jakarta") }; exclude group: "org.glassfish.jaxb", module: "jaxb-runtime" }
++     runtimeOnly "org.glassfish.jaxb:jaxb-runtime"
 == grails-app/conf/application.yml
 +   cache:
 +     clearAtStartup: false
@@ -153,7 +155,8 @@ dependentFeatures: [cache]
 + 
 == build.gradle
 +     implementation "org.apache.grails:grails-cache"
-+     implementation("org.ehcache:ehcache") { capabilities { requireCapability("org.ehcache:ehcache-jakarta") } }
++     implementation("org.ehcache:ehcache") { capabilities { requireCapability("org.ehcache:ehcache-jakarta") }; exclude group: "org.glassfish.jaxb", module: "jaxb-runtime" }
++     runtimeOnly "org.glassfish.jaxb:jaxb-runtime"
 == grails-app/conf/application.yml
 - grails.codegen.defaultPackage: example.grails
 + grails:

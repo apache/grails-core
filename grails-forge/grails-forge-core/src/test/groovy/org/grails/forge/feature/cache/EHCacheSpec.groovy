@@ -47,8 +47,10 @@ class EHCacheSpec extends ApplicationContextSpec implements CommandOutputFixture
                 .features(['cache-ehcache'])
                 .render()
 
-        then:
-        template.contains('implementation("org.ehcache:ehcache") { capabilities { requireCapability("org.ehcache:ehcache-jakarta") } }')
+        then: 'Ehcache without the jaxb-runtime it asks for with a range, and jaxb-runtime in the version the BOM manages'
+        template.contains('implementation("org.ehcache:ehcache") { capabilities { requireCapability("org.ehcache:ehcache-jakarta") }; ' +
+                'exclude group: "org.glassfish.jaxb", module: "jaxb-runtime" }')
+        template.contains('runtimeOnly "org.glassfish.jaxb:jaxb-runtime"\n')
         template.contains('implementation "org.apache.grails:grails-cache"')
         !template.contains('org.grails.plugins:cache-ehcache')
         !template.contains('javax.cache')

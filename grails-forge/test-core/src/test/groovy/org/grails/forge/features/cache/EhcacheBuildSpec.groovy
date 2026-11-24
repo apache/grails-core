@@ -189,6 +189,21 @@ class EhcacheBuildSpec extends CommandSpec {
         ['tests', 'failures', 'errors', 'skipped'].collectEntries { String count -> [(count): suite().getAttribute(count)] } ==
                 [tests: '3', failures: '0', errors: '0', skipped: '0']
 
+        when: 'the runtime class path is resolved'
+        List<String> runtime = executeGradle('dependencies', '--configuration', 'runtimeClasspath').output.readLines()
+        String declared = runtime.find { String line -> line ==~ /[+\\]--- org\.glassfish\.jaxb:jaxb-runtime -> .*/ }
+        String version = declared?.substring(declared.indexOf(' -> ') + 4)?.replace(' (*)', '')
+
+        then: 'Ehcache asks for jaxb-runtime with a range, which would have the build list the versions in the repository: nothing asks for it with a range'
+        !runtime.any { String line -> line.contains('org.glassfish.jaxb:jaxb-runtime:[') || line.contains('[3,3.1)') }
+
+        and: 'the application declares jaxb-runtime without a version, and it has the version the BOM constrains it to'
+        version ==~ /\d+\.\d+\.\d+/
+        runtime.any { String line -> line.endsWith("--- org.glassfish.jaxb:jaxb-runtime:${version} (c)") }
+
+        and: 'with the API of JAXB of Jakarta EE that Ehcache reads its XML with'
+        runtime.any { String line -> line.contains('--- jakarta.xml.bind:jakarta.xml.bind-api') }
+
         where:
         gormImpl << [GormImpl.HIBERNATE5, GormImpl.HIBERNATE7]
     }

@@ -127,10 +127,11 @@ class FeatureAdditionPlacesSpec extends ApplicationContextSpec {
 
         // build.gradle: 123, 176, 180 and 125 until gorm-neo4j replaced the two lines of grails-bom with those of grails-neo4j-bom,
         // which made a change next to them one more feature's conflict; the merge was not changed. 129, 183, 189 and 131 until
-        // cache-ehcache, which declared one line, the plugin, declared two at two places, grails-cache and Ehcache; the merge was not changed
+        // cache-ehcache, which declared one line, the plugin, declared two at two places, grails-cache and Ehcache; the merge was not changed.
+        // 130, 185, 191 and 132 until cache-ehcache declared jaxb-runtime among the runtimeOnly lines, a third place; the merge was not changed
         where:
         file                              || mostInserted | mostRemoved | mostChanged | mostEmptyLines
-        'build.gradle'                    || 130          | 185         | 191         | 132
+        'build.gradle'                    || 131          | 187         | 193         | 133
         'grails-app/conf/application.yml' || 43           | 69          | 69          | 40
         'README.md'                       || 70           | 101         | 101         | 71
     }

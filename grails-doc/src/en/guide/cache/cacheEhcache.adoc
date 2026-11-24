@@ -31,15 +31,16 @@ The feature requires the `cache` feature and is offered for applications (`web` 
 
 ==== What the Application Has
 
-`build.gradle` has the cache plugin and the Jakarta EE variant of Ehcache, both in the versions the Grails BOM manages:
+`build.gradle` has the cache plugin, the Jakarta EE variant of Ehcache and the Jakarta XML Binding runtime, all in the versions the Grails BOM manages:
 
 [source,groovy]
 ----
 implementation "org.apache.grails:grails-cache"
-implementation("org.ehcache:ehcache") { capabilities { requireCapability("org.ehcache:ehcache-jakarta") } }
+implementation("org.ehcache:ehcache") { capabilities { requireCapability("org.ehcache:ehcache-jakarta") }; exclude group: "org.glassfish.jaxb", module: "jaxb-runtime" }
+runtimeOnly "org.glassfish.jaxb:jaxb-runtime"
 ----
 
-The capability selects the variant of Ehcache built for Jakarta EE, which reads its XML configuration with the Jakarta XML Binding the BOM manages. The default variant is built for `javax.xml.bind` and cannot read the configuration with it.
+The capability selects the variant of Ehcache built for Jakarta EE, which reads its XML configuration with Jakarta XML Binding. The default variant is built for `javax.xml.bind` and cannot read the configuration with it. The Jakarta EE variant asks for `org.glassfish.jaxb:jaxb-runtime` with the version range `[3,3.1)`, and a range has Gradle list the versions of the module in the repository whenever its cache of dynamic versions has expired, so the build takes `jaxb-runtime` out of the dependencies of Ehcache and declares it without a version: it has the version the BOM manages, and brings the API of Jakarta XML Binding, `jakarta.xml.bind-api`, with it.
 
 `grails-app/conf/spring/resources.groovy` defines the JCache cache manager of Ehcache, configured by `grails-app/conf/ehcache.xml`, and the cache manager of the plugin over it:
 
