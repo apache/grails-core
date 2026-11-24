@@ -29,18 +29,6 @@
             "type": "java.util.Map",
             "description": "Map of cache-specific configurations keyed by cache name, each supporting a `maxCapacity` setting (used by GrailsConcurrentLinkedMapCacheManager).",
             "defaultValue": {}
-        },
-        {
-            "name": "grails.cache.ehcache.ehcacheXmlLocation",
-            "type": "java.lang.String",
-            "description": "Location of the Ehcache XML configuration file on the classpath.",
-            "defaultValue": "classpath:ehcache.xml"
-        },
-        {
-            "name": "grails.cache.ehcache.lockTimeout",
-            "type": "java.lang.Integer",
-            "description": "The timeout in milliseconds for acquiring a lock on a cache element.",
-            "defaultValue": 200
         }
     ]
 }
