@@ -1322,6 +1322,10 @@ These calls on Hibernate 5 returned the wrong rows or failed. Each now does what
 
 To keep the earlier result for a sort, remove the sort from the query. To keep it for an empty list whose negation is required for every match, return an empty list before the query when the input list is empty: removing the criterion returns every row, not none. When the negated list is one side of an `or`, leave that side out when the list is empty: it matched nothing there, so the other sides alone gave the earlier result, and returning an empty list would drop their rows. An `or` that is itself inside a `not` gives the same result as before, so leave it as it is: dropping a side of it would change the result.
 
+==== Hibernate 5: a map sort with a direction that is not asc or desc is refused
+
+A map given as the `sort` argument, `list(sort: [title: 'sideways'])`, sorted ascending when a direction was neither `asc` nor `desc`, which hid a typo. It now throws an `IllegalArgumentException` that names the property and the direction; a number or `null` as the direction is refused the same way. Hibernate 7 already refuses an `order` direction that is neither, with the message `Invalid sort direction`. To get the earlier rows back, give the direction `asc`, or leave the property out of the map.
+
 ==== More GSP tags HTML-encode the attribute values they write
 
 These tags now HTML-encode the values they write into attributes, as `<g:link>` and `<g:textField>` already did and as these tags already encoded their other attributes:

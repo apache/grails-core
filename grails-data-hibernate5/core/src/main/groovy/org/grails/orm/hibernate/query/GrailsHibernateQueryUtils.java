@@ -268,14 +268,20 @@ public class GrailsHibernateQueryUtils {
     }
 
     /**
-     * The direction of one entry of a map of sort properties: {@code desc} in any case sorts descending, and anything
-     * else sorts ascending, as the direction of a sort always has on this line.
+     * The direction of one entry of a map of sort properties: {@code asc} or {@code desc}, in any case. Anything else
+     * is refused, as a sort that silently falls back to ascending hides a typo.
      */
     static String sortDirection(Object property, Object direction) {
-        if (direction instanceof CharSequence && DynamicFinder.ORDER_DESC.equalsIgnoreCase(direction.toString())) {
-            return DynamicFinder.ORDER_DESC;
+        if (direction instanceof CharSequence) {
+            String text = direction.toString();
+            if (DynamicFinder.ORDER_DESC.equalsIgnoreCase(text)) {
+                return DynamicFinder.ORDER_DESC;
+            }
+            if (DynamicFinder.ORDER_ASC.equalsIgnoreCase(text)) {
+                return DynamicFinder.ORDER_ASC;
+            }
         }
-        return DynamicFinder.ORDER_ASC;
+        throw new IllegalArgumentException("The direction of the sort on [" + property + "] must be 'asc' or 'desc', not [" + direction + "]");
     }
 
     /**

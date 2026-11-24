@@ -314,6 +314,22 @@ class MapSortAndEmptyListHibernateSpec extends GrailsDataTckSpec<GrailsDataHiber
         'a collection of strings, negated'      | { -> MsBook.createCriteria().list { not { inList('tags', [] as Object[]) }; order('title') }*.title }  | ['alpha', 'beta', 'omega', 'zeta']
         'a collection of strings, with values'  | { -> MsBook.createCriteria().list { inList('tags', ['y'] as Object[]) }*.title }                        | ['zeta']
     }
+
+    @Unroll
+    void "a map sort with #form is refused"() {
+        when:
+        MsBook.list(sort: sort)
+
+        then:
+        IllegalArgumentException e = thrown()
+        e.message.contains('title')
+
+        where:
+        form                | sort
+        'a direction text'  | [title: 'sideways']
+        'a number'          | [title: 1]
+        'a null direction'  | [title: null]
+    }
 }
 
 @Entity
