@@ -21,6 +21,7 @@ package org.grails.orm.hibernate.query;
 
 import java.beans.PropertyDescriptor;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -71,6 +72,7 @@ import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.model.types.Basic;
+import org.grails.datastore.mapping.model.types.Embedded;
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings;
 import org.grails.datastore.mapping.query.Query;
 import org.grails.datastore.mapping.query.api.BuildableCriteria;
@@ -1741,9 +1743,10 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
                     }
                     // GRAILS-7324 look if we already have association to sort by
                     Map argMap = (Map) args[0];
-                    // a map of sort properties is applied with the other arguments, in populateArgumentsForCriteria
+                    // a map of sort properties is applied with the other arguments, in populateArgumentsForCriteria;
+                    // a builder constructed without a datastore has no mapping to resolve the properties against, so it stays there
                     final Object sortArgument = argMap.get(HibernateQueryConstants.ARGUMENT_SORT);
-                    if (sortArgument instanceof Map) {
+                    if (sortArgument instanceof Map && datastore != null) {
                         applyMapSort(argMap, (Map<?, ?>) sortArgument);
                         argMap = withSortApplied(argMap);
                     }
@@ -2070,7 +2073,43 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
                 return false;
             }
         }
-        addOrder(criteria, aliasForSortedAssociation(association) + "." + property.substring(lastPropertyPos + 1), order, ignoreCase);
+        String leaf = property.substring(lastPropertyPos + 1);
+        String joinedPart = association;
+        String embeddedPart = "";
+        String[] names = association.split("\\.");
+        PersistentEntity current = entity;
+        StringBuilder joined = new StringBuilder();
+        for (int i = 0; i < names.length; i++) {
+            PersistentProperty step = current == null ? null : current.getPropertyByName(names[i]);
+            if (step instanceof Embedded) {
+                // an embedded component is not joined: the rest of the path is read through the join before it
+                String rest = String.join(".", Arrays.copyOfRange(names, i, names.length));
+                if (joined.length() == 0 || !isEmbeddedPath(current, Arrays.copyOfRange(names, i, names.length))) {
+                    return false;
+                }
+                joinedPart = joined.toString();
+                embeddedPart = rest + ".";
+                break;
+            }
+            if (joined.length() > 0) {
+                joined.append('.');
+            }
+            joined.append(names[i]);
+            current = step instanceof Association ? ((Association) step).getAssociatedEntity() : null;
+        }
+        addOrder(criteria, aliasForSortedAssociation(joinedPart) + "." + embeddedPart + leaf, order, ignoreCase);
+        return true;
+    }
+
+    private static boolean isEmbeddedPath(PersistentEntity owner, String[] names) {
+        PersistentEntity current = owner;
+        for (String name : names) {
+            PersistentProperty property = current == null ? null : current.getPropertyByName(name);
+            if (!(property instanceof Embedded)) {
+                return false;
+            }
+            current = ((Embedded) property).getAssociatedEntity();
+        }
         return true;
     }
 
@@ -2089,6 +2128,44 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
         return alias;
     }
 
+    /**
+     * Joins once an association that two or more of the sort properties go through, on the way to the property or as its owner, so that each of them orders by that
+     * join: sorting a property of an association joins it, and a second property of the same association would join it again.
+     */
+    private void joinAssociationsSortedTwice(PersistentEntity entity, Map<?, ?> sortMap) {
+        Map<String, Integer> uses = new LinkedHashMap<>();
+        for (Object key : sortMap.keySet()) {
+            String property = (String) key;
+            // every association on the way to the property is used: author.publisher.name goes through author as well
+            int dot = property.indexOf('.');
+            while (dot > 0) {
+                uses.merge(property.substring(0, dot), 1, Integer::sum);
+                dot = property.indexOf('.', dot + 1);
+            }
+        }
+        for (Map.Entry<String, Integer> use : uses.entrySet()) {
+            String association = use.getKey();
+            if (use.getValue() > 1 && !aliasMap.containsKey(association) && isJoinableAssociationPath(entity, association)) {
+                aliasForSortedAssociation(association);
+            }
+        }
+    }
+
+    /**
+     * @return whether every name of the path is an association of the entity it starts from, and none is embedded
+     */
+    private static boolean isJoinableAssociationPath(PersistentEntity entity, String path) {
+        PersistentEntity current = entity;
+        for (String name : path.split("\\.")) {
+            PersistentProperty property = current == null ? null : current.getPropertyByName(name);
+            if (!(property instanceof Association) || property instanceof Embedded) {
+                return false;
+            }
+            current = ((Association) property).getAssociatedEntity();
+        }
+        return true;
+    }
+
     private void applyMapSort(Map<?, ?> argMap, Map<?, ?> sortMap) {
         boolean ignoreCase = true;
         Object caseArg = argMap.get(HibernateQueryConstants.ARGUMENT_IGNORE_CASE);
@@ -2096,6 +2173,7 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
             ignoreCase = (Boolean) caseArg;
         }
         PersistentEntity entity = datastore.getMappingContext().getPersistentEntity(targetClass.getName());
+        joinAssociationsSortedTwice(entity, sortMap);
         for (Map.Entry<?, ?> entry : sortMap.entrySet()) {
             String property = (String) entry.getKey();
             String order = GrailsHibernateQueryUtils.sortDirection(property, entry.getValue());

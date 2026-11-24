@@ -99,6 +99,9 @@ public abstract class AbstractHibernateQuery extends Query {
     protected String alias;
     protected int aliasCount;
     protected Map<String, CriteriaAndAlias> createdAssociationPaths = new HashMap<>();
+
+    /** The aliases of the joins made to order by a property of an association, by association path, so each association is joined once. */
+    private final Map<String, String> sortAliases = new HashMap<>();
     protected LinkedList<String> aliasStack = new LinkedList<>();
     protected LinkedList<PersistentEntity> entityStack = new LinkedList<>();
     protected LinkedList<Association> associationStack = new LinkedList<>();
@@ -618,7 +621,11 @@ public abstract class AbstractHibernateQuery extends Query {
             String sortHead = property.substring(0, i);
             String sortTail = property.substring(i + 1);
 
-            if (createdAssociationPaths.containsKey(sortHead)) {
+            if (criteria != null && isJoinableAssociation(sortHead)) {
+                // the join that a condition made is reused, and one that is missing is made once for every property that goes through it
+                addOrderThroughJoins(property, order);
+            }
+            else if (createdAssociationPaths.containsKey(sortHead)) {
                 CriteriaAndAlias criteriaAndAlias = createdAssociationPaths.get(sortHead);
                 Criteria criteria = criteriaAndAlias.criteria;
                 org.hibernate.criterion.Order hibernateOrder = order.getDirection() == Order.Direction.ASC ?
@@ -638,8 +645,7 @@ public abstract class AbstractHibernateQuery extends Query {
                     }
                     else {
                         if (criteria != null) {
-                            Criteria subCriteria = criteria.createCriteria(sortHead);
-                            addOrderToCriteria(subCriteria, sortTail, order);
+                            addOrderThroughJoins(property, order);
                         }
                         else if (detachedCriteria != null) {
                             DetachedCriteria subDetachedCriteria = detachedCriteria.createCriteria(sortHead);
@@ -655,6 +661,54 @@ public abstract class AbstractHibernateQuery extends Query {
         }
 
         return this;
+    }
+
+    private boolean isJoinableAssociation(String name) {
+        PersistentProperty property = entity.getPropertyByName(name);
+        return property instanceof Association && !(property instanceof Embedded);
+    }
+
+    /**
+     * Orders by a property that is reached through associations, {@code author.publisher.name}, on the join of each association:
+     * the one a condition of the query made, or else one made here, once for every property that goes through that association.
+     */
+    private void addOrderThroughJoins(String property, Order order) {
+        PersistentEntity current = entity;
+        String ownerAlias = null;
+        String path = "";
+        String rest = property;
+        int dot = rest.indexOf('.');
+        while (dot > 0) {
+            PersistentProperty head = current.getPropertyByName(rest.substring(0, dot));
+            if (!(head instanceof Association) || head instanceof Embedded) {
+                break;
+            }
+            String joinedPath = path + head.getName();
+            ownerAlias = joinedAlias(joinedPath, ownerAlias, head.getName());
+            path = joinedPath + ".";
+            current = ((Association) head).getAssociatedEntity();
+            rest = rest.substring(dot + 1);
+            dot = rest.indexOf('.');
+        }
+        String orderBy = ownerAlias == null ? calculatePropertyName(rest) : ownerAlias + '.' + rest;
+        org.hibernate.criterion.Order hibernateOrder = order.getDirection() == Order.Direction.ASC ?
+                org.hibernate.criterion.Order.asc(orderBy) : org.hibernate.criterion.Order.desc(orderBy);
+        criteria.addOrder(order.isIgnoreCase() ? hibernateOrder.ignoreCase() : hibernateOrder);
+    }
+
+    private String joinedAlias(String joinedPath, String parentAlias, String name) {
+        CriteriaAndAlias made = createdAssociationPaths.get(joinedPath);
+        if (made != null && made.alias != null) {
+            return made.alias;
+        }
+        String known = sortAliases.get(joinedPath);
+        if (known != null) {
+            return known;
+        }
+        String alias = "sort_" + name + '_' + sortAliases.size();
+        criteria.createAlias(parentAlias == null ? name : parentAlias + '.' + name, alias, org.hibernate.sql.JoinType.INNER_JOIN);
+        sortAliases.put(joinedPath, alias);
+        return alias;
     }
 
     private void addSimpleOrder(Order order, String property) {
