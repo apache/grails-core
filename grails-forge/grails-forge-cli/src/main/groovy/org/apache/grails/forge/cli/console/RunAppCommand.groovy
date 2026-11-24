@@ -27,6 +27,7 @@ import java.nio.file.attribute.PosixFilePermissions
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
 import java.util.function.Consumer
 import java.util.function.Function
 import groovy.transform.CompileStatic
@@ -460,18 +461,20 @@ class RunAppCommand extends GradleEnvironmentCommand implements OptionRelation.D
     // looks for what stop-app says while the build runs, and cancels the build itself.
     private int stayWith(ConsoleProject project, boolean windows, Path directory, List<String> arguments, int answersOn, String address) throws GradleRunner.RefusedArgumentException {
         List<String> failures = []
-        long[] recorded = [0L, 0L] as long[]
+        // set where the build is told to have started, which can be a thread of the runner, and read here after it
+        AtomicReference<long[]> recorded = new AtomicReference<long[]>([0L, 0L] as long[])
         AtomicBoolean asked = new AtomicBoolean()
-        Thread[] looking = new Thread[1]
+        AtomicReference<Thread> looking = new AtomicReference<Thread>()
         GradleBuild runner = GradleBuild.of(GradleBuild.Purpose.BUILD, { String message -> failures.add(message) } as Consumer<String>, windows)
         out('| Running application...')
         int exit = runner.run(project, arguments, { GradleBuild.Running started ->
             try {
                 // the instant as it was recorded: of a process that has ended by now the system says none
-                recorded[1] = RunningApplication.record(directory, started.process, answersOn, false, started.commandLine, ApplicationPort.boundLoopback(address))
-                recorded[0] = started.process.pid()
+                long instant = RunningApplication.record(directory, started.process, answersOn, false, started.commandLine, ApplicationPort.boundLoopback(address))
+                long pid = started.process.pid()
+                recorded.set([pid, instant] as long[])
                 if (started.commandLine) {
-                    looking[0] = lookForStop(directory, recorded[0], recorded[1], asked, started)
+                    looking.set(lookForStop(directory, pid, instant, asked, started))
                 }
             } catch (IOException e) {
                 // a build that has ended by now is none to record, and says itself how it ended
@@ -480,14 +483,13 @@ class RunAppCommand extends GradleEnvironmentCommand implements OptionRelation.D
                 }
             }
         } as Consumer<GradleBuild.Running>)
-        if (looking[0] != null) {
-            looking[0].interrupt()
-        }
-        if (recorded[0] != 0L && RunningApplication.wasAskedToStop(directory, recorded[0], recorded[1])) {
+        looking.get()?.interrupt()
+        long[] record = recorded.get()
+        if (record[0] != 0L && RunningApplication.wasAskedToStop(directory, record[0], record[1])) {
             asked.set(true)
         }
-        if (recorded[0] != 0L) {
-            RunningApplication.forget(directory, recorded[0], recorded[1])
+        if (record[0] != 0L) {
+            RunningApplication.forget(directory, record[0], record[1])
         }
         if (asked.get()) {
             out(GradleRunner.asksToEnd() ? '| Application stopped' : "| Application stopped. ${GradleRunner.ENDED_AT_ONCE}")
@@ -536,16 +538,18 @@ class RunAppCommand extends GradleEnvironmentCommand implements OptionRelation.D
         GradleRunner runner = GradleBuild.leftRunning({ String message -> err(message) } as Consumer<String>, windows)
         // From here to the answer the build is this command's to end: also when the CLI is ended by a
         // signal, which interrupts no thread. The hook is there before the build is, and is told of it.
+        // what the hook reads is set on the thread of the command: through atomics, so that the hook sees it as it was set
         AtomicBoolean ending = new AtomicBoolean()
-        ProcessHandle[] build = new ProcessHandle[1]
-        long[] recorded = [0L, 0L] as long[]
+        AtomicReference<ProcessHandle> build = new AtomicReference<ProcessHandle>()
+        AtomicReference<long[]> recorded = new AtomicReference<long[]>([0L, 0L] as long[])
         Thread whenEnded = new Thread({
             ending.set(true)
-            ProcessHandle left = build[0]
+            ProcessHandle left = build.get()
             if (left != null) {
                 err('The application was stopped before it answered, because the command was ended')
                 GradleRunner.stop(left, STOP_SECONDS)
-                RunningApplication.forget(directory, recorded[0], recorded[1])
+                long[] record = recorded.get()
+                RunningApplication.forget(directory, record[0], record[1])
             }
         } as Runnable, 'grails-run-app-wait')
         try {
@@ -556,7 +560,7 @@ class RunAppCommand extends GradleEnvironmentCommand implements OptionRelation.D
         }
         try {
             ProcessHandle started = runner.start(project, arguments, log)
-            build[0] = started
+            build.set(started)
             if (started == null) {
                 said(log)
                 return 1
@@ -569,8 +573,9 @@ class RunAppCommand extends GradleEnvironmentCommand implements OptionRelation.D
             }
             try {
                 // the instant as it was recorded: of a process that has ended by now the system says none
-                recorded[1] = RunningApplication.record(directory, started, answersOn, true, false, ApplicationPort.boundLoopback(address))
-                recorded[0] = started.pid()
+                // the pid and the instant are set together: the hook never sees the one without the other
+                long instant = RunningApplication.record(directory, started, answersOn, true, false, ApplicationPort.boundLoopback(address))
+                recorded.set([started.pid(), instant] as long[])
             } catch (IOException e) {
                 if (!started.isAlive()) {
                     // nothing is there to record: the build has ended already, which is what there is to say
@@ -589,7 +594,8 @@ class RunAppCommand extends GradleEnvironmentCommand implements OptionRelation.D
                 return 1
             }
             if (ended != null) {
-                RunningApplication.forget(directory, recorded[0], recorded[1])
+                long[] record = recorded.get()
+                RunningApplication.forget(directory, record[0], record[1])
                 err(ended)
                 said(log)
                 return 1
@@ -603,7 +609,7 @@ class RunAppCommand extends GradleEnvironmentCommand implements OptionRelation.D
             return 0
         } finally {
             // once it answers, or has been ended, the build is no longer the hook's
-            build[0] = null
+            build.set(null)
             try {
                 Runtime.getRuntime().removeShutdownHook(whenEnded)
             } catch (IllegalStateException ignored) {
