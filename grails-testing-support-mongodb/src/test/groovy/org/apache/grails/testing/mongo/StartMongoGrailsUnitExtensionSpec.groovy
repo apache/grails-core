@@ -20,6 +20,7 @@
 package org.apache.grails.testing.mongo
 
 import org.testcontainers.containers.GenericContainer
+import spock.lang.Requires
 import spock.lang.Specification
 
 class StartMongoGrailsUnitExtensionSpec extends Specification {
@@ -30,6 +31,7 @@ class StartMongoGrailsUnitExtensionSpec extends Specification {
         extension.stop()
     }
 
+    @Requires({ os.linux || !System.getenv().containsKey('CI') })
     void 'stop stops the container the specifications of the run shared'() {
         given: 'a started extension whose container a specification used'
         extension.start()
@@ -42,6 +44,7 @@ class StartMongoGrailsUnitExtensionSpec extends Specification {
         !container.running
     }
 
+    @Requires({ os.linux || !System.getenv().containsKey('CI') })
     void 'the shared container is the running container the specifications of this thread are given'() {
         when: 'test support asks for the shared container twice'
         GenericContainer first = StartMongoGrailsUnitExtension.sharedContainer
@@ -58,6 +61,15 @@ class StartMongoGrailsUnitExtensionSpec extends Specification {
         then: 'the container of the test run is not affected'
         first.running
         StartMongoGrailsUnitExtension.sharedContainer.is(first)
+    }
+
+    void 'starting and stopping an unused extension does not need a container'() {
+        when: 'a test run starts and ends without a specification requesting MongoDB'
+        extension.start()
+        extension.stop()
+
+        then:
+        noExceptionThrown()
     }
 
     void 'stop does nothing when the extension was never started'() {

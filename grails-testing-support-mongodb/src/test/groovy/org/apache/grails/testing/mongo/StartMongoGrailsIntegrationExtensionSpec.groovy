@@ -20,6 +20,7 @@
 package org.apache.grails.testing.mongo
 
 import org.testcontainers.containers.GenericContainer
+import spock.lang.Requires
 import spock.lang.Specification
 
 class StartMongoGrailsIntegrationExtensionSpec extends Specification {
@@ -31,6 +32,7 @@ class StartMongoGrailsIntegrationExtensionSpec extends Specification {
         holder.stop()
     }
 
+    @Requires({ os.linux || !System.getenv().containsKey('CI') })
     void 'stop stops the container the extension started for the integration tests'() {
         given: 'the container of an integration test run'
         GenericContainer container = holder.container

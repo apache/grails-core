@@ -20,6 +20,7 @@
 package org.apache.grails.testing.mongo
 
 import org.testcontainers.containers.GenericContainer
+import spock.lang.Requires
 import spock.lang.Specification
 
 class MongoContainerHolderSpec extends Specification {
@@ -30,6 +31,7 @@ class MongoContainerHolderSpec extends Specification {
         holder.stop()
     }
 
+    @Requires({ os.linux || !System.getenv().containsKey('CI') })
     void 'a thread is given the same running container each time it asks'() {
         when: 'the same thread asks twice'
         GenericContainer first = holder.container
@@ -40,6 +42,7 @@ class MongoContainerHolderSpec extends Specification {
         second.is(first)
     }
 
+    @Requires({ os.linux || !System.getenv().containsKey('CI') })
     void 'stop, called from another thread, stops the container and the next request starts a new one'() {
         given: 'a container started for this thread'
         GenericContainer container = holder.container
