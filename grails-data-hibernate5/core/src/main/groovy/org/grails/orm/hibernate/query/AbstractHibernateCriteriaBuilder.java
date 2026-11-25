@@ -1613,8 +1613,15 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
         for (Object property : properties) {
             String sortProperty = (String) property;
             String wholePath = getWholeAssociationPath(sortProperty);
+            int lastPropertyPos = wholePath.lastIndexOf('.');
+            if (lastPropertyPos < 0) {
+                continue;
+            }
+            String sortAssociationPath = wholePath.substring(0, lastPropertyPos);
             for (Map.Entry<String, JoinType> requested : requestedJoinTypes.entrySet()) {
-                if (requested.getValue() == JoinType.LEFT && wholePath.startsWith(requested.getKey() + '.')) {
+                // The sort can use either the requested association or an intermediate association on its path.
+                if (requested.getValue() == JoinType.LEFT && (wholePath.startsWith(requested.getKey() + '.') ||
+                        requested.getKey().startsWith(sortAssociationPath + '.'))) {
                     calculateOrderPropertyName(new RequestedOrder(sortProperty.split("\\."), Order::asc, targetClass, "", null));
                     break;
                 }
