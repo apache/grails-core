@@ -94,19 +94,22 @@ class AssociationOrdersSpec extends Specification {
         moved[0].associationProperty == 'name'
     }
 
-    def 'an order by a single name that is no property of the association stays in its block'() {
+    def 'an order by a single name that is no property of the association moves out, for the query to reject'() {
         given:
         def club = block('club', ['name'])
         club.order('unknown')
         List<Query.Order> moved = []
 
+        expect:
+        AssociationOrders.inBlocks([club])*.property == ['club.unknown']
+
         when:
         AssociationOrders.moveOutOf(club, moved.&add)
 
         then:
-        moved.empty
-        club.orders*.property == ['unknown']
-        AssociationOrders.inBlocks([club]).empty
+        moved*.property == ['club.unknown']
+        moved[0].associationProperty == 'unknown'
+        club.orders.empty
     }
 
     def 'an order by an alias that the block declares keeps the block and the path of the alias'() {
