@@ -21,6 +21,9 @@ package grails.gorm.tests
 import grails.gorm.DetachedCriteria
 import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
+import org.hibernate.Hibernate
+
+import jakarta.persistence.criteria.JoinType
 
 class UndefinedAliasSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
 
@@ -149,6 +152,39 @@ class UndefinedAliasSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckMa
                 ['argument', 'stored', 'map'],
                 [false, true],
         ].combinations().collect { List row -> row[0] + row[1..2] }
+    }
+
+    void 'a nested LEFT sort keeps an empty collection with root alias #rootAlias using #sortForm and pagination #paged'() {
+        given:
+        new Team(name: 'Nested empty').save(failOnError: true)
+        final populated = new Team(name: 'Nested populated').save(failOnError: true)
+        ['Nested player A', 'Nested player B'].each { String playerName ->
+            final player = new Player(name: playerName, team: populated)
+            player.contract = new Contract(salary: 100G, player: player)
+            player.save(failOnError: true)
+        }
+        manager.session.flush()
+        manager.session.clear()
+        def criteria = (rootAlias == null ? new DetachedCriteria(Team) : new DetachedCriteria(Team, rootAlias)).like('name', 'Nested%')
+        final arguments = [fetch: ['players.team': JoinType.LEFT]] + (paged ? [max: 10] : [:])
+        if (sortForm == 'stored') {
+            criteria = criteria.sort('players.team.name')
+        }
+        else {
+            arguments.sort = sortForm == 'map' ? ['players.team.name': 'asc'] : 'players.team.name'
+        }
+
+        when:
+        final results = criteria.list(arguments)
+
+        then:
+        results*.name.sort() == ['Nested empty', 'Nested populated']
+        results.every { Hibernate.isInitialized(it.players) == !paged }
+        results.find { it.name == 'Nested empty' }.players.empty
+        results.find { it.name == 'Nested populated' }.players*.name.sort() == ['Nested player A', 'Nested player B']
+
+        where:
+        [rootAlias, sortForm, paged] << [[null, 'players'], ['argument', 'stored', 'map'], [false, true]].combinations()
     }
 
     private static final List<String> TEAMS_BY_NAME = ['Arsenal First Team', 'Chelsea First Team', 'Manchester United First Team', 'Unattached First Team']

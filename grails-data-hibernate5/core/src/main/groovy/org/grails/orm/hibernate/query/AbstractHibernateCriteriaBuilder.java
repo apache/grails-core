@@ -25,9 +25,11 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 
 import groovy.lang.Closure;
@@ -153,6 +155,7 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
      * applied once the criteria are built, see {@link #applyRequestedJoinTypes()}.
      */
     private final Map<String, JoinType> requestedJoinTypes = new LinkedHashMap<>();
+    private final Set<String> explicitFetchModes = new HashSet<>();
     /**
      * The orders that the criteria request, in the order of the requests. They are added once the
      * criteria are built, see {@link #applyRequestedOrders()}.
@@ -339,6 +342,7 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
         criteria.setFetchMode(calculatePropertyName(associationPath), FetchMode.JOIN);
         // the fetch mode alone replaces a join type that was requested for the association before
         requestedJoinTypes.remove(getRequestedJoinPath(associationPath));
+        explicitFetchModes.add(getRequestedJoinPath(associationPath));
         return this;
     }
 
@@ -351,6 +355,7 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
     public BuildableCriteria join(String property, JoinType joinType) {
         criteria.setFetchMode(calculatePropertyName(property), FetchMode.JOIN);
         requestedJoinTypes.put(getRequestedJoinPath(property), joinType);
+        explicitFetchModes.remove(getRequestedJoinPath(property));
         return this;
     }
 
@@ -394,10 +399,12 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
             Object fetchValue = ((Map.Entry) entry).getValue();
             if (fetchValue instanceof JoinType) {
                 requestedJoinTypes.put(associationPath, (JoinType) fetchValue);
+                explicitFetchModes.remove(associationPath);
             }
             else {
                 criteria.setFetchMode(associationPath, GrailsHibernateUtil.getFetchMode(fetchValue));
                 requestedJoinTypes.remove(associationPath);
+                explicitFetchModes.add(associationPath);
             }
         }
         Map remaining = new HashMap(arguments);
@@ -439,6 +446,7 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
     public BuildableCriteria select(String associationPath) {
         criteria.setFetchMode(calculatePropertyName(associationPath), FetchMode.SELECT);
         requestedJoinTypes.remove(getRequestedJoinPath(associationPath));
+        explicitFetchModes.add(getRequestedJoinPath(associationPath));
         return this;
     }
 
@@ -678,6 +686,7 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
         if (criteria != null) {
             criteria.setFetchMode(associationPath, fetchMode);
             requestedJoinTypes.remove(associationPath);
+            explicitFetchModes.add(associationPath);
         }
     }
 
@@ -1664,7 +1673,7 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
                 alias = tokens[i] + ALIAS + aliasCount;
                 aliasMap.put(associationPath, alias);
                 String joinPath = parentAlias != null ? parentAlias + '.' + tokens[i] : associationPath;
-                boolean requestedLeftJoin = requestedJoinTypes.get(associationPath) == JoinType.LEFT;
+                boolean requestedLeftJoin = isRequestedLeftSortJoin(associationPath);
                 boolean leftJoin = requestedLeftJoin || GrailsHibernateUtil.isLeftJoinAssociationSort(property.getOwner());
                 CriteriaImpl root = criteria instanceof CriteriaImpl ? (CriteriaImpl) criteria : null;
                 boolean pagedCollection = requestedLeftJoin && property instanceof ToMany && root != null &&
@@ -1680,6 +1689,27 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
             entity = ((Association) property).getAssociatedEntity();
         }
         return alias + '.' + tokens[tokens.length - 1];
+    }
+
+    /**
+     * A nested left request also applies to intermediate joins made only for its sort, unless
+     * the caller explicitly chose a type or a replacement fetch mode for that intermediate path.
+     * Joins already made by association criteria are reused before this method is consulted.
+     */
+    private boolean isRequestedLeftSortJoin(String associationPath) {
+        if (requestedJoinTypes.containsKey(associationPath)) {
+            return requestedJoinTypes.get(associationPath) == JoinType.LEFT;
+        }
+        if (explicitFetchModes.contains(associationPath)) {
+            return false;
+        }
+        String prefix = associationPath + '.';
+        for (Map.Entry<String, JoinType> requested : requestedJoinTypes.entrySet()) {
+            if (requested.getValue() == JoinType.LEFT && requested.getKey().startsWith(prefix)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     protected Order convertOrder(Query.Order o, String property) {
@@ -1955,6 +1985,7 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
             applyRequestedSortJoins(listArguments);
             applyRequestedOrders();
             requestedJoinTypes.clear();
+            explicitFetchModes.clear();
 
             if (resultTransformer != null) {
                 criteria.setResultTransformer(resultTransformer);
@@ -2276,6 +2307,7 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
         applyRequestedJoinTypes();
         applyRequestedOrders();
         requestedJoinTypes.clear();
+        explicitFetchModes.clear();
         return criteria;
     }
 
