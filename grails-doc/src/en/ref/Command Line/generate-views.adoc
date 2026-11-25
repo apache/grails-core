@@ -56,7 +56,7 @@ Arguments:
 Flags:
 
 * `force` - Replace files that are there already (`--force`)
-* `views` - The kind of views to generate, `gsp` or `json` (`--views=json`), where the kind the application is given by itself is not the one that is wanted. The value is given with `=`.
+* `views` - The kind of views to generate, `gsp` or `json` (`--views=json`), where the kind the application is given by itself is not the one that is wanted. The value follows `=` or is the next word: `--views=json` and `--views json` are the same.
 
 === JSON Views and a REST Controller
 

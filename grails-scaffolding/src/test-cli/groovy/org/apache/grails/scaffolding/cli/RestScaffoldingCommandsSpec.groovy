@@ -76,6 +76,23 @@ class RestScaffoldingCommandsSpec extends Specification {
             'src/integration-test/groovy/com/example/BookServiceSpec.groovy': 'ed5c7bd2d4cfa49176bbca31fff17fa7277bd6d5cd49564b8e1bd22feb193124',
     ]
 
+    /** What the controller spec has that the one of Grails 8 had not: it renders the view the action answered with */
+    private static final String RENDER_VIEW = '''\
+    /**
+     * Renders the JSON view the action answered with. A unit test calls the action and nothing after it,
+     * so the view is rendered here, as the application renders it once the action has returned.
+     */
+    private void renderView() {
+        def modelAndView = controller.modelAndView
+        modelAndView?.view?.render(modelAndView.model, request, response)
+    }
+
+'''
+
+    /** The cleanup of the service spec of Grails 8, which failed every test of an application without MongoDB */
+    private static final String GRAILS_8_CLEANUP = 'assert false, "TODO: Provide a cleanup implementation if using MongoDB"'
+    private static final String CLEANUP = '// TODO: With MongoDB, where what a test saves is not rolled back, delete here what setupData() saved'
+
     @Shared
     URLClassLoader restApplication
 
@@ -124,9 +141,9 @@ class RestScaffoldingCommandsSpec extends Specification {
         errors.toString() == ''
         generated() == (REST_CONTROLLER + JSON_VIEWS + ['grails-app/views/error.gson']).sort()
 
-        and: 'the controller answers with JSON and XML and has the actions of a REST resource only'
+        and: 'the controller answers with JSON only, as one create-controller writes in a REST API application, and has the actions of a REST resource only'
         String controller = written('grails-app/controllers/com/example/BookController.groovy')
-        controller.contains("static responseFormats = ['json', 'xml']")
+        controller.contains("static responseFormats = ['json']\n")
         controller.contains('render status: NO_CONTENT')
         !controller.contains('def create()')
         !controller.contains('def edit(')
@@ -140,11 +157,27 @@ class RestScaffoldingCommandsSpec extends Specification {
         when:
         boolean result = runInRestApplication(new GenerateAllCommand(), 'generate-all com.example.Book')
 
-        then: 'the sources are the same byte for byte'
+        then: 'the service is the same byte for byte'
         result
-        GRAILS_8.every { String path, String digest ->
-            assert sha256(written(path)) == digest: "${path} is not what Grails 8 generated"
-            true
+        sameAsGrails8('grails-app/services/com/example/BookService.groovy') { String text -> text }
+
+        and: 'the controller is the same but for its formats: Grails 8 advertised XML as well, which a REST API of Grails 9 does not'
+        sameAsGrails8('grails-app/controllers/com/example/BookController.groovy') { String text ->
+            assert text.count("static responseFormats = ['json']\n") == 1
+            text.replace("static responseFormats = ['json']\n", "static responseFormats = ['json', 'xml']\n")
+        }
+
+        and: 'the controller spec is the same but for rendering the view of each action whose answer it reads, without which those tests fail'
+        sameAsGrails8('src/test/groovy/com/example/BookControllerSpec.groovy') { String text ->
+            assert text.count(RENDER_VIEW) == 1
+            assert text.count('renderView()') == 7
+            text.replace(RENDER_VIEW, '').replaceAll(/\n *renderView\(\)/, '')
+        }
+
+        and: 'the service spec is the same but for its cleanup, which failed every test of an application without MongoDB'
+        sameAsGrails8('src/integration-test/groovy/com/example/BookServiceSpec.groovy') { String text ->
+            assert text.count(CLEANUP) == 1
+            text.replace(CLEANUP, GRAILS_8_CLEANUP)
         }
 
         and: 'the views are the same but for their indentation, which was a tab'
@@ -277,6 +310,8 @@ class RestScaffoldingCommandsSpec extends Specification {
         true      | true   | ''             || false
         true      | true   | '--views=json' || true
         true      | true   | '--views=JSON' || true
+        true      | true   | '--views json' || true
+        true      | false  | '--views gsp'  || false
         true      | false  | '--views=gsp'  || false
         false     | false  | '--views=json' || true
         false     | true   | '--views=json' || true
@@ -429,6 +464,14 @@ class RestScaffoldingCommandsSpec extends Specification {
         StringWriter writer = new StringWriter()
         engine.resolveTemplate(path).make(model).writeTo(writer)
         writer.toString()
+    }
+
+    /**
+     * Whether a generated file is what Grails 8 generated once what Grails 9 changed in it is taken back.
+     */
+    private boolean sameAsGrails8(String path, Closure<String> withoutTheChanges) {
+        assert sha256(withoutTheChanges.call(written(path).replace('\r\n', '\n'))) == GRAILS_8[path]: "${path} is not what Grails 8 generated"
+        true
     }
 
     private static String sha256(String text) {

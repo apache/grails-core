@@ -25,7 +25,7 @@ class ${className}ServiceSpec extends Specification {
     }
 
     void cleanup() {
-        assert false, "TODO: Provide a cleanup implementation if using MongoDB"
+        // TODO: With MongoDB, where what a test saves is not rolled back, delete here what setupData() saved
     }
 
     void "test get"() {

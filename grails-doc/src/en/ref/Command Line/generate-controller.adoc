@@ -45,7 +45,7 @@ The `generate-controller` command generates the controller that implements CRUD 
 
 It writes no views: link:{commandLineRefFromRef}generate-views.html[generate-views] does, and link:{commandLineRefFromRef}generate-all.html[generate-all] does both.
 
-In a REST API application the same four files are written for a REST resource, as the section "JSON Views and a REST Controller" below describes. The controller has the actions `index`, `show`, `save`, `update` and `delete` and no `create` or `edit`, declares `static responseFormats = ['json', 'xml']`, answers with a status and the resource and never redirects, and answers 404 when there is nothing to delete; the service returns what it deleted; and the unit test of the controller reads the JSON of the responses. They are written from the templates `RestController.groovy`, `RestService.groovy`, `RestSpec.groovy` and `RestServiceSpec.groovy`, each of the project under `src/main/templates/scaffolding` when it is there (see link:{commandLineRefFromRef}install-templates.html[install-templates]) and of the scaffolding plugin otherwise.
+In a REST API application the same four files are written for a REST resource, as the section "JSON Views and a REST Controller" below describes. The controller has the actions `index`, `show`, `save`, `update` and `delete` and no `create` or `edit`, declares `static responseFormats = ['json']` as a controller that `create-controller` writes there does, answers with a status and the resource and never redirects, and answers 404 when there is nothing to delete; the service returns what it deleted; and the unit test of the controller reads the JSON of the responses. Add `'xml'` to the formats for a controller that answers with XML as well. The two tests are complete but for the places they mark with `TODO`, which ask for the valid properties of the class and for the data of the service test, and pass once those are filled in. The unit test of the controller renders the JSON view an action answered with itself (`renderView()`), because a unit test calls the action and nothing after it, and then reads the response. In an application with MongoDB, where what a test saves is not rolled back, the `cleanup()` of the service test is the place to delete it. They are written from the templates `RestController.groovy`, `RestService.groovy`, `RestSpec.groovy` and `RestServiceSpec.groovy`, each of the project under `src/main/templates/scaffolding` when it is there (see link:{commandLineRefFromRef}install-templates.html[install-templates]) and of the scaffolding plugin otherwise.
 
 Usage:
 
@@ -61,7 +61,7 @@ Arguments:
 Flags:
 
 * `force` - Replace files that are there already (`--force`)
-* `views` - The kind of views the controller is for, `gsp` or `json` (`--views=json`), where the kind the application is given by itself is not the one that is wanted. The value is given with `=`.
+* `views` - The kind of views the controller is for, `gsp` or `json` (`--views=json`), where the kind the application is given by itself is not the one that is wanted. The value follows `=` or is the next word: `--views=json` and `--views json` are the same.
 
 === JSON Views and a REST Controller
 

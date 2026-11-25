@@ -17,6 +17,15 @@ class ${className}ControllerSpec extends Specification implements ControllerUnit
         defineBeans(new JsonViewGrailsPlugin(applicationContext: applicationContext))
     }
 
+    /**
+     * Renders the JSON view the action answered with. A unit test calls the action and nothing after it,
+     * so the view is rendered here, as the application renders it once the action has returned.
+     */
+    private void renderView() {
+        def modelAndView = controller.modelAndView
+        modelAndView?.view?.render(modelAndView.model, request, response)
+    }
+
     def populateValidParams(params) {
         assert params != null
 
@@ -34,6 +43,7 @@ class ${className}ControllerSpec extends Specification implements ControllerUnit
 
         when:"The index action is executed"
             controller.index()
+            renderView()
 
         then:"The response is correct"
             response.text == '[]'
@@ -63,6 +73,7 @@ class ${className}ControllerSpec extends Specification implements ControllerUnit
         populateValidParams(params)
         request.json = new ${className}(params)
         controller.save()
+        renderView()
 
         then:
         response.status == CREATED.value()
@@ -83,6 +94,7 @@ class ${className}ControllerSpec extends Specification implements ControllerUnit
         populateValidParams(params)
         request.json = new ${className}(params)
         controller.save()
+        renderView()
 
         then:
         response.status == UNPROCESSABLE_ENTITY.value()
@@ -111,6 +123,7 @@ class ${className}ControllerSpec extends Specification implements ControllerUnit
         when:"A domain instance is passed to the show action"
         params.id = 2
         controller.show()
+        renderView()
 
         then:"A model is populated containing the domain instance"
         response.status == OK.value()
@@ -142,6 +155,7 @@ class ${className}ControllerSpec extends Specification implements ControllerUnit
         instance.id = 1
         instance.version = 0
         controller.update(instance)
+        renderView()
 
         then:
         response.status == OK.value()
@@ -163,6 +177,7 @@ class ${className}ControllerSpec extends Specification implements ControllerUnit
         instance.id = 1
         instance.version = 0
         controller.update(instance)
+        renderView()
 
         then:
         response.status == UNPROCESSABLE_ENTITY.value()

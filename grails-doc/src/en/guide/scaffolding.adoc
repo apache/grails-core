@@ -256,7 +256,7 @@ model {
 json tmpl.book(book)
 ----
 
-`generate-controller` writes a controller with the actions `index`, `show`, `save`, `update` and `delete`, which declares `static responseFormats = ['json', 'xml']` and answers with a status and the resource, the data service it uses, and a test of each. `generate-all` does both.
+`generate-controller` writes a controller with the actions `index`, `show`, `save`, `update` and `delete`, which declares `static responseFormats = ['json']` and answers with a status and the resource, the data service it uses, and a test of each. `generate-all` does both. The two tests are complete but for the places they mark with `TODO`, which ask for the valid properties of the class and for the data of the service test, and pass once those are filled in. The unit test of the controller renders the JSON view an action answered with itself (`renderView()`), because a unit test calls the action and nothing after it, and then reads the response. In an application with MongoDB, where what a test saves is not rolled back, the `cleanup()` of the service test is the place to delete it.
 
 A REST API application has these commands when it has the scaffolding plugin, which it does not have by default:
 
@@ -265,7 +265,7 @@ A REST API application has these commands when it has the scaffolding plugin, wh
 grails create-restapi myapi --features scaffolding
 ----
 
-`grails feature add scaffolding` adds the plugin to a REST API application that is there already.
+`grails feature add scaffolding` adds the plugin to a REST API application that is there already. The scaffolding plugin depends on the GSP and fields plugins, so the application then has those on its class path and loads them, although it has no GSP; its responses are the same as without the plugin.
 
 The commands generate JSON views and the REST controller when the JSON views plugin is on the class path of the application and `grails-app/views` has no GSP, and GSP views and the controller for pages everywhere else. An application with both kinds of views is therefore given GSP views, and `--views=json` asks for the other kind:
 
@@ -274,7 +274,7 @@ The commands generate JSON views and the REST controller when the JSON views plu
 grails generate-all com.bookstore.Book --views=json
 ----
 
-`--views=gsp` does the reverse. The templates are those of the scaffolding plugin unless the project has its own under `src/main/templates/scaffolding`, where link:{commandLineRef}install-templates.html[install-templates] writes them: `index.gson`, `show.gson` and `_domain.gson` for the views, and `RestController.groovy`, `RestService.groovy`, `RestSpec.groovy` and `RestServiceSpec.groovy` for the controller, the service and their tests.
+`--views=gsp` does the reverse, and the value can also be given as the next word (`--views json`). The templates are those of the scaffolding plugin unless the project has its own under `src/main/templates/scaffolding`, where link:{commandLineRef}install-templates.html[install-templates] writes them: `index.gson`, `show.gson` and `_domain.gson` for the views, and `RestController.groovy`, `RestService.groovy`, `RestSpec.groovy` and `RestServiceSpec.groovy` for the controller, the service and their tests.
 
 ===== Generating Scaffolded Controllers and Services
 
