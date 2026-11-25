@@ -44,6 +44,10 @@ import org.gradle.api.provider.ValueSourceParameters
  * by its path, with what it is: a file with its content and the number of names it has, a link with
  * where it leads, a directory, or something else.</p>
  *
+ * <p>A link is not followed, and what it leads to is no part of the digest. It does not have to be:
+ * the tasks that have this value as their input refuse a pack with a link before they read it, see
+ * {@link ForgePackLinks}, so none of them has a result to keep for a pack that is read through one.</p>
+ *
  * <p>Read while the build is configured, the value is an input of the configuration cache. Read as the
  * input of a task only, it is read again by every build.</p>
  *

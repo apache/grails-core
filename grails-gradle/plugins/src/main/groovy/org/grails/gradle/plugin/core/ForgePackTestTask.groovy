@@ -213,6 +213,7 @@ abstract class ForgePackTestTask extends ForgePackToolTask {
         File published = publicationRepository.get().asFile
         fileSystemOperations.delete { DeleteSpec spec -> spec.delete(applications, reports, published) }
         reports.mkdirs()
+        requirePackWithoutLinks()
         requireTooling('tested', 'tests', 'test')
         repositoriesLeftOut.get().each { String line -> logger.warn(withoutUserInfo(line)) }
         if (fixtureTimeout.get() <= Duration.ZERO) {

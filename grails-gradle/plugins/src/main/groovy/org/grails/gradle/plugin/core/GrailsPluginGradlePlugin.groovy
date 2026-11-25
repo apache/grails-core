@@ -596,27 +596,14 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
     }
 
     /**
-     * A directory for a pack holds a descriptor, and nothing of it is a link: Forge reads no link when
-     * it reads a pack from a directory, and a link here would put a file from somewhere else in the jar.
+     * A directory for a pack holds a descriptor, and nothing of it is a link, see {@link ForgePackLinks}.
      */
     private static void checkForgePackSource(File directory) {
-        Path root = directory.toPath()
-        if (Files.isSymbolicLink(root)) {
-            throw new GradleException("${FORGE_PACK_SOURCE_DIR} is a link, which the directory of a feature pack cannot be")
-        }
-        if (!Files.isRegularFile(root.resolve(FORGE_PACK_DESCRIPTOR), LinkOption.NOFOLLOW_LINKS)) {
+        ForgePackLinks.refuseLinkedDirectory(directory)
+        if (!Files.isRegularFile(directory.toPath().resolve(FORGE_PACK_DESCRIPTOR), LinkOption.NOFOLLOW_LINKS)) {
             throw new GradleException("${FORGE_PACK_SOURCE_DIR} has files of a feature pack and no ${FORGE_PACK_DESCRIPTOR} that is a file")
         }
-        Path templates = root.resolve('templates')
-        if (Files.exists(templates, LinkOption.NOFOLLOW_LINKS)) {
-            Files.walk(templates).withCloseable { Stream<Path> paths ->
-                Path link = paths.filter { Path path -> Files.isSymbolicLink(path) }.findFirst().orElse(null)
-                if (link != null) {
-                    throw new GradleException("The feature pack in ${FORGE_PACK_SOURCE_DIR} has a link, which a pack cannot have: " +
-                            root.relativize(link).join('/'))
-                }
-            }
-        }
+        ForgePackLinks.refuseLinkedTemplates(directory)
     }
 
     /**

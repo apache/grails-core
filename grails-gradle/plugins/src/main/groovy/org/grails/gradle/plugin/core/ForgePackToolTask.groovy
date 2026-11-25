@@ -127,6 +127,14 @@ abstract class ForgePackToolTask extends DefaultTask {
     }
 
     /**
+     * Fails for a pack whose directory is a link or that has a link under its templates, before Forge is
+     * started: the jar of the plugin is not built of such a pack either, see {@link ForgePackLinks}.
+     */
+    protected void requirePackWithoutLinks() {
+        ForgePackLinks.refuse(packDirectory.get().asFile)
+    }
+
+    /**
      * Fails for a class path of Forge that is not whole or has nothing, before anything is started with it.
      *
      * @param done what was to be done with the pack, as in "could not be checked"

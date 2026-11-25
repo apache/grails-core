@@ -68,6 +68,7 @@ abstract class CheckForgePackTask extends ForgePackToolTask {
     void check() {
         File marker = markerFile.get().asFile
         marker.delete()
+        requirePackWithoutLinks()
         requireTooling('checked', 'checks', 'check')
         Launched result = launch(MAIN_CLASS, [packDirectory.get().asFile.absolutePath])
         List<String> written = result.written

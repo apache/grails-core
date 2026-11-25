@@ -21,6 +21,9 @@ package org.grails.gradle.plugin.core
 import org.gradle.testkit.runner.BuildResult
 import org.gradle.testkit.runner.GradleRunner
 import org.gradle.testkit.runner.TaskOutcome
+import spock.lang.Unroll
+
+import java.nio.file.Files
 
 /**
  * A plugin that keeps a Forge feature pack under {@code src/main/forge} has it checked by Forge, in a
@@ -189,8 +192,96 @@ class GrailsPluginForgePackCheckSpec extends GradleSpecification {
         problem                               | change                                                                    || message
         'a template'                          | { File pack -> new File(pack, 'templates/Audit.groovy.gsp') << '${nope}' } || 'The template Audit.groovy.gsp cannot be rendered'
         'a file Gradle does not look at'      | { File pack -> new File(pack, 'templates/.gitignore').text = '${nope}' }   || 'The template .gitignore cannot be rendered'
-        'a file replaced by a link to it'     | { File pack -> GrailsPluginGradlePluginForgePackSpec.replaceByLink(new File(pack, 'templates/conf/audit.txt')) } || "'conf/audit.txt' is not a file under templates of the pack, or is a link"
+        'a file replaced by a link to it'     | { File pack -> GrailsPluginGradlePluginForgePackSpec.replaceByLink(new File(pack, 'templates/conf/audit.txt')) } || 'The feature pack in src/main/forge has a link, which a pack cannot have: templates/conf/audit.txt'
         'the descriptor, which is taken away' | { File pack -> new File(pack, 'feature.yml').delete() }                    || 'There is no feature.yml in the directory, or it is not a file'
+    }
+
+    @Unroll
+    def "a directory of the pack that is a link fails #task as it fails the jar, and is not taken for checked when what it leads to changes"() {
+        given: 'the pack somewhere else, and a link to it where the pack of the plugin is looked for'
+        GradleRunner runner = setupTestResourceProject('plugin-forge-pack')
+        File pack = new File(runner.projectDir, 'src/main/forge')
+        File elsewhere = new File(runner.projectDir, 'pack-elsewhere')
+        assert pack.renameTo(elsewhere)
+        Files.createSymbolicLink(pack.toPath(), elsewhere.toPath())
+
+        when:
+        BuildResult result = runner.withArguments(task).buildAndFail()
+
+        then: 'the stand-in for Forge, which would read the pack through the link, is not started'
+        result.task(":${task}").outcome == TaskOutcome.FAILED
+        result.output.contains('src/main/forge is a link, which the directory of a feature pack cannot be')
+        !result.output.contains('stand-in')
+
+        when: 'a template is spoiled where the link leads, which changes nothing of the link'
+        new File(elsewhere, 'templates/Audit.groovy.gsp') << '${nope}'
+        result = runner.withArguments(task).buildAndFail()
+
+        then: 'the task is run again, with the configuration of the first build'
+        result.output.contains('Reusing configuration cache')
+        result.task(":${task}").outcome == TaskOutcome.FAILED
+        result.output.contains('src/main/forge is a link, which the directory of a feature pack cannot be')
+
+        where:
+        task << ['checkForgePack', 'forgePackTest']
+    }
+
+    def "a pack that was checked and is then reached through a link is checked again, and refused"() {
+        given:
+        GradleRunner runner = setupTestResourceProject('plugin-forge-pack')
+        executeTask('checkForgePack')
+        File pack = new File(runner.projectDir, 'src/main/forge')
+        File elsewhere = new File(runner.projectDir, 'pack-elsewhere')
+        assert pack.renameTo(elsewhere)
+        Files.createSymbolicLink(pack.toPath(), elsewhere.toPath())
+
+        when:
+        BuildResult result = runner.withArguments('checkForgePack').buildAndFail()
+
+        then:
+        result.output.contains('Reusing configuration cache')
+        result.output.contains('src/main/forge is a link, which the directory of a feature pack cannot be')
+
+        when: 'the pack is where it was again'
+        Files.delete(pack.toPath())
+        assert elsewhere.renameTo(pack)
+        result = executeTask('checkForgePack')
+
+        then:
+        assertTaskSuccess('checkForgePack', result)
+    }
+
+    @Unroll
+    def "a directory under templates that is a link fails the check as it fails the jar: #what"() {
+        given: 'a pack that was checked, and a link no file of the descriptor is under'
+        GradleRunner runner = setupTestResourceProject('plugin-forge-pack')
+        executeTask('checkForgePack')
+        File project = runner.projectDir
+        File outside = new File(project, 'templates-elsewhere')
+        outside.mkdirs()
+        new File(outside, 'Other.groovy.gsp').text = 'class Other {}\n'
+        Files.createSymbolicLink(new File(project, "src/main/forge/${link}").toPath(), new File(project, target).toPath())
+
+        when:
+        BuildResult check = runner.withArguments('checkForgePack').buildAndFail()
+
+        then:
+        check.output.contains("The feature pack in src/main/forge has a link, which a pack cannot have: ${link}")
+
+        when: 'what the link leads to is changed'
+        new File(outside, 'Other.groovy.gsp') << '${nope}'
+        check = runner.withArguments('checkForgePack').buildAndFail()
+        BuildResult jar = runner.withArguments('jar').buildAndFail()
+
+        then: 'the check fails again, with the words the jar fails with'
+        check.output.contains("The feature pack in src/main/forge has a link, which a pack cannot have: ${link}")
+        jar.output.contains("The feature pack in src/main/forge has a link, which a pack cannot have: ${link}")
+
+        where:
+        what                                 | link                   | target
+        'one that leads out of the pack'     | 'templates/shared'     | 'templates-elsewhere'
+        'one that leads back into the pack'  | 'templates/conf/loop'  | 'src/main/forge/templates'
+        'one that leads to itself'           | 'templates/self'       | 'src/main/forge/templates/self'
     }
 
     def "a plugin without a feature pack has none to check, and resolves no Forge"() {
