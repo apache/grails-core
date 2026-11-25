@@ -33,6 +33,7 @@ import org.grails.forge.options.DevelopmentReloading
 import org.grails.forge.options.GormImpl
 import org.grails.forge.options.JdkVersion
 import org.grails.forge.options.ServletImpl
+import spock.lang.Unroll
 
 /**
  * The record of an application that was there before it had one, written with the baseline the
@@ -344,6 +345,117 @@ class RecordAdoptionSpec extends AbstractFeatureAdditionSpec {
 
         expect: 'a line of the default that is written otherwise is not taken for it'
         planOf(generator, other, ['postgres']).conflicts*.path == ['build.gradle']
+    }
+
+    void "an entry a feature adds to a list of the build goes to the end of that list of the application, and a list that cannot be told is a conflict"() {
+        given: 'an application whose list ends without a comma, and one that gives the list twice'
+        ProjectGenerator generator = beanContext.getBean(ProjectGenerator)
+        Path generated = create(generator, 'generated', [])
+        Path project = withoutRecord(generated, 'app')
+        String text = Files.readString(project.resolve('build.gradle'))
+        String last = "            'webjars/bootstrap-icons/**',\n    ]\n"
+        assert text.count(last) == 1
+        Files.writeString(project.resolve('build.gradle'), text.replace(last, "            'webjars/bootstrap-icons/**'\n    ]\n"))
+        Path twice = withoutRecord(generated, 'twice')
+        Files.writeString(twice.resolve('build.gradle'), text.replace(last, "            'webjars/bootstrap-icons/**'\n    ]\n    excludes = [\n    ]\n"))
+        addition(generator).adopt(project, ApplicationType.WEB, 'shop', 'com.acme', OPTIONS, [], [], [], OperatingSystem.LINUX, []).apply()
+        addition(generator).adopt(twice, ApplicationType.WEB, 'shop', 'com.acme', OPTIONS, [], [], [], OperatingSystem.LINUX, []).apply()
+
+        when:
+        ChangePlan plan = planOf(generator, project, ['openapi'])
+        plan.apply()
+
+        then: 'the entry follows the last one, which has the comma that sets them apart, and ends as the list ended'
+        plan.conflicts.isEmpty()
+        plan.files.find { ChangePlan.PlannedFile file -> file.path == 'build.gradle' }.details.any { String line -> line.contains('1 entry at the end of the list excludes of assets') }
+        Files.readString(project.resolve('build.gradle')).contains("            'webjars/bootstrap-icons/**',\n            'webjars/swagger-ui/**'\n    ]\n")
+
+        expect:
+        planOf(generator, twice, ['openapi']).conflicts*.path == ['build.gradle']
+    }
+
+    @Unroll
+    void "a value a feature changes in a YAML file that is laid out otherwise is changed where it is: #what"() {
+        given: 'the configuration of the application as two documents, indented by four, its keys in another order'
+        ProjectGenerator generator = beanContext.getBean(ProjectGenerator)
+        Path project = withoutRecord(create(generator, 'generated', []), 'app')
+        Path configuration = project.resolve('grails-app/conf/application.yml')
+        Map<String, Object> settings = new org.yaml.snakeyaml.Yaml().load(Files.readString(configuration)) as Map<String, Object>
+        org.yaml.snakeyaml.DumperOptions options = new org.yaml.snakeyaml.DumperOptions()
+        options.indent = 4
+        options.defaultFlowStyle = org.yaml.snakeyaml.DumperOptions.FlowStyle.BLOCK
+        org.yaml.snakeyaml.Yaml yaml = new org.yaml.snakeyaml.Yaml(options)
+        Map<String, Object> first = new LinkedHashMap<>()
+        settings.keySet().toList().reverse().findAll { String key -> key != 'environments' }.each { String key -> first.put(key, settings.get(key)) }
+        String own = change('# the settings of the application\n' + yaml.dump(first) + '---\n' + yaml.dump([environments: settings.get('environments')]))
+        assert own.contains('    username: sa') || what != 'as it was generated'
+        Files.writeString(configuration, own)
+        addition(generator).adopt(project, ApplicationType.WEB, 'shop', 'com.acme', OPTIONS, [], [], [], OperatingSystem.LINUX, []).apply()
+
+        when:
+        ChangePlan plan = planOf(generator, project, ['postgres'])
+
+        then:
+        plan.conflicts*.path == (changed ? [] : ['grails-app/conf/application.yml'])
+
+        when:
+        if (changed) {
+            plan.apply()
+        }
+        List<String> before = own.readLines()
+        List<String> after = Files.readAllLines(configuration)
+
+        then: 'only the values are other, each on the line it was on, with what else the line has'
+        !changed || after.size() == before.size()
+        !changed || (0..<after.size()).every { int index ->
+            after[index] == before[index] || (after[index].substring(0, after[index].indexOf(':')) == before[index].substring(0, before[index].indexOf(':')) &&
+                    (!before[index].contains(' #') || after[index].endsWith(before[index].substring(before[index].indexOf(' #')))))
+        }
+        !changed || after.any { String line -> line.trim().startsWith('driverClassName: ') && line.contains('org.postgresql.Driver') }
+        !changed || after.any { String line -> line.trim().startsWith('username: postgres') }
+        !changed || !after.join('\n').contains('jdbc:h2')
+
+        where:
+        what                               | change                                                                                         || changed
+        'as it was generated'              | { String text -> text }                                                                        || true
+        'with a comment on its line'       | { String text -> text.replace('    username: sa', '    username: sa # the user of the database') } || true
+        'between quotes'                   | { String text -> text.replace('driverClassName: org.h2.Driver', 'driverClassName: "org.h2.Driver"') } || true
+        'changed by the application'       | { String text -> text.replace('    username: sa', '    username: admin') }                     || false
+        'set in two documents of the file' | { String text -> text + '---\ndataSource:\n    username: sa\n' }                              || false
+    }
+
+    void "a BootStrap class that is as an earlier version generated it becomes the one of this version with the feature, and one with a line of its own is a conflict"() {
+        given:
+        ProjectGenerator generator = beanContext.getBean(ProjectGenerator)
+        Path generated = create(generator, 'generated', [])
+        Path project = withoutRecord(generated, 'app')
+        Path bootStrap = Files.walk(project.resolve('grails-app/init')).filter { Path each -> each.fileName.toString() == 'BootStrap.groovy' }.findFirst().get()
+        String earlier = 'package com.acme\n\nclass BootStrap {\n\n    def init = {\n    }\n\n    def destroy = {\n    }\n\n}\n'
+        Files.writeString(bootStrap, earlier)
+        Path own = withoutRecord(generated, 'own')
+        Files.writeString(own.resolve(project.relativize(bootStrap).toString()), earlier.replace('    def init = {\n', '    def init = {\n        println "ours"\n'))
+        addition(generator).adopt(project, ApplicationType.WEB, 'shop', 'com.acme', OPTIONS, [], [], [], OperatingSystem.LINUX, []).apply()
+        addition(generator).adopt(own, ApplicationType.WEB, 'shop', 'com.acme', OPTIONS, [], [], [], OperatingSystem.LINUX, []).apply()
+        String path = project.relativize(bootStrap).join('/')
+
+        when:
+        ChangePlan plan = planOf(generator, project, ['grails-spring-security'])
+        ChangePlan.PlannedFile planned = plan.files.find { ChangePlan.PlannedFile file -> file.path == path }
+
+        then:
+        plan.conflicts.isEmpty()
+        planned.action == ChangePlan.Action.UPDATE
+        planned.details.any { String line -> line.startsWith('this file is as an earlier version of Grails generated it') }
+
+        when:
+        plan.apply()
+
+        then:
+        Files.readString(bootStrap) == Files.readString(project.resolve('.grails/baseline/files').resolve(path))
+        Files.readString(bootStrap).contains('springSecurityService')
+
+        expect:
+        planOf(generator, own, ['grails-spring-security']).conflicts*.path == [path]
     }
 
     void "a build whose dependencies block cannot be told is a conflict, and nothing is written"() {

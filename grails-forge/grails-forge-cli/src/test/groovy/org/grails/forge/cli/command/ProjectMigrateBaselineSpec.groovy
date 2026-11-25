@@ -19,6 +19,7 @@
 package org.grails.forge.cli.command
 
 import groovy.json.JsonSlurper
+import org.apache.grails.forge.core.change.EarlierGeneratedFiles
 import org.apache.grails.forge.core.state.ProjectManifest
 import org.apache.grails.forge.core.state.ProjectState
 import org.grails.forge.cli.CliRunner
@@ -208,26 +209,37 @@ class ProjectMigrateBaselineSpec extends AbstractFeatureAddCommandSpec {
         new File(dir, 'README.md').readLines().drop(readme.size()).findAll { String line -> !line.isEmpty() }[0] == '## Feature cache documentation'
         ProjectState.read(dir.toPath()).verifyBaseline(dir.toPath())
 
-        when: 'a feature that changes a line of the build the application has otherwise'
-        Map<String, String> before = tree(dir)
+        when: 'a feature that adds an entry to a list of the build, whose last entry the application has without the comma this version writes'
         reset()
         exit = add('openapi')
 
-        then: 'is a conflict, and nothing is written, the record among it'
+        then: 'the entry is put at the end of the list of the application, which gets the comma that sets it apart'
+        done(exit)
+        out.toString().contains('1 entry at the end of the list excludes of assets')
+        new File(dir, 'build.gradle').text.contains("            'webjars/bootstrap-icons/**',\n            'webjars/swagger-ui/**'\n    ]\n")
+
+        when: 'a class of the application has a line of its own where a feature writes'
+        File bootStrap = new File(dir, 'grails-app/init/com/example/BootStrap.groovy')
+        bootStrap.text = bootStrap.text.replace('    def init = {\n', '    def init = {\n        println "ours"\n')
+        Map<String, String> before = tree(dir)
+        reset()
+        exit = add('grails-spring-security')
+
+        then: 'that is a conflict, and nothing is written, the record among it'
         exit == 1
-        out.toString() =~ /conflict +build\.gradle: /
+        out.toString() =~ /conflict +grails-app\/init\/com\/example\/BootStrap\.groovy: /
         err.toString().contains('The feature was not added: 1 file cannot be written without losing what the application has. Nothing was changed.')
         tree(dir) == before
 
         when: 'what it comes to is asked for as a document'
         reset()
-        exit = add('openapi', '--dry-run', '--json')
+        exit = add('grails-spring-security', '--dry-run', '--json')
         Map document = new JsonSlurper().parseText(out.toString()) as Map
 
         then:
         exit == 1
         document.outcome == 'conflicts'
-        (document.files as List<Map>).find { Map file -> file.path == 'build.gradle' }.action == 'conflict'
+        (document.files as List<Map>).find { Map file -> file.path == 'grails-app/init/com/example/BootStrap.groovy' }.action == 'conflict'
         tree(dir) == before
 
         when: 'the record is written anew without a feature the application does not have'
@@ -242,7 +254,7 @@ class ProjectMigrateBaselineSpec extends AbstractFeatureAddCommandSpec {
         out.toString().contains(WRITTEN)
         state.manifest.generationState == ProjectManifest.ADOPTED
         state.manifest.excludedFeatures*.name == ['mockito']
-        state.manifest.requestedFeatures*.name == ['cache']
+        state.manifest.requestedFeatures*.name == ['cache', 'openapi']
         !state.lock.featureNames.contains('mockito')
         state.verifyBaseline(dir.toPath())
         tree(dir).findAll { String path, String content -> !path.startsWith('.grails') } == before.findAll { String path, String content -> !path.startsWith('.grails') }
@@ -274,7 +286,7 @@ class ProjectMigrateBaselineSpec extends AbstractFeatureAddCommandSpec {
                 '    testImplementation "org.apache.grails:grails-testing-support-web"\n    implementation "org.apache.grails:grails-cache"\n}\n')
 
         and: 'the settings are a document of their own at the end of a configuration that is written as several'
-        out.toString().contains('what the feature sets, which the file does not set, was put into a document of its own at the end of it')
+        out.toString().contains('what the feature sets, which the file does not set, put into a document of its own at the end of it')
         new File(dir, 'grails-app/conf/application.yml').text.startsWith(configuration)
         new File(dir, 'grails-app/conf/application.yml').text.substring(configuration.length()).readLines()*.trim().toSet() ==
                 ['---', 'grails:', 'cache:', 'enabled: true', 'clearAtStartup: false', 'cacheManager: GrailsConcurrentMapCacheManager'].toSet()
@@ -303,24 +315,31 @@ class ProjectMigrateBaselineSpec extends AbstractFeatureAddCommandSpec {
         new File(dir, 'build.gradle').text.contains('apply from: "gradle/asciidoc.gradle"\napply plugin: "org.apache.grails.gradle.grails-gson"\n')
         new File(dir, 'build.gradle').readLines().containsAll(withDocs.readLines())
 
-        when: 'a feature that changes a line of the build the application has otherwise'
+        when: 'a feature that takes the place of the database driver, whose settings the configuration has in documents and an indentation of its own'
+        String settings = new File(dir, 'grails-app/conf/application.yml').text
+        reset()
+        exit = add('postgres')
+
+        then: 'each value is changed where it is, and nothing else of the file'
+        done(exit)
+        out.toString().contains('5 values the feature changes changed where the file has them, each as it was generated')
+        new File(dir, 'grails-app/conf/application.yml').text == settings.replace('driverClassName: org.h2.Driver', 'driverClassName: org.postgresql.Driver')
+                .replace('username: sa', 'username: postgres')
+                .replace('url: jdbc:h2:mem:devDb;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE', 'url: jdbc:postgresql://localhost:5432/devDb?tcpKeepAlive=true')
+                .replace('url: jdbc:h2:mem:testDb;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE', 'url: jdbc:postgresql://localhost:5432/testDb?tcpKeepAlive=true')
+                .replace('url: jdbc:h2:./prodDb;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE', 'url: jdbc:postgresql://localhost:5432/postgres?tcpKeepAlive=true')
+        !new File(dir, 'build.gradle').text.contains('com.h2database:h2')
+
+        when: 'a feature that changes the BootStrap class, which is as the Grails shell wrote it'
+        reset()
+        exit = add('grails-spring-security')
+
+        then: 'the class becomes the one this version generates with the feature'
+        done(exit)
+        out.toString() =~ /update +grails-app\/init\/com\/example\/BootStrap\.groovy/
+        out.toString().contains('this file is as an earlier version of Grails generated it, with nothing of yours in it')
+        new File(dir, 'grails-app/init/com/example/BootStrap.groovy').text.contains('springSecurityService')
         Map<String, String> before = tree(dir)
-        reset()
-        exit = add('openapi')
-
-        then: 'is a conflict that names the file, and nothing is written'
-        exit == 1
-        out.toString() =~ /conflict +build\.gradle: /
-        tree(dir) == before
-
-        when: 'what the feature would change is shown'
-        reset()
-        exit = add('openapi', '--diff')
-
-        then: 'for whoever adds it by hand'
-        exit == 1
-        out.toString().contains('rejected: build.gradle')
-        tree(dir) == before
 
         when: 'the files that are not as this version generates them are asked for'
         reset()
@@ -361,14 +380,14 @@ class ProjectMigrateBaselineSpec extends AbstractFeatureAddCommandSpec {
         fixture                           | feature                   || conflicts                                              | left
         EarlierApplication.GRAILS_8_SHELL | 'cache'                   || []                                                     | ['README.md']
         EarlierApplication.GRAILS_8_SHELL | 'grails-quartz'           || []                                                     | ['README.md']
-        EarlierApplication.GRAILS_8_SHELL | 'postgres'                || ['grails-app/conf/application.yml']                    | ['README.md']
+        EarlierApplication.GRAILS_8_SHELL | 'postgres'                || []                                                     | ['README.md']
         EarlierApplication.GRAILS_8_SHELL | 'github-workflow-java-ci' || []                                                     | []
         EarlierApplication.GRAILS_8_SHELL | 'asciidoctor'             || []                                                     | []
         EarlierApplication.GRAILS_8_SHELL | 'views-json'              || []                                                     | ['README.md']
         EarlierApplication.GRAILS_8_SHELL | 'testcontainers'          || []                                                     | ['README.md']
-        EarlierApplication.GRAILS_8_SHELL | 'grails-spring-security'  || ['grails-app/init/com/example/BootStrap.groovy']       | ['README.md']
-        EarlierApplication.GRAILS_8_SHELL | 'mysql'                   || ['grails-app/conf/application.yml']                    | ['README.md']
-        EarlierApplication.GRAILS_8_SHELL | 'openapi'                 || ['build.gradle']                                       | ['README.md']
+        EarlierApplication.GRAILS_8_SHELL | 'grails-spring-security'  || []                                                     | ['README.md']
+        EarlierApplication.GRAILS_8_SHELL | 'mysql'                   || []                                                     | ['README.md']
+        EarlierApplication.GRAILS_8_SHELL | 'openapi'                 || []                                                     | ['README.md']
         EarlierApplication.GRAILS_8_FORGE | 'cache'                   || []                                                     | []
         EarlierApplication.GRAILS_8_FORGE | 'grails-quartz'           || []                                                     | []
         EarlierApplication.GRAILS_8_FORGE | 'postgres'                || []                                                     | []
@@ -378,7 +397,7 @@ class ProjectMigrateBaselineSpec extends AbstractFeatureAddCommandSpec {
         EarlierApplication.GRAILS_8_FORGE | 'testcontainers'          || []                                                     | []
         EarlierApplication.GRAILS_8_FORGE | 'grails-spring-security'  || []                                                     | []
         EarlierApplication.GRAILS_8_FORGE | 'mysql'                   || []                                                     | []
-        EarlierApplication.GRAILS_8_FORGE | 'openapi'                 || ['build.gradle']                                       | []
+        EarlierApplication.GRAILS_8_FORGE | 'openapi'                 || []                                                     | []
         EarlierApplication.GRAILS_7_FORGE | 'cache'                   || []                                                     | []
         EarlierApplication.GRAILS_7_FORGE | 'grails-quartz'           || []                                                     | []
         EarlierApplication.GRAILS_7_FORGE | 'postgres'                || []                                                     | []
@@ -386,12 +405,33 @@ class ProjectMigrateBaselineSpec extends AbstractFeatureAddCommandSpec {
         EarlierApplication.GRAILS_7_FORGE | 'asciidoctor'             || []                                                     | []
         EarlierApplication.GRAILS_7_FORGE | 'views-json'              || []                                                     | []
         EarlierApplication.GRAILS_7_FORGE | 'testcontainers'          || []                                                     | []
-        EarlierApplication.GRAILS_7_FORGE | 'grails-spring-security'  || ['grails-app/init/com/example/BootStrap.groovy']       | []
+        EarlierApplication.GRAILS_7_FORGE | 'grails-spring-security'  || []                                                     | []
         EarlierApplication.GRAILS_7_FORGE | 'mysql'                   || []                                                     | []
-        EarlierApplication.GRAILS_7_FORGE | 'openapi'                 || ['build.gradle']                                       | []
+        EarlierApplication.GRAILS_7_FORGE | 'openapi'                 || []                                                     | []
         outcome = conflicts.isEmpty() ? 'added to' : 'not added to'
         created = fixture == EarlierApplication.GRAILS_8_SHELL ? 'the Grails shell of Grails 8.0.0 created' :
                 fixture == EarlierApplication.GRAILS_8_FORGE ? 'Grails 8.0.0 generated' : 'Grails 7.0.9 generated'
+    }
+
+    @Unroll
+    void "the BootStrap class of an application that #created is one an earlier version is known to have generated"() {
+        given:
+        EarlierApplication.copy(fixture, dir)
+        File bootStrap = new File(dir, 'grails-app/init/com/example/BootStrap.groovy')
+
+        expect: 'whatever the package and the ends of the lines'
+        EarlierGeneratedFiles.isAsGenerated('grails-app/init/com/example/BootStrap.groovy', bootStrap.bytes)
+        EarlierGeneratedFiles.isAsGenerated('grails-app/init/org/acme/shop/BootStrap.groovy', bootStrap.text.replace('package com.example', 'package org.acme.shop').replace('\n', '\r\n').bytes)
+
+        and: 'and with a line of anyone else in it, it is not'
+        !EarlierGeneratedFiles.isAsGenerated('grails-app/init/com/example/BootStrap.groovy', bootStrap.text.replace('def init = {', 'def init = { // ours').bytes)
+        !EarlierGeneratedFiles.isAsGenerated('grails-app/conf/BootStrap.groovy', bootStrap.bytes)
+
+        where:
+        fixture                           | created
+        EarlierApplication.GRAILS_8_SHELL | 'the Grails shell of Grails 8.0.0 created'
+        EarlierApplication.GRAILS_8_FORGE | 'Grails 8.0.0 generated'
+        EarlierApplication.GRAILS_7_FORGE | 'Grails 7.0.9 generated'
     }
 
     void "a project that is still on Grails 8 gets its record, and a feature is added once it is on Grails 9"() {

@@ -56,7 +56,7 @@ class MigratedApplicationBuildSpec extends CommandSpec {
         System.setProperty('user.dir', previousDirectory)
     }
 
-    void 'an application with a build of its own layout builds after project migrate and feature add of a Gradle plugin and of a dependency'() {
+    void 'an application with a build of its own layout builds after project migrate and feature add of a Gradle plugin, of a dependency and of an entry of a list'() {
         given: 'an application without a record, whose plugins are applied elsewhere and whose dependencies are in another order'
         generateProjectWithDefaults(ApplicationType.WEB)
         assert new File(dir, '.grails').deleteDir()
@@ -71,21 +71,27 @@ class MigratedApplicationBuildSpec extends CommandSpec {
         int to = (from..<lines.size()).find { int index -> lines[index] == '}' }
         List<String> declared = lines.subList(from + 1, to).reverse()
         lines = lines.subList(0, from + 1) + declared + lines.subList(to, lines.size())
-        build.text = lines.join('\n') + '\n'
+        // and the last entry of a list without the comma this version ends it with, as earlier versions wrote it
+        String last = "            'webjars/bootstrap-icons/**',\n    ]\n"
+        assert (lines.join('\n') + '\n').count(last) == 1
+        build.text = (lines.join('\n') + '\n').replace(last, "            'webjars/bootstrap-icons/**'\n    ]\n")
         String own = build.text
 
         when:
         int migrated = cli(ProjectMigrateCommand)
         int json = cli(FeatureAddCommand, 'views-json')
         int cache = cli(FeatureAddCommand, 'cache')
+        int openapi = cli(FeatureAddCommand, 'openapi')
         List<String> after = build.readLines()
 
         then: 'both features are added, and every line of the build is still there, in its order'
         migrated == 0
         json == 0
         cache == 0
+        openapi == 0
+        build.text.contains("            'webjars/bootstrap-icons/**',\n            'webjars/swagger-ui/**'\n    ]\n")
         ProjectState.read(dir.toPath()).manifest.generationState == ProjectManifest.ADOPTED
-        after.findAll { String line -> own.readLines().contains(line) } == own.readLines()
+        after.findAll { String line -> own.readLines().contains(line) } == own.readLines() - ["            'webjars/bootstrap-icons/**'"]
 
         and: 'the plugin is applied after the plugins the build applies, and the dependencies are the last of their block'
         after.indexOf('apply plugin: "org.apache.grails.gradle.grails-gson"') == after.findLastIndexOf { String line -> line.startsWith('apply plugin:') }

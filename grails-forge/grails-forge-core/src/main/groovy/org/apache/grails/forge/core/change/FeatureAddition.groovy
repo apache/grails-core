@@ -52,10 +52,15 @@ import org.grails.forge.template.YamlKeyOrder
 import org.grails.forge.template.YamlTemplate
 import org.grails.forge.util.NameUtils
 import org.grails.forge.util.VersionInfo
+import org.yaml.snakeyaml.DumperOptions
 import org.yaml.snakeyaml.LoaderOptions
 import org.yaml.snakeyaml.Yaml
 import org.yaml.snakeyaml.constructor.SafeConstructor
 import org.yaml.snakeyaml.error.YAMLException
+import org.yaml.snakeyaml.nodes.MappingNode
+import org.yaml.snakeyaml.nodes.Node
+import org.yaml.snakeyaml.nodes.NodeTuple
+import org.yaml.snakeyaml.nodes.ScalarNode
 import java.nio.file.Files
 import java.nio.file.LinkOption
 import java.nio.file.Path
@@ -131,6 +136,9 @@ final class FeatureAddition {
     private static final int MAX_SCANNED_LINE = 2000
     private static final String BUILD_FILE = 'build.gradle'
     private static final String README_FILE = 'README.md'
+    private static final Pattern LIST_ENTRY = Pattern.compile(/\s+('[^'\\]*'|"[^"\\$]*"),?\s*/)
+    private static final Pattern LIST_START = Pattern.compile(/\s+([A-Za-z_][A-Za-z0-9_]*)\s*=\s*\[\s*/)
+    private static final Pattern MARGIN_BLOCK = Pattern.compile(/([A-Za-z_][A-Za-z0-9_]*)\s*\{\s*/)
     private static final Pattern APPLY_PLUGIN = Pattern.compile(/apply plugin:\s*["']([^"']+)["']\s*/)
     private static final Pattern APPLIED = Pattern.compile(/apply (plugin|from):\s*["'][^"']+["']\s*/)
     private static final Pattern PLUGIN_ID = Pattern.compile(/\s+id\s*\(?\s*["']([^"']+)["']\s*\)?(\s+version\s+["'][^"']+["'])?\s*/)
@@ -937,6 +945,14 @@ final class FeatureAddition {
             return conflict(path, 'the feature changes this file, and it was removed from the project', binary, working, base, proposed,
                     ["Put the file back as it was generated (its copy is ${ProjectState.BASELINE_FILES}/${BaselineIndex.copyPath(path)}), add the feature, and remove it again".toString()])
         }
+        // A file of an application that was there which is what an earlier version of Grails generated has
+        // nothing of the application in it: it is to the feature what a generated file that was not changed is
+        if (adopted && !binary && !Arrays.equals(base, proposed) && !ThreeWayMerge.sameText(working.content, base) && !ThreeWayMerge.sameText(working.content, proposed) &&
+                EarlierGeneratedFiles.isAsGenerated(path, working.content)) {
+            return new PlannedFile(path, Action.UPDATE, null, binary, working.content, proposed,
+                    posix && working.executable != proposedExecutable ? Boolean.valueOf(proposedExecutable) : null, base, proposed,
+                    ['this file is as an earlier version of Grails generated it, with nothing of yours in it: it becomes the file this version generates with the feature'])
+        }
         byte[] result
         boolean edited
         List<String> notes = []
@@ -980,12 +996,11 @@ final class FeatureAddition {
             boolean configuration = path.startsWith(CONFIGURATION_DIRECTORY) && isYaml(path)
             List<String> placedInBuild = []
             byte[] placed = merge.getConflicts() == 0 || !adopted ? null : path == BUILD_FILE ? buildLinesPlaced(working.content, base, proposed, placedInBuild) :
-                    configuration ? settingsAppended(working.content, base, proposed) : path == README_FILE ? linesAppended(working.content, base, proposed) : null
+                    configuration ? settingsAppended(working.content, base, proposed, placedInBuild) : path == README_FILE ? linesAppended(working.content, base, proposed) : null
             if (placed != null) {
                 result = placed
                 edited = true
-                notes << (path == README_FILE ? 'this file is not laid out as this version writes it: the lines the feature adds were put at the end of it' : configuration ? 'this file is not laid out as this version writes it: what the feature sets, which the file does not set, was put into a document ' +
-                        'of its own at the end of it' :
+                notes << (path == README_FILE ? 'this file is not laid out as this version writes it: the lines the feature adds were put at the end of it' : configuration ? "this file is not laid out as this version writes it: ${placedInBuild.join('; ')}" :
                         "this file is not laid out as this version writes it, so the lines of the feature were put where a Gradle build has them: ${placedInBuild.join('; ')}").toString()
             } else if (merge.getConflicts() > 0) {
                 boolean elsewhere = merge.getConflictingChanges().every { ThreeWayMerge.Conflict place -> place.elsewhere }
@@ -1079,6 +1094,14 @@ final class FeatureAddition {
         List<Integer> removed = differing(withFeature, generated)
         added.removeAll { Integer index -> withFeature[index].trim().isEmpty() }
         removed.removeAll { Integer index -> generated[index].trim().isEmpty() }
+        // an entry of a list that gets a comma because another follows it is the entry it was
+        for (int index : new ArrayList<Integer>(removed)) {
+            Integer withComma = added.find { Integer each -> withFeature[each].trim() == generated[index].trim() + ',' && generated[index] ==~ LIST_ENTRY }
+            if (withComma != null) {
+                removed.remove((Object) index)
+                added.remove((Object) withComma)
+            }
+        }
         if (added.isEmpty() && removed.isEmpty()) {
             return null
         }
@@ -1119,6 +1142,9 @@ final class FeatureAddition {
         List<String> toClasspath = []
         List<String> toPlugins = []
         List<String> toApply = []
+        Map<Integer, List<String>> toLists = new TreeMap<>()
+        Map<Integer, Integer> listEnds = new HashMap<>()
+        Map<Integer, String> listNames = new HashMap<>()
         for (int index : added) {
             String line = withFeature[index]
             if (featureDependencies != null && index > featureDependencies[0] && index < featureDependencies[1] && DEPENDENCY.matcher(line).find()) {
@@ -1145,8 +1171,39 @@ final class FeatureAddition {
                     toApply << line
                 }
             } else {
-                return null
+                // an entry of a list of text that a block at the margin is given, as the excludes of the assets
+                int[] list = listAround(withFeature, index)
+                String[] named = list == null ? null : listName(withFeature, list)
+                int[] there = named == null ? null : listOf(ownLines, named)
+                if (there == null) {
+                    return null
+                }
+                toLists.computeIfAbsent(there[0]) { Integer each -> new ArrayList<String>() }.add(line)
+                listEnds.put(there[0], there[1])
+                listNames.put(there[0], "${named[1]} of ${named[0]}".toString())
             }
+        }
+        // the entries a list does not have go to its end, after its last entry, which gets the comma that sets them apart
+        Map<Integer, String> rewritten = new HashMap<>()
+        Map<Integer, List<String>> entries = new TreeMap<>()
+        for (Map.Entry<Integer, List<String>> each : toLists.entrySet()) {
+            int start = each.key
+            int end = listEnds.get(start)
+            Set<String> has = (start + 1..<end).collect { int index -> ownLines[index].trim().replaceFirst(/,$/, '') }.toSet()
+            List<String> more = each.value.collect { String entry -> entry.trim().replaceFirst(/,$/, '') }.unique().findAll { String entry -> !has.contains(entry) }
+            if (more.isEmpty()) {
+                continue
+            }
+            boolean none = end == start + 1
+            boolean comma = none || ownLines[end - 1].trim().endsWith(',')
+            String indent = none ? each.value[0].substring(0, each.value[0].indexOf(each.value[0].trim())) : ownLines[end - 1].substring(0, ownLines[end - 1].indexOf(ownLines[end - 1].trim()))
+            if (!none && !comma) {
+                rewritten.put(end - 1, own[end - 1].replaceFirst(/(\s*)$/, ',$1'))
+            }
+            List<String> lines = []
+            more.eachWithIndex { String entry, int index -> lines << indent + entry + (comma || index < more.size() - 1 ? ',' : '') }
+            entries.put(end, lines)
+            said << "${counted(more.size(), 'entry', 'entries')} at the end of the list ${listNames.get(start)}".toString()
         }
         // where each kind goes, by the place it has in a Gradle build file: what is put in at one place is put in in this order
         Map<Integer, List<String>> at = new TreeMap<>(Comparator.reverseOrder())
@@ -1154,6 +1211,7 @@ final class FeatureAddition {
             at.computeIfAbsent(index) { Integer each -> new ArrayList<String>() }.addAll(lines.collect { String line -> line + ending })
             null
         }
+        entries.each { Integer place, List<String> lines -> put(place, lines) }
         int top = 0
         while (top < ownLines.size() && (ownLines[top].trim().isEmpty() || ownLines[top] ==~ /\s*(\/\/|\/\*|\*).*/)) {
             top++
@@ -1189,6 +1247,7 @@ final class FeatureAddition {
             said << "${counted(gone.size(), 'dependency', 'dependencies')} the feature takes the place of taken out of the dependencies block".toString()
         }
         List<String> result = new ArrayList<String>(own)
+        rewritten.each { Integer place, String line -> result[place] = line }
         // from the end of the file to its start, so that a place is where it was when it is reached
         Set<Integer> places = new TreeSet<Integer>(Comparator.reverseOrder())
         places.addAll(at.keySet())
@@ -1206,6 +1265,71 @@ final class FeatureAddition {
             }
         }
         return result.join('').getBytes(StandardCharsets.UTF_8)
+    }
+
+    /**
+     * The list of text an entry of a build file is in: a line that gives a name a list, as
+     * {@code excludes = [}, the entries one on a line, and the line that closes it.
+     *
+     * @return where the list starts and ends, or {@code null} for a line that is no entry of such a list
+     */
+    private static int[] listAround(List<String> lines, int index) {
+        if (!(lines[index] ==~ LIST_ENTRY)) {
+            return null
+        }
+        int start = index
+        while (start >= 0 && lines[start] ==~ LIST_ENTRY) {
+            start--
+        }
+        int end = index
+        while (end < lines.size() && lines[end] ==~ LIST_ENTRY) {
+            end++
+        }
+        return start >= 0 && end < lines.size() && lines[start] ==~ LIST_START && lines[end] ==~ /\s+\]\s*/ ? [start, end] as int[] : null
+    }
+
+    // the block at the margin a list is given in, and the name it is given to; null when the list is in no such block or in a block inside one
+    private static String[] listName(List<String> lines, int[] list) {
+        Matcher given = LIST_START.matcher(lines[list[0]])
+        if (!given.matches()) {
+            return null
+        }
+        for (int index = list[0] - 1; index >= 0; index--) {
+            String line = lines[index]
+            if (!line.isEmpty() && !Character.isWhitespace(line.charAt(0))) {
+                Matcher block = MARGIN_BLOCK.matcher(line)
+                int[] found = block.matches() ? marginBlock(lines, block.group(1)) : null
+                // every line between the start of the block and the list is of the depth of the list, so that the list is the block's own
+                boolean own = found != null && found[0] == index && found[1] > list[1] &&
+                        (index + 1..<list[0]).every { int each -> !(lines[each] ==~ /.*[{}]\s*/) || lines[each] ==~ LIST_START }
+                return own ? [block.group(1), given.group(1)] as String[] : null
+            }
+        }
+        return null
+    }
+
+    // where the one list of a name in the one block of a name at the margin starts and ends in a file, or null when it cannot be told
+    private static int[] listOf(List<String> lines, String[] named) {
+        int[] block = ambiguous(lines, named[0]) ? null : marginBlock(lines, named[0])
+        if (block == null) {
+            return null
+        }
+        List<Integer> starts = (block[0] + 1..<block[1]).findAll { int index ->
+            Matcher given = LIST_START.matcher(lines[index])
+            given.matches() && given.group(1) == named[1]
+        }
+        if (starts.size() != 1) {
+            return null
+        }
+        int end = starts[0] + 1
+        while (end < block[1] && lines[end] ==~ LIST_ENTRY) {
+            end++
+        }
+        if (!(lines[end] ==~ /\s+\]\s*/)) {
+            return null
+        }
+        String[] own = listName(lines, [starts[0], end] as int[])
+        return own != null && own[0] == named[0] ? [starts[0], end] as int[] : null
     }
 
     private static String counted(int count, String one, String many) {
@@ -1306,7 +1430,7 @@ final class FeatureAddition {
      *
      * @return the file, or {@code null} when it is not such a change or not such a file
      */
-    private static byte[] settingsAppended(byte[] working, byte[] base, byte[] proposed) {
+    private static byte[] settingsAppended(byte[] working, byte[] base, byte[] proposed, List<String> said) {
         Map<?, ?> generated = yamlOf(base)
         Map<?, ?> withFeature = yamlOf(proposed)
         if (generated == null || withFeature == null) {
@@ -1317,14 +1441,27 @@ final class FeatureAddition {
         if (!flattened('', generated, before) || !flattened('', withFeature, after)) {
             return null
         }
-        if (before.any { String key, Object value -> !after.containsKey(key) || after.get(key) != value }) {
+        // a setting the feature takes out has no place that can be told: only what it changes and what it adds is put in
+        if (before.any { String key, Object value -> !after.containsKey(key) }) {
             return null
         }
+        List<String> changed = before.keySet().findAll { String key -> after.get(key) != before.get(key) }.toList()
         List<String> added = after.keySet().findAll { String key -> !before.containsKey(key) }.toList()
-        if (added.isEmpty()) {
+        if (added.isEmpty() && changed.isEmpty()) {
             return null
         }
         String text = new String(working, StandardCharsets.UTF_8)
+        if (!changed.isEmpty()) {
+            text = valuesReplaced(text, new String(proposed, StandardCharsets.UTF_8), changed, before)
+            if (text == null) {
+                return null
+            }
+            said << "${counted(changed.size(), 'value', 'values')} the feature changes changed where the file has ${changed.size() == 1 ? 'it' : 'them'}, each as it was generated".toString()
+            if (added.isEmpty()) {
+                return text.getBytes(StandardCharsets.UTF_8)
+            }
+        }
+        said << 'what the feature sets, which the file does not set, put into a document of its own at the end of it'
         Set<String> set = new LinkedHashSet<>()
         try {
             for (Object document : new Yaml(new SafeConstructor(new LoaderOptions())).loadAll(text)) {
@@ -1363,6 +1500,94 @@ final class FeatureAddition {
         String ending = text.contains('\r\n') ? '\r\n' : '\n'
         String appended = YamlTemplate.dump(document).readLines().collect { String line -> line + ending }.join('')
         return (text + (text.isEmpty() || text.endsWith('\n') ? '' : ending) + '---' + ending + appended).getBytes(StandardCharsets.UTF_8)
+    }
+
+    /**
+     * A YAML file with the values a feature changes put in the place of those the file has, and
+     * nothing else of the file changed: not its indentation, the order of its keys, its documents or
+     * its comments. It is done only where each setting is in the file exactly once, as a value on one
+     * line that is what the generator wrote for it, so that it is no value of whoever owns the file;
+     * the characters of that value are then those the generator writes for the feature.
+     *
+     * @param text the file of the project
+     * @param withFeature the file as it is generated with the feature
+     * @param changed the settings the feature changes, by the keys that lead to them
+     * @param before every setting of the file as it is generated without the feature
+     * @return the file, or {@code null} when a setting is not there once, is not as generated, or is
+     * no value of one line
+     */
+    private static String valuesReplaced(String text, String withFeature, List<String> changed, Map<String, Object> before) {
+        // a mark of the parser counts code points, and the text is cut by characters
+        if (text.codePointCount(0, text.length()) != text.length() || withFeature.codePointCount(0, withFeature.length()) != withFeature.length()) {
+            return null
+        }
+        Map<String, List<ScalarNode>> own = new HashMap<>()
+        Map<String, List<ScalarNode>> generated = new HashMap<>()
+        try {
+            for (Node document : new Yaml(new SafeConstructor(new LoaderOptions())).composeAll(new StringReader(text))) {
+                if (!scalars('', document, own)) {
+                    return null
+                }
+            }
+            for (Node document : new Yaml(new SafeConstructor(new LoaderOptions())).composeAll(new StringReader(withFeature))) {
+                if (!scalars('', document, generated)) {
+                    return null
+                }
+            }
+        } catch (YAMLException | StackOverflowError ignored) {
+            return null
+        }
+        // from the end of the file to its start, so that a place is where it was when it is reached
+        Map<Integer, List<Object>> places = new TreeMap<>(Comparator.reverseOrder())
+        for (String key : changed) {
+            List<ScalarNode> there = own.get(key)
+            List<ScalarNode> written = generated.get(key)
+            Object was = before.get(key)
+            if (there == null || there.size() != 1 || written == null || written.size() != 1 || was == null || was instanceof Collection || was instanceof Map) {
+                return null
+            }
+            ScalarNode node = there[0]
+            ScalarNode to = written[0]
+            if (node == null || to == null || !oneLine(node) || !oneLine(to) || node.getValue() != String.valueOf(was)) {
+                return null
+            }
+            places.put(node.getStartMark().getIndex(), [node.getEndMark().getIndex(), withFeature.substring(to.getStartMark().getIndex(), to.getEndMark().getIndex())] as List<Object>)
+        }
+        StringBuilder result = new StringBuilder(text)
+        places.each { Integer start, List<Object> place ->
+            result.replace(start, (Integer) place[0], (String) place[1])
+        }
+        return result.toString()
+    }
+
+    private static boolean oneLine(ScalarNode node) {
+        return node.getStartMark().getLine() == node.getEndMark().getLine() &&
+                node.getScalarStyle() in [DumperOptions.ScalarStyle.PLAIN, DumperOptions.ScalarStyle.SINGLE_QUOTED, DumperOptions.ScalarStyle.DOUBLE_QUOTED]
+    }
+
+    // every value of a document that is one scalar, by the keys that lead to it with dots between them; false for what is no mapping of text keys
+    private static boolean scalars(String prefix, Node node, Map<String, List<ScalarNode>> into) {
+        if (!(node instanceof MappingNode)) {
+            return node == null
+        }
+        for (NodeTuple each : ((MappingNode) node).getValue()) {
+            if (!(each.getKeyNode() instanceof ScalarNode)) {
+                return false
+            }
+            String key = prefix.isEmpty() ? ((ScalarNode) each.getKeyNode()).getValue() : prefix + '.' + ((ScalarNode) each.getKeyNode()).getValue()
+            Node value = each.getValueNode()
+            if (value instanceof MappingNode && !((MappingNode) value).getValue().isEmpty()) {
+                if (!scalars(key, value, into)) {
+                    return false
+                }
+            } else if (value instanceof ScalarNode) {
+                into.computeIfAbsent(key) { String it -> new ArrayList<ScalarNode>() }.add((ScalarNode) value)
+            } else {
+                // a list or an empty mapping: there once, and no value of one line
+                into.computeIfAbsent(key) { String it -> new ArrayList<ScalarNode>() }.add(null)
+            }
+        }
+        return true
     }
 
     // every value of a document that is no map, by the keys that lead to it with dots between them; false for a key that is no text
