@@ -70,8 +70,8 @@ import static org.codehaus.groovy.ast.tools.GeneralUtils.ifS
 import static org.codehaus.groovy.ast.tools.GeneralUtils.notNullX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.notX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.param
-import static org.codehaus.groovy.ast.tools.GeneralUtils.propX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.params
+import static org.codehaus.groovy.ast.tools.GeneralUtils.propX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.returnS
 import static org.codehaus.groovy.ast.tools.GeneralUtils.stmt
 import static org.codehaus.groovy.ast.tools.GeneralUtils.varX
@@ -169,10 +169,9 @@ abstract class AbstractCacheTransformation extends AbstractMethodDecoratingTrans
     }
 
     /**
-     * The cache manager the class caches with, read as {@code this.grailsCacheManager}: a field of that name the
-     * class declares, otherwise what {@link org.grails.plugin.cache.GrailsCacheManagerAware} holds, through its
-     * getter. A parameter of the annotated method named {@code grailsCacheManager} hides the bare name in the
-     * method, but not the property of {@code this}.
+     * Reads the cache manager as {@code this.grailsCacheManager}. This resolves to a field the class declares
+     * or to its getter, which {@link org.grails.plugin.cache.GrailsCacheManagerAware} provides unless the class
+     * defines its own. Qualifying the read with {@code this} prevents a method parameter from hiding the property.
      *
      * @return the read of the property on {@code this}
      */
