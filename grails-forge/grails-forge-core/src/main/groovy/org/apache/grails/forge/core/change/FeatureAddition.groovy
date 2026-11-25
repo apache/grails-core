@@ -921,7 +921,8 @@ final class FeatureAddition {
             // file of the application was generated from it: a file of it that the application does not
             // have was never there, and nobody took it out. The feature has nothing to change, and what
             // it would have changed is said; the copy of the baseline is the generator's file either way
-            List<String> added = binary ? Collections.<String>emptyList() : addedLines(base, proposed)
+            // the lines that say something: an empty line between them is not counted, and not shown
+            List<String> added = binary ? Collections.<String>emptyList() : addedLines(base, proposed).findAll { String line -> !line.trim().isEmpty() }
             List<String> said = []
             if (!added.isEmpty()) {
                 said << "the feature would have added ${added.size() == 1 ? '1 line' : "${added.size()} lines"} to it:".toString()

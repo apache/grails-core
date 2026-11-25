@@ -179,7 +179,7 @@ class ProjectCommandsSpec extends CommandSpec {
         document.effectiveOptions == [
                 [name: 'application-type', value: 'web', status: 'recorded'],
                 [name: 'name', value: 'shop', status: 'recorded'],
-                [name: 'package', value: 'com.example', default: 'shop', status: 'differs'],
+                [name: 'package', value: 'com.example', status: 'recorded'],
                 [name: 'grails-version', value: VersionInfo.grailsVersion, status: 'recorded'],
                 [name: 'jdk', option: '--jdk', value: 25, default: 21, status: 'differs'],
                 [name: 'servlet', option: '--servlet', value: 'tomcat', default: 'tomcat', status: 'default'],
@@ -226,7 +226,7 @@ class ProjectCommandsSpec extends CommandSpec {
         from > 0
         rows == [['application type', 'web'],
                  ['name', 'shop'],
-                 ['package', 'com.example', '(differs from the current default: shop)'],
+                 ['package', 'com.example'],
                  ['Grails version', VersionInfo.grailsVersion],
                  ['--jdk', '21', '(default)'],
                  ['--servlet', 'tomcat', '(default)'],

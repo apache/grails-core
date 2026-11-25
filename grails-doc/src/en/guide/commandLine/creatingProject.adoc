@@ -395,7 +395,7 @@ $ ./grailsw project show
 | Every option of create-app with the value the application was generated with, and whether that is the default of this version (9.0.0) of the command line
     application type           web
     name                       shop
-    package                    com.example  (differs from the current default: shop)
+    package                    com.example
     Grails version             9.0.0
     --jdk                      21  (default)
     --servlet                  tomcat  (default)
@@ -434,6 +434,9 @@ The list of options has every option of the `create-` command that decides somet
 
 | `not recorded: the only one this version generates`
 | The test framework and the build tool are no options: every application has Spock and Gradle, and the record does not name them.
+
+| (no mark)
+| The type, the name and the version of Grails are what the record has, and have no default. So is the package: it is given with the name, as in `com.example.shop`, and the command line at the end gives it that way. It is marked `default` only when it is the package a `create-` command gives a name without one, as `shop` for `grails create-app shop`.
 |===
 
 The line after the options tells the features that were asked for from the ones the application has because of its type, an option or another feature; the record does not say which of the three brought a feature in.
@@ -488,7 +491,7 @@ $ grails project migrate
     gorm-hibernate5 (build.gradle declares org.apache.grails:grails-data-hibernate5)
     grails-gradle-plugin (build.gradle declares org.apache.grails:grails-gradle-plugins)
     grails-quartz (build.gradle declares org.apache.grails:grails-quartz)
-| Assumed, because nothing in the project says it: jdk (--jdk), reloading (--reloading). The files of the project were read as text and nothing of the build was run, so a feature the build does not declare in a line of its own was not found. To say it otherwise, run grails project migrate --force with the name and the package (com.example.shop), --type, --jdk, --servlet, --data, --reloading, --features for features that were not found and --exclude-features for features the application does not have
+| Assumed, because nothing in the project says it: jdk (--jdk), reloading (--reloading). The files of the project were read as text and nothing of the build was run, so a feature the build does not declare in a line of its own was not found. To say it otherwise, run grails project migrate --force with the name and the package (com.example.myapp), --type, --jdk, --servlet, --data, --reloading, --features for features that were not found and --exclude-features for features the application does not have
 | The baseline is the 64 files this version generates for an application of the type, the options and the features above (29 features with those of the type; grails project show lists them). The application has 41 of them as generated, 21 otherwise and 2 not at all: what it has otherwise is taken for a change of yours
 | The record was written, with its baseline under .grails/baseline: .grails/project.yml, .grails/forge.lock.yml and .grails/baseline/index.yml. No other file of the project was changed. Commit the directory .grails
 | grails help lists the commands that create the classes of the application, and grails project show says what the record has. grails feature add adds a feature against the baseline and keeps what the application has otherwise; where a feature changes lines the application has otherwise, it names them and writes nothing. grails project regenerate --diff names the files that are not as this version generates them, and grails project migrate --force writes the record anew when the type, an option or a feature above is not what the application has
@@ -720,7 +723,7 @@ The command works from the record of the project. It generates the application a
 | A file that only a default feature wrote, which the feature replaces, and that you did not change. It is removed, with the directories that are empty without it.
 
 | `leave`
-| Only in an application whose record `project migrate` wrote for an application that was there: the feature changes a file this version generates for the application and the application does not have, as a `README.md`. The file is not written and the feature is added without it. The lines under it say what the feature would have added, and that the file as this version generates it with the feature is under `.grails/baseline/files`. In an application that was generated, a file you removed is a conflict.
+| Only in an application whose record `project migrate` wrote for an application that was there: the feature changes a file this version generates for the application and the application does not have, as a `README.md`. The file is not written and the feature is added without it. The lines under it say what the feature would have added, counted and shown without the empty lines between them, and that the file as this version generates it with the feature is under `.grails/baseline/files`. In an application that was generated, a file you removed is a conflict.
 
 | `conflict`
 | The file cannot be written without losing something of yours. See below.

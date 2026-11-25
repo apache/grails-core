@@ -496,11 +496,14 @@ class ProjectShowCommand extends BaseCommand implements Callable<Integer>, Proje
         ProjectLock lock = state.lock
         GenerationOptions options = manifest.options
         Plugins plugins = new Plugins(state)
+        // The package is given with the name, as the command line at the end gives it, and is no option that has a default
+        // of its own: only the package a create command gives a name without one is said to be the default
         String ofName = packageOf(manifest.name)
+        boolean ofNameAlone = ofName != null && manifest.defaultPackage == ofName
         List<Setting> settings = [
                 new Setting('application-type', null, written(manifest.applicationType), null, RECORDED),
                 new Setting('name', null, manifest.name, null, RECORDED),
-                new Setting('package', null, manifest.defaultPackage, ofName, ofName == null ? RECORDED : manifest.defaultPackage == ofName ? DEFAULT : DIFFERS),
+                new Setting('package', null, manifest.defaultPackage, ofNameAlone ? ofName : null, ofNameAlone ? DEFAULT : RECORDED),
                 new Setting('grails-version', null, manifest.grailsVersion, null, RECORDED)]
         // the preset is given with --preset, and not with --feature-pack-dir
         List<String> unnamedPacks = lock.features.findAll { LockedFeature feature ->

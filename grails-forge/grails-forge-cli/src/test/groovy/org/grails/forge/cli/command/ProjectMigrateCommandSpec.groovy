@@ -134,7 +134,7 @@ dependencies {
         said.contains('    grails-quartz (build.gradle declares org.apache.grails:grails-quartz)')
         said.contains('    postgres (build.gradle declares org.postgresql:postgresql)')
         said.any { it.startsWith('| Assumed, because nothing in the project says it: jdk (--jdk), servlet (--servlet), reloading (--reloading). ') }
-        said.any { it.contains('run grails-forge-cli project migrate --force with the name and the package (com.example.shop), --type, --jdk, --servlet, --data, ' +
+        said.any { it.contains('run grails-forge-cli project migrate --force with the name and the package (com.example.legacy.legacy), --type, --jdk, --servlet, --data, ' +
                 '--reloading, --features for features that were not found and --exclude-features for features the application does not have') }
         said.any { it.startsWith('| The record was written, with its baseline under .grails/baseline: .grails/project.yml, .grails/forge.lock.yml and ' +
                 '.grails/baseline/index.yml. No other file of the project was changed.') }

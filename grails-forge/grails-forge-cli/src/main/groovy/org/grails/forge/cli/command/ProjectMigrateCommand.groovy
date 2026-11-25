@@ -800,7 +800,8 @@ class ProjectMigrateCommand extends BaseCommand implements Callable<Integer>, Pr
                 (assumed.isEmpty() ? '' : "Assumed, because nothing in the project says it: ${assumed.join(', ')}. ") +
                 (instead.isEmpty() ? '' : "Assumed in place of what the project says, which this version does not generate for: ${instead.join(', ')}. ") +
                 'The files of the project were read as text and nothing of the build was run, so a feature the build does not declare in a line of its own was ' +
-                "not found. To say it otherwise, run ${UsageHelp.toType(spec, 'project migrate --force')} with the name and the package (com.example.shop), --type, --jdk, --servlet, " +
+                "not found. To say it otherwise, run ${UsageHelp.toType(spec, 'project migrate --force')} with the name and the package " +
+                "(${ProjectShowCommand.commandLine("${identity.defaultPackage.value}.${identity.name.value}".toString(), [])}), --type, --jdk, --servlet, " +
                 '--data, --reloading, --features for features that were not found and --exclude-features for features the application does not have')
     }
 
