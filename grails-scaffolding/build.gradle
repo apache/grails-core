@@ -47,8 +47,17 @@ ext {
     pomDescription = 'Provides scaffolding for Grails applications'
 }
 
+configurations.register('restApplicationPlugins') {
+    description = 'The JSON views plugin, as a REST application has it, for the specs of the commands that generate JSON views.'
+    canBeConsumed = false
+}
+
 dependencies {
     implementation platform(project(':grails-bom'))
+
+    // kept off the class path of the tests: the commands generate JSON views where they find the plugin there
+    restApplicationPlugins platform(project(':grails-bom'))
+    restApplicationPlugins project(':grails-views-gson')
 
     // the cli tier — published separately as a companion -cli artifact
     cliImplementation platform(project(':grails-bom'))
@@ -83,6 +92,22 @@ dependencies {
     testImplementation 'net.bytebuddy:byte-buddy'
 
     testCompileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
+}
+
+tasks.named('testCli', Test) {
+    jvmArgumentProviders.add(new RestApplicationPlugins(classpath: configurations.named('restApplicationPlugins')))
+}
+
+/** Hands the specs the class path of the JSON views plugin, which they load beside their own where a REST application is meant. */
+class RestApplicationPlugins implements CommandLineArgumentProvider {
+
+    @Classpath
+    Provider<Configuration> classpath
+
+    @Override
+    Iterable<String> asArguments() {
+        ["-Dscaffolding.restApplicationPlugins=${classpath.get().asPath}".toString()]
+    }
 }
 
 apply {

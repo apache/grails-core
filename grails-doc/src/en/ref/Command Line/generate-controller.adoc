@@ -45,11 +45,13 @@ The `generate-controller` command generates the controller that implements CRUD 
 
 It writes no views: link:{commandLineRefFromRef}generate-views.html[generate-views] does, and link:{commandLineRefFromRef}generate-all.html[generate-all] does both.
 
+In a REST API application the same four files are written for a REST resource, as the section "JSON Views and a REST Controller" below describes. The controller has the actions `index`, `show`, `save`, `update` and `delete` and no `create` or `edit`, declares `static responseFormats = ['json', 'xml']`, answers with a status and the resource and never redirects, and answers 404 when there is nothing to delete; the service returns what it deleted; and the unit test of the controller reads the JSON of the responses. They are written from the templates `RestController.groovy`, `RestService.groovy`, `RestSpec.groovy` and `RestServiceSpec.groovy`, each of the project under `src/main/templates/scaffolding` when it is there (see link:{commandLineRefFromRef}install-templates.html[install-templates]) and of the scaffolding plugin otherwise.
+
 Usage:
 
 [source,console]
 ----
-grails generate-controller <domain class>... [--force]
+grails generate-controller <domain class>... [--force] [--views=gsp|json]
 ----
 
 Arguments:
@@ -59,6 +61,19 @@ Arguments:
 Flags:
 
 * `force` - Replace files that are there already (`--force`)
+* `views` - The kind of views the controller is for, `gsp` or `json` (`--views=json`), where the kind the application is given by itself is not the one that is wanted. The value is given with `=`.
+
+=== JSON Views and a REST Controller
+
+In a REST API application and in a REST API plugin the command generates what the `rest-api` profile generated before Grails 9: JSON views in place of GSP views, and a controller for a REST resource in place of a controller for pages. Which of the two an application is given is decided as follows:
+
+* With `--views=json` it is JSON views and the REST controller, and with `--views=gsp` GSP views and the controller for pages, whatever the application has.
+* Without the option it is JSON views and the REST controller when the JSON views plugin (`org.apache.grails:grails-views-gson`, the `views-json` feature) is on the class path of the application and no file under `grails-app/views` ends with `.gsp`. That is a REST API application and a REST API plugin.
+* Everywhere else it is GSP views and the controller for pages. An application that has both GSP and JSON views is therefore given GSP views, as before, unless the option asks for JSON views.
+
+link:{commandLineRefFromRef}generate-controller.html[generate-controller], link:{commandLineRefFromRef}generate-views.html[generate-views] and link:{commandLineRefFromRef}generate-all.html[generate-all] decide it the same way and take the same option, so a controller and views that are generated one after the other fit together.
+
+A REST API application has the commands when it has the scaffolding plugin, which it does not have by default: create it with `grails create-restapi myapi --features scaffolding`, or add the feature later with `grails feature add scaffolding`.
 
 === Running the Command
 
@@ -78,7 +93,7 @@ $ ./gradlew runCommand -Pargs="generate-controller org.bookstore.Book"       <3>
 
 A file that is there already is kept: the command warns that it skips the file and goes on. With `--force` the file is replaced.
 
-Without a domain class the command says `No domain-class specified` and fails. A domain class that is not found is named (`Domain class not found for name: ...`); the files of the other classes are generated, and the command fails.
+Without a domain class the command says `No domain-class specified` and fails. With a `--views` that is neither `gsp` nor `json` it says what the option takes, writes nothing and fails. A domain class that is not found is named (`Domain class not found for name: ...`); the files of the other classes are generated, and the command fails.
 
 When the command fails, the Gradle task fails, and `grails` ends with exit code 1.
 

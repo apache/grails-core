@@ -36,7 +36,10 @@ import org.grails.io.support.Resource
 @CompileStatic
 class GenerateViewsCommand implements GrailsApplicationCommand, CommandLineHelper, SkipBootstrap {
 
-    String description = 'Generates GSP views for the specified domain class'
+    private static final String DOMAIN_TEMPLATE = '_domain.gson'
+    private static final List<String> JSON_VIEW_NAMES = ['index.gson', 'show.gson', DOMAIN_TEMPLATE].asImmutable()
+
+    String description = 'Generates the views for the specified domain class: GSP views, or JSON views in a REST application'
 
     @Delegate ConsoleLogger consoleLogger = GrailsConsole.getInstance()
 
@@ -53,7 +56,13 @@ class GenerateViewsCommand implements GrailsApplicationCommand, CommandLineHelpe
         } else {
             domainClassesNames = args
         }
-        final List<String> viewNames = resolveViewNames()
+        final String views = viewsKind()
+        if (views == null) {
+            error(viewsKindProblem())
+            return FAILURE
+        }
+        final boolean json = views == JSON_VIEWS
+        final List<String> viewNames = json ? JSON_VIEW_NAMES : resolveViewNames()
         boolean overwrite = isFlagPresent('force')
         int failureCount = 0
         for (String domainClassName in domainClassesNames) {
@@ -61,8 +70,10 @@ class GenerateViewsCommand implements GrailsApplicationCommand, CommandLineHelpe
             if (sourceClass) {
                 final Model model = model(sourceClass)
                 viewNames.each { String view ->
+                    // the template of the JSON views of a class is named after the class in the project
+                    final String written = view == DOMAIN_TEMPLATE ? "_${model.propertyName}.gson" : view
                     render(template: template("scaffolding/$view"),
-                            destination: file("grails-app/views/$model.propertyName/$view"),
+                            destination: file("grails-app/views/$model.propertyName/$written"),
                             model: model,
                             overwrite: overwrite)
                 }

@@ -995,7 +995,7 @@ Outside a project these commands are not mistakes: `create-controller`, `install
 
 |`generate-all`
 |the REST API profile
-|a command of a plugin: `generate-all` of the scaffolding plugin, for applications with GSP views (see the section before this one for how the command of a plugin becomes a command here). The JSON views the profile command generated have no replacement.
+|a command of a plugin: `generate-all` of the scaffolding plugin (see the section before this one for how the command of a plugin becomes a command here). In a REST API application or REST API plugin with the `scaffolding` feature it generates the REST controller and the JSON views the profile command generated; see link:{commandLineRef}generate-all.html[generate-all].
 
 |`generate-controller`
 |the REST API profile

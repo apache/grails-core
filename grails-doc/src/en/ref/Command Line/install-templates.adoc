@@ -60,4 +60,4 @@ $ grails run-command install-templates
 
 === Description
 
-The scaffolding plugin has a command of the same name, which copies its templates to the application's `src/main/templates/scaffolding` directory. `grails install-templates` is the command above and does not write those templates: the command of the plugin is run with `run-command` or with the Gradle task `runCommand`.
+The scaffolding plugin has a command of the same name, which copies its templates to the application's `src/main/templates/scaffolding` directory. `grails install-templates` is the command above and does not write those templates: the command of the plugin is run with `run-command` or with the Gradle task `runCommand`. The templates of a REST API application are among them: `index.gson`, `show.gson` and `_domain.gson` for the JSON views, and `RestController.groovy`, `RestService.groovy`, `RestSpec.groovy` and `RestServiceSpec.groovy` for the controller, the service and their tests (see link:{commandLineRefFromRef}generate-all.html[generate-all]).

@@ -46,7 +46,7 @@ class ScaffoldingCommandDescriptionsSpec extends Specification {
 
         and:
         new GenerateViewsCommand().name == 'generate-views'
-        new GenerateViewsCommand().description == 'Generates GSP views for the specified domain class'
+        new GenerateViewsCommand().description == 'Generates the views for the specified domain class: GSP views, or JSON views in a REST application'
     }
 
     private List<String> registeredCommands() {

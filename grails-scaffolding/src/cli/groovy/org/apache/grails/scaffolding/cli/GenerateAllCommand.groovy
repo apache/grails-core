@@ -45,6 +45,10 @@ class GenerateAllCommand implements GrailsApplicationCommand, CommandLineHelper,
             error('No domain-class specified')
             return FAILURE
         }
+        if (viewsKind() == null) {
+            error(viewsKindProblem())
+            return FAILURE
+        }
         boolean controllers = run(new GenerateControllerCommand())
         boolean views = run(new GenerateViewsCommand())
         return controllers && views

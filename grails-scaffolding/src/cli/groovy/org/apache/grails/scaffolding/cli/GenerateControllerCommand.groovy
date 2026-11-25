@@ -56,28 +56,35 @@ class GenerateControllerCommand implements GrailsApplicationCommand, CommandLine
             domainClassNames = args
         }
 
+        final String views = viewsKind()
+        if (views == null) {
+            error(viewsKindProblem())
+            return FAILURE
+        }
+        // the controller and the service of a REST application, and their specs, are templates of their own
+        final String prefix = views == JSON_VIEWS ? 'Rest' : ''
         boolean overwrite = isFlagPresent('force')
         int failureCount = 0
         for (String domainClassName in domainClassNames) {
             final Resource sourceClass = source(domainClassName)
             if (sourceClass) {
                 final Model model = model(sourceClass)
-                render(template: 'scaffolding/Controller.groovy',
+                render(template: "scaffolding/${prefix}Controller.groovy",
                         destination: file("grails-app/controllers/${model.packagePath}/${model.convention('Controller')}.groovy"),
                         model: model,
                         overwrite: overwrite)
 
-                render(template: 'scaffolding/Service.groovy',
+                render(template: "scaffolding/${prefix}Service.groovy",
                         destination: file("grails-app/services/${model.packagePath}/${model.convention('Service')}.groovy"),
                         model: model,
                         overwrite: overwrite)
 
-                render(template: 'scaffolding/Spec.groovy',
+                render(template: "scaffolding/${prefix}Spec.groovy",
                         destination: file("src/test/groovy/${model.packagePath}/${model.convention('ControllerSpec')}.groovy"),
                         model: model,
                         overwrite: overwrite)
 
-                render(template: 'scaffolding/ServiceSpec.groovy',
+                render(template: "scaffolding/${prefix}ServiceSpec.groovy",
                         destination: file("src/integration-test/groovy/${model.packagePath}/${model.convention('ServiceSpec')}.groovy"),
                         model: model,
                         overwrite: overwrite)

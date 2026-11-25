@@ -240,6 +240,42 @@ grails generate-all com.bookstore.Book
 A generated controller redirects a successful form save or update to its own `show` action, so it keeps
 working when it is renamed, for example to serve the domain class at a different URL.
 
+===== Generating JSON Views and a REST Controller
+
+In a REST API application, and in a REST API plugin, the same three commands generate for a REST resource, as the `rest-api` profile did before Grails 9. `generate-views` writes JSON views in place of GSP views, which are `index.gson`, `show.gson` and the template `_book.gson` under `grails-app/views/book`:
+
+[source,groovy]
+.grails-app/views/book/show.gson
+----
+import com.bookstore.Book
+
+model {
+    Book book
+}
+
+json tmpl.book(book)
+----
+
+`generate-controller` writes a controller with the actions `index`, `show`, `save`, `update` and `delete`, which declares `static responseFormats = ['json', 'xml']` and answers with a status and the resource, the data service it uses, and a test of each. `generate-all` does both.
+
+A REST API application has these commands when it has the scaffolding plugin, which it does not have by default:
+
+[source,bash]
+----
+grails create-restapi myapi --features scaffolding
+----
+
+`grails feature add scaffolding` adds the plugin to a REST API application that is there already.
+
+The commands generate JSON views and the REST controller when the JSON views plugin is on the class path of the application and `grails-app/views` has no GSP, and GSP views and the controller for pages everywhere else. An application with both kinds of views is therefore given GSP views, and `--views=json` asks for the other kind:
+
+[source,bash]
+----
+grails generate-all com.bookstore.Book --views=json
+----
+
+`--views=gsp` does the reverse. The templates are those of the scaffolding plugin unless the project has its own under `src/main/templates/scaffolding`, where link:{commandLineRef}install-templates.html[install-templates] writes them: `index.gson`, `show.gson` and `_domain.gson` for the views, and `RestController.groovy`, `RestService.groovy`, `RestSpec.groovy` and `RestServiceSpec.groovy` for the controller, the service and their tests.
+
 ===== Generating Scaffolded Controllers and Services
 
 To generate a scaffolded controller (using `@Scaffold` annotation):

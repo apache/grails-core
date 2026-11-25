@@ -222,7 +222,7 @@ The build of the project lists these commands, with the Gradle task `grailsComma
 $ grails run-command -Dgrails.env=production data-import orders.csv
 ----
 
-The scaffolding plugin, which a web application has by default, brings link:{commandLineRef}generate-all.html[generate-all], link:{commandLineRef}generate-controller.html[generate-controller] and link:{commandLineRef}generate-views.html[generate-views] this way. `run-command NAME` is also how to reach a command of a plugin whose name a command of `grails` itself has. A command that needs no application, because it only works on the files of the project, can say so and is then run without starting it; `query-tail` of Grails Data is one.
+The scaffolding plugin, which a web application has by default, brings link:{commandLineRef}generate-all.html[generate-all], link:{commandLineRef}generate-controller.html[generate-controller] and link:{commandLineRef}generate-views.html[generate-views] this way. In a REST API application with the `scaffolding` feature they generate a REST controller and JSON views in place of pages. `run-command NAME` is also how to reach a command of a plugin whose name a command of `grails` itself has. A command that needs no application, because it only works on the files of the project, can say so and is then run without starting it; `query-tail` of Grails Data is one.
 
 A project can also have _scripts_ in `src/main/scripts`. A script is run by the build without the application and cannot use the classes of the application. Scripts are deprecated: the scripts a project has still run, no command creates a new one, and a new command is a class that `create-command` writes.
 
