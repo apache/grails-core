@@ -279,8 +279,8 @@ public class GrailsHibernateQueryUtils {
                 Association a = (Association) property;
                 Criteria subCriteria = c.createCriteria(sortHead);
                 PersistentEntity associatedEntity = a.getAssociatedEntity();
-                Class<?> propertyTargetClass = associatedEntity.getJavaClass();
-                cacheCriteriaByMapping(propertyTargetClass, subCriteria);
+                // the cache setting of a query comes from its own entity, the cache argument and the cache call: the mapping of an
+                // entity that is only sorted through is no part of it, and a sub-criteria shares the setting of its root
                 addOrderPossiblyNested(subCriteria, associatedEntity, sortTail, order, ignoreCase); // Recurse on nested sort
             }
         }

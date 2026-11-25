@@ -1343,3 +1343,47 @@ A value marked with `raw()` is still written as given by the tags that wrote it 
 `<g:radio>` now encodes its `value` once. It encoded it twice, so a value with `&`, `<`, `>`, `"` or `'` was submitted with character references in it, such as `+R&amp;D+` for `R&D`.
 
 A value encoded beforehand is no longer encoded twice in the `value` of `<g:textField>`, `<g:hiddenField>` and the other field tags when a `RequestDataValueProcessor` returns it unchanged, nor in an option of `<g:select>`, with or without a processor. `<g:paginate>` and `<g:sortableColumn>` write a `class` that was encoded beforehand once next to the classes they add, such as `step` and `sortable`; they encoded it twice.
+
+==== UPGRADE-NUMBER. The query cache follows the `cache` option of a criteria
+
+With Hibernate 5, some queries were put in the query cache against the `cache` argument or the `cache` call that was given for them, and some were put in it that no mapping or argument had asked for. A query is now cached when the mapping of its entity caches, when `cache: true` or `cache(true)` asks for it, or when `grails.hibernate.cache.queries` is `true`, and an explicit `false` always keeps it out. The first two columns below say what changes.
+
+[cols="3,2,2"]
+|===
+|Query |Before |Now
+
+|`createCriteria().list([:]) { cache(false) }` on an entity whose mapping caches
+|cached
+|not cached
+
+|`list(max: 2, sort: 'author.name', cache: false)` or `cache(false)` in a criteria, when `author` is a cached entity
+|cached
+|not cached
+
+|`findAllWhere(props, [sort: 'author.name', cache: false])`
+|cached
+|not cached
+
+|`findWhere`, `findAllWhere`, `find(example, args)` and `findAll(example, args)` with `sort: 'author.name'`, on an entity whose mapping does not cache, when `author` is a cached entity
+|cached
+|not cached
+
+|a criteria list with `sort: 'author.name'` on an entity whose mapping does not cache, when `author` is a cached entity
+|cached
+|not cached
+
+|a criteria list with `lock: true` and `sort: 'author.name'`
+|cached
+|not cached
+
+|`createCriteria().list(max: 2, cache: true) { cache(false) }`
+|cached
+|not cached
+
+|`createCriteria().list(max: 2, cache: false) { cache(true) }`
+|not cached
+|cached
+
+|===
+
+To keep the old result for one query, pass `cache: true`, or call `cache(true)` in the criteria. A query that nothing asked to cache, whose entity does not cache, is no longer cached because of the entity it sorts through.

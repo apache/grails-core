@@ -18,6 +18,7 @@
  */
 package grails.orm;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -34,6 +35,7 @@ import org.hibernate.criterion.Criterion;
 import org.hibernate.criterion.Projection;
 import org.hibernate.criterion.ProjectionList;
 import org.hibernate.criterion.Projections;
+import org.hibernate.internal.CriteriaImpl;
 import org.hibernate.sql.JoinType;
 import org.hibernate.type.StandardBasicTypes;
 import org.hibernate.type.Type;
@@ -169,9 +171,21 @@ public class HibernateCriteriaBuilder extends AbstractHibernateCriteriaBuilder {
         return type.getJavaType();
     }
 
+    /** What the mapping made of the criteria when it was created, to tell what a closure changed afterwards. */
+    private boolean cacheableAtCreation;
+
     @Override
     protected List createPagedResultList(Map args) {
-        GrailsHibernateUtil.populateArgumentsForCriteria(datastore, targetClass, criteria, args, conversionService);
+        Map populateArgs = args;
+        boolean closureDecided = cacheAsked || ((CriteriaImpl) criteria).getCacheable() != cacheableAtCreation;
+        if (closureDecided || !args.containsKey(GrailsHibernateUtil.ARGUMENT_CACHE)) {
+            // The criteria holds the setting that is to apply: the mapping's default, set when it was created, or what the
+            // closure asked for with cache(boolean) or setCacheable. The closure speaks last and most specifically, so what it
+            // asked for wins over the cache argument; without a cache argument the mapping would be applied again over it.
+            populateArgs = new HashMap(args);
+            populateArgs.put(GrailsHibernateUtil.ARGUMENT_CACHE, ((CriteriaImpl) criteria).getCacheable());
+        }
+        GrailsHibernateUtil.populateArgumentsForCriteria(datastore, targetClass, criteria, populateArgs, conversionService);
         GrailsHibernateTemplate ght = new GrailsHibernateTemplate(sessionFactory, (HibernateDatastore) datastore, getDefaultFlushMode());
         return new PagedResultList(ght, criteria);
     }
@@ -208,6 +222,7 @@ public class HibernateCriteriaBuilder extends AbstractHibernateCriteriaBuilder {
 
             criteria = hibernateSession.createCriteria(targetClass);
             cacheCriteriaMapping();
+            cacheableAtCreation = ((CriteriaImpl) criteria).getCacheable();
             criteriaMetaClass = GroovySystem.getMetaClassRegistry().getMetaClass(criteria.getClass());
         }
     }

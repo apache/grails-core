@@ -230,7 +230,8 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
             } else if (property instanceof Association) {
                 Criteria subCriteria = c.createCriteria(sortHead);
                 Class<?> propertyTargetClass = ((Association) property).getAssociatedEntity().getJavaClass();
-                GrailsHibernateUtil.cacheCriteriaByMapping(datastore, propertyTargetClass, subCriteria);
+                // the cache setting of a query comes from its own entity, the cache argument and the cache call: the mapping of an
+                // entity that is only sorted through is no part of it, and a sub-criteria shares the setting of its root
                 addOrderPossiblyNested(datastore, subCriteria, propertyTargetClass, sortTail, order, ignoreCase); // Recurse on nested sort
             }
         }

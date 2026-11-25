@@ -155,6 +155,18 @@ def people = Person.withCriteria {
 }
 ----
 
+A query is put in the query cache when the mapping of its entity enables the cache, when `cache: true` is given or `cache true` is called in a criteria, or when `grails.hibernate.cache.queries` is `true`. Dynamic finders, `list`, `where` queries and criteria queries are all cached on that rule. An explicit `false` takes precedence over the mapping and over the setting, in either direction: `cache false` (or `cache: false`) keeps one query out of the query cache, and `cache true` puts one in it.
+
+[source,java]
+----
+def people = Person.createCriteria().list(max: 10) {
+    like('firstName', 'Fr%')
+    cache false
+}
+----
+
+When both the argument and the call are given, the call wins, because the closure runs last and says it for this query alone: `list(max: 2, cache: true) { cache(false) }` is not cached, and `list(max: 2, cache: false) { cache(true) }` is. Calling `setCacheable` on the criteria is the same as `cache`. The query that counts the rows of a paged list, which `totalCount` runs, is not put in the query cache, also when the list is.
+
 
 ===== Cache usages
 
