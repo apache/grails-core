@@ -333,12 +333,12 @@ public final class PluginUtils {
                         continue;
                     }
 
-                    String xmlPluginName = handler.getPluginName();
-                    String normalizedName = (xmlPluginName != null && isValidPluginName(xmlPluginName)) ?
-                            normalizePluginName(xmlPluginName) : null;
-                    boolean partialDedupe = remainingClasses.size() != pluginClasses.size();
-                    String descriptorName = partialDedupe ? null : normalizedName;
-                    String label = descriptorName != null ? descriptorName : String.join(", ", remainingClasses);
+                    String descriptorName = null;
+                    if (remainingClasses.size() == 1) {
+                        String className = remainingClasses.get(0);
+                        descriptorName = getLogicalPluginNameFromClassName(className.substring(className.lastIndexOf('.') + 1));
+                    }
+                    String label = String.join(", ", remainingClasses);
                     LOG.warn("Plugin [{}] was discovered via legacy {} at [{}], which is deprecated in Grails 9.0 " +
                                     "and will be removed in Grails 10.0. Rebuild this plugin against Grails 9 to " +
                                     "generate {} and META-INF/grails/plugins/<name>/plugin.properties.",
