@@ -29,6 +29,7 @@ import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.model.types.Association
 import org.grails.datastore.mapping.model.types.Custom
+import org.grails.datastore.mapping.model.types.Embedded
 import org.grails.datastore.mapping.model.types.ToOne
 import org.grails.datastore.mapping.query.AssociationQuery
 import org.grails.datastore.mapping.query.Query
@@ -183,7 +184,16 @@ class SimpleMapQuery extends Query {
     def associationQueryHandlers = [
         (AssociationQuery): { allEntities, Association association, AssociationQuery aq ->
             Query.Junction queryCriteria = aq.criteria
-            return executeAssociationSubQuery(datastore[getFamily(association.associatedEntity)], association.associatedEntity, queryCriteria, aq.association)
+            def matchingIdentifiers = executeAssociationSubQuery(datastore[getFamily(association.associatedEntity)], association.associatedEntity, queryCriteria, aq.association)
+            if (association instanceof Embedded) {
+                return matchingIdentifiers
+            }
+            // the identifiers found are those of the associated entities; the owners are the ones that refer to them
+            Set matching = matchingIdentifiers as Set
+            def reflector = association.associatedEntity.reflector
+            return queryAssociation(allEntities, association) {
+                matching.contains(reflector.getIdentifier(it))
+            }
         },
 
         (FunctionCallingCriterion): { allEntities, Association association, FunctionCallingCriterion fcc ->
@@ -232,7 +242,17 @@ class SimpleMapQuery extends Query {
                 function(resolveIfEmbedded(eq.property, it)) == null
             }
         },
-        (Query.NotEquals): { allEntities, Association association, Query.NotEquals eq , Closure function = {it} ->
+        (Query.IsEmpty): { allEntities, Association association, Query.IsEmpty eq, Closure function = { it } ->
+            queryAssociation(allEntities, association) {
+                isEmptyValue(function(resolveIfEmbedded(eq.property, it)))
+            }
+        },
+        (Query.IsNotEmpty): { allEntities, Association association, Query.IsNotEmpty eq, Closure function = { it } ->
+            queryAssociation(allEntities, association) {
+                !isEmptyValue(function(resolveIfEmbedded(eq.property, it)))
+            }
+        },
+        (Query.NotEquals): { allEntities, Association association, Query.NotEquals eq , Closure function = { it } ->
             queryAssociation(allEntities, association) {
                 final value = subqueryIfNecessary(eq)
                 function(resolveIfEmbedded(eq.property, it)) != value
@@ -288,10 +308,10 @@ class SimpleMapQuery extends Query {
 
     protected queryAssociation(allEntities, Association association, Closure callable) {
         allEntities?.findAll {
-            def propertyName = association.name
             if (association instanceof ToOne) {
 
-                def id = it.value[propertyName]
+                // the association is stored under the key of its mapping, as any other property is
+                def id = it.value[storedKey(association)]
 
                 // If the entity isn't mocked properly this will happen and can cause a NPE.
                 PersistentEntity associatedEntity = association.associatedEntity
@@ -324,6 +344,15 @@ class SimpleMapQuery extends Query {
     }
 
     def executeAssociationSubQuery(allEntities, PersistentEntity associatedEntity, Query.Junction queryCriteria, PersistentProperty property) {
+        if (queryCriteria.getCriteria().isEmpty()) {
+            if (queryCriteria instanceof Query.Negation) {
+                throw new IllegalArgumentException('Logical expression [not] must contain at least 1 expression')
+            }
+            // an empty junction in a block is true, as anywhere else, and the block still asks for an associated entity, as a join
+            // does: it answers with the entities of the map it is evaluated against that hold the association, whichever level of
+            // nesting that map is at
+            return identifiersWhereEmpty((Map) allEntities, property, false)
+        }
         List resultList = []
         for (Query.Criterion criterion in queryCriteria.getCriteria()) {
             def handler = associationQueryHandlers[criterion.getClass()]
@@ -370,7 +399,10 @@ class SimpleMapQuery extends Query {
         },
         (AssociationQuery): { AssociationQuery aq, PersistentProperty property ->
             Query.Junction queryCriteria = aq.criteria
-            return executeAssociationSubQuery(datastore[family], aq.association.associatedEntity, queryCriteria, property)
+            def found = executeAssociationSubQuery(datastore[family], aq.association.associatedEntity, queryCriteria, property)
+            // a block asks for an associated entity, as a join does, so a negation inside it is taken among the owners that have one
+            Set withAssociated = identifiersWhereEmpty(aq.association, false) as Set
+            return found.findAll { withAssociated.contains(it) }
         },
         (Query.EqualsAll): { Query.EqualsAll equalsAll, PersistentProperty property, Closure function=null, boolean onValue = false ->
             def name = equalsAll.property
@@ -460,6 +492,12 @@ class SimpleMapQuery extends Query {
         (Query.IsNull): { Query.IsNull equals, PersistentProperty property, Closure function = null , boolean onValue = false ->
             handlers[Query.Equals].call(new Query.Equals(equals.property, null), property, function)
         },
+        (Query.IsEmpty): { Query.IsEmpty criterion, PersistentProperty property ->
+            identifiersWhereEmpty(property, true)
+        },
+        (Query.IsNotEmpty): { Query.IsNotEmpty criterion, PersistentProperty property ->
+            identifiersWhereEmpty(property, false)
+        },
         (Query.IdEquals): { Query.IdEquals equals, PersistentProperty property ->
             def indexer = entityPersister.getPropertyIndexer(property)
             return indexer.query(equals.value)
@@ -498,6 +536,10 @@ class SimpleMapQuery extends Query {
             return executeLikeWithRegex(entityPersister, property, regexFormat)
         },
         (Query.In): { Query.In inList, PersistentProperty property ->
+            if (!inList.values) {
+                // a list with no value matches nothing; the disjunction built below would be empty, which is true
+                return []
+            }
             def disjunction = new Query.Disjunction()
             for (value in inList.values) {
                 disjunction.add(Restrictions.eq(inList.name, value))
@@ -692,6 +734,14 @@ class SimpleMapQuery extends Query {
     }
 
     Collection executeSubQueryInternal(criteria, criteriaList) {
+        if (criteriaList.isEmpty()) {
+            if (criteria instanceof Query.Negation) {
+                throw new IllegalArgumentException('Logical expression [not] must contain at least 1 expression')
+            }
+            // a junction with nothing in it is true wherever it stands, as it is on Hibernate 5: it answers every entity, so in an and it
+            // is neutral, in an or it makes the or true, and under a not the negation is empty
+            return datastore[family].keySet().toList()
+        }
         SimpleMapResultList resultList = new SimpleMapResultList(this)
         for (Query.Criterion criterion in criteriaList) {
             if (isEmptyBlock(criterion)) {
@@ -710,8 +760,11 @@ class SimpleMapQuery extends Query {
                 }
                 else {
                     def handler = handlers[criterion.getClass()]
+                    if (handler == null) {
+                        throw new InvalidDataAccessResourceUsageException("Queries of type ${criterion.getClass().simpleName} are not supported by this implementation")
+                    }
 
-                    def results = handler?.call(criterion, property) ?: []
+                    def results = handler.call(criterion, property) ?: []
                     resultList.results << results
                 }
             }
@@ -720,7 +773,18 @@ class SimpleMapQuery extends Query {
             // only blocks without criteria: every entity, before the ones without an associated entity are left out
             return datastore[family].keySet().toList()
         }
-        return applyJunctionToResults(criteria, resultList.results)
+        def result = applyJunctionToResults(criteria, resultList.results)
+        if (criteria instanceof Query.Negation) {
+            // a block asks for an associated entity, as a join does, so the entities left by a negation of it are taken among
+            // the ones that have one
+            for (Query.Criterion criterion in criteriaList) {
+                if (criterion instanceof AssociationQuery) {
+                    Set withAssociated = identifiersWhereEmpty(((AssociationQuery) criterion).association, false) as Set
+                    result = result.findAll { withAssociated.contains(it) }
+                }
+            }
+        }
+        return result
     }
 
     private static boolean isEmptyBlock(Query.Criterion criterion) {
@@ -745,21 +809,31 @@ class SimpleMapQuery extends Query {
      * in its association index, any other value is on the entity.
      */
     protected List identifiersWhereEmpty(PersistentProperty property, boolean empty) {
+        identifiersWhereEmpty(datastore[family], property, empty)
+    }
+
+    protected List identifiersWhereEmpty(Map entities, PersistentProperty property, boolean empty) {
         List found = []
-        datastore[family].each { id, data ->
+        entities.each { id, data ->
             boolean propertyEmpty
             if (property instanceof Association && !(property instanceof ToOne) && ((Association) property).associatedEntity != null) {
                 def indexer = entityPersister.getAssociationIndexer((Map) data, (Association) property)
                 propertyEmpty = indexer.query(id).isEmpty()
             }
             else {
-                propertyEmpty = data instanceof Map && isEmptyValue(data.get(property.name))
+                propertyEmpty = data instanceof Map && isEmptyValue(data.get(storedKey(property)))
             }
             if (propertyEmpty == empty) {
                 found << id
             }
         }
         found
+    }
+
+    /** The key a property is stored under: the key of its mapping, or its name when the mapping gives none. */
+    private static String storedKey(PersistentProperty property) {
+        KeyValue mapped = (KeyValue) property.getMapping()?.getMappedForm()
+        mapped?.getKey() != null ? mapped.getKey() : property.name
     }
 
     protected static boolean isEmptyValue(Object value) {
