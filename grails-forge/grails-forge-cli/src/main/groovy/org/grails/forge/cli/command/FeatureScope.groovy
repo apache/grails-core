@@ -46,7 +46,7 @@ import org.grails.forge.util.NameUtils
 import picocli.CommandLine
 
 /**
- * The application the commands {@code feature search}, {@code feature info} and {@code feature diff}
+ * The application the commands {@code feature find}, {@code feature show} and {@code feature diff}
  * speak of: the one of the current directory, by its record, or a new application of a type. It is
  * the application of the current directory when that is in a project with a record and no type is
  * named; with {@code --type}, and anywhere else, it is a new application of the type, which is
@@ -57,7 +57,7 @@ import picocli.CommandLine
 @CompileStatic
 final class FeatureScope {
 
-    /** What a text to search by, and a line of what is written, is held to. */
+    /** What a text to find features by, and a line of what is written, is held to. */
     public static final int WIDTH = 100
 
     private static final int NAME_COLUMN = 30

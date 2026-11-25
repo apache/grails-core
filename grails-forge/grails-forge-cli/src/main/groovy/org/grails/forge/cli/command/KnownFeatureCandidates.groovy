@@ -30,7 +30,7 @@ import org.grails.forge.feature.Feature
 import org.grails.forge.io.FileSystemOutputHandler
 
 /**
- * The names of the features {@code feature info} says something of, which the TAB key completes: in
+ * The names of the features {@code feature show} says something of, which the TAB key completes: in
  * the directory of an application the features of Grails for its type, whether it has them or not,
  * and anywhere else those of every type of application.
  *

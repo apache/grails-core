@@ -17,7 +17,7 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-== feature search
+== feature find
 
 === Purpose
 
@@ -27,9 +27,9 @@ Lists the features that have a text in their name, their title, their descriptio
 
 [source,console]
 ----
-grails feature search cache
-grails feature search database --type rest-api
-grails feature search mongo --json
+grails feature find cache
+grails feature find database --type rest-api
+grails feature find mongo --json
 ----
 
 === Description
@@ -38,7 +38,7 @@ Usage:
 
 [source,console]
 ----
-grails feature search [--json] [--type=TYPE] [--feature-pack-dir=DIRECTORY]... [--feature-pack-repository=URL]... [--offline] TEXT
+grails feature find [--json] [--type=TYPE] [--feature-pack-dir=DIRECTORY]... [--feature-pack-repository=URL]... [--offline] TEXT
 ----
 
 Arguments:
@@ -53,13 +53,13 @@ Options:
 * `--feature-pack-repository=URL` - A Maven repository to fetch the jar of a plugin from, whose feature pack the application was generated with, as `feature add` takes it. Can be given more than once.
 * `--offline` - Ask nothing of the network: such a jar is taken only from a repository that is a directory.
 
-`feature search` is the `search` command of the `feature` command. It speaks of one application. In the directory of an application that has a record under `.grails`, or anywhere below it, that is this application: its type and the features it has are read from the record. Outside a project, in a project without a record, and wherever `--type` is given, it is a new application of the type, which is `web` when `--type` is not given. The command writes no file in either case.
+`feature find` is the `find` command of the `feature` command. The text is an argument the command requires: without it the command is a mistake in the command line (exit code 2). It speaks of one application. In the directory of an application that has a record under `.grails`, or anywhere below it, that is this application: its type and the features it has are read from the record. Outside a project, in a project without a record, and wherever `--type` is given, it is a new application of the type, which is `web` when `--type` is not given. The command writes no file in either case.
 
-The features that are searched are the ones link:feature-list.html[feature list] and the `--list-features` option of the `create-` commands show for the type of application: the features of Grails, and the features of the feature packs that are not part of Grails which were given to the command or which the application was generated with. Those that have the text are listed by category, each with its description:
+The features the text is looked for in are the ones link:feature-list.html[feature list] and the `--list-features` option of the `create-` commands show for the type of application: the features of Grails, and the features of the feature packs that are not part of Grails which were given to the command or which the application was generated with. Those that have the text are listed by category, each with its description:
 
 [source,console]
 ----
-$ grails feature search cache
+$ grails feature find cache
 | 2 features of a new application of type web have cache in the name, the title, the description or the category:
   Cache
     cache                          The Cache Plugin provides powerful and easy-to-use caching
@@ -67,15 +67,15 @@ $ grails feature search cache
     cache-ehcache                  Caches with Ehcache 3 through JCache (JSR-107): the cache manager
                                    of the Cache plugin, grailsCacheManager, is defined in
                                    ...
-| More of one feature: grails feature info FEATURE
+| More of one feature: grails feature show FEATURE
 ----
 
 * For a new application, a feature such an application has without being asked for it ends with `(by default)`.
-* For the application in the current directory, a feature it has ends with `(the application has it)`. Whether link:feature-add.html[feature add] adds one of the others is said by `feature list`, and for one feature by link:feature-info.html[feature info].
+* For the application in the current directory, a feature it has ends with `(the application has it)`. Whether link:feature-add.html[feature add] adds one of the others is said by `feature list`, and for one feature by link:feature-show.html[feature show].
 * A feature that is a preview is marked `[PREVIEW]`, and one of the community `[COMMUNITY]`, as `--list-features` marks them.
 
 A text that no feature has is no failure: the command says that no feature has it and ends with exit code 0. The exit code is 1 when the record of the application cannot be read, or when a feature pack the application was generated with is not to be had again or is another than the one its record has, as `feature add` refuses it; and 2 for a mistake in the command line, such as a text of more than one line or a `--type` that is no type of application.
 
 With `--json` the document has `format` (1), `projectDirectory` (`null` for a new application), `applicationType`, the `text`, `notes` (what was said while the jar of a feature pack was fetched again) and `features`, each with `name`, `title`, `description`, `category`, `preview`, `community`, `default` (whether a new application of the type has it without being asked for it; `null` when that could not be worked out) and `inApplication` (whether the application has it; `null` for a new application).
 
-The command starts the project generator, which knows the features, when it runs; `feature search --help` does not.
+The command starts the project generator, which knows the features, when it runs; `feature find --help` does not.

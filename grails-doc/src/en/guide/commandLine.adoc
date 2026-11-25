@@ -534,7 +534,7 @@ The usage of every command is laid out for a width of 100 columns, and the list 
 [[shellCompletion]]
 === Completion in a Shell
 
-The binary distribution has a completion script for bash and zsh, `bin/grails_completion`. Loaded into the shell, it completes on the TAB key the commands of `grails` itself, the commands of a project among them, their options, the values of an option that takes one of a few (`--servlet`, `--data`, `--reloading`, `--type`), and the names of features for `--features` of the create commands and for `feature add`, `feature diff`, `feature info` and `feature show`. Load it in the file the shell reads when it starts. SDKMAN sets `GRAILS_HOME` to the version in use; with the zip of the distribution it is the directory it was unpacked to.
+The binary distribution has a completion script for bash and zsh, `bin/grails_completion`. Loaded into the shell, it completes on the TAB key the commands of `grails` itself, the commands of a project among them, their options, the values of an option that takes one of a few (`--servlet`, `--data`, `--reloading`, `--type`), and the names of features for `--features` of the create commands and for `feature add`, `feature diff`, `feature show` and `feature info`. Load it in the file the shell reads when it starts. SDKMAN sets `GRAILS_HOME` to the version in use; with the zip of the distribution it is the directory it was unpacked to.
 
 In bash, in `~/.bashrc`:
 
@@ -583,7 +583,7 @@ In front of the name of a command only the options of the command line itself ar
 
 ==== What a Command Starts
 
-The help, `help --json`, the version, the refusal of a command there is not or of a mistake in the command line, the commands that run the build of the project (`gradle`, `compile`, `clean`, `test-app`, `run-app` and the others) and the commands that create the classes of an application start nothing but the command line itself. Only the commands that generate from the features of Grails, or list or look up those features, start the project generator, when they run: `create-app` and the other commands that create an application, their `--help`, `help` with their name and `--list-features`, which list the features, `feature add`, `feature list`, `feature search`, `feature info`, `feature diff`, `project regenerate`, and `project migrate` once it has found the project and nothing refuses it. So the commands of the first kind answer at once, and they keep working when the generator cannot be started; a command that needs it then says so in one line and ends with exit code 1. Most of the time of a command of the second kind goes to starting the generator, so the command line loads the classes of the generator ahead on a second thread when it is given one of these commands by its name, as described under JVM Options, Memory and Environment Variables above.
+The help, `help --json`, the version, the refusal of a command there is not or of a mistake in the command line, the commands that run the build of the project (`gradle`, `compile`, `clean`, `test-app`, `run-app` and the others) and the commands that create the classes of an application start nothing but the command line itself. Only the commands that generate from the features of Grails, or list or look up those features, start the project generator, when they run: `create-app` and the other commands that create an application, their `--help`, `help` with their name and `--list-features`, which list the features, `feature add`, `feature list`, `feature find`, `feature show`, `feature diff`, `project regenerate`, and `project migrate` once it has found the project and nothing refuses it. So the commands of the first kind answer at once, and they keep working when the generator cannot be started; a command that needs it then says so in one line and ends with exit code 1. Most of the time of a command of the second kind goes to starting the generator, so the command line loads the classes of the generator ahead on a second thread when it is given one of these commands by its name, as described under JVM Options, Memory and Environment Variables above.
 
 After a mistake in the command line of a command that creates an application, one line shows how the command is used, and the features are not listed: `--list-features` and `--help` have them.
 
@@ -930,12 +930,12 @@ grails list-plugins security
 grails plugin-info spring-security
 ----
 
-Each of the two is also a command of `plugin`: link:{commandLineRef}plugin-list.html[plugin list] is `list-plugins`, and link:{commandLineRef}plugin-show.html[plugin show], which is `plugin info` too, is `plugin-info`. They are one command with two names each, with the same arguments, options and output, and neither name is deprecated. link:{commandLineRef}plugin-search.html[plugin search] is the list with the text it lists by, which it is not run without:
+Each of the two is also a command of `plugin`: link:{commandLineRef}plugin-list.html[plugin list] is `list-plugins`, and link:{commandLineRef}plugin-show.html[plugin show], which is `plugin info` too, is `plugin-info`. They are one command with two names each, with the same arguments, options and output, and neither name is deprecated. link:{commandLineRef}plugin-find.html[plugin find] `TEXT` is the list with the text it lists by, which it requires: without the text it is a mistake in the command line (exit code 2). No two of the names start with the same letter, so one letter is short for each: `pl l`, `pl f`, `pl s` and `pl i`.
 
 [source,console]
 ----
 grails plugin list
-grails plugin search security
+grails plugin find security
 grails plugin show spring-security
 ----
 

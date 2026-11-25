@@ -27,7 +27,7 @@ import org.apache.grails.forge.core.change.ChangePlan.PlannedFile
 import org.apache.grails.forge.core.state.ProjectState
 
 /**
- * What a feature contributes to an application, as {@code feature info} says it: the files it adds,
+ * What a feature contributes to an application, as {@code feature show} says it: the files it adds,
  * changes and removes, and the lines it puts into the build files and takes out of them. It is
  * worked out by the generator: from what {@code feature add} would do to the application of the
  * current directory, or from an application of a type generated with the feature and without it.

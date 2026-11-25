@@ -55,4 +55,4 @@ Grails plugins for Grails 9.0.0
 More of one plugin: grails plugin show NAME
 ----
 
-`plugin` has three commands: `plugin list`, link:plugin-search.html[plugin search], which is the list with the text it is listed by, and link:plugin-show.html[plugin show], which says what is known of one plugin. `grails plugin` without one of them is a mistake in the command line (exit code 2) that names the three.
+`plugin` has three commands: `plugin list`, link:plugin-find.html[plugin find], which is the list with the text it is listed by, and link:plugin-show.html[plugin show], which says what is known of one plugin. `grails plugin` without one of them is a mistake in the command line (exit code 2) that names the three.

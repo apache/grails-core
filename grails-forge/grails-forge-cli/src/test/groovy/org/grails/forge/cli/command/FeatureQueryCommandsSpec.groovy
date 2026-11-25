@@ -42,7 +42,7 @@ import org.springframework.context.ApplicationContext
 import spock.lang.Unroll
 
 /**
- * {@code feature search}, {@code feature info} with its other name {@code feature show}, and
+ * {@code feature find}, {@code feature show} with its other name {@code feature info}, and
  * {@code feature diff}, through the command line: in the directory of an application, where they
  * speak of it by its record, and outside a project and with {@code --type}, where they speak of a
  * new application of a type. None of them writes anything.
@@ -74,9 +74,9 @@ class FeatureQueryCommandsSpec extends CommandSpec {
         home.deleteDir()
     }
 
-    void "outside a project feature search lists the features of a new web application that have the text, and says which it has by default"() {
+    void "outside a project feature find lists the features of a new web application that have the text, and says which it has by default"() {
         when:
-        int exit = run('feature', 'search', 'CACHE')
+        int exit = run('feature', 'find', 'CACHE')
         List<String> lines = out.toString().readLines()
 
         then: 'in whichever case'
@@ -84,11 +84,11 @@ class FeatureQueryCommandsSpec extends CommandSpec {
         err.toString().isEmpty()
         lines[0] ==~ /\| \d+ features of a new application of type web have CACHE in the name, the title, the description or the category:/
         lines.any { it.startsWith('    cache ') }
-        lines[-1] == '| More of one feature: grails-forge-cli feature info FEATURE'
+        lines[-1] == '| More of one feature: grails-forge-cli feature show FEATURE'
 
         when: 'a feature such an application has without being asked for it'
         reset()
-        exit = run('feature', 'search', 'asset-pipeline-grails')
+        exit = run('feature', 'find', 'asset-pipeline-grails')
 
         then:
         exit == 0
@@ -96,7 +96,7 @@ class FeatureQueryCommandsSpec extends CommandSpec {
 
         when: 'a text no feature has'
         reset()
-        exit = run('feature', 'search', 'no-such-text-anywhere')
+        exit = run('feature', 'find', 'no-such-text-anywhere')
 
         then:
         exit == 0
@@ -105,7 +105,7 @@ class FeatureQueryCommandsSpec extends CommandSpec {
     }
 
     @Unroll
-    void "feature search --json has every feature of a new #type application that has the text in its name, title, description or category, and no other"() {
+    void "feature find --json has every feature of a new #type application that has the text in its name, title, description or category, and no other"() {
         given:
         List<Feature> all = beanContext.getBean(ProjectGenerator).availableFeatures(applicationType, []).getFeatures().toList()
         List<String> expected = all.findAll { Feature feature ->
@@ -113,7 +113,7 @@ class FeatureQueryCommandsSpec extends CommandSpec {
         }*.name.sort()
 
         when:
-        int exit = run((['feature', 'search', text, '--json'] + (type == null ? [] : ['--type', type])) as String[])
+        int exit = run((['feature', 'find', text, '--json'] + (type == null ? [] : ['--type', type])) as String[])
         Map document = (Map) new JsonSlurper().parseText(out.toString())
         List<Map> features = (List<Map>) document.features
 
@@ -138,13 +138,13 @@ class FeatureQueryCommandsSpec extends CommandSpec {
         'plugin'   | ApplicationType.PLUGIN   | 'gorm'
     }
 
-    void "in an application feature search speaks of it, says which features it has, and writes nothing"() {
+    void "in an application feature find speaks of it, says which features it has, and writes nothing"() {
         given:
         create(['--features', 'grails-quartz'])
         Map<String, String> before = tree()
 
         when:
-        int exit = run('feature', 'search', 'quartz')
+        int exit = run('feature', 'find', 'quartz')
         List<String> lines = out.toString().readLines()
 
         then:
@@ -155,7 +155,7 @@ class FeatureQueryCommandsSpec extends CommandSpec {
 
         when:
         reset()
-        exit = run('feature', 'search', 'cache', '--json')
+        exit = run('feature', 'find', 'cache', '--json')
         Map document = (Map) new JsonSlurper().parseText(out.toString())
 
         then:
@@ -166,7 +166,7 @@ class FeatureQueryCommandsSpec extends CommandSpec {
 
         when: 'with a type it is a new application of that type that is spoken of'
         reset()
-        exit = run('feature', 'search', 'quartz', '--json', '--type', 'rest-api')
+        exit = run('feature', 'find', 'quartz', '--json', '--type', 'rest-api')
         document = (Map) new JsonSlurper().parseText(out.toString())
 
         then:
@@ -191,21 +191,21 @@ class FeatureQueryCommandsSpec extends CommandSpec {
 
         where:
         args                                           | said
-        ['feature', 'search']                          | 'TEXT'
-        ['feature', 'search', ' ']                     | 'The text to search the features by is one line of at most 100 characters'
-        ['feature', 'search', 'x' * 101]               | 'The text to search the features by is one line of at most 100 characters'
-        ['feature', 'search', 'cache', '--type', 'ear'] | 'ear is no type of application: --type is one of web, rest-api, web-plugin, plugin, rest-api-plugin'
-        ['feature', 'info']                            | 'FEATURE'
-        ['feature', 'info', 'cache', '--type', 'ear']  | 'ear is no type of application'
+        ['feature', 'find']                            | 'TEXT'
+        ['feature', 'find', ' ']                       | 'The text to find the features by is one line of at most 100 characters'
+        ['feature', 'find', 'x' * 101]                 | 'The text to find the features by is one line of at most 100 characters'
+        ['feature', 'find', 'cache', '--type', 'ear']  | 'ear is no type of application: --type is one of web, rest-api, web-plugin, plugin, rest-api-plugin'
+        ['feature', 'show']                            | 'FEATURE'
+        ['feature', 'show', 'cache', '--type', 'ear']  | 'ear is no type of application'
         ['feature', 'diff']                            | 'FEATURE'
         ['feature', 'diff', 'cache', '--type', 'ear']  | 'ear is no type of application'
         ['feature', 'diff', 'no-such-feature']         | 'no-such-feature'
         ['feature', 'diff', 'h2,postgres']             | 'postgres'
     }
 
-    void "outside a project feature info says what a feature is, and what it changes in a new web application"() {
+    void "outside a project feature show says what a feature is, and what it changes in a new web application"() {
         when:
-        int exit = run('feature', 'info', 'postgres')
+        int exit = run('feature', 'show', 'postgres')
         List<String> lines = out.toString().readLines()
 
         then:
@@ -228,12 +228,12 @@ class FeatureQueryCommandsSpec extends CommandSpec {
         lines.contains('    changed  grails-app/conf/application.yml')
     }
 
-    void "feature show is feature info, and --json writes one document with what the text says"() {
+    void "feature info is feature show, and --json writes one document with what the text says"() {
         when:
-        int exit = run('feature', 'info', 'postgres', '--json')
+        int exit = run('feature', 'show', 'postgres', '--json')
         String info = out.toString()
         reset()
-        int shown = run('feature', 'show', 'postgres', '--json')
+        int shown = run('feature', 'info', 'postgres', '--json')
         Map document = (Map) new JsonSlurper().parseText(out.toString())
         Map feature = (Map) document.feature
 
@@ -272,7 +272,7 @@ class FeatureQueryCommandsSpec extends CommandSpec {
 
     void "what a default contributes is worked out against an application that was created without it"() {
         when:
-        int exit = run('feature', 'info', 'mockito', '--json')
+        int exit = run('feature', 'show', 'mockito', '--json')
         Map feature = (Map) ((Map) new JsonSlurper().parseText(out.toString())).feature
 
         then:
@@ -285,7 +285,7 @@ class FeatureQueryCommandsSpec extends CommandSpec {
 
         when: 'a default no application is generated without'
         reset()
-        exit = run('feature', 'info', 'h2')
+        exit = run('feature', 'show', 'h2')
         List<String> lines = out.toString().readLines()
 
         then: 'what the feature is, is said all the same'
@@ -296,13 +296,13 @@ class FeatureQueryCommandsSpec extends CommandSpec {
         !lines.any { it.contains('it changes') }
     }
 
-    void "in an application feature info says what feature add would change there, which is what feature add --dry-run says"() {
+    void "in an application feature show says what feature add would change there, which is what feature add --dry-run says"() {
         given:
         create([])
         Map<String, String> before = tree()
 
         when:
-        int exit = run('feature', 'info', 'grails-quartz', '--json')
+        int exit = run('feature', 'show', 'grails-quartz', '--json')
         Map document = (Map) new JsonSlurper().parseText(out.toString())
         Map feature = (Map) document.feature
         reset()
@@ -325,7 +325,7 @@ class FeatureQueryCommandsSpec extends CommandSpec {
 
         when: 'as text'
         reset()
-        exit = run('feature', 'info', 'grails-quartz')
+        exit = run('feature', 'show', 'grails-quartz')
         List<String> lines = out.toString().readLines()
 
         then:
@@ -340,13 +340,13 @@ class FeatureQueryCommandsSpec extends CommandSpec {
         tree() == before
     }
 
-    void "of a feature the application has, feature info says so, and what it changes in a new application of its type"() {
+    void "of a feature the application has, feature show says so, and what it changes in a new application of its type"() {
         given:
         create(['--features', 'grails-quartz'])
         Map<String, String> before = tree()
 
         when:
-        int exit = run('feature', 'info', 'grails-quartz')
+        int exit = run('feature', 'show', 'grails-quartz')
         List<String> lines = out.toString().readLines()
 
         then:
@@ -358,12 +358,12 @@ class FeatureQueryCommandsSpec extends CommandSpec {
         tree() == before
     }
 
-    void "feature info says when feature add adds a feature only with --replace, and why it does not add another"() {
+    void "feature show says when feature add adds a feature only with --replace, and why it does not add another"() {
         given:
         create(['--features', 'postgres', '--exclude-features', 'mockito'])
 
         when: 'a feature of the group of one that was asked for by name'
-        int exit = run('feature', 'info', 'mysql', '--json')
+        int exit = run('feature', 'show', 'mysql', '--json')
         Map feature = (Map) ((Map) new JsonSlurper().parseText(out.toString())).feature
 
         then:
@@ -374,7 +374,7 @@ class FeatureQueryCommandsSpec extends CommandSpec {
 
         when:
         reset()
-        exit = run('feature', 'info', 'mysql')
+        exit = run('feature', 'show', 'mysql')
 
         then:
         exit == 0
@@ -382,7 +382,7 @@ class FeatureQueryCommandsSpec extends CommandSpec {
 
         when: 'a feature the application was created without'
         reset()
-        exit = run('feature', 'info', 'mockito')
+        exit = run('feature', 'show', 'mockito')
         List<String> lines = out.toString().readLines()
 
         then: 'the reason feature add gives, and what it changes in a new application'
@@ -398,18 +398,18 @@ class FeatureQueryCommandsSpec extends CommandSpec {
         String ofPluginOnly = generator.availableFeatures(ApplicationType.PLUGIN, []).getFeatures().toList()*.name.find { !ofWeb.contains(it) }
 
         when:
-        int exit = run('feature', 'info', 'quartz')
+        int exit = run('feature', 'show', 'quartz')
 
         then:
         exit == 1
         out.toString().isEmpty()
         err.toString().readLines().size() == 1
         err.toString().startsWith('| Error There is no feature quartz for a new application of type web. Did you mean: grails-quartz')
-        err.toString().contains('grails-forge-cli feature search TEXT lists the features')
+        err.toString().contains('grails-forge-cli feature find TEXT lists the features')
 
         when: 'for a tool'
         reset()
-        exit = run('feature', 'info', 'quartz', '--json')
+        exit = run('feature', 'show', 'quartz', '--json')
         Map document = (Map) new JsonSlurper().parseText(out.toString())
 
         then:
@@ -419,7 +419,7 @@ class FeatureQueryCommandsSpec extends CommandSpec {
 
         when:
         reset()
-        exit = ofPluginOnly == null ? 1 : run('feature', 'info', ofPluginOnly)
+        exit = ofPluginOnly == null ? 1 : run('feature', 'show', ofPluginOnly)
 
         then:
         exit == 1
@@ -427,7 +427,7 @@ class FeatureQueryCommandsSpec extends CommandSpec {
 
         when:
         reset()
-        exit = ofPluginOnly == null ? 0 : run('feature', 'info', ofPluginOnly, '--type', 'plugin')
+        exit = ofPluginOnly == null ? 0 : run('feature', 'show', ofPluginOnly, '--type', 'plugin')
 
         then:
         exit == 0
@@ -442,7 +442,7 @@ class FeatureQueryCommandsSpec extends CommandSpec {
         new File(pack, 'templates/audit.txt').setText('kept as it is', 'UTF-8')
 
         when:
-        int exit = run('feature', 'info', 'acme-audit', '--feature-pack-dir', pack.absolutePath)
+        int exit = run('feature', 'show', 'acme-audit', '--feature-pack-dir', pack.absolutePath)
         List<String> lines = out.toString().readLines()
 
         then:
@@ -454,9 +454,9 @@ class FeatureQueryCommandsSpec extends CommandSpec {
         lines.any { it.startsWith('    added    grails-app/conf/') && it.endsWith('/audit.txt') }
         lines.any { it.startsWith('             + ') && it.contains('com.acme:acme-audit-grails:2.3.0') }
 
-        when: 'and found by feature search'
+        when: 'and found by feature find'
         reset()
-        exit = run('feature', 'search', 'acme', '--json', '--feature-pack-dir', pack.absolutePath)
+        exit = run('feature', 'find', 'acme', '--json', '--feature-pack-dir', pack.absolutePath)
 
         then:
         exit == 0
@@ -625,15 +625,15 @@ class FeatureQueryCommandsSpec extends CommandSpec {
 
         where:
         args                            | usage
-        ['feature', 'search', '--help'] | 'Usage: grails-forge-cli feature search '
-        ['feature', 'info', '--help']   | 'Usage: grails-forge-cli feature info '
-        ['feature', 'show', '-h']       | 'Usage: grails-forge-cli feature info '
+        ['feature', 'find', '--help']   | 'Usage: grails-forge-cli feature find '
+        ['feature', 'show', '--help']   | 'Usage: grails-forge-cli feature show '
+        ['feature', 'info', '-h']       | 'Usage: grails-forge-cli feature show '
         ['feature', 'diff', '--help']   | 'Usage: grails-forge-cli feature diff '
-        ['help', 'feature', 'show']     | 'Usage: grails-forge-cli feature info '
+        ['help', 'feature', 'info']     | 'Usage: grails-forge-cli feature show '
         ['help', 'feature']             | 'Usage: grails-forge-cli feature '
         ['plugin', '--help']            | 'Usage: grails-forge-cli plugin '
         ['plugin', 'list', '--help']    | 'Usage: grails-forge-cli plugin list '
-        ['plugin', 'search', '--help']  | 'Usage: grails-forge-cli plugin search '
+        ['plugin', 'find', '--help']    | 'Usage: grails-forge-cli plugin find '
         ['plugin', 'info', '--help']    | 'Usage: grails-forge-cli plugin show '
         ['help', 'plugin', 'show']      | 'Usage: grails-forge-cli plugin show '
     }
@@ -646,20 +646,20 @@ class FeatureQueryCommandsSpec extends CommandSpec {
 
         then:
         exit == 0
-        commands.keySet() == ['add', 'list', 'search', 'info', 'diff'] as Set
-        commands.info.aliases == ['show']
-        optionNames(commands.search).containsAll(['--json', '--type', '--feature-pack-dir', '--offline'])
-        optionNames(commands.info).containsAll(['--json', '--type', '--feature-pack-dir', '--offline'])
+        commands.keySet() == ['add', 'list', 'find', 'show', 'diff'] as Set
+        commands.get('show').aliases == ['info']
+        optionNames(commands.get('find')).containsAll(['--json', '--type', '--feature-pack-dir', '--offline'])
+        optionNames(commands.get('show')).containsAll(['--json', '--type', '--feature-pack-dir', '--offline'])
         optionNames(commands.diff).containsAll(['--replace', '--type', '--feature-pack-dir', '--offline'])
         !optionNames(commands.diff).contains('--json')
-        ((List<Map>) commands.search.parameters)*.label == ['TEXT']
-        ((List<Map>) commands.info.parameters)*.label == ['FEATURE']
+        ((List<Map>) commands.get('find').parameters)*.label == ['TEXT']
+        ((List<Map>) commands.get('show').parameters)*.label == ['FEATURE']
         ((List<Map>) commands.diff.parameters)*.label == ['FEATURE']
         commands.values().every { it.project == (it.name in ['add', 'list']) }
 
         when: 'by what is short for the names, plain and never waiting for what is typed'
         reset()
-        exit = run('feature', 'se', 'quartz', '--plain-output', '--non-interactive')
+        exit = run('feature', 'f', 'quartz', '--plain-output', '--non-interactive')
 
         then:
         exit == 0
@@ -682,28 +682,28 @@ class FeatureQueryCommandsSpec extends CommandSpec {
         Terminal terminal = TerminalBuilder.builder().type(Terminal.TYPE_DUMB).streams(new ByteArrayInputStream(new byte[0]), new ByteArrayOutputStream()).build()
 
         expect: 'the commands, by each of their names'
-        complete(terminal, 'feature ').containsAll(['add', 'list', 'search', 'info', 'show', 'diff'])
-        complete(terminal, 'plugin ').containsAll(['list', 'search', 'show', 'info'])
-        complete(terminal, 'feature search --').containsAll(['--json', '--type'])
-        complete(terminal, 'feature info --type ').containsAll(['web', 'rest-api', 'plugin', 'web-plugin', 'rest-api-plugin'])
+        complete(terminal, 'feature ').containsAll(['add', 'list', 'find', 'show', 'info', 'diff'])
+        complete(terminal, 'plugin ').containsAll(['list', 'find', 'show', 'info'])
+        complete(terminal, 'feature find --').containsAll(['--json', '--type'])
+        complete(terminal, 'feature show --type ').containsAll(['web', 'rest-api', 'plugin', 'web-plugin', 'rest-api-plugin'])
 
         when: 'outside a project'
-        List<String> info = complete(terminal, 'feature info ')
         List<String> show = complete(terminal, 'feature show ')
+        List<String> info = complete(terminal, 'feature info ')
         List<String> diff = complete(terminal, 'feature diff ')
 
         then:
-        info.containsAll(['cache', 'grails-quartz', 'postgres', 'asset-pipeline-grails'])
-        show == info
+        show.containsAll(['cache', 'grails-quartz', 'postgres', 'asset-pipeline-grails'])
+        info == show
         diff.containsAll(['cache', 'grails-quartz', 'postgres'])
 
         when: 'in an application that has some of them'
         create(['--features', 'grails-quartz'])
-        info = complete(terminal, 'feature info ')
+        show = complete(terminal, 'feature show ')
         diff = complete(terminal, 'feature diff ')
 
-        then: 'feature info says something of a feature the application has too, and feature diff has nothing to show of it'
-        info.containsAll(['cache', 'grails-quartz', 'asset-pipeline-grails'])
+        then: 'feature show says something of a feature the application has too, and feature diff has nothing to show of it'
+        show.containsAll(['cache', 'grails-quartz', 'asset-pipeline-grails'])
         diff.contains('cache')
         !diff.contains('grails-quartz')
 

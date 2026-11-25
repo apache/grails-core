@@ -82,14 +82,14 @@ public final class StartupPreload {
 
     /**
      * The commands of a group that start the project generator when they run, by the name of the group:
-     * {@code feature add}, {@code feature list}, {@code feature search}, {@code feature info} (also {@code feature show})
+     * {@code feature add}, {@code feature list}, {@code feature find}, {@code feature show} (also {@code feature info})
      * and {@code feature diff} read what it knows of the features, {@code project regenerate}
      * generates the application again and {@code project migrate} looks for the features of the application among
      * those it knows. Each of them is short-lived and spends most of its time starting the generator, so the
      * classes of the generator are loaded ahead for it as they are for the commands that create an application.
      */
     public static final Map<String, List<String>> GENERATOR_SUBCOMMANDS = Map.of(
-            "feature", List.of("add", "list", "search", "info", "show", "diff"),
+            "feature", List.of("add", "list", "find", "show", "info", "diff"),
             "project", List.of("regenerate", "migrate"));
 
     private static final String GROOVY_RUNTIME = "groovy.lang.GroovySystem";

@@ -17,7 +17,7 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-== plugin search
+== plugin find
 
 === Purpose
 
@@ -27,9 +27,9 @@ Lists the Grails plugins that have a text in their name, their coordinates or th
 
 [source,console]
 ----
-grails plugin search security
-grails plugin search mongo --json
-grails plugin search audit --deprecated
+grails plugin find security
+grails plugin find mongo --json
+grails plugin find audit --deprecated
 ----
 
 === Description
@@ -38,18 +38,18 @@ Usage:
 
 [source,console]
 ----
-grails plugin search [--deprecated] [--offline] [--json] [--plugin-index=URL] FILTER
+grails plugin find [--deprecated] [--offline] [--json] [--plugin-index=URL] TEXT
 ----
 
 Arguments:
 
-* `FILTER` - The text, which this command is not run without, one line of at most 100 characters. A plugin is listed when its name, its coordinates (`group:artifact`) or its description has the text, in whichever case.
+* `TEXT` - The text, which the command requires, one line of at most 100 characters. A plugin is listed when its name, its coordinates (`group:artifact`) or its description has the text, in whichever case.
 
-`plugin search FILTER` writes what `plugin list FILTER` and `list-plugins FILTER` write, and takes their options: see link:list-plugins.html[list-plugins] for the options, the two lists the plugins come from, the plugin index and the JSON document of `--json`. Without a text the command is a mistake in the command line (exit code 2): `plugin list` lists every plugin. A text that no plugin has is no failure: the command says that no plugin has it and ends with exit code 0.
+`plugin find TEXT` writes what `plugin list TEXT` and `list-plugins TEXT` write, and takes their options: see link:list-plugins.html[list-plugins] for the options, the two lists the plugins come from, the plugin index and the JSON document of `--json`. The text is optional for those two and required here: without it the command is a mistake in the command line (exit code 2), and its usage and `help --json` say so. `plugin list` lists every plugin. A text that no plugin has is no failure: the command says that no plugin has it and ends with exit code 0.
 
 [source,console]
 ----
-$ grails plugin search quartz --offline
+$ grails plugin find quartz --offline
 Grails plugins for Grails 9.0.0
   Name    Coordinates                      Version  Description
   Quartz  org.apache.grails:grails-quartz  9.0.0    Schedules jobs that run at an interval or by a cron expression, with Quartz

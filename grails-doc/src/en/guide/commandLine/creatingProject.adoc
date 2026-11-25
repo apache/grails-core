@@ -584,22 +584,22 @@ Three more commands of `feature` say what there is to add, and change nothing ei
 |===
 | Command | What it says
 
-| link:{commandLineRef}feature-search.html[feature search] `TEXT`
+| link:{commandLineRef}feature-find.html[feature find] `TEXT`
 | The features that have the text in their name, their title, their description or their category, each with whether the application has it.
 
-| link:{commandLineRef}feature-info.html[feature info] `FEATURE`, also `feature show`
+| link:{commandLineRef}feature-show.html[feature show] `FEATURE`, also `feature info`
 | One feature: what it is for, the types of application it is for, what it requires, the features of its exclusive group and the one whose place it takes, where its documentation is, whether `feature add` adds it to this application, and the files and the lines of the build files it would add, change and remove here.
 
 | link:{commandLineRef}feature-diff.html[feature diff] `FEATURE...`
 | What `feature add` with the same features would change, as a unified diff on the standard output and nothing else there. It is the diff of `feature add --diff`, and its exit code is 0 when the features can be added, 1 when they cannot, and 2 when they cannot be asked for as they were.
 |===
 
-Outside a project, and with `--type web`, `--type rest-api` and the other types of application, the three speak of a new application of the type: `feature search` lists its features and marks those it has by default, `feature info` shows what a feature changes in it, and `feature diff` shows that as a diff, as the Grails Forge web application does.
+Outside a project, and with `--type web`, `--type rest-api` and the other types of application, the three speak of a new application of the type: `feature find` lists its features and marks those it has by default, `feature show` shows what a feature changes in it, and `feature diff` shows that as a diff, as the Grails Forge web application does. No two of the commands of `feature` start with the same letter, so one letter is short for each: `f a`, `f l`, `f f`, `f s` (and `f i` for `feature info`) and `f d`.
 
 [source,console]
 ----
-$ grails feature search quartz
-$ grails feature info grails-quartz
+$ grails feature find quartz
+$ grails feature show grails-quartz
 $ grails feature diff grails-quartz
 ----
 

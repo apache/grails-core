@@ -34,7 +34,7 @@ import org.grails.forge.io.FileSystemOutputHandler
 import picocli.CommandLine
 
 /**
- * What {@code feature search}, {@code feature info} and {@code feature diff} share: the application
+ * What {@code feature find}, {@code feature show} and {@code feature diff} share: the application
  * they speak of, see {@link FeatureScope}, which is that of the current directory or, with
  * {@code --type} and outside a project, a new application of a type. None of them changes anything.
  *

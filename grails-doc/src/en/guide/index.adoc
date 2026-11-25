@@ -1491,15 +1491,15 @@ include::ref/Command Line/feature-add.adoc[]
 
 include::ref/Command Line/feature-list.adoc[]
 
-[[ref-command-line-feature-search]]
-==== feature search
+[[ref-command-line-feature-find]]
+==== feature find
 
-include::ref/Command Line/feature-search.adoc[]
+include::ref/Command Line/feature-find.adoc[]
 
-[[ref-command-line-feature-info]]
-==== feature info
+[[ref-command-line-feature-show]]
+==== feature show
 
-include::ref/Command Line/feature-info.adoc[]
+include::ref/Command Line/feature-show.adoc[]
 
 [[ref-command-line-feature-diff]]
 ==== feature diff
@@ -1521,10 +1521,10 @@ include::ref/Command Line/plugin-info.adoc[]
 
 include::ref/Command Line/plugin-list.adoc[]
 
-[[ref-command-line-plugin-search]]
-==== plugin search
+[[ref-command-line-plugin-find]]
+==== plugin find
 
-include::ref/Command Line/plugin-search.adoc[]
+include::ref/Command Line/plugin-find.adoc[]
 
 [[ref-command-line-plugin-show]]
 ==== plugin show

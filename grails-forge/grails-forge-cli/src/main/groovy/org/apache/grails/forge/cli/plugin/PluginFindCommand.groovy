@@ -23,33 +23,47 @@ import org.grails.forge.cli.ForgeContext
 import picocli.CommandLine
 
 /**
- * {@code plugin search}: the plugins {@code plugin list} lists that have a text in their name, their
+ * {@code plugin find}: the plugins {@code plugin list} lists that have a text in their name, their
  * coordinates or their description. It is {@code plugin list} with the text it lists by, which this
- * command does not run without.
+ * command is not run without: the text is an argument the command line requires.
  *
  * @since 9.0
  */
-@CommandLine.Command(name = PluginSearchCommand.NAME, description = [
+@CommandLine.Command(name = PluginFindCommand.NAME, description = [
         'Lists the Grails plugins that have a text in their name, their coordinates or their description, in whichever case: ' +
                 'those of this release of Grails, and those of the plugin index of Grails, which is read from the network.',
         'It is @|bold plugin list|@ with the text to list by; @|bold plugin show|@ says more of one plugin.'])
 @CompileStatic
-class PluginSearchCommand extends PluginListCommand {
+class PluginFindCommand extends PluginListingCommand {
 
-    public static final String NAME = 'search'
+    public static final String NAME = 'find'
+
+    @CommandLine.Parameters(arity = '1', paramLabel = 'TEXT',
+            description = 'The text the plugins are listed by: one line, which a plugin has in its name, its coordinates or its description, in whichever case.')
+    String text
 
     /**
      * @param context the Forge application of the command line, see {@link PluginsCommand#PluginsCommand(ForgeContext)}
      */
-    PluginSearchCommand(ForgeContext context) {
+    PluginFindCommand(ForgeContext context) {
         super(context)
     }
 
     @Override
     protected int run() {
-        if (filter == null || filter.trim().isEmpty()) {
-            throw new CommandLine.ParameterException(spec.commandLine(), 'Give the text to search the plugins by: plugin list lists every plugin')
+        if (text.trim().isEmpty()) {
+            throw new CommandLine.ParameterException(spec.commandLine(), 'Give the text to find the plugins by: plugin list lists every plugin')
         }
         return super.run()
+    }
+
+    @Override
+    protected String listedBy() {
+        return text
+    }
+
+    @Override
+    protected String showCommand() {
+        return "${PluginGroupCommand.NAME} ${PluginShowCommand.NAME}"
     }
 }

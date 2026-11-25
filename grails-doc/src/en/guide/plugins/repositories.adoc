@@ -27,7 +27,7 @@ NOTE: If you have created a Grails plugin and want it to be listed on the https:
 
 ===== Finding Plugins
 
-`grails list-plugins` lists the Grails plugins there are, and takes a text to look for, as in `grails list-plugins security`. `grails plugin-info NAME` says more of one: its versions, its license, where its documentation and sources are, and the dependency to add to `build.gradle`. The same commands are `grails plugin list`, `grails plugin search security` and `grails plugin show NAME`:
+`grails list-plugins` lists the Grails plugins there are, and takes a text to look for, as in `grails list-plugins security`. `grails plugin-info NAME` says more of one: its versions, its license, where its documentation and sources are, and the dependency to add to `build.gradle`. The same commands are `grails plugin list`, `grails plugin find security` and `grails plugin show NAME`:
 
 [source,console]
 ----

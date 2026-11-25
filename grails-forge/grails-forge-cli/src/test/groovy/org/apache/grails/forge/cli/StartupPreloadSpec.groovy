@@ -87,9 +87,9 @@ class StartupPreloadSpec extends Specification {
         []                                          | false
         ['feature', 'add', 'cache']                 | true
         ['--plain-output', 'feature', 'list']       | true
-        ['feature', 'search', 'cache']              | true
-        ['feature', 'info', 'cache']                | true
+        ['feature', 'find', 'cache']              | true
         ['feature', 'show', 'cache']                | true
+        ['feature', 'info', 'cache']                | true
         ['feature', 'diff', 'cache']                | true
         ['plugin', 'list']                          | false
         ['plugin', 'show', 'cache']                 | false

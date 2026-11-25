@@ -44,7 +44,7 @@ import org.springframework.stereotype.Component
 import picocli.CommandLine
 
 /**
- * {@code feature info}, and by its other name {@code feature show}: what is known of one feature.
+ * {@code feature show}, and by its other name {@code feature info}: what is known of one feature.
  * What the feature is, is read from the feature: its title, its description, its category, the types
  * of application it is for, what it requires and where its documentation is. What it comes to in an
  * application is worked out by the generator: in the directory of an application that does not have
@@ -53,41 +53,41 @@ import picocli.CommandLine
  *
  * @since 9.0
  */
-@CommandLine.Command(name = FeatureInfoCommand.NAME, aliases = [FeatureInfoCommand.OTHER_NAME], description = [
+@CommandLine.Command(name = FeatureShowCommand.NAME, aliases = [FeatureShowCommand.OTHER_NAME], description = [
         'Says what is known of one feature: its title, what it is for, its category, the types of application it is for, the features it requires, ' +
                 'those it is exclusive with and those whose place it takes, whether an application has it by default, and where its documentation is.',
         'In the directory of an application it says whether the application has the feature, and which files and which lines of the build files ' +
                 'feature add would add, change and remove there. Outside a project, with --type, and for a feature the application has, these are ' +
                 'worked out for a new application of the type.',
         'For the feature of a feature pack that is not part of Grails, the pack and the coordinates of its plugin are named. ' +
-                'The command is also there as @|bold feature show|@.'])
+                'The command is also there as @|bold feature info|@.'])
 @Component
 @Scope('prototype')
 @CompileStatic
-class FeatureInfoCommand extends FeatureQueryCommand {
+class FeatureShowCommand extends FeatureQueryCommand {
 
-    public static final String NAME = 'info'
+    public static final String NAME = 'show'
 
     /** The other name of the command */
-    public static final String OTHER_NAME = 'show'
+    public static final String OTHER_NAME = 'info'
 
     private static final int MAX_NAMED = 5
     private static final String NONE = 'none'
 
     @CommandLine.Parameters(arity = '1', paramLabel = 'FEATURE', completionCandidates = KnownFeatureCandidates,
-            description = 'The name of the feature, as feature list and feature search have it.')
+            description = 'The name of the feature, as feature list and feature find have it.')
     String feature
 
     @CommandLine.Option(names = ['--json'], description = 'Write what is known of the feature as one JSON document for a tool to read, and nothing else.')
     boolean json
 
     @Autowired
-    FeatureInfoCommand(ProjectGenerator projectGenerator) {
+    FeatureShowCommand(ProjectGenerator projectGenerator) {
         super({ projectGenerator })
     }
 
     /** On a Forge application that is started when the command first needs it. */
-    FeatureInfoCommand(ForgeContext context) {
+    FeatureShowCommand(ForgeContext context) {
         super(generatorOf(context))
     }
 
@@ -322,7 +322,7 @@ class FeatureInfoCommand extends FeatureQueryCommand {
         }
         return "There is no feature ${given} for ${scope.described}." +
                 (close ? " Did you mean: ${close.take(MAX_NAMED).join(', ')}${close.size() > MAX_NAMED ? " (and ${close.size() - MAX_NAMED} more)" : ''}?" : '') +
-                " ${UsageHelp.toType(spec, "${FeatureCommand.NAME} ${FeatureSearchCommand.NAME} TEXT")} lists the features that have a text in their name or their description"
+                " ${UsageHelp.toType(spec, "${FeatureCommand.NAME} ${FeatureFindCommand.NAME} TEXT")} lists the features that have a text in their name or their description"
     }
 
     private static Map<String, Object> document(FeatureScope scope, List<String> notes, Map<String, Object> info, String error) {

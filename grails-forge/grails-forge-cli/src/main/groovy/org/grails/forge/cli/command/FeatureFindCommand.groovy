@@ -30,24 +30,24 @@ import org.springframework.stereotype.Component
 import picocli.CommandLine
 
 /**
- * {@code feature search}: the features that have a text in their name, their title, their
+ * {@code feature find}: the features that have a text in their name, their title, their
  * description or their category, among those there are for the application of the current directory
  * or for a new application of a type.
  *
  * @since 9.0
  */
-@CommandLine.Command(name = FeatureSearchCommand.NAME, description = [
+@CommandLine.Command(name = FeatureFindCommand.NAME, description = [
         'Lists the features that have a text in their name, their title, their description or their category, in whichever case.',
         'In the directory of an application they are the features of Grails for its type, and those of the feature packs it was generated with, ' +
                 'given as to feature list; each says whether the application has it. Outside a project, and with --type, they are the features a new ' +
                 'application of the type is created with, and each says whether such an application has it by default.',
-        '@|bold feature info|@ says more of one feature.'])
+        '@|bold feature show|@ says more of one feature.'])
 @Component
 @Scope('prototype')
 @CompileStatic
-class FeatureSearchCommand extends FeatureQueryCommand {
+class FeatureFindCommand extends FeatureQueryCommand {
 
-    public static final String NAME = 'search'
+    public static final String NAME = 'find'
 
     @CommandLine.Parameters(arity = '1', paramLabel = 'TEXT',
             description = 'The text the features are listed by: one line, which a feature has in its name, its title, its description or its category.')
@@ -57,19 +57,19 @@ class FeatureSearchCommand extends FeatureQueryCommand {
     boolean json
 
     @Autowired
-    FeatureSearchCommand(ProjectGenerator projectGenerator) {
+    FeatureFindCommand(ProjectGenerator projectGenerator) {
         super({ projectGenerator })
     }
 
     /** On a Forge application that is started when the command first needs it. */
-    FeatureSearchCommand(ForgeContext context) {
+    FeatureFindCommand(ForgeContext context) {
         super(generatorOf(context))
     }
 
     @Override
     Integer call() throws Exception {
         if (text.trim().isEmpty() || text.length() > FeatureScope.WIDTH || text != UsageHelp.line(text)) {
-            throw new CommandLine.ParameterException(spec.commandLine(), "The text to search the features by is one line of at most ${FeatureScope.WIDTH} characters")
+            throw new CommandLine.ParameterException(spec.commandLine(), "The text to find the features by is one line of at most ${FeatureScope.WIDTH} characters")
         }
         List<String> notes = []
         FeatureScope scope = scope(notes)
@@ -127,7 +127,7 @@ class FeatureSearchCommand extends FeatureQueryCommand {
                 }
             }
         }
-        out("@|blue ||@ More of one feature: ${UsageHelp.toType(spec, "${FeatureCommand.NAME} ${FeatureInfoCommand.NAME} FEATURE")}")
+        out("@|blue ||@ More of one feature: ${UsageHelp.toType(spec, "${FeatureCommand.NAME} ${FeatureShowCommand.NAME} FEATURE")}")
         return 0
     }
 }

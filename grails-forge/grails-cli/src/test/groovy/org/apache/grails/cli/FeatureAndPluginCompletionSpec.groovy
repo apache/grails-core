@@ -53,20 +53,20 @@ class FeatureAndPluginCompletionSpec extends Specification {
 
         where:
         typed                               | expected                                                     | absent
-        'grails feature '                   | ['add', 'list', 'search', 'info', 'show', 'diff']            | ['create-app']
-        'grails feature info grails-q'      | ['grails-quartz']                                            | ['info']
-        'grails feature show ca'            | ['cache']                                                    | ['show']
+        'grails feature '                   | ['add', 'list', 'find', 'show', 'info', 'diff']              | ['create-app', 'search']
+        'grails feature show grails-q'      | ['grails-quartz']                                            | ['info']
+        'grails feature info ca'            | ['cache']                                                    | ['show']
         'grails feature diff ca'            | ['cache']                                                    | ['diff']
-        'grails feature info --'            | ['--json', '--type', '--feature-pack-dir']                   | ['--replace']
-        'grails feature search --'          | ['--json', '--type']                                         | ['--replace']
+        'grails feature show --'            | ['--json', '--type', '--feature-pack-dir']                   | ['--replace']
+        'grails feature find --'            | ['--json', '--type']                                         | ['--replace']
         'grails feature diff --'            | ['--replace', '--type']                                      | ['--json']
-        'grails feature info --type '       | ['web', 'rest-api', 'plugin', 'web-plugin', 'rest-api-plugin'] | []
+        'grails feature show --type '       | ['web', 'rest-api', 'plugin', 'web-plugin', 'rest-api-plugin'] | []
         'grails pl'                         | ['plugin', 'plugin-info']                                    | ['list-plugins']
-        'grails plugin '                    | ['list', 'search', 'show', 'info']                           | ['add']
+        'grails plugin '                    | ['list', 'find', 'show', 'info']                             | ['add', 'search']
         'grails plugin show --'             | ['--json', '--offline', '--plugin-index', '--snapshots']     | ['--deprecated']
         'grails plugin info --'             | ['--json', '--offline', '--plugin-index', '--snapshots']     | ['--deprecated']
         'grails plugin list --'             | ['--json', '--offline', '--plugin-index', '--deprecated']    | ['--snapshots']
-        'grails plugin search --'           | ['--json', '--offline', '--plugin-index', '--deprecated']    | ['--snapshots']
+        'grails plugin find --'             | ['--json', '--offline', '--plugin-index', '--deprecated']    | ['--snapshots']
         'grails plugin show grails-ca'      | ['grails-cache']                                             | []
     }
 

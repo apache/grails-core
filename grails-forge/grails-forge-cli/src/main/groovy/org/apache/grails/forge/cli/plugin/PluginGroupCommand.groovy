@@ -26,12 +26,12 @@ import picocli.CommandLine
 /**
  * {@code plugin}: the commands that say which Grails plugins there are. {@code plugin list} is
  * {@code list-plugins} and {@code plugin show} is {@code plugin-info}, each one command with two
- * names; {@code plugin search} is the list with the text it is listed by.
+ * names; {@code plugin find} is the list with the text it is listed by.
  *
  * @since 9.0
  */
 @CommandLine.Command(name = PluginGroupCommand.NAME, description = 'Says which Grails plugins there are, and what is known of one',
-        subcommands = [PluginListCommand, PluginSearchCommand, PluginShowCommand])
+        subcommands = [PluginListCommand, PluginFindCommand, PluginShowCommand])
 @CompileStatic
 class PluginGroupCommand extends BaseCommand implements Callable<Integer> {
 
@@ -39,7 +39,7 @@ class PluginGroupCommand extends BaseCommand implements Callable<Integer> {
 
     @Override
     Integer call() throws Exception {
-        throw new CommandLine.ParameterException(spec.commandLine(), 'No command specified: plugin list lists the Grails plugins, plugin search lists those ' +
+        throw new CommandLine.ParameterException(spec.commandLine(), 'No command specified: plugin list lists the Grails plugins, plugin find lists those ' +
                 'that have a text in their name, their coordinates or their description, and plugin show says what is known of one')
     }
 }

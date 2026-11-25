@@ -17,20 +17,20 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-== feature info
+== feature show
 
 === Purpose
 
-Says what is known of one feature: what it is for, the types of application it is for, what it requires and takes the place of, where its documentation is, and which files and which lines of the build files it contributes to an application. `feature show` is another name of the command.
+Says what is known of one feature: what it is for, the types of application it is for, what it requires and takes the place of, where its documentation is, and which files and which lines of the build files it contributes to an application. `feature info` is another name of the command.
 
 === Examples
 
 [source,console]
 ----
-grails feature info grails-quartz
 grails feature show grails-quartz
-grails feature info postgres --type rest-api
-grails feature info cache --json
+grails feature info grails-quartz
+grails feature show postgres --type rest-api
+grails feature show cache --json
 ----
 
 === Description
@@ -39,13 +39,13 @@ Usage:
 
 [source,console]
 ----
-grails feature info [--json] [--type=TYPE] [--feature-pack-dir=DIRECTORY]... [--feature-pack-repository=URL]... [--offline] FEATURE
 grails feature show [--json] [--type=TYPE] [--feature-pack-dir=DIRECTORY]... [--feature-pack-repository=URL]... [--offline] FEATURE
+grails feature info [--json] [--type=TYPE] [--feature-pack-dir=DIRECTORY]... [--feature-pack-repository=URL]... [--offline] FEATURE
 ----
 
 Arguments:
 
-* `FEATURE` - The name of the feature, as link:feature-list.html[feature list], link:feature-search.html[feature search] and `--list-features` have it.
+* `FEATURE` - The name of the feature, as link:feature-list.html[feature list], link:feature-find.html[feature find] and `--list-features` have it.
 
 Options:
 
@@ -55,11 +55,11 @@ Options:
 * `--feature-pack-repository=URL` - A Maven repository to fetch the jar of a plugin from, whose feature pack the application was generated with, as `feature add` takes it. Can be given more than once.
 * `--offline` - Ask nothing of the network: such a jar is taken only from a repository that is a directory.
 
-`feature info` is the `info` command of the `feature` command, and `feature show` is the same command. It speaks of one application. In the directory of an application that has a record under `.grails`, or anywhere below it, that is this application: its type, the options it was created with and the features it has are read from the record. Outside a project, in a project without a record, and wherever `--type` is given, it is a new application of the type, with the options a `create-` command has when it is given none; the type is `web` when `--type` is not given. The command writes no file in either case.
+`feature show` is the `show` command of the `feature` command, and `feature info` is the same command by its other name. It speaks of one application. In the directory of an application that has a record under `.grails`, or anywhere below it, that is this application: its type, the options it was created with and the features it has are read from the record. Outside a project, in a project without a record, and wherever `--type` is given, it is a new application of the type, with the options a `create-` command has when it is given none; the type is `web` when `--type` is not given. The command writes no file in either case.
 
 [source,console]
 ----
-$ grails feature info postgres
+$ grails feature show postgres
 Feature: postgres (PostgresSQL)
 
 Add PostgresSQL driver and default configuration.
@@ -162,4 +162,4 @@ With `--json` the document has `format` (1), `projectDirectory` (`null` for a ne
 | Each build file that changes, by its `file`, with the lines that are `added` to it and `removed` from it.
 |===
 
-The command starts the project generator when it runs, and generates the application in memory to compare; `feature info --help` does not start it. On the TAB key, the interactive console and the completion script complete the names of features after `feature info` and `feature show`: in the directory of an application the features of Grails for its type, whether it has them or not.
+The command starts the project generator when it runs, and generates the application in memory to compare; `feature show --help` does not start it. On the TAB key, the interactive console and the completion script complete the names of features after `feature show` and `feature info`: in the directory of an application the features of Grails for its type, whether it has them or not.

@@ -30,7 +30,7 @@ import java.util.concurrent.Callable
  * @since 9.0
  */
 @CommandLine.Command(name = FeatureCommand.NAME, description = 'Works with the features of the application in the current directory',
-        subcommands = [FeatureAddCommand, FeatureListCommand, FeatureSearchCommand, FeatureInfoCommand, FeatureDiffCommand])
+        subcommands = [FeatureAddCommand, FeatureListCommand, FeatureFindCommand, FeatureShowCommand, FeatureDiffCommand])
 @Component
 @Scope('prototype')
 @CompileStatic
@@ -40,7 +40,7 @@ class FeatureCommand extends BaseCommand implements Callable<Integer> {
 
     @Override
     Integer call() throws Exception {
-        throw new CommandLine.ParameterException(spec.commandLine(), 'No command specified: feature add adds features to the application, and feature list lists them; feature search lists the features ' +
-                'that have a text in their name or their description, feature info says what is known of one, and feature diff shows what feature add would change')
+        throw new CommandLine.ParameterException(spec.commandLine(), 'No command specified: feature add adds features to the application, and feature list lists them; feature find lists the features ' +
+                'that have a text in their name or their description, feature show says what is known of one, and feature diff shows what feature add would change')
     }
 }
