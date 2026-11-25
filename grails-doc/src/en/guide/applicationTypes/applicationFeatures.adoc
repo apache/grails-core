@@ -27,6 +27,15 @@ $ grails create-app --list-features
 $ grails create-restapi --list-features
 ----
 
+Three commands say more of the features, before a project is created and in one. link:{commandLineRef}feature-search.html[feature search] lists the features that have a text in their name, their title, their description or their category. link:{commandLineRef}feature-info.html[feature info], which is `feature show` too, says what is known of one feature: what it is for, the types of application it is for, what it requires and takes the place of, where its documentation is, and the files and the lines of `build.gradle` it contributes. link:{commandLineRef}feature-diff.html[feature diff] shows what features change as a unified diff. Outside a project they speak of a new application of the type `--type` names, which is `web` when the option is not given; in the directory of an application they speak of that application, and `feature diff` is then what `feature add` would change in it:
+
+[source,console]
+----
+$ grails feature search database
+$ grails feature info postgres --type rest-api
+$ grails feature diff postgres
+----
+
 Features are chosen when the project is created:
 
 [source,console]

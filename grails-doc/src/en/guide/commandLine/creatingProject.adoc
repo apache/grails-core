@@ -570,6 +570,31 @@ Two options show what would happen and change nothing:
 | With `--dry-run`: writes what `--dry-run` says as one JSON document for a program, with an outcome and a reason for every way the command can end, every file by its exact path, and whether the change can be made. See xref:commandLine#changeResultsForAProgram[The Result of `feature add` and `project regenerate` for a Program].
 |===
 
+Three more commands of `feature` say what there is to add, and change nothing either:
+
+[cols="1,3"]
+|===
+| Command | What it says
+
+| link:{commandLineRef}feature-search.html[feature search] `TEXT`
+| The features that have the text in their name, their title, their description or their category, each with whether the application has it.
+
+| link:{commandLineRef}feature-info.html[feature info] `FEATURE`, also `feature show`
+| One feature: what it is for, the types of application it is for, what it requires, the features of its exclusive group and the one whose place it takes, where its documentation is, whether `feature add` adds it to this application, and the files and the lines of the build files it would add, change and remove here.
+
+| link:{commandLineRef}feature-diff.html[feature diff] `FEATURE...`
+| What `feature add` with the same features would change, as a unified diff on the standard output and nothing else there. It is the diff of `feature add --diff`, and its exit code is 0 when the features can be added, 1 when they cannot, and 2 when they cannot be asked for as they were.
+|===
+
+Outside a project, and with `--type web`, `--type rest-api` and the other types of application, the three speak of a new application of the type: `feature search` lists its features and marks those it has by default, `feature info` shows what a feature changes in it, and `feature diff` shows that as a diff, as the Grails Forge web application does.
+
+[source,console]
+----
+$ grails feature search quartz
+$ grails feature info grails-quartz
+$ grails feature diff grails-quartz
+----
+
 ==== A feature that takes the place of a default
 
 An application has some features without having been asked for them: `h2` as its database driver, `sitemesh3` for its layouts, `geb-with-testcontainers` for its functional tests. Each is the default of an exclusive group, of which an application has one feature. Adding another feature of the group replaces the default, and the command says so:

@@ -1,0 +1,165 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+== feature info
+
+=== Purpose
+
+Says what is known of one feature: what it is for, the types of application it is for, what it requires and takes the place of, where its documentation is, and which files and which lines of the build files it contributes to an application. `feature show` is another name of the command.
+
+=== Examples
+
+[source,console]
+----
+grails feature info grails-quartz
+grails feature show grails-quartz
+grails feature info postgres --type rest-api
+grails feature info cache --json
+----
+
+=== Description
+
+Usage:
+
+[source,console]
+----
+grails feature info [--json] [--type=TYPE] [--feature-pack-dir=DIRECTORY]... [--feature-pack-repository=URL]... [--offline] FEATURE
+grails feature show [--json] [--type=TYPE] [--feature-pack-dir=DIRECTORY]... [--feature-pack-repository=URL]... [--offline] FEATURE
+----
+
+Arguments:
+
+* `FEATURE` - The name of the feature, as link:feature-list.html[feature list], link:feature-search.html[feature search] and `--list-features` have it.
+
+Options:
+
+* `--type=TYPE` - Speak of a new application of this type, and not of the application in the current directory: `web` (what `create-app` creates), `rest-api`, `plugin`, `web-plugin` or `rest-api-plugin`. Outside a project the type is `web` when the option is not given.
+* `--json` - Write what is known of the feature as one JSON document for a tool to read, and nothing else.
+* `--feature-pack-dir=DIRECTORY` - In the directory of an application: the directory of a feature pack that is not part of Grails and that the application was generated with, as link:feature-add.html[feature add] takes it. For a new application: the directory of a feature pack whose feature is then one the command says something of, as the `create-` commands take it. Can be given more than once.
+* `--feature-pack-repository=URL` - A Maven repository to fetch the jar of a plugin from, whose feature pack the application was generated with, as `feature add` takes it. Can be given more than once.
+* `--offline` - Ask nothing of the network: such a jar is taken only from a repository that is a directory.
+
+`feature info` is the `info` command of the `feature` command, and `feature show` is the same command. It speaks of one application. In the directory of an application that has a record under `.grails`, or anywhere below it, that is this application: its type, the options it was created with and the features it has are read from the record. Outside a project, in a project without a record, and wherever `--type` is given, it is a new application of the type, with the options a `create-` command has when it is given none; the type is `web` when `--type` is not given. The command writes no file in either case.
+
+[source,console]
+----
+$ grails feature info postgres
+Feature: postgres (PostgresSQL)
+
+Add PostgresSQL driver and default configuration.
+
+* Category: Database
+* Application types: web, rest-api, web-plugin, plugin, rest-api-plugin
+* By default: no, in a new application of type web
+* Requires: none
+* Exclusive group database-driver: an application has one of it, so not this feature together with h2, mysql, sqlserver
+* Takes the place of: h2
+* Brings with it: testcontainers
+* In a new application of type web it changes 4 files:
+    changed  README.md
+    changed  build.gradle
+             + runtimeOnly "org.postgresql:postgresql"
+             + testImplementation "org.testcontainers:testcontainers"
+             + testImplementation "org.testcontainers:testcontainers-postgresql"
+             + testImplementation "org.testcontainers:testcontainers-spock"
+             - runtimeOnly "com.h2database:h2"
+    changed  grails-app/conf/application.yml
+    added    src/test/resources/application-test.yml
+----
+
+What the feature is, is read from the feature:
+
+* its name, its title and its description, and whether it is a preview or of the community;
+* its category, and the types of application it is a feature of;
+* the features it requires by name, which come with it;
+* its exclusive group, when it has one, and the other features of the group: an application has one feature of such a group, as one database driver, so these are the features it is not used together with;
+* the addresses of its documentation and of the documentation of what it integrates, where it names them;
+* for the feature of a feature pack that is not part of Grails: the name of the pack, and the coordinates of the plugin whose jar has it, or the directory the pack was given as.
+
+What the feature comes to in the application is worked out by the project generator:
+
+* `By default` says whether a new application of the type, with the options of the application that is spoken of, has the feature without being asked for it; in the directory of an application, `In this application` says whether it has it.
+* `Takes the place of` names the features that make way for it, as `h2` for `postgres`, and `Brings with it` the features that come with it.
+* The files are listed with what is done to each (`added`, `changed` or `removed`), and under a build file (`build.gradle`, `settings.gradle` or `gradle.properties`) are the lines the feature puts into it (`+`) and takes out of it (`-`).
+
+In the directory of an application that does not have the feature, the files and the lines are those link:feature-add.html[feature add] would write there: they are worked out as `feature add --dry-run` works them out, from the record and the files of the application, and are the same files. The command then also says:
+
+* that `feature add` adds the feature only with `--replace`, when it takes the place of a feature that was asked for by name;
+* why `feature add` does not add the feature, when it does not: it was left out with `--exclude-features`, it would change an option the application was created with, a file of yours is in the way, or the record is not one a feature is added to. Where the change could not be worked out for the application, what the feature contributes is shown for a new application of its type.
+
+For a feature the application already has, for a new application, and with `--type`, the files and the lines are the difference between an application of the type that is generated without the feature and one that is generated with it. For a feature such an application has by default, the first of the two is an application that was created without it, as with `--exclude-features`; where no application is generated without the feature, as without `h2`, which `gorm-hibernate5` requires, the command says that what it contributes was not worked out, and why.
+
+A name that is no feature of the application ends the command with exit code 1, and the error names the features with a similar name, or the types of application the feature is for with the command line that says more of it. Exit code 1 is also that of a record that cannot be read and of a feature pack of the application that is not to be had again; exit code 2 is that of a mistake in the command line.
+
+With `--json` the document has `format` (1), `projectDirectory` (`null` for a new application), `applicationType`, `notes` and `feature`, which is `null` beside an `error` when the name is no feature. The feature has:
+
+[cols="1,3"]
+|===
+| Member | What it says
+
+| `name`, `title`, `description`, `category`
+| What the feature says of itself.
+
+| `preview`, `community`
+| Whether it is a preview, and whether it is of the community.
+
+| `applicationTypes`
+| The types of application it is a feature of.
+
+| `requires`
+| The features it requires by name.
+
+| `exclusiveGroup`, `conflictsWith`
+| Its exclusive group, or `null`, and the other features of that group.
+
+| `default`
+| Whether a new application of the type has it without being asked for it; `null` when that could not be worked out.
+
+| `inApplication`
+| Whether the application has it; `null` for a new application.
+
+| `documentation`, `thirdPartyDocumentation`
+| The addresses, or `null`.
+
+| `featurePack`
+| For the feature of a feature pack that is not part of Grails, its `name`, the `coordinates` of the plugin (`group:artifact:version`, or `null` for the pack of a directory), its `origin` and its `contentSha256`; otherwise `null`.
+
+| `addable`
+| In the directory of an application that does not have the feature, whether `feature add` adds it; otherwise `null`.
+
+| `notAddedBecause`
+| Why not, or why what the feature contributes was not worked out; otherwise `null`.
+
+| `replaceOption`
+| Whether `feature add` adds it only with `--replace`.
+
+| `replaces`, `bringsWithIt`
+| The features that make way for it, and those that come with it.
+
+| `contributionTo`
+| `application` when the files are those `feature add` would write in the application of the current directory, `new-application` when they are those of a new application of the type, and `null` when they were not worked out.
+
+| `files`
+| Each file by its `path` in the project, with its `change`: `added`, `changed` or `removed`.
+
+| `build`
+| Each build file that changes, by its `file`, with the lines that are `added` to it and `removed` from it.
+|===
+
+The command starts the project generator when it runs, and generates the application in memory to compare; `feature info --help` does not start it. On the TAB key, the interactive console and the completion script complete the names of features after `feature info` and `feature show`: in the directory of an application the features of Grails for its type, whether it has them or not.

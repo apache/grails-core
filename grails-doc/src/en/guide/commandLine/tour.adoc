@@ -258,7 +258,7 @@ The command generates the application as it was recorded and once more with the 
 
 `--dry-run` lists what would happen and `--diff` shows it line by line; neither changes anything. Adding a feature the application already has changes nothing either.
 
-You do not need to remember how the project was created to know what can be added. `feature list` reads the record and says which features the project has, which of them were asked for by name, which features `feature add` can add with what each takes the place of, and why it cannot add each of the others, such as a feature that would change the servlet container the project was created with. In interactive mode the TAB key completes the names of the features the project does not have after `feature add`.
+You do not need to remember how the project was created to know what can be added. `feature list` reads the record and says which features the project has, which of them were asked for by name, which features `feature add` can add with what each takes the place of, and why it cannot add each of the others, such as a feature that would change the servlet container the project was created with. In interactive mode the TAB key completes the names of the features the project does not have after `feature add`. `feature search TEXT` finds a feature by a word of its name or its description, `feature info FEATURE` says what one feature is and which files and lines of `build.gradle` it would add here, and `feature diff FEATURE` shows what `feature add` would change as a diff; none of them changes anything.
 
 Some features take the place of a default one. An application has the H2 database unless another one is chosen, so adding PostgreSQL replaces it, and the command says so:
 

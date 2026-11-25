@@ -33,7 +33,8 @@ import picocli.CommandLine
  */
 @CommandLine.Command(name = ListPluginsCommand.NAME, description = [
         'Lists the Grails plugins: those of this release of Grails, and those of the plugin index of Grails, which is read from the network.',
-        'Each has its name, its coordinates, the latest version for this Grails and what it is for; @|bold plugin-info|@ says more of one.'])
+        'Each has its name, its coordinates, the latest version for this Grails and what it is for; @|bold plugin-info|@ says more of one.',
+        'The command is also there as @|bold plugin list|@.'])
 @CompileStatic
 class ListPluginsCommand extends PluginsCommand {
 
@@ -103,15 +104,23 @@ class ListPluginsCommand extends PluginsCommand {
                 (indexRead ? ", and ${listed.size() - ofGrails} of the plugin index, with the latest version that says it is for this Grails (${NO_VERSION} where none does)" : ''))
         if (withPacks > 0) {
             out("${withPacks} of the plugin index ${withPacks == 1 ? 'has' : 'have'} a feature pack an application of this Grails is created with, " +
-                    "which ${PluginInfoCommand.NAME} names")
+                    "which ${showCommand()} names")
         }
         if (notListed > 0) {
             out("${notListed} deprecated ${notListed == 1 ? 'plugin is' : 'plugins are'} not listed: --deprecated lists ${notListed == 1 ? 'it' : 'them'}")
         }
         if (!listed.isEmpty()) {
-            out("More of one plugin: ${UsageHelp.toType(spec, "${PluginInfoCommand.NAME} NAME")}")
+            out("More of one plugin: ${UsageHelp.toType(spec, "${showCommand()} NAME")}")
         }
         return 0
+    }
+
+    /**
+     * @return the command that says more of one plugin, as it is typed after the name of the program:
+     * the one of the name this command was typed by
+     */
+    protected String showCommand() {
+        return PluginInfoCommand.NAME
     }
 
     private Map<String, Object> described(PluginRecord plugin) {

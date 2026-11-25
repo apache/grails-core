@@ -21,7 +21,7 @@ under the License.
 
 === Purpose
 
-Says what is known of one Grails plugin: its versions, what it is for, its license, where its documentation, issues and sources are, and the line that adds it to the build of an application.
+Says what is known of one Grails plugin: its versions, what it is for, its license, where its documentation, issues and sources are, and the line that adds it to the build of an application. The command is also there as link:plugin-show.html[plugin show] and `plugin info`.
 
 === Examples
 
@@ -108,3 +108,5 @@ A plugin that is not known ends the command with exit code 1 and one line that n
 Everything the plugin index and a repository say is shown as text and nothing of it is run: control characters are taken out, an address that is not an `http` or `https` address is not shown, and no jar is downloaded.
 
 With `--json` the document has `format` (1), `pluginIndex`, `notes` and `plugin`, with `name`, `coordinates`, `ofGrails`, `title`, `description`, `grailsVersion`, `version`, `managedBy`, `latestVersion`, `versions`, `versionsFrom`, `requiresGrails`, `license`, `documentation`, `issueTracker`, `source`, `deprecated`, `dependency`, `features` and `featurePacks`, one entry for each feature of the packs the plugin index records, with its `name`, whether it is `offered`, and the `version`, `coordinates` and `applicationTypes` of the pack that is, with the `applicationType` (`web`, `rest-api`, `web-plugin`, `plugin` or `rest-api-plugin`) the version is chosen for, or the `reason` none is. For a plugin that is not known, `plugin` is `null` and `error` says why.
+
+`plugin-info`, link:plugin-show.html[plugin show] and `plugin info` are one command with three names, and none is deprecated: `grails plugin show` takes the same argument and options and writes the same, and names `plugin list` in the place of `list-plugins` where it names the list of the plugins.

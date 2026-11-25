@@ -87,6 +87,12 @@ class StartupPreloadSpec extends Specification {
         []                                          | false
         ['feature', 'add', 'cache']                 | true
         ['--plain-output', 'feature', 'list']       | true
+        ['feature', 'search', 'cache']              | true
+        ['feature', 'info', 'cache']                | true
+        ['feature', 'show', 'cache']                | true
+        ['feature', 'diff', 'cache']                | true
+        ['plugin', 'list']                          | false
+        ['plugin', 'show', 'cache']                 | false
         ['project', 'regenerate', '--diff']         | true
         ['project', 'migrate', '--dry-run']         | true
         ['feature']                                 | false

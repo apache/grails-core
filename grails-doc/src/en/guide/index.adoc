@@ -1491,6 +1491,21 @@ include::ref/Command Line/feature-add.adoc[]
 
 include::ref/Command Line/feature-list.adoc[]
 
+[[ref-command-line-feature-search]]
+==== feature search
+
+include::ref/Command Line/feature-search.adoc[]
+
+[[ref-command-line-feature-info]]
+==== feature info
+
+include::ref/Command Line/feature-info.adoc[]
+
+[[ref-command-line-feature-diff]]
+==== feature diff
+
+include::ref/Command Line/feature-diff.adoc[]
+
 [[ref-command-line-gradle]]
 ==== gradle
 
@@ -1500,6 +1515,21 @@ include::ref/Command Line/gradle.adoc[]
 ==== plugin-info
 
 include::ref/Command Line/plugin-info.adoc[]
+
+[[ref-command-line-plugin-list]]
+==== plugin list
+
+include::ref/Command Line/plugin-list.adoc[]
+
+[[ref-command-line-plugin-search]]
+==== plugin search
+
+include::ref/Command Line/plugin-search.adoc[]
+
+[[ref-command-line-plugin-show]]
+==== plugin show
+
+include::ref/Command Line/plugin-show.adoc[]
 
 [[ref-command-line-project-health]]
 ==== project health

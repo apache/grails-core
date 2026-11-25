@@ -1,0 +1,55 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+== plugin show
+
+=== Purpose
+
+Says what is known of one Grails plugin: its versions, what it is for, its license, where its documentation, issues and sources are, and the line that adds it to the build of an application. It is the link:plugin-info.html[plugin-info] command by its name among the commands of `plugin`, and `plugin info` is another name of it.
+
+=== Examples
+
+[source,console]
+----
+grails plugin show cache
+grails plugin info cache
+grails plugin show org.apache.grails:grails-cache
+grails plugin show audit-logging --snapshots
+grails plugin show cache --json
+----
+
+=== Description
+
+Usage:
+
+[source,console]
+----
+grails plugin show [--snapshots] [--offline] [--json] [--plugin-index=URL] PLUGIN
+grails plugin info [--snapshots] [--offline] [--json] [--plugin-index=URL] PLUGIN
+----
+
+`plugin show`, `plugin info` and link:plugin-info.html[plugin-info] are one command with three names: the argument, the options, what is written, the JSON document of `--json` and the exit codes are those of `plugin-info`, which that page describes. None of the names is deprecated. The one difference is the command that is named for the list of the plugins when a plugin is not known, which is link:plugin-list.html[plugin list]:
+
+[source,console]
+----
+$ grails plugin show no-such-plugin --offline
+| Error No plugin no-such-plugin is known among the plugins of this release of Grails. grails plugin list lists the plugins, and a plugin that is in neither list is looked for in the repositories when it is given by its coordinates, as group:artifact
+----
+
+On the TAB key, the interactive console and the completion script complete the artifacts of the plugins of this release of Grails after `plugin show` and `plugin info`, as after `plugin-info`.

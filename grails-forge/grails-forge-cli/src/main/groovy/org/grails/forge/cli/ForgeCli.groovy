@@ -33,6 +33,7 @@ import org.apache.grails.forge.cli.console.EarlierGrailsProject
 import org.apache.grails.forge.cli.console.PlainOutput
 import org.apache.grails.forge.cli.console.RunAppCommand
 import org.apache.grails.forge.cli.plugin.ListPluginsCommand
+import org.apache.grails.forge.cli.plugin.PluginGroupCommand
 import org.apache.grails.forge.core.change.FeatureAddition
 import org.apache.grails.forge.cli.plugin.PluginInfoCommand
 import org.apache.grails.forge.cli.console.GradleBuild
@@ -565,6 +566,8 @@ final class ForgeCli {
         // the plugins there are, in a project and outside one: only these two ask the plugin index for anything
         commandLine.addSubcommand(new ListPluginsCommand(context))
         commandLine.addSubcommand(new PluginInfoCommand(context))
+        // the same two by their names among the commands of plugin, and the list by a text
+        commandLine.addSubcommand(new PluginGroupCommand())
         // last: a command of the application does not take the name of a command that is there
         ApplicationCommands.addTo(commandLine, listsApplication)
         // everything after gradle is Gradle's, and everything after a command of the application is that command's

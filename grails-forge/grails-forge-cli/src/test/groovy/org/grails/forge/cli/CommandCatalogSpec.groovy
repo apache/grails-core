@@ -319,7 +319,7 @@ class CommandCatalogSpec extends CommandSpec implements CommandFixture {
         'pp'     | 'package-plugin (pap), publish-plugin (pup)'
         'co'     | 'compile (com), console (con)'
         's'      | 'stats (st), shell (sh)'
-        'p'      | 'project (pr), assemble (a)'
+        'p'      | 'project (pr), assemble (a), plugin (pl)'
     }
 
     @Unroll
@@ -770,7 +770,7 @@ class CommandCatalogSpec extends CommandSpec implements CommandFixture {
         commands.find { it.name == 'gradle' }.project == true
         commands.find { it.name == 'create-app' }.project == false
         commands.find { it.name == 'help' }.project == false
-        commands.find { it.name == 'feature' }.commands*.name == ['add', 'list']
+        commands.find { it.name == 'feature' }.commands*.name == ['add', 'list', 'search', 'info', 'diff']
         commands.find { it.name == 'feature' }.commands[0].project == true
         commands.find { it.name == 'gradle' }.options == []
         commands.find { it.name == 'gradle' }.parameters == [[label: 'ARGS', arity: '1..*', description: 'The tasks to run and the options of Gradle, for example: build --offline',

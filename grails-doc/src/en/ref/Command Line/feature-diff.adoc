@@ -1,0 +1,114 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+== feature diff
+
+=== Purpose
+
+Shows what link:feature-add.html[feature add] would change in the files of the application in the current directory, as a unified diff, and changes nothing.
+
+=== Examples
+
+[source,console]
+----
+grails feature diff grails-quartz
+grails feature diff mysql --replace
+grails feature diff postgres,cache
+grails feature diff postgres --type rest-api
+----
+
+=== Description
+
+Usage:
+
+[source,console]
+----
+grails feature diff [--replace] [--type=TYPE] [--feature-pack-dir=DIRECTORY]... [--feature-pack-repository=URL]... [--offline] FEATURE...
+----
+
+Arguments:
+
+* `FEATURE` - The names of the features, as they are given to `feature add`: several can be given, separated by commas or spaces.
+
+Options:
+
+* `--replace` - As for `feature add`: a feature that was asked for by name makes way for the feature that takes its place.
+* `--type=TYPE` - Show what the features change in a new application of this type, and not in the application of the current directory: `web` (what `create-app` creates), `rest-api`, `plugin`, `web-plugin` or `rest-api-plugin`. Outside a project the type is `web` when the option is not given.
+* `--feature-pack-dir=DIRECTORY` - The directory of a feature pack that is not part of Grails and that the application was generated with, as `feature add` takes it. Can be given more than once.
+* `--feature-pack-repository=URL` - A Maven repository to fetch the jar of a plugin from, whose feature pack the application was generated with, as `feature add` takes it. Can be given more than once.
+* `--offline` - Ask nothing of the network: such a jar is taken only from a repository that is a directory.
+
+`feature diff` is the `diff` command of the `feature` command. In the directory of an application, or anywhere below it, it works out what `feature add` with the same features and options would do, in the same way: both commands ask for the same plan of the change, so the diff is line for line the one `feature add --diff` shows, and what `feature add` then writes. The files you changed are taken into account as `feature add` takes them: a line of yours that the feature does not touch stays as it is, and is not in the diff.
+
+[source,console]
+----
+$ grails feature diff grails-quartz
+--- a/README.md
++++ b/README.md
+@@ -9,6 +9,10 @@
+...
+--- a/build.gradle
++++ b/build.gradle
+@@ -124,6 +124,7 @@
+     implementation "org.apache.grails:grails-gsp"
+     implementation "org.apache.grails:grails-interceptors"
+     implementation "org.apache.grails:grails-logging"
++    implementation "org.apache.grails:grails-quartz"
+     implementation "org.apache.grails:grails-rest-transforms"
+     implementation "org.apache.grails:grails-scaffolding"
+     implementation "org.apache.grails:grails-services"
+--- a/grails-app/conf/application.yml
++++ b/grails-app/conf/application.yml
+@@ -35,3 +35,4 @@
+       codecs:
+         scriptlet: html
+       encoding: UTF-8
++quartz.autoStartup: true
+----
+
+The diff is all that is written on the standard output, so that it can be kept in a file or read by a tool. A file that is added is compared with `/dev/null`, and a binary file is named in one line. The record under `.grails`, which `feature add` writes too, is not part of it. What else there is to say is written on the standard error: that the application already has a feature, which feature is replaced, and why the features cannot be added. For a file of yours that is in the way, the diff has a line `rejected: PATH (the reason)` followed by what the feature would have made of the file as it was generated.
+
+The exit code says whether `feature add` would add the features:
+
+* 0 - The features can be added, and the diff is what adding them changes. The diff is empty when the application has every feature that was named, which the standard error then says.
+* 1 - The features cannot be added: a file cannot be written without losing what the application has, a feature would change an option the application was created with or take out a feature that was asked for by name, the record cannot be used, or a feature pack the application was generated with is not to be had again. Where the change was worked out, the diff shows it.
+* 2 - A mistake in the command line, and features an application cannot have as they were asked for, as for `feature add`: a name that is no feature, two features of one exclusive group, a feature that was left out with `--exclude-features`, or a feature that takes the place of one that was asked for by name, without `--replace`.
+
+This is not the exit code of link:project-regenerate.html[project regenerate --diff], which ends with 1 when it finds differences: that command checks that nothing was changed, and this one shows a change that was asked for. `feature add --dry-run` lists the same change by file, and `feature add --dry-run --json` gives it to a tool.
+
+Outside a project, and wherever `--type` is given, there is no application to change, and the diff is what the features change in a new application of the type: the difference between the application a `create-` command makes without them and the one it makes with them, as the Grails Forge web application shows it for a feature. The files are named without `a/` and `b/`, and a file that is added is compared with nothing under its own name.
+
+[source,console]
+----
+$ grails feature diff postgres
+--- build.gradle
++++ build.gradle
+@@ -138,13 +138,16 @@
+     implementation "org.springframework.boot:spring-boot-starter-validation"
+     implementation "org.springframework.boot:spring-boot-tomcat"
+     runtimeOnly "cloud.wondrify:asset-pipeline-grails"
+-    runtimeOnly "com.h2database:h2"
+     runtimeOnly "com.zaxxer:HikariCP"
++    runtimeOnly "org.postgresql:postgresql"
+...
+----
+
+A feature such an application has by default changes nothing in it: the diff is empty, and the standard error says so. In a project that has no record under `.grails`, `feature diff` without `--type` ends with exit code 1 and says, as `feature add` does, that there is no application here that a feature can be added to; with `--type` it shows a new application there too.
+
+The command starts the project generator when it runs; `feature diff --help` does not. On the TAB key, the interactive console and the completion script complete the names of features after `feature diff` as after `feature add`: in the directory of an application, those it does not have.

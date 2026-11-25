@@ -46,7 +46,8 @@ import picocli.CommandLine
  */
 @CommandLine.Command(name = PluginInfoCommand.NAME, description = [
         'Says what is known of one Grails plugin: its versions, what it is for, its license, where its documentation, issues and sources are,',
-        'and the line that adds it to the build of an application. @|bold list-plugins|@ lists the plugins.'])
+        'and the line that adds it to the build of an application. @|bold list-plugins|@ lists the plugins.',
+        'The command is also there as @|bold plugin show|@ and @|bold plugin info|@.'])
 @CompileStatic
 class PluginInfoCommand extends PluginsCommand {
 
@@ -254,8 +255,16 @@ class PluginInfoCommand extends PluginsCommand {
         return "No plugin ${FeatureSelectionException.shown(plugin)} is known among the plugins of this release of Grails" +
                 (indexRead ? ' and of the plugin index' : '') + '.' +
                 (close ? " Did you mean: ${close.take(MAX_NAMED).join(', ')}${close.size() > MAX_NAMED ? " (and ${close.size() - MAX_NAMED} more)" : ''}?" : '') +
-                " ${UsageHelp.toType(spec, ListPluginsCommand.NAME)} lists the plugins, and a plugin that is in neither list is looked for in the repositories " +
+                " ${UsageHelp.toType(spec, listCommand())} lists the plugins, and a plugin that is in neither list is looked for in the repositories " +
                 'when it is given by its coordinates, as group:artifact'
+    }
+
+    /**
+     * @return the command that lists the plugins, as it is typed after the name of the program: the
+     * one of the name this command was typed by
+     */
+    protected String listCommand() {
+        return ListPluginsCommand.NAME
     }
 
     private int failed(String message) {

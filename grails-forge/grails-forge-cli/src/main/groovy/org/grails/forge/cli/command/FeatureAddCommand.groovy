@@ -135,7 +135,7 @@ class FeatureAddCommand extends BaseCommand implements Callable<Integer>, Projec
         boolean preview = dryRun || diff
         try {
             if (!ProjectState.exists(directory)) {
-                throw new ProjectStateException(noRecord())
+                throw new ProjectStateException(noRecord(spec))
             }
             FeatureAddition addition = new FeatureAddition(projectGeneratorSource.get())
             for (String message : (preview ? Collections.<String>emptyList() : addition.recover(directory).getMessages())) {
@@ -158,7 +158,7 @@ class FeatureAddCommand extends BaseCommand implements Callable<Integer>, Projec
         }
     }
 
-    private String noRecord() {
+    static String noRecord(CommandLine.Model.CommandSpec spec) {
         return "There is no application here that a feature can be added to: ${ProjectState.MANIFEST} is missing. " +
                 'Run the command in the directory of an application that Grails 9 created. For an application that was there before, ' +
                 "${UsageHelp.toType(spec, "${ProjectGroupCommand.NAME} ${ProjectMigrateCommand.NAME}")} writes the record the commands that create its classes read; " +
@@ -178,7 +178,7 @@ class FeatureAddCommand extends BaseCommand implements Callable<Integer>, Projec
         Path directory = search.project.directory
         ChangeDocument document = ChangeDocument.ofFeatureAdd(directory)
         if (!ProjectState.exists(directory)) {
-            return written(document.ended(ChangeDocument.INVALID_RECORD, ChangeDocument.NO_RECORD, noRecord()), 1)
+            return written(document.ended(ChangeDocument.INVALID_RECORD, ChangeDocument.NO_RECORD, noRecord(spec)), 1)
         }
         Notes notes = new Notes()
         ChangePlan plan
@@ -204,7 +204,7 @@ class FeatureAddCommand extends BaseCommand implements Callable<Integer>, Projec
         return exitCode
     }
 
-    private static String notAdded(ChangePlan plan, List<PlannedFile> conflicts) {
+    static String notAdded(ChangePlan plan, List<PlannedFile> conflicts) {
         return "The ${plan.requested.size() == 1 ? 'feature was' : 'features were'} not added: ${conflicts.size()} ${conflicts.size() == 1 ? 'file' : 'files'} " +
                 'cannot be written without losing what the application has. Nothing was changed. What is in the way is said with each file; ' +
                 '--diff shows what the feature would change. Make room for it and add the feature again'

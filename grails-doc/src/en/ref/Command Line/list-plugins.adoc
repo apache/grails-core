@@ -21,7 +21,7 @@ under the License.
 
 === Purpose
 
-Lists the Grails plugins there are: the plugins of this release of Grails, and the plugins of the community that the Grails plugin index has.
+Lists the Grails plugins there are: the plugins of this release of Grails, and the plugins of the community that the Grails plugin index has. The command is also there as link:plugin-list.html[plugin list], and with the text to list by as link:plugin-search.html[plugin search].
 
 === Examples
 
@@ -80,3 +80,5 @@ What the plugin index says is shown as text: it is not run, a plugin is not down
 With `--json` the document has `format` (1), `grailsVersion`, `pluginIndex` (its `address`, whether it was `read`, and the `problem` when it was not), `notes`, `deprecatedNotListed` and `plugins`, each with `name`, `coordinates`, `version`, `description`, `ofGrails`, `deprecated` and `featurePacks`, the names of the features of the feature packs the plugin index records for the plugin that an application of this Grails is created with. The last line of the list says how many plugins have such a feature, when any has.
 
 For more about one plugin use the link:plugin-info.html[plugin-info] command.
+
+`list-plugins` and link:plugin-list.html[plugin list] are one command with two names, and neither is deprecated: `grails plugin list` takes the same argument and options and writes the same list, and names `plugin show` in the place of `plugin-info` in its last line. link:plugin-search.html[plugin search] `TEXT` is `list-plugins TEXT`.
