@@ -687,7 +687,7 @@ grails generate-scaffold-all Book
 
 These commands support options like `--extends` to specify a custom class to extend, `--namespace` for controller namespacing, and `--service` to use `RestfulServiceController`.
 
-For full details, see the link:{guidePath}scaffolding.html[Scaffolding] documentation.
+For full details, see the link:scaffolding.html[Scaffolding] documentation.
 
 ===== 2.8 URL Mapping Group Defaults
 
@@ -703,7 +703,7 @@ group "/api", namespace: 'api', controller: 'resource', {
 
 Nested groups merge defaults — inner groups inherit and can extend or override outer group defaults. Child mappings can override any default explicitly. This is a new additive feature and does not affect existing URL mappings.
 
-For full details, see the link:{guidePath}theWebLayer/urlmappings/mappingToControllersAndActions.html#_group_defaults[Group Defaults] documentation.
+For full details, see the link:theWebLayer.html#_group_defaults[Group Defaults] documentation.
 
 ===== 2.9 URL Mapping Wildcard Validation
 

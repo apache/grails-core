@@ -93,7 +93,7 @@ Options:
 
 * `--unit` - Run the unit tests: the task `test`.
 * `--integration` - Run the integration tests: the task `integrationTest`.
-* `--<<phase>>` - Run another test phase of the project, as described above.
+* `+--<<phase>>+` - Run another test phase of the project, as described above.
 * `--clean` - Run every test again, also where nothing changed.
 * `--continuous` - Run the tests again whenever a file they depend on changes: the continuous build of Gradle, which runs the tests when it starts.
 * `--debug-jvm` - Start the JVM of the tests suspended, waiting for a debugger on port 5005. Where several phases run tests, their JVMs are started one after the other and each waits in its turn: name the phase, or the test, that is to be debugged.
