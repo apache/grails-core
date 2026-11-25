@@ -131,6 +131,9 @@ final class FeatureAddition {
     private static final int MAX_SCANNED_LINE = 2000
     private static final String BUILD_FILE = 'build.gradle'
     private static final String README_FILE = 'README.md'
+    private static final Pattern APPLY_PLUGIN = Pattern.compile(/apply plugin:\s*["']([^"']+)["']\s*/)
+    private static final Pattern APPLIED = Pattern.compile(/apply (plugin|from):\s*["'][^"']+["']\s*/)
+    private static final Pattern PLUGIN_ID = Pattern.compile(/\s+id\s*\(?\s*["']([^"']+)["']\s*\)?(\s+version\s+["'][^"']+["'])?\s*/)
     private static final String CONFIGURATION_DIRECTORY = 'grails-app/conf/'
     private static final Pattern DEPENDENCY = Pattern.compile(/^\s*([A-Za-z][A-Za-z0-9]*)[ (]+["']([^:"'\s]+:[^:"'\s]+)(?::[^"']*)?["']/)
     private static final Pattern TOP_LEVEL_KEY = Pattern.compile(/([A-Za-z0-9_.-]+):(\s.*)?/)
@@ -974,15 +977,15 @@ final class FeatureAddition {
             // place of a line the feature adds among them is not there. Where the feature does nothing to
             // the file but declare dependencies, a declaration is as good at the end of the block
             boolean configuration = path.startsWith(CONFIGURATION_DIRECTORY) && isYaml(path)
-            byte[] placed = merge.getConflicts() == 0 || !adopted ? null : path == BUILD_FILE ? dependenciesPlaced(working.content, base, proposed) :
+            List<String> placedInBuild = []
+            byte[] placed = merge.getConflicts() == 0 || !adopted ? null : path == BUILD_FILE ? buildLinesPlaced(working.content, base, proposed, placedInBuild) :
                     configuration ? settingsAppended(working.content, base, proposed) : path == README_FILE ? linesAppended(working.content, base, proposed) : null
             if (placed != null) {
                 result = placed
                 edited = true
                 notes << (path == README_FILE ? 'this file is not laid out as this version writes it: the lines the feature adds were put at the end of it' : configuration ? 'this file is not laid out as this version writes it: what the feature sets, which the file does not set, was put into a document ' +
                         'of its own at the end of it' :
-                        'the dependencies of this file are not in the order this version writes them in: the dependencies the feature declares were put at the end of ' +
-                                'its dependencies block').toString()
+                        "this file is not laid out as this version writes it, so the lines of the feature were put where a Gradle build has them: ${placedInBuild.join('; ')}").toString()
             } else if (merge.getConflicts() > 0) {
                 boolean elsewhere = merge.getConflictingChanges().every { ThreeWayMerge.Conflict place -> place.elsewhere }
                 return conflict(path, elsewhere ? "the project and the feature both moved or added ${merge.getConflicts() == 1 ? 'a line' : "${merge.getConflicts()} lines"} of this file, " +
@@ -1045,57 +1048,233 @@ final class FeatureAddition {
     }
 
     /**
-     * The build file of the project with the dependencies a feature declares put at the end of its
-     * dependencies block, for a build file the changes of the feature are not merged into by lines.
-     * It is done only where nothing can go wrong with it: the feature takes no line out of the file
-     * as it is generated, every line it adds declares a dependency by its coordinates, in the one
-     * {@code dependencies} block that starts and ends at the margin, and the file of the project has
-     * one such block too. A dependency the block of the project declares already, in the very words,
-     * is not declared again.
+     * The build file of the project with what a feature does to the generated one done to it by the
+     * order a Gradle build file has, for a build file the changes of the feature are not merged into
+     * by lines. It is done only where every line the feature adds or takes out is one of these, and
+     * its place in the file of the project can be told:
+     * <ul>
+     * <li>a dependency that is declared by its coordinates in the one {@code dependencies} block at
+     * the margin: added at the end of that block of the project; taken out where the block of the
+     * project has the very line once, as when a feature takes the place of a default;</li>
+     * <li>{@code apply plugin: "id"} and {@code apply from: "file"} at the margin: put after the last
+     * such line of the project, or after its {@code plugins} block, or after its {@code buildscript}
+     * block, or at the top after the comments the file starts with;</li>
+     * <li>{@code id "id"}, with or without a version, in the one {@code plugins} block at the margin:
+     * put at the end of that block of the project, and where the project has none, in a block of its
+     * own after the {@code buildscript} block, which is where Gradle takes one;</li>
+     * <li>{@code classpath} in the {@code dependencies} of the one {@code buildscript} block at the
+     * margin: put at the end of that inner block of the project.</li>
+     * </ul>
+     * A line the project already has in its place, in the very words, is not put there again, and
+     * neither is a plugin the project applies in the other of the two forms.
      *
+     * @param said told what was placed, in words for whoever adds the feature
      * @return the file, or {@code null} when it is not such a change or not such a file
      */
-    private static byte[] dependenciesPlaced(byte[] working, byte[] base, byte[] proposed) {
+    private static byte[] buildLinesPlaced(byte[] working, byte[] base, byte[] proposed, List<String> said) {
         List<String> generated = textLines(base)
         List<String> withFeature = textLines(proposed)
-        Map<String, Integer> left = new HashMap<>()
-        for (String line : generated) {
-            left.put(line, left.getOrDefault(line, 0) + 1)
-        }
-        List<Integer> added = []
-        for (int index = 0; index < withFeature.size(); index++) {
-            String line = withFeature[index]
-            if (left.getOrDefault(line, 0) > 0) {
-                left.put(line, left.get(line) - 1)
-            } else {
-                added << index
-            }
-        }
-        int[] block = dependenciesBlock(withFeature)
-        if (added.isEmpty() || left.values().any { Integer count -> count > 0 } || block == null) {
+        List<Integer> added = differing(generated, withFeature)
+        List<Integer> removed = differing(withFeature, generated)
+        added.removeAll { Integer index -> withFeature[index].trim().isEmpty() }
+        removed.removeAll { Integer index -> generated[index].trim().isEmpty() }
+        if (added.isEmpty() && removed.isEmpty()) {
             return null
         }
+        String text = new String(working, StandardCharsets.UTF_8)
+        // the lines of the project with what ends each, so that the file is the same but for the lines that are put in or taken out
+        List<String> own = text.split('(?<=\\n)').toList()
+        List<String> ownLines = own.collect { String line -> line.replaceAll(/\r?\n$/, '') }
+        String ending = text.contains('\r\n') ? '\r\n' : '\n'
+        int[] dependencies = marginBlock(ownLines, 'dependencies')
+        int[] plugins = marginBlock(ownLines, 'plugins')
+        int[] buildscript = marginBlock(ownLines, 'buildscript')
+        int[] classpath = buildscript == null ? null : innerDependencies(ownLines, buildscript)
+        // a block of the name that is there more than once, or not at the margin, is none whose end can be told
+        if (ambiguous(ownLines, 'dependencies') || ambiguous(ownLines, 'plugins') || ambiguous(ownLines, 'buildscript')) {
+            return null
+        }
+        int[] generatedDependencies = marginBlock(generated, 'dependencies')
+        Set<Integer> gone = new HashSet<>()
+        for (int index : removed) {
+            String line = generated[index]
+            if (generatedDependencies == null || index <= generatedDependencies[0] || index >= generatedDependencies[1] || !DEPENDENCY.matcher(line).find() || dependencies == null) {
+                return null
+            }
+            List<Integer> there = (dependencies[0] + 1..<dependencies[1]).findAll { int each -> ownLines[each].trim() == line.trim() }
+            if (there.size() != 1) {
+                return null
+            }
+            gone << there[0]
+        }
+        int[] featureDependencies = marginBlock(withFeature, 'dependencies')
+        int[] featurePlugins = marginBlock(withFeature, 'plugins')
+        int[] featureBuildscript = marginBlock(withFeature, 'buildscript')
+        int[] featureClasspath = featureBuildscript == null ? null : innerDependencies(withFeature, featureBuildscript)
+        List<String> applied = ownLines.findAll { String line -> line ==~ APPLIED }
+        Set<String> appliedIds = (applied.collect { String line -> idOf(APPLY_PLUGIN, line) } +
+                (plugins == null ? [] : ownLines.subList(plugins[0] + 1, plugins[1]).collect { String line -> idOf(PLUGIN_ID, line) })).findAll { String id -> id != null }.toSet()
+        List<String> toDependencies = []
+        List<String> toClasspath = []
+        List<String> toPlugins = []
+        List<String> toApply = []
         for (int index : added) {
-            if (index <= block[0] || index >= block[1] || !DEPENDENCY.matcher(withFeature[index]).find()) {
+            String line = withFeature[index]
+            if (featureDependencies != null && index > featureDependencies[0] && index < featureDependencies[1] && DEPENDENCY.matcher(line).find()) {
+                if (dependencies == null) {
+                    return null
+                }
+                if (!ownLines.subList(dependencies[0] + 1, dependencies[1]).any { String each -> each.trim() == line.trim() }) {
+                    toDependencies << line
+                }
+            } else if (featureClasspath != null && index > featureClasspath[0] && index < featureClasspath[1] && line ==~ /\s+classpath\s.+/) {
+                if (classpath == null) {
+                    return null
+                }
+                if (!ownLines.subList(classpath[0] + 1, classpath[1]).any { String each -> each.trim() == line.trim() }) {
+                    toClasspath << line
+                }
+            } else if (featurePlugins != null && index > featurePlugins[0] && index < featurePlugins[1] && idOf(PLUGIN_ID, line) != null) {
+                if (!appliedIds.contains(idOf(PLUGIN_ID, line))) {
+                    toPlugins << line
+                }
+            } else if (line ==~ APPLIED) {
+                String id = idOf(APPLY_PLUGIN, line)
+                if (!(id != null && appliedIds.contains(id)) && !applied.any { String each -> each.trim() == line.trim() }) {
+                    toApply << line
+                }
+            } else {
                 return null
             }
         }
-        String text = new String(working, StandardCharsets.UTF_8)
-        // the lines of the project with what ends each, so that the file is the same but for the lines that are put in
-        List<String> own = text.split('(?<=\\n)').toList()
-        int[] ownBlock = dependenciesBlock(own.collect { String line -> line.replaceAll(/\r?\n$/, '') })
-        if (ownBlock == null) {
+        // where each kind goes, by the place it has in a Gradle build file: what is put in at one place is put in in this order
+        Map<Integer, List<String>> at = new TreeMap<>(Comparator.reverseOrder())
+        Closure<Void> put = { int index, List<String> lines ->
+            at.computeIfAbsent(index) { Integer each -> new ArrayList<String>() }.addAll(lines.collect { String line -> line + ending })
+            null
+        }
+        int top = 0
+        while (top < ownLines.size() && (ownLines[top].trim().isEmpty() || ownLines[top] ==~ /\s*(\/\/|\/\*|\*).*/)) {
+            top++
+        }
+        int afterBuildscript = buildscript != null ? buildscript[1] + 1 : top
+        if (!toClasspath.isEmpty()) {
+            put(classpath[1], toClasspath)
+            said << "${counted(toClasspath.size(), 'entry', 'entries')} of the buildscript class path at the end of the dependencies of the buildscript block".toString()
+        }
+        if (!toPlugins.isEmpty()) {
+            if (plugins != null) {
+                put(plugins[1], toPlugins)
+                said << "${counted(toPlugins.size(), 'plugin', 'plugins')} at the end of the plugins block".toString()
+            } else {
+                put(afterBuildscript, (buildscript != null ? [''] : Collections.<String>emptyList()) + ['plugins {'] + toPlugins + ['}'] + (buildscript != null ? Collections.<String>emptyList() : ['']))
+                said << ("${counted(toPlugins.size(), 'plugin', 'plugins')} in a plugins block of its own ${buildscript != null ? 'after the buildscript block' : 'at the top'}, " +
+                        'where Gradle takes one').toString()
+            }
+        }
+        if (!toApply.isEmpty()) {
+            int last = ownLines.findLastIndexOf { String line -> line ==~ APPLIED }
+            int place = last >= 0 ? last + 1 : plugins != null ? plugins[1] + 1 : afterBuildscript
+            put(place, (last >= 0 ? Collections.<String>emptyList() : ['']) + toApply)
+            said << ("${counted(toApply.size(), 'apply line', 'apply lines')} " +
+                    (last >= 0 ? 'after the last line of the file that applies a plugin' : plugins != null ? 'after the plugins block' :
+                            buildscript != null ? 'after the buildscript block' : 'at the top')).toString()
+        }
+        if (!toDependencies.isEmpty()) {
+            put(dependencies[1], toDependencies)
+            said << "${counted(toDependencies.size(), 'dependency', 'dependencies')} at the end of the dependencies block".toString()
+        }
+        if (!gone.isEmpty()) {
+            said << "${counted(gone.size(), 'dependency', 'dependencies')} the feature takes the place of taken out of the dependencies block".toString()
+        }
+        List<String> result = new ArrayList<String>(own)
+        // from the end of the file to its start, so that a place is where it was when it is reached
+        Set<Integer> places = new TreeSet<Integer>(Comparator.reverseOrder())
+        places.addAll(at.keySet())
+        places.addAll(gone)
+        for (int place : places) {
+            if (gone.contains(place)) {
+                result.remove(place)
+            }
+            if (at.containsKey(place)) {
+                // a file that does not end with the end of a line gets one before what is put after its last line
+                if (place == result.size() && place > 0 && !result[place - 1].endsWith('\n')) {
+                    result[place - 1] = result[place - 1] + ending
+                }
+                result.addAll(place, at.get(place))
+            }
+        }
+        return result.join('').getBytes(StandardCharsets.UTF_8)
+    }
+
+    private static String counted(int count, String one, String many) {
+        return count == 1 ? "1 ${one}" : "${count} ${many}"
+    }
+
+    // the indexes of the lines one file has that the other has not, each line as often as it has it more
+    private static List<Integer> differing(List<String> without, List<String> with) {
+        Map<String, Integer> left = new HashMap<>()
+        for (String line : without) {
+            left.put(line, left.getOrDefault(line, 0) + 1)
+        }
+        List<Integer> differing = []
+        for (int index = 0; index < with.size(); index++) {
+            String line = with[index]
+            if (left.getOrDefault(line, 0) > 0) {
+                left.put(line, left.get(line) - 1)
+            } else {
+                differing << index
+            }
+        }
+        return differing
+    }
+
+    private static String idOf(Pattern pattern, String line) {
+        Matcher matcher = pattern.matcher(line)
+        return matcher.matches() ? matcher.group(1) : null
+    }
+
+    // whether a file names a block more than once, or not at the margin, or not as a block whose end can be told
+    private static boolean ambiguous(List<String> lines, String name) {
+        int atMargin = lines.count { String line -> line ==~ (name + '\\s*\\{.*') }.intValue()
+        boolean indented = name != 'dependencies' && lines.any { String line -> line ==~ ('\\s+' + name + '\\s*\\{.*') }
+        return atMargin > 1 || indented || (atMargin == 1 && marginBlock(lines, name) == null)
+    }
+
+    // where the one block of a name that starts and ends at the margin starts and ends, or null when there is not exactly one
+    private static int[] marginBlock(List<String> lines, String name) {
+        List<Integer> starts = lines.findIndexValues { String line -> line ==~ (name + '\\s*\\{\\s*(//.*)?') }.collect { Number index -> index.intValue() }
+        if (starts.size() != 1) {
             return null
         }
-        Set<String> declared = own.subList(ownBlock[0] + 1, ownBlock[1]).collect { String line -> line.trim() }.toSet()
-        String ending = own[ownBlock[0]].endsWith('\r\n') ? '\r\n' : '\n'
-        List<String> toPlace = added.collect { int index -> withFeature[index] }.findAll { String line -> !declared.contains(line.trim()) }
-        List<String> result = new ArrayList<String>(own.subList(0, ownBlock[1]))
-        for (String line : toPlace) {
-            result << line + ending
+        int end = -1
+        for (int index = starts[0] + 1; index < lines.size(); index++) {
+            String line = lines[index]
+            if (line ==~ /\}\s*/) {
+                end = index
+                break
+            }
+            // what is at the margin inside the block is no line of a block that is written as the generator writes it
+            if (!line.isEmpty() && !Character.isWhitespace(line.charAt(0))) {
+                return null
+            }
         }
-        result.addAll(own.subList(ownBlock[1], own.size()))
-        return result.join('').getBytes(StandardCharsets.UTF_8)
+        return end < 0 ? null : [starts[0], end] as int[]
+    }
+
+    // where the one dependencies block inside a buildscript block starts and ends, or null when there is not exactly one
+    private static int[] innerDependencies(List<String> lines, int[] buildscript) {
+        List<Integer> starts = (buildscript[0] + 1..<buildscript[1]).findAll { int index -> lines[index] ==~ /\s+dependencies\s*\{\s*(\/\/.*)?/ }
+        if (starts.size() != 1) {
+            return null
+        }
+        String indent = lines[starts[0]].substring(0, lines[starts[0]].indexOf('dependencies'))
+        for (int index = starts[0] + 1; index < buildscript[1]; index++) {
+            if (lines[index] ==~ (Pattern.quote(indent) + '\\}\\s*')) {
+                return [starts[0], index] as int[]
+            }
+        }
+        return null
     }
 
     /**
@@ -1222,27 +1401,6 @@ final class FeatureAddition {
             rest = rest.substring(step.length() + 1)
             at = (Map<?, ?>) at.get(step)
         }
-    }
-
-    // where the one dependencies block of a build file that starts and ends at the margin starts and ends, or null when there is not exactly one
-    private static int[] dependenciesBlock(List<String> lines) {
-        List<Integer> starts = lines.findIndexValues { String line -> line ==~ /dependencies\s*\{\s*/ }.collect { Number index -> index.intValue() }
-        if (starts.size() != 1) {
-            return null
-        }
-        int end = -1
-        for (int index = starts[0] + 1; index < lines.size(); index++) {
-            String line = lines[index]
-            if (line ==~ /\}\s*/) {
-                end = index
-                break
-            }
-            // what is at the margin inside the block is no line of a block that is written as the generator writes it
-            if (!line.isEmpty() && !Character.isWhitespace(line.charAt(0))) {
-                return null
-            }
-        }
-        return end < 0 ? null : [starts[0], end] as int[]
     }
 
     private static boolean isYaml(String path) {

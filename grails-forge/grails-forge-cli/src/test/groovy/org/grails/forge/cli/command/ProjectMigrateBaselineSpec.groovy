@@ -208,10 +208,10 @@ class ProjectMigrateBaselineSpec extends AbstractFeatureAddCommandSpec {
         new File(dir, 'README.md').readLines().drop(readme.size()).findAll { String line -> !line.isEmpty() }[0] == '## Feature cache documentation'
         ProjectState.read(dir.toPath()).verifyBaseline(dir.toPath())
 
-        when: 'a feature that applies a Gradle plugin, where the application has another line'
+        when: 'a feature that changes a line of the build the application has otherwise'
         Map<String, String> before = tree(dir)
         reset()
-        exit = add('views-json')
+        exit = add('openapi')
 
         then: 'is a conflict, and nothing is written, the record among it'
         exit == 1
@@ -221,7 +221,7 @@ class ProjectMigrateBaselineSpec extends AbstractFeatureAddCommandSpec {
 
         when: 'what it comes to is asked for as a document'
         reset()
-        exit = add('views-json', '--dry-run', '--json')
+        exit = add('openapi', '--dry-run', '--json')
         Map document = new JsonSlurper().parseText(out.toString()) as Map
 
         then:
@@ -269,7 +269,7 @@ class ProjectMigrateBaselineSpec extends AbstractFeatureAddCommandSpec {
         new File(dir, '.grails/baseline/files/README.md').text.contains('## Feature cache documentation')
 
         and: 'the dependency is the last of the dependencies, which are in the order they were in'
-        out.toString().contains('the dependencies the feature declares were put at the end of its dependencies block')
+        out.toString().contains('1 dependency at the end of the dependencies block')
         new File(dir, 'build.gradle').text == build.replace('    testImplementation "org.apache.grails:grails-testing-support-web"\n}\n',
                 '    testImplementation "org.apache.grails:grails-testing-support-web"\n    implementation "org.apache.grails:grails-cache"\n}\n')
 
@@ -281,10 +281,32 @@ class ProjectMigrateBaselineSpec extends AbstractFeatureAddCommandSpec {
         ProjectState.read(dir.toPath()).lock.featureNames.contains('cache')
         ProjectState.read(dir.toPath()).verifyBaseline(dir.toPath())
 
-        when: 'a feature that does more to the build than declare dependencies'
-        Map<String, String> before = tree(dir)
+        when: 'a feature that brings a Gradle plugin by its id and a script of its own'
+        String withCache = new File(dir, 'build.gradle').text
         reset()
         exit = add('asciidoctor')
+
+        then: 'the plugin gets a plugins block after the buildscript block, which the build did not have, and the script is applied after its plugins'
+        done(exit)
+        out.toString().contains('1 plugin in a plugins block of its own after the buildscript block, where Gradle takes one')
+        out.toString().contains('1 apply line after the last line of the file that applies a plugin')
+        new File(dir, 'build.gradle').text == withCache.replace('}\n\nversion = "0.1"', '}\n\nplugins {\n    id "org.asciidoctor.jvm.convert" version "4.0.5"\n}\n\nversion = "0.1"')
+                .replace('apply plugin:"org.apache.grails.gradle.grails-gsp"\n', 'apply plugin:"org.apache.grails.gradle.grails-gsp"\napply from: "gradle/asciidoc.gradle"\n')
+
+        when: 'a feature that applies a Gradle plugin'
+        String withDocs = new File(dir, 'build.gradle').text
+        reset()
+        exit = add('views-json')
+
+        then: 'the plugin is applied after the last line that applies one'
+        done(exit)
+        new File(dir, 'build.gradle').text.contains('apply from: "gradle/asciidoc.gradle"\napply plugin: "org.apache.grails.gradle.grails-gson"\n')
+        new File(dir, 'build.gradle').readLines().containsAll(withDocs.readLines())
+
+        when: 'a feature that changes a line of the build the application has otherwise'
+        Map<String, String> before = tree(dir)
+        reset()
+        exit = add('openapi')
 
         then: 'is a conflict that names the file, and nothing is written'
         exit == 1
@@ -293,7 +315,7 @@ class ProjectMigrateBaselineSpec extends AbstractFeatureAddCommandSpec {
 
         when: 'what the feature would change is shown'
         reset()
-        exit = add('asciidoctor', '--diff')
+        exit = add('openapi', '--diff')
 
         then: 'for whoever adds it by hand'
         exit == 1
@@ -339,30 +361,30 @@ class ProjectMigrateBaselineSpec extends AbstractFeatureAddCommandSpec {
         fixture                           | feature                   || conflicts                                              | left
         EarlierApplication.GRAILS_8_SHELL | 'cache'                   || []                                                     | ['README.md']
         EarlierApplication.GRAILS_8_SHELL | 'grails-quartz'           || []                                                     | ['README.md']
-        EarlierApplication.GRAILS_8_SHELL | 'postgres'                || ['build.gradle', 'grails-app/conf/application.yml']    | ['README.md']
+        EarlierApplication.GRAILS_8_SHELL | 'postgres'                || ['grails-app/conf/application.yml']                    | ['README.md']
         EarlierApplication.GRAILS_8_SHELL | 'github-workflow-java-ci' || []                                                     | []
-        EarlierApplication.GRAILS_8_SHELL | 'asciidoctor'             || ['build.gradle']                                       | []
-        EarlierApplication.GRAILS_8_SHELL | 'views-json'              || ['build.gradle']                                       | ['README.md']
+        EarlierApplication.GRAILS_8_SHELL | 'asciidoctor'             || []                                                     | []
+        EarlierApplication.GRAILS_8_SHELL | 'views-json'              || []                                                     | ['README.md']
         EarlierApplication.GRAILS_8_SHELL | 'testcontainers'          || []                                                     | ['README.md']
         EarlierApplication.GRAILS_8_SHELL | 'grails-spring-security'  || ['grails-app/init/com/example/BootStrap.groovy']       | ['README.md']
-        EarlierApplication.GRAILS_8_SHELL | 'mysql'                   || ['build.gradle', 'grails-app/conf/application.yml']    | ['README.md']
+        EarlierApplication.GRAILS_8_SHELL | 'mysql'                   || ['grails-app/conf/application.yml']                    | ['README.md']
         EarlierApplication.GRAILS_8_SHELL | 'openapi'                 || ['build.gradle']                                       | ['README.md']
         EarlierApplication.GRAILS_8_FORGE | 'cache'                   || []                                                     | []
         EarlierApplication.GRAILS_8_FORGE | 'grails-quartz'           || []                                                     | []
         EarlierApplication.GRAILS_8_FORGE | 'postgres'                || []                                                     | []
         EarlierApplication.GRAILS_8_FORGE | 'github-workflow-java-ci' || []                                                     | []
         EarlierApplication.GRAILS_8_FORGE | 'asciidoctor'             || []                                                     | []
-        EarlierApplication.GRAILS_8_FORGE | 'views-json'              || ['build.gradle']                                       | []
+        EarlierApplication.GRAILS_8_FORGE | 'views-json'              || []                                                     | []
         EarlierApplication.GRAILS_8_FORGE | 'testcontainers'          || []                                                     | []
         EarlierApplication.GRAILS_8_FORGE | 'grails-spring-security'  || []                                                     | []
         EarlierApplication.GRAILS_8_FORGE | 'mysql'                   || []                                                     | []
         EarlierApplication.GRAILS_8_FORGE | 'openapi'                 || ['build.gradle']                                       | []
         EarlierApplication.GRAILS_7_FORGE | 'cache'                   || []                                                     | []
         EarlierApplication.GRAILS_7_FORGE | 'grails-quartz'           || []                                                     | []
-        EarlierApplication.GRAILS_7_FORGE | 'postgres'                || ['build.gradle']                                       | []
+        EarlierApplication.GRAILS_7_FORGE | 'postgres'                || []                                                     | []
         EarlierApplication.GRAILS_7_FORGE | 'github-workflow-java-ci' || []                                                     | []
         EarlierApplication.GRAILS_7_FORGE | 'asciidoctor'             || []                                                     | []
-        EarlierApplication.GRAILS_7_FORGE | 'views-json'              || ['build.gradle']                                       | []
+        EarlierApplication.GRAILS_7_FORGE | 'views-json'              || []                                                     | []
         EarlierApplication.GRAILS_7_FORGE | 'testcontainers'          || []                                                     | []
         EarlierApplication.GRAILS_7_FORGE | 'grails-spring-security'  || ['grails-app/init/com/example/BootStrap.groovy']       | []
         EarlierApplication.GRAILS_7_FORGE | 'mysql'                   || []                                                     | []
