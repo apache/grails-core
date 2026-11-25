@@ -126,9 +126,6 @@ dependencies {
         // comp: RemovalCause, this should perhaps be api in data-mapping as it is needed for compilation downstream
     }
 
-    testImplementation 'com.github.docker-java:docker-java-api', {
-        // test: Ulimit, version follows org.testcontainers:testcontainers
-    }
     testImplementation 'ch.qos.logback:logback-classic', {
         // test: Logger and ListAppender, used to capture log events
     }

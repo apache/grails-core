@@ -1275,6 +1275,14 @@ With `DISCRIMINATOR` multi-tenancy, GORM for MongoDB and GORM's in-memory datast
 * Inside `Tenants.withoutId { }` a lookup by id is still not restricted to a tenant, and neither is a proxy returned by `load` or `proxy` that is initialized there. As the previous note says, only `withoutId` lifts the restriction: a tenant id of `DEFAULT` restricts a lookup by id to that tenant as it restricts a query.
 * A lookup by id still finds an instance that the session holds for the current tenant, including one that has been saved but not flushed, and it does not flush the session.
 
+==== A sort by an association uses the left join that a query requests for it
+
+With GORM for Hibernate, a where query, a detached criteria or a dynamic finder that requests a left join of an association, with `join('owner', JoinType.LEFT)` or `fetch: [owner: JoinType.LEFT]`, and sorts by a property of that association, as with `sort: 'owner.lastName'`, now returns the instances without the association. As of Grails 7.0.18 the sort uses the left join that the query requests. Previously the sort joined the association again with an inner join, so those instances were left out, although the same query without the sort returned them.
+
+* The `totalCount` of a paged list counts the same instances as the list.
+* To leave out the instances without the association, as before, request an inner join with `JoinType.INNER`, or add a criterion such as `owner != null`.
+* A sort by an association for which the query requests no join type, or the fetch mode `join`, still joins it with an inner join.
+
 ==== Data binding white lists apply wherever a class is compiled
 
 As of Grails 7.0.18, the list of bindable properties that Grails generates for a class at compile time, from its statically typed properties, its `bindable` constraints, its `transients` list and its `transient` fields, is generated for every class that implements `grails.validation.Validateable` or declares `constraints` or `transients`, and for every class that extends one, wherever the class is compiled with the data binding library, `grails-web-databinding`, on the compilation's classpath, as it is in an application or a plugin. A library module that compiles against GORM alone generates no list and gets no warning. Previously only domain classes and the parameter types of controller actions compiled with their controller got the list, and a class without one was bound without restriction.

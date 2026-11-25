@@ -44,6 +44,8 @@ import org.hibernate.dialect.Dialect;
 import org.hibernate.dialect.function.SQLFunction;
 import org.hibernate.persister.entity.PropertyMapping;
 import org.hibernate.type.BasicType;
+import org.hibernate.type.ManyToOneType;
+import org.hibernate.type.Type;
 import org.hibernate.type.TypeResolver;
 
 import org.springframework.context.ApplicationEventPublisher;
@@ -611,50 +613,139 @@ public abstract class AbstractHibernateQuery extends Query {
         super.order(order);
 
         String property = order.getProperty();
-
         int i = property.indexOf('.');
-        if (i > -1) {
-
-            String sortHead = property.substring(0, i);
-            String sortTail = property.substring(i + 1);
-
-            if (createdAssociationPaths.containsKey(sortHead)) {
-                CriteriaAndAlias criteriaAndAlias = createdAssociationPaths.get(sortHead);
-                Criteria criteria = criteriaAndAlias.criteria;
-                org.hibernate.criterion.Order hibernateOrder = order.getDirection() == Order.Direction.ASC ?
-                        org.hibernate.criterion.Order.asc(property) :
-                        org.hibernate.criterion.Order.desc(property);
-
-                criteria.addOrder(order.isIgnoreCase() ? hibernateOrder.ignoreCase() : hibernateOrder);
-            }
-            else {
-
-                PersistentProperty persistentProperty = entity.getPropertyByName(sortHead);
-
-                if (persistentProperty instanceof Association) {
-                    Association a = (Association) persistentProperty;
-                    if (persistentProperty instanceof Embedded) {
-                        addSimpleOrder(order, property);
-                    }
-                    else {
-                        if (criteria != null) {
-                            Criteria subCriteria = criteria.createCriteria(sortHead);
-                            addOrderToCriteria(subCriteria, sortTail, order);
-                        }
-                        else if (detachedCriteria != null) {
-                            DetachedCriteria subDetachedCriteria = detachedCriteria.createCriteria(sortHead);
-                            addOrderToDetachedCriteria(subDetachedCriteria, sortTail, order);
-                        }
-                    }
-                }
-            }
-
-        }
-        else {
+        if (i < 0) {
             addSimpleOrder(order, property);
+            return this;
         }
 
+        String sortHead = property.substring(0, i);
+        if (!createdAssociationPaths.containsKey(sortHead)) {
+            PersistentProperty persistentProperty = entity.getPropertyByName(sortHead);
+            if (!(persistentProperty instanceof Association)) {
+                // neither an alias of this query nor an association: the sort is ignored
+                return this;
+            }
+            if (persistentProperty instanceof Embedded) {
+                // a component path, which Hibernate resolves against the entity itself
+                addSimpleOrder(order, property);
+                return this;
+            }
+        }
+
+        String aliasedProperty = calculateSortPropertyName(property);
+        if (aliasedProperty != null) {
+            addAliasedOrder(order, aliasedProperty);
+        }
         return this;
+    }
+
+    /**
+     * Qualifies a sort property that crosses one or more associations with the alias of the last
+     * association on its path, since Hibernate resolves a property of a joined association only
+     * through the alias of the join. The head of the path is either an alias defined by a where
+     * query or an association of the entity. An association that this query has already joined, for
+     * example for a where query criterion, is reused; one it has not joined yet is joined for the sort.
+     * The exception is the identifier of an association that follows another one on the path, which is
+     * sorted by its foreign key instead, as a join would leave out the rows where the association is null.
+     */
+    private String calculateSortPropertyName(String property) {
+        String[] tokens = property.split("\\.");
+        PersistentEntity currentEntity = entity;
+        String currentAlias = null;
+        StringBuilder associationPath = new StringBuilder();
+        int firstAssociation = 0;
+
+        CriteriaAndAlias head = createdAssociationPaths.get(tokens[0]);
+        if (head != null) {
+            currentAlias = head.alias;
+            associationPath.append(head.associationPath);
+            currentEntity = getAssociatedEntity(head.associationPath);
+            firstAssociation = 1;
+        }
+
+        for (int i = firstAssociation; i < tokens.length - 1; i++) {
+            String token = tokens[i];
+            PersistentProperty persistentProperty = currentEntity != null ? currentEntity.getPropertyByName(token) : null;
+            if (!(persistentProperty instanceof Association) || persistentProperty instanceof Embedded) {
+                // the rest of the path is a component path or a property, which Hibernate resolves itself
+                StringBuilder remainder = new StringBuilder(currentAlias == null ? "" : currentAlias);
+                for (int j = i; j < tokens.length; j++) {
+                    if (remainder.length() > 0) {
+                        remainder.append('.');
+                    }
+                    remainder.append(tokens[j]);
+                }
+                return remainder.toString();
+            }
+
+            if (associationPath.length() > 0) {
+                associationPath.append('.');
+            }
+            associationPath.append(token);
+            Association association = (Association) persistentProperty;
+            // the first association of a path is joined even for its identifier, as it always has been
+            if (currentAlias != null && i == tokens.length - 2 && isForeignKeyIdentifier(currentEntity, association, tokens[i + 1])) {
+                return currentAlias + '.' + token + '.' + tokens[i + 1];
+            }
+            CriteriaAndAlias criteriaAndAlias = getOrCreateAlias(associationPath.toString(), generateAlias(token));
+            if (criteriaAndAlias == null) {
+                return null;
+            }
+            currentAlias = criteriaAndAlias.alias;
+            currentEntity = association.getAssociatedEntity();
+        }
+        return currentAlias + '.' + tokens[tokens.length - 1];
+    }
+
+    /**
+     * Whether a property is the identifier of an association that the given entity maps to a foreign key
+     * of its own. Hibernate then reads the identifier from the foreign key, without a join. That is not
+     * the case for a <code>hasOne</code> or for the inverse side of a one-to-one, where the foreign key
+     * is on the other side.
+     */
+    private boolean isForeignKeyIdentifier(PersistentEntity owner, Association association, String property) {
+        PersistentEntity associatedEntity = association.getAssociatedEntity();
+        PersistentProperty identity = associatedEntity != null ? associatedEntity.getIdentity() : null;
+        if (session == null || identity == null || !identity.getName().equals(property)) {
+            return false;
+        }
+        SessionFactory sessionFactory = ((IHibernateTemplate) session.getNativeInterface()).getSessionFactory();
+        Type type = getEntityPersister(owner.getJavaClass().getName(), sessionFactory).toType(association.getName());
+        return type instanceof ManyToOneType && ((ManyToOneType) type).isReferenceToPrimaryKey();
+    }
+
+    /**
+     * Returns the entity at the end of an association path from the root entity, or null when
+     * the path does not consist of associations only.
+     */
+    private PersistentEntity getAssociatedEntity(String associationPath) {
+        String path = associationPath;
+        if (alias != null && path.startsWith(alias + '.')) {
+            path = path.substring(alias.length() + 1);
+        }
+        PersistentEntity currentEntity = entity;
+        for (String token : path.split("\\.")) {
+            PersistentProperty persistentProperty = currentEntity != null ? currentEntity.getPropertyByName(token) : null;
+            if (!(persistentProperty instanceof Association)) {
+                return null;
+            }
+            currentEntity = ((Association) persistentProperty).getAssociatedEntity();
+        }
+        return currentEntity;
+    }
+
+    private void addAliasedOrder(Order order, String aliasedProperty) {
+        org.hibernate.criterion.Order hibernateOrder = order.getDirection() == Order.Direction.ASC ?
+                org.hibernate.criterion.Order.asc(aliasedProperty) :
+                org.hibernate.criterion.Order.desc(aliasedProperty);
+        hibernateOrder = order.isIgnoreCase() ? hibernateOrder.ignoreCase() : hibernateOrder;
+        if (criteria != null) {
+            criteria.addOrder(hibernateOrder);
+        }
+        else if (detachedCriteria != null) {
+            detachedCriteria.addOrder(hibernateOrder);
+        }
     }
 
     private void addSimpleOrder(Order order, String property) {
