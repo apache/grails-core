@@ -917,12 +917,12 @@ A sort by a property of an association, such as `Book.list(sort: 'author.name')`
 - A comparison against a subquery that returns more than one row, and the `exists`, `notExists`, `all` and `some` forms, throw an `InvalidDataAccessResourceUsageException` that names the form. A subquery runs on the connection of its own criteria, so for a query on another connection build the subquery with `withConnection`.
 - `deleteAll()` and `updateAll()` of such a query run the subquery too, so they select the rows a `list()` of the same query finds. `where { age != max(age) }.deleteAll()` deleted every row.
 
-# After the Upgrade
-
 ## Negated conditions on an embedded value in MongoDB
 
 - A negated condition on an embedded value (`address { ne('city', x) }`, `notIn`, `not { eq('address.city', x) }`, `where { address.city != x }`) also matched an owner with no embedded value, because MongoDB's `$ne`, `$nin`, `$not` and `$nor` match a missing field. That owner no longer matches, as with Hibernate: the embedded value is required in the `or` branch that holds the negation.
 - An owner that has the value with the property unset still matches a negated condition, as before. Queries that returned owners without an embedded value return fewer rows, and `deleteAll()` and `updateAll()` select the same rows.
+
+# After the Upgrade
 
 ## Verification Checklist
 
