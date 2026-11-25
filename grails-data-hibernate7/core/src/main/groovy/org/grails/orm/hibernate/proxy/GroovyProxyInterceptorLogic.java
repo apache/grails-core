@@ -54,9 +54,30 @@ public class GroovyProxyInterceptorLogic {
     private static final String HAS_CHANGED = "hasChanged";
     private static final String TO_STRING = "toString";
 
+    /**
+     * Answers the metaclass of a proxy, initialized or not: always that of the persistent class the proxy
+     * extends. Forwarding the request to the entity behind an initialized proxy answers the metaclass of
+     * the entity's own class, which is a subclass of the persistent class when the association is typed
+     * as the root of a hierarchy. Groovy then invokes that subclass's methods on the proxy, which is not
+     * an instance of it.
+     *
+     * @return the metaclass, or {@link #INVOKE_IMPLEMENTATION} when the call does not ask for it
+     * @since 8.0.1
+     */
+    public static Object handleMetaClass(InterceptorState state, String methodName, Object... args) {
+        if (isMetaClassRequest(methodName, args)) {
+            return InvokerHelper.getMetaClass(state.persistentClass());
+        }
+        return INVOKE_IMPLEMENTATION;
+    }
+
+    private static boolean isMetaClassRequest(String methodName, Object... args) {
+        return (GET_META_CLASS.equals(methodName) || methodName.endsWith("getStaticMetaClass")) &&
+                (args == null || args.length == 0);
+    }
+
     public static Object handleUninitialized(InterceptorState state, String methodName, Object... args) {
-        if ((GET_META_CLASS.equals(methodName) || methodName.endsWith("getStaticMetaClass")) &&
-                (args == null || args.length == 0)) {
+        if (isMetaClassRequest(methodName, args)) {
             return InvokerHelper.getMetaClass(state.persistentClass());
         }
         if (GET_PROPERTY.equals(methodName) && args.length == 1) {

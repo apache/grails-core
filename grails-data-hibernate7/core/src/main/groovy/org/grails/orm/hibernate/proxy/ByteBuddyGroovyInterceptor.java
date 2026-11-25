@@ -74,6 +74,11 @@ public class ByteBuddyGroovyInterceptor extends ByteBuddyInterceptor {
         GroovyProxyInterceptorLogic.InterceptorState state = new GroovyProxyInterceptorLogic.InterceptorState(
                 getEntityName(), getPersistentClass(), getIdentifier(), lazyToString);
 
+        Object metaClass = GroovyProxyInterceptorLogic.handleMetaClass(state, methodName, args);
+        if (metaClass != GroovyProxyInterceptorLogic.INVOKE_IMPLEMENTATION) { // NOPMD: sentinel comparison
+            return metaClass;
+        }
+
         if (isUninitialized()) {
             Object result = GroovyProxyInterceptorLogic.handleUninitialized(state, methodName, args);
             if (result != GroovyProxyInterceptorLogic.INVOKE_IMPLEMENTATION) { // NOPMD: sentinel comparison

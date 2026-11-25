@@ -18,6 +18,7 @@
  */
 package org.grails.orm.hibernate.proxy
 
+import org.codehaus.groovy.runtime.InvokerHelper
 import spock.lang.Specification
 import spock.lang.Unroll
 import org.grails.orm.hibernate.proxy.GroovyProxyInterceptorLogic.InterceptorState
@@ -45,6 +46,31 @@ class GroovyProxyInterceptorLogicSpec extends Specification {
 
         where:
         methodName << ["getMetaClass", "getStaticMetaClass"]
+    }
+
+    def "handleMetaClass answers the metaclass of the persistent class for #methodName"() {
+        given:
+        def state = new InterceptorState("TestEntity", String, 123L)
+
+        expect:
+        GroovyProxyInterceptorLogic.handleMetaClass(state, methodName, [] as Object[]).is(InvokerHelper.getMetaClass(String))
+
+        where:
+        methodName << ["getMetaClass", "getStaticMetaClass"]
+    }
+
+    def "handleMetaClass leaves #methodName to the implementation"() {
+        given:
+        def state = new InterceptorState("TestEntity", String, 123L)
+
+        expect:
+        GroovyProxyInterceptorLogic.handleMetaClass(state, methodName, args) == GroovyProxyInterceptorLogic.INVOKE_IMPLEMENTATION
+
+        where:
+        methodName     | args
+        "getName"      | [] as Object[]
+        "getProperty"  | ["name"] as Object[]
+        "getMetaClass" | ["unexpected"] as Object[]
     }
 
     def "handleUninitialized handles identifier access"() {
