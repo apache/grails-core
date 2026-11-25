@@ -850,7 +850,8 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
                     try {
                         collection.createIndex(new Document(index.getDefinition()), indexOptions);
                     } catch (MongoCommandException e) {
-                        LOG.error("Failed to create index for entity [" + entity.getName() + "] with definition [" + index.getDefinition() + "]: " + e.getMessage(), e);
+                        LOG.error("Failed to create index for entity [" + entity.getName() + "] with definition [" + index.getDefinition() + "]: " + e.getMessage());
+                        LOG.debug("Stack trace of the failure to create index for entity [" + entity.getName() + "] with definition [" + index.getDefinition() + "]: " + e.getMessage(), e);
                     }
                 }
 
@@ -872,7 +873,8 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
                             collection.createIndex(indexDef);
                         }
                     } catch (MongoCommandException e) {
-                        LOG.error("Failed to create compound index for entity [" + entity.getName() + "] with definition [" + indexDef + "]: " + e.getMessage(), e);
+                        LOG.error("Failed to create compound index for entity [" + entity.getName() + "] with definition [" + indexDef + "]: " + e.getMessage());
+                        LOG.debug("Stack trace of the failure to create compound index for entity [" + entity.getName() + "] with definition [" + indexDef + "]: " + e.getMessage(), e);
                     }
                 }
             }
@@ -906,7 +908,8 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
                         collection.createIndex(dbObject, indexOptions);
                     }
                 } catch (MongoCommandException e) {
-                    LOG.error("Failed to create index for entity [" + entity.getName() + "] on property [" + property.getName() + "]: " + e.getMessage(), e);
+                    LOG.error("Failed to create index for entity [" + entity.getName() + "] on property [" + property.getName() + "]: " + e.getMessage());
+                    LOG.debug("Stack trace of the failure to create index for entity [" + entity.getName() + "] on property [" + property.getName() + "]: " + e.getMessage(), e);
                 }
             }
         }

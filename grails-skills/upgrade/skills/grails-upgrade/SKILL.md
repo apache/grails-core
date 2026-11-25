@@ -794,6 +794,13 @@ GORM for MongoDB and GORM's in-memory datastore used by unit tests, lookups by i
 
 Unit tests that look up instances across tenants need the same changes as application code.
 
+## GORM for Hibernate: a sort uses a requested left join
+
+A where query, a detached criteria or a dynamic finder that requests a left join of an association, with `join('owner', JoinType.LEFT)` or `fetch: [owner: JoinType.LEFT]`, and sorts by a property of that association, as with `sort: 'owner.lastName'`, sorted with an inner join and left out the instances without the association. As of 7.0.18 the sort uses the requested left join, so those instances are returned, and the `totalCount` of a paged list counts them.
+
+- Search for `JoinType.LEFT` in calls to `join` and in `fetch` arguments of queries that also sort by a property of the same association.
+- To leave out the instances without the association, as before, request `JoinType.INNER`, or add a criterion such as `owner != null`.
+
 ## Data binding white lists
 
 Data binding white lists apply wherever a class is compiled.
@@ -849,6 +856,15 @@ Search the configuration for `useEncryptedJwt`. If it is enabled, check each poi
 
 The guide gives no setting that restores encrypted JWTs without a signature.
 
+## GORM for Hibernate: `list` sorts by every property of a sort map
+
+`list` with a `Map` of sort properties, such as `Book.list(sort: [title: 'asc', 'author.name': 'desc'])`, sorted by the last entry of the map only. As of 7.0.18 it sorts by every entry, in the order of the map. The same applies to a default sort that the mapping declares for more than one property, as in `sort author: 'asc', title: 'desc'`.
+
+- Search for `sort: [` in calls to `list`, and for a `sort` with more than one property in a `static mapping` block. The results of these calls are now sorted by every property, so the rows selected by `max` and `offset` can change.
+- To sort by one property, as before, pass that property alone.
+- An association is joined once for all the entries that sort by it. `find` and `findAll` with an example, `findWhere` and `findAllWhere` failed with `duplicate association path` for such a sort and now work.
+- Sorting by two properties of the same collection returns fewer duplicate rows. A book with three chapters occurs three times for `Book.list(sort: ['chapters.title': 'asc', 'chapters.id': 'asc'])`, rather than nine times. Update assertions that relied on the repeated joins. No compatibility setting restores them.
+
 ## GSP tag attributes
 
 More GSP tags HTML-encode the attribute values they write.
@@ -884,6 +900,16 @@ These bugs are fixed, which changes what the browser submits or what the page co
 - `<g:radio>` encodes its `value` once. It encoded it twice, so a value with `&`, `<`, `>`, `"` or `'` was submitted with character references in it, such as `R&amp;D` for `R&D`. Remove any code that decoded the submitted value to undo this.
 - A value encoded beforehand is no longer encoded twice in the `value` of `<g:textField>`, `<g:hiddenField>` and the other field tags when a `RequestDataValueProcessor` returns it unchanged, nor in an option of `<g:select>`.
 - `<g:paginate>` and `<g:sortableColumn>` write a `class` that was encoded beforehand once next to the classes they add, such as `step` and `sortable`. They encoded it twice.
+
+## GORM for Hibernate: setting for a sort by an association
+
+A sort by a property of an association, such as `Book.list(sort: 'author.name')`, joins the association with an inner join, so it leaves out the instances whose association is `null`, and `count` and the `totalCount` of a paged list do not count them. That is unchanged by default. 7.0.18 adds the `grails.gorm.leftJoinAssociationSort` setting, default `false`. Set to `true`, the association is joined with a left join and the sort keeps those instances.
+
+- Nothing needs to change to keep the previous results.
+- Search for `sort:` arguments and `.sort(` calls whose property contains a `.`, such as `sort: 'author.name'`. If the application expects every instance from such a query, set `grails.gorm.leftJoinAssociationSort: true` in `application.yml`.
+- With the setting, the instances without the association come first or last, depending on how the database sorts nulls. To leave them out of one query, add a criterion that the association is not `null`.
+- A sort by a property of a collection, such as `sort: 'books.title'`, joins the collection with an inner join with or without the setting.
+- Explicitly setting it to `false` logs a startup warning naming Grails 9, which removes the setting. The planned default in Grails 8.1 is `true`; check the target release's compatibility settings before upgrading.
 
 ## GORM for Hibernate 5: query arguments reach where queries and dynamic finders
 
