@@ -38,7 +38,7 @@ class ListPluginsCommand extends PluginListingCommand {
 
     public static final String NAME = 'list-plugins'
 
-    @CommandLine.Parameters(arity = '0..1', paramLabel = 'FILTER',
+    @CommandLine.Parameters(arity = '0..1', paramLabel = 'TEXT',
             description = 'Lists only the plugins that have this text in their name, their coordinates or their description, in whichever case.')
     String filter
 

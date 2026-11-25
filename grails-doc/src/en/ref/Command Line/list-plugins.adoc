@@ -40,12 +40,12 @@ Usage:
 
 [source,console]
 ----
-grails list-plugins [--deprecated] [--offline] [--json] [--plugin-index=URL] [FILTER]
+grails list-plugins [--deprecated] [--offline] [--json] [--plugin-index=URL] [TEXT]
 ----
 
 Arguments:
 
-* `FILTER` - Lists only the plugins that have this text in their name, their coordinates or their description, in whichever case.
+* `TEXT` - Lists only the plugins that have this text in their name, their coordinates or their description, in whichever case.
 
 Options:
 

@@ -760,7 +760,7 @@ class PluginCommandsSpec extends Specification {
 
         then:
         exit == 0
-        out.toString().replaceAll(/\s+/, ' ').contains('Usage: list-plugins [-hvVx] [--deprecated] [--json] [--offline] [--plugin-index=URL] [FILTER]')
+        out.toString().replaceAll(/\s+/, ' ').contains('Usage: list-plugins [-hvVx] [--deprecated] [--json] [--offline] [--plugin-index=URL] [TEXT]')
         asked.isEmpty()
 
         when:

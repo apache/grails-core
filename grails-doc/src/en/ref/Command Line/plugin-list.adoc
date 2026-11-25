@@ -40,7 +40,7 @@ Usage:
 
 [source,console]
 ----
-grails plugin list [--deprecated] [--offline] [--json] [--plugin-index=URL] [FILTER]
+grails plugin list [--deprecated] [--offline] [--json] [--plugin-index=URL] [TEXT]
 ----
 
 `plugin list` and link:list-plugins.html[list-plugins] are one command with two names: the argument, the options, what is written, the JSON document of `--json` and the exit codes are those of `list-plugins`, which that page describes. Neither name is deprecated. The one difference is the command the last line names for more of one plugin, which is the one of the same kind:

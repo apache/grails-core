@@ -135,7 +135,7 @@ class FindAndShowNamesSpec extends CommandSpec {
 
         then:
         exit == 0
-        synopsis(out.toString()).endsWith(' [FILTER]')
+        synopsis(out.toString()).endsWith(' [TEXT]')
 
         where:
         command << ['plugin list', 'list-plugins']
@@ -168,8 +168,8 @@ class FindAndShowNamesSpec extends CommandSpec {
         exit == 0
         parameters(ofFeature.find { it.name == 'find' }) == [[label: 'TEXT', arity: '1']]
         parameters(ofPlugin.find { it.name == 'find' }) == [[label: 'TEXT', arity: '1']]
-        parameters(ofPlugin.find { it.name == 'list' }) == [[label: 'FILTER', arity: '0..1']]
-        parameters(commands.find { it.name == 'list-plugins' }) == [[label: 'FILTER', arity: '0..1']]
+        parameters(ofPlugin.find { it.name == 'list' }) == [[label: 'TEXT', arity: '0..1']]
+        parameters(commands.find { it.name == 'list-plugins' }) == [[label: 'TEXT', arity: '0..1']]
 
         and: 'the command that shows one, by its first name, with the other beside it'
         ofFeature.find { it.name == 'show' }.aliases == ['info']
