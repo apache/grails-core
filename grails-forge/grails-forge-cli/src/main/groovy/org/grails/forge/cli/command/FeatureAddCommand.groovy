@@ -32,10 +32,13 @@ import org.apache.grails.forge.core.change.ChangePlan.PlannedFile
 import org.apache.grails.forge.core.change.FeatureAddition
 import org.apache.grails.forge.core.change.ProjectChangeException
 import org.apache.grails.forge.core.pack.Pack
+import org.apache.grails.forge.core.pack.PackInstructions
 import org.apache.grails.forge.core.state.ProjectState
 import org.apache.grails.forge.core.state.ProjectStateException
 import org.grails.forge.application.generator.ProjectGenerator
 import org.grails.forge.cli.ForgeContext
+import org.grails.forge.feature.AvailableFeatures
+import org.grails.forge.feature.Feature
 import org.grails.forge.feature.FeatureSelectionException
 import org.grails.forge.io.ConsoleOutput
 import org.grails.forge.io.FileSystemOutputHandler
@@ -144,7 +147,11 @@ class FeatureAddCommand extends BaseCommand implements Callable<Integer>, Projec
             List<Pack> packs = packOptions.packs(directory, createPackArtifacts(), grailsRepoUrl(), { String line -> out("@|blue ||@ ${shown(line)}") } as Consumer<String>,
                     { String line -> warning(shown(line)) } as Consumer<String>)
             ChangePlan plan = addition.plan(directory, features, getOperatingSystem(), this, replace, packs)
-            return apply(plan, preview)
+            int exit = apply(plan, preview)
+            if (exit == 0 && !preview && !plan.isNothingToAdd()) {
+                CreateCommand.said(this, instructions(directory, plan, packs))
+            }
+            return exit
         } catch (FeatureSelectionException e) {
             // features an application cannot have are a mistake in the command line, as they are when it is created
             throw new CommandLine.ParameterException(spec.commandLine(), shown(e.getMessage()))
@@ -182,9 +189,10 @@ class FeatureAddCommand extends BaseCommand implements Callable<Integer>, Projec
         }
         Notes notes = new Notes()
         ChangePlan plan
+        List<Pack> packs
         try {
             // which jar of a pack is fetched again is said among the notes: the document is all that is written
-            List<Pack> packs = packOptions.packs(directory, createPackArtifacts(), grailsRepoUrl(), { String line -> notes.out(line) } as Consumer<String>,
+            packs = packOptions.packs(directory, createPackArtifacts(), grailsRepoUrl(), { String line -> notes.out(line) } as Consumer<String>,
                     { String line -> notes.warning(line) } as Consumer<String>)
             plan = new FeatureAddition(projectGeneratorSource.get()).plan(directory, features, getOperatingSystem(), notes, replace, packs)
         } catch (Exception e) {
@@ -195,6 +203,7 @@ class FeatureAddCommand extends BaseCommand implements Callable<Integer>, Projec
         }
         List<PlannedFile> conflicts = plan.getConflicts()
         document.planned(plan, notes.lines, conflicts.isEmpty() ? null : notAdded(plan, conflicts))
+        document.instructions(instructions(directory, plan, packs))
         return written(document, document.outcome in [ChangeDocument.NO_CHANGES, ChangeDocument.CHANGES] ? 0 : 1)
     }
 
@@ -202,6 +211,22 @@ class FeatureAddCommand extends BaseCommand implements Callable<Integer>, Projec
         // written as it is: a document is not markup of the command line
         spec.commandLine().getOut().println(document.toJson())
         return exitCode
+    }
+
+    /**
+     * What the feature packs of the features that are added say is to be done once they are: of a pack
+     * of Grails and of one that is not alike.
+     */
+    private List<PackInstructions> instructions(Path directory, ChangePlan plan, List<Pack> packs) {
+        if (plan.added.isEmpty()) {
+            return []
+        }
+        AvailableFeatures available = projectGeneratorSource.get().availableFeatures(ProjectState.readSelection(directory).manifest.applicationType, packs)
+        List<Feature> added = []
+        for (String name : plan.added) {
+            available.findFeature(name, true).ifPresent { Feature feature -> added << feature }
+        }
+        return PackInstructions.of(added)
     }
 
     static String notAdded(ChangePlan plan, List<PlannedFile> conflicts) {

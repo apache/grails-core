@@ -76,6 +76,8 @@ files:
   - from: audit.properties
     to: grails-app/conf/audit.properties
 readme: The audit trail is configured in `AuditConfig`.
+instructions: |
+  Run `./gradlew dbmGormDiff` to generate the migration of the audit tables.
 ----
 
 [cols="1,3"]
@@ -132,11 +134,30 @@ readme: The audit trail is configured in `AuditConfig`.
 
 |`readme`
 |A paragraph for the application's `README.md`.
+
+|`instructions`
+|What is to be done once the application has the feature, for whoever created it: see <<forgeFeaturePackInstructions,below>>. It is shown and written nowhere.
 |===
 
 A name in `requires` and `conflicts` is the feature of that name, of Grails or of whichever pack has it. A full name, `group:artifact#name`, is the feature `name` of the pack of the plugin `group:artifact` and of no other: of the jar of that plugin, in whichever version the command took it, by its coordinates or from a feature catalog. The pack of a directory or of a file is the pack of no plugin, so a full name does not name it, even when the feature has that name. A feature that is required by its full name is selected by its name, which is the name `features` has in a template. When no pack of that plugin with that feature was given for the type of the application, the application is refused, and the message names the plugin and the feature, so that the plugin can be given by its coordinates; a feature that conflicts by its full name is refused only beside the feature of the pack of that plugin.
 
 A pack only adds. It cannot change what another selected feature gives the application: a setting, a build property or the version of a dependency that is already there with another value is an error, and so is a file another feature writes, such as the `.gitignore` and the `.gitattributes` at the root of an application. A descriptor with an unknown key, or a destination outside the application, is refused with a message that names the key.
+
+
+[[forgeFeaturePackInstructions]]
+==== Instructions
+
+
+The `instructions` of a pack are for the next step that the pack cannot take itself, as the instructions of a profile were: a command to run, a value to set. A `create-` command shows them once the application is created, and `feature add` once it added the feature, after everything else the command says:
+
+[source]
+----
+| Application created at /home/me/shop
+| The feature acme-audit says what to do next:
+    Run `./gradlew dbmGormDiff` to generate the migration of the audit tables.
+----
+
+They are shown as text: nothing of them is run or filled in, and a command they name is one you run. A descriptor whose instructions have a control character, such as the escape that changes the colours of a terminal, is refused. At most 30 lines are shown, each of at most 200 characters; the command says how many lines it left out. `feature add --dry-run --json` has them in the `instructions` member of its document. They are not written into the application: what should stay with it belongs in `readme`. The hosted application generator at https://start.grails.org does not show instructions.
 
 
 ==== Templates

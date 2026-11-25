@@ -26,6 +26,7 @@ import org.apache.grails.forge.core.change.ChangePlan.Action
 import org.apache.grails.forge.core.change.ChangePlan.PlannedFile
 import org.apache.grails.forge.core.change.FeatureRequestException
 import org.apache.grails.forge.core.change.ProjectChangeException
+import org.apache.grails.forge.core.pack.PackInstructions
 import org.apache.grails.forge.core.state.ProjectStateException
 import org.grails.forge.feature.FeatureSelectionException
 import java.nio.file.Path
@@ -107,7 +108,7 @@ final class ChangeDocument {
 
     static ChangeDocument ofFeatureAdd(Path project) {
         ChangeDocument document = new ChangeDocument('feature add', project, ['applicable', 'requested', 'alreadyPresent', 'added', 'replaced', 'replacements',
-                                                                              'lostFeatures', 'changedOptions', 'files', 'notes'])
+                                                                              'lostFeatures', 'changedOptions', 'files', 'notes', 'instructions'])
         document.members.put('applicable', false)
         return document
     }
@@ -163,6 +164,20 @@ final class ChangeDocument {
             return ended(OUTCOMES.getOrDefault(reason, FAILED), reason, message)
         }
         return ended(FAILED, ERROR, message)
+    }
+
+    /**
+     * What the feature packs of the added features say is to be done once the features are added: for each
+     * such feature its name and the text, as the command shows it without {@code --json}.
+     */
+    ChangeDocument instructions(List<PackInstructions> instructions) {
+        members.put('instructions', instructions.collect { PackInstructions each ->
+            Map<String, Object> entry = new LinkedHashMap<>()
+            entry.put('feature', each.feature)
+            entry.put('text', each.text)
+            return entry
+        })
+        return this
     }
 
     /**

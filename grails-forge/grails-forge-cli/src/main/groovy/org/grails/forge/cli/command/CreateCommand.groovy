@@ -33,6 +33,7 @@ import org.apache.grails.forge.core.pack.Pack
 import org.apache.grails.forge.core.pack.PackArtifact
 import org.apache.grails.forge.core.pack.PackDescriptor.PackDependency
 import org.apache.grails.forge.core.pack.PackDescriptorException
+import org.apache.grails.forge.core.pack.PackInstructions
 import org.apache.grails.forge.core.pack.PackLoader
 import org.apache.grails.forge.core.pack.PackPreset
 import org.apache.grails.forge.core.pack.PackRefusedException
@@ -188,6 +189,8 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer>, O
     private String bomOfCatalogPacks
     // the features of the application that are of packs that are not part of Grails
     private List<String> notOfGrails = []
+    // what the feature packs of the application say is to be done now that it is created
+    private List<PackInstructions> instructions = []
 
     private final ApplicationType applicationType
     // what the Forge application has, asked of it when the command first needs it
@@ -343,6 +346,7 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer>, O
                     'An application that is to be a project of that build is created with --subproject, ' +
                     'and one that is to be a build of its own with the feature gradle-settings-file')
         }
+        said(this, instructions)
         return 0
     }
 
@@ -429,6 +433,7 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer>, O
             throw mistake(e)
         }
         heldToItsBom(context)
+        instructions = PackInstructions.of(context.getFeatures().getFeatures())
         notOfGrails = packs.findAll { Pack pack -> !pack.bundled && context.getFeatures().contains(pack.descriptor.name) }
                 .collect { Pack pack -> FeatureSelectionException.shown(pack.descriptor.name) }
         List<String> warnings = []
@@ -453,6 +458,19 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer>, O
         // of the application that was made: one that is refused is not warned of as if it had been
         for (String each : warnings) {
             warning(each)
+        }
+    }
+
+    /**
+     * Says what the feature packs say is to be done next, after everything the command itself says. The
+     * text is that of a descriptor: it is printed as text, and nothing of it is markup of this command.
+     */
+    static void said(BaseCommand command, List<PackInstructions> instructions) {
+        for (PackInstructions each : instructions) {
+            command.out("@|blue ||@ The feature ${each.feature.replace('@|', '@ |')} says what to do next:")
+            for (String line : each.lines) {
+                command.out("    ${line.replace('@|', '@ |')}")
+            }
         }
     }
 

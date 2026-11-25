@@ -39,7 +39,7 @@ import spock.lang.Unroll
 class FeatureAddJsonSpec extends AbstractFeatureAddCommandSpec {
 
     static final List<String> MEMBERS = ['format', 'command', 'projectDirectory', 'outcome', 'reason', 'message', 'hasChanges', 'applicable', 'requested',
-                                         'alreadyPresent', 'added', 'replaced', 'replacements', 'lostFeatures', 'changedOptions', 'files', 'notes']
+                                         'alreadyPresent', 'added', 'replaced', 'replacements', 'lostFeatures', 'changedOptions', 'files', 'notes', 'instructions']
 
     void "what a feature would change is the document, with every file by its path and what would be done to it, and nothing is changed"() {
         given:

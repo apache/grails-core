@@ -654,7 +654,7 @@ A tool that checks whether a project still is what was generated, or what adding
  "replacements":["postgres replaces h2, the default of the group database-driver"],"lostFeatures":[],"changedOptions":[],
  "files":[{"path":"README.md","action":"update","reason":null,"details":[]},{"path":"build.gradle","action":"update","reason":null,"details":[]},
           {"path":"grails-app/conf/application.yml","action":"update","reason":null,"details":[]},
-          {"path":"src/test/resources/application-test.yml","action":"add","reason":null,"details":[]}],"notes":[]}
+          {"path":"src/test/resources/application-test.yml","action":"add","reason":null,"details":[]}],"notes":[],"instructions":[]}
 ----
 
 The document is written on one line; it is shown on several here. Both documents begin with the same members, always in the same order, and every member is always there: one that does not apply is `null`.
@@ -836,9 +836,12 @@ The exit code is always the one the command ends with without `--json`, so a scr
 | `notes`
 | What the features said while the application was generated with them, a line each; usually nothing.
 
+| `instructions`
+| What the feature packs of the features in `added` say is to be done once the features are added: for each such feature its name, as `feature`, and the `text`, which the command shows after it added the features. Empty when none of them says anything.
+
 |===
 
-The `requested` to `notes` members of `feature add` are `null` when the command did not get as far as working out the change. `project regenerate --diff --json` has `files` only after `hasChanges`, each with its `path` and its `status`: `added` for a file the generator did not write, `removed` for a generated file that is not there any more, and `changed` for one with other content, sorted by the path. What the `.gitignore` the project was generated with leaves out is not looked at, and neither is `.git`, as without `--json`.
+The `requested` to `instructions` members of `feature add` are `null` when the command did not get as far as working out the change. `project regenerate --diff --json` has `files` only after `hasChanges`, each with its `path` and its `status`: `added` for a file the generator did not write, `removed` for a generated file that is not there any more, and `changed` for one with other content, sorted by the path. What the `.gitignore` the project was generated with leaves out is not looked at, and neither is `.git`, as without `--json`.
 
 ==== In a Project of an Earlier Version of Grails
 
