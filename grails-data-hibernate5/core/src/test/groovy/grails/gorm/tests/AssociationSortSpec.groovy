@@ -79,7 +79,7 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManag
         results*.name - 'Unattached First Team' == ['Arsenal Second Team', 'Arsenal First Team', 'Chelsea First Team', 'MU First Team']
 
         and:
-        Team.list(sort: ['club.name': 'asc', name: 'desc'], max: 2, offset: 1)*.name == results[1..2]*.name
+        Team.list(sort: ['club.name': 'asc', name: 'desc'], max: 2, offset: 1)*.name == ['Arsenal First Team', 'Chelsea First Team']
     }
 
     void '#api sorted by two properties of an association joins the association once'() {
