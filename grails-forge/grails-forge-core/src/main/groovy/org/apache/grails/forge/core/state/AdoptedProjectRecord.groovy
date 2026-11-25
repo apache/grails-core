@@ -30,11 +30,14 @@ import java.nio.charset.StandardCharsets
 
 /**
  * The record of an application that was there before it had one: what the application is taken to
- * be, written by {@code project migrate} and not by the generator. Its manifest says so with
- * {@code generationState: untracked}, and its baseline has no file, because the generator wrote none
- * of the files of the application as they are: nothing can be merged against it, so no feature is
- * added to such an application and it is not generated again. The commands that create the classes
- * of an application read from it what they read from the record of a generated one.
+ * be, written by {@code project migrate} and not when the application was generated. There are two
+ * of them. The one of {@link #adopted} has the baseline the generator writes for what the application
+ * is taken to be, and says so with {@code generationState: adopted}: a feature is added against that
+ * baseline. The one of {@link #files} is written where no such baseline can be generated: its manifest
+ * says {@code generationState: untracked} and its baseline has no file, so nothing can be merged
+ * against it, no feature is added to such an application and it is not generated again. The commands
+ * that create the classes of an application read from both what they read from the record of a
+ * generated one.
  *
  * @since 9.0
  */
@@ -95,6 +98,33 @@ final class AdoptedProjectRecord {
         files.put(ProjectState.BASELINE_INDEX, indexBytes)
         files.put(ProjectState.LOCK, lockBytes)
         files.put(ProjectState.MANIFEST, manifestBytes)
+        return files
+    }
+
+    /**
+     * The manifest and the lock the generator writes for an application, as those of an application
+     * that was there before it had a record and whose baseline is what the generator writes for what
+     * it is taken to be: the manifest says {@code generationState: adopted} and is the same otherwise,
+     * and the lock has the digest of that manifest. The baseline and its index are those the generator
+     * wrote.
+     *
+     * @param manifestBytes the manifest the generator wrote
+     * @param lockBytes the lock the generator wrote with it
+     * @return the manifest and the lock of the adopted record, by their paths in the project
+     * @throws ProjectStateException when the two are not a manifest and a lock this version reads
+     * @since 9.0
+     */
+    static Map<String, byte[]> adopted(byte[] manifestBytes, byte[] lockBytes) {
+        ProjectManifest written = ProjectManifest.read(manifestBytes)
+        ProjectLock lock = ProjectLock.read(lockBytes)
+        byte[] manifest = new ProjectManifest(written.grailsVersion, written.applicationType, written.name, written.defaultPackage, written.options,
+                ProjectManifest.ADOPTED, written.requestedFeatures, written.excludedFeatures, written.parameters, written.preset).toBytes()
+        byte[] sealed = new ProjectLock(StateYaml.sha256(manifest), lock.generatorName, lock.generatorVersion, lock.generatorSha256, lock.grailsVersion, lock.templateApi,
+                lock.applicationType, lock.options, lock.lineEndings, lock.repositories, lock.repositoriesNotNamed, lock.features, lock.parameters,
+                lock.baselineIndexSha256).toBytes()
+        Map<String, byte[]> files = new LinkedHashMap<>()
+        files.put(ProjectState.MANIFEST, manifest)
+        files.put(ProjectState.LOCK, sealed)
         return files
     }
 }

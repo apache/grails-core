@@ -131,7 +131,7 @@ class FeatureListCommand extends BaseCommand implements Callable<Integer>, Proje
         listHas(state)
         if (availability?.refusal != null) {
             // the record of an earlier version is moved to this one by a command that is named
-            String move = state.manifest.isTracked() && RecordMigration.isMovable(state.lock) ? ". ${ProjectMigrateCommand.moveAdvice(spec)}" : ''
+            String move = state.manifest.hasBaseline() && RecordMigration.isMovable(state.lock) ? ". ${ProjectMigrateCommand.moveAdvice(spec)}" : ''
             out("@|blue ||@ No feature is added to this application with feature add: ${shown(availability.refusal)}${move}")
             return 0
         }

@@ -47,6 +47,18 @@ final class ProjectManifest {
      */
     public static final String UNTRACKED = 'untracked'
 
+    /**
+     * The application was there before it had a record, and the baseline is what this generator
+     * writes for what the application is taken to be: the type, the options and the features that
+     * {@code project migrate} found in its files or was given. A feature is added to the project
+     * against that baseline, and where the application is not what the generator writes for those
+     * choices, it is a change of the application, as it is in a project that was generated. The state
+     * stays as it is when a feature is added and when the record is moved to another version
+     *
+     * @since 9.0
+     */
+    public static final String ADOPTED = 'adopted'
+
     @PackageScope
     static final Pattern FEATURE_NAME = Pattern.compile(/[A-Za-z0-9][A-Za-z0-9._:#+-]{0,199}/)
 
@@ -104,6 +116,24 @@ final class ProjectManifest {
         return generationState == TRACKED
     }
 
+    /**
+     * @return whether the baseline of the project was written for an application that was there, from
+     * what the application is taken to be, see {@link #ADOPTED}
+     * @since 9.0
+     */
+    boolean isAdopted() {
+        return generationState == ADOPTED
+    }
+
+    /**
+     * @return whether the project has a baseline of the generator, which a feature is added against:
+     * the one the application was generated with, or the one that was adopted for it
+     * @since 9.0
+     */
+    boolean hasBaseline() {
+        return generationState == TRACKED || generationState == ADOPTED
+    }
+
     @PackageScope
     byte[] toBytes() {
         Map<String, Object> map = new LinkedHashMap<>()
@@ -151,7 +181,7 @@ final class ProjectManifest {
                 name,
                 defaultPackage,
                 GenerationOptions.read(root.section('options'), missingOptionsAsDefaults),
-                root.oneOf('generationState', [TRACKED, UNTRACKED]),
+                root.oneOf('generationState', [TRACKED, UNTRACKED, ADOPTED]),
                 root.sections('requestedFeatures', StateLimits.MAX_FEATURES).collect { StateSection each -> RequestedFeature.read(each) },
                 root.sections('excludedFeatures', StateLimits.MAX_FEATURES).collect { StateSection each -> RequestedFeature.read(each) },
                 root.texts('parameters', StateLimits.MAX_PARAMETERS),

@@ -717,7 +717,7 @@ class ProjectStateSpec extends ApplicationContextSpec {
         'the manifest has markup of the command line' | '.grails/project.yml' | { it.replace('name: shop', "name: '@|red x|@'") } |
                 '.grails/project.yml: name must be one line of at most 255 characters, none of them a control character or one that is not shown'
         'the manifest has a state of generation there is not' | '.grails/project.yml' | { it.replace('generationState: tracked', 'generationState: maybe') } |
-                ".grails/project.yml: generationState must be one of tracked, untracked, but is 'maybe'"
+                ".grails/project.yml: generationState must be one of tracked, untracked, adopted, but is 'maybe'"
         'a requested feature has no name' | '.grails/project.yml' | { it.replace('requestedFeatures: []', 'requestedFeatures:\n- version: 1.0') } |
                 '.grails/project.yml: requestedFeatures[0].name is missing'
         'the features of the lock are no list' | '.grails/forge.lock.yml' | { it.replace('features:\n', 'features: none\nother:\n') } |

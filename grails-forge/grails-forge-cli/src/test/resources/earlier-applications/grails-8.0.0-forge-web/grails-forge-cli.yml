@@ -1,0 +1,8 @@
+applicationType: web
+defaultPackage: com.example
+reloading: devtools
+sourceLanguage: groovy
+buildTool: gradle
+gormImpl: gorm-hibernate5
+servletImpl: spring-boot-starter-tomcat
+features: [app-name, asset-pipeline-grails, base, geb-with-testcontainers, gorm-hibernate5, gradle, grails-application, grails-dependencies, grails-gorm-testing-support, grails-gradle-plugin, grails-profiles, grails-url-mappings, grails-web, grails-web-testing-support, grails-wrapper, gsp, h2, logback, readme, scaffolding, sitemesh3, spock, spring-boot-autoconfigure, spring-boot-devtools, spring-boot-starter, spring-boot-starter-tomcat, spring-resources, yaml]

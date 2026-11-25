@@ -572,7 +572,7 @@ class ProjectMigrateGeneratedSpec extends CommandSpec {
 
         then:
         exit == 1
-        err.toString().contains('--offline is for moving the record of a generated application that has the features of feature packs that are not part of Grails, ' +
+        err.toString().contains('--offline is for the record of an application that has the features of feature packs that are not part of Grails, ' +
                 'and this application has no such record. Nothing was written')
         !new File(dir, '.grails').exists()
     }

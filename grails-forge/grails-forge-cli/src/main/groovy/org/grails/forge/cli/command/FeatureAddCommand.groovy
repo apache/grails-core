@@ -184,8 +184,7 @@ class FeatureAddCommand extends BaseCommand implements Callable<Integer>, Projec
     static String noRecord(CommandLine.Model.CommandSpec spec) {
         return "There is no application here that a feature can be added to: ${ProjectState.MANIFEST} is missing. " +
                 'Run the command in the directory of an application that Grails 9 created. For an application that was there before, ' +
-                "${UsageHelp.toType(spec, "${ProjectGroupCommand.NAME} ${ProjectMigrateCommand.NAME}")} writes the record the commands that create its classes read; " +
-                'a feature is added to such an application by hand'
+                "${UsageHelp.toType(spec, "${ProjectGroupCommand.NAME} ${ProjectMigrateCommand.NAME}")} writes the record, with the baseline a feature is added against"
     }
 
     /**

@@ -33,6 +33,7 @@ import org.apache.grails.forge.cli.pack.PackArtifacts
 import org.apache.grails.forge.cli.pack.RecordedPackOptions
 import org.apache.grails.forge.core.change.FeatureAddition
 import org.apache.grails.forge.core.change.ProjectChangeException
+import org.apache.grails.forge.core.change.RecordAdoption
 import org.apache.grails.forge.core.change.RecordMigration
 import org.apache.grails.forge.core.pack.Pack
 import org.apache.grails.forge.core.pack.PackCondition
@@ -79,9 +80,13 @@ import java.util.function.Supplier
  * {@link ProjectEvidence}, and from what is given on the command line, which counts for more.
  *
  * <p>Only the files of the record under {@code .grails} are written. The record says that it was
- * written for an application that was there ({@code generationState: untracked}) and has a baseline
- * without a file: the commands that create the classes of an application read it as they read the
- * record of a generated one, and no feature is added to the application by a command.</p>
+ * written for an application that was there, and has the baseline this version generates for what the
+ * application is taken to be ({@code generationState: adopted}, see {@link FeatureAddition#adopt}):
+ * the commands that create the classes of an application read it as they read the record of a
+ * generated one, and a feature is added against that baseline, which takes what the application has
+ * otherwise for a change of the application. Where no such baseline can be generated, as where the
+ * type of the application was assumed, the record has none ({@code generationState: untracked}) and
+ * no feature is added by a command until the command is given what it could not work out.</p>
  *
  * <p>The record of an application that Grails 9 generated, which an earlier version of the command
  * line wrote, or another build of this version that generates other files, is moved to this version:
@@ -97,8 +102,12 @@ import java.util.function.Supplier
         'What the application is, is worked out from its files, which are read and not changed: the record an earlier version wrote, the profile ' +
                 'it had, the plugins and the dependencies of build.gradle, and its configuration. What was found, where, and what was assumed is said; ' +
                 'the options say it otherwise. Only the directory .grails is written to.',
-        'The record says that it was written for an application that was there. No feature is added to such an application by a command, and it is ' +
-                'not generated again: there is no copy of what the generator wrote to tell its changes from yours.',
+        'The record says that it was written for an application that was there, and has a copy of every file this version generates for an application ' +
+                'of the type, the options and the features that were found or given: feature add adds a feature against that copy, takes what the application ' +
+                'has otherwise for a change of yours, and writes nothing where a feature changes the same lines. Where the type was assumed, or this version does ' +
+                'not generate an application from what was found, the record has no such copy and no feature is added until the command is told what it could not find.',
+        'Run again with --force, the command reads the files again and keeps the features the record names, those that feature add added among them; ' +
+                '--exclude-features takes one out, and the options and --exclude-features are worked out again or given again.',
         'An application that Grails 9 generated has the record of how it was generated. When an earlier version of the command line wrote it, the command ' +
                 'moves it to this version: the application is generated again from the choices the record has, and the copy of every generated file and the ' +
                 'record become what this version writes for them. No other file is changed; feature add then takes what the application has otherwise than ' +
@@ -170,8 +179,8 @@ class ProjectMigrateCommand extends BaseCommand implements Callable<Integer>, Pr
     boolean dryRun
 
     @CommandLine.Option(names = ['--force'],
-            description = 'Write the record again over one this command wrote. The record of how an application was generated is never written over with one ' +
-                    'that is worked out from the files: it is moved to this version, which needs no --force.')
+            description = 'Write the record again over one this command wrote, with what the files and the command line say now. The record of how an ' +
+                    'application was generated is never written over with one that is worked out from the files: it is moved to this version, which needs no --force.')
     boolean overwrite
 
     @CommandLine.Mixin
@@ -203,12 +212,17 @@ class ProjectMigrateCommand extends BaseCommand implements Callable<Integer>, Pr
         // The record of a generated application is moved to this version, by the choices it has. So is one that a change
         // which was interrupted left half written, with the lock of the change and the manifest from before it: the move
         // ends the change first, after which the record reads, and nothing refuses the record before that
-        if (hasGeneratedRecord(directory) || halfWritten(directory)) {
+        ProjectState recorded = recordWithBaseline(directory)
+        // The record this command wrote with a baseline is moved to this version as that of a generated application is,
+        // unless the command is told to write it anew or what the application is otherwise
+        ProjectState adopted = recorded != null && recorded.manifest.isAdopted() ? recorded : null
+        if ((recorded != null && adopted == null) || halfWritten(directory) || (adopted != null && !overwrite && choicesGiven().isEmpty())) {
             return move(directory)
         }
-        String packs = packOptionsGiven()
-        if (packs != null) {
-            err("${packs} ${packs.contains(', ') ? 'are' : 'is'} for moving the record of a generated application that has the features of feature packs that are " +
+        boolean ofPacks = adopted != null && adopted.lock.features.any { LockedFeature feature -> feature.source == LockedFeature.PACK }
+        String packsGiven = packOptionsGiven()
+        if (packsGiven != null && !ofPacks) {
+            err("${packsGiven} ${packsGiven.contains(', ') ? 'are' : 'is'} for the record of an application that has the features of feature packs that are " +
                     'not part of Grails, and this application has no such record. Nothing was written')
             return 1
         }
@@ -233,8 +247,39 @@ class ProjectMigrateCommand extends BaseCommand implements Callable<Integer>, Pr
             err("${identity.refusal}. Nothing was written")
             return 1
         }
-        AvailableFeatures available = projectGeneratorSource.get().availableFeatures(applicationType.value, [])
+        // the feature packs that are not part of Grails a feature was added from since the record was written, given again
+        List<Pack> packs = []
+        if (ofPacks) {
+            try {
+                packs = FeatureAddition.recordedPacks(adopted.lock, adopted.manifest.preset, packOptions.packs(directory, createPackArtifacts(), grailsRepoUrl(),
+                        { String line -> out("@|blue ||@ ${GradleRunner.line(line)}") } as Consumer<String>, { String line -> warning(GradleRunner.line(line)) } as Consumer<String>))
+            } catch (ProjectChangeException | IllegalArgumentException | PackArtifactException e) {
+                err(GradleRunner.line(e.getMessage() ?: e.getClass().getSimpleName()))
+                stacktrace(e)
+                return 1
+            }
+        }
+        AvailableFeatures available = projectGeneratorSource.get().availableFeatures(applicationType.value, packs)
         Map<String, String> found = featuresFound(available, evidence, notes)
+        // What the record this command wrote names is kept: a feature that was added since is among it, and the files
+        // of the application do not show every feature
+        List<String> kept = []
+        if (adopted != null) {
+            List<String> gone = []
+            for (String name : adopted.manifest.requestedFeatures*.name) {
+                Feature feature = available.findFeature(name, true).orElse(null)
+                if (feature == null) {
+                    gone << name
+                } else {
+                    kept << feature.getName()
+                    found.put(feature.getName(), "the record, ${ProjectState.MANIFEST}".toString())
+                }
+            }
+            if (gone) {
+                notes << ("The record names ${gone.size() == 1 ? 'a feature' : 'features'} an application of the type ${written(applicationType.value)} does not have in this " +
+                        "version, which ${gone.size() == 1 ? 'is' : 'are'} not in the new record: ${shown(gone.join(', '))}").toString()
+            }
+        }
         // what is known not to have been read is said, so that no feature is taken to be absent because it was not found
         if (!evidence.buildRead) {
             notes << "The project has no ${ProjectEvidence.BUILD} or ${ProjectEvidence.KOTLIN_BUILD} that could be read, so no feature was looked for in its build".toString()
@@ -275,14 +320,58 @@ class ProjectMigrateCommand extends BaseCommand implements Callable<Integer>, Pr
 
         List<Feature> applied = has.keySet().collect { String each -> available.findFeature(each, true).get() }
         applied.sort(FeatureContext.FEATURE_ORDER)
+        GenerationOptions generationOptions = new GenerationOptions(JdkVersion.valueOf(Integer.parseInt(options.get('jdk').value)),
+                ServletImpl.values().find { ServletImpl each -> written(each) == options.get('servlet').value },
+                GormImpl.values().find { GormImpl each -> written(each) == options.get('data').value },
+                DevelopmentReloading.values().find { DevelopmentReloading each -> written(each) == options.get('reloading').value },
+                !evidence.ownBuild)
+        // The baseline: what this version generates for an application of what was found and given. Where it
+        // generates none, the record is written without one, and says what the command has to be told
+        FeatureAddition addition = new FeatureAddition(projectGeneratorSource.get())
+        List<String> byName = (stated + kept.findAll { String each -> has.containsKey(each) }).unique()
+        RecordAdoption adoption = null
+        String noBaseline = null
+        if (applicationType.assumed) {
+            noBaseline = "the type of the application was assumed (${applicationType.where}): say it with --type"
+        } else {
+            try {
+                if (!dryRun) {
+                    // a change that was interrupted is ended first, as a feature that is added ends it
+                    for (String message : addition.recover(directory).getMessages()) {
+                        out("@|blue ||@ ${message}")
+                    }
+                }
+                adoption = addition.adopt(directory, applicationType.value, identity.name.value, identity.defaultPackage.value, generationOptions, byName,
+                        has.keySet().findAll { String each -> !(each in byName) }.toList(), excluded, getOperatingSystem(), packs)
+            } catch (FeatureSelectionException e) {
+                noBaseline = "this version does not create an application of the type, the options and the features above (${GradleRunner.line(e.getMessage())}): say with " +
+                        '--exclude-features which of the features the application does not have, or with the options what it has otherwise'
+            } catch (ProjectChangeException e) {
+                if (e.getReason() != ProjectChangeException.NOT_REGENERABLE) {
+                    err(GradleRunner.line(e.getMessage() ?: e.getClass().getSimpleName()))
+                    stacktrace(e)
+                    return 1
+                }
+                noBaseline = "${GradleRunner.line(e.getMessage()).replaceFirst(/\. Nothing was changed$/, '')}: say with --exclude-features which of the features the application " +
+                        'does not have, or with the options what it has otherwise'
+            } catch (ProjectStateException e) {
+                err("The record could not be written as this version reads it: ${GradleRunner.line(e.getMessage())}. Give the name of the application with its " +
+                        'package to the command, as com.example.shop. Nothing was written')
+                return 1
+            }
+        }
+        if (adoption != null) {
+            describe(applicationType, identity, options, applied, has, excluded, notes, evidence)
+            return adopt(adoption, has.keySet())
+        }
+        if (adopted != null) {
+            describe(applicationType, identity, options, applied, has, excluded, notes, evidence)
+            err("The record is not written anew: ${noBaseline}. The record the application has, with its baseline, is as it was. Nothing was written")
+            return 1
+        }
         Map<String, byte[]> files
         try {
-            files = AdoptedProjectRecord.files(applicationType.value, identity.name.value, identity.defaultPackage.value,
-                    new GenerationOptions(JdkVersion.valueOf(Integer.parseInt(options.get('jdk').value)),
-                            ServletImpl.values().find { ServletImpl each -> written(each) == options.get('servlet').value },
-                            GormImpl.values().find { GormImpl each -> written(each) == options.get('data').value },
-                            DevelopmentReloading.values().find { DevelopmentReloading each -> written(each) == options.get('reloading').value },
-                            !evidence.ownBuild),
+            files = AdoptedProjectRecord.files(applicationType.value, identity.name.value, identity.defaultPackage.value, generationOptions,
                     stated, excluded,
                     applied.collect { Feature feature ->
                         new LockedFeature(feature.getName(), feature instanceof PackFeature ? LockedFeature.BUNDLED_PACK : LockedFeature.FRAMEWORK)
@@ -293,11 +382,46 @@ class ProjectMigrateCommand extends BaseCommand implements Callable<Integer>, Pr
             return 1
         }
         describe(applicationType, identity, options, applied, has, excluded, notes, evidence)
+        out("@|blue ||@ The record ${dryRun ? 'would be' : 'is'} written without a baseline (generationState ${ProjectManifest.UNTRACKED}), and ${UsageHelp.toType(spec, 'feature add')} " +
+                "adds no feature to the application until it has one: ${noBaseline}, and run ${UsageHelp.toType(spec, 'project migrate --force')} with it")
         if (dryRun) {
             out('@|blue ||@ Nothing was written')
             return 0
         }
         return write(directory, files)
+    }
+
+    // The record with its baseline: what the baseline is and how the application compares with it, and then the files, all of them or none
+    private Integer adopt(RecordAdoption adoption, Collection<String> has) {
+        List<String> ofBaseline = adoption.record.lock.featureNames
+        List<String> notThere = has.findAll { String each -> !(each in ofBaseline) }.toList()
+        if (notThere) {
+            out("@|blue ||@ Not in the baseline, because this version does not select ${notThere.size() == 1 ? 'it' : 'them'} by name for an application of these " +
+                    "choices: ${shown(notThere.join(', '))}")
+        }
+        int files = adoption.record.baseline.files.size()
+        out("@|blue ||@ The baseline ${dryRun ? 'would be' : 'is'} the ${files} files this version generates for an application of the type, the options and the features above " +
+                "(${ofBaseline.size()} features with those of the type; ${UsageHelp.toType(spec, 'project show')} lists them). The application has ${adoption.asGenerated.size()} of " +
+                "them as generated, ${adoption.otherwise.size()} otherwise and ${adoption.absent.size()} not at all: what it has otherwise is taken for a change of yours")
+        if (dryRun) {
+            out('@|blue ||@ Nothing was written')
+            return 0
+        }
+        try {
+            adoption.apply()
+        } catch (ProjectChangeException e) {
+            err(GradleRunner.line(e.getMessage() ?: e.getClass().getSimpleName()))
+            stacktrace(e)
+            return 1
+        }
+        out("@|blue ||@ The record was written, with its baseline under ${ProjectState.BASELINE}: ${ProjectState.MANIFEST}, ${ProjectState.LOCK} and ${ProjectState.BASELINE_INDEX}. " +
+                "No other file of the project was changed. Commit the directory ${ProjectState.DIRECTORY}")
+        out("@|blue ||@ ${UsageHelp.toType(spec, 'help')} lists the commands that create the classes of the application, and ${UsageHelp.toType(spec, 'project show')} says what the record has. " +
+                "${UsageHelp.toType(spec, 'feature add')} adds a feature against the baseline and keeps what the application has otherwise; where a feature changes lines the application " +
+                "has otherwise, it names them and writes nothing. ${UsageHelp.toType(spec, 'project regenerate --diff')} names the files that are not as this version generates them, " +
+                "and ${UsageHelp.toType(spec, 'project migrate --force')} writes the record anew when the type, an option or a feature above is not what the application has")
+        out("@|blue ||@ ${ProjectHealthCommand.advice(spec)}")
+        return 0
     }
 
     private ApplicationType givenType() {
@@ -695,21 +819,23 @@ class ProjectMigrateCommand extends BaseCommand implements Callable<Integer>, Pr
         }
         out("@|blue ||@ The record was written: ${texts.keySet().join(', ')}. No other file of the project was changed. Commit the directory ${ProjectState.DIRECTORY}")
         out("@|blue ||@ ${UsageHelp.toType(spec, 'help')} lists the commands that create the classes of the application, and ${UsageHelp.toType(spec, 'project show')} says what the record has. " +
-                "The record says what the application is taken to be, not how it was generated: ${UsageHelp.toType(spec, 'feature add')} and ${UsageHelp.toType(spec, 'project regenerate')} are for an " +
-                'application this version generated, and change nothing here')
+                "The record says what the application is taken to be and has no baseline: ${UsageHelp.toType(spec, 'feature add')} and ${UsageHelp.toType(spec, 'project regenerate')} " +
+                'need one, and change nothing here')
         out("@|blue ||@ ${ProjectHealthCommand.advice(spec)}")
         return 0
     }
 
-    // whether the project has the record of a generated application that reads; what else it has is for the rest of the command
-    private static boolean hasGeneratedRecord(Path directory) {
+    // the record of the project when it reads and has a baseline of the generator: that of a generated application, or
+    // one this command wrote with a baseline; what else the project has is for the rest of the command
+    private static ProjectState recordWithBaseline(Path directory) {
         if (!ProjectState.exists(directory)) {
-            return false
+            return null
         }
         try {
-            return ProjectState.readSelection(directory, true).manifest.isTracked()
+            ProjectState state = ProjectState.readSelection(directory, true)
+            return state.manifest.hasBaseline() ? state : null
         } catch (ProjectStateException ignored) {
-            return false
+            return null
         }
     }
 
@@ -815,18 +941,23 @@ class ProjectMigrateCommand extends BaseCommand implements Callable<Integer>, Pr
 
     private Integer moved(Path directory, ProjectManifest manifest, RecordMigration migration) {
         String running = "${ProjectLock.GENERATOR} ${VersionInfo.getVersion()} for Grails ${VersionInfo.getGrailsVersion()}"
+        // the record this command wrote with a baseline says what the application is taken to be, which the command writes anew when it is told to
+        String anew = !manifest.isAdopted() ? '' : '. The record was written for an application that was there, with the baseline of what it is taken to be: ' +
+                "${UsageHelp.toType(spec, 'project migrate --force')} reads the files again and writes it anew, with the type, the options, --features and --exclude-features " +
+                'where the record is not what the application has'
         if (migration.outcome == RecordMigration.Outcome.SAME_BUILD) {
             out("@|blue ||@ The record of the application ${shown(manifest.name)} was written by this build of the command line, ${running}: it is that of " +
-                    'this version already, and there is nothing to move. Nothing was written')
+                    "this version already, and there is nothing to move. Nothing was written${anew}")
             return 0
         }
         if (migration.outcome == RecordMigration.Outcome.SAME_FILES) {
             out("@|blue ||@ The record of the application ${shown(manifest.name)} was written by another build of ${running} (the generator sha256 " +
                     "${migration.recordedSha256 ?: 'not recorded'} there, ${VersionInfo.getGeneratorSha256() ?: 'none'} here), which writes the same record for " +
-                    'its choices: it is that of this version already, and there is nothing to move. Nothing was written')
+                    "its choices: it is that of this version already, and there is nothing to move. Nothing was written${anew}")
             return 0
         }
-        out("@|blue ||@ The record of how the application ${shown(manifest.name)} was generated, ${dryRun ? 'as it would be moved' : 'moved'} to this version: " +
+        out("@|blue ||@ The record of ${manifest.isAdopted() ? 'what' : 'how'} the application ${shown(manifest.name)} ${manifest.isAdopted() ? 'is taken to be' : 'was generated'}, " +
+                "${dryRun ? 'as it would be moved' : 'moved'} to this version: " +
                 'the application is generated again from the choices the record has, and nothing but the record is written')
         out("    generator  ${ProjectLock.GENERATOR} ${shown(migration.recordedVersion)} for Grails ${shown(migration.recordedGrailsVersion)}" +
                 "${migration.recordedSha256 == null ? '' : " (generator sha256 ${migration.recordedSha256.take(SHORT_SHA256)})"}, now " +

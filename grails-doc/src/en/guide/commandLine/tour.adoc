@@ -127,7 +127,7 @@ The file has a few more keys than are shown here. Three things follow from the r
 * *Do not edit it.* The files carry digests of each other. A record that was changed by hand is not used, and the commands that need it say so.
 * *The application does not read it.* Only the command line does: the commands that create classes take the type, the package and the features from it, and `feature add`, `project show` and `project regenerate` work from it.
 
-An application that Grails 9 did not generate, such as one that was created with the Grails shell of an earlier version, has no record. link:{commandLineRef}project-migrate.html[project migrate] writes one from the files of the application, and the commands that create classes are there afterwards. `feature add` and `project regenerate` still refuse such an application: they need the record of an application that Grails 9 generated.
+An application that Grails 9 did not generate, such as one that was created with the Grails shell of an earlier version, has no record. link:{commandLineRef}project-migrate.html[project migrate] writes one from the files of the application, with a copy of every file this version generates for an application of the same type, options and features. The commands that create classes are there afterwards, and so is `feature add`, which takes what the application has otherwise than that copy for a change of yours.
 
 See "The `.grails` directory of a project" in xref:commandLine#creatingProject[Creating a Grails Project].
 

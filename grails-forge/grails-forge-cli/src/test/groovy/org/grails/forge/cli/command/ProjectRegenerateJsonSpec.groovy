@@ -147,14 +147,10 @@ class ProjectRegenerateJsonSpec extends AbstractFeatureAddCommandSpec {
         document.files == null
     }
 
-    void "an application whose record project migrate wrote is refused, and the reason says so"() {
+    void "an application whose record project migrate wrote without a baseline is refused, and the reason says so"() {
         given:
-        new File(dir, 'grails-app/conf').mkdirs()
-        new File(dir, 'grails-app/init/com/example/legacy').mkdirs()
-        new File(dir, 'grails-app/conf/application.yml').text = ProjectMigrateCommandSpec.SHELL_CONFIGURATION
-        new File(dir, 'grails-app/init/com/example/legacy/Application.groovy').text = 'package com.example.legacy\n\nclass Application {\n}\n'
-        new File(dir, 'build.gradle').text = ProjectMigrateCommandSpec.SHELL_BUILD
-        new File(dir, 'settings.gradle').text = "rootProject.name = 'legacy'\n"
+        // a plugin whose type is assumed, for which project migrate generates no baseline
+        EarlierApplication.pluginOfAssumedType(dir)
         ForgeCli.execute(beanContext, 'project', 'migrate')
         reset()
 

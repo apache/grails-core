@@ -215,9 +215,8 @@ class FeatureListCommandSpec extends CommandSpec {
     }
 
     void "an application whose record feature add does not take: what it has is listed, and the list says why nothing can be added"() {
-        given: 'an application whose record project migrate wrote'
-        create([])
-        new File(dir, '.grails').deleteDir()
+        given: 'a plugin whose record project migrate wrote without a baseline, because it assumed its type'
+        EarlierApplication.pluginOfAssumedType(dir)
         assert ForgeCli.execute(beanContext, 'project', 'migrate') == 0
         out.reset()
 

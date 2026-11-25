@@ -25,6 +25,7 @@ import org.apache.grails.forge.cli.console.ConsoleProject
 import org.apache.grails.forge.cli.console.GradleRunner
 import org.apache.grails.forge.cli.console.OptionRelation
 import org.apache.grails.forge.cli.console.ProjectCommand
+import org.apache.grails.forge.cli.console.UsageHelp
 import org.apache.grails.forge.cli.pack.PackArtifactException
 import org.apache.grails.forge.cli.pack.PackArtifacts
 import org.apache.grails.forge.cli.pack.RecordedPackOptions
@@ -361,8 +362,11 @@ class ProjectRegenerateCommand extends BaseCommand implements Callable<Integer>,
             }
             return 1
         }
+        // the record that was written for an application that was there has the baseline of what the application is taken to be
+        boolean adopted = regenerated.state.manifest.isAdopted()
         if (unlike.isEmpty()) {
-            out('@|blue ||@ Every file of the application is as it was generated, and it has no others')
+            out(adopted ? '@|blue ||@ Every file of the application is as this version generates it for what the application is taken to be, and it has no others' :
+                    '@|blue ||@ Every file of the application is as it was generated, and it has no others')
             return 0
         }
         for (Map.Entry<String, String> each : unlike.entrySet()) {
@@ -370,8 +374,12 @@ class ProjectRegenerateCommand extends BaseCommand implements Callable<Integer>,
             spec.commandLine().getOut().println("${each.value.padRight(8)} ${each.key.replaceAll(/[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/, '?')}")
         }
         Map<String, Integer> counted = unlike.values().countBy { String kind -> kind }
-        out("@|blue ||@ ${unlike.size()} ${unlike.size() == 1 ? 'file is' : 'files are'} not as the application was generated: " +
-                ['added', 'removed', 'changed'].findAll { String kind -> counted.containsKey(kind) }.collect { String kind -> "${counted.get(kind)} ${kind}" }.join(', '))
+        out("@|blue ||@ ${unlike.size()} ${unlike.size() == 1 ? 'file is' : 'files are'} not as " +
+                (adopted ? 'this version generates an application of what this one is taken to be' : 'the application was generated') + ': ' +
+                ['added', 'removed', 'changed'].findAll { String kind -> counted.containsKey(kind) }.collect { String kind -> "${counted.get(kind)} ${kind}" }.join(', ') +
+                (!adopted ? '' : ". The record was written for an application that was there, by ${UsageHelp.toType(spec, 'project migrate')}: the files named are all the " +
+                        'application has otherwise than a new one of the same type, options and features, what an earlier version of Grails generated otherwise among it, ' +
+                        'and not only what was changed in it'))
         return 1
     }
 

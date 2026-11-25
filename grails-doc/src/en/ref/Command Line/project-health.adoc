@@ -245,7 +245,7 @@ The id of a finding is the name of its check and the name of the finding, as `ja
 | `record.version-drift`
 | warning
 | The project is on another version of Grails than the record.
-| `./grailsw update-wrapper`, then `./grailsw project migrate`; for a record that `project migrate` wrote, `project migrate --force`.
+| `./grailsw update-wrapper`, then `./grailsw project migrate`; for a record that `project migrate` wrote without a baseline, `project migrate --force`.
 
 | `record.interrupted`
 | warning

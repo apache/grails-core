@@ -62,7 +62,7 @@ final class RecordCheck extends HealthCheck {
         }
         List<HealthFinding> findings = []
         ProjectState selection = context.selection
-        boolean movable = selection != null && selection.manifest.tracked && RecordMigration.isMovable(selection.lock)
+        boolean movable = selection != null && selection.manifest.hasBaseline() && RecordMigration.isMovable(selection.lock)
         String migrate = context.toType('project migrate')
         if (movable) {
             // moving the record writes its baseline anew, so what else is wrong with it is for this version to say afterwards
@@ -76,7 +76,7 @@ final class RecordCheck extends HealthCheck {
             findings << found('unreadable', HealthLevel.WARNING, "The record of the project does not read: ${context.recordFailure}",
                     'Do as the message says; a record that was changed by hand is restored from version control (git restore --source=HEAD -- .grails)', null,
                     [ProjectState.MANIFEST, ProjectState.LOCK, ProjectState.BASELINE_INDEX], NOTE_RECORD)
-        } else if (context.record.manifest.tracked) {
+        } else if (context.record.manifest.hasBaseline()) {
             try {
                 context.record.verifyBaseline(context.directory)
             } catch (ProjectStateException e) {
@@ -99,7 +99,11 @@ final class RecordCheck extends HealthCheck {
         }
         ProjectManifest manifest = context.record.manifest
         return [ok(manifest.tracked ? 'The record under .grails reads, its baseline is what its index says, and it is the record of this version' :
-                'The record under .grails, which project migrate wrote, reads', [ProjectState.MANIFEST])]
+                manifest.adopted ? 'The record under .grails, which project migrate wrote with the baseline of what the application is taken to be (generationState ' +
+                        "${ProjectManifest.ADOPTED}), reads, its baseline is what its index says, and it is the record of this version" :
+                        'The record under .grails, which project migrate wrote without a baseline (generationState ' +
+                                "${ProjectManifest.UNTRACKED}), reads; feature add adds no feature until ${context.toType('project migrate --force')} writes it with one",
+                [ProjectState.MANIFEST])]
     }
 
     private List<HealthFinding> withoutRecord(HealthContext context) {
@@ -127,7 +131,7 @@ final class RecordCheck extends HealthCheck {
         }
         String recorded = selection.manifest.grailsVersion
         String message = "The project is on Grails ${project} (gradle.properties), and the record is of Grails ${recorded}"
-        if (!selection.manifest.tracked) {
+        if (!selection.manifest.hasBaseline()) {
             String again = context.toType('project migrate --force')
             return found('version-drift', HealthLevel.WARNING, message, "${again}, with the name and the options the record was written with, writes it again for this version",
                     again, ['gradle.properties', ProjectState.MANIFEST], NOTE_RECORD)

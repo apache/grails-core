@@ -25,6 +25,7 @@ import org.apache.grails.forge.core.change.ChangePlan.PlannedFile
 import org.apache.grails.forge.core.change.ProjectTransaction.Write
 import org.apache.grails.forge.core.pack.Pack
 import org.apache.grails.forge.core.pack.PackArtifact
+import org.apache.grails.forge.core.state.AdoptedProjectRecord
 import org.apache.grails.forge.core.state.BaselineIndex
 import org.apache.grails.forge.core.state.BaselineIndex.BaselineFile
 import org.apache.grails.forge.core.state.GenerationOptions
@@ -35,6 +36,7 @@ import org.apache.grails.forge.core.state.ProjectManifest.RequestedFeature
 import org.apache.grails.forge.core.state.ProjectState
 import org.apache.grails.forge.core.state.ProjectStateException
 import org.apache.grails.forge.core.state.StateLimits
+import org.grails.forge.application.ApplicationType
 import org.grails.forge.application.OperatingSystem
 import org.grails.forge.application.Project
 import org.grails.forge.application.generator.GeneratorContext
@@ -640,11 +642,12 @@ final class FeatureAddition {
         ProjectManifest manifest = state.manifest
         ProjectLock lock = state.lock
         // said before the baseline is looked at: such a record has none, and that is not what is wrong with it
-        if (!manifest.isTracked()) {
+        if (!manifest.hasBaseline()) {
             throw new ProjectChangeException('The record of the application was written for an application that was there, and not by the generator (generationState in ' +
                     "${ProjectState.MANIFEST} is ${ProjectManifest.UNTRACKED}, as project migrate writes it). There is no baseline the generator wrote, and without one what a " +
                     'feature changes cannot be told from what the application changed: no feature is added to such an application by a command, and it is not generated ' +
-                    'again. Nothing was changed. Add to the build and the configuration by hand what the feature adds to an application that is created with it',
+                    'again. Nothing was changed. project migrate --force writes the record with a baseline once it is told what it could not work out, which it names; ' +
+                    'until then, add to the build and the configuration by hand what the feature adds to an application that is created with it',
                     ProjectChangeException.UNTRACKED_RECORD, null)
         }
         state.verifyBaseline(projectDirectory)
@@ -768,6 +771,23 @@ final class FeatureAddition {
     private RenderedProject render(ProjectManifest manifest, List<String> features, OperatingSystem operatingSystem, ConsoleOutput console, List<Pack> packs,
                                    boolean optionsAreChoices = true, Map<String, Map<String, String>> optionsOfAddedFeatures = [:]) {
         Project project = NameUtils.parse(manifest.defaultPackage + '.' + manifest.name)
+        GeneratorContext context = context(manifest, features, operatingSystem, console, packs, optionsAreChoices, optionsOfAddedFeatures)
+        RenderedProject rendered = new RenderedProject()
+        generator.generate(manifest.applicationType, project, rendered, context)
+        // The record of an application that was there says so in every version of it: the generator
+        // writes the record of an application it generates, and here it is that of one it did not
+        if (manifest.isAdopted() && rendered.content(ProjectState.MANIFEST) != null && rendered.content(ProjectState.LOCK) != null) {
+            AdoptedProjectRecord.adopted(rendered.content(ProjectState.MANIFEST), rendered.content(ProjectState.LOCK)).each { String path, byte[] content ->
+                rendered.replace(path, content)
+            }
+        }
+        return rendered
+    }
+
+    // what the generator selects for the choices of a manifest and the features that are asked for
+    private GeneratorContext context(ProjectManifest manifest, List<String> features, OperatingSystem operatingSystem, ConsoleOutput console, List<Pack> packs,
+                                     boolean optionsAreChoices, Map<String, Map<String, String>> optionsOfAddedFeatures = [:]) {
+        Project project = NameUtils.parse(manifest.defaultPackage + '.' + manifest.name)
         GenerationOptions recorded = manifest.options
         // The options of the manifest are what the application has, so each of them is a choice: a
         // feature that would put another servlet container, reloader or Grails Data implementation in
@@ -778,11 +798,8 @@ final class FeatureAddition {
                 .withGiven(optionsAreChoices ? EnumSet.allOf(OptionName) : EnumSet.noneOf(OptionName))
                 // an application that was created without the files of the root of a build stays without them
                 .withSubproject(recorded.subproject)
-        GeneratorContext context = generator.createGeneratorContext(manifest.applicationType, project, options, operatingSystem, features, console, packs,
+        return generator.createGeneratorContext(manifest.applicationType, project, options, operatingSystem, features, console, packs,
                 manifest.excludedFeatures*.name)
-        RenderedProject rendered = new RenderedProject()
-        generator.generate(manifest.applicationType, project, rendered, context)
-        return rendered
     }
 
     private static ProjectState stateOf(RenderedProject rendered) {
@@ -1254,7 +1271,7 @@ final class FeatureAddition {
         byte[] manifestBytes = state.content(ProjectState.MANIFEST)
         byte[] lockBytes = state.content(ProjectState.LOCK)
         byte[] indexBytes = state.content(ProjectState.BASELINE_INDEX)
-        if (!manifest.isTracked()) {
+        if (!manifest.hasBaseline()) {
             throw new ProjectChangeException("The record of the application was written for an application that was there (generationState in ${ProjectState.MANIFEST} " +
                     "is ${ProjectManifest.UNTRACKED}): it has no baseline the generator wrote, and there is nothing of a generator to move. Nothing was changed",
                     ProjectChangeException.UNTRACKED_RECORD, null)
@@ -1330,6 +1347,128 @@ final class FeatureAddition {
         // the manifest last, as when the application was generated
         writes << new Write(ProjectState.MANIFEST, rendered.content(ProjectState.MANIFEST), null, ProjectTransaction.sha256(manifestBytes))
         return new RecordMigration(RecordMigration.Outcome.MOVED, lock, projectDirectory, home, added, removed, changed, writes)
+    }
+
+    /**
+     * Works out the record of an application that was there before it had one, with a baseline: the
+     * application is generated in memory, by this generator, from what it is taken to be, and the
+     * baseline, its index, the lock and the manifest are what the generator writes for that, the
+     * manifest with {@code generationState: adopted}. No file of the application is changed: where
+     * the application is not what the generator makes of the choices, a feature that is added later
+     * takes it for a change of the application, and where such a change is in the lines a feature
+     * changes, adding the feature is a conflict and writes nothing. Nothing is written here, see
+     * {@link RecordAdoption#apply()}.
+     *
+     * <p>A project that has such a record already, or one without a baseline, gets the new one in its
+     * place. The record of an application that was generated is never replaced by one that is worked
+     * out: it is moved to this generator, see {@link #migrate}.</p>
+     *
+     * @param projectDirectory the directory of the project
+     * @param applicationType the type of the application
+     * @param name the name of the application, as a create command takes it
+     * @param defaultPackage the package its classes are created in
+     * @param options the options it is taken to have, each of which is held to as a choice
+     * @param requested the names of the features that are asked for by name, as with {@code --features}
+     * @param found the names of the features that were found in the files of the application. Each is
+     * asked for by name only where the type, the options and the features that are asked for do not
+     * bring it, so that one the application would have by default stays a default, which another
+     * feature of its group replaces; one that cannot be asked for by name is not in the record
+     * @param excluded the names of the features it does not have
+     * @param operatingSystem the operating system the generator is told of, as when an application is created
+     * @param packs the feature packs that are not part of Grails whose features are among {@code requested}
+     * @throws ProjectStateException when the project has a record that cannot be read
+     * @throws FeatureSelectionException when an application cannot be created with these choices
+     * @throws ProjectChangeException when a change of the project was interrupted
+     * ({@link ProjectChangeException#INTERRUPTED_CHANGE}), the project has the record of a generated
+     * application ({@link ProjectChangeException#GENERATED_RECORD}), or the generator does not make
+     * an application of the choices ({@link ProjectChangeException#NOT_REGENERABLE})
+     * @since 9.0
+     */
+    RecordAdoption adopt(Path projectDirectory, ApplicationType applicationType, String name, String defaultPackage, GenerationOptions options, List<String> requested,
+                         List<String> found, List<String> excluded, @Nullable OperatingSystem operatingSystem, List<Pack> packs) {
+        if (ProjectTransaction.isHalfMade(projectDirectory, home)) {
+            throw new ProjectChangeException('An earlier change of the project was interrupted; it is undone when the record is written without --dry-run, ' +
+                    'and has to be before anything else is done', ProjectChangeException.INTERRUPTED_CHANGE, null)
+        }
+        ProjectState existing = ProjectState.exists(projectDirectory) ? ProjectState.read(projectDirectory) : null
+        if (existing != null && existing.manifest.isTracked()) {
+            throw new ProjectChangeException("The application has the record of how it was generated (${ProjectState.MANIFEST}), which is not written over with one " +
+                    'that is worked out from its files. Nothing was changed', ProjectChangeException.GENERATED_RECORD, null)
+        }
+        // the copies that are replaced are those the index names, and nothing else is there
+        if (existing != null && !existing.baseline.files.isEmpty()) {
+            existing.verifyBaseline(projectDirectory)
+        }
+        List<String> asked = new ArrayList<String>(requested).unique()
+        RenderedProject rendered
+        try {
+            if (!found.isEmpty()) {
+                ProjectManifest without = new ProjectManifest(VersionInfo.getGrailsVersion(), applicationType, name, defaultPackage, options, ProjectManifest.ADOPTED,
+                        asked.collect { String each -> new RequestedFeature(each) }, excluded.toSorted().unique().collect { String each -> new RequestedFeature(each) }, [:])
+                Set<String> selected = context(without, asked, operatingSystem, ConsoleOutput.NOOP, packs, true).getFeatures().getFeatures()*.getName().toSet()
+                AvailableFeatures available = generator.availableFeatures(applicationType, packs)
+                for (String each : found) {
+                    if (!selected.contains(each) && !asked.contains(each) && available.findFeature(each).isPresent()) {
+                        asked << each
+                    }
+                }
+            }
+            ProjectManifest choices = new ProjectManifest(VersionInfo.getGrailsVersion(), applicationType, name, defaultPackage, options, ProjectManifest.ADOPTED,
+                    asked.collect { String each -> new RequestedFeature(each) }, excluded.toSorted().unique().collect { String each -> new RequestedFeature(each) }, [:])
+            rendered = render(choices, asked, operatingSystem, ConsoleOutput.NOOP, packs)
+        } catch (ProjectChangeException | FeatureSelectionException e) {
+            throw e
+        } catch (Exception e) {
+            throw new ProjectChangeException("This version of Grails does not generate an application from these choices: ${line(e)}. Nothing was changed",
+                    ProjectChangeException.NOT_REGENERABLE, e)
+        }
+        ProjectState proposed = stateOf(rendered)
+        if (proposed.manifest.options != options || proposed.manifest.applicationType != applicationType || proposed.manifest.name != name ||
+                proposed.manifest.defaultPackage != defaultPackage) {
+            throw new ProjectChangeException('This version of Grails generates an application from these choices with other choices' +
+                    (proposed.manifest.options == options ? '' : " (${changedOptions(options, proposed.manifest.options).join(', ')})") + '. Nothing was changed',
+                    ProjectChangeException.NOT_REGENERABLE, null)
+        }
+        List<Write> writes = []
+        List<String> same = []
+        List<String> otherwise = []
+        List<String> absent = []
+        for (BaselineFile file : proposed.baseline.files) {
+            BaselineFile had = existing?.baseline?.find(file.path)
+            if (had == null || had.sha256 != file.sha256) {
+                String copy = "${ProjectState.BASELINE_FILES}/${BaselineIndex.copyPath(file.path)}".toString()
+                writes << new Write(copy, rendered.content(copy), null, had == null ? null : had.sha256)
+            }
+            Working working = working(projectDirectory, file.path)
+            if (working.content == null) {
+                absent << file.path
+            } else if (file.binary ? Arrays.equals(working.content, rendered.content(file.path)) : ThreeWayMerge.sameText(working.content, rendered.content(file.path))) {
+                same << file.path
+            } else {
+                otherwise << file.path
+            }
+        }
+        // the copies of the files this record does not have go first, so that a copy of another
+        // name that a file system takes for the same is written after it
+        for (BaselineFile file : (existing == null ? Collections.<BaselineFile>emptyList() : existing.baseline.files)) {
+            if (proposed.baseline.find(file.path) == null) {
+                writes.add(0, new Write("${ProjectState.BASELINE_FILES}/${BaselineIndex.copyPath(file.path)}".toString(), null, null, file.sha256))
+            }
+        }
+        // what tells Git how to keep the record is not needed to read it, and is no file of a change: one that is there is left as it is
+        Map<String, byte[]> forGit = new LinkedHashMap<>()
+        for (String path : [ProjectState.IGNORE, ProjectState.ATTRIBUTES]) {
+            if (!Files.exists(projectDirectory.resolve(path), LinkOption.NOFOLLOW_LINKS) && rendered.content(path) != null) {
+                forGit.put(path, rendered.content(path))
+            }
+        }
+        writes << new Write(ProjectState.BASELINE_INDEX, rendered.content(ProjectState.BASELINE_INDEX), null,
+                existing == null ? null : ProjectTransaction.sha256(existing.content(ProjectState.BASELINE_INDEX)))
+        writes << new Write(ProjectState.LOCK, rendered.content(ProjectState.LOCK), null, existing == null ? null : ProjectTransaction.sha256(existing.content(ProjectState.LOCK)))
+        // the manifest last, as when an application is generated
+        writes << new Write(ProjectState.MANIFEST, rendered.content(ProjectState.MANIFEST), null,
+                existing == null ? null : ProjectTransaction.sha256(existing.content(ProjectState.MANIFEST)))
+        return new RecordAdoption(proposed, projectDirectory, home, same, otherwise, absent, writes, forGit)
     }
 
     /**

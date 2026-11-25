@@ -136,29 +136,33 @@ dependencies {
         said.any { it.startsWith('| Assumed, because nothing in the project says it: jdk (--jdk), servlet (--servlet), reloading (--reloading). ') }
         said.any { it.contains('run grails-forge-cli project migrate --force with the name and the package (com.example.shop), --type, --jdk, --servlet, --data, ' +
                 '--reloading, --features for features that were not found and --exclude-features for features the application does not have') }
-        said.any { it.startsWith('| The record was written: .grails/.gitignore, .grails/.gitattributes, .grails/baseline/index.yml, .grails/forge.lock.yml, ' +
-                '.grails/project.yml. No other file of the project was changed.') }
+        said.any { it.startsWith('| The record was written, with its baseline under .grails/baseline: .grails/project.yml, .grails/forge.lock.yml and ' +
+                '.grails/baseline/index.yml. No other file of the project was changed.') }
+        new File(dir, '.grails/.gitignore').isFile()
+        new File(dir, '.grails/.gitattributes').isFile()
 
-        and: 'the record says that it was written for an application that was there, and has no baseline'
-        state.manifest.generationState == 'untracked'
+        and: 'the record says that it was written for an application that was there, and has the baseline this version generates for what was found'
+        state.manifest.generationState == 'adopted'
         !state.manifest.tracked
         state.manifest.applicationType == ApplicationType.WEB
         state.manifest.name == 'legacy'
         state.manifest.defaultPackage == 'com.example.legacy'
         state.manifest.grailsVersion == VersionInfo.getGrailsVersion()
-        state.manifest.requestedFeatures.isEmpty()
+        // what was found and an application of the type does not have by default is asked for by name
+        state.manifest.requestedFeatures*.name == ['grails-quartz', 'postgres', 'testcontainers']
         state.manifest.options.jdk == JdkVersion.DEFAULT_OPTION
         state.manifest.options.servlet == ServletImpl.TOMCAT
         state.manifest.options.data == GormImpl.HIBERNATE5
         state.manifest.options.reloading == DevelopmentReloading.NONE
         !state.manifest.options.subproject
-        state.baseline.files.isEmpty()
+        state.baseline.files*.path.containsAll(['build.gradle', 'grails-app/conf/application.yml'])
+        state.verifyBaseline(dir.toPath())
         state.lock.featureNames.containsAll(['gorm-hibernate5', 'grails-quartz', 'postgres'])
         !state.lock.featureNames.contains('gorm-mongodb')
 
         and: 'only the record was written'
         tree().findAll { !it.key.startsWith('.grails') } == before
-        tree().keySet().findAll { it.startsWith('.grails') } ==
+        tree().keySet().findAll { it.startsWith('.grails') && !it.startsWith('.grails/baseline/files') && !it.startsWith('.grails/transactions') } ==
                 ['.grails', '.grails/.gitattributes', '.grails/.gitignore', '.grails/baseline', '.grails/baseline/index.yml', '.grails/forge.lock.yml', '.grails/project.yml'] as Set
     }
 
@@ -206,10 +210,11 @@ dependencies {
         !err.toString().contains('Warning')
     }
 
-    void "no feature is added to an application whose record was written for it, and it is not generated again: nothing is changed"() {
-        given:
-        shellProject()
+    void "no feature is added to an application whose record was written without a baseline, and it is not generated again: nothing is changed"() {
+        given: 'a plugin the type of which is assumed, for which no baseline is generated'
+        EarlierApplication.pluginOfAssumedType(dir)
         ForgeCli.execute(beanContext, 'project', 'migrate')
+        assert ProjectState.read(dir.toPath()).manifest.generationState == 'untracked'
         Map<String, String> before = tree()
         out.reset()
 
@@ -221,7 +226,8 @@ dependencies {
         err.toString().contains('The record of the application was written for an application that was there, and not by the generator ' +
                 '(generationState in .grails/project.yml is untracked, as project migrate writes it)')
         err.toString().contains('no feature is added to such an application by a command, and it is not generated again. Nothing was changed. ' +
-                'Add to the build and the configuration by hand what the feature adds to an application that is created with it')
+                'project migrate --force writes the record with a baseline once it is told what it could not work out, which it names; until then, ' +
+                'add to the build and the configuration by hand what the feature adds to an application that is created with it')
         tree() == before
 
         when:
@@ -251,12 +257,14 @@ dependencies {
         exit == 0
         err.toString().isEmpty()
         said[0] == '| What the application legacy is taken to be, from the record that was written for it in .grails'
-        said.any { it ==~ / +state +untracked/ }
+        said.any { it ==~ / +state +adopted/ }
         said.any { it ==~ / +recorded by +grails-forge .*/ }
-        said.any { it ==~ / +asked for +grails-web-console/ }
-        said.any { it.startsWith('| The record was written for an application that was there, by project migrate, and not when the application was generated') }
-        said.contains('| The command asks with --features for the features that were found in the project as well: grails-quartz, postgres, testcontainers. ' +
-                'A feature of the record that it does not name is not selected by name, and comes with the type of application, an option or another feature')
+        // the features that were found and are no default of the type are asked for with the one that was given
+        said.any { it ==~ / +asked for +grails-quartz.*/ }
+        said.join('\n').contains('grails-web-console')
+        said.any { it.startsWith('| The record was written for an application that was there, by project migrate, and not when the application was generated ' +
+                '(its state is adopted): it says what the application is taken to be, and its baseline is what this version generates for that.') }
+        !said.any { it.startsWith('| The command asks with --features for the features that were found in the project as well') }
         said[-2] == '| A new application of this type, with these options and features, is created with:'
         said[-1] == 'grails-forge-cli create-app com.example.legacy.legacy --reloading none --features grails-quartz,grails-web-console,postgres,testcontainers'
 
@@ -267,13 +275,14 @@ dependencies {
 
         then:
         exit == 0
-        document.generationState == 'untracked'
-        document.requestedFeatures*.name == ['grails-web-console']
-        document.addedFeatures as Set == ['gorm-hibernate5', 'grails-gradle-plugin', 'grails-quartz', 'postgres', 'testcontainers'] as Set
+        document.generationState == 'adopted'
+        document.requestedFeatures*.name == ['grails-quartz', 'grails-web-console', 'postgres', 'testcontainers']
+        (document.addedFeatures as List<String>).containsAll(['gorm-hibernate5', 'grails-gradle-plugin'])
+        !(document.addedFeatures as List<String>).any { it in ['grails-quartz', 'grails-web-console', 'postgres', 'testcontainers'] }
         document.command.arguments == ['com.example.legacy.legacy', '--reloading', 'none', '--features', 'grails-quartz,grails-web-console,postgres,testcontainers']
-        document.effectiveOptions.find { it.name == 'features' }.value == ['grails-web-console']
+        document.effectiveOptions.find { it.name == 'features' }.value == ['grails-quartz', 'grails-web-console', 'postgres', 'testcontainers']
         ((List<String>) document.notes).any { it.startsWith('The record was written for an application that was there') }
-        ((List<String>) document.notes).any { it.startsWith('The command asks with --features for the features that were found in the project as well') }
+        !((List<String>) document.notes).any { it.startsWith('The command asks with --features for the features that were found in the project as well') }
     }
 
     @Unroll
@@ -320,7 +329,8 @@ dependencies {
         and: 'what was found is told from what was given: the document has both, and a line before the command names what the command asks for of it'
         List<String> requested = adopted.manifest.requestedFeatures*.name
         List<String> named = command.arguments.contains('--features') ? ((String) command.arguments[command.arguments.indexOf('--features') + 1]).split(',').toList() : []
-        found == null || named - requested == found
+        // a record with a baseline asks for what was found as for what was given; one without names what was found beside what its manifest asks for
+        found == null || (adopted.manifest.adopted ? requested.containsAll(found) && (named - requested).isEmpty() : named - requested == found)
         document.requestedFeatures*.name == requested
         document.addedFeatures == adopted.lock.featureNames.findAll { !(it in requested) }
         ((List<String>) document.notes).any { it.startsWith('The command asks with --features for the features that were found in the project as well') } ==
@@ -465,7 +475,8 @@ dependencies {
         state.manifest.options.servlet == ServletImpl.UNDERTOW
         state.manifest.options.data == GormImpl.HIBERNATE7
         state.manifest.options.reloading == DevelopmentReloading.DEVTOOLS
-        state.manifest.requestedFeatures*.name == ['cache', 'grails-web-console']
+        // with those that were given, those that were found and that an application of these choices does not have by default
+        state.manifest.requestedFeatures*.name == ['cache', 'grails-quartz', 'grails-web-console', 'testcontainers']
         state.manifest.excludedFeatures*.name == ['postgres']
         state.lock.featureNames.containsAll(['cache', 'grails-web-console', 'gorm-hibernate7', 'grails-undertow', 'spring-boot-devtools', 'grails-quartz'])
         !state.lock.featureNames.contains('postgres')
@@ -608,7 +619,8 @@ dependencies {
         then:
         exit == 0
         new File(dir, '.grails/.gitignore').text == '/run/\n'
-        out.toString().contains('| The record was written: .grails/.gitattributes, .grails/baseline/index.yml, .grails/forge.lock.yml, .grails/project.yml. ')
+        out.toString().contains('| The record was written, with its baseline under .grails/baseline: ')
+        new File(dir, '.grails/.gitattributes').isFile()
     }
 
     @Unroll

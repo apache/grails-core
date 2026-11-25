@@ -118,9 +118,10 @@ final class FeatureAvailability {
      */
     static String refusal(ProjectState state) {
         ProjectLock lock = state.lock
-        if (!state.manifest.isTracked()) {
+        if (!state.manifest.hasBaseline()) {
             return "the record was written by project migrate for an application that was there, and not by the generator (its generationState is ${ProjectManifest.UNTRACKED}). " +
-                    'A feature is added to such an application by hand'
+                    'project migrate --force writes the record with a baseline once it is told what it could not work out, which it names; until then a feature ' +
+                    'is added to such an application by hand'
         }
         if (lock.generatorName != ProjectLock.GENERATOR || lock.generatorVersion != VersionInfo.getVersion() || lock.grailsVersion != VersionInfo.getGrailsVersion() ||
                 lock.templateApi != PackDescriptor.TEMPLATE_API) {

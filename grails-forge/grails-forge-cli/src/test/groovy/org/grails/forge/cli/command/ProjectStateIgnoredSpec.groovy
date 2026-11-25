@@ -84,8 +84,9 @@ class ProjectStateIgnoredSpec extends CommandSpec {
         OF_ONE_MACHINE.each { String path -> write(dir, path) }
         git(dir, 'init', '-q')
 
-        then: 'Git sees the record, and nothing else of .grails'
-        untracked(dir).findAll { String path -> path.startsWith('.grails/') } == RECORD
+        then: 'Git sees the record, with the copy of every file of its baseline, and nothing else of .grails'
+        untracked(dir).findAll { String path -> path.startsWith('.grails/') }.containsAll(RECORD)
+        untracked(dir).findAll { String path -> path.startsWith('.grails/') }.every { String path -> path in RECORD || path.startsWith('.grails/baseline/files/') }
         OF_ONE_MACHINE.every { String path -> ignored(dir, path) }
     }
 

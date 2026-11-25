@@ -74,6 +74,14 @@ final class RenderedProject implements OutputHandler {
         return files.get(path)
     }
 
+    // the content of a file that was written, as it is to be instead
+    void replace(String path, byte[] content) {
+        if (!files.containsKey(path)) {
+            throw new IllegalArgumentException("${path} was not written")
+        }
+        files.put(path, content)
+    }
+
     boolean isExecutable(String path) {
         return executable.contains(path)
     }
