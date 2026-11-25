@@ -633,6 +633,15 @@ With GORM for Hibernate 5 and Hibernate 7, a sort whose path starts with a name 
 - Remove the sort or declare its alias, as in `Book.where { def a = author; a.name ==~ 'S%' }.list(sort: 'a.name')`.
 - Prefer an association path such as `author.name` when optional filters change the aliases available. Check the count query too when it shares a table's sort parameter.
 
+## Cache Annotations Use `grailsCacheManager`
+
+The cache annotations and `GrailsCacheAdminService` cache with the bean named `grailsCacheManager`, or the bean with that alias, like the cache tags. Grails 8 injected them a cache manager by type, so a cache manager of the application's own marked primary or with a `@Priority` took them from `grailsCacheManager`; now no other cache manager is taken or created for them.
+
+- Search for `CacheManager` beans the application defines, marked primary or with a `@Priority`, and for `grails.cache.enabled: false`. Where the cached methods should keep caching with such a cache manager, name it `grailsCacheManager` or register that alias; declaring `@Qualifier("grailsCacheManager")` on its `@Bean` method or class does not select it. With caching enabled it replaces the plugin's and must implement `GrailsCacheManager`.
+- Without a `grailsCacheManager`, as with `grails.cache.enabled: false`, the annotated methods run uncached, where Grails 8 used the only or primary cache manager, such as Spring Security's `cacheUsers` one.
+- A `grailsCacheManager` created from a bean with cached methods no longer starts; create it from that bean's dependencies.
+- Plugins compiled against Grails 8 keep the Grails 8.0.1 behaviour until they are compiled against Grails 9.
+
 # After the Upgrade
 
 ## Verification Checklist
