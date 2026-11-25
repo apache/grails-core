@@ -5032,3 +5032,7 @@ A value marked with `raw()` is still written as given by the tags that wrote it 
 `<g:radio>` now encodes its `value` once. It encoded it twice, so a value with `&`, `<`, `>`, `"` or `'` was submitted with character references in it, such as `+R&amp;D+` for `R&D`.
 
 A value encoded beforehand is no longer encoded twice in the `value` of `<g:textField>`, `<g:hiddenField>` and the other field tags when a `RequestDataValueProcessor` returns it unchanged, nor in an option of `<g:select>`, with or without a processor. `<g:paginate>` and `<g:sortableColumn>` write a `class` that was encoded beforehand once next to the classes they add, such as `step` and `sortable`; they encoded it twice.
+
+==== An aggregate function inside the block of an embedded property is refused
+
+An aggregate on the right of a comparison, such as `stats { qty > avg(qty) }` in a `where` query or in the `@Where` of a data service, where `stats` is an embedded property, is refused when the query is compiled, with a message that names the function and the embedded property. The subquery of an aggregate is built over an entity, and the class of an embedded value is not one, so the query failed when it ran, with an error that did not say why. Compare with a value that is computed before the query, or write the aggregate on a property of the entity itself. No working query changes.
