@@ -22,6 +22,7 @@ import grails.gorm.DetachedCriteria
 import grails.gorm.annotation.Entity
 import org.grails.datastore.gorm.events.ConfigurableApplicationEventPublisher
 import org.grails.datastore.mapping.core.DatastoreUtils
+import org.grails.datastore.mapping.query.Query
 import org.grails.datastore.mapping.query.event.PreQueryEvent
 import org.grails.orm.hibernate.HibernateDatastore
 import org.hibernate.dialect.H2Dialect
@@ -57,6 +58,25 @@ class PreQueryListenerAssociationCriteriaSpec extends Specification {
 
     void cleanup() {
         listener.active = false
+        listener.sortProperty = null
+    }
+
+    void 'a count removes the order a listener adds by #property but keeps its joins for #api'() {
+        given:
+        listener.sortProperty = property
+
+        expect:
+        ListenerTeam.withTransaction {
+            final criteria = ListenerTeam.where { league == 'Premier' }.sort('name')
+            query.call(criteria)
+        } == expected
+
+        where:
+        api                | property    | query                                                  | expected
+        'count'            | 'name'      | { criteria -> criteria.count() }                       | 3
+        'count projection' | 'name'      | { criteria -> criteria.projections { count() }.list() } | [3]
+        'count'            | 'club.name' | { criteria -> criteria.count() }                       | 2
+        'count projection' | 'club.name' | { criteria -> criteria.projections { count() }.list() } | [2]
     }
 
     void '#api applies criteria on an association that a listener adds to the query'() {
@@ -79,9 +99,13 @@ class PreQueryListenerAssociationCriteriaSpec extends Specification {
     static class ClubCriteriaListener implements ApplicationListener<ApplicationEvent> {
 
         volatile boolean active
+        volatile String sortProperty
 
         @Override
         void onApplicationEvent(ApplicationEvent event) {
+            if (sortProperty != null && event instanceof PreQueryEvent && ((PreQueryEvent) event).query.entity.javaClass == ListenerTeam) {
+                ((PreQueryEvent) event).query.order(Query.Order.asc(sortProperty))
+            }
             if (active && event instanceof PreQueryEvent && ((PreQueryEvent) event).query.entity.javaClass == ListenerTeam) {
                 new DetachedCriteria(ListenerTeam).build {
                     club {

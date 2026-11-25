@@ -18,6 +18,7 @@
  */
 package grails.gorm.tests
 
+import grails.gorm.DetachedCriteria
 import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.hibernate.Hibernate
@@ -151,6 +152,25 @@ class WhereQueryWithAssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibe
 
         then:
         results*.name == ['MU First Team', 'Chelsea First Team', 'Arsenal First Team']
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15589')
+    void 'count ignores a sort that is stored on the query'() {
+        given: 'a team without a club, which a sort by a property of the club leaves out'
+        saveTeamWithoutClub()
+
+        expect: 'a count for a sort by a property of the queried class'
+        Team.where { name ==~ '%First Team' }.sort('name').count() == 4
+
+        and: 'a count that agrees with the list for a sort by a property of an association'
+        Team.where { name ==~ '%First Team' }.sort('club.name').list().size() == 3
+        Team.where { name ==~ '%First Team' }.sort('club.name').count() == 3
+
+        and: 'for a sort that is passed to count'
+        Team.where { name ==~ '%First Team' }.count(sort: 'club.name', order: 'desc') == 3
+
+        and: 'for a detached criteria'
+        new DetachedCriteria(Team).build { like('name', '%First Team') }.sort('club.name').count() == 3
     }
 
     void 'sort by two properties of the same association when the where query does not use it'() {
