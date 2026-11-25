@@ -38,13 +38,14 @@ class StartMongoGrailsUnitExtension extends AbstractMongoGrailsExtension impleme
     MongoContainerHolder containerHolder
 
     // the holder of the extension Spock started for this test JVM
-    private static MongoContainerHolder activeHolder
+    private static volatile MongoContainerHolder activeHolder
 
     /**
      * The container the specifications run by the calling thread share, started if none of them has asked for it
      * yet. It is the container an {@link AutoStartedMongoSpec} is given, for test support that is not a
      * specification, such as a TCK manager. This extension stops it when the test run ends, so callers never do.
      *
+     * @throws IllegalStateException if Spock has not started this unit-test extension, or it has stopped
      * @since 7.0.18
      */
     static MongoDBContainer getSharedContainer() {

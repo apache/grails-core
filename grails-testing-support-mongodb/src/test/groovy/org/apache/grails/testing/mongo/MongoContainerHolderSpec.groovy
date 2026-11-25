@@ -19,9 +19,14 @@
 
 package org.apache.grails.testing.mongo
 
+import java.util.concurrent.Callable
+import java.util.concurrent.FutureTask
+import java.util.concurrent.TimeUnit
+
 import org.testcontainers.containers.GenericContainer
 import spock.lang.Requires
 import spock.lang.Specification
+import spock.lang.Unroll
 
 class MongoContainerHolderSpec extends Specification {
 
@@ -69,5 +74,68 @@ class MongoContainerHolderSpec extends Specification {
 
         then:
         noExceptionThrown()
+    }
+
+    @Requires({ os.linux || !System.getenv().containsKey('CI') })
+    @Unroll
+    void 'stop attempts every container and can retry failures (same failure: #sameFailure)'() {
+        given: 'three containers obtained through the public API on different threads'
+        GenericContainer first = holder.container
+        GenericContainer second = containerOnAnotherThread()
+        GenericContainer healthy = containerOnAnotherThread()
+        Throwable firstFailure = new IllegalStateException('First stop failed')
+        Throwable secondFailure = sameFailure ? firstFailure : new AssertionError('Second stop failed')
+        List<Throwable> attempted = []
+        first.metaClass.stop = { ->
+            attempted.add(firstFailure)
+            throw firstFailure
+        }
+        second.metaClass.stop = { ->
+            attempted.add(secondFailure)
+            throw secondFailure
+        }
+
+        when: 'two containers refuse to stop'
+        holder.stop()
+
+        then: 'every stop is attempted and the first failure carries any other failure'
+        Throwable failure = thrown()
+        attempted.size() == 2
+        failure.is(attempted.first())
+        failure.suppressed.toList() == attempted.findAll { !it.is(failure) }
+        !healthy.running
+        first.running
+        second.running
+
+        when: 'the failures are cleared and shutdown is retried'
+        first.metaClass = null
+        second.metaClass = null
+        holder.stop()
+
+        then: 'the failed containers were retained for the retry'
+        !first.running
+        !second.running
+
+        when: 'the original thread requests another container'
+        GenericContainer replacement = holder.container
+
+        then: 'a fresh container can be started after cleanup'
+        replacement.running
+        !replacement.is(first)
+
+        cleanup:
+        [first, second, healthy].findAll().each { container ->
+            container.metaClass = null
+            container.stop()
+        }
+
+        where:
+        sameFailure << [false, true]
+    }
+
+    private GenericContainer containerOnAnotherThread() {
+        FutureTask<GenericContainer> request = new FutureTask<GenericContainer>({ holder.container } as Callable<GenericContainer>)
+        new Thread(request).start()
+        request.get(120, TimeUnit.SECONDS)
     }
 }

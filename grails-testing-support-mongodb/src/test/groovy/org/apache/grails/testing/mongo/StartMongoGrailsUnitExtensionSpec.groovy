@@ -19,6 +19,10 @@
 
 package org.apache.grails.testing.mongo
 
+import java.util.concurrent.Callable
+import java.util.concurrent.FutureTask
+import java.util.concurrent.TimeUnit
+
 import org.testcontainers.containers.GenericContainer
 import spock.lang.Requires
 import spock.lang.Specification
@@ -61,6 +65,23 @@ class StartMongoGrailsUnitExtensionSpec extends Specification {
         then: 'the container of the test run is not affected'
         first.running
         StartMongoGrailsUnitExtension.sharedContainer.is(first)
+    }
+
+    @Requires({ os.linux || !System.getenv().containsKey('CI') })
+    void 'test support on another thread reuses the container of that thread through the active extension'() {
+        when: 'a helper on another thread asks the public accessor twice'
+        FutureTask<List<GenericContainer>> request = new FutureTask<List<GenericContainer>>({
+            [StartMongoGrailsUnitExtension.sharedContainer, StartMongoGrailsUnitExtension.sharedContainer]
+        } as Callable<List<GenericContainer>>)
+        new Thread(request).start()
+        List<GenericContainer> containers = request.get(120, TimeUnit.SECONDS)
+
+        then: 'both requests use the active extension and share one running container'
+        containers[0].running
+        containers[1].is(containers[0])
+
+        and: 'the specification thread has its own container'
+        !StartMongoGrailsUnitExtension.sharedContainer.is(containers[0])
     }
 
     void 'starting and stopping an unused extension does not need a container'() {

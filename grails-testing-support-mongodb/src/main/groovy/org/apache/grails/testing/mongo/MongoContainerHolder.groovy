@@ -84,14 +84,30 @@ class MongoContainerHolder {
 
     /**
      * Stops every container this holder started, whichever thread it was started for. A thread that asks for a
-     * container afterwards is given a new one.
+     * container after a successful stop is given a new one. If a stop fails, the remaining containers are still
+     * stopped before the first failure is rethrown, with later failures suppressed. Failed containers are kept
+     * so that a subsequent call can retry their stops.
      */
     void stop() {
+        Throwable failure = null
         Iterator<GenericContainer> started = containers.values().iterator()
         while (started.hasNext()) {
             GenericContainer container = started.next()
-            started.remove()
-            container.stop()
+            try {
+                container.stop()
+                started.remove()
+            }
+            catch (Throwable e) {
+                if (failure == null) {
+                    failure = e
+                }
+                else if (!failure.is(e)) {
+                    failure.addSuppressed(e)
+                }
+            }
+        }
+        if (failure != null) {
+            throw failure
         }
     }
 }
