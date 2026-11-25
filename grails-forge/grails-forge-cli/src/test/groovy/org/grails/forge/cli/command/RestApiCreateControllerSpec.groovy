@@ -101,7 +101,7 @@ class RestApiCreateControllerSpec extends CommandSpec implements CommandFixture 
         expect:
         ForgeCli.execute(beanContext, 'create-controller', 'fooBar') == 0
         files()['grails-app/controllers/example/grails/FooBarController.groovy'] ==
-                'package example.grails\n\n\nclass FooBarController {\n\n    def index() {\n\n    }\n}'
+                'package example.grails\n\n\nclass FooBarController {\n\n    def index() {\n\n    }\n}\n'
 
         where:
         type << [ApplicationType.WEB, ApplicationType.WEB_PLUGIN, ApplicationType.PLUGIN]

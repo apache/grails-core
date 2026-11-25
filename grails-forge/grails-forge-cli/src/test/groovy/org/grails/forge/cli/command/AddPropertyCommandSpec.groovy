@@ -415,7 +415,7 @@ class Book {
         book.getText('UTF-8') == expected
 
         where:
-        how << ['is as create-domain-class writes it, without a line ending at its end',
+        how << ['has no line ending at its end, as create-domain-class wrote it once',
                 'has the line endings of Windows',
                 'is indented with tabs',
                 'is indented with two spaces and has an empty block',

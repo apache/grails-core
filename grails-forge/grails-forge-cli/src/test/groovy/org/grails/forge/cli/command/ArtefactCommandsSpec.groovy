@@ -204,6 +204,37 @@ class ArtefactCommandsSpec extends CommandSpec implements CommandFixture {
         set << ['existing', 'web', 'rest-api']
     }
 
+    @Unroll
+    void "every file a command writes in a #type project ends with one line break, and so does every template of the command line"() {
+        given:
+        project(type, features as String[])
+
+        when:
+        Map<String, String> written = writtenBy {
+            ALL_COMMANDS.each { String command ->
+                ForgeCli.execute(beanContext, command, 'fooBar' + (OWN_NAMES[command] ?: ''), '-f')
+                ForgeCli.execute(beanContext, command, 'other.pkg.Baz' + (OWN_NAMES[command] ?: ''), '-f')
+            }
+        }
+
+        then:
+        written.size() == files
+        written.each { String path, String text ->
+            assert text.endsWith('}\n'): path
+            assert !text.contains('\r'): path
+        }
+
+        and:
+        ArtefactTemplate.values().each { ArtefactTemplate template ->
+            assert ArtefactTemplates.builtIn(template).endsWith('}\n'): template.resource
+        }
+
+        where:
+        type                     | features          | files
+        ApplicationType.WEB      | ['grails-quartz'] | 30
+        ApplicationType.REST_API | []                | 34
+    }
+
     void "the templates of the command line are resources on its class path, one of each"() {
         expect:
         ArtefactTemplate.values().each { ArtefactTemplate template ->
@@ -730,7 +761,7 @@ class ArtefactCommandsSpec extends CommandSpec implements CommandFixture {
                 'artifacts/Service.groovy', 'artifacts/TagLib.groovy', 'testing/Controller.groovy', 'testing/DomainClass.groovy',
                 'testing/Generic.groovy', 'testing/Integration.groovy', 'testing/Interceptor.groovy', 'testing/Service.groovy', 'testing/TagLib.groovy']
         // the controller of a REST API project answers in JSON only, as the one of its profile did
-        controller = type == ApplicationType.WEB ? '@artifact.package@\n\nclass @artifact.name@Controller {\n\n    def index() {\n\n    }\n}' :
+        controller = type == ApplicationType.WEB ? '@artifact.package@\n\nclass @artifact.name@Controller {\n\n    def index() {\n\n    }\n}\n' :
                 '@artifact.package@\nclass @artifact.name@Controller {\n\n    static responseFormats = [\'json\']\n\n    def index() {\n\n    }\n}\n'
     }
 
