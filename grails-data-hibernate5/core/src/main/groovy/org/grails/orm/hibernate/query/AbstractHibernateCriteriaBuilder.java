@@ -2040,11 +2040,6 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
     }
 
     /**
-     * Applies a map of sort properties in the order it lists them. A property of an association the query's own blocks
-     * already joined is ordered through that join, as for a single sort property, so the association is not joined a
-     * second time; any other property is ordered as the paged list orders it.
-     */
-    /**
      * The arguments of a query whose sort the builder has applied. A sort that is absent lets the default sort of the
      * mapping apply, which the sort the call gave replaces, so it is left in as a sort without properties.
      */
@@ -2166,6 +2161,11 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
         return true;
     }
 
+    /**
+     * Applies a map of sort properties in the order it lists them. A property of an association the query's own blocks
+     * already joined is ordered through that join, as for a single sort property, so the association is not joined a
+     * second time; any other property is ordered as the paged list orders it.
+     */
     private void applyMapSort(Map<?, ?> argMap, Map<?, ?> sortMap) {
         boolean ignoreCase = true;
         Object caseArg = argMap.get(HibernateQueryConstants.ARGUMENT_IGNORE_CASE);

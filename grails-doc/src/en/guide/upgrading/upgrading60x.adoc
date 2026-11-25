@@ -1275,6 +1275,14 @@ With `DISCRIMINATOR` multi-tenancy, GORM for MongoDB and GORM's in-memory datast
 * Inside `Tenants.withoutId { }` a lookup by id is still not restricted to a tenant, and neither is a proxy returned by `load` or `proxy` that is initialized there. As the previous note says, only `withoutId` lifts the restriction: a tenant id of `DEFAULT` restricts a lookup by id to that tenant as it restricts a query.
 * A lookup by id still finds an instance that the session holds for the current tenant, including one that has been saved but not flushed, and it does not flush the session.
 
+==== A sort by an association uses the left join that a query requests for it
+
+With GORM for Hibernate, a where query, a detached criteria or a dynamic finder that requests a left join of an association, with `join('owner', JoinType.LEFT)` or `fetch: [owner: JoinType.LEFT]`, and sorts by a property of that association, as with `sort: 'owner.lastName'`, now returns the instances without the association. As of Grails 7.0.18 the sort uses the left join that the query requests. Previously the sort joined the association again with an inner join, so those instances were left out, although the same query without the sort returned them.
+
+* The `totalCount` of a paged list counts the same instances as the list.
+* To leave out the instances without the association, as before, request an inner join with `JoinType.INNER`, or add a criterion such as `owner != null`.
+* A sort by an association for which the query requests no join type, or the fetch mode `join`, still joins it with an inner join.
+
 ==== Data binding white lists apply wherever a class is compiled
 
 As of Grails 7.0.18, the list of bindable properties that Grails generates for a class at compile time, from its statically typed properties, its `bindable` constraints, its `transients` list and its `transient` fields, is generated for every class that implements `grails.validation.Validateable` or declares `constraints` or `transients`, and for every class that extends one, wherever the class is compiled with the data binding library, `grails-web-databinding`, on the compilation's classpath, as it is in an application or a plugin. A library module that compiles against GORM alone generates no list and gets no warning. Previously only domain classes and the parameter types of controller actions compiled with their controller got the list, and a class without one was bound without restriction.
@@ -1309,14 +1317,45 @@ As of Grails 7.0.18, with `grails.plugin.springsecurity.rest.token.storage.jwt.u
 * With encrypted JWTs enabled, a signed JWT is rejected as an invalid token, and with signed JWTs, an encrypted JWT is. Previously such a token failed with a `NullPointerException`.
 * An encrypted JWT whose content encryption key is encrypted with `RSA1_5` is rejected unless `grails.plugin.springsecurity.rest.token.generation.jwt.jweAlgorithm` is `RSA1_5`. The plugin passes that setting to the new `jweAlgorithm` property of `JwtService`. A `jwtService` bean that an application defines itself accepts `RSA1_5` as before, unless the application sets that property too.
 
-==== Hibernate 5: map sorts, composite id sorts and empty in lists
+==== `list` sorts by every property of a sort map
+
+With GORM for Hibernate, `list` with a `Map` of sort properties, such as `Book.list(sort: [title: 'asc', 'author.name': 'desc'])`, sorted by the last entry of the map only. As of Grails 7.0.18, it sorts by every entry, in the order of the map. The same applies to a default sort that the mapping declares for more than one property, as in `sort author: 'asc', title: 'desc'`: `list` sorted by its last property only. An association is joined once for all the entries that sort by it. `list` joined it once for each entry, and `find` and `findAll` with an example, `findWhere` and `findAllWhere` failed with `duplicate association path`. To sort by one property, as before, pass that property alone.
+
+The rows on a page can change because every sort property now participates before `max` and `offset` are applied. Sorting by two properties of the same collection also returns fewer duplicate rows: a book with three chapters occurs three times for `Book.list(sort: ['chapters.title': 'asc', 'chapters.id': 'asc'])`, rather than nine times from two joins of the chapters. There is no compatibility setting: both changes apply the sort that the call requests. Pass just the last sort property to retain the former single-property ordering.
+
+==== A setting makes a sort by an association keep every instance
+
+With GORM for Hibernate, a sort by a property of an association, such as `Book.list(sort: 'author.name')`, joins the association with an inner join. The sort therefore leaves out the instances whose association is `null`, and the `totalCount` of a paged list and `count` do not count them. That is unchanged by default. As of Grails 7.0.18, the new `grails.gorm.leftJoinAssociationSort` setting makes such a sort join the association with a left join, so that a sort no longer changes which instances a query returns:
+
+[source,yaml]
+----
+grails:
+    gorm:
+        leftJoinAssociationSort: true
+----
+
+The setting applies to `list`, to `find` and `findAll` with an example, to `findWhere` and `findAllWhere`, to dynamic finders, to a criteria query that is passed pagination arguments, such as `Book.createCriteria().list(sort: 'author.name', max: 10) { ... }`, and to where queries and detached criteria.
+
+* With the setting, the instances whose association is `null` are returned and counted. Whether they come first or last depends on how the database sorts nulls. To leave them out, add a criterion that the association is not `null`, such as `Book.where { author != null }.list(sort: 'author.name')`.
+* A where query or a detached criteria that has criteria on the association still joins it for those criteria, with an inner join by default, and the sort uses that join.
+* A sort by a property of a collection, such as `Author.list(sort: 'books.title')`, still joins the collection with an inner join, and leaves out the instances whose collection is empty.
+* The setting is disabled by default in Grails 7 and in Grails 8.0. Explicitly setting it to `false` logs a startup warning that Grails 9 removes the setting. The planned default in Grails 8.1 is `true`. It is listed with the other settings of this kind in link:upgrading.html#compatibilitySettings[Compatibility Settings].
+
+==== A where query uses the join type that it requests for each join of the association
+
+With GORM for Hibernate, a where query, a detached criteria or a dynamic finder can request the type of the join of an association, with the `fetch` argument, as in `Book.where { ... }.list(fetch: [author: JoinType.INNER])`, or with `join('author', JoinType.INNER)`. The join type is used when the criteria, a projection or a sort of the query join the association. As of Grails 7.0.18, it no longer matters in which order the query was put together.
+
+* A join type that the `fetch` argument requests is now also used for an association that the where query or the detached criteria itself has criteria or a projection on. Such an association was joined before the argument was read: with an inner join for criteria and with a left join for a projection, whatever the argument requested. `Book.where { author.name == 'Stephen King' || title == 'Anonymous' }.list(fetch: [author: JoinType.LEFT])` now also returns the book without an author that matches the title, as it already did when the join type was requested with `join('author', JoinType.LEFT)`.
+* A join type for a nested association is requested by its path. `join('author.publisher', JoinType.LEFT)` is now used for the join that criteria on `author.publisher` make, which was an inner join whatever was requested. A join type requested for an association of the queried class, such as `publisher`, is no longer used for a nested association of the same name.
+* A sort stored on the query with `sort()`, as in `Book.where { ... }.sort('author.name').list(fetch: [author: JoinType.LEFT])`, now uses the join type requested by the `fetch` argument. It also returns books without an author. The same holds for a nested association path. Request `JoinType.INNER` to keep leaving those books out.
+
+==== Hibernate 5: criteria map sorts, composite id sorts and empty in lists
 
 These calls on Hibernate 5 returned the wrong rows or failed. Each now does what it asks:
 
-* A `where` query or `findAll` with a condition on an association, `Team.where { club.name == 'Arsenal' }`, can be sorted by a property of that association, `list(sort: 'club.name')`, on the join that the condition made. It threw `QueryException` (could not resolve property) unless the association was given an alias that the sort named.
-* A map as the `sort` argument of a criteria or detached criteria, `list(sort: [a: 'asc', b: 'desc'])`, threw a `ClassCastException`. It now orders by every property, in the order the map lists them. The static `list(sort: map)` kept only the last property of the map (issue https://github.com/apache/grails-core/issues/14533[#14533]); it now orders by all of them, so the order of the rows it returns can differ from before.
+* A map as the `sort` argument of a criteria or detached criteria, `list(sort: [a: 'asc', b: 'desc'])`, threw a `ClassCastException`. It now orders by every property, in the order the map lists them, as `list` does.
 * Sorting a domain class with a composite id by one of the properties of the id threw a `NullPointerException`; it sorts now (issue https://github.com/apache/grails-core/issues/14451[#14451]).
-* A map sort, or a string sort on an association that the query's own block already joined, no longer joins the association a second time (which failed with a duplicate association path), and a sort that the call gives keeps the default sort of the mapping off, as `sort:` always did.
+* A sort that the call gives keeps the default sort of the mapping off, as `sort:` always did.
 * An empty list given to `inList`, or to `in` in any of its forms, is an explicit false, so its negation matches every row: `not { inList('year', []) }` and `findAllByYearNotInList([])` matched no row on PostgreSQL, MySQL and MariaDB (issues https://github.com/apache/grails-core/issues/14653[#14653] and https://github.com/apache/grails-core/issues/14457[#14457]).
 * A default `sort` of a `hasMany` that names a property the associated entity does not have failed with a `NullPointerException` at startup; the error now names the association and the sort.
 

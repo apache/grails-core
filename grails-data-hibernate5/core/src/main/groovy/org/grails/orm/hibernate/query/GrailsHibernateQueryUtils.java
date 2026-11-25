@@ -20,7 +20,7 @@
 package org.grails.orm.hibernate.query;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -30,6 +30,7 @@ import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.From;
 import jakarta.persistence.criteria.Join;
+import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Root;
 
 import org.hibernate.Criteria;
@@ -37,6 +38,7 @@ import org.hibernate.FetchMode;
 import org.hibernate.FlushMode;
 import org.hibernate.LockMode;
 import org.hibernate.criterion.Order;
+import org.hibernate.internal.CriteriaImpl;
 import org.hibernate.query.Query;
 
 import org.springframework.core.convert.ConversionService;
@@ -47,8 +49,10 @@ import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.model.types.Embedded;
+import org.grails.datastore.mapping.model.types.ToMany;
 import org.grails.datastore.mapping.reflect.ClassUtils;
 import org.grails.orm.hibernate.cfg.AbstractGrailsDomainBinder;
+import org.grails.orm.hibernate.cfg.GrailsHibernateUtil;
 import org.grails.orm.hibernate.cfg.Mapping;
 
 /**
@@ -127,10 +131,8 @@ public class GrailsHibernateQueryUtils {
             }
             if (sortObj instanceof Map) {
                 Map sortMap = (Map) sortObj;
-                // the properties of one association are ordered through one join: a second createCriteria for the same path fails
-                Map<String, Criteria> joined = new HashMap<>();
                 for (Object sort : sortMap.keySet()) {
-                    addOrderPossiblyNested(c, entity, (String) sort, sortDirection(sort, sortMap.get(sort)), ignoreCase, joined, "");
+                    addOrderPossiblyNested(c, entity, (String) sort, sortDirection(sort, sortMap.get(sort)), ignoreCase);
                 }
             } else {
                 final String sort = (String) sortObj;
@@ -141,10 +143,9 @@ public class GrailsHibernateQueryUtils {
             Mapping m = AbstractGrailsDomainBinder.getMapping(entity.getJavaClass());
             if (m != null) {
                 Map sortMap = m.getSort().getNamesAndDirections();
-                Map<String, Criteria> joined = new HashMap<>();
                 for (Object sort : sortMap.keySet()) {
                     final String order = DynamicFinder.ORDER_DESC.equalsIgnoreCase((String) sortMap.get(sort)) ? DynamicFinder.ORDER_DESC : DynamicFinder.ORDER_ASC;
-                    addOrderPossiblyNested(c, entity, (String) sort, order, true, joined, "");
+                    addOrderPossiblyNested(c, entity, (String) sort, order, true);
                 }
             }
         }
@@ -172,7 +173,6 @@ public class GrailsHibernateQueryUtils {
             Map fetch = (Map) fetchObj;
             for (Object o : fetch.keySet()) {
                 String associationName = (String) o;
-
                 final FetchMode fetchMode = getFetchMode(fetch.get(associationName));
                 if (fetchMode == FetchMode.JOIN) {
                     queryRoot.join(associationName);
@@ -189,9 +189,8 @@ public class GrailsHibernateQueryUtils {
             }
             if (sortObj instanceof Map) {
                 Map sortMap = (Map) sortObj;
-                Map<String, Join> joined = new HashMap<>();
                 for (Object sort : sortMap.keySet()) {
-                    addOrderPossiblyNested(query, queryRoot, criteriaBuilder, entity, (String) sort, sortDirection(sort, sortMap.get(sort)), ignoreCase, joined, "");
+                    addOrderPossiblyNested(query, queryRoot, criteriaBuilder, entity, (String) sort, sortDirection(sort, sortMap.get(sort)), ignoreCase);
                 }
             } else {
                 final String sort = (String) sortObj;
@@ -202,10 +201,9 @@ public class GrailsHibernateQueryUtils {
             Mapping m = AbstractGrailsDomainBinder.getMapping(entity.getJavaClass());
             if (m != null) {
                 Map sortMap = m.getSort().getNamesAndDirections();
-                Map<String, Join> joined = new HashMap<>();
                 for (Object sort : sortMap.keySet()) {
                     final String order = DynamicFinder.ORDER_DESC.equalsIgnoreCase((String) sortMap.get(sort)) ? DynamicFinder.ORDER_DESC : DynamicFinder.ORDER_ASC;
-                    addOrderPossiblyNested(query, queryRoot, criteriaBuilder, entity, (String) sort, order, true, joined, "");
+                    addOrderPossiblyNested(query, queryRoot, criteriaBuilder, entity, (String) sort, order, true);
                 }
             }
         }
@@ -282,11 +280,14 @@ public class GrailsHibernateQueryUtils {
      * Add order to criteria, creating necessary subCriteria if nested sort property (ie. sort:'nested.property').
      */
     static void addOrderPossiblyNested(Criteria c, PersistentEntity entity, String sort, String order, boolean ignoreCase) {
-        addOrderPossiblyNested(c, entity, sort, order, ignoreCase, new HashMap<>(), "");
+        addOrderPossiblyNested(c, null, entity, sort, order, ignoreCase);
     }
 
-    private static void addOrderPossiblyNested(Criteria c, PersistentEntity entity, String sort, String order, boolean ignoreCase,
-                                               Map<String, Criteria> joined, String path) {
+    /**
+     * Add order to criteria, creating necessary subCriteria if nested sort property (ie. sort:'nested.property').
+     * The association path is the path of the given criteria from the root criteria, or null for the root.
+     */
+    private static void addOrderPossiblyNested(Criteria c, String associationPath, PersistentEntity entity, String sort, String order, boolean ignoreCase) {
         int firstDotPos = sort.indexOf(".");
         if (firstDotPos == -1) {
             addOrder(c, sort, order, ignoreCase);
@@ -299,17 +300,71 @@ public class GrailsHibernateQueryUtils {
                 addOrder(c, sort, order, ignoreCase);
             } else if (property instanceof Association) {
                 Association a = (Association) property;
-                String associationPath = path + sortHead;
                 PersistentEntity associatedEntity = a.getAssociatedEntity();
-                Criteria subCriteria = joined.get(associationPath);
+                String sortPath = associationPath == null ? sortHead : associationPath + '.' + sortHead;
+                // a join that the query already has for the association, such as the one of a requested join type
+                Criteria subCriteria = findJoinCriteria(c, sortPath);
                 if (subCriteria == null) {
-                    subCriteria = c.createCriteria(sortHead);
+                    // with the leftJoinAssociationSort setting, a left join, so that the sort keeps the rows where
+                    // the association is null; a collection is joined with an inner join, since Hibernate would
+                    // fetch it through a left join
+                    subCriteria = c.createCriteria(sortHead, a instanceof ToMany || !GrailsHibernateUtil.isLeftJoinAssociationSort(entity) ?
+                            org.hibernate.sql.JoinType.INNER_JOIN : org.hibernate.sql.JoinType.LEFT_OUTER_JOIN);
                     cacheCriteriaByMapping(associatedEntity.getJavaClass(), subCriteria);
-                    joined.put(associationPath, subCriteria);
                 }
-                addOrderPossiblyNested(subCriteria, associatedEntity, sortTail, order, ignoreCase, joined, associationPath + "."); // Recurse on nested sort
+                addOrderPossiblyNested(subCriteria, sortPath, associatedEntity, sortTail, order, ignoreCase); // Recurse on nested sort
             }
         }
+    }
+
+    private static Criteria findJoinCriteria(Criteria criteria, String associationPath) {
+        Criteria root = criteria;
+        while (root instanceof CriteriaImpl.Subcriteria) {
+            root = ((CriteriaImpl.Subcriteria) root).getParent();
+        }
+        if (root instanceof CriteriaImpl) {
+            CriteriaImpl rootCriteria = (CriteriaImpl) root;
+            Iterator<CriteriaImpl.Subcriteria> subcriteria = rootCriteria.iterateSubcriteria();
+            while (subcriteria.hasNext()) {
+                CriteriaImpl.Subcriteria existing = subcriteria.next();
+                if (associationPath.equals(getWholePath(rootCriteria, existing))) {
+                    return existing;
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * The path is relative to the parent criteria, or starts with the alias of another criteria.
+     */
+    private static String getWholePath(CriteriaImpl root, CriteriaImpl.Subcriteria subcriteria) {
+        String path = subcriteria.getPath();
+        Criteria parent = subcriteria.getParent();
+        int firstDotPos = path.indexOf('.');
+        if (firstDotPos > 0) {
+            String qualifier = path.substring(0, firstDotPos);
+            Criteria qualified = qualifier.equals(subcriteria.getAlias()) ? null : findCriteriaByAlias(root, qualifier);
+            if (qualified != null) {
+                parent = qualified;
+                path = path.substring(firstDotPos + 1);
+            }
+        }
+        return parent instanceof CriteriaImpl.Subcriteria ? getWholePath(root, (CriteriaImpl.Subcriteria) parent) + '.' + path : path;
+    }
+
+    private static Criteria findCriteriaByAlias(CriteriaImpl root, String alias) {
+        if (alias.equals(root.getAlias())) {
+            return root;
+        }
+        Iterator<CriteriaImpl.Subcriteria> subcriteria = root.iterateSubcriteria();
+        while (subcriteria.hasNext()) {
+            CriteriaImpl.Subcriteria existing = subcriteria.next();
+            if (alias.equals(existing.getAlias())) {
+                return existing;
+            }
+        }
+        return null;
     }
 
     /**
@@ -322,18 +377,6 @@ public class GrailsHibernateQueryUtils {
                                                String sort,
                                                String order,
                                                boolean ignoreCase) {
-        addOrderPossiblyNested(query, queryRoot, criteriaBuilder, entity, sort, order, ignoreCase, new HashMap<>(), "");
-    }
-
-    private static void addOrderPossiblyNested(CriteriaQuery query,
-                                               From queryRoot,
-                                               CriteriaBuilder criteriaBuilder,
-                                               PersistentEntity entity,
-                                               String sort,
-                                               String order,
-                                               boolean ignoreCase,
-                                               Map<String, Join> joined,
-                                               String path) {
         int firstDotPos = sort.indexOf(".");
         if (firstDotPos == -1) {
             final PersistentProperty<? extends Property> property = entity.getPropertyByName(sort);
@@ -350,16 +393,29 @@ public class GrailsHibernateQueryUtils {
                 addOrder(entity, query, queryRoot, criteriaBuilder, sort, order, ignoreCase);
             } else if (property instanceof Association) {
                 final Association<? extends Property> a = (Association<? extends Property>) property;
-                String associationPath = path + sortHead;
-                Join join = joined.get(associationPath);
-                if (join == null) {
-                    join = queryRoot.join(sortHead);
-                    joined.put(associationPath, join);
-                }
+                final Join join = getOrCreateSortJoin(queryRoot, sortHead, !(a instanceof ToMany) && GrailsHibernateUtil.isLeftJoinAssociationSort(entity));
                 PersistentEntity associatedEntity = a.getAssociatedEntity();
-                addOrderPossiblyNested(query, join, criteriaBuilder, associatedEntity, sortTail, order, ignoreCase, joined, associationPath + "."); // Recurse on nested sort
+                addOrderPossiblyNested(query, join, criteriaBuilder, associatedEntity, sortTail, order, ignoreCase); // Recurse on nested sort
             }
         }
+    }
+
+    /**
+     * Returns the join of an association for a sort: the join or the fetch that the query already has
+     * for it, made by the {@code fetch} argument or by an earlier sort property, or, failing that, a
+     * new one, so that the association is joined once. With the {@code leftJoinAssociationSort} setting,
+     * a new one is a left join, so that the sort keeps the rows where the association is null, except
+     * for a collection, which is joined with an inner join.
+     */
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private static Join getOrCreateSortJoin(From from, String associationName, boolean leftJoin) {
+        for (Object existing : from.getJoins()) {
+            Join join = (Join) existing;
+            if (associationName.equals(join.getAttribute().getName())) {
+                return join;
+            }
+        }
+        return from.join(associationName, leftJoin ? JoinType.LEFT : JoinType.INNER);
     }
 
     private static boolean isIgnoreCaseProperty(boolean ignoreCase, PersistentProperty<? extends Property> persistentProperty) {
@@ -383,11 +439,17 @@ public class GrailsHibernateQueryUtils {
         if (ignoreCase) {
             path = criteriaBuilder.upper(path);
         }
-        final jakarta.persistence.criteria.Order sortOrder = DynamicFinder.ORDER_DESC.equals(order) ?
-                criteriaBuilder.desc(path) : criteriaBuilder.asc(path);
-        // CriteriaQuery.orderBy replaces the order it had, so a sort on several properties is built up
-        final List<jakarta.persistence.criteria.Order> orders = new ArrayList<>(query.getOrderList());
-        orders.add(sortOrder);
+        addOrder(query, DynamicFinder.ORDER_DESC.equals(order) ? criteriaBuilder.desc(path) : criteriaBuilder.asc(path));
+    }
+
+    /**
+     * Adds an order to the orders the query already has: <code>orderBy</code> replaces them, so a sort
+     * by more than one property would otherwise sort by the last one only.
+     */
+    @SuppressWarnings("unchecked")
+    private static void addOrder(CriteriaQuery query, jakarta.persistence.criteria.Order order) {
+        List<jakarta.persistence.criteria.Order> orders = new ArrayList<>(query.getOrderList());
+        orders.add(order);
         query.orderBy(orders);
     }
 
