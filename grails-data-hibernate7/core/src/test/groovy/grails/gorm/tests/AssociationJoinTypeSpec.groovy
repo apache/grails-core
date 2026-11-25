@@ -145,6 +145,32 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckM
         request << ['before', 'after', 'fetch']
     }
 
+    void 'a requested left join supplied #request the block belongs only to that builder call'() {
+        given:
+        final criteria = Team.createCriteria()
+        final arguments = request == 'fetch' ? [max: 10, fetch: [club: JoinType.LEFT]] : [max: 10]
+        final page = criteria.list(arguments) {
+            if (request == 'before') {
+                join('club', JoinType.LEFT)
+            }
+            club { order('name') }
+            if (request == 'after') {
+                join('club', JoinType.LEFT)
+            }
+        }
+
+        when:
+        final next = criteria.list { club { order('name') } }
+
+        then:
+        page*.name.sort() == ALL_TEAMS
+        page.totalCount == ALL_TEAMS.size()
+        next*.name.sort() == TEAMS_WITH_A_CLUB
+
+        where:
+        request << ['before', 'after', 'fetch']
+    }
+
     void 'static list fetches a nested collection together with its owner'() {
         given:
         saveTeamWithAPlayerWithoutContract()

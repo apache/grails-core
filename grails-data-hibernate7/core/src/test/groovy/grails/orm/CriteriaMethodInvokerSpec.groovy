@@ -171,6 +171,8 @@ class CriteriaMethodInvokerSpec extends Specification {
             }
         }
         1 * builder.getClassForAssociationType(_) >> InvokerTransaction
+        1 * builder.setTargetClass(InvokerTransaction)
+        1 * builder.setTargetClass(InvokerAccount)
         1 * query.join("transactions", _)
         1 * mappingContext.getPersistentEntity(InvokerAccount.name) >> persistentEntity
         1 * persistentEntity.getPropertyByName("transactions") >> association
