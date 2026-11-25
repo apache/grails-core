@@ -416,6 +416,25 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManag
         'static page'     | { AssociationSortOwner.list(max: 10, sort: 'scores.score').totalCount }
     }
 
+    void 'a collection fetch and sort count roots once using #form'() {
+        given:
+        new AssociationSortOwner(name: 'Empty').save(failOnError: true, flush: true)
+        manager.session.clear()
+
+        when:
+        final results = query.call()
+
+        then:
+        results*.name.sort() == ['Ann', 'Bob', 'Empty']
+        results.totalCount == 3
+
+        where:
+        form             | query
+        'fetch argument' | { AssociationSortOwner.createCriteria().list(max: 10, sort: 'scores.score', fetch: [scores: JoinType.LEFT]) {} }
+        'join call'      | { AssociationSortOwner.createCriteria().list(max: 10, sort: 'scores.score') { join('scores', JoinType.LEFT) } }
+        'order call'     | { AssociationSortOwner.createCriteria().list(max: 10, fetch: [scores: JoinType.LEFT]) { order('scores.score') } }
+    }
+
     void 'a detached page retains its sort restriction when counting at offset #offset'() {
         given:
         final query = new DetachedCriteria(Team).like('name', '%First%').sort('club.name')

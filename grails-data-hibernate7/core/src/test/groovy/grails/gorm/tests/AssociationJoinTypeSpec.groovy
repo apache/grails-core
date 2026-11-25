@@ -171,6 +171,152 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckM
         request << ['before', 'after', 'fetch']
     }
 
+    void 'a nested left join supplied #request the blocks keeps the alternative without a club'() {
+        given:
+        final equivalent = Player.where { team.club.name == 'Chelsea' || name == 'Unattached Player' }
+                .join('team.club', JoinType.LEFT)
+
+        when:
+        final arguments = request == 'fetch' ? [max: 10, fetch: ['team.club': JoinType.LEFT]] : [max: 10]
+        final results = Player.createCriteria().list(arguments) {
+            if (request == 'before') {
+                join('team.club', JoinType.LEFT)
+            }
+            or {
+                team { club { eq('name', 'Chelsea') } }
+                eq('name', 'Unattached Player')
+            }
+            if (request == 'after') {
+                join('team.club', JoinType.LEFT)
+            }
+        }
+
+        then:
+        results*.name.sort() == ['Chelsea Player', 'Unattached Player']
+        results.totalCount == 2
+
+        and: 'the equivalent where query has the same rows'
+        equivalent.list()*.name.sort() == results*.name.sort()
+
+        where:
+        request << ['before', 'after', 'fetch']
+    }
+
+    void 'an explicit nested inner block retains its restriction with a left request #request the blocks'() {
+        when:
+        final arguments = request == 'fetch' ? [fetch: ['team.club': JoinType.LEFT]] : [:]
+        final results = Player.createCriteria().list(arguments) {
+            if (request == 'before') {
+                join('team.club', JoinType.LEFT)
+            }
+            or {
+                team { club(0) { eq('name', 'Chelsea') } }
+                eq('name', 'Unattached Player')
+            }
+            if (request == 'after') {
+                join('team.club', JoinType.LEFT)
+            }
+        }
+
+        then:
+        results*.name == ['Chelsea Player']
+
+        where:
+        request << ['before', 'after', 'fetch']
+    }
+
+    void 'a left join followed by #mode and a default block keeps its criteria join type'() {
+        when:
+        final results = Team.createCriteria().list(max: 10) {
+            join('club', JoinType.LEFT)
+            "$mode"('club')
+            or {
+                club { eq('name', 'Chelsea') }
+                eq('name', 'Unattached First Team')
+            }
+        }
+
+        then:
+        results*.name.sort() == ['Chelsea First Team', 'Unattached First Team']
+        results.totalCount == 2
+
+        where:
+        mode << ['join', 'select']
+    }
+
+    void 'a left join followed only by an untyped join remains nonrestricting'() {
+        expect:
+        Team.createCriteria().list {
+            join('club', JoinType.LEFT)
+            join('club')
+        }*.name.sort() == ALL_TEAMS
+    }
+
+    void 'a nested right join has the same rows in its list count and paged total'() {
+        given: 'a playerless team already refers to Arsenal, and two clubs have no teams'
+        new Club(name: 'Teamless A').save(failOnError: true)
+        new Club(name: 'Teamless B').save(failOnError: true, flush: true)
+        manager.session.clear()
+        final query = new DetachedCriteria(Player).join('team.club', JoinType.RIGHT)
+
+        when:
+        final results = query.list()
+        final page = query.list(max: 10)
+
+        then:
+        results.findAll { it != null }*.name.sort() == ['Arsenal Player', 'Chelsea Player', 'MU Player']
+        results.count { it == null } == 2
+        page.size() == results.size()
+        query.count() == results.size()
+        page.totalCount == results.size()
+    }
+
+    void 'a right join keeps unmatched null rows with collection fetch #fetch and paging #paged'() {
+        given:
+        new Club(name: 'Teamless A').save(failOnError: true)
+        new Club(name: 'Teamless B').save(failOnError: true)
+        savePlayer('Second Arsenal Player', Team.findByName('Arsenal First Team'))
+        manager.session.clear()
+        final query = new DetachedCriteria(Team).join('club', JoinType.RIGHT)
+        final arguments = [fetch: [players: fetch]]
+        if (paged) {
+            arguments.max = 10
+        }
+
+        when:
+        final results = query.list(arguments)
+
+        then:
+        results.findAll { it != null }*.name.sort() == TEAMS_WITH_A_CLUB
+        results.count { it == null } == 2
+        query.count() == results.size()
+        !paged || results.totalCount == results.size()
+        results.findAll { it != null }.every { Hibernate.isInitialized(it.players) }
+        results.find { it?.name == 'Arsenal First Team' }.players*.name.sort() == ['Arsenal Player', 'Second Arsenal Player']
+
+        where:
+        [fetch, paged] << [[JoinType.LEFT, 'join'], [false, true]].combinations()
+    }
+
+    void 'right join pages retain each unmatched row when a collection is fetched'() {
+        given:
+        new Club(name: 'Teamless A').save(failOnError: true)
+        new Club(name: 'Teamless B').save(failOnError: true, flush: true)
+        manager.session.clear()
+        final query = new DetachedCriteria(Team).join('club', JoinType.RIGHT)
+
+        when:
+        final pages = (0..<6).collect { offset ->
+            query.list(max: 1, offset: offset, sort: 'id', fetch: [players: JoinType.LEFT])
+        }
+        final rows = pages.collectMany { it.toList() }
+
+        then:
+        pages.every { it.size() == 1 && it.totalCount == 6 }
+        rows.findAll { it != null }*.name.sort() == TEAMS_WITH_A_CLUB
+        rows.count { it == null } == 2
+    }
+
     void 'static list fetches a nested collection together with its owner'() {
         given:
         saveTeamWithAPlayerWithoutContract()

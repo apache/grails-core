@@ -249,17 +249,17 @@ public class CriteriaMethodInvoker {
                 try {
                     DetachedCriteria<?> oldDetachedCriteria = hibernateQuery.getDetachedCriteria();
                     if (!embedded) {
-                        JoinType joinType;
                         if (hasMoreThanOneArg) {
-                            joinType = builder.convertFromInt((Integer) args[0]);
-                        } else if (associationClass.equals(oldTargetClass)) {
-                            joinType = JoinType.LEFT; // default to left join if joining on the same table
-                        } else {
-                            joinType = builder.convertFromInt(0);
-                        }
-
-                        if (hasMoreThanOneArg || !oldDetachedCriteria.getJoinTypes().containsKey(name)) {
-                            hibernateQuery.join(name, joinType);
+                            hibernateQuery.join(name, builder.convertFromInt((Integer) args[0]));
+                        } else if (!oldDetachedCriteria.getJoinTypes().containsKey(name) &&
+                                !oldDetachedCriteria.getSupersededJoinTypes().containsKey(name)) {
+                            if (associationClass.equals(oldTargetClass)) {
+                                hibernateQuery.join(name, JoinType.LEFT); // default to left join on the same table
+                            } else {
+                                // The block declares its default inner join in the plan. Do not record that
+                                // default as a caller-requested type that could override a root path request.
+                                hibernateQuery.join(name);
+                            }
                         }
                     }
 

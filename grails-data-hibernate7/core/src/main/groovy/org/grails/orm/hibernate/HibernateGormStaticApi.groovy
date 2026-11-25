@@ -461,7 +461,7 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
     }
 
     private DetachedCriteria<D> whereCriteria(Map queryMap) {
-        DetachedCriteria<D> criteria = new DetachedCriteria<D>(persistentClass)
+        DetachedCriteria<D> criteria = new DetachedCriteria<D>(persistentClass).withConnection(getQualifier())
         queryMap?.each { Object key, Object value ->
             String propertyName = validateWherePropertyName(key.toString())
             criteria = value == null ? criteria.isNull(propertyName) : criteria.eq(propertyName, value)
@@ -647,7 +647,7 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
     @Override
     List<D> list(Map params = Collections.emptyMap()) {
         if (requestsJoinType(params) || requiresCriteriaFetch(params)) {
-            return new DetachedCriteria<D>(persistentClass).list(params)
+            return new DetachedCriteria<D>(persistentClass).withConnection(getQualifier()).list(params)
         }
         firePreQueryEvent()
         HqlListQueryBuilder builder = new HqlListQueryBuilder((GrailsHibernatePersistentEntity) persistentEntity, params)

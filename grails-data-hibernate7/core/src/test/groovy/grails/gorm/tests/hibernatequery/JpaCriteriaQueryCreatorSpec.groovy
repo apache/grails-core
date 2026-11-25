@@ -58,6 +58,15 @@ class JpaCriteriaQueryCreatorSpec extends HibernateGormDatastoreSpec {
             projections { property('o.firstName') }
             order('o.firstName', 'asc')
         } == ['Alice', 'Bob']
+
+        and: 'counting the rows retains the unmatched owner, but counting a pet property omits its null'
+        JpaCriteriaQueryCreatorSpecPet.createCriteria().count {
+            createAlias('owner', 'o', 2)
+        } == 2
+        JpaCriteriaQueryCreatorSpecPet.createCriteria().list {
+            createAlias('owner', 'o', 2)
+            projections { count('name') }
+        } == [1L]
     }
 
     def "test createQuery"() {

@@ -177,7 +177,11 @@ public class JpaCriteriaQueryCreator<T> {
         collectRequestedFetches(detachedCriteria, "", requested);
         Set<String> joinedCollections = new HashSet<>();
         requested.keySet().forEach(path -> collectCollectionPaths(path, joinedCollections));
-        boolean singleBag = requested.keySet().stream().map(this::bagOnPath).filter(Objects::nonNull).distinct().count() == 1;
+        long bags = requested.keySet().stream().map(this::bagOnPath).filter(Objects::nonNull).distinct().count();
+        // A collection fetch makes Hibernate deduplicate entity results, including unmatched null rows of a
+        // right join. Load those collections separately, retaining the existing two-bag restriction.
+        boolean deferForRightJoin = bags < 2 && requested.entrySet().stream().anyMatch(entry ->
+                entry.getValue() == JoinType.RIGHT && firstCollection(entry.getKey().split("\\.")) == -1);
         for (Query.Order order : detachedCriteria.getOrders()) {
             int dot = order.getProperty().lastIndexOf('.');
             if (dot > 0) {
@@ -192,6 +196,7 @@ public class JpaCriteriaQueryCreator<T> {
             }
         }
         Map<String, Fetch<?, ?>> fetches = new HashMap<>();
+        Map<String, From<?, ?>> projectionJoins = new HashMap<>();
         requested.forEach((path, joinType) -> {
             if (aliasedPaths.contains(path)) {
                 // the join of an alias that the query declares, which the criteria that use the alias make
@@ -208,7 +213,8 @@ public class JpaCriteriaQueryCreator<T> {
             }
             if (entitySelect) {
                 String bag = bagOnPath(path);
-                if (singleBag && bag != null && joinedCollections.stream().anyMatch(collectionPath -> !collectionPath.equals(bag))) {
+                if (deferForRightJoin && collection >= 0 ||
+                        bags == 1 && bag != null && joinedCollections.stream().anyMatch(collectionPath -> !collectionPath.equals(bag))) {
                     deferredCollectionFetches.add(path);
                     return;
                 }
@@ -216,8 +222,8 @@ public class JpaCriteriaQueryCreator<T> {
                 // elements; the subquery decides which instances the query returns
                 fetchPath(root, tokens, restricts && collection < 0 ? joinType : JoinType.LEFT, fetches);
             }
-            else if (restricts && collection < 0) {
-                context.resolveAssociation(path);
+            else if (collection < 0) {
+                joinProjectionPath(root, tokens, joinType, projectionJoins);
             }
         });
     }
@@ -322,6 +328,21 @@ public class JpaCriteriaQueryCreator<T> {
                 fetches.put(path.toString(), fetch);
             }
             parent = fetch;
+        }
+    }
+
+    /** A projection uses the same to-one join chain as the entity fetch, including its left-joined prefixes. */
+    private static void joinProjectionPath(Root<?> root, String[] tokens, JoinType lastJoinType, Map<String, From<?, ?>> joins) {
+        From<?, ?> parent = root;
+        String path = "";
+        for (int i = 0; i < tokens.length; i++) {
+            path = path.isEmpty() ? tokens[i] : path + '.' + tokens[i];
+            From<?, ?> join = joins.get(path);
+            if (join == null) {
+                join = parent.join(tokens[i], i == tokens.length - 1 ? lastJoinType : JoinType.LEFT);
+                joins.put(path, join);
+            }
+            parent = join;
         }
     }
 

@@ -173,11 +173,12 @@ class CriteriaMethodInvokerSpec extends Specification {
         1 * builder.getClassForAssociationType(_) >> InvokerTransaction
         1 * builder.setTargetClass(InvokerTransaction)
         1 * builder.setTargetClass(InvokerAccount)
-        1 * query.join("transactions", _)
+        1 * query.join("transactions")
         1 * mappingContext.getPersistentEntity(InvokerAccount.name) >> persistentEntity
         1 * persistentEntity.getPropertyByName("transactions") >> association
         1 * query.getDetachedCriteria() >> Mock(DetachedCriteria) {
             getJoinTypes() >> [:]
+            getSupersededJoinTypes() >> [:]
         }
         1 * query.setDetachedCriteria(_ as DetachedAssociationCriteria)
         1 * query.setDetachedCriteria(_ as DetachedCriteria)
@@ -242,6 +243,7 @@ class CriteriaMethodInvokerSpec extends Specification {
         1 * persistentEntity.getPropertyByName("transactions") >> associationTo('transactions', ['amount'])
         1 * query.getDetachedCriteria() >> Mock(DetachedCriteria) {
             getJoinTypes() >> [:]
+            getSupersededJoinTypes() >> [:]
         }
         1 * query.setDetachedCriteria(_ as DetachedAssociationCriteria) >> { DetachedAssociationCriteria criteria ->
             block = criteria
@@ -725,6 +727,7 @@ class CriteriaMethodInvokerSpec extends Specification {
         1 * persistentEntity.getPropertyByName("parent") >> association
         1 * query.getDetachedCriteria() >> Mock(DetachedCriteria) {
             getJoinTypes() >> [:]
+            getSupersededJoinTypes() >> [:]
         }
         1 * query.add(_ as org.grails.datastore.mapping.query.Query.Criterion)
     }
