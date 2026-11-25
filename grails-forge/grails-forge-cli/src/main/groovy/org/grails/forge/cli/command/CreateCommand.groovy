@@ -24,6 +24,7 @@ import org.apache.grails.forge.cli.console.ConsoleProject
 import org.apache.grails.forge.cli.console.GradleRunner
 import org.apache.grails.forge.cli.console.OptionRelation
 import org.apache.grails.forge.cli.console.UsageHelp
+import org.apache.grails.forge.cli.pack.FeatureOptions
 import org.apache.grails.forge.cli.pack.PackArtifactException
 import org.apache.grails.forge.cli.pack.PackArtifacts
 import org.apache.grails.forge.cli.pack.PackCatalogs
@@ -121,6 +122,12 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer>, O
                     '(with this option, as they are without what is left out). A feature that is selected, that a feature of the ' +
                     'application requires or that the application cannot be without cannot be left out.')
     List<String> excludedFeatures = new ArrayList<>()
+
+    @CommandLine.Option(names = ['--feature-option'], paramLabel = 'FEATURE.NAME=VALUE',
+            description = 'An option of a feature, which the feature pack of the feature declares: the name of the feature, a dot, the name of the ' +
+                    'option and its value, as in acme-audit.store=collection. An option that is not given has the value the pack gives it. What a ' +
+                    'feature takes is said with what its pack adds, and by --list-features for a pack that is given. Can be given more than once.')
+    List<String> featureOptions = new ArrayList<>()
 
     @CommandLine.Option(names = ['--feature-pack-dir'], paramLabel = 'DIRECTORY',
             description = 'A directory that holds a feature pack (feature.yml and its templates directory), whose feature can then be ' +
@@ -308,6 +315,11 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer>, O
             } catch (FeatureSelectionException e) {
                 throw mistake(e)
             }
+            // what the features of the packs that were given take, which no other list says
+            for (String line : FeatureOptions.listing(packs.findAll { Pack pack -> !pack.bundled })) {
+                String shown = line.replaceAll(/\p{Cntrl}/, '?').replace('@|', '@ |')
+                out(line.startsWith(' ') ? shown : "@|blue ||@ ${shown}")
+            }
             return 0
         }
         Project project
@@ -416,12 +428,13 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer>, O
     }
 
     void generate(Project project, OutputHandler outputHandler) throws Exception {
-        // a version of Java there is not is said before anything is taken from a repository
+        // a version of Java there is not is said before anything is taken from a repository, and so is an option that is not written as one
         getJdkVersion()
+        optionsOfFeatures()
         checkExcludedNames()
         List<Pack> packs = selection().packs
         // an option that is given is a choice, which the features that are selected do not replace; one a preset gives is a default
-        Options options = options().withGiven(given()).withSubproject(subproject)
+        Options options = options().withGiven(given()).withSubproject(subproject).withFeatureOptions(optionsOfFeatures())
         if (!packs.isEmpty()) {
             withPacks(packs)
         }
@@ -540,6 +553,15 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer>, O
             for (String each : packArtifacts().takeWarnings()) {
                 warning(each.replaceAll(/\p{Cntrl}/, '?').replace('@|', '@ |'))
             }
+        }
+    }
+
+    // the options of features, which are held to the features of the application when it is generated
+    private Map<String, Map<String, String>> optionsOfFeatures() {
+        try {
+            return FeatureOptions.parse(featureOptions)
+        } catch (IllegalArgumentException e) {
+            throw new CommandLine.ParameterException(this.spec.commandLine(), e.getMessage())
         }
     }
 

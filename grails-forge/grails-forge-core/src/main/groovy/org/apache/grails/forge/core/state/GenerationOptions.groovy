@@ -21,6 +21,7 @@ package org.apache.grails.forge.core.state
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.PackageScope
+import org.grails.forge.application.OperatingSystem
 import org.grails.forge.options.DevelopmentReloading
 import org.grails.forge.options.GormImpl
 import org.grails.forge.options.JdkVersion
@@ -31,7 +32,10 @@ import org.grails.forge.options.ServletImpl
  * The options an application was generated with, written as the create commands take them:
  * {@code jdk: 21}, {@code servlet: tomcat}, {@code data: hibernate7}, {@code reloading: devtools}.
  * An application that was created as a project of a Gradle build that is not its own also has
- * {@code layout: subproject}; one that is a build of its own has no {@code layout}.
+ * {@code layout: subproject}; one that is a build of its own has no {@code layout}. An application
+ * that was given options of features, which feature packs declare as {@code parameters}, has them
+ * under {@code featureOptions}, by the name of the feature and then of the option; one that was given
+ * none has no {@code featureOptions}.
  *
  * @since 9.0
  */
@@ -50,6 +54,9 @@ final class GenerationOptions {
     /** Whether the application has only its own files, and not those of the root of a Gradle build. */
     final boolean subproject
 
+    /** The options that were given for features, by the name of the feature and then of the option, both sorted. */
+    final Map<String, Map<String, String>> featureOptions
+
     /**
      * The keys of the options the record did not have, for which this has what a create command takes
      * when the option is not given. Empty unless the record was read for showing it, see
@@ -61,16 +68,36 @@ final class GenerationOptions {
     /** What {@code layout} is for an application that is a project of a build that is not its own. */
     public static final String SUBPROJECT = 'subproject'
 
+    /** The key the options of features are written under. */
+    public static final String FEATURE_OPTIONS = 'featureOptions'
+
+    /** The most options one feature can be given. */
+    public static final int MAX_FEATURE_OPTIONS = 20
+
     GenerationOptions(JdkVersion jdk, ServletImpl servlet, GormImpl data, DevelopmentReloading reloading) {
         this(jdk, servlet, data, reloading, false)
     }
 
     GenerationOptions(JdkVersion jdk, ServletImpl servlet, GormImpl data, DevelopmentReloading reloading, boolean subproject) {
-        this(jdk, servlet, data, reloading, subproject, Collections.<String>emptySet())
+        this(jdk, servlet, data, reloading, subproject, Collections.<String, Map<String, String>>emptyMap())
     }
 
-    private GenerationOptions(JdkVersion jdk, ServletImpl servlet, GormImpl data, DevelopmentReloading reloading, boolean subproject, Set<String> notRecorded) {
+    GenerationOptions(JdkVersion jdk, ServletImpl servlet, GormImpl data, DevelopmentReloading reloading, boolean subproject,
+                      Map<String, Map<String, String>> featureOptions) {
+        this(jdk, servlet, data, reloading, subproject, featureOptions, Collections.<String>emptySet())
+    }
+
+    @SuppressWarnings('ParameterCount')
+    private GenerationOptions(JdkVersion jdk, ServletImpl servlet, GormImpl data, DevelopmentReloading reloading, boolean subproject,
+                              Map<String, Map<String, String>> featureOptions, Set<String> notRecorded) {
         this.notRecorded = Collections.unmodifiableSet(new LinkedHashSet<String>(notRecorded))
+        Map<String, Map<String, String>> sorted = new TreeMap<>()
+        featureOptions.each { String feature, Map<String, String> values ->
+            if (!values.isEmpty()) {
+                sorted.put(feature, Collections.unmodifiableMap(new TreeMap<String, String>(values)))
+            }
+        }
+        this.featureOptions = Collections.unmodifiableMap(sorted)
         this.jdk = jdk
         this.servlet = servlet
         this.data = data
@@ -80,7 +107,8 @@ final class GenerationOptions {
 
     @PackageScope
     static GenerationOptions of(Options options) {
-        return new GenerationOptions(options.getJavaVersion(), options.getServletImpl(), options.getGormImpl(), options.getDevelopmentReloading(), options.isSubproject())
+        return new GenerationOptions(options.getJavaVersion(), options.getServletImpl(), options.getGormImpl(), options.getDevelopmentReloading(), options.isSubproject(),
+                options.getFeatureOptions())
     }
 
     @PackageScope
@@ -93,6 +121,12 @@ final class GenerationOptions {
         if (subproject) {
             // written only for such an application, so that the state of every other one is what it was
             map.put('layout', SUBPROJECT)
+        }
+        if (!featureOptions.isEmpty()) {
+            // written only when there are some, for the same reason
+            Map<String, Object> ofFeatures = new LinkedHashMap<>()
+            featureOptions.each { String feature, Map<String, String> values -> ofFeatures.put(feature, new LinkedHashMap<String, Object>(values)) }
+            map.put(FEATURE_OPTIONS, ofFeatures)
         }
         return map
     }
@@ -124,9 +158,36 @@ final class GenerationOptions {
                 notRecorded.contains('reloading') ? DevelopmentReloading.DEFAULT_OPTION :
                         DevelopmentReloading.valueOf(named(section, 'reloading', DevelopmentReloading.values() as List<Enum>)),
                 section.has('layout') && section.oneOf('layout', [SUBPROJECT]) == SUBPROJECT,
+                section.has(FEATURE_OPTIONS) ? featureOptions(section.section(FEATURE_OPTIONS)) : Collections.<String, Map<String, String>>emptyMap(),
                 notRecorded)
         section.end()
         return options
+    }
+
+    // the options of each feature, as one line of text each: what they have to be is for the pack that declares them to say
+    private static Map<String, Map<String, String>> featureOptions(StateSection section) {
+        Map<String, Map<String, String>> ofFeatures = new LinkedHashMap<>()
+        List<String> features = section.keys()
+        if (features.size() > StateLimits.MAX_FEATURES) {
+            throw section.problem('', "has ${features.size()} features, and can have ${StateLimits.MAX_FEATURES}")
+        }
+        for (String feature : features) {
+            Map<String, String> values = section.texts(feature, MAX_FEATURE_OPTIONS)
+            if (values.isEmpty()) {
+                throw section.problem(feature, 'has no option: a feature without options is not written')
+            }
+            ofFeatures.put(feature, values)
+        }
+        section.end()
+        return ofFeatures
+    }
+
+    /**
+     * @param operatingSystem the operating system the generator is told of
+     * @return the options an application is generated again with
+     */
+    Options toOptions(OperatingSystem operatingSystem) {
+        return new Options(reloading, data, servlet, jdk, operatingSystem).withSubproject(subproject).withFeatureOptions(featureOptions)
     }
 
     @PackageScope

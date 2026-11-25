@@ -24,6 +24,7 @@ import org.apache.grails.forge.core.pack.Pack
 import org.apache.grails.forge.core.pack.PackContent
 import org.apache.grails.forge.core.pack.PackDescriptorParser
 import org.apache.grails.forge.core.pack.PackFeatures
+import org.apache.grails.forge.core.pack.PackParameter
 import org.apache.grails.forge.core.state.ProjectState
 import org.apache.grails.forge.core.state.ProjectStateRecorder
 import org.grails.forge.io.OutputFailedException
@@ -251,6 +252,9 @@ class DefaultProjectGenerator implements ProjectGenerator {
         AvailableFeatures availableFeatures = availableFeatures(applicationType, packs)
 
         FeatureContext featureContext = contextFactory.createFeatureContext(availableFeatures, selectedFeatures, applicationType, options, operatingSystem, excludedFeatures)
-        return contextFactory.createGeneratorContext(project, featureContext, consoleOutput)
+        GeneratorContext generatorContext = contextFactory.createGeneratorContext(project, featureContext, consoleOutput)
+        // an option that was given for a feature is one a feature of the application takes
+        PackParameter.check(options, generatorContext.getFeatures().getFeatures())
+        return generatorContext
     }
 }

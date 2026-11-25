@@ -35,7 +35,7 @@ import spock.lang.Unroll
 class PackOfForgeDescriptorSpec extends Specification {
 
     static final String MINIMAL = PackDescriptorParserSpec.MINIMAL
-    static final String CONDITION_KEYS = '[feature, group, anyOf, allOf, not, applicationType, option, jdkAtLeast]'
+    static final String CONDITION_KEYS = '[feature, group, anyOf, allOf, not, applicationType, option, jdkAtLeast, parameter]'
 
     PackDescriptorParser parser = new PackDescriptorParser()
 
@@ -343,6 +343,6 @@ build:
 
         where:
         text                                                                      | problem
-        "guideOfGrails: 'guide/a.html'\n"                                         | "the descriptor: has the key 'guideOfGrails', which this version of Forge does not read here; the keys are [format, kind, name, templateApi, compatibility, title, description, category, documentation, applicationTypes, requires, conflicts, oneOf, dependencies, platforms, buildPlugins, build, configuration, files, readme, instructions, readmeLinks, requiresJdk, thirdPartyDocumentation]"
+        "guideOfGrails: 'guide/a.html'\n"                                         | "the descriptor: has the key 'guideOfGrails', which this version of Forge does not read here; the keys are [format, kind, name, templateApi, compatibility, title, description, category, documentation, applicationTypes, requires, conflicts, oneOf, dependencies, platforms, buildPlugins, build, configuration, files, readme, instructions, readmeLinks, requiresJdk, parameters, thirdPartyDocumentation]"
     }
 }

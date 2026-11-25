@@ -159,7 +159,7 @@ class ProjectCommandsSpec extends CommandSpec {
         out.toString().readLines().size() == 1
         out.toString().startsWith('{"format":1,"applicationType":"web","name":"shop","defaultPackage":"com.example","grailsVersion":')
         document.keySet() as List == ['format', 'applicationType', 'name', 'defaultPackage', 'grailsVersion', 'generator', 'templateApi', 'generationState', 'options',
-                                      'requestedFeatures', 'excludedFeatures', 'repositories', 'repositoriesNotNamed', 'features', 'command', 'notes',
+                                      'featureOptions', 'requestedFeatures', 'excludedFeatures', 'repositories', 'repositoriesNotNamed', 'features', 'command', 'notes',
                                       'effectiveOptions', 'addedFeatures']
         document.generator == [name: 'grails-forge', version: VersionInfo.version, sha256: VersionInfo.generatorSha256]
         document.generationState == 'tracked'
@@ -187,6 +187,7 @@ class ProjectCommandsSpec extends CommandSpec {
                 [name: 'reloading', option: '--reloading', value: 'devtools', default: 'devtools', status: 'default'],
                 [name: 'subproject', option: '--subproject', value: false, default: false, status: 'default'],
                 [name: 'features', option: '--features', value: ['grails-quartz'], default: [], status: 'differs'],
+                [name: 'feature-option', option: '--feature-option', value: [], default: [], status: 'default'],
                 [name: 'exclude-features', option: '--exclude-features', value: ['mockito'], default: [], status: 'differs'],
                 [name: 'feature-pack-dir', option: '--feature-pack-dir', value: [], default: [], status: 'default'],
                 [name: 'feature-pack-repository', option: '--feature-pack-repository', value: [], default: [], status: 'default'],
@@ -217,7 +218,7 @@ class ProjectCommandsSpec extends CommandSpec {
         List<String> lines = out.toString().readLines()
         int from = lines.indexOf("| Every option of create-app with the value the application was generated with, and whether that is the default of this version " +
                 "(${VersionInfo.version}) of the command line".toString())
-        List<List<String>> rows = lines.subList(from + 1, from + 19).collect { String line -> line.trim().split(/ {2,}/).toList() }
+        List<List<String>> rows = lines.subList(from + 1, from + 20).collect { String line -> line.trim().split(/ {2,}/).toList() }
 
         then:
         exit == 0
@@ -233,6 +234,7 @@ class ProjectCommandsSpec extends CommandSpec {
                  ['--reloading', 'devtools', '(default)'],
                  ['--subproject', 'no', '(default)'],
                  ['--features', 'grails-quartz', '(differs from the current default: (none))'],
+                 ['--feature-option', '(none)', '(default)'],
                  ['--exclude-features', '(none)', '(default)'],
                  ['--feature-pack-dir', '(none)', '(default)'],
                  ['--feature-pack-repository', '(none)', '(default)'],
@@ -243,9 +245,9 @@ class ProjectCommandsSpec extends CommandSpec {
                  ['build tool', 'gradle', '(not recorded: the only one this version generates)']]
 
         and: 'the features that were asked for apart from those that came with them'
-        lines[from + 19] == "| Of the ${state.lock.features.size()} features, 1 was asked for (--features above) and ${state.lock.features.size() - 1} came with the " +
+        lines[from + 20] == "| Of the ${state.lock.features.size()} features, 1 was asked for (--features above) and ${state.lock.features.size() - 1} came with the " +
                 'application type, with an option or with another feature:'
-        lines[from + 20].trim().split(', ').toList() == state.lock.featureNames - 'grails-quartz'
+        lines[from + 21].trim().split(', ').toList() == state.lock.featureNames - 'grails-quartz'
 
         and: 'the command line is the short one, and last'
         lines[-1] == 'grails-forge-cli create-app com.example.shop --features grails-quartz'

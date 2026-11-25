@@ -255,6 +255,9 @@ final class Pack {
         if (descriptor.readme) {
             lines << 'a section of the readme'
         }
+        if (descriptor.parameters) {
+            lines << "options, given as --feature-option ${descriptor.name}.NAME=VALUE: ${some(descriptor.parameters.collect { PackParameter each -> each.usage })}".toString()
+        }
         if (descriptor.requires) {
             lines << "requires the features ${some(descriptor.requires)}".toString()
         }

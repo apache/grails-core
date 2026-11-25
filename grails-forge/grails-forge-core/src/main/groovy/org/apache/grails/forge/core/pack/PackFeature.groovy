@@ -221,14 +221,19 @@ class PackFeature implements Feature {
 
     @Override
     List<String> getFeaturesReliedOn(ApplicationType applicationType) {
-        PackCondition.Facts facts = PackCondition.of(applicationType, (Options) null, Collections.<Feature>emptyList())
+        PackCondition.Facts facts = ofPack(PackCondition.of(applicationType, (Options) null, Collections.<Feature>emptyList()), null)
         return pack.descriptor.ofForge.reliesOn.findAll { PackOfForge.Addition each -> each.when.test(facts) }
                 .collect { PackOfForge.Addition each -> each.feature }
     }
 
     protected boolean isDefaultFor(ApplicationType applicationType, Options options, Set<Feature> selectedFeatures) {
         PackCondition byDefault = pack.descriptor.ofForge.byDefault
-        return byDefault != null && byDefault.test(PackCondition.of(applicationType, options, selectedFeatures))
+        return byDefault != null && byDefault.test(ofPack(PackCondition.of(applicationType, options, selectedFeatures), options))
+    }
+
+    // what is known for the conditions of this pack: what is known of the application, and the values of the parameters of the pack
+    private PackCondition.Facts ofPack(PackCondition.Facts facts, Options options) {
+        return pack.descriptor.parameters.isEmpty() ? facts : PackCondition.withParameters(facts, PackParameter.values(pack.descriptor, options))
     }
 
     @Override
@@ -246,7 +251,7 @@ class PackFeature implements Feature {
                 featureContext.addFeature(feature)
             }
         }
-        PackCondition.Facts facts = PackCondition.of(featureContext)
+        PackCondition.Facts facts = ofPack(PackCondition.of(featureContext), featureContext.getOptions())
         for (PackOfForge.Addition addition : pack.descriptor.ofForge.adds) {
             // asked one after the other: what one addition brings in, the next one sees
             if (!featureContext.isPresent(addition.feature) && addition.when.test(facts)) {
@@ -262,7 +267,7 @@ class PackFeature implements Feature {
     void apply(GeneratorContext generatorContext) {
         PackDescriptor descriptor = pack.descriptor
         PackOfForge ofForge = descriptor.ofForge
-        PackCondition.Facts facts = PackCondition.of(generatorContext)
+        PackCondition.Facts facts = ofPack(PackCondition.of(generatorContext), generatorContext.getOptions())
         for (String conflict : descriptor.conflicts) {
             Feature other = generatorContext.getFeatures().getFeatures().find { Feature each -> isNamed(conflict, each) }
             if (other != null) {

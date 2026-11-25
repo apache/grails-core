@@ -221,7 +221,7 @@ final class ProjectStateRecorder {
         // what the application has: an option that was not given gives way to the features
         Options ofApplication = generatorContext.getApplicationOptions()
         GenerationOptions options = new GenerationOptions(generatorContext.getJdkVersion(), ofApplication.getServletImpl(),
-                ofApplication.getGormImpl(), ofApplication.getDevelopmentReloading(), ofApplication.isSubproject())
+                ofApplication.getGormImpl(), ofApplication.getDevelopmentReloading(), ofApplication.isSubproject(), ofApplication.getFeatureOptions())
         String grailsVersion = VersionInfo.getGrailsVersion()
         List<Feature> applied = new ArrayList<>(generatorContext.getFeatures().getFeatures())
         applied.sort(FeatureContext.FEATURE_ORDER)

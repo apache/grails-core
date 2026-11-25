@@ -158,6 +158,20 @@ final class StateSection {
         return texts
     }
 
+    /**
+     * @return the keys of the section, each one line of text
+     */
+    List<String> keys() {
+        List<String> keys = []
+        for (Object name : values.keySet()) {
+            if (!(name instanceof String) || !StateYaml.isLine((String) name, StateLimits.MAX_TEXT)) {
+                throw new ProjectStateException("${file}: ${at ?: 'the file'} has a key that is not one line of text")
+            }
+            keys << (String) name
+        }
+        return keys
+    }
+
     /** Refuses a key that nothing read. */
     void end() {
         for (Object key : values.keySet()) {

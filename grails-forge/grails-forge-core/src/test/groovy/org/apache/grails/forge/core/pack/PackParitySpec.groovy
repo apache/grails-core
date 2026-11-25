@@ -347,7 +347,7 @@ class PackParitySpec extends ApplicationContextSpec {
                 '(for an application with applicationType web, options [data:hibernate5, jdk:21, reloading:devtools, servlet:tomcat])'
         'files:\n  - from: a.txt.gsp\n    to: a.gsp\n    template: false\n' | '${project.nam}' || null
         'files:\n  - from: a.txt.gsp\n    to: a.txt\n    when: { features: [gsp] }\n' | 'a' ||
-                "files[0].when: has the key 'features', and a condition has one of the keys [feature, group, anyOf, allOf, not, applicationType, option, jdkAtLeast]"
+                "files[0].when: has the key 'features', and a condition has one of the keys [feature, group, anyOf, allOf, not, applicationType, option, jdkAtLeast, parameter]"
         'dependencies:\n  - scope: buildscript\n    coordinates: com.acme:a\n    when: { option: { data: oracle } }\n' | 'a' ||
                 "dependencies[0].when.option.data: must be one of [hibernate5, hibernate7, mongodb, neo4j], or a list of them, but is 'oracle'"
         'build:\n  blocks:\n    start: x\n' | 'a' || "build.blocks: has text for [afterPlugins, afterDependencies, end], but one place is 'start'"

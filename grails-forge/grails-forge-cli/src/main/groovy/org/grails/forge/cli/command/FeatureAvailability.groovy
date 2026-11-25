@@ -195,6 +195,7 @@ final class FeatureAvailability {
     // cannot change, as when a feature is added
     private static Options options(GenerationOptions recorded, @Nullable OperatingSystem operatingSystem) {
         return new Options(recorded.reloading, recorded.data, recorded.servlet, recorded.jdk, operatingSystem)
+                .withFeatureOptions(recorded.featureOptions)
                 .withGiven(EnumSet.allOf(OptionName))
                 .withSubproject(recorded.subproject)
     }

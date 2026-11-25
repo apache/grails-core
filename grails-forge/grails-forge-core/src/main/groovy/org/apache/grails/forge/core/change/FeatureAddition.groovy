@@ -199,6 +199,13 @@ final class FeatureAddition {
     }
 
     /**
+     * The options that are given for the features that are added, by the name of the feature and then of
+     * the option, as a feature pack declares them as {@code parameters}. An option of a feature the
+     * application has is refused: those are what its record says.
+     */
+    Map<String, Map<String, String>> featureOptions = [:]
+
+    /**
      * Works out what adding features to a project comes to. Nothing is written.
      *
      * @param projectDirectory the directory of the project
@@ -239,6 +246,13 @@ final class FeatureAddition {
         ProjectState state = replayable(projectDirectory)
         ProjectManifest manifest = state.manifest
         ProjectLock lock = state.lock
+        for (String feature : featureOptions.keySet()) {
+            // what the application has it keeps as it was created: an option of a feature it has is of its record
+            if (lock.featureNames.contains(feature)) {
+                throw new FeatureSelectionException("An option was given for the feature ${FeatureSelectionException.shown(feature)}, which the application has: " +
+                        'adding a feature does not change what the application was created with, and the options of its features are those of its record')
+            }
+        }
         List<Pack> ofTheLock = recordedPacks(lock, manifest.preset, packs)
         if (names.isEmpty()) {
             throw new FeatureSelectionException('Name the feature to add')
@@ -293,7 +307,7 @@ final class FeatureAddition {
 
         RenderedProject after
         try {
-            after = render(manifest, selected, operatingSystem, console, ofTheLock, true)
+            after = render(manifest, selected, operatingSystem, console, ofTheLock, true, featureOptions)
         } catch (FeatureSelectionException e) {
             if (e.getOption() == null) {
                 throw e
@@ -302,7 +316,7 @@ final class FeatureAddition {
             // would be with the feature in the place of that option is worked out all the same, to
             // show it: it is refused below, because it takes away what the application has
             try {
-                after = render(manifest, selected, operatingSystem, ConsoleOutput.NOOP, ofTheLock, false)
+                after = render(manifest, selected, operatingSystem, ConsoleOutput.NOOP, ofTheLock, false, featureOptions)
             } catch (FeatureSelectionException ignored) {
                 throw e
             }
@@ -752,13 +766,15 @@ final class FeatureAddition {
     }
 
     private RenderedProject render(ProjectManifest manifest, List<String> features, OperatingSystem operatingSystem, ConsoleOutput console, List<Pack> packs,
-                                   boolean optionsAreChoices = true) {
+                                   boolean optionsAreChoices = true, Map<String, Map<String, String>> optionsOfAddedFeatures = [:]) {
         Project project = NameUtils.parse(manifest.defaultPackage + '.' + manifest.name)
         GenerationOptions recorded = manifest.options
         // The options of the manifest are what the application has, so each of them is a choice: a
         // feature that would put another servlet container, reloader or Grails Data implementation in
         // the place of the one the application has is refused, and replaces nothing
         Options options = new Options(recorded.reloading, recorded.data, recorded.servlet, recorded.jdk, operatingSystem)
+                // the options the features were given are those of the record, and those of the features that are added
+                .withFeatureOptions(recorded.featureOptions + optionsOfAddedFeatures)
                 .withGiven(optionsAreChoices ? EnumSet.allOf(OptionName) : EnumSet.noneOf(OptionName))
                 // an application that was created without the files of the root of a build stays without them
                 .withSubproject(recorded.subproject)

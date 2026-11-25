@@ -23,6 +23,7 @@ import org.apache.grails.forge.cli.console.ConsoleProject
 import org.apache.grails.forge.cli.console.OptionRelation
 import org.apache.grails.forge.cli.console.ProjectCommand
 import org.apache.grails.forge.cli.console.UsageHelp
+import org.apache.grails.forge.cli.pack.FeatureOptions
 import org.apache.grails.forge.cli.pack.PackArtifactException
 import org.apache.grails.forge.cli.pack.PackArtifacts
 import org.apache.grails.forge.cli.pack.RecordedPackOptions
@@ -97,6 +98,12 @@ class FeatureAddCommand extends BaseCommand implements Callable<Integer>, Projec
             'and nothing else: the outcome, the reason, the files with their paths in the project and what would be done to each, and whether the change can be made.')
     boolean json
 
+    @CommandLine.Option(names = ['--feature-option'], paramLabel = 'FEATURE.NAME=VALUE',
+            description = 'An option of a feature that is added, which the feature pack of the feature declares: the name of the feature, a dot, the ' +
+                    'name of the option and its value. An option that is not given has the value the pack gives it. The options of the features the ' +
+                    'application has stay what its record says. Can be given more than once.')
+    List<String> featureOptions = new ArrayList<>()
+
     @CommandLine.Mixin
     RecordedPackOptions packOptions = new RecordedPackOptions()
 
@@ -141,6 +148,7 @@ class FeatureAddCommand extends BaseCommand implements Callable<Integer>, Projec
                 throw new ProjectStateException(noRecord(spec))
             }
             FeatureAddition addition = new FeatureAddition(projectGeneratorSource.get())
+            addition.featureOptions = optionsOfFeatures()
             for (String message : (preview ? Collections.<String>emptyList() : addition.recover(directory).getMessages())) {
                 out("@|blue ||@ ${message}")
             }
@@ -162,6 +170,14 @@ class FeatureAddCommand extends BaseCommand implements Callable<Integer>, Projec
                 e.printStackTrace(spec.commandLine().getErr())
             }
             return 1
+        }
+    }
+
+    private Map<String, Map<String, String>> optionsOfFeatures() {
+        try {
+            return FeatureOptions.parse(featureOptions)
+        } catch (IllegalArgumentException e) {
+            throw new CommandLine.ParameterException(spec.commandLine(), e.getMessage())
         }
     }
 
@@ -194,7 +210,9 @@ class FeatureAddCommand extends BaseCommand implements Callable<Integer>, Projec
             // which jar of a pack is fetched again is said among the notes: the document is all that is written
             packs = packOptions.packs(directory, createPackArtifacts(), grailsRepoUrl(), { String line -> notes.out(line) } as Consumer<String>,
                     { String line -> notes.warning(line) } as Consumer<String>)
-            plan = new FeatureAddition(projectGeneratorSource.get()).plan(directory, features, getOperatingSystem(), notes, replace, packs)
+            FeatureAddition addition = new FeatureAddition(projectGeneratorSource.get())
+            addition.featureOptions = FeatureOptions.parse(featureOptions)
+            plan = addition.plan(directory, features, getOperatingSystem(), notes, replace, packs)
         } catch (Exception e) {
             if (showStacktrace()) {
                 e.printStackTrace(spec.commandLine().getErr())

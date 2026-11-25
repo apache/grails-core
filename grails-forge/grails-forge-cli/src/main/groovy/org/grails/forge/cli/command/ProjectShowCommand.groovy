@@ -27,6 +27,7 @@ import org.apache.grails.forge.cli.console.ProjectCommand
 import org.apache.grails.forge.cli.console.UsageHelp
 import org.apache.grails.forge.core.change.RecordMigration
 import org.apache.grails.forge.core.pack.PackPreset
+import org.apache.grails.forge.cli.pack.FeatureOptions
 import org.apache.grails.forge.core.state.GenerationOptions
 import org.apache.grails.forge.core.state.ProjectLock
 import org.apache.grails.forge.core.state.ProjectLock.LockedFeature
@@ -98,7 +99,7 @@ class ProjectShowCommand extends BaseCommand implements Callable<Integer>, Proje
 
     /** The options of a create command that are shown with their value, in the order they are shown. */
     public static final List<String> SHOWN_OPTIONS = Collections.unmodifiableList([
-            '--jdk', '--servlet', '--data', '--reloading', '--subproject', '--features', '--exclude-features', '--feature-pack-dir',
+            '--jdk', '--servlet', '--data', '--reloading', '--subproject', '--features', '--feature-option', '--exclude-features', '--feature-pack-dir',
             '--feature-pack-repository', '--feature-pack-sha256', '--feature-catalog', '--preset'])
 
     /**
@@ -236,6 +237,9 @@ class ProjectShowCommand extends BaseCommand implements Callable<Integer>, Proje
         List<String> features = found.isEmpty() ? plugins.features : (plugins.features + found).unique(false).toSorted()
         if (!features.isEmpty()) {
             arguments << '--features' << features.join(',')
+        }
+        for (String option : FeatureOptions.written(options.featureOptions)) {
+            arguments << FeatureOptions.OPTION << option
         }
         for (String repository : plugins.repositories) {
             arguments << '--feature-pack-repository' << repository
@@ -428,6 +432,9 @@ class ProjectShowCommand extends BaseCommand implements Callable<Integer>, Proje
             feature.coordinates == null ? shown(feature.name) : "${shown(feature.name)} (${shown(feature.coordinates + ':' + feature.version)})".toString()
         }.join(', ') ?: '(no features)')
         row('left out', manifest.excludedFeatures.collect { RequestedFeature feature -> shown(feature.name) }.join(', ') ?: '(no features)')
+        for (String option : FeatureOptions.written(options.featureOptions)) {
+            row('feature option', shown(option))
+        }
         for (LockedRepository repository : lock.repositories) {
             row('repository', repository.url == null ? shown(repository.kind) : "${shown(repository.kind)} ${shown(repository.url)}")
         }
@@ -498,6 +505,7 @@ class ProjectShowCommand extends BaseCommand implements Callable<Integer>, Proje
         known.put('--reloading', compared('--reloading', written(options.reloading), written(DevelopmentReloading.DEFAULT_OPTION), options.notRecorded.contains('reloading')))
         known.put('--subproject', compared('--subproject', options.subproject, false, false))
         known.put('--features', compared('--features', plugins.features, [], false))
+        known.put(FeatureOptions.OPTION, compared(FeatureOptions.OPTION, FeatureOptions.written(options.featureOptions), [], false))
         known.put('--exclude-features', compared('--exclude-features', manifest.excludedFeatures*.name, [], false))
         // the record has the features of such a pack and not where the pack was
         known.put('--feature-pack-dir', unnamedPacks.isEmpty() ? compared('--feature-pack-dir', [], [], false) :
@@ -677,6 +685,7 @@ class ProjectShowCommand extends BaseCommand implements Callable<Integer>, Proje
         document.put('generationState', manifest.generationState)
         document.put('options', entries(jdk: manifest.options.jdk.majorVersion(), servlet: written(manifest.options.servlet), data: written(manifest.options.data),
                 reloading: written(manifest.options.reloading)))
+        document.put('featureOptions', manifest.options.featureOptions)
         document.put('requestedFeatures', manifest.requestedFeatures.collect { RequestedFeature feature ->
             entries(name: feature.name, coordinates: feature.coordinates, version: feature.version)
         })

@@ -59,6 +59,7 @@ import org.grails.forge.util.VersionInfo
  * <tr><td>{@code options.reloading}</td><td>how the application reloads in development, as {@code --reloading} takes it: {@code devtools}, {@code jrebel} or {@code none}</td></tr>
  * <tr><td>{@code grailsVersion}</td><td>the version of Grails the application is generated for</td></tr>
  * <tr><td>{@code pack.name}</td><td>the name of the feature of the pack</td></tr>
+ * <tr><td>{@code parameters}</td><td>the value of each parameter the descriptor declares, by its name, as {@code parameters.store}: {@code true} or {@code false} for a {@code boolean}, text for the others</td></tr>
  * </table>
  *
  * <p>The templates of a pack Forge has in itself that names artifacts under {@code versionsOfForge} have
@@ -85,7 +86,8 @@ final class PackModel {
     static Map<String, Object> of(GeneratorContext generatorContext, PackDescriptor descriptor) {
         Map<String, Object> model = model(generatorContext.getProject().getProperties(), generatorContext.getFeatures(),
                 generatorContext.getApplicationType(), generatorContext.getJdkVersion(), generatorContext.getApplicationOptions().getGormImpl(),
-                generatorContext.getApplicationOptions().getServletImpl(), generatorContext.getApplicationOptions().getDevelopmentReloading(), descriptor)
+                generatorContext.getApplicationOptions().getServletImpl(), generatorContext.getApplicationOptions().getDevelopmentReloading(), descriptor,
+                PackParameter.values(descriptor, generatorContext.getOptions()))
         if (descriptor.versionsOfForge) {
             Map<String, Object> versions = new LinkedHashMap<>()
             descriptor.versionsOfForge.each { String artifact, String otherwise ->
@@ -106,7 +108,9 @@ final class PackModel {
      * it requires, and nothing else. There are as many as it takes for every type of application the
      * descriptor names and every value of {@code options.jdk}, {@code options.data},
      * {@code options.servlet} and {@code options.reloading} to be in one of them: the first has the first
-     * value of each, the second the second, and one that has run out of values starts over. They are not
+     * value of each, the second the second, and one that has run out of values starts over. A parameter
+     * of the pack that is a {@code boolean} or a {@code choice} has each of its values in turn alike,
+     * the default first; one that is text has its default. They are not
      * every combination, and a combination can be one no application has. The models have the names
      * {@link #of} gives a template of a pack that is not of Forge.
      *
@@ -123,13 +127,24 @@ final class PackModel {
         ServletImpl[] servlets = ServletImpl.values()
         DevelopmentReloading[] reloading = DevelopmentReloading.values()
         JdkVersion[] jdks = JdkVersion.values()
-        int count = [types.size(), data.length, servlets.length, reloading.length, jdks.length].max()
+        // the values a parameter is rendered with, the default first
+        Map<String, List<Object>> values = new TreeMap<>()
+        for (PackParameter parameter : descriptor.parameters) {
+            List<Object> all = parameter.type == PackParameter.BOOLEAN ? [true, false] as List<Object> :
+                    parameter.type == PackParameter.CHOICE ? new ArrayList<Object>(parameter.choices) : [parameter.defaultValue] as List<Object>
+            all.remove(parameter.defaultValue)
+            all.add(0, parameter.defaultValue)
+            values.put(parameter.name, all)
+        }
+        int count = ([types.size(), data.length, servlets.length, reloading.length, jdks.length] + values.values()*.size()).max()
         Map<String, Map<String, Object>> samples = new LinkedHashMap<>()
         for (int index = 0; index < count; index++) {
+            Map<String, Object> parameters = new TreeMap<>()
+            values.each { String name, List<Object> all -> parameters.put(name, all[index % all.size()]) }
             Map<String, Object> model = model(project, features, types[index % types.size()], jdks[index % jdks.length],
-                    data[index % data.length], servlets[index % servlets.length], reloading[index % reloading.length], descriptor)
-            samples.put("applicationType ${model.get('applicationType')}, options ${model.get('options')}".toString(),
-                    Collections.unmodifiableMap(model))
+                    data[index % data.length], servlets[index % servlets.length], reloading[index % reloading.length], descriptor, parameters)
+            samples.put("applicationType ${model.get('applicationType')}, options ${model.get('options')}".toString() +
+                    (parameters.isEmpty() ? '' : ", parameters ${parameters}".toString()), Collections.unmodifiableMap(model))
         }
         return samples
     }
@@ -141,10 +156,10 @@ final class PackModel {
     @SuppressWarnings('ParameterCount')
     private static Map<String, Object> model(Map<String, String> project, Collection<String> features, ApplicationType applicationType,
                                              JdkVersion jdk, GormImpl data, ServletImpl servlet, DevelopmentReloading reloading,
-                                             PackDescriptor descriptor) {
+                                             PackDescriptor descriptor, Map<String, Object> parameters) {
         switch (descriptor.templateApi) {
             case 1:
-                return api1(project, features, applicationType, jdk, data, servlet, reloading, descriptor)
+                return api1(project, features, applicationType, jdk, data, servlet, reloading, descriptor, parameters)
             default:
                 throw new IllegalArgumentException("The feature pack ${descriptor.name} is written against template API " +
                         "${descriptor.templateApi}, and this version of Forge renders the template APIs ${APIS}")
@@ -154,7 +169,7 @@ final class PackModel {
     @SuppressWarnings('ParameterCount')
     private static Map<String, Object> api1(Map<String, String> project, Collection<String> features, ApplicationType applicationType,
                                             JdkVersion jdk, GormImpl data, ServletImpl servlet, DevelopmentReloading reloading,
-                                            PackDescriptor descriptor) {
+                                            PackDescriptor descriptor, Map<String, Object> parameters) {
         int api = 1
         Map<String, Object> model = new LinkedHashMap<>()
         model.put('project', new Names(api, 'project', project))
@@ -169,6 +184,8 @@ final class PackModel {
         ] as Map<String, Object>))
         model.put('grailsVersion', VersionInfo.getGrailsVersion())
         model.put('pack', new Names(api, 'pack', [name: descriptor.name] as Map<String, Object>))
+        // the parameters the descriptor declares, each with the value it was given or its default
+        model.put('parameters', new Names(api, 'parameters', parameters))
         return model
     }
 

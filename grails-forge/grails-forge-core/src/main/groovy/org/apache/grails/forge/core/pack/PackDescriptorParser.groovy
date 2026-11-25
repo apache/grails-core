@@ -131,7 +131,7 @@ class PackDescriptorParser {
     private static final Set<String> KEYS = ['format', 'kind', 'name', 'templateApi', 'compatibility', 'title',
                                              'description', 'category', 'documentation', 'applicationTypes', 'requires',
                                              'conflicts', 'oneOf', 'dependencies', 'platforms', 'buildPlugins', 'build',
-                                             'configuration', 'files', 'readme', 'instructions', 'readmeLinks', 'requiresJdk', 'thirdPartyDocumentation'] as Set<String>
+                                             'configuration', 'files', 'readme', 'instructions', 'readmeLinks', 'requiresJdk', 'parameters', 'thirdPartyDocumentation'] as Set<String>
     // a preset names one type of application, gives options and asks for features, and is in no group or category
     private static final List<String> PRESET_KEYS = ['format', 'kind', 'name', 'templateApi', 'compatibility', 'title', 'description',
                                                      'documentation', 'thirdPartyDocumentation', 'applicationType', 'options', 'features',
@@ -156,7 +156,7 @@ class PackDescriptorParser {
     private static final Pattern GUIDE_PAGE = Pattern.compile(PAGE_STEP + '(/' + PAGE_STEP + ')*/?(#[A-Za-z0-9\\-_.]+)?')
     private static final List<String> CONDITION_KEYS = [PackCondition.FEATURE, PackCondition.GROUP, PackCondition.ANY_OF, PackCondition.ALL_OF,
                                                         PackCondition.NOT, PackCondition.APPLICATION_TYPE, PackCondition.OPTION,
-                                                        PackCondition.JDK_AT_LEAST]
+                                                        PackCondition.JDK_AT_LEAST, PackCondition.PARAMETER]
     private static final int MAX_CONDITIONS = 50
     private static final int MAX_CONDITION_DEPTH = 5
     private static final int MIN_JDK = 8
@@ -189,6 +189,7 @@ class PackDescriptorParser {
     private static final Pattern PROPERTY_NAME = Pattern.compile(/[A-Za-z0-9_.\-]+/)
     private static final Pattern PROPERTY_VALUE = Pattern.compile(/([\x21-\x5B\x5D-\x7E]([\x20-\x5B\x5D-\x7E]*[\x21-\x5B\x5D-\x7E])?)?/)
     private static final Pattern IDENTIFIER = Pattern.compile(/[A-Za-z_]\w*/)
+    private static final Pattern PARAMETER_NAME = Pattern.compile(/[a-z][A-Za-z0-9]{0,39}/)
     private static final Pattern IDENTIFIER_OR_CALL = Pattern.compile(/[A-Za-z_]\w*(\([A-Za-z_]\w*\))?/)
     private static final Pattern COMMENT = Pattern.compile(/[\x20-\x7E]+/)
     private static final Pattern ENVIRONMENT = Pattern.compile(/[A-Za-z][A-Za-z0-9_\-]{0,49}/)
@@ -258,11 +259,14 @@ class PackDescriptorParser {
 
     private static PackDescriptor read(String yaml, String source, boolean ofForge) {
         Map<String, Object> root = load(yaml, source)
-        List<String> problems = new Problems()
+        Problems problems = new Problems()
         checkTree(root, '', problems)
         failOn(problems, source)
         // which keys are read depends on the kind: a preset has keys a feature has not, and the reverse
         boolean preset = !ofForge && root.get('kind') == PackPreset.KIND
+        // before anything with a condition: a condition can ask for a parameter, which has to be one of these. A preset declares none
+        List<PackParameter> parameters = preset ? Collections.<PackParameter>emptyList() : declaredParameters(root, problems)
+        problems.setDeclared(parameters)
         rootKeys(root, ofForge ? KEYS.toList() + KEYS_OF_FORGE : preset ? PRESET_KEYS : KEYS.toList(), preset, problems)
         requireNumber(root, 'format', PackDescriptor.FORMAT, problems)
         int templateApi = requireTemplateApi(root, problems)
@@ -332,9 +336,81 @@ class PackDescriptorParser {
                 // what was refused above as a key of the packs of Forge is not read here as well
                 readOfForge(ofForge ? root : root.findAll { String key, Object value -> !KEYS_OF_FORGE.contains(key) } as Map<String, Object>,
                         build, name, oneOf, extensionParts, settings, problems),
-                ofPreset)
+                ofPreset,
+                parameters)
         failOn(problems, source)
         return descriptor
+    }
+
+    /**
+     * The options the feature takes: each with a name a template can read it by, a type, the value it has
+     * when it is not given, which is one it can have, and what it is for.
+     */
+    private static List<PackParameter> declaredParameters(Map<String, Object> root, List<String> problems) {
+        List<PackParameter> parameters = []
+        Map<Integer, Map<String, Object>> entries = maps(root, 'parameters', problems)
+        if (entries.size() > PackParameter.MAX) {
+            problems << "parameters: can have ${PackParameter.MAX} parameters, but has ${entries.size()}".toString()
+            return parameters
+        }
+        Set<String> names = new HashSet<>()
+        entries.each { int index, Map<String, Object> entry ->
+            String at = "parameters[${index}]."
+            unknownKeys(entry, ['name', 'type', 'default', 'choices', 'description'], at, problems)
+            String name = matching(requiredText(entry, 'name', at, MAX_LINE, problems), PARAMETER_NAME, at + 'name',
+                    'must be a name a template can read, of at most 40 letters and digits, starting with a lower case letter', problems)
+            if (name != null && !names.add(name)) {
+                problems << "${at}name: ${describe(name)} is declared by an earlier entry too".toString()
+                name = null
+            }
+            String type = requiredText(entry, 'type', at, MAX_LINE, problems)
+            if (type != null && !PackParameter.TYPES.contains(type)) {
+                problems << "${at}type: must be one of ${PackParameter.TYPES}, but is ${describe(type)}".toString()
+                type = null
+            }
+            List<String> choices = []
+            if (type == PackParameter.CHOICE) {
+                texts(entry, 'choices', at, problems).each { int choice, String value ->
+                    if (!PackParameter.isText(value)) {
+                        problems << "${at}choices[${choice}]: must be one line of at most ${PackParameter.MAX_VALUE} characters, but is ${describe(value)}".toString()
+                    } else {
+                        choices << value
+                    }
+                }
+                if (choices.size() < 2 || choices.size() > MAX_ENTRIES_OF_FORGE) {
+                    problems << "${at}choices: must list 2 to ${MAX_ENTRIES_OF_FORGE} values a choice can have".toString()
+                    type = null
+                }
+            } else if (entry.containsKey('choices')) {
+                problems << "${at}choices: is for a parameter of the type ${PackParameter.CHOICE}".toString()
+            }
+            String description = text(entry, 'description', at, MAX_PARAGRAPH, problems)
+            Object written = entry.get('default')
+            Object byDefault = null
+            if (written == null) {
+                problems << "${at}default: is required: the value the parameter has when none is given".toString()
+            } else if (type == PackParameter.BOOLEAN) {
+                if (written instanceof Boolean) {
+                    byDefault = written
+                } else {
+                    problems << "${at}default: must be true or false, but is ${describe(written)}".toString()
+                }
+            } else if (type != null) {
+                if (!(written instanceof String)) {
+                    problems << "${at}default: must be text, but is ${describe(written)}${quoteHint(written)}".toString()
+                } else if (type == PackParameter.CHOICE ? !choices.contains(written) : !PackParameter.isText((String) written)) {
+                    problems << (type == PackParameter.CHOICE ? "${at}default: must be one of ${choices}, but is ${describe(written)}" :
+                            "${at}default: must be one line of text of at most ${PackParameter.MAX_VALUE} characters that is not blank and has no " +
+                                    "control characters, but is ${describe(written)}").toString()
+                } else {
+                    byDefault = written
+                }
+            }
+            if (name != null && type != null && byDefault != null) {
+                parameters << new PackParameter(name, type, byDefault, choices, description)
+            }
+        }
+        return parameters
     }
 
     /**
@@ -1193,6 +1269,8 @@ class PackDescriptorParser {
                 String option = (String) ((Map) asked).keySet().first()
                 List<String> values = oneOrMore(((Map) asked).get(option), "${place}.${option}", PackCondition.OPTIONS.get(option), problems)
                 return values == null ? null : new PackCondition(key, option, values, [])
+            case PackCondition.PARAMETER:
+                return parameterCondition(asked, place, problems)
             case PackCondition.JDK_AT_LEAST:
                 Integer jdk = jdk(asked)
                 if (jdk == null) {
@@ -1204,6 +1282,34 @@ class PackDescriptorParser {
                 problems << "${at}: has the key ${describe(key)}, and a condition has one of the keys ${CONDITION_KEYS}".toString()
                 return null
         }
+    }
+
+    // a parameter the pack declares, with a value it can have or a list of them
+    private static PackCondition parameterCondition(Object asked, String place, List<String> problems) {
+        List<PackParameter> declared = problems instanceof Problems ? ((Problems) problems).getDeclared() : Collections.<PackParameter>emptyList()
+        String name = asked instanceof Map && ((Map) asked).size() == 1 ? String.valueOf(((Map) asked).keySet().first()) : null
+        PackParameter parameter = declared.find { PackParameter each -> each.name == name }
+        if (parameter == null) {
+            problems << ("${place}: must be one of the parameters the pack declares, ${declared*.name}, with a value or a list of values, " +
+                    "but is ${describe(asked)}").toString()
+            return null
+        }
+        Object value = ((Map) asked).get(name)
+        List<Object> given = value instanceof List ? (List<Object>) value : [value]
+        List<String> values = []
+        for (Object each : given) {
+            String written = each instanceof Boolean || each instanceof String ? each.toString() : null
+            if (written == null || parameter.refusal(written) != null) {
+                problems << "${place}.${brief(name)}: ${parameter.refusal(written ?: '')}, or a list of such values, but is ${describe(value)}".toString()
+                return null
+            }
+            values << written
+        }
+        if (values.isEmpty() || values.size() > MAX_ENTRIES_OF_FORGE) {
+            problems << "${place}.${brief(name)}: must be a value or a list of 1 to ${MAX_ENTRIES_OF_FORGE} values, but is ${describe(value)}".toString()
+            return null
+        }
+        return new PackCondition(PackCondition.PARAMETER, name, values, [])
     }
 
     private static Integer jdk(Object value) {
@@ -1502,6 +1608,17 @@ class PackDescriptorParser {
 
         // named with its class: a list reads a bare name as the property of each of its elements
         private static final int LIMIT = PackDescriptorParser.MAX_PROBLEMS
+
+        // the parameters the descriptor declares, which its conditions are read against
+        private List<PackParameter> declaredParameters = []
+
+        List<PackParameter> getDeclared() {
+            return this.@declaredParameters
+        }
+
+        void setDeclared(List<PackParameter> declared) {
+            this.@declaredParameters = declared
+        }
         private static final Pattern MORE = Pattern.compile(/and (\d+) more/)
 
         @Override

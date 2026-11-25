@@ -41,6 +41,7 @@ import org.grails.forge.options.Options
  * { applicationType: [web, web-plugin] }        the application is of one of the types
  * { option: { data: hibernate7 } }              the option has the value, or one of a list of values
  * { jdkAtLeast: 25 }                            the JDK of the application is that or later
+ * { parameter: { store: collection } }          the parameter of the pack has the value, or one of a list of values
  * </pre>
  *
  * <p>It is evaluated against the features there are at that moment: those selected so far for a
@@ -61,6 +62,7 @@ final class PackCondition {
     public static final String APPLICATION_TYPE = 'applicationType'
     public static final String OPTION = 'option'
     public static final String JDK_AT_LEAST = 'jdkAtLeast'
+    public static final String PARAMETER = 'parameter'
 
     /** The options a condition can ask, each with the values it can have, as the create commands take them */
     public static final Map<String, List<String>> OPTIONS = Collections.unmodifiableMap([
@@ -74,7 +76,7 @@ final class PackCondition {
 
     /** What is asked: one of the keys of the language */
     final String kind
-    /** The option that is asked, a key of {@link #OPTIONS}, or {@code null} */
+    /** The option that is asked, a key of {@link #OPTIONS}, or the parameter of the pack that is asked, or {@code null} */
     final String option
     /** The feature, the group, the application types, the values of the option or the JDK that is asked */
     final List<String> values
@@ -114,6 +116,10 @@ final class PackCondition {
             case JDK_AT_LEAST:
                 return facts.getOptions() != null && facts.getOptions().getJavaVersion() != null &&
                         facts.getOptions().getJavaVersion().majorVersion() >= Integer.parseInt(values[0])
+            case PARAMETER:
+                // what is known without the pack knows no parameter, and then the condition does not hold
+                Object value = facts.getParameter(option)
+                return value != null && values.contains(value.toString())
             default:
                 throw new IllegalStateException("A condition cannot ask '${kind}'")
         }
@@ -156,6 +162,8 @@ final class PackCondition {
                 return this == ALWAYS ? 'always' : "${kind}(${conditions.join(', ')})"
             case OPTION:
                 return "${option}=${values.join('|')}"
+            case PARAMETER:
+                return "parameter ${option}=${values.join('|')}"
             default:
                 return "${kind}=${values.join('|')}"
         }
@@ -201,6 +209,15 @@ final class PackCondition {
     }
 
     /**
+     * @param facts what is known of an application
+     * @param parameters the values of the parameters of one pack for it, by their names
+     * @return what is known of the application for the conditions of that pack
+     */
+    static Facts withParameters(Facts facts, Map<String, Object> parameters) {
+        return new OfPack(facts, parameters)
+    }
+
+    /**
      * What a condition is evaluated against.
      */
     interface Facts {
@@ -212,6 +229,48 @@ final class PackCondition {
         ApplicationType getApplicationType()
 
         Options getOptions()
+
+        /**
+         * @return the value of a parameter of the pack the condition is of, or {@code null} when it is not known
+         */
+        Object getParameter(String name)
+    }
+
+    @CompileStatic
+    private static final class OfPack implements Facts {
+
+        private final Facts facts
+        private final Map<String, Object> parameters
+
+        OfPack(Facts facts, Map<String, Object> parameters) {
+            this.facts = facts
+            this.parameters = parameters
+        }
+
+        @Override
+        boolean hasFeature(String name) {
+            return facts.hasFeature(name)
+        }
+
+        @Override
+        boolean hasGroup(String group) {
+            return facts.hasGroup(group)
+        }
+
+        @Override
+        ApplicationType getApplicationType() {
+            return facts.getApplicationType()
+        }
+
+        @Override
+        Options getOptions() {
+            return facts.getOptions()
+        }
+
+        @Override
+        Object getParameter(String name) {
+            return parameters.get(name)
+        }
     }
 
     @CompileStatic
@@ -246,6 +305,11 @@ final class PackCondition {
         Options getOptions() {
             return options
         }
+
+        @Override
+        Object getParameter(String name) {
+            return null
+        }
     }
 
     @CompileStatic
@@ -275,6 +339,11 @@ final class PackCondition {
         @Override
         Options getOptions() {
             return featureContext.getOptions()
+        }
+
+        @Override
+        Object getParameter(String name) {
+            return null
         }
     }
 }

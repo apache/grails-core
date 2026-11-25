@@ -78,7 +78,7 @@ class PackTemplateApiSpec extends ApplicationContextSpec {
 
         then:
         IllegalArgumentException e = thrown()
-        e.message.contains("There is no 'nope' for a template: template API 1 has [applicationType, features, grailsVersion, options, pack, project]")
+        e.message.contains("There is no 'nope' for a template: template API 1 has [applicationType, features, grailsVersion, options, pack, parameters, project]")
 
         when:
         generate(['acme-audit'], pack(['t.txt.gsp': '${options.nope}']))
@@ -116,12 +116,13 @@ class PackTemplateApiSpec extends ApplicationContextSpec {
         PackDescriptor descriptor = new PackDescriptorParser().parse(PackGenerationSpec.HEADER + 'name: acme-audit\n', 'test')
         List<Set<String>> ofSamples = PackModel.samples(descriptor).values().collect { Map<String, Object> sample ->
             sample.collectMany { String name, Object value ->
-                value instanceof Map ? ((Map) value).keySet().collect { "${name}.${it}".toString() } : [name]
+                // the parameters of a pack that declares none are a name without names below it
+                value instanceof Map && !((Map) value).isEmpty() ? ((Map) value).keySet().collect { "${name}.${it}".toString() } : [name]
             } as Set<String>
         }
 
         expect:
-        names.size() == 14
+        names.size() == 15
         ofClass == names
         ofGuide == names
         ofSamples.size() > 1

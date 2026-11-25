@@ -135,6 +135,9 @@ instructions: |
 |`files`
 |Files to write. `from` is a path under `templates`; `to` is the path in the application and can use `{name}`, `{packageName}`, `{packagePath}`, `{className}`, `{naturalName}` and `{propertyName}`. `when` is a condition. `template: false` writes a file whose name ends with `.gsp` as it is, and `executable: true` writes the file as one that can be run.
 
+|`parameters`
+|The options the feature takes, which whoever creates the application sets with `--feature-option`: see <<forgeFeaturePackParameters,below>>.
+
 |`requiresJdk`
 |The lowest version of Java the feature can be used with, as a number such as `25`. An application for an earlier one is refused when the feature is selected.
 
@@ -169,6 +172,9 @@ A `when` is a condition on the application that is created. It is data, which th
 |`{ jdkAtLeast: 25 }`
 |the application is for that version of Java or a later one
 
+|`{ parameter: { store: collection } }`
+|the <<forgeFeaturePackParameters,parameter>> of the pack has the value, or one of a list of values
+
 |`{ anyOf: [...] }`, `{ allOf: [...] }`, `{ not: ... }`
 |one, all or none of them hold: each a condition, or the name of a feature
 |===
@@ -199,6 +205,95 @@ files:
 What `checkForgePack` checks of a pack does not depend on its conditions: every template is rendered, whatever the `when` of its file.
 
 A pack only adds. It cannot change what another selected feature gives the application: a setting, a build property or the version of a dependency that is already there with another value is an error, and so is a file another feature writes, such as the `.gitignore` and the `.gitattributes` at the root of an application. A descriptor with an unknown key, or a destination outside the application, is refused with a message that names the key.
+
+
+[[forgeFeaturePackParameters]]
+==== Parameters
+
+
+A pack can leave a choice to whoever creates the application. It declares the choice as a parameter, with the value it has when nothing is said:
+
+[source,yaml]
+.src/main/forge/feature.yml
+----
+parameters:
+  - name: store
+    type: choice
+    choices: [table, collection]
+    default: table
+    description: Where audit events are kept
+  - name: retention
+    type: string
+    default: '90'
+    description: The days an audit event is kept
+  - name: console
+    type: boolean
+    default: false
+    description: Whether audit events are also written to the console
+dependencies:
+  - scope: implementation
+    coordinates: com.acme:acme-audit-mongodb
+    version: '2.3.0'
+    when: { parameter: { store: collection } }
+----
+
+[cols="1,3"]
+|===
+|Key |Meaning
+
+|`name`
+|Required. The name a template reads the parameter by: at most 40 letters and digits, starting with a lower case letter, as in `retentionDays`.
+
+|`type`
+|Required. `string`, a line of text; `boolean`, `true` or `false`; or `choice`, one of the values `choices` lists.
+
+|`choices`
+|For a `choice`: the 2 to 20 values it can have.
+
+|`default`
+|Required. The value the parameter has when none is given, which is one it can have. The text of a `string` is put in quotes when it could be read as a number, as `'90'` is.
+
+|`description`
+|What the parameter is for, which is shown where the options of the feature are listed.
+|===
+
+A pack can declare 20 parameters. A value that is text is one line of at most 200 characters that is not blank and has no control characters. It is data: nothing of it is run, and it is written wherever the templates of the pack write it, so a template that writes one into a source file has to write it as that file reads text.
+
+A parameter is set with `--feature-option`, which takes the name of the feature, a dot, the name of the parameter and the value, and can be given more than once:
+
+[source,console]
+----
+$ grails create-app com.example.shop \
+    --features=com.acme:acme-audit-grails:2.3.0 \
+    --feature-option acme-audit.store=collection \
+    --feature-option acme-audit.retention=30
+----
+
+The feature is named by its name, also when its plugin was given by its coordinates. The name of a feature and the name of a parameter have neither a dot nor an equals sign, so the value is everything after the first equals sign, as it is. An option of a feature the application does not have, an option the feature does not declare and a value the parameter cannot have are mistakes in the command line: the command ends with exit code 2 and says what the feature takes, and nothing is created. What the feature of a pack takes is said with what the pack adds when the application is created, and `--list-features` says it for every pack that is given to it:
+
+[source]
+----
+| The feature acme-audit takes options, each given as --feature-option acme-audit.NAME=VALUE:
+    store=table|collection (default table)  Where audit events are kept
+    retention=text (default 90)  The days an audit event is kept
+    console=true|false (default false)  Whether audit events are also written to the console
+----
+
+A template reads the value as `parameters.<name>`: text, or `true` or `false` for a `boolean`. A parameter that was not set has its default, and a name the pack does not declare is an error, as for every other name of a template. A condition asks for it with `parameter`, as above.
+
+[source,gsp]
+.src/main/forge/templates/audit.properties.gsp
+----
+audit.store=${parameters.store}
+audit.retention=${parameters.retention}
+<% if (parameters.console) { %>
+audit.console=true
+<% } %>
+----
+
+The options that were given are recorded with the other options of the application, in `.grails/project.yml` and `.grails/forge.lock.yml`, under `featureOptions`; an option that was not given is not recorded, since the pack, which the record holds to its digest, gives it its value. So `feature add` and `project regenerate` generate the application again with the same values, and `project show` has the options in the command line it prints and in the `featureOptions` member of its `--json` document. An application that was given no option of a feature has no `featureOptions` in its record, and the record is otherwise unchanged: it is still format 1.
+
+`feature add` takes `--feature-option` for the features it adds. The options of a feature the application has are those of its record, and an option that is given for such a feature is refused: to change one, create the application again with the command line `project show` prints. `checkForgePack` renders every template with each value of every `boolean` and `choice` parameter, the default first, and with the default of every `string`. The applications of `forgePackTest` are generated with the defaults of the parameters: a fixture cannot set one yet. A preset cannot set the parameters of the features it asks for; they are set on the command line.
 
 
 [[forgeFeaturePackInstructions]]
@@ -309,9 +404,12 @@ A template can refer to these names. Any other name is an error, so a misspelled
 
 |`pack.name`
 |The name of the feature of the pack
+
+|`parameters`
+|The value of each <<forgeFeaturePackParameters,parameter>> the descriptor declares, by its name, as `parameters.store`: `true` or `false` for a `boolean`, and text for the others
 |===
 
-These names are template API 1, the one `templateApi: 1` in the descriptor asks for. A template API does not change once it is released: when a later version of Grails gives templates more, that is template API 2, and a pack that declares 1 is still given exactly the names above. A pack that declares a template API the generator does not have is refused, with the ones it has in the message.
+These names are template API 1, the one `templateApi: 1` in the descriptor asks for. `parameters` was added to it before the first release of Grails 9: a template that does not use the name is rendered as it was. A template API does not change once it is released: when a later version of Grails gives templates more, that is template API 2, and a pack that declares 1 is still given exactly the names above. A pack that declares a template API the generator does not have is refused, with the ones it has in the message.
 
 A template has to be text in UTF-8, and a file of a pack can have at most 1 MiB, before and after it is rendered.
 
@@ -944,7 +1042,12 @@ Many features of Grails are written as feature packs inside the command line, in
 |Yes
 |
 
-|Conditions (`when`) on the type of the application, its features and groups, its options and its version of Java
+|`parameters`, the options of the feature, with `--feature-option`
+|Yes
+|Yes
+|
+
+|Conditions (`when`) on the type of the application, its features and groups, its options, its version of Java and the parameters of the pack
 |Yes
 |Yes
 |
@@ -995,7 +1098,7 @@ Many features of Grails are written as feature packs inside the command line, in
 |The application is generated again as it was, which takes the very pack.
 |===
 
-Neither kind of pack can make an entry of `gradle.properties` conditional or add to `settings.gradle`: a build property is set for every application the feature is in, and the settings of a build are written by the feature `gradle-settings-file`.
+Neither kind of pack can make an entry of `gradle.properties` conditional or add to `settings.gradle`: a build property is set for every application the feature is in, and the settings of a build are written by the feature `gradle-settings-file`. Neither brings commands: the `create-` commands that write the classes of an application are those of the command line, and a descriptor with `artefacts` is refused as one with an unknown key.
 
 [[forgeFeaturePackSameEveryTime]]
 ==== What Is the Same Every Time

@@ -242,8 +242,8 @@ class PackGenerationSpec extends ApplicationContextSpec {
 
         where:
         name              | source                                    || has
-        'projekt'         | 'line one\n${projekt.name}'               || '[applicationType, features, grailsVersion, options, pack, project]'
-        'flags'           | '<% if (flags) { %>yes<% } %>'            || '[applicationType, features, grailsVersion, options, pack, project]'
+        'projekt'         | 'line one\n${projekt.name}'               || '[applicationType, features, grailsVersion, options, pack, parameters, project]'
+        'flags'           | '<% if (flags) { %>yes<% } %>'            || '[applicationType, features, grailsVersion, options, pack, parameters, project]'
         'pack.version'    | '${pack.version}'                         || '[pack.name]'
         'options.gorm'    | '<% if (options.gorm == "x") { %>y<% } %>' || '[options.data, options.jdk, options.reloading, options.servlet]'
         'project.nope'    | '${project.nope}'                         || 'project.packageName'

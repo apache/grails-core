@@ -213,6 +213,14 @@ The "create-*" commands are used to produce a fundamental Grails project, allowi
 --subproject
 ----
 
+| --feature-option
+| An option of a feature, which the feature pack of the feature declares as a parameter: the name of the feature, a dot, the name of the option and its value. Can be given more than once. An option the feature does not have, or a value the option cannot have, is refused. See xref:plugins#forgeFeaturePackParameters[Parameters].
+|
+[source,shell]
+----
+--feature-option acme-audit.store=collection
+----
+
 | --feature-pack-dir
 | A directory that holds the feature pack of a plugin, whose feature can then be selected with `--features`. Can be given more than once. A pack is code: use one only when you trust where it comes from. See xref:plugins#forgeFeaturePacks[Adding a Feature to Application Creation].
 |
