@@ -38,10 +38,15 @@ class ForkedCli {
      * @param directory the directory the CLI is run in
      * @param jvm options of the virtual machine
      * @param args the command line
-     * @return what starts it; the environment is that of this process
+     * @return what starts it; the environment is that of this process, and the home that of this
+     * virtual machine unless an option names another
      */
     static ProcessBuilder builder(File directory, List<String> jvm, String... args) {
         List<String> command = [new File(System.getProperty('java.home'), 'bin/java').path]
+        // The home of the specifications, which the build gives this virtual machine and another does not
+        // have by itself: the program would keep what it keeps under the home of whoever runs the build.
+        // An option of the specification that names another home comes after this one, and counts.
+        command.add("-Duser.home=${System.getProperty('user.home')}".toString())
         command.addAll(jvm)
         // Not an argument and not a variable of the environment: the class path of a build is longer than
         // either can be on Windows, where each ends at 32767 characters. Java reads it from a file, in
