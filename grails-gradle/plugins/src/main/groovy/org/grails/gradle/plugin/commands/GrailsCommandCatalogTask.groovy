@@ -98,11 +98,12 @@ abstract class GrailsCommandCatalogTask extends DefaultTask {
     /** What {@link #IGNORE_LOCATION} says: that nothing in its directory is committed, itself included. */
     public static final String IGNORE_CONTENT = '*\n'
 
-    /** What is read from the output of the project: registrations and descriptors, not classes. */
+    /** What is read from the output of the project: registrations, descriptors and declared options, not classes. */
     public static final List<String> REGISTRATION_PATTERNS = [
             'META-INF/grails-cli.factories',
             'META-INF/grails.factories',
             'META-INF/grails-commands/*.json',
+            'META-INF/grails-command-options.json',
     ].asImmutable()
 
     /**

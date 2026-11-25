@@ -126,6 +126,8 @@ class CommandCatalogBuilder {
     private boolean legacySupport
     // the task of each test phase by the name of the phase; null when the phases of the project were not given
     private Map<String, String> testPhases
+    // the options the elements of the class path declare for commands
+    private final CommandOptionCatalog commandOptions = new CommandOptionCatalog()
 
     /**
      * Reads the commands of one element of the class path. Elements are added in the order of the class path.
@@ -209,7 +211,11 @@ class CommandCatalogBuilder {
 
     /**
      * @return the document: {@code format}, {@code complete}, {@code diagnostics} and {@code commands},
-     * the same whenever the same elements were added in the same order
+     * {@code testPhases} when the phases were given, and {@code commandOptions} when an element of the
+     * class path declares an option for a command ({@link CommandOptions}); the same whenever the same
+     * elements were added in the same order. What there is to say of declared options is among the
+     * diagnostics, after what there is to say of the commands, and leaves {@code complete}, which is
+     * about the commands, as it is
      */
     Map<String, Object> build() {
         document(MAX_COMMANDS)
@@ -273,6 +279,12 @@ class CommandCatalogBuilder {
             commands = new ArrayList<Map<String, Object>>(commands.subList(0, most))
         }
         List<String> lines = new ArrayList<String>(said)
+        boolean complete = lines.isEmpty()
+        Set<String> saidOfOptions = new TreeSet<String>()
+        List<Map<String, Object>> options = commandOptions.entries(saidOfOptions)
+        for (String each : saidOfOptions) {
+            lines << line(each)
+        }
         if (lines.size() > MAX_DIAGNOSTICS) {
             int more = lines.size() - MAX_DIAGNOSTICS
             lines = new ArrayList<String>(lines.subList(0, MAX_DIAGNOSTICS))
@@ -280,7 +292,7 @@ class CommandCatalogBuilder {
         }
         Map<String, Object> document = new LinkedHashMap<String, Object>()
         document.format = FORMAT
-        document.complete = lines.isEmpty()
+        document.complete = complete
         document.diagnostics = lines
         document.commands = commands
         if (testPhases != null) {
@@ -292,6 +304,9 @@ class CommandCatalogBuilder {
                 phases << entry
             }
             document.testPhases = phases
+        }
+        if (!options.isEmpty()) {
+            document.commandOptions = options
         }
         document
     }
@@ -379,6 +394,7 @@ class CommandCatalogBuilder {
             if (legacyRegistrations != null) {
                 legacyClasses.addAll(names(legacyRegistrations, LEGACY_COMMAND_KEY))
             }
+            declaredOptions(origin, source)
         }
         for (String className : taken(origin, commandClasses)) {
             List<Candidate> candidates = registered.get(className)
@@ -452,6 +468,20 @@ class CommandCatalogBuilder {
             candidate.refusal = refused.message
         }
         candidate
+    }
+
+    // the options an element declares for commands, which is one resource of it
+    private void declaredOptions(String origin, Source source) {
+        if (!source.has(CommandOptions.LOCATION)) {
+            return
+        }
+        byte[] bytes
+        try {
+            bytes = source.read(CommandOptions.LOCATION, CommandOptions.MAX_BYTES)
+        } catch (IOException ignored) {
+            bytes = null
+        }
+        commandOptions.add(origin, bytes)
     }
 
     private Properties factories(String origin, Source source, String location) {
