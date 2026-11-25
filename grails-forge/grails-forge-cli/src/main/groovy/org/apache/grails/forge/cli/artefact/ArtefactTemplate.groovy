@@ -31,6 +31,9 @@ import groovy.transform.CompileStatic
 enum ArtefactTemplate {
 
     CONTROLLER('artifacts/Controller.groovy', Syntax.TOKENS),
+    // the controller of a REST API project, which the REST API profile had at the place of the controller: one that
+    // answers in JSON only; a project has one template for it, as it had with a profile
+    REST_CONTROLLER('artifacts/Controller.groovy', Syntax.TOKENS, 'artifacts/RestController.groovy'),
     CONTROLLER_TEST('testing/Controller.groovy', Syntax.TOKENS),
     SERVICE('artifacts/Service.groovy', Syntax.TOKENS),
     SERVICE_TEST('testing/Service.groovy', Syntax.TOKENS),

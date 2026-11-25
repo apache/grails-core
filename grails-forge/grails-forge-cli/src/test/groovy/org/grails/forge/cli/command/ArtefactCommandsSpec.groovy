@@ -705,7 +705,7 @@ class ArtefactCommandsSpec extends CommandSpec implements CommandFixture {
         has == (ALL_COMMANDS - without) as Set
         installed.keySet() == templates.collect { 'src/main/templates/' + it } as Set
         out.toString().readLines() == installed.keySet().sort().collect { '| Copied template to ' + it }
-        installed['src/main/templates/artifacts/Controller.groovy'] == '@artifact.package@\n\nclass @artifact.name@Controller {\n\n    def index() {\n\n    }\n}'
+        installed['src/main/templates/artifacts/Controller.groovy'] == controller
 
         when: 'every command again, which now reads the templates of the project'
         out.reset()
@@ -729,6 +729,9 @@ class ArtefactCommandsSpec extends CommandSpec implements CommandFixture {
                 'artifacts/Command.groovy', 'artifacts/Controller.groovy', 'artifacts/DomainClass.groovy', 'artifacts/Interceptor.groovy',
                 'artifacts/Service.groovy', 'artifacts/TagLib.groovy', 'testing/Controller.groovy', 'testing/DomainClass.groovy',
                 'testing/Generic.groovy', 'testing/Integration.groovy', 'testing/Interceptor.groovy', 'testing/Service.groovy', 'testing/TagLib.groovy']
+        // the controller of a REST API project answers in JSON only, as the one of its profile did
+        controller = type == ApplicationType.WEB ? '@artifact.package@\n\nclass @artifact.name@Controller {\n\n    def index() {\n\n    }\n}' :
+                '@artifact.package@\nclass @artifact.name@Controller {\n\n    static responseFormats = [\'json\']\n\n    def index() {\n\n    }\n}\n'
     }
 
     void "install-templates keeps a template the project has, unless it is forced"() {

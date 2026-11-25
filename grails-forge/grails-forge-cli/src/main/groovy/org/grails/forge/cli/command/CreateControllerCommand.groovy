@@ -22,11 +22,21 @@ import groovy.transform.CompileStatic
 import org.apache.grails.forge.cli.artefact.ArtefactTemplate
 import org.grails.forge.util.ThrowingSupplier
 import jakarta.inject.Inject
+import org.grails.forge.application.ApplicationType
 import org.grails.forge.cli.CodeGenConfig
 import org.grails.forge.io.ConsoleOutput
 import org.grails.forge.io.OutputHandler
 import picocli.CommandLine
 
+/**
+ * {@code create-controller}: a controller with an empty default action, and its test. In a REST API
+ * application or REST API plugin the controller names JSON as the one format it responds in, as the
+ * controller the command of that profile wrote did, and as {@code create-restful-controller} and
+ * {@code create-domain-resource} do; without it {@code respond} negotiates every format the
+ * application has a MIME type for.
+ *
+ * @since 9.0
+ */
 @CommandLine.Command(name = CreateControllerCommand.NAME, description = 'Creates a Grails Controller')
 @CompileStatic
 class CreateControllerCommand extends CodeGenCommand {
@@ -54,13 +64,19 @@ class CreateControllerCommand extends CodeGenCommand {
 
     @Override
     List<ArtefactTemplate> getTemplates() {
-        return [ArtefactTemplate.CONTROLLER, ArtefactTemplate.CONTROLLER_TEST]
+        return [controller(), ArtefactTemplate.CONTROLLER_TEST]
+    }
+
+    // the template of the controller this project gets; a project has its own of either at the same place
+    private ArtefactTemplate controller() {
+        ApplicationType type = config?.getApplicationType()
+        return type != null && type.isRestApi() ? ArtefactTemplate.REST_CONTROLLER : ArtefactTemplate.CONTROLLER
     }
 
     @Override
     Integer call() throws Exception {
         return generate('controller', getProject(controllerName, 'Controller'), [
-                'grails-app/controllers/{packagePath}/{className}Controller.groovy': ArtefactTemplate.CONTROLLER,
+                'grails-app/controllers/{packagePath}/{className}Controller.groovy': controller(),
                 'src/test/groovy/{packagePath}/{className}ControllerSpec.groovy': ArtefactTemplate.CONTROLLER_TEST
         ])
     }

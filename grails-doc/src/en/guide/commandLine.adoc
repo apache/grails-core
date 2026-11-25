@@ -1074,7 +1074,7 @@ In the directory of a project the `grails` command has commands that write a cla
 |Command |Writes |In
 
 |`create-controller <name>`
-|`grails-app/controllers/<package>/<Name>Controller.groovy` and `src/test/groovy/<package>/<Name>ControllerSpec.groovy`
+|`grails-app/controllers/<package>/<Name>Controller.groovy` and `src/test/groovy/<package>/<Name>ControllerSpec.groovy`; in a REST API application or REST API plugin the controller declares `static responseFormats = ['json']`
 |every project
 
 |`create-service <name>`
@@ -1197,6 +1197,8 @@ Every file these commands write comes from a template, and a project can have it
 |`create-command`
 |tokens
 |===
+
+`artifacts/Controller.groovy` is one template in every project, as it was in every profile. The one the `grails` command has for a REST API application or REST API plugin declares `static responseFormats = ['json']`, so that the controller responds in JSON only as the classes of `create-restful-controller` and `create-domain-resource` do, and the one for every other project declares no formats; `install-templates` copies the one of the project it runs in.
 
 The locations are those the templates had before Grails 9, in a profile, in the Quartz plugin and in the Geb plugin, and so are the two ways of writing a name, so a template that only names what it wants can be put under `src/main/templates` as it is. No template is run: a template is text in which names are replaced. The shell ran `Job.groovy` and `FunctionalSpec.groovy` as Groovy templates; a template that relied on that, with code or with an expression that is more than a name, has to be written without.
 

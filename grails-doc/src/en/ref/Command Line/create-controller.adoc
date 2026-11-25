@@ -42,6 +42,22 @@ grails create-controller [-f] <<name>>
 
 Creates a new controller with an empty default action: `grails-app/controllers/<package>/<Name>Controller.groovy`, and its test `src/test/groovy/<package>/<Name>ControllerSpec.groovy`. It is a command of every project.
 
+In a REST API application or REST API plugin the controller declares JSON as the one format it responds in, as `create-restful-controller` and `create-domain-resource` do:
+
+[source,groovy]
+----
+class BookController {
+
+    static responseFormats = ['json']
+
+    def index() {
+
+    }
+}
+----
+
+Without the declaration, `respond` chooses among every format the application has a MIME type for. Add a format to the list when the controller is to respond in it; `xml` needs the `grails-xml` module. In every other project the controller declares no formats. `install-templates` copies the template of the kind of project it runs in.
+
 A link:{guidePath}theWebLayer.html#controllers[controller] is responsible for handling incoming web requests and performing actions such as redirects, rendering views and so on.
 
 The name is needed: the command does not ask for one. It can include a package, such as `org.bookstore` in the last example above; without one, the class goes into the default package of the project. The first letter of the name is made upper case.
