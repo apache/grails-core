@@ -40,3 +40,12 @@ grails:
             - com.companyname.somepackage
             - com.companyname.someotherpackage
 ----
+
+* `grails.gorm.leftJoinAssociationSort` - If set to `true`, a sort by a property of an association, such as `Book.list(sort: 'author.name')`, joins the association with a left join, so the sort keeps the instances whose association is `null`. By default the association is joined with an inner join, which leaves those instances out. Available with GORM for Hibernate as of Grails 7.0.18.
+
+[source,yaml]
+----
+grails:
+    gorm:
+        leftJoinAssociationSort: true
+----

@@ -65,6 +65,7 @@ import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.model.types.Embedded;
+import org.grails.datastore.mapping.model.types.ToMany;
 import org.grails.datastore.mapping.proxy.ProxyHandler;
 import org.grails.datastore.mapping.query.AssociationQuery;
 import org.grails.datastore.mapping.query.Query;
@@ -75,6 +76,7 @@ import org.grails.datastore.mapping.query.event.PreQueryEvent;
 import org.grails.orm.hibernate.AbstractHibernateSession;
 import org.grails.orm.hibernate.IHibernateTemplate;
 import org.grails.orm.hibernate.cfg.AbstractGrailsDomainBinder;
+import org.grails.orm.hibernate.cfg.GrailsHibernateUtil;
 import org.grails.orm.hibernate.cfg.Mapping;
 import org.grails.orm.hibernate.proxy.HibernateProxyHandler;
 
@@ -649,8 +651,10 @@ public abstract class AbstractHibernateQuery extends Query {
      * through the alias of the join. The head of the path is either an alias defined by a where
      * query or an association of the entity. An association that this query has already joined, for
      * example for a where query criterion, is reused; one it has not joined yet is joined for the sort.
-     * The exception is the identifier of an association that follows another one on the path, which is
-     * sorted by its foreign key instead, as a join would leave out the rows where the association is null.
+     * With the <code>grails.gorm.leftJoinAssociationSort</code> setting that is a left join, so that the
+     * rows where the association is null are kept. Without it, it is an inner join, except for the
+     * identifier of an association that follows another one on the path, which is sorted by its foreign
+     * key instead, as a join would leave out the rows where the association is null.
      */
     private String calculateSortPropertyName(String property) {
         String[] tokens = property.split("\\.");
@@ -686,12 +690,22 @@ public abstract class AbstractHibernateQuery extends Query {
                 associationPath.append('.');
             }
             associationPath.append(token);
+            String path = associationPath.toString();
             Association association = (Association) persistentProperty;
-            // the first association of a path is joined even for its identifier, as it always has been
-            if (currentAlias != null && i == tokens.length - 2 && isForeignKeyIdentifier(currentEntity, association, tokens[i + 1])) {
+            if (GrailsHibernateUtil.isLeftJoinAssociationSort(entity)) {
+                // With the leftJoinAssociationSort setting, a sort does not change which rows the query
+                // returns: an association that is joined only for the sort is joined with a left join,
+                // unless the query requests another join type for it. A collection keeps its inner join:
+                // Hibernate would fetch it through a left join.
+                if (!(persistentProperty instanceof ToMany)) {
+                    joinTypes.putIfAbsent(path, JoinType.LEFT);
+                }
+            }
+            else if (currentAlias != null && i == tokens.length - 2 && isForeignKeyIdentifier(currentEntity, association, tokens[i + 1])) {
+                // the first association of a path is joined even for its identifier, as it always has been
                 return currentAlias + '.' + token + '.' + tokens[i + 1];
             }
-            CriteriaAndAlias criteriaAndAlias = getOrCreateAlias(associationPath.toString(), generateAlias(token));
+            CriteriaAndAlias criteriaAndAlias = getOrCreateAlias(path, generateAlias(token));
             if (criteriaAndAlias == null) {
                 return null;
             }

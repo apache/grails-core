@@ -36,6 +36,36 @@ class HibernateDatastoreSpec extends Specification {
     @AutoCleanup
     HibernateDatastore datastore
 
+    void 'startup warns about the removal of an explicitly disabled association-sort setting'() {
+        given:
+        final config = [(Settings.SETTING_DB_CREATE): 'create-drop']
+        if (setting != null) {
+            config['grails.gorm.leftJoinAssociationSort'] = setting
+        }
+        final previousErrorStream = System.err
+        final output = new ByteArrayOutputStream()
+        final errorStream = new PrintStream(output, true, 'UTF-8')
+        System.setErr(errorStream)
+
+        when:
+        try {
+            datastore = new HibernateDatastore(config, Book)
+        }
+        finally {
+            System.setErr(previousErrorStream)
+            errorStream.close()
+        }
+
+        then:
+        output.toString('UTF-8').contains('Grails 9 removes this compatibility setting') == warns
+
+        where:
+        setting | warns
+        null    | false
+        true    | false
+        false   | true
+    }
+
     void "test configure via map"() {
         when:"The map constructor is used"
         def config = Collections.singletonMap(Settings.SETTING_DB_CREATE,  "create-drop")

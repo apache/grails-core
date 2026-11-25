@@ -337,6 +337,17 @@ def results = Pet.where {
 
 A sort by the identifier of the last association on a longer path, such as `owner.employer.id`, does not join that association. It sorts by the foreign key that `owner` holds, and so keeps the pets whose owner has no employer. A `hasOne` association has no such foreign key and is joined.
 
+To make every sort keep the instances without the association, enable the `grails.gorm.leftJoinAssociationSort` setting:
+
+[source,yaml]
+----
+grails:
+    gorm:
+        leftJoinAssociationSort: true
+----
+
+An association that is joined only for a sort is then joined with a left join, so a sort by `owner.lastName` keeps the pets that have no owner. Whether they come first or last depends on how the database sorts nulls. The setting applies to every query that takes a sort, such as `list` and dynamic finders, not only to `where` queries. A collection is the exception: a sort by a property of a collection joins it with an inner join, so it leaves out the instances whose collection is empty.
+
 If the `where` query defines an explicit alias for the association, you can sort by the alias instead:
 
 [source,groovy]

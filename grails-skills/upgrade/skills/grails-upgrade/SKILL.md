@@ -901,6 +901,16 @@ These bugs are fixed, which changes what the browser submits or what the page co
 - A value encoded beforehand is no longer encoded twice in the `value` of `<g:textField>`, `<g:hiddenField>` and the other field tags when a `RequestDataValueProcessor` returns it unchanged, nor in an option of `<g:select>`.
 - `<g:paginate>` and `<g:sortableColumn>` write a `class` that was encoded beforehand once next to the classes they add, such as `step` and `sortable`. They encoded it twice.
 
+## GORM for Hibernate: setting for a sort by an association
+
+A sort by a property of an association, such as `Book.list(sort: 'author.name')`, joins the association with an inner join, so it leaves out the instances whose association is `null`, and `count` and the `totalCount` of a paged list do not count them. That is unchanged by default. 7.0.18 adds the `grails.gorm.leftJoinAssociationSort` setting, default `false`. Set to `true`, the association is joined with a left join and the sort keeps those instances.
+
+- Nothing needs to change to keep the previous results.
+- Search for `sort:` arguments and `.sort(` calls whose property contains a `.`, such as `sort: 'author.name'`. If the application expects every instance from such a query, set `grails.gorm.leftJoinAssociationSort: true` in `application.yml`.
+- With the setting, the instances without the association come first or last, depending on how the database sorts nulls. To leave them out of one query, add a criterion that the association is not `null`.
+- A sort by a property of a collection, such as `sort: 'books.title'`, joins the collection with an inner join with or without the setting.
+- Explicitly setting it to `false` logs a startup warning naming Grails 9, which removes the setting. The planned default in Grails 8.1 is `true`; check the target release's compatibility settings before upgrading.
+
 # After the Upgrade
 
 ## Verification Checklist

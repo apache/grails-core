@@ -1323,6 +1323,24 @@ With GORM for Hibernate, `list` with a `Map` of sort properties, such as `Book.l
 
 The rows on a page can change because every sort property now participates before `max` and `offset` are applied. Sorting by two properties of the same collection also returns fewer duplicate rows: a book with three chapters occurs three times for `Book.list(sort: ['chapters.title': 'asc', 'chapters.id': 'asc'])`, rather than nine times from two joins of the chapters. There is no compatibility setting: both changes apply the sort that the call requests. Pass just the last sort property to retain the former single-property ordering.
 
+==== A setting makes a sort by an association keep every instance
+
+With GORM for Hibernate, a sort by a property of an association, such as `Book.list(sort: 'author.name')`, joins the association with an inner join. The sort therefore leaves out the instances whose association is `null`, and the `totalCount` of a paged list and `count` do not count them. That is unchanged by default. As of Grails 7.0.18, the new `grails.gorm.leftJoinAssociationSort` setting makes such a sort join the association with a left join, so that a sort no longer changes which instances a query returns:
+
+[source,yaml]
+----
+grails:
+    gorm:
+        leftJoinAssociationSort: true
+----
+
+The setting applies to `list`, to `find` and `findAll` with an example, to `findWhere` and `findAllWhere`, to dynamic finders, to a criteria query that is passed pagination arguments, such as `Book.createCriteria().list(sort: 'author.name', max: 10) { ... }`, and to where queries and detached criteria.
+
+* With the setting, the instances whose association is `null` are returned and counted. Whether they come first or last depends on how the database sorts nulls. To leave them out, add a criterion that the association is not `null`, such as `Book.where { author != null }.list(sort: 'author.name')`.
+* A where query or a detached criteria that has criteria on the association still joins it for those criteria, with an inner join by default, and the sort uses that join.
+* A sort by a property of a collection, such as `Author.list(sort: 'books.title')`, still joins the collection with an inner join, and leaves out the instances whose collection is empty.
+* The setting is disabled by default in Grails 7 and in Grails 8.0. Explicitly setting it to `false` logs a startup warning that Grails 9 removes the setting. The planned default in Grails 8.1 is `true`. It is listed with the other settings of this kind in link:upgrading.html#compatibilitySettings[Compatibility Settings].
+
 ==== More GSP tags HTML-encode the attribute values they write
 
 These tags now HTML-encode the values they write into attributes, as `<g:link>` and `<g:textField>` already did and as these tags already encoded their other attributes:

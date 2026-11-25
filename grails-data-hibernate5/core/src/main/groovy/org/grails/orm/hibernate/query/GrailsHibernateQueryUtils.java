@@ -30,6 +30,7 @@ import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.From;
 import jakarta.persistence.criteria.Join;
+import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Root;
 
 import org.hibernate.Criteria;
@@ -48,8 +49,10 @@ import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.model.types.Embedded;
+import org.grails.datastore.mapping.model.types.ToMany;
 import org.grails.datastore.mapping.reflect.ClassUtils;
 import org.grails.orm.hibernate.cfg.AbstractGrailsDomainBinder;
+import org.grails.orm.hibernate.cfg.GrailsHibernateUtil;
 import org.grails.orm.hibernate.cfg.Mapping;
 
 /**
@@ -290,10 +293,14 @@ public class GrailsHibernateQueryUtils {
                 Association a = (Association) property;
                 PersistentEntity associatedEntity = a.getAssociatedEntity();
                 String sortPath = associationPath == null ? sortHead : associationPath + '.' + sortHead;
-                // a join that an earlier sort property made for the association
+                // a join that the query already has for the association, such as the one of a requested join type
                 Criteria subCriteria = findJoinCriteria(c, sortPath);
                 if (subCriteria == null) {
-                    subCriteria = c.createCriteria(sortHead);
+                    // with the leftJoinAssociationSort setting, a left join, so that the sort keeps the rows where
+                    // the association is null; a collection is joined with an inner join, since Hibernate would
+                    // fetch it through a left join
+                    subCriteria = c.createCriteria(sortHead, a instanceof ToMany || !GrailsHibernateUtil.isLeftJoinAssociationSort(entity) ?
+                            org.hibernate.sql.JoinType.INNER_JOIN : org.hibernate.sql.JoinType.LEFT_OUTER_JOIN);
                     cacheCriteriaByMapping(associatedEntity.getJavaClass(), subCriteria);
                 }
                 addOrderPossiblyNested(subCriteria, sortPath, associatedEntity, sortTail, order, ignoreCase); // Recurse on nested sort
@@ -377,7 +384,7 @@ public class GrailsHibernateQueryUtils {
                 addOrder(entity, query, queryRoot, criteriaBuilder, sort, order, ignoreCase);
             } else if (property instanceof Association) {
                 final Association<? extends Property> a = (Association<? extends Property>) property;
-                final Join join = getOrCreateSortJoin(queryRoot, sortHead);
+                final Join join = getOrCreateSortJoin(queryRoot, sortHead, !(a instanceof ToMany) && GrailsHibernateUtil.isLeftJoinAssociationSort(entity));
                 PersistentEntity associatedEntity = a.getAssociatedEntity();
                 addOrderPossiblyNested(query, join, criteriaBuilder, associatedEntity, sortTail, order, ignoreCase); // Recurse on nested sort
             }
@@ -387,17 +394,19 @@ public class GrailsHibernateQueryUtils {
     /**
      * Returns the join of an association for a sort: the join or the fetch that the query already has
      * for it, made by the {@code fetch} argument or by an earlier sort property, or, failing that, a
-     * new one, so that the association is joined once.
+     * new one, so that the association is joined once. With the {@code leftJoinAssociationSort} setting,
+     * a new one is a left join, so that the sort keeps the rows where the association is null, except
+     * for a collection, which is joined with an inner join.
      */
     @SuppressWarnings({"rawtypes", "unchecked"})
-    private static Join getOrCreateSortJoin(From from, String associationName) {
+    private static Join getOrCreateSortJoin(From from, String associationName, boolean leftJoin) {
         for (Object existing : from.getJoins()) {
             Join join = (Join) existing;
             if (associationName.equals(join.getAttribute().getName())) {
                 return join;
             }
         }
-        return from.join(associationName);
+        return from.join(associationName, leftJoin ? JoinType.LEFT : JoinType.INNER);
     }
 
     private static boolean isIgnoreCaseProperty(boolean ignoreCase, PersistentProperty<? extends Property> persistentProperty) {

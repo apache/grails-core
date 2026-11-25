@@ -153,6 +153,10 @@ public class HibernateDatastore extends AbstractHibernateDatastore implements Me
         initializeConverters(this.mappingContext);
 
         if (!(connectionSources instanceof SingletonConnectionSources)) {
+            if (Boolean.FALSE.equals(connectionSources.getBaseConfiguration().getProperty("grails.gorm.leftJoinAssociationSort", Boolean.class))) {
+                LOG.warn("grails.gorm.leftJoinAssociationSort is explicitly false. Grails 9 removes this compatibility setting; " +
+                        "enable it and review association-sort results before upgrading.");
+            }
 
             final HibernateDatastore parent = this;
             Iterable<ConnectionSource<SessionFactory, HibernateConnectionSourceSettings>> allConnectionSources = connectionSources.getAllConnectionSources();
