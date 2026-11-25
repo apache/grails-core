@@ -360,12 +360,12 @@ configuration:
 
     void "a key Forge does not read is rejected with the keys it does"() {
         when:
-        parser.parse(MINIMAL + 'artefacts: []\nwhen: {}\n', 'acme.yml')
+        parser.parse(MINIMAL + 'flags: []\nwhen: {}\n', 'acme.yml')
 
         then:
         PackDescriptorException e = thrown()
         e.problems.size() == 2
-        e.problems[0].startsWith("the descriptor: has the key 'artefacts', which this version of Forge does not read here; the keys are [format, kind, name, ")
+        e.problems[0].startsWith("the descriptor: has the key 'flags', which this version of Forge does not read here; the keys are [format, kind, name, ")
         e.problems[1].startsWith("the descriptor: has the key 'when', ")
     }
 

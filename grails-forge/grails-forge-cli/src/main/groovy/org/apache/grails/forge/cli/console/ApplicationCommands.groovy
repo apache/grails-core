@@ -22,6 +22,7 @@ import java.util.function.Consumer
 import java.util.function.Supplier
 import java.util.regex.Pattern
 import groovy.transform.CompileStatic
+import org.apache.grails.forge.cli.artefact.PackArtefactCommand
 import org.grails.forge.application.OperatingSystem
 import org.grails.forge.cli.command.BaseCommand
 import org.grails.forge.feature.FeatureSelectionException
@@ -340,6 +341,9 @@ final class ApplicationCommands {
     private static String takenBy(CommandCatalog builtIn, String name) {
         CommandLine root = builtIn.getRoot()
         CommandLine named = root.getSubcommands().get(name)
+        if (named != null && named.getCommandSpec().userObject() instanceof PackArtefactCommand) {
+            return "${name} is a command of the feature ${((PackArtefactCommand) named.getCommandSpec().userObject()).getArtefact().feature} of the application"
+        }
         if (named != null) {
             String own = named.getCommandName()
             return own == name ? "${name} is a command of the CLI itself (${CommandCatalog.BUILT_IN})" :
@@ -347,6 +351,10 @@ final class ApplicationCommands {
         }
         try {
             CommandLine shortFor = builtIn.find(root, name)
+            if (shortFor != null && shortFor.getCommandSpec().userObject() instanceof PackArtefactCommand) {
+                return "${name} is short for ${shortFor.getCommandName()}, a command of the feature " +
+                        "${((PackArtefactCommand) shortFor.getCommandSpec().userObject()).getArtefact().feature} of the application"
+            }
             return shortFor == null ? null : "${name} is short for ${shortFor.getCommandName()}, a command of the CLI itself (${CommandCatalog.BUILT_IN})"
         } catch (CommandLine.ParameterException ignored) {
             return "${name} is short for more than one command of the CLI itself (${CommandCatalog.BUILT_IN})"

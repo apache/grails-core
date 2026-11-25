@@ -22,6 +22,8 @@ import java.nio.file.Path
 import java.util.function.Function
 import java.util.function.Supplier
 import groovy.transform.CompileStatic
+import org.apache.grails.forge.cli.artefact.PackArtefactCommand
+import org.apache.grails.forge.core.pack.PackArtefact
 import org.grails.forge.cli.ForgeContext
 import org.grails.forge.cli.command.CodeGenCommand
 import org.grails.forge.feature.FeatureSelectionException
@@ -155,7 +157,24 @@ final class CommandCatalog {
                 (similar.isEmpty() ? '' : ". Did you mean: ${similar.join(' or ')}?") +
                 (untrusted == null ? '' : "${System.lineSeparator()}The commands of a project are not there: ${untrusted}") +
                 (listed == null ? '' : "${System.lineSeparator()}${listed}") +
+                ofAFeature(parent, typed) +
                 FormerCommands.line(parent, typed, FormerCommands.isEnvironment(typed) ? commandNamed(parent, next) : null))
+    }
+
+    // A name that a feature can give a command, create- and a name of its own, is a command only in the project of an
+    // application that has the feature: the command line reads the commands of features from the record of the project,
+    // so it cannot say which feature has the name, and says where such a command is one. Not for a name the Grails shell
+    // had, which is answered with what there is in its place.
+    private static String ofAFeature(CommandLine parent, String typed) {
+        if (parent.getParent() != null || typed == null || !typed.startsWith(PackArtefact.COMMAND_PREFIX) || FormerCommands.find(typed) != null) {
+            return ''
+        }
+        String name = typed.substring(PackArtefact.COMMAND_PREFIX.length())
+        if (name.length() > PackArtefact.MAX_NAME || !PackArtefact.NAME.matcher(name).matches() || PackArtefact.RESERVED.contains(name)) {
+            return ''
+        }
+        return "${System.lineSeparator()}A feature can give the command line a command of this name. It is a command in the project of an application that " +
+                "has the feature, where ${UsageHelp.toType(parent, 'help')} lists it and ${UsageHelp.toType(parent, 'feature add')} adds the feature"
     }
 
     // the command of a command that was typed, by the name it was typed by or, for a short form, by its name; null for none and for several
@@ -293,9 +312,11 @@ final class CommandCatalog {
             Map<String, Object> each = new LinkedHashMap<>()
             each.put('name', spec.name())
             each.put('aliases', spec.aliases().toList())
-            each.put('description', text(spec.usageMessage().description()))
+            // what a feature says of its command is text, which the help has in the form the command line shows as it is
+            each.put('description', spec.userObject() instanceof PackArtefactCommand ? ((PackArtefactCommand) spec.userObject()).getDescription() :
+                    text(spec.usageMessage().description()))
             each.put('project', spec.userObject() instanceof ProjectCommand)
-            each.put('origin', BUILT_IN)
+            each.put('origin', spec.userObject() instanceof PackArtefactCommand ? ((PackArtefactCommand) spec.userObject()).getOrigin() : BUILT_IN)
             each.put('options', options(spec))
             List<Map<String, Object>> parameters = []
             for (CommandLine.Model.PositionalParamSpec parameter : spec.positionalParameters()) {
@@ -436,14 +457,16 @@ final class CommandCatalog {
      * The commands of a command that a short form is looked up among: those the help lists, and outside
      * a project the commands that create the classes of a project, which are not listed there; they are
      * commands there by their names, and so by their short forms. The commands of the CLI itself come
-     * first: what a project or one of its plugins calls a command does not change what a short form of
-     * theirs means, or make it stand for two.
+     * first, then those the features of the application give it, then those of the build: what a feature, a
+     * project or one of its plugins calls a command does not change what a short form of a command
+     * before it means, or make it stand for two.
      */
     @CompileStatic
     private static final class Known {
 
         private final CommandLine parent
         private final List<CommandLine> own = []
+        private final List<CommandLine> ofFeatures = []
         private final List<CommandLine> ofTheBuild = []
 
         Known(CommandLine parent) {
@@ -455,12 +478,13 @@ final class CommandCatalog {
                 }
             }
             for (CommandLine command : known) {
-                (command.getCommandSpec().userObject() instanceof ApplicationCommandCommand ? ofTheBuild : own).add(command)
+                Object object = command.getCommandSpec().userObject()
+                (object instanceof ApplicationCommandCommand ? ofTheBuild : object instanceof PackArtefactCommand ? ofFeatures : own).add(command)
             }
         }
 
         List<CommandLine> all() {
-            return own + ofTheBuild
+            return own + ofFeatures + ofTheBuild
         }
 
         // what a form is short for; nothing for anything that cannot be a short form, and for a name of the Grails shell
@@ -468,7 +492,12 @@ final class CommandCatalog {
             if (!ShortForms.FORM.matcher(typed).matches() || isFormer(parent, typed)) {
                 return Collections.emptyList()
             }
+            // what a feature calls a command does not make a short form of the command line stand for two, and neither does
+            // what the build lists for one of a feature
             List<CommandLine> fits = ShortForms.fitting(typed, own)
+            if (fits.isEmpty()) {
+                fits = ShortForms.fitting(typed, ofFeatures)
+            }
             return fits.isEmpty() ? ShortForms.fitting(typed, ofTheBuild) : fits
         }
 

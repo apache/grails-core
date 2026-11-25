@@ -343,6 +343,6 @@ build:
 
         where:
         text                                                                      | problem
-        "guideOfGrails: 'guide/a.html'\n"                                         | "the descriptor: has the key 'guideOfGrails', which this version of Forge does not read here; the keys are [format, kind, name, templateApi, compatibility, title, description, category, documentation, applicationTypes, requires, conflicts, oneOf, dependencies, platforms, buildPlugins, build, configuration, files, readme, instructions, readmeLinks, requiresJdk, parameters, thirdPartyDocumentation]"
+        "guideOfGrails: 'guide/a.html'\n"                                         | "the descriptor: has the key 'guideOfGrails', which this version of Forge does not read here; the keys are [format, kind, name, templateApi, compatibility, title, description, category, documentation, applicationTypes, requires, conflicts, oneOf, dependencies, platforms, buildPlugins, build, configuration, files, readme, instructions, readmeLinks, requiresJdk, parameters, artefacts, thirdPartyDocumentation]"
     }
 }

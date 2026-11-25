@@ -131,7 +131,8 @@ class PackDescriptorParser {
     private static final Set<String> KEYS = ['format', 'kind', 'name', 'templateApi', 'compatibility', 'title',
                                              'description', 'category', 'documentation', 'applicationTypes', 'requires',
                                              'conflicts', 'oneOf', 'dependencies', 'platforms', 'buildPlugins', 'build',
-                                             'configuration', 'files', 'readme', 'instructions', 'readmeLinks', 'requiresJdk', 'parameters', 'thirdPartyDocumentation'] as Set<String>
+                                             'configuration', 'files', 'readme', 'instructions', 'readmeLinks', 'requiresJdk', 'parameters', 'artefacts',
+                                             'thirdPartyDocumentation'] as Set<String>
     // a preset names one type of application, gives options and asks for features, and is in no group or category
     private static final List<String> PRESET_KEYS = ['format', 'kind', 'name', 'templateApi', 'compatibility', 'title', 'description',
                                                      'documentation', 'thirdPartyDocumentation', 'applicationType', 'options', 'features',
@@ -142,6 +143,7 @@ class PackDescriptorParser {
             requires: 'a preset asks for features with features',
             oneOf: 'a preset is in no exclusive group',
             category: 'a preset is not among the features that are listed, and has no category',
+            artefacts: 'a preset gives the command line no commands; a feature does, and a preset asks for it with features',
     ]
     private static final Map<String, String> ONLY_OF_A_PRESET = [
             applicationType: 'only a preset (kind: preset) names one type of application; a feature names the types it is for with applicationTypes',
@@ -337,7 +339,8 @@ class PackDescriptorParser {
                 readOfForge(ofForge ? root : root.findAll { String key, Object value -> !KEYS_OF_FORGE.contains(key) } as Map<String, Object>,
                         build, name, oneOf, extensionParts, settings, problems),
                 ofPreset,
-                parameters)
+                parameters,
+                preset ? Collections.<PackArtefact>emptyList() : artefacts(root, problems))
         failOn(problems, source)
         return descriptor
     }
@@ -936,6 +939,85 @@ class PackDescriptorParser {
                     flag(entry, 'executable', true, at, problems), when(entry, at, problems))
         }
         return files
+    }
+
+    /**
+     * The commands the feature gives the command line: each with a name that is free, a template of the
+     * pack and the path of the class it writes, which has the name of the class in it, and, both or
+     * neither, the template and the path of a test.
+     */
+    private static List<PackArtefact> artefacts(Map<String, Object> root, List<String> problems) {
+        List<PackArtefact> artefacts = []
+        Map<Integer, Map<String, Object>> entries = maps(root, 'artefacts', problems)
+        if (entries.size() > PackArtefact.MAX) {
+            problems << "artefacts: can have ${PackArtefact.MAX} commands, but has ${entries.size()}".toString()
+            return artefacts
+        }
+        Set<String> names = new HashSet<>()
+        entries.each { int index, Map<String, Object> entry ->
+            String at = "artefacts[${index}]."
+            unknownKeys(entry, ['name', 'description', 'suffix', 'template', 'to', 'testTemplate', 'testTo'], at, problems)
+            String name = matching(requiredText(entry, 'name', at, PackArtefact.MAX_NAME, problems), PackArtefact.NAME, at + 'name',
+                    "must be lower case letters and digits in words joined by hyphens, starting with a letter: the command is ${PackArtefact.COMMAND_PREFIX} and the name", problems)
+            if (name != null && PackArtefact.RESERVED.contains(name)) {
+                problems << ("${at}name: ${PackArtefact.COMMAND_PREFIX}${name} is a command of the command line itself, or was one of the Grails shell, " +
+                        'and a pack gives none of that name').toString()
+                name = null
+            } else if (name != null && !names.add(name)) {
+                problems << "${at}name: ${describe(name)} is the name of an earlier command too".toString()
+                name = null
+            }
+            String description = text(entry, 'description', at, PackArtefact.MAX_DESCRIPTION, problems)
+            String suffix = matching(text(entry, 'suffix', at, MAX_LINE, problems), PackArtefact.SUFFIX, at + 'suffix',
+                    "must be what the kind of class adds to the name of a class, such as 'Listener': at most 40 letters and digits that start with a capital", problems)
+            String template = templateOfArtefact(entry, 'template', at, problems)
+            String to = destinationOfArtefact(entry, 'to', at, problems)
+            boolean tested = entry.get('testTemplate') != null || entry.get('testTo') != null
+            String testTemplate = null
+            String testTo = null
+            if (tested && (entry.get('testTemplate') == null || entry.get('testTo') == null)) {
+                problems << "${at}${entry.get('testTemplate') == null ? 'testTemplate' : 'testTo'}: is required with ${entry.get('testTemplate') == null ? 'testTo' : 'testTemplate'}: a test has a template and a path, or the command writes none".toString()
+            } else if (tested) {
+                testTemplate = templateOfArtefact(entry, 'testTemplate', at, problems)
+                testTo = destinationOfArtefact(entry, 'testTo', at, problems)
+                if (to != null && testTo != null && folded(to) == folded(testTo)) {
+                    problems << "${at}testTo: ${describe(testTo)} is where the class is written too, at least where the case of letters does not count".toString()
+                    testTo = null
+                }
+            }
+            if (name != null && template != null && to != null && (!tested || (testTemplate != null && testTo != null))) {
+                artefacts << new PackArtefact(name, description ?: "Creates a class (${name})".toString(), suffix, template, to, testTemplate, testTo)
+            }
+        }
+        return artefacts
+    }
+
+    // a path as a file system that ignores the case and the composed form of letters sees it
+    private static String folded(String path) {
+        return Normalizer.normalize(path, Normalizer.Form.NFC).toUpperCase(Locale.ROOT).toLowerCase(Locale.ROOT)
+    }
+
+    private static String templateOfArtefact(Map<String, Object> entry, String key, String at, List<String> problems) {
+        String template = path(entry, key, at, false, problems)
+        if (template != null && template.length() > PackArtefact.MAX_PATH) {
+            problems << "${at}${key}: can have ${PackArtefact.MAX_PATH} characters, but has ${template.length()}".toString()
+            return null
+        }
+        return template
+    }
+
+    private static String destinationOfArtefact(Map<String, Object> entry, String key, String at, List<String> problems) {
+        String to = path(entry, key, at, true, problems)
+        if (to != null && to.length() > PackArtefact.MAX_PATH) {
+            problems << "${at}${key}: can have ${PackArtefact.MAX_PATH} characters, but has ${to.length()}".toString()
+            return null
+        }
+        if (to != null && !to.contains(PackArtefact.CLASS_NAME)) {
+            problems << ("${at}${key}: must have the placeholder ${PackArtefact.CLASS_NAME}, the name of the class that is created, " +
+                    "as in 'grails-app/services/{packagePath}/{className}Service.groovy', but is ${describe(to)}").toString()
+            return null
+        }
+        return to
     }
 
     /**

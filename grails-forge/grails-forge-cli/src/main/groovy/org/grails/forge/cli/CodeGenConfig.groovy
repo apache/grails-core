@@ -19,6 +19,7 @@
 package org.grails.forge.cli
 
 import groovy.transform.CompileStatic
+import org.apache.grails.forge.cli.artefact.FeatureArtefact
 import org.apache.grails.forge.cli.console.ConsoleProject
 import org.apache.grails.forge.core.state.EarlierRecord
 import org.apache.grails.forge.core.state.ProjectState
@@ -47,6 +48,8 @@ class CodeGenConfig {
     private Language sourceLanguage
     private List<String> features
     private List<String> excludedFeatures = Collections.emptyList()
+
+    private List<FeatureArtefact> artefacts = Collections.emptyList()
 
     private boolean legacy
     private File projectDirectory
@@ -104,6 +107,19 @@ class CodeGenConfig {
 
     void setExcludedFeatures(List<String> excludedFeatures) {
         this.excludedFeatures = excludedFeatures
+    }
+
+    /**
+     * @return the commands the features of the application give the command line, as the record of
+     * the project has them, in the order of the features; none for a record that is not the one Grails
+     * writes when it generates an application
+     */
+    List<FeatureArtefact> getArtefacts() {
+        return artefacts
+    }
+
+    void setArtefacts(List<FeatureArtefact> artefacts) {
+        this.artefacts = artefacts
     }
 
     boolean isLegacy() {
@@ -167,6 +183,7 @@ class CodeGenConfig {
                 codeGenConfig.setSourceLanguage(Language.DEFAULT_OPTION)
                 codeGenConfig.setFeatures(new ArrayList<String>(state.lock.featureNames))
                 codeGenConfig.setExcludedFeatures(new ArrayList<String>(state.manifest.excludedFeatures*.name))
+                codeGenConfig.setArtefacts(FeatureArtefact.of(state.lock))
                 warnOfAnotherRecord(beanContext, directory, codeGenConfig, consoleOutput)
                 return codeGenConfig
             } catch (ProjectStateException e) {

@@ -51,7 +51,7 @@ Options:
 
 * `--json` - Write the commands there are in the current directory, with their options, as one JSON document for a tool to read.
 
-Without a command, `help` shows how the command line is used and lists the commands there are in the current directory, with the first sentence of the description of each. Outside a project those are the commands that create one and the commands that run a build; in a project there are also the commands that create its classes and the commands of the application and its plugins:
+Without a command, `help` shows how the command line is used and lists the commands there are in the current directory, with the first sentence of the description of each. Outside a project those are the commands that create one and the commands that run a build; in a project there are also the commands that create its classes, those of the command line and those a feature of the project gives it, and the commands of the application and its plugins:
 
 [source,console]
 ----

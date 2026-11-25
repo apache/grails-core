@@ -24,6 +24,8 @@ import java.util.function.Predicate
 import java.util.function.Supplier
 import groovy.transform.CompileStatic
 import org.apache.grails.forge.cli.Diagnostics
+import org.apache.grails.forge.cli.artefact.FeatureArtefact
+import org.apache.grails.forge.cli.artefact.PackArtefactCommand
 import org.apache.grails.forge.cli.StartupPreload
 import org.apache.grails.forge.core.pack.BundledPackFeatures
 import org.apache.grails.forge.cli.console.ApplicationCommands
@@ -568,6 +570,11 @@ final class ForgeCli {
         commandLine.addSubcommand(new PluginInfoCommand(context))
         // the same two by their names among the commands of plugin, and the list by a text
         commandLine.addSubcommand(new PluginGroupCommand())
+        // the commands the features of the application give, which the record of the project has: after every command of
+        // the command line itself, whose names they do not take, and before those of the application, which do not take theirs
+        if (codeGenConfig != null) {
+            addCommandsOfFeatures(commandLine, codeGenConfig, console ?: root, factory)
+        }
         // last: a command of the application does not take the name of a command that is there
         ApplicationCommands.addTo(commandLine, listsApplication)
         // everything after gradle is Gradle's, and everything after a command of the application is that command's
@@ -578,6 +585,25 @@ final class ForgeCli {
             new UsageHelp(spec, scheme)
         } as CommandLine.IHelpFactory)
         return commandLine
+    }
+
+    // A feature pack is refused a name the command line has when it is read, and two features of one application the
+    // same name when the application is generated. What is left is a record that was written by hand, or by a version
+    // with fewer commands of its own: the command that is there stays, the first of two features has the name, and the
+    // one that is not a command is said.
+    private static void addCommandsOfFeatures(CommandLine commandLine, CodeGenConfig config, ConsoleOutput console, CommandLine.IFactory factory) {
+        for (FeatureArtefact artefact : config.getArtefacts()) {
+            CommandLine taken = commandLine.getSubcommands().get(artefact.commandName)
+            if (taken != null) {
+                Object other = taken.getCommandSpec().userObject()
+                console.warning("The command ${artefact.commandName} of the feature ${artefact.feature} is not a command here: ${artefact.commandName} is " +
+                        (other instanceof PackArtefactCommand ? "a command of the feature ${((PackArtefactCommand) other).getArtefact().feature}" :
+                                taken.getCommandName() == artefact.commandName ? 'a command of the command line itself' :
+                                        "another name of ${taken.getCommandName()}, a command of the command line itself"))
+                continue
+            }
+            commandLine.addSubcommand(artefact.commandName, new CommandLine(PackArtefactCommand.specOf(config, artefact, factory), factory))
+        }
     }
 
     // Runs what the command line was read as. A command that writes what the record of a project says

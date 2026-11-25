@@ -232,6 +232,10 @@ final class Pack {
                 lines << "source files it writes: ${some(sources)}".toString()
             }
         }
+        if (descriptor.artefacts) {
+            lines << ("commands it gives the command line of the application, whose templates it writes under ${PackArtefact.DIRECTORY}/${descriptor.name}: " +
+                    "${some(descriptor.artefacts.collect { PackArtefact each -> each.commandName })}").toString()
+        }
         if (descriptor.buildPlugins) {
             lines << "build plugins: ${some(descriptor.buildPlugins.collect { PackBuildPlugin each -> each.version ? each.id + ':' + each.version : each.id })}".toString()
         }

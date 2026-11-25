@@ -138,6 +138,9 @@ instructions: |
 |`parameters`
 |The options the feature takes, which whoever creates the application sets with `--feature-option`: see <<forgeFeaturePackParameters,below>>.
 
+|`artefacts`
+|The commands the feature gives the `grails` command in an application that has it, each of which writes a class from a template of the pack: see <<forgeFeaturePackArtefacts,below>>.
+
 |`requiresJdk`
 |The lowest version of Java the feature can be used with, as a number such as `25`. An application for an earlier one is refused when the feature is selected.
 
@@ -310,6 +313,93 @@ The `instructions` of a pack are for the next step that the pack cannot take its
 ----
 
 They are shown as text: nothing of them is run or filled in, and a command they name is one you run. A descriptor whose instructions have a control character, such as the escape that changes the colours of a terminal, is refused. At most 30 lines are shown, each of at most 200 characters; the command says how many lines it left out. `feature add --dry-run --json` has them in the `instructions` member of its document. They are not written into the application: what should stay with it belongs in `readme`. The hosted application generator at https://start.grails.org does not show instructions.
+
+
+[[forgeFeaturePackArtefacts]]
+==== Commands That Create Classes
+
+
+A plugin that has a kind of class of its own, a job, a listener, a report, can give the `grails` command a command that writes one, as `create-controller` writes a controller. The descriptor declares it under `artefacts`:
+
+[source,yaml]
+----
+artefacts:
+  - name: audit-listener                                                   <1>
+    description: Creates a listener of audit events                        <2>
+    suffix: AuditListener                                                  <3>
+    template: artefacts/AuditListener.groovy                               <4>
+    to: grails-app/services/{packagePath}/{className}AuditListener.groovy  <5>
+    testTemplate: artefacts/AuditListenerSpec.groovy                       <6>
+    testTo: src/test/groovy/{packagePath}/{className}AuditListenerSpec.groovy
+----
+<1> The command is `create-` and this name: `create-audit-listener`. Lower case letters and digits in words joined by hyphens, at most 40 characters.
+<2> One line of at most 200 characters, which `help` shows with the name of the feature after it. Without one the command is described as `Creates a class (audit-listener)`.
+<3> What the kind of class adds to the name of a class. A name that is given with it, `OrderAuditListener`, is taken without it, as `create-job` takes `ReportJob`. It can be left out.
+<4> The template of the class, a file under `templates` of the pack.
+<5> Where the class is written in the application. The path has the placeholders of `files[].to` and has to have `{className}`.
+<6> The template and the path of a test, both or neither.
+
+A pack can declare 20 of them. The templates are those of the `create-` commands of the command line: text in which tokens are replaced, and nothing else. They are never GSP and nothing of them is run, whatever the name of the file ends with:
+
+[cols="2,5"]
+|===
+|Token |Replaced by
+
+|`@artifact.package@`
+|The declaration of the package, `package com.example`, as a line of its own with an empty line after it. For a class without a package neither is written.
+
+|`@artifact.package.name@`, `@artifact.package.path@`
+|The name of the package, `com.example`, and the package as a path, `com/example`.
+
+|`@artifact.name@`
+|The name of the class without the `suffix`: `Order` for `create-audit-listener Order` and for `create-audit-listener OrderAuditListener`.
+
+|`@artifact.propertyName@`
+|That name with a lower-case first letter: `order`.
+|===
+
+[source,groovy]
+.src/main/forge/templates/artefacts/AuditListener.groovy
+----
+@artifact.package@
+class @artifact.name@AuditListener {
+
+    void onEvent(Map event) {
+    }
+}
+----
+
+Everything else in a template is written as it is, a `${...}` and a `<% %>` included. A template has to be text in UTF-8 of at most 256 KiB, and a token that starts with `@artifact.` and is none of the five is refused when the pack is read. The Gradle plugin of Grails replaces `@info.app.name@`, `@info.app.version@` and `@info.app.grailsVersion@` in the resources of a project, and leaves `src/main/forge` alone: a template reaches the jar byte for byte.
+
+When an application is created with the feature, and when `feature add` adds it, the templates are written into the application as they are, under `src/main/templates/features/<name of the feature>/` and the path they have in the pack:
+
+[source]
+----
+src/main/templates/features/acme-audit/artefacts/AuditListener.groovy
+src/main/templates/features/acme-audit/artefacts/AuditListenerSpec.groovy
+----
+
+They are generated files like every other the pack writes: they are committed with the application, they are in its record with their digests, and `project regenerate --diff` names one that was changed. The record of the application, `.grails/forge.lock.yml`, has the commands under the feature. From then on the `grails` command needs neither the pack nor the project generator for them: in a project whose record has the feature it lists the commands in `help` and `help --json` (with the `origin` `feature:acme-audit`), completes their names in the interactive console, finds them by their short forms, and writes the class from the template in the project:
+
+[source,console]
+----
+$ grails create-audit-listener Order
+| Rendered audit-listener to grails-app/services/com/example/OrderAuditListener.groovy
+| Rendered audit-listener to src/test/groovy/com/example/OrderAuditListenerSpec.groovy
+----
+
+The command does what `create-controller` and the other commands of the command line do: it writes all of its files or none, keeps a file that is there unless it is given `-f` or `--force`, and writes only into the project (see xref:commandLine#creatingClassesWithGrails[Creating Classes with the `grails` Command]). Since the template is a file of the project, a team changes it there, and the command uses what it finds. A template that is not there any more is not replaced by one of the pack: the command writes nothing and names the path, and the file is restored from version control or from the copy the record keeps of it under `.grails/baseline/files`. `install-templates` neither writes nor replaces these templates.
+
+Names:
+
+* A pack cannot take the name of a command of the command line itself or of the Grails shell: `controller`, `service`, `domain-class`, `job`, `app`, `plugin`, `script` and the others are refused when the pack is read, with `artefacts[0].name: create-service is a command of the command line itself, or was one of the Grails shell, and a pack gives none of that name`.
+* Two features of one application cannot give the same command: such an application is refused when it is created, and `feature add` refuses the second feature.
+* A command of the application or of one of its plugins that has the same name gives way to the command of the feature, as it gives way to a command of the command line itself. `help` says so, and that command is still run with `grails run-command <name>`.
+* A short form is looked up among the commands of the command line itself first, then among those of the features, then among those of the application: a command of a feature never makes a short form of `grails` itself stand for two commands, or for another one.
+
+Outside a project, and in an application without the feature, there is no such command, and the name is refused like any name that is no command, with one more line: `A feature can give the command line a command of this name. It is a command in the project of an application that has the feature`. The completion script for bash and zsh is written when the distribution is built and knows nothing of a project, so it does not complete these commands; the interactive console does. The hosted generator at https://start.grails.org takes no pack of a plugin, so an application created there has the commands of the features of Grails only. No feature of Grails declares one in this release (`create-job` of `grails-quartz` is a command of the command line itself); one that did would have its templates and its record written there as on the command line, since it is the same generator.
+
+A preset declares no `artefacts`: it asks for the feature that has them.
 
 
 ==== Templates
@@ -600,6 +690,7 @@ $ ./gradlew check
 * the whole descriptor: unknown keys, missing or malformed values, destinations outside the application;
 * every file the descriptor names: that it is there under `templates`, is a file and not a link, and is not too large;
 * `compatibility`: that the pack is for the version of Grails, and for the version of the generator, it is checked with;
+* every command under `artefacts`: its name, its paths, and its templates, which have to be text in UTF-8 of at most 256 KiB with no token but the five a command replaces. These templates are not rendered and not counted in the line the check ends with: nothing of them is run;
 * every template: that it compiles, and that it renders without an error. A name the template API does not have, such as a misspelled `project.pakageName`, is an error. The problem names the line of the template, as the message does when an application is created. A tag that is not one of the ten <<forgeFeaturePackTags,instruction tags>> is no problem: it is output, and is not looked up in a tag library.
 
 The templates are found through the descriptor, so while the descriptor has a problem only its problems are reported: the templates are checked once it can be read.
@@ -1047,6 +1138,11 @@ Many features of Grails are written as feature packs inside the command line, in
 |Yes
 |
 
+|`artefacts`, the commands that create classes from templates of the pack
+|Yes
+|Yes
+|
+
 |Conditions (`when`) on the type of the application, its features and groups, its options, its version of Java and the parameters of the pack
 |Yes
 |Yes
@@ -1098,7 +1194,7 @@ Many features of Grails are written as feature packs inside the command line, in
 |The application is generated again as it was, which takes the very pack.
 |===
 
-Neither kind of pack can make an entry of `gradle.properties` conditional or add to `settings.gradle`: a build property is set for every application the feature is in, and the settings of a build are written by the feature `gradle-settings-file`. Neither brings commands: the `create-` commands that write the classes of an application are those of the command line, and a descriptor with `artefacts` is refused as one with an unknown key.
+Neither kind of pack can make an entry of `gradle.properties` conditional or add to `settings.gradle`: a build property is set for every application the feature is in, and the settings of a build are written by the feature `gradle-settings-file`. The commands a pack gives the command line are those of `artefacts`, which write a class from a template in which names are replaced: a pack brings no command that runs code of its own. Such a command is a class of the plugin, see xref:commandLine#creatingCustomCommands[Creating Custom Commands].
 
 [[forgeFeaturePackSameEveryTime]]
 ==== What Is the Same Every Time

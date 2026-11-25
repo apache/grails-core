@@ -199,6 +199,13 @@ class PackLoader {
                 files.put(file.from, content)
             }
         }
+        artefactTemplates(descriptor, files, problems, 0L, { String template, List<String> refused ->
+            byte[] content = resource(loader, "${base}${Pack.TEMPLATES}/${template}", PackArtefact.MAX_TEMPLATE_BYTES)
+            if (content == null) {
+                refused << "is not a resource under ${base}${Pack.TEMPLATES}, or has more than the ${PackArtefact.MAX_TEMPLATE_BYTES} bytes a template of a command can have".toString()
+            }
+            return content
+        } as TemplateReader)
         if (problems) {
             throw new PackDescriptorException(origin, problems)
         }
@@ -252,6 +259,18 @@ class PackLoader {
                 files.put(file.from, content)
             }
         }
+        artefactTemplates(descriptor, files, problems, total, { String template, List<String> refused ->
+            String path = "${Pack.JAR_DIRECTORY}/${Pack.TEMPLATES}/${template}"
+            if (!jar.hasFile(path)) {
+                refused << "is not a file under ${Pack.JAR_DIRECTORY}/${Pack.TEMPLATES} of the jar".toString()
+                return null
+            }
+            byte[] content = jar.read(path, PackArtefact.MAX_TEMPLATE_BYTES)
+            if (content == null) {
+                refused << tooLargeForACommand()
+            }
+            return content
+        } as TemplateReader)
         if (problems) {
             throw new PackDescriptorException(origin, problems)
         }
@@ -300,10 +319,101 @@ class PackLoader {
                 files.put(file.from, content)
             }
         }
+        artefactTemplates(descriptor, files, problems, total, { String template, List<String> refused ->
+            if (!isPlainFileBelow(templates, template)) {
+                refused << "is not a file under ${Pack.TEMPLATES} of the pack, or is a link or is reached through one".toString()
+                return null
+            }
+            byte[] content = read(templates.resolve(template), PackArtefact.MAX_TEMPLATE_BYTES)
+            if (!isPlainFileBelow(templates, template)) {
+                refused << 'changed while the pack was read'
+                return null
+            }
+            if (content == null) {
+                refused << tooLargeForACommand()
+            }
+            return content
+        } as TemplateReader)
         if (problems) {
             throw new PackDescriptorException(origin, problems)
         }
         return new Pack(descriptor, origin, files, descriptorBytes)
+    }
+
+    /** Gives the content of a template of a command by its path under the templates of a pack, or {@code null} and why it has none. */
+    private static interface TemplateReader {
+
+        byte[] read(String template, List<String> refused)
+    }
+
+    private static String tooLargeForACommand() {
+        return "has more than the ${PackArtefact.MAX_TEMPLATE_BYTES} bytes a template of a command can have".toString()
+    }
+
+    /**
+     * Reads the templates of the commands of a pack, see {@link PackArtefact}, into the files of the
+     * pack, where they are part of what the pack is ({@link Pack#getContentSha256()}). A template is
+     * text in UTF-8 without a NUL character, in which every token is one of {@link ArtefactTokens#ALL}:
+     * it is written into an application as it is and rendered by the command line later, so what could
+     * not be rendered then is refused now. A file that is also a file of {@code files} is read once.
+     *
+     * @param total the bytes of the files that were read before
+     * @param reader gives the content of a template by its path under the templates of the pack, or
+     * {@code null} and why it has none
+     */
+    private static void artefactTemplates(PackDescriptor descriptor, Map<String, byte[]> files, List<String> problems, long total,
+                                          TemplateReader reader) {
+        long all = total
+        Set<String> read = new HashSet<>()
+        for (int index = 0; index < descriptor.artefacts.size(); index++) {
+            PackArtefact artefact = descriptor.artefacts[index]
+            for (String key : ['template', 'testTemplate']) {
+                String template = key == 'template' ? artefact.template : artefact.testTemplate
+                if (template == null || !read.add(template) || problems.size() >= PackDescriptorParser.MAX_PROBLEMS || all > MAX_PACK_BYTES) {
+                    continue
+                }
+                String at = "artefacts[${index}].${key}: '${template}'"
+                byte[] content = files.get(template)
+                if (content != null && content.length > PackArtefact.MAX_TEMPLATE_BYTES) {
+                    problems << "${at} ${tooLargeForACommand()}".toString()
+                    continue
+                }
+                if (content == null) {
+                    List<String> refused = []
+                    content = reader.read(template, refused)
+                    if (content == null) {
+                        problems << "${at} ${refused ? refused[0] : 'cannot be read'}".toString()
+                        continue
+                    }
+                    all += content.length
+                    if (all > MAX_PACK_BYTES) {
+                        problems << "${at} takes the files of the pack over the ${MAX_PACK_BYTES} bytes they can have together".toString()
+                        continue
+                    }
+                }
+                String problem = templateProblem(content)
+                if (problem != null) {
+                    problems << "${at} is the template of a command and ${problem}".toString()
+                    continue
+                }
+                files.put(template, content)
+            }
+        }
+    }
+
+    // what keeps the content of a file from being the template of a command; null when nothing does
+    private static String templateProblem(byte[] content) {
+        String text
+        try {
+            text = decode(content)
+        } catch (CharacterCodingException ignored) {
+            return 'is not text in UTF-8'
+        }
+        if (text.indexOf(0) >= 0) {
+            return 'has a NUL character, which no source file has'
+        }
+        String token = ArtefactTokens.problem(text)
+        return token == null ? null : "cannot be rendered: ${token}".toString()
     }
 
     /**

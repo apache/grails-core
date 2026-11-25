@@ -88,6 +88,8 @@ final class PackDescriptor {
     final PackPreset preset
     /** The options the feature takes, which whoever creates the application gives and the templates and conditions read */
     final List<PackParameter> parameters
+    /** The commands the feature gives the command line of an application that has it, each of which writes a class from a template of the pack */
+    final List<PackArtefact> artefacts
 
     @SuppressWarnings('ParameterCount')
     PackDescriptor(String name, String title, String description, String category, String documentation,
@@ -174,6 +176,21 @@ final class PackDescriptor {
                    String readme, String instructions, String thirdPartyDocumentation, Map<String, String> versionsOfForge,
                    Map<String, String> buildBlocks, List<PackLink> readmeLinks, int templateApi, PackOfForge ofForge, PackPreset preset,
                    List<PackParameter> parameters) {
+        this(name, title, description, category, documentation, grailsCompatibility, forgeCompatibility, applicationTypes, requires,
+                conflicts, oneOf, dependencies, platforms, buildPlugins, buildProperties, buildExtensions, configuration, files, readme,
+                instructions, thirdPartyDocumentation, versionsOfForge, buildBlocks, readmeLinks, templateApi, ofForge, preset, parameters, [])
+    }
+
+    @SuppressWarnings('ParameterCount')
+    PackDescriptor(String name, String title, String description, String category, String documentation,
+                   String grailsCompatibility, String forgeCompatibility, Set<ApplicationType> applicationTypes,
+                   List<String> requires, List<String> conflicts, String oneOf, List<PackDependency> dependencies,
+                   List<PackDependency> platforms, List<PackBuildPlugin> buildPlugins, Map<String, String> buildProperties,
+                   Map<String, String> buildExtensions, Map<String, Object> configuration, List<PackFile> files,
+                   String readme, String instructions, String thirdPartyDocumentation, Map<String, String> versionsOfForge,
+                   Map<String, String> buildBlocks, List<PackLink> readmeLinks, int templateApi, PackOfForge ofForge, PackPreset preset,
+                   List<PackParameter> parameters, List<PackArtefact> artefacts) {
+        this.artefacts = List.copyOf(artefacts)
         this.parameters = List.copyOf(parameters)
         this.preset = preset
         this.ofForge = ofForge
@@ -208,7 +225,7 @@ final class PackDescriptor {
         return [name, title, description, category, documentation, grailsCompatibility, forgeCompatibility, applicationTypes,
                 requires, conflicts, oneOf, dependencies, platforms, buildPlugins, buildProperties, buildExtensions,
                 configuration, files, readme, instructions, thirdPartyDocumentation, versionsOfForge, buildBlocks, readmeLinks,
-                templateApi, ofForge, preset, parameters] as List<Object>
+                templateApi, ofForge, preset, parameters, artefacts] as List<Object>
     }
 
     /**

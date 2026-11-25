@@ -371,6 +371,11 @@ class PackFeature implements Feature {
                         'the files of a feature pack can have together')
             }
         }
+        written += addArtefactTemplates(generatorContext)
+        if (written > PackLoader.MAX_PACK_BYTES) {
+            throw new IllegalArgumentException("The feature ${name} writes more than the ${PackLoader.MAX_PACK_BYTES} bytes " +
+                    'the files of a feature pack can have together')
+        }
         if (descriptor.readme != null) {
             // a paragraph of its own, whatever it ends with
             String readme = descriptor.readme.stripTrailing() + '\n\n'
@@ -555,6 +560,50 @@ class PackFeature implements Feature {
         }
         generatorContext.addTemplate("pack:${name}:${file.to}".toString(), new PackContent(file.to, content, file.executable, !pack.isBundled()))
         return content.length
+    }
+
+    /**
+     * Writes the templates of the commands of the pack into the application, as they are: nothing of
+     * them is rendered here, since it is the command line that renders one, for each class it is asked
+     * to create. They are files of the application like any other the pack writes, so the record of
+     * the application has them, and a command reads its template from the project.
+     *
+     * <p>Two features of one application cannot give the command line a command of the same name: the
+     * application is refused, whichever of the two is applied first.</p>
+     *
+     * @return the bytes the templates have in the application
+     */
+    private int addArtefactTemplates(GeneratorContext generatorContext) {
+        List<PackArtefact> artefacts = pack.descriptor.artefacts
+        if (artefacts.isEmpty()) {
+            return 0
+        }
+        for (Feature other : generatorContext.getFeatures().getFeatures()) {
+            if (other.is(this) || !(other instanceof PackFeature)) {
+                continue
+            }
+            List<String> theirs = ((PackFeature) other).pack.descriptor.artefacts*.name
+            PackArtefact both = artefacts.find { PackArtefact each -> each.name in theirs }
+            if (both != null) {
+                throw new IllegalArgumentException("The feature ${name} gives the command line the command ${both.commandName}, and so does the feature " +
+                        "${other.getName()}: an application has one of the two features")
+            }
+        }
+        int written = 0
+        Set<String> added = new HashSet<>()
+        for (PackArtefact artefact : artefacts) {
+            for (String template : artefact.templates) {
+                if (!added.add(template)) {
+                    continue
+                }
+                String path = PackArtefact.projectPath(name, template)
+                byte[] content = pack.content(template)
+                // under a key no file of the pack has: one that is written to the same path is then two files for one, which is refused
+                generatorContext.addTemplate("pack:${name}:artefact:${template}".toString(), new PackContent(path, content, false, !pack.isBundled()))
+                written += content.length
+            }
+        }
+        return written
     }
 
     /**

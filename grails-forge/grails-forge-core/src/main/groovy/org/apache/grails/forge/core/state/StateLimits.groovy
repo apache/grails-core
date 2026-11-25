@@ -52,6 +52,9 @@ final class StateLimits {
     /** The most features a manifest can ask for or leave out, and a lock can have */
     public static final int MAX_FEATURES = 1000
 
+    /** The most commands the features of a project give the command line, all of them together */
+    public static final int MAX_ARTEFACTS = 200
+
     /** The most parameters a manifest or a lock can have */
     public static final int MAX_PARAMETERS = 200
 
@@ -80,7 +83,7 @@ final class StateLimits {
     public static final int MANIFEST_LINES = 3 * 2 * MAX_FEATURES + MAX_PARAMETERS + 64
 
     /** The most lines the lock can have: eight for a feature, two for a repository */
-    public static final int LOCK_LINES = 8 * MAX_FEATURES + 2 * MAX_REPOSITORIES + MAX_PARAMETERS + 64
+    public static final int LOCK_LINES = 8 * MAX_FEATURES + 2 * MAX_REPOSITORIES + MAX_PARAMETERS + 8 * MAX_ARTEFACTS + 64
 
     /** The most lines the index of the baseline can have: four for a file */
     public static final int INDEX_LINES = 4 * MAX_FILES + 16

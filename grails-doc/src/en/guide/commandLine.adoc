@@ -370,6 +370,8 @@ A short form is read in the following order, and the first reading that fits a c
 . A form of lower-case letters only that starts no such name is read as the first letters of the words of a name: `ra` is `run-app`, `sa` is `stop-app`, `cdc` is `create-domain-class`.
 . Failing that, a form of lower-case letters only is cut into as many parts as the name has words, each part the start of its word and the parts in the order of the words: `runa`, `rapp` and `runapp` are `run-app`, `ccon` is `create-controller`.
 
+A short form is looked up among the commands of `grails` itself first, then among the commands the features of the project give it, then among those of the application and its plugins, and the first of the three that has a command it fits is the one that counts: `cdc` stays `create-domain-class` in a project where a feature has a `create-domain-check`.
+
 Upper case and hyphens say where the words begin, so a form that has them is read by the rule of the Grails shell alone. A short form has nothing but letters and hyphens in it. A form is read against the other names of a command as well, so `w` is `war` and so `assemble`, except another name that is the first word of the name of its command: `run` and `stop` are short for nothing, as the Grails shell read no short form of them, because what starts `run` starts `run-script` and `run-command` too. Some forms and what they are:
 
 [cols="2,3,5"]
@@ -504,7 +506,7 @@ The usage of every command is laid out for a width of 100 columns, and the list 
 | The options the command line itself takes in front of a command, described like the options of a command: `--plain-output` and `--non-interactive` among them (see the next section).
 
 | `commands`
-| The commands, in the order `help` lists them. `name` is what is typed, `aliases` are other names of the command, `description` is one line of plain text, `project` says whether the command works on a project and cannot be used outside one, `origin` says where the command comes from (`built-in` for the commands of the command line itself), and `commands` holds the commands of the command, described in the same way. The commands of the application and its plugins come after those of `grails`. Their `origin` is `application`, the coordinates `group:artifact:version` of the artifact the command comes from, or `file:` and the name of a jar; they also have `target`, which is `application` for a command that runs in the application and `standalone` for one the build runs without starting the application, and `registration`, as the build of the project says it (see xref:commandLine#creatingCustomCommands[Creating Custom Commands]). A script of the application comes after them, with the `origin` `application`, the `target` `standalone`, because the build runs it without the application, the `registration` `script` and an empty `description`.
+| The commands, in the order `help` lists them. `name` is what is typed, `aliases` are other names of the command, `description` is one line of plain text, `project` says whether the command works on a project and cannot be used outside one, `origin` says where the command comes from (`built-in` for the commands of the command line itself, `feature:` and the name of the feature for a `create-` command a feature of the project gives, which comes after the commands of the command line itself), and `commands` holds the commands of the command, described in the same way. The commands of the application and its plugins come after those of `grails`. Their `origin` is `application`, the coordinates `group:artifact:version` of the artifact the command comes from, or `file:` and the name of a jar; they also have `target`, which is `application` for a command that runs in the application and `standalone` for one the build runs without starting the application, and `registration`, as the build of the project says it (see xref:commandLine#creatingCustomCommands[Creating Custom Commands]). A script of the application comes after them, with the `origin` `application`, the `target` `standalone`, because the build runs it without the application, the `registration` `script` and an empty `description`.
 
 | `options`
 | The options of the command: all the `names` of an option, the `label` of its value (`null` for an option that takes none), whether it is `required`, its `arity`, and what the members below say of it. The options are sorted by name, in every language: by the longest name of each without its hyphens, ignoring case. A command of the application or of a plugin has neither `options` nor `parameters` nor `relations`: the build does not know them.
@@ -552,7 +554,7 @@ autoload -U +X bashcompinit && bashcompinit
 source "$GRAILS_HOME/bin/grails_completion"
 ----
 
-The script is written when the distribution is built, so it knows the commands and the features of that version of Grails and nothing of a project: it does not offer the commands of the application and its plugins, and it offers to `feature add` every feature of Grails, also one the project has already. The interactive console completes from the project of the current directory: there `feature add` is offered the features the project does not have, and the commands of the application and its plugins are completed by their names. There is no completion script for other shells, such as fish or PowerShell.
+The script is written when the distribution is built, so it knows the commands and the features of that version of Grails and nothing of a project: it does not offer the commands of the application and its plugins or the `create-` commands a feature of the project gives it, and it offers to `feature add` every feature of Grails, also one the project has already. The interactive console completes from the project of the current directory: there `feature add` is offered the features the project does not have, and the commands of the application and its plugins, and those of its features, are completed by their names. There is no completion script for other shells, such as fish or PowerShell.
 
 === Output for a Program, and Running Without a User
 
@@ -1077,6 +1079,7 @@ In this case, "com.example" becomes the default package for your project.
 
 Each part of the package becomes a directory of the sources, and the name of the application a directory and part of the names of files. A part that is one of the names Windows keeps for devices, such as `aux` in `com.aux.myapp`, is therefore refused, as is such a name for the application itself: the project could not be checked out on Windows. Those names are `con`, `prn`, `aux`, `nul`, `conin$`, `conout$`, `clock$`, and `com` or `lpt` followed by one digit, which can also be a superscript `¹`, `²` or `³`, in any case of letters. A name with a control character, a slash or a backslash, and a name for the application that not every file system takes for a directory (one with `:`, `*`, `?`, `"`, `<`, `>` or `|` in it, or with a space or a dot at its end), are refused as well, as mistakes in the command line.
 
+[[creatingClassesWithGrails]]
 === Creating Classes with the `grails` Command
 
 In the directory of a project the `grails` command has commands that write a class of the application, most of them with a test beside it. Which commands there are depends on the type of the application and on its features, as recorded in the project:
@@ -1133,6 +1136,8 @@ In the directory of a project the `grails` command has commands that write a cla
 |`grails-app/commands/<package>/<Name>Command.groovy`
 |every project
 |===
+
+A feature can add commands of the same kind. A feature pack, of Grails or of a plugin, declares them with the templates they write from, and in a project whose record has the feature they are commands of `grails` like those above: `create-<name> <class>`, listed by `help` with the name of the feature, with `-f` and the same rules for names and files. Their templates are files of the project under `src/main/templates/features/<feature>`. See xref:plugins#forgeFeaturePackArtefacts[Commands That Create Classes] in the chapter on feature packs.
 
 `create-script`, which wrote a script command into `src/main/scripts`, is removed: script commands are deprecated, and a new command is a class of the application that `create-command` writes (see <<commandsOfEarlierVersions,Commands of Earlier Versions>>).
 
@@ -1282,6 +1287,8 @@ $ grails install-templates
 | Copied template to src/main/templates/artifacts/Controller.groovy
 ...
 ----
+
+The templates of the commands a feature gives the project are not among these. They are under `src/main/templates/features/<feature>/`, written there when the application was generated with the feature or the feature was added, and they are the only templates those commands have: change them in place. A template of them that is missing is not written again by `install-templates`; the command that needs it names the path, and the file comes back from version control or from the copy under `.grails/baseline/files`. All of them use the `@artifact.name@` tokens.
 
 It lists each file it writes. A template the project already has is kept and named; with `-f` or `--force` it is replaced. The templates of the scaffolding plugin under `src/main/templates/scaffolding` are a different set, which this command does not write: `./gradlew runCommand -Pargs="install-templates"` copies those.
 

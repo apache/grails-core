@@ -20,6 +20,7 @@ package org.apache.grails.forge.core.state
 
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
+import org.apache.grails.forge.core.pack.PackArtefact
 import org.grails.forge.application.ApplicationType
 import java.nio.charset.StandardCharsets
 import java.util.regex.Pattern
@@ -215,6 +216,13 @@ final class ProjectLock {
                 throw root.problem('features', "has the feature ${feature.name} more than once")
             }
         }
+        int artefacts = 0
+        for (LockedFeature feature : features) {
+            artefacts += feature.artefacts.size()
+        }
+        if (artefacts > StateLimits.MAX_ARTEFACTS) {
+            throw root.problem('features', "have ${artefacts} commands, and the features of a project can have ${StateLimits.MAX_ARTEFACTS}")
+        }
         Map<String, String> parameters = root.texts('parameters', StateLimits.MAX_PARAMETERS)
         StateSection baseline = root.section('baselineIndex')
         String baselineIndexSha256 = baseline.matching('sha256', SHA256, 'a SHA-256 digest in hexadecimal')
@@ -353,9 +361,13 @@ final class ProjectLock {
         final String catalogSha256
         /** The digest of the content of a pack that was given as a directory or a file, or {@code null} */
         final String contentSha256
+        /** The commands the feature gives the command line, which only a feature of a feature pack has; none for most */
+        final List<LockedArtefact> artefacts
 
+        @SuppressWarnings('ParameterCount')
         LockedFeature(String name, String source, String origin = null, String coordinates = null, String version = null, String sha256 = null,
-                      String catalog = null, String catalogSha256 = null, String contentSha256 = null) {
+                      String catalog = null, String catalogSha256 = null, String contentSha256 = null, List<LockedArtefact> artefacts = []) {
+            this.artefacts = List.copyOf(artefacts)
             this.contentSha256 = contentSha256
             this.catalog = catalog
             this.catalogSha256 = catalogSha256
@@ -393,6 +405,10 @@ final class ProjectLock {
             if (catalogSha256 != null) {
                 map.put('catalogSha256', catalogSha256)
             }
+            // only when there are some: the lock of an application without such a feature is what it was
+            if (artefacts) {
+                map.put('artefacts', artefacts.collect { LockedArtefact each -> each.toMap() })
+            }
             return map
         }
 
@@ -410,7 +426,15 @@ final class ProjectLock {
                     section.optionalMatching('sha256', SHA256, 'a SHA-256 digest in hexadecimal'),
                     section.has('catalog') ? section.text('catalog', StateLimits.MAX_ADDRESS) : null,
                     section.optionalMatching('catalogSha256', SHA256, 'a SHA-256 digest in hexadecimal'),
-                    contentSha256)
+                    contentSha256,
+                    !section.has('artefacts') ? [] as List<LockedArtefact> :
+                            section.sections('artefacts', PackArtefact.MAX).collect { StateSection each -> LockedArtefact.read(each) })
+            if (feature.artefacts && source == FRAMEWORK) {
+                throw section.problem('artefacts', 'are the commands of a feature of a feature pack, and only such a feature has them')
+            }
+            if (feature.artefacts*.name.toSet().size() != feature.artefacts.size()) {
+                throw section.problem('artefacts', 'has a command more than once')
+            }
             // the content of a pack of a directory or a file stands for what it was; a jar of a repository has its own digest
             if (contentSha256 != null && (source != PACK || feature.coordinates != null || feature.sha256 != null)) {
                 throw section.problem('contentSha256', 'is the digest of the content of a feature pack that was given as a directory or a file, ' +

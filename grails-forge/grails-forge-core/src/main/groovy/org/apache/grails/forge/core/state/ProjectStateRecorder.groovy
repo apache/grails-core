@@ -20,6 +20,7 @@ package org.apache.grails.forge.core.state
 
 import groovy.transform.CompileStatic
 import org.apache.grails.forge.core.pack.Pack
+import org.apache.grails.forge.core.pack.PackArtefact
 import org.apache.grails.forge.core.pack.PackArtifact
 import org.apache.grails.forge.core.pack.PackDescriptor
 import org.apache.grails.forge.core.pack.PackFeature
@@ -315,15 +316,17 @@ final class ProjectStateRecorder {
             return new LockedFeature(feature.getName(), LockedFeature.FRAMEWORK)
         }
         Pack pack = ((PackFeature) feature).getPack()
+        // the commands the feature gives the command line, which reads them from here
+        List<LockedArtefact> commands = pack.getDescriptor().getArtefacts().collect { PackArtefact each -> LockedArtefact.of(each) }
         if (pack.isBundled()) {
-            return new LockedFeature(feature.getName(), LockedFeature.BUNDLED_PACK)
+            return new LockedFeature(feature.getName(), LockedFeature.BUNDLED_PACK, null, null, null, null, null, null, null, commands)
         }
         PackArtifact artifact = pack.getArtifact()
         if (artifact == null) {
             // the state is committed, and where a pack of a directory was read from is a path of the
             // machine it was generated on: the lock says what the pack was, by the digest of its content,
             // which is the same on every computer that has the same pack
-            return new LockedFeature(feature.getName(), LockedFeature.PACK, null, null, null, null, null, null, pack.getContentSha256())
+            return new LockedFeature(feature.getName(), LockedFeature.PACK, null, null, null, null, null, null, pack.getContentSha256(), commands)
         }
         // a pack that was taken by the coordinates of its plugin: which artifact, and its very bytes.
         // The repository is said when it is an https address, as the repositories of the build are,
@@ -334,7 +337,8 @@ final class ProjectStateRecorder {
                 ProjectLock.recordableAddress(artifact.getRecordableRepository()),
                 artifact.coordinates.substring(0, version), artifact.coordinates.substring(version + 1), artifact.sha256,
                 // of the catalog that gave the coordinates for a name: its digest, and its address by the same rule
-                artifact.catalogSha256 == null ? null : ProjectLock.recordableAddress(artifact.getRecordableCatalog()), artifact.catalogSha256)
+                artifact.catalogSha256 == null ? null : ProjectLock.recordableAddress(artifact.getRecordableCatalog()), artifact.catalogSha256,
+                null, commands)
     }
 
     // the repositories that were given in place of those Grails gives a build, as the build file has them

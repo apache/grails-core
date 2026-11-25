@@ -27,6 +27,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.util.regex.Matcher
 import java.util.regex.Pattern
+import org.apache.grails.forge.core.pack.ArtefactTokens
 import org.apache.grails.forge.core.pack.PackDescriptorParser
 import org.grails.forge.application.Project
 import org.grails.forge.util.NameUtils
@@ -52,9 +53,7 @@ final class ArtefactTemplates {
 
     private static final String BUILT_IN = '/META-INF/grails-forge-cli/templates/'
     private static final int MAX_REASON = 300
-    private static final String PACKAGE = 'artifact.package'
-    // a token, and the end of the line when the token is the last of it
-    private static final Pattern TOKEN = Pattern.compile(/@(artifact\.[A-Za-z0-9_.]*)@(\r\n|\r|\n)?/)
+    private static final String PACKAGE = ArtefactTokens.PACKAGE
     private static final Pattern PLACEHOLDER = Pattern.compile(/\$\{([A-Za-z_][A-Za-z0-9_]*)\}/)
     // the declaration of the package on a line of its own, which a class without a package has not
     private static final Pattern PACKAGE_LINE = Pattern.compile(/package \$\{packageName\}[ \t]*;?[ \t]*(?:\r\n|\r|\n|\z)(?:\r\n|\r|\n)?/)
@@ -118,13 +117,27 @@ final class ArtefactTemplates {
      * is outside the project by a link, is no file, is too large or is not text
      */
     static Source find(File projectDirectory, ArtefactTemplate template) {
-        String path = projectPath(template)
+        Source ofProject = findInProject(projectDirectory, projectPath(template))
+        return ofProject ?: new Source(builtIn(template), null)
+    }
+
+    /**
+     * The template a project has at a path, for a command whose templates are files of the project and
+     * of nothing else, as those of a command of a feature are.
+     *
+     * @param projectDirectory the directory of the project
+     * @param path the path of the template in the project, with {@code /} between the steps
+     * @return the template, or {@code null} when the project has none there
+     * @throws ArtefactTemplateException when the project has a template there that cannot be used: one
+     * that is outside the project by a link, is no file, is too large or is not text
+     */
+    static Source findInProject(File projectDirectory, String path) {
         // a template is there when every step to it has the very name that is asked for: a file
         // system that takes TESTING for testing finds a file under either, and another does not
         Path file = projectDirectory.toPath()
         for (String step : path.split('/')) {
             if (!Files.isDirectory(file) || !ProjectOutputHandler.named(file, step)) {
-                return new Source(builtIn(template), null)
+                return null
             }
             file = file.resolve(step)
         }
@@ -186,16 +199,29 @@ final class ArtefactTemplates {
         return template.syntax == ArtefactTemplate.Syntax.TOKENS ? tokens(source.text, name, names) : placeholders(source.text, name, names)
     }
 
+    /**
+     * Renders a template of a project in which the tokens of {@link ArtefactTokens} are replaced.
+     * Nothing of it is run.
+     *
+     * @param source the template, see {@link #findInProject(File, String)}
+     * @param names the names of the class
+     * @return the text of the file
+     * @throws ArtefactTemplateException when the template cannot be rendered
+     */
+    static String renderTokens(Source source, Project names) {
+        return tokens(source.text, source.projectPath, names)
+    }
+
     private static String tokens(String text, String name, Project names) {
         String packageName = names.getPackageName() ?: ''
         Map<String, String> values = [
-                'artifact.package.name': packageName,
-                'artifact.package.path': packageName.replace('.', '/'),
-                'artifact.name': names.getClassName(),
-                'artifact.propertyName': names.getPropertyName()
+                (ArtefactTokens.PACKAGE_NAME): packageName,
+                (ArtefactTokens.PACKAGE_PATH): packageName.replace('.', '/'),
+                (ArtefactTokens.NAME): names.getClassName(),
+                (ArtefactTokens.PROPERTY_NAME): names.getPropertyName()
         ]
         StringBuilder rendered = new StringBuilder(text.length() + 256)
-        Matcher token = TOKEN.matcher(text)
+        Matcher token = ArtefactTokens.TOKEN.matcher(text)
         int from = 0
         while (token.find()) {
             String key = token.group(1)

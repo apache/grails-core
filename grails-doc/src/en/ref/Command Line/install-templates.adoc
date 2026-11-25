@@ -42,6 +42,8 @@ grails install-templates [-f]
 
 The `install-templates` command copies the templates of the commands the project has, such as `create-controller`, `create-service` and `create-unit-test`, to `src/main/templates/artifacts` and `src/main/templates/testing` of the project (and `src/main/templates/Job.groovy` in a project with the Quartz plugin). Those commands then write their files from the templates of the project. It lists each file it writes; a template the project has already is kept and named unless `-f` or `--force` is given.
 
+The templates of the `create-` commands a feature of the project gives it are not copied: the project has them already, under `src/main/templates/features/<feature>/`, since it was generated with the feature, and the command neither writes nor replaces them.
+
 See "Templates of the Project" in link:{guidePath}commandLine.html[The Command Line] for the templates and their syntax.
 
 == The install-templates Command of the Scaffolding Plugin
