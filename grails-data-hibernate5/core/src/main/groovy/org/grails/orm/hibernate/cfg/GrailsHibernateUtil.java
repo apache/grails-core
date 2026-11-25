@@ -38,6 +38,7 @@ import org.hibernate.engine.spi.SessionImplementor;
 import org.hibernate.engine.spi.Status;
 import org.hibernate.internal.util.StringHelper;
 import org.hibernate.proxy.HibernateProxy;
+import org.hibernate.sql.JoinType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,6 +50,7 @@ import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.config.GormProperties;
 import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.model.types.Embedded;
+import org.grails.datastore.mapping.model.types.ToMany;
 import org.grails.datastore.mapping.reflect.ClassUtils;
 import org.grails.orm.hibernate.AbstractHibernateDatastore;
 import org.grails.orm.hibernate.datasource.MultipleDataSourceSupport;
@@ -214,6 +216,21 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
     }
 
     /**
+     * Whether a sort by a property of an association joins the association with a left join, so that the
+     * sort keeps the instances whose association is null. That is the case when the
+     * <code>grails.gorm.leftJoinAssociationSort</code> setting is enabled. The association is otherwise
+     * joined with an inner join.
+     *
+     * @param entity an entity of the datastore that runs the query
+     * @return whether a sort joins an association with a left join
+     * @since 7.0.18
+     */
+    public static boolean isLeftJoinAssociationSort(PersistentEntity entity) {
+        return entity != null && entity.getMappingContext() instanceof HibernateMappingContext &&
+                ((HibernateMappingContext) entity.getMappingContext()).isLeftJoinAssociationSort();
+    }
+
+    /**
      * Add order to criteria, creating necessary subCriteria if nested sort property (ie. sort:'nested.property').
      */
     private static void addOrderPossiblyNested(AbstractHibernateDatastore datastore, Criteria c, Class<?> targetClass, String sort, String order, boolean ignoreCase) {
@@ -228,7 +245,11 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
                 // embedded objects cannot reference entities (at time of writing), so no more recursion needed
                 addOrder(c, sort, order, ignoreCase);
             } else if (property instanceof Association) {
-                Criteria subCriteria = c.createCriteria(sortHead);
+                // with the leftJoinAssociationSort setting, a left join, so that the sort keeps the rows where the
+                // association is null; a collection is joined with an inner join, since Hibernate would fetch it
+                // through a left join
+                Criteria subCriteria = c.createCriteria(sortHead, property instanceof ToMany || !isLeftJoinAssociationSort(property.getOwner()) ?
+                        JoinType.INNER_JOIN : JoinType.LEFT_OUTER_JOIN);
                 Class<?> propertyTargetClass = ((Association) property).getAssociatedEntity().getJavaClass();
                 GrailsHibernateUtil.cacheCriteriaByMapping(datastore, propertyTargetClass, subCriteria);
                 addOrderPossiblyNested(datastore, subCriteria, propertyTargetClass, sortTail, order, ignoreCase); // Recurse on nested sort
