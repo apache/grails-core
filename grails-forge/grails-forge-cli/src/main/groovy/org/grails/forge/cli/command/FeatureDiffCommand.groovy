@@ -22,6 +22,7 @@ import java.nio.file.Path
 import java.util.function.Consumer
 import groovy.transform.CompileStatic
 import org.apache.grails.forge.cli.console.ConsoleProject
+import org.apache.grails.forge.cli.pack.AddedPackOptions
 import org.apache.grails.forge.cli.pack.PackArtifactException
 import org.apache.grails.forge.cli.pack.PackArtifacts
 import org.apache.grails.forge.core.change.ChangePlan
@@ -76,6 +77,10 @@ class FeatureDiffCommand extends FeatureQueryCommand {
     @CommandLine.Option(names = ['--replace'], description = 'As for feature add: a feature that was asked for by name makes way for the feature that takes its place.')
     boolean replace
 
+    // declared where feature add declares them, so that what that command takes this one takes
+    @CommandLine.Mixin
+    AddedPackOptions addedOptions = new AddedPackOptions()
+
     @Autowired
     FeatureDiffCommand(ProjectGenerator projectGenerator) {
         super({ projectGenerator })
@@ -91,12 +96,19 @@ class FeatureDiffCommand extends FeatureQueryCommand {
         ApplicationType given = FeatureScope.typeOf(spec.commandLine(), type)
         ConsoleProject.Search search = ConsoleProject.search(FileSystemOutputHandler.getDefaultBaseDirectory().toPath())
         if (given != null || search.project == null) {
+            List<String> ofAnAddition = addedOptions.given()
+            if (!ofAnAddition.isEmpty()) {
+                // there is no application a pack is added to: a new one has the features of Grails and of the packs that are given as directories
+                throw new CommandLine.ParameterException(spec.commandLine(), "${ofAnAddition.join(', ')} ${ofAnAddition.size() == 1 ? 'is an option' : 'are options'} " +
+                        "for a feature that is added to the application of the current directory. ${given != null ? 'With --type' : 'Outside a project'}, feature diff " +
+                        'shows a new application, with the features of Grails and of the feature packs --feature-pack-dir gives')
+            }
             return ofNewApplication()
         }
         return ofProject(search.project.directory)
     }
 
-    // feature add of the same features, with the feature packs and the repositories this command was given, which takes the packs that are added
+    // feature add of the same features, with the feature packs, the repositories and the options this command was given, which takes the packs that are added
     private FeatureAddCommand asAdded() {
         FeatureDiffCommand diff = this
         FeatureAddCommand add = new FeatureAddCommand(getProjectGenerator()) {
@@ -114,11 +126,16 @@ class FeatureDiffCommand extends FeatureQueryCommand {
         add.spec = spec
         add.features = features
         add.packOptions = packOptions
+        add.addedOptions = addedOptions
+        add.replace = replace
         return add
     }
 
     // the plan of feature add, of which the diff is written
     private Integer ofProject(Path directory) {
+        FeatureAddCommand add = asAdded()
+        // an option of a feature that is not written as one is a mistake in the command line, as for feature add
+        Map<String, Map<String, String>> options = add.optionsOfFeatures()
         try {
             if (!ProjectState.exists(directory)) {
                 throw new ProjectStateException("${FeatureAddCommand.noRecord(spec)}. With --type, feature diff shows what the features change in a new application of that type")
@@ -126,10 +143,12 @@ class FeatureDiffCommand extends FeatureQueryCommand {
             List<Pack> packs = packOptions.packs(directory, createPackArtifacts(), grailsRepoUrl(), { String line -> note(shown(line)) } as Consumer<String>,
                     { String line -> warned(shown(line)) } as Consumer<String>)
             // the feature of a plugin that is named by its coordinates, or of a pack that is given, is taken as feature add takes it
-            FeatureAddCommand.Asked asked = asAdded().asked(directory, packs, { String line -> note(shown(line.replace('@|blue ||@ ', ''))) } as Consumer<String>,
+            FeatureAddCommand.Asked asked = add.asked(directory, packs, { String line -> note(shown(line.replace('@|blue ||@ ', ''))) } as Consumer<String>,
                     { String line -> warned(shown(line)) } as Consumer<String>)
-            ChangePlan plan = new FeatureAddition(getProjectGenerator()).plan(directory, asked.features, getOperatingSystem(), new Notes(), replace,
-                    asked.ofTheApplication, asked.added)
+            FeatureAddition addition = new FeatureAddition(getProjectGenerator())
+            addition.featureOptions = options
+            ChangePlan plan = addition.plan(directory, asked.features, getOperatingSystem(), new Notes(), replace, asked.ofTheApplication, asked.added)
+            add.heldToItsBom(directory, plan)
             for (String name : plan.alreadyThere) {
                 note("The application already has the feature ${shown(name)}")
             }
@@ -155,7 +174,7 @@ class FeatureDiffCommand extends FeatureQueryCommand {
             return 0
         } catch (FeatureSelectionException e) {
             // features an application cannot have are a mistake in the command line, as they are for feature add
-            throw new CommandLine.ParameterException(spec.commandLine(), shown(e.getMessage()))
+            throw new CommandLine.ParameterException(spec.commandLine(), shown(e.getMessage()) + add.notInCatalog())
         } catch (ProjectStateException | ProjectChangeException | IllegalArgumentException | PackArtifactException e) {
             err(shown(ProjectMigrateCommand.withMove(spec, directory, e)))
             if (showStacktrace()) {

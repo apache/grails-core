@@ -23,6 +23,7 @@ import org.apache.grails.forge.cli.console.ConsoleProject
 import org.apache.grails.forge.cli.console.OptionRelation
 import org.apache.grails.forge.cli.console.ProjectCommand
 import org.apache.grails.forge.cli.console.UsageHelp
+import org.apache.grails.forge.cli.pack.AddedPackOptions
 import org.apache.grails.forge.cli.pack.FeatureOptions
 import org.apache.grails.forge.cli.pack.PackArtifactException
 import org.apache.grails.forge.cli.pack.PackArtifacts
@@ -110,32 +111,12 @@ class FeatureAddCommand extends BaseCommand implements Callable<Integer>, Projec
             'and nothing else: the outcome, the reason, the files with their paths in the project and what would be done to each, and whether the change can be made.')
     boolean json
 
-    @CommandLine.Option(names = ['--feature-option'], paramLabel = 'FEATURE.NAME=VALUE',
-            description = 'An option of a feature that is added, which the feature pack of the feature declares: the name of the feature, a dot, the ' +
-                    'name of the option and its value. An option that is not given has the value the pack gives it. The options of the features the ' +
-                    'application has stay what its record says. Can be given more than once.')
-    List<String> featureOptions = new ArrayList<>()
-
     @CommandLine.Mixin
     RecordedPackOptions packOptions = new RecordedPackOptions()
 
-    @CommandLine.Option(names = ['--feature-pack-sha256'], paramLabel = 'COORDINATES=SHA256',
-            description = 'The SHA-256 the jar of a plugin that is added by its coordinates has to have, as group:artifact:version=sha256. ' +
-                    'A jar with another one is refused before it is opened. Can be given more than once.')
-    List<String> featurePackDigests = new ArrayList<>()
-
-    @CommandLine.Option(names = ['--feature-catalog'], paramLabel = 'URL',
-            description = 'A feature catalog, in which a name that is neither a feature of Grails nor that of a feature pack that was given is ' +
-                    'looked up, as the create commands look it up: the catalog says which plugin has the feature, in which version and with which ' +
-                    'SHA-256. The address is https, or file: for a file; none is for no catalog. Without the option, the catalogs of the ' +
-                    'GRAILS_FORGE_CATALOG environment variable are read, else the plugin index the GRAILS_PLUGIN_INDEX environment variable names, ' +
-                    'and without either none. Can be given more than once.')
-    List<String> featureCatalogs = new ArrayList<>()
-
-    @CommandLine.Option(names = ['--refresh'],
-            description = 'Read each feature catalog anew, and not the copy of it that is kept on this computer for a day, and fetch ' +
-                    'the jar of a plugin that is added, and not the copy of it that is kept on this computer')
-    boolean refresh
+    // declared where feature diff declares them too, so that what this command takes that one takes
+    @CommandLine.Mixin
+    AddedPackOptions addedOptions = new AddedPackOptions()
 
     // asked of the Forge application when the command first needs it
     private final Supplier<ProjectGenerator> projectGeneratorSource
@@ -202,7 +183,7 @@ class FeatureAddCommand extends BaseCommand implements Callable<Integer>, Projec
             return exit
         } catch (FeatureSelectionException e) {
             // features an application cannot have are a mistake in the command line, as they are when it is created
-            throw new CommandLine.ParameterException(spec.commandLine(), shown(e.getMessage()) + (packSelection == null ? '' : packSelection.getNotInCatalog()))
+            throw new CommandLine.ParameterException(spec.commandLine(), shown(e.getMessage()) + notInCatalog())
         } catch (ProjectStateException | ProjectChangeException | IllegalArgumentException | PackArtifactException e) {
             // a record that another version wrote is moved to this one by a command that is named
             err(shown(ProjectMigrateCommand.withMove(spec, directory, e)))
@@ -213,9 +194,21 @@ class FeatureAddCommand extends BaseCommand implements Callable<Integer>, Projec
         }
     }
 
-    private Map<String, Map<String, String>> optionsOfFeatures() {
+    /**
+     * @return what follows the message for a name that is no feature, when a catalog was asked for it and has none
+     * of the name; the empty text when no pack was taken
+     */
+    String notInCatalog() {
+        return packSelection == null ? '' : packSelection.getNotInCatalog()
+    }
+
+    /**
+     * @return the options of the features that are added, as {@code --feature-option} gave them
+     * @throws CommandLine.ParameterException for one that is not written as an option of a feature
+     */
+    Map<String, Map<String, String>> optionsOfFeatures() {
         try {
-            return FeatureOptions.parse(featureOptions)
+            return FeatureOptions.parse(addedOptions.featureOptions)
         } catch (IllegalArgumentException e) {
             throw new CommandLine.ParameterException(spec.commandLine(), e.getMessage())
         }
@@ -252,7 +245,7 @@ class FeatureAddCommand extends BaseCommand implements Callable<Integer>, Projec
             Asked asked = asked(directory, given, { String line -> notes.out(plain(line)) } as Consumer<String>, { String line -> notes.warning(line) } as Consumer<String>)
             packs = asked.ofTheApplication + asked.added
             FeatureAddition addition = new FeatureAddition(projectGeneratorSource.get())
-            addition.featureOptions = FeatureOptions.parse(featureOptions)
+            addition.featureOptions = FeatureOptions.parse(addedOptions.featureOptions)
             plan = addition.plan(directory, asked.features, getOperatingSystem(), notes, replace, asked.ofTheApplication, asked.added)
             heldToItsBom(directory, plan)
             // which packs the features come from is among the notes: the document is all that is written
@@ -416,7 +409,7 @@ class FeatureAddCommand extends BaseCommand implements Callable<Integer>, Projec
             }
             return has == null ? feature : has.name
         }
-        boolean nothingToTake = featurePackDigests.isEmpty() && named.every { String feature ->
+        boolean nothingToTake = addedOptions.featurePackDigests.isEmpty() && named.every { String feature ->
             feature == null || (!PackArtifacts.isCoordinates(feature) && (isKnown(state, feature) || toAdd.any { Pack pack -> pack.descriptor.name == feature }))
         }
         if (nothingToTake) {
@@ -435,8 +428,8 @@ class FeatureAddCommand extends BaseCommand implements Callable<Integer>, Projec
         }
     }
 
-    // the packs a catalog gave for names were chosen for the BOM the application has, which the features that are added can change
-    private void heldToItsBom(Path directory, ChangePlan plan) {
+    /** The packs a catalog gave for names were chosen for the BOM the application has, which the features that are added can change. */
+    void heldToItsBom(Path directory, ChangePlan plan) {
         if (packSelection == null || plan.isNothingToAdd()) {
             return
         }
@@ -566,17 +559,17 @@ class FeatureAddCommand extends BaseCommand implements Callable<Integer>, Projec
 
         @Override
         List<String> getPackDigests() {
-            return featurePackDigests
+            return addedOptions.featurePackDigests
         }
 
         @Override
         List<String> getPackCatalogs() {
-            return featureCatalogs
+            return addedOptions.featureCatalogs
         }
 
         @Override
         boolean isCatalogRefresh() {
-            return refresh
+            return addedOptions.refresh
         }
 
         @Override
