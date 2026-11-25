@@ -163,6 +163,9 @@ class PackParitySpec extends ApplicationContextSpec {
               - scope: integrationTestImplementationTestFixtures
                 coordinates: com.acme:acme-audit-fixtures
                 version: 2.3.0
+              - scope: grailsCli
+                coordinates: com.acme:acme-audit-cli
+                version: 2.3.0
             buildPlugins:
               - id: com.acme.audit
                 apply: true
@@ -214,6 +217,10 @@ class PackParitySpec extends ApplicationContextSpec {
         and: 'the scopes a pack of Grails declares in'
         build.contains('testAndDevelopmentOnly "com.acme:acme-audit-console:2.3.0"')
         build.contains('integrationTestImplementation testFixtures("com.acme:acme-audit-fixtures:2.3.0")')
+
+        and: 'the scope of the commands, whose dependencies are not on the class path the application runs with'
+        build.contains('grailsCli "com.acme:acme-audit-cli:2.3.0"')
+        !build.contains('implementation "com.acme:acme-audit-cli')
 
         and: 'text at the places of the build file, and a block whose name has a call'
         build.indexOf("def auditStore = 'table'") > build.indexOf('plugins {')

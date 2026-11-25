@@ -73,11 +73,11 @@ In a REST API application and in a REST API plugin the command generates what th
 
 link:{commandLineRefFromRef}generate-controller.html[generate-controller], link:{commandLineRefFromRef}generate-views.html[generate-views] and link:{commandLineRefFromRef}generate-all.html[generate-all] decide it the same way and take the same option, so a controller and views that are generated one after the other fit together.
 
-A REST API application has the commands when it has the scaffolding plugin, which it does not have by default: create it with `grails create-restapi myapi --features scaffolding`, or add the feature later with `grails feature add scaffolding`.
+A REST API application has the commands when it has the `scaffolding` feature, which it does not have by default: create it with `grails create-restapi myapi --features scaffolding`, or add the feature later with `grails feature add scaffolding`. The feature gives a REST API application the commands of the scaffolding plugin and not the plugin, which the running application has no use for.
 
 === Running the Command
 
-The command is a command of the scaffolding plugin (`org.apache.grails:grails-scaffolding`), which the application has to depend on, and it runs in the application, started by the Gradle task `runCommand` of the project. There are three ways to run it:
+The command is a command of the scaffolding plugin (`org.apache.grails:grails-scaffolding`), which the application has to depend on, and it runs in the application, started by the Gradle task `runCommand` of the project. A REST API application with the `scaffolding` feature depends on the commands of the plugin alone (`grailsCli "org.apache.grails:grails-scaffolding-cli"`), which keeps the plugin, GSP and the fields plugin off the class path the application runs with. There are three ways to run it:
 
 [source,console]
 ----

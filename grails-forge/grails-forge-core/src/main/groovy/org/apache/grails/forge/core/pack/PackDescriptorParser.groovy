@@ -95,6 +95,7 @@ class PackDescriptorParser {
             compileOnly: Scope.COMPILE_ONLY,
             runtimeOnly: Scope.RUNTIME_ONLY,
             developmentOnly: Scope.DEVELOPMENT_ONLY,
+            grailsCli: Scope.GRAILS_CLI,
             testImplementation: Scope.TEST_IMPLEMENTATION,
             testCompileOnly: Scope.TEST_COMPILE_ONLY,
             testRuntimeOnly: Scope.TEST_RUNTIME_ONLY,

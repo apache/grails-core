@@ -58,7 +58,7 @@ Flags:
 
 === Running the Command
 
-The command is a command of the scaffolding plugin (`org.apache.grails:grails-scaffolding`), which the application has to depend on, and it runs in the application, started by the Gradle task `runCommand` of the project. There are three ways to run it:
+The command is a command of the scaffolding plugin (`org.apache.grails:grails-scaffolding`), which the application has to depend on, and it runs in the application, started by the Gradle task `runCommand` of the project. In a REST API application with the `scaffolding` feature, which has the commands of the plugin and not the plugin (`grailsCli "org.apache.grails:grails-scaffolding-cli"`), a class this command writes can extend a class of the scaffolding plugin, such as `RestfulServiceController` or `GormService`. It compiles, and the running application does not have that class: declare `implementation "org.apache.grails:grails-scaffolding"` in such an application first. There are three ways to run it:
 
 [source,console]
 ----

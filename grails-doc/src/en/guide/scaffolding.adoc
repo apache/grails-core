@@ -265,7 +265,9 @@ A REST API application has these commands when it has the scaffolding plugin, wh
 grails create-restapi myapi --features scaffolding
 ----
 
-`grails feature add scaffolding` adds the plugin to a REST API application that is there already. The scaffolding plugin depends on the GSP and fields plugins, so the application then has those on its class path and loads them, although it has no GSP; its responses are the same as without the plugin.
+`grails feature add scaffolding` adds the plugin to a REST API application that is there already.
+
+A REST API application gets the commands of the plugin and not the plugin itself: its build declares `grailsCli "org.apache.grails:grails-scaffolding-cli"`, where a web application declares `implementation "org.apache.grails:grails-scaffolding"`. A dependency of the `grailsCli` configuration is on the class path the build runs a command with, and on the class paths the project is compiled and tested with, and not on the one the application runs with or in the archive it is packaged as. The running application therefore has neither the scaffolding plugin nor the GSP and fields plugins the scaffolding plugin depends on. The commands that write sources work there, which are `generate-all`, `generate-controller`, `generate-views`, `generate-service` and `install-templates`. `create-scaffold-controller`, `create-scaffold-service` and `generate-scaffold-all` write classes that can extend classes of the scaffolding plugin, such as `RestfulServiceController` and `GormService`, which the running application then does not have: an application that wants those declares the plugin itself, with `implementation`, and then has GSP on its class path.
 
 The commands generate JSON views and the REST controller when the JSON views plugin is on the class path of the application and `grails-app/views` has no GSP, and GSP views and the controller for pages everywhere else. An application with both kinds of views is therefore given GSP views, and `--views=json` asks for the other kind:
 

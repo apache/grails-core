@@ -4,7 +4,8 @@ conflicts: []
 oneOf: null
 default: applicationType=web|web-plugin
 adds: gsp when applicationType=web|web-plugin
-dependency: implementation org.apache.grails:grails-scaffolding without a version
+dependency: implementation org.apache.grails:grails-scaffolding without a version when applicationType=web|web-plugin
+dependency: grailsCli org.apache.grails:grails-scaffolding-cli without a version when applicationType=rest-api|rest-api-plugin
 
 # web
 title: Scaffolding
@@ -37,7 +38,7 @@ dependentFeatures: []
 + 
 + 
 == build.gradle
-+     implementation "org.apache.grails:grails-scaffolding"
++     grailsCli "org.apache.grails:grails-scaffolding-cli"
 
 # web_plugin
 title: Scaffolding
@@ -73,5 +74,5 @@ dependentFeatures: []
 + 
 + 
 == build.gradle
-+     implementation "org.apache.grails:grails-scaffolding"
++     grailsCli "org.apache.grails:grails-scaffolding-cli"
 

@@ -170,7 +170,8 @@ class CreateRestApiPluginCommandSpec extends CommandSpec {
         scaffolding == 0
         features.contains('scaffolding')
         !features.contains('gsp')
-        new File(project, 'build.gradle').getText('UTF-8').contains('implementation "org.apache.grails:grails-scaffolding"')
+        new File(project, 'build.gradle').getText('UTF-8').contains('grailsCli "org.apache.grails:grails-scaffolding-cli"')
+        !new File(project, 'build.gradle').getText('UTF-8').contains('"org.apache.grails:grails-scaffolding"')
         !new File(project, 'build.gradle').getText('UTF-8').contains('grails-gsp')
     }
 

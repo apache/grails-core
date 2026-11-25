@@ -30,6 +30,12 @@ default: { applicationType: [web, web-plugin] }
 adds:
   - feature: gsp
     when: { applicationType: [web, web-plugin] }
+# a web application has the plugin, which also scaffolds pages at run time; a REST API has its commands and their
+# templates only, which generate sources: the plugin, GSP and the fields plugin stay off the class path it runs with
 dependencies:
   - scope: implementation
     coordinates: org.apache.grails:grails-scaffolding
+    when: { applicationType: [web, web-plugin] }
+  - scope: grailsCli
+    coordinates: org.apache.grails:grails-scaffolding-cli
+    when: { applicationType: [rest-api, rest-api-plugin] }

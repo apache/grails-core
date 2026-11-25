@@ -29,6 +29,12 @@ class Scope {
     public static final Scope IMPLEMENTATION = new Scope(Source.MAIN, Arrays.asList(Phase.COMPILATION, Phase.RUNTIME))
     public static final Scope COMPILE_ONLY = new Scope(Source.MAIN, Collections.singletonList(Phase.COMPILATION))
     public static final Scope CONSOLE = new Scope(Source.MAIN, Collections.singletonList(Phase.CONSOLE))
+    /**
+     * The commands of the application and the libraries they need: on the class path the build runs a command
+     * with and on the compile and test class paths, never on the class path the application runs with or in
+     * what is packaged. The {@code grailsCli} configuration of the Grails Gradle plugin.
+     */
+    public static final Scope GRAILS_CLI = new Scope(Source.MAIN, Collections.singletonList(Phase.GRAILS_CLI))
     public static final Scope DEVELOPMENT_ONLY = new Scope(Source.MAIN, Collections.singletonList(Phase.DEVELOPMENT_ONLY))
     public static final Scope RUNTIME_ONLY = new Scope(Source.MAIN, Collections.singletonList(Phase.RUNTIME))
     public static final Scope TEST_IMPLEMENTATION = new Scope(Source.TEST, Arrays.asList(Phase.COMPILATION, Phase.RUNTIME))
