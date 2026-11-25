@@ -239,7 +239,11 @@ abstract class ScriptCommand extends Script implements ModelBuilder, ConsoleLogg
 
     /**
      * Runs another script command when a method is called that the script does not have:
-     * {@code generateController('Book')} runs the script {@code generate-controller}.
+     * {@code generateController('Book')} runs the script {@code generate-controller}. The script that
+     * is run has the flags and the system properties this script was given, as it had in the Grails
+     * shell, and its own arguments: a flag or a system property among them comes over one of the same
+     * name that this script was given, and the arguments of this script that are no flags are not
+     * passed on.
      *
      * @param method the name of the method
      * @param arguments the arguments of the command
@@ -259,7 +263,7 @@ abstract class ScriptCommand extends Script implements ModelBuilder, ConsoleLogg
         for (Object each : given) {
             vector.add(String.valueOf(each))
         }
-        return runner.run(vector) == 0
+        return runner.run(vector, executionContext?.commandLine) == 0
     }
 
     /**

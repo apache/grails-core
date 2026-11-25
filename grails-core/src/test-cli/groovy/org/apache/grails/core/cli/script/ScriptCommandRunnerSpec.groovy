@@ -210,7 +210,7 @@ class ScriptCommandRunnerSpec extends Specification {
 
     @Unroll
     def 'a listener registered with #listener is given the context the command it hears runs with'() {
-        given: 'outer runs middle, which runs inner; each listener writes down the context it is given'
+        given: 'outer runs middle, which runs inner with the flags middle was given; each listener writes down the context it is given'
         script('outer', """
             void record(Object context, Object heard) {
                 file('heard.txt') << [context.getClass().name, context.commandLine.commandName, context.commandLine.remainingArgs,
@@ -234,9 +234,9 @@ class ScriptCommandRunnerSpec extends Specification {
         listener                                                                                    | command  | remaining    | flags
         "before('middle') { context -> record(context, delegate) }"                                 | 'middle' | ['m1']       | ['fast']
         "after('middle') { context -> record(context, delegate) }"                                  | 'middle' | ['m1']       | ['fast']
-        "before('inner') { context -> record(context, delegate) }"                                  | 'inner'  | ['i1', 'i2'] | []
-        "after('inner') { record(it, delegate) }"                                                   | 'inner'  | ['i1', 'i2'] | []
-        "on('innerStart') { org.apache.grails.core.cli.ExecutionContext context -> record(context, delegate) }" | 'inner'  | ['i1', 'i2'] | []
+        "before('inner') { context -> record(context, delegate) }"                                  | 'inner'  | ['i1', 'i2'] | ['fast']
+        "after('inner') { record(it, delegate) }"                                                   | 'inner'  | ['i1', 'i2'] | ['fast']
+        "on('innerStart') { org.apache.grails.core.cli.ExecutionContext context -> record(context, delegate) }" | 'inner'  | ['i1', 'i2'] | ['fast']
         "on('middleEnd') { context -> record(context, delegate) }"                                  | 'middle' | ['m1']       | ['fast']
         "after('outer') { context -> record(context, delegate) }"                                   | 'outer'  | ['o1']       | []
     }

@@ -42,6 +42,7 @@ import grails.util.Environment
 import grails.util.GrailsNameUtils
 import org.apache.grails.core.cli.ExecutionContext
 import org.apache.grails.gradle.model.cli.CommandArgumentsFile
+import org.grails.build.parsing.CommandLine
 import org.grails.build.parsing.CommandLineParser
 import org.grails.build.parsing.DefaultCommandLine
 
@@ -242,6 +243,20 @@ class ScriptCommandRunner {
      * @throws ScriptCommandException when there is no such script
      */
     int run(List<String> vector) {
+        return run(vector, null)
+    }
+
+    /**
+     * Runs a script command for a script that calls it as a method. As in the Grails shell, the
+     * command has the flags and the system properties of the command line of the calling script,
+     * and what it is given itself comes over them; its arguments that are no flags are its own.
+     *
+     * @param vector the name of the command, and then its arguments
+     * @param calling the command line of the script that calls the command, or {@code null} when no script does
+     * @return 0 when the script ran and did not return {@code false}, 1 when it returned {@code false}
+     * @throws ScriptCommandException when there is no such script
+     */
+    int run(List<String> vector, CommandLine calling) {
         if (vector.isEmpty() || !isName(vector[0])) {
             throw new ScriptCommandException('No script was run: the first argument is the name of a script command, ' +
                     "in lower-case letters and digits in words joined by single hyphens, of at most ${MAX_NAME} characters.")
@@ -255,12 +270,19 @@ class ScriptCommandRunner {
         ScriptCommand script = compile(source, name)
         List<String> placed = [PLACEHOLDER]
         placed.addAll(vector.subList(1, vector.size()))
-        DefaultCommandLine commandLine = new DefaultCommandLine()
+        DefaultCommandLine commandLine
         // The arguments are data: reading -Dgrails.env=NAME among them sets the environment of the
         // JVM, as it did in the Grails shell, where it was typed for the shell. Here it is undone.
         String environment = System.getProperty(Environment.KEY)
         try {
-            new CommandLineParser().parse(commandLine, placed as String[])
+            // a script another script calls starts from the flags and the system properties of that script
+            CommandLine parsed = calling == null ?
+                    new CommandLineParser().parse(new DefaultCommandLine(), placed as String[]) :
+                    calling.parseNew(placed as String[])
+            if (!(parsed instanceof DefaultCommandLine)) {
+                throw new ScriptCommandException("The script ${name} was not run: the command line of the script that calls it cannot be passed on.")
+            }
+            commandLine = (DefaultCommandLine) parsed
         } finally {
             if (environment == null) {
                 System.clearProperty(Environment.KEY)
