@@ -167,14 +167,90 @@ class RecordAdoptionSpec extends AbstractFeatureAdditionSpec {
         thrown(FeatureSelectionException)
     }
 
-    void "what the application has otherwise in the lines a feature changes is a conflict, and nothing is written"() {
+    void "a file of the baseline that the application does not have is left out of what a feature changes, and the feature is added without it"() {
+        given: 'an application without the README this version generates, and its record'
+        ProjectGenerator generator = beanContext.getBean(ProjectGenerator)
+        Path generated = create(generator, 'generated', [])
+        Path project = withoutRecord(generated, 'app')
+        Files.delete(project.resolve('README.md'))
+        addition(generator).adopt(project, ApplicationType.WEB, 'shop', 'com.acme', OPTIONS, [], [], [], OperatingSystem.LINUX, []).apply()
+
+        when:
+        ChangePlan plan = planOf(generator, project)
+        ChangePlan.PlannedFile readme = plan.files.find { ChangePlan.PlannedFile file -> file.path == 'README.md' }
+
+        then: 'the file is no conflict: it is left out, with what the feature would have added to it and where its copy is'
+        plan.conflicts.isEmpty()
+        readme.action == ChangePlan.Action.LEAVE
+        readme.reason.startsWith('the application does not have this file')
+        readme.details.any { String line -> line.startsWith('the feature would have added ') }
+        readme.details.any { String line -> line.contains('.grails/baseline/files/README.md') }
+        plan.diff().any { String line -> line.startsWith('left out: README.md') }
+
+        when:
+        plan.apply()
+        ProjectState state = ProjectState.read(project)
+
+        then: 'the feature is added, the file is not written, and its copy in the baseline is the one of the generator with the feature'
+        !Files.exists(project.resolve('README.md'))
+        state.lock.featureNames.contains(FEATURE)
+        Files.readString(project.resolve('build.gradle')).contains('quartz')
+        Files.readString(project.resolve('.grails/baseline/files/README.md')).toLowerCase().contains('quartz')
+        state.verifyBaseline(project)
+        addition(generator).regenerate(project, OperatingSystem.LINUX).state.manifest.adopted
+
+        when: 'the same file is taken out of an application that was generated'
+        Files.delete(generated.resolve('README.md'))
+
+        then: 'that is a change of the application, and a conflict as before'
+        planOf(generator, generated).conflicts*.path == ['README.md']
+    }
+
+    void "a dependency a feature declares is put at the end of the dependencies block of a build that has them in an order of its own"() {
         given: 'an application whose dependencies are not those the generator writes'
+        ProjectGenerator generator = beanContext.getBean(ProjectGenerator)
+        Path generated = create(generator, 'generated', [])
+        Path project = withoutRecord(generated, 'app')
+        Path build = project.resolve('build.gradle')
+        String text = Files.readString(build)
+        int from = text.indexOf('\ndependencies {\n')
+        int to = text.indexOf('\n}\n', from)
+        String own = text.substring(0, from) + '\ndependencies {\n    runtimeOnly "com.h2database:h2"\n    implementation "org.apache.grails:grails-core"\n}\n' + text.substring(to + 3)
+        Files.writeString(build, own)
+        addition(generator).adopt(project, ApplicationType.WEB, 'shop', 'com.acme', OPTIONS, [], [], [], OperatingSystem.LINUX, []).apply()
+
+        when:
+        ChangePlan plan = planOf(generator, project)
+        ChangePlan.PlannedFile planned = plan.files.find { ChangePlan.PlannedFile file -> file.path == 'build.gradle' }
+
+        then: 'the line is placed, and that is said'
+        plan.conflicts.isEmpty()
+        planned.action == ChangePlan.Action.MERGE
+        planned.details.any { String line -> line.contains('the dependencies the feature declares were put at the end of its dependencies block') }
+
+        when:
+        plan.apply()
+
+        then: 'every line of the application is where it was, and the dependency is the last of the block'
+        Files.readString(build) == own.replace('    implementation "org.apache.grails:grails-core"\n}\n',
+                '    implementation "org.apache.grails:grails-core"\n    implementation "org.apache.grails:grails-quartz"\n}\n')
+
+        when: 'the same build in an application that was generated, where the place of a line is the one the generator gave it'
+        Path tracked = copy(generated, 'tracked')
+        Files.writeString(tracked.resolve('build.gradle'), own)
+
+        then: 'is a conflict as before'
+        planOf(generator, tracked).conflicts*.path == ['build.gradle']
+    }
+
+    void "a build whose dependencies block cannot be told is a conflict, and nothing is written"() {
+        given: 'two dependencies blocks'
         ProjectGenerator generator = beanContext.getBean(ProjectGenerator)
         Path project = withoutRecord(create(generator, 'generated', []), 'app')
         Path build = project.resolve('build.gradle')
         String text = Files.readString(build)
         int from = text.indexOf('\ndependencies {\n')
-        Files.writeString(build, text.substring(0, from) + '\ndependencies {\n    implementation "org.apache.grails:grails-core"\n}\n')
+        Files.writeString(build, text.substring(0, from) + '\ndependencies {\n    implementation "org.apache.grails:grails-core"\n}\n\ndependencies {\n}\n')
         addition(generator).adopt(project, ApplicationType.WEB, 'shop', 'com.acme', OPTIONS, [], [], [], OperatingSystem.LINUX, []).apply()
         Map<String, String> before = tree(project)
 

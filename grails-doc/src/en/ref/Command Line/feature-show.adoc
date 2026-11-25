@@ -140,6 +140,9 @@ With `--json` the document has `format` (1), `projectDirectory` (`null` for a ne
 | `featurePack`
 | For the feature of a feature pack that is not part of Grails, its `name`, the `coordinates` of the plugin (`group:artifact:version`, or `null` for the pack of a directory), its `origin` and its `contentSha256`; otherwise `null`.
 
+| `commands`
+| The commands the feature gives the command line of an application that has it, each with its `name` (`create-<name>`) and its `description`; empty for a feature that gives none. Without `--json` they are listed under `Commands it gives the command line of an application that has it`.
+
 | `addable`
 | In the directory of an application that does not have the feature, whether `feature add` adds it; otherwise `null`.
 

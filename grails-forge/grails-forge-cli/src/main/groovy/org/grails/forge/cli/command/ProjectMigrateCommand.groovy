@@ -46,6 +46,7 @@ import org.apache.grails.forge.core.state.ProjectLock.LockedFeature
 import org.apache.grails.forge.core.state.ProjectManifest
 import org.apache.grails.forge.core.state.ProjectState
 import org.apache.grails.forge.core.state.ProjectStateException
+import org.apache.grails.forge.core.state.ProjectStateRecorder
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.application.Project
 import org.grails.forge.application.generator.ProjectGenerator
@@ -189,6 +190,9 @@ class ProjectMigrateCommand extends BaseCommand implements Callable<Integer>, Pr
     // asked of the Forge application when the command first needs it
     private final Supplier<ProjectGenerator> projectGeneratorSource
 
+    // whether the project is a part of a Gradle build above it, and has none of its own
+    private boolean partOfBuildAbove
+
     @Autowired
     ProjectMigrateCommand(ProjectGenerator projectGenerator) {
         this.projectGeneratorSource = { projectGenerator } as Supplier<ProjectGenerator>
@@ -290,9 +294,16 @@ class ProjectMigrateCommand extends BaseCommand implements Callable<Integer>, Pr
             notes << ("The project is on Grails ${earlier} (gradle.properties): the record is that of an application of Grails ${EarlierGrailsProject.FIRST_MAJOR}, and the " +
                     "other commands of a project are run once the project is on Grails ${EarlierGrailsProject.FIRST_MAJOR} or later").toString()
         }
-        if (!evidence.ownBuild) {
+        // A project without settings of its own is a part of the build above it. One that has the Gradle wrapper and
+        // no build above it is a build of its own all the same, as Forge of Grails 7 and 8 generated an application
+        partOfBuildAbove = !evidence.ownBuild && (search.project.getBuildRoot() != null ||
+                !['gradlew', 'gradlew.bat'].any { String wrapper -> Files.isRegularFile(directory.resolve(wrapper), LinkOption.NOFOLLOW_LINKS) })
+        if (partOfBuildAbove) {
             notes << ("The project has no ${ProjectEvidence.SETTINGS} of its own, so it is part of a build above it: what that build declares for it, in a subprojects or " +
                     'allprojects block or in a convention plugin, was not read').toString()
+        } else if (!evidence.ownBuild) {
+            notes << ("The project has no ${ProjectEvidence.SETTINGS}, and has the Gradle wrapper and no build above it: it is taken for a build of its own, as an earlier " +
+                    'version generated one').toString()
         }
         if (evidence.earlierRecord != null && evidence.earlierRecordRefused == null) {
             notes << ("${evidence.earlierRecord} was read and is left as it is. With a record under ${ProjectState.DIRECTORY} the commands go by that, and warn when " +
@@ -324,7 +335,7 @@ class ProjectMigrateCommand extends BaseCommand implements Callable<Integer>, Pr
                 ServletImpl.values().find { ServletImpl each -> written(each) == options.get('servlet').value },
                 GormImpl.values().find { GormImpl each -> written(each) == options.get('data').value },
                 DevelopmentReloading.values().find { DevelopmentReloading each -> written(each) == options.get('reloading').value },
-                !evidence.ownBuild)
+                partOfBuildAbove)
         // The baseline: what this version generates for an application of what was found and given. Where it
         // generates none, the record is written without one, and says what the command has to be told
         FeatureAddition addition = new FeatureAddition(projectGeneratorSource.get())
@@ -373,9 +384,8 @@ class ProjectMigrateCommand extends BaseCommand implements Callable<Integer>, Pr
         try {
             files = AdoptedProjectRecord.files(applicationType.value, identity.name.value, identity.defaultPackage.value, generationOptions,
                     stated, excluded,
-                    applied.collect { Feature feature ->
-                        new LockedFeature(feature.getName(), feature instanceof PackFeature ? LockedFeature.BUNDLED_PACK : LockedFeature.FRAMEWORK)
-                    })
+                    // each as the record of a generated application has it, with the commands the feature gives the command line
+                    applied.collect { Feature feature -> ProjectStateRecorder.locked(feature) })
         } catch (ProjectStateException e) {
             err("The record could not be written as this version reads it: ${GradleRunner.line(e.getMessage())}. Give the name of the application with its " +
                     'package to the command, as com.example.shop. Nothing was written')
@@ -762,7 +772,7 @@ class ProjectMigrateCommand extends BaseCommand implements Callable<Integer>, Pr
         row('name', identity.name.value, identity.name.where)
         row('package', identity.defaultPackage.value, identity.defaultPackage.where)
         options.each { String option, Found<String> value -> row(option, value.value, value.where) }
-        if (!evidence.ownBuild) {
+        if (partOfBuildAbove) {
             row('layout', GenerationOptions.SUBPROJECT, "the project has no ${ProjectEvidence.SETTINGS} of its own")
         }
         out("@|blue ||@ The ${applied.size()} ${applied.size() == 1 ? 'feature' : 'features'} of Grails it is taken to have" +

@@ -182,114 +182,122 @@ class ProjectMigrateBaselineSpec extends AbstractFeatureAddCommandSpec {
         tree(dir) == before
     }
 
-    void "a feature that changes lines the application has otherwise is a conflict that writes nothing, and is added once there is room for it"() {
-        given: 'an application of Grails 8, which has no feature mockito, as every application of this version has'
+    void "a feature whose lines have no place in a file that is laid out otherwise is added all the same, and the record is written anew with what the application has"() {
+        given: 'an application of Grails 8, whose README has other sections than this version writes'
         EarlierApplication.copy(EarlierApplication.GRAILS_8_FORGE, dir)
         EarlierApplication.upgrade(dir)
         assert migrate() == 0
         assert ProjectState.read(dir.toPath()).lock.featureNames.contains('mockito')
-        Map<String, String> before = tree(dir)
+        List<String> build = new File(dir, 'build.gradle').readLines()
+        List<String> readme = new File(dir, 'README.md').readLines()
         reset()
 
         when:
         int exit = add('cache')
 
-        then: 'the file in which both changed the same place is named with its lines, and nothing is written, the record among it'
-        exit == 1
-        out.toString() =~ /conflict +README\.md: the feature changes lines of this file that were changed in the project too, or lines next to them/
-        out.toString().contains('## Feature mockito documentation')
-        err.toString().contains('The feature was not added: 1 file cannot be written without losing what the application has. Nothing was changed.')
-        tree(dir) == before
-
-        when: 'what it comes to is asked for as a document'
-        reset()
-        exit = add('cache', '--dry-run', '--json')
-        Map document = new JsonSlurper().parseText(out.toString()) as Map
-
-        then:
-        exit == 1
-        document.outcome == 'conflicts'
-        (document.files as List<Map>).find { Map file -> file.path == 'README.md' }.action == 'conflict'
-        tree(dir) == before
-
-        when: 'the record is written anew without the feature the application does not have'
-        reset()
-        exit = migrate('--force', '--exclude-features', 'mockito')
-        ProjectState state = ProjectState.read(dir.toPath())
-
-        then:
-        exit == 0
-        out.toString().contains('| Left out with --exclude-features: mockito')
-        out.toString().contains(WRITTEN)
-        state.manifest.generationState == ProjectManifest.ADOPTED
-        state.manifest.excludedFeatures*.name == ['mockito']
-        !state.lock.featureNames.contains('mockito')
-        state.verifyBaseline(dir.toPath())
-        tree(dir).findAll { String path, String content -> !path.startsWith('.grails') } == before.findAll { String path, String content -> !path.startsWith('.grails') }
-
-        when: 'the feature is added again'
-        before = tree(dir)
-        reset()
-        exit = add('cache')
-
-        then: 'the file is still in the way: Grails 8 wrote it otherwise than this version does, with or without that feature'
-        exit == 1
-        out.toString() =~ /conflict +README\.md: /
-        !out.toString().contains('## Feature mockito documentation')
-        tree(dir) == before
-
-        when: 'the file is made what this version generates, from its copy in the baseline, and the feature is added'
-        new File(dir, 'README.md').bytes = new File(dir, '.grails/baseline/files/README.md').bytes
-        List<String> build = new File(dir, 'build.gradle').readLines()
-        reset()
-        exit = add('cache')
-
-        then: 'with the lines of the application kept in the files it has otherwise'
+        then: 'the lines of the README are put at its end, which is said, and the other files are merged'
         done(exit)
-        out.toString() =~ /update +README\.md/
+        out.toString() =~ /merge +README\.md \(your changes are kept\)/
+        out.toString().contains('this file is not laid out as this version writes it: the lines the feature adds were put at the end of it')
         out.toString() =~ /merge +build\.gradle \(your changes are kept\)/
         out.toString() =~ /merge +grails-app\/conf\/application\.yml \(your changes are kept\)/
         new File(dir, 'build.gradle').readLines().contains('    implementation "org.apache.grails:grails-cache"')
         new File(dir, 'build.gradle').readLines().containsAll(build)
         new File(dir, 'grails-app/conf/application.yml').readLines()*.trim().containsAll(['cache:', 'enabled: true', 'clearAtStartup: false'])
-        new File(dir, 'README.md').text.contains('## Feature cache documentation')
+        new File(dir, 'README.md').readLines().take(readme.size()) == readme
+        new File(dir, 'README.md').readLines().drop(readme.size()).findAll { String line -> !line.isEmpty() }[0] == '## Feature cache documentation'
+        ProjectState.read(dir.toPath()).verifyBaseline(dir.toPath())
 
-        when: 'the record is written anew once more, from the files as they are now'
+        when: 'a feature that applies a Gradle plugin, where the application has another line'
+        Map<String, String> before = tree(dir)
+        reset()
+        exit = add('views-json')
+
+        then: 'is a conflict, and nothing is written, the record among it'
+        exit == 1
+        out.toString() =~ /conflict +build\.gradle: /
+        err.toString().contains('The feature was not added: 1 file cannot be written without losing what the application has. Nothing was changed.')
+        tree(dir) == before
+
+        when: 'what it comes to is asked for as a document'
+        reset()
+        exit = add('views-json', '--dry-run', '--json')
+        Map document = new JsonSlurper().parseText(out.toString()) as Map
+
+        then:
+        exit == 1
+        document.outcome == 'conflicts'
+        (document.files as List<Map>).find { Map file -> file.path == 'build.gradle' }.action == 'conflict'
+        tree(dir) == before
+
+        when: 'the record is written anew without a feature the application does not have'
         reset()
         exit = migrate('--force', '--exclude-features', 'mockito')
+        ProjectState state = ProjectState.read(dir.toPath())
 
-        then: 'the feature that was added is kept, as one the record names'
+        then: 'the feature that was added is kept, as one the record names, and no file of the application is touched'
         exit == 0
+        out.toString().contains('| Left out with --exclude-features: mockito')
         out.toString().contains('    cache (the record, .grails/project.yml)')
-        ProjectState.read(dir.toPath()).manifest.requestedFeatures*.name == ['cache']
-        ProjectState.read(dir.toPath()).verifyBaseline(dir.toPath())
+        out.toString().contains(WRITTEN)
+        state.manifest.generationState == ProjectManifest.ADOPTED
+        state.manifest.excludedFeatures*.name == ['mockito']
+        state.manifest.requestedFeatures*.name == ['cache']
+        !state.lock.featureNames.contains('mockito')
+        state.verifyBaseline(dir.toPath())
+        tree(dir).findAll { String path, String content -> !path.startsWith('.grails') } == before.findAll { String path, String content -> !path.startsWith('.grails') }
     }
 
-    void "an application the Grails shell created keeps its own build where a feature would change it, and says which files are in the way"() {
+    void "an application the Grails shell created gets a feature without the file it does not have, with its dependencies and its settings where they can be put"() {
         given:
         EarlierApplication.copy(EarlierApplication.GRAILS_8_SHELL, dir)
         EarlierApplication.upgrade(dir)
         assert migrate() == 0
-        Map<String, String> before = tree(dir)
+        String build = new File(dir, 'build.gradle').text
+        String configuration = new File(dir, 'grails-app/conf/application.yml').text
         reset()
 
-        when: 'a feature that adds a dependency among dependencies that are in another order than this version writes them in'
+        when: 'a feature that adds a dependency, settings and a section of the README'
         int exit = add('cache')
 
-        then: 'every file that is in the way is named with what to do, and nothing is written'
+        then: 'the README the application does not have is left out, and what would have been added to it is said'
+        done(exit)
+        out.toString() =~ /leave +README\.md: the application does not have this file, which this version generates for it and the feature changes: it is left out/
+        out.toString().contains('## Feature cache documentation')
+        out.toString().contains('the file as this version generates it with the feature is kept as .grails/baseline/files/README.md: copy it from there to have it')
+        !new File(dir, 'README.md').exists()
+        new File(dir, '.grails/baseline/files/README.md').text.contains('## Feature cache documentation')
+
+        and: 'the dependency is the last of the dependencies, which are in the order they were in'
+        out.toString().contains('the dependencies the feature declares were put at the end of its dependencies block')
+        new File(dir, 'build.gradle').text == build.replace('    testImplementation "org.apache.grails:grails-testing-support-web"\n}\n',
+                '    testImplementation "org.apache.grails:grails-testing-support-web"\n    implementation "org.apache.grails:grails-cache"\n}\n')
+
+        and: 'the settings are a document of their own at the end of a configuration that is written as several'
+        out.toString().contains('what the feature sets, which the file does not set, was put into a document of its own at the end of it')
+        new File(dir, 'grails-app/conf/application.yml').text.startsWith(configuration)
+        new File(dir, 'grails-app/conf/application.yml').text.substring(configuration.length()).readLines()*.trim().toSet() ==
+                ['---', 'grails:', 'cache:', 'enabled: true', 'clearAtStartup: false', 'cacheManager: GrailsConcurrentMapCacheManager'].toSet()
+        ProjectState.read(dir.toPath()).lock.featureNames.contains('cache')
+        ProjectState.read(dir.toPath()).verifyBaseline(dir.toPath())
+
+        when: 'a feature that does more to the build than declare dependencies'
+        Map<String, String> before = tree(dir)
+        reset()
+        exit = add('asciidoctor')
+
+        then: 'is a conflict that names the file, and nothing is written'
         exit == 1
-        out.toString() =~ /conflict +README\.md: the feature changes this file, and it was removed from the project/
-        out.toString().contains('its copy is .grails/baseline/files/README.md')
-        out.toString() =~ /conflict +build\.gradle: the feature changes lines of this file that were changed in the project too, or lines next to them/
+        out.toString() =~ /conflict +build\.gradle: /
         tree(dir) == before
 
         when: 'what the feature would change is shown'
         reset()
-        exit = add('cache', '--diff')
+        exit = add('asciidoctor', '--diff')
 
         then: 'for whoever adds it by hand'
         exit == 1
-        out.toString().contains('+    implementation "org.apache.grails:grails-cache"')
+        out.toString().contains('rejected: build.gradle')
         tree(dir) == before
 
         when: 'the files that are not as this version generates them are asked for'
@@ -301,10 +309,67 @@ class ProjectMigrateBaselineSpec extends AbstractFeatureAddCommandSpec {
         out.toString().readLines().contains('changed  build.gradle')
         out.toString().readLines().contains('removed  README.md')
         out.toString() =~ /\| \d+ files are not as this version generates an application of what this one is taken to be: /
-        out.toString().contains('The record was written for an application that was there, by')
         out.toString().contains('the files named are all the application has otherwise than a new one of the same type, options and features, what an earlier version of Grails ' +
                 'generated otherwise among it, and not only what was changed in it')
         tree(dir) == before
+    }
+
+    @Unroll
+    void "#feature is #outcome an application that #created: #conflicts in the way, #left left out"() {
+        given:
+        EarlierApplication.copy(fixture, dir)
+        EarlierApplication.upgrade(dir)
+        assert migrate() == 0
+        Map<String, String> before = tree(dir)
+        reset()
+
+        when:
+        int exit = add(feature, '--dry-run', '--json')
+        Map document = new JsonSlurper().parseText(out.toString()) as Map
+        List<Map> files = document.files as List<Map>
+
+        then:
+        document.outcome == (conflicts.isEmpty() ? 'changes' : 'conflicts')
+        exit == (conflicts.isEmpty() ? 0 : 1)
+        files.findAll { Map file -> file.action == 'conflict' }*.path == conflicts
+        files.findAll { Map file -> file.action == 'leave' }*.path == left
+        tree(dir) == before
+
+        where:
+        fixture                           | feature                   || conflicts                                              | left
+        EarlierApplication.GRAILS_8_SHELL | 'cache'                   || []                                                     | ['README.md']
+        EarlierApplication.GRAILS_8_SHELL | 'grails-quartz'           || []                                                     | ['README.md']
+        EarlierApplication.GRAILS_8_SHELL | 'postgres'                || ['build.gradle', 'grails-app/conf/application.yml']    | ['README.md']
+        EarlierApplication.GRAILS_8_SHELL | 'github-workflow-java-ci' || []                                                     | []
+        EarlierApplication.GRAILS_8_SHELL | 'asciidoctor'             || ['build.gradle']                                       | []
+        EarlierApplication.GRAILS_8_SHELL | 'views-json'              || ['build.gradle']                                       | ['README.md']
+        EarlierApplication.GRAILS_8_SHELL | 'testcontainers'          || []                                                     | ['README.md']
+        EarlierApplication.GRAILS_8_SHELL | 'grails-spring-security'  || ['grails-app/init/com/example/BootStrap.groovy']       | ['README.md']
+        EarlierApplication.GRAILS_8_SHELL | 'mysql'                   || ['build.gradle', 'grails-app/conf/application.yml']    | ['README.md']
+        EarlierApplication.GRAILS_8_SHELL | 'openapi'                 || ['build.gradle']                                       | ['README.md']
+        EarlierApplication.GRAILS_8_FORGE | 'cache'                   || []                                                     | []
+        EarlierApplication.GRAILS_8_FORGE | 'grails-quartz'           || []                                                     | []
+        EarlierApplication.GRAILS_8_FORGE | 'postgres'                || []                                                     | []
+        EarlierApplication.GRAILS_8_FORGE | 'github-workflow-java-ci' || []                                                     | []
+        EarlierApplication.GRAILS_8_FORGE | 'asciidoctor'             || []                                                     | []
+        EarlierApplication.GRAILS_8_FORGE | 'views-json'              || ['build.gradle']                                       | []
+        EarlierApplication.GRAILS_8_FORGE | 'testcontainers'          || []                                                     | []
+        EarlierApplication.GRAILS_8_FORGE | 'grails-spring-security'  || []                                                     | []
+        EarlierApplication.GRAILS_8_FORGE | 'mysql'                   || []                                                     | []
+        EarlierApplication.GRAILS_8_FORGE | 'openapi'                 || ['build.gradle']                                       | []
+        EarlierApplication.GRAILS_7_FORGE | 'cache'                   || []                                                     | []
+        EarlierApplication.GRAILS_7_FORGE | 'grails-quartz'           || []                                                     | []
+        EarlierApplication.GRAILS_7_FORGE | 'postgres'                || ['build.gradle']                                       | []
+        EarlierApplication.GRAILS_7_FORGE | 'github-workflow-java-ci' || []                                                     | []
+        EarlierApplication.GRAILS_7_FORGE | 'asciidoctor'             || []                                                     | []
+        EarlierApplication.GRAILS_7_FORGE | 'views-json'              || ['build.gradle']                                       | []
+        EarlierApplication.GRAILS_7_FORGE | 'testcontainers'          || []                                                     | []
+        EarlierApplication.GRAILS_7_FORGE | 'grails-spring-security'  || ['grails-app/init/com/example/BootStrap.groovy']       | []
+        EarlierApplication.GRAILS_7_FORGE | 'mysql'                   || []                                                     | []
+        EarlierApplication.GRAILS_7_FORGE | 'openapi'                 || ['build.gradle']                                       | []
+        outcome = conflicts.isEmpty() ? 'added to' : 'not added to'
+        created = fixture == EarlierApplication.GRAILS_8_SHELL ? 'the Grails shell of Grails 8.0.0 created' :
+                fixture == EarlierApplication.GRAILS_8_FORGE ? 'Grails 8.0.0 generated' : 'Grails 7.0.9 generated'
     }
 
     void "a project that is still on Grails 8 gets its record, and a feature is added once it is on Grails 9"() {

@@ -87,7 +87,7 @@ class FeatureAddCommand extends BaseCommand implements Callable<Integer>, Projec
     public static final String NAME = 'add'
 
     private static final Map<Action, String> ACTIONS = [(Action.ADD): 'add', (Action.UPDATE): 'update', (Action.MERGE): 'merge', (Action.ADOPT): 'keep',
-                                                        (Action.CONFLICT): 'conflict', (Action.REMOVE): 'remove'] as Map<Action, String>
+                                                        (Action.CONFLICT): 'conflict', (Action.REMOVE): 'remove', (Action.LEAVE): 'leave'] as Map<Action, String>
 
     @CommandLine.Parameters(arity = '1..*', paramLabel = 'FEATURE', split = ',', completionCandidates = FeatureNameCandidates,
             description = 'The features to add: the names feature list lists; the coordinates of a plugin with a feature pack, group:artifact:version; ' +
@@ -336,7 +336,7 @@ class FeatureAddCommand extends BaseCommand implements Callable<Integer>, Projec
             out("    ${ACTIONS.get(file.action).padRight(8)} ${shown(file.path)}" +
                     (file.action == Action.MERGE ? ' (your changes are kept)' : '') +
                     (file.action == Action.ADOPT ? ' (it is what the feature makes it already)' : '') +
-                    (file.action == Action.CONFLICT ? ": ${shown(file.reason)}" : ''))
+                    (file.action in [Action.CONFLICT, Action.LEAVE] ? ": ${shown(file.reason)}" : ''))
             for (String line : file.details) {
                 out("             ${shown(line)}")
             }
@@ -391,7 +391,7 @@ class FeatureAddCommand extends BaseCommand implements Callable<Integer>, Projec
      * name nothing here knows are taken as the create commands take them, see {@link PackSelection};
      * what the application has by those coordinates already is the feature it has.
      */
-    private Asked asked(Path directory, List<Pack> given, Consumer<String> said, Consumer<String> warned) {
+    Asked asked(Path directory, List<Pack> given, Consumer<String> said, Consumer<String> warned) {
         ProjectState state
         try {
             state = ProjectState.readSelection(directory, true)
@@ -521,7 +521,7 @@ class FeatureAddCommand extends BaseCommand implements Callable<Integer>, Projec
     }
 
     /** What was asked for, once the packs it needs are taken. */
-    private static final class Asked {
+    static final class Asked {
 
         final List<String> features
         final List<Pack> ofTheApplication

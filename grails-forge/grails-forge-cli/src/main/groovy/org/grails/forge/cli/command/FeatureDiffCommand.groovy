@@ -23,6 +23,7 @@ import java.util.function.Consumer
 import groovy.transform.CompileStatic
 import org.apache.grails.forge.cli.console.ConsoleProject
 import org.apache.grails.forge.cli.pack.PackArtifactException
+import org.apache.grails.forge.cli.pack.PackArtifacts
 import org.apache.grails.forge.core.change.ChangePlan
 import org.apache.grails.forge.core.change.ChangePlan.PlannedFile
 import org.apache.grails.forge.core.change.FeatureAddition
@@ -95,6 +96,27 @@ class FeatureDiffCommand extends FeatureQueryCommand {
         return ofProject(search.project.directory)
     }
 
+    // feature add of the same features, with the feature packs and the repositories this command was given, which takes the packs that are added
+    private FeatureAddCommand asAdded() {
+        FeatureDiffCommand diff = this
+        FeatureAddCommand add = new FeatureAddCommand(getProjectGenerator()) {
+
+            @Override
+            protected PackArtifacts createPackArtifacts() {
+                return diff.createPackArtifacts()
+            }
+
+            @Override
+            protected String grailsRepoUrl() {
+                return diff.grailsRepoUrl()
+            }
+        }
+        add.spec = spec
+        add.features = features
+        add.packOptions = packOptions
+        return add
+    }
+
     // the plan of feature add, of which the diff is written
     private Integer ofProject(Path directory) {
         try {
@@ -103,7 +125,11 @@ class FeatureDiffCommand extends FeatureQueryCommand {
             }
             List<Pack> packs = packOptions.packs(directory, createPackArtifacts(), grailsRepoUrl(), { String line -> note(shown(line)) } as Consumer<String>,
                     { String line -> warned(shown(line)) } as Consumer<String>)
-            ChangePlan plan = new FeatureAddition(getProjectGenerator()).plan(directory, features, getOperatingSystem(), new Notes(), replace, packs)
+            // the feature of a plugin that is named by its coordinates, or of a pack that is given, is taken as feature add takes it
+            FeatureAddCommand.Asked asked = asAdded().asked(directory, packs, { String line -> note(shown(line.replace('@|blue ||@ ', ''))) } as Consumer<String>,
+                    { String line -> warned(shown(line)) } as Consumer<String>)
+            ChangePlan plan = new FeatureAddition(getProjectGenerator()).plan(directory, asked.features, getOperatingSystem(), new Notes(), replace,
+                    asked.ofTheApplication, asked.added)
             for (String name : plan.alreadyThere) {
                 note("The application already has the feature ${shown(name)}")
             }

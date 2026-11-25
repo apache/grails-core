@@ -130,6 +130,7 @@ final class FeatureAddition {
     private static final int MAX_SCANNED = 20000
     private static final int MAX_SCANNED_LINE = 2000
     private static final String BUILD_FILE = 'build.gradle'
+    private static final String README_FILE = 'README.md'
     private static final String CONFIGURATION_DIRECTORY = 'grails-app/conf/'
     private static final Pattern DEPENDENCY = Pattern.compile(/^\s*([A-Za-z][A-Za-z0-9]*)[ (]+["']([^:"'\s]+:[^:"'\s]+)(?::[^"']*)?["']/)
     private static final Pattern TOP_LEVEL_KEY = Pattern.compile(/([A-Za-z0-9_.-]+):(\s.*)?/)
@@ -370,7 +371,7 @@ final class FeatureAddition {
         for (BaselineFile file : proposed.baseline.files) {
             BaselineFile generated = state.baseline.find(file.path)
             PlannedFile planned = planned(projectDirectory, file.path, generated == null ? null : before.content(file.path), generated != null && generated.executable,
-                    after.content(file.path), file.executable, file.binary || (generated != null && generated.binary), posix)
+                    after.content(file.path), file.executable, file.binary || (generated != null && generated.binary), posix, manifest.isAdopted())
             if (planned != null) {
                 files << planned
             }
@@ -887,7 +888,8 @@ final class FeatureAddition {
      * @param proposed the file as it is generated with the features
      * @return what is to be done, or {@code null} when the features leave the file as it is
      */
-    private static PlannedFile planned(Path project, String path, byte[] base, boolean baseExecutable, byte[] proposed, boolean proposedExecutable, boolean binary, boolean posix) {
+    private static PlannedFile planned(Path project, String path, byte[] base, boolean baseExecutable, byte[] proposed, boolean proposedExecutable, boolean binary, boolean posix,
+                                       boolean adopted = false) {
         if (base != null && Arrays.equals(base, proposed) && baseExecutable == proposedExecutable) {
             return null
         }
@@ -910,6 +912,22 @@ final class FeatureAddition {
                         ["Make the file ${proposedExecutable ? '' : 'not '}executable and add the feature again".toString()])
             }
             return new PlannedFile(path, Action.ADOPT, null, binary, working.content, working.content, null, base, proposed, [])
+        }
+        if (working.content == null && adopted) {
+            // The baseline of an application that was there is what the generator writes for it, and no
+            // file of the application was generated from it: a file of it that the application does not
+            // have was never there, and nobody took it out. The feature has nothing to change, and what
+            // it would have changed is said; the copy of the baseline is the generator's file either way
+            List<String> added = binary ? Collections.<String>emptyList() : addedLines(base, proposed)
+            List<String> said = []
+            if (!added.isEmpty()) {
+                said << "the feature would have added ${added.size() == 1 ? '1 line' : "${added.size()} lines"} to it:".toString()
+                said.addAll(quoted(added))
+            }
+            said << ("the file as this version generates it with the feature is kept as ${ProjectState.BASELINE_FILES}/${BaselineIndex.copyPath(path)}: " +
+                    'copy it from there to have it').toString()
+            return new PlannedFile(path, Action.LEAVE, 'the application does not have this file, which this version generates for it and the feature changes: it is left out, ' +
+                    'and the feature is added without it', binary, null, null, null, base, proposed, said)
         }
         if (working.content == null) {
             return conflict(path, 'the feature changes this file, and it was removed from the project', binary, working, base, proposed,
@@ -952,15 +970,30 @@ final class FeatureAddition {
                         [("Put the file aside, put the generated one in its place (its copy is ${ProjectState.BASELINE_FILES}/${BaselineIndex.copyPath(path)}), add the feature, " +
                                  'and bring your changes into the new file').toString()])
             }
-            if (merge.getConflicts() > 0) {
+            // The build of an application that was there has its dependencies in an order of its own, so the
+            // place of a line the feature adds among them is not there. Where the feature does nothing to
+            // the file but declare dependencies, a declaration is as good at the end of the block
+            boolean configuration = path.startsWith(CONFIGURATION_DIRECTORY) && isYaml(path)
+            byte[] placed = merge.getConflicts() == 0 || !adopted ? null : path == BUILD_FILE ? dependenciesPlaced(working.content, base, proposed) :
+                    configuration ? settingsAppended(working.content, base, proposed) : path == README_FILE ? linesAppended(working.content, base, proposed) : null
+            if (placed != null) {
+                result = placed
+                edited = true
+                notes << (path == README_FILE ? 'this file is not laid out as this version writes it: the lines the feature adds were put at the end of it' : configuration ? 'this file is not laid out as this version writes it: what the feature sets, which the file does not set, was put into a document ' +
+                        'of its own at the end of it' :
+                        'the dependencies of this file are not in the order this version writes them in: the dependencies the feature declares were put at the end of ' +
+                                'its dependencies block').toString()
+            } else if (merge.getConflicts() > 0) {
                 boolean elsewhere = merge.getConflictingChanges().every { ThreeWayMerge.Conflict place -> place.elsewhere }
                 return conflict(path, elsewhere ? "the project and the feature both moved or added ${merge.getConflicts() == 1 ? 'a line' : "${merge.getConflicts()} lines"} of this file, " +
                         'each to another place' : "the feature changes ${merge.getConflicts() == 1 ? 'lines' : "${merge.getConflicts()} places"} of this file that were changed " +
                         'in the project too, or lines next to them', binary, working, base, proposed, places(merge))
             }
-            result = merge.getMerged()
-            edited = !ThreeWayMerge.sameText(working.content, base)
-            if (merge.getChangedAlike() > 0) {
+            if (placed == null) {
+                result = merge.getMerged()
+                edited = !ThreeWayMerge.sameText(working.content, base)
+            }
+            if (placed == null && merge.getChangedAlike() > 0) {
                 notes << ("your change and the feature's are the same in ${merge.getChangedAlike() == 1 ? 'one place' : "${merge.getChangedAlike()} places"} of this file, " +
                         'and what both have there is there once').toString()
             }
@@ -974,7 +1007,7 @@ final class FeatureAddition {
                             'compares lines, cannot know that the two are one dependency. Keep one of them').toString()
                 }
             }
-            if (edited && path.startsWith(CONFIGURATION_DIRECTORY) && isYaml(path)) {
+            if (edited && placed == null && path.startsWith(CONFIGURATION_DIRECTORY) && isYaml(path)) {
                 PlannedFile twice = setTwice(path, working, base, proposed, result)
                 if (twice != null) {
                     return twice
@@ -988,6 +1021,228 @@ final class FeatureAddition {
             return new PlannedFile(path, Action.ADOPT, null, binary, working.content, working.content, null, base, proposed, [])
         }
         return new PlannedFile(path, edited ? Action.MERGE : Action.UPDATE, null, binary, working.content, result, executable, base, proposed, notes)
+    }
+
+    // the lines a file has with the features that it has not without them, each as often as it has it more
+    private static List<String> addedLines(byte[] base, byte[] proposed) {
+        Map<String, Integer> left = new HashMap<>()
+        for (String line : textLines(base)) {
+            left.put(line, left.getOrDefault(line, 0) + 1)
+        }
+        List<String> added = []
+        for (String line : textLines(proposed)) {
+            if (left.getOrDefault(line, 0) > 0) {
+                left.put(line, left.get(line) - 1)
+            } else {
+                added << line
+            }
+        }
+        return added
+    }
+
+    private static List<String> textLines(byte[] content) {
+        return content == null ? Collections.<String>emptyList() : new String(content, StandardCharsets.UTF_8).readLines()
+    }
+
+    /**
+     * The build file of the project with the dependencies a feature declares put at the end of its
+     * dependencies block, for a build file the changes of the feature are not merged into by lines.
+     * It is done only where nothing can go wrong with it: the feature takes no line out of the file
+     * as it is generated, every line it adds declares a dependency by its coordinates, in the one
+     * {@code dependencies} block that starts and ends at the margin, and the file of the project has
+     * one such block too. A dependency the block of the project declares already, in the very words,
+     * is not declared again.
+     *
+     * @return the file, or {@code null} when it is not such a change or not such a file
+     */
+    private static byte[] dependenciesPlaced(byte[] working, byte[] base, byte[] proposed) {
+        List<String> generated = textLines(base)
+        List<String> withFeature = textLines(proposed)
+        Map<String, Integer> left = new HashMap<>()
+        for (String line : generated) {
+            left.put(line, left.getOrDefault(line, 0) + 1)
+        }
+        List<Integer> added = []
+        for (int index = 0; index < withFeature.size(); index++) {
+            String line = withFeature[index]
+            if (left.getOrDefault(line, 0) > 0) {
+                left.put(line, left.get(line) - 1)
+            } else {
+                added << index
+            }
+        }
+        int[] block = dependenciesBlock(withFeature)
+        if (added.isEmpty() || left.values().any { Integer count -> count > 0 } || block == null) {
+            return null
+        }
+        for (int index : added) {
+            if (index <= block[0] || index >= block[1] || !DEPENDENCY.matcher(withFeature[index]).find()) {
+                return null
+            }
+        }
+        String text = new String(working, StandardCharsets.UTF_8)
+        // the lines of the project with what ends each, so that the file is the same but for the lines that are put in
+        List<String> own = text.split('(?<=\\n)').toList()
+        int[] ownBlock = dependenciesBlock(own.collect { String line -> line.replaceAll(/\r?\n$/, '') })
+        if (ownBlock == null) {
+            return null
+        }
+        Set<String> declared = own.subList(ownBlock[0] + 1, ownBlock[1]).collect { String line -> line.trim() }.toSet()
+        String ending = own[ownBlock[0]].endsWith('\r\n') ? '\r\n' : '\n'
+        List<String> toPlace = added.collect { int index -> withFeature[index] }.findAll { String line -> !declared.contains(line.trim()) }
+        List<String> result = new ArrayList<String>(own.subList(0, ownBlock[1]))
+        for (String line : toPlace) {
+            result << line + ending
+        }
+        result.addAll(own.subList(ownBlock[1], own.size()))
+        return result.join('').getBytes(StandardCharsets.UTF_8)
+    }
+
+    /**
+     * The README of the project with the lines a feature adds put at its end, for a README the lines
+     * are not merged into, where the feature takes no line out of the file as it is generated: the
+     * file is read by people, and a section of it says the same wherever it stands.
+     *
+     * @return the file, or {@code null} when the feature does more to the file than add lines
+     */
+    private static byte[] linesAppended(byte[] working, byte[] base, byte[] proposed) {
+        // which of the empty lines of the file are the feature's cannot be told: its lines are set apart by one each, as the generator sets them
+        List<String> added = addedLines(base, proposed).findAll { String line -> !line.trim().isEmpty() }
+        if (added.isEmpty() || !addedLines(proposed, base).isEmpty()) {
+            return null
+        }
+        String text = new String(working, StandardCharsets.UTF_8)
+        String ending = text.contains('\r\n') ? '\r\n' : '\n'
+        return (text + (text.isEmpty() || text.endsWith('\n') ? '' : ending) + ending + added.collect { String line -> line + ending }.join(ending)).getBytes(StandardCharsets.UTF_8)
+    }
+
+    /**
+     * A YAML configuration file of the project with what a feature sets put into a document of its
+     * own at the end, for a file the changes of the feature are not merged into by lines, as one that
+     * is indented otherwise or is written as several documents. It is done only where nothing can go
+     * wrong with it: the feature takes nothing out of the file as it is generated and changes no
+     * value of it, the file of the project is one or more documents of keys, and no document of it
+     * sets a key the feature sets, or a key above or below one.
+     *
+     * @return the file, or {@code null} when it is not such a change or not such a file
+     */
+    private static byte[] settingsAppended(byte[] working, byte[] base, byte[] proposed) {
+        Map<?, ?> generated = yamlOf(base)
+        Map<?, ?> withFeature = yamlOf(proposed)
+        if (generated == null || withFeature == null) {
+            return null
+        }
+        Map<String, Object> before = new LinkedHashMap<>()
+        Map<String, Object> after = new LinkedHashMap<>()
+        if (!flattened('', generated, before) || !flattened('', withFeature, after)) {
+            return null
+        }
+        if (before.any { String key, Object value -> !after.containsKey(key) || after.get(key) != value }) {
+            return null
+        }
+        List<String> added = after.keySet().findAll { String key -> !before.containsKey(key) }.toList()
+        if (added.isEmpty()) {
+            return null
+        }
+        String text = new String(working, StandardCharsets.UTF_8)
+        Set<String> set = new LinkedHashSet<>()
+        try {
+            for (Object document : new Yaml(new SafeConstructor(new LoaderOptions())).loadAll(text)) {
+                if (document == null) {
+                    continue
+                }
+                Map<String, Object> keys = new LinkedHashMap<>()
+                if (!(document instanceof Map) || !flattened('', (Map<?, ?>) document, keys)) {
+                    return null
+                }
+                set.addAll(keys.keySet())
+            }
+        } catch (YAMLException | StackOverflowError ignored) {
+            return null
+        }
+        for (String key : added) {
+            if (set.any { String has -> has == key || has.startsWith(key + '.') || key.startsWith(has + '.') }) {
+                return null
+            }
+        }
+        // what the feature sets, as the generator writes it: the keys of the generated file that lead to it, and nothing else of them
+        Map<String, Object> document = new LinkedHashMap<>()
+        for (String key : added) {
+            Map<String, Object> at = document
+            Map<?, ?> from = withFeature
+            List<String> steps = stepsOf(key, withFeature)
+            if (steps == null) {
+                return null
+            }
+            for (int index = 0; index < steps.size() - 1; index++) {
+                from = (Map<?, ?>) from.get(steps[index])
+                at = (Map<String, Object>) at.computeIfAbsent(steps[index]) { String step -> new LinkedHashMap<String, Object>() }
+            }
+            at.put(steps.last(), from.get(steps.last()))
+        }
+        String ending = text.contains('\r\n') ? '\r\n' : '\n'
+        String appended = YamlTemplate.dump(document).readLines().collect { String line -> line + ending }.join('')
+        return (text + (text.isEmpty() || text.endsWith('\n') ? '' : ending) + '---' + ending + appended).getBytes(StandardCharsets.UTF_8)
+    }
+
+    // every value of a document that is no map, by the keys that lead to it with dots between them; false for a key that is no text
+    private static boolean flattened(String prefix, Map<?, ?> map, Map<String, Object> into) {
+        for (Map.Entry<?, ?> each : map.entrySet()) {
+            if (!(each.key instanceof String)) {
+                return false
+            }
+            String key = prefix.isEmpty() ? (String) each.key : prefix + '.' + each.key
+            if (each.value instanceof Map && !((Map) each.value).isEmpty()) {
+                if (!flattened(key, (Map<?, ?>) each.value, into)) {
+                    return false
+                }
+            } else {
+                into.put(key, each.value)
+            }
+        }
+        return true
+    }
+
+    // the keys that lead to a value of a document, of which one can have a dot in it
+    private static List<String> stepsOf(String key, Map<?, ?> document) {
+        List<String> steps = []
+        Map<?, ?> at = document
+        String rest = key
+        while (true) {
+            Map<?, ?> here = at
+            String step = at.keySet().collect { Object each -> (String) each }
+                    .findAll { String each -> rest == each || (rest.startsWith(each + '.') && here.get(each) instanceof Map) }.max { String each -> each.length() }
+            if (step == null) {
+                return null
+            }
+            steps << step
+            if (rest == step) {
+                return steps
+            }
+            rest = rest.substring(step.length() + 1)
+            at = (Map<?, ?>) at.get(step)
+        }
+    }
+
+    // where the one dependencies block of a build file that starts and ends at the margin starts and ends, or null when there is not exactly one
+    private static int[] dependenciesBlock(List<String> lines) {
+        List<Integer> starts = lines.findIndexValues { String line -> line ==~ /dependencies\s*\{\s*/ }.collect { Number index -> index.intValue() }
+        if (starts.size() != 1) {
+            return null
+        }
+        int end = -1
+        for (int index = starts[0] + 1; index < lines.size(); index++) {
+            String line = lines[index]
+            if (line ==~ /\}\s*/) {
+                end = index
+                break
+            }
+            // what is at the margin inside the block is no line of a block that is written as the generator writes it
+            if (!line.isEmpty() && !Character.isWhitespace(line.charAt(0))) {
+                return null
+            }
+        }
+        return end < 0 ? null : [starts[0], end] as int[]
     }
 
     private static boolean isYaml(String path) {

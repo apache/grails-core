@@ -67,7 +67,8 @@ final class FeatureContribution {
     static FeatureContribution ofPlan(ChangePlan plan) {
         List<Map<String, String>> files = []
         for (PlannedFile file : plan.files) {
-            if (file.action == Action.ADOPT) {
+            // a file the application keeps as it is, or does not have and is not given
+            if (file.action == Action.ADOPT || file.action == Action.LEAVE) {
                 continue
             }
             files << entry(file.path, file.action == Action.ADD ? ADDED : file.action == Action.REMOVE ? REMOVED : CHANGED)

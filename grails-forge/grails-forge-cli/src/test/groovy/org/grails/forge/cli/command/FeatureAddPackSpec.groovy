@@ -60,6 +60,8 @@ class FeatureAddPackSpec extends CommandSpec implements CommandFixture {
     String address
     File app
     List<URI> asked = []
+    // what the repositories of the network of this specification answer, by address: nothing, unless it is put here
+    Map<String, byte[]> answers = [:]
 
     void setup() {
         originalOut = System.out
@@ -342,6 +344,128 @@ class FeatureAddPackSpec extends CommandSpec implements CommandFixture {
         new File(app, 'build.gradle').text.contains('org.apache.grails:grails-cache')
     }
 
+    void "the options of a pack that is added are given with --feature-option, recorded, and used again when the application is generated again"() {
+        given: 'a pack with a parameter that is a choice, and a template that writes it'
+        File pack = new File(work, 'pack')
+        new File(pack, 'templates').mkdirs()
+        new File(pack, 'feature.yml').setText(FeatureOptionSpec.DESCRIPTOR, 'UTF-8')
+        new File(pack, 'templates/audit.properties.gsp').setText(FeatureOptionSpec.TEMPLATE, 'UTF-8')
+        File with = new File(work, 'with')
+        assert create(app) == 0
+        assert create(with, '--features', 'acme-audit', '--feature-pack-dir', pack.absolutePath, '--feature-option', 'acme-audit.store=collection') == 0
+        Map<String, String> before = tree(app)
+
+        when: 'a value that is none of the choices'
+        int exit = add(app, 'acme-audit', '--feature-pack-dir', pack.absolutePath, '--feature-option', 'acme-audit.store=nowhere')
+
+        then:
+        exit == 2
+        err.toString().contains('nowhere')
+        tree(app) == before
+
+        when: 'a value that is not the default'
+        exit = add(app, 'acme-audit', '--feature-pack-dir', pack.absolutePath, '--feature-option', 'acme-audit.store=collection')
+
+        then: 'the template has it, the record has it, and the application is the one that was created with the pack and the option'
+        done(exit)
+        new File(app, 'grails-app/conf/audit.properties').text == 'audit.store=collection\naudit.retention=90\n'
+        new File(app, '.grails/project.yml').text.contains('featureOptions:')
+        new File(app, '.grails/project.yml').text.contains('store: collection')
+        ProjectState.read(app.toPath()).manifest.options.featureOptions == ['acme-audit': [store: 'collection']]
+        tree(app) == tree(with)
+
+        and: 'the application is generated again as it is, from its record and the pack'
+        regenerate(app, '--diff', '--feature-pack-dir', pack.absolutePath) == 0
+
+        when: 'a feature of Grails is added later'
+        exit = add(app, 'grails-quartz', '--feature-pack-dir', pack.absolutePath)
+
+        then: 'the pack is used again with the option of the record'
+        done(exit)
+        new File(app, 'grails-app/conf/audit.properties').text == 'audit.store=collection\naudit.retention=90\n'
+        ProjectState.read(app.toPath()).manifest.options.featureOptions == ['acme-audit': [store: 'collection']]
+        regenerate(app, '--diff', '--feature-pack-dir', pack.absolutePath) == 0
+    }
+
+    void "what the pack that is added says is to be done next is said after the feature is added, and is in the document"() {
+        given:
+        File pack = pack(new File(work, 'pack'), 'kept as it is')
+        new File(pack, 'feature.yml') << PackInstructionsSpec.INSTRUCTIONS
+        assert create(app) == 0
+
+        when:
+        int exit = add(app, 'acme-audit', '--feature-pack-dir', pack.absolutePath, '--dry-run', '--json')
+        Map document = new JsonSlurper().parseText(out.toString()) as Map
+
+        then:
+        exit == 0
+        (document.instructions as List<Map>)*.feature == ['acme-audit']
+        ((document.instructions as List<Map>)[0].text as String).startsWith('Run `./gradlew dbmGormDiff`')
+
+        when:
+        exit = add(app, 'acme-audit', '--feature-pack-dir', pack.absolutePath)
+        List<String> lines = out.toString().readLines()
+
+        then:
+        done(exit)
+        lines.indexOf('| The feature acme-audit says what to do next:') > lines.findIndexOf { String line -> line.startsWith('| Feature acme-audit added') }
+        lines.contains('    Run `./gradlew dbmGormDiff` to generate the migration of the audit tables.')
+    }
+
+    void "the jar of a plugin that was fetched is kept, and added to another application without a request; --refresh fetches it again"() {
+        given: 'a repository of the network that has the jar'
+        File jar = publish(COORDINATES, 'kept as it is')
+        String remote = 'https://repo.acme.example/maven/'
+        answers.put("${remote}com/acme/acme-audit-grails/2.3.0/acme-audit-grails-2.3.0.jar".toString(), jar.bytes)
+        File other = new File(work, 'other')
+        File third = new File(work, 'third')
+        assert create(app) == 0
+        assert create(other) == 0
+        assert create(third) == 0
+
+        when:
+        int exit = add(app, COORDINATES, '--feature-pack-repository', remote)
+
+        then:
+        done(exit)
+        asked*.toString().contains("${remote}com/acme/acme-audit-grails/2.3.0/acme-audit-grails-2.3.0.jar".toString())
+
+        when: 'it is added to another application, with the SHA-256 it has to have'
+        asked.clear()
+        exit = add(other, COORDINATES, '--feature-pack-repository', remote, '--feature-pack-sha256', "${COORDINATES}=${sha256(jar)}")
+
+        then: 'the copy that is kept is the jar, and nothing is asked for'
+        done(exit)
+        asked.isEmpty()
+        new File(other, '.grails/forge.lock.yml').text.contains("sha256: ${sha256(jar)}\n")
+
+        when: 'and to a third with --refresh, where the repository has it no more'
+        answers.clear()
+        Map<String, String> before = tree(third)
+        exit = add(third, COORDINATES, '--feature-pack-repository', remote, '--feature-pack-sha256', "${COORDINATES}=${sha256(jar)}", '--refresh')
+
+        then: 'the repository is asked, and the feature is not added'
+        exit == 1
+        !asked.isEmpty()
+        tree(third) == before
+    }
+
+    void "feature diff shows what feature add of the plugin that is named by its coordinates would change, and writes nothing"() {
+        given:
+        publish(COORDINATES, 'kept as it is')
+        assert create(app) == 0
+        Map<String, String> before = tree(app)
+
+        when:
+        int exit = diff(app, COORDINATES, '--feature-pack-repository', address)
+
+        then:
+        exit == 0
+        out.toString().contains('+    implementation "com.acme:acme-audit-grails:2.3.0"')
+        out.toString().contains('+kept as it is')
+        tree(app) == before
+    }
+
     void "what adding the feature of a plugin comes to is one JSON document, with where the pack comes from among its notes"() {
         given:
         File jar = publish(COORDINATES, 'kept as it is')
@@ -397,16 +521,14 @@ class FeatureAddPackSpec extends CommandSpec implements CommandFixture {
 
     // with repositories of the network that have nothing: GRAILS_REPO_URL names none, and what is asked of the network is kept
     private int add(File directory, String... arguments) {
-        Transport transport = { URI asking ->
-            asked << asking
-            return new Reply(404, null, null)
-        } as Transport
+        Transport transport = transport()
         File catalogHome = home
         FeatureAddCommand command = new FeatureAddCommand(beanContext.getBean(ProjectGenerator)) {
 
             @Override
             protected PackArtifacts createPackArtifacts() {
-                return new PackArtifacts(transport)
+                // the jars that are fetched are kept under the home of the test, as the command keeps them under that of the user
+                return new PackArtifacts(transport).keepingJarsUnder(catalogHome.toPath())
             }
 
             @Override
@@ -427,6 +549,32 @@ class FeatureAddPackSpec extends CommandSpec implements CommandFixture {
             @Override
             protected Path featureCatalogHome() {
                 return catalogHome.toPath()
+            }
+        }
+        return inDirectory(directory) { new CommandLine(command, new GrailsPicocliFactory(beanContext)).execute(arguments) }
+    }
+
+    private Transport transport() {
+        return { URI asking ->
+            asked << asking
+            byte[] answer = answers.get(asking.toString())
+            return answer == null ? new Reply(404, null, null) : new Reply(200, null, new ByteArrayInputStream(answer))
+        } as Transport
+    }
+
+    // feature diff with the repositories of this specification
+    private int diff(File directory, String... arguments) {
+        Transport transport = transport()
+        FeatureDiffCommand command = new FeatureDiffCommand(beanContext.getBean(ProjectGenerator)) {
+
+            @Override
+            protected PackArtifacts createPackArtifacts() {
+                return new PackArtifacts(transport)
+            }
+
+            @Override
+            protected String grailsRepoUrl() {
+                return null
             }
         }
         return inDirectory(directory) { new CommandLine(command, new GrailsPicocliFactory(beanContext)).execute(arguments) }

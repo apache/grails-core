@@ -72,7 +72,7 @@ final class ChangeDocument {
     static final String ERROR = 'error'
 
     private static final Map<Action, String> ACTIONS = [(Action.ADD): 'add', (Action.UPDATE): 'update', (Action.MERGE): 'merge', (Action.ADOPT): 'keep',
-                                                        (Action.CONFLICT): 'conflict', (Action.REMOVE): 'remove'] as Map<Action, String>
+                                                        (Action.CONFLICT): 'conflict', (Action.REMOVE): 'remove', (Action.LEAVE): 'leave'] as Map<Action, String>
 
     // what a reason of the project change comes to; any other is a failure
     private static final Map<String, String> OUTCOMES = [

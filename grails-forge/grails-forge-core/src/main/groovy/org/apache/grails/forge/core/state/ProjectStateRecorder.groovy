@@ -311,7 +311,13 @@ final class ProjectStateRecorder {
         return new RequestedFeature(name, feature?.coordinates, feature?.version)
     }
 
-    private static LockedFeature locked(Feature feature) {
+    /**
+     * @param feature a feature of an application
+     * @return the feature as the lock of the application has it: where it is from, and the commands it
+     * gives the command line
+     * @since 9.0
+     */
+    static LockedFeature locked(Feature feature) {
         if (!(feature instanceof PackFeature)) {
             return new LockedFeature(feature.getName(), LockedFeature.FRAMEWORK)
         }

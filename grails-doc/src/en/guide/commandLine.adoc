@@ -837,7 +837,7 @@ The exit code is always the one the command ends with without `--json`, so a scr
 | For the outcome `refused` with `changes-option` or `removes-requested-feature`: the features the application would lose, and the options that would change, as `--data hibernate7 in the place of hibernate5`. Empty otherwise.
 
 | `files`
-| Every file the features would write, change or cannot change, sorted by its path. `action` is what would be done to it, as without `--json`: `add`, `update`, `merge` (the file was changed in the project too, and keeps those changes), `keep` (the project has the file as the features make it already), `remove` or `conflict`. `reason` says why a file is a conflict, and is `null` for the others; `details` are the lines that are said under the file: for a conflict, the lines of both sides and what to do.
+| Every file the features would write, change or cannot change, sorted by its path. `action` is what would be done to it, as without `--json`: `add`, `update`, `merge` (the file was changed in the project too, and keeps those changes), `keep` (the project has the file as the features make it already), `remove`, `leave` (in an application whose record `project migrate` wrote: the features change a file the application does not have, which is not written; `reason` and `details` say what was left out) or `conflict`. `reason` says why a file is a conflict, and is `null` for the others; `details` are the lines that are said under the file: for a conflict, the lines of both sides and what to do.
 
 | `notes`
 | What the features said while the application was generated with them, a line each; usually nothing.

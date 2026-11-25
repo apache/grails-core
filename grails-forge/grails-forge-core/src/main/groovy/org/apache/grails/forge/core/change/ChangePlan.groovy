@@ -61,6 +61,15 @@ final class ChangePlan {
         /** The file cannot be written without losing something of the project */
         CONFLICT,
 
+        /**
+         * The features change a file that an application which was there before it had a record does
+         * not have: the file is not written, the features are added without it, and what they would
+         * have changed in it is said
+         *
+         * @since 9.0
+         */
+        LEAVE,
+
         /** The features leave out a file that a feature they replace wrote, and the project has it as it was generated: it is removed. A plan that is refused shows the file so, and removes nothing */
         REMOVE
     }
@@ -74,7 +83,7 @@ final class ChangePlan {
         final String path
         final Action action
 
-        /** For a conflict, why the file cannot be written; {@code null} otherwise */
+        /** For a conflict, why the file cannot be written, and for a file that is left out, why it is; {@code null} otherwise */
         final String reason
 
         /**
@@ -233,12 +242,14 @@ final class ChangePlan {
 
     private static List<String> diff(PlannedFile file) {
         List<String> lines = []
-        boolean conflict = file.action == Action.CONFLICT
+        // what the features change in a file that is left out is shown as what they change in one that cannot be written is
+        boolean left = file.action == Action.LEAVE
+        boolean conflict = file.action == Action.CONFLICT || left
         boolean removal = file.action == Action.REMOVE
         byte[] from = conflict ? (file.base != null ? file.base : file.current) : removal && file.current == null ? file.base : file.current
         byte[] to = conflict ? file.proposed : file.result
         if (conflict) {
-            lines << "rejected: ${file.path} (${file.reason})".toString()
+            lines << "${left ? 'left out' : 'rejected'}: ${file.path} (${file.reason})".toString()
         }
         if (file.binary) {
             lines << "Binary file ${file.path} ${removal ? 'is removed' : from == null ? 'is added' : 'changes'}".toString()

@@ -27,6 +27,7 @@ import org.apache.grails.forge.core.change.FeatureAddition
 import org.apache.grails.forge.core.change.FeatureRequestException
 import org.apache.grails.forge.core.change.ProjectChangeException
 import org.apache.grails.forge.core.pack.Pack
+import org.apache.grails.forge.core.pack.PackArtefact
 import org.apache.grails.forge.core.pack.PackFeature
 import org.apache.grails.forge.core.state.ProjectStateException
 import org.grails.forge.application.ApplicationType
@@ -123,6 +124,7 @@ class FeatureShowCommand extends FeatureQueryCommand {
         info.put('documentation', found.getDocumentation())
         info.put('thirdPartyDocumentation', found.getThirdPartyDocumentation())
         info.put('featurePack', packOf(found))
+        info.put('commands', commandsOf(found))
         Worked worked = scope.isOfProject() && !inApplication ? inProject(scope, name) : null
         if (worked == null || worked.contribution == null) {
             Worked generated = generated(scope, name, defaults != null && defaults.contains(name))
@@ -233,6 +235,21 @@ class FeatureShowCommand extends FeatureQueryCommand {
         return said
     }
 
+    // the commands the feature gives the command line of an application that has it, each with what it says of itself
+    private static List<Map<String, String>> commandsOf(Feature feature) {
+        if (!(feature instanceof PackFeature)) {
+            return []
+        }
+        List<Map<String, String>> commands = []
+        for (PackArtefact each : ((PackFeature) feature).getPack().descriptor.artefacts) {
+            Map<String, String> command = new LinkedHashMap<>()
+            command.put('name', PackArtefact.COMMAND_PREFIX + each.name)
+            command.put('description', each.description)
+            commands << command
+        }
+        return commands
+    }
+
     private void print(FeatureScope scope, Feature found, Map<String, Object> info, Worked worked) {
         String name = found.getName()
         String title = found.getTitle()
@@ -271,6 +288,13 @@ class FeatureShowCommand extends FeatureQueryCommand {
         if (pack != null) {
             out("* Feature pack: ${shown((String) pack.get('name'))}, " + (pack.get('coordinates') ? "of the plugin ${shown((String) pack.get('coordinates'))}" :
                     "of ${shown((String) pack.get('origin'))}"))
+        }
+        List<Map<String, String>> commands = (List<Map<String, String>>) info.get('commands')
+        if (commands) {
+            out('* Commands it gives the command line of an application that has it:')
+            for (Map<String, String> command : commands) {
+                out("    ${shown(command.get('name'))}${command.get('description') ? '  ' + shown(command.get('description')) : ''}")
+            }
         }
         if (info.get('addable') == Boolean.FALSE) {
             out("* feature add does not add it to this application: ${worked.reason}")

@@ -44,14 +44,14 @@ grails feature diff [--replace] [--type=TYPE] [--feature-pack-dir=DIRECTORY]... 
 
 Arguments:
 
-* `FEATURE` - The names of the features, as they are given to `feature add`: several can be given, separated by commas or spaces.
+* `FEATURE` - The names of the features, as they are given to `feature add`: several can be given, separated by commas or spaces. In the directory of an application, the feature of a plugin that is not part of Grails can be named by the coordinates of the plugin, `group:artifact:version`, or by its name with `--feature-pack-dir`, and the diff is what `feature add` of it would change. The options `--feature-pack-sha256`, `--feature-catalog` and `--refresh` of `feature add` are not options of `feature diff`: a name of a catalog is looked up in the catalogs of the environment only, and `feature add --diff` takes all of them.
 
 Options:
 
 * `--replace` - As for `feature add`: a feature that was asked for by name makes way for the feature that takes its place.
 * `--type=TYPE` - Show what the features change in a new application of this type, and not in the application of the current directory: `web` (what `create-app` creates), `rest-api`, `plugin`, `web-plugin` or `rest-api-plugin`. Outside a project the type is `web` when the option is not given.
-* `--feature-pack-dir=DIRECTORY` - The directory of a feature pack that is not part of Grails and that the application was generated with, as `feature add` takes it. Can be given more than once.
-* `--feature-pack-repository=URL` - A Maven repository to fetch the jar of a plugin from, whose feature pack the application was generated with, as `feature add` takes it. Can be given more than once.
+* `--feature-pack-dir=DIRECTORY` - The directory of a feature pack that is not part of Grails: one the application has, or one whose feature is named, as `feature add` takes it. Can be given more than once.
+* `--feature-pack-repository=URL` - A Maven repository to fetch the jar of a plugin from, whose feature pack the application has or whose coordinates are named, as `feature add` takes it. Can be given more than once.
 * `--offline` - Ask nothing of the network: such a jar is taken only from a repository that is a directory.
 
 `feature diff` is the `diff` command of the `feature` command. In the directory of an application, or anywhere below it, it works out what `feature add` with the same features and options would do, in the same way: both commands ask for the same plan of the change, so the diff is line for line the one `feature add --diff` shows, and what `feature add` then writes. The files you changed are taken into account as `feature add` takes them: a line of yours that the feature does not touch stays as it is, and is not in the diff.
