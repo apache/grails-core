@@ -20,6 +20,7 @@ package grails.gorm.tests
 
 import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
+import org.hibernate.Hibernate
 import spock.lang.Issue
 
 import jakarta.persistence.criteria.JoinType
@@ -50,6 +51,30 @@ class WhereQueryWithAssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibe
 
     private static void saveTeamWithoutClub() {
         savePlayer('Unattached Player', new Team(name: 'Unattached First Team').save(failOnError: true))
+    }
+
+    private void saveSquad() {
+        final squad = new Team(club: Club.findByName('Arsenal'), name: 'Squad').save(failOnError: true)
+        ['Squad Player A', 'Squad Player B', 'Squad Player C'].each { savePlayer(it, squad) }
+        manager.session.clear()
+    }
+
+    /**
+     * Saves players whose order differs by each property on the sort path: by the name and the
+     * identifier of the club of their team, by the name of their team, and by their own name, which
+     * is also the order in which they are saved.
+     */
+    private void savePlayersInDistinctOrders() {
+        final clubA = new Club(name: 'Order club A').save(failOnError: true)
+        final clubC = new Club(name: 'Order club C').save(failOnError: true)
+        final clubB = new Club(name: 'Order club B').save(failOnError: true)
+        final teamZ = new Team(club: clubB, name: 'Order team Z').save(failOnError: true)
+        final teamY = new Team(club: clubA, name: 'Order team Y').save(failOnError: true)
+        final teamX = new Team(club: clubC, name: 'Order team X').save(failOnError: true)
+        savePlayer('Order player 1', teamZ)
+        savePlayer('Order player 2', teamY)
+        savePlayer('Order player 3', teamX)
+        manager.session.clear()
     }
 
     @Issue(['https://github.com/apache/grails-core/issues/9860', 'https://github.com/apache/grails-core/issues/15589'])
@@ -184,57 +209,71 @@ class WhereQueryWithAssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibe
         results*.name == ['Arsenal Player', 'Chelsea Player', 'MU Player']
     }
 
-    void 'sort by an association property leaves out the rows without the association'() {
+    void 'sort by an association property joins the association with the join type that fetch requests'() {
         given:
         saveTeamWithoutClub()
 
         when:
         final results = Team.where {
             name ==~ '%First%'
+        }.list(sort: 'club.name', fetch: [club: joinType])
+
+        then:
+        ('Unattached First Team' in results*.name) == kept
+        results*.name - 'Unattached First Team' == ['Arsenal First Team', 'Chelsea First Team', 'MU First Team']
+
+        where:
+        joinType       || kept
+        JoinType.LEFT  || true
+        JoinType.INNER || false
+    }
+
+    void 'a sort stored on the query leaves out the only match when fetch requests an inner join'() {
+        given:
+        saveTeamWithoutClub()
+
+        when:
+        final results = Team.where {
+            name == 'Unattached First Team'
+        }.sort('club.name').list(fetch: [club: JoinType.INNER])
+
+        then:
+        results.empty
+    }
+
+    void 'a sort stored on the query does not change the join of a criterion that list adds'() {
+        given:
+        saveTeamWithoutClub()
+
+        when: 'a left join would let the criterion match the team without a club'
+        final query = Team.where {
+            name ==~ '%First%'
+        }
+        final additionalCriteria = {
+            club {
+                isNull('name')
+            }
+        }
+
+        then: 'the criterion joins the club with an inner join, with and without the sort'
+        query.list(additionalCriteria).empty
+        query.sort('club.name').list(additionalCriteria).empty
+    }
+
+    void 'sort by an association property leaves out a team without a club when a criterion requires a club'() {
+        given:
+        saveTeamWithoutClub()
+
+        when:
+        final results = Team.where {
+            club != null
         }.list(sort: 'club.name')
 
-        then: 'the association is joined with an inner join'
+        then:
         results*.name == ['Arsenal First Team', 'Chelsea First Team', 'MU First Team']
     }
 
-    void 'sort by an association property keeps the rows without the association when fetch requests a left join'() {
-        given:
-        saveTeamWithoutClub()
-
-        when:
-        final results = Team.where {
-            name ==~ '%First%'
-        }.list(sort: 'club.name', fetch: [club: JoinType.LEFT])
-
-        then: 'the team without a club is kept'
-        'Unattached First Team' in results*.name
-
-        and: 'the other teams are sorted by the name of their club'
-        results*.name - 'Unattached First Team' == ['Arsenal First Team', 'Chelsea First Team', 'MU First Team']
-    }
-
-    void 'sort by the id of a nested association keeps the rows without that association'() {
-        given:
-        saveTeamWithoutClub()
-
-        when:
-        final results = Player.where {
-            name ==~ '%Player%'
-        }.list(sort: 'team.club.id', order: direction)
-
-        then: 'the player whose team has no club is kept'
-        'Unattached Player' in results*.name
-
-        and: 'the other players are sorted by the id of the club of their team'
-        results*.name - 'Unattached Player' == expected
-
-        where:
-        direction || expected
-        'asc'     || ['MU Player', 'Arsenal Player', 'Chelsea Player']
-        'desc'    || ['Chelsea Player', 'Arsenal Player', 'MU Player']
-    }
-
-    void 'sort by the id of a nested association through an explicit alias keeps the rows without that association'() {
+    void 'sort by a nested association id through an explicit alias keeps a player whose team has no club'() {
         given:
         saveTeamWithoutClub()
 
@@ -249,7 +288,7 @@ class WhereQueryWithAssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibe
         results*.name - 'Unattached Player' == ['MU Player', 'Arsenal Player', 'Chelsea Player']
     }
 
-    void 'sort by the id of a nested association keeps the rows without that association when the where query uses the first association'() {
+    void 'sort by a nested association id keeps a player whose team has no club when the where query uses the first association'() {
         given:
         saveTeamWithoutClub()
 
@@ -263,7 +302,7 @@ class WhereQueryWithAssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibe
         results*.name - 'Unattached Player' == ['MU Player', 'Arsenal Player', 'Chelsea Player']
     }
 
-    void 'sort by the id of a nested hasOne association, which has no foreign key to sort by'() {
+    void 'sort by the id of a nested hasOne association'() {
         when:
         final results = Contract.where {
             salary > 0
@@ -271,5 +310,58 @@ class WhereQueryWithAssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibe
 
         then:
         results*.player*.name == ['Chelsea Player', 'Arsenal Player', 'MU Player']
+    }
+
+    void 'a paged list sorted by a property of a collection does not fetch the collection'() {
+        given:
+        saveSquad()
+
+        when:
+        final results = Team.where {
+            name == 'Squad'
+        }.list(sort: 'players.name', max: 2)
+
+        then: 'the row limit does not leave players out of the collection'
+        results*.name == ['Squad']
+        !Hibernate.isInitialized(results.first().players)
+        results.first().players.size() == 3
+    }
+
+    void 'a sort by a property of a collection that is stored on the query does not fetch the collection'() {
+        given:
+        saveSquad()
+        final query = Team.where {
+            name == 'Squad'
+        }.sort('players.name')
+
+        when:
+        final listed = query.list(max: 2).first()
+
+        then:
+        !Hibernate.isInitialized(listed.players)
+        listed.players.size() == 3
+
+        when:
+        manager.session.clear()
+        final found = query.find()
+
+        then:
+        !Hibernate.isInitialized(found.players)
+        found.players.size() == 3
+    }
+
+    void 'sort by a property of a collection of an association does not fetch the collection'() {
+        given:
+        saveSquad()
+
+        when:
+        final results = Player.where {
+            name == 'Squad Player A'
+        }.list(sort: 'team.players.name', max: 2)
+
+        then:
+        results*.name == ['Squad Player A']
+        !Hibernate.isInitialized(results.first().team.players)
+        results.first().team.players.size() == 3
     }
 }
