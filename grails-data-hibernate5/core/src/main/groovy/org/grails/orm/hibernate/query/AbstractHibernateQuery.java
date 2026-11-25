@@ -634,7 +634,13 @@ public abstract class AbstractHibernateQuery extends Query {
         }
         org.hibernate.sql.JoinType hibernateJoinType = resolveJoinType(joinType);
         if (join.criteria != null) {
-            join.criteria.createAlias(associationPath, join.alias, hibernateJoinType);
+            CriteriaImpl root = criteria instanceof CriteriaImpl ? (CriteriaImpl) criteria : null;
+            boolean pagedIntermediateCollection = collection && !join.usedByCriteria && hasRequestedLeftJoinBelow(associationPath) && root != null &&
+                    (root.getMaxResults() != null || root.getFirstResult() != null && root.getFirstResult() > 0);
+            // Hibernate fetches an unrestricted left collection join even with FetchMode.SELECT.
+            // Keep this a sort join so limited rows cannot initialize an incomplete collection.
+            join.criteria.createAlias(associationPath, join.alias, hibernateJoinType,
+                    pagedIntermediateCollection ? Restrictions.sqlRestriction("1=1") : null);
             if (hibernateJoinType == org.hibernate.sql.JoinType.LEFT_OUTER_JOIN && collection &&
                     (join.usedByCriteria || GrailsHibernateUtil.keepsSortedCollectionUnfetched(join.criteria, associationPath))) {
                 GrailsHibernateUtil.keepCollectionUnfetched(join.criteria, join.alias);
@@ -681,6 +687,23 @@ public abstract class AbstractHibernateQuery extends Query {
                 collectionsLoadedAfterQuery.add(path);
             }
         }
+    }
+
+    /**
+     * Whether a nested left-join request also needs this intermediate path to remain outer.
+     * Explicit requests and replacement fetch modes on the intermediate association take precedence.
+     */
+    private boolean hasRequestedLeftJoinBelow(String associationPath) {
+        if (joinTypes.containsKey(associationPath) || fetchStrategies.containsKey(associationPath) || supersededJoinTypes.containsKey(associationPath)) {
+            return false;
+        }
+        String prefix = associationPath + '.';
+        for (Map.Entry<String, JoinType> requested : joinTypes.entrySet()) {
+            if (requested.getValue() == JoinType.LEFT && requested.getKey().startsWith(prefix) && getAssociation(requested.getKey()) != null) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private org.hibernate.sql.JoinType resolveJoinType(JoinType joinType) {
@@ -837,7 +860,7 @@ public abstract class AbstractHibernateQuery extends Query {
             }
             boolean joined = createdAssociationPaths.containsKey(path);
             CriteriaAndAlias join = getOrRegisterJoinAt(path, token);
-            if (!joined && !leftJoin) {
+            if (!joined && !leftJoin && !hasRequestedLeftJoinBelow(path)) {
                 // without the leftJoinAssociationSort setting, an association is joined for a sort as it is
                 // for criteria, with an inner join
                 join.usedByCriteria = true;

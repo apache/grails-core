@@ -444,7 +444,7 @@ public class GrailsHibernateQueryUtils {
                 // a join that the query already has for the association, such as the one of a requested join type
                 Criteria subCriteria = findJoinCriteria(c, sortPath);
                 if (subCriteria == null) {
-                    boolean requestedLeftJoin = fetch != null && fetch.get(sortPath) == JoinType.LEFT;
+                    boolean requestedLeftJoin = isLeftJoinRequested(fetch, sortPath, a);
                     boolean leftJoin = requestedLeftJoin || GrailsHibernateUtil.isLeftJoinAssociationSort(entity);
                     CriteriaImpl root = getRootCriteria(c);
                     boolean pagedCollection = requestedLeftJoin && a instanceof ToMany && root != null &&
@@ -462,6 +462,41 @@ public class GrailsHibernateQueryUtils {
                 addOrderPossiblyNested(subCriteria, sortPath, associatedEntity, sortTail, order, ignoreCase, fetch); // Recurse on nested sort
             }
         }
+    }
+
+    /**
+     * A requested left join of a nested path also needs left joins for its intermediate associations.
+     * An explicit type on an intermediate association wins. Only resolved association paths imply a
+     * join type; an unknown fetch path must not change which instances the sort returns.
+     */
+    private static boolean isLeftJoinRequested(Map<?, ?> fetch, String associationPath, Association association) {
+        if (fetch == null) {
+            return false;
+        }
+        Object requested = fetch.get(associationPath);
+        if (requested instanceof JoinType) {
+            return requested == JoinType.LEFT;
+        }
+        String prefix = associationPath + '.';
+        for (Map.Entry<?, ?> entry : fetch.entrySet()) {
+            if (entry.getValue() != JoinType.LEFT || !(entry.getKey() instanceof String) || !((String) entry.getKey()).startsWith(prefix)) {
+                continue;
+            }
+            PersistentEntity current = association.getAssociatedEntity();
+            boolean resolved = true;
+            for (String token : ((String) entry.getKey()).substring(prefix.length()).split("\\.")) {
+                PersistentProperty property = current != null ? current.getPropertyByName(token) : null;
+                if (!(property instanceof Association) || property instanceof Embedded) {
+                    resolved = false;
+                    break;
+                }
+                current = ((Association) property).getAssociatedEntity();
+            }
+            if (resolved) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static Criteria findJoinCriteria(Criteria criteria, String associationPath) {
