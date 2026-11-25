@@ -223,13 +223,23 @@ class PropertyComparisonCriterionHandler implements InternalCriterionHandler<Que
     }
 
     /**
-     * A part of an identifier that is an association is compared by the identifier of the associated entity, in turn
+     * A part of an identifier that is an embedded value is compared by its properties, in the order of their names, and a
+     * part that is an association is compared by the identifier of the associated entity, in turn
      * one part at a time, as the foreign key of it is: Hibernate does not compare two such entities of classes that are
      * not related, whatever their identifiers.
      */
     private static void addPart(List<Expression<?>> parts, Path<?> part, Attribute<?, ?> attribute) {
         if (attribute instanceof SingularAttribute<?, ?> singular && singular.getType() instanceof EntityType<?> associated) {
             parts.addAll(identifierParts(part, associated));
+        }
+        else if (attribute instanceof SingularAttribute<?, ?> singular && singular.getType() instanceof EmbeddableType<?> embeddable) {
+            // an embedded part is the columns of its properties, so two of them are compared by those leaves, whatever the
+            // classes of the embedded values are
+            List<Attribute<?, ?>> attributes = new ArrayList<>(embeddable.getAttributes());
+            attributes.sort(Comparator.comparing(Attribute::getName));
+            for (Attribute<?, ?> embedded : attributes) {
+                addPart(parts, part.get(embedded.getName()), embedded);
+            }
         }
         else {
             parts.add(part);

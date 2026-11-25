@@ -20,6 +20,12 @@ package grails.gorm.tests
 
 import grails.gorm.DetachedCriteria
 import grails.gorm.annotation.Entity
+import jakarta.persistence.Embeddable
+import jakarta.persistence.Embedded
+import jakarta.persistence.EmbeddedId
+import jakarta.persistence.GeneratedValue
+import jakarta.persistence.Id
+import jakarta.persistence.ManyToOne
 
 /**
  * Hibernate does not compare entities of classes that are not related, so two associations to such classes are
@@ -31,7 +37,7 @@ class SiblingAssociationPropertyComparisonSpec extends HibernateGormDatastoreSpe
 
     def setupSpec() {
         manager.registerDomainClasses(SpcLeft, SpcRight, SpcPlainLeft, SpcPlainRight, SpcHolder, SpcOwnerA, SpcOwnerB, SpcRefLeft, SpcRefRight, SpcRefHolder,
-                SpcMixed, SpcTextNum, SpcLongPair, SpcIntPair, SpcDoublePair, SpcTypeHolder, SpcInexactHolder)
+                SpcMixed, SpcTextNum, SpcLongPair, SpcIntPair, SpcDoublePair, SpcTypeHolder, SpcInexactHolder, SpcEmbLeft, SpcEmbRight, SpcEmbHolder)
     }
 
     private void seedComposite() {
@@ -135,6 +141,26 @@ class SiblingAssociationPropertyComparisonSpec extends HibernateGormDatastoreSpe
         SpcInexactHolder.withCriteria { neProperty('longPair', 'doublePair') }*.name == ['big']
         new DetachedCriteria(SpcInexactHolder).build { eqProperty('longPair', 'doublePair') }.list().isEmpty()
         new DetachedCriteria(SpcInexactHolder).build { neProperty('longPair', 'doublePair') }.list()*.name == ['big']
+    }
+
+    def 'two composite identifiers whose embedded parts have different classes are compared by the leaves of those parts'() {
+        given: 'the parts have the same leaves in two classes: the same row has equal leaves, the other row differs in one of them'
+        SpcEmbLeft left = new SpcEmbLeft(id: new SpcEmbKeyLeft(pos: new SpcPoint(x: 1, y: 2), code: 'a')).save(flush: true)
+        SpcEmbRight same = new SpcEmbRight(id: new SpcEmbKeyRight(pos: new SpcSpot(x: 1, y: 2), code: 'a')).save(flush: true)
+        SpcEmbRight other = new SpcEmbRight(id: new SpcEmbKeyRight(pos: new SpcSpot(x: 1, y: 3), code: 'a')).save(flush: true)
+        new SpcEmbHolder(name: 'same', left: left, right: same).save(flush: true)
+        new SpcEmbHolder(name: 'other', left: left, right: other).save(flush: true)
+        manager.session.clear()
+
+        expect: 'the criteria builder and a detached criteria answer alike'
+        SpcEmbHolder.withCriteria(criteria)*.name.sort() == expected
+        new DetachedCriteria(SpcEmbHolder).build(criteria).list()*.name.sort() == expected
+
+        where:
+        [criteria, expected] << [
+            [{ eqProperty('left', 'right') }, ['same']],
+            [{ neProperty('left', 'right') }, ['other']]
+        ]
     }
 
     private void seedAssociationParts() {
@@ -478,4 +504,61 @@ class SpcInexactHolder {
     String name
     SpcLongPair longPair
     SpcDoublePair doublePair
+}
+
+@Embeddable
+class SpcPoint implements Serializable {
+
+    Integer x
+    Integer y
+}
+
+@Embeddable
+class SpcSpot implements Serializable {
+
+    Integer x
+    Integer y
+}
+
+@Embeddable
+class SpcEmbKeyLeft implements Serializable {
+
+    @Embedded
+    SpcPoint pos
+    String code
+}
+
+@Embeddable
+class SpcEmbKeyRight implements Serializable {
+
+    @Embedded
+    SpcSpot pos
+    String code
+}
+
+@jakarta.persistence.Entity
+class SpcEmbLeft {
+
+    @EmbeddedId
+    SpcEmbKeyLeft id
+}
+
+@jakarta.persistence.Entity
+class SpcEmbRight {
+
+    @EmbeddedId
+    SpcEmbKeyRight id
+}
+
+@jakarta.persistence.Entity
+class SpcEmbHolder {
+
+    @Id
+    @GeneratedValue
+    Long id
+    String name
+    @ManyToOne
+    SpcEmbLeft left
+    @ManyToOne
+    SpcEmbRight right
 }
