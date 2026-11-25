@@ -132,6 +132,32 @@ class PlainBeanValidationWithoutDatastoreSpec extends Specification {
         api.hasErrors(bean)
     }
 
+    void 'an error recorded on a bean that was never validated is kept, and so is one recorded after the errors were cleared'() {
+        given:
+        GormValidationApi<PlainBean> api = api()
+        PlainBean bean = new PlainBean(name: 'ok')
+
+        when:
+        api.getErrors(bean).rejectValue('name', 'first')
+
+        then:
+        api.hasErrors(bean)
+        api.getErrors(bean).getFieldError('name').code == 'first'
+
+        when:
+        api.clearErrors(bean)
+
+        then:
+        !api.hasErrors(bean)
+
+        when:
+        api.getErrors(bean).rejectValue('name', 'second')
+
+        then:
+        api.hasErrors(bean)
+        api.getErrors(bean).getFieldError('name').code == 'second'
+    }
+
     void 'a bean that nothing refers to any more is freed with its errors'() {
         given:
         GormValidationApi<PlainBean> api = api()

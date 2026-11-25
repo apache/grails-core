@@ -253,6 +253,10 @@ class GormValidationApi<D> extends AbstractGormApi<D> {
     protected Errors resetErrors(D instance) {
         def errors = new ValidationErrors(instance)
         setErrors(instance, errors)
+        if (!(instance instanceof GormValidateable) && !hasDatastore) {
+            // what is kept for a bean with no datastore is a list of its errors, so hand back the object that adds to it
+            return readErrors(instance)
+        }
         return errors
     }
 
