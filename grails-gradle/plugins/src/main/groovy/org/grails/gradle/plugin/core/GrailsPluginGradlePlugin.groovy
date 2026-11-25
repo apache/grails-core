@@ -186,6 +186,7 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
                 Object ver = project.version
                 ver != null && ver.toString() != 'unspecified' ? ver.toString() : null
             })
+            task.pluginOptions.starter.convention(grailsExt.plugin.starter)
             task.pluginOptions.name.convention(grailsExt.plugin.name)
             task.pluginOptions.version.convention(grailsExt.plugin.version)
             task.pluginOptions.grailsVersion.convention(grailsExt.plugin.grailsVersion)

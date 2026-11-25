@@ -117,7 +117,9 @@ abstract class GeneratePluginDescriptorTask extends DefaultTask {
         List<String> extraExcludes = pluginOptions.pluginExcludes.getOrElse([])
 
         if (plugins.isEmpty()) {
-            // Descriptor-less starter plugin
+            if (!pluginOptions.starter.getOrElse(false)) {
+                return
+            }
             String rawName = configuredName ?: projectName.get()
             String logicalName = normalizePluginName(rawName)
             plugins.add(new ScannedPlugin(

@@ -63,12 +63,13 @@ NOTE: Plugin projects don't provide an index.gsp by default since most plugins d
 
 The structure of a Grails plugin is very nearly the same as a Grails application project's. A plugin can declare its metadata in one of three ways:
 
-1. *Descriptor-less starter plugin (recommended for Spring Boot auto-configuration plugins):* Apply the `org.apache.grails.gradle.grails-plugin` Gradle plugin, expose Spring beans via `@AutoConfiguration` (registered in `META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports`), and optionally configure plugin metadata in `build.gradle`:
+1. *Descriptor-less starter plugin (recommended for Spring Boot auto-configuration plugins):* Apply the `org.apache.grails.gradle.grails-plugin` Gradle plugin, expose Spring beans via `@AutoConfiguration` (registered in `META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports`), and declare the starter in `build.gradle`:
 +
 [source,groovy]
 ----
 grails {
     plugin {
+        starter = true
         name = 'example'
         grailsVersion = '9.0.0 > *'
         loadAfter = ['core']
@@ -449,12 +450,13 @@ NOTE: Plugin projects don't provide an index.gsp by default since most plugins d
 
 The structure of a Grails plugin is very nearly the same as a Grails application project's. A plugin can declare its metadata in one of three ways:
 
-1. *Descriptor-less starter plugin (recommended for Spring Boot auto-configuration plugins):* Apply the `org.apache.grails.gradle.grails-plugin` Gradle plugin, expose Spring beans via `@AutoConfiguration` (registered in `META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports`), and optionally configure plugin metadata in `build.gradle`:
+1. *Descriptor-less starter plugin (recommended for Spring Boot auto-configuration plugins):* Apply the `org.apache.grails.gradle.grails-plugin` Gradle plugin, expose Spring beans via `@AutoConfiguration` (registered in `META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports`), and declare the starter in `build.gradle`:
 +
 [source,groovy]
 ----
 grails {
     plugin {
+        starter = true
         name = 'example'
         grailsVersion = '9.0.0 > *'
         loadAfter = ['core']

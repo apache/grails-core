@@ -39,6 +39,11 @@ import org.gradle.api.tasks.Optional
 @CompileStatic
 abstract class GrailsPluginOptions {
 
+    /** Requests a classless starter descriptor when the source set contains no plugin class. */
+    @Input
+    @Optional
+    abstract Property<Boolean> getStarter()
+
     @Input
     @Optional
     abstract Property<String> getName()

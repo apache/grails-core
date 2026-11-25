@@ -77,6 +77,7 @@ class GeneratePluginDescriptorTaskSpec extends Specification {
                 t.pluginConfigFiles.from(configFile)
                 t.projectName.set('my-starter')
                 t.projectVersion.set('1.2.3')
+                t.pluginOptions.starter.set(true)
                 t.pluginOptions.grailsVersion.set('9.0.0 > *')
                 t.pluginOptions.loadAfter.set(['core'])
                 t.pluginOptions.dependsOn.set(['i18n': '9.0.0 > *'])
@@ -100,6 +101,28 @@ class GeneratePluginDescriptorTaskSpec extends Specification {
         props.getProperty('loadAfter') == 'core'
         props.getProperty('dependsOn.i18n') == '9.0.0 > *'
         props.getProperty('artefacts.Service') == 'com.example.HelloService'
+    }
+
+    void 'removing the last plugin class removes its descriptor without registering the project as a starter'() {
+        given:
+        File classesDir = new File(tempDir, 'classes')
+        writeClass(classesDir, 'com/example/AuditGrailsPlugin', Opcodes.ACC_PUBLIC)
+        File outDir = new File(tempDir, 'out')
+        Project project = ProjectBuilder.builder().withProjectDir(tempDir).build()
+        def task = project.tasks.register('generatePluginDescriptor', GeneratePluginDescriptorTask).get()
+        task.classesDirs.from(classesDir)
+        task.projectName.set('audit-library')
+        task.projectVersion.set('1.0')
+        task.outputDirectory.set(outDir)
+        task.generate()
+        assert new File(outDir, 'META-INF/grails/plugins.imports').text == 'audit\n'
+
+        when:
+        assert new File(classesDir, 'com/example/AuditGrailsPlugin.class').delete()
+        task.generate()
+
+        then:
+        outDir.listFiles().length == 0
     }
 
     void 'generates descriptor for @GrailsPluginDescriptor-annotated class and applies pluginExcludes'() {
@@ -170,6 +193,7 @@ class GeneratePluginDescriptorTaskSpec extends Specification {
                 t.classesDirs.from(classesDir)
                 t.projectName.set('full-options')
                 t.projectVersion.set('1.0.0')
+                t.pluginOptions.starter.set(true)
                 t.pluginOptions.loadBefore.set(['controllers'])
                 t.pluginOptions.evict.set(['old-plugin'])
                 t.pluginOptions.observe.set(['spring-security-core', '*'])
@@ -236,6 +260,7 @@ class GeneratePluginDescriptorTaskSpec extends Specification {
         GeneratePluginDescriptorTask task = project.tasks.register('generatePluginDescriptor', GeneratePluginDescriptorTask) {
             GeneratePluginDescriptorTask t ->
                 t.classesDirs.from(classesDir)
+                t.pluginOptions.starter.set(true)
                 t.pluginConfigFiles.from(yml, groovyCfg)
                 t.projectName.set('clash-plugin')
                 t.projectVersion.set('1.0.0')
@@ -271,7 +296,7 @@ class GeneratePluginDescriptorTaskSpec extends Specification {
         task.generate()
 
         then:
-        def e = thrown(GradleException)
+        def e = thrown(IllegalArgumentException)
         e.message.contains('shared')
     }
 }

@@ -1641,13 +1641,14 @@ under `META-INF/grails/`:
   path collisions in executable archives, shaded JARs, and GraalVM native images.
 * *Descriptor-less starter plugins.* A plugin built with `org.apache.grails.gradle.grails-plugin` no longer requires a
   `*GrailsPlugin` Groovy class. Plugins that wire beans via Spring Boot `@AutoConfiguration` and contribute artefacts,
-  views, or `plugin.yml` can omit the descriptor class completely and optionally declare metadata through the Gradle DSL:
+  views, or `plugin.yml` can omit the descriptor class completely by declaring the starter through the Gradle DSL:
 +
 [source,groovy]
 .build.gradle
 ----
 grails {
     plugin {
+        starter = true
         name = 'my-starter'
         grailsVersion = '9.0.0 > *'
         loadAfter = ['core']
