@@ -85,6 +85,10 @@ switch (testconfig) {
 		grails.plugin.springsecurity.password.algorithm = 'bcrypt'
 		break
 
+	case 'inactive':
+		grails.plugin.springsecurity.active = false
+		break
+
 	case 'misc':
 		grails.plugin.springsecurity.securityConfigType = 'Annotation'
 		grails.plugin.springsecurity.dao.reflectionSaltSourceProperty = 'username'
