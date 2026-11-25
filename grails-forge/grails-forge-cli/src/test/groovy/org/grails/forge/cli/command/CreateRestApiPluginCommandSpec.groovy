@@ -156,11 +156,22 @@ class CreateRestApiPluginCommandSpec extends CommandSpec {
         ProjectState.read(project.toPath()).manifest.requestedFeatures*.name == ['asciidoctor']
 
         when: 'a feature that is not one of a REST API plugin'
-        int refused = inProject(project, 'feature', 'add', 'scaffolding')
+        int refused = inProject(project, 'feature', 'add', 'openapi')
 
         then:
         refused != 0
-        !ProjectState.read(project.toPath()).lock.featureNames.contains('scaffolding')
+        !ProjectState.read(project.toPath()).lock.featureNames.contains('openapi')
+
+        when: 'scaffolding, whose commands generate a REST controller and JSON views in a REST API plugin'
+        int scaffolding = inProject(project, 'feature', 'add', 'scaffolding')
+        List<String> features = ProjectState.read(project.toPath()).lock.featureNames
+
+        then: 'it is added, without the GSP feature it brings to a web application'
+        scaffolding == 0
+        features.contains('scaffolding')
+        !features.contains('gsp')
+        new File(project, 'build.gradle').getText('UTF-8').contains('implementation "org.apache.grails:grails-scaffolding"')
+        !new File(project, 'build.gradle').getText('UTF-8').contains('grails-gsp')
     }
 
     void "create-rest-api-plugin lists the features of a REST API plugin"() {
@@ -173,9 +184,9 @@ class CreateRestApiPluginCommandSpec extends CommandSpec {
         listed.contains('views-json')
         listed.contains('views-markup')
         listed.contains('asciidoctor')
+        listed.contains('scaffolding')
 
         and: 'and none of the features that are for applications, or for pages'
-        !listed.contains('scaffolding')
         !listed.contains('asset-pipeline-grails')
         !listed.contains('openapi')
         !listed.contains('grails-spring-security')

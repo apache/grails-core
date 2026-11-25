@@ -384,8 +384,9 @@ class FormerCommandsSpec extends CommandSpec {
         then:
         exit == 2
         lines[1] == MISSING
-        lines[2] == 'generate-all is a command of the scaffolding plugin (grails-scaffolding) for applications with GSP views: where the application has the plugin, ' +
-                'it is a command here by its name. What the REST API profile generated with it (JSON views) has no replacement'
+        lines[2] == 'generate-all is a command of the scaffolding plugin (grails-scaffolding): where the application has the plugin, ' +
+                'it is a command here by its name. In a REST API application or REST API plugin, which has the plugin with the scaffolding feature, ' +
+                'it generates what the REST API profile generated (a REST controller and JSON views)'
 
         when: 'a command the directory has'
         err.reset()

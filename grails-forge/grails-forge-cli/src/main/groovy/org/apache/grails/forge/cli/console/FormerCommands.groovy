@@ -84,8 +84,9 @@ final class FormerCommands {
     private static final String PROFILES_GONE = 'Profiles are replaced by application types, features and feature packs, and no command creates any of these'
     private static final String REST_API = 'is a command in the directory of a REST API application or REST API plugin (create-restapi, create-rest-api-plugin), and the current directory is in none'
     private static final String PLUGIN_PROJECT = 'is a command in the directory of a Grails plugin, which has a class whose name ends with GrailsPlugin under src/main/groovy, and the current directory is in none'
-    private static final String SCAFFOLDING = 'is a command of the scaffolding plugin (grails-scaffolding) for applications with GSP views: where the application has the plugin, ' +
-            'it is a command here by its name. What the REST API profile generated with it (JSON views) has no replacement'
+    private static final String SCAFFOLDING = 'is a command of the scaffolding plugin (grails-scaffolding): where the application has the plugin, ' +
+            'it is a command here by its name. In a REST API application or REST API plugin, which has the plugin with the scaffolding feature, ' +
+            'it generates what the REST API profile generated (a REST controller and JSON views)'
 
     // What ends the interactive console, as both ended the interactive mode of the Grails shell. The table has a line for
     // each, the same but for the name, as each is no command outside the console.
