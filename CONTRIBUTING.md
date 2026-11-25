@@ -301,15 +301,16 @@ project, so two controls limit what runs:
 Each release branch is named after the minor version it releases, such as `7.0.x`, `8.0.x` or `8.1.x`.
 
 * A **maintenance branch** is a release branch whose minor version has been released, such as `7.0.x`, `7.2.x` and
-  `8.0.x` once 7.0.0, 7.2.0 and 8.0.0 are out. It takes bug fixes only, with no new features and no API changes, and
-  each release from it is the next patch version, such as 7.0.18 or 8.0.1.
+  `8.0.x` once 7.0.0, 7.2.0 and 8.0.0 are out, as long as patch releases are made from it. It takes bug fixes only,
+  with no new features and no API changes, and each release from it is the next patch version, such as 7.0.18 or
+  8.0.1.
 * The **next minor branch**, such as `8.1.x` until 8.1.0 is released, also takes features, as long as existing APIs
   keep working.
 * The **next major branch**, such as `9.0.x` until 9.0.0 is released, can take breaking changes.
 
-A change goes to the oldest release branch it belongs on, and is merged up from there into every newer branch: a bug
-fix to the oldest release branch that has the bug, a feature to the next minor branch, and a breaking change to the
-next major branch.
+A release branch takes changes only while releases are still made from it. A change goes to the oldest release branch
+it belongs on, and is merged up from there into every newer branch: a bug fix to the oldest release branch that has
+the bug, a feature to the next minor branch, and a breaking change to the next major branch.
 
 #### Fixes That Change a Result
 
@@ -318,8 +319,9 @@ with any datastore, the output a view or a renderer produces, the values data bi
 and the like.
 
 A fix that makes a failing call work, or makes a call do what it asks for without changing its result, is a bug fix
-like any other. So is a requested sort order that was ignored, unless `max` or `offset` limits the query: then the
-sort decides which rows come back, and the fix changes a result.
+like any other. So is a requested sort order that was ignored, unless the call returns only some of the rows it
+matches, as with `max` or `offset`, `first` or `last`, `find` and the `findBy*` finders, or `maxResults` and
+`firstResult` in a criteria query: then the sort decides which rows come back, and the fix changes a result.
 
 Other fixes change the result of a call that works today, such as the rows a query returns, the rows an `updateAll`
 changes or the JSON a domain class renders to, or make such a call throw. Applications may have been built on the
@@ -340,14 +342,17 @@ old result, and a patch release is often taken without reading its notes, so the
   and the major release after it removes it. Each fix has a setting of its own, not a switch it shares with other
   fixes, so that an application that turns it on for one fix gets no other result changed in a later patch release. A
   fix that exists in more than one module, such as the same query in Hibernate 5 and Hibernate 7, reads the same key
-  in each. While an application keeps the old result through the setting, it logs a warning at startup that names the
-  major release that removes the setting.
+  in each. When an application sets the setting to keep the old result, it logs a warning at startup that names the
+  major release that removes the setting. An application that leaves the setting at its default gets no warning.
 * **A result that can be defended.** When the old result can be defended, or it is unclear whether it can, the fix
-  goes to the next major release, or behind a setting as above.
+  goes to the next major release. It can also go behind a setting as above, except that the setting keeps the old
+  result by default until the next major release, which turns it on, and the major release after it removes it.
 * **A security fix** follows the [ASF security process](https://www.apache.org/security/) and goes to the earliest
-  supported version. These rules do not apply to it.
+  supported version, whether or not it changes a result, and is reviewed under that process. The rest of these rules
+  do not apply to it, except that a security fix that changes a result still adds the notes and the skill entry that
+  the list below asks for.
 
-A fix that changes a result:
+A fix that changes a result on a maintenance branch or the next minor branch:
 
 * has two reviewers (see [Change Review Process](#change-review-process)),
 * says in its pull request description which results change, how an application gets the old ones, and whether the
@@ -358,7 +363,12 @@ A fix that changes a result:
 * and, when it adds a setting, adds the setting to the one page of the guide that lists them all, Compatibility
   Settings (`grails-doc/src/en/guide/upgrading/compatibilitySettings.adoc`): what it changes, the release that added
   it, its default on each release line, the release that turns it on and the release that removes it. The upgrade
-  notes link to that page.
+  notes link to that page. Merging the fix up neither turns the setting on nor removes it, so its author also opens
+  an issue for each of those two steps, on the milestone of the release that makes the step. Each step adds its own
+  note and updates the row.
+
+A fix that goes only to the next major branch is a breaking change like any other there. It has one reviewer, and
+its description, its note in the upgrade guide and its entry in the upgrade skill say which results change.
 
 When the reviewers disagree about where a fix belongs, it goes to the dev@grails.apache.org mailing list, and to a
 vote if that does not settle it.
@@ -382,7 +392,7 @@ Concerning when a review is required for a `protected` branch:
    * Reasoning: due to the impact of past Spring & Groovy upgrades, it often breaks the entire development chain.  These changes should not be merged without significant review.
    * Minimum # of Reviewers:  2 reviewers, preferred 3
    * Mandated Waiting Period: 3 days if over a weekend, 1 day if during the week.
-* Fixes That Change a Result - `Review then Commit` with 2 reviewers. See [Fixes That Change a Result](#fixes-that-change-a-result).
+* Fixes That Change a Result on a maintenance branch or the next minor branch - `Review then Commit` with 2 reviewers. See [Fixes That Change a Result](#fixes-that-change-a-result).
 * Otherwise - `Review then Commit` with only 1 reviewer required. 
 
 An approval covers the changes that were reviewed. When a later push changes a pull request, the approvals given

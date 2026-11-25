@@ -304,7 +304,7 @@ Why it is this way:
 | Build/CI changes | Commit then Review | - | - |
 | Documentation | Commit then Review (obvious fixes) | 1 minimum | - |
 | Groovy/Spring dependency changes | Review then Commit | 2-3 required | 3 days (weekend) / 1 day (weekday) |
-| Fixes that change a result | Review then Commit | 2 required | - |
+| Fixes that change a result on a maintenance or the next minor branch | Review then Commit | 2 required | - |
 | All other changes | Review then Commit | 1 required | - |
 
 See `CONTRIBUTING.md` for full details.
