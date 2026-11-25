@@ -397,6 +397,28 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManag
         (players - 'No team').sort() == ['Bruno', 'Bukayo', 'Cole', 'Unattached Player']
     }
 
+    void 'a block-local sort by club.#property honors a root #joinType request #request the block'() {
+        when:
+        final results = Player.createCriteria().list(max: 10) {
+            if (request == 'before') {
+                join('team.club', joinType)
+            }
+            team { order("club.$property") }
+            if (request == 'after') {
+                join('team.club', joinType)
+            }
+        }
+        final names = results*.name
+
+        then:
+        names.contains('Unattached Player') == (joinType == JoinType.LEFT)
+        names - 'Unattached Player' == (property == 'name' ? ['Bukayo', 'Cole', 'Bruno'] : ['Bruno', 'Bukayo', 'Cole'])
+        results.totalCount == (joinType == JoinType.LEFT ? 4 : 3)
+
+        where:
+        [property, joinType, request] << [['name', 'id'], [JoinType.LEFT, JoinType.INNER], ['before', 'after']].combinations()
+    }
+
     void 'a collection sort counts roots once through #api'() {
         given:
         new AssociationSortOwner(name: 'Empty').save(failOnError: true, flush: true)

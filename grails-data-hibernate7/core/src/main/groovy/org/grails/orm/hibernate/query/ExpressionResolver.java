@@ -235,6 +235,12 @@ public class ExpressionResolver {
         if (component) {
             return from.join(attributeName);
         }
+        // The tracker qualifies a block-relative path against the plan of the whole query. A request for
+        // team.club belongs to club inside the team block, not to an inherited alias merely named club.
+        JoinType planned = associationPath != null ? joinTracker.plannedType(associationPath) : null;
+        if (planned != null) {
+            return from.join(attributeName, planned);
+        }
         HibernateAlias requested = associationPath != null && aliasRegistry.isOwnDefined(associationPath) ?
                 aliasRegistry.getDefinition(associationPath) : null;
         if (requested != null && !requested.explicit()) {

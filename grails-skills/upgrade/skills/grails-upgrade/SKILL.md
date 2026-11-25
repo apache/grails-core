@@ -1679,6 +1679,8 @@ java -XX:MaxRAMPercentage=60.0 -XX:MaxMetaspaceSize=256m -Dgrails.env=prod -jar 
 
 A sort by a property of an association, such as `Book.list(sort: 'author.name')`, joins the association with an inner join, so it leaves out the instances whose association is `null`. That is unchanged by default. As of 8.0.1, GORM for Hibernate 7 reads the `grails.gorm.leftJoinAssociationSort` setting, default `false`, as GORM for Hibernate 5 does. Set to `true`, the association is joined with a left join and the sort keeps those instances.
 
+A block-local sort uses a join type requested for its full path at the query root: `join('team.club', JoinType.LEFT)` applies to `team { order('club.name') }` or `team { order('club.id') }`, before or after the block. LEFT retains the missing club and INNER excludes it, independently of the association-sort setting.
+
 When sorting by a collection property, pagination limits the joined rows before duplicate instances are removed. A page can contain fewer than `max` instances, and an instance can appear on more than one page; adding the page sizes need not equal `totalCount`. Use a property of the queried class or a to-one association to page without repeated instances.
 
 - Nothing needs to change to keep the previous results.
