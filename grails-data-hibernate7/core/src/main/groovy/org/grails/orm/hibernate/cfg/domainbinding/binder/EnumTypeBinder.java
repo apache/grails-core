@@ -32,6 +32,7 @@ import org.slf4j.LoggerFactory;
 import org.grails.orm.hibernate.cfg.ColumnConfig;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateBasicProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEnumProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndPathFetcher;
 import org.grails.orm.hibernate.cfg.domainbinding.util.CreateKeyForProps;
@@ -121,7 +122,9 @@ public class EnumTypeBinder {
         Table t = simpleValue.getTable();
         t.addColumn(column);
         simpleValue.addColumn(column);
-        if (enumType == GrailsEnumType.DEFAULT || enumType == GrailsEnumType.STRING) {
+        // on a collection of enum values the constraints are those of the collection: maxSize is the number of its values,
+        // and an allowed value is a whole collection, so neither is the length of the column of one value
+        if ((enumType == GrailsEnumType.DEFAULT || enumType == GrailsEnumType.STRING) && !(property instanceof HibernateBasicProperty)) {
             stringColumnConstraintsBinder.bindStringColumnConstraints(column, pc, null);
         }
         createKeyForProps.createKeyForProps(property, path, t, columnName);

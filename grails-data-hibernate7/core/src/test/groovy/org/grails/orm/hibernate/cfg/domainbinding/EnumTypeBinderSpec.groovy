@@ -121,7 +121,7 @@ class EnumTypeBinderSpec extends HibernateGormDatastoreSpec {
     }
 
     @Unroll
-    def "maxSize is applied to the column of a #mapping enum: #applied"() {
+    def "maxSize is applied to the column of a #mapping: #applied"() {
         given:
         def table = new Table("person")
         def property = setupProperty(clazz, "status", table)
@@ -137,6 +137,7 @@ class EnumTypeBinderSpec extends HibernateGormDatastoreSpec {
         PersonSizedDefault  | "default" | true
         PersonSizedString   | "string"  | true
         PersonSizedOrdinal  | "ordinal" | false
+        PersonSizedCollection | "collection of enum values, where maxSize is the number of values" | false
     }
 
     @Unroll
@@ -316,4 +317,8 @@ class UserTypeEnumType implements UserType {
     @Override boolean isMutable() { false }
     @Override Serializable disassemble(Object value) { (Serializable)value }
     @Override Object assemble(Serializable cached, Object owner) { cached }
+}
+@Entity class PersonSizedCollection {
+    Long id; Set<Status01> status
+    static constraints = { status maxSize: 42 }
 }

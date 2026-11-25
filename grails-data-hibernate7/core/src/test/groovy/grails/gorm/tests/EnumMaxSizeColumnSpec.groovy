@@ -26,7 +26,7 @@ import spock.lang.Issue
 class EnumMaxSizeColumnSpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
-        manager.registerDomainClasses(EnumSizedThing, EnumListedThing)
+        manager.registerDomainClasses(EnumSizedThing, EnumListedThing, EnumCollectionThing)
     }
 
     void "an enum property with maxSize still stores and reads its value"() {
@@ -65,6 +65,18 @@ class EnumMaxSizeColumnSpec extends HibernateGormDatastoreSpec {
         EnumListedThing.count() == 1
     }
 
+    void "a maxSize on a collection of enum values limits the number of values and not the length of one"() {
+        given: 'a collection with maxSize 2 of values that are longer than two characters'
+        new EnumCollectionThing(kinds: [EnumLongKind.FIRST_VALUE, EnumLongKind.SECOND_VALUE]).save(flush: true, failOnError: true)
+        session.clear()
+
+        expect: 'both values are stored and read back'
+        EnumCollectionThing.list()[0].kinds as Set == [EnumLongKind.FIRST_VALUE, EnumLongKind.SECOND_VALUE] as Set
+
+        and: 'a third value is refused by the constraint of the collection'
+        !new EnumCollectionThing(kinds: [EnumLongKind.FIRST_VALUE, EnumLongKind.SECOND_VALUE, EnumLongKind.THIRD_VALUE]).validate()
+    }
+
     void "an enum inList that does not allow a value rejects it"() {
         expect:
         !new EnumListedThing(kind: EnumSizedKind.TWO).validate()
@@ -90,5 +102,18 @@ class EnumListedThing {
 
     static constraints = {
         kind inList: [EnumSizedKind.ONE]
+    }
+}
+
+enum EnumLongKind { FIRST_VALUE, SECOND_VALUE, THIRD_VALUE }
+
+@Entity
+class EnumCollectionThing {
+    Set<EnumLongKind> kinds
+
+    static hasMany = [kinds: EnumLongKind]
+
+    static constraints = {
+        kinds maxSize: 2
     }
 }
