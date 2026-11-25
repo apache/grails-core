@@ -43,6 +43,7 @@ import org.gradle.api.tasks.bundling.War
 import org.gradle.jvm.toolchain.JavaLauncher
 import org.gradle.jvm.toolchain.JavaToolchainService
 
+import org.apache.grails.plugin.descriptor.PluginDescriptorWriter
 import org.grails.gradle.plugin.core.GeneratePluginDescriptorTask
 import org.grails.gradle.plugin.core.GrailsCompileStaticOptions
 import org.grails.gradle.plugin.core.GrailsGradlePlugin
@@ -419,7 +420,7 @@ class GroovyPagePlugin implements Plugin<Project> {
             TaskProvider<GeneratePluginDescriptorTask> descriptorTask = project.tasks.named(
                     'generatePluginDescriptor', GeneratePluginDescriptorTask)
             Provider<RegularFile> importsFile = descriptorTask.flatMap { GeneratePluginDescriptorTask t ->
-                t.outputDirectory.file(GeneratePluginDescriptorTask.PLUGINS_IMPORTS_PATH)
+                t.outputDirectory.file(PluginDescriptorWriter.PLUGINS_IMPORTS_PATH)
             }
             compileGroovyPages.configure { GroovyPageForkCompileTask task ->
                 task.pluginImportsFiles.from(importsFile)

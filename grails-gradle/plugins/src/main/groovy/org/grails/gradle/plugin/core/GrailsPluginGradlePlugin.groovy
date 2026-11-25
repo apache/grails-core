@@ -40,6 +40,7 @@ import org.gradle.api.tasks.util.PatternFilterable
 import org.gradle.language.jvm.tasks.ProcessResources
 import org.gradle.tooling.provider.model.ToolingModelBuilderRegistry
 
+import org.apache.grails.plugin.descriptor.PluginDescriptorWriter
 import org.apache.grails.gradle.publish.GrailsPublishExtension
 import org.springframework.boot.gradle.tasks.bundling.BootJar
 
@@ -104,7 +105,7 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
         GrailsExtension ext = project.extensions.findByType(GrailsExtension)
         String configured = ext?.plugin?.name?.getOrNull()
         if (configured != null && !configured.isBlank()) {
-            return GeneratePluginDescriptorTask.normalizePluginName(configured)
+            return PluginDescriptorWriter.normalizePluginName(configured)
         }
         SourceSet mainSourceSet = SourceSets.findMainSourceSet(project)
         File descriptor = findConcretePluginDescriptorSource(mainSourceSet)
@@ -115,7 +116,7 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
                     : fileName.substring(0, fileName.length() - '.java'.length())
             return GrailsNameUtils.getLogicalPropertyName(baseName, 'GrailsPlugin')
         }
-        GeneratePluginDescriptorTask.normalizePluginName(project.name)
+        PluginDescriptorWriter.normalizePluginName(project.name)
     }
 
     private static File findConcretePluginDescriptorSource(SourceSet mainSourceSet) {

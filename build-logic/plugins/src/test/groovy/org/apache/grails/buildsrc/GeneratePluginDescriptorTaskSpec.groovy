@@ -18,7 +18,9 @@
  */
 package org.apache.grails.buildsrc
 
-import org.gradle.api.GradleException
+import org.gradle.testfixtures.ProjectBuilder
+
+import org.apache.grails.plugin.descriptor.PluginDescriptorWriter
 import org.objectweb.asm.AnnotationVisitor
 import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.Opcodes
@@ -56,6 +58,36 @@ class GeneratePluginDescriptorTaskSpec extends Specification {
         props
     }
 
+    void 'regeneration removes renamed artefacts and deleted plugins from the same output directory'() {
+        given:
+        File classes = new File(tempDir, 'classes')
+        File output = new File(tempDir, 'descriptor')
+        def task = ProjectBuilder.builder().withProjectDir(tempDir).build().tasks.create('generate', GeneratePluginDescriptorTask)
+        task.classesDirs.from(classes)
+        task.outputDirectory.set(output)
+        task.projectVersion.set('1')
+        def controller = { ClassWriter cw ->
+            def annotation = cw.visitAnnotation('Lgrails/artefact/Artefact;', true)
+            annotation.visit('value', 'Controller')
+            annotation.visitEnd()
+        }
+        writeClass(classes, 'example/OldController', controller)
+        writeClass(classes, 'example/AlphaGrailsPlugin')
+        writeClass(classes, 'example/BetaGrailsPlugin')
+        task.generate()
+
+        when:
+        assert new File(classes, 'example/BetaGrailsPlugin.class').delete()
+        assert new File(classes, 'example/OldController.class').delete()
+        writeClass(classes, 'example/NewController', controller)
+        task.generate()
+
+        then:
+        new File(output, 'META-INF/grails/plugins.imports').text == 'alpha\n'
+        !new File(output, 'META-INF/grails/plugins/beta').exists()
+        loadProperties(new File(output, 'META-INF/grails/plugins/alpha/plugin.properties'))['artefacts.Controller'] == 'example.NewController'
+    }
+
     void 'scans legacy *GrailsPlugin classes and @Artefact classes into plugins.imports and plugin.properties'() {
         given:
         File classesDir = new File(tempDir, 'classes')
@@ -80,8 +112,8 @@ class GeneratePluginDescriptorTaskSpec extends Specification {
         writeClass(classesDir, 'com/example/AbstractBaseGrailsPlugin', Opcodes.ACC_PUBLIC | Opcodes.ACC_ABSTRACT)
 
         when:
-        def result = GeneratePluginDescriptorTask.scan([classesDir] as Set)
-        GeneratePluginDescriptorTask.writeDescriptors(result, '9.0.0', outDir)
+        def result = PluginDescriptorWriter.scan([classesDir] as Set)
+        PluginDescriptorWriter.writeDescriptors(result.plugins, result.artefactsByType, '9.0.0', null, outDir)
 
         then:
         new File(outDir, 'META-INF/grails/plugins.imports').text == 'sample\n'
@@ -113,8 +145,8 @@ class GeneratePluginDescriptorTaskSpec extends Specification {
         }
 
         when:
-        def result = GeneratePluginDescriptorTask.scan([classesDir] as Set)
-        GeneratePluginDescriptorTask.writeDescriptors(result, '9.0.0', outDir)
+        def result = PluginDescriptorWriter.scan([classesDir] as Set)
+        PluginDescriptorWriter.writeDescriptors(result.plugins, result.artefactsByType, '9.0.0', null, outDir)
 
         then:
         new File(outDir, 'META-INF/grails/plugins.imports').text == 'metricsStarter\n'
@@ -134,7 +166,7 @@ class GeneratePluginDescriptorTaskSpec extends Specification {
         writeClass(classesDir, 'com/example/PlainLibraryClass')
 
         when:
-        def result = GeneratePluginDescriptorTask.scan([classesDir] as Set)
+        def result = PluginDescriptorWriter.scan([classesDir] as Set)
 
         then:
         result.plugins.isEmpty()
@@ -154,7 +186,7 @@ class GeneratePluginDescriptorTaskSpec extends Specification {
         new File(classesDir, 'org/grails/plugins/BinaryGrailsPlugin.class').tap { parentFile.mkdirs(); bytes = cw2.toByteArray() }
 
         when:
-        def result = GeneratePluginDescriptorTask.scan([classesDir] as Set)
+        def result = PluginDescriptorWriter.scan([classesDir] as Set)
 
         then:
         result.plugins.isEmpty()
@@ -184,7 +216,7 @@ class GeneratePluginDescriptorTaskSpec extends Specification {
         new File(classesDir, 'com/example/InjectedService.class').tap { parentFile.mkdirs(); bytes = injectedService.toByteArray() }
 
         when:
-        def result = GeneratePluginDescriptorTask.scan([classesDir] as Set)
+        def result = PluginDescriptorWriter.scan([classesDir] as Set)
 
         then:
         result.artefactsByType['Controller'] == null
@@ -218,8 +250,8 @@ class GeneratePluginDescriptorTaskSpec extends Specification {
         }
 
         when:
-        def result = GeneratePluginDescriptorTask.scan([classesDir] as Set)
-        GeneratePluginDescriptorTask.writeDescriptors(result, '9.0.0', outDir)
+        def result = PluginDescriptorWriter.scan([classesDir] as Set)
+        PluginDescriptorWriter.writeDescriptors(result.plugins, result.artefactsByType, '9.0.0', null, outDir)
         def props = loadProperties(new File(outDir, 'META-INF/grails/plugins/glob/plugin.properties'))
 
         then:
@@ -234,11 +266,11 @@ class GeneratePluginDescriptorTaskSpec extends Specification {
         writeClass(classesDir, 'com/two/DuplicateGrailsPlugin')
 
         when:
-        def result = GeneratePluginDescriptorTask.scan([classesDir] as Set)
-        GeneratePluginDescriptorTask.writeDescriptors(result, '9.0.0', outDir)
+        def result = PluginDescriptorWriter.scan([classesDir] as Set)
+        PluginDescriptorWriter.writeDescriptors(result.plugins, result.artefactsByType, '9.0.0', null, outDir)
 
         then:
-        def e = thrown(GradleException)
+        def e = thrown(IllegalArgumentException)
         e.message.contains('duplicate')
     }
 
@@ -249,7 +281,7 @@ class GeneratePluginDescriptorTaskSpec extends Specification {
         writeClass(classesDir, 'com/example/GrailsPlugin')
 
         when:
-        def result = GeneratePluginDescriptorTask.scan([classesDir] as Set)
+        def result = PluginDescriptorWriter.scan([classesDir] as Set)
 
         then:
         result.plugins.isEmpty()
@@ -267,8 +299,8 @@ class GeneratePluginDescriptorTaskSpec extends Specification {
         }
 
         when:
-        def result = GeneratePluginDescriptorTask.scan([classesDir] as Set)
-        GeneratePluginDescriptorTask.writeDescriptors(result, '9.0.0', outDir)
+        def result = PluginDescriptorWriter.scan([classesDir] as Set)
+        PluginDescriptorWriter.writeDescriptors(result.plugins, result.artefactsByType, '9.0.0', null, outDir)
 
         then:
         new File(outDir, 'META-INF/grails/plugins.imports').text == "${expected}\n"
@@ -293,8 +325,8 @@ class GeneratePluginDescriptorTaskSpec extends Specification {
         }
 
         when:
-        def result = GeneratePluginDescriptorTask.scan([classesDir] as Set)
-        GeneratePluginDescriptorTask.writeDescriptors(result, '9.0.0', outDir)
+        def result = PluginDescriptorWriter.scan([classesDir] as Set)
+        PluginDescriptorWriter.writeDescriptors(result.plugins, result.artefactsByType, '9.0.0', null, outDir)
         def props = loadProperties(new File(outDir, 'META-INF/grails/plugins/escaped/plugin.properties'))
 
         then:
