@@ -18,13 +18,21 @@
  */
 package org.grails.orm.hibernate.query;
 
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+
 import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.Path;
 import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.metamodel.Attribute;
+import jakarta.persistence.metamodel.EmbeddableType;
 import jakarta.persistence.metamodel.EntityType;
 import jakarta.persistence.metamodel.SingularAttribute;
 
 import org.hibernate.query.criteria.HibernateCriteriaBuilder;
+
+import org.springframework.util.ClassUtils;
 
 import org.grails.datastore.mapping.core.exceptions.ConfigurationException;
 import org.grails.datastore.mapping.query.Query;
@@ -51,6 +59,12 @@ class PropertyComparisonCriterionHandler implements InternalCriterionHandler<Que
         }
 
         HibernateCriteriaBuilder criteriaBuilder = context.getCriteriaBuilder();
+
+        if ((c instanceof Query.EqualsProperty || c instanceof Query.NotEqualsProperty) &&
+                unrelatedEntities(propertyPath, otherPropertyPath)) {
+            return compareIdentifiers(criteriaBuilder, (Path<?>) propertyPath, (Path<?>) otherPropertyPath,
+                    c instanceof Query.NotEqualsProperty);
+        }
 
         Expression<?> left = identifierIfCompared(propertyPath, otherPropertyPath);
         Expression<?> right = identifierIfCompared(otherPropertyPath, propertyPath);
@@ -108,5 +122,127 @@ class PropertyComparisonCriterionHandler implements InternalCriterionHandler<Que
             }
         }
         return null;
+    }
+
+    private static boolean unrelatedEntities(Expression<?> left, Expression<?> right) {
+        return entityTypeOf(left) != null && entityTypeOf(right) != null &&
+                !left.getJavaType().isAssignableFrom(right.getJavaType()) &&
+                !right.getJavaType().isAssignableFrom(left.getJavaType());
+    }
+
+    /**
+     * Hibernate does not compare two entities of classes that are not related, so two associations to such classes
+     * are compared by their identifiers, one part at a time: a generated identifier is one part, and a composite
+     * identifier has one part for each of its properties, paired in the order of their names. This is what
+     * Hibernate 5 does with the columns of the two foreign keys. Identifiers with a different number of parts, or with parts
+     * of types that are never equal, are never equal, so such a comparison matches no row, and its negation matches the rows
+     * that have both associations.
+     */
+    private static Predicate compareIdentifiers(HibernateCriteriaBuilder criteriaBuilder, Path<?> left, Path<?> right, boolean negate) {
+        List<Expression<?>> leftParts = identifierParts(left, entityTypeOf(left));
+        List<Expression<?>> rightParts = identifierParts(right, entityTypeOf(right));
+        if (!comparable(leftParts, rightParts)) {
+            // identifiers of different shapes are never equal: nothing matches ==, and every row that has both associations
+            // matches !=, a null being unknown as it is in SQL
+            return negate ? criteriaBuilder.and(criteriaBuilder.isNotNull(left), criteriaBuilder.isNotNull(right)) :
+                    criteriaBuilder.disjunction();
+        }
+        List<Predicate> parts = new ArrayList<>();
+        for (int i = 0; i < leftParts.size(); i++) {
+            parts.add(negate ? criteriaBuilder.notEqual(leftParts.get(i), rightParts.get(i)) :
+                    criteriaBuilder.equal(leftParts.get(i), rightParts.get(i)));
+        }
+        Predicate[] predicates = parts.toArray(new Predicate[0]);
+        return negate ? criteriaBuilder.or(predicates) : criteriaBuilder.and(predicates);
+    }
+
+    /**
+     * Whether two identifiers have the same number of parts and, part by part, types that a database compares: numbers of
+     * any width with each other, and otherwise a type with itself or with its subtype. A text part and a number part are
+     * never equal, so identifiers that differ in a part's type are not compared at all, as a different number of parts is not.
+     */
+    private static boolean comparable(List<Expression<?>> leftParts, List<Expression<?>> rightParts) {
+        if (leftParts.size() != rightParts.size()) {
+            return false;
+        }
+        for (int i = 0; i < leftParts.size(); i++) {
+            if (!comparableTypes(leftParts.get(i).getJavaType(), rightParts.get(i).getJavaType())) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static boolean floatingPoint(Class<?> type) {
+        Class<?> boxed = ClassUtils.resolvePrimitiveIfNecessary(type);
+        return Float.class.equals(boxed) || Double.class.equals(boxed);
+    }
+
+    private static boolean comparableTypes(Class<?> left, Class<?> right) {
+        Class<?> a = ClassUtils.resolvePrimitiveIfNecessary(left);
+        Class<?> b = ClassUtils.resolvePrimitiveIfNecessary(right);
+        if (Number.class.isAssignableFrom(a) && Number.class.isAssignableFrom(b)) {
+            // an integral number and a floating point one are not compared: a database converts the integral one, which
+            // rounds a value that a double cannot hold, so two parts that are not the same value could compare equal
+            return floatingPoint(a) == floatingPoint(b);
+        }
+        return a.isAssignableFrom(b) || b.isAssignableFrom(a);
+    }
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private static List<Expression<?>> identifierParts(Path<?> path, EntityType<?> entityType) {
+        List<Expression<?>> parts = new ArrayList<>();
+        if (entityType.hasSingleIdAttribute()) {
+            SingularAttribute<?, ?> id = entityType.getId((Class) entityType.getIdType().getJavaType());
+            Path<?> idPath = path.get(id.getName());
+            if (id.getType() instanceof EmbeddableType<?> embeddable) {
+                List<Attribute<?, ?>> attributes = new ArrayList<>(embeddable.getAttributes());
+                attributes.sort(Comparator.comparing(Attribute::getName));
+                for (Attribute<?, ?> attribute : attributes) {
+                    addPart(parts, idPath.get(attribute.getName()), attribute);
+                }
+            }
+            else {
+                addPart(parts, idPath, id);
+            }
+        }
+        else {
+            // a composite identifier without an identifier class: its properties are the properties of the entity
+            List<SingularAttribute<?, ?>> ids = new ArrayList<>();
+            for (SingularAttribute<?, ?> attribute : entityType.getSingularAttributes()) {
+                if (attribute.isId()) {
+                    ids.add(attribute);
+                }
+            }
+            ids.sort(Comparator.comparing(Attribute::getName));
+            for (SingularAttribute<?, ?> attribute : ids) {
+                addPart(parts, path.get(attribute.getName()), attribute);
+            }
+        }
+        return parts;
+    }
+
+    /**
+     * A part of an identifier that is an embedded value is compared by its properties, in the order of their names, and a
+     * part that is an association is compared by the identifier of the associated entity, in turn
+     * one part at a time, as the foreign key of it is: Hibernate does not compare two such entities of classes that are
+     * not related, whatever their identifiers.
+     */
+    private static void addPart(List<Expression<?>> parts, Path<?> part, Attribute<?, ?> attribute) {
+        if (attribute instanceof SingularAttribute<?, ?> singular && singular.getType() instanceof EntityType<?> associated) {
+            parts.addAll(identifierParts(part, associated));
+        }
+        else if (attribute instanceof SingularAttribute<?, ?> singular && singular.getType() instanceof EmbeddableType<?> embeddable) {
+            // an embedded part is the columns of its properties, so two of them are compared by those leaves, whatever the
+            // classes of the embedded values are
+            List<Attribute<?, ?>> attributes = new ArrayList<>(embeddable.getAttributes());
+            attributes.sort(Comparator.comparing(Attribute::getName));
+            for (Attribute<?, ?> embedded : attributes) {
+                addPart(parts, part.get(embedded.getName()), embedded);
+            }
+        }
+        else {
+            parts.add(part);
+        }
     }
 }
