@@ -92,7 +92,6 @@ final class RunningApplication {
     private static final int MAX_TAIL = 8 * 1024
     private static final long MAX_PID = Integer.MAX_VALUE
     private static final String TASK = 'bootRun'
-    private static final String WRAPPER_JAR = 'gradle/wrapper/gradle-wrapper.jar'
     private static final String WRAPPER_MAIN = 'org.gradle.wrapper.GradleWrapperMain'
     private static final List<String> CLASS_PATH_OPTIONS = ['-classpath', '-cp', '--class-path']
 
@@ -427,7 +426,7 @@ final class RunningApplication {
     // Whether a command line is that of the Gradle wrapper of the project running bootRun: the wrapper
     // script itself as an argument, with the task after it, as while a shell runs the script; or the
     // program the script becomes, Java with the wrapper jar of the project as its class path or its jar
-    // and the task after that. Paths are compared as the files they are, never as text that has another.
+    // and the task after that. The jar is the one the script runs, see ConsoleProject.Wrapper. Paths are compared as the files they are, never as text that has another.
     // Where the system does not show the arguments of a process there is nothing to compare, and the
     // number, the instant and the user decide.
     private static boolean isGradleOf(ConsoleProject project, boolean windows, ProcessHandle.Info info) {
@@ -435,14 +434,16 @@ final class RunningApplication {
         if (!shown.isPresent()) {
             return true
         }
-        Path wrapper = project.gradleWrapper(windows).file
+        // the wrapper as run-app found it and ran it: a script that is a link runs the jar beside its file, not beside the link
+        ConsoleProject.Wrapper found = project.gradleWrapper(windows)
+        Path wrapper = found.file
         if (wrapper == null) {
             return false
         }
         List<String> arguments = shown.get().toList()
         // as run-app names it: by the path of the project where the project is a part of a larger build
         String task = project.task(TASK)
-        Path jar = wrapper.getParent().resolve(WRAPPER_JAR)
+        Path jar = found.jar
         for (int i = 0; i < arguments.size(); i++) {
             List<String> after = arguments.subList(i + 1, arguments.size())
             if (!(task in after)) {

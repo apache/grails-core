@@ -94,7 +94,8 @@ final class ConsoleProject {
     private static final int MAX_ENTRIES = 20000
     private static final int MAX_NAMED = 10
     // what the wrapper script of a directory runs
-    private static final List<String> WRAPPER_FILES = ['gradle', 'gradle/wrapper', 'gradle/wrapper/gradle-wrapper.jar', 'gradle/wrapper/gradle-wrapper.properties']
+    private static final String WRAPPER_JAR = 'gradle/wrapper/gradle-wrapper.jar'
+    private static final List<String> WRAPPER_FILES = ['gradle', 'gradle/wrapper', WRAPPER_JAR, 'gradle/wrapper/gradle-wrapper.properties']
     // the directories of those, which the script reaches through whatever link they are
     private static final List<String> WRAPPER_DIRECTORIES = ['gradle', 'gradle/wrapper']
     private static final Supplier<String> ENVIRONMENT = { System.getenv(SAFE_DIRECTORY) } as Supplier<String>
@@ -364,25 +365,20 @@ final class ConsoleProject {
         Path root = getBuildRoot()
         if (root != null && Files.isRegularFile(root.resolve(name))) {
             // the build decides which Gradle it is built with: a wrapper that was left in the project is not the build's
-            Path wrapper = root.resolve(name)
-            String refused = refuseWrapper(root, wrapper, true)
-            return refused == null ? new Wrapper(wrapper, null) :
-                    new Wrapper(null, "The Gradle wrapper ${GradleRunner.line(wrapper)} is not run for the project in ${GradleRunner.line(directory)}: ${refused}")
+            return wrapperIn(root, root.resolve(name), true, windows)
         }
         Path each = directory
         for (int level = 0; each != null && level <= MAX_LEVELS; level++) {
             Path wrapper = each.resolve(name)
             if (Files.isRegularFile(wrapper)) {
-                String refused = refuseWrapper(each, wrapper, level > 0)
-                return refused == null ? new Wrapper(wrapper, null) :
-                        new Wrapper(null, "The Gradle wrapper ${GradleRunner.line(wrapper)} is not run for the project in ${GradleRunner.line(directory)}: ${refused}")
+                return wrapperIn(each, wrapper, level > 0, windows)
             }
             if (isRepositoryRoot(each)) {
-                return new Wrapper(null, noWrapper(name, 'in a directory above it in the same repository'))
+                return new Wrapper(null, noWrapper(name, 'in a directory above it in the same repository'), null)
             }
             each = each.getParent()
         }
-        return new Wrapper(null, noWrapper(name, each == null ? 'in a directory above it' : "in one of the ${MAX_LEVELS} directories above it, which is as far as is looked"))
+        return new Wrapper(null, noWrapper(name, each == null ? 'in a directory above it' : "in one of the ${MAX_LEVELS} directories above it, which is as far as is looked"), null)
     }
 
     /**
@@ -417,24 +413,37 @@ final class ConsoleProject {
         return "The project in ${GradleRunner.line(directory)} has no Gradle wrapper: there is no ${name} in it or ${where}"
     }
 
-    // why the wrapper found in a directory is not run, or null when it is
-    private String refuseWrapper(Path holder, Path wrapper, boolean aboveProject) {
-        if (aboveProject) {
-            if (!hasSettings(holder)) {
-                return "${GradleRunner.line(holder)} is above the project and has no ${SETTINGS.join(' or ')}, so it is not the root of a build the project is part of"
-            }
-        }
+    // The wrapper found in a directory, or why it is not run. A wrapper that is a link is followed to its
+    // file here, once: that file is the one that is held to the rule of a wrapper above, and the one whose
+    // directory has the jar the script runs, which is what a process is known by to be this wrapper.
+    private Wrapper wrapperIn(Path holder, Path wrapper, boolean aboveProject, boolean windows) {
         Path target = null
-        if (Files.isSymbolicLink(wrapper)) {
+        String refused = null
+        if (aboveProject && !hasSettings(holder)) {
+            refused = "${GradleRunner.line(holder)} is above the project and has no ${SETTINGS.join(' or ')}, so it is not the root of a build the project is part of"
+        } else if (Files.isSymbolicLink(wrapper)) {
             try {
                 target = wrapper.toRealPath()
                 if (!target.startsWith(holder.toRealPath())) {
-                    return "it is a link to a file outside ${GradleRunner.line(holder)}"
+                    refused = "it is a link to a file outside ${GradleRunner.line(holder)}"
                 }
             } catch (IOException ignored) {
-                return 'it is a link that cannot be followed'
+                refused = 'it is a link that cannot be followed'
             }
         }
+        refused = refused ?: refuseWrapper(holder, wrapper, target, aboveProject)
+        if (refused != null) {
+            return new Wrapper(null, "The Gradle wrapper ${GradleRunner.line(wrapper)} is not run for the project in ${GradleRunner.line(directory)}: ${refused}", null)
+        }
+        // The script finds the jar it runs from where its file really is: a link does not take the jar with
+        // it. The batch file of Windows finds its jar from where it was started, which is beside the link.
+        Path home = target == null || windows ? wrapper.getParent() : target.getParent()
+        return new Wrapper(wrapper, null, home.resolve(WRAPPER_JAR))
+    }
+
+    // why the wrapper found in a directory is not the user's own where it has to be, or null when it is run;
+    // target is the file a wrapper that is a link leads to, within the directory
+    private String refuseWrapper(Path holder, Path wrapper, Path target, boolean aboveProject) {
         if (above || aboveProject) {
             // the script, the settings that make the directory the root of a build, and what the script runs
             List<String> looked = [wrapper.getFileName().toString()]
@@ -741,9 +750,17 @@ final class ConsoleProject {
         /** Why no wrapper is run, as one line without the full stop; {@code null} when there is one. */
         final String refusal
 
-        private Wrapper(Path file, String refusal) {
+        /**
+         * The jar the wrapper script runs, or {@code null} when there is no wrapper: {@code gradle/wrapper/gradle-wrapper.jar}
+         * beside the script, which for a script that is a link is beside the file the link leads to, since the
+         * script looks for it from where its file really is. The batch file of Windows looks beside the link.
+         */
+        final Path jar
+
+        private Wrapper(Path file, String refusal, Path jar) {
             this.file = file
             this.refusal = refusal
+            this.jar = jar
         }
     }
 }
