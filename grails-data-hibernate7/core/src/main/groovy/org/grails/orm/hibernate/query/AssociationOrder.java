@@ -35,8 +35,8 @@ import org.grails.datastore.mapping.query.Query;
  * <p>
  * An order that stayed in its block had no effect. A query that selects distinct values of a property, grouped
  * values or aggregates can only be ordered by what it selects, and most databases reject any other order. In
- * such a query an order of a block is therefore still left out, unless the query selects its property. So is an
- * order of a block that names nothing the query can resolve.
+ * such a query an order of a block is therefore rejected, unless the query selects its property. So is an
+ * order of a block that names nothing the query can resolve, as it is outside a block.
  *
  * @since 8.0.1
  */
