@@ -36,6 +36,10 @@ import org.apache.grails.core.cli.StandaloneCommand
  * {@code application.groovy} or in {@code application.yml}: the settings it appends would replace it. With
  * {@code --force} it writes all the same.</p>
  *
+ * <p>Everything the command writes is worked out before any of it is written: the class files, the place of the
+ * bean of the password encoder listener, and the configuration file. When one of them cannot be written, the
+ * command says so and writes nothing, so a run that failed leaves nothing in the way of the next one.</p>
+ *
  * For example:
  * 1. <code>s2-quickstart com.yourapp User Role</code>
  * 2. <code>s2-quickstart com.yourapp User Role --groupClassName=RoleGroup</code>
@@ -92,15 +96,41 @@ Example: s2-quickstart --uiOnly
         if (!isFlagPresent('force') && !hasNoneOf(settings.keySet(), uiOnly ? 'its settings' : 'its classes and settings')) {
             return FAILURE
         }
-        boolean registered = true
-        if (uiOnly) {
-            addStatus('\nConfiguring Spring Security; not generating domain classes')
-        } else {
-            addStatus(creating())
-            registered = createDomains()
+        // everything the command writes is worked out first, so that it writes all of it or nothing
+        Map<String, File> classes = uiOnly ? [:] as Map<String, File> : classFiles()
+        BeanDefinitionWriter.Placement listener = null
+        if (!uiOnly) {
+            if (!canCreate(classes)) {
+                return FAILURE
+            }
+            listener = placeListener()
+            if (listener == null) {
+                return FAILURE
+            }
         }
-        String path = appendConfig(settings)
-        if (!registered) {
+        if (!canAppendConfig()) {
+            return FAILURE
+        }
+
+        addStatus(uiOnly ? '\nConfiguring Spring Security; not generating domain classes' : creating())
+        List<String> written = []
+        String path
+        try {
+            classes.each { String templateName, File destination ->
+                boolean present = destination.exists()
+                render(template(templateName + '.groovy.template'), destination, templateAttributes, false)
+                if (!present && destination.exists()) {
+                    written.add(projectPath(destination))
+                }
+            }
+            if (listener?.change) {
+                listener.write()
+                written.add(projectPath(listener.file))
+            }
+            path = appendConfig(settings)
+        } catch (Exception e) {
+            error("s2-quickstart stopped before it had written everything: ${e.message?.trim() ?: e.class.name}. " +
+                    (written ? "It wrote ${written.join(', ')} before that, and nothing else." : 'It wrote nothing.'))
             return FAILURE
         }
         addStatus(uiOnly ? """
@@ -209,24 +239,66 @@ please verify that the values are correct.
     }
 
     /**
-     * @return whether the password encoder listener of the user class is a bean of the project
+     * @return the files of the classes the command creates, in the order they are written, by the name of the
+     * template each is rendered from
      */
-    private boolean createDomains() {
-        generateFile('PersonWithoutInjection', userModel.simpleName)
-        generateFile('PersonPasswordEncoderListener', "${userModel.simpleName}PasswordEncoderListener", 'src/main/groovy')
-        generateFile('Authority', roleModel.simpleName)
-        generateFile('PersonAuthority', userModel.simpleName + roleModel.simpleName)
-
+    private Map<String, File> classFiles() {
+        Map<String, File> files = [:]
+        files.PersonWithoutInjection = classFile(userModel.simpleName)
+        files.PersonPasswordEncoderListener = classFile("${userModel.simpleName}PasswordEncoderListener", 'src/main/groovy')
+        files.Authority = classFile(roleModel.simpleName)
+        files.PersonAuthority = classFile(userModel.simpleName + roleModel.simpleName)
         if (requestmapModel) {
-            generateFile('Requestmap', requestmapModel.simpleName)
+            files.Requestmap = classFile(requestmapModel.simpleName)
         }
-
         if (groupModel) {
-            generateFile('AuthorityGroup', groupModel.simpleName)
-            generateFile('PersonAuthorityGroup', userModel.simpleName + groupModel.simpleName)
-            generateFile('AuthorityGroupAuthority', groupModel.simpleName + roleModel.simpleName)
+            files.AuthorityGroup = classFile(groupModel.simpleName)
+            files.PersonAuthorityGroup = classFile(userModel.simpleName + groupModel.simpleName)
+            files.AuthorityGroupAuthority = classFile(groupModel.simpleName + roleModel.simpleName)
         }
-        registerListener()
+        files
+    }
+
+    private File classFile(String className, String folder = 'grails-app/domain') {
+        file("${folder}/${userModel.packagePath}/${className}.groovy")
+    }
+
+    /**
+     * Says which of the class files cannot be created, when there are any: a file that is there already, which
+     * {@code --force} keeps as it is, a template that is not found, or a folder that cannot be made.
+     *
+     * @param classes the files by the names of their templates
+     * @return whether every file can be created, or is kept with {@code --force}
+     */
+    private boolean canCreate(Map<String, File> classes) {
+        String newLine = System.lineSeparator()
+        List<File> present = classes.values().findAll { File each -> each.exists() }.toList()
+        if (present && !isFlagPresent('force')) {
+            error("These files are there already, so the command wrote nothing:${newLine}" +
+                    present.collect { File each -> "    ${projectPath(each)}${newLine}" }.join('') +
+                    'To keep them as they are and write the rest, run the command again with --force.')
+            return false
+        }
+        List<String> missing = classes.keySet().findAll { String name -> !template(name + '.groovy.template')?.exists() }.toList()
+        if (missing) {
+            error("The command wrote nothing: it has no template ${missing.collect { String name -> name + '.groovy.template' }.join(', ')}.")
+            return false
+        }
+        File blocked = classes.values().find { File each -> !each.exists() && !canBeCreated(each) }
+        if (blocked != null) {
+            error("${projectPath(blocked)} cannot be created, so the command wrote nothing.")
+            return false
+        }
+        true
+    }
+
+    // whether the folder of the file is there to write to, or the nearest folder above it that is
+    private static boolean canBeCreated(File target) {
+        File parent = target.absoluteFile.parentFile
+        while (parent != null && !parent.exists()) {
+            parent = parent.parentFile
+        }
+        parent != null && parent.isDirectory() && parent.canWrite()
     }
 
     private Map<String, Object> settings(boolean uiOnly) {
@@ -257,38 +329,38 @@ please verify that the values are correct.
         settings
     }
 
-    private void generateFile(String templateName, String className, String folder = 'grails-app/domain') {
-        render(template(templateName + '.groovy.template'),
-                file("${folder}/${userModel.packagePath}/${className}.groovy"),
-                templateAttributes, false)
-    }
-
     /**
-     * Makes the password encoder listener a bean: in {@code resources.groovy} of an application, in the plugin
-     * class of a plugin that has no {@code resources.groovy}, and otherwise in a new {@code resources.groovy}.
-     * The bean is written once, at the start of the closure the project is started with: the last
-     * {@code beans = { }} of {@code resources.groovy}, or the closure {@code doWithSpring()} returns. A file
-     * that leaves it open which closure that is gets no bean, see {@link BeanDefinitionWriter}.
+     * Works out where the password encoder listener becomes a bean: in {@code resources.groovy} of an
+     * application, in the plugin class of a plugin that has no {@code resources.groovy}, and otherwise in a new
+     * {@code resources.groovy}. The bean is written once, at the start of the closure the project is started
+     * with: the last {@code beans = { }} of {@code resources.groovy}, or the closure {@code doWithSpring()}
+     * returns. A file that leaves it open which closure that is gets no bean, see {@link BeanDefinitionWriter};
+     * that is said here, before the command has written anything.
      *
-     * @return whether the listener is a bean now
+     * @return the file with the bean, to be written, or {@code null} when the bean cannot be added, which was said
      */
-    private boolean registerListener() {
+    private BeanDefinitionWriter.Placement placeListener() {
         String listener = "${userModel.simpleName}PasswordEncoderListener"
         BeanDefinitionWriter writer = new BeanDefinitionWriter("${userModel.propertyName}PasswordEncoderListener",
                 userModel.packageName, listener)
 
         File resources = file(RESOURCES)
         File pluginClass = resources.isFile() ? null : findPluginClass()
-        File target = pluginClass ?: resources
-        String refused = pluginClass ? writer.addToPluginClass(pluginClass, '            ') : writer.addToResources(resources, '    ')
-        if (refused == null) {
-            return true
+        BeanDefinitionWriter.Placement placement = pluginClass ?
+                writer.placeInPluginClass(pluginClass, '            ') : writer.placeInResources(resources, '    ')
+        String refused = placement.refused
+        if (refused == null && placement.change && !(placement.file.exists() ? placement.file.canWrite() : canBeCreated(placement.file))) {
+            refused = 'cannot be written to'
         }
-        error("The password encoder listener is not registered: ${projectPath(target)} ${refused}. " +
-                "Until ${pluginClass ? "the closure that 'doWithSpring()' returns" : "the closure the application reads from 'beans'"} " +
-                "has the bean '${writer.definition}', with '${writer.beanImport}', passwords are stored as they are given. " +
-                'Add the bean by hand.')
-        false
+        if (refused == null) {
+            return placement
+        }
+        String closure = pluginClass ? "the closure that 'doWithSpring()' returns" : "the closure the application reads from 'beans'"
+        error("The password encoder listener is not registered: ${projectPath(placement.file)} ${refused}. " +
+                "Without the bean '${writer.definition}', with '${writer.beanImport}', in ${closure} " +
+                'passwords are stored as they are given, so the command wrote nothing. ' +
+                'Change the file so that the command can add the bean, or add the bean by hand, and run the command again.')
+        null
     }
 
     private File findPluginClass() {

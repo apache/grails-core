@@ -19,6 +19,8 @@
 
 package org.apache.grails.security.cli
 
+import groovy.io.FileType
+
 import spock.lang.Issue
 import spock.lang.Specification
 import spock.lang.TempDir
@@ -156,20 +158,34 @@ class S2QuickstartListenerBeanSpec extends Specification {
     }
 
     @Unroll
-    def "s2-quickstart fails, says what to add and leaves resources.groovy as it is when #what"() {
+    def "s2-quickstart fails, says what to add and writes nothing when #what, and runs once the file is corrected"() {
         given:
         write(RESOURCES, text)
+        Map<String, String> before = snapshot()
 
         when:
         boolean result = run(QUICKSTART)
 
-        then:
+        then: 'no class, no listener, no bean and no setting is written'
         !result
-        written(RESOURCES) == text
+        snapshot() == before
+        errors.toString().contains('so the command wrote nothing')
         errors.toString().contains("The password encoder listener is not registered: ${RESOURCES} ${said}")
         errors.toString().contains("'${BEAN}(UserPasswordEncoderListener)'")
         errors.toString().contains("'import ${LISTENER}'")
         errors.toString().contains('passwords are stored as they are given')
+
+        when: 'the file is corrected and the same command is run again, without --force'
+        errors.reset()
+        write(RESOURCES, 'beans = {\n    marker(Object)\n}\n')
+        result = run(QUICKSTART)
+
+        then: 'nothing of the run that failed is in its way'
+        result
+        errors.toString() == ''
+        beans() == [marker: 'java.lang.Object', (BEAN): LISTENER]
+        new File(project, 'grails-app/domain/com/example/User.groovy').isFile()
+        written('grails-app/conf/application.yml').count('userDomainClassName') == 1
 
         where:
         what                                            | text                                                                              || said
@@ -195,15 +211,27 @@ class S2QuickstartListenerBeanSpec extends Specification {
         given: 'a comment that the line after the brace would be part of'
         String text = 'beans = { /* the beans\n    of the application */\n    marker(Object)\n}\n'
         write(RESOURCES, text)
+        Map<String, String> before = snapshot()
 
         when:
         boolean result = run(QUICKSTART)
 
         then:
         !result
-        written(RESOURCES) == text
+        snapshot() == before
         errors.toString().contains("${RESOURCES} has a closure in line 1 that the command cannot add a line to")
-        beans() == [marker: 'java.lang.Object']
+
+        when: 'the bean is added by hand, as the command says, and the command is run again'
+        errors.reset()
+        write(RESOURCES, "import ${LISTENER}\n\nbeans = { /* the beans\n    of the application */\n    ${BEAN}(UserPasswordEncoderListener)\n    marker(Object)\n}\n")
+        String byHand = written(RESOURCES)
+        result = run(QUICKSTART)
+
+        then:
+        result
+        errors.toString() == ''
+        written(RESOURCES) == byHand
+        beans() == [(BEAN): LISTENER, marker: 'java.lang.Object']
     }
 
     @Unroll
@@ -235,19 +263,32 @@ class S2QuickstartListenerBeanSpec extends Specification {
     }
 
     @Unroll
-    def "s2-quickstart fails and leaves the plugin class as it is when doWithSpring() #what"() {
+    def "s2-quickstart fails and writes nothing when doWithSpring() #what, and runs once the plugin class is corrected"() {
         given:
-        String text = "package demo\n\nimport grails.plugins.Plugin\n\nclass DemoGrailsPlugin extends Plugin {\n\n${method}\n}\n"
-        write(PLUGIN_CLASS, text)
+        String head = 'package demo\n\nimport grails.plugins.Plugin\n\nclass DemoGrailsPlugin extends Plugin {\n\n'
+        write(PLUGIN_CLASS, "${head}${method}\n}\n")
+        Map<String, String> before = snapshot()
 
         when:
         boolean result = run(QUICKSTART)
 
         then:
         !result
-        written(PLUGIN_CLASS) == text
+        snapshot() == before
         errors.toString().contains("The password encoder listener is not registered: ${PLUGIN_CLASS} ${said}")
         errors.toString().contains("'${BEAN}(UserPasswordEncoderListener)'")
+        errors.toString().contains('so the command wrote nothing')
+
+        when: 'the class is corrected and the same command is run again, without --force'
+        errors.reset()
+        write(PLUGIN_CLASS, "${head}    Closure doWithSpring() { {->\n            marker(Object)\n        }\n    }\n}\n")
+        result = run(QUICKSTART)
+
+        then:
+        result
+        errors.toString() == ''
+        pluginBeans() == [marker: 'java.lang.Object', (BEAN): LISTENER]
+        written('grails-app/conf/application.yml').count('userDomainClassName') == 1
 
         where:
         what                           | method                                                                                                    || said
@@ -321,6 +362,17 @@ class S2QuickstartListenerBeanSpec extends Specification {
             Thread.currentThread().contextClassLoader = previous
             loader.close()
         }
+    }
+
+    /**
+     * @return every file of the project, by its path in the project
+     */
+    private Map<String, String> snapshot() {
+        Map<String, String> files = [:]
+        project.eachFileRecurse(FileType.FILES) { File file ->
+            files.put(project.toPath().relativize(file.toPath()).toString().replace(File.separator, '/'), file.text)
+        }
+        files
     }
 
     private void write(String path, String text) {

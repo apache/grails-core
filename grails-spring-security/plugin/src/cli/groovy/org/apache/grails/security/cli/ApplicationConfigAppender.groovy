@@ -170,6 +170,23 @@ class ApplicationConfigAppender {
     }
 
     /**
+     * @return why settings cannot be appended, as a sentence without its full stop, or {@code null} when they can:
+     * the file is there and can be written to, or can be created
+     */
+    String whyNotAppendable() {
+        String path = getPath()
+        File config = new File(projectDirectory, path)
+        if (config.exists()) {
+            return config.isFile() && config.canWrite() ? null : "${path} cannot be written to".toString()
+        }
+        File parent = config.absoluteFile.parentFile
+        while (parent != null && !parent.exists()) {
+            parent = parent.parentFile
+        }
+        parent != null && parent.isDirectory() && parent.canWrite() ? null : "${path} cannot be created".toString()
+    }
+
+    /**
      * Appends the settings to the configuration of the project.
      *
      * @param comment a line that says where the settings come from

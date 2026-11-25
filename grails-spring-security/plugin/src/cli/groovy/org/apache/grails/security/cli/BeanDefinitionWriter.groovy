@@ -54,8 +54,10 @@ import org.codehaus.groovy.syntax.Types
  * that closure is known without running the script: every assignment of {@code beans} is a statement of the
  * script itself, {@code beans = { ... }}, and nothing else in the script names {@code beans} or returns from it.
  * The definition then goes to the start of the last of those closures. Anything else is refused with the reason,
- * and the file is left as it is, as it is when the changed file would not have the definition where it is
- * read.</p>
+ * as it is when the changed file would not have the definition where it is read.</p>
+ *
+ * <p>Nothing is written while the place is worked out: the result is a {@link Placement}, which is written
+ * afterwards, so that a command can refuse before it has changed any file.</p>
  */
 @CompileStatic
 class BeanDefinitionWriter {
@@ -95,41 +97,35 @@ class BeanDefinitionWriter {
     }
 
     /**
-     * Adds the definition to {@code resources.groovy}, which is created when it is not there.
+     * Works out how the definition is added to {@code resources.groovy}, which is created when it is not there.
      *
      * @param resources the file
      * @param indent what the line of the definition starts with
-     * @return {@code null} when the closure an application reads has the definition now, and otherwise what the
-     * file has that kept the definition out of it, as the end of a sentence that starts with the name of the file
+     * @return the file as it is to be written, or what it has that keeps the definition out of it
      */
-    String addToResources(File resources, String indent) {
+    Placement placeInResources(File resources, String indent) {
         List<String> lines = resources.isFile() ? resources.readLines('UTF-8') : [] as List<String>
         if (lines.every { String line -> line.trim().isEmpty() }) {
-            resources.parentFile.mkdirs()
-            write(resources, [beanImport, '', "${BEANS} = {".toString(), indent + definition, '}'])
-            return null
+            return new Placement(resources, [beanImport, '', "${BEANS} = {".toString(), indent + definition, '}'], null)
         }
         BeansScript script
         try {
             script = new BeansScript(parse(lines, resources.name))
         } catch (CompilationFailedException e) {
-            return unreadable(e)
+            return new Placement(resources, null, unreadable(e))
         }
         if (script.closures.isEmpty()) {
-            if (script.undecided() != null) {
-                return script.undecided()
-            }
-            if (script.hasCode) {
-                return "has no line with '${BEANS} = {'"
+            String refused = script.undecided() ?: (script.hasCode ? "has no line with '${BEANS} = {'".toString() : null)
+            if (refused != null) {
+                return new Placement(resources, null, refused)
             }
             lines.addAll(["${BEANS} = {".toString(), indent + definition, '}'])
             addImport(lines, script.module)
-            write(resources, lines)
-            return null
+            return new Placement(resources, lines, null)
         }
         String undecided = script.undecided()
         if (undecided != null) {
-            return undecided
+            return new Placement(resources, null, undecided)
         }
         change(resources, lines, script.module, script.closures.last(), indent) { ModuleNode changed ->
             BeansScript after = new BeansScript(changed)
@@ -138,36 +134,37 @@ class BeanDefinitionWriter {
     }
 
     /**
-     * Adds the definition to the closure that {@code doWithSpring()} of a plugin class returns.
+     * Works out how the definition is added to the closure that {@code doWithSpring()} of a plugin class returns.
      *
      * @param pluginClass the source file of the plugin class
      * @param indent what the line of the definition starts with
-     * @return {@code null} when the closure has the definition now, and otherwise what the file has that kept the
-     * definition out of it, as the end of a sentence that starts with the name of the file
+     * @return the file as it is to be written, or what it has that keeps the definition out of it
      */
-    String addToPluginClass(File pluginClass, String indent) {
+    Placement placeInPluginClass(File pluginClass, String indent) {
         List<String> lines = pluginClass.readLines('UTF-8')
         ModuleNode module
         try {
             module = parse(lines, pluginClass.name)
         } catch (CompilationFailedException e) {
-            return unreadable(e)
+            return new Placement(pluginClass, null, unreadable(e))
         }
         ClosureExpression closure = returnedByDoWithSpring(module)
         if (closure == null) {
-            return "has no closure that '${DO_WITH_SPRING}()' returns as its only statement"
+            return new Placement(pluginClass, null, "has no closure that '${DO_WITH_SPRING}()' returns as its only statement")
         }
         change(pluginClass, lines, module, closure, indent) { ModuleNode changed -> returnedByDoWithSpring(changed) }
     }
 
-    // adds the definition and the import, and writes the file when the closure that is read then has the definition
-    private String change(File file, List<String> lines, ModuleNode module, ClosureExpression closure, String indent,
+    // adds the definition and the import, which are to be written when the closure that is read then has the definition
+    private Placement change(File file, List<String> lines, ModuleNode module, ClosureExpression closure, String indent,
                           Closure<ClosureExpression> closureOf) {
         MethodCallExpression present = definitionIn(closure)
         if (present != null) {
-            return isOfTheClass(present) ? null : "has a bean '${beanName}' of another class in line ${present.lineNumber}"
+            return new Placement(file, null, isOfTheClass(present) ? null :
+                    "has a bean '${beanName}' of another class in line ${present.lineNumber}".toString())
         }
-        String refused = "has a closure in line ${closure.lineNumber} that the command cannot add a line to"
+        Placement refused = new Placement(file, null,
+                "has a closure in line ${closure.lineNumber} that the command cannot add a line to".toString())
         List<String> changed = new ArrayList<String>(lines)
         if (!addDefinition(changed, closure, indent)) {
             return refused
@@ -183,8 +180,7 @@ class BeanDefinitionWriter {
         if (added == null || !isOfTheClass(added) || statements(read).size() != statements(closure).size() + 1) {
             return refused
         }
-        write(file, changed)
-        null
+        new Placement(file, changed, null)
     }
 
     private static String unreadable(CompilationFailedException e) {
@@ -294,11 +290,49 @@ class BeanDefinitionWriter {
         }
     }
 
-    private static void write(File target, List<String> lines) {
-        target.withWriter('UTF-8') { Writer writer ->
-            lines.each { String line ->
-                writer.write(line)
-                writer.write(System.lineSeparator())
+    /**
+     * Where the definition goes, worked out without writing: the file with its lines as they are to be, or the
+     * reason the definition cannot be added to it.
+     */
+    static final class Placement {
+
+        /** The file that has the bean definitions. */
+        final File file
+
+        /**
+         * What the file has that keeps the definition out of it, as the end of a sentence that starts with the
+         * name of the file, or {@code null} when the definition is there or can be added.
+         */
+        final String refused
+
+        private final List<String> lines
+
+        private Placement(File file, List<String> lines, String refused) {
+            this.file = file
+            this.lines = lines
+            this.refused = refused
+        }
+
+        /**
+         * @return whether {@link #write} changes the file: not when the definition is there already, or is refused
+         */
+        boolean isChange() {
+            lines != null
+        }
+
+        /**
+         * Writes the file with the definition, when it is not there already.
+         */
+        void write() {
+            if (lines == null) {
+                return
+            }
+            file.parentFile.mkdirs()
+            file.withWriter('UTF-8') { Writer writer ->
+                lines.each { String line ->
+                    writer.write(line)
+                    writer.write(System.lineSeparator())
+                }
             }
         }
     }

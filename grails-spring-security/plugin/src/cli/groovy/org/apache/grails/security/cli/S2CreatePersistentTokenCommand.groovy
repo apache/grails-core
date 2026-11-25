@@ -52,7 +52,7 @@ Example: s2-create-persistent-token com.yourapp.PersistentLogin
     @Override
     boolean handle() {
         final Model domainModel = domainModel(USAGE_MESSAGE)
-        if (domainModel == null) {
+        if (domainModel == null || !canAppendConfig()) {
             return FAILURE
         }
         final String domainClass = "${domainModel.packageName}.${domainModel.simpleName}"

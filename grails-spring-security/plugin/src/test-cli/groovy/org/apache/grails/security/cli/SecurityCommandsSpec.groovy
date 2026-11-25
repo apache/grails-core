@@ -535,9 +535,10 @@ environments {
         ]
     }
 
-    def "s2-quickstart fails and says so when it cannot add the bean of the listener to resources.groovy"() {
+    def "s2-quickstart fails, says so and writes nothing when it cannot add the bean of the listener to resources.groovy"() {
         given: 'a resources.groovy that is written another way'
         write(RESOURCES, 'beans {\n}\n')
+        Map<String, String> before = snapshot()
 
         when:
         boolean result = run(new S2QuickstartCommand(), 's2-quickstart com.example User Role')
@@ -549,9 +550,10 @@ environments {
         errors.toString().contains("'userPasswordEncoderListener(UserPasswordEncoderListener)'")
         errors.toString().contains("'import com.example.UserPasswordEncoderListener'")
 
-        and: 'the classes and the settings are there'
-        written('grails-app/domain/com/example/User.groovy')
-        config().getProperty("${SETTINGS}.authority.className", String) == 'com.example.Role'
+        and: 'no class and no setting is written either: a user class without the listener would keep passwords as they are given'
+        snapshot() == before
+        generated() == [RESOURCES]
+        config().getProperty("${SETTINGS}.authority.className", String) == null
     }
 
     def "s2-quickstart in a plugin without resources.groovy adds the bean of the listener to the plugin class"() {
@@ -648,6 +650,7 @@ class DemoGrailsPlugin extends Plugin {
         !result
         written(pluginClass) == text
         errors.toString().contains("The password encoder listener is not registered: ${pluginClass} has no closure that 'doWithSpring()' returns as its only statement.")
+        generated() == []
     }
 
     def "s2-quickstart adds the bean of the listener once, to the last beans = { that is not in a comment"() {

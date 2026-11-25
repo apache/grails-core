@@ -98,6 +98,20 @@ trait CommandLineHelper {
     }
 
     /**
+     * Says why the settings of the command cannot be appended to the configuration of the project, when they
+     * cannot. A command asks before it writes anything, so that it writes all of its files or none.
+     *
+     * @return whether the settings can be appended
+     */
+    boolean canAppendConfig() {
+        String why = new ApplicationConfigAppender(file('')).whyNotAppendable()
+        if (why != null) {
+            GrailsConsole.getInstance().error("${why}, so the command wrote nothing.")
+        }
+        why == null
+    }
+
+    /**
      * Appends settings to the configuration of the project, see {@link ApplicationConfigAppender}.
      *
      * @param settings the settings by their full keys
