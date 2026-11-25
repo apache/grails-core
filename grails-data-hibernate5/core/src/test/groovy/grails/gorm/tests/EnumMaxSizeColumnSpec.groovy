@@ -29,7 +29,7 @@ import spock.lang.Unroll
 class EnumMaxSizeColumnSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
 
     void setupSpec() {
-        manager.domainClasses.addAll([EnumSizedThing, EnumListedThing, EnumCollectionThing, EnumMatrixThing, EnumMatrixCollectionThing])
+        manager.domainClasses.addAll([EnumSizedThing, EnumListedThing, EnumCollectionThing, EnumMatrixThing, EnumMatrixCollectionThing, EnumShortThing])
     }
 
     void "maxSize constrains the column of an enum property like it does a string property"() {
@@ -114,6 +114,20 @@ class EnumMaxSizeColumnSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckMan
         'inList of ONE and THREE'                        | 'listed' | 5
         'inList of ONE and THREE and maxSize 40'         | 'both'  | 40
         'no constraint'                                  | 'plain' | 255
+    }
+
+    void "a maxSize shorter than the longest constant name does not make the column too short for a valid value"() {
+        given: 'a value whose name is longer than the maxSize, which maxSize does not validate for an enum'
+        new EnumShortThing(state: EnumMatrixKind.THREE, label: 'ab').save(flush: true, failOnError: true)
+        manager.session.clear()
+
+        when:
+        Map<String, Integer> lengths = lengthsOf('enum_short_thing')
+
+        then: 'the enum column holds the longest name, THREE, and the string column keeps maxSize 2'
+        lengths['state'] == 5
+        lengths['label'] == 2
+        EnumShortThing.list().first().state == EnumMatrixKind.THREE
     }
 
     void "an enum property stored as its ordinal has no character column to size"() {
@@ -223,5 +237,16 @@ class EnumMatrixCollectionThing {
         kinds maxSize: 1
         sizedKinds size: 1..2
         listedKinds inList: [[EnumMatrixKind.ONE] as Set]
+    }
+}
+
+@Entity
+class EnumShortThing {
+    EnumMatrixKind state
+    String label
+
+    static constraints = {
+        state maxSize: 2
+        label maxSize: 2
     }
 }

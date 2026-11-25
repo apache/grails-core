@@ -1343,3 +1343,5 @@ With Hibernate 5, an enum property stored as a string ignored a `maxSize` constr
 property, and a column created from an `inList` of enum constants is as long as the longest constant name. The length
 only shows in a schema that Hibernate creates: an application that manages its schema by hand or with a migration tool
 keeps the columns it has, and `hbm2ddl.auto: update` does not change an existing column.
+The one difference from a `String` property is a `maxSize` shorter than the longest constant name: `maxSize` does not validate an
+enum, so the column is made as long as the longest name, and no value of the enum fails at the database.
