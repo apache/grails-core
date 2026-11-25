@@ -154,7 +154,7 @@ class UndefinedAliasSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckMa
         ].combinations().collect { List row -> row[0] + row[1..2] }
     }
 
-    void 'a nested LEFT sort keeps an empty collection with root alias #rootAlias using #sortForm and pagination #paged'() {
+    void 'a nested LEFT sort keeps an empty collection with root alias #rootAlias and fetch #fetchPath using #sortForm and pagination #paged'() {
         given:
         new Team(name: 'Nested empty').save(failOnError: true)
         final populated = new Team(name: 'Nested populated').save(failOnError: true)
@@ -166,12 +166,12 @@ class UndefinedAliasSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckMa
         manager.session.flush()
         manager.session.clear()
         def criteria = (rootAlias == null ? new DetachedCriteria(Team) : new DetachedCriteria(Team, rootAlias)).like('name', 'Nested%')
-        final arguments = [fetch: ['players.team': JoinType.LEFT]] + (paged ? [max: 10] : [:])
+        final arguments = [fetch: [(fetchPath): JoinType.LEFT]] + (paged ? [max: 10] : [:])
         if (sortForm == 'stored') {
-            criteria = criteria.sort('players.team.name')
+            criteria = criteria.sort(sortProperty)
         }
         else {
-            arguments.sort = sortForm == 'map' ? ['players.team.name': 'asc'] : 'players.team.name'
+            arguments.sort = sortForm == 'map' ? [(sortProperty): 'asc'] : sortProperty
         }
 
         when:
@@ -184,7 +184,32 @@ class UndefinedAliasSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckMa
         results.find { it.name == 'Nested populated' }.players*.name.sort() == ['Nested player A', 'Nested player B']
 
         where:
-        [rootAlias, sortForm, paged] << [[null, 'players'], ['argument', 'stored', 'map'], [false, true]].combinations()
+        [rootAlias, fetchPath, sortProperty, sortForm, paged] << [
+                [
+                        [null, 'players.team', 'players.team.name'],
+                        ['players', 'players.team', 'players.team.name'],
+                        ['t', 't.players.team', 't.players.team.name'],
+                        ['t', 't.players.team', 'players.team.name'],
+                        ['t', 'players.team', 't.players.team.name'],
+                        ['players', 'players.players.team', 'players.players.team.name'],
+                ],
+                ['argument', 'stored', 'map'],
+                [false, true],
+        ].combinations().collect { List row -> row[0] + row[1..2] }
+    }
+
+    void 'a root-qualified #replacement replaces a canonical INNER fetch request'() {
+        given:
+        new Team(name: 'Fetch alias empty').save(failOnError: true, flush: true)
+        manager.session.clear()
+        def criteria = new DetachedCriteria(Team, 't').eq('name', 'Fetch alias empty').join('club', JoinType.INNER)
+        criteria = replacement == 'join' ? criteria.join('t.club') : criteria.select('t.club')
+
+        expect:
+        criteria.list(sort: 't.name')*.name == ['Fetch alias empty']
+
+        where:
+        replacement << ['join', 'select']
     }
 
     private static final List<String> TEAMS_BY_NAME = ['Arsenal First Team', 'Chelsea First Team', 'Manchester United First Team', 'Unattached First Team']

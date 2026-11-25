@@ -1170,6 +1170,7 @@ public abstract class AbstractHibernateQuery extends Query {
 
     @Override
     public Query join(String property) {
+        property = normalizeFetchPath(property);
         this.hasJoins = true;
         supersedeJoinType(property);
         if (criteria != null)
@@ -1181,6 +1182,7 @@ public abstract class AbstractHibernateQuery extends Query {
 
     @Override
     public Query join(String property, JoinType joinType) {
+        property = normalizeFetchPath(property);
         this.hasJoins = true;
         this.joinTypes.put(property, joinType);
         this.supersededJoinTypes.remove(property);
@@ -1204,6 +1206,7 @@ public abstract class AbstractHibernateQuery extends Query {
 
     @Override
     public Query select(String property) {
+        property = normalizeFetchPath(property);
         this.hasJoins = true;
         supersedeJoinType(property);
         if (criteria != null)
@@ -1211,6 +1214,19 @@ public abstract class AbstractHibernateQuery extends Query {
         else if (detachedCriteria != null)
             detachedCriteria.setFetchMode(property, FetchMode.SELECT);
         return this;
+    }
+
+    /**
+     * Uses the same root-relative path for a fetch request and for a sort through that association.
+     * Preserve a valid association path when its first segment also names the root alias, and strip
+     * a qualifying root alias only once.
+     */
+    private String normalizeFetchPath(String property) {
+        String rootAlias = criteria != null ? criteria.getAlias() : detachedCriteria != null ? detachedCriteria.getAlias() : null;
+        if (property != null && rootAlias != null && property.startsWith(rootAlias + '.') && !isAssociationSortPath(property)) {
+            return property.substring(rootAlias.length() + 1);
+        }
+        return property;
     }
 
     @Override

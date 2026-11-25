@@ -101,6 +101,15 @@ public class GrailsHibernateQueryUtils {
         if (argMap.containsKey(DynamicFinder.ARGUMENT_READ_ONLY)) {
             c.setReadOnly(ClassUtils.getBooleanFromMap(DynamicFinder.ARGUMENT_READ_ONLY, argMap));
         }
+        // Typed collection fetches must see the limits before choosing how to load their elements.
+        final int max = maxParam == null ? -1 : maxParam;
+        final int offset = offsetParam == null ? -1 : offsetParam;
+        if (max > -1) {
+            c.setMaxResults(max);
+        }
+        if (offset > -1) {
+            c.setFirstResult(offset);
+        }
         String orderParam = (String) argMap.get(DynamicFinder.ARGUMENT_ORDER);
         Object fetchObj = argMap.get(DynamicFinder.ARGUMENT_FETCH);
         Map fetch = fetchObj instanceof Map ? (Map) fetchObj : null;
@@ -118,14 +127,6 @@ public class GrailsHibernateQueryUtils {
             }
         }
 
-        final int max = maxParam == null ? -1 : maxParam;
-        final int offset = offsetParam == null ? -1 : offsetParam;
-        if (max > -1) {
-            c.setMaxResults(max);
-        }
-        if (offset > -1) {
-            c.setFirstResult(offset);
-        }
         if (ClassUtils.getBooleanFromMap(DynamicFinder.ARGUMENT_LOCK, argMap)) {
             c.setLockMode(LockMode.PESSIMISTIC_WRITE);
             c.setCacheable(false);
