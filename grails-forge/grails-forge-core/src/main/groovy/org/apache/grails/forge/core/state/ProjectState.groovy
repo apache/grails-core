@@ -110,11 +110,41 @@ final class ProjectState {
     final ProjectManifest manifest
     final ProjectLock lock
     private final BaselineIndex baseline
+    private final Map<String, byte[]> read
 
-    private ProjectState(ProjectManifest manifest, ProjectLock lock, BaselineIndex baseline) {
+    private ProjectState(ProjectManifest manifest, ProjectLock lock, BaselineIndex baseline, byte[] manifestBytes, byte[] lockBytes, byte[] indexBytes) {
         this.manifest = manifest
         this.lock = lock
         this.baseline = baseline
+        Map<String, byte[]> files = new LinkedHashMap<>()
+        files.put(MANIFEST, manifestBytes.clone())
+        files.put(LOCK, lockBytes.clone())
+        if (indexBytes != null) {
+            files.put(BASELINE_INDEX, indexBytes.clone())
+        }
+        this.read = files
+    }
+
+    /**
+     * The bytes this state was read from. What changes a project works out the change from this state
+     * and writes it only when the files of the state are still these bytes: reading a file again for
+     * that would take what another command wrote in the meantime for what the change was worked out from.
+     *
+     * @param file {@link #MANIFEST}, {@link #LOCK} or {@link #BASELINE_INDEX}
+     * @return the bytes of the file as they were when this state was read
+     * @throws IllegalArgumentException for another path
+     * @throws IllegalStateException for the index of a state that was read without it, see {@link #readSelection(Path)}
+     * @since 9.0
+     */
+    byte[] content(String file) {
+        byte[] bytes = read.get(file)
+        if (bytes == null) {
+            if (file == BASELINE_INDEX) {
+                throw new IllegalStateException('The state was read without the index of its baseline')
+            }
+            throw new IllegalArgumentException("${file} is no file of the state of a project")
+        }
+        return bytes.clone()
     }
 
     /**
@@ -287,13 +317,13 @@ final class ProjectState {
             throw new ProjectStateException("${LOCK} does not belong to ${MANIFEST}: ${apart}")
         }
         if (indexBytes == null) {
-            return new ProjectState(manifest, lock, null)
+            return new ProjectState(manifest, lock, null, manifestBytes, lockBytes, null)
         }
         BaselineIndex baseline = BaselineIndex.read(indexBytes)
         if (lock.baselineIndexSha256 != StateYaml.sha256(indexBytes)) {
             throw new ProjectStateException("${BASELINE_INDEX} is not the baseline ${LOCK} was written with")
         }
-        return new ProjectState(manifest, lock, baseline)
+        return new ProjectState(manifest, lock, baseline, manifestBytes, lockBytes, indexBytes)
     }
 
     private static String apart(ProjectManifest manifest, ProjectLock lock, byte[] manifestBytes) {

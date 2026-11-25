@@ -273,9 +273,11 @@ final class FeatureAddition {
                     "left out with ${EXCLUDE_OPTION} when the application was created: adding a feature does not change what the application was created with")
         }
 
-        byte[] manifestBytes = bytes(projectDirectory, ProjectState.MANIFEST)
-        byte[] lockBytes = bytes(projectDirectory, ProjectState.LOCK)
-        byte[] indexBytes = bytes(projectDirectory, ProjectState.BASELINE_INDEX)
+        // The record as it was read, and not as it is now: the plan is worked out from what was read,
+        // and is written only to a project whose record is still that
+        byte[] manifestBytes = state.content(ProjectState.MANIFEST)
+        byte[] lockBytes = state.content(ProjectState.LOCK)
+        byte[] indexBytes = state.content(ProjectState.BASELINE_INDEX)
         List<String> recorded = manifest.requestedFeatures*.name
         // a feature that was asked for by name makes way when that was said, and is no more one that was asked for
         Map<String, String> inThePlace = inThePlaceOfOnesAskedFor(available, recorded, toAdd)
@@ -531,8 +533,8 @@ final class FeatureAddition {
     RegeneratedProject regenerate(Path projectDirectory, @Nullable OperatingSystem operatingSystem, List<Pack> packs) {
         ProjectState state = replayable(projectDirectory)
         List<Pack> ofTheLock = recordedPacks(state.lock, state.manifest.preset, packs)
-        RenderedProject rendered = replayed(projectDirectory, state, bytes(projectDirectory, ProjectState.MANIFEST), bytes(projectDirectory, ProjectState.LOCK),
-                bytes(projectDirectory, ProjectState.BASELINE_INDEX), operatingSystem, null, ofTheLock)
+        RenderedProject rendered = replayed(projectDirectory, state, state.content(ProjectState.MANIFEST), state.content(ProjectState.LOCK),
+                state.content(ProjectState.BASELINE_INDEX), operatingSystem, null, ofTheLock)
         return new RegeneratedProject(rendered, state)
     }
 
@@ -667,8 +669,12 @@ final class FeatureAddition {
             for (String path : unlike) {
                 BaselineFile generated = state.baseline.find(path)
                 byte[] now = before.content(path)
-                if (generated != null && now != null && isYaml(path) &&
-                        sameButForOrder(bytes(projectDirectory, "${ProjectState.BASELINE_FILES}/${BaselineIndex.copyPath(path)}".toString()), now)) {
+                if (generated == null || now == null || !isYaml(path)) {
+                    continue
+                }
+                // the copy the index that was read names, and not one another command has written since
+                byte[] copy = bytes(projectDirectory, "${ProjectState.BASELINE_FILES}/${BaselineIndex.copyPath(path)}".toString())
+                if (ProjectTransaction.sha256(copy) == generated.sha256 && sameButForOrder(copy, now)) {
                     inAnotherOrder.add(path)
                 }
             }
@@ -881,14 +887,10 @@ final class FeatureAddition {
                             'compares lines, cannot know that the two are one dependency. Keep one of them').toString()
                 }
             }
-            if (edited && path.startsWith(CONFIGURATION_DIRECTORY) && path.endsWith('.yml')) {
-                List<String> twice = keysTwice(result) - keysTwice(working.content) - keysTwice(proposed)
-                if (!twice.isEmpty()) {
-                    return conflict(path, "the project and the feature each have the top-level ${twice.size() == 1 ? 'key' : 'keys'} ${named(twice)} in one document of this file, " +
-                            'in different places', binary, working, base, proposed,
-                            [("Merged, the file would have ${twice.size() == 1 ? 'that key' : 'those keys'} twice, and only one of the two would count. Put what the project has under " +
-                                     "${twice.size() == 1 ? 'it' : 'them'} where the generated file has ${twice.size() == 1 ? 'the key' : 'the keys'}, or take it out, add the feature " +
-                                     'again, and put it back under the one key').toString()])
+            if (edited && path.startsWith(CONFIGURATION_DIRECTORY) && isYaml(path)) {
+                PlannedFile twice = setTwice(path, working, base, proposed, result)
+                if (twice != null) {
+                    return twice
                 }
             }
         }
@@ -985,9 +987,54 @@ final class FeatureAddition {
     }
 
     /**
+     * The merge compares lines. What the merged configuration file sets is looked at once more, as
+     * YAML and Grails read it, see {@link RepeatedSettings}: a key or a setting that the merged file
+     * has twice, and that neither the file of the project nor that of the feature has twice, is one
+     * the two each have, and the file is not written with both. Neither is a merged file that is not
+     * YAML any more when the two it was merged from are. A file of the project that is not YAML that
+     * reads is looked at by its lines, for a key at the beginning of a line.
+     *
+     * @return the conflict, or {@code null} when there is none
+     */
+    private static PlannedFile setTwice(String path, Working working, byte[] base, byte[] proposed, byte[] result) {
+        RepeatedSettings mine = RepeatedSettings.of(working.content)
+        RepeatedSettings theirs = RepeatedSettings.of(proposed)
+        List<String> keys
+        List<String> settings = []
+        if (mine == null || theirs == null) {
+            keys = keysTwice(result) - keysTwice(working.content) - keysTwice(proposed)
+        } else {
+            RepeatedSettings merged = RepeatedSettings.of(result)
+            if (merged == null) {
+                return conflict(path, 'the file of the project and the file of the feature are YAML, and merged by their lines they are not', false, working, base, proposed,
+                        [("Put the file aside, put the generated one in its place (its copy is ${ProjectState.BASELINE_FILES}/${BaselineIndex.copyPath(path)}), add the feature, " +
+                                 'and bring your changes into the new file').toString()])
+            }
+            keys = merged.topLevelKeysBeyond(mine, theirs)
+            settings = merged.settingsBeyond(mine, theirs)
+        }
+        if (!keys.isEmpty()) {
+            return conflict(path, "the project and the feature each have the top-level ${keys.size() == 1 ? 'key' : 'keys'} ${named(keys)} in one document of this file, " +
+                    'in different places', false, working, base, proposed,
+                    [("Merged, the file would have ${keys.size() == 1 ? 'that key' : 'those keys'} twice, and only one of the two would count. Put what the project has under " +
+                             "${keys.size() == 1 ? 'it' : 'them'} where the generated file has ${keys.size() == 1 ? 'the key' : 'the keys'}, or take it out, add the feature " +
+                             'again, and put it back under the one key').toString()])
+        }
+        if (!settings.isEmpty()) {
+            boolean one = settings.size() == 1
+            return conflict(path, "the project and the feature each have the ${one ? 'setting' : 'settings'} ${named(settings)} in one document of this file, " +
+                    'in different places or written in different ways', false, working, base, proposed,
+                    [("Merged, the file would have ${one ? 'that setting' : 'those settings'} twice, as a key with dots in it and as nested keys or twice under one key, " +
+                             "and only one of the two would count. Take ${one ? 'it' : 'them'} out of the file of the project, add the feature again, and give the one " +
+                             "${one ? 'setting' : 'place of each setting'} the value it is to have").toString()])
+        }
+        return null
+    }
+
+    /**
      * The top-level keys a YAML file has more than once in one of its documents, by a scan of its
      * lines for a key at the beginning of a line; a line of {@code ---} begins a document. It reads no
-     * more than {@link #MAX_SCANNED} lines.
+     * more than {@link #MAX_SCANNED} lines. It is what is left to do for a file that is not YAML that reads.
      */
     private static List<String> keysTwice(byte[] yaml) {
         List<String> twice = []
@@ -1184,6 +1231,13 @@ final class FeatureAddition {
         ProjectState state = ProjectState.read(projectDirectory)
         ProjectManifest manifest = state.manifest
         ProjectLock lock = state.lock
+        // The record as it was read here, before anything is worked out from it. Generating the
+        // application takes time, and a feature that another command adds meanwhile writes another
+        // record: read again afterwards, that record would be taken for the one the move was worked
+        // out from, and be overwritten by a baseline that knows nothing of the feature
+        byte[] manifestBytes = state.content(ProjectState.MANIFEST)
+        byte[] lockBytes = state.content(ProjectState.LOCK)
+        byte[] indexBytes = state.content(ProjectState.BASELINE_INDEX)
         if (!manifest.isTracked()) {
             throw new ProjectChangeException("The record of the application was written for an application that was there (generationState in ${ProjectState.MANIFEST} " +
                     "is ${ProjectManifest.UNTRACKED}): it has no baseline the generator wrote, and there is nothing of a generator to move. Nothing was changed",
@@ -1226,9 +1280,6 @@ final class FeatureAddition {
             throw new ProjectChangeException("${unlike}. Nothing was changed", unlike.contains('GRAILS_REPO_URL') ? ProjectChangeException.RECORD_DIFFERS :
                     ProjectChangeException.NOT_REGENERABLE, null)
         }
-        byte[] manifestBytes = bytes(projectDirectory, ProjectState.MANIFEST)
-        byte[] lockBytes = bytes(projectDirectory, ProjectState.LOCK)
-        byte[] indexBytes = bytes(projectDirectory, ProjectState.BASELINE_INDEX)
         // another build of this version that writes the same record but for its own identity is the same generator to the record
         if (thisVersion && Arrays.equals(rendered.content(ProjectState.MANIFEST), manifestBytes) &&
                 ProjectLock.sameButForTheBuild(rendered.content(ProjectState.LOCK), lockBytes) && Arrays.equals(rendered.content(ProjectState.BASELINE_INDEX), indexBytes)) {
