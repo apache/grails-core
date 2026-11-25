@@ -126,8 +126,8 @@ dependencies {
         // comp: RemovalCause, this should perhaps be api in data-mapping as it is needed for compilation downstream
     }
 
-    testImplementation 'com.github.docker-java:docker-java-api', {
-        // test: Ulimit, version follows org.testcontainers:testcontainers
+    testImplementation 'ch.qos.logback:logback-classic', {
+        // test: Logger and ListAppender, used to capture log events
     }
     testImplementation 'jakarta.validation:jakarta.validation-api'
     testImplementation 'junit:junit' // JUnit 4
@@ -136,7 +136,6 @@ dependencies {
     testImplementation project(':grails-testing-support-mongodb')
 
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
-    testRuntimeOnly 'org.slf4j:slf4j-nop' // Get rid of warning about missing slf4j implementation during tests
 }
 
 apply {

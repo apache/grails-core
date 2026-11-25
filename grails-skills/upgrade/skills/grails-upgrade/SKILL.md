@@ -794,6 +794,13 @@ GORM for MongoDB and GORM's in-memory datastore used by unit tests, lookups by i
 
 Unit tests that look up instances across tenants need the same changes as application code.
 
+## GORM for Hibernate: a sort uses a requested left join
+
+A where query, a detached criteria or a dynamic finder that requests a left join of an association, with `join('owner', JoinType.LEFT)` or `fetch: [owner: JoinType.LEFT]`, and sorts by a property of that association, as with `sort: 'owner.lastName'`, sorted with an inner join and left out the instances without the association. As of 7.0.18 the sort uses the requested left join, so those instances are returned, and the `totalCount` of a paged list counts them.
+
+- Search for `JoinType.LEFT` in calls to `join` and in `fetch` arguments of queries that also sort by a property of the same association.
+- To leave out the instances without the association, as before, request `JoinType.INNER`, or add a criterion such as `owner != null`.
+
 ## Data binding white lists
 
 Data binding white lists apply wherever a class is compiled.
