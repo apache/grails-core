@@ -249,17 +249,16 @@ public class JpaCriteriaQueryCreator<T> {
 
     @SuppressWarnings("unchecked")
     private void assignOrderBy(CriteriaQuery<?> cq, JpaQueryContext context) {
-        if (isCountOnly()) {
-            // a count returns one row whatever the order, and an ORDER BY on a column that is not aggregated fails
-            // on H2 and most other databases, so a count query leaves the criteria's orders out, handled ones too
-            return;
-        }
+        boolean countOnly = isCountOnly();
         List<Query.Order> orders = detachedCriteria.getOrders();
         if (!orders.isEmpty()) {
             List<jakarta.persistence.criteria.Order> jpaOrders = new ArrayList<>();
             for (Query.Order order : orders) {
                 PredicateGenerator.OrderHandler customHandler = PredicateGenerator.orderHandler(order.getClass());
                 if (customHandler != null) {
+                    if (countOnly) {
+                        continue;
+                    }
                     // the handler of a Query.Order subclass builds its JPA order, or leaves the order out
                     jakarta.persistence.criteria.Order customOrder =
                             customHandler.handle(cq, context.getRoot(), criteriaBuilder, order, context);
@@ -273,6 +272,13 @@ public class JpaCriteriaQueryCreator<T> {
                 Expression<?> expression = sqlProjection != null ?
                         context.getSelectionAlias(sqlProjection.getColumnAlias()) :
                         context.getFullyQualifiedExpression(propertyName);
+                if (expression == null) {
+                    throw new IllegalArgumentException("Invalid sort property");
+                }
+                if (countOnly) {
+                    // Validate stored sorts even for counts, without adding an aggregate ORDER BY.
+                    continue;
+                }
                 jakarta.persistence.criteria.Order jpaOrder;
                 if (order.isIgnoreCase() && expression.getJavaType().equals(String.class)) {
                     jpaOrder = order.getDirection().equals(Query.Order.Direction.ASC) ?

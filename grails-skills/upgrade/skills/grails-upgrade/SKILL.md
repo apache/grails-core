@@ -625,6 +625,14 @@ The command line parser of the `grails` tool and of `runCommand`, which applicat
 - The text inside a pair of double quotes is trimmed: `" a "` reaches the command as `a`, where it used to be ` a `.
 - `--name=` gives an empty `name` (it threw `ArrayIndexOutOfBoundsException`), a lone `"` argument is passed on (it threw `StringIndexOutOfBoundsException`), and an option's value is everything after the first `=`: `--filter=status=active` gives `status=active`, where it gave `status`. Remove workarounds for these.
 
+## A Sort by an Alias That the Query Does Not Define Is Rejected
+
+With GORM for Hibernate 5 and Hibernate 7, a sort whose path starts with a name that is neither a property of the queried class nor an alias that the query defines throws `IllegalArgumentException: Invalid sort property`. Hibernate 5 ignored it; Hibernate 7 either ignored it or failed inconsistently. This applies to where queries, detached criteria, static list, dynamic finders, example queries and criteria sorts. Stored sorts are validated for `count()` and `get()` too, even though a count does not order its result. An empty example rejects an invalid sort; with a valid sort Hibernate 7 still returns `null`.
+
+- Check dotted sort paths, including those from request parameters, against properties or aliases defined by the same query.
+- Remove the sort or declare its alias, as in `Book.where { def a = author; a.name ==~ 'S%' }.list(sort: 'a.name')`.
+- Prefer an association path such as `author.name` when optional filters change the aliases available. Check the count query too when it shares a table's sort parameter.
+
 # After the Upgrade
 
 ## Verification Checklist

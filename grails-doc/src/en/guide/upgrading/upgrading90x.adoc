@@ -1617,3 +1617,9 @@ of types, is of no format, where the Grails rules read it leniently as `json`.
 
 Other requests resolve as before, among them those of browsers and those that name one configured type. A Spring MVC
 endpoint, and Spring Security's filters before a URL mapping has matched a request, negotiate as before.
+
+==== 32. A Sort by an Alias That the Query Does Not Define Is Rejected
+
+With GORM for Hibernate 5 and Hibernate 7, a sort whose path starts with a name that is neither a property of the queried class nor an alias that the query defines, as in `Book.list(sort: 'a.name')`, throws an `IllegalArgumentException` with the message `Invalid sort property`. Hibernate 5 ignored such a sort and returned its results unsorted. Hibernate 7 rejected it inconsistently, sometimes with a `NullPointerException` or an `AssertionError`, and sometimes ignored it. The exception now applies to where queries, detached criteria, `list`, dynamic finders, `find` and `findAll` with an example, and the sort argument or `order` of a criteria query. A stored sort is validated for `count()` and `get()` too: `Book.where { ... }.sort('a.name').count()` throws even though a count does not order its result. An empty example with an invalid sort also throws; with a valid sort it keeps Hibernate 7's existing `null` result.
+
+To get the results without a sort, remove the sort, or define the alias in the query, as in `Book.where { def a = author; a.name ==~ 'S%' }.list(sort: 'a.name')`. When the same sort is applied to queries with different criteria, for example from a sortable table with optional filters, sort by the association path, such as `author.name`, which does not depend on an alias. Check the count query as well when reusing the table's sort parameter.
