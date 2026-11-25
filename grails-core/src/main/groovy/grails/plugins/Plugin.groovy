@@ -145,29 +145,16 @@ abstract class Plugin implements GrailsApplicationLifeCycle, GrailsApplicationAw
     }
 
     /**
-     * Invoked in a phase where plugins can add dynamic methods. Subclasses should override.
-     *
-     * @deprecated since 9.0 in favour of compile-time traits ({@link grails.compiler.traits.TraitInjector} /
-     * {@link grails.artefact.Enhances}) or Groovy extension modules
-     * ({@code META-INF/groovy/org.codehaus.groovy.runtime.ExtensionModule}). Runtime metaclass mutation
-     * undermines invokedynamic call-site caching and ahead-of-time compilation.
+     * Invoked in a phase where plugins can add dynamic methods. Subclasses should override
      */
-    @Deprecated(since = '9.0')
     @Override
     void doWithDynamicMethods() {
         // no-op
     }
 
     /**
-     * Invoked once the {@link ApplicationContext} has been refreshed and after {@link #doWithDynamicMethods()} is invoked.
-     * Subclasses should override.
-     *
-     * @deprecated since 9.0 in favour of standard Spring lifecycle beans ({@link org.springframework.context.ApplicationListener},
-     * {@link org.springframework.context.SmartLifecycle}, {@code @EventListener}, or
-     * {@link org.springframework.beans.factory.InitializingBean}) registered via {@code @AutoConfiguration} or
-     * {@link #beanRegistrar()}.
+     * Invokes once the {@link ApplicationContext} has been refreshed and after {#doWithDynamicMethods()} is invoked. Subclasses should override
      */
-    @Deprecated(since = '9.0')
     @Override
     void doWithApplicationContext() {
         // no-op

@@ -1627,14 +1627,11 @@ under `META-INF/grails/`:
 * *Plugin discovery index.* Every plugin JAR declares its logical plugin name(s) in `META-INF/grails/plugins.imports`
   (one per line, matching Spring Boot's `AutoConfiguration.imports` convention).
 * *Per-plugin properties descriptor.* Each plugin's metadata and contributed artefacts (grouped by artefact type) are
-  written to `META-INF/grails/plugins/<name>/plugin.properties` by the `org.apache.grails.gradle.grails-plugin` Gradle
-  plugin after compilation rather than by the Groovy compiler.
-* *Plugins inside applications or built without `grails-plugin`.* Because descriptor generation moved out of the Groovy
-  compiler and into `org.apache.grails.gradle.grails-plugin`, a `*GrailsPlugin` class placed inside an application
-  project or in a module built without `org.apache.grails.gradle.grails-plugin` (for example, a plain Gradle or Maven
-  library) is no longer auto-discovered unless it either applies `org.apache.grails.gradle.grails-plugin` or provides
-  static `META-INF/grails/plugins.imports` and `META-INF/grails/plugins/<name>/plugin.properties` resources in
-  `src/main/resources`.
+  written to `META-INF/grails/plugins/<name>/plugin.properties`.
+* *Plugins inside applications or built without the Grails Gradle plugin.* Compiling a Groovy plugin source file
+  with the Grails compiler transforms on the classpath and a class output directory generates its discovery metadata
+  beside its classes. This also applies to plugin sources in test source sets. A build applying the Grails Gradle
+  plugin assembles the main source set's descriptors from all compiled classes, including Java classes.
 * *Namespaced plugin configuration and view manifests.* A plugin's `grails-app/conf/plugin.yml` (or `plugin.groovy`) is
   packaged at `META-INF/grails/plugins/<name>/plugin.yml` instead of the JAR root, and precompiled plugin GSP views write
   their manifest to `META-INF/grails/plugins/<name>/views.properties` instead of `gsp/views.properties`. This prevents
@@ -1661,22 +1658,10 @@ grails {
   to declare `name`, `version`, `grailsVersion`, `loadAfter`, `loadBefore`, `dependsOn`, `evict`, `observe`,
   `environmentsIncludes`, `environmentsExcludes`, `pluginExcludes`, and `enabled` directly on the class. Build tooling
   and runtime discovery read this metadata without reflective instantiation.
-* *Deprecated lifecycle hooks.* `Plugin.doWithDynamicMethods()` and `Plugin.doWithApplicationContext()` are deprecated in
-  Grails 9.0. Prefer compile-time traits (`grails.compiler.traits.TraitInjector` / `@Enhances`) or Groovy extension
-  modules for adding methods, and standard Spring lifecycle beans (`ApplicationListener`, `SmartLifecycle`,
-  `@EventListener`, or `InitializingBean`) registered via `@AutoConfiguration` or `beanRegistrar()` for post-refresh
-  initialization.
 
 ===== Required Actions
 
 * Rebuild and republish Grails plugins with Grails 9 so they emit `META-INF/grails/plugins.imports` and
-  `META-INF/grails/plugins/<name>/plugin.properties`. Grails 9 no longer generates `META-INF/grails-plugin.xml`;
-  deprecated read-only fallback support remains in Grails 9 (logging a warning) for external plugins not yet rebuilt
-  and will be removed in Grails 10.
-* If an application or plain JVM library defines a `*GrailsPlugin` class without applying
-  `org.apache.grails.gradle.grails-plugin`, move it into a plugin subproject that applies
-  `org.apache.grails.gradle.grails-plugin` or add static `META-INF/grails/plugins.imports` and
-  `META-INF/grails/plugins/<name>/plugin.properties` files under `src/main/resources`.
-* Remove any custom publishing configuration or shadow/fat-JAR rules that reference `META-INF/grails-plugin.xml`.
-* Migrate overrides of `doWithDynamicMethods()` and `doWithApplicationContext()` (deprecated in Grails 9.0) to
-  compile-time traits/extension modules and Spring lifecycle beans.
+  `META-INF/grails/plugins/<name>/plugin.properties`. Published Gradle archives also include an XML projection for catalog and IDE consumers.
+  For a multi-plugin archive, the modern definitions carry each plugin's individual compatibility range.
+* Merge the lines of `META-INF/grails/plugins.imports` when combining plugin archives into a single JAR.

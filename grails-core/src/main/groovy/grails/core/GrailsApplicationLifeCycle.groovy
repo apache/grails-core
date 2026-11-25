@@ -57,23 +57,12 @@ interface GrailsApplicationLifeCycle {
     }
 
     /**
-     * Invoked once the {@link org.springframework.context.ApplicationContext} has been refreshed in a phase where plugins can add dynamic methods. Subclasses should override.
-     *
-     * @deprecated since 9.0 in favour of compile-time traits ({@link grails.compiler.traits.TraitInjector} /
-     * {@link grails.artefact.Enhances}) or Groovy extension modules
-     * ({@code META-INF/groovy/org.codehaus.groovy.runtime.ExtensionModule}).
+     * Invoked once the {@link org.springframework.context.ApplicationContext} has been refreshed in a phase where plugins can add dynamic methods. Subclasses should override
      */
-    @Deprecated(since = '9.0')
     void doWithDynamicMethods()
     /**
-     * Invoked once the {@link org.springframework.context.ApplicationContext} has been refreshed and after {@link #doWithDynamicMethods()} is invoked. Subclasses should override.
-     *
-     * @deprecated since 9.0 in favour of standard Spring lifecycle beans ({@link org.springframework.context.ApplicationListener},
-     * {@link org.springframework.context.SmartLifecycle}, {@code @EventListener}, or
-     * {@link org.springframework.beans.factory.InitializingBean}) registered via {@code @AutoConfiguration} or
-     * {@link #beanRegistrar()}.
+     * Invoked once the {@link org.springframework.context.ApplicationContext} has been refreshed and after {#doWithDynamicMethods()} is invoked. Subclasses should override
      */
-    @Deprecated(since = '9.0')
     void doWithApplicationContext()
 
     /**
