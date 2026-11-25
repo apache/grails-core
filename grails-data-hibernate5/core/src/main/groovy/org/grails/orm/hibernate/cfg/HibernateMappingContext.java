@@ -58,6 +58,7 @@ public class HibernateMappingContext extends AbstractMappingContext {
     private static final String[] DEFAULT_IDENTITY_MAPPING = new String[] {GormProperties.IDENTITY};
     private final HibernateMappingFactory mappingFactory;
     private final MappingConfigurationStrategy syntaxStrategy;
+    private boolean leftJoinAssociationSort;
 
     /**
      * Construct a HibernateMappingContext for the given arguments
@@ -73,6 +74,7 @@ public class HibernateMappingContext extends AbstractMappingContext {
         initialize(settings);
 
         if (settings != null) {
+            this.leftJoinAssociationSort = settings.isLeftJoinAssociationSort();
             this.mappingFactory.setDefaultMapping(settings.getDefault().getMapping());
             this.mappingFactory.setDefaultConstraints(settings.getDefault().getConstraints());
         }
@@ -93,6 +95,15 @@ public class HibernateMappingContext extends AbstractMappingContext {
 
     public HibernateMappingContext() {
         this(new HibernateConnectionSourceSettings());
+    }
+
+    /**
+     * @return Whether a sort by a property of an association joins the association with a left join,
+     * as the <code>grails.gorm.leftJoinAssociationSort</code> setting requests
+     * @since 7.0.18
+     */
+    public boolean isLeftJoinAssociationSort() {
+        return leftJoinAssociationSort;
     }
 
     /**

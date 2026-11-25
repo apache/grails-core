@@ -30,4 +30,8 @@ class Team {
     Club club
     String name
     static hasMany = [players: Player]
+
+    static constraints = {
+        club nullable: true
+    }
 }
