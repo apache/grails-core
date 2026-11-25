@@ -37,5 +37,6 @@ class MatrixOwner implements Serializable {
 
     static constraints = {
         address nullable: true
+        age nullable: true
     }
 }
