@@ -23,7 +23,7 @@ import grails.gorm.DetachedCriteria
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.apache.grails.data.testing.tck.domains.MatrixAddress
 import org.apache.grails.data.testing.tck.domains.MatrixOwner
-import spock.lang.Requires
+import spock.lang.IgnoreIf
 
 /**
  * Every criteria that can be built from a small grammar, run against one set of owners, and compared with what a
@@ -43,8 +43,43 @@ import spock.lang.Requires
  * the one value that is missing is the address of two owners. A null value of a property that is there is where
  * MongoDB and the join-based stores differ for {@code ne}, and it is a question of its own.
  */
-@Requires({ Boolean.getBoolean('hibernate5.gorm.suite') || Boolean.getBoolean('mongodb.gorm.suite') })
+@IgnoreIf({ detectStore() == null })
 class CriteriaSemanticMatrixSpec extends GrailsDataTckSpec {
+
+    /**
+     * What a store does with a value that is null or absent, where the reference (Hibernate 5, SQL three-valued logic) says
+     * unknown. A rule is T, F or U (unknown) for a comparison of {@code eq} and {@code inList}, and for {@code ne}, on a
+     * plain property that is null and on an embedded value that is absent. {@code embedded: false} is a store without
+     * embedded values, whose queries on one are not run.
+     */
+    private static final Map<String, Map> PROFILES = [
+        hibernate5: [plain: [eq: 'U', ne: 'U'], embedded: [eq: 'U', ne: 'U'], supportsEmbedded: true],
+        mongodb: [plain: [eq: 'F', ne: 'T'], embedded: [eq: 'U', ne: 'U'], supportsEmbedded: true],
+        hibernate7: [plain: [eq: 'U', ne: 'T'], embedded: [eq: 'U', ne: 'T'], supportsEmbedded: true],
+        simple: [plain: [eq: 'F', ne: 'T'], embedded: [eq: 'U', ne: 'U'], supportsEmbedded: false]
+    ]
+
+    /**
+     * The store the TCK runs on, found from the manager classes on the classpath, so that it is known before the spec starts;
+     * null for a store this table does not describe, such as one that runs a published TCK.
+     */
+    private static String detectStore() {
+        Map<String, String> managers = [
+            'org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager': 'hibernate5',
+            'org.apache.grails.data.hibernate7.core.GrailsDataHibernate7TckManager': 'hibernate7',
+            'org.apache.grails.data.mongo.core.GrailsDataMongoTckManager': 'mongodb',
+            'org.apache.grails.data.simple.core.GrailsDataCoreTckManager': 'simple'
+        ]
+        managers.find { String className, String store ->
+            try {
+                Class.forName(className, false, CriteriaSemanticMatrixSpec.classLoader)
+                true
+            }
+            catch (ClassNotFoundException ignored) {
+                false
+            }
+        }?.value
+    }
 
     void setupSpec() {
         manager.domainClasses.addAll([MatrixOwner])
@@ -57,13 +92,15 @@ class CriteriaSemanticMatrixSpec extends GrailsDataTckSpec {
         ['Bob', 40, 'Paris'],
         ['Cleo', 40, 'Rome'],
         ['Nina', 30, null],
-        ['Bob', 40, null]
+        ['Bob', 40, null],
+        ['Dora', null, 'Rome']
     ]
 
     private static final List<List> LEAVES = [
         ['eq', 'name', 'Bob'], ['ne', 'name', 'Bob'],
         ['eq', 'age', 30], ['ne', 'age', 30],
-        ['eq', 'city', 'Paris'], ['ne', 'city', 'Paris'], ['inList', 'city', ['Paris', 'Rome']]
+        ['eq', 'city', 'Paris'], ['ne', 'city', 'Paris'], ['inList', 'city', ['Paris', 'Rome']],
+        ['isNull', 'age', null], ['isNotNull', 'age', null], ['isNull', 'city', null]
     ]
 
     private void seed() {
@@ -74,17 +111,21 @@ class CriteriaSemanticMatrixSpec extends GrailsDataTckSpec {
     }
 
     void 'every query of the grammar returns the owners the evaluator says it does'() {
-        given:
+        given: 'the profile of the store the TCK runs on'
+        Map profile = PROFILES[detectStore()]
         seed()
         List<List> queries = queries()
         List<String> mismatches = []
 
         when:
         queries.each { List query ->
-            Set<String> expected = OWNERS.findAll { evaluate(query, it) == Boolean.TRUE }.collect { label(it) } as Set
+            if (!profile.supportsEmbedded && query.flatten().contains('city')) {
+                return
+            }
+            Set<String> expected = OWNERS.findAll { evaluate(query, it, profile) == Boolean.TRUE }.collect { label(it) } as Set
             [true, false].each { boolean block ->
                 ['criteria', 'detached'].each { String entry ->
-                    if (block && entry == 'detached' && !(query[0] in ['eq', 'ne', 'inList'])) {
+                    if (block && entry == 'detached' && !(query[0] in ['eq', 'ne', 'inList', 'isNull', 'isNotNull'])) {
                         return
                     }
                     Object actual = run(query, block, entry)
@@ -148,7 +189,10 @@ class CriteriaSemanticMatrixSpec extends GrailsDataTckSpec {
             default:
                 String operator = query[0]
                 String property = query[1]
-                if (property == 'city' && block) {
+                if (operator in ['isNull', 'isNotNull']) {
+                    builder."$operator"(property == 'city' ? 'address.city' : property)
+                }
+                else if (property == 'city' && block) {
                     Object value = query[2]
                     Closure inner = { -> "$operator"('city', value) }
                     Closure outer = { -> address(inner) }
@@ -163,27 +207,35 @@ class CriteriaSemanticMatrixSpec extends GrailsDataTckSpec {
     }
 
     /** true, false or null for unknown, as SQL answers a condition on one owner */
-    private static Boolean evaluate(List query, List owner) {
+    private static Boolean evaluate(List query, List owner, Map profile) {
         switch (query[0]) {
             case 'not':
-                Boolean inner = evaluate(query[1], owner)
+                Boolean inner = evaluate(query[1], owner, profile)
                 return inner == null ? null : !inner
             case 'and':
-                List<Boolean> parts = query.tail().collect { evaluate(it, owner) }
+                List<Boolean> parts = query.tail().collect { evaluate(it, owner, profile) }
                 if (parts.any { it == Boolean.FALSE }) {
                     return false
                 }
                 return parts.every { it == Boolean.TRUE } ? true : null
             case 'or':
-                List<Boolean> parts = query.tail().collect { evaluate(it, owner) }
+                List<Boolean> parts = query.tail().collect { evaluate(it, owner, profile) }
                 if (parts.any { it == Boolean.TRUE }) {
                     return true
                 }
                 return parts.every { it == Boolean.FALSE } ? false : null
             default:
                 Object value = owner[['name': 0, 'age': 1, 'city': 2][query[1]]]
+                if (query[0] == 'isNull') {
+                    return value == null
+                }
+                if (query[0] == 'isNotNull') {
+                    return value != null
+                }
                 if (value == null) {
-                    return null
+                    // what the store does with a value that is null or absent: unknown, as the reference says, or as its profile says
+                    String rule = profile[query[1] == 'city' ? 'embedded' : 'plain'][query[0] == 'ne' ? 'ne' : 'eq']
+                    return rule == 'T' ? true : rule == 'F' ? false : null
                 }
                 switch (query[0]) {
                     case 'eq': return value == query[2]
@@ -198,7 +250,7 @@ class CriteriaSemanticMatrixSpec extends GrailsDataTckSpec {
             case 'not': return "not { ${describe(query[1])} }"
             case 'and': return "and { ${query.tail().collect { describe(it) }.join('; ')} }"
             case 'or': return "or { ${query.tail().collect { describe(it) }.join('; ')} }"
-            default: return "${query[0]}(${query[1]}, ${query[2]})"
+            default: return query[2] == null ? "${query[0]}(${query[1]})" : "${query[0]}(${query[1]}, ${query[2]})"
         }
     }
 }
