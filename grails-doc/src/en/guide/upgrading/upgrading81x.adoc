@@ -94,10 +94,11 @@ For most applications **no changes are required**. Check that packaged styleshee
 
 ==== 6. Hibernate 5 Joins a Hierarchy Below an Abstract Root and Places Joined Subclass Tables by Their Mapping
 
-Two changes to how the Hibernate 5 binder lays out a hierarchy that uses `tablePerHierarchy false`.
+Three changes to how the Hibernate 5 binder lays out a hierarchy that uses `tablePerHierarchy false`.
 
 * An abstract base class that does not declare `tablePerHierarchy` now follows a direct subclass that sets `tablePerHierarchy false`, so the whole hierarchy is joined. In Grails 8.0 the base class kept a single table with a `class` discriminator column, and a subclass below the joined one could not be loaded through an association.
 * A joined subclass is now created in the schema and catalog of its `table` mapping. The mapping of its base class is inherited, so a `table schema:` declared only on the base class now also places the table of the subclass, which Grails 8.0 created in the default schema.
+* A property of a joined or union subclass that has a `formula` is read from the formula and has no column in the table of the subclass, as in a root class or a single table hierarchy. This holds for an enum property too, which was given a column that held no value.
 
 ===== Required Actions
 

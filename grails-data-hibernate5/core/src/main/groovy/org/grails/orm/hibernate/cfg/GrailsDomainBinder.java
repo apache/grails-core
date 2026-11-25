@@ -2290,6 +2290,15 @@ public class GrailsDomainBinder implements MetadataContributor {
             simpleValue.setTypeName(typeName);
         }
 
+        if (pc != null && pc.isDerived() && !(property instanceof TenantId)) {
+            // the value of a derived enum property is read from its formula, as the value of any other property is, and
+            // there is no column of its own to hold it
+            Formula formula = new Formula();
+            formula.setFormula(pc.getFormula());
+            simpleValue.addFormula(formula);
+            return;
+        }
+
         Table t = simpleValue.getTable();
         Column column = new Column();
 
