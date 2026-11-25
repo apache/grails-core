@@ -39,9 +39,13 @@ import groovy.transform.CompileStatic
  * <p>What is looked at is the files of {@link #BUILD_FILES} in the directory of the project, and every
  * directory below {@link #COMMAND_SOURCES}, and below the directory of the descriptors of each directory
  * of classes, with every file of the ending each has there: a new or a deleted file changes its
- * directory, a file that was written again only itself. No link is followed, and no more is looked at
- * than {@link #MAX_WALKED} entries, {@link #MAX_WALK_DEPTH} deep; a directory that has more is taken
- * for changed, since it cannot be said that it is not.</p>
+ * directory, a file that was written again only itself. No more is looked at than {@link #MAX_WALKED}
+ * entries, {@link #MAX_WALK_DEPTH} deep; a directory that has more is taken for changed, since it
+ * cannot be said that it is not.</p>
+ *
+ * <p>A file that is a symbolic link counts with the time of the file the link leads to, which is what
+ * the build reads: when the link itself was made says nothing of it. A link that leads to no file is
+ * no file. A link to a directory below one of the directories is not followed.</p>
  *
  * @since 9.0
  */
@@ -82,12 +86,9 @@ final class CommandCatalogFreshness {
     static String changedSince(File projectDirectory, Collection<File> classesDirectories, FileTime since) {
         Path project = projectDirectory.toPath()
         for (String name : BUILD_FILES) {
-            try {
-                if (Files.getLastModifiedTime(project.resolve(name), LinkOption.NOFOLLOW_LINKS) > since) {
-                    return name
-                }
-            } catch (IOException ignored) {
-                // it is not there
+            FileTime modified = modifiedBehind(project.resolve(name))
+            if (modified != null && modified > since) {
+                return name
             }
         }
         if (isChangedBelow(project.resolve(COMMAND_SOURCES), SOURCE_ENDING, since)) {
@@ -100,6 +101,19 @@ final class CommandCatalogFreshness {
             }
         }
         return null
+    }
+
+    /**
+     * @param path a file, or a link to one
+     * @return when the file the path leads to was changed, whatever links lead to it; {@code null}
+     * when there is no file, which a link that leads nowhere is
+     */
+    static FileTime modifiedBehind(Path path) {
+        try {
+            return Files.getLastModifiedTime(path)
+        } catch (IOException ignored) {
+            return null
+        }
     }
 
     /**
@@ -142,6 +156,11 @@ final class CommandCatalogFreshness {
 
         @Override
         FileVisitResult visitFile(Path file, BasicFileAttributes attributes) {
+            if (attributes.isSymbolicLink()) {
+                // a link to a file of the ending counts as that file does; any other link is an entry and no more
+                FileTime behind = file.getFileName().toString().endsWith(ending) ? fileBehind(file) : null
+                return look(behind ?: attributes.lastModifiedTime(), behind != null)
+            }
             // at the depth that is the last looked at, a directory is given as a file
             boolean counts = attributes.isDirectory() || (attributes.isRegularFile() && file.getFileName().toString().endsWith(ending))
             return look(attributes.isDirectory() ? changedAt(file, attributes) : attributes.lastModifiedTime(), counts)
@@ -150,6 +169,15 @@ final class CommandCatalogFreshness {
         @Override
         FileVisitResult visitFileFailed(Path file, IOException e) {
             return FileVisitResult.CONTINUE
+        }
+
+        private static FileTime fileBehind(Path link) {
+            try {
+                BasicFileAttributes behind = Files.readAttributes(link, BasicFileAttributes)
+                return behind.isRegularFile() ? behind.lastModifiedTime() : null
+            } catch (IOException ignored) {
+                return null
+            }
         }
 
         // When a directory was changed is asked of the directory itself. What the walk has of it is what the

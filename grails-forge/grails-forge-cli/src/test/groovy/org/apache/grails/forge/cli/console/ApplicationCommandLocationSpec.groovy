@@ -20,6 +20,7 @@ package org.apache.grails.forge.cli.console
 
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
+import java.nio.file.LinkOption
 import groovy.json.JsonSlurper
 import org.apache.grails.gradle.model.cli.CommandCatalogBuilder
 import org.apache.grails.gradle.model.cli.CommandCatalogFreshness
@@ -27,6 +28,7 @@ import org.grails.forge.application.ApplicationType
 import org.grails.forge.cli.CommandFixture
 import org.grails.forge.cli.CommandSpec
 import org.grails.forge.cli.ForgeCli
+import spock.lang.IgnoreIf
 
 /**
  * Where the command line finds the commands of the application and its plugins: in the file the
@@ -178,6 +180,56 @@ class ApplicationCommandLocationSpec extends CommandSpec implements CommandFixtu
         'gradle.properties'                                                           | 'gradle.properties'
         'grails-app/commands/example/GreetCommand.groovy'                             | 'grails-app/commands'
         'build/classes/groovy/main/META-INF/grails-commands/example.GreetCommand.json' | 'build/classes/groovy/main/META-INF/grails-commands'
+    }
+
+    @IgnoreIf({ os.windows })
+    void "#path as a link counts for the command line and for the task of the build with the time of the file it leads to: #scenario"() {
+        given: 'a catalog, and the place as a link to a file outside the project'
+        long now = System.currentTimeMillis()
+        File catalog = file(ApplicationCommandFile.LOCATION, ApplicationCommandsSpec.doc([ApplicationCommandsSpec.HELLO]))
+        catalog.setLastModified(now + (long) catalogWritten)
+        File classes = new File(dir, 'build/classes/groovy/main')
+        File elsewhere = Files.createTempDirectory('linked-build-files').toFile()
+        File target = new File(elsewhere, 'target')
+        if (targetModified != null) {
+            target.text = ''
+            target.setLastModified(now + (long) targetModified)
+        }
+        File link = new File(dir, path)
+        link.parentFile.mkdirs()
+        Files.createSymbolicLink(link.toPath(), target.toPath())
+        // making the link changed its directory, and making that one the directory above, which is not what is asked here
+        for (File above = link.parentFile; above != dir; above = above.parentFile) {
+            above.setLastModified(now - 3_600_000L)
+        }
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'help', '--json')
+        Map described = document()
+
+        then: 'the command line and the task of the build say the same'
+        exit == 0
+        (Files.getLastModifiedTime(link.toPath(), LinkOption.NOFOLLOW_LINKS) > Files.getLastModifiedTime(catalog.toPath())) == linkIsNewer
+        CommandCatalogFreshness.changedSince(dir, [classes], Files.getLastModifiedTime(catalog.toPath())) == named
+        described.complete == (named == null)
+        named == null || ((List<String>) described.diagnostics)[0].contains("may have changed: ${named} is newer than ${ApplicationCommandFile.LOCATION}")
+        named != null || described.diagnostics == []
+
+        cleanup:
+        elsewhere?.deleteDir()
+
+        where:
+        path                                              | scenario                                                    | catalogWritten | targetModified | linkIsNewer || named
+        'build.gradle'                                    | 'a newer file behind a link that is older than the catalog' | 3_600_000L     | 7_200_000L     | false       || 'build.gradle'
+        'build.gradle'                                    | 'an older file behind a link that is newer than the catalog' | -60_000L      | -120_000L      | true        || null
+        'build.gradle'                                    | 'no file'                                                   | -60_000L       | null           | true        || null
+        'settings.gradle'                                 | 'a newer file behind a link that is older than the catalog' | 3_600_000L     | 7_200_000L     | false       || 'settings.gradle'
+        'settings.gradle'                                 | 'an older file behind a link that is newer than the catalog' | -60_000L      | -120_000L      | true        || null
+        'gradle.properties'                               | 'a newer file behind a link that is older than the catalog' | 3_600_000L     | 7_200_000L     | false       || 'gradle.properties'
+        'gradle.properties'                               | 'no file'                                                   | -60_000L       | null           | true        || null
+        'grails-app/commands/example/GreetCommand.groovy' | 'a newer file behind a link that is older than the catalog' | 3_600_000L     | 7_200_000L     | false       || 'grails-app/commands'
+        'grails-app/commands/example/GreetCommand.groovy' | 'an older file behind a link that is newer than the catalog' | -60_000L      | -120_000L      | true        || null
+        'grails-app/commands/example/GreetCommand.groovy' | 'no file'                                                   | -60_000L       | null           | true        || null
     }
 
     private File file(String path, String text) {

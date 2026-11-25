@@ -19,12 +19,14 @@
 package org.grails.gradle.plugin.commands
 
 import java.nio.file.Files
+import java.nio.file.LinkOption
 import java.nio.file.attribute.FileTime
 
 import groovy.json.JsonSlurper
 
 import org.gradle.testkit.runner.BuildResult
 import org.gradle.testkit.runner.TaskOutcome
+import spock.lang.IgnoreIf
 
 import org.apache.grails.gradle.model.cli.CommandCatalogFreshness
 
@@ -159,6 +161,48 @@ class CommandCatalogBuildSpec extends CommandProjectSpecification {
         'build.gradle'                                                   | 'build.gradle'
         'grails-app/commands/example/GreetCommand.groovy'                | 'grails-app/commands'
         "build/resources/main/${descriptorPath('example.GreetCommand')}" | 'build/resources/main/META-INF/grails-commands'
+    }
+
+    @IgnoreIf({ os.windows })
+    def "a build file that is a link counts with the time of the file it leads to, for the task as for the command line"() {
+        given: 'a project whose build file is a link to a file outside it, and its catalog'
+        setupCommandProject()
+        File elsewhere = Files.createTempDirectory('linked-build-file').toFile()
+        File target = new File(elsewhere, 'build.gradle')
+        File link = new File(projectDir, 'build.gradle')
+        target.bytes = link.bytes
+        link.delete()
+        Files.createSymbolicLink(link.toPath(), target.toPath())
+        executeTask('classes')
+        File catalog = new File(projectDir, CATALOG)
+        byte[] written = catalog.bytes
+        long then = catalog.lastModified()
+
+        when: 'the catalog and the file are older than the link itself'
+        backdate(projectDir, then - 60_000)
+        target.setLastModified(then - 60_000)
+
+        then: 'nothing is out of date'
+        Files.getLastModifiedTime(link.toPath(), LinkOption.NOFOLLOW_LINKS).toMillis() > catalog.lastModified()
+        isCurrent()
+        executeTask('classes').task(':grailsCommandCatalog').outcome == TaskOutcome.UP_TO_DATE
+
+        when: 'the file the link leads to is written again'
+        target.setLastModified(then)
+
+        then: 'the catalog is out of date for both'
+        changedSince() == 'build.gradle'
+
+        when:
+        BuildResult result = executeTask('classes')
+
+        then:
+        result.task(':grailsCommandCatalog').outcome in [TaskOutcome.SUCCESS, TaskOutcome.FROM_CACHE]
+        catalog.bytes == written
+        isCurrent()
+
+        cleanup:
+        elsewhere?.deleteDir()
     }
 
     private Map catalog() {

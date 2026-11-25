@@ -444,12 +444,9 @@ final class ApplicationCommandFile {
     // the first of the places the list is made from that was changed after the file was written
     private static String changedSince(Path project, FileTime written) {
         for (String source : SOURCES) {
-            try {
-                if (Files.getLastModifiedTime(project.resolve(source), LinkOption.NOFOLLOW_LINKS).compareTo(written) > 0) {
-                    return source
-                }
-            } catch (IOException ignored) {
-                // it is not there
+            FileTime modified = modifiedBehind(project.resolve(source))
+            if (modified != null && modified.compareTo(written) > 0) {
+                return source
             }
         }
         for (Map.Entry<String, String> directory : COMMAND_DIRECTORIES.entrySet()) {
@@ -460,10 +457,32 @@ final class ApplicationCommandFile {
         return null
     }
 
+    // When the file a path leads to was changed, whatever links lead to it, which is the file the build
+    // reads: when a link itself was made says nothing of it. null when there is no file, which a link
+    // that leads nowhere is. The task that writes the file reads the times in the same way.
+    private static FileTime modifiedBehind(Path path) {
+        try {
+            return Files.getLastModifiedTime(path)
+        } catch (IOException ignored) {
+            return null
+        }
+    }
+
+    // when the file a link leads to was changed; null when it leads to no file
+    private static FileTime fileBehind(Path link) {
+        try {
+            BasicFileAttributes behind = Files.readAttributes(link, BasicFileAttributes)
+            return behind.isRegularFile() ? behind.lastModifiedTime() : null
+        } catch (IOException ignored) {
+            return null
+        }
+    }
+
     // Whether a directory, a directory below it or a file of the ending in one of them was changed
     // after an instant: a new or a deleted file changes its directory, a file that was written again
-    // only itself. No link is followed, and no more is looked at than a bounded number of entries; a
-    // directory that has more is taken for changed, since it cannot be said that it is not.
+    // only itself. A link to a file of the ending counts as that file does; a link to a directory is
+    // not followed. No more is looked at than a bounded number of entries; a directory that has more
+    // is taken for changed, since it cannot be said that it is not.
     private static boolean isChangedBelow(Path top, String ending, FileTime since) {
         if (!Files.isDirectory(top, LinkOption.NOFOLLOW_LINKS)) {
             return false
@@ -480,6 +499,10 @@ final class ApplicationCommandFile {
 
                 @Override
                 FileVisitResult visitFile(Path file, BasicFileAttributes attributes) {
+                    if (attributes.isSymbolicLink()) {
+                        FileTime behind = file.getFileName().toString().endsWith(ending) ? fileBehind(file) : null
+                        return look(behind ?: attributes.lastModifiedTime(), behind != null)
+                    }
                     // at the depth that is the last looked at, a directory is given as a file
                     boolean counts = attributes.isDirectory() || (attributes.isRegularFile() && file.getFileName().toString().endsWith(ending))
                     return look(attributes.isDirectory() ? changedAt(file, attributes) : attributes.lastModifiedTime(), counts)

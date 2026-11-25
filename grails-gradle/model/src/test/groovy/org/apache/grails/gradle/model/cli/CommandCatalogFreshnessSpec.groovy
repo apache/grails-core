@@ -19,6 +19,7 @@
 package org.apache.grails.gradle.model.cli
 
 import java.nio.file.Files
+import java.nio.file.LinkOption
 import java.nio.file.attribute.FileTime
 
 import spock.lang.IgnoreIf
@@ -36,6 +37,9 @@ class CommandCatalogFreshnessSpec extends Specification {
 
     @TempDir
     File project
+
+    @TempDir
+    File elsewhere
 
     File classes
 
@@ -158,6 +162,64 @@ class CommandCatalogFreshnessSpec extends Specification {
 
         cleanup:
         target.deleteDir()
+    }
+
+    @IgnoreIf({ os.windows })
+    @Unroll
+    def "#path as a link counts with the time of the file it leads to: #scenario"() {
+        given: 'the place as a link, which is itself as new as this moment, later than the catalog'
+        File target = new File(elsewhere, 'target')
+        if (targetModified != null) {
+            target.text = ''
+            target.setLastModified(WRITTEN + (long) targetModified)
+        }
+        File link = new File(project, path)
+        link.delete()
+        Files.createSymbolicLink(link.toPath(), target.toPath())
+        link.parentFile.setLastModified(WRITTEN - 1000)
+
+        expect:
+        Files.getLastModifiedTime(link.toPath(), LinkOption.NOFOLLOW_LINKS).toMillis() > WRITTEN
+        CommandCatalogFreshness.changedSince(project, [classes], at(WRITTEN)) == named
+
+        where:
+        path                                                                           | scenario                                | targetModified || named
+        'build.gradle'                                                                 | 'a file that is newer than the catalog' | 1000           || 'build.gradle'
+        'build.gradle'                                                                 | 'an older file behind a newer link'     | -1000          || null
+        'build.gradle'                                                                 | 'no file'                               | null           || null
+        'settings.gradle'                                                              | 'a file that is newer than the catalog' | 1000           || 'settings.gradle'
+        'settings.gradle'                                                              | 'an older file behind a newer link'     | -1000          || null
+        'gradle.properties'                                                            | 'a file that is newer than the catalog' | 1000           || 'gradle.properties'
+        'gradle.properties'                                                            | 'no file'                               | null           || null
+        'grails-app/commands/example/GreetCommand.groovy'                              | 'a file that is newer than the catalog' | 1000           || 'grails-app/commands'
+        'grails-app/commands/example/GreetCommand.groovy'                              | 'an older file behind a newer link'     | -1000          || null
+        'grails-app/commands/example/GreetCommand.groovy'                              | 'no file'                               | null           || null
+        'build/classes/groovy/main/META-INF/grails-commands/example.GreetCommand.json' | 'a file that is newer than the catalog' | 1000           || 'build/classes/groovy/main/META-INF/grails-commands'
+        'build/classes/groovy/main/META-INF/grails-commands/example.GreetCommand.json' | 'an older file behind a newer link'     | -1000          || null
+    }
+
+    @IgnoreIf({ os.windows })
+    def "a file that is newer than the catalog is seen behind a link that is older than the catalog, and through a link to a link"() {
+        given: 'a catalog that is written after the links were made, and a file that is written after the catalog'
+        long written = System.currentTimeMillis() + 3_600_000L
+        File target = new File(elsewhere, 'target')
+        target.text = ''
+        target.setLastModified(written + 1000)
+        File between = new File(elsewhere, 'between')
+        Files.createSymbolicLink(between.toPath(), target.toPath())
+        File link = new File(project, 'build.gradle')
+        link.delete()
+        Files.createSymbolicLink(link.toPath(), between.toPath())
+
+        expect:
+        Files.getLastModifiedTime(link.toPath(), LinkOption.NOFOLLOW_LINKS).toMillis() < written
+        CommandCatalogFreshness.changedSince(project, [classes], at(written)) == 'build.gradle'
+
+        when: 'the file is as old as the catalog'
+        target.setLastModified(written)
+
+        then:
+        CommandCatalogFreshness.changedSince(project, [classes], at(written)) == null
     }
 
     def "the rule names the places the command line reads the catalog by"() {
