@@ -205,7 +205,7 @@ class ExternalPackJourneySpec extends CommandSpec implements CommandFixture {
 
         then:
         exit == 1
-        err.toString().contains('The feature pack other-audit was given, and the application has no feature of it')
+        err.toString().contains('The feature pack other-audit was given, and its feature is not among the features that are added')
         tree(clone) == before
 
         when: 'and regenerate does not compare without it'

@@ -1049,7 +1049,7 @@ What works and what does not, once an application has the feature of such a pack
 |===
 |Command |With a pack that is not part of Grails
 
-|`feature add` of a feature of Grails
+|`feature add` of a feature of Grails, or of another pack
 |Works, with the same pack; refused without it, or with another, and nothing is changed.
 
 |`project regenerate`
@@ -1061,16 +1061,38 @@ What works and what does not, once an application has the feature of such a pack
 |`project show`
 |Works without the pack: it reads the record only.
 
-|`feature add` of the feature of a pack
-|Refused: only features of Grails are added. Create the application with the feature, or add what the pack adds by hand.
+|`feature add` of the feature of a pack the application does not have
+|Works, as described in <<forgeFeaturePackAddToExisting,Adding the Feature of a Pack to an Application That Is There>>.
 
 |A newer version of the pack
-|Not done by a command. The record names one version; to move to another, create the application again with it (the command line `project show` prints, with the new version) and merge the difference, or change the files by hand.
+|Not done by a command: `feature add` refuses a pack whose feature the application has and changes nothing. The record names one version; to move to another, create the application again with it (the command line `project show` prints, with the new version) and merge the difference, or change the files by hand.
 
 |A command line of another version of Grails
 |`feature add` and `project regenerate` are refused, as they are for every application, until `project migrate` moves the record of the earlier version to the one that runs. It generates the application again with the very pack, which is given again as `feature add` takes it (`--feature-pack-dir`, or fetched again by the coordinates and the SHA-256 of the record), and refuses without it.
 |===
 
+
+[[forgeFeaturePackAddToExisting]]
+==== Adding the Feature of a Pack to an Application That Is There
+
+`feature add` adds the feature of a pack to an application that was created without it, and takes the pack as the `create-` commands take it: with the same options, from the same repositories, by the same checks.
+
+[source,console]
+----
+$ grails feature add com.acme:acme-audit-grails:2.3.0
+$ grails feature add acme-audit --feature-pack-dir ~/acme-audit/src/main/forge
+$ grails feature add acme-audit --feature-catalog https://plugins.acme.example/catalog.json
+----
+
+* *By the coordinates of the plugin*, `group:artifact:version`. The jar is taken from the repositories of `GRAILS_REPO_URL` and then Maven Central, or from those `--feature-pack-repository` names, is checked against the checksum the repository publishes, and is held to the SHA-256 that `--feature-pack-sha256 group:artifact:version=sha256` gives, as described in <<forgeFeaturePackJar,Using the Pack of a Published Plugin>>. With `--offline` only a repository that is a directory is asked.
+* *By the name of the feature, with the directory of the pack*, `--feature-pack-dir`: for a pack that is not published, or is kept beside the applications.
+* *By a name of a feature catalog*, or the full name `group:artifact#name`: the catalog says the plugin, the version for the BOM of Grails the application has, the SHA-256 and where the jar can be had, as it does for a `create-` command. A catalog is named with `--feature-catalog`, `GRAILS_FORGE_CATALOG` or `GRAILS_PLUGIN_INDEX`; a name of Grails is never looked up.
+
+Before it writes anything the command says where the pack comes from, which jar it is and what the pack adds, and `--dry-run` and `--diff` say it and write nothing. A pack adds dependencies, build plugins, build script code and files to the application: add one only when you trust where it comes from.
+
+The application and its record are afterwards those of an application that was created with the pack: `project.yml` names the feature among those that were asked for, with the coordinates and the version of its plugin, and `forge.lock.yml` has the SHA-256 of the jar, or of the content of a pack of a directory, and the catalog a name was taken from. Everything in <<forgeFeaturePackAfterCreation,After the Application Is Created>> holds from then on: the next `feature add`, `feature list` and `project regenerate` need that very pack again. The files are written all of them or none; where the pack writes a file the application has otherwise, or changes lines you changed, the command names them and changes nothing, the record included.
+
+What is refused, with nothing changed: a preset (an application is made from a preset when it is created, with `--preset`); a pack whose feature is not among the features that are added; and another version of a pack whose feature the application has. Naming the plugin the application already has the feature of changes nothing. The features a pack `requires`, and those it `conflicts` with, by name or by full name, are resolved as when an application is created, and a required feature of another pack needs that pack given too. The same works for an application of Grails 7 or 8 that link:{commandLineRef}project-migrate.html[project migrate] gave its record.
 
 [[forgeFeaturePackCompanyWorkflow]]
 ==== A Pack of Your Organisation, from Start to Finish

@@ -26,7 +26,10 @@ import org.apache.grails.forge.cli.console.UsageHelp
 import org.apache.grails.forge.cli.pack.FeatureOptions
 import org.apache.grails.forge.cli.pack.PackArtifactException
 import org.apache.grails.forge.cli.pack.PackArtifacts
+import org.apache.grails.forge.cli.pack.PackCatalogs
+import org.apache.grails.forge.cli.pack.PackSelection
 import org.apache.grails.forge.cli.pack.RecordedPackOptions
+import org.apache.grails.forge.core.bom.BomVersions
 import org.apache.grails.forge.core.change.ChangePlan
 import org.apache.grails.forge.core.change.ChangePlan.Action
 import org.apache.grails.forge.core.change.ChangePlan.PlannedFile
@@ -34,13 +37,17 @@ import org.apache.grails.forge.core.change.FeatureAddition
 import org.apache.grails.forge.core.change.ProjectChangeException
 import org.apache.grails.forge.core.pack.Pack
 import org.apache.grails.forge.core.pack.PackInstructions
+import org.apache.grails.forge.core.state.ProjectLock
+import org.apache.grails.forge.core.state.ProjectLock.LockedFeature
 import org.apache.grails.forge.core.state.ProjectState
 import org.apache.grails.forge.core.state.ProjectStateException
+import org.grails.forge.application.ApplicationType
 import org.grails.forge.application.generator.ProjectGenerator
 import org.grails.forge.cli.ForgeContext
 import org.grails.forge.feature.AvailableFeatures
 import org.grails.forge.feature.Feature
 import org.grails.forge.feature.FeatureSelectionException
+import org.grails.forge.feature.grails.GrailsBase
 import org.grails.forge.io.ConsoleOutput
 import org.grails.forge.io.FileSystemOutputHandler
 import org.springframework.beans.factory.annotation.Autowired
@@ -48,6 +55,7 @@ import org.springframework.context.annotation.Scope
 import org.springframework.stereotype.Component
 import picocli.CommandLine
 import java.nio.file.Path
+import java.time.Duration
 import java.util.concurrent.Callable
 import java.util.function.Consumer
 import java.util.function.Supplier
@@ -66,6 +74,9 @@ import java.util.function.Supplier
                 'and an option the application was created with is never replaced.',
         'The files you changed keep your changes. When a feature changes or takes out what you changed too, or a file it writes is there already, ' +
                 'nothing is written and the files are named.',
+        'The feature of a plugin is added by the coordinates of the plugin, group:artifact:version, whose jar is taken from a repository as the create ' +
+                'commands take it; by its name with the directory of its feature pack (--feature-pack-dir); or by its name in a feature catalog. The record ' +
+                'then names the pack as it does for an application that was created with it. A pack is code: use one only when you trust where it comes from.',
         'An application with the feature of a feature pack that is not part of Grails gets a feature only with that very pack: the jar of a plugin is ' +
                 'fetched again by the coordinates and the SHA-256 its record has, and the pack of a directory is given again with --feature-pack-dir.'])
 @Component
@@ -79,7 +90,8 @@ class FeatureAddCommand extends BaseCommand implements Callable<Integer>, Projec
                                                         (Action.CONFLICT): 'conflict', (Action.REMOVE): 'remove'] as Map<Action, String>
 
     @CommandLine.Parameters(arity = '1..*', paramLabel = 'FEATURE', split = ',', completionCandidates = FeatureNameCandidates,
-            description = 'The names of the features to add: feature list lists those that can be added to the application.')
+            description = 'The features to add: the names feature list lists; the coordinates of a plugin with a feature pack, group:artifact:version; ' +
+                    'the name of the feature of a pack that is given with --feature-pack-dir; or a name, or a full name group:artifact#name, of a feature catalog.')
     List<String> features = new ArrayList<>()
 
     @CommandLine.Option(names = ['--dry-run'], description = 'Say which files would be added, changed and removed, which features would be replaced, and which conflicts there are, and change nothing.')
@@ -107,8 +119,32 @@ class FeatureAddCommand extends BaseCommand implements Callable<Integer>, Projec
     @CommandLine.Mixin
     RecordedPackOptions packOptions = new RecordedPackOptions()
 
+    @CommandLine.Option(names = ['--feature-pack-sha256'], paramLabel = 'COORDINATES=SHA256',
+            description = 'The SHA-256 the jar of a plugin that is added by its coordinates has to have, as group:artifact:version=sha256. ' +
+                    'A jar with another one is refused before it is opened. Can be given more than once.')
+    List<String> featurePackDigests = new ArrayList<>()
+
+    @CommandLine.Option(names = ['--feature-catalog'], paramLabel = 'URL',
+            description = 'A feature catalog, in which a name that is neither a feature of Grails nor that of a feature pack that was given is ' +
+                    'looked up, as the create commands look it up: the catalog says which plugin has the feature, in which version and with which ' +
+                    'SHA-256. The address is https, or file: for a file; none is for no catalog. Without the option, the catalogs of the ' +
+                    'GRAILS_FORGE_CATALOG environment variable are read, else the plugin index the GRAILS_PLUGIN_INDEX environment variable names, ' +
+                    'and without either none. Can be given more than once.')
+    List<String> featureCatalogs = new ArrayList<>()
+
+    @CommandLine.Option(names = ['--refresh'],
+            description = 'Read each feature catalog anew, and not the copy of it that is kept on this computer for a day, and fetch ' +
+                    'the jar of a plugin that is added, and not the copy of it that is kept on this computer')
+    boolean refresh
+
     // asked of the Forge application when the command first needs it
     private final Supplier<ProjectGenerator> projectGeneratorSource
+
+    private PackArtifacts packArtifacts
+    // how the packs that are asked for are taken, as the create commands take them
+    private PackSelection packSelection
+    // the packs whose features are added, which are said before anything is written
+    private List<Pack> addedPacks = []
 
     @Autowired
     FeatureAddCommand(ProjectGenerator projectGenerator) {
@@ -152,17 +188,21 @@ class FeatureAddCommand extends BaseCommand implements Callable<Integer>, Projec
             for (String message : (preview ? Collections.<String>emptyList() : addition.recover(directory).getMessages())) {
                 out("@|blue ||@ ${message}")
             }
-            List<Pack> packs = packOptions.packs(directory, createPackArtifacts(), grailsRepoUrl(), { String line -> out("@|blue ||@ ${shown(line)}") } as Consumer<String>,
+            List<Pack> packs = packOptions.packs(directory, packArtifacts(), grailsRepoUrl(), { String line -> out("@|blue ||@ ${shown(line)}") } as Consumer<String>,
                     { String line -> warning(shown(line)) } as Consumer<String>)
-            ChangePlan plan = addition.plan(directory, features, getOperatingSystem(), this, replace, packs)
+            Asked asked = asked(directory, packs, { String line -> out(line) } as Consumer<String>, { String line -> warning(line) } as Consumer<String>)
+            ChangePlan plan = addition.plan(directory, asked.features, getOperatingSystem(), this, replace, asked.ofTheApplication, asked.added)
+            heldToItsBom(directory, plan)
+            addedPacks = asked.added.findAll { Pack pack -> plan.added.contains(pack.descriptor.name) }
             int exit = apply(plan, preview)
             if (exit == 0 && !preview && !plan.isNothingToAdd()) {
-                CreateCommand.said(this, instructions(directory, plan, packs))
+                // what the packs of the features that were added say is to be done, those that were added with them among them
+                CreateCommand.said(this, instructions(directory, plan, asked.ofTheApplication + asked.added))
             }
             return exit
         } catch (FeatureSelectionException e) {
             // features an application cannot have are a mistake in the command line, as they are when it is created
-            throw new CommandLine.ParameterException(spec.commandLine(), shown(e.getMessage()))
+            throw new CommandLine.ParameterException(spec.commandLine(), shown(e.getMessage()) + (packSelection == null ? '' : packSelection.getNotInCatalog()))
         } catch (ProjectStateException | ProjectChangeException | IllegalArgumentException | PackArtifactException e) {
             // a record that another version wrote is moved to this one by a command that is named
             err(shown(ProjectMigrateCommand.withMove(spec, directory, e)))
@@ -207,11 +247,24 @@ class FeatureAddCommand extends BaseCommand implements Callable<Integer>, Projec
         List<Pack> packs
         try {
             // which jar of a pack is fetched again is said among the notes: the document is all that is written
-            packs = packOptions.packs(directory, createPackArtifacts(), grailsRepoUrl(), { String line -> notes.out(line) } as Consumer<String>,
+            List<Pack> given = packOptions.packs(directory, packArtifacts(), grailsRepoUrl(), { String line -> notes.out(line) } as Consumer<String>,
                     { String line -> notes.warning(line) } as Consumer<String>)
+            Asked asked = asked(directory, given, { String line -> notes.out(plain(line)) } as Consumer<String>, { String line -> notes.warning(line) } as Consumer<String>)
+            packs = asked.ofTheApplication + asked.added
             FeatureAddition addition = new FeatureAddition(projectGeneratorSource.get())
             addition.featureOptions = FeatureOptions.parse(featureOptions)
-            plan = addition.plan(directory, features, getOperatingSystem(), notes, replace, packs)
+            plan = addition.plan(directory, asked.features, getOperatingSystem(), notes, replace, asked.ofTheApplication, asked.added)
+            heldToItsBom(directory, plan)
+            // which packs the features come from is among the notes: the document is all that is written
+            for (Pack pack : asked.added.findAll { Pack each -> plan.added.contains(each.descriptor.name) }) {
+                for (String line : PackSelection.origin(pack, packArtifacts()) + pack.summary()) {
+                    notes.out(plain(line))
+                }
+                String unlike = pack.artifact == null ? null : PackSelection.unlikeItsPlugin(pack, 'changed')
+                if (unlike != null) {
+                    notes.warning(unlike)
+                }
+            }
         } catch (Exception e) {
             if (showStacktrace()) {
                 e.printStackTrace(spec.commandLine().getErr())
@@ -264,6 +317,15 @@ class FeatureAddCommand extends BaseCommand implements Callable<Integer>, Projec
             err(shown(plan.refusal))
             return 1
         }
+        // a pack is not part of Grails: where it comes from and what it adds is said before anything is written
+        for (Pack pack : addedPacks) {
+            for (String line : PackSelection.origin(pack, packArtifacts())) {
+                out(line)
+            }
+            for (String line : pack.summary()) {
+                out("    ${line.replace('@|', '@ |')}")
+            }
+        }
         List<String> required = plan.added.findAll { String name -> !plan.requested.contains(name) }
         out("@|blue ||@ ${preview ? 'To add' : 'Adding'} the ${plan.requested.size() == 1 ? 'feature' : 'features'} ${shown(plan.requested.join(', '))}" +
                 (required.isEmpty() ? '' : ", and with ${plan.requested.size() == 1 ? 'it' : 'them'} ${shown(required.join(', '))}"))
@@ -308,7 +370,91 @@ class FeatureAddCommand extends BaseCommand implements Callable<Integer>, Projec
         out("@|blue ||@ ${plan.requested.size() == 1 ? 'Feature' : 'Features'} ${shown(plan.requested.join(', '))} added" +
                 (plan.replaced.isEmpty() ? '' : ", in the place of ${shown(plan.replaced.join(', '))}") +
                 ". Commit the changes together with the directory ${ProjectState.DIRECTORY}")
+        if (!addedPacks.isEmpty()) {
+            out('@|blue ||@ ' + CreateCommand.laterCommands(addedPacks.collect { Pack pack -> FeatureSelectionException.shown(pack.descriptor.name) }))
+        }
+        // of the application that was changed: one that is refused is not warned of as if it had been
+        for (Pack pack : addedPacks) {
+            String unlike = pack.artifact == null ? null : PackSelection.unlikeItsPlugin(pack, 'changed')
+            if (unlike != null) {
+                warning(unlike)
+            }
+        }
         return 0
+    }
+
+    /**
+     * What was asked for, once the packs it needs are taken: the packs the application has, given
+     * again, the packs whose features are added, and the features by their names. The pack of a
+     * directory or a jar that was given is one of the application when the record has a feature of
+     * its name, and one to add otherwise. A plugin that is named by its coordinates, a full name and a
+     * name nothing here knows are taken as the create commands take them, see {@link PackSelection};
+     * what the application has by those coordinates already is the feature it has.
+     */
+    private Asked asked(Path directory, List<Pack> given, Consumer<String> said, Consumer<String> warned) {
+        ProjectState state
+        try {
+            state = ProjectState.readSelection(directory, true)
+        } catch (ProjectStateException ignored) {
+            // what is wrong with the record is said by what adds the feature
+            return new Asked(features, given, Collections.<Pack>emptyList())
+        }
+        ProjectLock lock = state.lock
+        List<LockedFeature> ofPacks = lock.features.findAll { LockedFeature feature -> feature.source == LockedFeature.PACK }
+        List<Pack> ofTheApplication = given.findAll { Pack pack -> ofPacks.any { LockedFeature feature -> feature.name == pack.descriptor.name } }
+        List<Pack> toAdd = given.findAll { Pack pack -> !ofTheApplication.contains(pack) }
+        // the plugin the application has the feature of, named by its coordinates or by the full name of the feature, is that feature
+        List<String> named = features.collect { String feature ->
+            if (feature == null) {
+                return feature
+            }
+            LockedFeature has = null
+            if (PackCatalogs.isId(feature)) {
+                has = ofPacks.find { LockedFeature each -> each.coordinates == PackCatalogs.pluginOf(feature) && each.name == PackCatalogs.nameOf(feature) }
+            } else if (PackArtifacts.isCoordinates(feature)) {
+                has = ofPacks.find { LockedFeature each -> each.coordinates != null && "${each.coordinates}:${each.version}".toString() == feature }
+            }
+            return has == null ? feature : has.name
+        }
+        boolean nothingToTake = featurePackDigests.isEmpty() && named.every { String feature ->
+            feature == null || (!PackArtifacts.isCoordinates(feature) && (isKnown(state, feature) || toAdd.any { Pack pack -> pack.descriptor.name == feature }))
+        }
+        if (nothingToTake) {
+            return new Asked(named, ofTheApplication, toAdd)
+        }
+        packSelection = new PackSelection(new SelectionHost(state, named, said, warned))
+        PackSelection.Taken taken = packSelection.select(toAdd, null)
+        return new Asked(taken.features, ofTheApplication, taken.packs)
+    }
+
+    // a name the command knows without a pack that is taken: a feature of Grails, for whichever type of application, and a feature the application has
+    private boolean isKnown(ProjectState state, String name) {
+        ProjectGenerator generator = projectGeneratorSource.get()
+        return state.lock.featureNames.contains(name) || ApplicationType.values().any { ApplicationType type ->
+            generator.availableFeatures(type, Collections.<Pack>emptyList()).findFeature(name, true).isPresent()
+        }
+    }
+
+    // the packs a catalog gave for names were chosen for the BOM the application has, which the features that are added can change
+    private void heldToItsBom(Path directory, ChangePlan plan) {
+        if (packSelection == null || plan.isNothingToAdd()) {
+            return
+        }
+        List<String> has = ProjectState.readSelection(directory, true).lock.featureNames
+        packSelection.heldToItsBom(GrailsBase.bomArtifactId(has.findAll { String name -> !plan.replaced.contains(name) } + plan.added),
+                'Add the feature that makes it so first, so that the versions are chosen for that BOM')
+    }
+
+    private PackArtifacts packArtifacts() {
+        if (packArtifacts == null) {
+            packArtifacts = createPackArtifacts()
+        }
+        return packArtifacts
+    }
+
+    // a line as a document has it: without the markup of the command line
+    private static String plain(String line) {
+        return line.replace('@|blue ||@ ', '').trim()
     }
 
     /**
@@ -324,6 +470,198 @@ class FeatureAddCommand extends BaseCommand implements Callable<Integer>, Projec
      */
     protected String grailsRepoUrl() {
         return System.getenv('GRAILS_REPO_URL')
+    }
+
+    /**
+     * @return the feature catalogs that are read when the command names none: addresses separated by
+     * semicolons, {@code none} for no catalog, or {@code null} when the environment names none
+     */
+    protected String featureCatalogSetting() {
+        return System.getenv('GRAILS_FORGE_CATALOG')
+    }
+
+    /**
+     * @return the plugin index the environment names ({@code GRAILS_PLUGIN_INDEX}): an address,
+     * {@code none}, or {@code null} when it names none. It is the catalog when neither
+     * {@code --feature-catalog} nor {@link #featureCatalogSetting()} names one
+     */
+    protected String pluginIndexSetting() {
+        return System.getenv(CreateCommand.PLUGIN_INDEX_VARIABLE)
+    }
+
+    /**
+     * @return whether the plugin index of Grails is read as a catalog when neither the command nor
+     * the environment names one, which it is not, as for the create commands
+     */
+    protected boolean readsPluginIndexUnnamed() {
+        return PackCatalogs.PLUGIN_INDEX_UNNAMED
+    }
+
+    /**
+     * @return the home of the user, in which the copies of the feature catalogs are kept, under
+     * {@code .grails/forge/catalogs}
+     */
+    protected Path featureCatalogHome() {
+        return Path.of(System.getProperty('user.home'))
+    }
+
+    /**
+     * @return how long the feature catalog nobody named can take
+     */
+    protected Duration defaultCatalogWithin() {
+        return PackCatalogs.DEFAULT_WITHIN
+    }
+
+    /**
+     * @param artifact the artifact of a BOM of Grails
+     * @return the versions it manages, or {@code null} when this Forge has none for it
+     */
+    protected BomVersions bomVersions(String artifact) {
+        return BomVersions.of(artifact)
+    }
+
+    /** What was asked for, once the packs it needs are taken. */
+    private static final class Asked {
+
+        final List<String> features
+        final List<Pack> ofTheApplication
+        final List<Pack> added
+
+        Asked(List<String> features, List<Pack> ofTheApplication, List<Pack> added) {
+            this.features = features
+            this.ofTheApplication = ofTheApplication
+            this.added = added
+        }
+    }
+
+    /** What the command gives the taking of the packs it adds: its options, what it says, and what it reads of the environment. */
+    private final class SelectionHost implements PackSelection.Host {
+
+        private final ProjectState state
+        private final List<String> asked
+        private final Consumer<String> said
+        private final Consumer<String> warned
+
+        SelectionHost(ProjectState state, List<String> asked, Consumer<String> said, Consumer<String> warned) {
+            this.state = state
+            this.asked = asked
+            this.said = said
+            this.warned = warned
+        }
+
+        @Override
+        List<String> getAskedFeatures() {
+            return asked
+        }
+
+        @Override
+        String getAskedWith() {
+            return 'to add'
+        }
+
+        @Override
+        List<String> getPackRepositories() {
+            return packOptions.repositories
+        }
+
+        @Override
+        List<String> getPackDigests() {
+            return featurePackDigests
+        }
+
+        @Override
+        List<String> getPackCatalogs() {
+            return featureCatalogs
+        }
+
+        @Override
+        boolean isCatalogRefresh() {
+            return refresh
+        }
+
+        @Override
+        boolean isPackOffline() {
+            return packOptions.offline
+        }
+
+        @Override
+        String getApplicationTypeName() {
+            return state.manifest.applicationType.getName().replace('_', '-')
+        }
+
+        @Override
+        String getBomArtifact() {
+            return GrailsBase.bomArtifactId(state.lock.featureNames + asked.findAll { String each -> each != null })
+        }
+
+        @Override
+        boolean isKnownFeature(String name) {
+            return FeatureAddCommand.this.isKnown(state, name)
+        }
+
+        @Override
+        Pack notAPreset(Pack pack, String given) {
+            if (pack.descriptor.preset) {
+                throw new CommandLine.ParameterException(spec.commandLine(), "${FeatureSelectionException.shown(given)} has the preset ${pack.descriptor.name}, " +
+                        'which is not a feature: an application is made from a preset when it is created, with --preset, and a preset is not added to one that is there')
+            }
+            return pack
+        }
+
+        @Override
+        PackArtifacts getPackArtifacts() {
+            return FeatureAddCommand.this.packArtifacts()
+        }
+
+        @Override
+        String getCatalogSetting() {
+            return FeatureAddCommand.this.featureCatalogSetting()
+        }
+
+        @Override
+        String getPluginIndexSetting() {
+            return FeatureAddCommand.this.pluginIndexSetting()
+        }
+
+        @Override
+        boolean isPluginIndexReadUnnamed() {
+            return FeatureAddCommand.this.readsPluginIndexUnnamed()
+        }
+
+        @Override
+        Path getCatalogHome() {
+            return FeatureAddCommand.this.featureCatalogHome()
+        }
+
+        @Override
+        String getGrailsRepoUrl() {
+            return FeatureAddCommand.this.grailsRepoUrl()
+        }
+
+        @Override
+        Duration getDefaultCatalogWithin() {
+            return FeatureAddCommand.this.defaultCatalogWithin()
+        }
+
+        @Override
+        BomVersions bomVersionsOf(String artifact) {
+            return FeatureAddCommand.this.bomVersions(artifact)
+        }
+
+        @Override
+        CommandLine.Model.CommandSpec getCommandSpec() {
+            return spec
+        }
+
+        @Override
+        void say(String line) {
+            said.accept(line)
+        }
+
+        @Override
+        void warn(String line) {
+            warned.accept(line)
+        }
     }
 
     private static String shown(String text) {

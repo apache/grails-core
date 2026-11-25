@@ -343,7 +343,7 @@ A plugin can give its users two things on the command line.
 $ grails create-app com.example.shop --features com.acme:acme-audit-grails:2.3.0
 ----
 
-While you write a pack, `--feature-pack-dir` gives it to a `create-` command as a directory, the Gradle task `checkForgePack` (a part of `check`) reads the pack and renders its templates, and `forgePackTest` generates and builds real applications with it. A pack is code that runs when an application is generated, so use one only when you trust where it comes from. The feature of a plugin is selected when an application is created; `feature add` adds the features of Grails itself.
+While you write a pack, `--feature-pack-dir` gives it to a `create-` command as a directory, the Gradle task `checkForgePack` (a part of `check`) reads the pack and renders its templates, and `forgePackTest` generates and builds real applications with it. A pack is code that runs when an application is generated, so use one only when you trust where it comes from. The feature of a plugin is selected when an application is created, and added to an application that is there with `feature add`, by the coordinates of the plugin, as `grails feature add com.acme:acme-audit-grails:2.3.0`.
 
 link:plugins.html#forgeFeaturePacks[Adding a Feature to Application Creation] is the reference for packs, and link:applicationTypes.html#customizingGeneration[Customizing What a New Application Gets] compares the ways an organisation can shape new projects.
 

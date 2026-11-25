@@ -41,8 +41,15 @@ class FeatureRequestException extends FeatureSelectionException {
     /** A feature would take the place of one that a feature the application keeps or gets requires. */
     public static final String REQUIRED_BY_ANOTHER_FEATURE = 'required-by-another-feature'
 
-    /** A feature was named by the coordinates of a plugin, which cannot be added to an application yet. */
+    /** A feature was named by the coordinates of a plugin: a feature is added by its name, with the feature pack of the plugin given. */
     public static final String PLUGIN_COORDINATES = 'plugin-coordinates'
+
+    /**
+     * A preset was given to add its feature: an application is made from a preset when it is created.
+     *
+     * @since 9.0
+     */
+    public static final String PRESET = 'preset-not-added'
 
     private final String reason
 

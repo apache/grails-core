@@ -1238,17 +1238,18 @@ class FeatureAddCommandSpec extends CommandSpec implements CommandFixture {
         !new File(home, '.grails/forge/transactions').list()
     }
 
-    void "the feature of a plugin is not added by the coordinates of the plugin"() {
+    void "the feature of a plugin whose jar no repository has is not added, and nothing is written"() {
         given:
         create(dir, CreateAppCommand, [])
         Map<String, String> before = tree(dir)
 
-        when:
-        int exit = add('com.acme:acme-audit-grails:2.3.0')
+        when: 'the plugin is named by its coordinates, and nothing is asked of the network'
+        int exit = add('com.acme:acme-audit-grails:2.3.0', '--offline')
 
-        then:
-        exit == 2
-        err.toString().contains('com.acme:acme-audit-grails:2.3.0 is no name of a feature of Grails')
+        then: 'the plugin is looked for as the create commands look for it, and is not there'
+        exit == 1
+        err.toString().contains('com.acme:acme-audit-grails:2.3.0')
+        !err.toString().contains('is no name of a feature')
         tree(dir) == before
     }
 

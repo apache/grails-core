@@ -81,7 +81,9 @@ import java.util.function.Predicate
  * name, there is a conflict, and a plan with a conflict writes nothing. A file the features do not
  * change is not looked at.</p>
  *
- * <p>Only features of Grails are added, to an application that this very version generated. An
+ * <p>Features of Grails are added, and the features of feature packs that are not part of Grails,
+ * which the caller gives with the features to add: the application is then one that was created
+ * with the pack, and its record names the pack as the record of such an application does. An
  * application with the feature of a feature pack that is not part of Grails is generated again only
  * with that very pack, which the caller gives: the pack of a jar has to be the jar of the coordinates
  * and the SHA-256 the lock records, and a pack that was given as a directory or a file one whose
@@ -245,6 +247,24 @@ final class FeatureAddition {
      * @see #plan(Path, List, OperatingSystem, ConsoleOutput, boolean)
      */
     ChangePlan plan(Path projectDirectory, List<String> names, @Nullable OperatingSystem operatingSystem, ConsoleOutput console, boolean replace, List<Pack> packs) {
+        return plan(projectDirectory, names, operatingSystem, console, replace, packs, Collections.<Pack>emptyList())
+    }
+
+    /**
+     * @param added the feature packs that are not part of Grails whose features are to be added: each
+     * is the pack of a feature that is named, or of one that a feature which is added requires. The
+     * application is then generated with them as one that is created with them is, and its record
+     * names each as the record of such an application does: by the coordinates and the SHA-256 of
+     * its jar, or by the digest of its content. A preset is not added, and neither is a pack whose
+     * feature the application has
+     * @throws FeatureSelectionException also for a preset among {@code added}: a {@link FeatureRequestException}
+     * @throws ProjectChangeException also for a pack among {@code added} whose feature the application
+     * has, or does not get with the features that are added ({@link ProjectChangeException#PACK_DIFFERS})
+     * @see #plan(Path, List, OperatingSystem, ConsoleOutput, boolean, List)
+     * @since 9.0
+     */
+    ChangePlan plan(Path projectDirectory, List<String> names, @Nullable OperatingSystem operatingSystem, ConsoleOutput console, boolean replace, List<Pack> packs,
+                    List<Pack> added) {
         ProjectState state = replayable(projectDirectory)
         ProjectManifest manifest = state.manifest
         ProjectLock lock = state.lock
@@ -259,12 +279,13 @@ final class FeatureAddition {
         if (names.isEmpty()) {
             throw new FeatureSelectionException('Name the feature to add')
         }
-        AvailableFeatures available = generator.availableFeatures(manifest.applicationType, ofTheLock)
+        List<Pack> withAdded = ofTheLock + notOfTheApplication(lock, added)
+        AvailableFeatures available = generator.availableFeatures(manifest.applicationType, withAdded)
         List<String> asked = []
         for (String name : names) {
             if (name != null && name.contains(':')) {
-                throw new FeatureRequestException("${FeatureSelectionException.shown(name)} is no name of a feature of Grails: the feature of a plugin cannot yet be " +
-                        'added to an application by the coordinates of the plugin', FeatureRequestException.PLUGIN_COORDINATES)
+                throw new FeatureRequestException("${FeatureSelectionException.shown(name)} is no name of a feature: the feature of a plugin is added by its name, " +
+                        'with the feature pack of the plugin, which feature add takes by the coordinates of the plugin', FeatureRequestException.PLUGIN_COORDINATES)
             }
             Feature feature = name == null ? null : available.findFeature(name).orElse(null)
             // a name that is no feature is refused by the selection, in the words it has for it
@@ -309,7 +330,7 @@ final class FeatureAddition {
 
         RenderedProject after
         try {
-            after = render(manifest, selected, operatingSystem, console, ofTheLock, true, featureOptions)
+            after = render(manifest, selected, operatingSystem, console, withAdded, true, featureOptions)
         } catch (FeatureSelectionException e) {
             if (e.getOption() == null) {
                 throw e
@@ -318,12 +339,19 @@ final class FeatureAddition {
             // would be with the feature in the place of that option is worked out all the same, to
             // show it: it is refused below, because it takes away what the application has
             try {
-                after = render(manifest, selected, operatingSystem, ConsoleOutput.NOOP, ofTheLock, false, featureOptions)
+                after = render(manifest, selected, operatingSystem, ConsoleOutput.NOOP, withAdded, false, featureOptions)
             } catch (FeatureSelectionException ignored) {
                 throw e
             }
         }
         ProjectState proposed = stateOf(after)
+        // a pack that was given to add its feature, and whose feature the application does not get, was given by mistake
+        List<String> notAdded = added.findAll { Pack pack -> !proposed.lock.featureNames.contains(pack.descriptor.name) }*.descriptor*.name
+        if (!notAdded.isEmpty()) {
+            throw new ProjectChangeException("The feature ${notAdded.size() == 1 ? 'pack' : 'packs'} ${named(notAdded)} ${notAdded.size() == 1 ? 'was' : 'were'} given, and " +
+                    "${notAdded.size() == 1 ? 'its feature is' : 'their features are'} not among the features that are added: a feature pack is given to add its feature, " +
+                    'or again when the application has it. Nothing was changed', ProjectChangeException.PACK_DIFFERS, null)
+        }
         List<String> changedOptions = changedOptions(state.manifest.options, proposed.manifest.options)
         List<String> has = proposed.lock.featureNames
         List<String> lostFeatures = state.lock.featureNames.findAll { String name -> !has.contains(name) }
@@ -575,7 +603,7 @@ final class FeatureAddition {
         for (Pack pack : given) {
             if (!ofPacks.any { LockedFeature feature -> feature.name == pack.descriptor.name }) {
                 throw new ProjectChangeException("The feature pack ${pack.descriptor.name} was given, and the application has no feature of it: a feature pack is given " +
-                        'again only when the application was generated with it, and a feature of a feature pack is not added to an application',
+                        'again only when the application has its feature',
                         ProjectChangeException.PACK_DIFFERS, null)
             }
         }
@@ -630,6 +658,32 @@ final class FeatureAddition {
 
     private static String bounded(String message) {
         return message.length() > MAX_MESSAGE * 2 ? message.substring(0, MAX_MESSAGE * 2) + '...' : message
+    }
+
+    /**
+     * The feature packs whose features are to be added, which are none the application has: a preset
+     * is what an application is created from, and a pack whose feature the application has is
+     * given again as the pack of the application, and is not put in its place by another.
+     */
+    private static List<Pack> notOfTheApplication(ProjectLock lock, List<Pack> added) {
+        for (Pack pack : added) {
+            String name = pack.descriptor.name
+            if (pack.descriptor.preset) {
+                throw new FeatureRequestException("${FeatureSelectionException.shown(name)} is a preset, and a preset is not added to an application: an application is " +
+                        'made from a preset when it is created, with --preset, which gives it the options and the features of the preset. Nothing was changed',
+                        FeatureRequestException.PRESET)
+            }
+            LockedFeature has = lock.features.find { LockedFeature feature -> feature.name == name }
+            if (has != null) {
+                String ofJar = has.coordinates == null ? null : "${has.coordinates}:${has.version}".toString()
+                throw new ProjectChangeException("The application has the feature ${name} already" + (has.source != LockedFeature.PACK ? ', which is a feature of Grails' :
+                        ofJar != null ? ", of the feature pack of the jar ${ofJar} with the SHA-256 ${has.sha256}" : ', of a feature pack that was given as a directory or a file') +
+                        ', and the pack that was given to add it' + (pack.artifact == null ? '' : ", ${pack.artifact.coordinates} with the SHA-256 ${pack.artifact.sha256},") +
+                        ' is another: a feature pack is not put in the place of the one an application has by a command. Nothing was changed',
+                        ProjectChangeException.PACK_DIFFERS, null)
+            }
+        }
+        return added
     }
 
     // the state of a project that can be generated again by this generator

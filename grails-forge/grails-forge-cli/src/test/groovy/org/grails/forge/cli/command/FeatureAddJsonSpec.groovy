@@ -181,7 +181,6 @@ class FeatureAddJsonSpec extends AbstractFeatureAddCommandSpec {
         ['--features', 'h2']                                       | 'postgres'                         | []            || 'replace-required'            | 'feature add postgres --replace takes h2 out of the application'
         ['--features=grails-spring-security,grails-spring-security-ui'] | 'spring-boot-starter-security' | ['--replace'] || 'required-by-another-feature' | 'The feature grails-spring-security is not replaced'
         []                                                         | 'no-such-feature'                  | []            || 'feature-selection'           | 'The requested feature does not exist: no-such-feature'
-        []                                                         | 'com.acme:acme-audit-grails:2.3.0' | []            || 'plugin-coordinates'          | 'is no name of a feature of Grails'
     }
 
     void "an application that another version generated is refused, and the reason names it"() {

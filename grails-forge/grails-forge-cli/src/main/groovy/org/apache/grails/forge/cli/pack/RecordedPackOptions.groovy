@@ -47,8 +47,9 @@ import picocli.CommandLine
 class RecordedPackOptions {
 
     @CommandLine.Option(names = ['--feature-pack-dir'], paramLabel = 'DIRECTORY',
-            description = 'The directory of a feature pack the application was generated with, which is not part of Grails and was given to the ' +
-                    'create command as a directory. Its content has to have the SHA-256 the record of the application has. Can be given more than once.')
+            description = 'The directory of a feature pack that is not part of Grails. One the application has is given again, as it was given when ' +
+                    'the application got its feature, and its content has to have the SHA-256 the record of the application has; feature add also takes ' +
+                    'one the application does not have, to add its feature. Can be given more than once.')
     List<File> directories = new ArrayList<>()
 
     // not shown, as for the create commands: the jar of a plugin the application was generated with, as a file
@@ -58,14 +59,15 @@ class RecordedPackOptions {
     List<File> jars = new ArrayList<>()
 
     @CommandLine.Option(names = ['--feature-pack-repository'], paramLabel = 'URL',
-            description = 'A Maven repository to fetch the jar of a plugin from, whose feature pack the application was generated with. When the option ' +
+            description = 'A Maven repository to fetch the jar of a plugin from, whose feature pack the application has or, with feature add, is to get. When the option ' +
                     'is given, only the repositories it names are asked; without it, those of GRAILS_REPO_URL, Maven Central and then the repository ' +
                     'the record of the application names for the jar. Can be given more than once.')
     List<String> repositories = new ArrayList<>()
 
     @CommandLine.Option(names = ['--offline'],
-            description = 'Ask nothing of the network: the jar of a plugin whose feature pack the application has is taken from the copy of it that ' +
-                    'is kept on this computer since it was fetched, from a repository that is a directory, or from --feature-pack-jar')
+            description = 'Ask nothing of the network: the jar of a plugin whose feature pack the application has, or is to get, is taken from the ' +
+                    'copy of it that is kept on this computer since it was fetched, from a repository that is a directory, or from --feature-pack-jar, ' +
+                    'and a feature catalog from its copy on this computer or from a file')
     boolean offline
 
     /**

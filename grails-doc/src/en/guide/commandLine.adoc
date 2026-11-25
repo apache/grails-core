@@ -741,7 +741,11 @@ The exit code is always the one the command ends with without `--json`, so a scr
 
 | `plugin-coordinates`
 | `refused`
-| A feature was named by the coordinates of a plugin, which cannot be added to an application yet.
+| A program gave the coordinates of a plugin where the name of a feature is taken. `feature add` itself takes the plugin by its coordinates and adds its feature, and does not end with this reason.
+
+| `preset-not-added`
+| `refused`
+| A preset was given to add its feature: an application is made from a preset when it is created.
 
 | `feature-selection`
 | `refused`
