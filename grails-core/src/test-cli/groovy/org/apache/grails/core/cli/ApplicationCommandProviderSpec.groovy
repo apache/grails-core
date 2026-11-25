@@ -448,7 +448,7 @@ class ApplicationCommandProviderSpec extends Specification {
     }
 
     @Unroll
-    def "a command is found by its name, and by the name its class gives when no command has that name: #lookedFor"() {
+    def "a command is found by the name its class gives, which the build lists it by, and by its name when no class gives that name: #lookedFor"() {
         given: 'commands whose names are not the names their classes give, as the catalog of a build lists a command without a descriptor'
         URL plugin = createFactoryJar(
                 'class-named-commands.jar',
@@ -466,7 +466,7 @@ class ApplicationCommandProviderSpec extends Specification {
         CommandDescriptor.conventionName(ZOrderedCollisionCommand.name)   || ZOrderedCollisionCommand
         CommandDescriptor.conventionName(AUnorderedCollisionCommand.name) || AUnorderedCollisionCommand
         'something-else'                                                || ClassGivenCommand
-        'class-given'                                                   || RunsAsClassGivenCommand
+        'class-given'                                                   || ClassGivenCommand
         'runs-as-class-given'                                           || RunsAsClassGivenCommand
         'no-such-command'                                               || null
     }

@@ -22,6 +22,7 @@ import java.lang.reflect.Method
 
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
+import org.codehaus.groovy.ast.ASTNode
 import org.codehaus.groovy.ast.ClassHelper
 import org.codehaus.groovy.ast.ClassNode
 import org.codehaus.groovy.ast.CodeVisitorSupport
@@ -89,7 +90,10 @@ import org.codehaus.groovy.transform.trait.Traits
  * is found as Groovy finds it: a private method of the class whose code calls it; of the methods with
  * the same parameters, the one nearest to the command; every method the call can mean otherwise. Where
  * the code can go two ways that leave the property different, a condition or two constructors, it is
- * not known.</p>
+ * not known. Each way is read with what holds the command on that way: a parameter of a method that was
+ * given the command and is given another value on one way holds the command on the other ways still,
+ * and where the ways meet again it is not known what it holds, so what is done through it from there
+ * makes the property unknown.</p>
  *
  * <p>What can set the property and is not read makes it unknown: a method that is not compiled with
  * the command or has no code, one of the Groovy runtime or one the runtime looks for, an assignment
@@ -181,6 +185,67 @@ class ConstructionReader {
         new ConstructionReader(command, declaring, property).read()
     }
 
+    /**
+     * @param declaring the class that declares the property
+     * @param property the name of a property that is final
+     * @return whether a constructor of the class has a statement that sets the property, or a property
+     * of the command whose name is worked out, which is the only code that can set a final property
+     * over the value it is declared with
+     */
+    static boolean setsInConstructor(ClassNode declaring, String property) {
+        boolean[] found = [false] as boolean[]
+        CodeVisitorSupport targets = new CodeVisitorSupport() {
+
+            @Override
+            void visitVariableExpression(VariableExpression expression) {
+                found[0] = found[0] || expression.name == property
+            }
+
+            @Override
+            void visitPropertyExpression(PropertyExpression expression) {
+                String name = expression.propertyAsString
+                found[0] = found[0] || name == null || name == property
+                super.visitPropertyExpression(expression)
+            }
+
+            @Override
+            void visitAttributeExpression(AttributeExpression expression) {
+                String name = expression.propertyAsString
+                found[0] = found[0] || name == null || name == property
+                super.visitAttributeExpression(expression)
+            }
+        }
+        CodeVisitorSupport assignments = new CodeVisitorSupport() {
+
+            @Override
+            void visitBinaryExpression(BinaryExpression expression) {
+                if (Types.ofType(expression.operation.type, Types.ASSIGNMENT_OPERATOR)) {
+                    expression.leftExpression.visit(targets)
+                }
+                super.visitBinaryExpression(expression)
+            }
+
+            @Override
+            void visitPostfixExpression(PostfixExpression expression) {
+                expression.expression.visit(targets)
+                super.visitPostfixExpression(expression)
+            }
+
+            @Override
+            void visitPrefixExpression(PrefixExpression expression) {
+                expression.expression.visit(targets)
+                super.visitPrefixExpression(expression)
+            }
+        }
+        for (ConstructorNode constructor : declaring.declaredConstructors) {
+            constructor.code?.visit(assignments)
+        }
+        for (Statement statement : declaring.objectInitializerStatements) {
+            statement.visit(assignments)
+        }
+        found[0]
+    }
+
     private String read() {
         if (hierarchy.any { ClassNode type -> MOP_METHODS.any { String name -> !type.getDeclaredMethods(name).isEmpty() } }) {
             return null
@@ -270,14 +335,80 @@ class ConstructionReader {
         if (statement instanceof IfStatement) {
             IfStatement choice = (IfStatement) statement
             truth(choice.booleanExpression, state, frame)
-            return State.join(run(choice.ifBlock, state.copy(), frame), run(choice.elseBlock, state.copy(), frame))
+            // each way starts with the parameters that hold the command where the ways part
+            Set<String> held = frame.aliases
+            frame.aliases = new HashSet<String>(held)
+            State first = run(choice.ifBlock, state.copy(), frame)
+            Set<String> heldAfterFirst = frame.aliases
+            frame.aliases = new HashSet<String>(held)
+            State second = run(choice.elseBlock, state.copy(), frame)
+            return either(first, heldAfterFirst, second, frame)
         }
         // a loop, a switch, a try, and the rest are not followed
+        forget(statement, frame)
         State unknown = new State(UNKNOWN, true)
         if (returns(statement)) {
             frame.returned = State.join(frame.returned, unknown)
         }
         unknown
+    }
+
+    // Either of two ways the code can go, of which the second is the one the frame has the parameters of. A way that
+    // does not complete leaves nothing. A parameter that holds the command after one way and not after the other may
+    // hold it: it is not followed from here, and the command is with code that is not read.
+    private static State either(State first, Set<String> heldAfterFirst, State second, Frame frame) {
+        State joined = State.join(first, second)
+        if (first == null) {
+            return joined
+        }
+        if (second == null) {
+            frame.aliases = heldAfterFirst
+            return joined
+        }
+        if (heldAfterFirst != frame.aliases) {
+            frame.aliases.retainAll(heldAfterFirst)
+            joined.escaped = true
+        }
+        joined
+    }
+
+    // code that is not followed may give a parameter that holds the command another value: one it assigns is not
+    // followed after it. Says whether there was one.
+    private static boolean forget(ASTNode code, Frame frame) {
+        if (frame.aliases.isEmpty()) {
+            return false
+        }
+        Set<String> assigned = new HashSet<String>()
+        CodeVisitorSupport targets = new CodeVisitorSupport() {
+
+            @Override
+            void visitVariableExpression(VariableExpression expression) {
+                assigned << expression.name
+            }
+        }
+        code.visit(new CodeVisitorSupport() {
+
+            @Override
+            void visitBinaryExpression(BinaryExpression expression) {
+                if (Types.ofType(expression.operation.type, Types.ASSIGNMENT_OPERATOR)) {
+                    expression.leftExpression.visit(targets)
+                }
+                super.visitBinaryExpression(expression)
+            }
+
+            @Override
+            void visitPostfixExpression(PostfixExpression expression) {
+                expression.expression.visit(targets)
+                super.visitPostfixExpression(expression)
+            }
+
+            @Override
+            void visitPrefixExpression(PrefixExpression expression) {
+                expression.expression.visit(targets)
+                super.visitPrefixExpression(expression)
+            }
+        })
+        frame.aliases.removeAll(assigned)
     }
 
     // evaluates the expression, and says whether its value can be, or hold, the command
@@ -311,7 +442,10 @@ class ConstructionReader {
             return instantiate((ConstructorCallExpression) expression, state, frame)
         }
         if (expression instanceof ClosureExpression) {
-            // a closure holds the command it is written in
+            // a closure holds the command it is written in, and can set what it sees whenever it is called
+            if (forget(expression, frame)) {
+                state.escaped = true
+            }
             return true
         }
         if (expression instanceof MethodPointerExpression) {
@@ -379,6 +513,7 @@ class ConstructionReader {
                 return false
             }
         }
+        forget(expression, frame)
         unknown(state)
     }
 
@@ -474,9 +609,11 @@ class ConstructionReader {
         }
         if (operation == Types.LOGICAL_AND || operation == Types.LOGICAL_OR) {
             truth(expression.leftExpression, state, frame)
+            // the right side runs or does not
             State skipped = state.copy()
+            Set<String> held = new HashSet<String>(frame.aliases)
             truth(expression.rightExpression, state, frame)
-            state.take(State.join(skipped, state))
+            state.take(either(skipped, held, state, frame))
             return false
         }
         // an operator is a method of the value on its left
@@ -546,6 +683,16 @@ class ConstructionReader {
             writeProperty(name, value, carries, onThis && frame.owner.getDeclaredField(name) != null, state, frame)
             return
         }
+        // several variables at once, or something that is not followed
+        Set<String> named = new HashSet<String>()
+        target.visit(new CodeVisitorSupport() {
+
+            @Override
+            void visitVariableExpression(VariableExpression expression) {
+                named << expression.name
+            }
+        })
+        frame.aliases.removeAll(named)
         unknown(state)
     }
 
@@ -665,16 +812,21 @@ class ConstructionReader {
             boolean carries = eval(choice.trueExpression, state, frame)
             external(state, carries)
             State skipped = state.copy()
+            Set<String> held = new HashSet<String>(frame.aliases)
             carries = eval(choice.falseExpression, state, frame) || carries
-            state.take(State.join(skipped, state))
+            state.take(either(skipped, held, state, frame))
             return carries
         }
         truth(choice.booleanExpression.expression, state, frame)
+        Set<String> held = frame.aliases
+        frame.aliases = new HashSet<String>(held)
         State first = state.copy()
         boolean carries = eval(choice.trueExpression, first, frame)
+        Set<String> heldAfterFirst = frame.aliases
+        frame.aliases = new HashSet<String>(held)
         State second = state.copy()
         carries = eval(choice.falseExpression, second, frame) || carries
-        state.take(State.join(first, second))
+        state.take(either(first, heldAfterFirst, second, frame))
         carries
     }
 
@@ -981,7 +1133,8 @@ class ConstructionReader {
 
         final ClassNode owner
 
-        final Set<String> aliases = new HashSet<String>()
+        // the parameters that hold the command at the point of the code that is read, which each way the code can go has its own of
+        Set<String> aliases = new HashSet<String>()
 
         State returned
 

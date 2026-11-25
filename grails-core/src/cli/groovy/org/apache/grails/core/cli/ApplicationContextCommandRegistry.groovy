@@ -41,6 +41,7 @@ class ApplicationContextCommandRegistry {
     // every command made, by its class, also one whose name another command has
     private final Map<Class<?>, ApplicationCommand> madeCommands = new LinkedHashMap<>()
     private final String missingCommandHint
+    private volatile Map<String, List<ApplicationCommand>> listed
 
     ApplicationContextCommandRegistry() {
         ClassLoader registryClassLoader = ApplicationContextCommandRegistry.classLoader
@@ -252,39 +253,60 @@ class ApplicationContextCommandRegistry {
     }
 
     /**
-     * Finds a command by its name, or, when no command has that name, by the name its class name
-     * gives ({@code ImportDataCommand} is {@code import-data}). The catalog of the commands of a
-     * build lists a command that has no descriptor by the name its class name gives, as its own
-     * name is known only once the command is made; the command is run by the name it is listed by.
+     * Finds a command by the name the catalog of the commands of a build lists it by: the name its
+     * descriptor gives, or, for a command that has no descriptor, the name its class name gives
+     * ({@code ImportDataCommand} is {@code import-data}), as the name of such a command is known
+     * only once the command is made. The command a name is listed for is the command that name runs,
+     * also when another command gives itself that name when it is made. A name that is listed for
+     * no command, or for more than one, which the catalog does not list, is the name a command has
+     * when it is made; of several commands that have it, the first in their order.
      *
      * @param name the name of the command
-     * @return the command, or {@code null} when no command has the name, and the class of no
-     * command, or of more than one, gives it
+     * @return the command, or {@code null} when the name is listed for no single command and no
+     * command has it
      */
     ApplicationCommand findCommand(String name) {
-        ApplicationCommand command = commands[name]
-        command != null ? command : findCommandByClassName(name)
+        List<ApplicationCommand> listed = listedCommands().get(name)
+        listed != null && listed.size() == 1 ? listed[0] : commands[name]
     }
 
-    // the command whose class gives the name; of two classes that give it, the one without a descriptor, as the
-    // catalog lists a command with a descriptor by the name the descriptor gives
-    private ApplicationCommand findCommandByClassName(String name) {
-        List<Class<?>> named = madeCommands.keySet().findAll { Class<?> type -> CommandDescriptor.conventionName(type.name) == name }.toList()
-        if (named.size() > 1) {
-            named = named.findAll { Class<?> type -> !hasDescriptor(type) }
+    // the commands by the names the catalog lists them by
+    private Map<String, List<ApplicationCommand>> listedCommands() {
+        Map<String, List<ApplicationCommand>> byName = listed
+        if (byName == null) {
+            byName = new HashMap<>()
+            for (Map.Entry<Class<?>, ApplicationCommand> made : madeCommands) {
+                String name = listedName(made.key)
+                if (name != null) {
+                    byName.computeIfAbsent(name) { String key -> new ArrayList<ApplicationCommand>() }.add(made.value)
+                }
+            }
+            listed = byName
         }
-        named.size() == 1 ? madeCommands[named[0]] : null
+        byName
+    }
+
+    // the name the catalog lists the class by: the one its descriptor gives, the one its class name gives when it has
+    // no descriptor, and none when its descriptor cannot be used, as the catalog does not list that command
+    private static String listedName(Class<?> type) {
+        String location = CommandDescriptor.location(type.name)
+        URL descriptor = location == null ? null : type.classLoader?.getResource(location)
+        if (descriptor == null) {
+            return CommandDescriptor.conventionName(type.name)
+        }
+        try {
+            byte[] bytes = descriptor.openStream().withCloseable { InputStream input -> input.readNBytes(CommandDescriptor.MAX_BYTES + 1) }
+            return CommandDescriptor.read(type.name, bytes).name
+        }
+        catch (CommandDescriptor.Refused | IOException ignored) {
+            return null
+        }
     }
 
     // the class of the command, which the catalog names it by: for an adapter, the class of the command it adapts
     private static Class<?> commandClass(ApplicationCommand command) {
         Object target = command instanceof ApplicationCommandTargetAware ? ((ApplicationCommandTargetAware) command).target : command
         target.getClass()
-    }
-
-    private static boolean hasDescriptor(Class<?> type) {
-        String location = CommandDescriptor.location(type.name)
-        location != null && type.classLoader?.getResource(location) != null
     }
 
     String getMissingCommandHint() {

@@ -51,7 +51,9 @@ import org.apache.grails.gradle.model.cli.CommandDescriptor
  * {@code getName()}; the description is the name unless one of them declares {@code description}
  * or {@code getDescription()}. The declaration nearest to the command is read, as it is the one
  * that is called: a method that does nothing but return a string constant, or a property. A
- * property that can be set is what it is once an instance of the command is made: the field
+ * property that is {@code final} is the value it is declared with unless a constructor of its class
+ * sets it, which Groovy allows. A property that can be set, or is set so, is what it is once an
+ * instance of the command is made: the field
  * initializers, initializer blocks and constructors of the command and of the classes it extends
  * are followed in the order they run, with the methods of those classes they call on the command,
  * and the property is known when the last statement that sets it sets it to a string constant on
@@ -162,10 +164,11 @@ class CommandDescriptorWriter {
             }
             PropertyNode propertyNode = current.getProperty(property)
             if (propertyNode != null && !propertyNode.isStatic()) {
-                if (Modifier.isFinal(propertyNode.modifiers)) {
+                // nothing but a constructor of its class sets a final property over the value it is declared with
+                if (Modifier.isFinal(propertyNode.modifiers) && !ConstructionReader.setsInConstructor(current, property)) {
                     return constant(propertyNode.initialExpression)
                 }
-                // a property that can be set is what the code that runs when the command is made leaves it as
+                // a property that is set is what the code that runs when the command is made leaves it as
                 String made = ConstructionReader.read(classNode, current, property)
                 return made == null ? UNKNOWN : made
             }
