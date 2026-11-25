@@ -219,6 +219,80 @@ class TestFilterAcrossTasksFunctionalSpec extends GradleSpecification {
         result.output.contains('No tests found for given includes')
     }
 
+    @Unroll
+    def "a filter that matches nothing fails although a task without a filter ran its tests: #arguments"() {
+        when:
+        BuildResult result = fail(arguments + [LENIENT])
+
+        then: 'the tests of the task that was given no filter are no match of the filter'
+        result.task(':test').outcome == TaskOutcome.SUCCESS
+        result.task(':checkTestFilterMatched').outcome == TaskOutcome.FAILED
+        result.output.contains('No tests found for the given filter (*Nope*) in the test task :test:')
+
+        when: 'asked again'
+        result = fail(arguments + [LENIENT])
+
+        then:
+        result.output.contains('Reusing configuration cache')
+        result.task(':checkTestFilterMatched').outcome == TaskOutcome.FAILED
+        result.output.contains('No tests found for the given filter (*Nope*) in the test task :test:')
+
+        where:
+        arguments << [
+                ['test', '--tests', '*Nope*', 'integrationTest'],
+                ['integrationTest', 'test', '--tests', '*Nope*'],
+                ['test', '--tests=*Nope*', 'integrationTest'],
+        ]
+    }
+
+    def "a task without a filter runs all of its tests beside a task whose filter has a match"() {
+        when:
+        BuildResult result = run(['test', '--tests', '*UnitOnly*', 'integrationTest', LENIENT])
+
+        then:
+        passed(result) == ['BothIntegrationTest', 'IntegrationOnlyTest', 'UnitOnlyTest']
+        result.task(':checkTestFilterMatched').outcome == TaskOutcome.SUCCESS
+    }
+
+    def "one of two filters that has no test where it was given does not fail the build: a test was found for a filter"() {
+        when: 'the unit tests have their test, and the integration tests have none for theirs'
+        BuildResult result = run(['test', '--tests', '*UnitOnly*', 'integrationTest', '--tests', '*Nope*', LENIENT])
+
+        then:
+        passed(result) == ['UnitOnlyTest']
+        result.task(':integrationTest').outcome == TaskOutcome.SUCCESS
+        result.task(':checkTestFilterMatched').outcome == TaskOutcome.SUCCESS
+    }
+
+    def "a task that was given no filter on the command line is as Gradle has it with the property: it fails without a test for the filter of its build script"() {
+        given:
+        new File(runner.projectDir, 'build.gradle') << '''
+            tasks.named('integrationTest') {
+                filter {
+                    includeTestsMatching '*Nope*'
+                }
+            }
+        '''.stripIndent()
+
+        when:
+        BuildResult result = fail(['test', '--tests', '*UnitOnly*', 'integrationTest', LENIENT, '--continue'])
+
+        then:
+        result.task(':integrationTest').outcome == TaskOutcome.FAILED
+        result.output.contains('No tests found for given includes: [*Nope*](filter.includeTestsMatching)')
+        result.task(':checkTestFilterMatched').outcome == TaskOutcome.SUCCESS
+    }
+
+    def "without the property a filter that matches nothing fails in its task as Gradle has it, beside a task without a filter"() {
+        when:
+        BuildResult result = fail(['test', '--tests', '*Nope*', 'integrationTest'])
+
+        then:
+        result.task(':test').outcome == TaskOutcome.FAILED
+        result.output.contains('No tests found for given includes: [*Nope*](--tests filter)')
+        result.task(':checkTestFilterMatched') == null
+    }
+
     // the tasks and their filter in the order the command line gives them
     private static List<String> both(String filter) {
         ['test', '--tests', filter, 'integrationTest', '--tests', filter]

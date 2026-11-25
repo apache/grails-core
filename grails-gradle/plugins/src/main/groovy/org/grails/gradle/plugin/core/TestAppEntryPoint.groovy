@@ -48,8 +48,8 @@ import org.gradle.language.base.plugins.LifecycleBasePlugin
  * those of them that are part of the build (a task left out with {@code -x} is not):
  * the names of tests are the {@code --tests} of each, with which a task without such a test passes;
  * the tests are run again where nothing changed; the JVMs of the tests wait for a debugger, one at
- * a time. The unit tests are run first, then the integration tests, then the other phases, in
- * every build that has them and not only in one of this task.</p>
+ * a time. The unit tests are run first, then the integration tests, then the other phases, where
+ * the build script does not ask for another order: see {@link TestPhaseOrder}.</p>
  *
  * @since 9.0
  */
@@ -75,17 +75,7 @@ class TestAppEntryPoint {
             task.runs.set(runs)
             task.usesService(runs)
         }
-        // Not shouldRunAfter, which Gradle sets aside where tasks of a project run in parallel, as they do
-        // with the configuration cache: the phases would start together.
-        testTasks.configureEach { Test test ->
-            if (test.name == TestPhaseNames.INTEGRATION_TASK) {
-                test.mustRunAfter(testTasks.named({ String name -> name == TestPhaseNames.UNIT_TASK } as Spec<String>))
-            } else if (test.name != TestPhaseNames.UNIT_TASK) {
-                test.mustRunAfter(testTasks.named({ String name ->
-                    name == TestPhaseNames.UNIT_TASK || name == TestPhaseNames.INTEGRATION_TASK
-                } as Spec<String>))
-            }
-        }
+        TestPhaseOrder.apply(project, testTasks)
         // a debugger is attached to one JVM at a time: the test tasks that wait for one do not run together
         Provider<Debugger> debugger = project.gradle.sharedServices.registerIfAbsent(DEBUGGER, Debugger) { BuildServiceSpec<BuildServiceParameters.None> spec ->
             spec.maxParallelUsages.set(1)
@@ -110,11 +100,12 @@ class TestAppEntryPoint {
                     test.setTestNameIncludePatterns(patterns)
                     Provider<RegularFile> count = TestFilterAcrossTasks.countFile(project, test.name)
                     task.counts.put(test.path, count)
-                    // with the property, TestFilterAcrossTasks counts and tracks every test task of the build
+                    // with the property, TestFilterAcrossTasks has every test task of the project count
                     if (!counted) {
                         TestFilterAcrossTasks.count(test, count)
-                        TestFilterAcrossTasks.track(test, runs)
                     }
+                    TestFilterAcrossTasks.lenient(test)
+                    TestFilterAcrossTasks.track(test, runs)
                 }
                 if (task.rerunTests.get()) {
                     test.outputs.upToDateWhen(new Never())

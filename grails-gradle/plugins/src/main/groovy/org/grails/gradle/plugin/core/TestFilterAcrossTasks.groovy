@@ -20,6 +20,7 @@ package org.grails.gradle.plugin.core
 
 import java.util.concurrent.ConcurrentHashMap
 
+import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 
 import org.gradle.TaskExecutionRequest
@@ -44,13 +45,20 @@ import org.gradle.api.tasks.testing.TestResult
  * {@code integrationTest}.
  *
  * <p>With the project property {@value #PROPERTY} (any value but {@code false}), a test task of the
- * project that has no test for its filter passes, and the task {@value #CHECK_TASK_NAME} runs after
- * the test tasks of the build and fails when a filter was given on the command line ({@code --tests})
- * and no test task of the project that ran in the build ran a test: a filter that matches nothing
- * anywhere is still a failure. A test task that ran is one that ran its tests, was up to date or was
- * taken from the build cache; one that is left out of the build ({@code -x}) or skipped (an
- * {@code onlyIf}, {@code enabled = false}) ran no test, and what it counted in an earlier build is not
- * counted. Without the property nothing is changed.</p>
+ * project that was given a filter on the command line ({@code --tests}) and has no test for it passes,
+ * and the task {@value #CHECK_TASK_NAME} runs after the test tasks of the build and fails when none of
+ * the test tasks that were given a filter ran a test: a filter that matches nothing anywhere is still a
+ * failure. A test task of the same build that was given no filter runs all of its tests, and they are
+ * no match of the filter of another task: it is not counted, and it is as Gradle has it in every way.
+ * A test task that ran is one that ran its tests, was up to date or was taken from the build cache; one
+ * that is left out of the build ({@code -x}) or skipped (an {@code onlyIf}, {@code enabled = false})
+ * ran no test, and what it counted in an earlier build is not counted.</p>
+ *
+ * <p>A test task without a test for its filter passes in these two cases and in no other: the property
+ * is given and the task has a {@code --tests} of the command line, or the task is run by
+ * {@code testApp} with the {@code --tests} of that task, see {@link TestAppEntryPoint}. Without the
+ * property and without {@code testApp} nothing is changed: {@code gradlew test --tests X} fails in
+ * {@code test}, as Gradle has it, when the task has no such test.</p>
  *
  * @since 9.0
  */
@@ -90,13 +98,24 @@ class TestFilterAcrossTasks {
                 return
             }
             List<Test> tests = graph.allTasks.findAll { Task each -> each instanceof Test && each.project == project } as List<Test>
+            // the tasks the filter was given to, and no others: what a task without a filter runs is no match of it
+            Map<Test, Set<String>> given = [:]
+            for (Test each : tests) {
+                given.put(each, commandLinePatterns(each))
+            }
+            boolean known = !given.values().contains(null)
+            List<Test> filtered = known ? tests.findAll { Test each -> !given.get(each).isEmpty() } : tests
             check.configure { TestFilterMatchCheck task ->
-                for (Test each : tests) {
+                if (known) {
+                    task.patterns.set(filtered.collectMany { Test each -> given.get(each) as List<String> }.unique())
+                }
+                for (Test each : filtered) {
                     task.testTasks.add(each.path)
                     task.counts.put(each.path, countFile(project, each.name))
                 }
             }
-            for (Test each : tests) {
+            for (Test each : filtered) {
+                lenient(each)
                 track(each, runs)
             }
         }
@@ -108,9 +127,30 @@ class TestFilterAcrossTasks {
         return asked.isPresent() && asked.get() != 'false'
     }
 
-    /** Lets a test task pass that has no test for its filter, and has it write the number of tests it ran to a file. */
-    static void count(Test test, Provider<RegularFile> count) {
+    /** Lets a test task pass that has no test for its filter. */
+    static void lenient(Test test) {
         test.filter.failOnNoMatchingTests = false
+    }
+
+    /**
+     * The patterns a test task was given with {@code --tests} on the command line, which are not those
+     * its build script gives its filter.
+     *
+     * @return the patterns, none for a task without {@code --tests}, or {@code null} where the filter of
+     * the task does not say: Gradle has no public way to ask, and every filter it makes says it
+     */
+    @CompileDynamic
+    static Set<String> commandLinePatterns(Test test) {
+        Object filter = test.filter
+        if (!filter.metaClass.hasProperty(filter, 'commandLineIncludePatterns')) {
+            return null
+        }
+        Object patterns = filter.commandLineIncludePatterns
+        return patterns instanceof Collection ? new LinkedHashSet<String>((Collection<String>) patterns) : null
+    }
+
+    /** Has a test task write the number of tests it ran to a file. */
+    static void count(Test test, Provider<RegularFile> count) {
         // an output, so that a task that is up to date or taken from the build cache has the count of the run its results are of
         test.outputs.file(count).withPropertyName('grailsTestFilterCount')
         test.addTestListener(new TestCount(count.get().asFile))

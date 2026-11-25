@@ -323,6 +323,95 @@ class TestAppFunctionalSpec extends GradleSpecification {
         result.output.contains(':testApp SKIPPED')
     }
 
+    @Unroll
+    def "with the property for test tasks that are named one by one, testApp looks for the tests as without it: #filter"() {
+        when:
+        BuildResult result = runner.withArguments(['testApp', '--tests', filter, '-Pgrails.test.filter.lenient=true']).forwardOutput().run()
+
+        then:
+        passed(result) == ran
+        EVERY_TASK.every { result.task(it).outcome == TaskOutcome.SUCCESS }
+        result.task(':testApp').outcome == outcome
+        result.output.contains('No tests found for the given filter (*Nope*) in any of the test tasks :test, :integrationTest, :functionalTest, :smoke') == (outcome == TaskOutcome.FAILED)
+
+        where:
+        filter        || ran              | outcome
+        '*UnitOnly*'  || ['UnitOnlyTest'] | TaskOutcome.SUCCESS
+        '*Nope*'      || []               | TaskOutcome.FAILED
+    }
+
+    @Unroll
+    def "a test task that is asked for beside testApp and is no phase of it is not looked at for the tests of testApp#how"() {
+        when: 'the integration tests are run without a filter, and the unit tests have no such test'
+        BuildResult result = fail(['testApp', '--phase', 'unit', '--tests', '*Nope*', 'integrationTest'] + arguments)
+
+        then:
+        result.task(':testApp').outcome == TaskOutcome.FAILED
+        result.output.contains('No tests found for the given filter (*Nope*) in the test task :test:')
+
+        where:
+        arguments << [[], ['-Pgrails.test.filter.lenient=true']]
+        how = arguments ? ', with the property for test tasks that are named one by one' : ''
+    }
+
+    @Unroll
+    def "a build in which #what is built as it is without the task: #ordinary, and testApp"() {
+        given:
+        new File(runner.projectDir, 'build.gradle') << "\n${script}\n"
+
+        when: 'what an ordinary build asks for'
+        BuildResult result = run(ordinary)
+
+        then: 'there is no circular dependency, and the tasks run in the order the build script asks for'
+        sequence.every { result.task(it).outcome == TaskOutcome.SUCCESS }
+        inOrder(result, sequence)
+
+        when:
+        result = run(['testApp', '--rerun-tests'])
+
+        then: 'every phase runs, in the order of the phases where the build script does not ask for another'
+        EVERY_TASK.every { result.task(it).outcome == TaskOutcome.SUCCESS }
+        result.task(':testApp').outcome == TaskOutcome.SUCCESS
+        passed(result) == EVERY_TEST
+        order.every { List<String> pair -> inOrder(result, pair) }
+
+        where:
+        what                                                 | script                                                   | ordinary                   | sequence                       || order
+        'the unit tests depend on another Test task'         | "tasks.named('test') { dependsOn 'smoke' }"              | ['test']                   | [':smoke', ':test']            || [[':smoke', ':test'], [':test', ':integrationTest'], [':integrationTest', ':functionalTest']]
+        'the unit tests depend on another Test task'         | "tasks.named('test') { dependsOn 'smoke' }"              | ['check']                  | [':smoke', ':test', ':check']  || [[':smoke', ':test']]
+        'another Test task depends on the unit tests'        | "tasks.named('smoke') { dependsOn 'test' }"              | ['smoke']                  | [':test', ':smoke']            || [[':test', ':integrationTest'], [':integrationTest', ':functionalTest'], [':integrationTest', ':smoke']]
+        'the integration tests depend on another Test task'  | "tasks.named('integrationTest') { dependsOn 'smoke' }"   | ['integrationTest']        | [':smoke', ':integrationTest'] || [[':smoke', ':integrationTest'], [':test', ':integrationTest'], [':test', ':smoke'], [':integrationTest', ':functionalTest']]
+        'the unit tests depend on the integration tests'     | "tasks.named('test') { dependsOn 'integrationTest' }"    | ['test']                   | [':integrationTest', ':test']  || [[':integrationTest', ':test'], [':test', ':functionalTest'], [':test', ':smoke']]
+        'the unit tests are to run after another Test task'  | "tasks.named('test') { mustRunAfter 'functionalTest' }"  | ['test', 'functionalTest'] | [':functionalTest', ':test']   || [[':functionalTest', ':test'], [':test', ':integrationTest'], [':integrationTest', ':smoke']]
+        'another Test task is finalized by the unit tests'   | "tasks.named('smoke') { finalizedBy 'test' }"            | ['smoke']                  | [':smoke', ':test']            || [[':smoke', ':test'], [':test', ':integrationTest'], [':integrationTest', ':functionalTest']]
+    }
+
+    def "in a build without testApp the phases are in their order where Gradle runs one task of a project at a time"() {
+        when: 'asked for in another order, and without the configuration cache, with which the tasks of a project run in parallel'
+        BuildResult result = run(['smoke', 'functionalTest', 'integrationTest', 'test', '--no-configuration-cache'])
+
+        then:
+        inOrder(result, [':test', ':integrationTest', ':functionalTest'])
+        inOrder(result, [':integrationTest', ':smoke'])
+    }
+
+    def "testApp that is asked for by its path runs the unit tests first and the integration tests before the others"() {
+        when:
+        BuildResult result = run([':testApp'])
+
+        then:
+        result.task(':testApp').outcome == TaskOutcome.SUCCESS
+        inOrder(result, [':test', ':integrationTest', ':functionalTest'])
+        inOrder(result, [':integrationTest', ':smoke'])
+    }
+
+    // whether the tasks were run in this order, by the order Gradle names them in
+    private static boolean inOrder(BuildResult result, List<String> tasks) {
+        List<Integer> places = tasks.collect { String task -> result.tasks*.path.indexOf(task) }
+        assert !places.contains(-1) : "${tasks} of ${result.tasks*.path}"
+        places == places.toSorted()
+    }
+
     private BuildResult run(List<String> arguments) {
         runner.withArguments(arguments + ['--stacktrace']).forwardOutput().build()
     }
