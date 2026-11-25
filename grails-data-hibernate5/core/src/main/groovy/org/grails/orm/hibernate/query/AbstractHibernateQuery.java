@@ -623,7 +623,13 @@ public abstract class AbstractHibernateQuery extends Query {
         }
         org.hibernate.sql.JoinType hibernateJoinType = resolveJoinType(joinType);
         if (join.criteria != null) {
-            join.criteria.createAlias(associationPath, join.alias, hibernateJoinType);
+            CriteriaImpl root = criteria instanceof CriteriaImpl ? (CriteriaImpl) criteria : null;
+            boolean pagedIntermediateCollection = collection && !join.usedByCriteria && hasRequestedLeftJoinBelow(associationPath) && root != null &&
+                    (root.getMaxResults() != null || root.getFirstResult() != null && root.getFirstResult() > 0);
+            // Hibernate fetches an unrestricted left collection join even with FetchMode.SELECT.
+            // Keep this a sort join so limited rows cannot initialize an incomplete collection.
+            join.criteria.createAlias(associationPath, join.alias, hibernateJoinType,
+                    pagedIntermediateCollection ? Restrictions.sqlRestriction("1=1") : null);
         }
         else if (join.detachedCriteria != null) {
             join.detachedCriteria.createAlias(associationPath, join.alias, hibernateJoinType);
@@ -634,6 +640,23 @@ public abstract class AbstractHibernateQuery extends Query {
         // a path that the query is restricted to with a subquery is joined, and fetched, with a left join
         JoinType joinType = subqueryJoinedPaths.contains(join.associationPath) ? JoinType.LEFT : joinTypes.get(join.associationPath);
         return joinType == null && join.usedByCriteria ? supersededJoinTypes.get(join.associationPath) : joinType;
+    }
+
+    /**
+     * Whether a nested left-join request also needs this intermediate path to remain outer.
+     * Explicit requests and replacement fetch modes on the intermediate association take precedence.
+     */
+    private boolean hasRequestedLeftJoinBelow(String associationPath) {
+        if (joinTypes.containsKey(associationPath) || fetchStrategies.containsKey(associationPath) || supersededJoinTypes.containsKey(associationPath)) {
+            return false;
+        }
+        String prefix = associationPath + '.';
+        for (Map.Entry<String, JoinType> requested : joinTypes.entrySet()) {
+            if (requested.getValue() == JoinType.LEFT && requested.getKey().startsWith(prefix) && getAssociation(requested.getKey()) != null) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private org.hibernate.sql.JoinType resolveJoinType(JoinType joinType) {
@@ -790,7 +813,7 @@ public abstract class AbstractHibernateQuery extends Query {
             }
             boolean joined = createdAssociationPaths.containsKey(path);
             CriteriaAndAlias join = getOrRegisterJoinAt(path, token);
-            if (!joined && (!leftJoin || persistentProperty instanceof ToMany)) {
+            if (!joined && (!leftJoin || persistentProperty instanceof ToMany) && !hasRequestedLeftJoinBelow(path)) {
                 // without the leftJoinAssociationSort setting, an association is joined for a sort as it is
                 // for criteria, with an inner join. A collection always is: Hibernate would fetch it through
                 // a left join

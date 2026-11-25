@@ -159,33 +159,34 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
         [associationForm, request] << [['block', 'alias'], ['before', 'after', 'fetch']].combinations()
     }
 
-    void 'a criteria #ordering keeps the left collection join from #request with pagination #paged'() {
+    void 'a criteria #ordering keeps the left join of #path from #request with pagination #paged'() {
         given:
         saveTeamWithAPlayerWithoutContract()
         final arguments = paged ? [max: 10] : [:]
+        final sortProperty = path == 'players' ? 'players.name' : 'players.contract.salary'
         if (request == 'fetch') {
-            arguments.fetch = [players: JoinType.LEFT]
+            arguments.fetch = [(path): JoinType.LEFT]
         }
         if (ordering == 'sort') {
-            arguments.sort = 'players.name'
+            arguments.sort = sortProperty
         }
         else if (ordering == 'sort map') {
-            arguments.sort = ['players.name': 'asc', name: 'asc']
+            arguments.sort = [(sortProperty): 'asc', name: 'asc']
         }
 
         when:
         final results = Team.createCriteria().list(arguments) {
             if (request == 'before') {
-                join('players', JoinType.LEFT)
+                join(path, JoinType.LEFT)
             }
             if (ordering == 'order') {
-                order('players.name')
+                order(sortProperty)
             }
             else if (ordering == 'Query.Order') {
-                order(Query.Order.asc('players.name'))
+                order(Query.Order.asc(sortProperty))
             }
             if (request == 'after') {
-                join('players', JoinType.LEFT)
+                join(path, JoinType.LEFT)
             }
         }
 
@@ -198,15 +199,15 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
         results.find { it.name == 'Squad Team' }.players*.name.sort() == ['Squad Player A', 'Squad Player B', 'Squad Player without contract']
 
         where:
-        [request, ordering, paged] << [['fetch', 'before', 'after'], ['order', 'Query.Order', 'sort', 'sort map'], [false, true]].combinations()
+        [path, request, ordering, paged] << [['players', 'players.contract'], ['fetch', 'before', 'after'], ['order', 'Query.Order', 'sort', 'sort map'], [false, true]].combinations()
     }
 
-    void 'a requested left collection sort keeps the complete collection on a small page at offset #offset'() {
+    void 'a requested left sort of #path keeps the complete collection on a small page at offset #offset'() {
         given:
         saveTeamWithAPlayerWithoutContract()
 
         when:
-        final results = Team.createCriteria().list(max: 2, offset: offset, sort: 'players.name', fetch: [players: JoinType.LEFT]) {
+        final results = Team.createCriteria().list(max: 2, offset: offset, sort: sortProperty, fetch: [(path): JoinType.LEFT]) {
             eq('name', 'Squad Team')
         }
 
@@ -216,7 +217,71 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
         results.first().players*.name.sort() == ['Squad Player A', 'Squad Player B', 'Squad Player without contract']
 
         where:
-        offset << [0, 1]
+        [path, offset] << [['players', 'players.contract'], [0, 1]].combinations()
+        sortProperty = path == 'players' ? 'players.name' : 'players.contract.salary'
+    }
+
+    void 'a nested LEFT criteria sort respects the intermediate #request request'() {
+        given:
+        saveTeamWithAPlayerWithoutContract()
+        final arguments = [sort: 'players.contract.salary']
+        if (request == 'fetch') {
+            arguments.fetch = [players: 'lazy']
+        }
+
+        when:
+        final results = Team.createCriteria().list(arguments) {
+            join('players', JoinType.INNER)
+            if (request == 'join') {
+                join('players')
+            }
+            else if (request == 'select') {
+                select('players')
+            }
+            else if (request == 'fetchMode') {
+                fetchMode('players', org.hibernate.FetchMode.SELECT)
+            }
+            join('players.contract', JoinType.LEFT)
+        }
+
+        then:
+        results*.name.unique().sort() == (TEAMS_WITH_PLAYERS + 'Squad Team').sort()
+
+        where:
+        request << ['inner', 'join', 'select', 'fetchMode', 'fetch']
+    }
+
+    void 'a nested LEFT criteria sort retains an intermediate association predicate'() {
+        when:
+        final results = Team.createCriteria().list(sort: 'players.contract.salary', fetch: ['players.contract': JoinType.LEFT]) {
+            or {
+                eq('name', 'Playerless First Team')
+                players { eq('name', 'Arsenal Player') }
+            }
+        }
+
+        then:
+        results*.name == ['Arsenal First Team']
+    }
+
+    void 'a nested LEFT to-one criteria #ordering keeps a missing nested association'() {
+        when:
+        final arguments = ordering == 'sort' ? [sort: 'team.club.name'] : ordering == 'map' ? [sort: ['team.club.name': 'asc', name: 'asc']] : [:]
+        final results = Player.createCriteria().list(arguments) {
+            join('team.club', JoinType.LEFT)
+            if (ordering == 'order') {
+                order('team.club.name')
+            }
+            else if (ordering == 'Query.Order') {
+                order(Query.Order.asc('team.club.name'))
+            }
+        }
+
+        then:
+        results*.name.sort() == ['Arsenal Player', 'Chelsea Player', 'MU Player', 'Unattached Player']
+
+        where:
+        ordering << ['sort', 'map', 'order', 'Query.Order']
     }
 
     void 'a replacement fetch mode removes the requested left collection sort join'() {
