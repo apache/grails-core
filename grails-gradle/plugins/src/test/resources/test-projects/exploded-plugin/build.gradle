@@ -1,0 +1,19 @@
+plugins {
+    id 'org.apache.grails.gradle.grails-plugin'
+    id 'org.apache.grails.gradle.grails-exploded'
+}
+
+version = '1.0'
+
+grails {
+    bom = null
+    cliAutoProvision = false
+    plugin {
+        starter = true
+    }
+}
+
+tasks.register('collectExplodedPlugin', Sync) {
+    from configurations.runtimeElements.outgoing.variants.named('exploded').get().artifacts.files
+    into layout.buildDirectory.dir('collected')
+}

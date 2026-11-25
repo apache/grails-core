@@ -307,7 +307,7 @@ Within the `build.gradle` of the plugin, apply the gradle plugin `org.apache.gra
 apply plugin: 'org.apache.grails.gradle.grails-exploded'
 ----
 
-NOTE: This plugin ensures that development commands such as `bootRun` use the exploded classes and resources of the plugin rather than the packaged JAR file.
+NOTE: During development, `bootRun` uses the plugin's main source set output directories. These include compiled Java and Groovy classes, processed resources, and generated files such as the plugin descriptor and its namespaced configuration.
 
 *Step 5: Run the application*
 
