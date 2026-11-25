@@ -171,6 +171,28 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckM
         request << ['before', 'after', 'fetch']
     }
 
+    void 'a block-local association sort honors a root #joinType request supplied #request the block'() {
+        when:
+        final arguments = request == 'fetch' ? [max: 10, fetch: ['team.club': joinType]] : [max: 10]
+        final results = Player.createCriteria().list(arguments) {
+            if (request == 'before') {
+                join('team.club', joinType)
+            }
+            team { order('club.name') }
+            if (request == 'after') {
+                join('team.club', joinType)
+            }
+        }
+
+        then:
+        results*.name.contains('Unattached Player') == (joinType == JoinType.LEFT)
+        results*.name - 'Unattached Player' == ['Arsenal Player', 'Chelsea Player', 'MU Player']
+        results.totalCount == (joinType == JoinType.LEFT ? 4 : 3)
+
+        where:
+        [joinType, request] << [[JoinType.LEFT, JoinType.INNER], ['before', 'after', 'fetch']].combinations()
+    }
+
     void 'a nested left join supplied #request the blocks keeps the alternative without a club'() {
         given:
         final equivalent = Player.where { team.club.name == 'Chelsea' || name == 'Unattached Player' }

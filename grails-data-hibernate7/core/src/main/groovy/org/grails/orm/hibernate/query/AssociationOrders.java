@@ -36,9 +36,9 @@ import org.grails.datastore.mapping.query.Query;
  * for.</li>
  * <li>An order by any other dotted name may be an order by an alias of the criteria around the block, which the
  * block sees as well. Its path is the name, qualified with the association.</li>
- * <li>An order by a single name that is no property of the association is not an order of the enclosing
- * criteria. It stays in its block and has no effect.</li>
  * </ul>
+ * An order that names nothing, neither a property of the association nor an alias, becomes an order of the
+ * enclosing criteria as well, so that the query rejects it as it rejects such an order outside a block.
  * The criteria builder moves the orders out of a block when the block ends, so that they keep their place among
  * the orders of the query. Criteria that are built in any other way keep the orders in their blocks, and the
  * query reads them from there, after the orders of the criteria themselves.
@@ -58,11 +58,8 @@ public final class AssociationOrders {
      */
     public static void moveOutOf(DetachedAssociationCriteria<?> block, Consumer<Query.Order> enclosingCriteria) {
         for (Iterator<Query.Order> orders = block.getOrders().iterator(); orders.hasNext();) {
-            Query.Order order = ofEnclosingCriteria(orders.next(), block);
-            if (order != null) {
-                enclosingCriteria.accept(order);
-                orders.remove();
-            }
+            enclosingCriteria.accept(ofEnclosingCriteria(orders.next(), block));
+            orders.remove();
         }
     }
 
@@ -83,10 +80,7 @@ public final class AssociationOrders {
                 List<Query.Order> ordersOfBlock = new ArrayList<>(block.getOrders());
                 ordersOfBlock.addAll(inBlocks(block.getCriteria()));
                 for (Query.Order order : ordersOfBlock) {
-                    Query.Order enclosing = ofEnclosingCriteria(order, block);
-                    if (enclosing != null) {
-                        orders.add(enclosing);
-                    }
+                    orders.add(ofEnclosingCriteria(order, block));
                 }
             }
         }
@@ -94,8 +88,7 @@ public final class AssociationOrders {
     }
 
     /**
-     * Returns an order of an association block as an order of the criteria that enclose the block, or
-     * {@code null} if it is a single name that is no property of the association.
+     * Returns an order of an association block as an order of the criteria that enclose the block.
      */
     private static AssociationOrder ofEnclosingCriteria(Query.Order order, DetachedAssociationCriteria<?> block) {
         String associationName = block.getAssociationPath();
@@ -107,18 +100,10 @@ public final class AssociationOrders {
         int dot = property.indexOf('.');
         String head = dot < 0 ? property : property.substring(0, dot);
         String aliasPath = dot > 0 ? pathOfAlias(block, head) : null;
-        String path;
-        if (aliasPath != null) {
-            path = aliasPath + property.substring(dot);
-        } else if (dot > 0 || block.getAssociation().getAssociatedEntity().getPropertyByName(head) != null) {
-            // the property is looked up on the entity of the association, which is also there for an embedded
-            // component: the class of a component is not a domain class, so the criteria of its block have no
-            // entity. A dotted name that starts with no property can be an alias of the criteria around the
-            // block; the block resolves it, and an alias that nothing declares leaves the order without an effect
-            path = property;
-        } else {
-            return null;
-        }
+        // A dotted name that starts with no alias of the block can start with a property of the association or
+        // with an alias of the criteria around the block. The block resolves it, and the query rejects a name
+        // that resolves to nothing.
+        String path = aliasPath != null ? aliasPath + property.substring(dot) : property;
         AssociationOrder enclosing =
                 new AssociationOrder(associationName + '.' + path, order.getDirection(), block, property);
         if (order.isIgnoreCase()) {

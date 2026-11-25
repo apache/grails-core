@@ -477,14 +477,14 @@ class ExpressionResolverSpec extends Specification {
         result == namePath
     }
 
-    def 'a sort joins a nested association with the join type requested for its path'() {
+    def 'a sort joins a nested association with the #joinType requested for its path'() {
         given:
         def root = Mock(SqmFrom)
         def teamJoin = Mock(SqmAttributeJoin)
         def clubJoin = Mock(SqmAttributeJoin)
         def namePath = Mock(SqmPath)
         def aliasRegistry = new AliasRegistry()
-        aliasRegistry.define('team.club', new HibernateAlias('team.club', 'team.club', JoinType.INNER, false))
+        aliasRegistry.define('team.club', new HibernateAlias('team.club', 'team.club', joinType, false))
         def resolver = new ExpressionResolver(aliasRegistry, new JoinTracker(root))
         resolver.leftJoinSort = true
 
@@ -497,9 +497,12 @@ class ExpressionResolverSpec extends Specification {
         1 * root.join('team', JoinType.LEFT) >> teamJoin
         _ * teamJoin.get('club') >> attributePath(Attribute.PersistentAttributeType.MANY_TO_ONE)
         _ * teamJoin.getSqmJoins() >> []
-        1 * teamJoin.join('club', JoinType.INNER) >> clubJoin
+        1 * teamJoin.join('club', joinType) >> clubJoin
         1 * clubJoin.get('name') >> namePath
         result == namePath
+
+        where:
+        joinType << [JoinType.LEFT, JoinType.INNER]
     }
 
     def 'a sort through an alias starts from the join of the alias'() {

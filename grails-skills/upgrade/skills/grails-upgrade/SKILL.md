@@ -1679,12 +1679,14 @@ java -XX:MaxRAMPercentage=60.0 -XX:MaxMetaspaceSize=256m -Dgrails.env=prod -jar 
 
 A sort by a property of an association, such as `Book.list(sort: 'author.name')`, joins the association with an inner join, so it leaves out the instances whose association is `null`. That is unchanged by default. As of 8.0.1, GORM for Hibernate 7 reads the `grails.gorm.leftJoinAssociationSort` setting, default `false`, as GORM for Hibernate 5 does. Set to `true`, the association is joined with a left join and the sort keeps those instances.
 
+A block-local sort uses a join type requested for its full path at the query root: `join('team.club', JoinType.LEFT)` applies to `team { order('club.name') }` or `team { order('club.id') }`, before or after the block. LEFT retains the missing club and INNER excludes it, independently of the association-sort setting.
+
 When sorting by a collection property, pagination limits the joined rows before duplicate instances are removed. A page can contain fewer than `max` instances, and an instance can appear on more than one page; adding the page sizes need not equal `totalCount`. Use a property of the queried class or a to-one association to page without repeated instances.
 
 - Nothing needs to change to keep the previous results.
 - Search for `sort:` arguments, `.sort(` calls and `order(` calls whose property contains a `.`, such as `sort: 'author.name'`. If the application expects every instance from such a query, set `grails.gorm.leftJoinAssociationSort: true` in `application.yml`.
 - With the setting off, a sorted where-query count and the totalCount of sorted criteria, detached-criteria and static list pages retain the sort's inner joins and now exclude roots without the association, as the list does. A collection sort counts each root once. Remove the sort from a separate count query to count roots without that restriction. Counts omit ORDER BY but keep its joins. Without an explicit join type in fetch, Hibernate 7 still ignores the sort argument of findWhere and findAllWhere; the setting does not affect those calls.
-- An `order` inside an association block, such as `author { order('name') }`, now sorts the query by that property of the association. It was ignored. Remove the `order` to get the previous order.
+- An `order` inside an association block, such as `author { order('name') }`, now sorts the query by that property of the association. It was ignored. Remove the `order` to get the previous order. Such an `order` now fails with an `IllegalArgumentException` when it names neither a property of the association nor an alias, or when the query has a `distinct`, `groupProperty` or aggregate projection that does not select the property of the order; remove it there, since it had no effect.
 - A join type given to an association block inside `and`, `or` or `not`, as in `or { author(1) { ... } }` for a left join, was ignored and is now applied. To keep the inner join, leave the join type out.
 - The setting is enabled by default as of Grails 8.1 and removed in Grails 9.
 

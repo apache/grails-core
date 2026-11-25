@@ -397,6 +397,28 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManag
         (players - 'No team').sort() == ['Bruno', 'Bukayo', 'Cole', 'Unattached Player']
     }
 
+    void 'a block-local sort by club.#property honors a root #joinType request #request the block'() {
+        when:
+        final results = Player.createCriteria().list(max: 10) {
+            if (request == 'before') {
+                join('team.club', joinType)
+            }
+            team { order("club.$property") }
+            if (request == 'after') {
+                join('team.club', joinType)
+            }
+        }
+        final names = results*.name
+
+        then:
+        names.contains('Unattached Player') == (joinType == JoinType.LEFT)
+        names - 'Unattached Player' == (property == 'name' ? ['Bukayo', 'Cole', 'Bruno'] : ['Bruno', 'Bukayo', 'Cole'])
+        results.totalCount == (joinType == JoinType.LEFT ? 4 : 3)
+
+        where:
+        [property, joinType, request] << [['name', 'id'], [JoinType.LEFT, JoinType.INNER], ['before', 'after']].combinations()
+    }
+
     void 'a collection sort counts roots once through #api'() {
         given:
         new AssociationSortOwner(name: 'Empty').save(failOnError: true, flush: true)
@@ -988,30 +1010,18 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManag
         results == [9, 1]
     }
 
-    void 'an order in an association block is left out of a query that can only be ordered by what it selects'() {
-        when: 'the database would reject an order by the name of the club in each of these queries'
-        final distinctNames = Team.withCriteria {
-            projections {
-                distinct('name')
-            }
-            club {
-                like('name', '%')
-                order('name', 'desc')
-            }
-        }
-        final lastName = Team.withCriteria {
-            projections {
-                max('name')
-            }
-            club {
-                like('name', '%')
-                order('name', 'desc')
-            }
-        }
+    void 'an order in an association block of a query that can only be ordered by what it selects is rejected, as the database would reject it'() {
+        when:
+        query.call()
 
-        then: 'they run as they did when no order of a block reached the query'
-        distinctNames.sort() == ['Arsenal First Team', 'Chelsea First Team', 'Manchester United First Team']
-        lastName == ['Manchester United First Team']
+        then:
+        IllegalArgumentException e = thrown()
+        e.message.contains('can only be ordered by what it selects')
+
+        where:
+        description               | query
+        'a distinct projection'   | { Team.withCriteria { projections { distinct('name') }; club { like('name', '%'); order('name', 'desc') } } }
+        'an aggregate projection' | { Team.withCriteria { projections { max('name') }; club { like('name', '%'); order('name', 'desc') } } }
     }
 
     void 'an order in an association block sorts a distinct query that selects the property of the order'() {
@@ -1046,16 +1056,33 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManag
         results.totalCount == 2
     }
 
-    void 'an order in an association block that names neither a property nor an alias has no effect'() {
+    void 'an order by #property in an association block, which names neither a property nor an alias, is rejected'() {
         when:
-        final results = Player.withCriteria {
+        Player.withCriteria {
             team {
-                order('unknown.name')
+                order(property)
             }
         }
 
-        then: 'it is left out of the query, as every order of a block was before'
-        results.size() == 4
+        then: 'it is a mistake, as it is outside a block, and ignoring it would hide it'
+        final e = thrown(IllegalArgumentException)
+        e.message == 'Invalid sort property'
+
+        where:
+        property << ['unknown.name', 'unknown', 'club.unknown']
+    }
+
+    void 'an order in an association block of a detached criteria that names neither a property nor an alias is rejected'() {
+        when:
+        new DetachedCriteria(Player).build {
+            team {
+                order('unknown')
+            }
+        }.list()
+
+        then:
+        final e = thrown(IllegalArgumentException)
+        e.message == 'Invalid sort property'
     }
 
     void 'a criteria query that selects a distinct association property is ordered by that property'() {
@@ -1265,16 +1292,17 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManag
         results*.title - 'Anonymous' == ['Guide', 'It']
     }
 
-    void 'an order in a block of an embedded component that names no property of the component stays in the block'() {
+    void 'an order in a block of an embedded component that names no property of the component is rejected'() {
         when:
-        final results = AssociationSortBook.withCriteria {
+        AssociationSortBook.withCriteria {
             details {
                 order('unknown')
             }
         }
 
         then:
-        results.size() == 3
+        final e = thrown(IllegalArgumentException)
+        e.message == 'Invalid sort property'
     }
 
     protected static List<AssociationSortBook> booksSortedByAuthor(String api) {
