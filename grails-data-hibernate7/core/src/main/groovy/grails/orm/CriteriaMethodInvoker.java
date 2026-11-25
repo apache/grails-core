@@ -31,6 +31,7 @@ import jakarta.persistence.metamodel.Attribute;
 import jakarta.persistence.metamodel.EntityType;
 import jakarta.persistence.metamodel.Metamodel;
 
+import org.hibernate.Hibernate;
 import org.hibernate.NonUniqueResultException;
 
 import org.springframework.beans.BeanUtils;
@@ -169,7 +170,8 @@ public class CriteriaMethodInvoker {
             if (rows.size() > 1) {
                 throw new NonUniqueResultException(rows.size());
             }
-            result = rows.isEmpty() ? null : rows.get(0);
+            // the row may be a proxy that the session already held; a get answers with the instance, as on Hibernate 5
+            result = rows.isEmpty() ? null : Hibernate.unproxy(rows.get(0));
         }
         if (!builder.isParticipate()) {
             builder.closeSession();
