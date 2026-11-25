@@ -1375,3 +1375,13 @@ A value marked with `raw()` is still written as given by the tags that wrote it 
 `<g:radio>` now encodes its `value` once. It encoded it twice, so a value with `&`, `<`, `>`, `"` or `'` was submitted with character references in it, such as `+R&amp;D+` for `R&D`.
 
 A value encoded beforehand is no longer encoded twice in the `value` of `<g:textField>`, `<g:hiddenField>` and the other field tags when a `RequestDataValueProcessor` returns it unchanged, nor in an option of `<g:select>`, with or without a processor. `<g:paginate>` and `<g:sortableColumn>` write a `class` that was encoded beforehand once next to the classes they add, such as `step` and `sortable`; they encoded it twice.
+
+==== An enum stored as a string takes the length of its maxSize constraint
+
+With Hibernate 5, an enum property stored as a string ignored a `maxSize` constraint, so its column was always
+`VARCHAR(255)` while a `String` property honoured it. The column now takes the same length constraints as a `String`
+property, and a column created from an `inList` of enum constants is as long as the longest constant name. The length
+only shows in a schema that Hibernate creates: an application that manages its schema by hand or with a migration tool
+keeps the columns it has, and `hbm2ddl.auto: update` does not change an existing column.
+The one difference from a `String` property is a `maxSize` shorter than the longest constant name: `maxSize` does not validate an
+enum, so the column is made as long as the longest name, and no value of the enum fails at the database.
