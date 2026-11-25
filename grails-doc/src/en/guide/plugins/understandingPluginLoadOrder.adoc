@@ -131,3 +131,12 @@ def environments = [includes: ["development", "test"]]
 ----
 
 will do the same thing.
+
+==== Reading a published plugin definition
+
+Tools can read the UTF-8 `META-INF/grails/plugins/<name>/plugin.properties` file with
+`grails.plugins.metadata.PluginDefinition.read(name, reader)`. This returns an immutable definition
+with symbolic class names, the plugin version, Grails compatibility, dependency version constraints,
+ordering, and contributed artefacts. Reading the definition requires no classes from the plugin.
+A true `metadataComplete` value means Grails can determine eligibility and ordering from the
+published definition before constructing the lifecycle implementation.

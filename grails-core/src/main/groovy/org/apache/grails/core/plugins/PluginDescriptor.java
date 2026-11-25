@@ -18,19 +18,18 @@
  */
 package org.apache.grails.core.plugins;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Properties;
-import java.util.Set;
 
 import org.jspecify.annotations.Nullable;
 
 import org.springframework.core.io.Resource;
+
+import grails.plugins.metadata.PluginDefinition;
 
 /**
  * Represents a parsed Grails plugin descriptor discovered on the classpath from
@@ -41,24 +40,6 @@ import org.springframework.core.io.Resource;
  * metadata, and the artefact classes contributed by the plugin grouped by artefact type.</p>
  */
 public class PluginDescriptor {
-
-    public static final String FORMAT_VERSION_KEY = "format.version";
-    public static final String SUPPORTED_FORMAT_VERSION = "1";
-    public static final String NAME_KEY = "name";
-    public static final String VERSION_KEY = "version";
-    public static final String CLASS_KEY = "class";
-    public static final String GRAILS_VERSION_KEY = "grailsVersion";
-    public static final String LOAD_AFTER_KEY = "loadAfter";
-    public static final String LOAD_BEFORE_KEY = "loadBefore";
-    public static final String DEPENDS_ON_PREFIX = "dependsOn.";
-    public static final String EVICT_KEY = "evict";
-    public static final String OBSERVE_KEY = "observe";
-    public static final String ENABLED_KEY = "enabled";
-    public static final String ENVIRONMENTS_INCLUDES_KEY = "environments.includes";
-    public static final String ENVIRONMENTS_EXCLUDES_KEY = "environments.excludes";
-    public static final String ARTEFACTS_KEY = "artefacts";
-    public static final String ARTEFACTS_PREFIX = "artefacts.";
-    public static final String METADATA_COMPLETE_KEY = "metadata.complete";
 
     private final @Nullable Resource resource;
     private final @Nullable String pluginName;
@@ -160,79 +141,12 @@ public class PluginDescriptor {
             @Nullable String defaultPluginName,
             @Nullable Resource resource,
             Properties properties) {
-        String formatVersion = trimToNull(properties.getProperty(FORMAT_VERSION_KEY));
-        if (formatVersion != null && !SUPPORTED_FORMAT_VERSION.equals(formatVersion)) {
-            throw new IllegalArgumentException(
-                    "Unsupported Grails plugin descriptor format.version [" + formatVersion +
-                            "] in " + (resource != null ? resource.getDescription() : defaultPluginName));
-        }
-
-        String rawName = trimToNull(properties.getProperty(NAME_KEY));
-        String trimmedDefaultName = trimToNull(defaultPluginName);
-        String pluginName = rawName != null ? PluginUtils.normalizePluginName(rawName) :
-                (trimmedDefaultName != null ? PluginUtils.normalizePluginName(trimmedDefaultName) : null);
-        String pluginVersion = trimToNull(properties.getProperty(VERSION_KEY));
-        String grailsVersion = trimToNull(properties.getProperty(GRAILS_VERSION_KEY));
-
-        List<String> pluginClasses = splitList(properties.getProperty(CLASS_KEY));
-
-        Map<String, List<String>> artefactsByType = new LinkedHashMap<>();
-        Set<String> allArtefacts = new LinkedHashSet<>();
-
-        List<String> propertyNames = new ArrayList<>(properties.stringPropertyNames());
-        Collections.sort(propertyNames);
-
-        Map<String, String> dependsOn = new LinkedHashMap<>();
-        for (String key : propertyNames) {
-            if (key.startsWith(DEPENDS_ON_PREFIX)) {
-                String depName = key.substring(DEPENDS_ON_PREFIX.length()).trim();
-                String depVersion = properties.getProperty(key);
-                if (!depName.isEmpty() && depVersion != null) {
-                    String trimmedVersion = depVersion.trim();
-                    dependsOn.put(PluginUtils.normalizePluginName(depName), trimmedVersion.isEmpty() ? "*" : trimmedVersion);
-                }
-            } else if (key.startsWith(ARTEFACTS_PREFIX)) {
-                String artefactType = key.substring(ARTEFACTS_PREFIX.length()).trim();
-                List<String> typeClasses = splitList(properties.getProperty(key));
-                if (!artefactType.isEmpty() && !typeClasses.isEmpty()) {
-                    artefactsByType.put(artefactType, typeClasses);
-                    allArtefacts.addAll(typeClasses);
-                }
-            }
-        }
-        allArtefacts.addAll(splitList(properties.getProperty(ARTEFACTS_KEY)));
-
-        List<String> loadAfter = splitList(properties.getProperty(LOAD_AFTER_KEY));
-        List<String> loadBefore = splitList(properties.getProperty(LOAD_BEFORE_KEY));
-        List<String> evict = splitList(properties.getProperty(EVICT_KEY));
-        List<String> observe = splitList(properties.getProperty(OBSERVE_KEY));
-        List<String> envIncludes = splitList(properties.getProperty(ENVIRONMENTS_INCLUDES_KEY));
-        List<String> envExcludes = splitList(properties.getProperty(ENVIRONMENTS_EXCLUDES_KEY));
-
-        String enabledStr = trimToNull(properties.getProperty(ENABLED_KEY));
-        boolean enabled = enabledStr == null || Boolean.parseBoolean(enabledStr);
-
-        String completeStr = trimToNull(properties.getProperty(METADATA_COMPLETE_KEY));
-        boolean metadataComplete = completeStr != null ? Boolean.parseBoolean(completeStr) : pluginClasses.isEmpty();
-
-        return new PluginDescriptor(
-                resource,
-                pluginName,
-                pluginVersion,
-                grailsVersion,
-                pluginClasses,
-                new ArrayList<>(allArtefacts),
-                artefactsByType,
-                loadAfter,
-                loadBefore,
-                dependsOn,
-                evict,
-                observe,
-                envIncludes,
-                envExcludes,
-                enabled,
-                metadataComplete
-        );
+        PluginDefinition definition = PluginDefinition.fromProperties(defaultPluginName, properties);
+        return new PluginDescriptor(resource, definition.getPluginName(), definition.getPluginVersion(),
+                definition.getGrailsVersionRange(), definition.getProvidedPlugins(), definition.getProvidedClasses(),
+                definition.getProvidedArtefactsByType(), definition.getLoadAfter(), definition.getLoadBefore(),
+                definition.getDependsOn(), definition.getEvict(), definition.getObserve(), definition.getEnvironmentsIncludes(),
+                definition.getEnvironmentsExcludes(), definition.isEnabled(), definition.isMetadataComplete());
     }
 
     /**
@@ -371,29 +285,6 @@ public class PluginDescriptor {
             copy.put(entry.getKey(), entry.getValue() != null ? List.copyOf(entry.getValue()) : List.of());
         }
         return Collections.unmodifiableMap(copy);
-    }
-
-    private static List<String> splitList(@Nullable String value) {
-        if (value == null || value.isBlank()) {
-            return List.of();
-        }
-        String[] parts = value.split(",");
-        List<String> result = new ArrayList<>(parts.length);
-        for (String part : parts) {
-            String trimmed = part.trim();
-            if (!trimmed.isEmpty()) {
-                result.add(trimmed);
-            }
-        }
-        return result;
-    }
-
-    private static @Nullable String trimToNull(@Nullable String value) {
-        if (value == null) {
-            return null;
-        }
-        String trimmed = value.trim();
-        return trimmed.isEmpty() ? null : trimmed;
     }
 
     @Override
