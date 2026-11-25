@@ -243,7 +243,8 @@ final class ProjectEvidence {
 
         List<String> build = lines(directory.resolve(BUILD))
         String read = BUILD
-        if (build == null && !Files.exists(directory.resolve(BUILD), LinkOption.NOFOLLOW_LINKS)) {
+        // as Gradle chooses: build.gradle when it is a file, or a link that leads to one, and the Kotlin file otherwise
+        if (build == null && !Files.isRegularFile(directory.resolve(BUILD))) {
             build = lines(directory.resolve(KOTLIN_BUILD))
             read = build == null ? BUILD : KOTLIN_BUILD
         }
@@ -344,7 +345,7 @@ final class ProjectEvidence {
 
         List<String> settings = lines(directory.resolve(SETTINGS))
         String settingsRead = SETTINGS
-        if (settings == null && !Files.exists(directory.resolve(SETTINGS), LinkOption.NOFOLLOW_LINKS)) {
+        if (settings == null && !Files.isRegularFile(directory.resolve(SETTINGS))) {
             settings = lines(directory.resolve(KOTLIN_SETTINGS))
             settingsRead = settings == null ? SETTINGS : KOTLIN_SETTINGS
         }

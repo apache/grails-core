@@ -18,6 +18,7 @@
  */
 package org.apache.grails.forge.cli.console
 
+import java.nio.file.Files
 import java.nio.file.Path
 import groovy.json.JsonSlurper
 import java.util.function.Predicate
@@ -211,6 +212,55 @@ class MultiProjectBuildSpec extends CommandSpec implements CommandFixture {
         exit == 0
         lineOf('requested=') == '<classes>'
         ran() as Set<String> == [':classes', ':inline:classes'] as Set<String>
+    }
+
+    @Unroll
+    void "settings that are a link to a file make the project the root of its build as a file does: #settings"() {
+        given: 'an application whose settings are a link, as Gradle follows it, and include a plugin that has the tasks the application has'
+        File site = new File(root, 'tools/site')
+        assert new File(site, 'settings.gradle').delete()
+        new File(site, 'conf').mkdirs()
+        new File(site, "conf/${settings}").text = text
+        Files.createSymbolicLink(new File(site, settings).toPath(), Path.of("conf/${settings}"))
+        new File(site, 'inline/src/main/groovy').mkdirs()
+        new File(site, 'inline/build.gradle').text = PROJECT
+
+        when: 'a command of the application'
+        int exit = run('tools/site/grails-app', 'compile')
+
+        then: 'Gradle is asked for the task of the root, and the plugin is not compiled with it'
+        exit == 0
+        lineOf('requested=') == '<:classes>'
+        ran() == [':classes']
+
+        and: 'Gradle is given what makes sure that the root is this project'
+        new File(site, '.grails/run/project-path.gradle').isFile()
+
+        when: 'Gradle itself is asked, as it is typed'
+        out.reset()
+        exit = run('tools/site', 'gradle', 'classes')
+
+        then: 'for every project, as Gradle does'
+        exit == 0
+        ran() as Set<String> == [':classes', ':inline:classes'] as Set<String>
+
+        where:
+        settings              | text
+        'settings.gradle'     | "rootProject.name = 'site'\ninclude 'inline'\n"
+        'settings.gradle.kts' | 'rootProject.name = "site"\ninclude("inline")\n'
+    }
+
+    void "settings that are a link to nothing are no settings, as for Gradle: the project is a project of the build above"() {
+        given:
+        Files.createSymbolicLink(new File(root, 'apps/admin/settings.gradle').toPath(), Path.of('conf/nothing.gradle'))
+
+        when:
+        int exit = run('apps/admin', 'compile')
+
+        then:
+        exit == 0
+        lineOf('requested=') == '<:apps:admin:classes>'
+        ran() == [':apps:admin:classes']
     }
 
     void "the wrapper of the build is the one that is run, also where the project has one of its own"() {

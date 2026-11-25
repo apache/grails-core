@@ -317,7 +317,7 @@ final class ConsoleProject {
      */
     String task(String name) {
         String path = getGradlePath()
-        if (path == null && getBuildRoot() == null && SETTINGS.any { String settings -> Files.isRegularFile(directory.resolve(settings), LinkOption.NOFOLLOW_LINKS) }) {
+        if (path == null && getBuildRoot() == null && hasSettings(directory)) {
             namedBy = ':'
             return ":${name}".toString()
         }
@@ -612,6 +612,10 @@ final class ConsoleProject {
         return RECORDS.any { String record -> Files.isRegularFile(directory.resolve(record), LinkOption.NOFOLLOW_LINKS) }
     }
 
+    // The settings of a build as Gradle finds them: a file of the name, or a link that leads to a file, which
+    // Gradle follows. A link that leads to nothing, and a directory of the name, are no settings for Gradle.
+    // Everything that asks whether a directory is the root of a build asks this, so that a task is named
+    // for the root wherever Gradle takes the directory for one.
     private static boolean hasSettings(Path directory) {
         return SETTINGS.any { String settings -> Files.isRegularFile(directory.resolve(settings)) }
     }
