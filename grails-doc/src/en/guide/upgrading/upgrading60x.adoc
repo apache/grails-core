@@ -1343,3 +1343,9 @@ A value marked with `raw()` is still written as given by the tags that wrote it 
 `<g:radio>` now encodes its `value` once. It encoded it twice, so a value with `&`, `<`, `>`, `"` or `'` was submitted with character references in it, such as `+R&amp;D+` for `R&D`.
 
 A value encoded beforehand is no longer encoded twice in the `value` of `<g:textField>`, `<g:hiddenField>` and the other field tags when a `RequestDataValueProcessor` returns it unchanged, nor in an option of `<g:select>`, with or without a processor. `<g:paginate>` and `<g:sortableColumn>` write a `class` that was encoded beforehand once next to the classes they add, such as `step` and `sortable`; they encoded it twice.
+
+==== A cascadeValidate that names no mode is refused when the mapping is read
+
+`cascadeValidate` is one of `default`, `none`, `owned` or `dirty`, in any letter case. As of Grails 7.0.18 a value that names none of them, such as `true`, `false` or a misspelling, is refused when the mapping is read: the application fails to start with `cascadeValidate must be one of default, none, owned or dirty, but was 'true'`, in a `mapping` block, in a mapping map and as the global default.
+
+Previously such a value was accepted when the mapping was read, and `validate()` failed with `No enum constant ...CascadeValidateType.TRUE` the first time it reached the association, so an application that relied on it was already failing on its first validation of that association and now fails at startup instead. Name one of the four modes, or remove the option to get the default.
