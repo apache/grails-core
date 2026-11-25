@@ -693,6 +693,28 @@ class PluginDiscoverySpec extends Specification {
         }
     }
 
+    def 'two independent starter definitions with one id report both origins'() {
+        given:
+        def roots = (1..2).collect {
+            def dir = File.createTempDir()
+            writePluginDescriptor(dir, 'conflictingId', "name=conflictingId\nversion=${it}\n")
+            dir
+        }
+        def loader = new URLClassLoader(roots*.toURI()*.toURL() as URL[], (ClassLoader) null)
+
+        when:
+        new ClasspathPluginFinder().findClasspathPlugins(loader, '9.0.0')
+
+        then:
+        def error = thrown(grails.plugins.exceptions.PluginException)
+        roots.every { error.message.contains(it.name) }
+        error.message.contains('conflictingId')
+
+        cleanup:
+        loader?.close()
+        roots*.deleteDir()
+    }
+
     def 'a plugin class declared in multiple classpath descriptors is registered only once'() {
         given: 'a plugin class compiled by a Groovy class loader'
         def gcl = new GroovyClassLoader()

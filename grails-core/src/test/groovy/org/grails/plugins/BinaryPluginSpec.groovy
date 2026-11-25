@@ -325,6 +325,26 @@ class BinaryPluginSpec extends Specification {
         loader?.close()
     }
 
+    def "activation uses the same complete definition as discovery"() {
+        given:
+        Properties props = new Properties()
+        props.load(new StringReader("""
+            name=testBinary
+            version=98.7
+            class=${TestBinaryGrailsPlugin.name}
+            dependsOn.core=98.7
+            metadata.complete=true
+        """))
+        def descriptor = PluginDescriptor.fromProperties('testBinary', null, props)
+
+        when:
+        def plugin = new BinaryGrailsPlugin(TestBinaryGrailsPlugin, descriptor, new DefaultGrailsApplication())
+
+        then:
+        plugin.version == '98.7'
+        plugin.getDependentVersion('core') == '98.7'
+    }
+
     def "Test BinaryGrailsPlugin honors overridden descriptor name for views and propertySource"() {
         given: 'a *GrailsPlugin class whose descriptor declares an overridden logical name bar'
         File root = new File(tempDir, 'renamed-binary-root')

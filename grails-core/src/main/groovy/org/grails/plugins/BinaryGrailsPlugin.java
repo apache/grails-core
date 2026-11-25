@@ -94,11 +94,17 @@ public class BinaryGrailsPlugin extends DefaultGrailsPlugin {
      * @param application the application
      */
     public BinaryGrailsPlugin(Class<?> pluginClass, @Nullable PluginDescriptor descriptor, GrailsApplication application) {
+        this(pluginClass, descriptor, application,
+                descriptor != null && descriptor.isMetadataComplete() ? PluginUtils.extractPluginMetadata(descriptor, pluginClass) : null);
+    }
+
+    public BinaryGrailsPlugin(Class<?> pluginClass, @Nullable PluginDescriptor descriptor,
+            GrailsApplication application, @Nullable PluginMetadata metadata) {
         super(pluginClass,
                 descriptor != null ? descriptor.getResource() : null,
                 application,
                 descriptor != null ? descriptor.getPluginVersion() : null,
-                descriptor != null && descriptor.getProvidedPlugins().size() <= 1 ? descriptor.getPluginName() : null);
+                descriptor != null && descriptor.getProvidedPlugins().size() <= 1 ? descriptor.getPluginName() : null, metadata);
         this.descriptor = descriptor;
         URL rootResource = IOUtils.findRootResource(pluginClass);
         this.baseResource = rootResource != null ? new UrlResource(rootResource) : null;

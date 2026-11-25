@@ -166,7 +166,7 @@ public class DefaultGrailsPluginManager extends AbstractGrailsPluginManager {
             } else if (pluginInfo.getPluginClass() == null) {
                 plugin = new BinaryGrailsPlugin(pluginInfo.getPluginDescriptor(), pluginInfo.getMetadata(), application);
             } else {
-                plugin = createBinaryGrailsPlugin(pluginInfo.getPluginClass(), pluginInfo.getPluginDescriptor());
+                plugin = new BinaryGrailsPlugin(pluginInfo.getPluginClass(), pluginInfo.getPluginDescriptor(), application, pluginInfo.getMetadata());
             }
 
             if (LOG.isDebugEnabled()) {
@@ -189,10 +189,6 @@ public class DefaultGrailsPluginManager extends AbstractGrailsPluginManager {
         }
 
         initialised = true;
-    }
-
-    private GrailsPlugin createBinaryGrailsPlugin(Class<?> pluginClass, PluginDescriptor binaryDescriptor) {
-        return new BinaryGrailsPlugin(pluginClass, binaryDescriptor, application);
     }
 
     protected GrailsPlugin createGrailsPlugin(Class<?> pluginClass, Resource resource) {

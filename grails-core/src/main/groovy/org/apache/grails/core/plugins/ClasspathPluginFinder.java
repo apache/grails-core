@@ -20,7 +20,11 @@ package org.apache.grails.core.plugins;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+
+import grails.plugins.exceptions.PluginException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -92,7 +96,16 @@ public class ClasspathPluginFinder {
             }
         }
 
-        return discoveredPlugins;
+        Map<String, PluginInfo> byName = new LinkedHashMap<>();
+        for (PluginInfo candidate : discoveredPlugins) {
+            PluginInfo previous = byName.putIfAbsent(candidate.getName(), candidate);
+            if (previous != null && (candidate.getPluginClass() != previous.getPluginClass()
+                    || candidate.getPluginClass() == null && !candidate.getPluginDescriptor().equals(previous.getPluginDescriptor()))) {
+                throw new PluginException("Conflicting definitions for Grails plugin [" + candidate.getName() + "]: "
+                        + previous.getPluginDescriptor() + " and " + candidate.getPluginDescriptor());
+            }
+        }
+        return List.copyOf(byName.values());
     }
 
     private static Class<?> attemptPluginClassLoad(String pluginClassName, ClassLoader classLoader) {

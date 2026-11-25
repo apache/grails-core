@@ -574,15 +574,15 @@ public final class PluginUtils {
                 descriptor.getPluginName() != null && !descriptor.getPluginName().isBlank()) ?
                 normalizePluginName(descriptor.getPluginName()) :
                 null;
+        if (descriptor.isMetadataComplete() && descriptor.getPluginName() != null) {
+            return extractPluginMetadataFromDescriptor(descriptor, pluginClass);
+        }
         if (pluginClass.isAnnotationPresent(GrailsPluginDescriptor.class)) {
             return extractPluginMetadataFromAnnotation(
                     pluginClass, descriptor.getPluginVersion(), descriptor.getGrailsVersionRange(), descriptorNameOverride);
         }
         if (!isGrailsPluginClassNamedCorrectly(pluginClass)) {
             return null;
-        }
-        if (descriptor.isMetadataComplete() && descriptor.getPluginName() != null) {
-            return extractPluginMetadataFromDescriptor(descriptor, pluginClass);
         }
         return extractPluginMetadata(pluginClass, descriptor.getPluginVersion(), descriptorNameOverride);
     }
@@ -616,17 +616,6 @@ public final class PluginUtils {
         String pluginName = (overrideName != null && !overrideName.isBlank()) ?
                 normalizePluginName(overrideName) :
                 getLogicalPluginName(pluginClass);
-        String pluginVersion;
-        String grailsVersion;
-
-        String[] loadAfterNames;
-        String[] loadBeforeNames;
-        String[] evictions;
-        String[] observedPluginNames;
-        PluginDependencies dependencies;
-        Map<String, Set<Object>> environments;
-        String status;
-
         Object pluginInstance;
         try {
             pluginInstance = pluginClass.getDeclaredConstructor().newInstance();
@@ -634,23 +623,27 @@ public final class PluginUtils {
             throw new IllegalStateException("Could not instantiate plugin [" + pluginName + "]: ", e);
         }
 
-        var beanWrapper = new BeanWrapperImpl(pluginInstance);
+        return readPluginInstanceMetadata(pluginInstance, new BeanWrapperImpl(pluginInstance), pluginName, fallbackVersion);
+    }
 
-        pluginVersion = evaluatePluginVersion(beanWrapper, pluginInstance, pluginName, fallbackVersion);
-        grailsVersion = getPluginGrailsVersionRange(pluginInstance, pluginName);
-        dependencies = evaluatePluginDependencies(beanWrapper, pluginInstance);
-        loadAfterNames = evaluatePluginLoadAfters(beanWrapper, pluginInstance);
-        loadBeforeNames = evaluatePluginLoadBefores(beanWrapper, pluginInstance);
-        evictions = evaluatePluginEvictionPolicy(beanWrapper, pluginInstance);
-        observedPluginNames = evaluateObservedPlugins(beanWrapper, pluginInstance);
-        status = evaluatePluginStatus(beanWrapper, pluginInstance);
-        environments = evaluatePluginEnvironments(beanWrapper, pluginInstance);
+    /** Reads a conventional plugin's computed metadata from its existing lifecycle instance. */
+    public static PluginMetadata readPluginInstanceMetadata(
+            Object pluginInstance, BeanWrapper beanWrapper, String pluginName, @Nullable String fallbackVersion) {
+        var pluginVersion = evaluatePluginVersion(beanWrapper, pluginInstance, pluginName, fallbackVersion);
+        var grailsVersion = getPluginGrailsVersionRange(pluginInstance, pluginName);
+        var dependencies = evaluatePluginDependencies(beanWrapper, pluginInstance);
+        var loadAfterNames = evaluatePluginLoadAfters(beanWrapper, pluginInstance);
+        var loadBeforeNames = evaluatePluginLoadBefores(beanWrapper, pluginInstance);
+        var evictions = evaluatePluginEvictionPolicy(beanWrapper, pluginInstance);
+        var observedPluginNames = evaluateObservedPlugins(beanWrapper, pluginInstance);
+        var status = evaluatePluginStatus(beanWrapper, pluginInstance);
+        var environments = evaluatePluginEnvironments(beanWrapper, pluginInstance);
 
         return new PluginMetadata(
                 pluginName,
                 pluginVersion,
                 grailsVersion,
-                pluginClass,
+                pluginInstance.getClass(),
                 loadAfterNames,
                 loadBeforeNames,
                 dependencies.dependencies,
@@ -662,7 +655,7 @@ public final class PluginUtils {
         );
     }
 
-    private static PluginMetadata extractPluginMetadataFromAnnotation(
+    public static PluginMetadata extractPluginMetadataFromAnnotation(
             Class<?> pluginClass,
             @Nullable String fallbackVersion,
             @Nullable String fallbackGrailsVersion,
@@ -691,6 +684,9 @@ public final class PluginUtils {
                     continue;
                 }
                 String depVersion = trimmedSpec.substring(sep + 1).trim();
+                if (depVersion.equals("${plugin.version}")) {
+                    depVersion = pluginVersion;
+                }
                 dependencies.put(normalizePluginName(rawName), depVersion.isEmpty() ? "*" : depVersion);
             } else {
                 dependencies.put(normalizePluginName(trimmedSpec), "*");

@@ -127,7 +127,7 @@ public class DefaultGrailsPlugin extends AbstractGrailsPlugin implements ParentA
     private List<WatchPattern> watchedResourcePatterns;
 
     public DefaultGrailsPlugin(Class<?> pluginClass, Resource resource, GrailsApplication application) {
-        this(pluginClass, resource, application, null, null);
+        this(pluginClass, resource, application, null, null, null);
     }
 
     protected DefaultGrailsPlugin(
@@ -135,7 +135,7 @@ public class DefaultGrailsPlugin extends AbstractGrailsPlugin implements ParentA
             @Nullable Resource resource,
             GrailsApplication application,
             @Nullable String fallbackVersion) {
-        this(pluginClass, resource, application, fallbackVersion, null);
+        this(pluginClass, resource, application, fallbackVersion, null, null);
     }
 
     protected DefaultGrailsPlugin(
@@ -143,7 +143,8 @@ public class DefaultGrailsPlugin extends AbstractGrailsPlugin implements ParentA
             @Nullable Resource resource,
             GrailsApplication application,
             @Nullable String fallbackVersion,
-            @Nullable String overrideName) {
+            @Nullable String overrideName,
+            @Nullable PluginMetadata metadata) {
         super(pluginClass, application);
         if (overrideName != null && !overrideName.isBlank()) {
             this.pluginName = PluginUtils.normalizePluginName(overrideName);
@@ -153,7 +154,7 @@ public class DefaultGrailsPlugin extends AbstractGrailsPlugin implements ParentA
         resolver = CachingPathMatchingResourcePatternResolver.INSTANCE;
 
         try {
-            initialisePlugin(pluginClass, fallbackVersion);
+            initialisePlugin(pluginClass, fallbackVersion, metadata);
         } catch (Throwable e) {
             throw new PluginException("Error initialising plugin for class [" + pluginClass.getName() + "]:" + e.getMessage(), e);
         }
@@ -239,7 +240,7 @@ public class DefaultGrailsPlugin extends AbstractGrailsPlugin implements ParentA
         }
     }
 
-    private void initialisePlugin(Class<?> clazz, @Nullable String fallbackVersion) {
+    private void initialisePlugin(Class<?> clazz, @Nullable String fallbackVersion, @Nullable PluginMetadata metadata) {
         pluginGrailsClass = new GrailsPluginClass(clazz);
         plugin = pluginGrailsClass.newInstance();
         if (plugin instanceof Plugin) {
@@ -254,54 +255,20 @@ public class DefaultGrailsPlugin extends AbstractGrailsPlugin implements ParentA
         }
         pluginBean = new BeanWrapperImpl(plugin);
 
-        if (clazz.isAnnotationPresent(GrailsPluginDescriptor.class)) {
-            GrailsPluginDescriptor annotation = clazz.getAnnotation(GrailsPluginDescriptor.class);
-            PluginMetadata metadata = PluginUtils.extractPluginMetadata(
-                    new org.apache.grails.core.plugins.PluginDescriptor(
-                            pluginDescriptor,
-                            pluginName != null ? pluginName : PluginUtils.getLogicalPluginName(clazz),
-                            fallbackVersion,
-                            null,
-                            List.of(clazz.getName()),
-                            List.of(),
-                            Map.of(),
-                            List.of(),
-                            List.of(),
-                            Map.of(),
-                            List.of(),
-                            List.of(),
-                            List.of(),
-                            List.of(),
-                            annotation.enabled(),
-                            true),
-                    clazz);
-            if (metadata != null) {
-                applyMetadata(metadata);
-            }
-            if (annotation.pluginExcludes().length > 0) {
-                pluginExcludes = new ArrayList<>(Arrays.asList(annotation.pluginExcludes()));
-            }
-            evaluateProvidedArtefacts();
-            evaluateOnChangeListener();
-            evaluateTypeFilters();
-            return;
+        GrailsPluginDescriptor annotation = clazz.getAnnotation(GrailsPluginDescriptor.class);
+        if (metadata == null) {
+            metadata = annotation == null
+                    ? PluginUtils.readPluginInstanceMetadata(plugin, pluginBean, pluginName, fallbackVersion)
+                    : PluginUtils.extractPluginMetadataFromAnnotation(clazz, fallbackVersion, null, pluginName);
         }
-
-        // configure plugin
-        version = PluginUtils.evaluatePluginVersion(pluginBean, plugin, pluginGrailsClass.getName(), fallbackVersion);
-
-        PluginUtils.PluginDependencies pluginDependencies = PluginUtils.evaluatePluginDependencies(pluginBean, plugin);
-        dependencies = pluginDependencies.dependencies();
-        dependencyNames = pluginDependencies.dependencyNames();
-        loadAfterNames = PluginUtils.evaluatePluginLoadAfters(pluginBean, plugin);
-        loadBeforeNames = PluginUtils.evaluatePluginLoadBefores(pluginBean, plugin);
+        applyMetadata(metadata);
+        if (annotation == null) {
+            evaluatePluginExcludes();
+        } else {
+            pluginExcludes = new ArrayList<>(Arrays.asList(annotation.pluginExcludes()));
+        }
         evaluateProvidedArtefacts();
-        evictionList = PluginUtils.evaluatePluginEvictionPolicy(pluginBean, plugin);
         evaluateOnChangeListener();
-        observedPlugins = PluginUtils.evaluateObservedPlugins(pluginBean, plugin);
-        status = PluginUtils.evaluatePluginStatus(pluginBean, plugin);
-        pluginEnvs = PluginUtils.evaluatePluginEnvironments(pluginBean, plugin);
-        evaluatePluginExcludes();
         evaluateTypeFilters();
     }
 
@@ -689,7 +656,7 @@ public class DefaultGrailsPlugin extends AbstractGrailsPlugin implements ParentA
         ClassLoader parent = grailsApplication.getClassLoader();
         GroovyClassLoader gcl = new GroovyClassLoader(parent);
         try {
-            initialisePlugin(gcl.parseClass(descriptor.getFile()), version);
+            initialisePlugin(gcl.parseClass(descriptor.getFile()), version, null);
         } catch (Exception e) {
             LOG.error("Error refreshing plugin: " + e.getMessage(), e);
         }
