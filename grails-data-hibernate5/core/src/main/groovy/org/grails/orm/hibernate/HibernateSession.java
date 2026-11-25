@@ -144,7 +144,8 @@ public class HibernateSession extends AbstractHibernateSession {
             unsupported.append("offset(").append(offset).append(')');
         }
         throw new InvalidDataAccessResourceUsageException(operation + " cannot limit the rows it writes to, " +
-                "so it does not support " + unsupported + "; remove it or select the ids first");
+                "so it does not support " + unsupported + ": call it before max or offset are applied to the query, " +
+                "which a criteria cannot drop once they are set, or select the ids first and write by id");
     }
 
     /**

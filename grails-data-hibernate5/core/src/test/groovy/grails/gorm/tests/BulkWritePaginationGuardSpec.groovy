@@ -63,6 +63,18 @@ class BulkWritePaginationGuardSpec extends GrailsDataTckSpec<GrailsDataHibernate
         rows() == 3
     }
 
+    void "the message says what to do instead, as the upgrade note does"() {
+        when:
+        TestEntity.where { age > 0 }.max(1).deleteAll()
+
+        then: 'a criteria cannot drop max once it is set, so the write comes before it, or the ids are selected first'
+        InvalidDataAccessResourceUsageException e = thrown()
+        e.message.contains('call it before max or offset are applied to the query')
+        e.message.contains('which a criteria cannot drop once they are set')
+        e.message.contains('select the ids first and write by id')
+        !e.message.contains('remove it')
+    }
+
     void "updateAll refuses an offset above 0 and updates nothing"() {
         when:
         TestEntity.where { age > 0 }.offset(1).updateAll(age: 41)
