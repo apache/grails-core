@@ -151,6 +151,9 @@ class CriteriaQueryArgumentsSpec extends GrailsDataTckSpec<GrailsDataHibernate5T
             case 'paged where':
                 found = TestEntity.where { age > 0 }.list(args + [max: 10])
                 break
+            case 'paged criteria':
+                found = TestEntity.createCriteria().list(args + [max: 10]) { gt('age', 0) }
+                break
             case 'paged finder':
                 found = TestEntity.findAllByAgeGreaterThan(0, args + [max: 10])
                 break
@@ -275,6 +278,8 @@ class CriteriaQueryArgumentsSpec extends GrailsDataTckSpec<GrailsDataHibernate5T
         'findAllBy'       | 'flushMode' | 'BOGUS'
         'findBy'          | 'flushMode' | 'BOGUS'
         'paged where'     | 'flushMode' | 'BOGUS'
+        'paged criteria'  | 'flushMode' | 'BOGUS'
+        'paged criteria'  | 'fetchSize' | 'lots'
     }
 
     @Unroll

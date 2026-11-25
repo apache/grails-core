@@ -171,15 +171,18 @@ public class HibernateCriteriaBuilder extends AbstractHibernateCriteriaBuilder {
 
     @Override
     protected List createPagedResultList(Map args) {
+        // the Hibernate settings of the arguments are read as the arguments of any other query are, with the same message
+        // naming the argument for a value that is not valid: HibernateQuery.setArguments checks them and sets them on the
+        // criteria, before the arguments of the page are applied
+        new HibernateQuery(criteria, datastore.getMappingContext().getPersistentEntity(targetClass.getName())).setArguments(args);
         GrailsHibernateUtil.populateArgumentsForCriteria(datastore, targetClass, criteria, args, conversionService);
         GrailsHibernateTemplate ght = new GrailsHibernateTemplate(sessionFactory, (HibernateDatastore) datastore, getDefaultFlushMode());
         PagedResultList paged = new PagedResultList(ght, criteria);
         Object mode = args.get("flushMode");
-        if (mode instanceof org.hibernate.FlushMode) {
-            paged.flushMode = (org.hibernate.FlushMode) mode;
-        }
-        else if (mode != null) {
-            paged.flushMode = org.hibernate.FlushMode.valueOf(String.valueOf(mode).trim());
+        if (mode != null) {
+            // the value was checked above, so this cannot fail
+            paged.flushMode = mode instanceof org.hibernate.FlushMode ?
+                    (org.hibernate.FlushMode) mode : org.hibernate.FlushMode.valueOf(String.valueOf(mode).trim());
         }
         return paged;
     }
