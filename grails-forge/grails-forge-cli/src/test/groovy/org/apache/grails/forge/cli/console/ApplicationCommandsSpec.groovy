@@ -556,7 +556,7 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
         'that origin in other letters'            | HELLO + [name: 'other', origin: 'Built-In']            | ORIGIN
         'the origin of the application in other letters' | HELLO + [name: 'other', origin: 'APPLICATION']  | ORIGIN
         'no origin'                               | HELLO + [name: 'other'] - [origin: 'org.example:hello-cli:1.2.3'] | ORIGIN
-        'a command for Gradle'                    | HELLO + [name: 'other', target: 'gradle']              | 'its target is gradle, which is not run from here'
+        'a command for the console'               | HELLO + [name: 'other', target: 'console']             | 'its target is console, which is not run from here'
         'a target there is not'                   | HELLO + [name: 'other', target: 'hostile']             | 'its target is none there is'
         'no target'                               | HELLO + [name: 'other'] - [target: 'application']      | 'its target is none there is'
         'a registration there is not'             | HELLO + [name: 'other', registration: 'hostile']       | 'its registration is none of descriptor, factories, legacy'

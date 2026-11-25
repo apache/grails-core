@@ -22,7 +22,7 @@ import groovy.transform.CompileStatic
 
 import org.apache.grails.core.cli.ApplicationCommand
 import org.apache.grails.core.cli.ExecutionContext
-import org.apache.grails.core.cli.StandaloneCommand
+import org.apache.grails.core.cli.GradleCommand
 import org.apache.grails.datastore.core.querytail.QueryTailSettings
 import org.grails.build.parsing.CommandLine
 import org.grails.config.CodeGenConfig
@@ -30,13 +30,13 @@ import org.grails.config.CodeGenConfig
 /**
  * The {@code query-tail} command: shows the statements the running application executes, by the page
  * that runs them. It follows the capture file the application writes and is run without the
- * application (see {@link StandaloneCommand}): a second instance of the application, with its data
+ * application (see {@link GradleCommand}): a second instance of the application, with its data
  * source and its {@code BootStrap}, is not what reads a file.
  *
  * @since 9.0
  */
 @CompileStatic
-class QueryTailCommand implements ApplicationCommand, StandaloneCommand {
+class QueryTailCommand implements ApplicationCommand, GradleCommand {
 
     /** The options of the command, each given with two dashes. */
     public static final List<String> FLAGS = ['statements', 'stream', 'page', 'top', 'all', 'once', 'file'].asImmutable()

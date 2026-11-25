@@ -56,7 +56,7 @@ final class ScriptCommandFiles {
     public static final String REGISTRATION = 'script'
 
     /** What runs a script, in the description of a command for a tool: a JVM of the build, without the application. */
-    public static final String TARGET = 'standalone'
+    public static final String TARGET = 'gradle'
 
     /** How many entries of the directory are looked at, at most. */
     public static final int MAX_ENTRIES = 4096

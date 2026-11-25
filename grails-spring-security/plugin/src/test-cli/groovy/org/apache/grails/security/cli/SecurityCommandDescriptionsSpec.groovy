@@ -19,7 +19,7 @@
 
 package org.apache.grails.security.cli
 
-import org.apache.grails.core.cli.StandaloneCommand
+import org.apache.grails.core.cli.GradleCommand
 import spock.lang.Specification
 
 import org.apache.grails.core.cli.ApplicationCommand
@@ -61,6 +61,6 @@ class SecurityCommandDescriptionsSpec extends Specification {
 
     void 'the commands only write files of the project, so they are run without the application being started'() {
         expect: 'an application that cannot start, as one that is not configured yet, has them all the same'
-        [S2QuickstartCommand, S2CreatePersistentTokenCommand, S2CreateRoleHierarchyEntryCommand].every { Class command -> StandaloneCommand.isAssignableFrom(command) }
+        [S2QuickstartCommand, S2CreatePersistentTokenCommand, S2CreateRoleHierarchyEntryCommand].every { Class command -> GradleCommand.isAssignableFrom(command) }
     }
 }

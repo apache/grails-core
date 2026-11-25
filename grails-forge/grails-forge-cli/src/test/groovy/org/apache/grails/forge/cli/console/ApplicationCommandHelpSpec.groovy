@@ -36,7 +36,7 @@ class ApplicationCommandHelpSpec extends CommandSpec {
 
     static final List<Map> COMMANDS = [
             [name: 'audit-report', aliases: [], description: 'Writes the audit report', origin: 'application', target: 'application', registration: 'factories'],
-            [name: 'hello-world', aliases: [], description: 'Says hello', origin: 'org.example:hello-cli:1.2.3', target: 'standalone', registration: 'descriptor']
+            [name: 'hello-world', aliases: [], description: 'Says hello', origin: 'org.example:hello-cli:1.2.3', target: 'gradle', registration: 'descriptor']
     ]
 
     PrintStream originalOut
@@ -87,7 +87,7 @@ class ApplicationCommandHelpSpec extends CommandSpec {
         where:
         name           | said
         'audit-report' | 'Writes the audit report A command of the application, which runs in the application'
-        'hello-world'  | 'Says hello A command of org.example:hello-cli:1.2.3, which runs without the application'
+        'hello-world'  | 'Says hello A command of org.example:hello-cli:1.2.3, which runs with Gradle, without the application'
         'data-import'  | 'A script of the application, in src/main/scripts'
     }
 

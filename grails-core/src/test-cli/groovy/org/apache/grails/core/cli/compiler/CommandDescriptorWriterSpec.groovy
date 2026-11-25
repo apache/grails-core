@@ -294,21 +294,21 @@ class CommandDescriptorWriterSpec extends Specification {
     }
 
     @Unroll
-    def "a command that runs without the application, marked #where, is described as standalone"() {
+    def "a command that runs without the application, marked #where, is described as one the build runs"() {
         when:
         compile('TailCommand', source)
 
         then:
         descriptor('example.TailCommand') == [format: 1, class: 'example.TailCommand', name: 'tail',
-                                              description: 'Follows a file', target: 'standalone']
+                                              description: 'Follows a file', target: 'gradle']
         registered() == ['example.TailCommand']
 
         where:
         where                         | source
-        'on the class'                | "class TailCommand implements ${CONTRACT}, ${STANDALONE} { String description = 'Follows a file'; ${HANDLE} }"
-        'on a Grails command'         | "class TailCommand implements org.apache.grails.core.cli.GrailsApplicationCommand, ${STANDALONE} { String description = 'Follows a file'; boolean handle() { true } }"
-        'on an interface it has'      | "interface FileCommand extends ${STANDALONE} {}\nclass TailCommand implements ${CONTRACT}, FileCommand { String description = 'Follows a file'; ${HANDLE} }"
-        'on a class it extends'       | "abstract class FileCommand implements ${CONTRACT}, ${STANDALONE} { String description = 'Follows a file' }\nclass TailCommand extends FileCommand { ${HANDLE} }"
+        'on the class'                | "class TailCommand implements ${CONTRACT}, ${GRADLE} { String description = 'Follows a file'; ${HANDLE} }"
+        'on a Grails command'         | "class TailCommand implements org.apache.grails.core.cli.GrailsApplicationCommand, ${GRADLE} { String description = 'Follows a file'; boolean handle() { true } }"
+        'on an interface it has'      | "interface FileCommand extends ${GRADLE} {}\nclass TailCommand implements ${CONTRACT}, FileCommand { String description = 'Follows a file'; ${HANDLE} }"
+        'on a class it extends'       | "abstract class FileCommand implements ${CONTRACT}, ${GRADLE} { String description = 'Follows a file' }\nclass TailCommand extends FileCommand { ${HANDLE} }"
     }
 
     @Unroll
@@ -653,7 +653,7 @@ class CommandDescriptorWriterSpec extends Specification {
         noExceptionThrown()
     }
 
-    private static final String STANDALONE = 'org.apache.grails.core.cli.StandaloneCommand'
+    private static final String GRADLE = 'org.apache.grails.core.cli.GradleCommand'
 
     private static final String HANDLE = 'boolean handle(org.apache.grails.core.cli.ExecutionContext executionContext) { true }'
 

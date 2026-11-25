@@ -118,7 +118,7 @@ class ScriptCommandsSpec extends CommandSpec implements CommandFixture {
         described.complete == true
         described.diagnostics == []
         ((List<Map>) described.commands).findAll { it.registration == 'script' } == ['data-import', 'nightly-report', 'x'].collect {
-            [name: it, aliases: [], description: '', project: true, origin: 'application', target: 'standalone', registration: 'script', commands: []]
+            [name: it, aliases: [], description: '', project: true, origin: 'application', target: 'gradle', registration: 'script', commands: []]
         }
 
         when: 'completion, as the interactive shell asks for it'

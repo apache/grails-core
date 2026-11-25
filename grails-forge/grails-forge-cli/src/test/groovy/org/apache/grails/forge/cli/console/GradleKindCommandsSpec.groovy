@@ -29,15 +29,15 @@ import org.grails.forge.cli.ForgeCli
 import spock.lang.IgnoreIf
 
 /**
- * A command the build of a project lists with the target {@code standalone}, one that is run without
+ * A command the build of a project lists with the target {@code gradle}, one that is run without
  * the application, as a command of the CLI: listed and run as every command of the application and
  * its plugins is, and said to be what it is. The file of the build is written here by hand, or by
  * the class of the build that writes it.
  */
-class StandaloneCommandsSpec extends CommandSpec implements CommandFixture {
+class GradleKindCommandsSpec extends CommandSpec implements CommandFixture {
 
     static final Map TAIL = [name: 'query-tail', aliases: [], description: 'Shows the statements', origin: 'org.apache.grails.data:grails-datamapping-core-cli:9.0.0',
-                             target: 'standalone', registration: 'descriptor']
+                             target: 'gradle', registration: 'descriptor']
 
     PrintStream originalOut
     PrintStream originalErr
@@ -78,7 +78,7 @@ class StandaloneCommandsSpec extends CommandSpec implements CommandFixture {
 
         then:
         exit == 0
-        help.contains('A command of org.apache.grails.data:grails-datamapping-core-cli:9.0.0, which runs without the application: it is started by the Gradle task runCommand of the project.')
+        help.contains('A command of org.apache.grails.data:grails-datamapping-core-cli:9.0.0, which runs with Gradle, without the application: it is started by the Gradle task runCommand of the project.')
         !help.contains('which runs in the application')
 
         when: 'the other command is said to run in the application, as before'
@@ -107,7 +107,7 @@ class StandaloneCommandsSpec extends CommandSpec implements CommandFixture {
         commands == [
                 [name: 'hello-world', aliases: [], description: 'Says hello', project: true, origin: 'org.example:hello-cli:1.2.3', target: 'application', registration: 'descriptor', commands: []],
                 [name: 'query-tail', aliases: [], description: 'Shows the statements', project: true, origin: 'org.apache.grails.data:grails-datamapping-core-cli:9.0.0',
-                 target: 'standalone', registration: 'descriptor', commands: []]]
+                 target: 'gradle', registration: 'descriptor', commands: []]]
     }
 
     void "what the build writes for a command that runs without the application is what is read here"() {
@@ -115,7 +115,7 @@ class StandaloneCommandsSpec extends CommandSpec implements CommandFixture {
         File jar = new File(dir, 'element')
         new File(jar, 'META-INF').mkdirs()
         new File(jar, 'META-INF/grails-cli.factories').text = 'org.apache.grails.core.cli.ApplicationCommand=demo.TailCommand,demo.ReportCommand\n'
-        [['demo.TailCommand', 'tail', 'standalone'], ['demo.ReportCommand', 'report', 'application']].each { List<String> each ->
+        [['demo.TailCommand', 'tail', 'gradle'], ['demo.ReportCommand', 'report', 'application']].each { List<String> each ->
             File descriptor = new File(jar, CommandDescriptor.location(each[0]))
             descriptor.parentFile.mkdirs()
             descriptor.text = CommandDescriptor.describe(each[0], each[1], 'Does it', each[2])
@@ -133,7 +133,7 @@ class StandaloneCommandsSpec extends CommandSpec implements CommandFixture {
         exit == 0
         described.complete == true
         described.diagnostics == []
-        ((List<Map>) described.commands).findAll { it.origin != 'built-in' }.collectEntries { [(it.name): it.target] } == [report: 'application', tail: 'standalone']
+        ((List<Map>) described.commands).findAll { it.origin != 'built-in' }.collectEntries { [(it.name): it.target] } == [report: 'application', tail: 'gradle']
     }
 
     @IgnoreIf({ os.windows })

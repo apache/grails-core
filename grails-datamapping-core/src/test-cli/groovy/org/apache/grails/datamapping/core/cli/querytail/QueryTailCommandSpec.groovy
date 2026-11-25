@@ -212,7 +212,7 @@ class QueryTailCommandSpec extends Specification {
         QueryTailCommand.FLAGS.every { String flag -> help.out.contains("--${flag}") }
     }
 
-    void "the command is listed by a build from its descriptor, as one that runs without the application"() {
+    void "the command is listed by a build from its descriptor, as one the build runs without the application"() {
         when: 'what the compiler wrote for the command, which is what the jar of the command line tier has'
         InputStream resource = QueryTailCommand.classLoader.getResourceAsStream(CommandDescriptor.location(QueryTailCommand.name))
         CommandDescriptor.Described described = CommandDescriptor.read(QueryTailCommand.name, resource.bytes)
@@ -222,7 +222,7 @@ class QueryTailCommandSpec extends Specification {
         described.name == 'query-tail'
         described.name == command.name
         described.description == command.description
-        described.target == CommandDescriptor.TARGET_STANDALONE
+        described.target == CommandDescriptor.TARGET_GRADLE
     }
 
     /**

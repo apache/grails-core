@@ -107,7 +107,7 @@ final class ApplicationCommandFile {
     public static final String APPLICATION = 'application'
 
     /** The target of a command the build runs without the application: with the class path of the project, and nothing of it started. */
-    public static final String STANDALONE = 'standalone'
+    public static final String GRADLE = 'gradle'
 
     // the document is four deep; what a later task adds to a command and is not read here may go deeper
     private static final int MAX_DEPTH = 8
@@ -116,7 +116,7 @@ final class ApplicationCommandFile {
     private static final Pattern NAME = Pattern.compile('[a-z][a-z0-9]*(-[a-z0-9]+)*')
     private static final Pattern TASK_NAME = Pattern.compile('[A-Za-z][A-Za-z0-9_-]*')
     private static final List<String> REGISTRATIONS = ['descriptor', 'factories', 'legacy']
-    private static final List<String> OTHER_TARGETS = ['console', 'gradle', 'session']
+    private static final List<String> OTHER_TARGETS = ['console', 'standalone', 'session']
     private static final List<Integer> NOT_SHOWN = [(int) Character.CONTROL, (int) Character.FORMAT, (int) Character.LINE_SEPARATOR,
                                                     (int) Character.PARAGRAPH_SEPARATOR, (int) Character.SURROGATE, (int) Character.PRIVATE_USE,
                                                     (int) Character.UNASSIGNED]
@@ -380,7 +380,7 @@ final class ApplicationCommandFile {
             return "its origin is not at most ${MAX_ORIGIN} characters of printable ASCII without a space, an @ or a dollar sign, or is a word the command line keeps for itself"
         }
         Object target = command.get('target')
-        if (target != APPLICATION && target != STANDALONE) {
+        if (target != APPLICATION && target != GRADLE) {
             return target in OTHER_TARGETS ? "its target is ${target}, which is not run from here" : 'its target is none there is'
         }
         if (!(command.get('registration') in REGISTRATIONS)) {
@@ -563,7 +563,7 @@ final class ApplicationCommandFile {
         /** How the command is registered, which says how much the build knows of it. */
         final String registration
 
-        /** How the build runs the command: {@link #APPLICATION} with the application, {@link #STANDALONE} without it. */
+        /** How the build runs the command: {@link #APPLICATION} with the application, {@link #GRADLE} without it. */
         final String target
 
         private Entry(String name, List<String> aliases, String description, String origin, String registration, String target = APPLICATION) {
@@ -578,8 +578,8 @@ final class ApplicationCommandFile {
         /**
          * @return whether the build runs the command without starting the application
          */
-        boolean isStandalone() {
-            return target == STANDALONE
+        boolean isGradle() {
+            return target == GRADLE
         }
 
         /**

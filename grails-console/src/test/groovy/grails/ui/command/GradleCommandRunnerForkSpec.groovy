@@ -30,62 +30,62 @@ import grails.ui.StartedJvmCoverage
 import org.apache.grails.core.cli.ApplicationCommand
 import org.apache.grails.core.cli.ExecutionContext
 import org.apache.grails.core.cli.GrailsApplicationCommand
-import org.apache.grails.core.cli.StandaloneCommand
+import org.apache.grails.core.cli.GradleCommand
 
 /**
- * A {@link StandaloneCommand} as the {@code runCommand} task of a build starts it: by the {@code main}
+ * A {@link GradleCommand} as the {@code runCommand} task of a build starts it: by the {@code main}
  * method of {@link GrailsApplicationContextCommandRunner} in a JVM of its own, which runs the command
  * without the application and ends with the status of the command.
  */
-class StandaloneCommandRunnerForkSpec extends Specification {
+class GradleCommandRunnerForkSpec extends Specification {
 
     private static final int TIMEOUT_SECONDS = 120
 
     @TempDir
     File dir
 
-    def "a standalone command runs with its arguments and its flags and without the application, and the JVM ends with 0"() {
+    def "a command the build runs is given its arguments and its flags, without the application, and the JVM ends with 0"() {
         when:
-        Map result = run('standalone-spec-succeeds', 'one', '--flag=value', 'two', '--bare', StandaloneStartedApplication.name)
+        Map result = run('gradle-kind-spec-succeeds', 'one', '--flag=value', 'two', '--bare', GradleKindStartedApplication.name)
 
         then:
         result.ended
         result.exit == 0
-        result.out.contains('COMMAND=standalone-spec-succeeds [one, two] value true context=null injected=null')
+        result.out.contains('COMMAND=gradle-kind-spec-succeeds [one, two] value true context=null injected=null')
 
         and: 'the class of the application was neither made nor initialized'
         !result.out.contains('APPLICATION')
     }
 
-    def "a standalone command runs for an application whose context does not load"() {
+    def "a command the build runs is run for an application whose context does not load"() {
         when:
-        Map result = run('standalone-spec-succeeds', StandaloneFailingApplication.name)
+        Map result = run('gradle-kind-spec-succeeds', GradleKindFailingApplication.name)
 
         then:
         result.ended
         result.exit == 0
-        result.out.contains('COMMAND=standalone-spec-succeeds')
+        result.out.contains('COMMAND=gradle-kind-spec-succeeds')
         !result.err.contains('Context failed to load')
     }
 
-    def "the arguments of a file are those of a standalone command, each as it is"() {
+    def "the arguments of a file are those of a command the build runs, each as it is"() {
         given:
         File arguments = new File(dir, 'arguments.json')
         arguments.setText('["two words", "--flag=a value", "$HOME"]', 'UTF-8')
 
         when:
-        Map result = run('standalone-spec-succeeds', StandaloneStartedApplication.name, "--grails-args-file=${arguments.path}".toString())
+        Map result = run('gradle-kind-spec-succeeds', GradleKindStartedApplication.name, "--grails-args-file=${arguments.path}".toString())
 
         then:
         result.ended
         result.exit == 0
-        result.out.contains('COMMAND=standalone-spec-succeeds [two words, $HOME] a value null context=null injected=null')
+        result.out.contains('COMMAND=gradle-kind-spec-succeeds [two words, $HOME] a value null context=null injected=null')
     }
 
     @Unroll
-    def "a standalone command that #what ends the JVM with 1"() {
+    def "a command the build runs that #what ends the JVM with 1"() {
         when:
-        Map result = run(command, StandaloneStartedApplication.name)
+        Map result = run(command, GradleKindStartedApplication.name)
 
         then:
         result.ended
@@ -96,18 +96,18 @@ class StandaloneCommandRunnerForkSpec extends Specification {
 
         where:
         what            | command                          | said
-        'returns false' | 'standalone-spec-returns-false' | null
-        'throws'        | 'standalone-spec-throws'        | 'Command execution error: this command fails on purpose'
+        'returns false' | 'gradle-kind-spec-returns-false' | null
+        'throws'        | 'gradle-kind-spec-throws'        | 'Command execution error: this command fails on purpose'
     }
 
-    def "a standalone command renders a template of the project into the project without the application"() {
+    def "a command the build runs renders a template of the project into the project without the application"() {
         given: 'a template, where the templates of a project are'
         File template = new File(dir, 'src/main/templates/artifacts/Report.groovy')
         template.parentFile.mkdirs()
         template.text = 'package ${packageName}\n\nclass ${className}Report {\n}\n'
 
         when:
-        Map result = run('create-standalone-report', 'com.example.Sales', StandaloneFailingApplication.name)
+        Map result = run('create-gradle-kind-report', 'com.example.Sales', GradleKindFailingApplication.name)
 
         then:
         result.ended
@@ -115,12 +115,12 @@ class StandaloneCommandRunnerForkSpec extends Specification {
         new File(dir, 'src/main/groovy/com/example/SalesReport.groovy').text == 'package com.example\n\nclass SalesReport {\n}\n'
 
         when: 'it is given no name'
-        result = run('create-standalone-report', StandaloneFailingApplication.name)
+        result = run('create-gradle-kind-report', GradleKindFailingApplication.name)
 
         then:
         result.ended
         result.exit == 1
-        result.err.contains('Usage: create-standalone-report <name>')
+        result.err.contains('Usage: create-gradle-kind-report <name>')
     }
 
     private Map run(String... arguments) {
@@ -141,18 +141,18 @@ class StandaloneCommandRunnerForkSpec extends Specification {
     }
 }
 
-class StandaloneStartedApplication extends GrailsAutoConfiguration {
+class GradleKindStartedApplication extends GrailsAutoConfiguration {
 
     static {
         println 'APPLICATION INITIALIZED'
     }
 
-    StandaloneStartedApplication() {
+    GradleKindStartedApplication() {
         println 'APPLICATION STARTED'
     }
 }
 
-class StandaloneFailingApplication extends GrailsAutoConfiguration {
+class GradleKindFailingApplication extends GrailsAutoConfiguration {
 
     @Bean
     Runnable failing() {
@@ -160,7 +160,7 @@ class StandaloneFailingApplication extends GrailsAutoConfiguration {
     }
 }
 
-class StandaloneSpecSucceedsCommand implements ApplicationCommand, StandaloneCommand {
+class GradleKindSpecSucceedsCommand implements ApplicationCommand, GradleCommand {
 
     Object grailsApplication
 
@@ -172,7 +172,7 @@ class StandaloneSpecSucceedsCommand implements ApplicationCommand, StandaloneCom
     }
 }
 
-class StandaloneSpecReturnsFalseCommand implements ApplicationCommand, StandaloneCommand {
+class GradleKindSpecReturnsFalseCommand implements ApplicationCommand, GradleCommand {
 
     @Override
     boolean handle(ExecutionContext executionContext) {
@@ -181,7 +181,7 @@ class StandaloneSpecReturnsFalseCommand implements ApplicationCommand, Standalon
     }
 }
 
-class StandaloneSpecThrowsCommand implements ApplicationCommand, StandaloneCommand {
+class GradleKindSpecThrowsCommand implements ApplicationCommand, GradleCommand {
 
     @Override
     boolean handle(ExecutionContext executionContext) {
@@ -193,13 +193,13 @@ class StandaloneSpecThrowsCommand implements ApplicationCommand, StandaloneComma
 /**
  * The command the guide shows for a command that renders a template without the application.
  */
-class CreateStandaloneReportCommand implements GrailsApplicationCommand, StandaloneCommand {
+class CreateGradleKindReportCommand implements GrailsApplicationCommand, GradleCommand {
 
     String description = 'Creates a report class from a template'
 
     boolean handle() {
         if (!args) {
-            System.err.println('Usage: create-standalone-report <name>')
+            System.err.println('Usage: create-gradle-kind-report <name>')
             return false
         }
         def model = model(args[0])
