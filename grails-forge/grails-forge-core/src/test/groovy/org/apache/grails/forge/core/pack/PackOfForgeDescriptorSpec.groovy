@@ -284,7 +284,6 @@ build:
         text                                                                              | problem
         'dependencies:\n  - scope: implementation\n    coordinates: com.acme:a\n    when: gsp\n' | "dependencies[0].when: must be a condition, a mapping with one of the keys ${CONDITION_KEYS}, but is 'gsp'"
         'dependencies:\n  - scope: api\n    coordinates: com.acme:a\n'                    | "dependencies[0].scope: must be one of [implementation, compileOnly, runtimeOnly, developmentOnly, testImplementation, testCompileOnly, testRuntimeOnly, testAndDevelopmentOnly, integrationTestImplementationTestFixtures, buildscript], but is 'api'"
-        'platforms:\n  - coordinates: com.acme:a\n    when: { feature: gsp }\n'           | "platforms[0]: has the key 'when', which this version of Forge does not read here; the keys are [coordinates, version]"
         'buildPlugins:\n  - id: a.b\n    apply: false\n'                                  | 'buildPlugins[0].apply: must be true or be left out, but is the value false'
         'buildPlugins:\n  - id: a.b\n    when: { feature: }\n'                            | 'buildPlugins[0].when.feature: must be text, but is empty'
         'files:\n  - from: a.gsp\n    to: a.txt\n    template: true\n'                    | 'files[0].template: must be false or be left out, but is the value true'
@@ -329,16 +328,8 @@ build:
         'order'              | 'the descriptor'  | 'order: test\n'
         'visible'            | 'the descriptor'  | 'visible: false\n'
         'reliesOn'           | 'the descriptor'  | 'reliesOn:\n  - gsp\n'
-        'requiresJdk'        | 'the descriptor'  | 'requiresJdk: 25\n'
         'dataSource'         | 'the descriptor'  | 'oneOf: database-driver\ndataSource:\n  a: 1\n'
         'dataSourceOfDriver' | 'the descriptor'  | 'dataSourceOfDriver: true\n'
-        'when'               | 'dependencies[0]' | 'dependencies:\n  - scope: implementation\n    coordinates: com.acme:a\n    when: { feature: gsp }\n'
-        'when'               | 'buildPlugins[0]' | 'buildPlugins:\n  - id: a.b\n    when: { feature: gsp }\n'
-        'apply'              | 'buildPlugins[0]' | 'buildPlugins:\n  - id: a.b\n    apply: true\n'
-        'when'               | 'files[0]'        | 'files:\n  - from: a.txt\n    to: a.txt\n    when: { feature: gsp }\n'
-        'template'           | 'files[0]'        | 'files:\n  - from: a.gsp\n    to: a.gsp\n    template: false\n'
-        'executable'         | 'files[0]'        | 'files:\n  - from: a.sh\n    to: a.sh\n    executable: true\n'
-        'propertyComments'   | 'build'           | 'build:\n  propertyComments:\n    - a\n'
     }
 
     @Unroll
@@ -352,10 +343,6 @@ build:
 
         where:
         text                                                                      | problem
-        'configuration:\n  - values:\n      a: 1\n'                               | 'configuration: must be a mapping of keys to values, but is a list'
-        'build:\n  extensions:\n    acme:\n      - text: x\n'                     | 'build.extensions.acme: must be text, but is a list'
-        'build:\n  extensions:\n    tasks.withType(Test).configureEach: x\n'      | "build.extensions: the name of an extension is one or more identifiers joined by '.', but one is 'tasks.withType(Test).configureEach'"
-        'dependencies:\n  - scope: buildscript\n    coordinates: com.acme:a\n'    | "dependencies[0].scope: must be one of [implementation, compileOnly, runtimeOnly, developmentOnly, testImplementation, testCompileOnly, testRuntimeOnly], but is 'buildscript'"
-        "guideOfGrails: 'guide/a.html'\n"                                         | "the descriptor: has the key 'guideOfGrails', which this version of Forge does not read here; the keys are [format, kind, name, templateApi, compatibility, title, description, category, documentation, applicationTypes, requires, conflicts, oneOf, dependencies, platforms, buildPlugins, build, configuration, files, readme, instructions, thirdPartyDocumentation]"
+        "guideOfGrails: 'guide/a.html'\n"                                         | "the descriptor: has the key 'guideOfGrails', which this version of Forge does not read here; the keys are [format, kind, name, templateApi, compatibility, title, description, category, documentation, applicationTypes, requires, conflicts, oneOf, dependencies, platforms, buildPlugins, build, configuration, files, readme, instructions, readmeLinks, requiresJdk, thirdPartyDocumentation]"
     }
 }

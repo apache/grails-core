@@ -271,7 +271,9 @@ class PackFeature implements Feature {
         }
         // a pack of Forge is a feature of the framework: what it sets is not compared with what another feature sets
         boolean held = !pack.isBundled()
-        List<PackDependency> declared = held ? descriptor.dependencies + descriptor.platforms : Collections.<PackDependency>emptyList()
+        // of what the pack gives this application: a dependency whose condition does not hold is not there to differ
+        List<PackDependency> declared = held ? (descriptor.dependencies + descriptor.platforms).findAll { PackDependency each -> each.when.test(facts) } :
+                Collections.<PackDependency>emptyList()
         declared.each { PackDependency dependency -> checkVersion(generatorContext, dependency) }
         for (PackDependency dependency : descriptor.dependencies) {
             if (!dependency.when.test(facts)) {
@@ -284,7 +286,9 @@ class PackFeature implements Feature {
             }
         }
         for (PackDependency platform : descriptor.platforms) {
-            generatorContext.addDependency(toDependency(generatorContext, platform, true))
+            if (platform.when.test(facts)) {
+                generatorContext.addDependency(toDependency(generatorContext, platform, true))
+            }
         }
         for (PackBuildPlugin plugin : descriptor.buildPlugins) {
             if (!plugin.when.test(facts)) {
@@ -334,12 +338,19 @@ class PackFeature implements Feature {
             }
             generatorContext.getConfiguration().put(setting, value)
         }
+        // the settings of the file of one environment, by the environment
+        Map<String, Map<String, Object>> ofEnvironments = new LinkedHashMap<>()
         for (PackOfForge.Settings each : ofForge.settings) {
             if (each.environmentFile != null && each.when.test(facts)) {
-                Map<String, Object> ofEnvironment = new LinkedHashMap<>()
+                Map<String, Object> ofEnvironment = ofEnvironments.computeIfAbsent(each.environmentFile) { String environment -> new LinkedHashMap<String, Object>() }
                 flatten(each.values, '', ofEnvironment)
-                configurationOf(generatorContext, each.environmentFile).putAll(ofEnvironment)
             }
+        }
+        ofEnvironments.each { String environment, Map<String, Object> ofEnvironment ->
+            if (held) {
+                checkEnvironmentFile(generatorContext, environment, ofEnvironment)
+            }
+            configurationOf(generatorContext, environment).putAll(ofEnvironment)
         }
         List<PackFile> files = descriptor.files.findAll { PackFile file -> file.when.test(facts) }
         // every destination before the first template: a pack that cannot write one of its files runs none. Where a
@@ -366,6 +377,7 @@ class PackFeature implements Feature {
                 declared.each { PackDependency dependency -> checkVersion(generatorContext, dependency) }
                 descriptor.buildProperties.each { String property, String value -> checkProperty(generatorContext, property, value) }
                 settings.each { String setting, Object value -> checkSetting(generatorContext, setting, value) }
+                ofEnvironments.each { String environment, Map<String, Object> ofEnvironment -> checkEnvironmentFile(generatorContext, environment, ofEnvironment) }
             }
         }
     }
@@ -437,7 +449,10 @@ class PackFeature implements Feature {
         if (declared.version == null) {
             return
         }
-        Dependency other = generatorContext.getDependencies().find { Dependency each ->
+        // a dependency of the build itself is compared with those of the build, and any other with those of the application
+        Collection<Dependency> among = declared.scope == PackDescriptorParser.BUILDSCRIPT ? generatorContext.getBuildscriptDependencies() :
+                generatorContext.getDependencies()
+        Dependency other = among.find { Dependency each ->
             each.getGroupId() == declared.groupId && each.getArtifactId() == declared.artifactId && each.getVersion() != declared.version
         }
         if (other != null) {
@@ -483,6 +498,14 @@ class PackFeature implements Feature {
             if (ofEnvironment != null) {
                 checkSetting(ofEnvironment, setting, setting.substring(end + 1), value)
             }
+        }
+    }
+
+    // what the file of one environment has is held as the settings of the application are
+    private void checkEnvironmentFile(GeneratorContext generatorContext, String environment, Map<String, Object> settings) {
+        Configuration configuration = configurationOf(generatorContext, environment)
+        settings.each { String setting, Object value ->
+            checkSetting(configuration, "${setting} for the environment ${environment}".toString(), setting, value)
         }
     }
 

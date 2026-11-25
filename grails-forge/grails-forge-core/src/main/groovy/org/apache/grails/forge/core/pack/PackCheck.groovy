@@ -93,7 +93,7 @@ final class PackCheck {
         Set<String> checked = new HashSet<>()
         for (int index = 0; index < descriptor.files.size() && problems.size() < PackDescriptorParser.MAX_PROBLEMS; index++) {
             PackFile file = descriptor.files[index]
-            if (!Pack.isTemplate(file.from) || !checked.add(file.from)) {
+            if (!file.isTemplate() || !checked.add(file.from)) {
                 continue
             }
             pages = pages ?: new PackPages(PackPages.classLoader)

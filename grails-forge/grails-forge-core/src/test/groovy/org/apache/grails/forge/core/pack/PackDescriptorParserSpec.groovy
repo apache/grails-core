@@ -273,7 +273,7 @@ configuration:
         'the group is not an identifier'           | null                  | "oneOf: 'a b'\n"                                               || "oneOf: must be the identifier of a group, such as 'database-driver' or 'com.acme:audit', but is 'a b'"
         'the dependencies are a mapping'           | null                  | 'dependencies: {}\n'                                           || 'dependencies: must be a list of mappings, but is a mapping'
         'a dependency has no scope'                | null                  | 'dependencies:\n  - coordinates: com.acme:a\n'                 || 'dependencies[0].scope: is required'
-        'a dependency has an unknown scope'        | null                  | 'dependencies:\n  - scope: api\n    coordinates: com.acme:a\n' || "dependencies[0].scope: must be one of [implementation, compileOnly, runtimeOnly, developmentOnly, testImplementation, testCompileOnly, testRuntimeOnly], but is 'api'"
+        'a dependency has an unknown scope'        | null                  | 'dependencies:\n  - scope: api\n    coordinates: com.acme:a\n' || "dependencies[0].scope: must be one of [implementation, compileOnly, runtimeOnly, developmentOnly, testImplementation, testCompileOnly, testRuntimeOnly, testAndDevelopmentOnly, integrationTestImplementationTestFixtures, buildscript], but is 'api'"
         'coordinates include a version'            | null                  | DEPENDENCY + 'com.acme:a:1.0\n'                                || "dependencies[0].coordinates: must be 'group:artifact', with the version given separately, but is 'com.acme:a:1.0'"
         'coordinates end a Groovy string'          | null                  | DEPENDENCY + "'com.acme:a\"'\n"                                || "dependencies[0].coordinates: must be 'group:artifact', with the version given separately, but is 'com.acme:a\"'"
         'coordinates hold a Groovy expression'     | null                  | DEPENDENCY + "'com.acme:\${x}'\n"                              || "dependencies[0].coordinates: must be 'group:artifact', with the version given separately, but is 'com.acme:\${x}'"
@@ -284,19 +284,19 @@ configuration:
         'a capability has no name'                 | null                  | DEPENDENCY + "com.acme:a\n    capabilities: [com.acme]\n"      || "dependencies[0].capabilities[0]: must be the capability 'group:name', but is 'com.acme'"
         'a capability ends a Groovy string'        | null                  | DEPENDENCY + "com.acme:a\n    capabilities: ['a:b\")']\n"      || "dependencies[0].capabilities[0]: must be the capability 'group:name', but is 'a:b\")'"
         'the capabilities are not a list'          | null                  | DEPENDENCY + "com.acme:a\n    capabilities: a:b\n"            || "dependencies[0].capabilities: must be a list, but is 'a:b'"
-        'a platform has capabilities'              | null                  | "platforms:\n  - coordinates: com.acme:bom\n    capabilities: ['a:b']\n" || "platforms[0]: has the key 'capabilities', which this version of Forge does not read here; the keys are [coordinates, version]"
+        'a platform has capabilities'              | null                  | "platforms:\n  - coordinates: com.acme:bom\n    capabilities: ['a:b']\n" || "platforms[0]: has the key 'capabilities', which this version of Forge does not read here; the keys are [coordinates, version, when]"
         'a version ends a Groovy string'           | null                  | DEPENDENCY + "com.acme:a\n    version: '1.0\"); println(\"x'\n" || "dependencies[0].version: ${VERSION_RULE}'1.0\"); println(\"x'"
         'a version holds a Groovy expression'      | null                  | DEPENDENCY + "com.acme:a\n    version: '\${pack.version}'\n"   || "dependencies[0].version: ${VERSION_RULE}'\${pack.version}'"
         'a version has a second line'              | null                  | DEPENDENCY + 'com.acme:a\n    version: "1.0\\nexec { }"\n'      || "dependencies[0].version: ${LINE_RULE}'1.0?exec { }'"
         'a version is read as a number'            | null                  | DEPENDENCY + 'com.acme:a\n    version: 1.10\n'                 || 'dependencies[0].version: must be text, but is the number 1.1; put it in quotes'
-        'a platform has a scope'                   | null                  | 'platforms:\n  - scope: implementation\n    coordinates: com.acme:bom\n' || "platforms[0]: has the key 'scope', which this version of Forge does not read here; the keys are [coordinates, version]"
+        'a platform has a scope'                   | null                  | 'platforms:\n  - scope: implementation\n    coordinates: com.acme:bom\n' || "platforms[0]: has the key 'scope', which this version of Forge does not read here; the keys are [coordinates, version, when]"
         'a platform has a version that is code'    | null                  | "platforms:\n  - coordinates: com.acme:bom\n    version: '1\"'\n" || "platforms[0].version: ${VERSION_RULE}'1\"'"
         'a build plugin has no id'                 | null                  | "buildPlugins:\n  - version: '1.0'\n"                          || 'buildPlugins[0].id: is required'
         'a build plugin id ends a Groovy string'   | null                  | "buildPlugins:\n  - id: 'x\"; println 1; \"'\n"                || "buildPlugins[0].id: must be the id of a Gradle plugin, such as 'com.acme.audit', but is 'x\"; println 1; \"'"
         'a build plugin version is code'           | null                  | "buildPlugins:\n  - id: idea\n    version: '1\" apply false; \"'\n" || "buildPlugins[0].version: ${VERSION_RULE}'1\" apply false; \"'"
         'a build plugin is applied twice'          | null                  | 'buildPlugins:\n  - id: idea\n  - id: idea\n'                  || "buildPlugins[1].id: 'idea' is declared by an earlier entry too"
         'the build is a list'                      | null                  | 'build: []\n'                                                  || 'build: must be a mapping of keys to values, but is a list'
-        'the build has another key'                | null                  | 'build:\n  blocks: []\n'                                       || "build: has the key 'blocks', which this version of Forge does not read here; the keys are [properties, extensions]"
+        'the build has another key'                | null                  | 'build:\n  settings: []\n'                                     || "build: has the key 'settings', which this version of Forge does not read here; the keys are [properties, extensions, blocks, propertyComments]"
         'a build property name sets a second one'  | null                  | "build:\n  properties:\n    'a=b': c\n"                        || "build.properties: the name of a property is letters, digits, '.', '-' and '_', but one is 'a=b'"
         'a build property has a second line'       | null                  | 'build:\n  properties:\n    a: "1\\norg.gradle.jvmargs=-javaagent:x"\n' || "build.properties.a: ${PROPERTY_RULE}'1?org.gradle.jvmargs=-javaagent:x'"
         'a build property is read as a fraction'   | null                  | 'build:\n  properties:\n    a: 1.10\n'                         || 'build.properties.a: must be text, true or false, or a whole number, but is the number 1.1; put any other value in quotes'
@@ -1211,9 +1211,7 @@ build:
         where:
         key               | place             | keys                       | text
         'versionsOfForge' | 'the descriptor'  | 'thirdPartyDocumentation]' | "versionsOfForge:\n  asciidoctorj: '3.0.0'\n"
-        'readmeLinks'     | 'the descriptor'  | 'thirdPartyDocumentation]' | 'readmeLinks:\n  - label: Shadow\n    href: https://acme.example\n'
-        'artifactOfForge' | 'buildPlugins[0]' | '[id, version]'            | 'buildPlugins:\n  - id: com.gradleup.shadow\n    artifactOfForge: shadow\n'
-        'blocks'          | 'build'           | '[properties, extensions]' | 'build:\n  blocks:\n    end: x\n'
+        'artifactOfForge' | 'buildPlugins[0]' | '[id, version, apply, when]' | 'buildPlugins:\n  - id: com.gradleup.shadow\n    artifactOfForge: shadow\n'
     }
 
     @Unroll

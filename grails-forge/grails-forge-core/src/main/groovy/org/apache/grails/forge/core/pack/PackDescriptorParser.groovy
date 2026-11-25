@@ -86,7 +86,10 @@ import org.yaml.snakeyaml.resolver.Resolver
 @CompileStatic
 class PackDescriptorParser {
 
-    /** The scopes a pack can declare a dependency in, by their Gradle configuration name */
+    /** The scope of a dependency of the build itself, which is on the class path of the build script */
+    public static final String BUILDSCRIPT = 'buildscript'
+
+    /** The scopes a pack can declare a dependency in, by their Gradle configuration name; {@link #BUILDSCRIPT} is the build itself */
     public static final Map<String, Scope> SCOPES = Collections.unmodifiableMap([
             implementation: Scope.IMPLEMENTATION,
             compileOnly: Scope.COMPILE_ONLY,
@@ -95,17 +98,13 @@ class PackDescriptorParser {
             testImplementation: Scope.TEST_IMPLEMENTATION,
             testCompileOnly: Scope.TEST_COMPILE_ONLY,
             testRuntimeOnly: Scope.TEST_RUNTIME_ONLY,
-    ] as Map<String, Scope>)
-
-    /** The scope of a dependency of the build itself, which only a pack Forge has in itself can declare */
-    public static final String BUILDSCRIPT = 'buildscript'
-
-    /** The scopes a pack Forge has in itself can declare a dependency in: those of any pack and those only the framework uses */
-    public static final Map<String, Scope> SCOPES_OF_FORGE = Collections.unmodifiableMap(SCOPES + ([
             testAndDevelopmentOnly: Scope.TEST_AND_DEVELOPMENT_ONLY,
             integrationTestImplementationTestFixtures: Scope.INTEGRATION_TEST_IMPLEMENTATION_TEST_FIXTURES,
             (BUILDSCRIPT): Scope.BUILD,
-    ] as Map<String, Scope>))
+    ] as Map<String, Scope>)
+
+    /** The scopes a pack Forge has in itself can declare a dependency in, which are those of every pack */
+    public static final Map<String, Scope> SCOPES_OF_FORGE = SCOPES
 
     /** The places among the features a pack Forge has in itself can take, by their names in a descriptor */
     public static final Map<String, Integer> ORDERS = Collections.unmodifiableMap(FeaturePhase.values().collectEntries { FeaturePhase phase ->
@@ -116,7 +115,7 @@ class PackDescriptorParser {
     public static final Set<String> DESTINATION_TOKENS = Collections.unmodifiableSet(
             ['packageName', 'packagePath', 'className', 'naturalName', 'propertyName', 'name'] as Set<String>)
 
-    /** The places of the build file a pack Forge has in itself can add text at, by their names in a descriptor */
+    /** The places of the build file a pack can add text at, by their names in a descriptor */
     public static final Map<String, BuildFileAnchor> ANCHORS = Collections.unmodifiableMap([
             afterPlugins: BuildFileAnchor.AFTER_PLUGINS,
             afterDependencies: BuildFileAnchor.AFTER_DEPENDENCIES,
@@ -132,7 +131,7 @@ class PackDescriptorParser {
     private static final Set<String> KEYS = ['format', 'kind', 'name', 'templateApi', 'compatibility', 'title',
                                              'description', 'category', 'documentation', 'applicationTypes', 'requires',
                                              'conflicts', 'oneOf', 'dependencies', 'platforms', 'buildPlugins', 'build',
-                                             'configuration', 'files', 'readme', 'instructions', 'thirdPartyDocumentation'] as Set<String>
+                                             'configuration', 'files', 'readme', 'instructions', 'readmeLinks', 'requiresJdk', 'thirdPartyDocumentation'] as Set<String>
     // a preset names one type of application, gives options and asks for features, and is in no group or category
     private static final List<String> PRESET_KEYS = ['format', 'kind', 'name', 'templateApi', 'compatibility', 'title', 'description',
                                                      'documentation', 'thirdPartyDocumentation', 'applicationType', 'options', 'features',
@@ -149,8 +148,9 @@ class PackDescriptorParser {
             options: 'only a preset (kind: preset) gives options',
             features: 'only a preset (kind: preset) asks for features; a feature requires them with requires',
     ]
-    private static final List<String> KEYS_OF_FORGE = ['versionsOfForge', 'readmeLinks', 'guideOfGrails', 'default', 'adds', 'order', 'visible',
-                                                       'reliesOn', 'requiresJdk', 'dataSource', 'dataSourceOfDriver']
+    // what only a pack Forge has in itself says: how its feature is selected without being named, and what it has of Forge itself
+    private static final List<String> KEYS_OF_FORGE = ['versionsOfForge', 'guideOfGrails', 'default', 'adds', 'order', 'visible',
+                                                       'reliesOn', 'dataSource', 'dataSourceOfDriver']
     private static final String GRAILS_DOCUMENTATION = 'https://grails.apache.org/docs/'
     private static final String PAGE_STEP = /[A-Za-z0-9][A-Za-z0-9\-_.]*/
     private static final Pattern GUIDE_PAGE = Pattern.compile(PAGE_STEP + '(/' + PAGE_STEP + ')*/?(#[A-Za-z0-9\\-_.]+)?')
@@ -231,20 +231,21 @@ class PackDescriptorParser {
      * <li>{@code versionsOfForge} maps artifacts to versions: the templates of the pack have
      * {@code versionsOfForge}, the version Forge knows for each artifact or, when it knows none, the
      * one written here;</li>
-     * <li>{@code build.blocks} maps {@code afterPlugins}, {@code afterDependencies} and {@code end} to
-     * text that is added to the build file at that place as it is;</li>
-     * <li>{@code readmeLinks} is a list of {@code label} and {@code href}: links the readme of the
-     * application gets, each as an entry of a list;</li>
-     * <li>how the feature takes part in the selection: {@code default} (when it is selected without being
-     * named), {@code adds} (the features it adds), {@code order}, {@code visible}, {@code reliesOn} and
-     * {@code requiresJdk};</li>
-     * <li>{@code when}, a condition ({@link PackCondition}), on a dependency, a build plugin or a file, and
-     * on the entries of a {@code configuration} or the parts of a build extension written as a list;</li>
+     * <li>how the feature takes part in the selection without being asked for: {@code default} (when it
+     * is selected without being named), {@code adds} (the features it adds once the defaults are
+     * chosen), {@code order}, {@code visible} and {@code reliesOn};</li>
      * <li>{@code dataSource}, the settings of a database driver, and {@code dataSourceOfDriver} for the
-     * feature that takes them; {@code environmentFile} on an entry of the configuration;
-     * {@code apply} on a build plugin; {@code template: false} and {@code executable: true} on a file;
-     * {@code build.propertyComments}; and the scopes of {@link #SCOPES_OF_FORGE}.</li>
+     * feature that takes them; and {@code guideOfGrails}, a page of the documentation of Grails in
+     * place of a link.</li>
      * </ul>
+     *
+     * <p>Everything else is read for every pack alike: {@code when}, a condition ({@link PackCondition}),
+     * on a dependency, a platform, a build plugin or a file, and on the entries of a
+     * {@code configuration} or the parts of a build extension written as a list; {@code build.blocks},
+     * {@code build.propertyComments}, {@code readmeLinks} and {@code requiresJdk};
+     * {@code environmentFile} on an entry of the configuration; {@code apply} on a build plugin;
+     * {@code template: false} and {@code executable: true} on a file; and every scope of
+     * {@link #SCOPES}.</p>
      *
      * @param yaml the text of the descriptor
      * @param source where the descriptor came from, for messages
@@ -295,7 +296,7 @@ class PackDescriptorParser {
         }
         PackPreset ofPreset = preset ? presetOf(root, problems) : null
         Map<String, Object> build = map(root, 'build', '', problems)
-        unknownKeys(build, ofForge ? ['properties', 'extensions', 'blocks', 'propertyComments'] : ['properties', 'extensions'], 'build.', problems)
+        unknownKeys(build, ['properties', 'extensions', 'blocks', 'propertyComments'], 'build.', problems)
         String oneOf = preset ? null : matching(text(root, 'oneOf', '', MAX_LINE, problems), GROUP_ID, 'oneOf',
                 "must be the identifier of a group, such as 'database-driver' or 'com.acme:audit'", problems)
         Map<String, List<PackOfForge.Part>> extensionParts = new LinkedHashMap<>()
@@ -317,18 +318,20 @@ class PackDescriptorParser {
                 dependencies(root, 'platforms', false, false, problems),
                 buildPlugins(root, ofForge, problems),
                 buildProperties(build, problems),
-                buildExtensions(build, ofForge, extensionParts, problems),
-                configuration(root, ofForge, settings, problems),
-                files(root, ofForge, problems),
+                buildExtensions(build, extensionParts, problems),
+                configuration(root, settings, problems),
+                files(root, problems),
                 document(root.get('readme'), 'readme', problems),
                 document(root.get('instructions'), 'instructions', problems),
                 matching(text(root, 'thirdPartyDocumentation', '', MAX_PARAGRAPH, problems), URL, 'thirdPartyDocumentation',
                         "must be an http or https address, without spaces, quotes, '<', '>' or '\$'", problems),
                 ofForge ? versionsOfForge(root, problems) : [:] as Map<String, String>,
-                ofForge ? buildBlocks(build, problems) : [:] as Map<String, String>,
-                ofForge ? readmeLinks(root, problems) : [] as List<PackLink>,
+                buildBlocks(build, problems),
+                readmeLinks(root, problems),
                 templateApi,
-                ofForge ? readOfForge(root, build, name, oneOf, extensionParts, settings, problems) : PackOfForge.NONE,
+                // what was refused above as a key of the packs of Forge is not read here as well
+                readOfForge(ofForge ? root : root.findAll { String key, Object value -> !KEYS_OF_FORGE.contains(key) } as Map<String, Object>,
+                        build, name, oneOf, extensionParts, settings, problems),
                 ofPreset)
         failOn(problems, source)
         return descriptor
@@ -629,8 +632,8 @@ class PackDescriptorParser {
         maps(root, key, problems).each { int index, Map<String, Object> entry ->
             String at = "${key}[${index}]."
             List<String> keys = scoped ? ['scope', 'coordinates', 'version', 'excludes', 'capabilities'] : ['coordinates', 'version']
-            unknownKeys(entry, ofForge ? keys + ['versionOfForge', WHEN] : keys, at, problems)
-            Map<String, Scope> scopes = ofForge ? SCOPES_OF_FORGE : SCOPES
+            unknownKeys(entry, ofForge ? keys + ['versionOfForge', WHEN] : keys + [WHEN], at, problems)
+            Map<String, Scope> scopes = SCOPES
             boolean versionOfForge = ofForge && entry.containsKey('versionOfForge')
             if (versionOfForge && (entry.get('versionOfForge') != Boolean.TRUE || entry.get('version') != null)) {
                 problems << "${at}versionOfForge: must be true, and then there is no version".toString()
@@ -663,7 +666,7 @@ class PackDescriptorParser {
                 }
             }
             dependencies << new PackDependency(scope, parts[0], parts[1], version(entry, at, problems), excludes, versionOfForge,
-                    ofForge ? when(entry, at, problems) : PackCondition.ALWAYS, capabilities)
+                    when(entry, at, problems), capabilities)
         }
         return dependencies
     }
@@ -673,7 +676,7 @@ class PackDescriptorParser {
         Set<String> declared = new HashSet<>()
         maps(root, 'buildPlugins', problems).each { int index, Map<String, Object> entry ->
             String at = "buildPlugins[${index}]."
-            unknownKeys(entry, ofForge ? ['id', 'version', 'artifactOfForge', 'apply', WHEN] : ['id', 'version'], at, problems)
+            unknownKeys(entry, ofForge ? ['id', 'version', 'artifactOfForge', 'apply', WHEN] : ['id', 'version', 'apply', WHEN], at, problems)
             String id = matching(requiredText(entry, 'id', at, MAX_LINE, problems), PLUGIN_ID, at + 'id',
                     "must be the id of a Gradle plugin, such as 'com.acme.audit'", problems)
             if (id != null && !declared.add(id)) {
@@ -687,8 +690,8 @@ class PackDescriptorParser {
             if (artifact != null && entry.get('version') != null) {
                 problems << "${at}artifactOfForge: has the version Forge knows, and then there is no version".toString()
             }
-            plugins << new PackBuildPlugin(id, version(entry, at, problems), artifact, ofForge && flag(entry, 'apply', true, at, problems),
-                    ofForge ? when(entry, at, problems) : PackCondition.ALWAYS)
+            plugins << new PackBuildPlugin(id, version(entry, at, problems), artifact, flag(entry, 'apply', true, at, problems),
+                    when(entry, at, problems))
         }
         return plugins
     }
@@ -720,7 +723,7 @@ class PackDescriptorParser {
     }
 
     /**
-     * The text a pack of Forge adds to the build file as it is, by the name of the place.
+     * The text a pack adds to the build file as it is, by the name of the place.
      */
     private static Map<String, String> buildBlocks(Map<String, Object> build, List<String> problems) {
         Map<String, String> blocks = new LinkedHashMap<>()
@@ -740,7 +743,7 @@ class PackDescriptorParser {
     }
 
     /**
-     * The links a pack of Forge adds to the readme. A label is written between the brackets of a
+     * The links a pack adds to the readme. A label is written between the brackets of a
      * Markdown link, so it has none of its own.
      */
     private static List<PackLink> readmeLinks(Map<String, Object> root, List<String> problems) {
@@ -797,20 +800,20 @@ class PackDescriptorParser {
     }
 
     /**
-     * The build extensions. For a pack Forge has in itself the name can have a call in it, as
+     * The build extensions. The name can have a call in it, as
      * {@code tasks.withType(Test).configureEach} has, and the body can be a list of parts, each with a
      * condition: those go to {@code parts}.
      */
-    private static Map<String, String> buildExtensions(Map<String, Object> build, boolean ofForge, Map<String, List<PackOfForge.Part>> parts,
+    private static Map<String, String> buildExtensions(Map<String, Object> build, Map<String, List<PackOfForge.Part>> parts,
                                                        List<String> problems) {
         Map<String, String> extensions = new LinkedHashMap<>()
-        Pattern step = ofForge ? IDENTIFIER_OR_CALL : IDENTIFIER
+        Pattern step = IDENTIFIER_OR_CALL
         map(build, 'extensions', 'build.', problems).each { String name, Object value ->
             if (!name.split(/\./, -1).every { String part -> step.matcher(part).matches() }) {
                 problems << "build.extensions: the name of an extension is one or more identifiers joined by '.', but one is ${describe(name)}".toString()
                 return
             }
-            if (ofForge && value instanceof List) {
+            if (value instanceof List) {
                 parts.put(name, extensionParts((List<Object>) value, "build.extensions.${brief(name)}", problems))
                 return
             }
@@ -824,7 +827,7 @@ class PackDescriptorParser {
         return extensions
     }
 
-    private static List<PackFile> files(Map<String, Object> root, boolean ofForge, List<String> problems) {
+    private static List<PackFile> files(Map<String, Object> root, List<String> problems) {
         List<PackFile> files = []
         // destinations and the directories above them, as a file system that ignores the case and the
         // composed form of letters sees them, each with the destination that was written
@@ -832,7 +835,7 @@ class PackDescriptorParser {
         Map<String, String> directories = new HashMap<>()
         maps(root, 'files', problems).each { int index, Map<String, Object> entry ->
             String at = "files[${index}]."
-            unknownKeys(entry, ofForge ? ['from', 'to', 'template', 'executable', WHEN] : ['from', 'to'], at, problems)
+            unknownKeys(entry, ['from', 'to', 'template', 'executable', WHEN], at, problems)
             String from = path(entry, 'from', at, false, problems)
             String to = path(entry, 'to', at, true, problems)
             if (to != null) {
@@ -853,8 +856,8 @@ class PackDescriptorParser {
                     }
                 }
             }
-            files << new PackFile(from, to, !(ofForge && flag(entry, 'template', false, at, problems)),
-                    ofForge && flag(entry, 'executable', true, at, problems), ofForge ? when(entry, at, problems) : PackCondition.ALWAYS)
+            files << new PackFile(from, to, !flag(entry, 'template', false, at, problems),
+                    flag(entry, 'executable', true, at, problems), when(entry, at, problems))
         }
         return files
     }
@@ -920,10 +923,10 @@ class PackDescriptorParser {
      * The configuration, of which the settings under {@code environments} are those of one environment
      * each. The name of an environment becomes part of the name of a file, so it is held to a name.
      */
-    private static Map<String, Object> configuration(Map<String, Object> root, boolean ofForge, List<PackOfForge.Settings> conditional,
+    private static Map<String, Object> configuration(Map<String, Object> root, List<PackOfForge.Settings> conditional,
                                                      List<String> problems) {
-        if (ofForge && root.get('configuration') instanceof List) {
-            // of a pack of Forge: entries that are there when a condition holds, or go to the file of one environment
+        if (root.get('configuration') instanceof List) {
+            // entries that are there when a condition holds, or go to the file of one environment
             maps(root, 'configuration', problems).each { int index, Map<String, Object> entry ->
                 String at = "configuration[${index}]."
                 unknownKeys(entry, [WHEN, 'environmentFile', 'values'], at, problems)
@@ -963,8 +966,9 @@ class PackDescriptorParser {
     }
 
     /**
-     * What only a pack Forge has in itself says of how its feature is selected and of what it gives
-     * beside other features.
+     * What a descriptor says of what its feature gives beside other features, and what only a pack Forge
+     * has in itself says of how its feature is selected: of the pack of a plugin the keys of the
+     * selection were refused before, and are not in {@code root}.
      */
     @SuppressWarnings('ParameterCount')
     private static PackOfForge readOfForge(Map<String, Object> root, Map<String, Object> build, String name, String oneOf,
@@ -1020,8 +1024,10 @@ class PackDescriptorParser {
         if (comments.size() > MAX_ENTRIES_OF_FORGE) {
             problems << "build.propertyComments: can have ${MAX_ENTRIES_OF_FORGE} lines, but has ${comments.size()}".toString()
         }
-        return new PackOfForge(byDefault, additions(root, 'adds', name, problems), order, visible, reliesOn, requiresJdk, dataSource,
+        PackOfForge read = new PackOfForge(byDefault, additions(root, 'adds', name, problems), order, visible, reliesOn, requiresJdk, dataSource,
                 flag(root, 'dataSourceOfDriver', true, '', problems), comments, extensionParts, conditional)
+        // a descriptor that says none of it has the one value of that
+        return read == PackOfForge.NONE ? PackOfForge.NONE : read
     }
 
     /**

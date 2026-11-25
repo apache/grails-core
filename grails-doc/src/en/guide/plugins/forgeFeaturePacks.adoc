@@ -112,34 +112,91 @@ instructions: |
 |An exclusive group the feature belongs to, such as `acme-audit-store`: only one feature of a group can be selected. The group is one of packs; a pack cannot join a group of Grails, such as `database-driver`.
 
 |`dependencies`
-|Dependencies of the application. `scope` is a Gradle configuration (`implementation`, `compileOnly`, `runtimeOnly`, `developmentOnly`, `testImplementation`, `testCompileOnly`, `testRuntimeOnly`), `coordinates` is `group:artifact`, `version` is optional and left out when the Grails BOM or a platform manages it, `excludes` lists `group:artifact` or `group` to exclude, and `capabilities` lists `group:name` capabilities that select a variant of the dependency, as `requireCapability` does in a Gradle build: `capabilities: ['org.ehcache:ehcache-jakarta']` declares `implementation("org.ehcache:ehcache") { capabilities { requireCapability("org.ehcache:ehcache-jakarta") } }`. Two features that declare one dependency with different exclusions or capabilities cannot be selected together.
+|Dependencies of the application. `scope` is a Gradle configuration (`implementation`, `compileOnly`, `runtimeOnly`, `developmentOnly`, `testImplementation`, `testCompileOnly`, `testRuntimeOnly`, `testAndDevelopmentOnly`, `integrationTestImplementationTestFixtures`) or `buildscript`, for a dependency of the build itself, which is on the class path of the build script. `coordinates` is `group:artifact`, `version` is optional and left out when the Grails BOM or a platform manages it, `excludes` lists `group:artifact` or `group` to exclude, and `capabilities` lists `group:name` capabilities that select a variant of the dependency, as `requireCapability` does in a Gradle build: `capabilities: ['org.ehcache:ehcache-jakarta']` declares `implementation("org.ehcache:ehcache") { capabilities { requireCapability("org.ehcache:ehcache-jakarta") } }`. Two features that declare one dependency with different exclusions or capabilities cannot be selected together. With `when`, the dependency is there only for an application the <<forgeFeaturePackConditions,condition>> holds of.
 
 |`platforms`
-|BOMs to import, with `coordinates` and `version`.
+|BOMs to import, with `coordinates` and `version`, and `when` for a condition.
 
 |`buildPlugins`
-|Gradle plugins to apply, by `id` and optional `version`.
+|Gradle plugins to apply, by `id` and optional `version`. `apply: true` applies the plugin with `apply plugin:` after the `plugins` block, for a plugin that is on the class path of the build through a `buildscript` dependency. `when` is a condition.
 
-|`build.properties`
-|Entries for `gradle.properties`.
+|`build.properties`, `build.propertyComments`
+|Entries for `gradle.properties`, and lines of comment that are written above them, each one line of printable ASCII characters.
 
 |`build.extensions`
-|Code for `build.gradle`, by the name of the block it goes into, for example `assets: minifyJs = false`.
+|Code for `build.gradle`, by the name of the block it goes into, for example `assets: minifyJs = false`. A name is identifiers joined by dots, of which one can be a call with one argument, as in `tasks.withType(Test).configureEach`; `tasks.bootRun` configures the task `bootRun`. In place of the code, a list of at most 20 parts, each with its `text` and a `when`, gives the block the parts whose condition holds, in their order.
+
+|`build.blocks`
+|Text that is added to `build.gradle` as it is, at one of three places: `afterPlugins`, `afterDependencies` and `end`. For what no named block holds, such as a method the build script declares.
 
 |`configuration`
-|Settings for `application.yml`. Settings under `environments.<name>` apply to that environment.
+|Settings for `application.yml`. Settings under `environments.<name>` apply to that environment. In place of the mapping, a list of entries, each with its `values` and a `when`, sets the values whose condition holds; an entry with `environmentFile: <name>` writes its values to the configuration file of that environment (`application-<name>.yml`; for `test`, the one among the resources of the tests) in place of `application.yml`.
 
 |`files`
-|Files to write. `from` is a path under `templates`; `to` is the path in the application and can use `{name}`, `{packageName}`, `{packagePath}`, `{className}`, `{naturalName}` and `{propertyName}`.
+|Files to write. `from` is a path under `templates`; `to` is the path in the application and can use `{name}`, `{packageName}`, `{packagePath}`, `{className}`, `{naturalName}` and `{propertyName}`. `when` is a condition. `template: false` writes a file whose name ends with `.gsp` as it is, and `executable: true` writes the file as one that can be run.
 
-|`readme`
-|A paragraph for the application's `README.md`.
+|`requiresJdk`
+|The lowest version of Java the feature can be used with, as a number such as `25`. An application for an earlier one is refused when the feature is selected.
+
+|`readme`, `readmeLinks`
+|A paragraph for the application's `README.md`, and links for its list of links, each with a `label` and an `href`, at most 20.
 
 |`instructions`
 |What is to be done once the application has the feature, for whoever created it: see <<forgeFeaturePackInstructions,below>>. It is shown and written nowhere.
 |===
 
 A name in `requires` and `conflicts` is the feature of that name, of Grails or of whichever pack has it. A full name, `group:artifact#name`, is the feature `name` of the pack of the plugin `group:artifact` and of no other: of the jar of that plugin, in whichever version the command took it, by its coordinates or from a feature catalog. The pack of a directory or of a file is the pack of no plugin, so a full name does not name it, even when the feature has that name. A feature that is required by its full name is selected by its name, which is the name `features` has in a template. When no pack of that plugin with that feature was given for the type of the application, the application is refused, and the message names the plugin and the feature, so that the plugin can be given by its coordinates; a feature that conflicts by its full name is refused only beside the feature of the pack of that plugin.
+
+[[forgeFeaturePackConditions]]
+A `when` is a condition on the application that is created. It is data, which the generator evaluates: nothing of the pack is run for it. A condition is a mapping with one key:
+
+[cols="2,3"]
+|===
+|Condition |Holds when
+
+|`{ feature: grails-spring-security }`
+|the application has the feature, however it came to have it
+
+|`{ group: database-driver }`
+|the application has a feature of the exclusive group
+
+|`{ applicationType: [web, web-plugin] }`
+|the application is of the type, or of one of the types
+
+|`{ option: { data: mongodb } }`
+|the option has the value, or one of a list of values. The options are `data`, `servlet` and `reloading`, with the values the `create-` commands take, and `none` where the application has none
+
+|`{ jdkAtLeast: 25 }`
+|the application is for that version of Java or a later one
+
+|`{ anyOf: [...] }`, `{ allOf: [...] }`, `{ not: ... }`
+|one, all or none of them hold: each a condition, or the name of a feature
+|===
+
+A condition has at most 50 conditions in all, nested at most 5 deep.
+
+[source,yaml]
+----
+dependencies:
+  - scope: implementation
+    coordinates: com.acme:acme-audit-mongodb
+    version: '2.3.0'
+    when: { option: { data: mongodb } }
+  - scope: implementation
+    coordinates: com.acme:acme-audit-sql
+    version: '2.3.0'
+    when: { not: { option: { data: mongodb } } }
+configuration:
+  - values:
+      acme.audit.user: true
+    when: { feature: grails-spring-security }
+files:
+  - from: AuditController.groovy.gsp
+    to: 'grails-app/controllers/{packagePath}/AuditController.groovy'
+    when: { applicationType: [web, rest-api] }
+----
+
+What `checkForgePack` checks of a pack does not depend on its conditions: every template is rendered, whatever the `when` of its file.
 
 A pack only adds. It cannot change what another selected feature gives the application: a setting, a build property or the version of a dependency that is already there with another value is an error, and so is a file another feature writes, such as the `.gitignore` and the `.gitattributes` at the root of an application. A descriptor with an unknown key, or a destination outside the application, is refused with a message that names the key.
 
@@ -861,60 +918,84 @@ What this way does not have, today: a repository or a catalog that needs credent
 ==== What a Pack Can Do
 
 
-Many features of Grails are written as feature packs inside the command line. Those packs can say more than the pack of a plugin, and how many of them there are says nothing about what the pack of a plugin can express. What each can say:
+Many features of Grails are written as feature packs inside the command line, in the same format. The pack of a plugin can say what such a pack says, with the exceptions of the table below, each of which is there for a reason: a pack is given by somebody other than the user and the framework, so what it does has to be seen by whoever selects it, and the same selection has to give the same application.
 
-[cols="3,2,2"]
+[cols="3,2,2,4"]
 |===
-|What |The pack of a plugin |A pack of Grails
+|What |The pack of a plugin |A pack of Grails |Why
 
-|Its name, title, description, category, documentation, `applicationTypes`, `compatibility`
+|`name`, `title`, `description`, `category`, `documentation`, `thirdPartyDocumentation`, `applicationTypes`, `compatibility`, `requires`, `conflicts`
 |Yes
 |Yes
+|
 
-|`requires` and `conflicts`, with features of Grails or of other packs
+|`dependencies` with every scope, `buildscript` among them, `excludes`, `capabilities` and `when`; `platforms`; `buildPlugins` with `apply` and `when`
 |Yes
 |Yes
+|
+
+|`build.properties`, `build.propertyComments`, `build.extensions` with conditional parts and names with a call, `build.blocks`
+|Yes
+|Yes
+|
+
+|`configuration`, with conditional entries and `environmentFile`; `files` with `when`, `template: false` and `executable: true`; `readme`, `readmeLinks`, `instructions`; `requiresJdk`
+|Yes
+|Yes
+|
+
+|Conditions (`when`) on the type of the application, its features and groups, its options and its version of Java
+|Yes
+|Yes
+|
+
+|Templates: template API 1, the ten instruction tags, the escapes
+|Yes. Compiled when the application is generated
+|Yes. Compiled when Grails is built
+|A template of a plugin is in the jar as its source, so that it can be read before it is used.
+
+|A setting, a build property, the version of a dependency or a file another feature of the application also has
+|Refused: a pack only adds
+|Not compared
+|What the features of Grails give each other is tested with every release of Grails; what a pack of somebody else would replace in an application is not, and nobody selecting it would be told.
 
 |An exclusive group (`oneOf`)
-|A group of packs only
-|Also a group of Grails, such as `database-driver`, with the settings a driver gives the data source
+|A group of packs
+|Also a group of Grails, such as `database-driver`, with the settings a driver gives the data source (`dataSource`, `dataSourceOfDriver`)
+|A feature of a group of Grails takes the place of the default of that group, as a driver takes that of `h2`: a pack would then remove a feature of Grails from the application, which is not adding.
 
-|Dependencies
-|In the scopes listed above, with a version or one a platform manages
-|Also `testAndDevelopmentOnly`, `integrationTestImplementationTestFixtures` and `buildscript`, and the version the release of Grails has for an artifact
-
-|Platforms, `gradle.properties` entries, settings, files, a paragraph of the readme
+|Being selected without being named (`default`), adding features once the defaults are chosen (`adds`, `reliesOn`)
+|No. Other features are selected with `requires`
 |Yes
-|Yes, and links of the readme, comments of properties and a configuration file of one environment
+|The features of an application are the ones that were asked for and the ones those require, which the command lists. A pack that selects itself, or selects features by a condition that is asked while the selection is still made, would make the selection depend on the order the features are looked at in.
 
-|Gradle plugins
-|By `id` and `version`
-|Also with the version of an artifact of the release, and declared without being applied
-
-|Code for blocks of `build.gradle` (`build.extensions`)
+|Being hidden (`visible: false`)
+|No
 |Yes
-|Also text at fixed places of the build file, and parts that depend on other features
+|A feature of a pack is always listed, and named when the application is created.
 
-|Contributions that depend on the other features of the application, such as a dependency only with a given feature or option (`when`)
-|No: a template can test `features` and `options`, but a dependency, plugin, setting or file is always added
+|Its place among the features (`order`)
+|No: the default place
 |Yes
+|The place of a feature decides which features are applied before it, and so what it finds of them. The features of Grails have places that were chosen with each other; every pack of a plugin has the one default place, where what it gives is compared with what the others give, and where the order of two packs is that of their names, whatever they say. The order of the features is part of what makes an application <<forgeFeaturePackSameEveryTime,the same every time>>.
 
-|Being selected without being named, adding other features once the defaults are chosen, being hidden, its place among the features, the lowest JDK
-|No: the feature is selected when it is named, and has the default place
+|The version this release of Grails has for an artifact (`versionOfForge`, `artifactOfForge`, `versionsOfForge` and the name of that kind in a template), a page of the guide of Grails as the documentation (`guideOfGrails`)
+|No. A dependency without a `version` has the one the BOM of the application manages
 |Yes
-
-|Templates
-|Template API 1
-|Template API 1, and the versions the release has for artifacts
+|The table of versions is a part of the command line and changes with every release of it, without notice: a pack that read it would generate another application with every release, although neither the pack nor its record changed.
 
 |Selected by its name
 |When it was given as a directory, by its coordinates, or with a catalog that is named
 |Always, and on https://start.grails.org
+|A pack is code: it is used when the user names where it comes from. The hosted generator runs no code of others.
 
 |`feature add` and `project regenerate` of an application that has it
 |With the same pack, held to its digest
 |Always
+|The application is generated again as it was, which takes the very pack.
 |===
+
+Neither kind of pack can make an entry of `gradle.properties` conditional or add to `settings.gradle`: a build property is set for every application the feature is in, and the settings of a build are written by the feature `gradle-settings-file`.
 
 [[forgeFeaturePackSameEveryTime]]
 ==== What Is the Same Every Time

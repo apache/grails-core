@@ -210,8 +210,16 @@ final class Pack {
         if (templates) {
             lines << "templates, which are code that runs when the application is generated: ${some(templates)}".toString()
         }
-        if (descriptor.buildExtensions) {
-            lines << "build file blocks, which are code of the build: ${some(descriptor.buildExtensions.keySet())}".toString()
+        List<String> blocks = (descriptor.buildExtensions.keySet() + descriptor.ofForge.buildExtensionParts.keySet()).toList()
+        if (blocks) {
+            lines << "build file blocks, which are code of the build: ${some(blocks)}".toString()
+        }
+        if (descriptor.buildBlocks) {
+            lines << "text it adds to the build file as it is, which is code of the build: ${some(descriptor.buildBlocks.keySet())}".toString()
+        }
+        List<PackDependency> ofTheBuild = descriptor.dependencies.findAll { PackDependency each -> each.scope == PackDescriptorParser.BUILDSCRIPT }
+        if (ofTheBuild) {
+            lines << "dependencies of the build itself, which are code of the build: ${some(ofTheBuild.collect { PackDependency each -> coordinates(each) })}".toString()
         }
         if (descriptor.files) {
             // a file outside the sources can be code of the build or of what builds it: none of those is left out
@@ -233,10 +241,14 @@ final class Pack {
         if (descriptor.platforms) {
             lines << "platforms: ${some(descriptor.platforms.collect { PackDependency each -> coordinates(each) })}".toString()
         }
-        if (descriptor.dependencies) {
-            lines << "dependencies: ${some(descriptor.dependencies.collect { PackDependency each -> each.scope + ' ' + coordinates(each) })}".toString()
+        List<PackDependency> ofTheApplication = descriptor.dependencies - ofTheBuild
+        if (ofTheApplication) {
+            lines << "dependencies: ${some(ofTheApplication.collect { PackDependency each -> each.scope + ' ' + coordinates(each) })}".toString()
         }
         int settings = leaves(descriptor.configuration)
+        for (PackOfForge.Settings each : descriptor.ofForge.settings) {
+            settings += leaves(each.values)
+        }
         if (settings > 0) {
             lines << "configuration: ${settings} ${settings == 1 ? 'setting' : 'settings'}".toString()
         }
