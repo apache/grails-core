@@ -162,7 +162,8 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer>, O
     boolean listCatalogFeatures
 
     @CommandLine.Option(names = ['--refresh'],
-            description = 'Read each feature catalog anew, and not the copy of it that is kept on this computer for a day')
+            description = 'Read each feature catalog anew, and not the copy of it that is kept on this computer for a day, and fetch ' +
+                    'the jar of each plugin whose feature pack is used, and not the copy of it that is kept on this computer')
     boolean refresh
 
     @CommandLine.Option(names = ['--preset'], paramLabel = 'PRESET',
@@ -175,7 +176,8 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer>, O
 
     @CommandLine.Option(names = ['--offline'],
             description = 'Ask nothing of the network: a feature catalog is read from its copy on this computer or from a file, and ' +
-                    'the feature pack of a plugin is taken only from a repository that is a directory')
+                    'the feature pack of a plugin is taken from a repository that is a directory, or from the copy of its jar that is ' +
+                    'kept on this computer since it was last fetched')
     boolean offline
 
     private PackArtifacts packArtifacts
@@ -501,8 +503,25 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer>, O
             } else if (artifact.pinned) {
                 out('    the jar has the SHA-256 that was asked for with --feature-pack-sha256')
             }
-            out(artifact.checkedAgainst == null ? '    the jar was not checked: the repository gave no checksum for it' :
-                    "    the jar matches the ${artifact.checkedAgainst} checksum the repository publishes for it")
+            String copy = packArtifacts().copyUsed(artifact.sha256)
+            if (copy != null) {
+                // no repository was asked: what a repository publishes for the jar was not looked at now
+                out("    ${copy.replaceAll(/\p{Cntrl}/, '?').replace('@|', '@ |')}")
+            } else {
+                out(artifact.checkedAgainst == null ? '    the jar was not checked: the repository gave no checksum for it' :
+                        "    the jar matches the ${artifact.checkedAgainst} checksum the repository publishes for it")
+            }
+        }
+    }
+
+    // the pack of the jar of a plugin, from a repository or from the copy of the jar that is kept on this computer
+    private Pack jarOf(PackArtifacts.Coordinates coordinates, List<URI> repositories, String sha256) {
+        try {
+            return packArtifacts().resolve(coordinates, repositories, sha256)
+        } finally {
+            for (String each : packArtifacts().takeWarnings()) {
+                warning(each.replaceAll(/\p{Cntrl}/, '?').replace('@|', '@ |'))
+            }
         }
     }
 
@@ -666,6 +685,7 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer>, O
                 throw new IllegalArgumentException('--refresh reads a feature catalog anew and --offline asks nothing of the network: give one of them')
             }
             packArtifacts().offline = offline
+            packArtifacts().refresh = refresh
             for (String given : featurePackDigests) {
                 Map.Entry<String, String> digest = PackArtifacts.digest(given)
                 if (digests.containsKey(digest.key) && digests.get(digest.key) != digest.value) {
@@ -698,7 +718,7 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer>, O
         }
         // the preset first: what it gives decides the BOM the features of a catalog are chosen for
         if (presetReference?.form == PresetReference.Form.COORDINATES) {
-            presetPack = aPreset(packArtifacts().resolve(presetReference.coordinates, repositories, presetDigest), presetReference)
+            presetPack = aPreset(jarOf(presetReference.coordinates, repositories, presetDigest), presetReference)
         } else if (presetReference?.form == PresetReference.Form.NAME) {
             presetPack = presetFromCatalogs(presetReference, digests)
         }
@@ -710,7 +730,7 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer>, O
         }
         Map<String, String> names = new HashMap<>()
         for (PackArtifacts.Coordinates coordinates : plugins.values()) {
-            Pack pack = notAPreset(packArtifacts().resolve(coordinates, repositories, digests.get(coordinates.toString())), coordinates.toString())
+            Pack pack = notAPreset(jarOf(coordinates, repositories, digests.get(coordinates.toString())), coordinates.toString())
             packs << pack
             names.put(coordinates.toString(), pack.descriptor.name)
         }
@@ -816,7 +836,7 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer>, O
                         "names for it, with the SHA-256 ${choice.version.sha256}. Asking ${ofTheUser.take(4).collect { URI each -> PackArtifacts.shownAddress(each) }.join(', ')}" +
                         "${ofTheUser.size() > 4 ? " and ${ofTheUser.size() - 4} more" : ''}" +
                         (ofTheCatalog ? "${ofTheUser.isEmpty() ? '' : ', and then '}${PackArtifacts.shownAddress(choice.version.repository)}, the repository the catalog names" : '')).replaceAll(/\p{Cntrl}/, '?').replace('@|', '@ |'))
-                Pack pack = packArtifacts().resolve(coordinates, where, choice.version.sha256)
+                Pack pack = jarOf(coordinates, where, choice.version.sha256)
                 if (pack.descriptor.name != choice.version.name) {
                     throw new PackArtifactException("The feature catalog ${from} says that ${coordinates} has the feature ${choice.version.name}, " +
                             "and the jar has the feature pack ${pack.descriptor.name}")
@@ -866,6 +886,7 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer>, O
                 throw new IllegalArgumentException('--refresh reads a feature catalog anew and --offline asks nothing of the network: give one of them')
             }
             packArtifacts().offline = offline
+            packArtifacts().refresh = refresh
             String setting = featureCatalogSetting()
             // the plugin index the environment names for the commands that list plugins is the catalog of these too
             String index = pluginIndexSetting()
@@ -1182,7 +1203,7 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer>, O
                 "${repositories.size() > 4 ? " and ${repositories.size() - 4} more" : ''}" +
                 (ofTheCatalog ? "${repositories.isEmpty() ? '' : ', and then '}${PackArtifacts.shownAddress(choice.version.repository)}, the repository the catalog names" : ''))
                 .replaceAll(/\p{Cntrl}/, '?').replace('@|', '@ |'))
-        Pack pack = packArtifacts().resolve(coordinates, where, choice.version.sha256)
+        Pack pack = jarOf(coordinates, where, choice.version.sha256)
         if (pack.descriptor.name != choice.version.name || !pack.descriptor.preset) {
             throw new PackArtifactException("The feature catalog ${from} says that ${coordinates} has the preset ${choice.version.name}, " +
                     "and the jar has the ${pack.descriptor.preset ? 'preset' : 'feature pack'} ${pack.descriptor.name}")

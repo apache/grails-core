@@ -64,8 +64,8 @@ class RecordedPackOptions {
     List<String> repositories = new ArrayList<>()
 
     @CommandLine.Option(names = ['--offline'],
-            description = 'Ask nothing of the network: the jar of a plugin whose feature pack the application has is taken only from a repository that ' +
-                    'is a directory, or from --feature-pack-jar')
+            description = 'Ask nothing of the network: the jar of a plugin whose feature pack the application has is taken from the copy of it that ' +
+                    'is kept on this computer since it was fetched, from a repository that is a directory, or from --feature-pack-jar')
     boolean offline
 
     /**
@@ -129,7 +129,17 @@ class RecordedPackOptions {
                     "Asking ${where.take(4).collect { URI each -> PackArtifacts.shownAddress(each) }.join(', ')}${where.size() > 4 ? " and ${where.size() - 4} more" : ''}").toString())
             try {
                 packs << artifacts.resolve(PackArtifacts.coordinates(coordinates), where, feature.sha256)
+                String copy = artifacts.copyUsed(feature.sha256)
+                if (copy != null) {
+                    said.accept("It was not fetched: ${copy}".toString())
+                }
+                for (String each : artifacts.takeWarnings()) {
+                    warned.accept(each)
+                }
             } catch (PackArtifactException e) {
+                for (String each : artifacts.takeWarnings()) {
+                    warned.accept(each)
+                }
                 // the pack the application was generated with is not to be had: a refusal of the command, as a pack that was not given is
                 throw new ProjectChangeException("The ${kind} ${feature.name} of the " +
                         "application could not be had again: ${e.message}", ProjectChangeException.PACK_MISSING, e)

@@ -57,7 +57,16 @@ import org.grails.forge.feature.FeatureSelectionException
  * Takes the feature pack of a plugin from a Maven repository by the coordinates of the plugin: the main
  * jar of that one version and nothing else of it. No dependency of the plugin is resolved, nothing of
  * the jar is loaded as code, and the jar is held in memory, where the bytes that are hashed are the
- * bytes the pack is read from; it is written to no file.
+ * bytes the pack is read from.
+ *
+ * <p>A jar that was fetched from a repository of the network is kept, by its SHA-256, in
+ * {@code .grails/forge/packs} of the home of the user ({@link PackJarCache}), when this was told a home.
+ * A jar is taken from there only by its digest: when the digest that is asked for is known, the copy is
+ * read in the place of a request, and its bytes are hashed again. Without a digest every jar is fetched,
+ * a release as much as a snapshot, since what a repository has under coordinates is what it has today;
+ * only when nothing is asked of the network is the jar that was last fetched from a repository for the
+ * coordinates used, and the command says so. A jar of a repository that is a directory is read from the
+ * directory every time, and is not kept.</p>
  *
  * <p>This is in the command line and not in the generator, so that the hosted Forge, which is built on
  * the generator alone, has no way to fetch a pack.</p>
@@ -144,11 +153,27 @@ class PackArtifacts {
     private final Duration fileTimeout
     private final PackLoader loader = new PackLoader()
 
-    /** Whether nothing is asked of the network: only a directory gives a file then */
+    /** Whether nothing is asked of the network: only a directory, or a jar that is kept on this computer, gives a file then */
     boolean offline
 
+    /** Whether every jar is fetched, whatever copy of it is kept on this computer */
+    boolean refresh
+
+    // the jars that are kept on this computer, or null when none is read or kept
+    private PackJarCache kept
+    // what is said of each jar that was taken from its copy, by its digest
+    private final Map<String, String> copiesUsed = new HashMap<>()
+
+    /**
+     * What a command asks with: over https, with the certificates the JVM trusts, and with the jars
+     * kept under the home of the user.
+     */
     PackArtifacts() {
         this(new HttpTransport(null, ANSWER_TIMEOUT))
+        String home = System.getProperty('user.home')
+        if (home) {
+            keepingJarsUnder(Path.of(home))
+        }
     }
 
     /**
@@ -167,6 +192,33 @@ class PackArtifacts {
         this.transport = transport
         this.answerTimeout = answerTimeout
         this.fileTimeout = fileTimeout
+    }
+
+    /**
+     * @param home the home of the user, under which the jars that are fetched are kept, in
+     * {@code .grails/forge/packs}, or {@code null} for no copies
+     * @return this
+     */
+    PackArtifacts keepingJarsUnder(Path home) {
+        kept = home == null ? null : new PackJarCache(home)
+        return this
+    }
+
+    /**
+     * @param sha256 the SHA-256 of the jar of a pack {@link #resolve} gave
+     * @return what is said of the jar when it was not fetched and is the copy that is kept on this
+     * computer, as a sentence without its first capital and its full stop; {@code null} for a jar
+     * that was fetched or read from a directory
+     */
+    String copyUsed(String sha256) {
+        return copiesUsed.get(sha256)
+    }
+
+    /**
+     * @return what there is to say about the copies of jars that were read, each once
+     */
+    List<String> takeWarnings() {
+        return kept == null ? Collections.<String>emptyList() : kept.takeWarnings()
     }
 
     /**
@@ -552,7 +604,17 @@ class PackArtifacts {
             throw new IllegalArgumentException("'${echo(sha256)}' is not a SHA-256, which is 64 hexadecimal digits")
         }
         String pinned = sha256?.toLowerCase(Locale.ROOT)
+        try {
+            Pack ofCopy = pinned == null || refresh || offline ? null : fromCopy(coordinates, repositories, pinned)
+            if (ofCopy != null) {
+                return ofCopy
+            }
+        } catch (PackDescriptorException e) {
+            throw new PackArtifactException("The feature pack of ${coordinates} from ${kept.shownFile(pinned)} cannot be used:\n" +
+                    e.problems.collect { String problem -> '  - ' + problem }.join('\n'))
+        }
         List<String> tried = []
+        boolean notAsked = false
         for (int index = 0; index < repositories.size(); index++) {
             URI repository = repositories[index]
             String where = shown(repository)
@@ -564,6 +626,7 @@ class PackArtifacts {
                 continue
             } catch (Offline e) {
                 tried << "${where}: ${e.message}".toString()
+                notAsked = true
                 continue
             } catch (Local e) {
                 throw new PackArtifactException("The feature pack of ${coordinates} was not taken from ${where}: ${e.message}. " +
@@ -594,7 +657,87 @@ class PackArtifacts {
             throw new PackArtifactException("The feature pack of ${coordinates} was not taken from a repository. ${tried.join('; ')}. " +
                     "A repository that fails ends the search; ${REPOSITORY_OPTION} names the repositories to ask")
         }
-        throw new PackArtifactException("The feature pack of ${coordinates} was not taken from a repository. ${tried.join('; ')}")
+        if (!notAsked || kept == null) {
+            throw new PackArtifactException("The feature pack of ${coordinates} was not taken from a repository. ${tried.join('; ')}")
+        }
+        // nothing is asked of the network, and no repository that was named gave the jar or had given it before:
+        // a jar with the digest that is asked for is that jar, wherever it was fetched from
+        try {
+            Pack ofCopy = pinned == null ? null : fromCopy(coordinates, pinned, null, null)
+            if (ofCopy != null) {
+                return ofCopy
+            }
+        } catch (PackDescriptorException e) {
+            throw new PackArtifactException("The feature pack of ${coordinates} from ${kept.shownFile(pinned)} cannot be used:\n" +
+                    e.problems.collect { String problem -> '  - ' + problem }.join('\n'))
+        }
+        throw new PackArtifactException("The feature pack of ${coordinates} was not taken from a repository. ${tried.join('; ')}. " +
+                (kept.refused != null ? "No copy of a jar is read on this computer, whether there is one or not: ${kept.refused}" :
+                        pinned != null ? "No copy of the jar of ${coordinates} with the SHA-256 ${pinned} is kept on this computer, in ${kept.shownDirectory}" :
+                                "No copy of a jar that was fetched for ${coordinates} from ${tried.size() == 1 ? 'that repository' : 'one of those repositories'} " +
+                                        "is kept on this computer, in ${kept.shownDirectory}"))
+    }
+
+    /**
+     * The pack of the jar that is kept on this computer and has the digest that is asked for, when
+     * one of the repositories gave that jar for the coordinates before: the first of them, which is
+     * then where the jar was found. No repository is asked.
+     *
+     * @return the pack, or {@code null} when there is no such jar
+     */
+    private Pack fromCopy(Coordinates coordinates, List<URI> repositories, String pinned) {
+        if (kept == null) {
+            return null
+        }
+        for (URI repository : repositories) {
+            if (FILE.equalsIgnoreCase(repository.scheme)) {
+                continue
+            }
+            PackJarCache.Fetched last = kept.last(repository, coordinates.toString())
+            if (last != null && last.sha256 == pinned) {
+                return fromCopy(coordinates, pinned, repository, last)
+            }
+        }
+        return null
+    }
+
+    /**
+     * @param repository the repository the jar was fetched from, or {@code null} when it is not known
+     * @param last what is kept of that fetch, or {@code null}
+     * @return the pack of the jar of a digest that is kept on this computer, or {@code null} when none is
+     */
+    private Pack fromCopy(Coordinates coordinates, String digest, URI repository, PackJarCache.Fetched last) {
+        byte[] bytes = kept.jar(digest, MAX_JAR_BYTES)
+        if (bytes == null) {
+            return null
+        }
+        String where = repository == null ? 'a copy on this computer' : shown(repository)
+        Pack pack = loader.fromJarBytes(bytes, bytes.length, "${coordinates} (${where})")
+        copiesUsed.put(digest, "the jar is the copy that is kept on this computer, ${kept.shownFile(digest)}, which has that SHA-256".toString())
+        return pack.withArtifact(new PackArtifact(pack.descriptor.name, coordinates.toString(), repository?.toString(),
+                last?.file ?: "${coordinates.artifact}-${coordinates.version}.jar".toString(), digest, last?.checkedAgainst, true))
+    }
+
+    /**
+     * The pack of the jar that was last fetched from a repository for the coordinates, for when nothing
+     * is asked of the network.
+     *
+     * @param pinned the digest the jar has to have, or {@code null} when none was asked for
+     * @return the pack, or {@code null} when no such jar is kept
+     */
+    private Pack lastFetched(URI repository, String where, Coordinates coordinates, String pinned) {
+        PackJarCache.Fetched last = kept?.last(repository, coordinates.toString())
+        if (last == null || (pinned != null && last.sha256 != pinned)) {
+            return null
+        }
+        Pack pack = fromCopy(coordinates, last.sha256, repository, last)
+        if (pack == null || pinned != null) {
+            return pack
+        }
+        copiesUsed.put(last.sha256, ("the jar is the copy that is kept on this computer, ${kept.shownFile(last.sha256)}, of the jar that was last fetched from " +
+                "${where} for ${coordinates}: --offline asks nothing of the network, so whether the repository still has that jar is not known").toString())
+        return pack.withArtifact(new PackArtifact(pack.descriptor.name, coordinates.toString(), repository.toString(), last.file, last.sha256,
+                last.checkedAgainst, false))
     }
 
     /**
@@ -679,14 +822,18 @@ class PackArtifacts {
 
     private Pack from(URI repository, String where, Coordinates coordinates, String pinned) {
         if (offline && !FILE.equalsIgnoreCase(repository.scheme)) {
-            throw new Offline()
+            Pack ofCopy = lastFetched(repository, where, coordinates, pinned)
+            if (ofCopy == null) {
+                throw new Offline()
+            }
+            return ofCopy
         }
         URI directory = repository.resolve("${coordinates.group.replace('.', '/')}/${coordinates.artifact}/${coordinates.version}/")
         String file = fileName(directory, repository, coordinates)
         URI jar = directory.resolve(file)
         MessageDigest sha256 = MessageDigest.getInstance('SHA-256')
         MessageDigest sha1 = MessageDigest.getInstance('SHA-1')
-        // the jar is kept in memory and nowhere else: what is hashed, checked and read is one array
+        // what is hashed, checked and read is one array
         Held held = new Held()
         try {
             copy(jar, repository, MAX_JAR_BYTES, file, held, [sha256, sha1])
@@ -701,6 +848,11 @@ class PackArtifacts {
         }
         String checkedAgainst = checkedAgainst(jar, repository, file, [sha256: digest, sha1: HexFormat.of().formatHex(sha1.digest())])
         Pack pack = loader.fromJarBytes(held.bytes(), held.size(), "${coordinates} (${where})")
+        copiesUsed.remove(digest)
+        // only a jar that was checked and holds a pack is kept, and one of a directory is where it is already
+        if (kept != null && !FILE.equalsIgnoreCase(repository.scheme)) {
+            kept.keep(held.bytes(), held.size(), digest, repository, coordinates.toString(), file, checkedAgainst)
+        }
         return pack.withArtifact(new PackArtifact(pack.descriptor.name, coordinates.toString(), repository.toString(), file,
                 digest, checkedAgainst, pinned != null))
     }

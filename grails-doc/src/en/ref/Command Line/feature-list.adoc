@@ -44,7 +44,7 @@ Options:
 
 * `--feature-pack-dir=DIRECTORY` - The directory of a feature pack that is not part of Grails and that the application was generated with from a directory, or of the preset it was made from, as link:feature-add.html[feature add] takes it. Its content has to have the SHA-256 the record has. Can be given more than once.
 * `--feature-pack-repository=URL` - A Maven repository to fetch the jar of a plugin from, whose feature pack the application was generated with, or of its preset, as `feature add` takes it: `https`, or `file:` for a directory. When the option is given, only the repositories it names are asked; without it, those of `GRAILS_REPO_URL`, Maven Central and then the repository the record names for the jar. Can be given more than once.
-* `--offline` - Ask nothing of the network: such a jar is taken only from a repository that is a directory.
+* `--offline` - Ask nothing of the network: such a jar is taken from the copy of it that is kept in `.grails/forge/packs` of the home directory since it was fetched, or from a repository that is a directory.
 
 `feature list` is the `list` command of the `feature` command. It reads the record of the project in its `.grails` directory and writes nothing:
 

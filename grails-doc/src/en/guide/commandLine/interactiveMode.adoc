@@ -159,14 +159,16 @@ Creates an application
                             is typed is refused.
       --offline           Ask nothing of the network: a feature catalog is read from its copy on
                             this computer or from a file, and the feature pack of a plugin is taken
-                            only from a repository that is a directory
+                            from a repository that is a directory, or from the copy of its jar that
+                            is kept on this computer since it was last fetched
       --plain-output      Write plain text for a program to read: no colour or other terminal
                             markup, and no progress display of Gradle.
   -r, --reloading=RELOADING
                           Which development reloading option to use. Possible values: devtools,
                             jrebel, none.
       --refresh           Read each feature catalog anew, and not the copy of it that is kept on
-                            this computer for a day
+                            this computer for a day, and fetch the jar of each plugin whose feature
+                            pack is used, and not the copy of it that is kept on this computer
   -s, --servlet=Servlet Implementation
                           Which Servlet Implementation to configure. Possible values: tomcat,
                             jetty, undertow, none.

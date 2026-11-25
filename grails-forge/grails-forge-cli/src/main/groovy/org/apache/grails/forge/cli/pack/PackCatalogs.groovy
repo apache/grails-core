@@ -28,7 +28,6 @@ import java.nio.file.LinkOption
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.nio.file.attribute.FileAttribute
-import java.nio.file.attribute.PosixFilePermission
 import java.nio.file.attribute.PosixFilePermissions
 import java.security.MessageDigest
 import java.time.Duration
@@ -39,7 +38,6 @@ import java.time.temporal.ChronoUnit
 import java.util.function.Function
 import java.util.function.Predicate
 import java.util.regex.Pattern
-import org.apache.grails.forge.cli.console.ProcessUser
 import org.apache.grails.forge.cli.pack.PackCatalog.Plugin
 import org.apache.grails.forge.cli.pack.PackCatalog.Version
 
@@ -724,69 +722,16 @@ final class PackCatalogs {
             copiesLookedAt = true
             if (home != null) {
                 Path directory = home.resolve('.grails').resolve('forge').resolve('catalogs')
-                Path notOurs = notOurs(directory)
+                Path notOurs = OwnDirectory.notOurs(directory)
                 if (notOurs == null) {
                     copies = directory
                 } else {
-                    String named = notOurs.toString().replaceAll(/\p{Cntrl}/, '?').replace('@|', '@ |')
-                    copiesRefused = "${named.length() > 200 ? named.substring(0, 200) + '...' : named} is not a directory of yours that nobody else can write to: it ${whyNotOurs(notOurs)}".toString()
+                    copiesRefused = OwnDirectory.refusal(notOurs)
                     warnings << "No copy of a feature catalog is read or kept: ${copiesRefused}".toString()
                 }
             }
         }
         return copies
-    }
-
-    /**
-     * @return the first of the directory of the copies and the two above it that is there and is not
-     * a directory, is a link, belongs to someone else or can be written to by others; {@code null}
-     * when there is none
-     */
-    private Path notOurs(Path directory) {
-        boolean posix = FileSystems.default.supportedFileAttributeViews().contains('posix')
-        // who runs the command, and not who owns the home: the two differ under sudo and in a container
-        ProcessUser user = posix && ProcessUser.current().isKnown() ? ProcessUser.current() : null
-        for (Path each : [directory.parent.parent, directory.parent, directory]) {
-            try {
-                if (!Files.exists(each, LinkOption.NOFOLLOW_LINKS)) {
-                    continue
-                }
-                if (Files.isSymbolicLink(each) || !Files.isDirectory(each, LinkOption.NOFOLLOW_LINKS)) {
-                    return each
-                }
-                if (posix) {
-                    Set<PosixFilePermission> permissions = Files.getPosixFilePermissions(each, LinkOption.NOFOLLOW_LINKS)
-                    if (permissions.contains(PosixFilePermission.GROUP_WRITE) || permissions.contains(PosixFilePermission.OTHERS_WRITE) ||
-                            (user != null && !user.owns(each))) {
-                        return each
-                    }
-                }
-            } catch (IOException | RuntimeException ignored) {
-                return each
-            }
-        }
-        return null
-    }
-
-    // what is wrong with the one notOurs found, and what makes it right where something does
-    private static String whyNotOurs(Path found) {
-        try {
-            if (Files.isSymbolicLink(found)) {
-                return 'is a link, and copies are kept only in a directory that is reached without one'
-            }
-            if (!Files.isDirectory(found, LinkOption.NOFOLLOW_LINKS)) {
-                return 'is not a directory'
-            }
-            if (FileSystems.default.supportedFileAttributeViews().contains('posix')) {
-                Set<PosixFilePermission> permissions = Files.getPosixFilePermissions(found, LinkOption.NOFOLLOW_LINKS)
-                if (permissions.contains(PosixFilePermission.GROUP_WRITE) || permissions.contains(PosixFilePermission.OTHERS_WRITE)) {
-                    return 'can be written to by its group or by others, so what is in it need not be a copy this command made; chmod go-w on it makes it yours alone'
-                }
-            }
-        } catch (IOException | RuntimeException ignored) {
-            return 'cannot be looked at'
-        }
-        return 'is not owned by the user who runs the command'
     }
 
     // a copy is written whole or not at all: beside its place first, and then moved into it
@@ -801,7 +746,7 @@ final class PackCatalogs {
             FileAttribute<?>[] ofFile = posix ? [PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString('rw-------'))] as FileAttribute<?>[] : new FileAttribute<?>[0]
             Files.createDirectories(copy.parent, ofDirectory)
             // what was made just now is looked at as what was there before
-            if (notOurs(copy.parent) != null) {
+            if (OwnDirectory.notOurs(copy.parent) != null) {
                 return
             }
             sweep(copy.parent)
