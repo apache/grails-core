@@ -70,6 +70,55 @@ class YamlKeyOrderSpec extends Specification {
     }
 
     @Unroll
+    void "the entries of #setting keep the order they were declared in, at the top of a file and in an environment, and what is around and below them is alphabetical"() {
+        given:
+        Map<String, Object> entries = [json: [zeta: 1, alpha: 2], html: ['text/html', 'application/xhtml+xml'], all: '*/*']
+        Map<String, Object> nested = entries
+        for (String step : setting.split(/\./).reverse()) {
+            nested = [zz: 1, (step): nested, aa: 2] as Map<String, Object>
+        }
+
+        when:
+        Map<String, Object> ordered = YamlKeyOrder.canonical(nested + [environments: [production: nested]])
+
+        then:
+        at(ordered, setting).keySet().toList() == ['json', 'html', 'all']
+        at(ordered.environments.production as Map, setting).keySet().toList() == ['json', 'html', 'all']
+        (at(ordered, setting).json as Map).keySet().toList() == ['alpha', 'zeta']
+        ordered.keySet().toList() == ['environments', 'grails', 'aa', 'zz']
+        (ordered.grails as Map).keySet().toList() == ['aa', setting.split(/\./)[1], 'zz']
+
+        and: 'written with dots in a key, the setting is the same one'
+        (YamlKeyOrder.canonical([(setting): entries]).get(setting) as Map).keySet().toList() == ['json', 'html', 'all']
+        ((YamlKeyOrder.canonical([(setting.substring(0, setting.lastIndexOf('.'))): [(setting.substring(setting.lastIndexOf('.') + 1)): entries, a: 1]])
+                .values().first() as Map).values().last() as Map).keySet().toList() == ['json', 'html', 'all']
+
+        where:
+        setting << YamlKeyOrder.DECLARED.toList().sort()
+    }
+
+    void "a map of the name of such a setting that is elsewhere, as in a list or below another key, is in alphabetical order"() {
+        expect:
+        YamlKeyOrder.canonical([mine: [grails: [mime: [types: [json: 1, html: 2]]]]]).mine.grails.mime.types.keySet().toList() == ['html', 'json']
+        YamlKeyOrder.canonical([grails: [[mime: [types: [json: 1, html: 2]]]]]).grails[0].mime.types.keySet().toList() == ['html', 'json']
+        YamlKeyOrder.canonical([grails: [mime: [typesOfMine: [json: 1, html: 2]]]]).grails.mime.typesOfMine.keySet().toList() == ['html', 'json']
+    }
+
+    void "an entry that is added to such a map leaves the others in their order"() {
+        given:
+        Map<String, Object> config = [grails: [mime: [types: [json: ['application/json'], html: ['text/html']]]]]
+        List<String> before = YamlTemplate.dump(YamlKeyOrder.canonical(config)).readLines()
+
+        when:
+        Map<String, Object> with = [grails: [mime: [types: [json: ['application/json'], html: ['text/html'], csv: 'text/csv']]]]
+        List<String> after = YamlTemplate.dump(YamlKeyOrder.canonical(with)).readLines()
+
+        then:
+        after - ['      csv: text/csv'] == before
+        after.last() == '      csv: text/csv'
+    }
+
+    @Unroll
     void "the order does not depend on the order the keys were put in (#seed)"() {
         given:
         Map<String, Object> config = [info: [app: [name: 1, version: 2]], dataSource: [a: 1, b: 2, c: 3], environments: [development: [x: 1, y: 2], test: [x: 1], production: [x: 1]],
@@ -130,6 +179,14 @@ class YamlKeyOrderSpec extends Specification {
         expect:
         YamlKeyOrder.following([first: 1, second: 2, a: 1, b: 2], [b: 2, a: 1]).keySet().toList() == ['b', 'first', 'second', 'a']
         YamlKeyOrder.following([only: 1], [b: 2]).keySet().toList() == ['only']
+    }
+
+    private static Map<String, Object> at(Map<String, Object> config, String setting) {
+        Object value = config
+        for (String step : setting.split(/\./)) {
+            value = (value as Map).get(step)
+        }
+        return value as Map<String, Object>
     }
 
     private static Map<String, Object> shuffled(Map<String, Object> map, Random random) {
