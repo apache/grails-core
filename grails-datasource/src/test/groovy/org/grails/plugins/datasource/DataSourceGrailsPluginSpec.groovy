@@ -30,6 +30,7 @@ import org.springframework.core.env.StandardEnvironment
 import org.springframework.util.ClassUtils
 
 import grails.core.GrailsApplication
+import grails.plugins.metadata.PluginDefinition
 import grails.plugins.GrailsPluginManager
 import org.grails.config.PropertySourcesConfig
 import org.grails.transaction.ChainedTransactionManagerPostProcessor
@@ -41,6 +42,19 @@ import spock.lang.Unroll
  * Created by graemerocher on 19/01/2017.
  */
 class DataSourceGrailsPluginSpec extends Specification {
+
+    void 'published dataSource definition binds core to the framework version'() {
+        given:
+        def resource = DataSourceGrailsPlugin.classLoader.getResource('META-INF/grails/plugins/dataSource/plugin.properties')
+
+        when:
+        PluginDefinition definition = resource.withReader('UTF-8') { PluginDefinition.read('dataSource', it) }
+
+        then:
+        definition.metadataComplete
+        definition.pluginVersion
+        definition.dependsOn == [core: definition.pluginVersion]
+    }
 
     void "test data sources Grails plugin Spring configuration"() {
         given:

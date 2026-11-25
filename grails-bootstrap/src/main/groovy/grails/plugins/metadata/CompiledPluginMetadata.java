@@ -25,19 +25,25 @@ import java.lang.annotation.Target;
 
 /**
  * Class-file-retained annotation stamped by the Grails Groovy compiler onto legacy {@code *GrailsPlugin}
- * descriptors that declare literal {@code pluginExcludes} patterns, allowing build-time bytecode scanners
- * to filter excluded artefacts without loading the plugin class.
+ * descriptors, so tooling can publish literal compatibility and artefact metadata without loading
+ * or constructing the plugin.
  *
  * @since 9.0
  */
 @Retention(RetentionPolicy.CLASS)
 @Target(ElementType.TYPE)
-public @interface PluginExcludes {
+public @interface CompiledPluginMetadata {
+
+    /** @return the declared Grails compatibility range, when statically known */
+    String grailsVersion() default "";
+
+    /** @return the declared plugin version, when statically known */
+    String version() default "";
 
     /**
      * The Ant-style exclude patterns declared by the plugin.
      *
      * @return excluded artefact patterns
      */
-    String[] value() default {};
+    String[] pluginExcludes() default {};
 }

@@ -96,6 +96,11 @@ class CompilePlugin implements Plugin<Project> {
         if (main == null) {
             return
         }
+        project.tasks.withType(GroovyCompile).configureEach { GroovyCompile compile ->
+            if (compile.name == main.getCompileTaskName('groovy')) {
+                compile.groovyOptions.disabledGlobalASTTransformations.add('org.grails.compiler.injection.PluginDescriptorTransformation')
+            }
+        }
         def generatedDir = project.layout.buildDirectory.dir('generated/resources/grailsLibraryPluginDescriptor')
         def task = project.tasks.register('generateGrailsPluginDescriptor', GeneratePluginDescriptorTask) { GeneratePluginDescriptorTask t ->
             t.group = 'build'

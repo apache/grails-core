@@ -32,7 +32,7 @@ import org.springframework.jmx.support.JmxUtils
 import org.springframework.util.ClassUtils
 
 import grails.plugins.Plugin
-import grails.util.GrailsUtil
+import grails.plugins.metadata.GrailsPluginDescriptor
 import org.grails.transaction.ChainedTransactionManagerPostProcessor
 
 /**
@@ -42,14 +42,13 @@ import org.grails.transaction.ChainedTransactionManagerPostProcessor
  * @since 0.4
  */
 @CompileStatic
+@GrailsPluginDescriptor(dependsOn = 'core:${plugin.version}')
 class DataSourceGrailsPlugin extends Plugin {
 
     private static final Log log = LogFactory.getLog(DataSourceGrailsPlugin)
     public static final String TRANSACTION_MANAGER_WHITE_LIST_PATTERN = 'grails.transaction.chainedTransactionManager.whitelistPattern'
     public static final String TRANSACTION_MANAGER_BLACK_LIST_PATTERN = 'grails.transaction.chainedTransactionManager.blacklistPattern'
     public static final String TRANSACTION_MANAGER_ENABLED = 'grails.transaction.chainedTransactionManager.enabled'
-    def version = GrailsUtil.getGrailsVersion()
-    def dependsOn = [core: version]
 
     @Override
     BeanRegistrar beanRegistrar() {

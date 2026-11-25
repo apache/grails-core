@@ -22,6 +22,8 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 
+import javax.xml.stream.XMLOutputFactory
+
 import groovy.io.FileType
 import groovy.transform.CompileStatic
 
@@ -50,7 +52,7 @@ final class PluginDescriptorWriter {
     private static final String GRAILS_PLUGIN_SUFFIX = 'GrailsPlugin'
     private static final String CLASS_FILE_EXTENSION = '.class'
     private static final String PLUGIN_DESCRIPTOR_ANNOTATION = 'Lgrails/plugins/metadata/GrailsPluginDescriptor;'
-    private static final String PLUGIN_EXCLUDES_ANNOTATION = 'Lgrails/plugins/metadata/PluginExcludes;'
+    private static final String COMPILED_PLUGIN_METADATA = 'Lgrails/plugins/metadata/CompiledPluginMetadata;'
     private static final String ARTEFACT_ANNOTATION = 'Lgrails/artefact/Artefact;'
 
     static ScanResult scan(Set<File> classesDirs) {
@@ -104,7 +106,8 @@ final class PluginDescriptorWriter {
             Map<String, SortedSet<String>> artefactsByType,
             String defaultVersion,
             File pluginConfigFile,
-            File outDir) {
+            File outDir,
+            boolean publishXml = true) {
         SortedSet<String> importNames = new TreeSet<>()
         Map<String, String> seenPluginNames = new LinkedHashMap<>()
         for (ScannedPlugin plugin : plugins) {
@@ -136,6 +139,48 @@ final class PluginDescriptorWriter {
         File importsFile = new File(outDir, PLUGINS_IMPORTS_PATH)
         importsFile.parentFile.mkdirs()
         importsFile.setText(importNames.join('\n') + '\n', StandardCharsets.UTF_8.name())
+        if (publishXml && plugins) {
+            // Older catalog and IDE readers look up exactly one XML resource per archive.
+            new File(outDir, 'META-INF/grails-plugin.xml').withWriter('UTF-8') { Writer writer ->
+                def xml = XMLOutputFactory.newFactory().createXMLStreamWriter(writer)
+                xml.writeStartElement('plugin')
+                if (plugins.size() == 1) {
+                    ScannedPlugin plugin = plugins.first()
+                    xml.writeAttribute('name', plugin.logicalName)
+                    if (plugin.version ?: defaultVersion) {
+                        xml.writeAttribute('version', plugin.version ?: defaultVersion)
+                    }
+                    if (plugin.grailsVersion) {
+                        xml.writeAttribute('grailsVersion', plugin.grailsVersion)
+                    }
+                }
+                Set<String> classes = new TreeSet<>()
+                for (ScannedPlugin plugin : plugins) {
+                    if (plugin.className) {
+                        xml.writeStartElement('type')
+                        xml.writeCharacters(plugin.className)
+                        xml.writeEndElement()
+                    }
+                    Properties definition = new Properties()
+                    new File(outDir, PLUGIN_DESCRIPTORS_PREFIX + plugin.logicalName + '/' + PLUGIN_PROPERTIES_FILE)
+                            .withReader('UTF-8') { Reader reader -> definition.load(reader) }
+                    for (String key : definition.stringPropertyNames()) {
+                        if (key == 'artefacts' || key.startsWith('artefacts.')) {
+                            classes.addAll(definition.getProperty(key).tokenize(','))
+                        }
+                    }
+                }
+                xml.writeStartElement('resources')
+                for (String name : classes) {
+                    xml.writeStartElement('resource')
+                    xml.writeCharacters(name)
+                    xml.writeEndElement()
+                }
+                xml.writeEndElement()
+                xml.writeEndElement()
+                xml.close()
+            }
+        }
     }
 
     static String renderProperties(
@@ -168,7 +213,14 @@ final class PluginDescriptorWriter {
         for (Map.Entry<String, String> dep : plugin.dependsOn.entrySet()) {
             String depKey = trimToNull(dep.key)
             if (depKey) {
-                entries.put("dependsOn.${normalizePluginName(depKey)}".toString(), trimToNull(dep.value) ?: '*')
+                String constraint = trimToNull(dep.value) ?: '*'
+                if (constraint == '${plugin.version}') {
+                    if (!version) {
+                        throw new IllegalArgumentException("Plugin ${plugin.logicalName} must declare a version for dependency ${depKey}")
+                    }
+                    constraint = version
+                }
+                entries.put("dependsOn.${normalizePluginName(depKey)}".toString(), constraint)
             }
         }
         if (plugin.evict) {
@@ -566,11 +618,21 @@ final class PluginDescriptorWriter {
                     }
                 }
             }
-            if (PLUGIN_EXCLUDES_ANNOTATION == descriptor) {
+            if (COMPILED_PLUGIN_METADATA == descriptor) {
                 return new AnnotationVisitor(Opcodes.ASM9) {
                     @Override
+                    void visit(String name, Object value) {
+                        if ('grailsVersion' == name) {
+                            grailsVersion = (String) value
+                        }
+                        else if ('version' == name) {
+                            version = (String) value
+                        }
+                    }
+
+                    @Override
                     AnnotationVisitor visitArray(String name) {
-                        if ('value' == name) {
+                        if ('pluginExcludes' == name) {
                             return stringArrayCollector(pluginExcludes)
                         }
                         null

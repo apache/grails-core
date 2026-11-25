@@ -49,7 +49,7 @@ import grails.compiler.ast.ClassInjector
 import grails.core.ArtefactHandler
 import grails.plugins.metadata.GrailsPlugin
 import grails.plugins.metadata.GrailsPluginDescriptor
-import grails.plugins.metadata.PluginExcludes
+import grails.plugins.metadata.CompiledPluginMetadata
 import grails.util.GrailsNameUtils
 import org.apache.grails.common.compiler.GroovyTransformOrder
 import org.grails.compiler.beans.AutoConfigurationImportsWriter
@@ -91,7 +91,7 @@ class GlobalGrailsClassInjectorTransformation implements ASTTransformation, Comp
     public static final ClassNode ARTEFACT_HANDLER_CLASS = ClassHelper.make('grails.core.ArtefactHandler')
     public static final ClassNode TRAIT_INJECTOR_CLASS = ClassHelper.make('grails.compiler.traits.TraitInjector')
     public static final ClassNode PLUGIN_DESCRIPTOR_ANNOTATION = ClassHelper.make(GrailsPluginDescriptor)
-    public static final ClassNode PLUGIN_EXCLUDES_ANNOTATION = ClassHelper.make(PluginExcludes)
+    public static final ClassNode COMPILED_PLUGIN_METADATA = ClassHelper.make(CompiledPluginMetadata)
 
     private static final String GRAILS_AUTO_CONFIGURATION_CLASS_NAME = 'grails.boot.config.GrailsAutoConfiguration'
     private static final String BEANS_PROPERTY = 'beans'
@@ -150,7 +150,7 @@ class GlobalGrailsClassInjectorTransformation implements ASTTransformation, Comp
                 if (pluginVersion && classNode.getAnnotations(PLUGIN_DESCRIPTOR_ANNOTATION).isEmpty()) {
                     addPluginVersionProperty(classNode, pluginVersion)
                 }
-                stampPluginExcludesAnnotation(classNode)
+                stampCompiledPluginMetadata(classNode)
                 compileBeansDsl(classNode, source)
                 continue
             }
@@ -255,31 +255,29 @@ class GlobalGrailsClassInjectorTransformation implements ASTTransformation, Comp
         }
     }
 
-    /**
-     * Stamps {@link PluginExcludes} onto a legacy {@code *GrailsPlugin} class when it declares a literal
-     * {@code pluginExcludes} list property, so build-time ASM descriptor generation can exclude matching
-     * artefacts without instantiating the class.
-     */
-    private static void stampPluginExcludesAnnotation(ClassNode classNode) {
-        if (!classNode.getAnnotations(PLUGIN_DESCRIPTOR_ANNOTATION).isEmpty() ||
-                !classNode.getAnnotations(PLUGIN_EXCLUDES_ANNOTATION).isEmpty()) {
+    private static void stampCompiledPluginMetadata(ClassNode classNode) {
+        if (!classNode.getAnnotations(PLUGIN_DESCRIPTOR_ANNOTATION).empty ||
+                !classNode.getAnnotations(COMPILED_PLUGIN_METADATA).empty) {
             return
         }
-        PropertyNode excludesProperty = classNode.getProperty('pluginExcludes')
-        Expression initial = excludesProperty?.field?.initialExpression
-        if (!(initial instanceof ListExpression)) {
-            return
-        }
-        List<Expression> values = []
-        for (Expression item : ((ListExpression) initial).expressions) {
-            if (item instanceof ConstantExpression && item.value instanceof String) {
-                values.add(new ConstantExpression(item.value))
+        AnnotationNode metadata = new AnnotationNode(COMPILED_PLUGIN_METADATA)
+        for (String name : ['version', 'grailsVersion']) {
+            Expression value = classNode.getDeclaredField(name)?.initialExpression
+            if (value instanceof ConstantExpression && value.value instanceof String) {
+                metadata.addMember(name, new ConstantExpression(value.value))
             }
         }
-        if (!values.isEmpty()) {
-            AnnotationNode annotationNode = new AnnotationNode(PLUGIN_EXCLUDES_ANNOTATION)
-            annotationNode.addMember('value', new ListExpression(values))
-            classNode.addAnnotation(annotationNode)
+        Expression excludes = classNode.getDeclaredField('pluginExcludes')?.initialExpression
+        if (excludes instanceof ListExpression) {
+            List<Expression> patterns = excludes.expressions.findAll {
+                it instanceof ConstantExpression && it.value instanceof String
+            }
+            if (patterns) {
+                metadata.addMember('pluginExcludes', new ListExpression(patterns))
+            }
+        }
+        if (metadata.members) {
+            classNode.addAnnotation(metadata)
         }
     }
 

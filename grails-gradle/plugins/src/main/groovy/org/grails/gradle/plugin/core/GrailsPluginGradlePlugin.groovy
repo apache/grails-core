@@ -148,7 +148,7 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
     }
 
     /**
-     * Clears {@code grails-publish}'s legacy {@code META-INF/grails-plugin.xml} sidecar convention.
+     * Connects {@code grails-publish} to the generated {@code META-INF/grails-plugin.xml} sidecar convention.
      * Grails 9 plugins package {@code META-INF/grails/plugins.imports} and
      * {@code META-INF/grails/plugins/<name>/plugin.properties} directly inside the JAR.
      *
@@ -157,7 +157,10 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
     protected void configurePluginPublishing(Project project) {
         project.pluginManager.withPlugin('org.apache.grails.gradle.grails-publish') {
             project.extensions.configure(GrailsPublishExtension) { GrailsPublishExtension publishExtension ->
-                publishExtension.pluginDescriptor.unsetConvention()
+                def task = project.tasks.named('generatePluginDescriptor', GeneratePluginDescriptorTask)
+                publishExtension.pluginDescriptor.convention(task.flatMap { GeneratePluginDescriptorTask generator ->
+                    generator.outputDirectory.file('META-INF/grails-plugin.xml')
+                })
             }
         }
     }
@@ -173,6 +176,10 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
         SourceSet mainSourceSet = SourceSets.findMainSourceSet(project)
         if (mainSourceSet == null) {
             return
+        }
+        // The packaging task reconciles all compiled classes, including incremental deletions.
+        project.tasks.named(mainSourceSet.getCompileTaskName('groovy'), GroovyCompile).configure { GroovyCompile compile ->
+            compile.groovyOptions.disabledGlobalASTTransformations.add('org.grails.compiler.injection.PluginDescriptorTransformation')
         }
         def generatedDir = project.layout.buildDirectory.dir('generated/resources/grailsPluginDescriptor')
         GrailsExtension grailsExt = project.extensions.getByType(GrailsExtension)

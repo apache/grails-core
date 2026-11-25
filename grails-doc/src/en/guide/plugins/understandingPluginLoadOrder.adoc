@@ -140,3 +140,9 @@ with symbolic class names, the plugin version, Grails compatibility, dependency 
 ordering, and contributed artefacts. Reading the definition requires no classes from the plugin.
 A true `metadataComplete` value means Grails can determine eligibility and ordering from the
 published definition before constructing the lifecycle implementation.
+
+For a Java-only plugin built directly with `javac`, put Grails and its dependencies on the processor
+path and select `-processor org.grails.compiler.injection.JavaPluginDescriptorProcessor`.
+Compile to a class directory with `-d`. Supply `-Agrails.plugin.version=1.0` if the annotation
+inherits the project version. Package the complete output directory. The Grails Gradle plugin
+already performs this reconciliation for joint Java and Groovy builds.

@@ -93,8 +93,8 @@ class GeneratePluginDescriptorTaskSpec extends Specification {
         File classesDir = new File(tempDir, 'classes')
         File outDir = new File(tempDir, 'out')
         writeClass(classesDir, 'com/example/SampleGrailsPlugin') { ClassWriter cw ->
-            AnnotationVisitor av = cw.visitAnnotation('Lgrails/plugins/metadata/PluginExcludes;', false)
-            AnnotationVisitor arr = av.visitArray('value')
+            AnnotationVisitor av = cw.visitAnnotation('Lgrails/plugins/metadata/CompiledPluginMetadata;', false)
+            AnnotationVisitor arr = av.visitArray('pluginExcludes')
             arr.visit(null, 'com/example/Excluded*')
             arr.visitEnd()
             av.visitEnd()
@@ -152,6 +152,9 @@ class GeneratePluginDescriptorTaskSpec extends Specification {
         new File(outDir, 'META-INF/grails/plugins.imports').text == 'metricsStarter\n'
         def props = loadProperties(new File(outDir, 'META-INF/grails/plugins/metricsStarter/plugin.properties'))
         props.getProperty('name') == 'metricsStarter'
+        def xml = new groovy.xml.XmlSlurper().parse(new File(outDir, 'META-INF/grails-plugin.xml'))
+        xml.@grailsVersion.text() == '9.0.0 > *'
+        xml.type.text() == 'com.example.MetricsStarter'
         props.getProperty('version') == '2.3.4'
         props.getProperty('class') == 'com.example.MetricsStarter'
         props.getProperty('grailsVersion') == '9.0.0 > *'
@@ -228,8 +231,8 @@ class GeneratePluginDescriptorTaskSpec extends Specification {
         File classesDir = new File(tempDir, 'classes')
         File outDir = new File(tempDir, 'out')
         writeClass(classesDir, 'com/example/GlobGrailsPlugin') { ClassWriter cw ->
-            AnnotationVisitor av = cw.visitAnnotation('Lgrails/plugins/metadata/PluginExcludes;', false)
-            AnnotationVisitor arr = av.visitArray('value')
+            AnnotationVisitor av = cw.visitAnnotation('Lgrails/plugins/metadata/CompiledPluginMetadata;', false)
+            AnnotationVisitor arr = av.visitArray('pluginExcludes')
             arr.visit(null, '**/internal/**')
             arr.visit(null, 'com/example/V?Controller')
             arr.visit(null, 'com/example/Special$Controller')

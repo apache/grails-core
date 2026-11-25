@@ -39,7 +39,7 @@ import spock.util.environment.RestoreSystemProperties
 
 import grails.artefact.Artefact
 import grails.plugins.metadata.GrailsPlugin
-import grails.plugins.metadata.PluginExcludes
+import grails.plugins.metadata.CompiledPluginMetadata
 import grails.util.GrailsNameUtils
 import org.apache.grails.common.compiler.GroovyTransformOrder
 
@@ -196,7 +196,7 @@ class GlobalGrailsClassInjectorTransformationSpec extends Specification {
             !new File(targetDir, 'META-INF/grails-plugin.xml').exists()
     }
 
-    void "the global transform stamps @PluginExcludes onto a legacy *GrailsPlugin declaring literal pluginExcludes"() {
+    void "the global transform stamps @CompiledPluginMetadata onto a legacy *GrailsPlugin declaring literal pluginExcludes"() {
         given:
             def sourceFile = new File(tempDir, 'ExcludesGrailsPlugin.groovy')
             def targetDir = new File(tempDir, 'build/classes/groovy/main')
@@ -207,6 +207,7 @@ class GlobalGrailsClassInjectorTransformationSpec extends Specification {
                     '''
                         class ExcludesGrailsPlugin {
                             def version = '1.0'
+                            def grailsVersion = '9.0 > *'
                             def pluginExcludes = ['com/example/Excluded*', 'demo/**']
                         }
                     ''',
@@ -214,9 +215,11 @@ class GlobalGrailsClassInjectorTransformationSpec extends Specification {
             )
 
         then:
-            def annotations = classNode.getAnnotations(ClassHelper.make(PluginExcludes))
+            def annotations = classNode.getAnnotations(ClassHelper.make(CompiledPluginMetadata))
             annotations.size() == 1
-            annotations.first().getMember('value').expressions*.text == ['com/example/Excluded*', 'demo/**']
+            annotations.first().getMember('grailsVersion').text == '9.0 > *'
+            annotations.first().getMember('version').text == '1.0'
+            annotations.first().getMember('pluginExcludes').expressions*.text == ['com/example/Excluded*', 'demo/**']
     }
 
     void "the global transform recognizes @GrailsPluginDescriptor classes without the GrailsPlugin suffix"() {
