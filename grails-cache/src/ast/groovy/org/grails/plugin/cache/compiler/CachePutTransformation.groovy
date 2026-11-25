@@ -59,7 +59,7 @@ class CachePutTransformation extends AbstractCacheTransformation {
 
     @Override
     protected Expression buildDelegatingMethodCall(SourceUnit sourceUnit, AnnotationNode annotationNode, ClassNode classNode, MethodNode methodNode, MethodCallExpression originalMethodCallExpr, BlockStatement newMethodBody) {
-        VariableExpression cacheManagerVariableExpression = varX(GRAILS_CACHE_MANAGER_PROPERTY_NAME)
+        Expression cacheManagerVariableExpression = grailsCacheManagerExpression()
         BlockStatement cachingBlock = block()
 
         // Cache $_cache_cacheVariable = this.grailsCacheManager.getCache("...");
@@ -85,7 +85,7 @@ class CachePutTransformation extends AbstractCacheTransformation {
 
         newMethodBody.addStatement(
             // if(grailsCacheManager != null)
-            ifS(notNullX(varX(GRAILS_CACHE_MANAGER_PROPERTY_NAME)),
+            ifS(notNullX(grailsCacheManagerExpression()),
                     cachingBlock
             )
         )
