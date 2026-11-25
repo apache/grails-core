@@ -120,6 +120,18 @@ class EnumTypeBinderSpec extends HibernateGormDatastoreSpec {
         Person05 | UserTypeEnumType | UserTypeEnumType.class.getName() | null              | false
     }
 
+    def "a maxSize shorter than the longest constant name does not make the column too short for a valid value"() {
+        given: 'an enum whose longest constant, OUT_OF_STOCK, is 12 characters, with a maxSize of 2'
+        def table = new Table("person")
+        def property = setupProperty(PersonSizedShort, "status", table)
+
+        when:
+        def simpleValue = binder.bindEnumType(property as HibernateEnumProperty, "")
+
+        then: 'the column holds the longest name, as maxSize does not validate an enum'
+        simpleValue.getColumns()[0].getLength() == 12L
+    }
+
     @Unroll
     def "maxSize is applied to the column of a #mapping: #applied"() {
         given:
@@ -321,4 +333,8 @@ class UserTypeEnumType implements UserType {
 @Entity class PersonSizedCollection {
     Long id; Set<Status01> status
     static constraints = { status maxSize: 42 }
+}
+@Entity class PersonSizedShort {
+    Long id; Status01 status
+    static constraints = { status maxSize: 2 }
 }

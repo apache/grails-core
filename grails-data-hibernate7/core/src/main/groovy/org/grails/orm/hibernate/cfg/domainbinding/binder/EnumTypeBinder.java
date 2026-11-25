@@ -126,6 +126,15 @@ public class EnumTypeBinder {
         // and an allowed value is a whole collection, so neither is the length of the column of one value
         if ((enumType == GrailsEnumType.DEFAULT || enumType == GrailsEnumType.STRING) && !(property instanceof HibernateBasicProperty)) {
             stringColumnConstraintsBinder.bindStringColumnConstraints(column, pc, null);
+            // maxSize does not validate an enum value, so a value whose name is longer than the column would pass validation and
+            // fail in the database: the column holds the longest name of the enum at least
+            int longestName = 0;
+            for (Object constant : propertyType.getEnumConstants()) {
+                longestName = Math.max(longestName, ((Enum<?>) constant).name().length());
+            }
+            if (column.getLength() != null && column.getLength() < longestName) {
+                column.setLength((long) longestName);
+            }
         }
         createKeyForProps.createKeyForProps(property, path, t, columnName);
 
