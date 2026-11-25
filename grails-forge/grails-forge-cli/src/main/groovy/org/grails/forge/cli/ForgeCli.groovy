@@ -59,11 +59,14 @@ import org.grails.forge.cli.command.CreateRestfulControllerCommand
 import org.grails.forge.cli.command.CreateServiceCommand
 import org.grails.forge.cli.command.CreateTagLibCommand
 import org.grails.forge.cli.command.CreateUnitTestCommand
+import org.grails.forge.cli.command.FeatureCommand
 import org.grails.forge.cli.command.InstallTemplatesCommand
 import org.grails.forge.cli.command.HelpCommand
 import org.grails.forge.cli.command.ProjectGroupCommand
 import org.grails.forge.cli.command.ProjectHealthCommand
 import org.grails.forge.cli.command.ProjectMigrateCommand
+import org.grails.forge.cli.command.ProjectRegenerateCommand
+import org.grails.forge.cli.command.ProjectShowCommand
 import org.grails.forge.io.ConsoleOutput
 import org.grails.forge.io.FileSystemOutputHandler
 
@@ -223,6 +226,8 @@ final class ForgeCli {
         CommandLine commandLine = createCommandLine(context, held, reads, listsApplication(args))
         if (reads) {
             held.advice = { advice(context) } as Supplier<String>
+        } else {
+            held.difference = { CodeGenConfig.earlierRecordDifference(context) } as Supplier<String>
         }
         try {
             int exit = execute(commandLine, held, args)
@@ -235,6 +240,8 @@ final class ForgeCli {
             CommandLine listed = createCommandLine(context, again, reads, listsApplication(args))
             if (reads) {
                 again.advice = { advice(context) } as Supplier<String>
+            } else {
+                again.difference = { CodeGenConfig.earlierRecordDifference(context) } as Supplier<String>
             }
             ApplicationCommands commands = ApplicationCommands.of(listed)
             if (commands != null) {
@@ -337,7 +344,13 @@ final class ForgeCli {
             // the help is shown all the same, and says first why its commands of a project are not run
             held.warning(refused)
         }
-        if (readsProject(expanded)) {
+        if (goesByRecord(commandLine, expanded)) {
+            held.sayRecordsDiffer()
+        }
+        if (!readsProject(expanded)) {
+            // of a command that is not put together from the record, the one thing there can be to say of it
+            held.replay(root)
+        } else {
             // A project of an earlier version of Grails is said to be one by the commands that write
             // into it what this version has, and by the help; a command that runs its build does in
             // it what it does in any project, and says nothing.
@@ -358,6 +371,39 @@ final class ForgeCli {
             ApplicationCommands.said(commandLine, commandOf(args), commandOf(expanded))
         }
         return commandLine.execute(expanded)
+    }
+
+    /**
+     * Whether a command line goes by what the record of the project says of the application, and is
+     * therefore told when a {@code grails-forge-cli.yml} beside {@code .grails} says something else:
+     * the commands that create the classes of the application, those of its features among them, every
+     * command of {@code feature}, {@code project show} and {@code project regenerate}, and the
+     * document of {@code help --json}, which has every diagnostic of the directory. No other command
+     * says it: one that runs the build or looks for plugins decides nothing by the record, and
+     * {@code project health} has a finding for it. This is the one place that decides it.
+     */
+    private static boolean goesByRecord(CommandLine commandLine, String... expanded) {
+        List<String> options = optionsOf(expanded)
+        List<String> words = options.findAll { String arg -> !arg.startsWith('-') }
+        if (words.isEmpty()) {
+            return false
+        }
+        if (words[0] == HelpCommand.NAME) {
+            return options.contains('--json')
+        }
+        if (options.contains('-h') || options.contains('--help')) {
+            return false
+        }
+        Class<?> type = declared(expanded)
+        if (type == FeatureCommand) {
+            return true
+        }
+        if (type == ProjectGroupCommand) {
+            return words.size() > 1 && words[1] in [ProjectShowCommand.NAME, ProjectRegenerateCommand.NAME]
+        }
+        CommandLine named = commandLine.getSubcommands().get(words[0])
+        Object command = named == null ? null : named.getCommandSpec().userObject()
+        return command instanceof CodeGenCommand || command instanceof PackArtefactCommand
     }
 
     /**
@@ -649,6 +695,24 @@ final class ForgeCli {
 
         /** Gives what there is to say of a project of an earlier version of Grails, when a command asks for it. */
         Supplier<String> advice
+
+        /** Gives the warning that the two records of the project differ, where the record was not read for the command line. */
+        Supplier<String> difference
+
+        private String differs
+
+        @Override
+        void recordsDiffer(String warning) {
+            differs = warning
+        }
+
+        /** Says that the two records of the project differ, when they do: asked for by a command line that goes by the record. */
+        void sayRecordsDiffer() {
+            String message = differs ?: (difference == null ? null : difference.get())
+            if (message != null) {
+                warning(message)
+            }
+        }
 
         void advise() {
             String guidance = advice == null ? null : advice.get()

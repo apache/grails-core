@@ -175,16 +175,16 @@ class CodeGenConfig {
         // be used. Only the manifest and the lock are read: the commands need nothing of the baseline
         if (ProjectState.exists(directory.toPath())) {
             try {
-                ProjectState state = ProjectState.readSelection(directory.toPath())
-                CodeGenConfig codeGenConfig = new CodeGenConfig()
-                codeGenConfig.setApplicationType(state.manifest.applicationType)
-                codeGenConfig.setDefaultPackage(state.manifest.defaultPackage)
-                codeGenConfig.setReloading(state.manifest.options.reloading)
-                codeGenConfig.setSourceLanguage(Language.DEFAULT_OPTION)
-                codeGenConfig.setFeatures(new ArrayList<String>(state.lock.featureNames))
-                codeGenConfig.setExcludedFeatures(new ArrayList<String>(state.manifest.excludedFeatures*.name))
-                codeGenConfig.setArtefacts(FeatureArtefact.of(state.lock))
-                warnOfAnotherRecord(beanContext, directory, codeGenConfig, consoleOutput)
+                CodeGenConfig codeGenConfig = ofState(ProjectState.readSelection(directory.toPath()))
+                String difference = differenceOfEarlierRecord(beanContext, directory, codeGenConfig)
+                if (difference != null) {
+                    // who listens says it where it matters, see ForgeCli; anyone else is told as of any warning
+                    if (consoleOutput instanceof RecordListener) {
+                        ((RecordListener) consoleOutput).recordsDiffer(difference)
+                    } else {
+                        consoleOutput.warning(difference)
+                    }
+                }
                 return codeGenConfig
             } catch (ProjectStateException e) {
                 notUsed(consoleOutput)
@@ -192,6 +192,39 @@ class CodeGenConfig {
             }
         }
         return loadEarlierRecord(beanContext, directory, consoleOutput)
+    }
+
+    private static CodeGenConfig ofState(ProjectState state) {
+        CodeGenConfig codeGenConfig = new CodeGenConfig()
+        codeGenConfig.setApplicationType(state.manifest.applicationType)
+        codeGenConfig.setDefaultPackage(state.manifest.defaultPackage)
+        codeGenConfig.setReloading(state.manifest.options.reloading)
+        codeGenConfig.setSourceLanguage(Language.DEFAULT_OPTION)
+        codeGenConfig.setFeatures(new ArrayList<String>(state.lock.featureNames))
+        codeGenConfig.setExcludedFeatures(new ArrayList<String>(state.manifest.excludedFeatures*.name))
+        codeGenConfig.setArtefacts(FeatureArtefact.of(state.lock))
+        return codeGenConfig
+    }
+
+    /**
+     * What there is to say of a {@code grails-forge-cli.yml} beside the {@code .grails} of the project
+     * the current directory is in, for a command that goes by the record and is not put together from
+     * it, as {@code feature add} and {@code project show}.
+     *
+     * @return the warning, in the words reading the record has for it, or {@code null} when the
+     * directory is in no project with both records, when they say the same, and when either cannot be
+     * used, which the command that reads the record says itself
+     */
+    static String earlierRecordDifference(ForgeContext beanContext) {
+        try {
+            File directory = ConsoleProject.directoryFor(FileSystemOutputHandler.getDefaultBaseDirectory().toPath()).toFile()
+            if (!ProjectState.exists(directory.toPath())) {
+                return null
+            }
+            return differenceOfEarlierRecord(beanContext, directory, ofState(ProjectState.readSelection(directory.toPath())))
+        } catch (IOException | ProjectStateException ignored) {
+            return null
+        }
     }
 
     private static void notUsed(ConsoleOutput consoleOutput) {
@@ -208,21 +241,27 @@ class CodeGenConfig {
     interface RecordListener {
 
         void recordNotUsed()
+
+        /**
+         * @param warning that the record of an earlier version beside the record that is used does
+         * not say what it says: no warning of every command, see {@link ForgeCli}
+         */
+        void recordsDiffer(String warning)
     }
 
     // A project has grails-forge-cli.yml beside its state when a version that wrote both generated it,
     // or when the file was put there. When it does not say what the state says, as after a change by
     // hand, which changed what the commands did before there was a state, it is not followed, and is
     // not passed over in silence either
-    private static void warnOfAnotherRecord(ForgeContext beanContext, File directory, CodeGenConfig config, ConsoleOutput consoleOutput) {
+    private static String differenceOfEarlierRecord(ForgeContext beanContext, File directory, CodeGenConfig config) {
         File record = new File(directory, ProjectState.EARLIER_RECORD)
         if (!record.isFile() || record.length() > MAX_EARLIER_RECORD) {
-            return
+            return null
         }
         // an earlier record that cannot be used is not compared, and nothing is said of it: the state is what counts
         CodeGenConfig earlier = loadEarlierRecord(beanContext, directory, ConsoleOutput.NOOP)
         if (earlier == null || earlier.legacy) {
-            return
+            return null
         }
         List<String> different = []
         if (earlier.defaultPackage != null && earlier.defaultPackage != config.defaultPackage) {
@@ -231,10 +270,12 @@ class CodeGenConfig {
         if (earlier.features != null && new HashSet<String>(earlier.features) != new HashSet<String>(config.features)) {
             different << 'the features'
         }
-        if (different) {
-            consoleOutput.warning("${ProjectState.EARLIER_RECORD} and ${ProjectState.DIRECTORY} do not say the same about ${different.join(' and ')} of the project; " +
-                    "the commands go by ${ProjectState.DIRECTORY}, the record of how the project was generated")
+        if (!different) {
+            return null
         }
+        return "${ProjectState.EARLIER_RECORD} and ${ProjectState.DIRECTORY} do not say the same about ${different.join(' and ')} of the project; " +
+                "the commands go by ${ProjectState.DIRECTORY}, the record of how the project was generated. Remove ${ProjectState.EARLIER_RECORD} once ${ProjectState.DIRECTORY} " +
+                'says what the project is, which project show tells, unless a tool of yours reads the file'
     }
 
     /**

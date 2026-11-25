@@ -84,7 +84,8 @@ class CodeGenConfigProjectStateSpec extends Specification {
 
         and: 'that the earlier record says something else is said once, not followed and not passed over'
         warnings == ['grails-forge-cli.yml and .grails do not say the same about the default package and the features of the project; ' +
-                             'the commands go by .grails, the record of how the project was generated']
+                             'the commands go by .grails, the record of how the project was generated. Remove grails-forge-cli.yml once .grails says what the project is, ' +
+                             'which project show tells, unless a tool of yours reads the file']
     }
 
     void "a generated project has no earlier record, and one beside its state that says something else is said"() {
@@ -115,7 +116,8 @@ class CodeGenConfigProjectStateSpec extends Specification {
         then:
         !config.features.contains('grails-quartz')
         warnings == ['grails-forge-cli.yml and .grails do not say the same about the features of the project; ' +
-                             'the commands go by .grails, the record of how the project was generated']
+                             'the commands go by .grails, the record of how the project was generated. Remove grails-forge-cli.yml once .grails says what the project is, ' +
+                             'which project show tells, unless a tool of yours reads the file']
 
         when: 'the earlier record cannot be read at all'
         warnings.clear()
