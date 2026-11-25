@@ -141,6 +141,11 @@ ordering, and contributed artefacts. Reading the definition requires no classes 
 A true `metadataComplete` value means Grails can determine eligibility and ordering from the
 published definition before constructing the lifecycle implementation.
 
+When two plugins are released together, an annotated plugin can declare
+`dependsOn = 'core:${plugin.version}'`. The build writes the resolved plugin version into the
+dependency constraint. The same placeholder is available in `grailsVersion` for plugins released
+with the framework.
+
 For a Java-only plugin built directly with `javac`, put Grails and its dependencies on the processor
 path and select `-processor org.grails.compiler.injection.JavaPluginDescriptorProcessor`.
 Compile to a class directory with `-d`. Supply `-Agrails.plugin.version=1.0` if the annotation

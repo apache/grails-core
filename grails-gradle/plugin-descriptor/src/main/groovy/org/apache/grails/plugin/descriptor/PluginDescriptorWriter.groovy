@@ -140,46 +140,61 @@ final class PluginDescriptorWriter {
         importsFile.parentFile.mkdirs()
         importsFile.setText(importNames.join('\n') + '\n', StandardCharsets.UTF_8.name())
         if (publishXml && plugins) {
-            // Older catalog and IDE readers look up exactly one XML resource per archive.
-            new File(outDir, 'META-INF/grails-plugin.xml').withWriter('UTF-8') { Writer writer ->
-                def xml = XMLOutputFactory.newFactory().createXMLStreamWriter(writer)
-                xml.writeStartElement('plugin')
-                if (plugins.size() == 1) {
-                    ScannedPlugin plugin = plugins.first()
-                    xml.writeAttribute('name', plugin.logicalName)
-                    if (plugin.version ?: defaultVersion) {
-                        xml.writeAttribute('version', plugin.version ?: defaultVersion)
-                    }
-                    if (plugin.grailsVersion) {
-                        xml.writeAttribute('grailsVersion', plugin.grailsVersion)
+            writeXmlProjection(outDir, importNames)
+        }
+    }
+
+    private static void writeXmlProjection(File outDir, Set<String> names) {
+        List<Properties> definitions = names.collect { String name ->
+            Properties definition = new Properties()
+            new File(outDir, PLUGIN_DESCRIPTORS_PREFIX + name + '/' + PLUGIN_PROPERTIES_FILE)
+                    .withReader('UTF-8') { Reader reader -> definition.load(reader) }
+            definition
+        }
+        new File(outDir, 'META-INF/grails-plugin.xml').withWriter('UTF-8') { Writer writer ->
+            def xml = XMLOutputFactory.newFactory().createXMLStreamWriter(writer)
+            xml.writeStartElement('plugin')
+            if (definitions.size() == 1) {
+                Properties definition = definitions.first()
+                for (String key : ['name', 'version', 'grailsVersion']) {
+                    if (definition.containsKey(key)) {
+                        xml.writeAttribute(key, definition.getProperty(key))
                     }
                 }
-                Set<String> classes = new TreeSet<>()
-                for (ScannedPlugin plugin : plugins) {
-                    if (plugin.className) {
-                        xml.writeStartElement('type')
-                        xml.writeCharacters(plugin.className)
-                        xml.writeEndElement()
-                    }
-                    Properties definition = new Properties()
-                    new File(outDir, PLUGIN_DESCRIPTORS_PREFIX + plugin.logicalName + '/' + PLUGIN_PROPERTIES_FILE)
-                            .withReader('UTF-8') { Reader reader -> definition.load(reader) }
-                    for (String key : definition.stringPropertyNames()) {
-                        if (key == 'artefacts' || key.startsWith('artefacts.')) {
-                            classes.addAll(definition.getProperty(key).tokenize(','))
+                List<String> dependencies = definition.stringPropertyNames().findAll { it.startsWith('dependsOn.') }.sort()
+                if (dependencies) {
+                    xml.writeStartElement('dependsOn')
+                    for (String key : dependencies) {
+                        String dependency = key.substring('dependsOn.'.length())
+                        if (dependency ==~ /[A-Za-z_][A-Za-z0-9._-]*/) {
+                            xml.writeAttribute(dependency, definition.getProperty(key))
                         }
                     }
-                }
-                xml.writeStartElement('resources')
-                for (String name : classes) {
-                    xml.writeStartElement('resource')
-                    xml.writeCharacters(name)
                     xml.writeEndElement()
                 }
-                xml.writeEndElement()
-                xml.writeEndElement()
-                xml.close()
             }
+            Set<String> classes = new TreeSet<>()
+            for (Properties definition : definitions) {
+                if (definition.getProperty('class')) {
+                    xml.writeStartElement('type')
+                    xml.writeCharacters(definition.getProperty('class'))
+                    xml.writeEndElement()
+                }
+                for (String key : definition.stringPropertyNames()) {
+                    if (key == 'artefacts' || key.startsWith('artefacts.')) {
+                        classes.addAll(definition.getProperty(key).tokenize(','))
+                    }
+                }
+            }
+            xml.writeStartElement('resources')
+            for (String name : classes) {
+                xml.writeStartElement('resource')
+                xml.writeCharacters(name)
+                xml.writeEndElement()
+            }
+            xml.writeEndElement()
+            xml.writeEndElement()
+            xml.close()
         }
     }
 
@@ -202,6 +217,12 @@ final class PluginDescriptorWriter {
 
         String grailsVer = trimToNull(plugin.grailsVersion)
         if (grailsVer) {
+            if (grailsVer.contains('${plugin.version}')) {
+                if (!version) {
+                    throw new IllegalArgumentException("Plugin ${plugin.logicalName} must declare a version for its compatibility range")
+                }
+                grailsVer = grailsVer.replace('${plugin.version}', version)
+            }
             entries.put('grailsVersion', grailsVer)
         }
         if (plugin.loadAfter) {

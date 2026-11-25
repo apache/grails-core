@@ -64,6 +64,7 @@ import grails.plugins.Plugin;
 import grails.plugins.VersionComparator;
 import grails.plugins.exceptions.PluginException;
 import grails.plugins.metadata.GrailsPluginDescriptor;
+import grails.plugins.metadata.PluginDefinition;
 import grails.util.Environment;
 import grails.util.GrailsClassUtils;
 import grails.util.GrailsNameUtils;
@@ -665,11 +666,28 @@ public final class PluginUtils {
                 normalizePluginName(overrideName) :
                 getLogicalPluginName(pluginClass);
         String pluginVersion = !annotation.version().isBlank() ? annotation.version().trim() : fallbackVersion;
+        if (pluginVersion == null) {
+            String path = getPluginDescriptorPath(pluginName);
+            try (InputStream input = pluginClass.getResourceAsStream("/" + path)) {
+                if (input != null) {
+                    var definition = PluginDefinition.read(pluginName, new InputStreamReader(input, StandardCharsets.UTF_8));
+                    if (definition.getProvidedPlugins().contains(pluginClass.getName())) {
+                        pluginVersion = definition.getPluginVersion();
+                    }
+                }
+            } catch (IOException e) {
+                throw new PluginException("Could not read plugin definition [" + path + "]", e);
+            }
+        }
         if (pluginVersion == null || pluginVersion.isBlank()) {
             throw new PluginException("Plugin [" + pluginName + "] must specify a version!");
         }
         String grailsVersion = !annotation.grailsVersion().isBlank() ?
                 annotation.grailsVersion().trim() : fallbackGrailsVersion;
+
+        if (grailsVersion != null) {
+            grailsVersion = grailsVersion.replace("${plugin.version}", pluginVersion);
+        }
 
         Map<String, Object> dependencies = new LinkedHashMap<>();
         for (String depSpec : annotation.dependsOn()) {

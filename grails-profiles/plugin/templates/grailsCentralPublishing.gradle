@@ -18,6 +18,12 @@ publishing {
             from components.java
             artifact sourcesJar
             artifact javadocJar
+            def descriptorTask = tasks.named('generatePluginDescriptor')
+            artifact(descriptorTask.flatMap { it.outputDirectory.file('META-INF/grails-plugin.xml') }) {
+                classifier = 'plugin'
+                extension = 'xml'
+                builtBy descriptorTask
+            }
         }
     }
 

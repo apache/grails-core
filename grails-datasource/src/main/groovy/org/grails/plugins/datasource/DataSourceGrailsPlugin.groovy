@@ -42,7 +42,7 @@ import org.grails.transaction.ChainedTransactionManagerPostProcessor
  * @since 0.4
  */
 @CompileStatic
-@GrailsPluginDescriptor(dependsOn = 'core:${plugin.version}')
+@GrailsPluginDescriptor(grailsVersion = '${plugin.version} > *', dependsOn = 'core:${plugin.version}')
 class DataSourceGrailsPlugin extends Plugin {
 
     private static final Log log = LogFactory.getLog(DataSourceGrailsPlugin)

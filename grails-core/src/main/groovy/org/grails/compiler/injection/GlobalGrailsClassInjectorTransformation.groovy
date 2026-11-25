@@ -267,6 +267,10 @@ class GlobalGrailsClassInjectorTransformation implements ASTTransformation, Comp
                 metadata.addMember(name, new ConstantExpression(value.value))
             }
         }
+        String frameworkVersion = GlobalGrailsClassInjectorTransformation.package.implementationVersion
+        if (!classNode.getProperty('grailsVersion') && frameworkVersion) {
+            metadata.addMember('grailsVersion', new ConstantExpression(frameworkVersion + ' > *'))
+        }
         Expression excludes = classNode.getDeclaredField('pluginExcludes')?.initialExpression
         if (excludes instanceof ListExpression) {
             List<Expression> patterns = excludes.expressions.findAll {

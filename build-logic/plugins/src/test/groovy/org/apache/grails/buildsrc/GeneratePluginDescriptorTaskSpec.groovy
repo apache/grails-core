@@ -155,6 +155,7 @@ class GeneratePluginDescriptorTaskSpec extends Specification {
         def xml = new groovy.xml.XmlSlurper().parse(new File(outDir, 'META-INF/grails-plugin.xml'))
         xml.@grailsVersion.text() == '9.0.0 > *'
         xml.type.text() == 'com.example.MetricsStarter'
+        xml.dependsOn.@i18n.text() == '9.0.0 > *'
         props.getProperty('version') == '2.3.4'
         props.getProperty('class') == 'com.example.MetricsStarter'
         props.getProperty('grailsVersion') == '9.0.0 > *'
