@@ -545,7 +545,7 @@ environments {
         then:
         !result
         written(RESOURCES) == 'beans {\n}\n'
-        errors.toString().contains("The password encoder listener is not registered: ${RESOURCES} has no line with 'beans = {'.")
+        errors.toString().contains("The password encoder listener is not registered: ${RESOURCES} sets or reads 'beans' in line 1, in another way than with 'beans = { ... }' as a statement of the script")
         errors.toString().contains("'userPasswordEncoderListener(UserPasswordEncoderListener)'")
         errors.toString().contains("'import com.example.UserPasswordEncoderListener'")
 
@@ -647,10 +647,10 @@ class DemoGrailsPlugin extends Plugin {
         then:
         !result
         written(pluginClass) == text
-        errors.toString().contains("The password encoder listener is not registered: ${pluginClass} has no closure that 'doWithSpring()' returns, opened with '{ ->'.")
+        errors.toString().contains("The password encoder listener is not registered: ${pluginClass} has no closure that 'doWithSpring()' returns as its only statement.")
     }
 
-    def "s2-quickstart adds the bean of the listener once, to the first beans = { that is not in a comment"() {
+    def "s2-quickstart adds the bean of the listener once, to the last beans = { that is not in a comment"() {
         given: 'a resources.groovy that names the closure in comments, and has it twice'
         write(RESOURCES, '''// beans = { is where the beans go
 /*
@@ -679,10 +679,10 @@ beans = {
                 '}',
                 '*/',
                 'beans = { // the beans of the application',
-                '    userPasswordEncoderListener(UserPasswordEncoderListener)',
                 '    other(Object)',
                 '}',
                 'beans = {',
+                '    userPasswordEncoderListener(UserPasswordEncoderListener)',
                 '}'
         ]
     }
