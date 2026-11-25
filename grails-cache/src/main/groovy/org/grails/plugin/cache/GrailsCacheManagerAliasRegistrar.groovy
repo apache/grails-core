@@ -50,9 +50,8 @@ import org.springframework.core.annotation.OrderUtils
  * the created object has, behind a factory method declared to return a {@code CacheManager}, is not
  * seen.</p>
  *
- * <p>Since Grails 9 the trait qualifies its field with the name {@code grailsCacheManager}, so Spring
- * injects that bean into a class compiled against it, and the alias is not used. A class compiled against
- * Grails 8 keeps its own field, without the qualifier, until it is compiled again, and the alias gives it
+ * <p>Since Grails 9 the trait resolves {@code grailsCacheManager} directly by name. A class compiled
+ * against Grails 8 keeps its type-based injection until it is compiled again, and the alias gives it
  * the behaviour of Grails 8.0.1.</p>
  *
  * <p>The alias is registered after every bean definition is in, so a {@code grailsCacheManager} that a

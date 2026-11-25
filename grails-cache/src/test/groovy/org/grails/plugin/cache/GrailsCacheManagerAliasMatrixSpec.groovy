@@ -22,6 +22,7 @@ import java.lang.reflect.Field
 import java.util.function.Supplier
 
 import org.springframework.beans.factory.annotation.Qualifier
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.cache.CacheManager
 import org.springframework.cache.concurrent.ConcurrentMapCacheManager
 import org.springframework.context.support.GenericApplicationContext
@@ -66,7 +67,7 @@ class GrailsCacheManagerAliasMatrixSpec extends CacheManagerArrangementsSpec {
         expect:
         field.type == CacheManager
         !field.isAnnotationPresent(Qualifier)
-        !field.isAnnotationPresent(GrailsCacheManagerQualifier)
+        !field.isAnnotationPresent(Value)
     }
 
     void 'the cache manager a cache-aware class gets is 8.0.0\'s, except where it failed with none preferred, and the known differences'() {
