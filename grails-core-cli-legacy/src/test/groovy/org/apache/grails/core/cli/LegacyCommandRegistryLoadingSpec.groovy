@@ -26,6 +26,7 @@ import grails.dev.commands.ExecutionContext as LegacyExecutionContext
 import groovy.transform.CompileStatic
 import org.apache.grails.core.cli.compat.LegacyApplicationCommandAdapter
 import org.apache.grails.core.cli.compat.LegacyApplicationCommandProvider
+import org.apache.grails.gradle.model.cli.CommandDescriptor
 import org.grails.build.parsing.CommandLine
 import org.slf4j.LoggerFactory
 import org.springframework.context.ConfigurableApplicationContext
@@ -131,6 +132,26 @@ class LegacyCommandRegistryLoadingSpec extends Specification {
 
         then:
         ((ApplicationCommandTargetAware) command).target instanceof ZOrderedLegacyCollisionCommand
+    }
+
+    @Unroll
+    def "a legacy command is found by the name its class gives, which the catalog of a build lists it by: #lookedFor"() {
+        given:
+        useFactoryResources('grails.dev.commands.ApplicationCommand=' +
+                "${LegacyRegistryTestCommand.name},${AUnorderedLegacyCollisionCommand.name},${ZOrderedLegacyCollisionCommand.name}")
+
+        when:
+        ApplicationCommand command = new ApplicationContextCommandRegistry().findCommand(lookedFor)
+
+        then:
+        ((ApplicationCommandTargetAware) command).target.getClass() == found
+
+        where: 'the name a class gives is the one the catalog lists the command by'
+        lookedFor                                                             || found
+        'legacy-registry-command'                                             || LegacyRegistryTestCommand
+        'legacy-registry-test'                                                || LegacyRegistryTestCommand
+        'legacy-order-collision'                                              || ZOrderedLegacyCollisionCommand
+        CommandDescriptor.conventionName(AUnorderedLegacyCollisionCommand.name) || AUnorderedLegacyCollisionCommand
     }
 
     @Unroll

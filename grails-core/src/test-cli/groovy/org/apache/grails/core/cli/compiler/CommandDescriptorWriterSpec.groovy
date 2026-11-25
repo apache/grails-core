@@ -332,6 +332,8 @@ class CommandDescriptorWriterSpec extends Specification {
         'a statement before it cannot skip it'               | "GreetCommand() { println 'made'; name = 'other' }"
         'every constructor sets it'                          | "GreetCommand() { name = 'other' }\nGreetCommand(int times) { setName('other') }"
         'an initializer block and the constructor set it alike' | "{ name = 'other' }\nGreetCommand() { name = 'other' }"
+        'it is assigned twice, the second time last'         | "GreetCommand() { name = 'another'; name = 'other' }"
+        'a statement before it cannot be followed'           | "GreetCommand() { [1].each { name = 'another' }; name = 'other' }"
     }
 
     @Unroll
@@ -350,9 +352,10 @@ class CommandDescriptorWriterSpec extends Specification {
         'it is assigned when a condition holds'            | "GreetCommand() { if (System.getProperty('greet.other')) { name = 'other' } }"
         'a statement before it can end the constructor'    | "GreetCommand() { if (System.getProperty('greet.same')) { return }; name = 'other' }"
         'it is assigned what is worked out'                | "GreetCommand() { name = System.getProperty('greet.name') }"
-        'it is assigned two names'                         | "GreetCommand() { name = 'other'; name = 'another' }"
         'one constructor sets it and another does not'     | "GreetCommand() { name = 'other' }\nGreetCommand(int times) { }"
         'its setter is written by hand'                    | "GreetCommand() { name = 'other' }\nvoid setName(String name) { this.name = name + '-loudly' }"
+        'a call after it is not followed'                  | "GreetCommand() { name = 'other'; println 'made' }"
+        'one constructor runs another'                     | "GreetCommand() { this(1) }\nGreetCommand(int times) { name = 'other' }"
     }
 
     @Unroll
@@ -454,6 +457,65 @@ class CommandDescriptorWriterSpec extends Specification {
         'it declares nothing, and has the property'           | "String name = 'old-name'" | ''                                             || null          | 'old-name'
     }
 
+    @Unroll
+    def "a name the code a constructor calls sets is recorded when that code is read, and nothing is recorded when it is not: #how"() {
+        when:
+        compile('ImportDataCommand', "abstract class OldNameCommand implements ${CONTRACT} {\n${base}\n}\n" +
+                "class ImportDataCommand extends OldNameCommand {\n${members}\n${HANDLE}\n}\n${others}", Phases.ALL)
+
+        then: 'what is recorded is the name the command has when it is made, or nothing'
+        recordedName(className) == recorded
+        Map<String, String> made = made(className)
+        made.name == name
+        recorded == null || descriptor(className).subMap('name', 'description') == made
+        registered().contains(className)
+
+        where:
+        how                                                              | base                                                               | members                                                                                              | others                                                                                  | className                       || recorded      | name
+        'it calls a helper that sets the name (the review)'              | "String name = 'old-name'"                                         | "ImportDataCommand() { rename() }\nprivate void rename() { name = 'import-data' }"                   | ''                                                                                      | 'example.ImportDataCommand'     || 'import-data' | 'import-data'
+        'the class it extends sets the name in its constructor'          | "String name\nOldNameCommand() { name = 'old-name' }"              | "ImportDataCommand() { rename() }\nprivate void rename() { name = 'import-data' }"                   | ''                                                                                      | 'example.ImportDataCommand'     || 'import-data' | 'import-data'
+        'the helper is final'                                            | "String name = 'old-name'"                                         | "ImportDataCommand() { rename() }\nfinal void rename() { this.name = 'import-data' }"                | ''                                                                                      | 'example.ImportDataCommand'     || 'import-data' | 'import-data'
+        'the helper can be overridden'                                   | "String name = 'old-name'"                                         | "ImportDataCommand() { this.rename() }\nvoid rename() { setName('import-data') }"                    | ''                                                                                      | 'example.ImportDataCommand'     || 'import-data' | 'import-data'
+        'the helper is static, and is given the command'                 | "String name = 'old-name'"                                         | "ImportDataCommand() { rename(this) }\nstatic void rename(ImportDataCommand command) { command.name = 'import-data' }" | ''                                                       | 'example.ImportDataCommand'     || 'import-data' | 'import-data'
+        'the static helper calls the setter of the command it is given'  | "String name = 'old-name'"                                         | "ImportDataCommand() { ImportDataCommand.rename(this) }\nstatic void rename(OldNameCommand command) { command.setName('import-data') }" | ''                                     | 'example.ImportDataCommand'     || 'import-data' | 'import-data'
+        'a helper calls a helper'                                        | "String name = 'old-name'"                                         | "ImportDataCommand() { prepare() }\nprivate void prepare() { println 'preparing'; rename() }\nprivate void rename() { name = 'import-data' }" | ''                         | 'example.ImportDataCommand'     || 'import-data' | 'import-data'
+        'it calls a helper of the class it extends'                      | "String name = 'old-name'\nprotected void useNewName() { name = 'import-data' }" | 'ImportDataCommand() { useNewName() }'                                                 | ''                                                                                      | 'example.ImportDataCommand'     || 'import-data' | 'import-data'
+        'the class it extends calls a method it overrides'               | "String name = 'old-name'\nOldNameCommand() { configure() }\nprotected void configure() { }" | "protected void configure() { name = 'import-data' }"                        | ''                                                                                      | 'example.ImportDataCommand'     || 'import-data' | 'import-data'
+        'a field initializer calls the helper'                           | "String name = 'old-name'"                                         | "private final String marker = rename()\nprivate String rename() { name = 'import-data'; 'renamed' }" | ''                                                                                    | 'example.ImportDataCommand'     || 'import-data' | 'import-data'
+        'the helper sets the name, then the constructor makes something' | "String name = 'old-name'"                                         | "ImportDataCommand() { rename(); new StringBuilder('made').append('!') }\nprivate void rename() { name = 'import-data' }" | ''                                                  | 'example.ImportDataCommand'     || 'import-data' | 'import-data'
+        'a further class overrides the helper'                           | "String name = 'old-name'"                                         | "ImportDataCommand() { rename() }\nvoid rename() { name = 'import-data' }"                           | "class LoudImportCommand extends ImportDataCommand { void rename() { name = 'loud-import' } }" | 'example.LoudImportCommand' || 'loud-import' | 'loud-import'
+        'the class a further class overrides the helper of'              | "String name = 'old-name'"                                         | "ImportDataCommand() { rename() }\nvoid rename() { name = 'import-data' }"                           | "class LoudImportCommand extends ImportDataCommand { void rename() { name = 'loud-import' } }" | 'example.ImportDataCommand' || 'import-data' | 'import-data'
+        'the helper sets the name when a condition holds'                | "String name = 'old-name'"                                         | "ImportDataCommand() { rename() }\nprivate void rename() { if (!System.getProperty('import.old')) { name = 'import-data' } }" | ''                                              | 'example.ImportDataCommand'     || null          | 'import-data'
+        'the helper sets the name it is given'                           | "String name = 'old-name'"                                         | "ImportDataCommand() { rename('import-data') }\nprivate void rename(String to) { name = to }"         | ''                                                                                      | 'example.ImportDataCommand'     || null          | 'import-data'
+        'the helper calls itself'                                        | "String name = 'old-name'"                                         | "ImportDataCommand() { rename(2) }\nprivate void rename(int times) { if (times > 0) { rename(times - 1) } else { name = 'import-data' } }" | ''                   | 'example.ImportDataCommand'     || null          | 'import-data'
+        'a closure sets the name'                                        | "String name = 'old-name'"                                         | "ImportDataCommand() { [1].each { name = 'import-data' } }"                                          | ''                                                                                      | 'example.ImportDataCommand'     || null          | 'import-data'
+        'a with block sets the name'                                     | "String name = 'old-name'"                                         | "ImportDataCommand() { with { name = 'import-data' } }"                                              | ''                                                                                      | 'example.ImportDataCommand'     || null          | 'import-data'
+        'a closure the helper is given sets the name'                    | "String name = 'old-name'"                                         | "ImportDataCommand() { apply { name = 'import-data' } }\nprivate void apply(Closure change) { change() }" | ''                                                                                  | 'example.ImportDataCommand'     || null          | 'import-data'
+        'a method of another class is given the command'                 | "String name = 'old-name'"                                         | 'ImportDataCommand() { Renamer.rename(this) }'                                                       | "class Renamer { static void rename(OldNameCommand command) { command.name = 'import-data' } }" | 'example.ImportDataCommand' || null          | 'import-data'
+        'the runtime sets the property by its name'                      | "String name = 'old-name'"                                         | "ImportDataCommand() { setProperty('name', 'import-data') }"                                         | ''                                                                                      | 'example.ImportDataCommand'     || null          | 'import-data'
+        'a subscript sets the property'                                  | "String name = 'old-name'"                                         | "ImportDataCommand() { this['name'] = 'import-data' }"                                               | ''                                                                                      | 'example.ImportDataCommand'     || null          | 'import-data'
+        'the meta class sets the property'                               | "String name = 'old-name'"                                         | "ImportDataCommand() { metaClass.setProperty(this, 'name', 'import-data') }"                         | ''                                                                                      | 'example.ImportDataCommand'     || null          | 'import-data'
+        'reflection sets the field'                                      | "String name = 'old-name'"                                         | "ImportDataCommand() { java.lang.reflect.Field field = OldNameCommand.getDeclaredField('name'); field.accessible = true; field.set(this, 'import-data') }" | '' | 'example.ImportDataCommand'  || null          | 'import-data'
+        'a trait of the command sets it when its fields are given values' | "String name = 'old-name'"                                        | ''                                                                                                   | "trait Renaming { String marker = rename()\nString rename() { setName('import-data'); 'renamed' } }\nclass RenamingImportCommand extends OldNameCommand implements Renaming { ${HANDLE} }" | 'example.RenamingImportCommand' || null | 'import-data'
+        'code the command was handed to sets it after the constructor does' | "String name = 'old-name'"                                      | "ImportDataCommand() { Keeper.keep(this); name = 'import-data'; Keeper.touch() }"                     | "class Keeper { static OldNameCommand kept\nstatic void keep(OldNameCommand command) { kept = command }\nstatic void touch() { kept.name = 'touched' } }" | 'example.ImportDataCommand' || null | 'touched'
+    }
+
+    @Unroll
+    def "a description the code a constructor calls sets is recorded when that code is read: #how"() {
+        when:
+        compile('ImportDataCommand', "abstract class OldNameCommand implements ${CONTRACT} { String description = 'Imports old data' }\n" +
+                "class ImportDataCommand extends OldNameCommand {\n${members}\n${HANDLE}\n}", Phases.ALL)
+
+        then:
+        descriptor('example.ImportDataCommand').description == recorded
+        made('example.ImportDataCommand').description == description
+
+        where:
+        how                                       | members                                                                                                     || recorded           | description
+        'a helper sets it'                        | "ImportDataCommand() { describe() }\nprivate void describe() { description = 'Imports the data' }"          || 'Imports the data' | 'Imports the data'
+        'a helper sets it when a condition holds' | "ImportDataCommand() { describe() }\nprivate void describe() { if (!System.getProperty('x')) { description = 'Imports the data' } }" || null | 'Imports the data'
+    }
+
     def "a command that extends another is listed under the name it is found by when it is run"() {
         given: 'a command that sets its name in its constructor over the one of the class it extends, compiled'
         compile('ImportDataCommand', "abstract class OldNameCommand implements ${CONTRACT} { String name = 'old-name' }\n" +
@@ -473,6 +535,66 @@ class CommandDescriptorWriterSpec extends Specification {
     }
 
     @Unroll
+    def "a command whose name cannot be read is listed by the name its class gives, and is run by that name: #how"() {
+        given: 'a command whose name is set in a way the compiler does not read, compiled'
+        compile('LegacyImportCommand', "abstract class OldNameCommand implements ${CONTRACT} { String name = 'old-name' }\n" +
+                "class LegacyImportCommand extends OldNameCommand {\n${members}\n${HANDLE}\n}", Phases.ALL)
+
+        when: 'the build lists the commands of the compiled classes'
+        CommandCatalogBuilder catalog = new CommandCatalogBuilder()
+        catalog.add(CommandCatalogBuilder.ORIGIN_APPLICATION, targetDirectory)
+        List<Map> listed = (List<Map>) catalog.build().commands
+
+        and: 'the command is looked for by the name listed, as the runner of runCommand looks for it, and by the name it has'
+        String name = made('example.LegacyImportCommand').name
+        List<String> found = withCompiledCommands {
+            ApplicationContextCommandRegistry registry = new ApplicationContextCommandRegistry()
+            [registry.findCommand((String) listed[0].name), registry.findCommand(name)].collect { ApplicationCommand command -> command?.getClass()?.name }
+        }
+
+        then:
+        !descriptorFile('example.LegacyImportCommand').exists()
+        listed == [[name: 'legacy-import', aliases: [], description: '', origin: 'application', target: 'application', registration: 'factories']]
+        name == 'import-data'
+        found == ['example.LegacyImportCommand', 'example.LegacyImportCommand']
+
+        where:
+        how                                       | members
+        'a helper sets it when a condition holds' | "LegacyImportCommand() { rename() }\nprivate void rename() { if (!System.getProperty('import.old')) { name = 'import-data' } }"
+        'a closure sets it'                       | "LegacyImportCommand() { with { name = 'import-data' } }"
+        'it is worked out'                        | "LegacyImportCommand() { name = 'import-' + 'data' }"
+    }
+
+    def "of two commands whose classes give one name, the one listed by it is run by it"() {
+        given: 'two classes of one simple name in two packages: the name of one is read, the name of the other is not'
+        File sources = new File(tempDir, 'src/cli/groovy/example')
+        File described = new File(sources, 'a/TwinCommand.groovy')
+        File undescribed = new File(sources, 'b/TwinCommand.groovy')
+        described.parentFile.mkdirs()
+        undescribed.parentFile.mkdirs()
+        described.text = "package example.a\nclass TwinCommand implements ${CONTRACT} { String name = 'twin-a'; ${HANDLE} }"
+        undescribed.text = "package example.b\nclass TwinCommand implements ${CONTRACT} {\nString name = 'twin-a'\n" +
+                "TwinCommand() { if (!System.getProperty('twin.a')) { name = 'twin-b' } }\n${HANDLE}\n}"
+        CompilationUnit unit = new CompilationUnit(new CompilerConfiguration(targetDirectory: targetDirectory))
+        unit.addSource(described)
+        unit.addSource(undescribed)
+        unit.compile(Phases.ALL)
+
+        when:
+        CommandCatalogBuilder catalog = new CommandCatalogBuilder()
+        catalog.add(CommandCatalogBuilder.ORIGIN_APPLICATION, targetDirectory)
+        List<Map> listed = (List<Map>) catalog.build().commands
+        Map<String, String> found = withCompiledCommands {
+            ApplicationContextCommandRegistry registry = new ApplicationContextCommandRegistry()
+            listed.collectEntries { Map command -> [(command.name): registry.findCommand((String) command.name)?.getClass()?.name] }
+        }
+
+        then: 'each name listed runs the class listed by it'
+        listed.collect { Map command -> [command.name, command.registration] } == [['twin', 'factories'], ['twin-a', 'descriptor']]
+        found == [twin: 'example.b.TwinCommand', 'twin-a': 'example.a.TwinCommand']
+    }
+
+    @Unroll
     def "what a constructor does to something else leaves the name what it starts as: #how"() {
         when:
         compile('GreetCommand', "class GreetCommand implements ${CONTRACT} { String name = 'say-hello'; String other; List<String> words = ['a']; " +
@@ -489,6 +611,8 @@ class CommandDescriptorWriterSpec extends Specification {
         'an element of a list is assigned'           | "words[0] = 'name'"
         'the setter of another property is called'   | "setOther('name')"
         'the name is read'                           | "other = name"
+        'something is made that is not given it'     | "new StringBuilder('name').append('x')"
+        'a method of another class is called'        | "other = System.getProperty('greet.other', 'x')"
     }
 
     def "a class whose name a descriptor cannot have gets none, and loses nothing when it is no command any more"() {
@@ -539,6 +663,11 @@ class CommandDescriptorWriterSpec extends Specification {
 
     private File descriptorFile(String className) {
         new File(targetDirectory, CommandDescriptor.location(className))
+    }
+
+    // the name the descriptor of the class records, or null when it has none
+    private String recordedName(String className) {
+        descriptorFile(className).isFile() ? descriptor(className).name : null
     }
 
     private Map descriptor(String className) {

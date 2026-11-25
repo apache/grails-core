@@ -31,6 +31,7 @@ import ch.qos.logback.classic.spi.ILoggingEvent
 import org.apache.grails.core.testing.support.LogCapture
 import org.springframework.core.Ordered
 
+import org.apache.grails.gradle.model.cli.CommandDescriptor
 import org.grails.core.io.support.GrailsFactoriesLoader
 
 import spock.lang.Specification
@@ -446,6 +447,30 @@ class ApplicationCommandProviderSpec extends Specification {
         !logCapture.events.any { it.formattedMessage.contains('ships Grails 7 commands') }
     }
 
+    @Unroll
+    def "a command is found by its name, and by the name its class gives when no command has that name: #lookedFor"() {
+        given: 'commands whose names are not the names their classes give, as the catalog of a build lists a command without a descriptor'
+        URL plugin = createFactoryJar(
+                'class-named-commands.jar',
+                'example.OtherFactory=example.OtherImplementation',
+                "${ApplicationCommand.name}=${AUnorderedCollisionCommand.name},${ZOrderedCollisionCommand.name}," +
+                        "${ClassGivenCommand.name},${RunsAsClassGivenCommand.name}")
+        useFactoryResources([plugin])
+
+        expect:
+        new ApplicationContextCommandRegistry().findCommand(lookedFor)?.getClass() == found
+
+        where: 'the name a class gives is the one the catalog lists the command by'
+        lookedFor                                                       || found
+        'ordered-collision'                                             || ZOrderedCollisionCommand
+        CommandDescriptor.conventionName(ZOrderedCollisionCommand.name)   || ZOrderedCollisionCommand
+        CommandDescriptor.conventionName(AUnorderedCollisionCommand.name) || AUnorderedCollisionCommand
+        'something-else'                                                || ClassGivenCommand
+        'class-given'                                                   || RunsAsClassGivenCommand
+        'runs-as-class-given'                                           || RunsAsClassGivenCommand
+        'no-such-command'                                               || null
+    }
+
     private URL createFactoryJar(String name, String legacyFactories, String cliFactories = null) {
         Path jar = tempDir.resolve(name)
         new JarOutputStream(Files.newOutputStream(jar)).withCloseable { JarOutputStream output ->
@@ -574,6 +599,33 @@ class AUnorderedCollisionCommand implements ApplicationCommand {
     @Override
     String getName() {
         'ordered-collision'
+    }
+
+    @Override
+    boolean handle(ExecutionContext executionContext) {
+        true
+    }
+}
+
+// runs as something-else; the name its class gives is the name of another command
+class ClassGivenCommand implements ApplicationCommand {
+
+    @Override
+    String getName() {
+        'something-else'
+    }
+
+    @Override
+    boolean handle(ExecutionContext executionContext) {
+        true
+    }
+}
+
+class RunsAsClassGivenCommand implements ApplicationCommand {
+
+    @Override
+    String getName() {
+        'class-given'
     }
 
     @Override

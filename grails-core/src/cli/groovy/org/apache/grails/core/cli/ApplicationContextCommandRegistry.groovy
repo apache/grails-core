@@ -24,6 +24,7 @@ import groovy.util.logging.Slf4j
 import org.springframework.core.OrderComparator
 import org.springframework.util.ClassUtils
 
+import org.apache.grails.gradle.model.cli.CommandDescriptor
 import org.grails.core.io.support.GrailsFactoriesLoader
 
 /**
@@ -37,6 +38,8 @@ import org.grails.core.io.support.GrailsFactoriesLoader
 class ApplicationContextCommandRegistry {
 
     private final Map<String, ApplicationCommand> commands = [:]
+    // every command made, by its class, also one whose name another command has
+    private final Map<Class<?>, ApplicationCommand> madeCommands = new LinkedHashMap<>()
     private final String missingCommandHint
 
     ApplicationContextCommandRegistry() {
@@ -84,6 +87,7 @@ class ApplicationContextCommandRegistry {
         }
         OrderComparator.sort(discoveredCommands)
         for (ApplicationCommand command : discoveredCommands) {
+            madeCommands.putIfAbsent(commandClass(command), command)
             if (!commands.containsKey(command.name)) {
                 commands[command.name] = command
             }
@@ -143,6 +147,7 @@ class ApplicationContextCommandRegistry {
         ApplicationCommandRegistrar registrar = new ApplicationCommandRegistrar() {
             @Override
             String register(ApplicationCommand command) {
+                madeCommands.putIfAbsent(commandClass(command), command)
                 String name = command.name
                 if (commands.containsKey(name)) {
                     return null
@@ -246,8 +251,40 @@ class ApplicationContextCommandRegistry {
         commands.values()
     }
 
+    /**
+     * Finds a command by its name, or, when no command has that name, by the name its class name
+     * gives ({@code ImportDataCommand} is {@code import-data}). The catalog of the commands of a
+     * build lists a command that has no descriptor by the name its class name gives, as its own
+     * name is known only once the command is made; the command is run by the name it is listed by.
+     *
+     * @param name the name of the command
+     * @return the command, or {@code null} when no command has the name, and the class of no
+     * command, or of more than one, gives it
+     */
     ApplicationCommand findCommand(String name) {
-        commands[name]
+        ApplicationCommand command = commands[name]
+        command != null ? command : findCommandByClassName(name)
+    }
+
+    // the command whose class gives the name; of two classes that give it, the one without a descriptor, as the
+    // catalog lists a command with a descriptor by the name the descriptor gives
+    private ApplicationCommand findCommandByClassName(String name) {
+        List<Class<?>> named = madeCommands.keySet().findAll { Class<?> type -> CommandDescriptor.conventionName(type.name) == name }.toList()
+        if (named.size() > 1) {
+            named = named.findAll { Class<?> type -> !hasDescriptor(type) }
+        }
+        named.size() == 1 ? madeCommands[named[0]] : null
+    }
+
+    // the class of the command, which the catalog names it by: for an adapter, the class of the command it adapts
+    private static Class<?> commandClass(ApplicationCommand command) {
+        Object target = command instanceof ApplicationCommandTargetAware ? ((ApplicationCommandTargetAware) command).target : command
+        target.getClass()
+    }
+
+    private static boolean hasDescriptor(Class<?> type) {
+        String location = CommandDescriptor.location(type.name)
+        location != null && type.classLoader?.getResource(location) != null
     }
 
     String getMissingCommandHint() {

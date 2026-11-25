@@ -26,13 +26,15 @@ import org.grails.forge.cli.ForgeCli
 import spock.lang.IgnoreIf
 import spock.lang.Shared
 import spock.lang.Timeout
+import spock.lang.Unroll
 
 /**
  * A command the application was given with {@code create-command} is a command of the command line by its
  * name, in a project that was never built: the build lists the commands of the application, which
  * compiles it, and the command is run in the application. As {@code create-command} writes it, the command says
  * what it was given and succeeds. Once the build has compiled the project the list is current, also for a
- * command added since. A command that extends another is listed, and run, by the name it has when it runs.
+ * command added since. A command that extends another is listed by a name it runs by: the name it has when it runs,
+ * when the compiler can read it, and the name its class gives otherwise.
  */
 @IgnoreIf({ os.windows })
 @Timeout(900)
@@ -111,8 +113,9 @@ class GeneratedApplicationCommandSpec extends CommandSpec implements CommandFixt
         !err.toString().contains('| Listing')
     }
 
-    void "a command that extends another is listed by the name it sets over the one it inherits, and is run by it"() {
-        given: 'a generated application with a command that sets its name in its constructor, over the name the command it extends has'
+    @Unroll
+    void "a command that extends another is listed by a name it runs under, and is run by it: #how"() {
+        given: 'a generated application with a command that has a name of its own, over the name the command it extends has'
         generateProject(ApplicationType.WEB)
         new File(dir, 'settings.gradle') << '\n' + gradle.recording
         new File(dir, 'gradle.properties') << "\norg.gradle.daemon.registry.base=${gradle.registry.canonicalPath}\norg.gradle.daemon.idletimeout=${IsolatedGradle.IDLE_MILLIS}\n"
@@ -128,32 +131,25 @@ class GeneratedApplicationCommandSpec extends CommandSpec implements CommandFixt
                 String name = 'old-name'
             }
             '''.stripIndent()
-        new File(commands, 'LegacyImportCommand.groovy').text = '''\
-            package example.grails
-
-            class LegacyImportCommand extends OldNameCommand {
-
-                LegacyImportCommand() {
-                    name = 'import-data'
-                }
-
-                boolean handle() {
-                    println "Ran ${name} with the arguments ${args}"
-                    return true
-                }
-            }
-            '''.stripIndent()
+        new File(commands, 'LegacyImportCommand.groovy').text = 'package example.grails\n\nclass LegacyImportCommand extends OldNameCommand {\n\n' +
+                members + '\n\n    boolean handle() {\n        println "Ran ${name} with the arguments ${args}"\n        return true\n    }\n}\n'
         out.reset()
         err.reset()
 
-        when: 'it is run by the name it sets'
-        int exit = ForgeCli.execute(beanContext, 'import-data', 'orders.csv')
+        when: 'it is run by the name the build lists it by'
+        int exit = ForgeCli.execute(beanContext, listed, 'orders.csv')
 
-        then: 'the build listed it by that name only, and the command that ran is the one listed'
+        then: 'the build listed it by that name only, and the command that ran is the one listed, with the name it has'
         exit == 0
-        ((List<Map>) catalog().commands).findAll { it.origin == 'application' }*.name == ['import-data']
-        err.toString().contains('| Running the command import-data of the application, with the Gradle task runCommand')
+        ((List<Map>) catalog().commands).findAll { it.origin == 'application' }.collect { [it.name, it.registration] } == [[listed, registration]]
+        err.toString().contains("| Running the command ${listed} of the application, with the Gradle task runCommand")
         out.toString().readLines().contains('Ran import-data with the arguments [orders.csv]')
+
+        where:
+        how                                                      | members                                                                                                         || listed          | registration
+        'its constructor sets the name'                          | "    LegacyImportCommand() {\n        name = 'import-data'\n    }"                                                 || 'import-data'   | 'descriptor'
+        'its constructor calls a helper that sets the name'      | "    LegacyImportCommand() {\n        rename()\n    }\n\n    private void rename() {\n        name = 'import-data'\n    }" || 'import-data' | 'descriptor'
+        'its name is worked out, and it is listed by its class'  | "    LegacyImportCommand() {\n        name = System.getProperty('import.name', 'import-data')\n    }"             || 'legacy-import' | 'factories'
     }
 
     private Map catalog() {
