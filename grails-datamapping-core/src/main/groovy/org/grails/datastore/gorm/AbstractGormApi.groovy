@@ -82,6 +82,11 @@ abstract class AbstractGormApi<D> extends AbstractDatastoreApi {
      * the default connection and not on the one the outer save named.
      */
     protected <T1> T1 inConnection(Closure<T1> callable) {
+        if (this.@datastore == null) {
+            // an API built from a mapping context has no connection to name: it runs on the connection of the save or
+            // validation it is called from, which it does not clear
+            return callable.call()
+        }
         String connection = connectionName()
         String named = connection == null || ConnectionSource.DEFAULT == connection ? null : connection
         String previous = VALIDATION_CONNECTION.get()

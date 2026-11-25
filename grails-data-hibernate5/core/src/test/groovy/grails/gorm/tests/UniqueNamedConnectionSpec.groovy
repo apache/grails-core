@@ -19,6 +19,7 @@
 package grails.gorm.tests
 
 import grails.gorm.annotation.Entity
+import org.grails.datastore.gorm.GormValidationApi
 import org.grails.datastore.gorm.events.ConfigurableApplicationEventPublisher
 import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.datastore.mapping.core.connections.ConnectionSource
@@ -66,6 +67,7 @@ class UniqueNamedConnectionSpec extends Specification {
         UncAudit.third.withNewTransaction { UncAudit.third.executeUpdate('delete from UncAudit') }
         UncBook.innerSaved = null
         UncBook.cascadeErrors = null
+        UncBook.innerPlainErrors = null
     }
 
     private <T> T withSessions(Closure<T> work) {
@@ -207,6 +209,33 @@ class UniqueNamedConnectionSpec extends Specification {
         'validated'   | false
     }
 
+    void 'an update that is flushed at the commit of a save on the second connection is checked on the second connection'() {
+        given: 'a book of the second connection, renamed to a value that exists only on the default connection'
+        UncBook.second.withNewTransaction { new UncBook(name: 'toRename').second.save(validate: false, flush: true) }
+
+        when: 'the rename is saved without a flush, so the update is validated when the transaction commits'
+        UncBook.second.withNewTransaction {
+            UncBook book = UncBook.second.findByName('toRename')
+            book.name = 'onDefault'
+            book.second.save()
+        }
+
+        then: 'the update was not cancelled, and the row of the second connection has the new name'
+        UncBook.second.withNewTransaction { UncBook.second.findByName('onDefault') } != null
+        UncBook.second.withNewTransaction { UncBook.second.findByName('toRename') } == null
+    }
+
+    void 'a validation API built from a mapping context that is called during a save on the second connection checks that connection'() {
+        when: 'the validator of the book checks a book that only the default connection has through an API that has no datastore'
+        UncBook book = new UncBook(name: 'newBook', innerPlain: true)
+        UncBook saved = withSessions { book.second.save() }
+
+        then: 'the check is made on the second connection, which the save named, so the value is free'
+        saved != null
+        UncBook.innerPlainErrors != null
+        !UncBook.innerPlainErrors.hasErrors()
+    }
+
     void 'a save through the default connection still checks the default connection'() {
         when:
         UncBook onDefault = new UncBook(name: 'onDefault')
@@ -247,12 +276,16 @@ class UncBook {
 
     boolean innerSave
     boolean innerValidate
+    boolean innerPlain
     boolean cascadeCheck
 
     // set by the validation below: the errors of the check of an entity that is mapped to the default connection only
     static Errors cascadeErrors
 
-    static transients = ['innerSave', 'innerValidate', 'cascadeCheck']
+    // set by the validation below: the errors of a check made through an API that is built from a mapping context
+    static Errors innerPlainErrors
+
+    static transients = ['innerSave', 'innerValidate', 'innerPlain', 'cascadeCheck']
 
     static constraints = {
         name(unique: true, validator: { String value, UncBook book ->
@@ -262,6 +295,14 @@ class UncBook {
             }
             if (book.innerValidate) {
                 new UncAudit(code: 'free').validate()
+            }
+            if (book.innerPlain) {
+                UncBook probe = new UncBook(name: 'onDefault')
+                UncBook.innerPlainErrors = new BeanPropertyBindingResult(probe, 'probe')
+                GormValidationApi<UncBook> noDatastore = new GormValidationApi<UncBook>(UncBook,
+                        UncBook.gormPersistentEntity.mappingContext, null)
+                noDatastore.validate(probe)
+                UncBook.innerPlainErrors = noDatastore.getErrors(probe)
             }
             if (book.cascadeCheck) {
                 // the validator of the entity is called directly, as the validation of an association cascades to it

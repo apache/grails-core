@@ -20,6 +20,10 @@ package org.grails.datastore.gorm
 
 import groovy.transform.CompileStatic
 
+import java.lang.ref.Reference
+import java.lang.ref.ReferenceQueue
+import java.lang.ref.WeakReference
+
 import jakarta.persistence.FlushModeType
 
 import org.springframework.context.ApplicationEventPublisher
@@ -56,7 +60,7 @@ class GormValidationApi<D> extends AbstractGormApi<D> {
     protected final MappingContext mappingContext
     protected final ApplicationEventPublisher eventPublisher
     protected final boolean hasDatastore
-    private final Map<Object, Errors> unattachedErrors = Collections.synchronizedMap(new WeakHashMap<Object, Errors>())
+    private final UnattachedErrors unattachedErrors = new UnattachedErrors()
 
     GormValidationApi(Class<D> persistentClass, Datastore datastore) {
         super(persistentClass, datastore)
@@ -307,6 +311,91 @@ class GormValidationApi<D> extends AbstractGormApi<D> {
         }
         else {
             readErrors(instance)?.hasErrors()
+        }
+    }
+
+    /**
+     * The errors of beans that cannot carry their own, when there is no session to keep them on. A bean is found by
+     * identity, as the session finds it, and held weakly; what is kept for it is the list of its errors and not the
+     * errors object, which holds the bean, so a bean that nothing else refers to is freed with its errors.
+     */
+    private static final class UnattachedErrors {
+
+        private final Map<IdentityKey, List<ObjectError>> errorsByBean = new HashMap<IdentityKey, List<ObjectError>>()
+        private final ReferenceQueue<Object> freed = new ReferenceQueue<Object>()
+
+        synchronized Errors get(Object bean) {
+            purge()
+            List<ObjectError> kept = errorsByBean.get(new IdentityKey(bean, null))
+            return kept == null ? null : view(bean, kept)
+        }
+
+        synchronized void put(Object bean, Errors errors) {
+            purge()
+            List<ObjectError> kept = new ArrayList<ObjectError>(errors.allErrors)
+            errorsByBean.put(new IdentityKey(bean, freed), kept)
+        }
+
+        /** the errors of the bean as an object that adds what it is given to the kept list too */
+        private Errors view(Object bean, List<ObjectError> kept) {
+            return new KeptErrors(bean, kept, this)
+        }
+
+        private void purge() {
+            Reference<?> reference
+            while ((reference = freed.poll()) != null) {
+                errorsByBean.remove(reference)
+            }
+        }
+
+        private static final class KeptErrors extends ValidationErrors {
+
+            private final List<ObjectError> kept
+            private final Object lock
+
+            KeptErrors(Object bean, List<ObjectError> kept, Object lock) {
+                super(bean)
+                this.kept = kept
+                this.lock = lock
+                for (ObjectError error : new ArrayList<ObjectError>(kept)) {
+                    super.addError(error)
+                }
+            }
+
+            @Override
+            void addError(ObjectError error) {
+                super.addError(error)
+                synchronized (lock) {
+                    kept.add(error)
+                }
+            }
+        }
+
+        private static final class IdentityKey extends WeakReference<Object> {
+
+            private final int hash
+
+            IdentityKey(Object bean, ReferenceQueue<Object> queue) {
+                super(bean, queue)
+                hash = System.identityHashCode(bean)
+            }
+
+            @Override
+            int hashCode() {
+                hash
+            }
+
+            @Override
+            boolean equals(Object other) {
+                if (this.is(other)) {
+                    return true
+                }
+                if (!(other instanceof IdentityKey)) {
+                    return false
+                }
+                Object mine = get()
+                return mine != null && mine.is(((IdentityKey) other).get())
+            }
         }
     }
 }

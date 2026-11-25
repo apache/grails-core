@@ -18,6 +18,8 @@
  */
 package org.grails.datastore.gorm.validation
 
+import java.lang.ref.WeakReference
+
 import org.springframework.validation.Errors
 import org.springframework.validation.Validator
 
@@ -86,6 +88,82 @@ class PlainBeanValidationWithoutDatastoreSpec extends Specification {
 
         then:
         !api.hasErrors(bean)
+    }
+
+    void 'two beans that are equal do not share their errors, as the session does not share them'() {
+        given:
+        GormValidationApi<PlainBean> api = api()
+        PlainBean validated = new ValueBean(name: '')
+        PlainBean equal = new ValueBean(name: '')
+
+        when:
+        api.validate(validated)
+
+        then:
+        validated == equal
+        api.hasErrors(validated)
+        !api.hasErrors(equal)
+    }
+
+    void 'a bean that is changed after it was validated keeps its errors'() {
+        given:
+        GormValidationApi<PlainBean> api = api()
+        PlainBean bean = new ValueBean(name: '')
+        api.validate(bean)
+
+        when:
+        bean.name = 'changed, and so another hash code'
+
+        then:
+        api.hasErrors(bean)
+        api.getErrors(bean).hasErrors()
+    }
+
+    void 'an error added to the errors of a bean is still there the next time they are read'() {
+        given:
+        GormValidationApi<PlainBean> api = api()
+        PlainBean bean = new PlainBean(name: 'ok')
+        api.validate(bean)
+
+        when:
+        api.getErrors(bean).rejectValue('name', 'added')
+
+        then:
+        api.hasErrors(bean)
+    }
+
+    void 'a bean that nothing refers to any more is freed with its errors'() {
+        given:
+        GormValidationApi<PlainBean> api = api()
+        WeakReference<PlainBean> reference = validatedBean(api)
+
+        when:
+        for (int attempt = 0; attempt < 20 && reference.get() != null; attempt++) {
+            System.gc()
+            Thread.sleep(50)
+        }
+
+        then:
+        reference.get() == null
+    }
+
+    private static WeakReference<PlainBean> validatedBean(GormValidationApi<PlainBean> api) {
+        PlainBean bean = new PlainBean(name: '')
+        api.validate(bean)
+        new WeakReference<PlainBean>(bean)
+    }
+
+    static class ValueBean extends PlainBean {
+
+        @Override
+        boolean equals(Object other) {
+            other instanceof ValueBean && other.name == name
+        }
+
+        @Override
+        int hashCode() {
+            Objects.hashCode(name)
+        }
     }
 
     static class PlainBean {
