@@ -24,6 +24,7 @@ import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.grails.datastore.mapping.query.Query
 import org.hibernate.Hibernate
+import org.hibernate.criterion.CriteriaSpecification
 import spock.lang.IgnoreIf
 
 import jakarta.persistence.criteria.JoinType
@@ -181,6 +182,36 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
         }
     }
 
+    void 'example API #api loads complete #path collections with typed #joinType and page #paging without an association sort'() {
+        given:
+        final first = new Team(name: 'Paged team').save(failOnError: true)
+        final second = new Team(name: 'Paged team').save(failOnError: true)
+        [first, second].eachWithIndex { Team team, int index ->
+            ['A', 'B', 'C'].each { String suffix -> savePlayer("Player ${index} ${suffix}", team) }
+        }
+        final expectedPlayers = [(first.id): ['Player 0 A', 'Player 0 B', 'Player 0 C'],
+                               (second.id): ['Player 1 A', 'Player 1 B', 'Player 1 C']]
+        final expectedIds = paging.offset ? [second.id] : paging.max || api in ['findWhere', 'find by example'] ? [first.id] : [first.id, second.id]
+        manager.session.clear()
+
+        when:
+        final result = query.call('Paged team', [sort: 'id', fetch: [(path): joinType]] + paging)
+        final results = result instanceof List ? result : [result]
+
+        then:
+        results*.id.unique() == expectedIds
+        results.every { it.players*.name.sort() == expectedPlayers[it.id] }
+
+        where:
+        [api, path, joinType, paging] << [
+                ['findAllWhere', 'findWhere', 'findAll by example', 'find by example'],
+                ['players', 'players.contract'],
+                [JoinType.LEFT, JoinType.INNER],
+                [[:], [max: 1], [max: 1, offset: 1], [offset: 1]],
+        ].combinations()
+        query = exampleQuery(api)
+    }
+
     void 'example API #api keeps #teamName through a nested LEFT sort with map #sortMap and pagination #paged'() {
         given:
         saveTeamWithAPlayerWithoutContract()
@@ -258,11 +289,10 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
         query = exampleQuery(api)
     }
 
-    void 'a criteria #ordering keeps the left join of #path from #request with pagination #paged'() {
+    void 'a criteria #ordering by #sortProperty keeps the left join of #path from #request with pagination #paged'() {
         given:
         saveTeamWithAPlayerWithoutContract()
         final arguments = paged ? [max: 10] : [:]
-        final sortProperty = path == 'players' ? 'players.name' : 'players.contract.salary'
         if (request == 'fetch') {
             arguments.fetch = [(path): JoinType.LEFT]
         }
@@ -298,10 +328,13 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
         results.find { it.name == 'Squad Team' }.players*.name.sort() == ['Squad Player A', 'Squad Player B', 'Squad Player without contract']
 
         where:
-        [path, request, ordering, paged] << [['players', 'players.contract'], ['fetch', 'before', 'after'], ['order', 'Query.Order', 'sort', 'sort map'], [false, true]].combinations()
+        [paths, request, ordering, paged] << [[['players', 'players.name'], ['players.contract', 'players.contract.salary'], ['players.contract', 'players.name']],
+                                            ['fetch', 'before', 'after'], ['order', 'Query.Order', 'sort', 'sort map'], [false, true]].combinations()
+        path = paths[0]
+        sortProperty = paths[1]
     }
 
-    void 'a requested left sort of #path keeps the complete collection on a small page at offset #offset'() {
+    void 'a requested left join of #path sorted by #sortProperty keeps the complete collection on a small page at offset #offset'() {
         given:
         saveTeamWithAPlayerWithoutContract()
 
@@ -316,14 +349,15 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
         results.first().players*.name.sort() == ['Squad Player A', 'Squad Player B', 'Squad Player without contract']
 
         where:
-        [path, offset] << [['players', 'players.contract'], [0, 1]].combinations()
-        sortProperty = path == 'players' ? 'players.name' : 'players.contract.salary'
+        [paths, offset] << [[['players', 'players.name'], ['players.contract', 'players.contract.salary'], ['players.contract', 'players.name']], [0, 1]].combinations()
+        path = paths[0]
+        sortProperty = paths[1]
     }
 
-    void 'a nested LEFT criteria sort respects the intermediate #request request'() {
+    void 'a nested LEFT criteria #sortForm by #sortProperty respects the intermediate #request request'() {
         given:
         saveTeamWithAPlayerWithoutContract()
-        final arguments = [sort: 'players.contract.salary']
+        final arguments = [sort: sortForm == 'map' ? [(sortProperty): 'asc', name: 'asc'] : sortProperty]
         if (request == 'fetch') {
             arguments.fetch = [players: 'lazy']
         }
@@ -347,12 +381,13 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
         results*.name.unique().sort() == (TEAMS_WITH_PLAYERS + 'Squad Team').sort()
 
         where:
-        request << ['inner', 'join', 'select', 'fetchMode', 'fetch']
+        [request, sortProperty, sortForm] << [['inner', 'join', 'select', 'fetchMode', 'fetch'], ['players.contract.salary', 'players.name'], ['string', 'map']].combinations()
     }
 
-    void 'a nested LEFT criteria sort retains an intermediate association predicate'() {
+    void 'a nested LEFT criteria #sortForm by #sortProperty retains an intermediate association predicate'() {
         when:
-        final results = Team.createCriteria().list(sort: 'players.contract.salary', fetch: ['players.contract': JoinType.LEFT]) {
+        final sort = sortForm == 'map' ? [(sortProperty): 'asc', name: 'asc'] : sortProperty
+        final results = Team.createCriteria().list(sort: sort, fetch: ['players.contract': JoinType.LEFT]) {
             or {
                 eq('name', 'Playerless First Team')
                 players { eq('name', 'Arsenal Player') }
@@ -361,6 +396,31 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
 
         then:
         results*.name == ['Arsenal First Team']
+
+        where:
+        [sortProperty, sortForm] << [['players.contract.salary', 'players.name'], ['string', 'map']].combinations()
+    }
+
+    void 'a nested LEFT #request keeps the intermediate alias join type for #sortForm by #sortProperty with left alias #leftAlias'() {
+        given:
+        final arguments = [sort: sortForm == 'map' ? [(sortProperty): 'asc', name: 'asc'] : sortProperty]
+        if (request == 'fetch') {
+            arguments.fetch = ['players.contract': JoinType.LEFT]
+        }
+
+        when:
+        final results = Team.createCriteria().list(arguments) {
+            createAlias('players', 'p', leftAlias ? CriteriaSpecification.LEFT_JOIN : CriteriaSpecification.INNER_JOIN)
+            if (request == 'join') {
+                join('players.contract', JoinType.LEFT)
+            }
+        }
+
+        then:
+        results*.name.sort() == (leftAlias ? ALL_TEAMS : TEAMS_WITH_PLAYERS)
+
+        where:
+        [request, sortProperty, sortForm, leftAlias] << [['fetch', 'join'], ['players.name', 'p.name'], ['string', 'map'], [false, true]].combinations()
     }
 
     void 'a nested LEFT to-one criteria #ordering keeps a missing nested association'() {
