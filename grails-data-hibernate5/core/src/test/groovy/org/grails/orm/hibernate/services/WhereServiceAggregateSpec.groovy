@@ -36,7 +36,7 @@ import org.grails.orm.hibernate.HibernateDatastore
  */
 class WhereServiceAggregateSpec extends Specification {
 
-    @Shared @AutoCleanup HibernateDatastore datastore = new HibernateDatastore(WsaReading)
+    @Shared @AutoCleanup HibernateDatastore datastore = new HibernateDatastore(WsaReading, WsaBase, WsaSub)
 
     @Shared WsaReadingService service
 
@@ -87,6 +87,46 @@ class WhereServiceAggregateSpec extends Specification {
         found(listOf(minimumQuery())) == [1]
     }
 
+    void "an aggregate in a where query of a method that names the base class is of the criteria passed to it: #function"() {
+        given: 'subclass quantities 1, 2 and 4, and base class quantities -50, 0 and 10'
+        WsaBase.withNewTransaction {
+            WsaBase.executeUpdate('delete from WsaBase')
+            [-50, 0, 10].each { new WsaBase(qty: it).save(failOnError: true, flush: true) }
+            [1, 2, 4].each { new WsaSub(qty: it).save(failOnError: true, flush: true) }
+        }
+
+        expect: 'the aggregate is of the three subclass rows, not of the six rows of the base class'
+        WsaBase.withNewTransaction { query(new DetachedCriteria<WsaBase>(WsaSub)).list() }*.qty.sort() == expected
+
+        where:
+        function | query                                    || expected
+        'avg'    | WhereServiceAggregateSpec.&aboveAverageOf || [4]
+        'max'    | WhereServiceAggregateSpec.&maximumOf      || [4]
+        'min'    | WhereServiceAggregateSpec.&minimumOf      || [1]
+        'sum'    | WhereServiceAggregateSpec.&belowTheSumOf  || [1, 2, 4]
+        'count'  | WhereServiceAggregateSpec.&atMostCountOf  || [1, 2]
+    }
+
+    static DetachedCriteria<WsaBase> aboveAverageOf(DetachedCriteria<WsaBase> criteria) {
+        criteria.where { qty > avg(qty) }
+    }
+
+    static DetachedCriteria<WsaBase> maximumOf(DetachedCriteria<WsaBase> criteria) {
+        criteria.where { qty == max(qty) }
+    }
+
+    static DetachedCriteria<WsaBase> minimumOf(DetachedCriteria<WsaBase> criteria) {
+        criteria.where { qty == min(qty) }
+    }
+
+    static DetachedCriteria<WsaBase> belowTheSumOf(DetachedCriteria<WsaBase> criteria) {
+        criteria.where { qty < sum(qty) }
+    }
+
+    static DetachedCriteria<WsaBase> atMostCountOf(DetachedCriteria<WsaBase> criteria) {
+        criteria.where { qty <= count(qty) }
+    }
+
     static DetachedCriteria<WsaReading> aboveAverageQuery() {
         WsaReading.where { qty > avg(qty) }
     }
@@ -124,6 +164,16 @@ class WhereServiceAggregateSpec extends Specification {
 class WsaReading {
 
     Integer qty
+}
+
+@Entity
+class WsaBase {
+
+    Integer qty
+}
+
+@Entity
+class WsaSub extends WsaBase {
 }
 
 @Service(WsaReading)
