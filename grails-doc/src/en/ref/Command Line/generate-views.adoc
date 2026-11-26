@@ -60,13 +60,12 @@ Flags:
 
 === JSON Views and a REST Controller
 
-// TOOLS-VERIFY: the four rules by which the scaffolding tools choose GSP or JSON views (TOOLS-DESIGN section 8; P3).
 In a REST API application and in a REST API plugin the command generates what the `rest-api` profile generated before Grails 9: JSON views in place of GSP views, and a controller for a REST resource in place of a controller for pages. Which of the two an application is given is decided as follows:
 
 * With `--views=json` it is JSON views and the REST controller, and with `--views=gsp` GSP views and the controller for pages, whatever the application has.
-* Without the option the features of the project decide, as the record of the `grails` command line has them (see link:{guidePath}commandLine.html#creatingProject[Creating a Grails Project]): a project with the feature `gsp` is given GSP views and the controller for pages, and one with the feature `views-json` and without `gsp` JSON views and the REST controller. That is a REST API application and a REST API plugin. A project with neither feature is given GSP views.
-* A project without a record, which the `grails` command line neither generated nor migrated, is given what its views are: GSP views when a file under `grails-app/views` ends with `.gsp`, and JSON views and the REST controller when none does and one ends with `.gson`.
-* Everywhere else it is GSP views and the controller for pages. An application that has both GSP and JSON views is therefore given GSP views, as before, unless the option asks for JSON views. `build.gradle` is not read: the tool runs without the class path of the application, and does not ask it.
+* Without the option, an application the command line generated or migrated, which has a record of its features, is given JSON views and the REST controller when it has the `views-json` feature and not the `gsp` feature. That is a REST API application and a REST API plugin. With the `gsp` feature, or with neither, it is given GSP views and the controller for pages, whatever files it has.
+* An application without that record is given JSON views and the REST controller when a file under `grails-app/views` ends with `.gson` and none ends with `.gsp`, and GSP views and the controller for pages otherwise.
+* Neither the class path of the application nor its build file is read. An application that has both GSP and JSON views is therefore given GSP views, as before, unless the option asks for JSON views.
 
 link:{commandLineRefFromRef}generate-controller.html[generate-controller], link:{commandLineRefFromRef}generate-views.html[generate-views] and link:{commandLineRefFromRef}generate-all.html[generate-all] decide it the same way and take the same option, so a controller and views that are generated one after the other fit together.
 
