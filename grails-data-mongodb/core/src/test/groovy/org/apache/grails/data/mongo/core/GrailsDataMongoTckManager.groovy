@@ -22,6 +22,7 @@ import groovy.util.logging.Slf4j
 
 import com.mongodb.BasicDBObject
 import com.mongodb.client.MongoClient
+import com.mongodb.client.MongoClients
 import com.mongodb.client.MongoDatabase
 import org.bson.Document
 import org.testcontainers.containers.MongoDBContainer
@@ -35,6 +36,7 @@ import grails.core.GrailsApplication
 import grails.gorm.validation.PersistentEntityValidator
 import org.apache.grails.data.testing.tck.base.GrailsDataTckManager
 import org.apache.grails.testing.mongo.AbstractMongoGrailsExtension
+import org.apache.grails.testing.mongo.StartMongoGrailsUnitExtension
 import org.grails.datastore.bson.query.BsonQuery
 import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.gorm.mongo.Birthday
@@ -55,6 +57,8 @@ import org.grails.datastore.mapping.query.Query
 @Slf4j
 class GrailsDataMongoTckManager extends GrailsDataTckManager {
 
+    private static final List<String> SYSTEM_DATABASES = ['admin', 'config', 'local']
+
     MongoDBContainer mongoDBContainer
 
     MongoDatastore mongoDatastore
@@ -69,7 +73,8 @@ class GrailsDataMongoTckManager extends GrailsDataTckManager {
     @Override
     void setupSpec() {
         super.setupSpec()
-        mongoDBContainer = MongoContainers.shared()
+        // shared by the specs of this test worker; the extension stops it when the test run ends
+        mongoDBContainer = StartMongoGrailsUnitExtension.sharedContainer
 
         configuration = [
                 (MongoSettings.SETTING_DATABASE_NAME): 'test',
@@ -82,8 +87,22 @@ class GrailsDataMongoTckManager extends GrailsDataTckManager {
     @Override
     void cleanupSpec() {
         super.cleanupSpec()
-        // the container is shared by the specs of this JVM, so the next one finds the server empty
-        MongoContainers.dropUserDatabases(mongoDBContainer)
+        // the container is shared by the specs of this test worker, so the next one finds the server empty
+        dropUserDatabases()
+    }
+
+    private void dropUserDatabases() {
+        MongoClient client = MongoClients.create(mongoDBContainer.replicaSetUrl)
+        try {
+            for (String name : client.listDatabaseNames()) {
+                if (!(name in SYSTEM_DATABASES)) {
+                    client.getDatabase(name).drop()
+                }
+            }
+        }
+        finally {
+            client.close()
+        }
     }
 
     @Override

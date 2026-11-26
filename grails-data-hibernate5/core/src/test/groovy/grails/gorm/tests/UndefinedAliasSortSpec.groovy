@@ -89,6 +89,18 @@ class UndefinedAliasSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckMa
         'name' | 'name.name'      | ['Manchester United First Team', 'Chelsea First Team', 'Arsenal First Team']
     }
 
+    void 'a one-row descending root-alias page returns Chelsea before Arsenal'() {
+        given:
+        final criteria = new DetachedCriteria(Team, 't').inList('name', ['Arsenal First Team', 'Chelsea First Team'])
+
+        when:
+        final results = criteria.list(max: 1, sort: 't.name', order: 'desc')
+
+        then:
+        results*.name == ['Chelsea First Team']
+        results.totalCount == 2
+    }
+
     void 'an association path keeps its meaning when the root alias has the same name'() {
         given:
         new Team(name: 'Alias Z', club: Club.findByName('Arsenal')).save(failOnError: true)
