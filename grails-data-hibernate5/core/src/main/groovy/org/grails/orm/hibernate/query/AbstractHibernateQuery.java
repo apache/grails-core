@@ -113,6 +113,17 @@ public abstract class AbstractHibernateQuery extends Query {
     protected int aliasCount;
     protected Map<String, CriteriaAndAlias> createdAssociationPaths = new HashMap<>();
     /**
+     * The joins of the query by their association path from the root entity. {@link #createdAssociationPaths}
+     * also holds each join under its alias, so an alias named like an association, as in
+     * <code>createAlias('players', 'club')</code>, would stand for the join of that association there.
+     */
+    private final Map<String, CriteriaAndAlias> joinsByPath = new HashMap<>();
+    /**
+     * Whether the query made a right join of an association to a single instance. Such a join returns
+     * a row without an instance for each associated instance that no instance refers to.
+     */
+    private boolean rightJoinMade;
+    /**
      * The joins that the query needs but has not made yet, in the order in which it came to need
      * them. They are made by {@link #applyDeferredJoins()}, when the query is executed.
      */
@@ -579,7 +590,7 @@ public abstract class AbstractHibernateQuery extends Query {
                 }
             }
         }
-        CriteriaAndAlias join = createdAssociationPaths.get(associationPath);
+        CriteriaAndAlias join = joinsByPath.get(associationPath);
         return join != null ? join : registerJoin(parentCriteria, associationPath, alias);
     }
 
@@ -588,19 +599,22 @@ public abstract class AbstractHibernateQuery extends Query {
      * query already has for the path is reused.
      */
     private CriteriaAndAlias getOrRegisterJoinAt(String associationPath, String associationName) {
-        CriteriaAndAlias join = createdAssociationPaths.get(associationPath);
+        CriteriaAndAlias join = joinsByPath.get(associationPath);
         return join != null ? join : registerJoin(criteria, associationPath, generateAlias(associationName));
     }
 
     /**
      * Registers a join under its association path and its alias. The alias can be used at once, in
      * criteria, projections and orders. The join itself is made by {@link #applyDeferredJoins()}.
+     * An alias that the query already has keeps standing for its own join when an association with
+     * the same name is joined, as it does for Hibernate.
      */
     private CriteriaAndAlias registerJoin(Criteria parentCriteria, String associationPath, String alias) {
         CriteriaAndAlias join = parentCriteria != null ?
                 new CriteriaAndAlias(parentCriteria, alias, associationPath) :
                 new CriteriaAndAlias(detachedCriteria, alias, associationPath);
-        createdAssociationPaths.put(associationPath, join);
+        joinsByPath.put(associationPath, join);
+        createdAssociationPaths.putIfAbsent(associationPath, join);
         createdAssociationPaths.put(alias, join);
         pendingJoins.add(join);
         return join;
@@ -633,6 +647,9 @@ public abstract class AbstractHibernateQuery extends Query {
             joinType = JoinType.INNER;
         }
         org.hibernate.sql.JoinType hibernateJoinType = resolveJoinType(joinType);
+        if (hibernateJoinType == org.hibernate.sql.JoinType.RIGHT_OUTER_JOIN && join.criteria != null) {
+            rightJoinMade = true;
+        }
         if (join.criteria != null) {
             CriteriaImpl root = criteria instanceof CriteriaImpl ? (CriteriaImpl) criteria : null;
             boolean pagedIntermediateCollection = collection && !join.usedByCriteria && hasRequestedLeftJoinBelow(associationPath) && root != null &&
@@ -858,7 +875,7 @@ public abstract class AbstractHibernateQuery extends Query {
                 // the first association of a path is joined even for its identifier, as it always has been
                 return currentAlias + '.' + token + '.' + tokens[i + 1];
             }
-            boolean joined = createdAssociationPaths.containsKey(path);
+            boolean joined = joinsByPath.containsKey(path);
             CriteriaAndAlias join = getOrRegisterJoinAt(path, token);
             if (!joined && !leftJoin && !hasRequestedLeftJoinBelow(path)) {
                 // without the leftJoinAssociationSort setting, an association is joined for a sort as it is
@@ -977,7 +994,7 @@ public abstract class AbstractHibernateQuery extends Query {
         int unjoinedCollection = -1;
         for (int i = 0; i < tokens.length; i++) {
             paths[i] = i == 0 ? tokens[i] : paths[i - 1] + '.' + tokens[i];
-            if (unjoinedCollection < 0 && associations[i] instanceof ToMany && !createdAssociationPaths.containsKey(paths[i])) {
+            if (unjoinedCollection < 0 && associations[i] instanceof ToMany && !joinsByPath.containsKey(paths[i])) {
                 unjoinedCollection = i;
             }
         }
@@ -1209,7 +1226,9 @@ public abstract class AbstractHibernateQuery extends Query {
         }
 
         applyDeferredJoins();
-        boolean keepNullRows = joinTypes.containsValue(JoinType.RIGHT) &&
+        // a right join of a collection is made as an inner join, and a path through a collection is
+        // restricted with a subquery, so only a right join of a single instance returns rows without one
+        boolean keepNullRows = rightJoinMade &&
                 (hibernateProjectionList == null || hibernateProjectionList.isEmpty());
         if (keepNullRows) {
             criteria.setResultTransformer(CriteriaSpecification.ROOT_ENTITY);
