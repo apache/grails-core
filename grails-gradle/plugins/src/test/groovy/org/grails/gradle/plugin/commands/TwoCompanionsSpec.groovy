@@ -24,13 +24,14 @@ import groovy.json.JsonSlurper
 import groovy.xml.XmlSlurper
 
 import org.gradle.testkit.runner.BuildResult
+import spock.lang.Unroll
 
 /**
  * A plugin with a tool of each kind publishes two companions: {@code -cli}, with the tools the build
  * runs, which depends on the plugin and on {@code -cli-standalone}, and {@code -cli-standalone}, with the
  * standalone tools, which depends on the tool API and never on the plugin. An application that depends on
  * the plugin gets each in the scope of its kind without a line, and one that takes only the standalone
- * tools has nothing of the plugin on any class path.
+ * tools has nothing of the plugin on any class path. Each companion has a module name of its own.
  */
 class TwoCompanionsSpec extends CommandProjectSpecification {
 
@@ -69,6 +70,27 @@ class TwoCompanionsSpec extends CommandProjectSpecification {
 
         and: 'the plugin itself depends on neither'
         !published('my-plugin', '.pom').text.contains('-cli')
+    }
+
+    @Unroll
+    def "each companion has a module name of its own: #declared"() {
+        given:
+        setupCompanions()
+        new File(projectDir, 'my-plugin/build.gradle') << "\ncliArtifact {\n${declared}\n}\n"
+
+        when:
+        executeTask(':my-plugin:cliJar', [':my-plugin:standaloneJar'])
+
+        then:
+        builtModuleName('my-plugin-cli') == cli
+        builtModuleName('my-plugin-cli-standalone') == standalone
+
+        where:
+        declared                                                                                  | cli                 | standalone
+        "automaticModuleName = 'com.example.tools'"                                               | 'com.example.tools' | 'com.example.tools.standalone'
+        "automaticModuleName = 'com.example.tools'\nstandaloneAutomaticModuleName = 'com.example.files'" | 'com.example.tools' | 'com.example.files'
+        "standaloneAutomaticModuleName = 'com.example.files'"                                     | null                | 'com.example.files'
+        ''                                                                                        | null                | null
     }
 
     def "an application of the same build that depends on the plugin gets each companion in the scope of its kind, without a line"() {
@@ -203,6 +225,13 @@ class TwoCompanionsSpec extends CommandProjectSpecification {
     private Set<String> entries(String artifact) {
         new JarFile(published(artifact, '.jar')).withCloseable { JarFile jar ->
             jar.entries().toList().findAll { !it.directory }*.name as Set<String>
+        }
+    }
+
+    // the module name of a jar the plugin built, or null when it has none
+    private String builtModuleName(String artifact) {
+        new JarFile(new File(projectDir, "my-plugin/build/libs/${artifact}-1.0.0-SNAPSHOT.jar")).withCloseable { JarFile jar ->
+            jar.manifest.mainAttributes.getValue('Automatic-Module-Name')
         }
     }
 

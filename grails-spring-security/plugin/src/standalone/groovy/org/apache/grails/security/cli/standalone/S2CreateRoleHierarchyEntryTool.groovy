@@ -17,7 +17,7 @@
  *  under the License.
  */
 
-package org.apache.grails.security.cli
+package org.apache.grails.security.cli.standalone
 
 import groovy.transform.CompileStatic
 
@@ -28,23 +28,23 @@ import org.apache.grails.core.cli.StandaloneTool
 import org.apache.grails.core.cli.ToolSupport
 
 /**
- * Creates a persistent token domain class for the Spring Security Core plugin.
- * Usage: <code>s2-create-persistent-token DOMAIN_CLASS_NAME</code>
+ * Creates a domain class for a persistent role hierarchy for the Spring Security Core plugin.
+ * Usage: <code>s2-create-role-hierarchy-entry DOMAIN_CLASS_NAME</code>
  *
- * For example: <code>s2-create-persistent-token com.yourapp.PersistentLogin</code>
+ * For example: <code>s2-create-role-hierarchy-entry com.yourapp.RoleHierarchyEntry</code>
  *
  * @since 6.0.0
  */
 @CompileStatic
-class S2CreatePersistentTokenTool implements StandaloneTool, ToolSupport, CommandLineHelper, SkipBootstrap {
+class S2CreateRoleHierarchyEntryTool implements StandaloneTool, ToolSupport, CommandLineHelper, SkipBootstrap {
 
     private static final String USAGE_MESSAGE = '''
-s2-create-persistent-token <domain-class-name>
+s2-create-role-hierarchy-entry <domain-class-name>
 
-Example: s2-create-persistent-token com.yourapp.PersistentLogin
+Example: s2-create-role-hierarchy-entry com.yourapp.RoleHierarchyEntry
 '''
 
-    String description = 'Creates a persistent token domain class for the Spring Security Core plugin'
+    String description = 'Creates a domain class for a persistent role hierarchy for the Spring Security Core plugin'
 
     @Delegate
     ConsoleLogger consoleLogger = GrailsConsole.getInstance()
@@ -57,15 +57,14 @@ Example: s2-create-persistent-token com.yourapp.PersistentLogin
         }
         final String domainClass = "${domainModel.packageName}.${domainModel.simpleName}"
 
-        addStatus("\nCreating persistent token class ${domainClass}")
-        render(template: template('PersistentLogin.groovy.template'),
+        addStatus("\nCreating role hierarchy entry class ${domainClass}")
+        render(template: template('RoleHierarchyEntry.groovy.template'),
                 destination: file("grails-app/domain/${domainModel.packagePath}/${domainModel.simpleName}.groovy"),
                 model: domainModel,
                 overwrite: false)
 
         String path = appendConfig([
-                'grails.plugin.springsecurity.rememberMe.persistent': true,
-                'grails.plugin.springsecurity.rememberMe.persistentToken.domainClassName': domainClass
+                'grails.plugin.springsecurity.roleHierarchyEntryClassName': domainClass
         ] as Map<String, Object>)
         addStatus("\nYour ${path} has been updated with the name of the class; please verify that the values are correct.")
         return SUCCESS

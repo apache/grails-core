@@ -36,6 +36,7 @@ import org.apache.grails.gradle.model.cli.ToolDescriptor
  * tool works on the files of the project only, and is a standalone tool in the {@code -cli-standalone} companion of
  * its plugin, which has the templates it renders and depends on the tool API and not on the plugin. Each {@code -cli}
  * brings its plugin and the standalone tools of the plugin, and has no tool classes when its plugin has no other tool.
+ * The two companions of a plugin have module names of their own and no package in common.
  *
  * <p>The build hands over the jar, the POM and the module metadata of each companion of the four plugins as it
  * publishes them.</p>
@@ -86,6 +87,31 @@ class SecurityToolsLocationSpec extends Specification {
             classes.size() == 1 && ApplicationTool.isAssignableFrom(loader.loadClass(classes[0])) &&
                     !StandaloneTool.isAssignableFrom(loader.loadClass(classes[0]))
         }
+    }
+
+    def "the standalone tools of grails-spring-security and the helpers s2-quickstart shares with them are in a package of their own"() {
+        expect:
+        packages(companion('grails-spring-security', 'cli', 'jar')) == ['org.apache.grails.security.cli'] as Set
+        packages(companion('grails-spring-security', 'cliStandalone', 'jar')) == ['org.apache.grails.security.cli.standalone'] as Set
+    }
+
+    @Unroll
+    def "#plugin-cli and #plugin-cli-standalone have module names of their own and no package in common"() {
+        given:
+        File cli = companion(plugin, 'cli', 'jar')
+        File standalone = companion(plugin, 'cliStandalone', 'jar')
+
+        expect:
+        moduleName(cli) == module
+        moduleName(standalone) == "${module}.standalone"
+        packages(cli).intersect(packages(standalone)).isEmpty()
+
+        where:
+        plugin                          | module
+        'grails-spring-security'        | 'org.apache.grails.security.cli'
+        'grails-spring-security-acl'    | 'org.apache.grails.security.acl.cli'
+        'grails-spring-security-oauth2' | 'org.apache.grails.security.oauth2.cli'
+        'grails-spring-security-ui'     | 'org.apache.grails.security.ui.cli'
     }
 
     @Unroll
@@ -210,6 +236,16 @@ class SecurityToolsLocationSpec extends Specification {
 
     private static List<String> entries(File jar) {
         new JarFile(jar).withCloseable { JarFile archive -> archive.entries()*.name }
+    }
+
+    // the packages of the classes in a jar
+    private static Set<String> packages(File jar) {
+        entries(jar).findAll { String entry -> entry.endsWith('.class') && !entry.startsWith('META-INF/') && entry.contains('/') }
+                .collect { String entry -> entry.substring(0, entry.lastIndexOf('/')).replace('/', '.') }.toSet()
+    }
+
+    private static String moduleName(File jar) {
+        new JarFile(jar).withCloseable { JarFile archive -> archive.manifest.mainAttributes.getValue('Automatic-Module-Name') }
     }
 
     private static List<String> pomDependencies(File pom) {

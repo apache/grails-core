@@ -17,7 +17,7 @@
  *  under the License.
  */
 
-package org.apache.grails.security.cli
+package org.apache.grails.security.cli.standalone
 
 import grails.build.logging.GrailsConsole
 import grails.codegen.model.Model

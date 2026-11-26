@@ -53,6 +53,16 @@ abstract class CliArtifactExtension {
     abstract Property<String> getAutomaticModuleName()
 
     /**
+     * The optional {@code Automatic-Module-Name} of the companion with the standalone tools; defaults to
+     * {@link #getAutomaticModuleName} followed by {@code .standalone} (e.g.
+     * {@code com.example.myplugin.cli.standalone}), and is left out when neither is set. Two jars on one
+     * module path cannot have the same module name, nor a package each.
+     *
+     * @since 9.0
+     */
+    abstract Property<String> getStandaloneAutomaticModuleName()
+
+    /**
      * Whether the plugin adds the default dependencies of the companions — to {@code cliApi} the plugin
      * project's own runtime classes, the {@code org.apache.grails:grails-core-cli} tool API and, when the
      * plugin has standalone tools, its own {@code -cli-standalone}; to {@code standaloneApi} the tool API

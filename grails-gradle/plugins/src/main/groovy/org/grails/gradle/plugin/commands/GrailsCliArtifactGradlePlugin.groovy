@@ -90,6 +90,8 @@ import org.apache.grails.gradle.publish.GrailsPublishExtension
  * <pre>
  * cliArtifact {
  *     automaticModuleName = 'com.example.myplugin.cli'
+ *     // the default: the name above followed by .standalone
+ *     standaloneAutomaticModuleName = 'com.example.myplugin.cli.standalone'
  * }
  * </pre>
  *
@@ -138,6 +140,7 @@ abstract class GrailsCliArtifactGradlePlugin implements Plugin<Project> {
         extension.artifactId.convention(project.provider { "${project.name}${ToolBuildNames.CLI_ARTIFACT_SUFFIX}" as String })
         extension.standaloneArtifactId.convention(project.provider { "${project.name}${ToolBuildNames.CLI_STANDALONE_ARTIFACT_SUFFIX}" as String })
         extension.defaultDependencies.convention(true)
+        extension.standaloneAutomaticModuleName.convention(extension.automaticModuleName.map { String name -> "${name}.standalone" as String })
 
         // the source sets every Grails project has for its tools, which the Grails Gradle plugin has made already where it is applied
         SourceSetContainer sourceSets = project.extensions.getByType(SourceSetContainer)
@@ -284,8 +287,8 @@ abstract class GrailsCliArtifactGradlePlugin implements Plugin<Project> {
             cliIntegrationTestSourceSet.resources.srcDir(sharedResources)
         }
 
-        nameCompanionJar(project, cliSourceSet, extension.artifactId, extension)
-        nameCompanionJar(project, standaloneSourceSet, extension.standaloneArtifactId, extension)
+        nameCompanionJar(project, cliSourceSet, extension.artifactId, extension.automaticModuleName)
+        nameCompanionJar(project, standaloneSourceSet, extension.standaloneArtifactId, extension.standaloneAutomaticModuleName)
 
         project.pluginManager.withPlugin('org.apache.grails.gradle.grails-publish') {
             project.extensions.configure(GrailsPublishExtension) { GrailsPublishExtension gpe ->
@@ -365,14 +368,14 @@ abstract class GrailsCliArtifactGradlePlugin implements Plugin<Project> {
 
     // the jar of a companion is the primary artifact of its own coordinate — published unclassified (a classifier
     // would leave the publication with pom packaging and no jar for Maven consumers); the base name keeps the local
-    // file distinct from the main jar
-    private static void nameCompanionJar(Project project, SourceSet sourceSet, Property<String> artifactId, CliArtifactExtension extension) {
+    // file distinct from the main jar. Each companion has a module name of its own, as two jars cannot share one
+    private static void nameCompanionJar(Project project, SourceSet sourceSet, Property<String> artifactId, Property<String> moduleName) {
         project.tasks.named(sourceSet.jarTaskName, Jar).configure { Jar jar ->
             jar.archiveBaseName.set(artifactId)
             jar.archiveClassifier.set('')
-            jar.manifest.attributes('Automatic-Module-Name': extension.automaticModuleName.orElse(''))
+            jar.manifest.attributes('Automatic-Module-Name': moduleName.orElse(''))
             jar.doFirst {
-                if (!extension.automaticModuleName.present) {
+                if (!moduleName.present) {
                     jar.manifest.attributes.remove('Automatic-Module-Name')
                 }
             }

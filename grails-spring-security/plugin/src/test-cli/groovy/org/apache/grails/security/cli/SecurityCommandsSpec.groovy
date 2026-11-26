@@ -37,6 +37,8 @@ import org.apache.grails.core.cli.ToolSupport
 import org.apache.grails.core.cli.io.FileSystemInteractionImpl
 import org.apache.grails.core.cli.script.ScriptConsole
 import org.apache.grails.core.cli.template.TemplateRendererImpl
+import org.apache.grails.security.cli.standalone.S2CreatePersistentTokenTool
+import org.apache.grails.security.cli.standalone.S2CreateRoleHierarchyEntryTool
 import org.grails.build.parsing.CommandLineParser
 import org.grails.config.CodeGenConfig
 import org.grails.config.PropertySourcesConfig

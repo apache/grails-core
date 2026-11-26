@@ -26,12 +26,14 @@ import groovy.transform.CompileStatic
 
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.Task
 import org.gradle.api.file.DuplicatesStrategy
 import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.SourceSetContainer
+import org.gradle.api.tasks.TaskProvider
 import org.gradle.api.tasks.bundling.AbstractArchiveTask
 import org.gradle.api.tasks.bundling.Jar
 import org.gradle.api.tasks.compile.GroovyCompile
@@ -81,9 +83,39 @@ class CompilePlugin implements Plugin<Project> {
     private static void configureCompile(Project project) {
         configureJavaVersion(project)
         configureJars(project)
+        configureCompanionPackages(project)
         configureCompiler(project)
         configureCallSiteModule(project)
         configureReproducible(project)
+    }
+
+    /**
+     * Registers {@link CompanionPackagesTask} for a module that publishes the companions of its tools, which
+     * fails when a package is in two of the jars of the module: the runtime jar, {@code -cli} and
+     * {@code -cli-standalone}. It runs with {@code check} and before the tests of the tools,
+     * {@code testCli}.
+     */
+    private static void configureCompanionPackages(Project project) {
+        project.pluginManager.withPlugin(SbomPlugin.CLI_ARTIFACT_PLUGIN_ID) {
+            TaskProvider<CompanionPackagesTask> packages = project.tasks.register(CompanionPackagesTask.TASK_NAME, CompanionPackagesTask) {
+                CompanionPackagesTask task ->
+                    task.group = 'verification'
+                    task.description = 'Fails when a package is in two of the jars of the module: the runtime jar and the companions of its tools.'
+                    task.projectPath.set(project.path)
+                    for (String jarTask : ['jar', 'cliJar', 'standaloneJar']) {
+                        if (project.tasks.names.contains(jarTask)) {
+                            task.jars.from(project.tasks.named(jarTask, Jar).flatMap { Jar jar -> jar.archiveFile })
+                        }
+                    }
+                    task.report.convention(project.layout.buildDirectory.file('reports/companion-packages/packages.txt'))
+            }
+            project.tasks.named('check').configure { Task check ->
+                check.dependsOn(packages)
+            }
+            project.tasks.matching { Task task -> task.name == 'testCli' }.configureEach { Task testCli ->
+                testCli.dependsOn(packages)
+            }
+        }
     }
 
     /**

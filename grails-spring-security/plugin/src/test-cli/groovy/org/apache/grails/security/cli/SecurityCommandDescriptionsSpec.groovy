@@ -24,6 +24,8 @@ import org.apache.grails.core.cli.StandaloneTool
 import spock.lang.Specification
 
 import org.apache.grails.core.cli.GrailsTool
+import org.apache.grails.security.cli.standalone.S2CreatePersistentTokenTool
+import org.apache.grails.security.cli.standalone.S2CreateRoleHierarchyEntryTool
 
 /**
  * What the list of commands shows for the commands of the Spring Security Core plugin: the names the scripts

@@ -26,6 +26,9 @@ import grails.build.logging.GrailsConsole
 import grails.codegen.model.Model
 import org.apache.grails.core.cli.ApplicationTool
 import org.apache.grails.core.cli.ToolSupport
+import org.apache.grails.security.cli.standalone.ApplicationConfigAppender
+import org.apache.grails.security.cli.standalone.CommandLineHelper
+import org.apache.grails.security.cli.standalone.SkipBootstrap
 
 /**
  * Creates domain classes and updates config settings for the Spring Security plugin.
