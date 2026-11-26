@@ -515,7 +515,7 @@ class GrailsMockHttpServletRequest extends MockHttpServletRequest implements Mul
 
     /**
      * Simulates Spring's {@code FormContentFilter}: parses an {@code application/x-www-form-urlencoded}
-     * body of a {@code PUT}, {@code PATCH} or {@code DELETE} request into request parameters, so a mock
+     * body of a {@code PUT}, {@code PATCH}, {@code DELETE} or {@code QUERY} request into request parameters, so a mock
      * request reflects what application code sees after that filter has run in a real deployment. Runs
      * once, the first time a non-empty form body is observed on parameter access.
      */
@@ -524,7 +524,7 @@ class GrailsMockHttpServletRequest extends MockHttpServletRequest implements Mul
             return
         }
         String httpMethod = getMethod()
-        if (httpMethod != 'PUT' && httpMethod != 'PATCH' && httpMethod != 'DELETE') {
+        if (!(httpMethod in ['PUT', 'PATCH', 'DELETE', 'QUERY'])) {
             return
         }
         String currentContentType = getContentType()

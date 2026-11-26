@@ -38,6 +38,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.ApplicationEvent;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.core.env.PropertyResolver;
 
 import org.grails.datastore.gorm.timestamp.AuditorAware;
 import org.grails.datastore.gorm.timestamp.DefaultTimestampProvider;
@@ -45,7 +48,10 @@ import org.grails.datastore.gorm.timestamp.TimestampProvider;
 import org.grails.datastore.mapping.config.AuditMetadataType;
 import org.grails.datastore.mapping.config.Entity;
 import org.grails.datastore.mapping.config.Settings;
+import org.grails.datastore.mapping.core.AbstractDatastore;
 import org.grails.datastore.mapping.core.Datastore;
+import org.grails.datastore.mapping.core.connections.ConnectionSources;
+import org.grails.datastore.mapping.core.connections.ConnectionSourcesProvider;
 import org.grails.datastore.mapping.engine.EntityAccess;
 import org.grails.datastore.mapping.engine.event.AbstractPersistenceEvent;
 import org.grails.datastore.mapping.engine.event.AbstractPersistenceEventListener;
@@ -89,11 +95,31 @@ public class AutoTimestampEventListener extends AbstractPersistenceEventListener
     private final ThreadLocal<DisabledTimestamps> disabledLastUpdated = new ThreadLocal<>();
 
     private TimestampProvider timestampProvider = new DefaultTimestampProvider();
-    private AuditorAware<?> auditorAware;
+    private volatile AuditorAware<?> auditorAware;
 
+    // Whether auditorAware holds the outcome of a lookup, or a value that was set; until then it is looked up from
+    // the application context of the datastore when an entity is saved.
+    private volatile boolean auditorAwareResolved;
+
+    // Guards the writes of auditorAware and auditorAwareResolved, so that an auditor set while a lookup runs is not
+    // replaced by what the lookup finds.
+    private final Object auditorAwareLock = new Object();
+
+    /**
+     * Creates the listener of the datastore, which reads {@link Settings#SETTING_AUTO_TIMESTAMP_INSERT_OVERWRITE} and
+     * {@link Settings#SETTING_AUTO_TIMESTAMP_CACHE_ANNOTATIONS} from the datastore's configuration. Unless an
+     * {@link AuditorAware} is set, or the listener is given an application context, it looks the auditor up in the
+     * application context of the datastore when an entity is first saved.
+     *
+     * @param datastore The datastore whose entities the listener handles
+     */
     public AutoTimestampEventListener(final Datastore datastore) {
         super(datastore);
 
+        // Only a listener that is a Spring bean gets the @Value settings injected, and that is the listener of the
+        // default connection only; the listener of every other connection, and of a tenant's database or schema,
+        // takes them from the configuration of its datastore.
+        applySettings(datastore);
         MappingContext mappingContext = datastore.getMappingContext();
         initForMappingContext(mappingContext);
     }
@@ -106,9 +132,57 @@ public class AutoTimestampEventListener extends AbstractPersistenceEventListener
 
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+        // Spring calls this after it has set the bean's properties, so an auditor the listener was configured with
+        // is kept when the context has none of its own.
+        AuditorAware<?> contextAuditorAware = lookUpAuditorAware(applicationContext);
+        synchronized (auditorAwareLock) {
+            if (contextAuditorAware != null) {
+                this.auditorAware = contextAuditorAware;
+            }
+            this.auditorAwareResolved = true;
+        }
+    }
+
+    private void applySettings(Datastore datastore) {
+        if (!(datastore instanceof ConnectionSourcesProvider<?, ?> connectionSourcesProvider)) {
+            return;
+        }
+        ConnectionSources<?, ?> connectionSources = connectionSourcesProvider.getConnectionSources();
+        PropertyResolver configuration = connectionSources != null ? connectionSources.getBaseConfiguration() : null;
+        if (configuration != null) {
+            insertOverwrite = configuration.getProperty(Settings.SETTING_AUTO_TIMESTAMP_INSERT_OVERWRITE, Boolean.class, insertOverwrite);
+            cacheAutoTimestampAnnotations = configuration.getProperty(Settings.SETTING_AUTO_TIMESTAMP_CACHE_ANNOTATIONS, Boolean.class, cacheAutoTimestampAnnotations);
+        }
+    }
+
+    private static AuditorAware<?> lookUpAuditorAware(ApplicationContext applicationContext) {
         try {
-            this.auditorAware = applicationContext.getBean(AuditorAware.class);
-        } catch (BeansException ignore) {}
+            return applicationContext.getBean(AuditorAware.class);
+        } catch (BeansException ignore) {
+            return null;
+        }
+    }
+
+    /**
+     * @return the application context of the datastore, once it is active, from the datastore or else from its
+     * event publisher, or {@code null}
+     */
+    private ApplicationContext activeApplicationContextOfDatastore() {
+        ApplicationContext applicationContext = null;
+        if (datastore instanceof AbstractDatastore abstractDatastore) {
+            applicationContext = abstractDatastore.getApplicationContext();
+        }
+        if (applicationContext == null && datastore != null) {
+            ApplicationEventPublisher publisher = datastore.getApplicationEventPublisher();
+            if (publisher instanceof ConfigurableApplicationContextEventPublisher contextEventPublisher) {
+                applicationContext = contextEventPublisher.getApplicationContext();
+            }
+        }
+        if (applicationContext instanceof ConfigurableApplicationContext configurableApplicationContext &&
+                !configurableApplicationContext.isActive()) {
+            return null;
+        }
+        return applicationContext;
     }
 
     protected void initForMappingContext(MappingContext mappingContext) {
@@ -163,8 +237,9 @@ public class AutoTimestampEventListener extends AbstractPersistenceEventListener
         }
 
         // Handle auditor fields
-        if (auditorAware != null) {
-            Optional<?> currentAuditor = auditorAware.getCurrentAuditor();
+        AuditorAware<?> currentAuditorAware = getAuditorAware();
+        if (currentAuditorAware != null) {
+            Optional<?> currentAuditor = currentAuditorAware.getCurrentAuditor();
             if (currentAuditor.isPresent()) {
                 Object auditor = currentAuditor.get();
 
@@ -209,8 +284,9 @@ public class AutoTimestampEventListener extends AbstractPersistenceEventListener
         }
 
         // Handle auditor fields
-        if (auditorAware != null) {
-            Optional<?> currentAuditor = auditorAware.getCurrentAuditor();
+        AuditorAware<?> currentAuditorAware = getAuditorAware();
+        if (currentAuditorAware != null) {
+            Optional<?> currentAuditor = currentAuditorAware.getCurrentAuditor();
             if (currentAuditor.isPresent()) {
                 Object auditor = currentAuditor.get();
 
@@ -307,12 +383,33 @@ public class AutoTimestampEventListener extends AbstractPersistenceEventListener
         this.timestampProvider = timestampProvider;
     }
 
+    /**
+     * @return the auditor that the auditor properties are set from: the one that was set, the one of the application
+     * context the listener was given, or else the one of the datastore's application context, which is looked up
+     * once that context is active; {@code null} when there is none
+     */
     public AuditorAware<?> getAuditorAware() {
+        if (!auditorAwareResolved) {
+            ApplicationContext applicationContext = activeApplicationContextOfDatastore();
+            if (applicationContext != null) {
+                // The lookup runs outside the lock, and what it finds is kept only if no auditor was set meanwhile.
+                AuditorAware<?> contextAuditorAware = lookUpAuditorAware(applicationContext);
+                synchronized (auditorAwareLock) {
+                    if (!auditorAwareResolved) {
+                        auditorAware = contextAuditorAware;
+                        auditorAwareResolved = true;
+                    }
+                }
+            }
+        }
         return auditorAware;
     }
 
     public void setAuditorAware(AuditorAware<?> auditorAware) {
-        this.auditorAware = auditorAware;
+        synchronized (auditorAwareLock) {
+            this.auditorAware = auditorAware;
+            this.auditorAwareResolved = true;
+        }
     }
 
     private static boolean isDisabled(final ThreadLocal<DisabledTimestamps> disabledTimestamps, final String entityName) {

@@ -29,8 +29,7 @@ plugins {
 dependencies {
     skill platform("org.apache.grails:grails-bom:${projectVersion}")
     skill 'org.apache.grails.skills:grails-developer'
-    skill 'org.apache.grails.skills:grails-8-upgrade'
-    skill 'org.apache.grails.skills:grails-9-upgrade'
+    skill 'org.apache.grails.skills:grails-upgrade'
     skill 'org.apache.grails.skills:grails-ai-developer'
 }
 

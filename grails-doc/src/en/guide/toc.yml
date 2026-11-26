@@ -37,6 +37,7 @@ gettingStarted:
   developmentReloading: Development Reloading
 upgrading:
   title: Upgrading from the previous versions
+  upgrading100x: Upgrading from Grails 9 to Grails 10
   upgrading90x: Upgrading from Grails 8 to Grails 9
   upgrading81x: Upgrading from Grails 8.0 to Grails 8.1
   upgrading80x: Upgrading from Grails 7 to Grails 8

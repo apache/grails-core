@@ -40,6 +40,7 @@ import org.grails.datastore.gorm.GormInstanceApi;
 import org.grails.datastore.gorm.GormStaticApi;
 import org.grails.datastore.gorm.GormValidationApi;
 import org.grails.datastore.gorm.events.AutoTimestampEventListener;
+import org.grails.datastore.gorm.events.AutoTimestampingDatastore;
 import org.grails.datastore.gorm.events.ConfigurableApplicationContextEventPublisher;
 import org.grails.datastore.gorm.events.ConfigurableApplicationEventPublisher;
 import org.grails.datastore.gorm.events.DefaultApplicationEventPublisher;
@@ -81,7 +82,7 @@ import org.grails.datastore.mapping.transactions.TransactionCapableDatastore;
  * @since 1.0
  */
 @SuppressWarnings("rawtypes")
-public class SimpleMapDatastore extends AbstractDatastore implements Closeable, TransactionCapableDatastore, SingleSessionCapableDatastore, SchemaMultiTenantCapableDatastore<Map<String, Map>, ConnectionSourceSettings>, ConnectionSourcesProvider<Map<String, Map>, ConnectionSourceSettings> {
+public class SimpleMapDatastore extends AbstractDatastore implements Closeable, TransactionCapableDatastore, SingleSessionCapableDatastore, SchemaMultiTenantCapableDatastore<Map<String, Map>, ConnectionSourceSettings>, ConnectionSourcesProvider<Map<String, Map>, ConnectionSourceSettings>, AutoTimestampingDatastore {
     private final Map<String, Map> inmemoryData;
     private final TenantResolver tenantResolver;
     protected final GormEnhancer gormEnhancer;
@@ -94,6 +95,7 @@ public class SimpleMapDatastore extends AbstractDatastore implements Closeable, 
     protected final Map<String, SimpleMapDatastore> datastoresByConnectionSource = new LinkedHashMap<>();
     protected final boolean failOnError;
     private final SimpleMapQueryTail queryTail;
+    private final AutoTimestampEventListener autoTimestampEventListener;
 
     public SimpleMapDatastore(ConnectionSources<Map<String, Map>, ConnectionSourceSettings> connectionSources, MappingContext mappingContext, ConfigurableApplicationEventPublisher eventPublisher) {
         super(mappingContext);
@@ -109,6 +111,9 @@ public class SimpleMapDatastore extends AbstractDatastore implements Closeable, 
         this.tenantResolver = multiTenancy.getTenantResolver();
         PropertyResolver config = connectionSources.getBaseConfiguration();
         this.failOnError = config.getProperty(Settings.SETTING_FAIL_ON_ERROR, Boolean.class, false);
+        // Created ahead of the datastores of the other connections, so that it stays the first one the shared mapping
+        // context lists, as it was when only this datastore had a listener.
+        this.autoTimestampEventListener = new AutoTimestampEventListener(this);
         if (!(connectionSources instanceof SingletonConnectionSources)) {
 
             Iterable<ConnectionSource<Map<String, Map>, ConnectionSourceSettings>> allConnectionSources = connectionSources.getAllConnectionSources();
@@ -123,6 +128,10 @@ public class SimpleMapDatastore extends AbstractDatastore implements Closeable, 
                     childDatastore = new SimpleMapDatastore(singletonConnectionSources, mappingContext, eventPublisher) {
                         @Override
                         protected GormEnhancer initialize(ConnectionSourceSettings settings) {
+                            // The parent's enhancer serves this connection's entities, but the sessions of this
+                            // connection publish their events with this datastore as the source, and only
+                            // listeners of its own handle those.
+                            registerEntityEventListeners(eventPublisher);
                             return null;
                         }
 
@@ -291,11 +300,24 @@ public class SimpleMapDatastore extends AbstractDatastore implements Closeable, 
     }
 
     protected void registerEventListeners(ConfigurableApplicationEventPublisher eventPublisher) {
-        eventPublisher.addApplicationListener(new DomainEventListener(this));
-        eventPublisher.addApplicationListener(new AutoTimestampEventListener(this));
+        registerEntityEventListeners(eventPublisher);
         if (multiTenancyMode == MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR) {
             eventPublisher.addApplicationListener(new MultiTenantEventListener(this));
         }
+    }
+
+    /**
+     * Registers the listeners that run the domain class events and set the timestamps of the entities saved through
+     * this datastore. The datastore of another connection, or of a schema, registers only these: the tenant of a
+     * discriminator column is bound for the datastore of the default connection, and a tenant filter of its own
+     * would not see it.
+     *
+     * @param eventPublisher The publisher of this datastore's events
+     * @since 9.0
+     */
+    protected void registerEntityEventListeners(ConfigurableApplicationEventPublisher eventPublisher) {
+        eventPublisher.addApplicationListener(new DomainEventListener(this));
+        eventPublisher.addApplicationListener(autoTimestampEventListener);
     }
 
     public Map getIndices() {
@@ -310,6 +332,11 @@ public class SimpleMapDatastore extends AbstractDatastore implements Closeable, 
     @Override
     public ApplicationEventPublisher getApplicationEventPublisher() {
         return this.eventPublisher;
+    }
+
+    @Override
+    public AutoTimestampEventListener getAutoTimestampEventListener() {
+        return autoTimestampEventListener;
     }
 
     /**
@@ -466,6 +493,9 @@ public class SimpleMapDatastore extends AbstractDatastore implements Closeable, 
             childDatastore = new SimpleMapDatastore(singletonConnectionSources, mappingContext, eventPublisher) {
                 @Override
                 protected GormEnhancer initialize(ConnectionSourceSettings settings) {
+                    // As for a connection's datastore, the schema's sessions publish their events with this
+                    // datastore as the source.
+                    registerEntityEventListeners(eventPublisher);
                     return null;
                 }
             };

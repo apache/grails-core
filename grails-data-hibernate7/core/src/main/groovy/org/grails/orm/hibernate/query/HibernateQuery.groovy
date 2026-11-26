@@ -540,7 +540,7 @@ class HibernateQuery extends Query {
             JpaSubQuery<Tuple> innerSubquery = countQuery.subquery(Tuple)
 
             ConversionService cs = session.mappingContext.conversionService
-            JpaCriteriaQueryCreator<?> creator = new JpaCriteriaQueryCreator<>(projections, cb, (GrailsHibernatePersistentEntity) this.@entity, detachedCriteria, cs)
+            JpaCriteriaQueryCreator<?> creator = new JpaCriteriaQueryCreator<>(projections, cb, (GrailsHibernatePersistentEntity) this.@entity, detachedCriteria, cs, this)
             creator.populateSubquery(innerSubquery)
 
             countQuery.from(innerSubquery)
@@ -872,6 +872,7 @@ class HibernateQuery extends Query {
                 hibernateQuery.offset(this.offset)
             }
             hibernateQuery.detachedCriteria = this.detachedCriteria.clone()
+            hibernateQuery.aliases.addAll(this.aliases)
 
             return hibernateQuery
         })

@@ -226,7 +226,7 @@ class RequestAndResponseMimeTypesApiSpec extends Specification{
             def context = (GenericWebApplicationContext) webRequest.applicationContext
             def own = new DefaultMimeUtility((buildMimeTypes() + new MimeType('application/vnd.own+json', 'own')) as MimeType[])
             def configurer = Spy(MimeTypesConfiguration.grailsMimeTypesWebMvcConfigurer(
-                    Stub(ObjectProvider) { getObject() >> own }, (GrailsApplication) application))
+                    Stub(ObjectProvider) { getObject() >> own }, (GrailsApplication) application, Stub(ObjectProvider)))
             context.beanFactory.registerSingleton('grailsMimeTypesWebMvcConfigurer', configurer)
             webRequest.currentRequest.addHeader('Accept', accept)
 
@@ -337,6 +337,23 @@ class RequestAndResponseMimeTypesApiSpec extends Specification{
 
     }
     
+    void "the response type is that of the block withFormat runs for a client that accepts any type"() {
+        given:
+            final webRequest = boundMimeTypeRequest()
+            webRequest.currentRequest.addHeader('Accept', '*/*')
+
+        when:
+            def result = webRequest.currentResponse.withFormat {
+                xml { 'got xml' }
+                html { 'got html' }
+            }
+
+        then: 'as a view is looked up for it afterwards'
+            result == 'got xml'
+            webRequest.currentResponse.format == 'xml'
+            webRequest.currentResponse.mimeType.extension == 'xml'
+    }
+
     @Issue("GRAILS-10973")
     void "request.withFormat should choose wildcard choice when format == all"() {
         when:
@@ -464,7 +481,7 @@ class RequestAndResponseMimeTypesApiSpec extends Specification{
             webRequest.currentRequest.addHeader('User-Agent', 'Trident/7.0')
 
         expect: 'the configurer is created, and the other entry is found'
-            MimeTypesConfiguration.grailsMimeTypesWebMvcConfigurer(Stub(ObjectProvider), (GrailsApplication) application)
+            MimeTypesConfiguration.grailsMimeTypesWebMvcConfigurer(Stub(ObjectProvider), (GrailsApplication) application, Stub(ObjectProvider))
             webRequest.currentResponse.withFormat {
                 json { 'got json' }
                 html { 'got html' }
@@ -478,7 +495,7 @@ class RequestAndResponseMimeTypesApiSpec extends Specification{
             application.setConfig(config)
 
         when: 'the configurer an application has is created'
-            MimeTypesConfiguration.grailsMimeTypesWebMvcConfigurer(Stub(ObjectProvider), (GrailsApplication) application)
+            MimeTypesConfiguration.grailsMimeTypesWebMvcConfigurer(Stub(ObjectProvider), (GrailsApplication) application, Stub(ObjectProvider))
 
         then:
             IllegalArgumentException e = thrown()

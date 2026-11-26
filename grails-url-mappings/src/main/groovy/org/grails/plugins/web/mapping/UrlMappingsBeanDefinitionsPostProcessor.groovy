@@ -72,15 +72,27 @@ class UrlMappingsBeanDefinitionsPostProcessor implements BeanDefinitionRegistryP
     private final boolean reloadEnabled
     private final boolean corsFilterEnabled
     private final boolean resolveHiddenHttpMethod
+    private final boolean markHandledRequests
 
     UrlMappingsBeanDefinitionsPostProcessor(boolean reloadEnabled, boolean corsFilterEnabled) {
         this(reloadEnabled, corsFilterEnabled, false)
     }
 
     UrlMappingsBeanDefinitionsPostProcessor(boolean reloadEnabled, boolean corsFilterEnabled, boolean resolveHiddenHttpMethod) {
+        this(reloadEnabled, corsFilterEnabled, resolveHiddenHttpMethod, false)
+    }
+
+    /**
+     * @param markHandledRequests whether the handler mapping marks the requests its mappings handle for Spring MVC's
+     *        content negotiation, as {@code grails.mime.negotiation.spring} has it
+     * @since 9.0
+     */
+    UrlMappingsBeanDefinitionsPostProcessor(boolean reloadEnabled, boolean corsFilterEnabled, boolean resolveHiddenHttpMethod,
+                                            boolean markHandledRequests) {
         this.reloadEnabled = reloadEnabled
         this.corsFilterEnabled = corsFilterEnabled
         this.resolveHiddenHttpMethod = resolveHiddenHttpMethod
+        this.markHandledRequests = markHandledRequests
     }
 
     @Override
@@ -94,6 +106,9 @@ class UrlMappingsBeanDefinitionsPostProcessor implements BeanDefinitionRegistryP
             }
             if (resolveHiddenHttpMethod) {
                 handlerMapping.propertyValues.addPropertyValue('resolveHiddenHttpMethod', true)
+            }
+            if (markHandledRequests) {
+                handlerMapping.propertyValues.addPropertyValue('markHandledRequests', true)
             }
             registry.registerBeanDefinition('urlMappingsHandlerMapping', handlerMapping)
         }

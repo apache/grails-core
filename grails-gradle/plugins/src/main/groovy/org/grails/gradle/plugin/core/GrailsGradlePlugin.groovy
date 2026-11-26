@@ -253,10 +253,22 @@ class GrailsGradlePlugin implements Plugin<Project> {
     private void configureGroovyCompiler(Project project) {
         project.tasks.withType(GroovyCompile).configureEach { GroovyCompile c ->
             if (c.name == 'compileGroovy') {
-                // Resource-only changes do not ordinarily invalidate compilation. This file changes
-                // whether the compiler owns the generated imports resource, so adding or deleting it
-                // must run the transform even when no Groovy source changed.
+                // Resource-only changes do not ordinarily invalidate compilation. These files change
+                // what the compiler generates: whether it owns the imports resource, and what it
+                // merges into the factories files, so adding, editing or deleting one must run the
+                // transforms even when no Groovy source changed.
                 AutoConfigurationImportsCompileInput.register(project, c)
+                FactoriesCompileInput.registerGrailsFactories(project, c)
+                FactoriesCompileInput.registerCliFactories(project, c)
+                // Under incremental Groovy compilation, which a build opts into with
+                // options.incremental = true, a deleted class that nothing depends on compiles nothing,
+                // so the factories files the compiler generated are reconciled with what the compilation
+                // produced once it is done. The default full recompilation cleans the destination
+                // directory first and leaves nothing to prune.
+                PruneGeneratedFactories.register(project, c, PruneGeneratedFactories.GRAILS_FACTORIES_LOCATION,
+                        [FactoriesCompileInput.GRAILS_FACTORIES_PATH])
+                PruneGeneratedFactories.register(project, c, PruneGeneratedFactories.CLI_FACTORIES_LOCATION,
+                        FactoriesCompileInput.CLI_FACTORIES_PATHS)
             }
             // Publish the project base directory to the Groovy compiler's worker daemon JVM so the
             // GlobalGrailsClassInjectorTransformation AST transform can locate
@@ -1222,11 +1234,15 @@ ${importStatements}
                 .extensions.create('nativeMetadata', NativeMetadataExtension)
         extension.paths.convention(['/'])
         extension.forms.convention([])
+        extension.requests.convention([])
         extension.jvmArguments.convention(['-Dgrails.env=production'])
         extension.port.convention(TRACING_PORT)
         extension.startTimeoutSeconds.convention(TRAINING_START_TIMEOUT_SECONDS)
         extension.outputDirectory.convention(project.layout.projectDirectory
                 .dir('src/native/resources/META-INF/native-image'))
+        project.pluginManager.withPlugin(NATIVE_IMAGE_PLUGIN) {
+            addTracedMetadataToNativeImageClasspath(project, extension)
+        }
 
         project.pluginManager.withPlugin(SPRING_BOOT_PLUGIN) {
             TaskProvider<?> bootJar = project.tasks.named('bootJar')
@@ -1244,11 +1260,43 @@ ${importStatements}
                 task.jvmArguments.set(extension.jvmArguments)
                 task.paths.set(extension.paths)
                 task.forms.set(extension.forms)
+                task.requests.set(extension.requests)
                 task.port.set(extension.port)
                 task.startTimeoutSeconds.set(extension.startTimeoutSeconds)
                 task.outputDirectory.set(extension.outputDirectory)
             }
         }
+    }
+
+    /**
+     * Puts what {@code traceNativeMetadata} recorded on the classpath the image is built from, without which
+     * recording it changes nothing: the image is built, starts, and fails on the first request that needs it.
+     *
+     * <p>Dynamically, for the reason {@link #addToNativeImageClasspath} is.</p>
+     */
+    @CompileDynamic
+    private static void addTracedMetadataToNativeImageClasspath(Project project, NativeMetadataExtension extension) {
+        def graalvm = project.extensions.findByName('graalvmNative')
+        graalvm?.binaries?.configureEach { binary ->
+            binary.classpath(extension.outputDirectory.map { Directory directory -> nativeMetadataRoot(directory.asFile) })
+        }
+    }
+
+    /**
+     * The classpath entry the metadata in a directory is read from: {@code native-image} looks for it under
+     * {@code META-INF/native-image} of each entry, so a directory anywhere else would never be read.
+     */
+    private static File nativeMetadataRoot(File directory) {
+        File metaInf = directory
+        while (metaInf != null && metaInf.name != 'META-INF') {
+            metaInf = metaInf.parentFile
+        }
+        if (metaInf?.parentFile == null) {
+            throw new GradleException("grails.nativeMetadata.outputDirectory is ${directory}, which an image cannot " +
+                    'read metadata from. Use a directory under META-INF/native-image, as the default ' +
+                    'src/native/resources/META-INF/native-image is.')
+        }
+        metaInf.parentFile
     }
 
     protected void configureBootRunPidFile(Project project) {

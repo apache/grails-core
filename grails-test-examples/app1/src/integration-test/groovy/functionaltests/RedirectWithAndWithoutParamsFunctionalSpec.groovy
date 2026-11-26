@@ -36,10 +36,11 @@ class RedirectWithAndWithoutParamsFunctionalSpec extends ContainerGebSpec {
         $('input', name:'name').value('foo')
         $('input', type:'submit').click()
 
-        then: 'the params are not added to the url'
-        !currentUrl.contains('?name=foo')
-        pageSource.contains('"id":')
+        then: 'the page the redirect leads to answers, without the params on its url'
+        // waitFor guards against asserting on the form before the browser has followed the redirect
+        waitFor { pageSource.contains('"id":') }
         pageSource.contains('"name":"foo"')
+        !currentUrl.contains('?name=foo')
     }
 
     @Issue('grails-core-#10622')

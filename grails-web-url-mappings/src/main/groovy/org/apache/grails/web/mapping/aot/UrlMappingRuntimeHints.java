@@ -18,8 +18,11 @@
  */
 package org.apache.grails.web.mapping.aot;
 
+import java.util.List;
+
 import org.jspecify.annotations.Nullable;
 
+import org.springframework.aot.hint.ExecutableMode;
 import org.springframework.aot.hint.MemberCategory;
 import org.springframework.aot.hint.RuntimeHints;
 import org.springframework.aot.hint.RuntimeHintsRegistrar;
@@ -49,6 +52,19 @@ public class UrlMappingRuntimeHints implements RuntimeHintsRegistrar {
         "grails.web.mapping.UrlMappingData"
     };
 
+    /**
+     * What a URL mappings closure is delegated to while the mappings are evaluated. Every mapping in it is
+     * a call the closure resolves dynamically against the builder, which reads the builder's own fields as
+     * well as calling its methods.
+     */
+    private static final String MAPPINGS_BUILDER = "org.grails.web.mapping.DefaultUrlMappingEvaluator$UrlMappingBuilder";
+
+    /**
+     * Whose method an error response is written as the return value of, which is looked up reflectively to tell Spring
+     * MVC the type of the value when {@code grails.exceptionresolver.problemDetails} writes one.
+     */
+    private static final String ACTION_RETURN_VALUES = "org.grails.web.mapping.mvc.ActionReturnValues";
+
     @Override
     public void registerHints(RuntimeHints hints, @Nullable ClassLoader classLoader) {
         for (String type : DISPATCHED_TYPES) {
@@ -57,5 +73,11 @@ public class UrlMappingRuntimeHints implements RuntimeHintsRegistrar {
                     MemberCategory.INVOKE_PUBLIC_METHODS,
                     MemberCategory.INVOKE_DECLARED_CONSTRUCTORS);
         }
+        hints.reflection().registerTypeIfPresent(classLoader, MAPPINGS_BUILDER,
+                MemberCategory.INVOKE_DECLARED_METHODS,
+                MemberCategory.INVOKE_PUBLIC_METHODS,
+                MemberCategory.ACCESS_DECLARED_FIELDS);
+        hints.reflection().registerTypeIfPresent(classLoader, ACTION_RETURN_VALUES,
+                type -> type.withMethod("returnedErrorResponse", List.of(), ExecutableMode.INVOKE));
     }
 }

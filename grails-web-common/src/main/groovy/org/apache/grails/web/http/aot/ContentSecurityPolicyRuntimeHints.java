@@ -34,7 +34,7 @@ import grails.web.http.ContentSecurityPolicyNonce;
  * metadata for the private class, so only the interface can be registered, and the read must not
  * reflect on anything else.</p>
  *
- * @since 9.1
+ * @since 9.0
  */
 public class ContentSecurityPolicyRuntimeHints implements RuntimeHintsRegistrar {
 

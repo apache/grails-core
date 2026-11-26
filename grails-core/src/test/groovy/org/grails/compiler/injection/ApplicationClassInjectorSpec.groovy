@@ -18,12 +18,31 @@
  */
 package org.grails.compiler.injection
 
+import org.codehaus.groovy.control.CompilationUnit
+import org.codehaus.groovy.control.CompilerConfiguration
+
 import spock.lang.Specification
+import spock.lang.TempDir
 import spock.lang.Unroll
 import spock.util.environment.RestoreSystemProperties
 
+import grails.util.BuildSettings
+
 @RestoreSystemProperties
 class ApplicationClassInjectorSpec extends Specification {
+
+    @TempDir
+    File tempDir
+
+    void setup() {
+        // compiling runs the global transformation, which would otherwise pick up trait injectors another
+        // spec left registered
+        TraitInjectionUtils.@traitInjectors = []
+    }
+
+    void cleanup() {
+        TraitInjectionUtils.@traitInjectors = null
+    }
 
     @Unroll
     def "EXCLUDED_AUTO_CONFIGURE_CLASSES contains expected entry #className"(String className) {
@@ -96,5 +115,48 @@ class ApplicationClassInjectorSpec extends Specification {
 
         expect:
         injector.artefactTypes.contains('Application')
+    }
+
+    def "a dynamically compiled application class records its name as the main class"() {
+        given: "an application class that is not statically compiled, where a generated project puts it"
+        def targetDir = new File(tempDir, 'build/classes/groovy/main')
+        compile(new File(tempDir, 'grails-app/init/Application.groovy'), '''
+            class Application extends grails.boot.config.GrailsAutoConfiguration {
+            }
+        ''', targetDir)
+        System.clearProperty(BuildSettings.MAIN_CLASS_NAME)
+
+        when: "the class is initialized"
+        def loader = new URLClassLoader([targetDir.toURI().toURL()] as URL[], getClass().classLoader)
+        Class.forName('Application', true, loader)
+
+        then: "its name is recorded"
+        System.getProperty(BuildSettings.MAIN_CLASS_NAME) == 'Application'
+    }
+
+    def "the statement recording the main class is not dispatched through a metaclass"() {
+        given: "an application class that is not statically compiled"
+        def targetDir = new File(tempDir, 'build/classes/groovy/main')
+        compile(new File(tempDir, 'grails-app/init/Application.groovy'), '''
+            class Application extends grails.boot.config.GrailsAutoConfiguration {
+            }
+        ''', targetDir)
+
+        when: "its static initializer is read"
+        def calls = StaticInitializerCalls.of(new File(targetDir, 'Application.class').bytes)
+
+        then: "System.setProperty is called directly"
+        calls.contains('INVOKESTATIC java/lang/System.setProperty')
+
+        and: "nothing is dispatched dynamically, which a native image could not resolve before any metadata is registered"
+        !calls.any { it.startsWith('INVOKEDYNAMIC') }
+    }
+
+    private static void compile(File sourceFile, String source, File targetDirectory) {
+        sourceFile.parentFile.mkdirs()
+        sourceFile.text = source
+        def compilationUnit = new CompilationUnit(new CompilerConfiguration(targetDirectory: targetDirectory))
+        compilationUnit.addSource(sourceFile)
+        compilationUnit.compile()
     }
 }

@@ -24,6 +24,8 @@ import org.hibernate.boot.model.FunctionContributor
 import org.hibernate.dialect.Dialect
 import org.hibernate.type.StandardBasicTypes
 
+import org.grails.orm.hibernate.dialect.SupportedDatabase
+
 @CompileStatic
 class GrailsRLikeFunctionContributor implements FunctionContributor {
 
@@ -33,8 +35,7 @@ class GrailsRLikeFunctionContributor implements FunctionContributor {
     void contributeFunctions(FunctionContributions functionContributions) {
         Dialect dialect = functionContributions.dialect
 
-        // Use the Enum to resolve the pattern
-        String pattern = RegexDialectPattern.findPatternForDialect(dialect)
+        String pattern = SupportedDatabase.forDialect(dialect).regexPattern()
 
         functionContributions
                 .functionRegistry

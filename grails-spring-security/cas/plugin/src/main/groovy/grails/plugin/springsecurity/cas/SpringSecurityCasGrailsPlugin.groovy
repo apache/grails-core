@@ -117,11 +117,10 @@ class SpringSecurityCasGrailsPlugin extends Plugin {
                     ignoreInitConfiguration = true
                 }
 
-                // after the encoding filter: SingleSignOutFilter reads the logoutRequest parameter of every POST
                 singleSignOutFilterRegistrationBean(FilterRegistrationBean) {
                     name = 'CAS Single Sign Out Filter'
                     filter = ref('singleSignOutFilter')
-                    order = GrailsFilters.CHARACTER_ENCODING_FILTER.order + 1
+                    order = GrailsFilters.CAS_SINGLE_SIGN_OUT_FILTER.order
                 }
 
                 singleSignOutHttpSessionListener(ServletListenerRegistrationBean, new SingleSignOutHttpSessionListener())

@@ -104,6 +104,20 @@ class GroovydocEnhancerExtension {
      */
     final Property<String> maxHeapSize
 
+    /**
+     * Whether groovydoc refuses to run on a JDK without its sources ({@code lib/src.zip}).
+     *
+     * <p>Groovydoc copies the Javadoc of the JDK methods a documented class inherits, such as
+     * the {@code {@inheritDoc}} of a {@code Map} implementation, from the sources of the JDK it
+     * runs on. On a JDK without them it only warns and leaves that Javadoc out, so the pages
+     * depend on how the JDK was installed.</p>
+     *
+     * <p>Defaults to {@code true} for a reproducible build, one with {@code SOURCE_DATE_EPOCH}
+     * set, whose documentation is compared with a rebuild of the same sources, and to
+     * {@code false} otherwise.</p>
+     */
+    final Property<Boolean> requireJdkSources
+
     @Inject
     GroovydocEnhancerExtension(ObjectFactory objects, Project project) {
         javaVersion = objects.property(String).convention(
@@ -122,5 +136,8 @@ class GroovydocEnhancerExtension {
         useAntBuilder = objects.property(Boolean).convention(true)
         footer = objects.property(String).convention('')
         maxHeapSize = objects.property(String).convention('1g')
+        requireJdkSources = objects.property(Boolean).convention(
+                project.providers.environmentVariable('SOURCE_DATE_EPOCH').map { true }.orElse(false)
+        )
     }
 }

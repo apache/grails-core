@@ -28,6 +28,7 @@ import jakarta.persistence.LockModeType
 import org.springframework.transaction.TransactionDefinition
 
 import grails.gorm.DetachedCriteria
+import org.grails.datastore.gorm.events.AutoTimestampEventListener
 import org.grails.datastore.gorm.finders.FinderMethod
 import org.grails.datastore.gorm.internal.RefreshLockArguments
 import org.grails.datastore.mapping.model.PersistentEntity
@@ -51,6 +52,21 @@ interface GormStaticOperations<D> {
      * @return The GORM dynamic finders
      */
     List<FinderMethod> getGormDynamicFinders()
+
+    /**
+     * Returns the listener that sets the timestamp and auditor properties of an instance saved through these
+     * operations, as {@code Book.withTenant('acme').autoTimestampEventListener} returns the tenant's. Each datastore
+     * has a listener of its own, and so does each connection and each tenant with a database or schema of its own,
+     * and a listener only handles the saves made through its own datastore.
+     *
+     * @return the listener that handles a save through these operations
+     * @throws UnsupportedOperationException when these operations cannot look the listener up
+     * @since 9.0
+     */
+    @CompileStatic
+    default AutoTimestampEventListener getAutoTimestampEventListener() {
+        throw new UnsupportedOperationException("[${getClass().name}] cannot look up the auto-timestamp event listener")
+    }
 
     /**
      *

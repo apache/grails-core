@@ -30,7 +30,6 @@ import org.hibernate.query.criteria.JpaSubQuery
 import org.springframework.core.convert.ConversionService
 
 import grails.gorm.DetachedCriteria
-import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.query.Query
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
@@ -49,6 +48,7 @@ class JpaCriteriaQueryCreator<T> {
     private final DetachedCriteria<?> detachedCriteria
     private final ConversionService conversionService
     private final HibernateQuery hibernateQuery
+    private final QueryAliasRegistrar aliasRegistrar
     private JpaQueryContext parentContext
     private JpaQueryContext context
 
@@ -74,6 +74,7 @@ class JpaCriteriaQueryCreator<T> {
         this.detachedCriteria = detachedCriteria
         this.conversionService = conversionService
         this.hibernateQuery = hibernateQuery
+        this.aliasRegistrar = new QueryAliasRegistrar(detachedCriteria, hibernateQuery)
     }
 
     void setParentContext(JpaQueryContext parentContext) {
@@ -97,19 +98,7 @@ class JpaCriteriaQueryCreator<T> {
         Class<?> javaClass = entity.javaClass
         Root<?> root = cq.from(javaClass)
 
-        List<HibernateAlias> aliases = []
-        if (hibernateQuery != null) {
-            aliases.addAll(hibernateQuery.aliases)
-        }
-        for (Query.Criterion criterion : detachedCriteria.criteria) {
-            if (criterion instanceof HibernateAlias) {
-                aliases.add((HibernateAlias) criterion)
-            }
-        }
-
-        context = JpaQueryContext.forSubquery(parentContext, aliases, root)
-        registerDetachedJoins(context)
-        discoverAliases(detachedCriteria.criteria, context)
+        context = aliasRegistrar.createContext(parentContext, root)
 
         applyEagerFetchJoins(root, projectionList)
 
@@ -164,19 +153,7 @@ class JpaCriteriaQueryCreator<T> {
         Class<?> javaClass = entity.javaClass
         Root<?> root = subquery.from(javaClass)
 
-        List<HibernateAlias> aliases = []
-        if (hibernateQuery != null) {
-            aliases.addAll(hibernateQuery.aliases)
-        }
-        for (Query.Criterion criterion : detachedCriteria.criteria) {
-            if (criterion instanceof HibernateAlias) {
-                aliases.add((HibernateAlias) criterion)
-            }
-        }
-
-        context = JpaQueryContext.forSubquery(parentContext, aliases, root)
-        registerDetachedJoins(context)
-        discoverAliases(detachedCriteria.criteria, context)
+        context = aliasRegistrar.createContext(parentContext, root)
 
         new JpaProjectionAdapter(criteriaBuilder, context, entity).adapt(projections, (AbstractQuery<?>) subquery)
 
@@ -328,45 +305,6 @@ class JpaCriteriaQueryCreator<T> {
         List<Query.Projection> projectionList = projections.projectionList
         return !projectionList.isEmpty() && projectionList.every { Query.Projection projection ->
             projection instanceof Query.CountProjection || projection instanceof Query.CountDistinctProjection
-        }
-    }
-
-    private void discoverAliases(List<Query.Criterion> criteria, JpaQueryContext context) {
-        if (criteria == null) {
-            return
-        }
-        for (Query.Criterion criterion : criteria) {
-            if (criterion instanceof HibernateAlias) {
-                HibernateAlias ha = (HibernateAlias) criterion
-                // If the alias is already defined in parent and materialized, just link it
-                if (!context.hasAlias(ha.alias())) {
-                    context.registerAlias(ha.alias(), ha)
-                }
-            } else if (criterion instanceof DetachedAssociationCriteria) {
-                DetachedAssociationCriteria<?> dac = (DetachedAssociationCriteria<?>) criterion
-                if (dac.alias != null) {
-                    context.registerAlias(dac.alias, new HibernateAlias(dac.associationPath, dac.alias, JoinType.INNER))
-                }
-                discoverAliases(dac.criteria, context)
-            } else if (criterion instanceof Query.PropertyNameCriterion) {
-                Query.PropertyNameCriterion pnc = (Query.PropertyNameCriterion) criterion
-                String propertyName = pnc.property
-                if (propertyName.contains('.')) {
-                    String alias = propertyName.substring(0, propertyName.indexOf('.'))
-                    // Only register if not already known in this or parent context
-                    if (!context.hasAlias(alias)) {
-                        context.registerAlias(alias, new HibernateAlias(alias, alias, JoinType.INNER))
-                    }
-                }
-            } else if (criterion instanceof Query.Junction) {
-                discoverAliases(((Query.Junction) criterion).criteria, context)
-            }
-        }
-    }
-
-    private void registerDetachedJoins(JpaQueryContext context) {
-        for (Map.Entry<String, ?> entry : detachedCriteria.joinTypes.entrySet()) {
-            context.registerAlias(entry.key, new HibernateAlias(entry.key, entry.key, (JoinType) entry.value))
         }
     }
 

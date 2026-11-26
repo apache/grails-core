@@ -24,16 +24,21 @@ This guide outlines the changes introduced in Grails 9 and the steps required to
 [TIP]
 ====
 **Let your coding agent work through this guide.**
-Grails publishes the `grails-9-upgrade` agent skill, which turns this guide into a migration checklist for an AI coding agent.
+The `grails-upgrade` agent skill of the last Grails 9 release turns this guide into a migration checklist for an AI coding agent.
 Extract it with the SkillsJars Gradle plugin, as xref:gettingStarted#agentSkills[Agent Skills] describes.
-While the application is still on Grails 8, declare the skill with its version, since the Grails 8 BOM does not manage it:
+Declare it with the version of that Grails 9 release; the `grails-upgrade` skill of Grails 10 covers the upgrade from Grails 9 to Grails 10 only:
 
 [source,groovy,subs="attributes"]
 .build.gradle
 ----
-skill 'org.apache.grails.skills:grails-9-upgrade:{version}'
+skill 'org.apache.grails.skills:grails-upgrade:<last Grails 9 version>'
 ----
 ====
+
+The changes are listed by release. Apply the section of every release after the one the application is on, up to and including the release it is upgrading to.
+
+[[grails-9-0-0-M1]]
+=== Grails 9.0.0-M1
 
 ==== 1. Groovy 6
 
@@ -51,6 +56,7 @@ The ones most likely to affect a Grails application are:
 Spring Framework 7.1's `ForwardedHeaderFilter` reads either the RFC 7239 `Forwarded` header or the `+X-Forwarded-*+` headers, and Spring Boot 4.2 configures it for `+X-Forwarded-*+`.
 Before, it read `Forwarded` when the request carried one and `+X-Forwarded-*+` otherwise.
 If your reverse proxy sends `Forwarded`, set `spring.mvc.forwarded-headers.header-format: standard`.
+The filter also ignores `X-Forwarded-Prefix` now, where it used to add it to the context path, so if your proxy strips a path prefix and sends that header, absolute links and redirects lose the prefix until you set `spring.mvc.forwarded-headers.use-forwarded-prefix: true`.
 Spring Boot 4.2 also registers the filter from its Spring MVC auto-configuration, which backs off when the application declares `@EnableWebMvc`; such an application must now register a `ForwardedHeaderFilter` itself.
 
 * *Embedded Tomcat keeps relative redirect locations relative.*
@@ -107,6 +113,54 @@ A Spring MVC `@RestController` that returns JAXB-annotated objects needs the con
 The Spring TestContext Framework used to ignore such a class unless its class hierarchy declared `@ContextConfiguration`, and now adds it to the test's application context.
 Grails 8 already logs a warning for each one it ignores, so a test run on Grails 8 shows the affected tests.
 Remove the `@Configuration` annotation, or move the class to a top-level class, if the test should not load it.
+
+* *`bootBuildImage` builds on Ubuntu 26.04.*
+The default builder is `paketobuildpacks/ubuntu-resolute-builder`, in place of `paketobuildpacks/builder-noble-java-tiny`, and images are based on Ubuntu 26.04 instead of 24.04.
+With no `builder` configured, the run image is `paketobuildpacks/ubuntu-resolute-run-tiny:latest`, which still has no shell; with one configured, it is the run image of the builder, which for `ubuntu-resolute-builder` has a shell.
+The builder no longer pins the version of the run image, so set both `builder` and `runImage` to specific versions for repeatable images, or set `builder` to `paketobuildpacks/builder-noble-java-tiny` to keep the previous one.
+
+* *An exception an action throws is now recorded as an error on the HTTP server observation.*
+When an error view answered, as the `"500"(view: '/error')` mapping of a generated application does, `http.server.requests` tagged the 500 with `error` and `exception` values of `none`, and tracing did not see a failure.
+A `500` mapping to a controller tagged it with `GrailsWrappedRuntimeException` and with the `uri` of that controller, so every failure it answered looked like the same route.
+Both now report the exception the action threw and the route of the action, and the span of the request is marked as failed.
+That includes an `Error`, such as a failed `assert`, rather than the `ServletException` Spring MVC wraps it in.
+These requests were already counted with `outcome=SERVER_ERROR`, but an alert that counts a non-`none` `error` value will see more server errors than before, and a dashboard that reads the `uri` of an error controller will find those failures under the routes of the actions.
+After a forward to an error controller, the `jakarta.servlet.error.exception` request attribute holds the exception the action threw rather than a `GrailsWrappedRuntimeException`, for a filter that reads it once the chain has returned. Inside the error controller it still holds the wrapper.
+A client error is not recorded, and neither is a failure inside `g:include`, whose error page is rendered inside a page that goes on to answer the request.
+The route is now set before the Grails interceptors run, so that a failure in one is reported under the route of the action.
+An interceptor whose `before()` returns `false`, to render a 403 or to redirect, stopped the request before its route was set, so the request was reported with a `uri` of `UNKNOWN`, or `REDIRECTION` for a redirect.
+It is now reported under the route of the action, so a dashboard or alert keyed on those `uri` values sees those requests move.
+
+* *On Undertow, a request reads as its own dispatch again once a forward returns.*
+Undertow left a request reading as a forward once a forward to a path had returned, as Tomcat and Jetty do not.
+Spring Framework 7.1's observation filter then took an asynchronous request that had forwarded, for example to an error controller, for a plain one, and reported its failure twice.
+`grails-undertow` now restores the dispatcher type when the forward returns, so a filter that reads `getDispatcherType()` once its chain has returned sees `REQUEST` or `ASYNC` rather than `FORWARD`, as it does on Tomcat and Jetty.
+
+* *`http.server.requests.active` is no longer registered by default.*
+Spring Boot 4.2 makes this long task timer opt-in.
+A dashboard or alert that reads it sets `management.metrics.observations.include-active-long-task-timer` to `true`, which replaces `management.metrics.observations.ignored-meters`.
+
+* *`spring-boot-starter-amqp` no longer means RabbitMQ.*
+It is now the starter for generic AMQP 1.0, and RabbitMQ has starters of its own.
+An application that uses RabbitMQ through `spring-boot-starter-amqp` or `spring-boot-starter-amqp-test` changes to `spring-boot-starter-rabbitmq` or `spring-boot-starter-rabbitmq-test`, and any import of `org.springframework.boot.amqp.autoconfigure` to `org.springframework.boot.rabbitmq.autoconfigure`.
+RabbitMQ over AMQP 1.0 has `spring-boot-starter-amqp-rabbitmq`.
+
+* *The Spring Security plugin no longer saves the requests browsers send on their own.*
+A denied request for `/apple-touch-icon.png`, `/manifest.json` or the `/.well-known/appspecific/com.chrome.devtools.json` that Chrome DevTools sends used to be saved, so a login redirected to it instead of to the page the user asked for.
+Spring Security 7.2's configuration DSL ignores these paths, which the plugin does not use, so the plugin now ignores them too, with `grails.plugin.springsecurity.requestCache.ignoredPatterns`.
+An application that secures a page at one of these paths and wants a login to return to it can leave the path out of that list.
+
+* *Digest authentication in the Spring Security plugin starts and signs users in.*
+`useDigestAuth` with its default of hashed passwords used to fail at startup, naming an encoder that no longer exists.
+What a user has stored is now the hash a browser computes, which the application computes, as the link:security.html#core-basicAndDigestAuth[guide] shows.
+With `digest.useCleartextPasswords`, nobody could sign in with Digest authentication, because the plugin replaced `passwordEncoder` with one that stored `{noop}secret`.
+`passwordEncoder` now stays as configured, and the application stores the password as it was typed, so an application with stored values such as `{noop}secret` removes the `{noop}` prefix from them and no longer stores them with `springSecurityService.encodePassword`.
+A form or Basic authentication signs a user in with their password in either mode.
+
+* *`fii.alwaysReauthenticate` in the Spring Security plugin takes effect.*
+The setting did nothing, because the plugin's security interceptor went straight to the access decision.
+An application that sets it now has the `Authentication` of a request to a secured URL authenticated again, while it still holds its credentials, as it does with `providerManager.eraseCredentialsAfterAuthentication` set to `false`.
+By default the credentials are erased at sign-in, so a user signed in through a form is not authenticated again.
 
 [TIP]
 ====
@@ -1238,6 +1292,13 @@ grails:
         springHandlers: true
 ----
 
+Spring Framework 7.1 adds `ProblemDetailsConfigurer.renderUnhandledExceptions`, which renders any exception no exception
+handler method handles as a problem. Turned on in a `WebMvcConfigurer`, it applies to Grails actions whatever
+`grails.exceptionresolver.springHandlers` says, and answers every exception, a browser's included, ahead of the Grails
+exception resolver, so `"500"` URL mappings no longer apply. Set `grails.exceptionresolver.problemDetails: true` instead,
+which writes the same problems and leaves the error page to the clients that prefer HTML. See
+<<controllerExceptionHandling,Declarative Controller Exception Handling>>.
+
 ==== 18. Actions Can Return Spring MVC Responses
 
 An action that returns a `ResponseEntity` or another `HttpEntity`, a `ProblemDetail`, an `ErrorResponse`,
@@ -1346,3 +1407,205 @@ See <<asyncPromises,Promises>> and <<events,Events>>.
 
 `grails-async-rxjava3` carries a `null` value as the RxJava 1 factory and every other promise factory do: `createPromise()` and `createPromise(Class)` give a promise whose `get()` returns `null`, a task that returns `null` resolves to `null`, and a `null` value keeps its place in the list that `onComplete`, `onError` and `waitAll` deliver.
 `grails-async-rxjava2` does not: there `createPromise()` and `onComplete` over a list holding a bound promise of `null` fail with a `NullPointerException`, and a task that returns `null` resolves to the `java.lang.Void` class.
+
+==== 22. Spring Boot Registers the Character Encoding Filter
+
+Grails no longer registers a character encoding filter of its own. It used to, and Spring Boot's backed off, so `spring.servlet.encoding` had no effect in a Grails application. Spring Boot's filter now decodes requests: it runs at `Ordered.HIGHEST_PRECEDENCE`, ahead of every other filter, and `spring.servlet.encoding` configures it.
+
+* The request encoding is now overridden by default, as in any Spring Boot application, so a request that declares a charset of its own is still decoded as UTF-8: its parameters, a body read through `getReader()`, `request.JSON` and `request.XML`, and a JSON or XML body bound to a command object or domain class. The parameters of a PUT, PATCH, DELETE or QUERY form are the exception, as in Grails 8: the `FormContentFilter` that parses them decodes them with the declared charset, forced or not. To keep the charset a request declares, as Grails 8 did, set `spring.servlet.encoding.force-request: false`.
+* Grails 8.1 already registers its encoding filter at `Ordered.HIGHEST_PRECEDENCE`, so an application coming from 8.1 sees no change in where the encoding filter runs. In an application coming from 8.0, filters ordered between `Ordered.HIGHEST_PRECEDENCE + 1` and -181, which used to run before Grails' encoding filter, now run after Spring Boot's, with the request encoding set, as section 5 of <<upgrading81x,Upgrading from Grails 8.0 to Grails 8.1>> describes. asset-pipeline's filter at -190 is one: in a packaged application (a WAR or an executable jar) it copies the request's encoding to the precompiled assets it serves, so every asset response now declares a charset, for example `text/css;charset=UTF-8`, and browsers use it for stylesheets and scripts instead of detecting their encoding. A filter among them that reads a request body sent without a charset through `getReader()` now decodes it as UTF-8 instead of ISO-8859-1.
+* `grails.filter.encoding` and `grails.filter.forceEncoding` are deprecated. Grails 9 translates them into `spring.servlet.encoding.charset` and `spring.servlet.encoding.force` and logs a warning, and a `spring.servlet.encoding` setting of the application wins over them. Use the Spring Boot properties instead.
+* `GrailsFilters.CHARACTER_ENCODING_FILTER` is deprecated, and its order is now `Ordered.HIGHEST_PRECEDENCE`, the order of Spring Boot's encoding filter, where Grails 8.0 had -180. A filter ordered at `GrailsFilters.CHARACTER_ENCODING_FILTER.order + 1` therefore runs right after the encoding filter, and now also ahead of `FormContentFilter` and of Grails' security headers filter at `GrailsFilters.FIRST`: it no longer sees the parameters of a PUT, PATCH, DELETE or QUERY form, and a response it sends without continuing the chain gets no security headers. Order it at `Ordered.HIGHEST_PRECEDENCE + 1` instead, or at `GrailsFilters.ASSET_PIPELINE_FILTER.order + 1` to keep the place it had in Grails 8.0.
+* `spring.servlet.encoding.enabled: false` turns the encoding filter off.
+* The CAS plugin's single sign-out filter, which reads a parameter of every POST, is registered right after the encoding filter.
+* A filter of your own that reads request parameters needs a later order than `Ordered.HIGHEST_PRECEDENCE`, or form input reaches controllers decoded as ISO-8859-1. One registered at exactly `Ordered.HIGHEST_PRECEDENCE` through a `FilterRegistrationBean` runs before the encoding filter.
+
+==== 23. A Configuration Key Below a Value That Is Not a Map Is Absent
+
+In Grails 8, `getProperty` on `grailsApplication.config` answered a dotted key that runs past a value that is not a map with that value: `server.url.port` when `server.url` is a string, `server.ports.0` when `server.ports` is a list, or `grails.gorm.default.constraints.nullable` when `grails.gorm.default.constraints` is a closure from `application.groovy`. `containsProperty` of such a key was `true`. In Grails 9 the key is absent: `getProperty` returns `null` or the default, `containsProperty` returns `false`, and `navigate` answers `null`.
+
+Below a list, a whole-number segment names an element instead, as Spring Boot reads it, and so does an index after the name of the list, whether the list comes from `application.yml` or from `application.groovy`:
+
+[source,groovy]
+----
+// server.ports: [8080, 8443]
+config.getProperty('server.ports.0')      // Grails 8: [8080, 8443], Grails 9: 8080
+config.getProperty('server.ports[1]')     // 8443
+config.navigate('server', 'ports', '0')   // Grails 8: [8080, 8443], Grails 9: 8080
+config.getProperty('server.ports.2')      // Grails 8: [8080, 8443], Grails 9: null
+----
+
+A list of maps reads into its elements, as `app.rows.0.name`. An index past the end of the list, a number with a leading zero such as `01`, or any other segment after it, is absent. A map whose keys are numbers, such as `codes: {'0': zero}`, reads as before.
+
+A typed read with a default changes with nothing to point at it, because the default takes over. With the parent set to a boolean as a shorthand for its block:
+
+[source,groovy]
+----
+// x.y: false
+config.getProperty('x.y.enabled', Boolean, true)   // Grails 8: false, Grails 9: true
+----
+
+A property source of lower precedence that sets the deeper key now answers it. With `a.b: x` in one property source and `a.b.c: y` in a source of lower precedence, `getProperty('a.b.c')` answers `y` where Grails 8 answered `x`, as a Spring `Environment` over the same sources does, and `containsProperty('a.b.c')` stays `true`. `navigate('a', 'b', 'c')` answers `null`.
+
+===== Required Actions
+
+* Code that reads a child of a string or a closure and relied on being answered with the parent reads the parent instead.
+* Code that read a whole list through a key ending in a whole number, such as `server.ports.0`, now gets the element; it reads the list as `server.ports`.
+* A typed read with a default below such a value, such as `getProperty('x.y.enabled', Boolean, true)` when `x.y` is `false`, reads the parent, or the configuration sets the deeper key.
+
+==== 24. The Spring Security User Cache Stores Copies
+
+With `cacheUsers` enabled, the Spring Security plugin's user cache now stores users by value, so each lookup gets its own copy, made by serializing the user. Grails 8 stored the instance itself. The authentication manager erases the password of the user it signs in, and it erased the cached instance too: the next sign-in missed the cache and loaded the user again. A copy is erased instead, so the cached user keeps its password and the user kept in the session holds none. In a native image the plugin registers its own user classes for this. A user class or id type of your own needs serialization metadata, which `traceNativeMetadata` records when the login form is listed in `forms`.
+
+===== Required Actions
+
+* A user class of your own is serialized, as `UserDetails` is `Serializable`. A field that cannot be serialized, such as a reference to a domain instance, makes the user uncached: it is loaded on every sign-in, and a warning is logged. Mark such a field `transient`, or hold its id instead.
+* Code that changed a user it read from `userCache` and expected the cache to see the change puts the user back with `userCache.putUserInCache`.
+* To store users by reference, as Grails 8 did, set `cacheConfig` on the `userCache` bean to a `MutableConfiguration` with `setStoreByValue(false)`.
+
+==== 25. A Class That Is Not Multi-Tenant Keeps Its Datastore Inside a Tenant Block
+
+With a database or a schema per tenant, a domain class that does not implement `MultiTenant` now stays on its own datastore inside a block that binds a tenant, such as `Tenants.withId('acme') { }`, as it does outside one. Only the classes that implement `MultiTenant` follow the tenant. This is what Grails 7 did and what the multi-tenancy guide describes; Grails 8.0 changed it, so an application upgrading from Grails 7 sees no change.
+
+In Grails 8, with GORM for MongoDB and the in-memory datastore of unit tests, every operation on such a class inside the block reached the tenant's database instead: `save`, `get`, `list`, `count`, `where` queries, data service methods, `withSession` and `GormEnhancer.findDatastore`. With GORM for Hibernate, `save`, `get`, `list` and `count` already used the default database, while `where` queries and data service methods did not work, because the tenant's session factory does not map the class; they now use the default database too.
+
+Writes of such a class inside the block go to the default datastore, so they run in a transaction of that datastore:
+
+* A data service of such a class runs its transactions in its own datastore, not the tenant's.
+* A transaction of the class's own datastore begun inside the tenant's transaction, such as a `withTransaction` or `withNewTransaction` block of the class or a method of its data service, is independent of the tenant's transaction. What it saves is written when it commits, and stays when the tenant's transaction then rolls back.
+* A write of such a class inside the tenant's transaction but outside a transaction of its own datastore, such as a `save()` in a method annotated `@Transactional` that runs in the tenant's transaction, now fails with an `IllegalTransactionStateException`. In Grails 8 the tenant's transaction wrote it to the tenant's database. The tenant's transaction cannot commit or roll back a write to another datastore, so the write would otherwise be lost, or written although the tenant's transaction rolled back. This applies to `save`, `insert`, `delete`, `saveAll` and `deleteAll` without `flush: true`, with GORM for MongoDB and the in-memory datastore of unit tests. With GORM for Hibernate, such a save already failed in Grails 8 and still does.
+
+===== Required Actions
+
+For most applications **no changes are required**.
+
+Move a write of such a class that runs inside a tenant's transaction into a transaction of the class's own datastore: call its data service, or wrap the write in the class's `withTransaction { }` block. A save with `flush: true` also works: it writes at once, and the write stays when the tenant's transaction rolls back.
+
+With GORM for MongoDB, a class that is not multi-tenant and was saved inside a tenant block in Grails 8 has its documents in that tenant's database. Grails 9 reads the class from the default database only, so `list`, `get`, `count` and queries no longer find those documents, although they are still in the tenant's database. Decide what the class is for before upgrading:
+
+* When each tenant should have its own instances, implement `MultiTenant` on the class, which then reads and writes the tenant's database again. Without it, every tenant reads and changes the same instances, in the default database.
+* A class that a multi-tenant class references, such as a `Country` of a multi-tenant `Book`, is loaded through the tenant's session, from the tenant's database, so it has to implement `MultiTenant` as well, even when it holds shared data.
+* When the instances are shared by every tenant and no multi-tenant class references them, move the documents from the tenants' databases into the default database.
+
+Data services choose their transaction manager in code generated at compile time, so a data service compiled against an earlier release keeps following the tenant until it is compiled again.
+
+==== 26. Unit Tests Run Domain Class Events for Every Data Source and Tenant
+
+In a unit test that implements `DataTest` or `DomainUnitTest`, a save through a data source other than the default one, as `book.secondary.save()` makes, and a save for a tenant with a database or a schema of its own, now run the domain class's events, such as `beforeInsert`, and set its `dateCreated` and `lastUpdated` properties, as they do in the application. In Grails 8 they ran neither. Unit tests still do not set the `@CreatedBy` and `@LastModifiedBy` properties, on any data source, even when the test defines an `AuditorAware` bean, as in Grails 8: the in-memory datastore is not given the application context, so note 28 does not apply to them.
+
+===== Required Actions
+
+* A test that expected such a save to keep the `dateCreated` and `lastUpdated` it was given saves inside a `withoutTimestamps { }` block of that data source's listener, such as `Book.secondary.autoTimestampEventListener`.
+* A test that expected a domain class event not to run on such a save expects what the event does.
+* The in-memory datastore of unit tests now follows `grails.gorm.events.autoTimestampInsertOverwrite` and `grails.gorm.autoTimestampCacheAnnotations` on every data source, the default one included, as the application does. In an application whose configuration sets `autoTimestampInsertOverwrite: false`, a unit test that expected a save to overwrite the `dateCreated` or `lastUpdated` it was given expects them kept.
+
+==== 27. A Domain Class Has an `autoTimestampEventListener` Property
+
+Every domain class now has a static `autoTimestampEventListener` property, the listener that sets its timestamp and auditor properties (see the Events and Auto Timestamping section of the GORM for link:{hibernate7Guide}index.html#eventsAutoTimestamping[Hibernate 7] guide). A domain class that declares a property of that name of another type no longer compiles: the compiler reports that the return type of its `getAutoTimestampEventListener()` is incompatible with the one in `GormEntity`. A property of that name typed `AutoTimestampEventListener`, such as an injected bean, compiles but hides the static property, so `Book.autoTimestampEventListener` throws `MissingPropertyException`.
+
+===== Required Actions
+
+* Rename a property of a domain class named `autoTimestampEventListener`. Code that used an injected `autoTimestampEventListener` bean in a domain class reads `Book.autoTimestampEventListener` instead, which is the listener of the data source the class's saves go to.
+
+==== 28. Every Data Source Sets the Auditor Properties and Follows the Auto-Timestamp Settings
+
+In an application with several data sources, or with a database or a schema per tenant, a save through a data source other than the default one:
+
+* sets the `@CreatedBy` and `@LastModifiedBy` properties from the application's `AuditorAware`. In Grails 8 only a save through the default data source set them.
+* follows `grails.gorm.events.autoTimestampInsertOverwrite` and `grails.gorm.autoTimestampCacheAnnotations`. In Grails 8 it overwrote a `dateCreated` or `lastUpdated` that an instance was saved with, whatever `autoTimestampInsertOverwrite` said.
+* with GORM for Neo4j, runs the domain class's events, such as `beforeInsert`, and sets `dateCreated` and `lastUpdated`. In Grails 8 a save through another Neo4j connection ran neither.
+
+===== Required Actions
+
+For most applications **no changes are required**. Check the domain classes saved through a data source other than the default one whose auditor properties, given timestamps or, with Neo4j, events were expected to be left alone.
+
+==== 29. JLine 4
+
+Grails 9 manages JLine 4 (`org.jline:jline`), the line Groovy 6's `groovysh` is built on, in place of JLine 3. The link:{versionsRef}Grails%20BOM.html[Grails BOM dependency table] has the exact version. JLine is the terminal library behind the interactive prompts of the `grails` command line tools and of `grails shell`, and behind `GrailsConsole`, which application and plugin commands write to. The line reader, terminal and completer APIs keep their `org.jline` packages.
+
+===== Required Actions
+
+* Recompile code of your own that uses JLine, such as an `org.jline.reader.Completer` for a command, against JLine 4. JLine 4 removed APIs that JLine 3 had deprecated, so code that uses them no longer compiles. For example, use `org.jline.builtins.Completers.FileNameCompleter` in place of `org.jline.reader.impl.completer.FileNameCompleter`, and `Terminal.inputEncoding()` and `outputEncoding()` in place of `stdinEncoding()`, `stdoutEncoding()` and `stderrEncoding()`. `TerminalBuilder.codepage(int)` and the `TerminalBuilder.PROP_JNA` and `PROP_JANSI` constants are gone too.
+* JLine 4 has no JNA or Jansi terminal provider. Remove a dependency on `org.jline:jline-terminal-jna` or `org.jline:jline-terminal-jansi`: neither has a JLine 4 version, and JLine finds the terminal through its remaining providers.
+
+picocli's `info.picocli:picocli-shell-jline3` runs on JLine 4, but picocli has no JLine 4 version of it, and its `PicocliCommands` implements `org.jline.console.CommandRegistry`, which JLine 4 deprecates. JLine's own picocli bridge, `org.jline:jline-picocli`, is built for JLine 4. To move to it, use it at the JLine version the Grails BOM manages.
+
+==== 30. Command Lines of Application Commands
+
+The command line parser of the `grails` command line tool and of `runCommand`, which reads the command line of an application or plugin command, reads two kinds of input differently:
+
+* An empty argument after an option without a value is that option's value, an empty one. `--name "" value` used to give the option `name` the value `value`; now `name` is empty, and `value` is an argument.
+* The text inside a pair of double quotes is trimmed, as an argument without quotes always was. `" a "` used to reach the command as ` a `, and now reaches it as `a`.
+
+It also reads three kinds of input it used to fail on or cut short:
+
+* `--name=`, an option with an empty value, threw an `ArrayIndexOutOfBoundsException`, and is now the option `name` with an empty value.
+* An argument that is a single `"` threw a `StringIndexOutOfBoundsException`, and is now passed on as it is.
+* The value of an option is everything after the first `=`: `--filter=status=active` used to give `status`, and now gives `status=active`.
+
+===== Required Actions
+
+* Check commands that read an option followed by an empty argument, or arguments with spaces inside quotes, and expect the values above.
+* Remove workarounds for the three failures, such as passing `--filter=status%3Dactive` and decoding it in the command.
+
+[[upgradingSpringFormatNegotiation]]
+==== 31. Opt Into Spring MVC Content Negotiation for Grails Formats
+
+Set `grails.mime.negotiation.spring: true` to resolve `request.format`, `response.format`, `withFormat` and the format
+`respond` writes in with Spring MVC's content negotiation manager, and to have the `format` parameter, URL extensions and
+the `grails.mime` settings of the `Accept` header decide what Spring MVC writes for an action too (see
+<<springFormatNegotiation,Resolving Formats with Spring MVC Content Negotiation>>). Grails 9 keeps its own rules by
+default, and Grails 10 makes the setting the default, so an application should check these answers before then.
+
+[source,yaml]
+.grails-app/conf/application.yml
+----
+grails:
+    mime:
+        negotiation:
+            spring: true
+----
+
+The setting changes these answers, which the framework's tests record by running the same requests both ways:
+
+* *The order of the `Accept` header.* Spring MVC takes a more specific type ahead of a less specific one of equal
+quality, where the Grails rules keep the order of the header: `Accept: */*, application/json` is the `json` format,
+where it is `all` without the setting, and `withFormat` runs the `json` block rather than its first. A type with the
+`+xml` suffix still comes ahead of the XML type of equal quality: `Accept: application/xml, application/atom+xml` is
+`atom` either way, and Spring MVC now writes what an action returns in that order too.
+* *Types with the `+json` and `+xml` suffixes.* A type no configured type names, such as `application/merge-patch+json`,
+`application/soap+xml` or, without a `hal` format, `application/hal+json`, is the `json` or `xml` format, where the
+Grails rules read only the problem types of RFC 9457 so and answer any other as `all`. In `Content-Type` too: a body sent
+as such a type is of the `json` format, where its `request.format` is otherwise `null`, and data binding reads it as JSON.
+* *A request that accepts no configured type.* Such a request, as one that sends only `Accept: image/png`, and one whose
+`Accept` header Spring cannot read, such as `Accept: application/json;q=abc`, is not acceptable: `response.format` and
+`response.mimeType` are `null`, `respond` answers `406 Not Acceptable` and `withFormat` runs its `*` block, or no block,
+where the Grails rules answer as for a client that accepts any type, with the `all` format, or read the header
+leniently. Code that reads `response.format` or `response.mimeType` must allow for `null`.
+* *The `format` parameter and URL extensions.* A format no type is configured for is not acceptable, to `respond`, which
+answers `406`, and to what Spring MVC writes, where the Grails rules answer in the first configured format;
+`withFormat` answers it from the `Accept` header, as for a format it has no block for. A format that
+`spring.mvc.contentnegotiation.media-types` maps, such as `plain: text/plain`, decides what Spring MVC writes, as
+without the setting where `spring.mvc.contentnegotiation.favor-parameter` is on, while `respond` still answers `406`
+for it. The `all` format leaves the format to the `Accept` header: `?format=all` with `Accept: application/json` is `json`, where it is otherwise `all`. The
+first value of the parameter counts.
+* *What Spring MVC writes for an action.* The `format` parameter and URL extensions now decide the type of a
+`ResponseEntity`, a `ProblemDetail` or another value Spring MVC writes for a request a URL mapping handles, where Spring
+MVC read only the `Accept` header: `/book/show/1.json` is answered in JSON whatever the `Accept` header asks for, and
+`/book/show/1.html` of an action that returns a map with `406`, since no message converter writes a map as HTML.
+`grails.mime.use.accept.header: false` and `grails.mime.disable.accept.header.*` now ignore the `Accept` header for it
+too.
+* *Without the `all` format.* Where `grails.mime.types` does not list `all`, a request without an `Accept` header is of
+the `all` format, as one that sends `Accept: */*` is, where the Grails rules give the first configured format, so
+`withFormat` runs its `*` block, or its first block, rather than the block of that format. A type of quality `0` comes
+after any other, so `Accept: application/json;q=0, */*;q=0.1` is `all`, where it is otherwise `json`. `?format=all`
+leaves the format to the `Accept` header there too, where the Grails rules give the first configured format.
+* *Wildcards.* A wildcard such as `text/*` is the `all` format as before, but `withFormat` runs the first block of a
+format with a type compatible with it, and `respond` answers in the first such format of the action, where the Grails
+rules run the first block and answer in the first format: `withFormat { pdf {...}; html {...} }` runs the `html` block for
+`Accept: text/*`.
+* *A `Content-Type` Spring cannot read.* A `Content-Type` Spring rejects, such as `application/json;charset=` or a list
+of types, is of no format, where the Grails rules read it leniently as `json`.
+
+Other requests resolve as before, among them those of browsers and those that name one configured type. A Spring MVC
+endpoint, and Spring Security's filters before a URL mapping has matched a request, negotiate as before.

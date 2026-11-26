@@ -79,7 +79,9 @@ class HttpServletRequestExtension {
     }
 
     /**
-     * Obtains a list of configured {@link grails.web.mime.MimeType} instances for the request
+     * Obtains a list of configured {@link grails.web.mime.MimeType} instances for the request: with
+     * {@code grails.mime.negotiation.spring}, the type of its {@code Content-Type} as Spring reads it, as the format
+     * {@code grails.mime.types} gives it
      *
      * @param request The request
      * @return A list of configured mime types
@@ -87,6 +89,12 @@ class HttpServletRequestExtension {
     static MimeType[] getMimeTypes(HttpServletRequest request) {
         MimeType[] result = (MimeType[]) request.getAttribute(GrailsApplicationAttributes.REQUEST_FORMATS)
         if (!result) {
+            GrailsContentNegotiationStrategy strategy = GrailsContentNegotiationStrategy.forRequest(request)
+            if (strategy.springNegotiation) {
+                result = strategy.resolveContentMimeTypes(request)
+                request.setAttribute(GrailsApplicationAttributes.REQUEST_FORMATS, result)
+                return result
+            }
             // First try to get context from GrailsWebRequest
             ApplicationContext context = null
             GrailsWebRequest webRequest = GrailsWebRequest.lookup()

@@ -36,6 +36,9 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 
 import grails.gorm.DetachedCriteria
 import grails.gorm.MultiTenant
+import org.grails.datastore.mapping.model.PersistentEntity
+import org.grails.datastore.mapping.model.types.Association
+import org.grails.datastore.mapping.model.types.Basic
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
 import org.grails.datastore.mapping.query.Query
 import org.grails.datastore.mapping.query.api.BuildableCriteria
@@ -46,6 +49,7 @@ import org.grails.orm.hibernate.GrailsHibernateTemplate
 import org.grails.orm.hibernate.HibernateDatastore
 import org.grails.orm.hibernate.HibernateSession
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
+import org.grails.orm.hibernate.query.HibernateAlias
 import org.grails.orm.hibernate.query.HibernateQuery
 import org.grails.orm.hibernate.query.SqlGroupProjection
 import org.grails.orm.hibernate.query.SqlProjection
@@ -218,30 +222,95 @@ class HibernateCriteriaBuilder extends GroovyObjectSupport implements BuildableC
         }
     }
 
-    org.grails.datastore.mapping.query.api.Criteria createAlias(String associationPath, String alias) {
-        def prop = hibernateQuery.getEntity().getPropertyByName(associationPath)
-        if (prop instanceof org.grails.datastore.mapping.model.types.Basic) {
-            hibernateQuery.addAlias(
-                    new org.grails.orm.hibernate.query.HibernateAlias(associationPath, alias, JoinType.INNER))
+    Criteria createAlias(String associationPath, String alias) {
+        return createAlias(associationPath, alias, 0)
+    }
+
+    Criteria createAlias(
+            String associationPath, String alias, int joinType) {
+        DetachedCriteria<?> criteria = hibernateQuery.getDetachedCriteria()
+        JoinType convertedJoinType = convertFromInt(joinType)
+        String path = pathFromDeclaredAlias(criteria, associationPath, alias)
+        if (path.contains(ALIAS_SEPARATOR)) {
+            criteria.getCriteria().add(new HibernateAlias(path, alias, convertedJoinType))
             return this
         }
-        hibernateQuery.getDetachedCriteria().createAlias(associationPath, alias)
-        hibernateQuery.getDetachedCriteria().join(associationPath, JoinType.INNER)
+        def prop = criteria.getPersistentEntity().getPropertyByName(path)
+        criteria.getCriteria().add(new HibernateAlias(path, alias, convertedJoinType))
+        if (prop instanceof Basic) {
+            return this
+        }
+        criteria.createAlias(path, alias)
+        criteria.join(path, convertedJoinType)
         return this
     }
 
-    org.grails.datastore.mapping.query.api.Criteria createAlias(
-            String associationPath, String alias, int joinType) {
-        def prop = hibernateQuery.getEntity().getPropertyByName(associationPath)
-        JoinType convertedJoinType = convertFromInt(joinType)
-        if (prop instanceof org.grails.datastore.mapping.model.types.Basic) {
-            hibernateQuery.addAlias(
-                    new org.grails.orm.hibernate.query.HibernateAlias(associationPath, alias, convertedJoinType))
-            return this
+    /**
+     * Resolves the path of an alias that starts with an alias the criteria already declare, as
+     * {@code createAlias('f.tag', 't')} does after {@code createAlias('favorite', 'f')}. The first alias of an
+     * association path shares the join of that path, so the path continues the path of that alias
+     * ({@code favorite.tag}) and shares its joins. A later alias of the same path has a join of its own: the
+     * path then names that alias, followed by {@link #ALIAS_SEPARATOR} ({@code f2:tag}), and is joined from it.
+     *
+     * @return the path the alias is registered with, which is the given path when it starts with an association
+     */
+    private static String pathFromDeclaredAlias(DetachedCriteria<?> criteria, String associationPath, String alias) {
+        int dot = associationPath.indexOf('.')
+        if (dot < 0 || associationPath.substring(0, dot) == alias) {
+            return associationPath
         }
-        hibernateQuery.getDetachedCriteria().createAlias(associationPath, alias)
-        hibernateQuery.getDetachedCriteria().join(associationPath, convertedJoinType)
-        return this
+        List<HibernateAlias> declared = new ArrayList<>()
+        for (Query.Criterion criterion : criteria.getCriteria()) {
+            if (criterion instanceof HibernateAlias) {
+                declared.add((HibernateAlias) criterion)
+            }
+        }
+        int rootIndex = lastIndexOfAlias(declared, associationPath.substring(0, dot), declared.size())
+        if (rootIndex < 0) {
+            return associationPath
+        }
+        String rest = associationPath.substring(dot + 1)
+        PersistentEntity entity = aliasedEntity(criteria.getPersistentEntity(), declared, rootIndex)
+        for (String segment : rest.split('\\.')) {
+            def property = entity == null ? null : entity.getPropertyByName(segment)
+            if (!(property instanceof Association)) {
+                throw new IllegalArgumentException("Argument [${associationPath}] is not an association".toString())
+            }
+            entity = ((Association<?>) property).getAssociatedEntity()
+        }
+        HibernateAlias root = declared.get(rootIndex)
+        HibernateAlias first = declared.find { HibernateAlias declaredAlias -> declaredAlias.path() == root.path() }
+        boolean sharesPathJoin = first != null && root == first
+        return sharesPathJoin ? "${root.path()}.${rest}".toString() : "${root.alias()}${ALIAS_SEPARATOR}${rest}".toString()
+    }
+
+    private static int lastIndexOfAlias(List<HibernateAlias> declared, String alias, int end) {
+        for (int i = end - 1; i >= 0; i--) {
+            if (declared.get(i).alias() == alias) {
+                return i
+            }
+        }
+        return -1
+    }
+
+    /**
+     * @return the entity the alias declared at the given position refers to, or {@code null} when its path
+     * does not lead to an entity
+     */
+    private static PersistentEntity aliasedEntity(PersistentEntity queried, List<HibernateAlias> declared, int index) {
+        String path = declared.get(index).path()
+        PersistentEntity entity = queried
+        int separator = path.indexOf(ALIAS_SEPARATOR)
+        if (separator >= 0) {
+            int rootIndex = lastIndexOfAlias(declared, path.substring(0, separator), index)
+            entity = rootIndex < 0 ? null : aliasedEntity(queried, declared, rootIndex)
+            path = path.substring(separator + ALIAS_SEPARATOR.length())
+        }
+        for (String segment : path.split('\\.')) {
+            def property = entity == null ? null : entity.getPropertyByName(segment)
+            entity = property instanceof Association ? ((Association<?>) property).getAssociatedEntity() : null
+        }
+        return entity
     }
 
     /**

@@ -26,6 +26,7 @@ import spock.util.environment.RestoreSystemProperties
 import org.springframework.transaction.TransactionStatus
 
 import grails.gorm.multitenancy.CurrentTenant
+import grails.gorm.multitenancy.CurrentTenantHolder
 import grails.gorm.multitenancy.Tenant
 import grails.gorm.multitenancy.Tenants
 import grails.gorm.multitenancy.WithoutTenant
@@ -180,6 +181,71 @@ return TestService
 
         then: "It executed corretly without throwing an exception"
         playerCount == 0
+    }
+
+    void 'inside Tenants.withId the current tenant is the one withId binds, not the one the resolver resolves'() {
+        given:
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'two')
+
+        expect:
+        Tenants.withId('one') { Tenants.currentId() } == 'one'
+    }
+
+    void 'a @CurrentTenant method inside Tenants.withId runs for the tenant withId binds'() {
+        given:
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'two')
+        final teamService = new TeamService()
+
+        when:
+        Tenants.withId('one') {
+            teamService.addTeam('Brentford')
+        }
+
+        then:
+        Tenants.withId('one') { Team.countByName('Brentford') } == 1
+
+        and: 'not for the tenant the resolver resolves'
+        Tenants.withId('two') { Team.countByName('Brentford') } == 0
+    }
+
+    void 'a @Transactional method runs for the tenant of its datastore while another datastore has a different tenant'() {
+        given:
+        final teamService = new TeamService()
+        final otherDatastore = Stub(Datastore)
+
+        when:
+        Tenants.withId('one') {
+            CurrentTenantHolder.withTenant(otherDatastore, 'two') {
+                teamService.addTeam('Fulham')
+            }
+        }
+
+        then:
+        Tenants.withId('one') { Team.countByName('Fulham') } == 1
+    }
+
+    void 'Tenants.withId with a domain class runs for the given tenant while the resolver resolves another one'() {
+        given:
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'two')
+
+        when:
+        Tenants.withId(Team, 'one') { new Team(name: 'Wolves').save(flush: true) }
+
+        then:
+        Tenants.withId('one') { Team.countByName('Wolves') } == 1
+    }
+
+    void 'Tenants.withId with a domain class inside Tenants.withId for another tenant runs for the given tenant'() {
+        given:
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'two')
+
+        when:
+        Tenants.withId('two') {
+            Tenants.withId(Team, 'one') { new Team(name: 'Everton').save(flush: true) }
+        }
+
+        then:
+        Tenants.withId('one') { Team.countByName('Everton') } == 1
     }
 }
 

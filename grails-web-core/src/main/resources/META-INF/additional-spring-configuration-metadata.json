@@ -69,14 +69,22 @@
         {
             "name": "grails.filter.encoding",
             "type": "java.lang.String",
-            "description": "The character encoding for the Grails character encoding filter.",
-            "defaultValue": "UTF-8"
+            "description": "The character encoding of the character encoding filter.",
+            "deprecation": {
+                "level": "warning",
+                "reason": "Spring Boot registers the character encoding filter; its encoding is configured with spring.servlet.encoding.charset.",
+                "replacement": "spring.servlet.encoding.charset"
+            }
         },
         {
             "name": "grails.filter.forceEncoding",
             "type": "java.lang.Boolean",
-            "description": "Whether to force the encoding filter to set the encoding on the response.",
-            "defaultValue": true
+            "description": "Whether the character encoding filter overrides the encoding of the request and the response.",
+            "deprecation": {
+                "level": "warning",
+                "reason": "Spring Boot registers the character encoding filter; whether it overrides the encoding is configured with spring.servlet.encoding.force.",
+                "replacement": "spring.servlet.encoding.force"
+            }
         },
         {
             "name": "grails.exceptionresolver.logRequestParameters",
@@ -122,6 +130,12 @@
             "name": "grails.mime.disable.accept.header.userAgentsXhr",
             "type": "java.lang.Boolean",
             "description": "When true, XHR requests also respect the grails.mime.disable.accept.header.userAgents setting, while by default XHR requests ignore user agent filtering.",
+            "defaultValue": false
+        },
+        {
+            "name": "grails.mime.negotiation.spring",
+            "type": "java.lang.Boolean",
+            "description": "Whether request.format, response.format, withFormat and the format respond writes in are resolved with Spring MVC's content negotiation manager, mapping the media types it resolves to the formats grails.mime.types gives them, rather than by the Grails rules. The format parameter, URL extensions and the grails.mime Accept header settings are kept, as strategies of Spring MVC's manager that also apply to what Spring MVC writes for the requests a URL mapping handles. Grails 10 makes it the default.",
             "defaultValue": false
         },
         {

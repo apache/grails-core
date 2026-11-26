@@ -21,6 +21,7 @@ package org.grails.config;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
@@ -29,9 +30,11 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Properties;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.regex.Pattern;
 
 import groovy.util.ConfigObject;
 import org.codehaus.groovy.runtime.DefaultGroovyMethods;
@@ -57,16 +60,119 @@ import org.grails.core.exceptions.GrailsConfigurationException;
 @Deprecated
 public abstract class NavigableMapConfig implements Config {
     protected static final Logger LOG = LoggerFactory.getLogger(NavigableMapConfig.class);
+
+    /**
+     * A key in brackets that is not an index and holds no dot, {@code [x]} of {@code routes[x]}.
+     */
+    private static final Pattern NAMED_SUBSCRIPT = Pattern.compile("\\[([^.\\[\\]]*[^.\\[\\]0-9][^.\\[\\]]*)]");
     protected ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
     protected ConfigurableConversionService conversionService = new DefaultConversionService();
     private volatile SystemEnvironmentIndex systemEnvironment = new SystemEnvironmentIndex(System.getenv());
+
     protected NavigableMap configMap = new NavigableMap() {
+
+        /**
+         * The texts the merge in progress has resolved, by the full name of the entry and the text. The merge writes one
+         * entry under several keys: a dotted key under the whole key and in its nested map, and a list element in its
+         * list in the nested map, in its list under the flat key and under its indexed key. Every write takes one value,
+         * even for {@code ${random.uuid}}. A value written below a subscript, {@code db.host} of
+         * {@code rows[0].db.host}, is written again into its element as it was resolved, so each resolved text is also
+         * recorded as resolved for its entry, and an escaped placeholder kept as text is not resolved a second time.
+         */
+        private Map<List<String>, String> resolvedTexts;
+
         @Override
-        protected Object mergeMapEntry(NavigableMap targetMap, String sourceKey, Object newValue) {
-            if (newValue instanceof CharSequence) {
-                newValue = resolvePlaceholders(newValue.toString());
+        public void merge(Map sourceMap, boolean parseFlatKeys) {
+            resolvedTexts = new HashMap<>();
+            try {
+                super.merge(sourceMap, parseFlatKeys);
+            } finally {
+                resolvedTexts = null;
             }
-            return super.mergeMapEntry(targetMap, sourceKey, newValue);
+        }
+
+        /**
+         * Resolves the placeholders in a value before it is written: in a string, in the strings of a list, through
+         * the maps and lists it holds, and in a map written under an indexed key, {@code rows[0]}, which is written into
+         * its list as it is. A map written under a plain key is merged entry by entry, through this method.
+         */
+        @Override
+        protected void mergeMapEntry(NavigableMap rootMap, String path, NavigableMap targetMap, String sourceKey,
+                Object sourceValue, boolean parseFlatKeys, boolean isNestedSet) {
+            Object value = sourceValue;
+            if (sourceValue instanceof CharSequence || sourceValue instanceof List ||
+                    (sourceValue instanceof Map && isIndexed(sourceKey))) {
+                // the full name of the entry, also for a value written below a subscript into its element, db.host of rows[0]
+                List<String> targetPath = targetMap.getPath();
+                value = resolved(targetPath.isEmpty() ? sourceKey : String.join(".", targetPath) + '.' + sourceKey, sourceValue);
+            }
+            super.mergeMapEntry(rootMap, path, targetMap, sourceKey, value, parseFlatKeys, isNestedSet);
+        }
+
+        private boolean isIndexed(String sourceKey) {
+            int subscriptStart = sourceKey.indexOf('[');
+            return subscriptStart > -1 && sourceKey.indexOf(']') > subscriptStart;
+        }
+
+        /**
+         * The value with the placeholders in its strings resolved, through the lists and maps it holds. A list or map
+         * holding no placeholder is the one given, and any other is a copy of the same kind, so the property source
+         * keeps what it holds.
+         */
+        @SuppressWarnings("unchecked")
+        private Object resolved(String name, Object value) {
+            if (value instanceof CharSequence) {
+                return resolvedText(name, value.toString());
+            }
+            if (value instanceof List) {
+                List<?> list = (List<?>) value;
+                List<Object> resolved = null;
+                for (int i = 0; i < list.size(); i++) {
+                    Object element = resolved(name + '[' + i + ']', list.get(i));
+                    if (resolved == null && !Objects.equals(element, list.get(i))) {
+                        resolved = new ArrayList<>(list);
+                    }
+                    if (resolved != null) {
+                        resolved.set(i, element);
+                    }
+                }
+                return resolved != null ? resolved : list;
+            }
+            if (value instanceof Map) {
+                Map<?, ?> map = (Map<?, ?>) value;
+                Map<Object, Object> resolved = null;
+                for (Map.Entry<?, ?> entry : map.entrySet()) {
+                    Object element = resolved(name + '.' + entry.getKey(), entry.getValue());
+                    if (resolved == null && !Objects.equals(element, entry.getValue())) {
+                        resolved = map instanceof NavigableMap ? (Map<Object, Object>) (Map<?, ?>) ((NavigableMap) map).clone() : new LinkedHashMap<>(map);
+                    }
+                    if (resolved != null) {
+                        resolved.put(entry.getKey(), element);
+                    }
+                }
+                return resolved != null ? resolved : map;
+            }
+            return value;
+        }
+
+        private String resolvedText(String name, String text) {
+            if (resolvedTexts == null) {
+                return resolvePlaceholders(text);
+            }
+            String entry = entryName(name);
+            String resolved = resolvedTexts.computeIfAbsent(Arrays.asList(entry, text), key -> resolvePlaceholders(text));
+            resolvedTexts.putIfAbsent(Arrays.asList(entry, resolved), resolved);
+            return resolved;
+        }
+
+        /**
+         * The name with each key in brackets that is not an index and holds no dot written as a part of a dotted name.
+         * {@code routes[x]} names the entry {@code x} of the map {@code routes}, and an element of a list from
+         * application.yml holds it under both names, so both take one resolution. A key with a dot, {@code [a.b]}, stays
+         * in its brackets, so it is not taken for the entry {@code b} of a map {@code a}.
+         */
+        private String entryName(String name) {
+            return name.indexOf('[') < 0 ? name : NAMED_SUBSCRIPT.matcher(name).replaceAll(".$1");
         }
     };
 
@@ -230,6 +336,14 @@ public abstract class NavigableMapConfig implements Config {
         systemEnvironment = new SystemEnvironmentIndex(System.getenv());
     }
 
+    /**
+     * Indexes the given environment as the JVM of the given operating system would hold it, so that a test can
+     * exercise the names Windows matches regardless of case on any machine.
+     */
+    void refreshSystemEnvironment(Map<String, String> environment, boolean windows) {
+        systemEnvironment = new SystemEnvironmentIndex(environment, windows);
+    }
+
     @Override
     public <T> T getProperty(String key, Class<T> targetType, T defaultValue) {
         Object value = systemEnvironment.get(key);
@@ -238,6 +352,9 @@ public abstract class NavigableMapConfig implements Config {
         }
         if (value == null) {
             value = configMap.get(key);
+        }
+        if (value instanceof List && isWrittenByIndexedKeys(key, (List<?>) value)) {
+            value = withPlainMaps((List<?>) value);
         }
 
         return convertValueIfNecessary(value, targetType, defaultValue);
@@ -267,6 +384,41 @@ public abstract class NavigableMapConfig implements Config {
         }
         cache.put(from, to);
         return to;
+    }
+
+    /**
+     * Whether the list holds a nested map for an element that indexed keys alone wrote, {@code rows[0].name}. The flat
+     * key of such a list holds the plain maps the subscripts wrote, which getProperty gave before the nested maps held
+     * the list. A list from application.yml, or merged as a list, holds its nested maps under the flat key too, and is
+     * given as it is held, as before.
+     */
+    private boolean isWrittenByIndexedKeys(String key, List<?> list) {
+        if (!holdsNavigableMap(list)) {
+            return false;
+        }
+        Object flat = configMap.get(key);
+        return flat instanceof List && !holdsNavigableMap((List<?>) flat);
+    }
+
+    /**
+     * The list with its maps as plain maps, as getProperty gives a map, whatever type the list is read as.
+     */
+    private List<Object> withPlainMaps(List<?> list) {
+        final IdentityHashMap<NavigableMap, Map<Object, Object>> cache = new IdentityHashMap<>();
+        final List<Object> converted = new ArrayList<>(list.size());
+        for (Object o: list) {
+            converted.add(o instanceof NavigableMap ? convertToMap((NavigableMap) o, cache) : o);
+        }
+        return converted;
+    }
+
+    private static boolean holdsNavigableMap(List<?> list) {
+        for (Object o: list) {
+            if (o instanceof NavigableMap) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private ConfigObject convertPropsToMap(ConfigObject config) {
@@ -371,6 +523,7 @@ public abstract class NavigableMapConfig implements Config {
 
         Object value = null;
         boolean first = true;
+        boolean storedKeyRead = false;
         int length = key.length();
         int start = 0;
         while (start < length) {
@@ -380,18 +533,77 @@ public abstract class NavigableMapConfig implements Config {
             }
             if (end > start) {
                 String segment = key.substring(start, end);
-                if (first) {
-                    value = configMap.get(segment);
-                    first = false;
-                } else if (value instanceof Map) {
-                    value = ((Map<?, ?>) value).get(segment);
+                Object parent = first ? configMap : value;
+                first = false;
+                if (parent instanceof Map<?, ?> map && map.containsKey(segment)) {
+                    value = map.get(segment);
                 } else {
-                    break;
+                    value = elementOf(parent, segment);
+                    if (value != null && !storedKeyRead) {
+                        // a full key stored as written, such as one put as server.ports[1], wins over the element
+                        Object stored = configMap.get(key);
+                        if (stored != null) {
+                            return stored;
+                        }
+                        storedKeyRead = true;
+                    }
+                }
+                if (value == null) {
+                    return null;
                 }
             }
             start = end + 1;
         }
         return value;
+    }
+
+    private static Object childOf(Object value, String segment) {
+        if (value instanceof Map<?, ?> map && map.containsKey(segment)) {
+            return map.get(segment);
+        }
+        return elementOf(value, segment);
+    }
+
+    /**
+     * The element of a list a segment of a key names: the element at a whole-number segment, as Spring Boot reads
+     * {@code server.ports.0}, or, for a segment with an index after a name, {@code ports[0]}, the element of the list
+     * under {@code ports} in a map that holds no key of that name itself. A whole number with a leading zero, such as
+     * {@code 01}, is not an index, as in Spring Boot. Anything else below a value that is not a map, such as a child
+     * of a scalar, does not exist. A key stored as written is read before the element it names.
+     */
+    private static Object elementOf(Object value, String segment) {
+        if (value instanceof Map) {
+            Map<?, ?> map = (Map<?, ?>) value;
+            int bracket = segment.indexOf('[');
+            if (bracket > 0 && segment.endsWith("]")) {
+                Object child = map.get(segment.substring(0, bracket));
+                for (String index : segment.substring(bracket + 1, segment.length() - 1).split("\\]\\[", -1)) {
+                    child = childOf(child, index);
+                    if (child == null) {
+                        return null;
+                    }
+                }
+                return child;
+            }
+            return null;
+        }
+        if (value instanceof List<?> list) {
+            int index = listIndex(segment);
+            return index >= 0 && index < list.size() ? list.get(index) : null;
+        }
+        return null;
+    }
+
+    private static int listIndex(String segment) {
+        if (segment.isEmpty() || segment.length() > 9 || (segment.length() > 1 && segment.charAt(0) == '0')) {
+            return -1;
+        }
+        for (int i = 0; i < segment.length(); i++) {
+            if (!Character.isDigit(segment.charAt(i))) {
+                return -1;
+            }
+        }
+        return Integer.parseInt(segment);
     }
 
     /**
@@ -424,8 +636,33 @@ public abstract class NavigableMapConfig implements Config {
         private final Set<String> canonicalNames;
         private final int[] canonicalHashes;
 
+        /**
+         * How the JVM compares variable names on Windows: each character upper-cased, and nothing else. That keeps names
+         * that {@link String#CASE_INSENSITIVE_ORDER} would merge apart, such as {@code CONFIG_ID} and {@code CONFIG_İD}
+         * (U+0130), because it also lower-cases and so reads the dotted capital I as an {@code i}.
+         */
+        private static final Comparator<String> WINDOWS_NAME_ORDER = (first, second) -> {
+            int length = Math.min(first.length(), second.length());
+            for (int i = 0; i < length; i++) {
+                char a = first.charAt(i);
+                char b = second.charAt(i);
+                if (a != b) {
+                    a = Character.toUpperCase(a);
+                    b = Character.toUpperCase(b);
+                    if (a != b) {
+                        return a - b;
+                    }
+                }
+            }
+            return first.length() - second.length();
+        };
+
         SystemEnvironmentIndex(Map<String, String> environment) {
-            this.variables = IS_WINDOWS ? new TreeMap<>(String.CASE_INSENSITIVE_ORDER) : HashMap.newHashMap(environment.size());
+            this(environment, IS_WINDOWS);
+        }
+
+        SystemEnvironmentIndex(Map<String, String> environment, boolean windows) {
+            this.variables = windows ? new TreeMap<>(WINDOWS_NAME_ORDER) : HashMap.newHashMap(environment.size());
             this.variables.putAll(environment);
             this.canonicalNames = HashSet.newHashSet(variables.size());
             for (String name : variables.keySet()) {

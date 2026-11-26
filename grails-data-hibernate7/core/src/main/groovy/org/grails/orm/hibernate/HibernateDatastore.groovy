@@ -65,6 +65,7 @@ import org.springframework.util.ReflectionUtils
 import grails.gorm.multitenancy.Tenants
 import org.grails.datastore.gorm.GormRegistry
 import org.grails.datastore.gorm.events.AutoTimestampEventListener
+import org.grails.datastore.gorm.events.AutoTimestampingDatastore
 import org.grails.datastore.gorm.events.ConfigurableApplicationContextEventPublisher
 import org.grails.datastore.gorm.events.ConfigurableApplicationEventPublisher
 import org.grails.datastore.gorm.events.DefaultApplicationEventPublisher
@@ -132,7 +133,8 @@ class HibernateDatastore extends AbstractDatastore
                 Closeable,
                 MessageSourceAware,
                 TransactionCapableDatastore,
-                MultipleConnectionSourceCapableDatastore {
+                MultipleConnectionSourceCapableDatastore,
+                AutoTimestampingDatastore {
 
     private static final Logger LOG = LoggerFactory.getLogger(HibernateDatastore)
 
@@ -255,7 +257,8 @@ class HibernateDatastore extends AbstractDatastore
         HibernateConnectionSourceSettings.HibernateSettings hibernateSettings = settings.hibernate
         this.osivReadOnly = hibernateSettings.osiv.readonly
         this.passReadOnlyToHibernate = hibernateSettings.isReadOnly()
-        this.isCacheQueries = hibernateSettings.cache.queries
+        Boolean cacheQueries = hibernateSettings.cache.queries
+        this.isCacheQueries = cacheQueries != null && cacheQueries
         this.failOnError = settings.isFailOnError()
         Boolean markDirty = settings.markDirty
         this.markDirty = markDirty != null && markDirty
@@ -993,6 +996,7 @@ class HibernateDatastore extends AbstractDatastore
         return eventTriggeringInterceptor
     }
 
+    @Override
     AutoTimestampEventListener getAutoTimestampEventListener() {
         return autoTimestampEventListener
     }

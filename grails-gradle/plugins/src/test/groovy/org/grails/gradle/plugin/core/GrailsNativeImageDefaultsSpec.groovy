@@ -71,6 +71,41 @@ class GrailsNativeImageDefaultsSpec extends GradleSpecification {
             result.output.contains('INDY_OPTION=true')
     }
 
+    void 'what traceNativeMetadata records is on the classpath the image is built from'() {
+        given:
+            setupTestResourceProject('native-defaults-on')
+
+        when:
+            BuildResult result = executeTask('inspectNativeClasspath')
+
+        then: 'the entry native-image reads META-INF/native-image of, without which recording it changes nothing'
+            result.output.contains('TRACED_METADATA_ON_CLASSPATH=true')
+    }
+
+    void 'metadata recorded under a directory of its own is read from the classpath entry above it'() {
+        given:
+            setupTestResourceProject('native-defaults-on')
+
+        when:
+            BuildResult result = executeTask('inspectNativeClasspath',
+                    ['-PfixtureTraceDirectory=recorded/META-INF/native-image/traced', '-PfixtureTraceRoot=recorded'])
+
+        then:
+            result.output.contains('TRACED_METADATA_ON_CLASSPATH=true')
+    }
+
+    void 'metadata recorded where an image cannot read it fails the build with the reason'() {
+        given:
+            GradleRunner runner = setupTestResourceProject('native-defaults-on')
+
+        when:
+            BuildResult result = runner.withArguments(
+                    ['inspectNativeClasspath', '-PfixtureTraceDirectory=recorded', '--stacktrace']).forwardOutput().buildAndFail()
+
+        then:
+            result.output.contains('which an image cannot read metadata from')
+    }
+
     void 'an application that builds an image and turns invokedynamic off fails the build with the reason'() {
         given:
             GradleRunner runner = setupTestResourceProject('native-defaults-on')

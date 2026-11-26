@@ -282,7 +282,7 @@ project, so two controls limit what runs:
 * A draft pull request runs no workflow unless it carries the `run ci` label; marking it ready for review starts CI.
   A pull request labelled `no ci` runs no workflow at all, draft or not. Labels are read when a push arrives, so add
   `run ci` (or remove `no ci`) and then push, or mark the draft ready, to get a run. Pushing to a draft still cancels
-  the run in flight for it, as every push to a pull request or a branch does.
+  the run in flight for it, as every push to a pull request does.
 * Adding `no ci` to a pull request cancels the runs it has in flight, and merging a pull request into a release branch
   cancels the runs started before the merge, unless the pull request is labelled `run ci`: on an older release branch
   the push after the merge does not run the tests, so the tests the label asked for are left to finish. A pull request
@@ -314,6 +314,11 @@ Concerning when a review is required for a `protected` branch:
    * Minimum # of Reviewers:  2 reviewers, preferred 3
    * Mandated Waiting Period: 3 days if over a weekend, 1 day if during the week.
 * Otherwise - `Review then Commit` with only 1 reviewer required. 
+
+An approval covers the changes that were reviewed. When a later push changes a pull request, the approvals given
+before it are dismissed automatically and the pull request has to be approved again; a rebase, or a merge of the base
+branch, that leaves the changes of the pull request as they were keeps them. A dismissed approval does not block the
+merge button, so check the review state of a pull request before merging it.
 
 ## Join The Project Team
 For people willing to contribute more than an occasional pull request, consider joining our core team.  Inquire in the `questions` channel in slack to learn more.

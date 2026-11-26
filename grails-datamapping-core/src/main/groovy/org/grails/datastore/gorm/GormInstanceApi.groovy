@@ -215,6 +215,7 @@ class GormInstanceApi<D> extends AbstractGormApi<D> implements GormInstanceOpera
         }
 
         try {
+            requireTransactionForWrite(shouldFlush)
             execute({ Session session ->
                 if (instance instanceof DirtyCheckable && markDirty) {
                     // Since this is an explicit call to save() we mark the instance as dirty to
@@ -250,6 +251,7 @@ class GormInstanceApi<D> extends AbstractGormApi<D> implements GormInstanceOpera
     @Override
     D insert(D instance, Map arguments) {
         boolean shouldFlush = arguments?.containsKey('flush') ? (boolean)arguments.get('flush') : false
+        requireTransactionForWrite(shouldFlush)
         execute({ Session session ->
             session.insert(instance)
             if (shouldFlush) {
@@ -267,6 +269,7 @@ class GormInstanceApi<D> extends AbstractGormApi<D> implements GormInstanceOpera
     @Override
     void delete(D instance, Map arguments) {
         boolean shouldFlush = arguments?.containsKey('flush') ? (boolean)arguments.get('flush') : false
+        requireTransactionForWrite(shouldFlush)
         execute({ Session session ->
             session.delete(instance)
             if (shouldFlush) {

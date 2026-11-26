@@ -42,7 +42,7 @@ import org.springframework.util.function.SingletonSupplier;
  * {@code ContentSecurityPolicyNonceGeneratingFilter} sets by default, so
  * {@link #nonceOf(HttpServletRequest)} reads the nonce whichever of the two generated it.</p>
  *
- * @since 9.1
+ * @since 9.0
  */
 public final class ContentSecurityPolicyNonce {
 

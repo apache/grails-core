@@ -29,6 +29,7 @@ import org.grails.web.mapping.DefaultLinkGenerator
 import org.grails.web.mapping.DefaultUrlMappingEvaluator
 import org.grails.web.mapping.DefaultUrlMappingsHolder
 import org.grails.web.util.WebUtils
+import org.springframework.http.HttpMethod
 import org.springframework.mock.web.MockServletContext
 import org.springframework.web.context.request.RequestContextHolder
 import spock.lang.IgnoreIf
@@ -56,6 +57,68 @@ class UrlMappingsWithHttpMethodSpec extends Specification{
          "/bar"( controller:"bar", action:"list", method:"*" )
          "/bar2"( controller:"bar", action:"list" )
 
+    }
+
+    void 'the query prefix maps a URL to the QUERY method of RFC 10008 alone'() {
+        given:
+        def holder = urlMappingsHolder {
+            query "/books/search"(controller: 'book', action: 'search')
+            query "/books/find"(controller: 'book') {
+                action = 'find'
+            }
+        }
+
+        expect:
+        holder.matchAll('/books/search', 'QUERY').size() == 1
+        holder.matchAll('/books/search', 'QUERY')[0].actionName == 'search'
+        holder.matchAll('/books/find', 'QUERY')[0].actionName == 'find'
+        !holder.matchAll('/books/search', 'POST')
+        !holder.matchAll('/books/search', 'GET')
+    }
+
+    void 'the method argument maps a URL to the QUERY method of RFC 10008, in any case'() {
+        given:
+        def holder = urlMappingsHolder {
+            "/books/search"(controller: 'book', action: 'search', method: 'QUERY')
+        }
+
+        expect:
+        holder.matchAll('/books/search', 'QUERY')[0].actionName == 'search'
+        holder.matchAll('/books/search', 'query')[0].actionName == 'search'
+        !holder.matchAll('/books/search', 'GET')
+    }
+
+    void 'a mapping for any method matches the QUERY method, and offers it among the methods of its URL'() {
+        given:
+        def holder = urlMappingsHolder {
+            "/books/any"(controller: 'book', action: 'any')
+            query "/books/search"(controller: 'book', action: 'search')
+        }
+
+        expect:
+        holder.matchAll('/books/any', 'QUERY')[0].actionName == 'any'
+        holder.allowedMethods('/books/any').contains(HttpMethod.QUERY)
+        holder.allowedMethods('/books/search') == [HttpMethod.QUERY] as Set
+    }
+
+    void 'a link to a QUERY mapping is generated with the method it is mapped to'() {
+        given:
+        def holder = urlMappingsHolder {
+            query "/books/search"(controller: 'book', action: 'search')
+            "/$controller/$action?"()
+        }
+        def linkGenerator = new DefaultLinkGenerator('http://localhost', '')
+        linkGenerator.urlMappingsHolder = holder
+
+        expect:
+        linkGenerator.link(controller: 'book', action: 'search', method: 'QUERY') == '/books/search'
+        linkGenerator.link(controller: 'book', action: 'search') == '/book/search'
+    }
+
+    private static UrlMappingsHolder urlMappingsHolder(Closure mappings) {
+        def ctx = new MockApplicationContext()
+        ctx.registerMockBean(GrailsApplication.APPLICATION_ID, new DefaultGrailsApplication())
+        new DefaultUrlMappingsHolder(new DefaultUrlMappingEvaluator(ctx).evaluateMappings(mappings))
     }
 
     void "Test that the http method can be used as a prefix to URL mappings"() {

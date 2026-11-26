@@ -231,14 +231,16 @@ include(
         // Test Report
         'grails-test-report',
 
+        // JUnit Platform listeners for the test JVMs of this repository (not published)
+        'grails-test-listener',
+
         // wrapper
         'grails-wrapper',
 
         // Agent Skills (published for consumption by AI coding agents)
         'grails-skills-ai',
         'grails-skills-developer',
-        'grails-skills-upgrade-guide-8',
-        'grails-skills-upgrade-guide-9',
+        'grails-skills-upgrade',
 )
 
 project(':grails-bom').projectDir = file('grails-bom/default')
@@ -269,8 +271,7 @@ project(':grails-async').projectDir = file('grails-async/plugin')
 
 project(':grails-skills-ai').projectDir = file('grails-skills/ai')
 project(':grails-skills-developer').projectDir = file('grails-skills/developer')
-project(':grails-skills-upgrade-guide-8').projectDir = file('grails-skills/upgrade-guide-8')
-project(':grails-skills-upgrade-guide-9').projectDir = file('grails-skills/upgrade-guide-9')
+project(':grails-skills-upgrade').projectDir = file('grails-skills/upgrade')
 
 project(':grails-dependencies-starter-web').projectDir = file('grails-dependencies/starter-web')
 project(':grails-dependencies-test').projectDir = file('grails-dependencies/test')
@@ -573,6 +574,7 @@ include(
         'grails-test-examples-datasources',
         'grails-test-examples-demo33',
         'grails-test-examples-enable-mvc-check',
+        'grails-test-examples-spring-format-negotiation',
         'grails-test-examples-exploded',
         'grails-test-examples-external-configuration',
         'grails-test-examples-geb',
@@ -643,6 +645,7 @@ project(':grails-test-examples-issue-views-182').projectDir = file('grails-test-
 project(':grails-test-examples-issue-11102').projectDir = file('grails-test-examples/issue-11102')
 project(':grails-test-examples-demo33').projectDir = file('grails-test-examples/demo33')
 project(':grails-test-examples-enable-mvc-check').projectDir = file('grails-test-examples/enable-mvc-check')
+project(':grails-test-examples-spring-format-negotiation').projectDir = file('grails-test-examples/spring-format-negotiation')
 project(':grails-test-examples-plugins-loadfirst').projectDir = file('grails-test-examples/plugins/loadfirst')
 project(':grails-test-examples-plugins-loadsecond').projectDir = file('grails-test-examples/plugins/loadsecond')
 project(':grails-test-examples-plugins-loadafter').projectDir = file('grails-test-examples/plugins/loadafter')

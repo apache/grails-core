@@ -505,23 +505,17 @@ class PredicateGenerator {
             JpaQueryContext fromsByProvider,
             DetachedAssociationCriteria<?> associationCriteria) {
         String associationName = associationCriteria.associationPath
-        From<?, ?> associationRoot = fromsByProvider.getFrom(associationName)
-        if (associationRoot == null) {
-            // Check if we already have it in our parent or alias map
-            Expression<?> expr = fromsByProvider.getFullyQualifiedExpression(associationName)
-            if (expr instanceof From) {
-                associationRoot = (From<?, ?>) expr
-            } else {
-                associationRoot = fromsByProvider.root.join(associationName)
-                fromsByProvider.addFrom(associationName, associationRoot)
-            }
-        }
+        From<?, ?> associationRoot = fromsByProvider.resolveAssociation(associationName)
 
         // Create a nested context for this association
-        JpaQueryContext nestedContext = new JpaQueryContext(fromsByProvider, null, associationRoot)
+        JpaQueryContext nestedContext = new QueryAliasRegistrar(associationCriteria, null)
+                .createContext(fromsByProvider, associationRoot, associationName)
 
         GrailsHibernatePersistentEntity associatedEntity = (GrailsHibernatePersistentEntity) associationCriteria.association.associatedEntity
         List<Query.Criterion> criteriaList = associationCriteria.criteria
+        if (criteriaList.isEmpty()) {
+            return null
+        }
         return criteriaBuilder.and(getPredicates(criteriaQuery, associationRoot, criteriaList, nestedContext, associatedEntity))
     }
 
@@ -530,19 +524,10 @@ class PredicateGenerator {
             JpaQueryContext fromsByProvider,
             HibernateAssociationQuery associationQuery) {
         String associationName = associationQuery.associationPath
-        From<?, ?> associationRoot = fromsByProvider.getFrom(associationName)
-        if (associationRoot == null) {
-            Expression<?> expr = fromsByProvider.getFullyQualifiedExpression(associationName)
-            if (expr instanceof From) {
-                associationRoot = (From<?, ?>) expr
-            } else {
-                associationRoot = fromsByProvider.root.join(associationName, JoinType.INNER)
-                fromsByProvider.addFrom(associationName, associationRoot)
-            }
-        }
+        From<?, ?> associationRoot = fromsByProvider.resolveAssociation(associationName)
 
         // Create a nested context for this association
-        JpaQueryContext nestedContext = new JpaQueryContext(fromsByProvider, null, associationRoot)
+        JpaQueryContext nestedContext = JpaQueryContext.forBlock(fromsByProvider, null, associationRoot, associationName)
 
         GrailsHibernatePersistentEntity associatedEntity = associationQuery.entity
         List<Query.Criterion> criteriaList = associationQuery.associationCriteria

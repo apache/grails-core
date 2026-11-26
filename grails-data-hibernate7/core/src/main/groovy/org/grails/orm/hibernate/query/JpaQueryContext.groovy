@@ -16,8 +16,10 @@
 package org.grails.orm.hibernate.query
 
 import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
 import jakarta.persistence.criteria.Expression
 import jakarta.persistence.criteria.From
+import jakarta.persistence.criteria.JoinType
 import jakarta.persistence.criteria.ParameterExpression
 import jakarta.persistence.criteria.Path
 
@@ -72,11 +74,29 @@ class JpaQueryContext implements Cloneable, QueryPathContext {
     }
 
     /**
+     * Creates the context of an association block, which shares the joins of the context that contains it.
+     *
+     * @param parent the context of the query or block that contains the block
+     * @param aliases the aliases the block declares, or {@code null}
+     * @param root the join of the block's association
+     * @param blockPath the association path of the block, relative to the container
+     */
+    static JpaQueryContext forBlock(JpaQueryContext parent, List<HibernateAlias> aliases, From<?, ?> root,
+                                    String blockPath) {
+        return new JpaQueryContext(parent, aliases, root, blockPath)
+    }
+
+    /**
      * Internal constructor for subqueries and base initialization.
      */
     JpaQueryContext(JpaQueryContext parent, List<HibernateAlias> aliases, From<?, ?> root) {
+        this(parent, aliases, root, (String) null)
+    }
+
+    private JpaQueryContext(JpaQueryContext parent, List<HibernateAlias> aliases, From<?, ?> root, String blockPath) {
         this.parent = parent
-        this.joinTracker = new JoinTracker(parent != null ? parent.joinTracker : null, root)
+        this.joinTracker = blockPath != null ? JoinTracker.forBlock(parent.joinTracker, root, blockPath) :
+                new JoinTracker(parent != null ? parent.joinTracker : null, root)
         this.aliasRegistry = new AliasRegistry(parent != null ? parent.aliasRegistry : null)
         this.resolver = new ExpressionResolver(aliasRegistry, joinTracker)
         if (aliases != null) {
@@ -95,6 +115,24 @@ class JpaQueryContext implements Cloneable, QueryPathContext {
 
     protected AliasRegistry getAliasRegistry() {
         return aliasRegistry
+    }
+
+    @PackageScope
+    void setJoinPlan(JoinPlan joinPlan) {
+        joinTracker.setPlan(joinPlan)
+    }
+
+    /**
+     * The join of an association path relative to this scope. It is the join every alias, block and property
+     * that goes through the path of the query shares, with the join type the criteria decided for the path.
+     */
+    @PackageScope
+    From<?, ?> resolveAssociation(String path) {
+        HibernateAlias definition = aliasRegistry.getDefinition(path)
+        JoinType planned = joinTracker.plannedType(path)
+        JoinType joinType = planned != null ? planned :
+                definition != null && !definition.explicit() ? definition.joinType() : JoinType.INNER
+        return resolver.resolveAssociation(path, joinType)
     }
 
     void setRoot(From<?, ?> root) {

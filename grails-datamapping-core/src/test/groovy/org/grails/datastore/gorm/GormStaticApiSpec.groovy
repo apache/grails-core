@@ -28,6 +28,7 @@ import grails.gorm.api.GormAllOperations
 import grails.gorm.api.GormInstanceOperations
 import grails.gorm.api.GormStaticOperations
 import grails.gorm.multitenancy.Tenants
+import org.grails.datastore.gorm.events.AutoTimestampingDatastore
 import org.grails.datastore.gorm.events.DefaultApplicationEventPublisher
 import org.grails.datastore.mapping.config.Settings
 import org.grails.datastore.mapping.core.Datastore
@@ -157,6 +158,68 @@ class GormStaticApiSpec extends Specification {
 
         expect:
         api.getGormDynamicFinders() == [finder]
+    }
+
+    void "getAutoTimestampEventListener returns the listener of the api's datastore"() {
+        given:
+        def api = new GormStaticApi(GormStaticApiThing, datastore, [])
+
+        expect:
+        api.autoTimestampEventListener != null
+        api.autoTimestampEventListener.is(datastore.autoTimestampEventListener)
+        GormStaticApiThing.autoTimestampEventListener.is(datastore.autoTimestampEventListener)
+    }
+
+    void "the default auto-timestamp listener of the static operations contract says it cannot be looked up"() {
+        given: 'an implementation that provides nothing beyond the interface defaults'
+        GormStaticOperations<Object> operations = (GormStaticOperations<Object>) Proxy.newProxyInstance(
+                GormStaticOperations.classLoader, [GormStaticOperations] as Class[],
+                { Object proxy, Method method, Object[] methodArgs ->
+                    if (method.isDefault()) {
+                        return InvocationHandler.invokeDefault(proxy, method, methodArgs)
+                    }
+                    throw new AssertionError("unexpected call of ${method.name}")
+                } as InvocationHandler)
+
+        when:
+        operations.autoTimestampEventListener
+
+        then:
+        UnsupportedOperationException e = thrown()
+        e.message.contains('cannot look up the auto-timestamp event listener')
+    }
+
+    void "getAutoTimestampEventListener rejects a datastore that does not set timestamps through a listener"() {
+        given:
+        Datastore plainDatastore = Stub(Datastore)
+        plainDatastore.getMappingContext() >> datastore.mappingContext
+        plainDatastore.connect() >> Stub(Session) { getDatastore() >> plainDatastore }
+        def api = new GormStaticApi(GormStaticApiThing, plainDatastore, [])
+
+        when:
+        api.autoTimestampEventListener
+
+        then:
+        IllegalStateException e = thrown()
+        e.message.contains(GormStaticApiThing.name)
+        e.message.contains(plainDatastore.toString())
+    }
+
+    void "getAutoTimestampEventListener rejects an auto-timestamping datastore that has no listener"() {
+        given:
+        Datastore listenerlessDatastore = Stub(Datastore, additionalInterfaces: [AutoTimestampingDatastore])
+        listenerlessDatastore.getMappingContext() >> datastore.mappingContext
+        listenerlessDatastore.connect() >> Stub(Session) { getDatastore() >> listenerlessDatastore }
+        ((AutoTimestampingDatastore) listenerlessDatastore).getAutoTimestampEventListener() >> null
+        def api = new GormStaticApi(GormStaticApiThing, listenerlessDatastore, [])
+
+        when:
+        api.autoTimestampEventListener
+
+        then:
+        IllegalStateException e = thrown()
+        e.message.contains(GormStaticApiThing.name)
+        e.message.contains(listenerlessDatastore.toString())
     }
 
     void "forQualifier creates a new static api bound to the requested qualifier"() {

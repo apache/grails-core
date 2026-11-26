@@ -79,6 +79,32 @@ The Grails 8 upgrade guide calls out the major application-impacting changes and
 For the changes since Spring Boot 4.1, see the https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-4.2-Release-Notes[Spring Boot 4.2 Release Notes] and the https://github.com/spring-projects/spring-framework/wiki/Spring-Framework-7.1-Release-Notes[Spring Framework 7.1 Release Notes].
 The xref:upgrading#upgrading90x[Upgrading from Grails 8 to Grails {grailsMajorVersion}] section covers the upgrade, including the graphql-java 26 changes that affect GraphQL applications.
 
+Spring Boot 4.2 can switch metrics and spans to OpenTelemetry's semantic conventions:
+
+[source,yaml]
+----
+management:
+    observations:
+        conventions: open-telemetry
+----
+
+`http.server.requests` then becomes `http.server.request.duration`, tagged with `http.route` and `error.type` in place of `uri` and `exception`.
+In a Grails application `http.route` is `/controller/action`, not the pattern of the URL mapping, which keeps it low in cardinality.
+Spring Boot's https://docs.spring.io/spring-boot/reference/actuator/observability.html#actuator.observability.semantic-conventions[documentation] lists what else changes, such as the properties that customize meter names no longer taking effect.
+
+==== The HTTP QUERY Method
+
+Spring Framework 7.1 supports the `QUERY` method of https://www.rfc-editor.org/info/rfc10008/[RFC 10008], a safe, idempotent request with a body. URL mappings gain a `query` prefix for it, next to `get`, `post` and the others, and a command object is bound to the body of a `QUERY`, which is JSON or form-encoded:
+
+[source,groovy]
+----
+static mappings = {
+    query "/books/search"(controller: 'book', action: 'search')
+}
+----
+
+See xref:theWebLayer#mappingHTTP[Mapping to HTTP methods].
+
 ==== JSON Dates and Times Render as Spring Boot Renders Them
 
 `render ... as JSON`, `respond` and JSON views now write `Date`, `Calendar`, `TimeZone`, the `java.sql` date types,
@@ -128,6 +154,11 @@ of the controller and of the `@ControllerAdvice` beans that apply to it, Spring 
 `spring.mvc.problemdetails.enabled` among them, which answers the exceptions of Spring MVC with RFC 9457 problems. See
 xref:theWebLayer#controllerExceptionHandling[Declarative Controller Exception Handling].
 
+With `grails.exceptionresolver.problemDetails: true`, an exception no such method handles is written as a problem to a
+client that does not prefer HTML, with the translation Spring Framework 7.1 adds, which keeps the status and detail of an
+`ErrorResponse` or a `@ResponseStatus` exception and does not expose the message of an unexpected one. The application's
+error page stays for browsers, and for an exception a URL mapping names.
+
 An action can return what a Spring MVC handler method returns to write the response, such as a `ResponseEntity`, a
 `ProblemDetail` or a `StreamingResponseBody`, and Spring MVC writes it with the return value handlers of its handler
 adapter, the `ResponseBodyAdvice` beans that apply to the controller, and the action's `@JsonView` and
@@ -136,7 +167,14 @@ an action annotated `@ResponseBody`, a `CompletableFuture` it returns included. 
 selects the properties `respond` writes through Spring MVC. See
 xref:theWebLayer#springResponses[Returning Spring MVC Responses].
 
-See xref:upgrading#upgrading90x[Upgrading from Grails 8 to Grails 9], sections 4 to 11 and 13 to 16.
+With `grails.mime.negotiation.spring: true`, which Grails 10 makes the default, `request.format`, `response.format`,
+`withFormat` and the format `respond` writes in are resolved with Spring MVC's content negotiation manager, so that the
+`spring.mvc.contentnegotiation.*` settings apply to them, and the `format` parameter, URL extensions and the
+`grails.mime` settings of the `Accept` header decide what Spring MVC writes for an action too, such as a
+`ResponseEntity` it returns. See <<springFormatNegotiation,Resolving Formats with Spring MVC Content Negotiation>>.
+
+See xref:upgrading#upgrading90x[Upgrading from Grails 8 to Grails 9], sections 6 to 13 and 15 to 18, and
+<<upgradingSpringFormatNegotiation,Opt Into Spring MVC Content Negotiation for Grails Formats>>.
 
 ==== Hibernate 7 Criteria Queries Can Be Extended
 
@@ -562,6 +600,23 @@ GORM for Hibernate 7 now starts tracking changes to an entity when it is persist
 
 As part of this change, persistence event listeners on Hibernate 7 receive a `PersistEvent` (`eventType` `Persist`) for every explicit or flush-time cascaded persist and a `MergeEvent` (`eventType` `Merge`) for every merge. Neither event can be cancelled. Hibernate 5 continues to publish `SaveOrUpdateEvent` when an entity is saved, and publishes no event for a merge. A listener that switches over `event.eventType` with a default branch that throws should handle the new values. See the Events and Auto Timestamping section of the GORM for link:{hibernate7Guide}index.html#eventsAutoTimestamping[Hibernate 7] guide.
 
+==== A Domain Class Answers with Its Auto-Timestamp Listener
+
+Every datastore has an `AutoTimestampEventListener` of its own, and so does every data source of an application with several and every tenant with a database or schema of its own. A listener only handles the saves made through its own datastore, so the `autoTimestampEventListener` bean, which belongs to the default data source, cannot turn off the timestamps of a domain class saved to another one. A domain class now answers with the listener that handles its saves:
+
+[source,groovy]
+----
+// Car is mapped to the default data source and Person to the 'people' data source
+Car.autoTimestampEventListener.withoutTimestamps {
+    car.save(flush: true)
+}
+Person.autoTimestampEventListener.withoutTimestamps {
+    person.save(flush: true)
+}
+----
+
+The lookup follows the data source a save made from the same place goes to. For a `Book` mapped to several data sources, inside a `Book.secondary.withTransaction { }` block, or a method annotated `@Transactional(connection = 'secondary')`, it is the `secondary` data source's listener, and `Book.secondary.autoTimestampEventListener` names that data source anywhere. For a multi-tenant class it is the current tenant's. This works with GORM for Hibernate 7, Hibernate 5, MongoDB and Neo4j, and in unit tests. See the Events and Auto Timestamping section of the GORM for link:{hibernate7Guide}index.html#eventsAutoTimestamping[Hibernate 7] guide.
+
 ==== Default Security Response Headers
 
 Servlet web applications now send a baseline set of browser hardening headers on every response:
@@ -603,9 +658,17 @@ A view renders the request's nonce with the new `<g:cspNonce/>` tag, as in `<scr
 which Spring Security's nonce filter uses as well, so the header and the page carry the same nonce whichever
 generated it. See the xref:security[Security] section of the user guide.
 
+==== Logins Redirect to the Page the User Asked For
+
+Browsers and their tools request paths such as `/apple-touch-icon.png`, `/manifest.json` and
+`/.well-known/appspecific/com.chrome.devtools.json` on their own. With the Spring Security plugin, a denied request for
+one of them was saved like any other, so a login could redirect there instead of to the page the user asked for. As
+Spring Security 7.2's configuration DSL does, the plugin now leaves these requests out of the request cache. The list is
+the `grails.plugin.springsecurity.requestCache.ignoredPatterns` setting.
+
 ==== Agent Skills Published with Grails
 
-Grails now publishes its app-facing https://agentskills.io[Agent Skills] with every release: `org.apache.grails.skills:grails-developer`, for building Grails applications, `org.apache.grails.skills:grails-8-upgrade`, for upgrading an application from Grails 7, and `org.apache.grails.skills:grails-9-upgrade`, for upgrading an application from Grails 8. The jars use the https://www.skillsjars.com[SkillsJars] layout and the Grails BOM manages them, so an application applies the SkillsJars Gradle plugin, declares the skills without a version, and runs `./gradlew extractSkillsJars` to write the skills for its Grails version to the directory its AI coding agent reads. See xref:gettingStarted#agentSkills[Agent Skills].
+Grails now publishes its app-facing https://agentskills.io[Agent Skills] with every release: `org.apache.grails.skills:grails-developer`, for building Grails applications, and `org.apache.grails.skills:grails-upgrade`, for upgrading an application from Grails 8 and from one Grails 9 release to a later one. The jars use the https://www.skillsjars.com[SkillsJars] layout and the Grails BOM manages them, so an application applies the SkillsJars Gradle plugin, declares the skills without a version, and runs `./gradlew extractSkillsJars` to write the skills for its Grails version to the directory its AI coding agent reads. See xref:gettingStarted#agentSkills[Agent Skills].
 
 ==== Test HTTP Client Form Requests
 
@@ -731,7 +794,9 @@ java -Dspring.aot.enabled=true -jar build/libs/myapp.jar
 
 AOT processing is also what a GraalVM native image requires: Spring Boot refuses to start an image without a
 build-time generated initializer. Reachability metadata for the application's own artefacts and compiled pages is
-written from the build output, and `traceNativeMetadata` records what the framework reflects on along a request path.
+written from the build output, the framework registers the reflection it does on its own behalf while the
+application starts -- finding the plugins, creating their beans and artefacts, and what Groovy does for enums,
+traits and closures -- and `traceNativeMetadata` records what the framework reflects on along a request path.
 
 See the <<deploymentAot,Ahead-of-Time Processing>> section for what it changes at runtime and what it
 does not yet cover.

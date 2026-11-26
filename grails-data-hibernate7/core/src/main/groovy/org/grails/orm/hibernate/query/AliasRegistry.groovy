@@ -46,6 +46,33 @@ class AliasRegistry {
         realizedExpressions.put(alias, expression)
     }
 
+    /**
+     * Whether this query declares the alias, independently of any enclosing query.
+     */
+    boolean isOwnDefined(String alias) {
+        return definitions.containsKey(alias)
+    }
+
+    /**
+     * Whether this query realized the alias, independently of any enclosing query.
+     */
+    boolean isOwnRealized(String alias) {
+        return realizedExpressions.containsKey(alias)
+    }
+
+    /**
+     * The first declared alias of an association path shares the path join. Further aliases
+     * have independent joins. Only declarations in this query participate.
+     */
+    HibernateAlias getAssociationAlias(String path) {
+        for (HibernateAlias definition : definitions.values()) {
+            if (definition != null && definition.explicit() && path == definition.path()) {
+                return definition
+            }
+        }
+        return null
+    }
+
     boolean isDefined(String alias) {
         if (definitions.containsKey(alias) || realizedExpressions.containsKey(alias)) {
             return true
@@ -66,14 +93,14 @@ class AliasRegistry {
 
     Expression<?> getRealized(String alias) {
         Expression<?> expr = realizedExpressions.get(alias)
-        if (expr == null && parent != null) {
+        if (expr == null && !isOwnDefined(alias) && parent != null) {
             return parent.getRealized(alias)
         }
         return expr
     }
 
     boolean hasRealized(String alias) {
-        return realizedExpressions.containsKey(alias) || (parent != null && parent.hasRealized(alias))
+        return getRealized(alias) != null
     }
 
 }

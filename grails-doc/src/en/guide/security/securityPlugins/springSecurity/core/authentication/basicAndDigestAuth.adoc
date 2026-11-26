@@ -89,7 +89,7 @@ https://en.wikipedia.org/wiki/Digest_access_authentication[Digest Authentication
 
 |digest.passwordAlreadyEncoded
 |`false`
-|Whether you are managing the password hashing yourself
+|Whether what is stored is already the hash a browser computes. Set for you unless `digest.useCleartextPasswords` is `true`
 
 |digest.createAuthenticatedToken
 |`false`
@@ -97,12 +97,19 @@ https://en.wikipedia.org/wiki/Digest_access_authentication[Digest Authentication
 
 |digest.useCleartextPasswords
 |`false`
-|If `true`, a cleartext password encoder is used (not recommended). If `false`, passwords hashed by `DigestAuthPasswordEncoder` are stored in the database
+|If `true`, passwords are stored as they were typed (not recommended). If `false`, the hash a browser computes from the username, realm name and password is stored
 |====================
 
 Digest authentication has a problem in that by default you store cleartext passwords in your database. This is because the browser hashes your password along with the username and Realm name, and this is compared to the password hashed using the same algorithm during authentication. The browser does not know about your `MessageDigest` algorithm or salt source, so to hash them the same way you need to load a cleartext password from the database.
 
-The plugin does provide an alternative, although it has no configuration options (in particular the digest algorithm cannot be changed). If `digest.useCleartextPasswords` is `false` (the default), then the `passwordEncoder` bean is replaced with an instance of `grails.plugin.springsecurity.authentication.encoding.DigestAuthPasswordEncoder`. This encoder uses the same approach as the browser, that is, it combines your password along with your username and Realm name essentially as a salt, and hashes with MD5. MD5 is not recommended in general, but given the typical size of the salt it is reasonably safe to use.
+The alternative is to store what the browser computes instead of the password. That is the default: with `digest.useCleartextPasswords` set to `false`, what a user has stored must be the MD5 hash of `username:realm:password`, which is what the filter needs and no more. MD5 is not recommended in general, but the username and realm name act as a salt. Changing the realm name makes every stored hash stop matching.
+
+The `passwordEncoder` bean cannot compute this hash, because an encoder is not given the username, so your application computes it wherever it saves a password:
+
+[source,groovy]
+----
+password = "${username}:${realmName}:${password}".md5()
+----
 
 The only required attribute is `useDigestAuth`, which you must set to `true`, but you probably also want to change the realm name:
 
@@ -116,17 +123,7 @@ Digest authentication cannot be applied to a subset of URLs like Basic authentic
 
 [NOTE]
 ====
-Note that since the Digest authentication password encoder is different from the typical encoders you must pass the username as the "`salt`" value. The code in the generated User class assumes you're not using a salt value, so you'll need to change the code in `encodePassword()` from
+What `s2-quickstart` generates hashes a password with `springSecurityService.encodePassword(password)`, in the user class or in its password encoder listener, which gives the wrong value for Digest authentication. Replace that call with the hash above, or set `digest.useCleartextPasswords` to `true` and store the password as it was typed.
 
-[source,groovy]
-----
-password = springSecurityService.encodePassword(password)
-----
-
-to
-
-[source,groovy]
-----
-password = springSecurityService.encodePassword(password, username)
-----
+Digest authentication leaves `passwordEncoder` as configured, so `springSecurityService.encodePassword` and the users that other `UserDetailsService` beans or `spring.security.user.*` describe work as they do without it. The plugin's `daoAuthenticationProvider` does not use it: it hashes a password that a form or Basic authentication sends the way a browser does, so a form signs a user in with their password in either mode, and not with the hash stored. A class named with `daoAuthenticationProviderBeanClass` is given `passwordEncoder` instead, unless it extends `grails.plugin.springsecurity.authentication.DigestDaoAuthenticationProvider`.
 ====

@@ -77,6 +77,12 @@
       "group": "grails.plugin.springsecurity.general"
     },
     {
+      "name": "grails.plugin.springsecurity.rejectRequestsDuringStartup",
+      "type": "java.lang.Boolean",
+      "description": "Whether to respond with 503 to requests received before the application has started.",
+      "group": "grails.plugin.springsecurity.general"
+    },
+    {
       "name": "grails.plugin.springsecurity.excludeSpringSecurityAutoConfiguration",
       "type": "java.lang.Boolean",
       "description": "Whether to automatically exclude Spring Boot security auto-configuration classes that conflict with the plugin.",
@@ -723,7 +729,7 @@
     {
       "name": "grails.plugin.springsecurity.fii.alwaysReauthenticate",
       "type": "java.lang.Boolean",
-      "description": "If true, re-authenticates when there is an Authentication in the SecurityContext.",
+      "description": "If true, re-authenticates the Authentication in the SecurityContext for every request to a secured URL, unless its credentials were erased once it was authenticated, as providerManager.eraseCredentialsAfterAuthentication does by default.",
       "group": "grails.plugin.springsecurity.authentication"
     },
     {
