@@ -25,17 +25,18 @@ import org.grails.build.parsing.CommandLineParser
 
 /**
  * The main class of the JVM the {@code grails} command line starts for a {@link StandaloneTool}:
- * a process of its own, which is no build and starts no application. It finds the command by its
- * name among the commands of its class path, as the {@code runCommand} task of a build does, runs
- * it with the arguments it was given, and ends with the result of the command.
+ * a process of its own, which is no build and starts no application. It finds the tool by its
+ * name among the tools of its class path, as the {@code runTool} task of a build does, runs
+ * it with the arguments it was given, and ends with the result of the tool.
  *
  * <p>The JVM is started with the name of the command and its arguments, or with one argument that
  * names a file which holds them ({@link CommandArgumentsFile#ARGUMENT}), so that none of them is in
  * a process listing. The directory of the project is the system property {@code base.dir}, or the
  * directory the JVM was started in.</p>
  *
- * <p>Only a command whose class is a {@link StandaloneTool} is run: any other command needs the
- * build or the application, and is refused with a line that says how it is run.</p>
+ * <p>Only a tool whose class is a {@link StandaloneTool} is run: an {@link ApplicationTool} needs the
+ * build, and the application unless it says otherwise, and is refused with a line that says how it is
+ * run.</p>
  *
  * @since 9.0
  */
@@ -73,9 +74,9 @@ final class StandaloneToolRunner {
             return 1
         }
         Object target = command instanceof ApplicationCommandTargetAware ? ((ApplicationCommandTargetAware) command).target : command
-        if (!(target instanceof StandaloneTool)) {
-            System.err.println("The command ${name} is not a StandaloneTool, so it is not run as a process of its own. " +
-                    "The build of the project runs it: grails run-command ${name}")
+        if (!(target instanceof StandaloneTool) || target instanceof ApplicationTool) {
+            System.err.println("The tool ${name} is not a StandaloneTool, so it is not run as a process of its own. " +
+                    "The build of the project runs it: grails run-tool ${name}")
             return 1
         }
         try {

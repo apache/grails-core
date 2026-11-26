@@ -19,10 +19,16 @@
 package org.apache.grails.core.cli
 
 /**
- * Implemented by command adapters whose underlying target should be autowired and inspected.
+ * Implemented by command adapters whose underlying target should be autowired and inspected. The
+ * compiler does not register a class that implements it, and a runner runs the adapter with the
+ * application, or without it, as its target says.
+ *
+ * <p>Internal: what an {@link ApplicationCommandProvider}, which is deprecated, registers.</p>
  *
  * @since 8.0
+ * @deprecated internal, and kept for one major version only: register a tool by its class
  */
+@Deprecated
 interface ApplicationCommandTargetAware {
 
     Object getTarget()

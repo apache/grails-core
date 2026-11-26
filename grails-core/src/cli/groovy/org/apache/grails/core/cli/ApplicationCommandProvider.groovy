@@ -21,8 +21,16 @@ package org.apache.grails.core.cli
 /**
  * Contributes application commands discovered outside the primary command contract.
  *
+ * <p>Internal: this is how the compatibility layer of Grails 8 for the commands of Grails 7 put
+ * its commands into the registry, and nothing in Grails implements it any more. The registry still
+ * calls a provider that is registered under its name in {@code META-INF/grails-cli.factories}. A
+ * tool is registered by its class in {@code META-INF/grails-cli.factories}, which the compiler
+ * writes; that is the only supported way.</p>
+ *
  * @since 8.0
+ * @deprecated internal, and kept for one major version only: register a tool by its class
  */
+@Deprecated
 interface ApplicationCommandProvider {
 
     void contributeCommands(

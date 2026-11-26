@@ -28,7 +28,13 @@ import org.apache.grails.gradle.model.cli.ToolDescriptor
 import org.grails.core.io.support.GrailsFactoriesLoader
 
 /**
- * A registry of {@link org.apache.grails.core.cli.GrailsTool} instances: how a runner or a test finds a tool by its name
+ * A registry of {@link org.apache.grails.core.cli.GrailsTool} instances: how a runner or a test finds a tool by its name.
+ *
+ * <p>The tools are the classes {@code META-INF/grails-cli.factories} of the class path registers under the key
+ * {@code org.apache.grails.core.cli.GrailsTool}, which the compiler writes, or under the key
+ * {@code org.apache.grails.core.cli.ApplicationCommand}, which the companions of Grails 8 have; a class registered
+ * under both, or by more than one resource, is made once. Commands of Grails 7 are not run: the registry only says
+ * which plugins have them ({@link #getMissingCommandHint()}).</p>
  *
  * @since 3.0
  */
@@ -311,6 +317,14 @@ class ApplicationContextCommandRegistry {
         target.getClass()
     }
 
+    /**
+     * What to say beside a name that is no tool of the class path: one line for each plugin on it that
+     * has commands of Grails 7, which Grails 9 does not run, naming the jar or directory of the plugin.
+     * Nothing is said of a plugin whose commands a provider says it handles
+     * ({@link ApplicationCommandFactoryKeyProvider}, deprecated).
+     *
+     * @return the lines, or {@code null} when there is nothing to say
+     */
     String getMissingCommandHint() {
         missingCommandHint
     }

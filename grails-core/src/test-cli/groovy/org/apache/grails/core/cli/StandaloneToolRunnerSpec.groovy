@@ -90,20 +90,21 @@ class StandaloneToolRunnerSpec extends Specification {
     }
 
     @Unroll
-    def "a command that is #kind is not run as a process of its own, and is told how it is run"() {
+    def "an application tool that is #kind is not run as a process of its own, and is told how it is run"() {
         when:
         Map result = run(command, 'argument')
 
         then:
         result.exit == 1
         result.out.isEmpty()
-        result.err.readLines() == ["The command ${command} is not a StandaloneTool, so it is not run as a process of its own. " +
-                                           "The build of the project runs it: grails run-command ${command}"]
+        result.err.readLines() == ["The tool ${command} is not a StandaloneTool, so it is not run as a process of its own. " +
+                                           "The build of the project runs it: grails run-tool ${command}"]
 
         where:
-        kind                         | command
-        'run by the build'           | 'runner-spec-gradle'
-        'run with the application'   | 'runner-spec-application'
+        kind                                          | command
+        'run by the build without the application'    | 'runner-spec-gradle'
+        'run with the application'                    | 'runner-spec-application'
+        'written with a name of Grails 8'             | 'runner-spec-old'
     }
 
     def "a name that no command has, and no name at all, end the JVM with 1"() {
@@ -122,7 +123,8 @@ class StandaloneToolRunnerSpec extends Specification {
         File registrations = new File(dir, 'registrations')
         new File(registrations, 'META-INF').mkdirs()
         new File(registrations, 'META-INF/grails-cli.factories').text = "${GrailsTool.name}=" +
-                [RunnerSpecSucceedsCommand, RunnerSpecReturnsFalseCommand, RunnerSpecThrowsCommand, RunnerSpecGradleCommand, RunnerSpecApplicationCommand]*.name.join(',') + '\n'
+                [RunnerSpecSucceedsCommand, RunnerSpecReturnsFalseCommand, RunnerSpecThrowsCommand, RunnerSpecGradleCommand, RunnerSpecApplicationCommand,
+                 RunnerSpecOldCommand]*.name.join(',') + '\n'
         List<String> command = [new File(System.getProperty('java.home'), 'bin/java').path,
                                 '-cp', registrations.path + File.pathSeparator + System.getProperty('java.class.path'),
                                 "-Dbase.dir=${dir.path}".toString(),
@@ -167,7 +169,7 @@ class RunnerSpecThrowsCommand implements StandaloneTool {
     }
 }
 
-class RunnerSpecGradleCommand implements ApplicationCommand {
+class RunnerSpecGradleCommand implements ApplicationTool {
 
     boolean startsApplication = false
 
@@ -178,7 +180,16 @@ class RunnerSpecGradleCommand implements ApplicationCommand {
     }
 }
 
-class RunnerSpecApplicationCommand implements ApplicationCommand {
+class RunnerSpecApplicationCommand implements ApplicationTool {
+
+    @Override
+    boolean handle(ExecutionContext executionContext) {
+        println "COMMAND=${name}"
+        true
+    }
+}
+
+class RunnerSpecOldCommand implements ApplicationCommand {
 
     @Override
     boolean handle(ExecutionContext executionContext) {

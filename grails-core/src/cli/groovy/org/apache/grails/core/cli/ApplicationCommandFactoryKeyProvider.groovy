@@ -19,10 +19,15 @@
 package org.apache.grails.core.cli
 
 /**
- * Identifies factory keys handled by an application command provider.
+ * Identifies factory keys handled by an application command provider. The registry tells of a
+ * plugin that has commands of Grails 7 unless a provider says it handles their key.
+ *
+ * <p>Internal: a kind of {@link ApplicationCommandProvider}, which is deprecated.</p>
  *
  * @since 8.0
+ * @deprecated internal, and kept for one major version only: register a tool by its class
  */
+@Deprecated
 interface ApplicationCommandFactoryKeyProvider extends ApplicationCommandProvider {
 
     Collection<String> getHandledFactoryKeys()

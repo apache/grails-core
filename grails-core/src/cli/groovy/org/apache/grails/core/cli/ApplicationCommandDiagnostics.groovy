@@ -24,20 +24,33 @@ import groovy.util.logging.Slf4j
 
 import org.grails.core.io.support.GrailsFactoriesLoader
 
+/**
+ * Tells of the plugins on the class path that have commands of Grails 7, which Grails 9 does not
+ * run: a plugin compiled for Grails 7 registers them in {@code META-INF/grails.factories} under the
+ * key {@code grails.dev.commands.ApplicationCommand}. Their classes are not loaded.
+ *
+ * @since 8.0
+ */
 @Slf4j
 @CompileStatic
 @PackageScope
 class ApplicationCommandDiagnostics {
 
-    private static final String LEGACY_COMMAND_FACTORY_KEY = 'grails.dev.commands.ApplicationCommand'
-    private static final String MISSING_COMMAND_HINT =
-            'Grails 7 commands were detected; set grails { legacyCommandSupport = true } or upgrade the plugin.'
+    private static final String GRAILS_7_COMMAND_FACTORY_KEY = 'grails.dev.commands.ApplicationCommand'
 
+    private static final String FACTORIES_SUFFIX = '/' + GrailsFactoriesLoader.FACTORIES_RESOURCE_LOCATION
+
+    /**
+     * @param registryClassLoader the class loader of the registry
+     * @param contextClassLoader the context class loader of the thread that makes the registry
+     * @param handledFactoryKeys the keys a provider of commands says it handles
+     * @return one line for each plugin that has commands of Grails 7, or {@code null} when there is none
+     */
     static String detectMissingCommandHint(
             ClassLoader registryClassLoader,
             ClassLoader contextClassLoader,
             Set<String> handledFactoryKeys) {
-        if (handledFactoryKeys.contains(LEGACY_COMMAND_FACTORY_KEY)) {
+        if (handledFactoryKeys.contains(GRAILS_7_COMMAND_FACTORY_KEY)) {
             return null
         }
 
@@ -47,11 +60,31 @@ class ApplicationCommandDiagnostics {
             addFactoryDeclarations(factoryDeclarations, contextClassLoader)
         }
 
-        for (String origin : factoryDeclarations.keySet()) {
-            log.error('Plugin {} ships Grails 7 commands; set grails { legacyCommandSupport = true } or upgrade the plugin.',
-                    origin)
+        List<String> lines = []
+        for (String resource : factoryDeclarations.keySet()) {
+            String line = "${origin(resource)} has commands of Grails 7, which Grails 9 does not run: use a version of the plugin for Grails 9"
+            log.warn(line)
+            lines << line
         }
-        factoryDeclarations ? MISSING_COMMAND_HINT : null
+        lines ? lines.join('\n') : null
+    }
+
+    // the jar or the directory of the file system a factories resource is in, and otherwise the resource
+    private static String origin(String resource) {
+        String location = resource
+        if (location.startsWith('jar:') && location.contains('!/')) {
+            location = location.substring('jar:'.length(), location.indexOf('!/'))
+        } else if (location.endsWith(FACTORIES_SUFFIX)) {
+            location = location.substring(0, location.length() - FACTORIES_SUFFIX.length())
+        }
+        if (location.startsWith('file:')) {
+            try {
+                return new File(new URI(location)).path
+            } catch (URISyntaxException | IllegalArgumentException ignored) {
+                return resource
+            }
+        }
+        resource
     }
 
     private static void addFactoryDeclarations(
@@ -62,7 +95,7 @@ class ApplicationCommandDiagnostics {
         }
         try {
             Map<String, List<String>> found = GrailsFactoriesLoader.loadFactoryDeclarations(
-                    LEGACY_COMMAND_FACTORY_KEY, classLoader, GrailsFactoriesLoader.FACTORIES_RESOURCE_LOCATION)
+                    GRAILS_7_COMMAND_FACTORY_KEY, classLoader, GrailsFactoriesLoader.FACTORIES_RESOURCE_LOCATION)
             for (Map.Entry<String, List<String>> entry : found) {
                 declarations.putIfAbsent(entry.key, entry.value)
             }

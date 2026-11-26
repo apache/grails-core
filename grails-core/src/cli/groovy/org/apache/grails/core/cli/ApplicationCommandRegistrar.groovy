@@ -21,8 +21,12 @@ package org.apache.grails.core.cli
 /**
  * Installs a contributed command unless its name is already registered.
  *
+ * <p>Internal: what the registry gives an {@link ApplicationCommandProvider}, which is deprecated.</p>
+ *
  * @since 8.0
+ * @deprecated internal, and kept for one major version only: register a tool by its class
  */
+@Deprecated
 interface ApplicationCommandRegistrar {
 
     /**
