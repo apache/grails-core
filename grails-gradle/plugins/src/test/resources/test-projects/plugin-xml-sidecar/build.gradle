@@ -1,0 +1,33 @@
+plugins {
+    id 'org.apache.grails.gradle.grails-plugin'
+    id 'org.apache.grails.gradle.grails-publish'
+}
+
+group = 'org.example.test'
+
+if (providers.gradleProperty('starter').present) {
+    grails {
+        plugin {
+            starter = true
+            name = 'sidecar-starter'
+        }
+    }
+}
+
+grailsPublish {
+    githubSlug = 'apache/grails-core'
+    license {
+        name = 'Apache-2.0'
+    }
+    title = 'Sidecar'
+    desc = 'Test module for the grails-plugin.xml publication sidecar'
+    developers = [test: 'Test Developer']
+}
+
+// Prints whether the publication carries the grails-plugin.xml sidecar.
+tasks.register('inspectPluginDescriptor') {
+    def present = providers.provider { grailsPublish.pluginDescriptor.present }
+    doLast {
+        println "PLUGIN_DESCRIPTOR_PRESENT=${present.get()}"
+    }
+}

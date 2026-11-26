@@ -152,17 +152,35 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
      * Grails 9 plugins package {@code META-INF/grails/plugins.imports} and
      * {@code META-INF/grails/plugins/<name>/plugin.properties} directly inside the JAR.
      *
+     * <p>The sidecar is published only for a project that declares a plugin: a {@code *GrailsPlugin} source
+     * file, as {@code grails-publish} itself decides, or a starter. The publication registers the artifact
+     * before anything is compiled, and the descriptor task writes no XML for a project without a plugin,
+     * so a library that applies the plugin Gradle plugin would otherwise fail to publish.</p>
+     *
      * @since 9.0
      */
     protected void configurePluginPublishing(Project project) {
         project.pluginManager.withPlugin('org.apache.grails.gradle.grails-publish') {
             project.extensions.configure(GrailsPublishExtension) { GrailsPublishExtension publishExtension ->
                 def task = project.tasks.named('generatePluginDescriptor', GeneratePluginDescriptorTask)
-                publishExtension.pluginDescriptor.convention(task.flatMap { GeneratePluginDescriptorTask generator ->
-                    generator.outputDirectory.file('META-INF/grails-plugin.xml')
+                GrailsExtension grailsExt = project.extensions.getByType(GrailsExtension)
+                def declaresPlugin = project.provider {
+                    grailsExt.plugin.starter.getOrElse(false) || hasPluginSource(project)
+                }
+                publishExtension.pluginDescriptor.convention(declaresPlugin.flatMap { Boolean declared ->
+                    declared ? task.flatMap { GeneratePluginDescriptorTask generator ->
+                        generator.outputDirectory.file('META-INF/grails-plugin.xml')
+                    } : project.objects.fileProperty()
                 })
             }
         }
+    }
+
+    private static boolean hasPluginSource(Project project) {
+        SourceSet main = SourceSets.findMainSourceSet(project)
+        main != null && !main.allSource.matching { PatternFilterable pattern ->
+            pattern.include('**/*GrailsPlugin.groovy', '**/*GrailsPlugin.java')
+        }.isEmpty()
     }
 
     /**
