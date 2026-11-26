@@ -19,6 +19,8 @@
 package org.grails.datastore.gorm
 
 import grails.gorm.annotation.AutoTimestamp
+import grails.gorm.annotation.CreatedDate
+import grails.gorm.annotation.LastModifiedDate
 import grails.persistence.Entity
 import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
@@ -28,7 +30,7 @@ import static grails.gorm.annotation.AutoTimestamp.EventType.CREATED
 
 class CustomAutoTimestampSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
     void setupSpec() {
-        manager.domainClasses.addAll([AutoTimestampedChildEntity, AutoTimestampedParentEntity, Image, RecordCustom])
+        manager.domainClasses.addAll([AutoTimestampedChildEntity, AutoTimestampedParentEntity, Image, RecordCustom, RecordWithAliases])
     }
 
     void "Test when the auto timestamp properties are customized, they are correctly set"() {
@@ -147,6 +149,69 @@ class CustomAutoTimestampSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager
         e.modified != null
         e.created != null
     }
+
+    void "Test @CreatedDate and @LastModifiedDate annotation aliases"() {
+        when: "An entity with alias annotations is persisted"
+        def r = new RecordWithAliases(name: "Test")
+        r.save(flush: true, failOnError: true)
+        manager.session.clear()
+        r = RecordWithAliases.get(r.id)
+        sleep(1) // give the date comparison below a chance diff
+
+        then: "the timestamp properties are set"
+        r.createdAt != null
+        r.updatedAt != null
+        r.createdAt.time < new Date().time
+        r.updatedAt.time < new Date().time
+
+        when: "An entity is modified"
+        Date previousCreated = r.createdAt
+        Date previousUpdated = r.updatedAt
+        r.name = "Test 2"
+        sleep(1) // give the save a chance to set a different time
+        r.save(flush: true)
+        manager.session.clear()
+        r = RecordWithAliases.get(r.id)
+
+        then: "the lastModified property is updated and createdDate is not"
+        r.updatedAt != null
+        previousUpdated.time < r.updatedAt.time
+        previousCreated.time == r.createdAt.time
+    }
+
+    void "Test @CreatedDate and @LastModifiedDate with insertOverwrite config"() {
+        when: "An entity is persisted and insertOverwrite is false"
+        AutoTimestampEventListener autoTimestampEventListener =
+                RecordWithAliases.gormPersistentEntity.mappingContext.eventListeners.find { it.class == AutoTimestampEventListener }
+        autoTimestampEventListener.insertOverwrite = false
+
+        def r = new RecordWithAliases(name: "Test")
+        def now = new Date()
+        r.createdAt = new Date(now.time)
+        r.updatedAt = r.createdAt
+        sleep(1) // give the save a chance to set a different time
+        r.save(flush: true, failOnError: true)
+        manager.session.clear()
+        r = RecordWithAliases.get(r.id)
+
+        then: "the timestamp properties are not overwritten"
+        now.time == r.updatedAt.time
+        now.time == r.createdAt.time
+
+        when: "An entity is modified"
+        Date previousCreated = r.createdAt
+        Date previousUpdated = r.updatedAt
+        r.name = "Test 2"
+        sleep(1) // give the save a chance to set a different time
+        r.save(flush: true)
+        manager.session.clear()
+        r = RecordWithAliases.get(r.id)
+
+        then: "the lastModified property is updated and createdDate is not"
+        r.updatedAt != null
+        previousUpdated.time < r.updatedAt.time
+        previousCreated.time == r.createdAt.time
+    }
 }
 
 @Entity
@@ -184,4 +249,14 @@ class AutoTimestampedParentEntity {
 @Entity
 class AutoTimestampedChildEntity extends AutoTimestampedParentEntity {
     String name
+}
+
+@Entity
+class RecordWithAliases {
+    Long id
+    String name
+    @CreatedDate
+    Date createdAt
+    @LastModifiedDate
+    Date updatedAt
 }

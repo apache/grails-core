@@ -21,9 +21,8 @@ package grails.plugin.json.converters
 
 import java.time.Period
 
+import groovy.json.JsonGenerator
 import groovy.transform.CompileStatic
-
-import grails.plugin.json.builder.JsonGenerator
 
 /**
  * A class to render a {@link Period} as json

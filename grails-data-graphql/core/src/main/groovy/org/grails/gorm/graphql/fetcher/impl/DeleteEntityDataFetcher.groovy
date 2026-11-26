@@ -36,7 +36,7 @@ import org.grails.gorm.graphql.response.delete.GraphQLDeleteResponseHandler
  */
 @CompileStatic
 @InheritConstructors
-class DeleteEntityDataFetcher<T> extends DefaultGormDataFetcher<T> implements DeletingGormDataFetcher {
+class DeleteEntityDataFetcher<T> extends DefaultGormDataFetcher<T> implements DeletingGormDataFetcher<T> {
 
     GraphQLDeleteResponseHandler responseHandler
 
@@ -48,7 +48,7 @@ class DeleteEntityDataFetcher<T> extends DefaultGormDataFetcher<T> implements De
     }
 
     protected void deleteInstance(GormEntity instance) {
-        instance.delete(failOnError: true)
+        instance.delete()
     }
 
     @Override

@@ -39,4 +39,13 @@ trait CommandLineHelper {
         }
     }
 
+    String flag(String name) {
+        final CommandLine commandLine = executionContext.commandLine
+        if (commandLine.hasOption(name)) {
+            return commandLine.optionValue(name)?.toString()
+        } else {
+            return commandLine?.undeclaredOptions?.get(name)?.toString()
+        }
+    }
+
 }

@@ -18,6 +18,8 @@
  */
 package org.grails.plugins.services
 
+import org.junit.jupiter.api.Test
+import static org.junit.jupiter.api.Assertions.assertTrue
 import org.grails.commons.test.AbstractGrailsMockTests
 import org.grails.plugins.DefaultGrailsPlugin
 import org.grails.plugins.MockGrailsPluginManager
@@ -26,6 +28,7 @@ import org.springframework.context.ApplicationContext
 
 class DataSourcesGrailsPluginTests  extends AbstractGrailsMockTests {
 
+    @Test
     void testSingleDataSource() {
         def appCtx = initializeContext([
                 dataSource: [
@@ -38,6 +41,7 @@ class DataSourcesGrailsPluginTests  extends AbstractGrailsMockTests {
         ])
         assertTrue appCtx.containsBean("dataSource")
     }
+    @Test
     void testMultipleDataSources() {
         def appCtx = initializeContext([
                 dataSource: [

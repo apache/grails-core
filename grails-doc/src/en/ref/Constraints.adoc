@@ -176,12 +176,61 @@ Some constraints have no impact on persistence but customize the scaffolding. It
 |===
 |Constraint|Description
 
-|display|Boolean that determines whether the property is displayed in the scaffolding views. If `true` (the default), the property _is_ displayed.
+|display|Controls whether and where the property is displayed in scaffolding views. Accepts a boolean or a `DisplayType` enum value (see below).
 |editable|Boolean that determines whether the property can be edited from the scaffolding views. If `false`, the associated form fields are displayed in read-only mode.
 |format|Specify a display format for types that accept one, such as dates. For example, 'yyyy-MM-dd'.
 |password|Boolean indicating whether this is property should be displayed with a password field. Only works on fields that would normally be displayed with a text field.
 |widget|Controls what widget is used to display the property. For example, 'textarea' will force the scaffolding to use a <textArea> tag.
 |===
+
+==== The display Constraint
+
+The `display` constraint controls whether a property appears in scaffolded views. It accepts either a boolean value or a `DisplayType` enum value for fine-grained control.
+
+===== Boolean Values (Backwards Compatible)
+
+[source,groovy]
+----
+static constraints = {
+    internalNotes display: false  // Never show this property
+    title display: true           // Show this property (default behavior)
+}
+----
+
+===== DisplayType Enum Values
+
+For more control over where properties are displayed, use the `DisplayType` enum:
+
+[source,groovy]
+----
+import static grails.gorm.validation.DisplayType.*
+
+class Book {
+    String title
+    String isbn
+    Date dateCreated
+    Date lastUpdated
+    String internalNotes
+
+    static constraints = {
+        dateCreated display: ALL         // Override blacklist, show in all views
+        lastUpdated display: OUTPUT_ONLY // Show only in show/index views
+        isbn display: INPUT_ONLY         // Show only in create/edit forms
+        internalNotes display: NONE      // Never show
+    }
+}
+----
+
+|===
+|DisplayType Value|Description
+
+|`ALL`|Display the property in all views (input and output). This also overrides the default blacklist for properties like `dateCreated` and `lastUpdated`.
+|`NONE`|Never display the property in any view. Equivalent to `display: false`.
+|`INPUT_ONLY`|Display the property only in input views (create and edit forms).
+|`OUTPUT_ONLY`|Display the property only in output views (show and index/list views).
+|===
+
+NOTE: Properties like `version`, `dateCreated`, and `lastUpdated` are excluded from input forms by default. Using `display: ALL` or `display: INPUT_ONLY` on these properties will override this blacklist and include them in input forms.
 
 
 === Programmatic access

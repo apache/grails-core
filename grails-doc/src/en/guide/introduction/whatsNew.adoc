@@ -74,7 +74,7 @@ The `@Scaffold` annotation was added to customize scaffolding generation for con
 ==== Bootstrap 5.3.3 support
 
 Bootstrap 5.3.3 support.
-Saffolding and Fields tags now optionally support boostrap classes.
+Scaffolding and Fields tags now optionally support boostrap classes.
 
 ==== Prioritization of AutoConfiguration over bean overriding.
 
@@ -89,6 +89,38 @@ With the removal of Micronaut, and the fixes to the asset pipeline plugin, Grail
 
 The `g:form` tag now automatically provides csrf protection when Spring Security CSRF is enabled.
 
+==== Banner versions and customization (Grails 7.1+)
+
+A Grails banner was introduced in Grails 7 that is displayed in the console on application startup.
+From Grails 7.1 onwards, this banner now shows versions of foundational dependencies
+and can be xref:conf.adoc#customizing-the-banner[customized].
+
+==== HTTP Client Testing Support (Grails 7.1+)
+
+Grails 7.1 introduces a new `grails-testing-support-http-client` module that simplifies HTTP-based
+integration and functional tests.
+
+The module provides an `HttpClientSupport` trait with request helpers for common use cases,
+and fluent response assertions via returning a TestHttpResponse wrapper of the actual HttpResponse.
+
+See the xref:testing.adoc#httpClientTestingSupport[HTTP Client Testing Support] section in the Testing chapter
+for setup and examples.
+
+==== Custom Test Phases (Grails 7.1+)
+
+Grails now supports defining custom test phases beyond the built-in `unit` and `integration` phases. Using the `testPhases` extension in your `build.gradle`, you can add phases such as `functionalTest`, `smokeTest`, or `performanceTest` - each with its own source set, dependency configurations, and Gradle task.
+
+[source,groovy]
+----
+testPhases {
+    functionalTest { }
+}
+----
+
+Each phase automatically sets a system property (e.g. `is.grails.functional.test`) that your code can use to detect which test phase is running. The existing `integrationTest` phase is now implemented on top of this same mechanism.
+
+See the xref:testing.adoc#testPhases[Custom Test Phases] section in the Testing chapter for full details.
+
 === Spring Security Plugins Merged into Grails
 
 The Spring Security plugins &#8212; *Core*, *ACL*, *CAS*, *LDAP*, *OAuth2*, *REST*, and *UI* &#8212; were previously developed and released independently from the https://github.com/apache/grails-spring-security[grails-spring-security] repository.
@@ -100,7 +132,6 @@ For dependency-coordinate mappings and Spring Security 6.x migration details, se
 
 NOTE: Documentation for earlier, independently-versioned releases &#8212; including the historical version selector &#8212; remains available at the https://apache.github.io/grails-spring-security/[legacy Spring Security plugin documentation site].
 
-
 === Quartz Plugin Merged into Grails
 
 The Quartz plugin was previously developed and released independently from the https://github.com/apache/grails-quartz[grails-quartz] repository.
@@ -111,6 +142,4 @@ The plugin now shares the Grails version and is managed by the Grails BOM, so yo
 For dependency-coordinate mappings, see the xref:upgrading#upgrading60x[Upgrading the Quartz Plugin] section.
 
 NOTE: Documentation for earlier, independently-versioned releases remains available at the https://apache.github.io/grails-quartz/[legacy Quartz plugin documentation site].
-
-
 
