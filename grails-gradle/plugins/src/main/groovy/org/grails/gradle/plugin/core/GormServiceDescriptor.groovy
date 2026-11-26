@@ -23,6 +23,7 @@ import java.nio.file.Files
 import groovy.transform.CompileStatic
 import org.gradle.api.DefaultTask
 import org.gradle.api.Project
+import org.gradle.api.Task
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.FileCopyDetails
 import org.gradle.api.file.RegularFileProperty
@@ -89,7 +90,13 @@ abstract class GormServiceDescriptor extends DefaultTask {
         }
         def main = project.extensions.getByType(JavaPluginExtension).sourceSets.named('main')
         def merged = project.tasks.register('mergeGormServiceDescriptor', GormServiceDescriptor) { task ->
-            task.descriptors.from(main.get().output.asFileTree.matching { include(PATH) })
+            // The compiler's registrations and the authored ones are the only sources. The whole
+            // source set output would also take in directories that view compilers add without a
+            // builtBy (it would be a cycle, since they run after classes), which Gradle rejects as an
+            // undeclared dependency.
+            def resources = project.tasks.named('processResources').map { Task processResources -> processResources.outputs.files }
+            task.descriptors.from(main.get().output.classesDirs.asFileTree.matching { include(PATH) })
+            task.descriptors.from(project.files(resources).asFileTree.matching { include(PATH) })
             task.descriptor.set(project.layout.buildDirectory.file('generated/gorm-services/' + PATH))
         }
         def output = merged.flatMap { GormServiceDescriptor task -> task.descriptor }
