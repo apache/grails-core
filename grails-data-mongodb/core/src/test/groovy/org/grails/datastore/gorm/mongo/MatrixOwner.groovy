@@ -16,14 +16,26 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+package org.grails.datastore.gorm.mongo
 
-package org.apache.grails.data.testing.tck.domains
+import grails.persistence.Entity
 
 /**
- * The embedded value of {@link NegationOwner}.
+ * The owner of the generated criteria matrix: a name and an age, which every owner has, and an address that an owner may
+ * not have.
  */
-class NegationAddress implements Serializable {
+@Entity
+class MatrixOwner implements Serializable {
 
-    String city
-    String country
+    Long id
+    Long version
+    String name
+    Integer age
+    MatrixAddress address
+
+    static embedded = ['address']
+
+    static constraints = {
+        address nullable: true
+    }
 }

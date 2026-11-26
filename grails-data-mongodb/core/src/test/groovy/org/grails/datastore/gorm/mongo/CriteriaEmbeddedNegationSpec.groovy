@@ -17,29 +17,25 @@
  * under the License.
  */
 
-package org.apache.grails.data.testing.tck.tests
+package org.grails.datastore.gorm.mongo
 
 import grails.gorm.DetachedCriteria
 
+import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
-import org.apache.grails.data.testing.tck.domains.NegationAddress
-import org.apache.grails.data.testing.tck.domains.NegationOwner
-import spock.lang.Requires
 import spock.lang.Unroll
 
 /**
  * A negated condition on an embedded value, in every form a criteria takes it and in every position: as an association
  * block, as a dotted property, in a detached criteria and in a where query, beside an or branch that has no embedded
- * value in it, and under a count. The expected values are what Hibernate 5, the reference, returns: the embedded value is
- * the columns of its owner, so a negated condition on it is unknown for an owner that has no such value and does not
+ * value in it, and under a count. The expected values are what Hibernate 5, the reference, returned when this spec was
+ * written, and it passed there unchanged: the embedded value is the columns of its owner, so a negated condition on it is unknown for an owner that has no such value and does not
  * match, exactly as the positive condition does not. MongoDB matches a missing field with {@code $ne}, {@code $nin} and
  * {@code $nor}, so it has to require the embedded value itself.
  *
- * It runs for Hibernate 5 and MongoDB, the stores that have embedded values: the in-memory datastore does not answer
- * criteria on an embedded value, with or without a negation, so there is nothing to compare for it.
+ * It runs on MongoDB, the only store this change is for.
  */
-@Requires({ Boolean.getBoolean('hibernate5.gorm.suite') || Boolean.getBoolean('mongodb.gorm.suite') })
-class CriteriaEmbeddedNegationSpec extends GrailsDataTckSpec {
+class CriteriaEmbeddedNegationSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
         manager.domainClasses.addAll([NegationOwner])

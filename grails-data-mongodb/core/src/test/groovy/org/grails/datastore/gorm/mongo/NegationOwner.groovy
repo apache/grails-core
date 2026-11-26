@@ -16,12 +16,25 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.grails.data.testing.tck.domains
+
+package org.grails.datastore.gorm.mongo
+
+import grails.persistence.Entity
 
 /**
- * The embedded value of {@link MatrixOwner}.
+ * The owner of an embedded address that it may not have, for the criteria that negate a condition on the embedded value.
  */
-class MatrixAddress implements Serializable {
+@Entity
+class NegationOwner implements Serializable {
 
-    String city
+    Long id
+    Long version
+    String name
+    NegationAddress address
+
+    static embedded = ['address']
+
+    static constraints = {
+        address nullable: true
+    }
 }

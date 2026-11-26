@@ -16,35 +16,32 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.grails.data.testing.tck.tests
+package org.grails.datastore.gorm.mongo
 
 import grails.gorm.DetachedCriteria
 
+import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
-import org.apache.grails.data.testing.tck.domains.MatrixAddress
-import org.apache.grails.data.testing.tck.domains.MatrixOwner
-import spock.lang.Requires
 
 /**
  * Every criteria that can be built from a small grammar, run against one set of owners, and compared with what a
  * reference evaluator says it returns. The expected value is not written per query: it is the evaluator's, which applies
  * SQL three-valued logic to each owner, where a condition on a value that is not there is unknown and an unknown that is
- * negated is still unknown. Hibernate 5 answers every query as the evaluator does, so it checks the evaluator, and the
- * stores that have to agree with it are checked against it. A query that is not answered as the evaluator answers it is
+ * negated is still unknown. Hibernate 5 answered every query as the evaluator does when this spec was written, so the
+ * evaluator is Hibernate 5's, and MongoDB is checked against it. A query that is not answered as the evaluator answers it is
  * listed with the owners it returned and the owners it should have.
  *
  * The grammar: a leaf is {@code eq}, {@code ne} or {@code inList} on the name, the age or the city of the embedded
  * address; a group is {@code and}, {@code or} or {@code not} of up to two leaves, and of one group and one leaf. The city
  * is written as a dotted property and as a block on the address, and each query goes through a criteria builder and
- * through a detached criteria. A detached criteria of Hibernate 5 throws for an association block inside a group, so the
+ * through a detached criteria. A detached criteria throws for an association block inside a group, so the
  * block is run there as a single condition only.
  *
  * Every owner has a name and an age, so that no condition is on a value that is null where the owner has the property:
  * the one value that is missing is the address of two owners. A null value of a property that is there is where
  * MongoDB and the join-based stores differ for {@code ne}, and it is a question of its own.
  */
-@Requires({ Boolean.getBoolean('hibernate5.gorm.suite') || Boolean.getBoolean('mongodb.gorm.suite') })
-class CriteriaSemanticMatrixSpec extends GrailsDataTckSpec {
+class CriteriaSemanticMatrixSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
         manager.domainClasses.addAll([MatrixOwner])
