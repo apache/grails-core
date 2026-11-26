@@ -22,7 +22,6 @@ plugins {
     id 'org.apache.grails.buildsrc.properties'
     id 'org.apache.grails.buildsrc.dependency-validator'
     id 'org.apache.grails.gradle.grails-plugin'
-    id 'org.apache.grails.gradle.grails-plugin-cli'
     id 'org.apache.grails.gradle.grails-gsp'
     id 'org.apache.grails.buildsrc.compile'
     id 'org.apache.grails.buildsrc.publish'
@@ -37,7 +36,7 @@ group = 'org.apache.grails'
 
 cliArtifact {
     automaticModuleName = 'org.apache.grails.scaffolding.cli'
-    // this framework module wires its cli dependencies with project dependencies below
+    // this framework module wires the dependencies of its tools with project dependencies below
     defaultDependencies = false
 }
 
@@ -48,18 +47,32 @@ ext {
 }
 
 configurations.register('restApplicationPlugins') {
-    description = 'The JSON views plugin, as a REST application has it, for the specs of the commands that generate JSON views.'
+    description = 'The JSON views plugin, as a REST application has it, for the specs that compile the JSON views the tools generate.'
     canBeConsumed = false
 }
 
 dependencies {
     implementation platform(project(':grails-bom'))
 
-    // kept off the class path of the tests: the commands generate JSON views where they find the plugin there
+    // kept off the class path of the tests, which compile the JSON views the tools generate against it
     restApplicationPlugins platform(project(':grails-bom'))
     restApplicationPlugins project(':grails-views-gson')
 
-    // the cli tier — published separately as a companion -cli artifact
+    // the tools, which all run as a process of their own: published as the companion -cli-standalone, which is
+    // compiled against the tool API and nothing of the plugin
+    standaloneImplementation platform(project(':grails-bom'))
+    standaloneApi(project(':grails-core')) {
+        capabilities {
+            requireCapability('org.apache.grails:grails-core-cli')
+        }
+    }
+    // GrailsConsole (used by the scaffolding tools) needs jline at compile time
+    standaloneImplementation 'org.jline:jline'
+
+    standaloneCompileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
+
+    // the companion -cli, which has no tools of its own: the plugin, the tool API and the standalone tools, so that a
+    // build that names it has every tool
     cliImplementation platform(project(':grails-bom'))
     cliApi project(project.path)
     cliApi(project(':grails-core')) {
@@ -67,10 +80,11 @@ dependencies {
             requireCapability('org.apache.grails:grails-core-cli')
         }
     }
-    // GrailsConsole (used by the scaffolding commands) needs jline at compile time
-    cliImplementation 'org.jline:jline'
-
-    cliCompileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
+    cliApi(project(project.path)) {
+        capabilities {
+            requireCapability("${project.group}:${project.name}-cli-standalone")
+        }
+    }
 
     api project(':grails-fields')
     api project(':grails-rest-transforms')
@@ -92,6 +106,16 @@ dependencies {
     testImplementation 'net.bytebuddy:byte-buddy'
 
     testCompileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
+
+    // ScaffoldingToolsLocationSpec reads the POM and the module metadata of the companions
+    testCliImplementation 'org.apache.groovy:groovy-json'
+    testCliImplementation 'org.apache.groovy:groovy-xml'
+}
+
+// the templates the tools render are in the companion of the tools as well as in the plugin, where dynamic scaffolding
+// renders them: the same staged directory the plugin's jar has them from
+sourceSets.named('standalone') { SourceSet standalone ->
+    standalone.output.dir([builtBy: tasks.named('copyTemplates')], layout.buildDirectory.dir('grails/plugin-templates'))
 }
 
 tasks.named('testCli', Test) {
@@ -100,6 +124,18 @@ tasks.named('testCli', Test) {
     // record is tested with as well, so the specs read the record a generated application has
     jvmArgumentProviders.add(new ProjectRecordSamples(samples: rootProject.layout.projectDirectory
             .dir('grails-gradle/model/src/test/resources/project-record-sample')))
+    // the jar, the POM and the module metadata of each companion, as the build publishes them
+    ToolCompanionFiles companions = new ToolCompanionFiles()
+    ['cli': 'cliJar', 'cliStandalone': 'standaloneJar'].each { String publication, String jar ->
+        String name = publication.capitalize()
+        companions.files["${publication}.jar".toString()] = tasks.named(jar, Jar).flatMap { it.archiveFile }
+        companions.files["${publication}.pom".toString()] = tasks.named("generatePomFileFor${name}Publication", GenerateMavenPom)
+                .map { GenerateMavenPom pom -> layout.projectDirectory.file(pom.destination.absolutePath) }
+        companions.files["${publication}.module".toString()] = tasks.named("generateMetadataFileFor${name}Publication", GenerateModuleMetadata)
+                .flatMap { it.outputFile }
+        dependsOn(jar, "generatePomFileFor${name}Publication", "generateMetadataFileFor${name}Publication")
+    }
+    jvmArgumentProviders.add(companions)
 }
 
 /** Hands the specs the class path of the JSON views plugin, which they load beside their own where a REST application is meant. */
@@ -124,6 +160,24 @@ class ProjectRecordSamples implements CommandLineArgumentProvider {
     @Override
     Iterable<String> asArguments() {
         ["-Dscaffolding.projectRecordSamples=${samples.asFile.absolutePath}".toString()]
+    }
+}
+
+/** Hands the specs the files of the companions, as {@code -Dtools.<publication>.<jar|pom|module>=<path>}. */
+class ToolCompanionFiles implements CommandLineArgumentProvider {
+
+    @Internal
+    Map<String, Provider<RegularFile>> files = [:]
+
+    @InputFiles
+    @PathSensitive(PathSensitivity.NAME_ONLY)
+    List<Provider<RegularFile>> getCompanionFiles() {
+        files.values().toList()
+    }
+
+    @Override
+    Iterable<String> asArguments() {
+        files.collect { String key, Provider<RegularFile> file -> "-Dtools.${key}=${file.get().asFile.absolutePath}".toString() }
     }
 }
 

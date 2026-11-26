@@ -81,7 +81,7 @@ class SecurityCommandsAllOrNothingSpec extends Specification {
         Map<String, String> before = snapshot()
 
         when:
-        boolean result = run(new S2QuickstartCommand(), QUICKSTART)
+        boolean result = run(new S2QuickstartTool(), QUICKSTART)
 
         then:
         !result
@@ -92,7 +92,7 @@ class SecurityCommandsAllOrNothingSpec extends Specification {
 
         when:
         errors.reset()
-        result = run(new S2QuickstartCommand(), QUICKSTART + ' --force')
+        result = run(new S2QuickstartTool(), QUICKSTART + ' --force')
 
         then:
         result
@@ -111,7 +111,7 @@ class SecurityCommandsAllOrNothingSpec extends Specification {
         Map<String, String> before = snapshot()
 
         when:
-        boolean result = run(new S2QuickstartCommand(), QUICKSTART)
+        boolean result = run(new S2QuickstartTool(), QUICKSTART)
 
         then:
         !result
@@ -121,7 +121,7 @@ class SecurityCommandsAllOrNothingSpec extends Specification {
         when:
         errors.reset()
         assert new File(project, inTheWay).delete()
-        result = run(new S2QuickstartCommand(), QUICKSTART)
+        result = run(new S2QuickstartTool(), QUICKSTART)
 
         then:
         result
@@ -141,7 +141,7 @@ class SecurityCommandsAllOrNothingSpec extends Specification {
         Map<String, String> before = snapshot()
 
         when:
-        boolean result = run(new S2QuickstartCommand(), QUICKSTART)
+        boolean result = run(new S2QuickstartTool(), QUICKSTART)
 
         then:
         !result
@@ -152,7 +152,7 @@ class SecurityCommandsAllOrNothingSpec extends Specification {
         when:
         errors.reset()
         assert new File(project, RESOURCES).setWritable(true)
-        result = run(new S2QuickstartCommand(), QUICKSTART)
+        result = run(new S2QuickstartTool(), QUICKSTART)
 
         then:
         result
@@ -187,10 +187,10 @@ class SecurityCommandsAllOrNothingSpec extends Specification {
 
         where:
         line                                                            | command                           || setting                         | created
-        QUICKSTART                                                      | S2QuickstartCommand               || 'userDomainClassName'           | USER
-        's2-quickstart --uiOnly'                                        | S2QuickstartCommand               || 'staticRules'                   | YAML
-        's2-create-persistent-token com.example.PersistentLogin'        | S2CreatePersistentTokenCommand    || 'persistentToken'               | 'grails-app/domain/com/example/PersistentLogin.groovy'
-        's2-create-role-hierarchy-entry com.example.RoleHierarchyEntry' | S2CreateRoleHierarchyEntryCommand || 'roleHierarchyEntryClassName'   | 'grails-app/domain/com/example/RoleHierarchyEntry.groovy'
+        QUICKSTART                                                      | S2QuickstartTool               || 'userDomainClassName'           | USER
+        's2-quickstart --uiOnly'                                        | S2QuickstartTool               || 'staticRules'                   | YAML
+        's2-create-persistent-token com.example.PersistentLogin'        | S2CreatePersistentTokenTool    || 'persistentToken'               | 'grails-app/domain/com/example/PersistentLogin.groovy'
+        's2-create-role-hierarchy-entry com.example.RoleHierarchyEntry' | S2CreateRoleHierarchyEntryTool || 'roleHierarchyEntryClassName'   | 'grails-app/domain/com/example/RoleHierarchyEntry.groovy'
     }
 
     def "s2-quickstart that fails while it writes says which files it wrote"() {
@@ -198,7 +198,7 @@ class SecurityCommandsAllOrNothingSpec extends Specification {
         write('src/main/templates/Authority.groovy.template', 'package ${packageName}\n\nclass ${noSuchAttribute.name} {\n}\n')
 
         when:
-        boolean result = run(new S2QuickstartCommand(), QUICKSTART)
+        boolean result = run(new S2QuickstartTool(), QUICKSTART)
 
         then: 'the files before the one that failed are named, and nothing after it was written'
         !result

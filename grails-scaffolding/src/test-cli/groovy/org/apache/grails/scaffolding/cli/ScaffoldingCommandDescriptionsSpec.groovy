@@ -39,15 +39,15 @@ class ScaffoldingCommandDescriptionsSpec extends Specification {
         }
 
         expect:
-        registered.contains(GenerateViewsCommand.name)
+        registered.contains(GenerateViewsTool.name)
         registered.size() >= 9
         commands.every { GrailsTool command ->
             command.description && command.description != command.name && !command.description.contains('\n')
         }
 
         and:
-        new GenerateViewsCommand().name == 'generate-views'
-        new GenerateViewsCommand().description == 'Generates the views for the specified domain class: GSP views, or JSON views in a REST application'
+        new GenerateViewsTool().name == 'generate-views'
+        new GenerateViewsTool().description == 'Generates the views for the specified domain class: GSP views, or JSON views in a REST application'
     }
 
     def "the commands only read and write files of the project, so each runs as a process of its own, without Gradle and without the application"() {

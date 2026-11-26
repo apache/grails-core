@@ -62,8 +62,8 @@ class SecurityCommandDescriptionsSpec extends Specification {
 
     void 'the commands only write files of the project, so they are run without the application being started'() {
         expect: 'an application that cannot start, as one that is not configured yet, has them all the same'
-        ApplicationTool.isAssignableFrom(S2QuickstartCommand) && !StandaloneTool.isAssignableFrom(S2QuickstartCommand)
-        !new S2QuickstartCommand().startsApplication
-        [S2CreatePersistentTokenCommand, S2CreateRoleHierarchyEntryCommand].every { Class command -> StandaloneTool.isAssignableFrom(command) }
+        ApplicationTool.isAssignableFrom(S2QuickstartTool) && !StandaloneTool.isAssignableFrom(S2QuickstartTool)
+        !new S2QuickstartTool().startsApplication
+        [S2CreatePersistentTokenTool, S2CreateRoleHierarchyEntryTool].every { Class command -> StandaloneTool.isAssignableFrom(command) }
     }
 }

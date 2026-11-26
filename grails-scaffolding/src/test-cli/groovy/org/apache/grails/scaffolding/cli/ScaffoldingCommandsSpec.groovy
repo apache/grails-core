@@ -67,7 +67,7 @@ class ScaffoldingCommandsSpec extends Specification {
 
     def "generate-controller writes the service spec, an integration spec, to the integration tests"() {
         when:
-        boolean result = run(new GenerateControllerCommand(), 'generate-controller com.example.Book')
+        boolean result = run(new GenerateControllerTool(), 'generate-controller com.example.Book')
 
         then:
         result
@@ -80,7 +80,7 @@ class ScaffoldingCommandsSpec extends Specification {
 
     def "generate-all generates the views of a class that is found although another class is not, and fails"() {
         when:
-        boolean result = run(new GenerateAllCommand(), 'generate-all Missing com.example.Book')
+        boolean result = run(new GenerateAllTool(), 'generate-all Missing com.example.Book')
 
         then:
         !result
@@ -92,7 +92,7 @@ class ScaffoldingCommandsSpec extends Specification {
 
     def "generate-all generates the controller and the views of a domain class"() {
         expect:
-        run(new GenerateAllCommand(), 'generate-all com.example.Book')
+        run(new GenerateAllTool(), 'generate-all com.example.Book')
         written('grails-app/controllers/com/example/BookController.groovy')
         ['create', 'edit', 'index', 'show'].every { written("grails-app/views/book/${it}.gsp") }
     }
@@ -107,9 +107,9 @@ class ScaffoldingCommandsSpec extends Specification {
 
         where:
         name                         | command                               | files
-        'create-scaffold-controller' | new CreateScaffoldControllerCommand() | ['grails-app/controllers/com/example/BookController.groovy']
-        'create-scaffold-service'    | new CreateScaffoldServiceCommand()    | ['grails-app/services/com/example/BookService.groovy']
-        'generate-scaffold-all'      | new GenerateScaffoldAllCommand()      | ['grails-app/controllers/com/example/BookController.groovy', 'grails-app/services/com/example/BookService.groovy']
+        'create-scaffold-controller' | new CreateScaffoldControllerTool() | ['grails-app/controllers/com/example/BookController.groovy']
+        'create-scaffold-service'    | new CreateScaffoldServiceTool()    | ['grails-app/services/com/example/BookService.groovy']
+        'generate-scaffold-all'      | new GenerateScaffoldAllTool()      | ['grails-app/controllers/com/example/BookController.groovy', 'grails-app/services/com/example/BookService.groovy']
     }
 
     def "#name takes a class the project has no source of by the name it is given"() {
@@ -122,9 +122,9 @@ class ScaffoldingCommandsSpec extends Specification {
 
         where:
         name                         | command                               | files
-        'create-scaffold-controller' | new CreateScaffoldControllerCommand() | ['grails-app/controllers/org/library/AuthorController.groovy']
-        'create-scaffold-service'    | new CreateScaffoldServiceCommand()    | ['grails-app/services/org/library/AuthorService.groovy']
-        'generate-scaffold-all'      | new GenerateScaffoldAllCommand()      | ['grails-app/controllers/org/library/AuthorController.groovy', 'grails-app/services/org/library/AuthorService.groovy']
+        'create-scaffold-controller' | new CreateScaffoldControllerTool() | ['grails-app/controllers/org/library/AuthorController.groovy']
+        'create-scaffold-service'    | new CreateScaffoldServiceTool()    | ['grails-app/services/org/library/AuthorService.groovy']
+        'generate-scaffold-all'      | new GenerateScaffoldAllTool()      | ['grails-app/controllers/org/library/AuthorController.groovy', 'grails-app/services/org/library/AuthorService.groovy']
     }
 
     def "#name fails for a domain class that is not found"() {
@@ -133,9 +133,9 @@ class ScaffoldingCommandsSpec extends Specification {
 
         where:
         name                        | command
-        'generate-controller'       | new GenerateControllerCommand()
-        'generate-async-controller' | new GenerateAsyncControllerCommand()
-        'generate-views'            | new GenerateViewsCommand()
+        'generate-controller'       | new GenerateControllerTool()
+        'generate-async-controller' | new GenerateAsyncControllerTool()
+        'generate-views'            | new GenerateViewsTool()
     }
 
     def "install-templates copies the templates of the plugin into the project"() {
@@ -143,7 +143,7 @@ class ScaffoldingCommandsSpec extends Specification {
         new File(project, 'src/main/templates').deleteDir()
 
         when:
-        boolean result = run(new InstallTemplatesCommand(), 'install-templates')
+        boolean result = run(new InstallTemplatesTool(), 'install-templates')
 
         then:
         result
@@ -154,7 +154,7 @@ class ScaffoldingCommandsSpec extends Specification {
 
     def "generate-async-controller writes an asynchronous controller and its spec, and no service"() {
         when:
-        boolean result = run(new GenerateAsyncControllerCommand(), 'generate-async-controller com.example.Book')
+        boolean result = run(new GenerateAsyncControllerTool(), 'generate-async-controller com.example.Book')
 
         then:
         result
@@ -167,7 +167,7 @@ class ScaffoldingCommandsSpec extends Specification {
 
     def "generate-async-controller generates for a class that is found although another class is not, and fails"() {
         when:
-        boolean result = run(new GenerateAsyncControllerCommand(), 'generate-async-controller Missing com.example.Book')
+        boolean result = run(new GenerateAsyncControllerTool(), 'generate-async-controller Missing com.example.Book')
 
         then:
         !result
@@ -187,14 +187,14 @@ class ScaffoldingCommandsSpec extends Specification {
 
         where:
         name                         | command
-        'generate-controller'        | GenerateControllerCommand
-        'generate-async-controller'  | GenerateAsyncControllerCommand
-        'generate-views'             | GenerateViewsCommand
-        'generate-all'               | GenerateAllCommand
-        'generate-service'           | GenerateServiceCommand
-        'create-scaffold-controller' | CreateScaffoldControllerCommand
-        'create-scaffold-service'    | CreateScaffoldServiceCommand
-        'generate-scaffold-all'      | GenerateScaffoldAllCommand
+        'generate-controller'        | GenerateControllerTool
+        'generate-async-controller'  | GenerateAsyncControllerTool
+        'generate-views'             | GenerateViewsTool
+        'generate-all'               | GenerateAllTool
+        'generate-service'           | GenerateServiceTool
+        'create-scaffold-controller' | CreateScaffoldControllerTool
+        'create-scaffold-service'    | CreateScaffoldServiceTool
+        'generate-scaffold-all'      | GenerateScaffoldAllTool
     }
 
     @Unroll
@@ -209,11 +209,11 @@ class ScaffoldingCommandsSpec extends Specification {
 
         where:
         name                        | command                        | said
-        'generate-controller'       | GenerateControllerCommand      | 'Domain class not found for name: Missing'
-        'generate-async-controller' | GenerateAsyncControllerCommand | 'Domain class not found for name: Missing'
-        'generate-views'            | GenerateViewsCommand           | 'Domain class not found for name: Missing'
-        'generate-all'              | GenerateAllCommand             | 'Domain class not found for name: Missing'
-        'generate-service'          | GenerateServiceCommand         | 'No domain-class found for name: Missing'
+        'generate-controller'       | GenerateControllerTool      | 'Domain class not found for name: Missing'
+        'generate-async-controller' | GenerateAsyncControllerTool | 'Domain class not found for name: Missing'
+        'generate-views'            | GenerateViewsTool           | 'Domain class not found for name: Missing'
+        'generate-all'              | GenerateAllTool             | 'Domain class not found for name: Missing'
+        'generate-service'          | GenerateServiceTool         | 'No domain-class found for name: Missing'
     }
 
     @Unroll
@@ -242,19 +242,19 @@ class ScaffoldingCommandsSpec extends Specification {
 
         where:
         name                         | command                         | count
-        'generate-controller'        | GenerateControllerCommand       | 4
-        'generate-async-controller'  | GenerateAsyncControllerCommand  | 2
-        'generate-views'             | GenerateViewsCommand            | 4
-        'generate-all'               | GenerateAllCommand              | 8
-        'generate-service'           | GenerateServiceCommand          | 2
-        'create-scaffold-controller' | CreateScaffoldControllerCommand | 1
-        'create-scaffold-service'    | CreateScaffoldServiceCommand    | 1
-        'generate-scaffold-all'      | GenerateScaffoldAllCommand      | 2
+        'generate-controller'        | GenerateControllerTool       | 4
+        'generate-async-controller'  | GenerateAsyncControllerTool  | 2
+        'generate-views'             | GenerateViewsTool            | 4
+        'generate-all'               | GenerateAllTool              | 8
+        'generate-service'           | GenerateServiceTool          | 2
+        'create-scaffold-controller' | CreateScaffoldControllerTool | 1
+        'create-scaffold-service'    | CreateScaffoldServiceTool    | 1
+        'generate-scaffold-all'      | GenerateScaffoldAllTool      | 2
     }
 
     def "generate-service writes the data service of a domain class and its spec"() {
         expect:
-        run(new GenerateServiceCommand(), 'generate-service com.example.Book')
+        run(new GenerateServiceTool(), 'generate-service com.example.Book')
         written('grails-app/services/com/example/BookService.groovy').contains('package com.example')
         written('src/test/groovy/com/example/BookServiceSpec.groovy').contains('BookService')
     }
@@ -270,14 +270,14 @@ class ScaffoldingCommandsSpec extends Specification {
 
         where:
         command                         | line                                                                         | path                                                        | expected
-        CreateScaffoldControllerCommand | 'create-scaffold-controller com.example.Book'                                | 'grails-app/controllers/com/example/BookController.groovy'       | ['package com.example\n', '@Scaffold(Book)']
-        CreateScaffoldControllerCommand | 'create-scaffold-controller com.example.Book --service'                      | 'grails-app/controllers/com/example/BookController.groovy'       | ['import grails.plugin.scaffolding.RestfulServiceController', '@Scaffold(RestfulServiceController<Book>)']
-        CreateScaffoldControllerCommand | 'create-scaffold-controller com.example.Book --namespace=admin'              | 'grails-app/controllers/com/example/admin/BookController.groovy' | ['package com.example.admin\n', 'import com.example.Book\n', "static namespace = 'admin'"]
-        CreateScaffoldControllerCommand | 'create-scaffold-controller com.example.Book --extends=org.base.Base'        | 'grails-app/controllers/com/example/BookController.groovy'       | ['import org.base.Base\n', '@Scaffold(Base<Book>)']
-        CreateScaffoldServiceCommand    | 'create-scaffold-service com.example.Book --extends=org.base.BaseService'    | 'grails-app/services/com/example/BookService.groovy'             | ['import org.base.BaseService\n', '@Scaffold(BaseService<Book>)']
-        GenerateScaffoldAllCommand      | 'generate-scaffold-all com.example.Book --serviceExtends=org.base.BaseService --controllerExtends=org.base.Base --namespace=admin' | 'grails-app/services/com/example/BookService.groovy' | ['@Scaffold(BaseService<Book>)']
-        GenerateScaffoldAllCommand      | 'generate-scaffold-all com.example.Book --serviceExtends=org.base.BaseService --controllerExtends=org.base.Base --namespace=admin' | 'grails-app/controllers/com/example/admin/BookController.groovy' | ['@Scaffold(Base<Book>)', "static namespace = 'admin'"]
-        GenerateScaffoldAllCommand      | 'generate-scaffold-all com.example.Book'                                     | 'grails-app/controllers/com/example/BookController.groovy'       | ['@Scaffold(RestfulServiceController<Book>)']
+        CreateScaffoldControllerTool | 'create-scaffold-controller com.example.Book'                                | 'grails-app/controllers/com/example/BookController.groovy'       | ['package com.example\n', '@Scaffold(Book)']
+        CreateScaffoldControllerTool | 'create-scaffold-controller com.example.Book --service'                      | 'grails-app/controllers/com/example/BookController.groovy'       | ['import grails.plugin.scaffolding.RestfulServiceController', '@Scaffold(RestfulServiceController<Book>)']
+        CreateScaffoldControllerTool | 'create-scaffold-controller com.example.Book --namespace=admin'              | 'grails-app/controllers/com/example/admin/BookController.groovy' | ['package com.example.admin\n', 'import com.example.Book\n', "static namespace = 'admin'"]
+        CreateScaffoldControllerTool | 'create-scaffold-controller com.example.Book --extends=org.base.Base'        | 'grails-app/controllers/com/example/BookController.groovy'       | ['import org.base.Base\n', '@Scaffold(Base<Book>)']
+        CreateScaffoldServiceTool    | 'create-scaffold-service com.example.Book --extends=org.base.BaseService'    | 'grails-app/services/com/example/BookService.groovy'             | ['import org.base.BaseService\n', '@Scaffold(BaseService<Book>)']
+        GenerateScaffoldAllTool      | 'generate-scaffold-all com.example.Book --serviceExtends=org.base.BaseService --controllerExtends=org.base.Base --namespace=admin' | 'grails-app/services/com/example/BookService.groovy' | ['@Scaffold(BaseService<Book>)']
+        GenerateScaffoldAllTool      | 'generate-scaffold-all com.example.Book --serviceExtends=org.base.BaseService --controllerExtends=org.base.Base --namespace=admin' | 'grails-app/controllers/com/example/admin/BookController.groovy' | ['@Scaffold(Base<Book>)', "static namespace = 'admin'"]
+        GenerateScaffoldAllTool      | 'generate-scaffold-all com.example.Book'                                     | 'grails-app/controllers/com/example/BookController.groovy'       | ['@Scaffold(RestfulServiceController<Book>)']
     }
 
     def "install-templates into a directory that has templates writes each of them again, and keeps what is no template of the plugin"() {
@@ -288,7 +288,7 @@ class ScaffoldingCommandsSpec extends Specification {
         own.text = 'of the project'
 
         when:
-        boolean result = run(new InstallTemplatesCommand(), 'install-templates')
+        boolean result = run(new InstallTemplatesTool(), 'install-templates')
 
         then:
         result
@@ -303,7 +303,7 @@ class ScaffoldingCommandsSpec extends Specification {
         templates.text = 'a file'
 
         when:
-        boolean result = run(new InstallTemplatesCommand(), 'install-templates')
+        boolean result = run(new InstallTemplatesTool(), 'install-templates')
 
         then:
         !result

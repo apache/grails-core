@@ -241,7 +241,7 @@ environments {
 
     def "s2-quickstart creates the user, role and join classes, the password encoder listener and its bean"() {
         when:
-        boolean result = run(new S2QuickstartCommand(), 's2-quickstart com.example User Role')
+        boolean result = run(new S2QuickstartTool(), 's2-quickstart com.example User Role')
 
         then:
         result
@@ -283,7 +283,7 @@ environments {
 
     def "s2-quickstart adds the settings to application.yml of a project that has no application.groovy"() {
         when:
-        boolean result = run(new S2QuickstartCommand(), 's2-quickstart com.example User Role')
+        boolean result = run(new S2QuickstartTool(), 's2-quickstart com.example User Role')
         CodeGenConfig config = config()
 
         then:
@@ -336,7 +336,7 @@ environments {
         }
 
         when:
-        boolean result = run(new S2QuickstartCommand(), 's2-quickstart com.example Person Authority Requestmap')
+        boolean result = run(new S2QuickstartTool(), 's2-quickstart com.example Person Authority Requestmap')
         CodeGenConfig config = config()
 
         then:
@@ -375,7 +375,7 @@ environments {
         }
 
         when:
-        boolean result = run(new S2QuickstartCommand(), 's2-quickstart com.example User Role --groupClassName=RoleGroup')
+        boolean result = run(new S2QuickstartTool(), 's2-quickstart com.example User Role --groupClassName=RoleGroup')
         CodeGenConfig config = config()
 
         then:
@@ -415,7 +415,7 @@ environments {
         }
 
         when:
-        boolean result = run(new S2QuickstartCommand(), line)
+        boolean result = run(new S2QuickstartTool(), line)
         CodeGenConfig config = config()
 
         then:
@@ -440,7 +440,7 @@ environments {
         write(GROOVY, "grails.gorm.failOnError = true")
 
         when:
-        boolean result = run(new S2QuickstartCommand(), 's2-quickstart com.example User Role Requestmap --groupClassName=RoleGroup')
+        boolean result = run(new S2QuickstartTool(), 's2-quickstart com.example User Role Requestmap --groupClassName=RoleGroup')
 
         then:
         result
@@ -486,7 +486,7 @@ environments {
         new File(project, YAML).delete()
 
         when:
-        boolean result = run(new S2QuickstartCommand(), 's2-quickstart com.example User Role')
+        boolean result = run(new S2QuickstartTool(), 's2-quickstart com.example User Role')
 
         then:
         result
@@ -496,13 +496,13 @@ environments {
 
     def "s2-quickstart --force keeps the classes that are there, and registers the listener once"() {
         given: 'what the command created, edited since'
-        assert run(new S2QuickstartCommand(), 's2-quickstart com.example User Role Requestmap')
+        assert run(new S2QuickstartTool(), 's2-quickstart com.example User Role Requestmap')
         List<String> files = generated() - RESOURCES
         files.each { String path -> write(path, 'edited') }
         String resources = written(RESOURCES)
 
         when: 'it is run again, with the option that writes over the settings it wrote the first time'
-        boolean result = run(new S2QuickstartCommand(), 's2-quickstart com.example User Role Requestmap --force')
+        boolean result = run(new S2QuickstartTool(), 's2-quickstart com.example User Role Requestmap --force')
 
         then: 'a file that is there is passed over, which is no failure'
         result
@@ -521,7 +521,7 @@ environments {
         write(RESOURCES, '// Place your Spring DSL code here\nbeans = {\n    other(Object)\n}\n')
 
         when:
-        boolean result = run(new S2QuickstartCommand(), 's2-quickstart com.example User Role')
+        boolean result = run(new S2QuickstartTool(), 's2-quickstart com.example User Role')
 
         then:
         result
@@ -541,7 +541,7 @@ environments {
         Map<String, String> before = snapshot()
 
         when:
-        boolean result = run(new S2QuickstartCommand(), 's2-quickstart com.example User Role')
+        boolean result = run(new S2QuickstartTool(), 's2-quickstart com.example User Role')
 
         then:
         !result
@@ -573,7 +573,7 @@ class DemoGrailsPlugin extends Plugin {
 ''')
 
         when:
-        boolean result = run(new S2QuickstartCommand(), 's2-quickstart com.example User Role')
+        boolean result = run(new S2QuickstartTool(), 's2-quickstart com.example User Role')
 
         then:
         result
@@ -582,7 +582,6 @@ class DemoGrailsPlugin extends Plugin {
 
 import com.example.UserPasswordEncoderListener
 
-import grails.plugins.Plugin
 
 class DemoGrailsPlugin extends Plugin {
 
@@ -600,7 +599,6 @@ class DemoGrailsPlugin extends Plugin {
         String pluginClass = 'src/main/groovy/demo/DemoGrailsPlugin.groovy'
         write(pluginClass, '''package demo
 
-import grails.plugins.Plugin
 
 class DemoGrailsPlugin extends Plugin {
 
@@ -614,15 +612,13 @@ class DemoGrailsPlugin extends Plugin {
 ''')
 
         when:
-        boolean result = run(new S2QuickstartCommand(), 's2-quickstart com.example User Role')
+        boolean result = run(new S2QuickstartTool(), 's2-quickstart com.example User Role')
 
         then:
         result
         written(pluginClass) == '''package demo
 
-import com.example.UserPasswordEncoderListener
 
-import grails.plugins.Plugin
 
 class DemoGrailsPlugin extends Plugin {
 
@@ -644,7 +640,7 @@ class DemoGrailsPlugin extends Plugin {
         write(pluginClass, text)
 
         when:
-        boolean result = run(new S2QuickstartCommand(), 's2-quickstart com.example User Role')
+        boolean result = run(new S2QuickstartTool(), 's2-quickstart com.example User Role')
 
         then:
         !result
@@ -669,7 +665,7 @@ beans = {
 ''')
 
         when:
-        boolean result = run(new S2QuickstartCommand(), 's2-quickstart com.example User Role')
+        boolean result = run(new S2QuickstartTool(), 's2-quickstart com.example User Role')
 
         then:
         result
@@ -695,7 +691,7 @@ beans = {
         write('src/main/templates/Authority.groovy.template', 'package ${packageName}\n\nclass ${roleClassName} { /* of the project */ }\n')
 
         when:
-        boolean result = run(new S2QuickstartCommand(), 's2-quickstart com.example User Role')
+        boolean result = run(new S2QuickstartTool(), 's2-quickstart com.example User Role')
 
         then:
         result
@@ -706,7 +702,7 @@ beans = {
     @Unroll
     def "#line fails, says #said and writes nothing"() {
         when:
-        boolean result = run(new S2QuickstartCommand(), line)
+        boolean result = run(new S2QuickstartTool(), line)
 
         then:
         !result
@@ -757,10 +753,10 @@ beans = {
 
         where:
         name                             | command                           | className            | file   | what                   | expected                                                                              | settings
-        's2-create-persistent-token'     | S2CreatePersistentTokenCommand    | 'PersistentLogin'    | YAML   | 'persistent token'     | ['class PersistentLogin implements Serializable {', "table 'persistent_login'"]       | ['rememberMe.persistent': true, 'rememberMe.persistentToken.domainClassName': 'com.example.PersistentLogin']
-        's2-create-persistent-token'     | S2CreatePersistentTokenCommand    | 'PersistentLogin'    | GROOVY | 'persistent token'     | ['class PersistentLogin implements Serializable {', 'String series']                  | ['rememberMe.persistent': true, 'rememberMe.persistentToken.domainClassName': 'com.example.PersistentLogin']
-        's2-create-role-hierarchy-entry' | S2CreateRoleHierarchyEntryCommand | 'RoleHierarchyEntry' | YAML   | 'role hierarchy entry' | ['class RoleHierarchyEntry implements Serializable {', 'String entry']                | ['roleHierarchyEntryClassName': 'com.example.RoleHierarchyEntry']
-        's2-create-role-hierarchy-entry' | S2CreateRoleHierarchyEntryCommand | 'RoleHierarchyEntry' | GROOVY | 'role hierarchy entry' | ['class RoleHierarchyEntry implements Serializable {', "entry nullable: false"]       | ['roleHierarchyEntryClassName': 'com.example.RoleHierarchyEntry']
+        's2-create-persistent-token'     | S2CreatePersistentTokenTool    | 'PersistentLogin'    | YAML   | 'persistent token'     | ['class PersistentLogin implements Serializable {', "table 'persistent_login'"]       | ['rememberMe.persistent': true, 'rememberMe.persistentToken.domainClassName': 'com.example.PersistentLogin']
+        's2-create-persistent-token'     | S2CreatePersistentTokenTool    | 'PersistentLogin'    | GROOVY | 'persistent token'     | ['class PersistentLogin implements Serializable {', 'String series']                  | ['rememberMe.persistent': true, 'rememberMe.persistentToken.domainClassName': 'com.example.PersistentLogin']
+        's2-create-role-hierarchy-entry' | S2CreateRoleHierarchyEntryTool | 'RoleHierarchyEntry' | YAML   | 'role hierarchy entry' | ['class RoleHierarchyEntry implements Serializable {', 'String entry']                | ['roleHierarchyEntryClassName': 'com.example.RoleHierarchyEntry']
+        's2-create-role-hierarchy-entry' | S2CreateRoleHierarchyEntryTool | 'RoleHierarchyEntry' | GROOVY | 'role hierarchy entry' | ['class RoleHierarchyEntry implements Serializable {', "entry nullable: false"]       | ['roleHierarchyEntryClassName': 'com.example.RoleHierarchyEntry']
     }
 
     def "the settings of a domain class are appended to application.groovy as assignments"() {
@@ -768,8 +764,8 @@ beans = {
         write(GROOVY, '// of the project\n')
 
         expect:
-        run(new S2CreatePersistentTokenCommand(), 's2-create-persistent-token com.example.PersistentLogin')
-        run(new S2CreateRoleHierarchyEntryCommand(), 's2-create-role-hierarchy-entry com.example.RoleHierarchyEntry')
+        run(new S2CreatePersistentTokenTool(), 's2-create-persistent-token com.example.PersistentLogin')
+        run(new S2CreateRoleHierarchyEntryTool(), 's2-create-role-hierarchy-entry com.example.RoleHierarchyEntry')
         written(GROOVY).readLines() == [
                 '// of the project',
                 '',
@@ -797,8 +793,8 @@ beans = {
 
         where:
         name                             | command                           | className            | key
-        's2-create-persistent-token'     | S2CreatePersistentTokenCommand    | 'PersistentLogin'    | 'rememberMe.persistentToken.domainClassName'
-        's2-create-role-hierarchy-entry' | S2CreateRoleHierarchyEntryCommand | 'RoleHierarchyEntry' | 'roleHierarchyEntryClassName'
+        's2-create-persistent-token'     | S2CreatePersistentTokenTool    | 'PersistentLogin'    | 'rememberMe.persistentToken.domainClassName'
+        's2-create-role-hierarchy-entry' | S2CreateRoleHierarchyEntryTool | 'RoleHierarchyEntry' | 'roleHierarchyEntryClassName'
     }
 
     @Unroll
@@ -816,15 +812,15 @@ beans = {
 
         where:
         command                           | line                                                    | said
-        S2CreatePersistentTokenCommand    | 's2-create-persistent-token'                            | 'The name of the domain class is required.'
-        S2CreatePersistentTokenCommand    | 's2-create-persistent-token com.example.A com.example.B' | 'Too many arguments.'
-        S2CreatePersistentTokenCommand    | 's2-create-persistent-token PersistentLogin'            | "'PersistentLogin' is no full name of a class"
-        S2CreatePersistentTokenCommand    | 's2-create-persistent-token com.example.Persistent-Login' | "'com.example.Persistent-Login' is no full name of a class"
-        S2CreatePersistentTokenCommand    | 's2-create-persistent-token com.example.PersistentLogin --force' | 'Unknown option --force.'
-        S2CreateRoleHierarchyEntryCommand | 's2-create-role-hierarchy-entry'                        | 'The name of the domain class is required.'
-        S2CreateRoleHierarchyEntryCommand | 's2-create-role-hierarchy-entry com.example.A com.example.B' | 'Too many arguments.'
-        S2CreateRoleHierarchyEntryCommand | 's2-create-role-hierarchy-entry RoleHierarchyEntry'     | "'RoleHierarchyEntry' is no full name of a class"
-        S2CreateRoleHierarchyEntryCommand | 's2-create-role-hierarchy-entry com.example.RoleHierarchyEntry --force' | 'Unknown option --force.'
+        S2CreatePersistentTokenTool    | 's2-create-persistent-token'                            | 'The name of the domain class is required.'
+        S2CreatePersistentTokenTool    | 's2-create-persistent-token com.example.A com.example.B' | 'Too many arguments.'
+        S2CreatePersistentTokenTool    | 's2-create-persistent-token PersistentLogin'            | "'PersistentLogin' is no full name of a class"
+        S2CreatePersistentTokenTool    | 's2-create-persistent-token com.example.Persistent-Login' | "'com.example.Persistent-Login' is no full name of a class"
+        S2CreatePersistentTokenTool    | 's2-create-persistent-token com.example.PersistentLogin --force' | 'Unknown option --force.'
+        S2CreateRoleHierarchyEntryTool | 's2-create-role-hierarchy-entry'                        | 'The name of the domain class is required.'
+        S2CreateRoleHierarchyEntryTool | 's2-create-role-hierarchy-entry com.example.A com.example.B' | 'Too many arguments.'
+        S2CreateRoleHierarchyEntryTool | 's2-create-role-hierarchy-entry RoleHierarchyEntry'     | "'RoleHierarchyEntry' is no full name of a class"
+        S2CreateRoleHierarchyEntryTool | 's2-create-role-hierarchy-entry com.example.RoleHierarchyEntry --force' | 'Unknown option --force.'
     }
 
     @Issue('https://github.com/apache/grails-core/issues/16348')
@@ -837,7 +833,7 @@ beans = {
         write(YAML, yaml)
 
         when:
-        boolean result = run(new S2QuickstartCommand(), line)
+        boolean result = run(new S2QuickstartTool(), line)
 
         then: 'the command fails as for a wrong argument'
         !result
@@ -874,12 +870,12 @@ beans = {
     @Issue('https://github.com/apache/grails-core/issues/16348')
     def "s2-quickstart run a second time writes nothing, and says what the first run wrote"() {
         given:
-        assert run(new S2QuickstartCommand(), 's2-quickstart com.example User Role')
+        assert run(new S2QuickstartTool(), 's2-quickstart com.example User Role')
         Map<String, String> before = (generated() + [YAML]).collectEntries { String path -> [(path): written(path)] }
         errors.reset()
 
         when:
-        boolean result = run(new S2QuickstartCommand(), 's2-quickstart com.example Person Authority')
+        boolean result = run(new S2QuickstartTool(), 's2-quickstart com.example Person Authority')
 
         then:
         !result
@@ -897,7 +893,7 @@ beans = {
         write(file, present)
 
         when:
-        boolean result = run(new S2QuickstartCommand(), 's2-quickstart com.example.auth Person Authority --force')
+        boolean result = run(new S2QuickstartTool(), 's2-quickstart com.example.auth Person Authority --force')
         CodeGenConfig config = config()
 
         then: 'it does what it does in an application without the settings'
@@ -931,7 +927,7 @@ beans = {
         write(GROOVY, groovy)
 
         when:
-        boolean result = run(new S2QuickstartCommand(), line)
+        boolean result = run(new S2QuickstartTool(), line)
 
         then:
         result
@@ -955,7 +951,7 @@ beans = {
         String yaml = written(YAML)
 
         when:
-        boolean result = run(new S2QuickstartCommand(), 's2-quickstart com.example User Role')
+        boolean result = run(new S2QuickstartTool(), 's2-quickstart com.example User Role')
 
         then:
         !result
@@ -968,7 +964,7 @@ beans = {
 
         when:
         errors.reset()
-        result = run(new S2QuickstartCommand(), 's2-quickstart com.example User Role --force')
+        result = run(new S2QuickstartTool(), 's2-quickstart com.example User Role --force')
 
         then:
         result
@@ -994,7 +990,7 @@ beans = {
         Map<String, Object> development = effective(Environment.DEVELOPMENT.name)
 
         when:
-        boolean result = run(new S2QuickstartCommand(), line)
+        boolean result = run(new S2QuickstartTool(), line)
 
         then: 'the command fails, and names the environment of each setting with its file'
         !result
@@ -1042,7 +1038,7 @@ beans = {
         effective(Environment.DEVELOPMENT.name)["${SETTINGS}.controllerAnnotations.staticRules"] == null
 
         when:
-        boolean result = inEnvironment(environment) { run(new S2QuickstartCommand(), 's2-quickstart --uiOnly') }
+        boolean result = inEnvironment(environment) { run(new S2QuickstartTool(), 's2-quickstart --uiOnly') }
 
         then: 'the command fails without --force, says so as the guide shows, and both environments read what they read'
         !result
@@ -1072,7 +1068,7 @@ beans = {
         write(file, text)
 
         when:
-        boolean result = run(new S2QuickstartCommand(), 's2-quickstart --uiOnly')
+        boolean result = run(new S2QuickstartTool(), 's2-quickstart --uiOnly')
 
         then:
         result
@@ -1104,7 +1100,7 @@ beans = {
         effective(Environment.PRODUCTION.name)["${SETTINGS}.securityConfigType"] == null
 
         when:
-        boolean result = run(new S2QuickstartCommand(), 's2-quickstart com.example User Role Requestmap')
+        boolean result = run(new S2QuickstartTool(), 's2-quickstart com.example User Role Requestmap')
 
         then:
         result
@@ -1122,7 +1118,7 @@ beans = {
         write(YAML, yaml)
 
         when:
-        boolean result = run(new S2QuickstartCommand(), 's2-quickstart --uiOnly --force')
+        boolean result = run(new S2QuickstartTool(), 's2-quickstart --uiOnly --force')
 
         then:
         result

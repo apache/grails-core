@@ -299,7 +299,7 @@ class S2QuickstartListenerBeanSpec extends Specification {
     }
 
     private boolean run(String line) {
-        ToolSupport command = new S2QuickstartCommand()
+        ToolSupport command = new S2QuickstartTool()
         command.executionContext = new ExecutionContext(new CommandLineParser().parseString(line))
         command.templateRenderer = new TemplateRendererImpl(project)
         command.fileSystemInteraction = new FileSystemInteractionImpl(project)

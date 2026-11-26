@@ -136,7 +136,7 @@ class RestScaffoldingCommandsSpec extends Specification {
         write('grails-app/views/error.gson', 'json {\n}\n')
 
         when:
-        boolean result = runInRestApplication(new GenerateAllCommand(), 'generate-all com.example.Book')
+        boolean result = runInRestApplication(new GenerateAllTool(), 'generate-all com.example.Book')
 
         then:
         result
@@ -157,7 +157,7 @@ class RestScaffoldingCommandsSpec extends Specification {
 
     def "what is generated for a REST API application is what the rest-api profile of Grails 8 generated"() {
         when:
-        boolean result = runInRestApplication(new GenerateAllCommand(), 'generate-all com.example.Book')
+        boolean result = runInRestApplication(new GenerateAllTool(), 'generate-all com.example.Book')
 
         then: 'the service is the same byte for byte'
         result
@@ -215,7 +215,7 @@ class RestScaffoldingCommandsSpec extends Specification {
 
     def "the controller, the service and the controller spec that are generated compile, and the JSON views compile and render"() {
         given:
-        assert runInRestApplication(new GenerateAllCommand(), 'generate-all com.example.Book')
+        assert runInRestApplication(new GenerateAllTool(), 'generate-all com.example.Book')
         File classes = new File(project, 'build/classes')
         File views = new File(project, 'build/views')
 
@@ -282,9 +282,9 @@ class RestScaffoldingCommandsSpec extends Specification {
 
         where:
         name                  | command                   | files
-        'generate-views'      | GenerateViewsCommand      | JSON_VIEWS
-        'generate-controller' | GenerateControllerCommand | REST_CONTROLLER
-        'generate-all'        | GenerateAllCommand        | (REST_CONTROLLER + JSON_VIEWS).sort()
+        'generate-views'      | GenerateViewsTool      | JSON_VIEWS
+        'generate-controller' | GenerateControllerTool | REST_CONTROLLER
+        'generate-all'        | GenerateAllTool        | (REST_CONTROLLER + JSON_VIEWS).sort()
     }
 
     @Unroll
@@ -300,7 +300,7 @@ class RestScaffoldingCommandsSpec extends Specification {
         String line = "generate-all com.example.Book ${option}".trim()
 
         when:
-        boolean result = run(new GenerateAllCommand(), line)
+        boolean result = run(new GenerateAllTool(), line)
 
         then:
         result
@@ -334,7 +334,7 @@ class RestScaffoldingCommandsSpec extends Specification {
 
         expect:
         !new File(project, 'grails-app/views').exists()
-        run(new GenerateViewsCommand(), 'generate-views com.example.Book')
+        run(new GenerateViewsTool(), 'generate-views com.example.Book')
         generated() == JSON_VIEWS
     }
 
@@ -344,7 +344,7 @@ class RestScaffoldingCommandsSpec extends Specification {
         write('grails-app/views/admin/reports/_row.gsp', '<tr></tr>\n')
 
         expect:
-        run(new GenerateViewsCommand(), 'generate-views com.example.Book')
+        run(new GenerateViewsTool(), 'generate-views com.example.Book')
         generated() == (GSP_VIEWS + ['grails-app/views/admin/reports/_row.gsp', 'grails-app/views/error.gson']).sort()
     }
 
@@ -361,15 +361,15 @@ class RestScaffoldingCommandsSpec extends Specification {
 
         where:
         name                  | command                   | option        | given
-        'generate-views'      | GenerateViewsCommand      | '--views=xml' | 'xml'
-        'generate-controller' | GenerateControllerCommand | '--views=xml' | 'xml'
-        'generate-all'        | GenerateAllCommand        | '--views=xml' | 'xml'
-        'generate-all'        | GenerateAllCommand        | '--views'     | 'true'
+        'generate-views'      | GenerateViewsTool      | '--views=xml' | 'xml'
+        'generate-controller' | GenerateControllerTool | '--views=xml' | 'xml'
+        'generate-all'        | GenerateAllTool        | '--views=xml' | 'xml'
+        'generate-all'        | GenerateAllTool        | '--views'     | 'true'
     }
 
     def "the templates of the project, which install-templates writes, are used for the JSON views and the REST controller too"() {
         given: 'the templates of the plugin in the project'
-        assert runInRestApplication(new InstallTemplatesCommand(), 'install-templates')
+        assert runInRestApplication(new InstallTemplatesTool(), 'install-templates')
 
         expect: 'the templates of a REST API application are among them'
         ['RestController.groovy', 'RestService.groovy', 'RestSpec.groovy', 'RestServiceSpec.groovy', 'index.gson', 'show.gson', '_domain.gson'].every {
@@ -379,7 +379,7 @@ class RestScaffoldingCommandsSpec extends Specification {
         when: 'two of them are changed'
         write('src/main/templates/scaffolding/show.gson', 'json { title ${propertyName}.title }\n')
         write('src/main/templates/scaffolding/RestController.groovy', 'package ${packageName}\n\nclass ${className}Controller { /* of the project */ }\n')
-        boolean result = runInRestApplication(new GenerateAllCommand(), 'generate-all com.example.Book')
+        boolean result = runInRestApplication(new GenerateAllTool(), 'generate-all com.example.Book')
 
         then:
         result
@@ -415,14 +415,14 @@ class RestScaffoldingCommandsSpec extends Specification {
 
         where:
         name                  | command                   | count
-        'generate-views'      | GenerateViewsCommand      | 3
-        'generate-controller' | GenerateControllerCommand | 4
-        'generate-all'        | GenerateAllCommand        | 7
+        'generate-views'      | GenerateViewsTool      | 3
+        'generate-controller' | GenerateControllerTool | 4
+        'generate-all'        | GenerateAllTool        | 7
     }
 
     def "generate-all in a REST API application generates for a class that is found although another is not, and fails"() {
         when:
-        boolean result = runInRestApplication(new GenerateAllCommand(), 'generate-all Missing com.example.Book')
+        boolean result = runInRestApplication(new GenerateAllTool(), 'generate-all Missing com.example.Book')
 
         then:
         !result

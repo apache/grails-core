@@ -98,7 +98,7 @@ class ScaffoldingViewsChoiceSpec extends Specification {
         views.each { String view -> write("grails-app/views/${view}", '') }
 
         when:
-        boolean result = run(new GenerateAllCommand(), "generate-all com.example.Book --views=${option}")
+        boolean result = run(new GenerateAllTool(), "generate-all com.example.Book --views=${option}")
 
         then:
         result
@@ -124,7 +124,7 @@ class ScaffoldingViewsChoiceSpec extends Specification {
         views.each { String view -> write("grails-app/views/${view}", '') }
 
         when:
-        boolean result = run(new GenerateAllCommand(), 'generate-all com.example.Book')
+        boolean result = run(new GenerateAllTool(), 'generate-all com.example.Book')
 
         then:
         result
@@ -150,7 +150,7 @@ class ScaffoldingViewsChoiceSpec extends Specification {
         views.each { String view -> write("grails-app/views/${view}", '') }
 
         when:
-        boolean result = run(new GenerateAllCommand(), 'generate-all com.example.Book')
+        boolean result = run(new GenerateAllTool(), 'generate-all com.example.Book')
 
         then:
         result
@@ -172,7 +172,7 @@ class ScaffoldingViewsChoiceSpec extends Specification {
     def "a project with no grails-app/views and no record is given GSP views"() {
         expect:
         !new File(project, 'grails-app/views').exists()
-        run(new GenerateViewsCommand(), 'generate-views com.example.Book')
+        run(new GenerateViewsTool(), 'generate-views com.example.Book')
         generatedViews() == GSP_VIEWS
     }
 
@@ -184,7 +184,7 @@ class ScaffoldingViewsChoiceSpec extends Specification {
 
         expect:
         !ProjectInfo.of(project).recorded
-        run(new GenerateViewsCommand(), 'generate-views com.example.Book')
+        run(new GenerateViewsTool(), 'generate-views com.example.Book')
         generatedViews() == JSON_VIEWS
 
         where:
@@ -210,9 +210,9 @@ class ScaffoldingViewsChoiceSpec extends Specification {
 
         where:
         name                  | command                   | what                           | views      | controller
-        'generate-views'      | GenerateViewsCommand      | 'its views'                    | JSON_VIEWS | false
-        'generate-controller' | GenerateControllerCommand | 'its controller'               | []         | true
-        'generate-all'        | GenerateAllCommand        | 'its views and its controller' | JSON_VIEWS | true
+        'generate-views'      | GenerateViewsTool      | 'its views'                    | JSON_VIEWS | false
+        'generate-controller' | GenerateControllerTool | 'its controller'               | []         | true
+        'generate-all'        | GenerateAllTool        | 'its views and its controller' | JSON_VIEWS | true
     }
 
     def "the JSON views plugin on the class path does not make a project a REST API application"() {
@@ -225,7 +225,7 @@ class ScaffoldingViewsChoiceSpec extends Specification {
 
         when:
         boolean result = withClassLoader(restApplication) {
-            run(new GenerateViewsCommand(), 'generate-views com.example.Book')
+            run(new GenerateViewsTool(), 'generate-views com.example.Book')
         }
 
         then:
