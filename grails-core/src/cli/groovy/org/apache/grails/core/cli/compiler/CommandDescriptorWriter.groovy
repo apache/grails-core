@@ -63,8 +63,8 @@ import org.apache.grails.gradle.model.cli.CommandDescriptor
  * which the registry of commands finds it by; a description declared or set in another way is left
  * out of the descriptor.</p>
  *
- * <p>The execution target of the descriptor is {@code gradle} for a class that implements
- * {@code GradleCommand}, itself or through a class it extends or an interface, and
+ * <p>The execution target of the descriptor is {@code standalone} for a class that implements
+ * {@code StandaloneCommand}, {@code gradle} for one that implements {@code GradleCommand} and not that, itself or through a class it extends or an interface, and
  * {@code application} for every other command.</p>
  *
  * @since 9.0
@@ -77,6 +77,7 @@ class CommandDescriptorWriter {
     private static final String TRAIT_CLASS_MEMBER = 'traitClass'
 
     private static final String GRADLE_COMMAND = 'org.apache.grails.core.cli.GradleCommand'
+    private static final String STANDALONE_COMMAND = 'org.apache.grails.core.cli.StandaloneCommand'
 
     private static final Object UNKNOWN = new Object()
 
@@ -111,7 +112,7 @@ class CommandDescriptorWriter {
         // nothing is written that the reader of a descriptor refuses: a name that is not the name of a
         // command gets no descriptor, and a description that is not one line that can be shown is left out
         String json = CommandDescriptor.describe(classNode.name, name, description,
-                isGradle(classNode) ? CommandDescriptor.TARGET_GRADLE : CommandDescriptor.TARGET_APPLICATION)
+                target(classNode))
         if (json == null) {
             descriptor.delete()
             return false
@@ -138,11 +139,16 @@ class CommandDescriptorWriter {
         }
     }
 
-    // whether the class, or a class it extends, is marked as a command the build runs without the application
-    private static boolean isGradle(ClassNode classNode) {
+    // the kind of the command: what the class, or a class it extends, is marked as; a class marked as both runs as a process of its own
+    private static String target(ClassNode classNode) {
+        isMarked(classNode, STANDALONE_COMMAND) ? CommandDescriptor.TARGET_STANDALONE :
+                isMarked(classNode, GRADLE_COMMAND) ? CommandDescriptor.TARGET_GRADLE : CommandDescriptor.TARGET_APPLICATION
+    }
+
+    private static boolean isMarked(ClassNode classNode, String marker) {
         ClassNode current = classNode
         while (current != null && current != ClassHelper.OBJECT_TYPE) {
-            if (current.allInterfaces.any { ClassNode interfaceNode -> interfaceNode.name == GRADLE_COMMAND }) {
+            if (current.allInterfaces.any { ClassNode interfaceNode -> interfaceNode.name == marker }) {
                 return true
             }
             current = current.superClass

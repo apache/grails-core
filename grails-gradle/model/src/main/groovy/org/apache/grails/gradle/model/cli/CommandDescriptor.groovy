@@ -35,7 +35,8 @@ import grails.util.GrailsNameUtils
  * class, which is the name of the resource), {@code name} (what is typed), and optionally
  * {@code description} (one line) and {@code target}: {@code application} for a command that is run
  * with the application started around it, which is also what a descriptor without the member means,
- * or {@code gradle} for one the build runs without the application. A reader ignores a member
+ * {@code gradle} for one the build runs without the application, or {@code standalone} for one that
+ * is run as a process of its own, without the build and without the application. A reader ignores a member
  * it does not know, and reads a descriptor only for a class the factories file of the same jar or
  * directory registers.</p>
  *
@@ -65,8 +66,15 @@ final class CommandDescriptor {
      */
     public static final String TARGET_GRADLE = 'gradle'
 
-    /** The execution targets of the commands a build runs, which are the ones a descriptor is read for. */
-    public static final List<String> RUN_TARGETS = [TARGET_APPLICATION, TARGET_GRADLE].asImmutable()
+    /**
+     * The execution target of a command that is run as a process of its own, by the command line,
+     * without the build and without the application. A build that is asked to run it runs it as
+     * it runs a command of the target {@link #TARGET_GRADLE}.
+     */
+    public static final String TARGET_STANDALONE = 'standalone'
+
+    /** The execution targets of the commands of a project, which are the ones a descriptor is read for. */
+    public static final List<String> RUN_TARGETS = [TARGET_APPLICATION, TARGET_GRADLE, TARGET_STANDALONE].asImmutable()
 
     /** The execution targets a descriptor can name. */
     public static final List<String> TARGETS = ['console', 'standalone', 'application', 'gradle', 'session'].asImmutable()

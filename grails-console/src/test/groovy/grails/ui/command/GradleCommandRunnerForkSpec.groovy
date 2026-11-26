@@ -31,6 +31,7 @@ import org.apache.grails.core.cli.ApplicationCommand
 import org.apache.grails.core.cli.ExecutionContext
 import org.apache.grails.core.cli.GrailsApplicationCommand
 import org.apache.grails.core.cli.GradleCommand
+import org.apache.grails.core.cli.StandaloneCommand
 
 /**
  * A {@link GradleCommand} as the {@code runCommand} task of a build starts it: by the {@code main}
@@ -54,6 +55,17 @@ class GradleCommandRunnerForkSpec extends Specification {
         result.out.contains('COMMAND=gradle-kind-spec-succeeds [one, two] value true context=null injected=null')
 
         and: 'the class of the application was neither made nor initialized'
+        !result.out.contains('APPLICATION')
+    }
+
+    def "a standalone command that the build is asked to run is run as a command the build runs: without the application"() {
+        when:
+        Map result = run('standalone-kind-spec', 'one', GradleKindFailingApplication.name)
+
+        then:
+        result.ended
+        result.exit == 0
+        result.out.contains('COMMAND=standalone-kind-spec [one] context=null')
         !result.out.contains('APPLICATION')
     }
 
@@ -168,6 +180,15 @@ class GradleKindSpecSucceedsCommand implements ApplicationCommand, GradleCommand
     boolean handle(ExecutionContext executionContext) {
         println "COMMAND=${name} ${executionContext.commandLine.remainingArgs} ${executionContext.commandLine.optionValue('flag')} " +
                 "${executionContext.commandLine.optionValue('bare')} context=${applicationContext} injected=${grailsApplication}"
+        true
+    }
+}
+
+class StandaloneKindSpecCommand implements ApplicationCommand, StandaloneCommand {
+
+    @Override
+    boolean handle(ExecutionContext executionContext) {
+        println "COMMAND=${name} ${executionContext.commandLine.remainingArgs} context=${applicationContext}"
         true
     }
 }

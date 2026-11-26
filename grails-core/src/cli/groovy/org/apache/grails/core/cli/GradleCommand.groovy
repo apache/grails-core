@@ -24,6 +24,14 @@ package org.apache.grails.core.cli
  * application and the class path the build resolves for it, and has no use for the application
  * context.
  *
+ * <p>A command is one of three kinds, and its class says which:</p>
+ * <ul>
+ *   <li>a command that implements neither marker is run with the application started around it;</li>
+ *   <li>a command that implements this interface is run by the build, without the application;</li>
+ *   <li>a command that implements {@link StandaloneCommand} is run as a process of its own, without
+ *       the build and without the application.</li>
+ * </ul>
+ *
  * <p>Such a command is written, registered, listed and typed as any other command: a class that
  * implements {@link ApplicationCommand} or {@link GrailsApplicationCommand}, and this interface as
  * well. What differs is how it is run by the {@code runCommand} task of a build, by the task of the

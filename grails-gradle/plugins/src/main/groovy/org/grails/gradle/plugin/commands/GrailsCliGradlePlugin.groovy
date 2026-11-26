@@ -43,6 +43,7 @@ import org.gradle.api.artifacts.result.ResolvedArtifactResult
 import org.gradle.api.artifacts.result.ResolvedComponentResult
 import org.gradle.api.file.FileCollection
 import org.gradle.api.plugins.JavaPlugin
+import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.JavaExec
 import org.gradle.api.tasks.SourceSet
@@ -220,6 +221,53 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
             project.tasks.named(JavaPlugin.CLASSES_TASK_NAME).configure { Task classes ->
                 classes.finalizedBy(catalog)
             }
+            configureStandaloneCommands(project, catalog)
+        }
+    }
+
+    /**
+     * Registers the task that writes down the class path of the commands that run as a process of
+     * their own, without Gradle (see {@link GrailsStandaloneCommandsTask}): the output of the project
+     * for the commands of the project itself, and {@code runtimeClasspath} and
+     * {@code grailsCliClasspath} for all of them, which is what {@code runCommand} runs a command
+     * with. The task runs after the one that writes the catalog, which says which commands those are,
+     * so every build that compiles the project leaves the file current. The class paths are resolved
+     * leniently, as they are for the catalog: one that does not resolve completely is not written
+     * down, and the build goes on.
+     */
+    protected void configureStandaloneCommands(Project project, TaskProvider<GrailsCommandCatalogTask> catalog) {
+        if (project.tasks.names.contains(GrailsStandaloneCommandsTask.TASK_NAME)) {
+            project.logger.warn('Project {} already has a task named {}, so the Grails Gradle plugin does not register its own and ' +
+                    'the class path of the commands that run without Gradle is not written down. Give the task another name.',
+                    project.path, GrailsStandaloneCommandsTask.TASK_NAME)
+            return
+        }
+        TaskProvider<GrailsStandaloneCommandsTask> standalone = project.tasks.register(GrailsStandaloneCommandsTask.TASK_NAME, GrailsStandaloneCommandsTask) { GrailsStandaloneCommandsTask task ->
+            task.group = GRAILS_COMMAND_GROUP
+            task.description = 'Writes down the class path of the commands that the grails command line runs without Gradle'
+            SourceSet mainSourceSet = SourceSets.findMainSourceSet(project)
+            task.catalogFile.set(catalog.flatMap { GrailsCommandCatalogTask catalogTask -> catalogTask.catalogFile })
+            // the directories of the classes and of the resources, by the tasks that write them, and not the output of the
+            // source set as a whole: that is built by classes, which this task runs after, as the task that writes the catalog does
+            task.applicationClasspath.from(mainSourceSet.output.classesDirs, project.tasks.named(mainSourceSet.processResourcesTaskName))
+            for (String configurationName : [JavaPlugin.RUNTIME_CLASSPATH_CONFIGURATION_NAME, GRAILS_CLI_CLASSPATH_CONFIGURATION]) {
+                ArtifactCollection artifacts = project.configurations.getByName(configurationName).incoming
+                        .artifactView({ ArtifactView.ViewConfiguration view -> view.lenient(true) } as Action<ArtifactView.ViewConfiguration>).artifacts
+                task.dependencyClasspath.from(artifacts.artifactFiles)
+                task.projectOutputs.addAll(artifacts.resolvedArtifacts.map(new GrailsStandaloneCommandsTask.ProjectOutputs()))
+                task.unresolved.put(configurationName, project.provider(new GrailsCommandCatalogTask.UnresolvedLines(artifacts)))
+            }
+            // the directories there are when the task is about to run, as whole paths: the command line compares the file with what is in them
+            task.sourceDirectories.set(project.provider({
+                mainSourceSet.allSource.srcDirs.collect { File directory -> directory.absolutePath }.sort()
+            } as Callable<List<String>>))
+            task.javaVersion.set(project.provider({
+                Integer.valueOf(project.extensions.getByType(JavaPluginExtension).targetCompatibility.majorVersion)
+            } as Callable<Integer>))
+            task.standaloneCommandsFile.convention(project.layout.projectDirectory.file(GrailsStandaloneCommandsTask.LOCATION))
+        }
+        catalog.configure { GrailsCommandCatalogTask task ->
+            task.finalizedBy(standalone)
         }
     }
 

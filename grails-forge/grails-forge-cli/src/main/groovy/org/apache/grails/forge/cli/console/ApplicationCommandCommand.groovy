@@ -31,6 +31,12 @@ import picocli.CommandLine
  * application is such a command too: it is run by the build as well, by the Gradle task
  * {@code runScriptCommand}, and never by the CLI.
  *
+ * <p>A command the build lists with the target {@code standalone} is not run by Gradle: the CLI starts
+ * a JVM for it, with the class path the build wrote down ({@link StandaloneCommandFile},
+ * {@link StandaloneCommandProcess}). Gradle is run for it only to bring that up to date, when
+ * something it is made from was changed, and when the build says that it has to run the command itself.
+ * No code of a project or of a plugin runs in the JVM of the CLI.</p>
+ *
  * <p>Everything after the name of the command is the command's and is given to it as the list of
  * arguments it is, one for one: the command of the CLI has no options of its own. The arguments are
  * handed to Gradle in a file only the user can read, see {@link CommandArgumentsFile}, so that none
@@ -89,13 +95,19 @@ class ApplicationCommandCommand extends InProjectCommand {
             description.add(DEPRECATED)
         } else {
             // where a command comes from is the name of a jar or of a project: text, as the description is
-            description.add(("A command of ${entry.origin == ApplicationCommandFile.APPLICATION ? 'the application' : shown(entry.origin).replace('%', '%%')}, " +
-                    (entry.isGradle() ? 'which runs with Gradle, without the application' : 'which runs in the application') +
-                    ": it is started by the Gradle task ${TASK} of the project.").toString())
+            String of = "A command of ${entry.origin == ApplicationCommandFile.APPLICATION ? 'the application' : shown(entry.origin).replace('%', '%%')}, "
+            description.add(entry.isStandalone() ?
+                    (of + 'which runs as a process of its own, without Gradle and without the application: ' +
+                            'it is started by this program, with the class path the build of the project wrote down for it.').toString() :
+                    (of + (entry.isGradle() ? 'which runs with Gradle, without the application' : 'which runs in the application') +
+                            ": it is started by the Gradle task ${TASK} of the project.").toString())
         }
         description.add('Everything after the name of the command is given to the command as it is, the options too.')
         description.add('--help after the name is given to the command as well, which runs it. This help is what the build of the project listed of the command, ' +
                 'and nothing was run for it.')
+        if (entry.isStandalone()) {
+            description.add("The Gradle task ${TASK} of the project runs it as well, without the application: run-command ${entry.name}".toString())
+        }
         spec.usageMessage().description(description as String[])
         return spec
     }
@@ -152,6 +164,13 @@ class ApplicationCommandCommand extends InProjectCommand {
         if (refused != null) {
             throw new CommandLine.ParameterException(spec.commandLine(), "The command cannot be given these arguments: ${refused}")
         }
+        if (entry.isStandalone()) {
+            Integer ended = standalone(project, vector)
+            if (ended != null) {
+                return ended.intValue()
+            }
+            // the build runs it, as it runs a command that needs it
+        }
         CommandArgumentsFile file
         try {
             file = CommandArgumentsFile.write(project, vector)
@@ -166,13 +185,8 @@ class ApplicationCommandCommand extends InProjectCommand {
             said.println(CommandLine.Help.Ansi.AUTO.string("@|bold | Running|@ ${entry.isScript() ? "the script ${entry.name} of ${ScriptCommandFiles.LOCATION}, with the Gradle task ${task()}" : running(entry.name, entry.origin)}"))
             if (entry.isScript()) {
                 said.println(CommandLine.Help.Ansi.AUTO.string('@|bold,red | Warning|@ ' + DEPRECATED))
-            } else if (arguments.any { String argument -> argument.startsWith(ENVIRONMENT_OPTION) }) {
-                // Every argument after the name of a command is the command's, and so is this one. Who types
-                // grails dbm-update -Dgrails.env=production means the environment, as after the name of every
-                // command that runs the build, and is told that the command runs for another one.
-                said.println(CommandLine.Help.Ansi.AUTO.string('@|bold,red | Warning|@ ' + GradleRunner.line("${ENVIRONMENT_OPTION}... after the name of ${entry.name} is given " +
-                        "to the command as an argument, and the command runs for the environment ${ENVIRONMENT}. To run it for another environment, name it before the command: " +
-                        UsageHelp.toType(spec, "run-command ${ENVIRONMENT_OPTION}production ${entry.name}"))))
+            } else {
+                warnOfEnvironment(said)
             }
             said.flush()
             GradleBuild runner = GradleBuild.of(GradleBuild.Purpose.BUILD, { String message -> err(message) } as Consumer<String>, getOperatingSystem() == OperatingSystem.WINDOWS)
@@ -181,6 +195,97 @@ class ApplicationCommandCommand extends InProjectCommand {
             throw new CommandLine.ParameterException(spec.commandLine(), e.getMessage())
         } finally {
             file.close()
+        }
+    }
+
+    // Every argument after the name of a command is the command's, and so is this one. Who types
+    // grails dbm-update -Dgrails.env=production means the environment, as after the name of every
+    // command that runs the build, and is told that the command runs for another one.
+    private void warnOfEnvironment(PrintWriter said) {
+        if (arguments.any { String argument -> argument.startsWith(ENVIRONMENT_OPTION) }) {
+            said.println(CommandLine.Help.Ansi.AUTO.string('@|bold,red | Warning|@ ' + GradleRunner.line("${ENVIRONMENT_OPTION}... after the name of ${entry.name} is given " +
+                    "to the command as an argument, and the command runs for the environment ${ENVIRONMENT}. To run it for another environment, name it before the command: " +
+                    UsageHelp.toType(spec, "run-command ${ENVIRONMENT_OPTION}production ${entry.name}"))))
+        }
+    }
+
+    // Runs a command that is a process of its own, without Gradle: with the class path the build wrote
+    // down, after the build has brought it up to date when something it is made from was changed. The
+    // exit code of the command, or null when the build is to run the command as it runs any other.
+    private Integer standalone(ConsoleProject project, List<String> vector) {
+        PrintWriter said = spec.commandLine().getErr()
+        boolean windows = getOperatingSystem() == OperatingSystem.WINDOWS
+        String name = entry.name
+        String byTheBuild = "The command was not run; the build runs it with: ${UsageHelp.toType(spec, "run-command ${name}")}"
+        StandaloneCommandFile file = StandaloneCommandFile.read(project, ApplicationCommandFile.read(project.getDirectory()), name)
+        if (file.state == StandaloneCommandFile.State.OUT_OF_DATE) {
+            said.println(CommandLine.Help.Ansi.AUTO.string("@|bold | Building|@ the project before ${name} is run without Gradle, " +
+                    "with the Gradle task ${StandaloneCommandFile.TASK}: ${file.reason}"))
+            said.flush()
+            if (build(project, windows) != 0) {
+                err("The project could not be built, so the command ${name} was not run")
+                return 1
+            }
+            ApplicationCommandFile list = ApplicationCommandFile.read(project.getDirectory())
+            ApplicationCommandFile.Entry listed = list.commands.find { ApplicationCommandFile.Entry each -> each.name == name }
+            if (listed == null) {
+                err("The build of the project no longer lists a command ${name}. Nothing was run")
+                return 1
+            }
+            if (!listed.isStandalone()) {
+                said.println(CommandLine.Help.Ansi.AUTO.string("@|bold | The command|@ ${name} is no longer one that runs without Gradle, as the build of the project lists it now"))
+                return null
+            }
+            file = StandaloneCommandFile.read(project, list, name)
+            if (file.state == StandaloneCommandFile.State.OUT_OF_DATE) {
+                err("The build of the project did not write down a class path for the command ${name}: ${file.reason}. ${byTheBuild}")
+                return 1
+            }
+        }
+        if (file.state == StandaloneCommandFile.State.REFUSED) {
+            err("The command ${name} is not started as a process of its own: ${file.reason}. ${byTheBuild}")
+            return 1
+        }
+        if (file.state == StandaloneCommandFile.State.THROUGH_GRADLE) {
+            said.println(CommandLine.Help.Ansi.AUTO.string("@|bold | The command|@ ${name} is run with Gradle: ${file.reason}"))
+            said.flush()
+            return null
+        }
+        StandaloneCommandProcess.Java java = StandaloneCommandProcess.java(windows, file.java)
+        if (java.refusal != null) {
+            err("${java.refusal}. ${byTheBuild}")
+            return 1
+        }
+        CommandArgumentsFile written
+        try {
+            written = CommandArgumentsFile.write(project, vector)
+        } catch (IOException e) {
+            err("The arguments of the command could not be written: ${GradleRunner.line(e.getMessage())}. The command was not run")
+            return 1
+        }
+        try {
+            said.println(CommandLine.Help.Ansi.AUTO.string("@|bold | Running|@ the command ${name} of " +
+                    "${entry.origin == ApplicationCommandFile.APPLICATION ? 'the application' : entry.origin}, as a process of its own, without Gradle"))
+            warnOfEnvironment(said)
+            said.flush()
+            return StandaloneCommandProcess.run(project, java.program, file.classpath, written, showStacktrace(), windows, { String message -> err(message) } as Consumer<String>)
+        } finally {
+            written.close()
+        }
+    }
+
+    // has the build write down the class path of the commands again, which compiles what they are made from; the input of the build has ended
+    private int build(ConsoleProject project, boolean windows) {
+        GradleBuild runner = GradleBuild.of(GradleBuild.Purpose.BUILD, { String message -> err(message) } as Consumer<String>, windows)
+        boolean nonInteractive = GradleBuild.isNonInteractive()
+        GradleBuild.setNonInteractive(true)
+        try {
+            return runner.run(project, [project.task(StandaloneCommandFile.TASK)])
+        } catch (GradleRunner.RefusedArgumentException e) {
+            err(e.getMessage())
+            return 1
+        } finally {
+            GradleBuild.setNonInteractive(nonInteractive)
         }
     }
 

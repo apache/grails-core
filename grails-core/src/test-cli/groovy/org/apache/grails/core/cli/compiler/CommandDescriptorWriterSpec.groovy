@@ -312,6 +312,25 @@ class CommandDescriptorWriterSpec extends Specification {
     }
 
     @Unroll
+    def "a command that runs as a process of its own, marked #where, is described as standalone"() {
+        when:
+        compile('RenderCommand', source)
+
+        then:
+        descriptor('example.RenderCommand') == [format: 1, class: 'example.RenderCommand', name: 'render',
+                                                description: 'Renders a file', target: 'standalone']
+        registered() == ['example.RenderCommand']
+
+        where:
+        where                         | source
+        'on the class'                | "class RenderCommand implements ${CONTRACT}, ${STANDALONE} { String description = 'Renders a file'; ${HANDLE} }"
+        'on a Grails command'         | "class RenderCommand implements org.apache.grails.core.cli.GrailsApplicationCommand, ${STANDALONE} { String description = 'Renders a file'; boolean handle() { true } }"
+        'on an interface it has'      | "interface FileCommand extends ${STANDALONE} {}\nclass RenderCommand implements ${CONTRACT}, FileCommand { String description = 'Renders a file'; ${HANDLE} }"
+        'on a class it extends'       | "abstract class FileCommand implements ${CONTRACT}, ${STANDALONE} { String description = 'Renders a file' }\nclass RenderCommand extends FileCommand { ${HANDLE} }"
+        'beside the other marker'     | "class RenderCommand implements ${CONTRACT}, ${GRADLE}, ${STANDALONE} { String description = 'Renders a file'; ${HANDLE} }"
+    }
+
+    @Unroll
     def "a name the class sets when an instance is made is the name recorded, and the name it runs under: #how"() {
         when:
         compile('GreetCommand', "class GreetCommand implements ${CONTRACT} {\nString name = 'say-hello';\n${members}\n${HANDLE}\n}", Phases.ALL)
@@ -654,6 +673,7 @@ class CommandDescriptorWriterSpec extends Specification {
     }
 
     private static final String GRADLE = 'org.apache.grails.core.cli.GradleCommand'
+    private static final String STANDALONE = 'org.apache.grails.core.cli.StandaloneCommand'
 
     private static final String HANDLE = 'boolean handle(org.apache.grails.core.cli.ExecutionContext executionContext) { true }'
 

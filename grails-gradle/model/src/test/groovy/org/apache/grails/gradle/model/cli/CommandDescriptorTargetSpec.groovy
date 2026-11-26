@@ -46,7 +46,7 @@ class CommandDescriptorTargetSpec extends Specification {
         read.target == target
 
         where:
-        target << ['application', 'gradle']
+        target << ['application', 'gradle', 'standalone']
     }
 
     def "a descriptor that names no target, and one written without one, is of a command that runs with the application"() {
@@ -62,7 +62,7 @@ class CommandDescriptorTargetSpec extends Specification {
         CommandDescriptor.describe(CLASS, 'tail', 'Follows a file', target) == null
 
         where:
-        target << ['console', 'standalone', 'session', 'nowhere', null]
+        target << ['console', 'session', 'nowhere', null]
     }
 
     @Unroll
@@ -77,7 +77,6 @@ class CommandDescriptorTargetSpec extends Specification {
         where:
         target           | reason
         '"console"'      | 'is for the execution target console, which this version of Grails cannot run'
-        '"standalone"'   | 'is for the execution target standalone, which this version of Grails cannot run'
         '"session"'      | 'is for the execution target session, which this version of Grails cannot run'
         '"nowhere"'      | 'has an execution target that does not exist'
         '7'              | 'has an execution target that does not exist'
@@ -89,8 +88,9 @@ class CommandDescriptorTargetSpec extends Specification {
         File jar = new File(dir, 'element')
         new File(jar, 'META-INF').mkdirs()
         new File(jar, 'META-INF/grails-cli.factories').text =
-                'org.apache.grails.core.cli.ApplicationCommand=demo.TailCommand,demo.ReportCommand,demo.PlainCommand\n'
+                'org.apache.grails.core.cli.ApplicationCommand=demo.TailCommand,demo.ReportCommand,demo.PlainCommand,demo.RenderCommand\n'
         descriptor(jar, 'demo.TailCommand', CommandDescriptor.describe('demo.TailCommand', 'tail', 'Follows a file', 'gradle'))
+        descriptor(jar, 'demo.RenderCommand', CommandDescriptor.describe('demo.RenderCommand', 'render', 'Renders a file', 'standalone'))
         descriptor(jar, 'demo.ReportCommand', CommandDescriptor.describe('demo.ReportCommand', 'report', 'Writes it'))
 
         when:
@@ -101,6 +101,7 @@ class CommandDescriptorTargetSpec extends Specification {
         then: 'a command without a descriptor is listed as one that runs with the application'
         catalog.commands == [
                 [name: 'plain', aliases: [], description: '', origin: 'org.example:element:1.0', target: 'application', registration: 'factories'],
+                [name: 'render', aliases: [], description: 'Renders a file', origin: 'org.example:element:1.0', target: 'standalone', registration: 'descriptor'],
                 [name: 'report', aliases: [], description: 'Writes it', origin: 'org.example:element:1.0', target: 'application', registration: 'descriptor'],
                 [name: 'tail', aliases: [], description: 'Follows a file', origin: 'org.example:element:1.0', target: 'gradle', registration: 'descriptor'],
         ]
