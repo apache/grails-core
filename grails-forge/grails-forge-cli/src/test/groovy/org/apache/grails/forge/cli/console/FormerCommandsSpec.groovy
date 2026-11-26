@@ -41,7 +41,7 @@ class FormerCommandsSpec extends CommandSpec {
     static final String CREATE_SCRIPT = 'create-script wrote a script command into src/main/scripts. Script commands are deprecated, and the scripts a project has still run: ' +
             'a new command is a class of the application. Type: grails-forge-cli create-command NAME'
     static final String MISSING ='The commands of the application and its plugins are not listed yet: a build that compiles the project lists them, ' +
-            'and so does typing the name of one. To list them now: grails-forge-cli gradle grailsCommandCatalog'
+            'and so does typing the name of one. To list them now: grails-forge-cli gradle grailsToolCatalog'
     static final Map<String, List<String>> PROJECTS = [
             web        : ['create-app', 'example.web'],
             rest       : ['create-restapi', 'example.rest'],
@@ -140,7 +140,7 @@ class FormerCommandsSpec extends CommandSpec {
         if (inAProject) {
             inProject('web')
             // a command of a plugin the build of the project lists
-            File catalog = new File(top, 'web/.grails/cache/command-catalog.json')
+            File catalog = new File(top, 'web/.grails/cache/tool-catalog.json')
             catalog.parentFile.mkdirs()
             catalog.text = ApplicationCommandsSpec.doc([[name: 'dbm-update', aliases: [], description: '', origin: 'org.grails.plugins:database-migration:5.0.0',
                                                          target: 'application', registration: 'factories']])
@@ -220,7 +220,7 @@ class FormerCommandsSpec extends CommandSpec {
     void "#environment is never short for a command, also where the application has a command it starts, which #form is short for"() {
         given: 'commands of the application whose names start with the names of the environments'
         inProject('web')
-        File catalog = new File(top, 'web/.grails/cache/command-catalog.json')
+        File catalog = new File(top, 'web/.grails/cache/tool-catalog.json')
         catalog.parentFile.mkdirs()
         catalog.text = ApplicationCommandsSpec.doc(['dev-tools', 'prod-check', 'production-report', 'development-report'].collect { String each ->
             [name: each, aliases: [], description: '', origin: 'application', target: 'application', registration: 'factories']
@@ -400,9 +400,9 @@ class FormerCommandsSpec extends CommandSpec {
     void "a command the build of the project lists is that command, whatever the table says about its name"() {
         given:
         inProject('web')
-        File catalog = new File(top, 'web/.grails/cache/command-catalog.json')
+        File catalog = new File(top, 'web/.grails/cache/tool-catalog.json')
         catalog.parentFile.mkdirs()
-        catalog.text = '{"format":1,"complete":true,"diagnostics":[],"commands":[{"name":"generate-all","aliases":[],"description":"Generates all",' +
+        catalog.text = '{"format":1,"complete":true,"diagnostics":[],"tools":[{"name":"generate-all","aliases":[],"description":"Generates all",' +
                 '"origin":"org.apache.grails:grails-scaffolding-cli:9.0.0","target":"application","registration":"descriptor"}]}'
 
         when:
@@ -425,7 +425,7 @@ class FormerCommandsSpec extends CommandSpec {
     void "#name is answered with its line also where it is the short form of a command of the application, which is found by a short form of its own"() {
         given: 'commands of the application whose names start as the name of the table and the rest of it'
         inProject('web')
-        File catalog = new File(top, 'web/.grails/cache/command-catalog.json')
+        File catalog = new File(top, 'web/.grails/cache/tool-catalog.json')
         catalog.parentFile.mkdirs()
         catalog.text = ApplicationCommandsSpec.doc(['run-now', 'test-tool', 'stop-point'].collect { String each ->
             [name: each, aliases: [], description: '', origin: 'application', target: 'application', registration: 'factories']
@@ -458,7 +458,7 @@ class FormerCommandsSpec extends CommandSpec {
     void "#name is another name of #command, as in the Grails shell, also where the application has a command it starts, which is found by a short form of its own"() {
         given: 'commands of the application whose names start with the name and the rest of it'
         inProject('web')
-        File catalog = new File(top, 'web/.grails/cache/command-catalog.json')
+        File catalog = new File(top, 'web/.grails/cache/tool-catalog.json')
         catalog.parentFile.mkdirs()
         catalog.text = ApplicationCommandsSpec.doc(['run-now', 'stop-point'].collect { String each ->
             [name: each, aliases: [], description: '', origin: 'application', target: 'application', registration: 'factories']

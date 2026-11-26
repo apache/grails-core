@@ -37,7 +37,7 @@ class ProjectStateIgnoredSpec extends CommandSpec {
 
     // what the commands and the console keep under .grails while they run, and leave behind
     static final List<String> OF_ONE_MACHINE = ['.grails/transactions/lock', '.grails/transactions/t0123456789abcdef01234567/new/0',
-                                                '.grails/history', '.grails/run/app.log', '.grails/cache/command-catalog.json']
+                                                '.grails/history', '.grails/run/app.log', '.grails/cache/tool-catalog.json']
 
     static final List<String> RECORD = ['.grails/.gitattributes', '.grails/.gitignore', '.grails/baseline/index.yml', '.grails/forge.lock.yml', '.grails/project.yml']
 

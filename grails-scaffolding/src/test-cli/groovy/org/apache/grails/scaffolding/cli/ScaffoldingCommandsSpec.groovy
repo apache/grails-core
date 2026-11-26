@@ -24,7 +24,7 @@ import spock.lang.Unroll
 
 import grails.build.logging.GrailsConsole
 import org.apache.grails.core.cli.ExecutionContext
-import org.apache.grails.core.cli.GrailsApplicationCommand
+import org.apache.grails.core.cli.ToolSupport
 import org.apache.grails.core.cli.io.FileSystemInteractionImpl
 import org.apache.grails.core.cli.script.ScriptConsole
 import org.apache.grails.core.cli.template.TemplateRendererImpl
@@ -315,7 +315,7 @@ class ScaffoldingCommandsSpec extends Specification {
      * Runs a command in the project of the spec. A command that the Gradle task starts gets the directory of
      * the project from the build settings of the JVM, which a spec cannot set.
      */
-    private boolean run(GrailsApplicationCommand command, String line) {
+    private boolean run(ToolSupport command, String line) {
         command.executionContext = new ExecutionContext(new CommandLineParser().parseString(line))
         command.templateRenderer = new TemplateRendererImpl(project)
         command.fileSystemInteraction = new FileSystemInteractionImpl(project)

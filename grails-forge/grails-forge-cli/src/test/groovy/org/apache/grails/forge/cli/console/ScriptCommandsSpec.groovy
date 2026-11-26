@@ -649,7 +649,7 @@ class ScriptCommandsSpec extends CommandSpec implements CommandFixture {
     }
 
     private void catalog(List commands) {
-        File file = new File(dir, '.grails/cache/command-catalog.json')
+        File file = new File(dir, '.grails/cache/tool-catalog.json')
         file.parentFile.mkdirs()
         file.bytes = ApplicationCommandsSpec.doc(commands).getBytes(StandardCharsets.UTF_8)
     }

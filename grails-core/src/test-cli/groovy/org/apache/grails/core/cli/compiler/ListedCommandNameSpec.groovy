@@ -25,8 +25,8 @@ import org.codehaus.groovy.control.Phases
 
 import org.apache.grails.core.cli.ApplicationCommand
 import org.apache.grails.core.cli.ApplicationContextCommandRegistry
-import org.apache.grails.gradle.model.cli.CommandCatalogBuilder
-import org.apache.grails.gradle.model.cli.CommandDescriptor
+import org.apache.grails.gradle.model.cli.ToolCatalogBuilder
+import org.apache.grails.gradle.model.cli.ToolDescriptor
 import spock.lang.Specification
 import spock.lang.TempDir
 import spock.lang.Unroll
@@ -124,13 +124,13 @@ class ListedCommandNameSpec extends Specification {
         descriptors.each { String className, String name ->
             File descriptor = descriptorFile("example.${className}")
             descriptor.parentFile.mkdirs()
-            descriptor.setText(CommandDescriptor.toJson("example.${className}", name, null), 'US-ASCII')
+            descriptor.setText(ToolDescriptor.toJson("example.${className}", name, null), 'US-ASCII')
         }
 
         when: 'the build lists the commands of the compiled classes'
-        CommandCatalogBuilder catalog = new CommandCatalogBuilder()
-        catalog.add(CommandCatalogBuilder.ORIGIN_APPLICATION, targetDirectory)
-        List<String> listed = ((List<Map>) catalog.build().commands).collect { Map command -> (String) command.name }
+        ToolCatalogBuilder catalog = new ToolCatalogBuilder()
+        catalog.add(ToolCatalogBuilder.ORIGIN_APPLICATION, targetDirectory)
+        List<String> listed = ((List<Map>) catalog.build().tools).collect { Map command -> (String) command.name }
 
         and: 'each is looked for by its name, as the runner of runCommand looks for it, and so are the names the commands have'
         Map<String, String> found = withCompiledCommands {
@@ -204,7 +204,7 @@ class ListedCommandNameSpec extends Specification {
     }
 
     private File descriptorFile(String className) {
-        new File(targetDirectory, CommandDescriptor.location(className))
+        new File(targetDirectory, ToolDescriptor.location(className))
     }
 
     // the name the descriptor of the class records, or null when it has none
@@ -214,7 +214,7 @@ class ListedCommandNameSpec extends Specification {
 
     private Map descriptor(String className) {
         // whatever the compiler writes, the reader of a descriptor takes
-        CommandDescriptor.read(className, descriptorFile(className).bytes)
+        ToolDescriptor.read(className, descriptorFile(className).bytes)
         (Map) new JsonSlurper().parse(descriptorFile(className), 'US-ASCII')
     }
 

@@ -35,7 +35,7 @@ import groovy.transform.CompileStatic
 
 /**
  * The file in which the build of a project lists the commands of the application and of its plugins:
- * {@code .grails/cache/command-catalog.json}, written by the Gradle task {@code grailsCommandCatalog}.
+ * {@code .grails/cache/tool-catalog.json}, written by the Gradle task {@code grailsToolCatalog}.
  * The CLI reads it and never writes it, and runs nothing to read it: every build that compiles the
  * project writes it, and the CLI has the build write it only for a name that is no command yet
  * ({@link ApplicationCommands#list}).
@@ -57,13 +57,13 @@ import groovy.transform.CompileStatic
 final class ApplicationCommandFile {
 
     /** Where the file is, in the directory of the project, whatever the build directory of the project is. */
-    public static final String LOCATION = '.grails/cache/command-catalog.json'
+    public static final String LOCATION = '.grails/cache/tool-catalog.json'
 
     /** The Gradle task that writes the file. */
-    public static final String TASK = 'grailsCommandCatalog'
+    public static final String TASK = 'grailsToolCatalog'
 
     /** How many bytes the file has, at most. */
-    // These are the numbers of what writes the file, CommandCatalogBuilder of grails-gradle-model, which
+    // These are the numbers of what writes the file, ToolCatalogBuilder of grails-gradle-model, which
     // writes no file that is refused here for its size: the two are in two builds, and a specification
     // holds them to be the same and reads the largest file the writer writes.
 
@@ -106,7 +106,10 @@ final class ApplicationCommandFile {
     /** The origin of a command of the project itself, and the target of a command that runs with the application started around it. */
     public static final String APPLICATION = 'application'
 
-    /** The target of a command the build runs without the application: with the class path of the project, and nothing of it started. */
+    /**
+     * The target of a command the build runs without the application: with the class path of the project, and nothing of it started.
+     * The file has such a command with the target {@link #APPLICATION} and the member {@code startsApplication} false.
+     */
     public static final String GRADLE = 'gradle'
 
     /** The target of a command the CLI starts as a process of its own, without Gradle and without the application. */
@@ -130,7 +133,7 @@ final class ApplicationCommandFile {
     // of them: every directory below them and every file of these endings is looked at, since a
     // command is written into the directory of its package. What the compiler says is looked for where
     // it is unless the build moves its build directory, which is not known here; the sources are where they are.
-    private static final Map<String, String> COMMAND_DIRECTORIES = ['grails-app/commands': '.groovy', 'build/classes/groovy/main/META-INF/grails-commands': '.json']
+    private static final Map<String, String> COMMAND_DIRECTORIES = ['grails-app/commands': '.groovy', 'build/classes/groovy/main/META-INF/grails-tools': '.json']
 
     /** What there is of the file. */
     static enum State {
@@ -296,7 +299,7 @@ final class ApplicationCommandFile {
         if (!(said instanceof List) || ((List) said).size() > MAX_DIAGNOSTICS || !((List) said).every { Object line -> isDiagnostic(line) }) {
             return refused("has diagnostics that are not at most ${MAX_DIAGNOSTICS} lines of at most ${MAX_DIAGNOSTIC} characters of printable ASCII")
         }
-        Object listed = members.get('commands')
+        Object listed = members.get('tools')
         if (!(listed instanceof List)) {
             return refused('has no list of commands')
         }
@@ -323,7 +326,7 @@ final class ApplicationCommandFile {
                 if (wrong == null) {
                     entry = new Entry((String) command.get('name'), command.containsKey('aliases') ? (List<String>) command.get('aliases') : Collections.<String>emptyList(),
                             command.containsKey('description') ? (String) command.get('description') : '', (String) command.get('origin'), (String) command.get('registration'),
-                            (String) command.get('target'))
+                            command.get('target') == APPLICATION && command.get('startsApplication') == Boolean.FALSE ? GRADLE : (String) command.get('target'))
                     if (entry.names().any { String name -> names.contains(name) } || entry.names().toSet().size() < entry.names().size()) {
                         wrong = 'it has a name that a command before it has'
                     }
@@ -383,8 +386,11 @@ final class ApplicationCommandFile {
             return "its origin is not at most ${MAX_ORIGIN} characters of printable ASCII without a space, an @ or a dollar sign, or is a word the command line keeps for itself"
         }
         Object target = command.get('target')
-        if (target != APPLICATION && target != GRADLE && target != STANDALONE) {
+        if (target != APPLICATION && target != STANDALONE) {
             return target in OTHER_TARGETS ? "its target is ${target}, which is not run from here" : 'its target is none there is'
+        }
+        if (command.containsKey('startsApplication') && !(command.get('startsApplication') instanceof Boolean)) {
+            return 'it does not say with true or false whether it starts the application'
         }
         if (!(command.get('registration') in REGISTRATIONS)) {
             return "its registration is none of ${REGISTRATIONS.join(', ')}"

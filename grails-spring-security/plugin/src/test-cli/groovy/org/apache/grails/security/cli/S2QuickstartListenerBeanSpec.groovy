@@ -30,7 +30,7 @@ import grails.build.logging.GrailsConsole
 import grails.core.DefaultGrailsApplication
 import grails.spring.BeanBuilder
 import org.apache.grails.core.cli.ExecutionContext
-import org.apache.grails.core.cli.GrailsApplicationCommand
+import org.apache.grails.core.cli.ToolSupport
 import org.apache.grails.core.cli.io.FileSystemInteractionImpl
 import org.apache.grails.core.cli.script.ScriptConsole
 import org.apache.grails.core.cli.template.TemplateRendererImpl
@@ -299,7 +299,7 @@ class S2QuickstartListenerBeanSpec extends Specification {
     }
 
     private boolean run(String line) {
-        GrailsApplicationCommand command = new S2QuickstartCommand()
+        ToolSupport command = new S2QuickstartCommand()
         command.executionContext = new ExecutionContext(new CommandLineParser().parseString(line))
         command.templateRenderer = new TemplateRendererImpl(project)
         command.fileSystemInteraction = new FileSystemInteractionImpl(project)

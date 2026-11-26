@@ -28,10 +28,11 @@ import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.Phases
 
 import org.apache.grails.core.cli.ApplicationCommand
+import org.apache.grails.core.cli.ApplicationTool
 import org.apache.grails.core.cli.ApplicationContextCommandRegistry
 import org.apache.grails.core.cli.ConfigReportCommand
-import org.apache.grails.gradle.model.cli.CommandCatalogBuilder
-import org.apache.grails.gradle.model.cli.CommandDescriptor
+import org.apache.grails.gradle.model.cli.ToolCatalogBuilder
+import org.apache.grails.gradle.model.cli.ToolDescriptor
 import spock.lang.Specification
 import spock.lang.TempDir
 import spock.lang.Unroll
@@ -54,7 +55,7 @@ class CommandDescriptorWriterSpec extends Specification {
         then: 'the bytes are these, so that the same source gives the same jar'
         descriptorFile('example.BackupDatabaseCommand').getText('US-ASCII') ==
                 '{"format":1,"class":"example.BackupDatabaseCommand","name":"backup-database",' +
-                '"description":"backup-database","target":"application"}\n'
+                '"description":"backup-database","target":"application","startsApplication":true}\n'
 
         and: 'it is the name the command has when it runs'
         compiledName('example.BackupDatabaseCommand') == 'backup-database'
@@ -70,7 +71,7 @@ class CommandDescriptorWriterSpec extends Specification {
 
         then:
         descriptor('example.GreetCommand') == [format: 1, class: 'example.GreetCommand', name: 'greet',
-                                               description: 'Greets someone', target: 'application']
+                                               description: 'Greets someone', target: 'application', startsApplication: true]
 
         where:
         declaration                          | contract                                              | members
@@ -88,7 +89,7 @@ class CommandDescriptorWriterSpec extends Specification {
 
         then:
         descriptor('example.GreetCommand') == [format: 1, class: 'example.GreetCommand', name: 'greet',
-                                               description: 'greet', target: 'application']
+                                               description: 'greet', target: 'application', startsApplication: true]
     }
 
     @Unroll
@@ -98,7 +99,7 @@ class CommandDescriptorWriterSpec extends Specification {
 
         then:
         descriptor('example.GreetCommand') == [format: 1, class: 'example.GreetCommand', name: 'say-hello',
-                                               description: 'say-hello', target: 'application']
+                                               description: 'say-hello', target: 'application', startsApplication: true]
 
         where:
         declaration  | members
@@ -112,7 +113,7 @@ class CommandDescriptorWriterSpec extends Specification {
         compile('GreetCommand', "class GreetCommand implements ${CONTRACT} {\n${members}\n${HANDLE}\n}")
 
         then:
-        descriptor('example.GreetCommand') == [format: 1, class: 'example.GreetCommand', name: 'greet', target: 'application']
+        descriptor('example.GreetCommand') == [format: 1, class: 'example.GreetCommand', name: 'greet', target: 'application', startsApplication: true]
 
         where:
         kind                         | members
@@ -154,7 +155,7 @@ class CommandDescriptorWriterSpec extends Specification {
         then:
         descriptor('example.GreetCommand').description == 'From the base'
         descriptor('example.LoudGreetCommand') == [format: 1, class: 'example.LoudGreetCommand', name: 'loud-greet',
-                                                   description: 'Its own', target: 'application']
+                                                   description: 'Its own', target: 'application', startsApplication: true]
         !descriptorFile('example.Described').exists()
         registered() == ['example.GreetCommand', 'example.LoudGreetCommand']
     }
@@ -191,7 +192,7 @@ class CommandDescriptorWriterSpec extends Specification {
         compile('GreetCommand', "class GreetCommand implements ${CONTRACT} { String description = ${literal}; ${HANDLE} }")
 
         then: 'the descriptor is one the reader takes, without the description'
-        descriptor('example.GreetCommand') == [format: 1, class: 'example.GreetCommand', name: 'greet', target: 'application']
+        descriptor('example.GreetCommand') == [format: 1, class: 'example.GreetCommand', name: 'greet', target: 'application', startsApplication: true]
 
         where:
         title                | literal
@@ -229,10 +230,10 @@ class CommandDescriptorWriterSpec extends Specification {
     def "an application with a compiled command and one registered and described by hand lists both by their descriptors"() {
         given: 'the registration and the descriptor of a command the compiler does not describe, in the resources, as the guide says'
         File resources = new File(tempDir, 'src/main/resources/META-INF')
-        new File(resources, 'grails-commands').mkdirs()
+        new File(resources, 'grails-tools').mkdirs()
         new File(resources, 'grails-cli.factories').text = "${CONTRACT}=example.AuditReportJavaCommand\n"
-        new File(resources, 'grails-commands/example.AuditReportJavaCommand.json').text =
-                '{"format": 1, "class": "example.AuditReportJavaCommand", "name": "audit", "description": "Writes the audit report", "target": "application"}\n'
+        new File(resources, 'grails-tools/example.AuditReportJavaCommand.json').text =
+                '{"format": 1, "class": "example.AuditReportJavaCommand", "name": "audit", "description": "Writes the audit report", "target": "application", "startsApplication": true}\n'
 
         and: 'a command under grails-app/commands, compiled'
         File classes = new File(tempDir, 'build/classes/groovy/main')
@@ -248,35 +249,36 @@ class CommandDescriptorWriterSpec extends Specification {
 
         and: 'the resources where a build puts them'
         File processed = new File(tempDir, 'build/resources/main/META-INF')
-        new File(processed, 'grails-commands').mkdirs()
+        new File(processed, 'grails-tools').mkdirs()
         new File(processed, 'grails-cli.factories').bytes = new File(resources, 'grails-cli.factories').bytes
-        new File(processed, 'grails-commands/example.AuditReportJavaCommand.json').bytes = new File(resources, 'grails-commands/example.AuditReportJavaCommand.json').bytes
+        new File(processed, 'grails-tools/example.AuditReportJavaCommand.json').bytes = new File(resources, 'grails-tools/example.AuditReportJavaCommand.json').bytes
 
         and:
         Properties merged = new Properties()
         new File(classes, CommandFactoriesTransformation.CLI_FACTORIES_LOCATION).withInputStream { merged.load(it) }
 
         expect: 'the compiler copied the registration written by hand into the classes directory, without a descriptor for it'
-        merged.getProperty(CONTRACT).tokenize(',').sort() == ['example.AuditReportJavaCommand', 'example.GreetCommand']
-        new File(classes, 'META-INF/grails-commands').list() as List == ['example.GreetCommand.json']
+        merged.getProperty(CONTRACT) == 'example.AuditReportJavaCommand'
+        merged.getProperty(TOOL) == 'example.GreetCommand'
+        new File(classes, 'META-INF/grails-tools').list() as List == ['example.GreetCommand.json']
 
         when: 'the catalog is put together from the output of the project, as one element of the class path'
-        CommandCatalogBuilder together = new CommandCatalogBuilder()
-        together.add(CommandCatalogBuilder.ORIGIN_APPLICATION, [classes, processed.parentFile])
+        ToolCatalogBuilder together = new ToolCatalogBuilder()
+        together.add(ToolCatalogBuilder.ORIGIN_APPLICATION, [classes, processed.parentFile])
 
         and: 'and from the two directories as elements of their own, as two jars would be'
-        CommandCatalogBuilder apart = new CommandCatalogBuilder()
-        apart.add(CommandCatalogBuilder.ORIGIN_APPLICATION, classes)
-        apart.add(CommandCatalogBuilder.ORIGIN_APPLICATION, processed.parentFile)
+        ToolCatalogBuilder apart = new ToolCatalogBuilder()
+        apart.add(ToolCatalogBuilder.ORIGIN_APPLICATION, classes)
+        apart.add(ToolCatalogBuilder.ORIGIN_APPLICATION, processed.parentFile)
 
         then:
         together.build() == [
                 format     : 1,
                 complete   : true,
                 diagnostics: [],
-                commands   : [
-                        [name: 'audit', aliases: [], description: 'Writes the audit report', origin: 'application', target: 'application', registration: 'descriptor'],
-                        [name: 'greet', aliases: [], description: 'Greets someone', origin: 'application', target: 'application', registration: 'descriptor'],
+                tools      : [
+                        [name: 'audit', aliases: [], description: 'Writes the audit report', origin: 'application', target: 'application', startsApplication: true, registration: 'descriptor'],
+                        [name: 'greet', aliases: [], description: 'Greets someone', origin: 'application', target: 'application', startsApplication: true, registration: 'descriptor'],
                 ],
         ]
         apart.build() == together.build()
@@ -285,30 +287,51 @@ class CommandDescriptorWriterSpec extends Specification {
     def "the descriptor written by hand for the command this module registers by hand says what the command says"() {
         given: 'the compiler does not describe a command of the module its transformation is in'
         ConfigReportCommand command = new ConfigReportCommand()
-        InputStream resource = ConfigReportCommand.classLoader.getResourceAsStream(CommandDescriptor.location(ConfigReportCommand.name))
+        InputStream resource = ConfigReportCommand.classLoader.getResourceAsStream(ToolDescriptor.location(ConfigReportCommand.name))
 
         expect:
-        resource.getText('US-ASCII') == CommandDescriptor.toJson(ConfigReportCommand.name, command.name, command.description)
-        CommandDescriptor.isCommandName(command.name)
-        CommandDescriptor.isDescription(command.description)
+        resource.getText('US-ASCII') == ToolDescriptor.toJson(ConfigReportCommand.name, command.name, command.description)
+        ToolDescriptor.isCommandName(command.name)
+        ToolDescriptor.isDescription(command.description)
     }
 
     @Unroll
-    def "a command that runs without the application, marked #where, is described as one the build runs"() {
+    def "a command that says it does not start the application, #where, is described as one the build runs without the application"() {
         when:
-        compile('TailCommand', source)
+        compile('TailCommand', source, Phases.ALL)
 
         then:
         descriptor('example.TailCommand') == [format: 1, class: 'example.TailCommand', name: 'tail',
-                                              description: 'Follows a file', target: 'gradle']
+                                              description: 'Follows a file', target: 'application', startsApplication: false]
         registered() == ['example.TailCommand']
+
+        and: 'which is what the command says when it is made'
+        !startsApplication('example.TailCommand')
 
         where:
         where                         | source
-        'on the class'                | "class TailCommand implements ${CONTRACT}, ${GRADLE} { String description = 'Follows a file'; ${HANDLE} }"
-        'on a Grails command'         | "class TailCommand implements org.apache.grails.core.cli.GrailsApplicationCommand, ${GRADLE} { String description = 'Follows a file'; boolean handle() { true } }"
-        'on an interface it has'      | "interface FileCommand extends ${GRADLE} {}\nclass TailCommand implements ${CONTRACT}, FileCommand { String description = 'Follows a file'; ${HANDLE} }"
-        'on a class it extends'       | "abstract class FileCommand implements ${CONTRACT}, ${GRADLE} { String description = 'Follows a file' }\nclass TailCommand extends FileCommand { ${HANDLE} }"
+        'on the class'                | "class TailCommand implements ${CONTRACT} { boolean startsApplication = false; String description = 'Follows a file'; ${HANDLE} }"
+        'on a tool'                   | "class TailCommand implements ${APPLICATION} { boolean startsApplication = false; String description = 'Follows a file'; ${HANDLE} }"
+        'on a Grails command'         | "class TailCommand implements org.apache.grails.core.cli.GrailsApplicationCommand { boolean startsApplication = false; String description = 'Follows a file'; boolean handle() { true } }"
+        'on a tool with the helpers'  | "class TailCommand implements ${APPLICATION}, org.apache.grails.core.cli.ToolSupport { boolean startsApplication = false; String description = 'Follows a file'; boolean handle() { true } }"
+        'on a class it extends'       | "abstract class FileCommand implements ${CONTRACT} { boolean startsApplication = false; String description = 'Follows a file' }\nclass TailCommand extends FileCommand { ${HANDLE} }"
+    }
+
+    @Unroll
+    def "a command that #what starts the application, and is described so"() {
+        when:
+        compile('TailCommand', source, Phases.ALL)
+
+        then:
+        descriptor('example.TailCommand') == [format: 1, class: 'example.TailCommand', name: 'tail',
+                                              description: 'tail', target: 'application', startsApplication: true]
+        startsApplication('example.TailCommand')
+
+        where:
+        what                             | source
+        'says nothing of it'             | "class TailCommand implements ${APPLICATION} { ${HANDLE} }"
+        'says that it does'              | "class TailCommand implements ${APPLICATION} { boolean startsApplication = true; ${HANDLE} }"
+        'says it over a class it extends' | "abstract class FileCommand implements ${APPLICATION} { boolean startsApplication = false }\nclass TailCommand extends FileCommand { boolean startsApplication = true; ${HANDLE} }"
     }
 
     @Unroll
@@ -323,11 +346,10 @@ class CommandDescriptorWriterSpec extends Specification {
 
         where:
         where                         | source
-        'on the class'                | "class RenderCommand implements ${CONTRACT}, ${STANDALONE} { String description = 'Renders a file'; ${HANDLE} }"
-        'on a Grails command'         | "class RenderCommand implements org.apache.grails.core.cli.GrailsApplicationCommand, ${STANDALONE} { String description = 'Renders a file'; boolean handle() { true } }"
-        'on an interface it has'      | "interface FileCommand extends ${STANDALONE} {}\nclass RenderCommand implements ${CONTRACT}, FileCommand { String description = 'Renders a file'; ${HANDLE} }"
-        'on a class it extends'       | "abstract class FileCommand implements ${CONTRACT}, ${STANDALONE} { String description = 'Renders a file' }\nclass RenderCommand extends FileCommand { ${HANDLE} }"
-        'beside the other marker'     | "class RenderCommand implements ${CONTRACT}, ${GRADLE}, ${STANDALONE} { String description = 'Renders a file'; ${HANDLE} }"
+        'on the class'                | "class RenderCommand implements ${STANDALONE} { String description = 'Renders a file'; ${HANDLE} }"
+        'with the helpers'            | "class RenderCommand implements ${STANDALONE}, org.apache.grails.core.cli.ToolSupport { String description = 'Renders a file'; boolean handle() { true } }"
+        'on a trait it has'           | "trait FileCommand implements ${STANDALONE} {}\nclass RenderCommand implements FileCommand { String description = 'Renders a file'; ${HANDLE} }"
+        'on a class it extends'       | "abstract class FileCommand implements ${STANDALONE} { String description = 'Renders a file' }\nclass RenderCommand extends FileCommand { ${HANDLE} }"
     }
 
     @Unroll
@@ -337,7 +359,7 @@ class CommandDescriptorWriterSpec extends Specification {
 
         then:
         descriptor('example.GreetCommand') == [format: 1, class: 'example.GreetCommand', name: 'other',
-                                               description: 'other', target: 'application']
+                                               description: 'other', target: 'application', startsApplication: true]
         made('example.GreetCommand') == [name: 'other', description: 'other']
 
         where:
@@ -385,7 +407,7 @@ class CommandDescriptorWriterSpec extends Specification {
 
         then: 'what is recorded is what the command has when it runs'
         descriptor('example.ImportDataCommand') == [format: 1, class: 'example.ImportDataCommand', name: name,
-                                                    description: description, target: 'application']
+                                                    description: description, target: 'application', startsApplication: true]
         made('example.ImportDataCommand') == [name: name, description: description]
         registered() == ['example.ImportDataCommand']
 
@@ -541,15 +563,15 @@ class CommandDescriptorWriterSpec extends Specification {
                 "class ImportDataCommand extends OldNameCommand { ImportDataCommand() { name = 'import-data' }; ${HANDLE} }", Phases.ALL)
 
         when: 'the build lists the commands of the compiled classes'
-        CommandCatalogBuilder catalog = new CommandCatalogBuilder()
-        catalog.add(CommandCatalogBuilder.ORIGIN_APPLICATION, targetDirectory)
-        List<Map> listed = (List<Map>) catalog.build().commands
+        ToolCatalogBuilder catalog = new ToolCatalogBuilder()
+        catalog.add(ToolCatalogBuilder.ORIGIN_APPLICATION, targetDirectory)
+        List<Map> listed = (List<Map>) catalog.build().tools
 
         and: 'the command is looked for by the name listed, as the runner of runCommand looks for it'
         ApplicationCommand found = withCompiledCommands { new ApplicationContextCommandRegistry().findCommand((String) listed[0].name) }
 
         then:
-        listed == [[name: 'import-data', aliases: [], description: 'import-data', origin: 'application', target: 'application', registration: 'descriptor']]
+        listed == [[name: 'import-data', aliases: [], description: 'import-data', origin: 'application', target: 'application', startsApplication: true, registration: 'descriptor']]
         found?.getClass()?.name == 'example.ImportDataCommand'
     }
 
@@ -560,9 +582,9 @@ class CommandDescriptorWriterSpec extends Specification {
                 "class LegacyImportCommand extends OldNameCommand {\n${members}\n${HANDLE}\n}", Phases.ALL)
 
         when: 'the build lists the commands of the compiled classes'
-        CommandCatalogBuilder catalog = new CommandCatalogBuilder()
-        catalog.add(CommandCatalogBuilder.ORIGIN_APPLICATION, targetDirectory)
-        List<Map> listed = (List<Map>) catalog.build().commands
+        ToolCatalogBuilder catalog = new ToolCatalogBuilder()
+        catalog.add(ToolCatalogBuilder.ORIGIN_APPLICATION, targetDirectory)
+        List<Map> listed = (List<Map>) catalog.build().tools
 
         and: 'the command is looked for by the name listed, as the runner of runCommand looks for it, and by the name it has'
         String name = made('example.LegacyImportCommand').name
@@ -573,7 +595,7 @@ class CommandDescriptorWriterSpec extends Specification {
 
         then:
         !descriptorFile('example.LegacyImportCommand').exists()
-        listed == [[name: 'legacy-import', aliases: [], description: '', origin: 'application', target: 'application', registration: 'factories']]
+        listed == [[name: 'legacy-import', aliases: [], description: '', origin: 'application', target: 'application', startsApplication: true, registration: 'factories']]
         name == 'import-data'
         found == ['example.LegacyImportCommand', 'example.LegacyImportCommand']
 
@@ -600,9 +622,9 @@ class CommandDescriptorWriterSpec extends Specification {
         unit.compile(Phases.ALL)
 
         when:
-        CommandCatalogBuilder catalog = new CommandCatalogBuilder()
-        catalog.add(CommandCatalogBuilder.ORIGIN_APPLICATION, targetDirectory)
-        List<Map> listed = (List<Map>) catalog.build().commands
+        ToolCatalogBuilder catalog = new ToolCatalogBuilder()
+        catalog.add(ToolCatalogBuilder.ORIGIN_APPLICATION, targetDirectory)
+        List<Map> listed = (List<Map>) catalog.build().tools
         Map<String, String> found = withCompiledCommands {
             ApplicationContextCommandRegistry registry = new ApplicationContextCommandRegistry()
             listed.collectEntries { Map command -> [(command.name): registry.findCommand((String) command.name)?.getClass()?.name] }
@@ -621,7 +643,7 @@ class CommandDescriptorWriterSpec extends Specification {
 
         then:
         descriptor('example.GreetCommand') == [format: 1, class: 'example.GreetCommand', name: 'say-hello',
-                                               description: 'say-hello', target: 'application']
+                                               description: 'say-hello', target: 'application', startsApplication: true]
 
         where:
         how                                          | statement
@@ -640,14 +662,14 @@ class CommandDescriptorWriterSpec extends Specification {
 
         then:
         registered() == ['example.GrüßeCommand']
-        !new File(targetDirectory, 'META-INF/grails-commands').exists()
+        !new File(targetDirectory, 'META-INF/grails-tools').exists()
 
         when:
         compile('GrüßeCommand', 'class GrüßeCommand { }')
 
         then:
         noExceptionThrown()
-        !new File(targetDirectory, 'META-INF/grails-commands').exists()
+        !new File(targetDirectory, 'META-INF/grails-tools').exists()
     }
 
     def "a class that declares nothing, and has nothing of the command contract in it, is described by the name its class gives"() {
@@ -657,7 +679,7 @@ class CommandDescriptorWriterSpec extends Specification {
         expect:
         CommandDescriptorWriter.write(plain, targetDirectory)
         descriptor('example.ArchiveReportCommand') == [format: 1, class: 'example.ArchiveReportCommand', name: 'archive-report',
-                                                       description: 'archive-report', target: 'application']
+                                                       description: 'archive-report', target: 'application', startsApplication: true]
 
         when:
         CommandDescriptorWriter.remove('example.ArchiveReportCommand', targetDirectory)
@@ -672,8 +694,9 @@ class CommandDescriptorWriterSpec extends Specification {
         noExceptionThrown()
     }
 
-    private static final String GRADLE = 'org.apache.grails.core.cli.GradleCommand'
-    private static final String STANDALONE = 'org.apache.grails.core.cli.StandaloneCommand'
+    private static final String TOOL = 'org.apache.grails.core.cli.GrailsTool'
+    private static final String APPLICATION = 'org.apache.grails.core.cli.ApplicationTool'
+    private static final String STANDALONE = 'org.apache.grails.core.cli.StandaloneTool'
 
     private static final String HANDLE = 'boolean handle(org.apache.grails.core.cli.ExecutionContext executionContext) { true }'
 
@@ -682,7 +705,7 @@ class CommandDescriptorWriterSpec extends Specification {
     }
 
     private File descriptorFile(String className) {
-        new File(targetDirectory, CommandDescriptor.location(className))
+        new File(targetDirectory, ToolDescriptor.location(className))
     }
 
     // the name the descriptor of the class records, or null when it has none
@@ -692,14 +715,14 @@ class CommandDescriptorWriterSpec extends Specification {
 
     private Map descriptor(String className) {
         // whatever the compiler writes, the reader of a descriptor takes
-        CommandDescriptor.read(className, descriptorFile(className).bytes)
+        ToolDescriptor.read(className, descriptorFile(className).bytes)
         (Map) new JsonSlurper().parse(descriptorFile(className), 'US-ASCII')
     }
 
     private List<String> registered() {
         Properties factories = new Properties()
         new File(targetDirectory, CommandFactoriesTransformation.CLI_FACTORIES_LOCATION).withInputStream { factories.load(it) }
-        factories.getProperty(CONTRACT).tokenize(',').sort()
+        factories.getProperty(TOOL).tokenize(',').sort()
     }
 
     private void compile(String fileName, String source, int phase = Phases.CANONICALIZATION, File target = null, List<File> classpath = []) {
@@ -719,6 +742,13 @@ class CommandDescriptorWriterSpec extends Specification {
         new URLClassLoader(urls, ApplicationCommand.classLoader).withCloseable { URLClassLoader loader ->
             ApplicationCommand command = (ApplicationCommand) loader.loadClass(className).getDeclaredConstructor().newInstance()
             [name: command.getName(), description: command.getDescription()]
+        }
+    }
+
+    // whether a compiled command says, when it is made, that the application is started around it
+    private boolean startsApplication(String className) {
+        new URLClassLoader([targetDirectory.toURI().toURL()] as URL[], ApplicationCommand.classLoader).withCloseable { URLClassLoader loader ->
+            ((ApplicationTool) loader.loadClass(className).getDeclaredConstructor().newInstance()).startsApplication
         }
     }
 

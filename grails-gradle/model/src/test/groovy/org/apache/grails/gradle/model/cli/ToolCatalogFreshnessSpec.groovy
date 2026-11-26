@@ -31,7 +31,7 @@ import spock.lang.Unroll
  * When a catalog of commands may be out of date: by the times the files it is made from were changed,
  * as the command line of Grails reads it and as the task that writes it holds itself to.
  */
-class CommandCatalogFreshnessSpec extends Specification {
+class ToolCatalogFreshnessSpec extends Specification {
 
     private static final long WRITTEN = 1_700_000_000_000L
 
@@ -49,22 +49,22 @@ class CommandCatalogFreshnessSpec extends Specification {
         file('settings.gradle', WRITTEN - 1000)
         file('gradle.properties', WRITTEN - 1000)
         file('grails-app/commands/example/GreetCommand.groovy', WRITTEN - 1000)
-        file('build/classes/groovy/main/META-INF/grails-commands/example.GreetCommand.json', WRITTEN - 1000)
+        file('build/classes/groovy/main/META-INF/grails-tools/example.GreetCommand.json', WRITTEN - 1000)
         // the directories were changed when their files were written, which was before the catalog
-        ['grails-app/commands/example', 'grails-app/commands', 'build/classes/groovy/main/META-INF/grails-commands'].each { String path ->
+        ['grails-app/commands/example', 'grails-app/commands', 'build/classes/groovy/main/META-INF/grails-tools'].each { String path ->
             new File(project, path).setLastModified(WRITTEN - 1000)
         }
     }
 
     def "a catalog that is as new as everything it is made from is not out of date"() {
         expect:
-        CommandCatalogFreshness.changedSince(project, [classes], at(WRITTEN)) == null
+        ToolCatalogFreshness.changedSince(project, [classes], at(WRITTEN)) == null
 
         when: 'something is exactly as old as the catalog'
         file('build.gradle', WRITTEN)
 
         then: 'it is not newer'
-        CommandCatalogFreshness.changedSince(project, [classes], at(WRITTEN)) == null
+        ToolCatalogFreshness.changedSince(project, [classes], at(WRITTEN)) == null
     }
 
     @Unroll
@@ -73,7 +73,7 @@ class CommandCatalogFreshnessSpec extends Specification {
         file(path, WRITTEN + 1000)
 
         expect:
-        CommandCatalogFreshness.changedSince(project, [classes], at(WRITTEN)) == named
+        ToolCatalogFreshness.changedSince(project, [classes], at(WRITTEN)) == named
 
         where:
         path                                                                    | named
@@ -84,7 +84,7 @@ class CommandCatalogFreshnessSpec extends Specification {
         'gradle.properties'                                                     | 'gradle.properties'
         'grails-app/commands/example/GreetCommand.groovy'                       | 'grails-app/commands'
         'grails-app/commands/example/deeper/OtherCommand.groovy'                | 'grails-app/commands'
-        'build/classes/groovy/main/META-INF/grails-commands/example.Other.json' | 'build/classes/groovy/main/META-INF/grails-commands'
+        'build/classes/groovy/main/META-INF/grails-tools/example.Other.json' | 'build/classes/groovy/main/META-INF/grails-tools'
     }
 
     def "a file of another ending is not looked at, and its directory is"() {
@@ -93,27 +93,27 @@ class CommandCatalogFreshnessSpec extends Specification {
         new File(project, 'grails-app/commands/example').setLastModified(WRITTEN - 1000)
 
         expect:
-        CommandCatalogFreshness.changedSince(project, [classes], at(WRITTEN)) == null
+        ToolCatalogFreshness.changedSince(project, [classes], at(WRITTEN)) == null
 
         when: 'a file is deleted, which changes its directory'
         new File(project, 'grails-app/commands/example/notes.txt').delete()
         new File(project, 'grails-app/commands/example').setLastModified(WRITTEN + 1000)
 
         then:
-        CommandCatalogFreshness.changedSince(project, [classes], at(WRITTEN)) == 'grails-app/commands'
+        ToolCatalogFreshness.changedSince(project, [classes], at(WRITTEN)) == 'grails-app/commands'
     }
 
     def "the descriptors of every directory of classes are looked at, also outside the project, which is then named by its path"() {
         given:
         File elsewhere = File.createTempDir()
-        File descriptor = new File(elsewhere, 'META-INF/grails-commands/example.Elsewhere.json')
+        File descriptor = new File(elsewhere, 'META-INF/grails-tools/example.Elsewhere.json')
         descriptor.parentFile.mkdirs()
         descriptor.text = '{}'
         descriptor.setLastModified(WRITTEN + 1000)
         descriptor.parentFile.setLastModified(WRITTEN - 1000)
 
         expect:
-        CommandCatalogFreshness.changedSince(project, [classes, elsewhere], at(WRITTEN)) == new File(elsewhere, 'META-INF/grails-commands').toPath().toString()
+        ToolCatalogFreshness.changedSince(project, [classes, elsewhere], at(WRITTEN)) == new File(elsewhere, 'META-INF/grails-tools').toPath().toString()
 
         cleanup:
         elsewhere.deleteDir()
@@ -124,7 +124,7 @@ class CommandCatalogFreshnessSpec extends Specification {
         File empty = File.createTempDir()
 
         expect:
-        CommandCatalogFreshness.changedSince(empty, [new File(empty, 'build/classes/groovy/main')], at(WRITTEN)) == null
+        ToolCatalogFreshness.changedSince(empty, [new File(empty, 'build/classes/groovy/main')], at(WRITTEN)) == null
 
         cleanup:
         empty.deleteDir()
@@ -134,7 +134,7 @@ class CommandCatalogFreshnessSpec extends Specification {
         given:
         File many = new File(project, 'grails-app/commands/many')
         many.mkdirs()
-        (0..CommandCatalogFreshness.MAX_WALKED).each { int i ->
+        (0..ToolCatalogFreshness.MAX_WALKED).each { int i ->
             File each = new File(many, "Command${i}.txt")
             each.text = ''
             each.setLastModified(WRITTEN - 1000)
@@ -143,7 +143,7 @@ class CommandCatalogFreshnessSpec extends Specification {
         new File(project, 'grails-app/commands').setLastModified(WRITTEN - 1000)
 
         expect:
-        CommandCatalogFreshness.changedSince(project, [classes], at(WRITTEN)) == 'grails-app/commands'
+        ToolCatalogFreshness.changedSince(project, [classes], at(WRITTEN)) == 'grails-app/commands'
     }
 
     @IgnoreIf({ os.windows })
@@ -158,7 +158,7 @@ class CommandCatalogFreshnessSpec extends Specification {
         new File(project, 'grails-app/commands/example').setLastModified(WRITTEN - 1000)
 
         expect: 'the link is an entry of its directory and not a file of the ending, and what it points to is not looked at'
-        CommandCatalogFreshness.changedSince(project, [classes], at(WRITTEN)) == null
+        ToolCatalogFreshness.changedSince(project, [classes], at(WRITTEN)) == null
 
         cleanup:
         target.deleteDir()
@@ -180,7 +180,7 @@ class CommandCatalogFreshnessSpec extends Specification {
 
         expect:
         Files.getLastModifiedTime(link.toPath(), LinkOption.NOFOLLOW_LINKS).toMillis() > WRITTEN
-        CommandCatalogFreshness.changedSince(project, [classes], at(WRITTEN)) == named
+        ToolCatalogFreshness.changedSince(project, [classes], at(WRITTEN)) == named
 
         where:
         path                                                                           | scenario                                | targetModified || named
@@ -194,8 +194,8 @@ class CommandCatalogFreshnessSpec extends Specification {
         'grails-app/commands/example/GreetCommand.groovy'                              | 'a file that is newer than the catalog' | 1000           || 'grails-app/commands'
         'grails-app/commands/example/GreetCommand.groovy'                              | 'an older file behind a newer link'     | -1000          || null
         'grails-app/commands/example/GreetCommand.groovy'                              | 'no file'                               | null           || null
-        'build/classes/groovy/main/META-INF/grails-commands/example.GreetCommand.json' | 'a file that is newer than the catalog' | 1000           || 'build/classes/groovy/main/META-INF/grails-commands'
-        'build/classes/groovy/main/META-INF/grails-commands/example.GreetCommand.json' | 'an older file behind a newer link'     | -1000          || null
+        'build/classes/groovy/main/META-INF/grails-tools/example.GreetCommand.json' | 'a file that is newer than the catalog' | 1000           || 'build/classes/groovy/main/META-INF/grails-tools'
+        'build/classes/groovy/main/META-INF/grails-tools/example.GreetCommand.json' | 'an older file behind a newer link'     | -1000          || null
     }
 
     @IgnoreIf({ os.windows })
@@ -213,24 +213,25 @@ class CommandCatalogFreshnessSpec extends Specification {
 
         expect:
         Files.getLastModifiedTime(link.toPath(), LinkOption.NOFOLLOW_LINKS).toMillis() < written
-        CommandCatalogFreshness.changedSince(project, [classes], at(written)) == 'build.gradle'
+        ToolCatalogFreshness.changedSince(project, [classes], at(written)) == 'build.gradle'
 
         when: 'the file is as old as the catalog'
         target.setLastModified(written)
 
         then:
-        CommandCatalogFreshness.changedSince(project, [classes], at(written)) == null
+        ToolCatalogFreshness.changedSince(project, [classes], at(written)) == null
     }
 
     def "the rule names the places the command line reads the catalog by"() {
         expect:
-        CommandCatalogFreshness.BUILD_FILES == ['build.gradle', 'build.gradle.kts', 'settings.gradle', 'settings.gradle.kts', 'gradle.properties']
-        CommandCatalogFreshness.COMMAND_SOURCES == 'grails-app/commands'
-        CommandCatalogFreshness.SOURCE_ENDING == '.groovy'
-        CommandCatalogFreshness.DESCRIPTORS == 'META-INF/grails-commands'
-        CommandCatalogFreshness.DESCRIPTOR_ENDING == '.json'
-        CommandCatalogFreshness.MAX_WALKED == 4096
-        CommandCatalogFreshness.MAX_WALK_DEPTH == 24
+        ToolCatalogFreshness.BUILD_FILES == ['build.gradle', 'build.gradle.kts', 'settings.gradle', 'settings.gradle.kts', 'gradle.properties']
+        ToolCatalogFreshness.COMMAND_SOURCES == 'grails-app/commands'
+        ToolCatalogFreshness.SOURCE_ENDING == '.groovy'
+        ToolCatalogFreshness.DESCRIPTORS == 'META-INF/grails-tools'
+        ToolCatalogFreshness.DESCRIPTORS == ToolDescriptor.DIRECTORY
+        ToolCatalogFreshness.DESCRIPTOR_ENDING == '.json'
+        ToolCatalogFreshness.MAX_WALKED == 4096
+        ToolCatalogFreshness.MAX_WALK_DEPTH == 24
     }
 
     private File file(String path, long modified) {

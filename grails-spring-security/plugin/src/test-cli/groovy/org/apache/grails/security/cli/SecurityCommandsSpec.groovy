@@ -33,7 +33,7 @@ import org.springframework.core.io.FileSystemResource
 import grails.build.logging.GrailsConsole
 import grails.util.Environment
 import org.apache.grails.core.cli.ExecutionContext
-import org.apache.grails.core.cli.GrailsApplicationCommand
+import org.apache.grails.core.cli.ToolSupport
 import org.apache.grails.core.cli.io.FileSystemInteractionImpl
 import org.apache.grails.core.cli.script.ScriptConsole
 import org.apache.grails.core.cli.template.TemplateRendererImpl
@@ -1141,7 +1141,7 @@ beans = {
      * the project from the build settings of the JVM, which a spec cannot set. The templates are the ones of
      * the plugin, read from the class path as an application reads them from the jar of the plugin.
      */
-    private boolean run(GrailsApplicationCommand command, String line) {
+    private boolean run(ToolSupport command, String line) {
         command.executionContext = new ExecutionContext(new CommandLineParser().parseString(line))
         command.templateRenderer = new TemplateRendererImpl(project)
         command.fileSystemInteraction = new FileSystemInteractionImpl(project)

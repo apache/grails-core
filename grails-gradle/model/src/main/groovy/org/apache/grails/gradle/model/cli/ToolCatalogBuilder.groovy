@@ -30,9 +30,10 @@ import org.grails.io.support.FactoriesLoaderSupport
  * Puts the catalog of the application commands of a project together from the jars and directories
  * of the class path its commands run with, without loading a class from them.
  *
- * <p>What is read is the registration of the commands ({@code META-INF/grails-cli.factories}; for the
+ * <p>What is read is the registration of the commands ({@code META-INF/grails-cli.factories}, under each
+ * of the keys of {@link ToolDescriptor#FACTORIES_KEYS}; for the
  * commands of a Grails 7 plugin {@code META-INF/grails.factories}) and the descriptors of the
- * registered classes ({@link CommandDescriptor}). A class can be registered by more than one element
+ * registered classes ({@link ToolDescriptor}). A class can be registered by more than one element
  * of the class path: the compiler copies a registration written by hand into the classes directory,
  * and a jar can register a class another jar has. The descriptor of a class is therefore looked for
  * in every element that registers it, and the first one in the order of the class path that has a
@@ -48,7 +49,7 @@ import org.grails.io.support.FactoriesLoaderSupport
  * @since 9.0
  */
 @CompileStatic
-class CommandCatalogBuilder {
+class ToolCatalogBuilder {
 
     /** The format of the document, which is that of {@code help --json} of the command line. */
     public static final int FORMAT = 1
@@ -58,7 +59,10 @@ class CommandCatalogBuilder {
      * writes it and the command line reads it. It is not in the build directory, which a build can
      * move, so that the command line finds it without running the build to ask where that is.
      */
-    public static final String LOCATION = '.grails/cache/command-catalog.json'
+    public static final String LOCATION = '.grails/cache/tool-catalog.json'
+
+    /** The member of the document that lists the tools. */
+    public static final String MEMBER_TOOLS = 'tools'
 
     /** The origin of a command of the project itself. */
     public static final String ORIGIN_APPLICATION = 'application'
@@ -110,7 +114,6 @@ class CommandCatalogBuilder {
     /** How many of the classes or origins that share something a diagnostic names; it counts the rest. */
     public static final int MAX_NAMED = 3
 
-    private static final String COMMAND_KEY = 'org.apache.grails.core.cli.ApplicationCommand'
     private static final String LEGACY_COMMAND_KEY = 'grails.dev.commands.ApplicationCommand'
     private static final String PROVIDER_KEY = 'org.apache.grails.core.cli.ApplicationCommandProvider'
     private static final String LEGACY_PROVIDER = 'org.apache.grails.core.cli.compat.LegacyApplicationCommandProvider'
@@ -210,7 +213,7 @@ class CommandCatalogBuilder {
     }
 
     /**
-     * @return the document: {@code format}, {@code complete}, {@code diagnostics} and {@code commands},
+     * @return the document: {@code format}, {@code complete}, {@code diagnostics} and {@code tools},
      * {@code testPhases} when the phases were given, and {@code commandOptions} when an element of the
      * class path declares an option for a command ({@link CommandOptions}); the same whenever the same
      * elements were added in the same order. What there is to say of declared options is among the
@@ -267,8 +270,12 @@ class CommandCatalogBuilder {
             command.aliases = []
             command.description = entry.description ?: ''
             command.origin = entry.origin
-            command.target = entry.target ?: CommandDescriptor.TARGET_APPLICATION
+            command.target = entry.target ?: ToolDescriptor.TARGET_APPLICATION
+            command.startsApplication = entry.target == null || (entry.target == ToolDescriptor.TARGET_APPLICATION && entry.startsApplication)
             command.registration = entry.registration
+            if (entry.deprecated) {
+                command.deprecated = new ArrayList<String>(entry.deprecated)
+            }
             commands << command
         }
         if (commands.size() > most) {
@@ -294,7 +301,7 @@ class CommandCatalogBuilder {
         document.format = FORMAT
         document.complete = complete
         document.diagnostics = lines
-        document.commands = commands
+        document.put(MEMBER_TOOLS, commands)
         if (testPhases != null) {
             List<Map<String, Object>> phases = []
             for (Map.Entry<String, String> phase : testPhases) {
@@ -319,7 +326,7 @@ class CommandCatalogBuilder {
         int most = MAX_COMMANDS
         String json = StrictJson.write(document(most)) + '\n'
         while (json.length() > MAX_BYTES && most > 0) {
-            most = Math.min(most, ((List) document(most).commands).size())
+            most = Math.min(most, ((List) document(most).get(MEMBER_TOOLS)).size())
             most -= Math.max(1, most.intdiv(8))
             json = StrictJson.write(document(most)) + '\n'
         }
@@ -347,7 +354,8 @@ class CommandCatalogBuilder {
                 return null
             }
             return new Entry(name: application.described.name, description: application.described.description, origin: application.origin,
-                    className: className, registration: REGISTRATION_DESCRIPTOR, target: application.described.target)
+                    className: className, registration: REGISTRATION_DESCRIPTOR, target: application.described.target,
+                    startsApplication: application.described.startsApplication, deprecated: application.described.deprecated)
         }
         List<Candidate> described = candidates.findAll { Candidate candidate -> candidate.digest != null }
         if (described.isEmpty()) {
@@ -365,12 +373,13 @@ class CommandCatalogBuilder {
             return null
         }
         new Entry(name: first.described.name, description: first.described.description, origin: first.origin,
-                className: className, registration: REGISTRATION_DESCRIPTOR, target: first.described.target)
+                className: className, registration: REGISTRATION_DESCRIPTOR, target: first.described.target,
+                startsApplication: first.described.startsApplication, deprecated: first.described.deprecated)
     }
 
     private static Entry named(String origin, String className, String registration, Set<String> said) {
-        String name = CommandDescriptor.conventionName(className)
-        if (!CommandDescriptor.isCommandName(name)) {
+        String name = ToolDescriptor.conventionName(className)
+        if (!ToolDescriptor.isCommandName(name)) {
             said << line("The command class ${className} of ${origin} is not listed: it has no descriptor, " +
                     'and the name its class name gives cannot be the name of a command.')
             return null
@@ -388,7 +397,9 @@ class CommandCatalogBuilder {
                 if (names(registrations, PROVIDER_KEY).contains(LEGACY_PROVIDER) && source.has(LEGACY_PROVIDER_CLASS)) {
                     legacySupport = true
                 }
-                commandClasses.addAll(names(registrations, COMMAND_KEY))
+                for (String key : ToolDescriptor.FACTORIES_KEYS) {
+                    commandClasses.addAll(names(registrations, key))
+                }
             }
             Properties legacyRegistrations = factories(origin, source, FactoriesLoaderSupport.FACTORIES_RESOURCE_LOCATION)
             if (legacyRegistrations != null) {
@@ -436,7 +447,7 @@ class CommandCatalogBuilder {
     private List<String> taken(String origin, Set<String> classNames) {
         List<String> taken = []
         for (String className : classNames) {
-            if (!CommandDescriptor.isClassName(className)) {
+            if (!ToolDescriptor.isClassName(className)) {
                 say("A command that ${origin} registers is not listed because what is registered is not the name of a class.")
                 continue
             }
@@ -452,19 +463,19 @@ class CommandCatalogBuilder {
     private static Candidate descriptor(String origin, Source source, String className) {
         byte[] bytes
         try {
-            bytes = source.read(CommandDescriptor.location(className), CommandDescriptor.MAX_BYTES)
+            bytes = source.read(ToolDescriptor.location(className), ToolDescriptor.MAX_BYTES)
         } catch (IOException ignored) {
             // every descriptor that cannot be read is the same descriptor: one that is refused
             return new Candidate(origin: origin, digest: 'unreadable',
-                    refusal: "has more than ${CommandDescriptor.MAX_BYTES} bytes or cannot be read")
+                    refusal: "has more than ${ToolDescriptor.MAX_BYTES} bytes or cannot be read")
         }
         if (bytes == null) {
             return null
         }
         Candidate candidate = new Candidate(origin: origin, digest: MessageDigest.getInstance('SHA-256').digest(bytes).encodeHex().toString())
         try {
-            candidate.described = CommandDescriptor.read(className, bytes)
-        } catch (CommandDescriptor.Refused refused) {
+            candidate.described = ToolDescriptor.read(className, bytes)
+        } catch (ToolDescriptor.Refused refused) {
             candidate.refusal = refused.message
         }
         candidate
@@ -563,13 +574,15 @@ class CommandCatalogBuilder {
         String registration
         // what the descriptor says, or null for a command that is listed from its registration alone
         String target
+        boolean startsApplication = true
+        List<String> deprecated
     }
 
     // one place a class is registered: with the descriptor found there (read, or refused), or without one
     private static class Candidate {
         String origin
         String digest
-        CommandDescriptor.Described described
+        ToolDescriptor.Described described
         String refusal
     }
 

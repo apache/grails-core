@@ -26,15 +26,15 @@ import org.gradle.testkit.runner.TaskOutcome
 
 /**
  * The file the build writes for the commands that run as a process of their own, without Gradle:
- * {@code .grails/cache/standalone-commands.json}, with the class path the command line starts each
+ * {@code .grails/cache/standalone-tools.json}, with the class path the command line starts each
  * of them with. It is written by every build that compiles the project, names paths only for
  * commands the catalog lists with the target {@code standalone}, and says when the command line has
  * to leave a command to the build.
  */
 class StandaloneCommandsFileSpec extends CommandProjectSpecification {
 
-    private static final String CATALOG = '.grails/cache/command-catalog.json'
-    private static final String FILE = '.grails/cache/standalone-commands.json'
+    private static final String CATALOG = '.grails/cache/tool-catalog.json'
+    private static final String FILE = '.grails/cache/standalone-tools.json'
 
     // what the compiler does with a registration written by hand: it copies it into the classes directory
     private static final String REGISTRATION_COPIED = '''
@@ -58,30 +58,31 @@ class StandaloneCommandsFileSpec extends CommandProjectSpecification {
         Map file = file()
 
         then: 'the tasks ran after it, and the catalog says which commands run how'
-        result.task(':grailsCommandCatalog').outcome == TaskOutcome.SUCCESS
-        result.task(':grailsStandaloneCommands').outcome == TaskOutcome.SUCCESS
-        catalog().commands.collectEntries { [(it.name): it.target] } ==
-                ['build-tool': 'gradle', 'config-report': 'application', 'local': 'standalone', 'other': 'application', 'tool': 'standalone']
+        result.task(':grailsToolCatalog').outcome == TaskOutcome.SUCCESS
+        result.task(':grailsStandaloneTools').outcome == TaskOutcome.SUCCESS
+        catalog().tools.collectEntries { [(it.name): it.target] } ==
+                ['build-tool': 'application', 'config-report': 'application', 'local': 'standalone', 'other': 'application', 'tool': 'standalone']
+        catalog().tools.findAll { it.startsApplication }*.name == ['config-report', 'other']
 
         and: 'the file lists the standalone commands alone, each with the class path it runs with'
         file.format == 1
-        file.commands == [local: 'application', tool: 'dependencies']
-        !file.containsKey('throughGradle')
+        file.keySet() == ['format', 'tools', 'classpath', 'sources', 'java'] as Set
+        file.tools == ['local', 'tool']
         file.java instanceof Integer && file.java >= 17
 
-        and: 'the output of the project, for the command of the application'
-        file.application.every { String path -> new File(path).absolute }
-        canonical(file.application).containsAll([new File(projectDir, 'build/classes/groovy/main').canonicalPath, new File(projectDir, 'build/resources/main').canonicalPath])
+        and: 'the output of the project first, for the command of the application'
+        file.classpath.every { String path -> new File(path).absolute }
+        canonical(file.classpath).take(2) == [new File(projectDir, 'build/classes/groovy/main').canonicalPath, new File(projectDir, 'build/resources/main').canonicalPath]
 
         and: 'and no directory that is not there, as the one of the classes of Java in a project without Java sources'
-        file.application.every { String path -> new File(path).exists() }
-        !canonical(file.application).contains(new File(projectDir, 'build/classes/java/main').canonicalPath)
+        file.classpath.every { String path -> new File(path).exists() }
+        !canonical(file.classpath).contains(new File(projectDir, 'build/classes/java/main').canonicalPath)
 
-        and: 'what the project depends on and its command line tier, without the output of the project'
-        file.dependencies.every { String path -> new File(path).absolute && new File(path).isFile() }
-        file.dependencies.collect { String path -> new File(path).name }.containsAll(
+        and: 'then what the project depends on and its command line tier, each once'
+        file.classpath.drop(2).every { String path -> new File(path).isFile() }
+        file.classpath.collect { String path -> new File(path).name }.containsAll(
                 ['tool-cli-1.0.jar', 'grails-core-cli-0.0.1-test.jar', 'grails-console-0.0.1-test.jar'])
-        !file.dependencies.any { String path -> path in file.application }
+        file.classpath.unique(false) == file.classpath
 
         and: 'the directories of the sources of the project'
         canonical(file.sources).containsAll([new File(projectDir, 'src/main/groovy').canonicalPath, new File(projectDir, 'src/main/resources').canonicalPath])
@@ -100,55 +101,55 @@ class StandaloneCommandsFileSpec extends CommandProjectSpecification {
         BuildResult result = executeTask('classes')
 
         then:
-        result.task(':grailsStandaloneCommands').outcome == TaskOutcome.SUCCESS
-        file().findAll { it.key != 'java' } == [format: 1, commands: [:], application: [], dependencies: [], sources: []]
+        result.task(':grailsStandaloneTools').outcome == TaskOutcome.SUCCESS
+        file().findAll { it.key != 'java' } == [format: 1, tools: [], classpath: [], sources: []]
         !fileText().contains(projectDir.name)
     }
 
     def "the file is not written again when nothing changed, and is when a source of the project or the catalog is newer than it"() {
         given:
         setupKinds()
-        executeTask('grailsStandaloneCommands')
+        executeTask('grailsStandaloneTools')
         // the tasks of the commands are registered from the jars of grailsCliClasspath while the build is
         // configured, which the first build resolved: the second stores what the third reuses
-        executeTask('grailsStandaloneCommands')
+        executeTask('grailsStandaloneTools')
         File written = new File(projectDir, FILE)
         String first = written.text
 
         when:
-        BuildResult again = executeTask('grailsStandaloneCommands')
+        BuildResult again = executeTask('grailsStandaloneTools')
 
         then:
         again.output.contains('Configuration cache entry reused')
-        again.task(':grailsStandaloneCommands').outcome == TaskOutcome.UP_TO_DATE
+        again.task(':grailsStandaloneTools').outcome == TaskOutcome.UP_TO_DATE
 
         when: 'a source of the project is newer than the file, and says the same'
         File source = new File(projectDir, 'src/main/groovy/example/Application.groovy')
         source.setLastModified(written.lastModified() + 1)
-        BuildResult touched = executeTask('grailsStandaloneCommands')
+        BuildResult touched = executeTask('grailsStandaloneTools')
 
         then: 'the file is written again, with what it had, and is no longer older than the source'
-        touched.task(':grailsStandaloneCommands').outcome == TaskOutcome.SUCCESS
+        touched.task(':grailsStandaloneTools').outcome == TaskOutcome.SUCCESS
         written.text == first
         written.lastModified() >= source.lastModified()
 
         when: 'the build file is newer than the catalog, which is written again, and the file after it'
         File catalog = new File(projectDir, CATALOG)
         new File(projectDir, 'build.gradle').setLastModified(Math.max(catalog.lastModified(), written.lastModified()) + 1)
-        BuildResult rebuilt = executeTask('grailsStandaloneCommands')
+        BuildResult rebuilt = executeTask('grailsStandaloneTools')
 
         then:
-        rebuilt.task(':grailsCommandCatalog').outcome == TaskOutcome.SUCCESS
-        rebuilt.task(':grailsStandaloneCommands').outcome == TaskOutcome.SUCCESS
+        rebuilt.task(':grailsToolCatalog').outcome == TaskOutcome.SUCCESS
+        rebuilt.task(':grailsStandaloneTools').outcome == TaskOutcome.SUCCESS
         written.text == first
         written.lastModified() >= catalog.lastModified()
         written.lastModified() >= new File(projectDir, 'build.gradle').lastModified()
 
         when: 'and nothing after that'
-        BuildResult settled = executeTask('grailsStandaloneCommands')
+        BuildResult settled = executeTask('grailsStandaloneTools')
 
         then:
-        settled.task(':grailsStandaloneCommands').outcome == TaskOutcome.UP_TO_DATE
+        settled.task(':grailsStandaloneTools').outcome == TaskOutcome.UP_TO_DATE
     }
 
     def "a class path with the output of another project of the build is not written down, and the file says that the build runs the commands"() {
@@ -166,10 +167,9 @@ class StandaloneCommandsFileSpec extends CommandProjectSpecification {
         Map file = file()
 
         then:
-        catalog().commands.find { it.name == 'sibling' }.target == 'standalone'
-        file.commands == [sibling: 'dependencies']
-        file.application == []
-        file.dependencies == []
+        catalog().tools.find { it.name == 'sibling' }.target == 'standalone'
+        file.tools == ['sibling']
+        file.classpath == []
         file.sources == []
         file.throughGradle == 'their class path has the output of another project of the build (:companion), which only the build keeps current'
         !fileText().contains(projectDir.name)
@@ -190,9 +190,9 @@ class StandaloneCommandsFileSpec extends CommandProjectSpecification {
         Map file = file()
 
         then:
-        result.task(':grailsStandaloneCommands').outcome == TaskOutcome.SUCCESS
-        file.commands == [tool: 'dependencies']
-        file.dependencies == []
+        result.task(':grailsStandaloneTools').outcome == TaskOutcome.SUCCESS
+        file.tools == ['tool']
+        file.classpath == []
         file.throughGradle == 'runtimeClasspath cannot be resolved completely, so their class path is not known'
     }
 
@@ -204,17 +204,17 @@ class StandaloneCommandsFileSpec extends CommandProjectSpecification {
                 id 'java-library'
                 id 'org.apache.grails.gradle.grails-cli' apply false
             }
-            tasks.register('grailsStandaloneCommands') {
+            tasks.register('grailsStandaloneTools') {
                 doLast { println 'THE TASK OF THE BUILD' }
             }
             apply plugin: 'org.apache.grails.gradle.grails-cli'
         ''')
 
         when:
-        BuildResult result = executeTask(':companion:grailsStandaloneCommands')
+        BuildResult result = executeTask(':companion:grailsStandaloneTools')
 
         then:
-        result.output.contains('Project :companion already has a task named grailsStandaloneCommands, so the Grails Gradle plugin does not register ' +
+        result.output.contains('Project :companion already has a task named grailsStandaloneTools, so the Grails Gradle plugin does not register ' +
                 'its own and the class path of the commands that run without Gradle is not written down. Give the task another name.')
         result.output.contains('THE TASK OF THE BUILD')
         !new File(projectDir, "companion/${FILE}").exists()
@@ -236,7 +236,7 @@ class StandaloneCommandsFileSpec extends CommandProjectSpecification {
         publish('org.example', 'tool-cli', '1.0', [
                 (CLI_FACTORIES): registrations('com.example.ToolCommand', 'com.example.BuildToolCommand', 'com.example.OtherCommand'),
                 (descriptorPath('com.example.ToolCommand')): described('com.example.ToolCommand', 'tool', 'standalone'),
-                (descriptorPath('com.example.BuildToolCommand')): described('com.example.BuildToolCommand', 'build-tool', 'gradle'),
+                (descriptorPath('com.example.BuildToolCommand')): described('com.example.BuildToolCommand', 'build-tool', 'application', false),
                 (descriptorPath('com.example.OtherCommand')): described('com.example.OtherCommand', 'other', 'application'),
         ])
     }
@@ -245,8 +245,8 @@ class StandaloneCommandsFileSpec extends CommandProjectSpecification {
         paths.collect { String path -> new File(path).canonicalPath }
     }
 
-    private static String described(String className, String name, String target) {
-        JsonOutput.toJson([format: 1, class: className, name: name, target: target])
+    private static String described(String className, String name, String target, boolean startsApplication = true) {
+        JsonOutput.toJson([format: 1, class: className, name: name, target: target] + (target == 'application' ? [startsApplication: startsApplication] : [:]))
     }
 
     private String catalogText() {

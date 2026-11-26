@@ -28,7 +28,7 @@ import spock.lang.Timeout
  * A command of the application or of one of its plugins is run by its name also before the build of the
  * project has listed it: a name that is no command, in a project whose list is missing or may be out of
  * date, has the build list the commands once, and is then read again. The build here needs nothing of
- * Grails: its {@code grailsCommandCatalog} writes down that it ran and writes the list the specification
+ * Grails: its {@code grailsToolCatalog} writes down that it ran and writes the list the specification
  * gave it, and its {@code runCommand} writes down the arguments it was given.
  */
 @IgnoreIf({ os.windows })
@@ -68,21 +68,21 @@ class ApplicationCommandListingSpec extends CommandSpec {
                 if (new File(base, 'listing-fails').exists()) {
                     throw new GradleException('the listing fails as it is asked to')
                 }
-                File catalog = new File(base, '.grails/cache/command-catalog.json')
+                File catalog = new File(base, '.grails/cache/tool-catalog.json')
                 catalog.parentFile.mkdirs()
                 catalog.text = new File(base, 'commands.json').text
             }
         }
 
         tasks.register('runCommand', RunCommand)
-        tasks.register('grailsCommandCatalog', ListCommands)
+        tasks.register('grailsToolCatalog', ListCommands)
         '''.stripIndent()
 
     static final Map GREET = [name: 'greet', aliases: [], description: 'Greets', origin: 'application', target: 'application', registration: 'descriptor']
     static final Map STATS = [name: 'stats', aliases: [], description: 'Counts', origin: 'org.example:stats-cli:1.0', target: 'application', registration: 'descriptor']
     static final String MISSING = 'The commands of the application and its plugins are not listed yet: a build that compiles the project lists them, and so does typing ' +
-            'the name of one. To list them now: grails-forge-cli gradle grailsCommandCatalog'
-    static final String LISTING = '| Listing the commands of the application and its plugins, of which greet may be one, with the Gradle task grailsCommandCatalog'
+            'the name of one. To list them now: grails-forge-cli gradle grailsToolCatalog'
+    static final String LISTING = '| Listing the commands of the application and its plugins, of which greet may be one, with the Gradle task grailsToolCatalog'
     // what the task writes when the runtime class path of the project does not resolve completely
     static final String UNRESOLVED = 'runtimeClasspath cannot be resolved completely (gradle dependencies --configuration runtimeClasspath says why), ' +
             'so the commands of what is missing from it are not listed: Could not resolve org.neo4j.driver:neo4j-java-driver:4.4.13. ' +
@@ -130,7 +130,7 @@ class ApplicationCommandListingSpec extends CommandSpec {
         ran() == ['greet Alice --help']
 
         and: 'the task was asked to run although Gradle may take it for up to date, with an input that has ended'
-        listed() == [':grailsCommandCatalog --rerun input=true']
+        listed() == [':grailsToolCatalog --rerun input=true']
 
         when: 'it is run again, and another command of the list'
         err.reset()
@@ -150,7 +150,7 @@ class ApplicationCommandListingSpec extends CommandSpec {
 
         then:
         exit == 2
-        lines[0] == '| Listing the commands of the application and its plugins, of which gret may be one, with the Gradle task grailsCommandCatalog'
+        lines[0] == '| Listing the commands of the application and its plugins, of which gret may be one, with the Gradle task grailsToolCatalog'
         lines.any { String line -> line.startsWith('There is no command gret. Did you mean: ') && line.contains('greet') }
         lines.contains('The build of the project has just listed the commands of the application and its plugins, and gret is none of them')
         listed().size() == 1
@@ -178,7 +178,7 @@ class ApplicationCommandListingSpec extends CommandSpec {
 
         then: 'the build lists the commands once, and the name may be one it could not list'
         exit == 2
-        lines[0] == '| Listing the commands of the application and its plugins, of which audit may be one, with the Gradle task grailsCommandCatalog'
+        lines[0] == '| Listing the commands of the application and its plugins, of which audit may be one, with the Gradle task grailsToolCatalog'
         lines.any { String line -> line.startsWith('There is no command audit') }
         lines.contains('The build of the project has just listed the commands of the application and its plugins, and audit is none of them. ' +
                 'Not every command of the application and its plugins is listed, so audit may be one that is not. What is not listed, and why: grails-forge-cli help')
@@ -211,7 +211,7 @@ class ApplicationCommandListingSpec extends CommandSpec {
 
         then:
         exit == 0
-        out.toString().replaceAll(/\s+/, ' ').contains("The Gradle task grailsCommandCatalog says: ${UNRESOLVED}")
+        out.toString().replaceAll(/\s+/, ' ').contains("The Gradle task grailsToolCatalog says: ${UNRESOLVED}")
     }
 
     void "a list that may be out of date is made again for a name that is not in it, and the command it now has is run"() {
@@ -249,7 +249,7 @@ class ApplicationCommandListingSpec extends CommandSpec {
 
         then:
         exit == 0
-        err.toString().readLines()[0] == '| Listing the commands of the application and its plugins, of which hw may be one, with the Gradle task grailsCommandCatalog'
+        err.toString().readLines()[0] == '| Listing the commands of the application and its plugins, of which hw may be one, with the Gradle task grailsToolCatalog'
         listed().size() == 1
         ran() == ['hello-world Ann']
 
@@ -400,7 +400,7 @@ class ApplicationCommandListingSpec extends CommandSpec {
         then:
         exit == 0
         all().contains(LISTING)
-        listed() == [':grailsCommandCatalog --rerun input=true']
+        listed() == [':grailsToolCatalog --rerun input=true']
         ran() == ['greet Carol']
         !new File(dir, 'wrapper-was-run.txt').exists()
 

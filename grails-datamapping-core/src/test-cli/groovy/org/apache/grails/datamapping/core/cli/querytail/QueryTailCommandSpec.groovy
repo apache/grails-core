@@ -24,7 +24,7 @@ import spock.lang.Specification
 import spock.lang.TempDir
 
 import org.apache.grails.datamapping.core.querytail.QueryTailRecord
-import org.apache.grails.gradle.model.cli.CommandDescriptor
+import org.apache.grails.gradle.model.cli.ToolDescriptor
 
 /**
  * Runs the query-tail command the way the build of a project does: found by its name among the
@@ -214,15 +214,16 @@ class QueryTailCommandSpec extends Specification {
 
     void "the command is listed by a build from its descriptor, as one the build runs without the application"() {
         when: 'what the compiler wrote for the command, which is what the jar of the command line tier has'
-        InputStream resource = QueryTailCommand.classLoader.getResourceAsStream(CommandDescriptor.location(QueryTailCommand.name))
-        CommandDescriptor.Described described = CommandDescriptor.read(QueryTailCommand.name, resource.bytes)
+        InputStream resource = QueryTailCommand.classLoader.getResourceAsStream(ToolDescriptor.location(QueryTailCommand.name))
+        ToolDescriptor.Described described = ToolDescriptor.read(QueryTailCommand.name, resource.bytes)
         QueryTailCommand command = new QueryTailCommand()
 
         then:
         described.name == 'query-tail'
         described.name == command.name
         described.description == command.description
-        described.target == CommandDescriptor.TARGET_GRADLE
+        described.target == ToolDescriptor.TARGET_APPLICATION
+        !described.startsApplication
     }
 
     /**

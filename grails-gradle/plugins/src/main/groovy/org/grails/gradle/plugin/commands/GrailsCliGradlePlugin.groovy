@@ -55,6 +55,8 @@ import org.gradle.api.tasks.util.PatternFilterable
 import grails.util.BuildSettings
 import grails.util.Environment
 import grails.util.GrailsNameUtils
+import org.apache.grails.gradle.model.cli.ToolBuildNames
+import org.apache.grails.gradle.model.cli.ToolDescriptor
 import org.grails.gradle.plugin.core.GrailsExtension
 import org.grails.gradle.plugin.core.GrailsGradlePlugin
 import org.grails.gradle.plugin.core.TestPhaseNames
@@ -75,7 +77,7 @@ import org.grails.build.parsing.CommandLineParser
 @CompileStatic
 class GrailsCliGradlePlugin implements Plugin<Project> {
 
-    public static final String APPLICATION_CONTEXT_COMMAND_CLASS = 'org.apache.grails.core.cli.ApplicationCommand'
+    public static final String APPLICATION_CONTEXT_COMMAND_CLASS = ToolDescriptor.FACTORIES_KEY_COMMAND
 
     /**
      * The task group the CLI command tasks are placed in. A group makes them visible in the
@@ -90,13 +92,13 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
      * the command-runner classpath, but never on `runtimeClasspath`, `bootRun`, or packaged
      * artifacts.
      */
-    public static final String GRAILS_CLI_CONFIGURATION = 'grailsCli'
+    public static final String GRAILS_CLI_CONFIGURATION = ToolBuildNames.GRAILS_CLI_CONFIGURATION
 
     /** Execution-only dependencies used by the command compatibility layer */
     public static final String GRAILS_CLI_LEGACY_CONFIGURATION = 'grailsCliLegacy'
 
     /** The resolvable view of {@link #GRAILS_CLI_CONFIGURATION} used by the command-runner tasks */
-    public static final String GRAILS_CLI_CLASSPATH_CONFIGURATION = 'grailsCliClasspath'
+    public static final String GRAILS_CLI_CLASSPATH_CONFIGURATION = ToolBuildNames.GRAILS_CLI_CLASSPATH_CONFIGURATION
 
     /**
      * Set this project property to {@code false} to stop the plugin from auto-provisioning the
@@ -540,8 +542,15 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
 
     @CompileDynamic
     protected void configureApplicationCommands(Project project) {
-        def applicationContextCommands = FactoriesLoaderSupport.loadFactoryNames(APPLICATION_CONTEXT_COMMAND_CLASS,
-                FactoriesLoaderSupport.classLoader, FactoriesLoaderSupport.CLI_FACTORIES_RESOURCE_LOCATION)
+        // a tool is registered under the key of the tool contract, and by a companion of Grails 8 under the key of the command contract
+        List<String> applicationContextCommands = []
+        for (String key : ToolDescriptor.FACTORIES_KEYS) {
+            String[] registered = FactoriesLoaderSupport.loadFactoryNames(key,
+                    FactoriesLoaderSupport.classLoader, FactoriesLoaderSupport.CLI_FACTORIES_RESOURCE_LOCATION)
+            if (registered) {
+                applicationContextCommands.addAll(registered as List<String>)
+            }
+        }
         project.afterEvaluate {
             FileCollection fileCollection = ClasspathUtils.buildClasspath(project, project.configurations.runtimeClasspath, project.configurations.grailsCliClasspath)
             // commands come from the buildscript classloader (legacy placement) and from the
@@ -614,9 +623,11 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
                 jarFile.getInputStream(entry).withCloseable { input ->
                     properties.load(input)
                 }
-                String factoryNames = properties.getProperty(APPLICATION_CONTEXT_COMMAND_CLASS)
-                if (factoryNames) {
-                    names.addAll(factoryNames.split(',').toList()*.trim())
+                for (String key : ToolDescriptor.FACTORIES_KEYS) {
+                    String factoryNames = properties.getProperty(key)
+                    if (factoryNames) {
+                        names.addAll(factoryNames.split(',').toList()*.trim())
+                    }
                 }
             }
             catch (IOException ignored) {

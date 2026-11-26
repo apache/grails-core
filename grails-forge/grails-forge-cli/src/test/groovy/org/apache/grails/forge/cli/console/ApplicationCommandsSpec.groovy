@@ -27,8 +27,8 @@ import java.util.concurrent.atomic.AtomicInteger
 import java.util.function.Predicate
 import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
-import org.apache.grails.gradle.model.cli.CommandCatalogBuilder
-import org.apache.grails.gradle.model.cli.CommandDescriptor
+import org.apache.grails.gradle.model.cli.ToolCatalogBuilder
+import org.apache.grails.gradle.model.cli.ToolDescriptor
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.cli.CommandFixture
 import org.grails.forge.cli.CommandSpec
@@ -89,8 +89,8 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
 
     static final Map HELLO = [name: 'hello-world', aliases: [], description: 'Says hello', origin: 'org.example:hello-cli:1.2.3', target: 'application', registration: 'descriptor']
     static final String MISSING = 'The commands of the application and its plugins are not listed yet: a build that compiles the project lists them, ' +
-            'and so does typing the name of one. To list them now: grails-forge-cli gradle grailsCommandCatalog'
-    static final String REFUSED = 'The commands of the application and its plugins are not listed: .grails/cache/command-catalog.json '
+            'and so does typing the name of one. To list them now: grails-forge-cli gradle grailsToolCatalog'
+    static final String REFUSED = 'The commands of the application and its plugins are not listed: .grails/cache/tool-catalog.json '
     static final String NOT_ALL = 'Not every command of the application and its plugins is listed, so audit-report may be one that is not. ' +
             'What is not listed, and why: grails-forge-cli help'
 
@@ -162,7 +162,7 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
         and: 'nothing was run for any of it, and nothing written'
         dir.list().sort() == ['.grails', 'grails-app']
         new File(dir, '.grails').list() == ['cache']
-        new File(dir, '.grails/cache').list() == ['command-catalog.json']
+        new File(dir, '.grails/cache').list() == ['tool-catalog.json']
 
         where:
         name           | usage                                                          | from                                                                     | form
@@ -209,8 +209,8 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
         then:
         exit == 0
         described.complete == false
-        described.diagnostics == ['The Gradle task grailsCommandCatalog says: The command class example.A of application is not listed: its descriptor @|red is|@ wrong.',
-                                  'The Gradle task grailsCommandCatalog says: And 3 more.']
+        described.diagnostics == ['The Gradle task grailsToolCatalog says: The command class example.A of application is not listed: its descriptor @|red is|@ wrong.',
+                                  'The Gradle task grailsToolCatalog says: And 3 more.']
         ((List<Map>) described.commands).any { it.name == 'hello-world' }
 
         when:
@@ -219,7 +219,7 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
 
         then:
         exit == 0
-        out.toString().replaceAll(/\s+/, ' ').contains('The Gradle task grailsCommandCatalog says: The command class example.A of application is not listed: its descriptor @|red is|@ wrong.')
+        out.toString().replaceAll(/\s+/, ' ').contains('The Gradle task grailsToolCatalog says: The command class example.A of application is not listed: its descriptor @|red is|@ wrong.')
 
         when: 'a name that is none of the commands is typed'
         err.reset()
@@ -304,7 +304,7 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
 
         then:
         exit == 2
-        !err.toString().contains('grailsCommandCatalog')
+        !err.toString().contains('grailsToolCatalog')
 
         when:
         exit = ForgeCli.execute(beanContext, 'help', '--json')
@@ -327,8 +327,8 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
         for (File each = newer.parentFile; each != dir && written.contains('/'); each = each.parentFile) {
             assert each.setLastModified(System.currentTimeMillis() - 240_000)
         }
-        String stale = "The commands of the application and its plugins may have changed: ${changed} is newer than .grails/cache/command-catalog.json. " +
-                'To list them again: grails-forge-cli gradle grailsCommandCatalog --rerun'
+        String stale = "The commands of the application and its plugins may have changed: ${changed} is newer than .grails/cache/tool-catalog.json. " +
+                'To list them again: grails-forge-cli gradle grailsToolCatalog --rerun'
 
         when:
         int exit = ForgeCli.execute(beanContext, 'help', '--json')
@@ -356,7 +356,7 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
         'gradle.properties'                                 | 'gradle.properties'
         'grails-app/commands'                               | 'grails-app/commands/BarCommand.groovy'
         'grails-app/commands'                               | 'grails-app/commands/demo/deep/BarCommand.groovy'
-        'build/classes/groovy/main/META-INF/grails-commands' | 'build/classes/groovy/main/META-INF/grails-commands/demo.BarCommand.json'
+        'build/classes/groovy/main/META-INF/grails-tools' | 'build/classes/groovy/main/META-INF/grails-tools/demo.BarCommand.json'
     }
 
     @Unroll
@@ -418,7 +418,7 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
 
         then:
         exit == 2
-        !err.toString().contains('grailsCommandCatalog')
+        !err.toString().contains('grailsToolCatalog')
     }
 
     @Unroll
@@ -434,7 +434,7 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
         exit == 0
         err.toString().isEmpty()
         described.complete == false
-        described.diagnostics == [REFUSED + reason + '. To write it again: grails-forge-cli gradle grailsCommandCatalog --rerun']
+        described.diagnostics == [REFUSED + reason + '. To write it again: grails-forge-cli gradle grailsToolCatalog --rerun']
         ((List<Map>) described.commands).every { it.origin == 'built-in' }
 
         when: 'the help a person reads says the same, with nothing of the file in it'
@@ -465,7 +465,7 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
         'objects in objects'                      | '{"a":' * 9 + '1' + '}' * 9                                         | 'is nested deeper than 8'
         'a great many values'                     | '[' + '1,' * 100_000 + '1]'                                         | 'has more than 100000 values'
         'a text without an end'                   | '{"format": "' + 'x' * 5000 + '"}'                                  | 'has a text of more than 4096 characters'
-        'a key twice'                             | doc([HELLO]).replace('"format"', '"commands":[],"format"')          | 'has an object with the same key twice'
+        'a key twice'                             | doc([HELLO]).replace('"format"', '"tools":[],"format"')          | 'has an object with the same key twice'
         'something after the document'            | doc([HELLO]) + '{}'                                                 | 'has something after the JSON document'
         'a byte that is not ASCII'                | doc([HELLO]).replace('Says', 'S\u00e4ys').getBytes('UTF-8')              | 'is not the ASCII the task writes'
         'a control character in a text'           | doc([HELLO]).replace('Says', 'Sa\u001b[31mys')                      | 'has a control character in a text'
@@ -484,7 +484,7 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
         'a diagnostic that is no text'            | doc([HELLO], [diagnostics: [1]])                                    | 'has diagnostics that are not at most 65 lines of at most 2048 characters of printable ASCII'
         'too many diagnostics'                    | doc([HELLO], [diagnostics: ['hostile'] * 66])                       | 'has diagnostics that are not at most 65 lines of at most 2048 characters of printable ASCII'
         'a diagnostic that is too long'           | doc([HELLO], [diagnostics: ['h' * 2049]])                           | 'has diagnostics that are not at most 65 lines of at most 2048 characters of printable ASCII'
-        'commands that are no list'               | doc([HELLO], [commands: [name: 'hostile']])                         | 'has no list of commands'
+        'commands that are no list'               | doc([HELLO], [tools: [name: 'hostile']])                         | 'has no list of commands'
     }
 
     static final String NAME = 'its name is not lower-case letters and digits in words joined by single hyphens, starting with a letter, of at most 64 characters'
@@ -495,8 +495,8 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
     @Unroll
     void "a command that is not as the build writes one is left out, and the others are used: #what"() {
         given: 'the command between two that are as they should be'
-        write(JsonOutput.toJson([format: 1, complete: true, diagnostics: [], commands: [HELLO, bad, FINE]]))
-        String leftOut = 'Command 2 of .grails/cache/command-catalog.json is not used: ' + reason
+        write(JsonOutput.toJson([format: 1, complete: true, diagnostics: [], tools: [HELLO, bad, FINE]]))
+        String leftOut = 'Command 2 of .grails/cache/tool-catalog.json is not used: ' + reason
 
         when:
         int exit = ForgeCli.execute(beanContext, 'help', '--json')
@@ -568,7 +568,7 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
     void "of many commands that are not as the build writes them the first are named and the others counted, and of too many commands the first are used"() {
         given:
         List commands = (1..5).collect { HELLO + [name: 'Hostile' + it] } + (1..600).collect { FINE + [name: 'fine-' + it] }
-        write(JsonOutput.toJson([format: 1, complete: true, diagnostics: [], commands: commands]))
+        write(JsonOutput.toJson([format: 1, complete: true, diagnostics: [], tools: commands]))
 
         when:
         int exit = ForgeCli.execute(beanContext, 'help', '--json')
@@ -578,11 +578,11 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
         exit == 0
         described.complete == false
         described.diagnostics == [
-                'Command 1 of .grails/cache/command-catalog.json is not used: ' + NAME,
-                'Command 2 of .grails/cache/command-catalog.json is not used: ' + NAME,
-                'Command 3 of .grails/cache/command-catalog.json is not used: ' + NAME,
-                '2 more commands of .grails/cache/command-catalog.json are not used, for reasons like these',
-                'The commands of .grails/cache/command-catalog.json after the first 512 are not used: 88 of them']
+                'Command 1 of .grails/cache/tool-catalog.json is not used: ' + NAME,
+                'Command 2 of .grails/cache/tool-catalog.json is not used: ' + NAME,
+                'Command 3 of .grails/cache/tool-catalog.json is not used: ' + NAME,
+                '2 more commands of .grails/cache/tool-catalog.json are not used, for reasons like these',
+                'The commands of .grails/cache/tool-catalog.json after the first 512 are not used: 88 of them']
         ((List<Map>) described.commands).findAll { it.origin != 'built-in' }*.name == (1..512).collect { 'fine-' + it }
     }
 
@@ -592,11 +592,11 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
         File element = new File(dir, 'element')
         new File(element, 'META-INF').mkdirs()
         new File(element, 'META-INF/grails-cli.factories').text = 'org.apache.grails.core.cli.ApplicationCommand=demo.SeedCommand\n'
-        CommandCatalogBuilder builder = new CommandCatalogBuilder()
+        ToolCatalogBuilder builder = new ToolCatalogBuilder()
         builder.add(origin, element)
         String json = builder.toJson()
         write(json)
-        String written = ((List<Map>) ((Map) new JsonSlurper().parseText(json)).commands)[0].origin
+        String written = ((List<Map>) ((Map) new JsonSlurper().parseText(json)).tools)[0].origin
         element.deleteDir()
 
         when:
@@ -646,7 +646,7 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
         given: 'a file with a command, somewhere else'
         File elsewhere = new File(dir, 'elsewhere/cache')
         elsewhere.mkdirs()
-        new File(elsewhere, 'command-catalog.json').text = doc([HELLO])
+        new File(elsewhere, 'tool-catalog.json').text = doc([HELLO])
         place.call(dir.toPath(), elsewhere.toPath())
 
         when:
@@ -656,16 +656,16 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
         then:
         exit == 0
         described.complete == false
-        described.diagnostics == [REFUSED + reason + '. To write it again: grails-forge-cli gradle grailsCommandCatalog --rerun']
+        described.diagnostics == [REFUSED + reason + '. To write it again: grails-forge-cli gradle grailsToolCatalog --rerun']
         ((List<Map>) described.commands).every { it.origin == 'built-in' }
 
         where:
         what                                  | reason                               | place
-        'a link'                              | 'is a link'                          | { Path project, Path other -> Files.createDirectories(project.resolve('.grails/cache')); Files.createSymbolicLink(project.resolve('.grails/cache/command-catalog.json'), other.resolve('command-catalog.json')) }
+        'a link'                              | 'is a link'                          | { Path project, Path other -> Files.createDirectories(project.resolve('.grails/cache')); Files.createSymbolicLink(project.resolve('.grails/cache/tool-catalog.json'), other.resolve('tool-catalog.json')) }
         'in a directory that is a link'       | 'is behind .grails/cache, which is a link' | { Path project, Path other -> Files.createDirectories(project.resolve('.grails')); Files.createSymbolicLink(project.resolve('.grails/cache'), other) }
         'in a .grails that is a link'         | 'is behind .grails, which is a link' | { Path project, Path other -> Files.createSymbolicLink(project.resolve('.grails'), other.getParent()) }
-        'a pipe'                              | 'is not a file'                      | { Path project, Path other -> Files.createDirectories(project.resolve('.grails/cache')); assert new ProcessBuilder('mkfifo', project.resolve('.grails/cache/command-catalog.json').toString()).start().waitFor() == 0 }
-        'a directory'                         | 'is not a file'                      | { Path project, Path other -> Files.createDirectories(project.resolve('.grails/cache/command-catalog.json')) }
+        'a pipe'                              | 'is not a file'                      | { Path project, Path other -> Files.createDirectories(project.resolve('.grails/cache')); assert new ProcessBuilder('mkfifo', project.resolve('.grails/cache/tool-catalog.json').toString()).start().waitFor() == 0 }
+        'a directory'                         | 'is not a file'                      | { Path project, Path other -> Files.createDirectories(project.resolve('.grails/cache/tool-catalog.json')) }
     }
 
     void "a description is shown as the text it is, also where it has what the command line or a terminal would read"() {
@@ -1091,16 +1091,16 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
 
     void "the reader and the writer of the file have one set of limits, and the largest file the writer writes is read: #what"() {
         given: 'more commands than a file lists, each with the longest description, registered by several elements of a class path'
-        CommandCatalogBuilder builder = new CommandCatalogBuilder()
+        ToolCatalogBuilder builder = new ToolCatalogBuilder()
         (0..<3).each { int part ->
             File element = new File(dir, "element${part}")
             new File(element, 'META-INF').mkdirs()
             List<String> classes = (0..<200).collect { int number -> "demo.p${part}.C${number}Command".toString() }
             new File(element, 'META-INF/grails-cli.factories').text = 'org.apache.grails.core.cli.ApplicationCommand=' + classes.join(',') + '\n'
             classes.eachWithIndex { String className, int number ->
-                File descriptor = new File(element, CommandDescriptor.location(className))
+                File descriptor = new File(element, ToolDescriptor.location(className))
                 descriptor.parentFile.mkdirs()
-                descriptor.text = CommandDescriptor.describe(className, "c-${part}-${number}".toString(), letter * CommandDescriptor.MAX_DESCRIPTION_LENGTH)
+                descriptor.text = ToolDescriptor.describe(className, "c-${part}-${number}".toString(), letter * ToolDescriptor.MAX_DESCRIPTION_LENGTH)
             }
             builder.add('o' * 200 + part, element)
         }
@@ -1114,25 +1114,25 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
         Map described = document()
 
         then: 'the numbers are the same in the two builds'
-        ApplicationCommandFile.MAX_BYTES == CommandCatalogBuilder.MAX_BYTES
-        ApplicationCommandFile.MAX_COMMANDS == CommandCatalogBuilder.MAX_COMMANDS
-        ApplicationCommandFile.MAX_ORIGIN == CommandCatalogBuilder.MAX_ORIGIN_LENGTH
-        ApplicationCommandFile.MAX_DESCRIPTION == CommandDescriptor.MAX_DESCRIPTION_LENGTH
-        ApplicationCommandFile.MAX_NAME == CommandDescriptor.MAX_NAME_LENGTH
-        ApplicationCommandFile.MAX_DIAGNOSTICS == CommandCatalogBuilder.MAX_DIAGNOSTICS + 1
-        ApplicationCommandFile.MAX_DIAGNOSTIC >= CommandCatalogBuilder.MAX_DIAGNOSTIC_LENGTH
+        ApplicationCommandFile.MAX_BYTES == ToolCatalogBuilder.MAX_BYTES
+        ApplicationCommandFile.MAX_COMMANDS == ToolCatalogBuilder.MAX_COMMANDS
+        ApplicationCommandFile.MAX_ORIGIN == ToolCatalogBuilder.MAX_ORIGIN_LENGTH
+        ApplicationCommandFile.MAX_DESCRIPTION == ToolDescriptor.MAX_DESCRIPTION_LENGTH
+        ApplicationCommandFile.MAX_NAME == ToolDescriptor.MAX_NAME_LENGTH
+        ApplicationCommandFile.MAX_DIAGNOSTICS == ToolCatalogBuilder.MAX_DIAGNOSTICS + 1
+        ApplicationCommandFile.MAX_DIAGNOSTIC >= ToolCatalogBuilder.MAX_DIAGNOSTIC_LENGTH
 
         and: 'the writer wrote no more than is read, and said what it left out'
         json.length() <= ApplicationCommandFile.MAX_BYTES
-        ((List) written.commands).size() <= ApplicationCommandFile.MAX_COMMANDS
-        ((List) written.commands).size() >= atLeast
+        ((List) written.tools).size() <= ApplicationCommandFile.MAX_COMMANDS
+        ((List) written.tools).size() >= atLeast
         ((List<String>) written.diagnostics).size() == 1
-        ((List<String>) written.diagnostics)[0] == "There are 600 commands, more than a catalog lists${how}: the last ${600 - ((List) written.commands).size()} by name are not listed."
+        ((List<String>) written.diagnostics)[0] == "There are 600 commands, more than a catalog lists${how}: the last ${600 - ((List) written.tools).size()} by name are not listed."
 
         and: 'all of it is read: the file is not refused, and every command it has is a command'
         exit == 0
-        described.diagnostics == ['The Gradle task grailsCommandCatalog says: ' + ((List<String>) written.diagnostics)[0]]
-        ((List<Map>) described.commands).findAll { it.origin != 'built-in' }*.name == ((List<Map>) written.commands)*.name
+        described.diagnostics == ['The Gradle task grailsToolCatalog says: ' + ((List<String>) written.diagnostics)[0]]
+        ((List<Map>) described.commands).findAll { it.origin != 'built-in' }*.name == ((List<Map>) written.tools)*.name
 
         where:
         what                                        | letter   | atLeast | how
@@ -1271,7 +1271,7 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
         then:
         exit == 2
         err.toString().readLines()[0].startsWith('There is no command hello-world')
-        !err.toString().contains('grailsCommandCatalog')
+        !err.toString().contains('grailsToolCatalog')
 
         when: 'the environment names the directory as one to use, whoever owns it'
         ConsoleProject.setSafeDirectories(dir.canonicalPath)
@@ -1310,7 +1310,7 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
         then:
         exit == 0
         err.toString().isEmpty()
-        !out.toString().contains('command-catalog')
+        !out.toString().contains('tool-catalog')
     }
 
     // a wrapper that is no Gradle: it says what its input is, what it was told, and what the file of the arguments holds
@@ -1333,7 +1333,7 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
     }
 
     private File catalogFile() {
-        return new File(dir, '.grails/cache/command-catalog.json')
+        return new File(dir, '.grails/cache/tool-catalog.json')
     }
 
     private void catalog(List commands, Map others = [:]) {
@@ -1348,7 +1348,7 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
     // one line of ASCII JSON, as the task writes it: what is not ASCII is written as an escape
     static String doc(List commands, Map others = [:]) {
         List sorted = commands.every { it instanceof Map && ((Map) it).name instanceof String } ? commands.sort(false) { ((Map) it).name } : commands
-        return JsonOutput.toJson([format: 1, complete: true, diagnostics: [], commands: sorted] + others)
+        return JsonOutput.toJson([format: 1, complete: true, diagnostics: [], tools: sorted] + others)
     }
 
     private Map document() {

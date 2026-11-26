@@ -30,11 +30,10 @@ import grails.ui.StartedJvmCoverage
 import org.apache.grails.core.cli.ApplicationCommand
 import org.apache.grails.core.cli.ExecutionContext
 import org.apache.grails.core.cli.GrailsApplicationCommand
-import org.apache.grails.core.cli.GradleCommand
-import org.apache.grails.core.cli.StandaloneCommand
+import org.apache.grails.core.cli.StandaloneTool
 
 /**
- * A {@link GradleCommand} as the {@code runCommand} task of a build starts it: by the {@code main}
+ * A command that does not start the application as the {@code runCommand} task of a build starts it: by the {@code main}
  * method of {@link GrailsApplicationContextCommandRunner} in a JVM of its own, which runs the command
  * without the application and ends with the status of the command.
  */
@@ -172,7 +171,9 @@ class GradleKindFailingApplication extends GrailsAutoConfiguration {
     }
 }
 
-class GradleKindSpecSucceedsCommand implements ApplicationCommand, GradleCommand {
+class GradleKindSpecSucceedsCommand implements ApplicationCommand {
+
+    boolean startsApplication = false
 
     Object grailsApplication
 
@@ -184,16 +185,18 @@ class GradleKindSpecSucceedsCommand implements ApplicationCommand, GradleCommand
     }
 }
 
-class StandaloneKindSpecCommand implements ApplicationCommand, StandaloneCommand {
+class StandaloneKindSpecCommand implements StandaloneTool {
 
     @Override
     boolean handle(ExecutionContext executionContext) {
-        println "COMMAND=${name} ${executionContext.commandLine.remainingArgs} context=${applicationContext}"
+        println "COMMAND=${name} ${executionContext.commandLine.remainingArgs} context=${metaClass.hasProperty(this, 'applicationContext')}"
         true
     }
 }
 
-class GradleKindSpecReturnsFalseCommand implements ApplicationCommand, GradleCommand {
+class GradleKindSpecReturnsFalseCommand implements ApplicationCommand {
+
+    boolean startsApplication = false
 
     @Override
     boolean handle(ExecutionContext executionContext) {
@@ -202,7 +205,9 @@ class GradleKindSpecReturnsFalseCommand implements ApplicationCommand, GradleCom
     }
 }
 
-class GradleKindSpecThrowsCommand implements ApplicationCommand, GradleCommand {
+class GradleKindSpecThrowsCommand implements ApplicationCommand {
+
+    boolean startsApplication = false
 
     @Override
     boolean handle(ExecutionContext executionContext) {
@@ -214,7 +219,9 @@ class GradleKindSpecThrowsCommand implements ApplicationCommand, GradleCommand {
 /**
  * The command the guide shows for a command that renders a template without the application.
  */
-class CreateGradleKindReportCommand implements GrailsApplicationCommand, GradleCommand {
+class CreateGradleKindReportCommand implements GrailsApplicationCommand {
+
+    boolean startsApplication = false
 
     String description = 'Creates a report class from a template'
 

@@ -22,8 +22,8 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.LinkOption
 import groovy.json.JsonSlurper
-import org.apache.grails.gradle.model.cli.CommandCatalogBuilder
-import org.apache.grails.gradle.model.cli.CommandCatalogFreshness
+import org.apache.grails.gradle.model.cli.ToolCatalogBuilder
+import org.apache.grails.gradle.model.cli.ToolCatalogFreshness
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.cli.CommandFixture
 import org.grails.forge.cli.CommandSpec
@@ -32,7 +32,7 @@ import spock.lang.IgnoreIf
 
 /**
  * Where the command line finds the commands of the application and its plugins: in the file the
- * Gradle task {@code grailsCommandCatalog} writes into the directory of the project, whatever the build
+ * Gradle task {@code grailsToolCatalog} writes into the directory of the project, whatever the build
  * of the project does with its build directory, which the command line does not run the build to
  * learn. A file an earlier build left in a build directory is not read.
  */
@@ -61,15 +61,15 @@ class ApplicationCommandLocationSpec extends CommandSpec implements CommandFixtu
 
     void "the command line reads the catalog where the task of the build writes it"() {
         expect:
-        ApplicationCommandFile.LOCATION == CommandCatalogBuilder.LOCATION
-        ApplicationCommandFile.LOCATION == '.grails/cache/command-catalog.json'
+        ApplicationCommandFile.LOCATION == ToolCatalogBuilder.LOCATION
+        ApplicationCommandFile.LOCATION == '.grails/cache/tool-catalog.json'
     }
 
     void "in a project whose #dsl build moves its build directory the commands are those of the catalog in the directory of the project"() {
         given: 'a build that moves its build directory, and catalogs that earlier builds left in build directories'
         File script = file(buildFile, moving)
-        file('build/grails/command-catalog.json', ApplicationCommandsSpec.doc([STALE]))
-        file('out/grails/command-catalog.json', ApplicationCommandsSpec.doc([STALE]))
+        file('build/grails/tool-catalog.json', ApplicationCommandsSpec.doc([STALE]))
+        file('out/grails/tool-catalog.json', ApplicationCommandsSpec.doc([STALE]))
         File catalog = file(ApplicationCommandFile.LOCATION, ApplicationCommandsSpec.doc([ApplicationCommandsSpec.HELLO]))
         catalog.setLastModified(script.lastModified() + 2000)
 
@@ -101,7 +101,7 @@ class ApplicationCommandLocationSpec extends CommandSpec implements CommandFixtu
     void "a catalog that an earlier build left in the build directory alone is not read, and the task that lists the commands is named"() {
         given:
         file('build.gradle', "layout.buildDirectory = layout.projectDirectory.dir('out')\n")
-        File stale = file('build/grails/command-catalog.json', ApplicationCommandsSpec.doc([STALE]))
+        File stale = file('build/grails/tool-catalog.json', ApplicationCommandsSpec.doc([STALE]))
         stale.setLastModified(System.currentTimeMillis() + 2000)
 
         when:
@@ -120,11 +120,11 @@ class ApplicationCommandLocationSpec extends CommandSpec implements CommandFixtu
         generateProject(ApplicationType.WEB)
         new File(dir, 'build.gradle') << "\nlayout.buildDirectory = layout.projectDirectory.dir('out')\n"
         ForgeCli.execute(beanContext, 'create-command', 'greet')
-        file('build/grails/command-catalog.json', ApplicationCommandsSpec.doc([STALE]))
+        file('build/grails/tool-catalog.json', ApplicationCommandsSpec.doc([STALE]))
 
         when: 'the build lists the commands, as the command line says to'
         out.reset()
-        int listed = ForgeCli.execute(beanContext, 'gradle', 'grailsCommandCatalog')
+        int listed = ForgeCli.execute(beanContext, 'gradle', 'grailsToolCatalog')
 
         then:
         listed == 0
@@ -160,7 +160,7 @@ class ApplicationCommandLocationSpec extends CommandSpec implements CommandFixtu
         exit == 0
         described.complete == false
         ((List<String>) described.diagnostics)[0].contains("may have changed: ${named} is newer than ${ApplicationCommandFile.LOCATION}")
-        CommandCatalogFreshness.changedSince(dir, [classes], Files.getLastModifiedTime(catalog.toPath())) == named
+        ToolCatalogFreshness.changedSince(dir, [classes], Files.getLastModifiedTime(catalog.toPath())) == named
 
         when: 'the catalog is written again, as the task does'
         catalog.setLastModified(System.currentTimeMillis() + 2_000)
@@ -169,7 +169,7 @@ class ApplicationCommandLocationSpec extends CommandSpec implements CommandFixtu
 
         then: 'neither takes it for out of date'
         document().complete == true
-        CommandCatalogFreshness.changedSince(dir, [classes], Files.getLastModifiedTime(catalog.toPath())) == null
+        ToolCatalogFreshness.changedSince(dir, [classes], Files.getLastModifiedTime(catalog.toPath())) == null
 
         where:
         changed                                                                       | named
@@ -179,7 +179,7 @@ class ApplicationCommandLocationSpec extends CommandSpec implements CommandFixtu
         'settings.gradle.kts'                                                         | 'settings.gradle.kts'
         'gradle.properties'                                                           | 'gradle.properties'
         'grails-app/commands/example/GreetCommand.groovy'                             | 'grails-app/commands'
-        'build/classes/groovy/main/META-INF/grails-commands/example.GreetCommand.json' | 'build/classes/groovy/main/META-INF/grails-commands'
+        'build/classes/groovy/main/META-INF/grails-tools/example.GreetCommand.json' | 'build/classes/groovy/main/META-INF/grails-tools'
     }
 
     @IgnoreIf({ os.windows })
@@ -210,7 +210,7 @@ class ApplicationCommandLocationSpec extends CommandSpec implements CommandFixtu
         then: 'the command line and the task of the build say the same'
         exit == 0
         (Files.getLastModifiedTime(link.toPath(), LinkOption.NOFOLLOW_LINKS) > Files.getLastModifiedTime(catalog.toPath())) == linkIsNewer
-        CommandCatalogFreshness.changedSince(dir, [classes], Files.getLastModifiedTime(catalog.toPath())) == named
+        ToolCatalogFreshness.changedSince(dir, [classes], Files.getLastModifiedTime(catalog.toPath())) == named
         described.complete == (named == null)
         named == null || ((List<String>) described.diagnostics)[0].contains("may have changed: ${named} is newer than ${ApplicationCommandFile.LOCATION}")
         named != null || described.diagnostics == []

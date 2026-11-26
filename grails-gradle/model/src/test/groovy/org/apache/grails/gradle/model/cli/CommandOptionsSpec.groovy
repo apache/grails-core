@@ -35,8 +35,8 @@ class CommandOptionsSpec extends Specification {
 
     def "the catalog lists the options that are declared, by command and name, with where each comes from"() {
         when:
-        CommandCatalogBuilder builder = new CommandCatalogBuilder()
-        builder.add(CommandCatalogBuilder.ORIGIN_APPLICATION, element('application', [
+        ToolCatalogBuilder builder = new ToolCatalogBuilder()
+        builder.add(ToolCatalogBuilder.ORIGIN_APPLICATION, element('application', [
                 [command: 'run-app', name: 'trace', description: 'Log every request.', type: 'boolean', property: 'logging.level.web', value: 'TRACE']]))
         builder.add('org.example:data-cli:1.0', element('data', [TAIL, [command: 'run-app', name: 'tenant', description: 'The tenant to run as.',
                                                                          type: 'string', property: 'demo.tenant', later: [1, 2]]]))
@@ -53,12 +53,12 @@ class CommandOptionsSpec extends Specification {
         catalog.complete == true
 
         and: 'the document is written with them, after everything it had before'
-        ((Map) StrictJson.parse(builder.toJson(), 8)).keySet().toList() == ['format', 'complete', 'diagnostics', 'commands', 'commandOptions']
+        ((Map) StrictJson.parse(builder.toJson(), 8)).keySet().toList() == ['format', 'complete', 'diagnostics', 'tools', 'commandOptions']
     }
 
     def "a catalog of a class path that declares no option has no such member"() {
         when:
-        CommandCatalogBuilder builder = new CommandCatalogBuilder()
+        ToolCatalogBuilder builder = new ToolCatalogBuilder()
         builder.add('org.example:none:1.0', element('none', null))
 
         then:
@@ -69,7 +69,7 @@ class CommandOptionsSpec extends Specification {
     @Unroll
     def "an option that #title is left out and named by its place, with nothing of it repeated, and the others are listed"() {
         when:
-        CommandCatalogBuilder builder = new CommandCatalogBuilder()
+        ToolCatalogBuilder builder = new ToolCatalogBuilder()
         builder.add('org.hostile:options:1.0', element('hostile', [TAIL + changed, [command: 'run-app', name: 'kept', description: 'Kept.', property: 'demo.kept']]))
         Map<String, Object> catalog = builder.build()
 
@@ -134,7 +134,7 @@ class CommandOptionsSpec extends Specification {
         file.bytes = content
 
         when:
-        CommandCatalogBuilder builder = new CommandCatalogBuilder()
+        ToolCatalogBuilder builder = new ToolCatalogBuilder()
         builder.add('org.hostile:options:1.0', element)
         Map<String, Object> catalog = builder.build()
 
@@ -160,7 +160,7 @@ class CommandOptionsSpec extends Specification {
         List<Map> many = (1..20).collect { int number -> [command: 'run-app', name: "option-${number}".toString(), description: 'One of many.', property: "demo.option${number}".toString()] }
 
         when:
-        CommandCatalogBuilder builder = new CommandCatalogBuilder()
+        ToolCatalogBuilder builder = new ToolCatalogBuilder()
         builder.add('org.example:many:1.0', element('many', many))
         Map<String, Object> catalog = builder.build()
 
@@ -169,7 +169,7 @@ class CommandOptionsSpec extends Specification {
         catalog.diagnostics == ['org.example:many:1.0 declares more than 16 options for commands; the last 4 are not used.']
 
         when:
-        builder = new CommandCatalogBuilder()
+        builder = new ToolCatalogBuilder()
         (1..3).each { int jar ->
             builder.add("org.example:jar${jar}:1.0", element("jar${jar}", (1..16).collect { int number ->
                 [command: 'run-app', name: "option-${jar}-${number}".toString(), description: 'One of many.', property: "demo.option${jar}x${number}".toString()]
@@ -180,12 +180,12 @@ class CommandOptionsSpec extends Specification {
         then:
         catalog.commandOptions.size() == CommandOptions.MAX_OPTIONS
         catalog.diagnostics == ['More than 32 options are declared for commands: the last 16 by command and name are not used.']
-        builder.toJson().length() < CommandCatalogBuilder.MAX_BYTES
+        builder.toJson().length() < ToolCatalogBuilder.MAX_BYTES
     }
 
     def "a name two plugins declare is the option of neither, and both are named"() {
         when:
-        CommandCatalogBuilder builder = new CommandCatalogBuilder()
+        ToolCatalogBuilder builder = new ToolCatalogBuilder()
         builder.add('org.example:two:1.0', element('two', [TAIL + [property: 'demo.two'], [command: 'run-app', name: 'kept', description: 'Kept.', property: 'demo.kept']]))
         builder.add('org.example:one:1.0', element('one', [TAIL + [property: 'demo.one']]))
         Map<String, Object> catalog = builder.build()
@@ -197,7 +197,7 @@ class CommandOptionsSpec extends Specification {
 
     def "an element that declares a name twice, and not the same, declares neither"() {
         when:
-        CommandCatalogBuilder builder = new CommandCatalogBuilder()
+        ToolCatalogBuilder builder = new ToolCatalogBuilder()
         builder.add('org.example:twice:1.0', element('twice', [TAIL, TAIL + [value: 'false']]))
         Map<String, Object> catalog = builder.build()
 
@@ -208,7 +208,7 @@ class CommandOptionsSpec extends Specification {
 
     def "the same declaration in two elements, as in a plugin and in its companion, is one: that of the first"() {
         when:
-        CommandCatalogBuilder builder = new CommandCatalogBuilder()
+        ToolCatalogBuilder builder = new ToolCatalogBuilder()
         builder.add('org.example:data:1.0', element('data', [TAIL]))
         builder.add('org.example:data-cli:1.0', element('cli', [TAIL, TAIL]))
         Map<String, Object> catalog = builder.build()
@@ -220,9 +220,9 @@ class CommandOptionsSpec extends Specification {
 
     def "what the application declares holds, and the plugin that declares the name otherwise is named"() {
         when:
-        CommandCatalogBuilder builder = new CommandCatalogBuilder()
+        ToolCatalogBuilder builder = new ToolCatalogBuilder()
         // the output of a project is in more than one directory
-        builder.add(CommandCatalogBuilder.ORIGIN_APPLICATION, [element('classes', null), element('resources', [TAIL + [property: 'demo.own']])])
+        builder.add(ToolCatalogBuilder.ORIGIN_APPLICATION, [element('classes', null), element('resources', [TAIL + [property: 'demo.own']])])
         builder.add('org.example:data-cli:1.0', element('cli', [TAIL]))
         Map<String, Object> catalog = builder.build()
 
@@ -234,7 +234,7 @@ class CommandOptionsSpec extends Specification {
 
     def "what is said of the options comes after what is said of the commands, within the diagnostics a catalog has"() {
         when:
-        CommandCatalogBuilder builder = new CommandCatalogBuilder()
+        ToolCatalogBuilder builder = new ToolCatalogBuilder()
         builder.add('org.example:data-cli:1.0', element('cli', [TAIL + [name: 'Q']]))
         builder.unresolved('runtimeClasspath', 'Could not find a:b:1.')
         Map<String, Object> catalog = builder.build()
@@ -244,7 +244,7 @@ class CommandOptionsSpec extends Specification {
         catalog.diagnostics.size() == 2
         catalog.diagnostics[0].startsWith('runtimeClasspath cannot be resolved completely')
         catalog.diagnostics[1].startsWith('Option 1 that org.example:data-cli:1.0 declares')
-        catalog.diagnostics.every { String line -> line.length() <= CommandCatalogBuilder.MAX_DIAGNOSTIC_LENGTH && line.every { String each -> each >= ' ' && each <= '~' } }
+        catalog.diagnostics.every { String line -> line.length() <= ToolCatalogBuilder.MAX_DIAGNOSTIC_LENGTH && line.every { String each -> each >= ' ' && each <= '~' } }
     }
 
     private static final String NAME = 'has a name that cannot be the name of an option (lower case letters and digits, in words joined by single hyphens, ' +

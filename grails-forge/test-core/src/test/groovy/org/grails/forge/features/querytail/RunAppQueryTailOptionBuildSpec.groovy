@@ -52,7 +52,7 @@ class RunAppQueryTailOptionBuildSpec extends CommandSpec {
         DeclaredOptions.Declared option = catalog.declaredOptions.options.find { DeclaredOptions.Declared each -> each.name == 'query-tail' }
 
         then: 'the command line reads the option from the file the build wrote'
-        compiled.task(':grailsCommandCatalog').outcome == TaskOutcome.SUCCESS
+        compiled.task(':grailsToolCatalog').outcome == TaskOutcome.SUCCESS
         catalog.state == ApplicationCommandFile.State.CURRENT
         catalog.declaredOptions.notUsed == 0
         option.command == 'run-app'

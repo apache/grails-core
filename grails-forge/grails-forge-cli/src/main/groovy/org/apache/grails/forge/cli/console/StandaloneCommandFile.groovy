@@ -33,8 +33,8 @@ import groovy.transform.CompileStatic
 
 /**
  * The file in which the build of a project writes down the class path of the commands that are run
- * as a process of their own, without Gradle: {@code .grails/cache/standalone-commands.json}, written
- * by the Gradle task {@code grailsStandaloneCommands} beside the list of the commands. The CLI reads
+ * as a process of their own, without Gradle: {@code .grails/cache/standalone-tools.json}, written
+ * by the Gradle task {@code grailsStandaloneTools} beside the list of the commands. The CLI reads
  * it for a command the list says is such a command, and for no other.
  *
  * <p>Starting a JVM on what the file names runs it, as starting the Gradle wrapper of the project
@@ -57,12 +57,12 @@ import groovy.transform.CompileStatic
 final class StandaloneCommandFile {
 
     /** Where the file is, in the directory of the project. */
-    public static final String LOCATION = '.grails/cache/standalone-commands.json'
+    public static final String LOCATION = '.grails/cache/standalone-tools.json'
 
     /** The Gradle task that writes the file. */
-    public static final String TASK = 'grailsStandaloneCommands'
+    public static final String TASK = 'grailsStandaloneTools'
 
-    // These are the numbers of what writes the file, StandaloneCommandsDocument of grails-gradle-model: the
+    // These are the numbers of what writes the file, StandaloneToolsDocument of grails-gradle-model: the
     // two are in two builds, and a specification holds them to be the same.
 
     /** How many bytes the file has, at most: as many as the task writes. */
@@ -83,8 +83,9 @@ final class StandaloneCommandFile {
     /** How deep a directory of sources is looked at, at most. */
     public static final int MAX_WALK_DEPTH = 64
 
-    private static final String APPLICATION = 'application'
-    private static final String DEPENDENCIES = 'dependencies'
+    private static final String TOOLS = 'tools'
+    private static final String CLASSPATH = 'classpath'
+    private static final String SOURCES = 'sources'
     private static final int MAX_DEPTH = 4
     private static final int MAX_VALUES = 3 * MAX_ENTRIES
     private static final int MAX_REASON = 400
@@ -214,23 +215,23 @@ final class StandaloneCommandFile {
             return outOfDate("${LOCATION} is not the document of format 1 the build writes")
         }
         int java = document.get('java') instanceof Long ? (int) Math.max(0L, Math.min(1000L, (Long) document.get('java'))) : 0
-        Object kind = ((Map) document.get('commands')).get(name)
-        if (kind != APPLICATION && kind != DEPENDENCIES) {
+        if (!((List) document.get(TOOLS)).contains(name)) {
             return outOfDate("${LOCATION} does not have the command")
         }
         Object throughGradle = document.get('throughGradle')
         if (throughGradle instanceof String) {
             return new StandaloneCommandFile(State.THROUGH_GRADLE, GradleRunner.line(shortened((String) throughGradle)), Collections.<Path>emptyList(), java)
         }
-        List<String> entries = []
-        if (kind == APPLICATION) {
-            String changed = changedSince((List<String>) document.get('sources'), written)
+        // the sources the file names are those of the project, which a command of the project itself is compiled
+        // from: a command of a plugin is as it was whatever was changed in them
+        ApplicationCommandFile.Entry listed = list.commands.find { ApplicationCommandFile.Entry each -> each.name == name }
+        if (listed == null || listed.origin == ApplicationCommandFile.APPLICATION) {
+            String changed = changedSince((List<String>) document.get(SOURCES), written)
             if (changed != null) {
                 return outOfDate("${shown(directory, changed)} was changed after ${LOCATION} was written")
             }
-            entries.addAll((List<String>) document.get('application'))
         }
-        entries.addAll((List<String>) document.get('dependencies'))
+        List<String> entries = new ArrayList<String>((List<String>) document.get(CLASSPATH))
         if (entries.isEmpty()) {
             return outOfDate("${LOCATION} has no class path for the command")
         }
@@ -401,13 +402,14 @@ final class StandaloneCommandFile {
             return null
         }
         Map<String, Object> document = (Map<String, Object>) parsed
-        if (!(document.get('format') instanceof Long) || ((Long) document.get('format')).longValue() != 1L || !(document.get('commands') instanceof Map)) {
+        if (!(document.get('format') instanceof Long) || ((Long) document.get('format')).longValue() != 1L) {
             return null
         }
-        if (!isPaths(document.get(APPLICATION), MAX_ENTRIES) || !isPaths(document.get(DEPENDENCIES), MAX_ENTRIES) || !isPaths(document.get('sources'), MAX_SOURCES)) {
+        Object tools = document.get(TOOLS)
+        if (!(tools instanceof List) || !((List) tools).every { Object each -> each instanceof String }) {
             return null
         }
-        if (((List) document.get(APPLICATION)).size() + ((List) document.get(DEPENDENCIES)).size() > MAX_ENTRIES) {
+        if (!isPaths(document.get(CLASSPATH), MAX_ENTRIES) || !isPaths(document.get(SOURCES), MAX_SOURCES)) {
             return null
         }
         return document

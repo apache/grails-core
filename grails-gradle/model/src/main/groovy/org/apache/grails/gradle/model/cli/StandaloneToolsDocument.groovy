@@ -30,58 +30,67 @@ import java.nio.file.attribute.FileTime
 import groovy.transform.CompileStatic
 
 /**
- * What the build of a project writes down for the commands of the project that are run as a process
- * of their own, without Gradle ({@code StandaloneCommand}): the class path the {@code grails} command
+ * What the build of a project writes down for the tools of the project that are run as a process
+ * of their own, without Gradle ({@code StandaloneTool}): the class path the {@code grails} command
  * line starts each of them with, so that it does not have to ask the build for it.
  *
- * <p>The document is a file beside the catalog of the commands, {@link #LOCATION}, and not a part of
+ * <p>The document is a file beside the catalog of the tools, {@link #LOCATION}, and not a part of
  * the catalog: the catalog has no path of this machine in it and is the same bytes for the same
- * commands on every machine, so a build cache can hold it; this file is nothing but paths of this
+ * tools on every machine, so a build cache can hold it; this file is nothing but paths of this
  * machine, and is never taken from a build cache.</p>
  *
  * <p>Format 1 is one JSON object in ASCII with these members:</p>
  * <ul>
  *   <li>{@code format}, the number 1;</li>
- *   <li>{@code commands}, an object with a member for each command of the catalog whose target is
- *       {@code standalone}: its name, and which class path it runs with, {@link #APPLICATION} for a
- *       command of the project itself and {@link #DEPENDENCIES} for a command of a plugin;</li>
- *   <li>{@code application}, the directories the classes and resources of the project are in, as
- *       absolute paths; empty when no command runs with them;</li>
- *   <li>{@code dependencies}, the files of what the project depends on at run time and of its command
- *       line tier, in the order of the class path, as absolute paths. A command of the project runs
- *       with {@code application} and then {@code dependencies}, a command of a plugin with
- *       {@code dependencies} alone;</li>
- *   <li>{@code sources}, the directories of the sources {@code application} is made from, as absolute
- *       paths; empty when no command runs with {@code application};</li>
+ *   <li>{@code tools}, a list of the names of the tools that are run as a process of their own;</li>
+ *   <li>{@code classpath}, the directories and files each of them is started with, in the order of
+ *       the class path, as absolute paths;</li>
+ *   <li>{@code sources}, the directories of the sources the class path is compiled from, as absolute
+ *       paths: a file that is newer than the document in one of them makes the document out of date;</li>
  *   <li>{@code java}, the version of Java the classes of the project are compiled for, a number;</li>
- *   <li>{@code throughGradle}, only where the commands cannot be given a class path that the command
- *       line can keep current by itself: one line that says why. The lists are empty then, and the
- *       command line runs the commands with Gradle.</li>
+ *   <li>{@code throughGradle}, only where the tools cannot be given a class path that the command
+ *       line can keep current by itself: one line that says why. The lists of paths are empty then,
+ *       and the command line runs the tools with Gradle.</li>
  * </ul>
  *
- * <p>A project without such a command has a document without a path in it.</p>
+ * <p>A project without such a tool has a document without a path in it.</p>
  *
  * @since 9.0
  */
 @CompileStatic
-final class StandaloneCommandsDocument {
+final class StandaloneToolsDocument {
 
     /** The format this class writes. */
     public static final int FORMAT = 1
 
     /** Where the document of a project is, in the directory of the project. */
-    public static final String LOCATION = '.grails/cache/standalone-commands.json'
+    public static final String LOCATION = '.grails/cache/standalone-tools.json'
 
-    /** The class path of a command of the project itself: the output of the project, then what it depends on. */
+    /** The member that lists the names of the tools. */
+    public static final String MEMBER_TOOLS = 'tools'
+
+    /** The member that lists the class path the tools are started with. */
+    public static final String MEMBER_CLASSPATH = 'classpath'
+
+    /** The member that lists the directories of the sources the class path is compiled from. */
+    public static final String MEMBER_SOURCES = 'sources'
+
+    /** The member that gives the version of Java the classes are compiled for. */
+    public static final String MEMBER_JAVA = 'java'
+
+    /** The member that says why the tools are run with Gradle. */
+    public static final String MEMBER_THROUGH_GRADLE = 'throughGradle'
+
+    /** What {@link #toolsOf} says of a tool of the project itself. */
     public static final String APPLICATION = 'application'
 
-    /** The class path of a command of a plugin: what the project depends on, without its own output. */
+    /** What {@link #toolsOf} says of a tool of a plugin. */
     public static final String DEPENDENCIES = 'dependencies'
 
     /** The most bytes a document has. */
     public static final int MAX_BYTES = 2 * 1024 * 1024
 
-    /** The most entries a class path of a document has. */
+    /** The most entries the class path of a document has. */
     public static final int MAX_ENTRIES = 4096
 
     /** The most characters a path of a document has. */
@@ -90,7 +99,7 @@ final class StandaloneCommandsDocument {
     /** The most directories of sources a document names. */
     public static final int MAX_SOURCES = 256
 
-    /** The most characters the line has that says why the commands are run with Gradle. */
+    /** The most characters the line has that says why the tools are run with Gradle. */
     public static final int MAX_REASON_LENGTH = 400
 
     /** How many entries of the directories of sources are looked at for what was changed, at most. */
@@ -101,99 +110,92 @@ final class StandaloneCommandsDocument {
 
     private static final int CATALOG_DEPTH = 8
 
-    private StandaloneCommandsDocument() {
+    private StandaloneToolsDocument() {
     }
 
     /**
-     * @param catalog the catalog of the commands of a project, as the build wrote it
-     * @return the commands of it that are run as a process of their own, by name, in the order of the
-     * catalog: {@link #APPLICATION} for a command of the project and {@link #DEPENDENCIES} for any
+     * @param catalog the catalog of the tools of a project, as the build wrote it
+     * @return the tools of it that are run as a process of their own, by name, in the order of the
+     * catalog: {@link #APPLICATION} for a tool of the project and {@link #DEPENDENCIES} for any
      * other; none for a catalog that cannot be read
      */
-    static Map<String, String> commandsOf(byte[] catalog) {
-        Map<String, String> commands = new LinkedHashMap<String, String>()
+    static Map<String, String> toolsOf(byte[] catalog) {
+        Map<String, String> tools = new LinkedHashMap<String, String>()
         Object parsed
         try {
             parsed = StrictJson.parse(catalog, CATALOG_DEPTH)
         } catch (StrictJson.Refused ignored) {
-            return commands
+            return tools
         }
-        Object listed = parsed instanceof Map ? ((Map) parsed).get('commands') : null
+        Object listed = parsed instanceof Map ? ((Map) parsed).get(ToolCatalogBuilder.MEMBER_TOOLS) : null
         if (!(listed instanceof List)) {
-            return commands
+            return tools
         }
         for (Object each : (List) listed) {
             if (!(each instanceof Map)) {
                 continue
             }
-            Map command = (Map) each
-            Object name = command.get('name')
-            if (name instanceof String && CommandDescriptor.isCommandName((String) name) &&
-                    command.get('target') == CommandDescriptor.TARGET_STANDALONE) {
-                commands.put((String) name, command.get('origin') == CommandCatalogBuilder.ORIGIN_APPLICATION ? APPLICATION : DEPENDENCIES)
+            Map tool = (Map) each
+            Object name = tool.get('name')
+            if (name instanceof String && ToolDescriptor.isCommandName((String) name) &&
+                    tool.get(ToolDescriptor.MEMBER_TARGET) == ToolDescriptor.TARGET_STANDALONE) {
+                tools.put((String) name, tool.get('origin') == ToolCatalogBuilder.ORIGIN_APPLICATION ? APPLICATION : DEPENDENCIES)
             }
         }
-        commands
+        tools
     }
 
     /**
-     * Writes the document. A project without a command that runs as a process of its own has a
-     * document without a path; so has one whose commands are run with Gradle, for the reason given
-     * or because a class path cannot be written down within the bounds of the format.
+     * Writes the document. A project without a tool that runs as a process of its own has a
+     * document without a path; so has one whose tools are run with Gradle, for the reason given
+     * or because the class path cannot be written down within the bounds of the format.
      *
-     * @param commands the commands, as {@link #commandsOf} gives them
-     * @param application the directories of the output of the project
-     * @param dependencies the files of what the project depends on, in the order of the class path
-     * @param sources the directories of the sources of the project
+     * @param tools the names of the tools that are run as a process of their own
+     * @param classpath the directories and files they are started with, in the order of the class path
+     * @param sources the directories of the sources the class path is compiled from
      * @param java the version of Java the classes of the project are compiled for
-     * @param throughGradle why the commands are run with Gradle, or {@code null} when they need not be
+     * @param throughGradle why the tools are run with Gradle, or {@code null} when they need not be
      * @return the JSON document, in ASCII, with a line end
      */
-    static String write(Map<String, String> commands, List<String> application, List<String> dependencies, List<String> sources,
-                        int java, String throughGradle) {
-        boolean ofApplication = commands.containsValue(APPLICATION)
-        List<String> none = Collections.<String> emptyList()
+    static String write(List<String> tools, List<String> classpath, List<String> sources, int java, String throughGradle) {
         String reason = null
-        if (!commands.isEmpty()) {
-            reason = throughGradle ?: unwritable(ofApplication ? application : none, dependencies, ofApplication ? sources : none)
+        if (!tools.isEmpty()) {
+            reason = throughGradle ?: unwritable(classpath, sources)
         }
-        String written = document(commands, application, dependencies, sources, java, reason)
+        String written = document(tools, classpath, sources, java, reason)
         if (written.length() > MAX_BYTES) {
-            written = document(commands, application, dependencies, sources, java, "the class path of the commands does not fit into ${MAX_BYTES} bytes".toString())
+            written = document(tools, classpath, sources, java, "the class path of the tools does not fit into ${MAX_BYTES} bytes".toString())
         }
         written
     }
 
-    private static String document(Map<String, String> commands, List<String> application, List<String> dependencies, List<String> sources, int java, String reason) {
-        boolean paths = !commands.isEmpty() && reason == null
-        boolean ofApplication = paths && commands.containsValue(APPLICATION)
+    private static String document(List<String> tools, List<String> classpath, List<String> sources, int java, String reason) {
+        boolean paths = !tools.isEmpty() && reason == null
         Map<String, Object> document = new LinkedHashMap<String, Object>()
-        document.format = FORMAT
-        document.commands = new LinkedHashMap<String, String>(commands)
-        document.application = ofApplication ? new ArrayList<String>(application) : []
-        document.dependencies = paths ? new ArrayList<String>(dependencies) : []
-        document.sources = ofApplication ? new ArrayList<String>(sources) : []
-        document.java = java
+        document.put('format', FORMAT)
+        document.put(MEMBER_TOOLS, new ArrayList<String>(tools))
+        document.put(MEMBER_CLASSPATH, paths ? new ArrayList<String>(classpath) : [])
+        document.put(MEMBER_SOURCES, paths ? new ArrayList<String>(sources) : [])
+        document.put(MEMBER_JAVA, java)
         if (reason != null) {
-            document.throughGradle = oneLine(reason)
+            document.put(MEMBER_THROUGH_GRADLE, oneLine(reason))
         }
         StrictJson.write(document) + '\n'
     }
 
     // why the paths cannot be written down as the format has them; null when they can
-    private static String unwritable(List<String> application, List<String> dependencies, List<String> sources) {
-        if (application.size() + dependencies.size() > MAX_ENTRIES) {
-            return "the class path of the commands has more than ${MAX_ENTRIES} entries"
+    private static String unwritable(List<String> classpath, List<String> sources) {
+        if (classpath.size() > MAX_ENTRIES) {
+            return "the class path of the tools has more than ${MAX_ENTRIES} entries"
         }
         if (sources.size() > MAX_SOURCES) {
             return "the project has more than ${MAX_SOURCES} directories of sources"
         }
-        List<String> all = new ArrayList<String>(application)
-        all.addAll(dependencies)
+        List<String> all = new ArrayList<String>(classpath)
         all.addAll(sources)
         for (String path : all) {
             if (!isPath(path)) {
-                return "a path of the class path of the commands has more than ${MAX_PATH_LENGTH} characters, " +
+                return "a path of the class path of the tools has more than ${MAX_PATH_LENGTH} characters, " +
                         'a control character or the character that separates the entries of a class path'
             }
         }

@@ -25,14 +25,14 @@ import org.gradle.testkit.runner.BuildResult
 import org.gradle.testkit.runner.TaskOutcome
 
 /**
- * The catalog of the application commands of a project, written by {@code grailsCommandCatalog}
+ * The catalog of the application commands of a project, written by {@code grailsToolCatalog}
  * from registrations and descriptors alone. No jar of these projects has a class in it, so a catalog
  * that is written at all was written without loading one.
  */
 class CommandCatalogSpec extends CommandProjectSpecification {
 
     private static final String LEGACY_KEY = 'grails.dev.commands.ApplicationCommand'
-    private static final String CATALOG = '.grails/cache/command-catalog.json'
+    private static final String CATALOG = '.grails/cache/tool-catalog.json'
 
     private static final String EVERY_SOURCE = '''
         // what the compiler does with a registration written by hand: it copies it into the classes
@@ -58,16 +58,16 @@ class CommandCatalogSpec extends CommandProjectSpecification {
         setupEverySource()
 
         when:
-        BuildResult result = executeTask('grailsCommandCatalog')
+        BuildResult result = executeTask('grailsToolCatalog')
 
         then:
-        result.task(':grailsCommandCatalog').outcome == TaskOutcome.SUCCESS
+        result.task(':grailsToolCatalog').outcome == TaskOutcome.SUCCESS
         catalogText() == JsonOutput.toJson([
                 format     : 1,
                 complete   : false,
                 diagnostics: ['org.example:old-plugin:7.0.0 has commands of Grails 7, which are not listed because they cannot be run: ' +
                                       'set grails { legacyCommandSupport = true }, or use a version of the plugin for this version of Grails.'],
-                commands   : [
+                tools      : [
                         command('config-report', 'Generates an AsciiDoc report of the application configuration', 'org.apache.grails:grails-core-cli:0.0.1-test'),
                         command('hello-world', 'Says "hello" to the world, grüßt 日本', 'org.example:hello-plugin-cli:1.2.3'),
                         command('local', 'A command of the application', 'application'),
@@ -101,14 +101,14 @@ class CommandCatalogSpec extends CommandProjectSpecification {
         ])
 
         when:
-        executeTask('grailsCommandCatalog')
+        executeTask('grailsToolCatalog')
         Map catalog = catalog()
 
         then:
         catalog.complete == true
         catalog.diagnostics == []
-        catalog.commands*.name == ['config-report', 'hello-legacy-app', 'hello-world', 'local', 'no-descriptor', 'runtime', 'sibling']
-        catalog.commands.find { it.name == 'hello-legacy-app' } == command('hello-legacy-app', '', 'org.example:old-plugin:7.0.0', 'legacy')
+        catalog.tools*.name == ['config-report', 'hello-legacy-app', 'hello-world', 'local', 'no-descriptor', 'runtime', 'sibling']
+        catalog.tools.find { it.name == 'hello-legacy-app' } == command('hello-legacy-app', '', 'org.example:old-plugin:7.0.0', 'legacy')
     }
 
     def "the catalog is the same bytes for the same commands, is not written again when nothing changed, and follows a change"() {
@@ -116,43 +116,43 @@ class CommandCatalogSpec extends CommandProjectSpecification {
         setupEverySource()
 
         when: 'the same build runs again'
-        executeTask('grailsCommandCatalog')
+        executeTask('grailsToolCatalog')
         String first = catalogText()
         // the tasks of the commands are registered from the jars of grailsCliClasspath while the build is
         // configured, so the jar of the companion project, which the first build made, is an input of the
         // configuration the second build stores
-        executeTask('grailsCommandCatalog')
-        BuildResult again = executeTask('grailsCommandCatalog')
+        executeTask('grailsToolCatalog')
+        BuildResult again = executeTask('grailsToolCatalog')
 
         then:
         again.output.contains('Configuration cache entry reused')
-        again.task(':grailsCommandCatalog').outcome == TaskOutcome.UP_TO_DATE
+        again.task(':grailsToolCatalog').outcome == TaskOutcome.UP_TO_DATE
 
         when: 'the catalog is written from nothing, in a build without the configuration cache'
         new File(projectDir, 'build').deleteDir()
         new File(projectDir, '.grails').deleteDir()
-        BuildResult clean = executeTask('grailsCommandCatalog', ['--no-configuration-cache'])
+        BuildResult clean = executeTask('grailsToolCatalog', ['--no-configuration-cache'])
 
         then:
-        clean.task(':grailsCommandCatalog').outcome == TaskOutcome.SUCCESS
+        clean.task(':grailsToolCatalog').outcome == TaskOutcome.SUCCESS
         catalogText() == first
 
         when: 'a class of the application changes that is not a command'
         projectFile('src/main/groovy/example/Other.groovy', 'package example\nclass Other { }\n')
-        BuildResult unrelated = executeTask('grailsCommandCatalog')
+        BuildResult unrelated = executeTask('grailsToolCatalog')
 
         then:
         unrelated.task(':compileGroovy').outcome == TaskOutcome.SUCCESS
-        unrelated.task(':grailsCommandCatalog').outcome == TaskOutcome.UP_TO_DATE
+        unrelated.task(':grailsToolCatalog').outcome == TaskOutcome.UP_TO_DATE
 
         when: 'the application gets a command'
         projectFile('src/main/resources/META-INF/grails-cli.factories', registrations('example.LocalCommand', 'example.SecondCommand'))
         projectFile("src/main/resources/${descriptorPath('example.SecondCommand')}", descriptor('example.SecondCommand', 'second', 'Added later'))
-        BuildResult changed = executeTask('grailsCommandCatalog')
+        BuildResult changed = executeTask('grailsToolCatalog')
 
         then:
-        changed.task(':grailsCommandCatalog').outcome == TaskOutcome.SUCCESS
-        catalog().commands.find { it.name == 'second' } == command('second', 'Added later', 'application')
+        changed.task(':grailsToolCatalog').outcome == TaskOutcome.SUCCESS
+        catalog().tools.find { it.name == 'second' } == command('second', 'Added later', 'application')
     }
 
     def "a project that has a task of the name keeps it, and is told that the catalog is not written"() {
@@ -163,20 +163,20 @@ class CommandCatalogSpec extends CommandProjectSpecification {
                 id 'java-library'
                 id 'org.apache.grails.gradle.grails-cli' apply false
             }
-            tasks.register('grailsCommandCatalog') {
+            tasks.register('grailsToolCatalog') {
                 doLast { println 'THE TASK OF THE BUILD' }
             }
             apply plugin: 'org.apache.grails.gradle.grails-cli'
         ''')
 
         when:
-        BuildResult result = executeTask(':companion:grailsCommandCatalog')
+        BuildResult result = executeTask(':companion:grailsToolCatalog')
 
         then:
-        result.output.contains('Project :companion already has a task named grailsCommandCatalog, so the Grails Gradle plugin does not register ' +
+        result.output.contains('Project :companion already has a task named grailsToolCatalog, so the Grails Gradle plugin does not register ' +
                 'its own and the catalog of the commands of the project is not written. Give the task another name.')
         result.output.contains('THE TASK OF THE BUILD')
-        !new File(projectDir, 'companion/build/grails/command-catalog.json').exists()
+        !new File(projectDir, 'companion/build/grails/tool-catalog.json').exists()
     }
 
     def "what a dependency says of its commands is held to a form, and what is not as it has to be is left out and named"() {
@@ -212,7 +212,7 @@ class CommandCatalogSpec extends CommandProjectSpecification {
         ])
 
         when:
-        executeTask('grailsCommandCatalog')
+        executeTask('grailsToolCatalog')
         Map catalog = catalog()
         List<String> diagnostics = catalog.diagnostics
 
@@ -220,7 +220,7 @@ class CommandCatalogSpec extends CommandProjectSpecification {
         catalog.complete == false
 
         and: 'the commands that are as they have to be are listed, and no other'
-        catalog.commands.findAll { it.origin != 'org.hostile:too-many:1.0' } == [
+        catalog.tools.findAll { it.origin != 'org.hostile:too-many:1.0' } == [
                 command('config-report', 'Generates an AsciiDoc report of the application configuration', 'org.apache.grails:grails-core-cli:0.0.1-test'),
                 // its descriptor is in a later jar than the first that registers the class, and its
                 // description is what the descriptor says: who shows it takes it for text of a stranger
@@ -228,7 +228,7 @@ class CommandCatalogSpec extends CommandProjectSpecification {
                 command('upper', '', 'file:upper.JAR', 'factories'),
                 command('zipped', 'In a zip', 'file:commands.zip'),
         ]
-        catalog.commands.count { it.origin == 'org.hostile:too-many:1.0' } == 256
+        catalog.tools.count { it.origin == 'org.hostile:too-many:1.0' } == 256
 
         and: 'each diagnostic is one line that a terminal can take'
         diagnostics.every { String line -> line ==~ /[\x20-\x7e]+/ && !line.contains('@|') && !line.contains('${') && line.length() <= 600 }
@@ -357,7 +357,7 @@ class CommandCatalogSpec extends CommandProjectSpecification {
     }
 
     private static Map<String, Object> command(String name, String description, String origin, String registration = 'descriptor') {
-        [name: name, aliases: [], description: description, origin: origin, target: 'application', registration: registration]
+        [name: name, aliases: [], description: description, origin: origin, target: 'application', startsApplication: true, registration: registration]
     }
 
     private String catalogText() {

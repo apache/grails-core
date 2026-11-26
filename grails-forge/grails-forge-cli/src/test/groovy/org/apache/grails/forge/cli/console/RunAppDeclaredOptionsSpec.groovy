@@ -20,7 +20,7 @@ package org.apache.grails.forge.cli.console
 
 import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
-import org.apache.grails.gradle.model.cli.CommandCatalogBuilder
+import org.apache.grails.gradle.model.cli.ToolCatalogBuilder
 import org.apache.grails.gradle.model.cli.CommandOptions
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.cli.CommandFixture
@@ -34,7 +34,7 @@ import spock.lang.Unroll
 
 /**
  * The options the application and its plugins declare for {@code run-app}, which the build of the
- * project lists in {@code .grails/cache/command-catalog.json}: each is an option of the command that
+ * project lists in {@code .grails/cache/tool-catalog.json}: each is an option of the command that
  * sets a property of the application, and nothing of a plugin is run for it.
  *
  * <p>Most projects here have the Gradle wrapper of {@link LifecycleCommandsSpec}, a program that
@@ -53,7 +53,7 @@ class RunAppDeclaredOptionsSpec extends CommandSpec implements CommandFixture {
     static final Map TRACE = [command: 'run-app', name: 'trace', description: 'Log every request.', type: 'boolean', property: 'logging.level.web', value: 'TRACE',
                               origin: 'application']
     static final String START = '<bootRun><--quiet><-Dgrails.env=development>'
-    static final String LIST = 'grails-forge-cli gradle grailsCommandCatalog'
+    static final String LIST = 'grails-forge-cli gradle grailsToolCatalog'
 
     @Shared
     IsolatedGradle daemon = new IsolatedGradle()
@@ -276,7 +276,7 @@ class RunAppDeclaredOptionsSpec extends CommandSpec implements CommandFixture {
         String help = out.toString().readLines()*.trim().join(' ').replaceAll(/ +/, ' ')
 
         then:
-        help.contains('14 of the options .grails/cache/command-catalog.json lists for commands are not used: they are not as the Gradle task grailsCommandCatalog writes them')
+        help.contains('14 of the options .grails/cache/tool-catalog.json lists for commands are not used: they are not as the Gradle task grailsToolCatalog writes them')
         !help.contains('java.security') && !help.contains('javaagent') && !help.contains('spring.profiles')
 
         when:
@@ -356,7 +356,7 @@ class RunAppDeclaredOptionsSpec extends CommandSpec implements CommandFixture {
 
         then: 'what was listed is an option still'
         help.contains('--query-tail Capture every statement GORM runs')
-        help.contains("The options the plugins of the project declare for run-app may have changed: build.gradle is newer than .grails/cache/command-catalog.json. To list them again: ${LIST}")
+        help.contains("The options the plugins of the project declare for run-app may have changed: build.gradle is newer than .grails/cache/tool-catalog.json. To list them again: ${LIST}")
     }
 
     void "the rules of the command line for a declared option are those of the task that lists it, and what the task writes is read"() {
@@ -393,7 +393,7 @@ class RunAppDeclaredOptionsSpec extends CommandSpec implements CommandFixture {
 
         when: 'the task lists as many options as it lists, with the longest texts, and the command line reads the file'
         scriptedProject('record')
-        CommandCatalogBuilder builder = new CommandCatalogBuilder()
+        ToolCatalogBuilder builder = new ToolCatalogBuilder()
         (1..3).each { int jar ->
             File element = new File(dir, "element${jar}")
             new File(element, 'META-INF').mkdirs()
@@ -404,7 +404,7 @@ class RunAppDeclaredOptionsSpec extends CommandSpec implements CommandFixture {
             }])
             builder.add("org.example:jar${jar}:1.0".padRight(120, 'x'), element)
         }
-        File file = new File(dir, '.grails/cache/command-catalog.json')
+        File file = new File(dir, '.grails/cache/tool-catalog.json')
         file.parentFile.mkdirs()
         file.text = builder.toJson()
         ApplicationCommandFile read = ApplicationCommandFile.read(dir.toPath())
@@ -417,9 +417,9 @@ class RunAppDeclaredOptionsSpec extends CommandSpec implements CommandFixture {
     }
 
     private void catalog(List options) {
-        File file = new File(dir, '.grails/cache/command-catalog.json')
+        File file = new File(dir, '.grails/cache/tool-catalog.json')
         file.parentFile.mkdirs()
-        file.text = JsonOutput.toJson([format: 1, complete: true, diagnostics: [], commands: []] + (options == null ? [:] : [commandOptions: options]))
+        file.text = JsonOutput.toJson([format: 1, complete: true, diagnostics: [], tools: []] + (options == null ? [:] : [commandOptions: options]))
     }
 
     private void scriptedProject(String mode) {

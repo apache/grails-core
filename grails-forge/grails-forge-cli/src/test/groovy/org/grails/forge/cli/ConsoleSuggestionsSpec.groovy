@@ -41,7 +41,7 @@ class ConsoleSuggestionsSpec extends Specification {
     Map<String, List<String>> told = [
             'no-such-command'  : ["Run 'grails help' for the commands",
                                   'The commands of the application and its plugins are not listed yet: a build that compiles the project lists them, ' +
-                                          'and so does typing the name of one. To list them now: grails gradle grailsCommandCatalog'],
+                                          'and so does typing the name of one. To list them now: grails gradle grailsToolCatalog'],
             'compile --nothing': ["Run 'grails help compile' for the options"],
             'feature add'      : ["Run 'grails help feature add' for the options"],
             'test'             : ['test was another name of test-app in the Grails shell, and in front of another command it named the environment test, ' +

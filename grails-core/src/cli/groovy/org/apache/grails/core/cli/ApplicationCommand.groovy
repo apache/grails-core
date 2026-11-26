@@ -20,55 +20,15 @@ package org.apache.grails.core.cli
 
 import groovy.transform.CompileStatic
 
-import org.springframework.context.ConfigurableApplicationContext
-
-import grails.util.Described
-import grails.util.GrailsNameUtils
-import grails.util.Named
-
 /**
- * Represents a command that runs with access to the
- * {@link org.springframework.context.ApplicationContext}.
+ * The name Grails 8 had for {@link ApplicationTool}: a class that implements it is an
+ * {@link ApplicationTool} and runs as before.
  *
  * @since 3.0
+ * @deprecated implement {@link ApplicationTool}; nothing else changes
  */
+@Deprecated
 @CompileStatic
-trait ApplicationCommand implements Named, Described {
-
-    ConfigurableApplicationContext applicationContext
-
-    /**
-     * Calculates the command name as used on the command line.
-     * <p>Example:
-     * {@code UrlMappingsReportCommand} -> {@code url-mappings-report}
-     * @return The command line name of the command
-     */
-    @Override
-    String getName() {
-        GrailsNameUtils.getScriptName(
-                GrailsNameUtils.getLogicalName(
-                        getClass().name,
-                        'Command'
-                )
-        )
-    }
-
-    /**
-     * The description of the command.
-     * By default this returns the name of the command.
-     * @return The description of the command
-     */
-    @Override
-    String getDescription() {
-        name
-    }
-
-    /**
-     * Executes the command.
-     *
-     * @param executionContext The execution context
-     * @return {@code true} if the command was successful; {@code false} otherwise
-     */
-    abstract boolean handle(ExecutionContext executionContext)
+trait ApplicationCommand implements ApplicationTool {
 
 }

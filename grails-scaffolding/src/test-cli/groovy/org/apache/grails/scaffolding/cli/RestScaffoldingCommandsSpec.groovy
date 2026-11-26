@@ -30,7 +30,7 @@ import org.codehaus.groovy.control.CompilerConfiguration
 
 import grails.build.logging.GrailsConsole
 import org.apache.grails.core.cli.ExecutionContext
-import org.apache.grails.core.cli.GrailsApplicationCommand
+import org.apache.grails.core.cli.ToolSupport
 import org.apache.grails.core.cli.io.FileSystemInteractionImpl
 import org.apache.grails.core.cli.script.ScriptConsole
 import org.apache.grails.core.cli.template.TemplateRendererImpl
@@ -423,7 +423,7 @@ class RestScaffoldingCommandsSpec extends Specification {
     /**
      * Runs a command in the project of the spec, which has what the class path of the tests has: no JSON views plugin.
      */
-    private boolean run(GrailsApplicationCommand command, String line) {
+    private boolean run(ToolSupport command, String line) {
         command.executionContext = new ExecutionContext(new CommandLineParser().parseString(line))
         command.templateRenderer = new TemplateRendererImpl(project)
         command.fileSystemInteraction = new FileSystemInteractionImpl(project)
@@ -433,7 +433,7 @@ class RestScaffoldingCommandsSpec extends Specification {
     /**
      * Runs a command as the build of a REST API application runs it: with the JSON views plugin on the class path.
      */
-    private boolean runInRestApplication(GrailsApplicationCommand command, String line) {
+    private boolean runInRestApplication(ToolSupport command, String line) {
         withClassLoader(restApplication) {
             run(command, line)
         }

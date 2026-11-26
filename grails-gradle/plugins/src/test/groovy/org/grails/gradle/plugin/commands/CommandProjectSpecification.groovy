@@ -76,12 +76,12 @@ abstract class CommandProjectSpecification extends GradleSpecification {
     }
 
     protected static String descriptorPath(String className) {
-        "META-INF/grails-commands/${className}.json"
+        "META-INF/grails-tools/${className}.json"
     }
 
     protected static String descriptor(String className, String name, String description = null) {
         JsonOutput.toJson([format: 1, class: className, name: name] +
-                (description == null ? [:] : [description: description]) + [target: 'application'])
+                (description == null ? [:] : [description: description]) + [target: 'application', startsApplication: true])
     }
 
     /**

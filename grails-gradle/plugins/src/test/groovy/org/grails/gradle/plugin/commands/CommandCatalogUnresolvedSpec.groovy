@@ -33,7 +33,7 @@ import org.gradle.testkit.runner.TaskOutcome
  */
 class CommandCatalogUnresolvedSpec extends CommandProjectSpecification {
 
-    private static final String CATALOG = '.grails/cache/command-catalog.json'
+    private static final String CATALOG = '.grails/cache/tool-catalog.json'
 
     private static final String MISSING = '''
         dependencies {
@@ -69,14 +69,14 @@ class CommandCatalogUnresolvedSpec extends CommandProjectSpecification {
 
         then: 'the build succeeds and stores its configuration'
         result.task(':compileGroovy').outcome == TaskOutcome.SUCCESS
-        result.task(':grailsCommandCatalog').outcome == TaskOutcome.SUCCESS
+        result.task(':grailsToolCatalog').outcome == TaskOutcome.SUCCESS
         result.output.contains('Configuration cache entry stored')
 
         and: 'the catalog lists what resolves, and says what does not'
         Map catalog = catalog()
         catalog.complete == false
         catalog.diagnostics == [EXPLAINED + failure]
-        catalog.commands*.name == ['config-report', 'plugin-report']
+        catalog.tools*.name == ['config-report', 'plugin-report']
 
         and: 'the file is still ASCII on one line, and says nothing of this machine'
         catalogText().bytes.every { byte b -> b == 0x0a || (b >= 0x20 && b <= 0x7e) }
@@ -92,7 +92,7 @@ class CommandCatalogUnresolvedSpec extends CommandProjectSpecification {
 
         then: 'it reuses the configuration, and the catalog is up to date and as it was'
         again.output.contains('Configuration cache entry reused')
-        again.task(':grailsCommandCatalog').outcome == TaskOutcome.UP_TO_DATE
+        again.task(':grailsToolCatalog').outcome == TaskOutcome.UP_TO_DATE
         catalogText() == written
 
         when: 'a command is run with that class path'
@@ -120,7 +120,7 @@ class CommandCatalogUnresolvedSpec extends CommandProjectSpecification {
         BuildResult result = executeTask('classes', ['--no-configuration-cache'])
 
         then:
-        result.task(':grailsCommandCatalog').outcome == TaskOutcome.SUCCESS
+        result.task(':grailsToolCatalog').outcome == TaskOutcome.SUCCESS
         catalogText() == cached
         catalog().complete == false
     }
@@ -139,10 +139,10 @@ class CommandCatalogUnresolvedSpec extends CommandProjectSpecification {
         BuildResult result = executeTask('classes')
 
         then:
-        result.task(':grailsCommandCatalog').outcome == TaskOutcome.SUCCESS
+        result.task(':grailsToolCatalog').outcome == TaskOutcome.SUCCESS
         catalog().complete == true
         catalog().diagnostics == []
-        catalog().commands*.name == ['config-report', 'plugin-report']
+        catalog().tools*.name == ['config-report', 'plugin-report']
     }
 
     def "a module that was not found and is found now gives a complete catalog in the next build, although the build did not change"() {
@@ -160,7 +160,7 @@ class CommandCatalogUnresolvedSpec extends CommandProjectSpecification {
 
         then: 'what the configuration cache stored of the failure is not used again'
         !result.output.contains('Configuration cache entry reused')
-        result.task(':grailsCommandCatalog').outcome == TaskOutcome.SUCCESS
+        result.task(':grailsToolCatalog').outcome == TaskOutcome.SUCCESS
         catalog().complete == true
         catalog().diagnostics == []
     }

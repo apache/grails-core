@@ -50,7 +50,7 @@ import groovy.transform.CompileStatic
  * @since 9.0
  */
 @CompileStatic
-final class CommandCatalogFreshness {
+final class ToolCatalogFreshness {
 
     /** The files of the directory of the project the commands of the project depend on. */
     public static final List<String> BUILD_FILES = ['build.gradle', 'build.gradle.kts', 'settings.gradle', 'settings.gradle.kts', 'gradle.properties'].asImmutable()
@@ -62,7 +62,7 @@ final class CommandCatalogFreshness {
     public static final String SOURCE_ENDING = '.groovy'
 
     /** The directory of the descriptors the compiler writes, in a directory of classes. */
-    public static final String DESCRIPTORS = 'META-INF/grails-commands'
+    public static final String DESCRIPTORS = ToolDescriptor.DIRECTORY
 
     /** The ending of a descriptor. */
     public static final String DESCRIPTOR_ENDING = '.json'
@@ -73,7 +73,7 @@ final class CommandCatalogFreshness {
     /** How deep a directory is looked at, at most. */
     public static final int MAX_WALK_DEPTH = 24
 
-    private CommandCatalogFreshness() {
+    private ToolCatalogFreshness() {
     }
 
     /**

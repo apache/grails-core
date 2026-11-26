@@ -38,6 +38,7 @@ import org.gradle.api.plugins.JavaPluginExtension
 
 import javax.inject.Inject
 
+import org.apache.grails.gradle.model.cli.ToolBuildNames
 import org.grails.gradle.plugin.core.FactoriesCompileInput
 import org.grails.gradle.plugin.core.PruneGeneratedFactories
 import org.grails.gradle.plugin.core.TestPhase
@@ -93,7 +94,7 @@ abstract class GrailsCliArtifactGradlePlugin implements Plugin<Project> {
     public static final String CLI_PUBLICATION_NAME = 'cli'
 
     /** The runtime-jar manifest attribute advertising the companion cli coordinate */
-    public static final String CLI_ARTIFACT_MANIFEST_ATTRIBUTE = 'Grails-Cli-Artifact'
+    public static final String CLI_ARTIFACT_MANIFEST_ATTRIBUTE = ToolBuildNames.CLI_ARTIFACT_MANIFEST_ATTRIBUTE
 
     @Inject
     abstract SoftwareComponentFactory getSoftwareComponentFactory()

@@ -24,7 +24,7 @@ import org.apache.grails.gradle.model.cli.CommandArgumentsFile
 import org.grails.build.parsing.CommandLineParser
 
 /**
- * The main class of the JVM the {@code grails} command line starts for a {@link StandaloneCommand}:
+ * The main class of the JVM the {@code grails} command line starts for a {@link StandaloneTool}:
  * a process of its own, which is no build and starts no application. It finds the command by its
  * name among the commands of its class path, as the {@code runCommand} task of a build does, runs
  * it with the arguments it was given, and ends with the result of the command.
@@ -34,15 +34,15 @@ import org.grails.build.parsing.CommandLineParser
  * a process listing. The directory of the project is the system property {@code base.dir}, or the
  * directory the JVM was started in.</p>
  *
- * <p>Only a command whose class is a {@link StandaloneCommand} is run: any other command needs the
+ * <p>Only a command whose class is a {@link StandaloneTool} is run: any other command needs the
  * build or the application, and is refused with a line that says how it is run.</p>
  *
  * @since 9.0
  */
 @CompileStatic
-final class StandaloneCommandRunner {
+final class StandaloneToolRunner {
 
-    private StandaloneCommandRunner() {
+    private StandaloneToolRunner() {
     }
 
     /**
@@ -50,7 +50,7 @@ final class StandaloneCommandRunner {
      *
      * @param args the name of the command and its arguments, or the one argument that names the file they are in
      * @return 0 when the command returned {@code true}, and 1 when it returned {@code false}, threw,
-     * is no command of the class path, or is not a {@link StandaloneCommand}
+     * is no command of the class path, or is not a {@link StandaloneTool}
      */
     static int run(String... args) {
         List<String> given
@@ -66,15 +66,15 @@ final class StandaloneCommandRunner {
         }
         String name = given[0]
         ApplicationContextCommandRegistry registry = ApplicationContextCommandRegistry.instance
-        ApplicationCommand command = registry.findCommand(name)
+        GrailsTool command = registry.findCommand(name)
         if (command == null) {
             String hint = registry.missingCommandHint
             System.err.println(hint ? "Command not found for name: ${name}\n${hint}" : "Command not found for name: ${name}")
             return 1
         }
         Object target = command instanceof ApplicationCommandTargetAware ? ((ApplicationCommandTargetAware) command).target : command
-        if (!(target instanceof StandaloneCommand)) {
-            System.err.println("The command ${name} is not a StandaloneCommand, so it is not run as a process of its own. " +
+        if (!(target instanceof StandaloneTool)) {
+            System.err.println("The command ${name} is not a StandaloneTool, so it is not run as a process of its own. " +
                     "The build of the project runs it: grails run-command ${name}")
             return 1
         }

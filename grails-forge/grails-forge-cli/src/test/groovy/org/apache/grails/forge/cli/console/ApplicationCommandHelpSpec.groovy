@@ -36,7 +36,7 @@ class ApplicationCommandHelpSpec extends CommandSpec {
 
     static final List<Map> COMMANDS = [
             [name: 'audit-report', aliases: [], description: 'Writes the audit report', origin: 'application', target: 'application', registration: 'factories'],
-            [name: 'hello-world', aliases: [], description: 'Says hello', origin: 'org.example:hello-cli:1.2.3', target: 'gradle', registration: 'descriptor']
+            [name: 'hello-world', aliases: [], description: 'Says hello', origin: 'org.example:hello-cli:1.2.3', target: 'application', startsApplication: false, registration: 'descriptor']
     ]
 
     PrintStream originalOut
@@ -118,7 +118,7 @@ class ApplicationCommandHelpSpec extends CommandSpec {
         then:
         exit == 2
         err.toString().readLines()[0].startsWith('There is no command audit-report')
-        err.toString().contains('The commands of the application and its plugins are not listed yet: a build that compiles the project lists them, and so does typing the name of one. To list them now: grails-forge-cli gradle grailsCommandCatalog')
+        err.toString().contains('The commands of the application and its plugins are not listed yet: a build that compiles the project lists them, and so does typing the name of one. To list them now: grails-forge-cli gradle grailsToolCatalog')
         !ran.exists()
     }
 

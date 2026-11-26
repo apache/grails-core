@@ -24,13 +24,13 @@ import org.gradle.testkit.runner.BuildResult
 import org.gradle.testkit.runner.TaskOutcome
 
 /**
- * The test phases of an application in the catalog {@code grailsCommandCatalog} writes, from which
+ * The test phases of an application in the catalog {@code grailsToolCatalog} writes, from which
  * {@code grails test-app} knows the switches of the phases: the {@code Test} tasks of the project,
  * by the names they are selected with.
  */
 class TestPhaseCatalogSpec extends CommandProjectSpecification {
 
-    private static final String CATALOG = '.grails/cache/command-catalog.json'
+    private static final String CATALOG = '.grails/cache/tool-catalog.json'
 
     def "the catalog lists the phases of the project in their order, each with its task, and no task whose name cannot be a switch"() {
         given:
@@ -53,10 +53,10 @@ class TestPhaseCatalogSpec extends CommandProjectSpecification {
         ''')
 
         when:
-        BuildResult result = executeTask('grailsCommandCatalog')
+        BuildResult result = executeTask('grailsToolCatalog')
 
         then:
-        result.task(':grailsCommandCatalog').outcome == TaskOutcome.SUCCESS
+        result.task(':grailsToolCatalog').outcome == TaskOutcome.SUCCESS
         catalog().testPhases == [
                 [name: 'unit', task: 'test'],
                 [name: 'integration', task: 'integrationTest'],
@@ -79,24 +79,24 @@ class TestPhaseCatalogSpec extends CommandProjectSpecification {
         ''')
 
         when:
-        executeTask('grailsCommandCatalog')
+        executeTask('grailsToolCatalog')
 
         then:
         catalog().testPhases*.name == ['unit', 'integration']
 
         when:
-        BuildResult result = executeTask('grailsCommandCatalog', ['-Pfunctional=true'])
+        BuildResult result = executeTask('grailsToolCatalog', ['-Pfunctional=true'])
 
         then:
-        result.task(':grailsCommandCatalog').outcome == TaskOutcome.SUCCESS
+        result.task(':grailsToolCatalog').outcome == TaskOutcome.SUCCESS
         catalog().testPhases*.name == ['unit', 'integration', 'functional']
 
         when:
-        result = executeTask('grailsCommandCatalog', ['-Pfunctional=true'])
+        result = executeTask('grailsToolCatalog', ['-Pfunctional=true'])
 
         then:
         result.output.contains('Configuration cache entry reused')
-        result.task(':grailsCommandCatalog').outcome == TaskOutcome.UP_TO_DATE
+        result.task(':grailsToolCatalog').outcome == TaskOutcome.UP_TO_DATE
     }
 
     private Map catalog() {

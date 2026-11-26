@@ -100,7 +100,7 @@ class TestAppPhasesSpec extends CommandSpec implements CommandFixture {
         exit == 2
         out.toString().contains("test-app has no option ${typed}. Did you mean: ${meant}?")
         out.toString().contains("If the project has a test phase of that name, the task ${task}, the switch is taken once the build has listed its phases " +
-                "(grails-forge-cli gradle grailsCommandCatalog), and the phase is run by its task with: grails-forge-cli gradle ${task}")
+                "(grails-forge-cli gradle grailsToolCatalog), and the phase is run by its task with: grails-forge-cli gradle ${task}")
         out.toString().contains('Usage:')
         !out.toString().contains('requested=')
 
@@ -198,7 +198,7 @@ class TestAppPhasesSpec extends CommandSpec implements CommandFixture {
         exit == 2
         lines[0] == "test-app has no option ${typed}, and the project has no test phase of that name: its build lists " +
                 "--unit, --integration, --end-to-end, --functional, --smoke.${meant ? ' Did you mean: ' + meant + '?' : ''}"
-        lines[1] == 'A phase that was added since is listed with: grails-forge-cli gradle grailsCommandCatalog'
+        lines[1] == 'A phase that was added since is listed with: grails-forge-cli gradle grailsToolCatalog'
         lines.any { it.startsWith('Usage:') }
         !out.toString().contains('requested=')
 
@@ -230,14 +230,14 @@ class TestAppPhasesSpec extends CommandSpec implements CommandFixture {
 
         then:
         help.contains('--functional Run the test phase functional: the task functionalTest.')
-        help.contains('The test phases may have changed: build.gradle is newer than .grails/cache/command-catalog.json. To list them again: grails-forge-cli gradle grailsCommandCatalog')
+        help.contains('The test phases may have changed: build.gradle is newer than .grails/cache/tool-catalog.json. To list them again: grails-forge-cli gradle grailsToolCatalog')
     }
 
     @Unroll
     void "a list that #says nothing of the phases is as none: a switch is taken for a phase, and the help says how the phases are listed"() {
         given:
         if (content != null) {
-            File file = new File(dir, '.grails/cache/command-catalog.json')
+            File file = new File(dir, '.grails/cache/tool-catalog.json')
             file.parentFile.mkdirs()
             file.text = content
         }
@@ -257,12 +257,12 @@ class TestAppPhasesSpec extends CommandSpec implements CommandFixture {
         then:
         !help.contains('--functional Run')
         help.contains('for another phase the name of its task without the ending Test, as --functional for functionalTest')
-        help.contains('The test phases the project adds have a switch each, and are listed here once the build has listed them: grails-forge-cli gradle grailsCommandCatalog')
+        help.contains('The test phases the project adds have a switch each, and are listed here once the build has listed them: grails-forge-cli gradle grailsToolCatalog')
 
         where:
         says               | content
         'is not there and' | null
-        'says'             | JsonOutput.toJson([format: 1, complete: true, diagnostics: [], commands: []])
+        'says'             | JsonOutput.toJson([format: 1, complete: true, diagnostics: [], tools: []])
         'is not read and'  | 'not a catalog'
     }
 
@@ -331,9 +331,9 @@ class TestAppPhasesSpec extends CommandSpec implements CommandFixture {
     }
 
     private void catalog(List phases) {
-        File file = new File(dir, '.grails/cache/command-catalog.json')
+        File file = new File(dir, '.grails/cache/tool-catalog.json')
         file.parentFile.mkdirs()
-        file.text = JsonOutput.toJson([format: 1, complete: true, diagnostics: [], commands: [], testPhases: phases])
+        file.text = JsonOutput.toJson([format: 1, complete: true, diagnostics: [], tools: [], testPhases: phases])
     }
 
     private String lineOf(String start) {

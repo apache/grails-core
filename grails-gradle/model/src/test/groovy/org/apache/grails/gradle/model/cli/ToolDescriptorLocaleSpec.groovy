@@ -25,7 +25,7 @@ import spock.lang.Unroll
  * The descriptor a build writes for a command is the same bytes whatever the language of the computer
  * that builds: the name a command has by its class is that of no language.
  */
-class CommandDescriptorLocaleSpec extends Specification {
+class ToolDescriptorLocaleSpec extends Specification {
 
     Locale locale
 
@@ -43,9 +43,9 @@ class CommandDescriptorLocaleSpec extends Specification {
         Locale.setDefault(Locale.forLanguageTag(tag))
 
         expect:
-        CommandDescriptor.conventionName(className) == name
-        CommandDescriptor.describe(className, CommandDescriptor.conventionName(className), 'Migrates the index') ==
-                CommandDescriptor.toJson(className, name, 'Migrates the index', CommandDescriptor.TARGET_APPLICATION)
+        ToolDescriptor.conventionName(className) == name
+        ToolDescriptor.describe(className, ToolDescriptor.conventionName(className), 'Migrates the index') ==
+                ToolDescriptor.toJson(className, name, 'Migrates the index', ToolDescriptor.TARGET_APPLICATION, true, [])
 
         where:
         className                              | tag     || name

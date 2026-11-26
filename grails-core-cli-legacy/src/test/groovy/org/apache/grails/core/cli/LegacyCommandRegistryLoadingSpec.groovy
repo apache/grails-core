@@ -26,7 +26,7 @@ import grails.dev.commands.ExecutionContext as LegacyExecutionContext
 import groovy.transform.CompileStatic
 import org.apache.grails.core.cli.compat.LegacyApplicationCommandAdapter
 import org.apache.grails.core.cli.compat.LegacyApplicationCommandProvider
-import org.apache.grails.gradle.model.cli.CommandDescriptor
+import org.apache.grails.gradle.model.cli.ToolDescriptor
 import org.grails.build.parsing.CommandLine
 import org.slf4j.LoggerFactory
 import org.springframework.context.ConfigurableApplicationContext
@@ -151,7 +151,7 @@ class LegacyCommandRegistryLoadingSpec extends Specification {
         'legacy-registry-command'                                             || LegacyRegistryTestCommand
         'legacy-registry-test'                                                || LegacyRegistryTestCommand
         'legacy-order-collision'                                              || ZOrderedLegacyCollisionCommand
-        CommandDescriptor.conventionName(AUnorderedLegacyCollisionCommand.name) || AUnorderedLegacyCollisionCommand
+        ToolDescriptor.conventionName(AUnorderedLegacyCollisionCommand.name) || AUnorderedLegacyCollisionCommand
     }
 
     @Unroll

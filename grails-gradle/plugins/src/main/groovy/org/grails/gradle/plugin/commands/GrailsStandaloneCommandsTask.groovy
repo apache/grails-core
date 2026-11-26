@@ -45,12 +45,13 @@ import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
 import org.gradle.work.DisableCachingByDefault
 
-import org.apache.grails.gradle.model.cli.StandaloneCommandsDocument
+import org.apache.grails.gradle.model.cli.StandaloneToolsDocument
+import org.apache.grails.gradle.model.cli.ToolBuildNames
 
 /**
  * Writes down, for the commands of the project that are run as a process of their own
- * ({@code StandaloneCommand}), the class path the {@code grails} command line starts them with:
- * {@link StandaloneCommandsDocument}, in {@link #LOCATION} of the directory of the project, beside
+ * ({@code StandaloneTool}), the class path the {@code grails} command line starts them with:
+ * {@link StandaloneToolsDocument}, in {@link #LOCATION} of the directory of the project, beside
  * the catalog of the commands, which says which commands those are.
  *
  * <p>The Grails Gradle plugin has the task run after the task that writes the catalog, which runs
@@ -72,10 +73,10 @@ import org.apache.grails.gradle.model.cli.StandaloneCommandsDocument
 abstract class GrailsStandaloneCommandsTask extends DefaultTask {
 
     /** The name of the task. */
-    public static final String TASK_NAME = 'grailsStandaloneCommands'
+    public static final String TASK_NAME = ToolBuildNames.STANDALONE_TOOLS_TASK
 
     /** Where the file is written, in the directory of the project, whatever its build directory is. */
-    public static final String LOCATION = StandaloneCommandsDocument.LOCATION
+    public static final String LOCATION = StandaloneToolsDocument.LOCATION
 
     /** The catalog of the commands of the project, which says which of them run as a process of their own. */
     @InputFile
@@ -132,9 +133,14 @@ abstract class GrailsStandaloneCommandsTask extends DefaultTask {
 
     @TaskAction
     void write() {
-        Map<String, String> commands = StandaloneCommandsDocument.commandsOf(catalogFile.get().asFile.bytes)
-        String json = StandaloneCommandsDocument.write(commands, applicationPaths, dependencyPaths, sourceDirectories.get(),
-                javaVersion.get().intValue(), throughGradle())
+        Map<String, String> tools = StandaloneToolsDocument.toolsOf(catalogFile.get().asFile.bytes)
+        // a tool of the project itself is started with the output of the project before what it depends on, and
+        // is out of date when a source of the project is newer; the tools of plugins alone need neither
+        boolean ofApplication = tools.containsValue(StandaloneToolsDocument.APPLICATION)
+        List<String> classpath = new ArrayList<String>(ofApplication ? applicationPaths : Collections.<String> emptyList())
+        classpath.addAll(dependencyPaths)
+        String json = StandaloneToolsDocument.write(new ArrayList<String>(tools.keySet()), classpath,
+                ofApplication ? sourceDirectories.get() : Collections.<String> emptyList(), javaVersion.get().intValue(), throughGradle())
         File target = standaloneCommandsFile.get().asFile
         target.parentFile.mkdirs()
         target.setBytes(json.getBytes(StandardCharsets.US_ASCII))
@@ -194,7 +200,7 @@ abstract class GrailsStandaloneCommandsTask extends DefaultTask {
             } catch (IOException ignored) {
                 return true
             }
-            String changed = StandaloneCommandsDocument.changedSince(standalone.sourceDirectories.get(), written)
+            String changed = StandaloneToolsDocument.changedSince(standalone.sourceDirectories.get(), written)
             if (changed != null) {
                 task.logger.info('{} is newer than {}, which is written again', changed, LOCATION)
             }

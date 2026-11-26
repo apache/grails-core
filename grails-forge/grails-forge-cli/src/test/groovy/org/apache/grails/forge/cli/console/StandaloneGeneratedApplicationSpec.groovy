@@ -89,10 +89,11 @@ class StandaloneGeneratedApplicationSpec extends CommandSpec implements CommandF
         new File(commands, 'BuiltCommand.groovy').text = '''\
             package example.grails
 
-            import org.apache.grails.core.cli.GradleCommand
             import org.apache.grails.core.cli.GrailsApplicationCommand
 
-            class BuiltCommand implements GrailsApplicationCommand, GradleCommand {
+            class BuiltCommand implements GrailsApplicationCommand {
+
+                boolean startsApplication = false
 
                 boolean handle() {
                     println "KIND gradle context=${applicationContext != null} args=${args}"
@@ -116,11 +117,11 @@ class StandaloneGeneratedApplicationSpec extends CommandSpec implements CommandF
 
         then: 'the build listed the commands, which compiles the project and writes down the class path, and the command ran as a process'
         assert exit == 0 : err.toString() + out.toString()
-        err.toString().readLines()[0] == '| Listing the commands of the application and its plugins, of which plain may be one, with the Gradle task grailsCommandCatalog'
+        err.toString().readLines()[0] == '| Listing the commands of the application and its plugins, of which plain may be one, with the Gradle task grailsToolCatalog'
         err.toString().readLines().contains('| Running the command plain of the application, as a process of its own, without Gradle')
         out.toString().readLines().contains("KIND standalone first context=false args=[one] flag=x base=${dir.canonicalPath}".toString())
         runs() == 1
-        standaloneFile().commands.plain == 'application'
+        standaloneFile().tools.contains('plain')
 
         when: 'it is run again, and nothing has changed'
         out.reset()
@@ -158,7 +159,7 @@ class StandaloneGeneratedApplicationSpec extends CommandSpec implements CommandF
         then: 'the build runs once before the command, which is the new one: no class is run that is older than its source'
         assert exit == 0 : err.toString() + out.toString()
         runs() == 2
-        err.toString().readLines()[0].startsWith('| Building the project before plain is run without Gradle, with the Gradle task grailsStandaloneCommands: ')
+        err.toString().readLines()[0].startsWith('| Building the project before plain is run without Gradle, with the Gradle task grailsStandaloneTools: ')
         out.toString().readLines().contains("KIND standalone second context=false args=[three] flag=null base=${dir.canonicalPath}".toString())
 
         when: 'the Gradle command is run by its name, by a daemon that is running'
@@ -205,7 +206,7 @@ class StandaloneGeneratedApplicationSpec extends CommandSpec implements CommandF
         then: 'it has the run time and command line dependencies of the project and nothing of the application, and Gradle is not run for it'
         assert exit == 0 : err.toString() + out.toString()
         runs() == 5
-        standaloneFile().commands.'generate-controller' == 'dependencies'
+        standaloneFile().tools.contains('generate-controller')
         err.toString().readLines()[0].startsWith('| Running the command generate-controller of org.apache.grails:grails-scaffolding-cli:')
         err.toString().readLines()[0].endsWith(', as a process of its own, without Gradle')
         new File(dir, 'grails-app/controllers/example/grails/BookController.groovy').isFile()
@@ -249,7 +250,7 @@ class StandaloneGeneratedApplicationSpec extends CommandSpec implements CommandF
         then: 'the build listed the commands once, and the command ran as a process, with the templates of a REST API application'
         assert exit == 0 : err.toString() + out.toString()
         runs() == 1
-        standaloneFile().commands.'generate-all' == 'dependencies'
+        standaloneFile().tools.contains('generate-all')
         err.toString().readLines().any { String line ->
             line.startsWith('| Running the command generate-all of org.apache.grails:grails-scaffolding-cli:') && line.endsWith(', as a process of its own, without Gradle')
         }
@@ -274,13 +275,13 @@ class StandaloneGeneratedApplicationSpec extends CommandSpec implements CommandF
         return """\
             package example.grails
 
-            import org.apache.grails.core.cli.GrailsApplicationCommand
-            import org.apache.grails.core.cli.StandaloneCommand
+            import org.apache.grails.core.cli.StandaloneTool
+            import org.apache.grails.core.cli.ToolSupport
 
-            class PlainCommand implements GrailsApplicationCommand, StandaloneCommand {
+            class PlainCommand implements StandaloneTool, ToolSupport {
 
                 boolean handle() {
-                    println "KIND standalone ${version} context=\${applicationContext != null} args=\${args} flag=\${executionContext.commandLine.optionValue('flag')} base=\${executionContext.baseDir.canonicalPath}"
+                    println "KIND standalone ${version} context=\${metaClass.hasProperty(this, 'applicationContext') != null} args=\${args} flag=\${executionContext.commandLine.optionValue('flag')} base=\${executionContext.baseDir.canonicalPath}"
                     !args.contains('fail')
                 }
             }

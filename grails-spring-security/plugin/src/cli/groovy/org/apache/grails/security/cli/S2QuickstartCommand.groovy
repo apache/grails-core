@@ -25,7 +25,6 @@ import grails.build.logging.ConsoleLogger
 import grails.build.logging.GrailsConsole
 import grails.codegen.model.Model
 import org.apache.grails.core.cli.GrailsApplicationCommand
-import org.apache.grails.core.cli.GradleCommand
 
 /**
  * Creates domain classes and updates config settings for the Spring Security plugin.
@@ -49,7 +48,9 @@ import org.apache.grails.core.cli.GradleCommand
  * @since 6.0.0
  */
 @CompileStatic
-class S2QuickstartCommand implements GrailsApplicationCommand, GradleCommand, CommandLineHelper, SkipBootstrap {
+class S2QuickstartCommand implements GrailsApplicationCommand, CommandLineHelper, SkipBootstrap {
+
+    boolean startsApplication = false
 
     private static final String SETTINGS = 'grails.plugin.springsecurity'
     private static final String RESOURCES = 'grails-app/conf/spring/resources.groovy'

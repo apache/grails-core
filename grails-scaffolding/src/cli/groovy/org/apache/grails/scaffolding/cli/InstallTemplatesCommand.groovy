@@ -22,8 +22,8 @@ import groovy.transform.CompileStatic
 
 import grails.build.logging.ConsoleLogger
 import grails.build.logging.GrailsConsole
-import org.apache.grails.core.cli.GrailsApplicationCommand
-import org.apache.grails.core.cli.StandaloneCommand
+import org.apache.grails.core.cli.StandaloneTool
+import org.apache.grails.core.cli.ToolSupport
 import org.grails.io.support.Resource
 import org.grails.io.support.SpringIOUtils
 
@@ -35,7 +35,7 @@ import org.grails.io.support.SpringIOUtils
  * @since 5.0.0
  */
 @CompileStatic
-class InstallTemplatesCommand implements GrailsApplicationCommand, StandaloneCommand, SkipBootstrap, CommandLineHelper {
+class InstallTemplatesCommand implements StandaloneTool, ToolSupport, SkipBootstrap, CommandLineHelper {
 
     @Delegate ConsoleLogger consoleLogger = GrailsConsole.getInstance()
 

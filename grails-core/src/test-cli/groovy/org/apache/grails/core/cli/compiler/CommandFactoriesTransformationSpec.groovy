@@ -67,7 +67,7 @@ class CommandFactoriesTransformationSpec extends Specification {
                 'Object getTarget() { null }'), targetDir)
 
         then:
-        cliFactories(targetDir).getProperty(CommandFactoriesTransformation.APPLICATION_COMMAND_CLASS.name) == 'example.RestoreCommand'
+        cliFactories(targetDir).getProperty(CommandFactoriesTransformation.GRAILS_TOOL_CLASS.name) == 'example.RestoreCommand'
     }
 
     @TempDir

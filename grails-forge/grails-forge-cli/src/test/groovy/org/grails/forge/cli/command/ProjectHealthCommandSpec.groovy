@@ -262,7 +262,7 @@ class ProjectHealthCommandSpec extends CommandSpec {
         'git-files.ok'                         | 'ok'      | '.grails/.gitignore leaves out what is of one machine' | { File p, File h -> without(p, '.gitignore', ~/\.grails\/(transactions\/|history)\n/) }
         'git-files.ok'                         | 'ok'      | '.gitignore does, and the record of a snapshot not'    | { File p, File h -> without(p, '.grails/.gitignore', ~/\/(transactions\/|history)\n/) }
         'command-catalog.missing'              | 'advice'  | 'the build has not listed the commands'                | { File p, File h -> }
-        'command-catalog.refused'              | 'advice'  | 'the list is no file'                                  | { File p, File h -> new File(p, '.grails/cache/command-catalog.json').mkdirs() }
+        'command-catalog.refused'              | 'advice'  | 'the list is no file'                                  | { File p, File h -> new File(p, '.grails/cache/tool-catalog.json').mkdirs() }
         'command-catalog.stale'                | 'advice'  | 'the build file was changed after the list'            | { File p, File h -> catalog(p); new File(p, 'build.gradle').setLastModified(System.currentTimeMillis() + 60_000) }
         'command-catalog.incomplete'           | 'advice'  | 'the runtime class path did not resolve completely'    | { File p, File h -> catalog(p, false, [UNRESOLVED]) }
         'command-catalog.incomplete'           | 'advice'  | 'a command of the list is not as the task writes one'  | { File p, File h -> catalog(p, true, [], [name: 'Not A Name']) }
@@ -474,7 +474,7 @@ class ProjectHealthCommandSpec extends CommandSpec {
         profile.level == 'error'
         profile.files == ['build.gradle']
         profile.upgradeNote == "https://grails.apache.org/docs/${VersionInfo.documentationVersion}/guide/upgrading.html#upgradingShellNotPublished".toString()
-        findings.find { it.id == 'command-catalog.missing' }.command == 'grails-forge-cli gradle grailsCommandCatalog'
+        findings.find { it.id == 'command-catalog.missing' }.command == 'grails-forge-cli gradle grailsToolCatalog'
     }
 
     void "command-catalog.incomplete names what the build could not list, as it says it, and how many more things it says"() {
@@ -489,10 +489,10 @@ class ProjectHealthCommandSpec extends CommandSpec {
         then: 'advice, which fails nothing'
         exit == 0
         finding.level == 'advice'
-        finding.message == ".grails/cache/command-catalog.json lists 0 commands of the application and its plugins, and not every one the build has: ${UNRESOLVED} (and 1 more)".toString()
+        finding.message == ".grails/cache/tool-catalog.json lists 0 commands of the application and its plugins, and not every one the build has: ${UNRESOLVED} (and 1 more)".toString()
         finding.fix == 'grails-forge-cli help lists what is not listed and why. A build that compiles the project lists the commands again once that is corrected'
         finding.command == 'grails-forge-cli help'
-        finding.files == ['.grails/cache/command-catalog.json']
+        finding.files == ['.grails/cache/tool-catalog.json']
         finding.upgradeNote == "https://grails.apache.org/docs/${VersionInfo.documentationVersion}/guide/upgrading.html#upgradingCommandCatalog".toString()
     }
 
@@ -861,9 +861,9 @@ class ProjectHealthCommandSpec extends CommandSpec {
     }
 
     static void catalog(File project, boolean complete = true, List<String> diagnostics = [], Map command = null) {
-        File file = new File(project, '.grails/cache/command-catalog.json')
+        File file = new File(project, '.grails/cache/tool-catalog.json')
         file.parentFile.mkdirs()
-        file.text = JsonOutput.toJson([format: 1, complete: complete, diagnostics: diagnostics, commands: command == null ? [] : [command]])
+        file.text = JsonOutput.toJson([format: 1, complete: complete, diagnostics: diagnostics, tools: command == null ? [] : [command]])
         file.setLastModified(System.currentTimeMillis() + 30_000)
     }
 

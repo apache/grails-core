@@ -28,7 +28,7 @@ import spock.lang.Unroll
 
 import grails.build.logging.GrailsConsole
 import org.apache.grails.core.cli.ExecutionContext
-import org.apache.grails.core.cli.GrailsApplicationCommand
+import org.apache.grails.core.cli.ToolSupport
 import org.apache.grails.core.cli.io.FileSystemInteractionImpl
 import org.apache.grails.core.cli.script.ScriptConsole
 import org.apache.grails.core.cli.template.TemplateRendererImpl
@@ -212,7 +212,7 @@ class SecurityCommandsAllOrNothingSpec extends Specification {
         written(YAML) == PRESENT_YAML
     }
 
-    private boolean run(GrailsApplicationCommand command, String line) {
+    private boolean run(ToolSupport command, String line) {
         command.executionContext = new ExecutionContext(new CommandLineParser().parseString(line))
         command.templateRenderer = new TemplateRendererImpl(project)
         command.fileSystemInteraction = new FileSystemInteractionImpl(project)

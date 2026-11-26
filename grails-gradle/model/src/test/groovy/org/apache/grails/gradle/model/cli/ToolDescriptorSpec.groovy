@@ -24,15 +24,15 @@ import spock.lang.Unroll
 /**
  * What writes a descriptor and what reads one agree: nothing is written that is then refused.
  */
-class CommandDescriptorSpec extends Specification {
+class ToolDescriptorSpec extends Specification {
 
     private static final String CLASS = 'example.GreetCommand'
 
     @Unroll
     def "what is written for #title is read back as it was"() {
         when:
-        String json = CommandDescriptor.describe(CLASS, name, description)
-        CommandDescriptor.Described read = CommandDescriptor.read(CLASS, json.getBytes('US-ASCII'))
+        String json = ToolDescriptor.describe(CLASS, name, description)
+        ToolDescriptor.Described read = ToolDescriptor.read(CLASS, json.getBytes('US-ASCII'))
 
         then:
         read.name == name
@@ -49,10 +49,85 @@ class CommandDescriptorSpec extends Specification {
     }
 
     @Unroll
+    def "whether a tool starts the application, and what is deprecated about it, are read back as written: #title"() {
+        when:
+        String json = ToolDescriptor.describe(CLASS, 'greet', 'Greets someone', target, startsApplication, deprecated)
+        ToolDescriptor.Described read = ToolDescriptor.read(CLASS, json.getBytes('US-ASCII'))
+
+        then:
+        json == '{"format":1,"class":"example.GreetCommand","name":"greet","description":"Greets someone",' + members + '}\n'
+        read.target == target
+        read.startsApplication == starts
+        read.deprecated == listed
+
+        where:
+        title                                            | target        | startsApplication | deprecated         || starts | listed             | members
+        'a tool that runs in the application'            | 'application' | true              | []                 || true   | []                 | '"target":"application","startsApplication":true'
+        'a tool the build runs without the application'  | 'application' | false             | null               || false  | []                 | '"target":"application","startsApplication":false'
+        'a tool of a deprecated type'                    | 'application' | true              | ['type']           || true   | ['type']           | '"target":"application","startsApplication":true,"deprecated":["type"]'
+        'a tool in a deprecated folder'                  | 'application' | false             | ['folder']         || false  | ['folder']         | '"target":"application","startsApplication":false,"deprecated":["folder"]'
+        'both, in the order of the format, each once'    | 'application' | true              | ['folder', 'type', 'folder'] || true | ['type', 'folder'] | '"target":"application","startsApplication":true,"deprecated":["type","folder"]'
+        'a standalone tool, which starts nothing'        | 'standalone'  | true              | ['type']           || false  | ['type']           | '"target":"standalone","deprecated":["type"]'
+    }
+
+    def "a descriptor without the members is of a tool that starts the application and has nothing deprecated, and what is read of it cannot be changed"() {
+        when:
+        ToolDescriptor.Described read = ToolDescriptor.read(CLASS, '{"format":1,"class":"example.GreetCommand","name":"greet"}'.getBytes('US-ASCII'))
+
+        then:
+        read.target == 'application'
+        read.startsApplication
+        read.deprecated == []
+
+        when:
+        read.deprecated << 'type'
+
+        then:
+        thrown(UnsupportedOperationException)
+    }
+
+    def "a standalone descriptor that says it starts the application is read as one that does not"() {
+        expect:
+        !ToolDescriptor.read(CLASS, '{"format":1,"class":"example.GreetCommand","name":"greet","target":"standalone","startsApplication":true}'.getBytes('US-ASCII')).startsApplication
+    }
+
+    def "no descriptor is written for something deprecated the format does not know"() {
+        expect:
+        ToolDescriptor.describe(CLASS, 'greet', 'Greets someone', 'application', true, ['type', 'name']) == null
+
+        and: 'which the reader would refuse'
+        refusal(ToolDescriptor.toJson(CLASS, 'greet', 'Greets someone', 'application', true, ['type', 'name'])) == 'has a deprecated that is not a list of type and folder'
+    }
+
+    def "the keys a tool is registered under are the one of the tool contract and the one Grails 8 wrote"() {
+        expect:
+        ToolDescriptor.FACTORIES_KEY_TOOL == 'org.apache.grails.core.cli.GrailsTool'
+        ToolDescriptor.FACTORIES_KEY_COMMAND == 'org.apache.grails.core.cli.ApplicationCommand'
+        ToolDescriptor.FACTORIES_KEYS == [ToolDescriptor.FACTORIES_KEY_TOOL, ToolDescriptor.FACTORIES_KEY_COMMAND]
+        ToolDescriptor.DIRECTORY == 'META-INF/grails-tools'
+        ToolDescriptor.location('example.GreetCommand') == 'META-INF/grails-tools/example.GreetCommand.json'
+    }
+
+    @Unroll
+    def "the name the class #className gives is #name"() {
+        expect:
+        ToolDescriptor.conventionName(className) == name
+
+        where:
+        className                          || name
+        'example.CreateReportTool'         || 'create-report'
+        'example.CreateReportCommand'      || 'create-report'
+        'example.ToolTool'                 || 'tool'
+        'example.ReportToolCommand'        || 'report-tool'
+        'example.ReportCommandTool'        || 'report-command'
+        'CreateReportTool'                 || 'create-report'
+    }
+
+    @Unroll
     def "a description that is #title is left out, so that the reader takes the rest"() {
         when:
-        String json = CommandDescriptor.describe(CLASS, 'greet', description)
-        CommandDescriptor.Described read = CommandDescriptor.read(CLASS, json.getBytes('US-ASCII'))
+        String json = ToolDescriptor.describe(CLASS, 'greet', description)
+        ToolDescriptor.Described read = ToolDescriptor.read(CLASS, json.getBytes('US-ASCII'))
 
         then:
         !json.contains('description')
@@ -60,7 +135,7 @@ class CommandDescriptorSpec extends Specification {
         read.description == null
 
         and: 'which is what the reader does with it, were it written'
-        refusal(CommandDescriptor.toJson(CLASS, 'greet', description)) != 'was read'
+        refusal(ToolDescriptor.toJson(CLASS, 'greet', description)) != 'was read'
 
         where:
         title                        | description
@@ -77,15 +152,15 @@ class CommandDescriptorSpec extends Specification {
     @Unroll
     def "no descriptor is written for #title"() {
         expect:
-        CommandDescriptor.describe(className, name, 'Greets someone') == null
+        ToolDescriptor.describe(className, name, 'Greets someone') == null
 
         and: 'which the reader would refuse'
-        className != CLASS || refusal(CommandDescriptor.toJson(className, name, 'Greets someone')).startsWith('has a name that cannot be')
+        className != CLASS || refusal(ToolDescriptor.toJson(className, name, 'Greets someone')).startsWith('has a name that cannot be')
 
         where:
         title                                   | className           | name
         'an empty name'                         | CLASS               | ''
-        'the name the class Command gives'      | CLASS               | CommandDescriptor.conventionName('example.Command')
+        'the name the class Command gives'      | CLASS               | ToolDescriptor.conventionName('example.Command')
         'a name with upper case'                | CLASS               | 'Say Hello'
         'a name of 65 characters'               | CLASS               | 'a' * 65
         'a name that starts with a digit'       | CLASS               | '1st'
@@ -119,11 +194,17 @@ class CommandDescriptorSpec extends Specification {
         'has a list for a description'    | '{"format":1,"class":"example.GreetCommand","name":"a","description":["x"]}' | 'has a description that is not one line'
         'is for the console'              | '{"format":1,"class":"example.GreetCommand","name":"a","target":"console"}' | 'is for the execution target console'
         'is for nowhere'                  | '{"format":1,"class":"example.GreetCommand","name":"a","target":"no\\u001bwhere"}' | 'has an execution target that does not exist'
+        'is for the target gradle'        | '{"format":1,"class":"example.GreetCommand","name":"a","target":"gradle"}' | 'has an execution target that does not exist'
+        'starts the application as text'  | '{"format":1,"class":"example.GreetCommand","name":"a","startsApplication":"false"}' | 'has a startsApplication that is neither true nor false'
+        'starts the application as 0'     | '{"format":1,"class":"example.GreetCommand","name":"a","startsApplication":0}' | 'has a startsApplication that is neither true nor false'
+        'has one thing deprecated as text' | '{"format":1,"class":"example.GreetCommand","name":"a","deprecated":"type"}' | 'has a deprecated that is not a list of type and folder'
+        'has something else deprecated'   | '{"format":1,"class":"example.GreetCommand","name":"a","deprecated":["type","name"]}' | 'has a deprecated that is not a list of type and folder'
+        'has a number deprecated'         | '{"format":1,"class":"example.GreetCommand","name":"a","deprecated":[1]}' | 'has a deprecated that is not a list of type and folder'
     }
 
     def "members a later format adds are ignored"() {
         when:
-        CommandDescriptor.Described read = CommandDescriptor.read(CLASS, ('{"format":1,"class":"example.GreetCommand","name":"greet",' +
+        ToolDescriptor.Described read = ToolDescriptor.read(CLASS, ('{"format":1,"class":"example.GreetCommand","name":"greet",' +
                 '"options":[{"names":["-f","--force"],"arity":"0"}],"later":{"a":[1,2.5e3,true,null]}}').getBytes('UTF-8'))
 
         then:
@@ -133,8 +214,8 @@ class CommandDescriptorSpec extends Specification {
 
     private static String refusal(String content) {
         try {
-            CommandDescriptor.read(CLASS, content.getBytes('UTF-8'))
-        } catch (CommandDescriptor.Refused refused) {
+            ToolDescriptor.read(CLASS, content.getBytes('UTF-8'))
+        } catch (ToolDescriptor.Refused refused) {
             assert refused.message ==~ /[\x20-\x7e]+/
             return refused.message
         }

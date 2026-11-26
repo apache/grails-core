@@ -23,23 +23,23 @@ import groovy.json.JsonSlurper
 import org.gradle.testkit.runner.BuildResult
 import org.gradle.testkit.runner.TaskOutcome
 
-import org.apache.grails.gradle.model.cli.CommandCatalogBuilder
+import org.apache.grails.gradle.model.cli.ToolCatalogBuilder
 
 /**
  * Where the catalog of the commands of a project is written: in the directory of the project, where
  * the command line reads it without running the build, whatever the build directory of the project is.
  * A catalog that an earlier build left in the build directory is not written again, and not read by
- * the command line, which reads {@link CommandCatalogBuilder#LOCATION} alone.
+ * the command line, which reads {@link ToolCatalogBuilder#LOCATION} alone.
  */
 class CommandCatalogLocationSpec extends CommandProjectSpecification {
 
-    private static final String CATALOG = '.grails/cache/command-catalog.json'
-    private static final String STALE = '{"format":1,"complete":true,"diagnostics":[],"commands":[{"name":"stale","origin":"application","target":"application","registration":"descriptor"}]}\n'
+    private static final String CATALOG = '.grails/cache/tool-catalog.json'
+    private static final String STALE = '{"format":1,"complete":true,"diagnostics":[],"tools":[{"name":"stale","origin":"application","target":"application","registration":"descriptor"}]}\n'
 
     def "the catalog is where the command line reads it, in the directory of the project"() {
         expect:
-        CATALOG == CommandCatalogBuilder.LOCATION
-        GrailsCommandCatalogTask.CATALOG_LOCATION == CommandCatalogBuilder.LOCATION
+        CATALOG == ToolCatalogBuilder.LOCATION
+        GrailsCommandCatalogTask.CATALOG_LOCATION == ToolCatalogBuilder.LOCATION
     }
 
     def "a project whose build directory is moved in #dsl has its catalog in the directory of the project, and a catalog of an earlier build is left as it is"() {
@@ -48,18 +48,18 @@ class CommandCatalogLocationSpec extends CommandProjectSpecification {
         if (kotlin) {
             asKotlinBuild()
         }
-        File old = projectFile('build/grails/command-catalog.json', STALE)
+        File old = projectFile('build/grails/tool-catalog.json', STALE)
 
         when:
-        BuildResult result = executeTask('grailsCommandCatalog')
+        BuildResult result = executeTask('grailsToolCatalog')
 
         then:
-        result.task(':grailsCommandCatalog').outcome == TaskOutcome.SUCCESS
-        catalog(projectDir).commands*.name == ['config-report']
+        result.task(':grailsToolCatalog').outcome == TaskOutcome.SUCCESS
+        catalog(projectDir).tools*.name == ['config-report']
 
         and: 'nothing of the catalog is in the build directory, which the build did write to'
         new File(projectDir, buildDirectory).isDirectory()
-        !new File(projectDir, "${buildDirectory}/grails/command-catalog.json").exists()
+        !new File(projectDir, "${buildDirectory}/grails/tool-catalog.json").exists()
 
         and: 'the catalog an earlier build wrote to the build directory it had then is not written again'
         old.text == STALE
@@ -80,10 +80,10 @@ class CommandCatalogLocationSpec extends CommandProjectSpecification {
         ''')
 
         when:
-        executeTask('grailsCommandCatalog')
+        executeTask('grailsToolCatalog')
 
         then:
-        catalog(projectDir).commands*.name == ['config-report']
+        catalog(projectDir).tools*.name == ['config-report']
         new File(projectDir, '../elsewhere/command-catalog').isDirectory()
         !new File(projectDir, '../elsewhere/command-catalog/grails').exists()
     }
@@ -115,13 +115,13 @@ class CommandCatalogLocationSpec extends CommandProjectSpecification {
         projectFile("second/src/main/resources/${descriptorPath('second.SecondCommand')}", descriptor('second.SecondCommand', 'second', 'Of the second application'))
 
         when:
-        BuildResult result = executeTask('grailsCommandCatalog')
+        BuildResult result = executeTask('grailsToolCatalog')
 
         then:
-        result.task(':grailsCommandCatalog').outcome == TaskOutcome.SUCCESS
-        result.task(':second:grailsCommandCatalog').outcome == TaskOutcome.SUCCESS
-        catalog(projectDir).commands*.name == ['config-report']
-        catalog(new File(projectDir, 'second')).commands*.name == ['config-report', 'second']
+        result.task(':grailsToolCatalog').outcome == TaskOutcome.SUCCESS
+        result.task(':second:grailsToolCatalog').outcome == TaskOutcome.SUCCESS
+        catalog(projectDir).tools*.name == ['config-report']
+        catalog(new File(projectDir, 'second')).tools*.name == ['config-report', 'second']
         new File(projectDir, 'out/second').isDirectory()
         !new File(projectDir, 'out/second/grails').exists()
     }
@@ -131,29 +131,29 @@ class CommandCatalogLocationSpec extends CommandProjectSpecification {
         setupCommandProject('''
             layout.buildDirectory = layout.projectDirectory.dir('out')
         ''')
-        executeTask('grailsCommandCatalog')
+        executeTask('grailsToolCatalog')
 
         when:
-        BuildResult again = executeTask('grailsCommandCatalog')
+        BuildResult again = executeTask('grailsToolCatalog')
 
         then:
-        again.task(':grailsCommandCatalog').outcome == TaskOutcome.UP_TO_DATE
+        again.task(':grailsToolCatalog').outcome == TaskOutcome.UP_TO_DATE
 
         when: 'the build directory is deleted, as clean does: the catalog is not in it'
         new File(projectDir, 'out').deleteDir()
-        BuildResult afterClean = executeTask('grailsCommandCatalog')
+        BuildResult afterClean = executeTask('grailsToolCatalog')
 
         then:
-        afterClean.task(':grailsCommandCatalog').outcome == TaskOutcome.UP_TO_DATE
-        catalog(projectDir).commands*.name == ['config-report']
+        afterClean.task(':grailsToolCatalog').outcome == TaskOutcome.UP_TO_DATE
+        catalog(projectDir).tools*.name == ['config-report']
 
         when: 'the catalog is deleted'
         new File(projectDir, CATALOG).delete()
-        BuildResult written = executeTask('grailsCommandCatalog')
+        BuildResult written = executeTask('grailsToolCatalog')
 
         then:
-        written.task(':grailsCommandCatalog').outcome == TaskOutcome.SUCCESS
-        catalog(projectDir).commands*.name == ['config-report']
+        written.task(':grailsToolCatalog').outcome == TaskOutcome.SUCCESS
+        catalog(projectDir).tools*.name == ['config-report']
     }
 
     // the build script of the project in the Kotlin DSL, with its build directory moved to target

@@ -23,11 +23,11 @@ import spock.lang.Specification
 /**
  * The test phases of a project in the catalog of its commands.
  */
-class CommandCatalogTestPhasesSpec extends Specification {
+class ToolCatalogTestPhasesSpec extends Specification {
 
     def "a catalog that was given no phases says nothing of them, and one that was given none lists none"() {
         when:
-        CommandCatalogBuilder builder = new CommandCatalogBuilder()
+        ToolCatalogBuilder builder = new ToolCatalogBuilder()
 
         then:
         !builder.build().containsKey('testPhases')
@@ -37,12 +37,12 @@ class CommandCatalogTestPhasesSpec extends Specification {
 
         then:
         builder.build().testPhases == []
-        builder.toJson().endsWith('"commands":[],"testPhases":[]}\n')
+        builder.toJson().endsWith('"tools":[],"testPhases":[]}\n')
     }
 
     def "the phases are listed in the order they are given in, and one that cannot be a switch or whose task has an unusual name is not"() {
         given:
-        CommandCatalogBuilder builder = new CommandCatalogBuilder()
+        ToolCatalogBuilder builder = new ToolCatalogBuilder()
         Map<String, String> phases = [unit: 'test', integration: 'integrationTest', 'end-to-end': 'endToEndTest', smoke: 'smoke']
         phases.putAll(['api_check': 'api_check', 'Upper': 'Upper', '': 'empty', '-x': 'x', 'a--b': 'ab', ('x' * 65): 'long', 'odd': 'a task', 'esc': 'a\u001b[31m',
                        'dollar': 'a$b', 'at': 'a@b', 'longTask': ('t' * 65)])
@@ -58,13 +58,13 @@ class CommandCatalogTestPhasesSpec extends Specification {
 
     def "no more phases are listed than a catalog lists"() {
         given:
-        CommandCatalogBuilder builder = new CommandCatalogBuilder()
+        ToolCatalogBuilder builder = new ToolCatalogBuilder()
 
         when:
         builder.testPhases((1..100).collectEntries { int number -> ["phase-${number}".toString(), "phase${number}Test".toString()] })
 
         then:
-        builder.build().testPhases.size() == CommandCatalogBuilder.MAX_TEST_PHASES
+        builder.build().testPhases.size() == ToolCatalogBuilder.MAX_TEST_PHASES
         builder.build().testPhases.first() == [name: 'phase-1', task: 'phase1Test']
     }
 }

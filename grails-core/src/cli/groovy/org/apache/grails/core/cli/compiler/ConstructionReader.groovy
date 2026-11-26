@@ -121,6 +121,10 @@ class ConstructionReader {
 
     // the traits of the command contract, whose fields are given no value when a command is made
     private static final Set<String> CONTRACT_TRAITS = [
+            'org.apache.grails.core.cli.GrailsTool',
+            'org.apache.grails.core.cli.ApplicationTool',
+            'org.apache.grails.core.cli.StandaloneTool',
+            'org.apache.grails.core.cli.ToolSupport',
             'org.apache.grails.core.cli.ApplicationCommand',
             'org.apache.grails.core.cli.GrailsApplicationCommand',
             'grails.codegen.model.ModelBuilder',

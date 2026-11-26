@@ -18,14 +18,14 @@
  */
 package org.apache.grails.security.ui.cli
 
-import org.apache.grails.core.cli.StandaloneCommand
+import org.apache.grails.core.cli.StandaloneTool
 import spock.lang.Specification
 import spock.lang.TempDir
 import spock.lang.Unroll
 
 import grails.build.logging.GrailsConsole
 import org.apache.grails.core.cli.ExecutionContext
-import org.apache.grails.core.cli.GrailsApplicationCommand
+import org.apache.grails.core.cli.ToolSupport
 import org.apache.grails.core.cli.io.FileSystemInteractionImpl
 import org.apache.grails.core.cli.script.ScriptConsole
 import org.apache.grails.core.cli.template.TemplateRendererImpl
@@ -231,7 +231,7 @@ class S2uiOverrideCommandSpec extends Specification {
      * the project from the build settings of the JVM, which a spec cannot set.
      */
     private boolean run(String line) {
-        GrailsApplicationCommand command = new S2uiOverrideCommand()
+        ToolSupport command = new S2uiOverrideCommand()
         command.executionContext = new ExecutionContext(new CommandLineParser().parseString(line))
         command.templateRenderer = new TemplateRendererImpl(project)
         command.fileSystemInteraction = new FileSystemInteractionImpl(project)
@@ -262,6 +262,6 @@ class S2uiOverrideCommandSpec extends Specification {
 
     void 'the commands only write files of the project, so they are run without the application being started'() {
         expect: 'an application that cannot start, as one that is not configured yet, has them all the same'
-        [S2uiOverrideCommand, S2uiCreateChallengeQuestionsCommand].every { Class command -> StandaloneCommand.isAssignableFrom(command) }
+        [S2uiOverrideCommand, S2uiCreateChallengeQuestionsCommand].every { Class command -> StandaloneTool.isAssignableFrom(command) }
     }
 }

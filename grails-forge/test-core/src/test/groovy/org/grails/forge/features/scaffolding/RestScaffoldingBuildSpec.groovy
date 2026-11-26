@@ -84,7 +84,7 @@ class RestScaffoldingBuildSpec extends CommandSpec {
         results('integrationTest', 'BirdServiceSpec') == [tests: 5, failures: 0, errors: 0, skipped: 0]
 
         and: 'the build listed the commands of the plugin for the command line when it compiled the application'
-        String catalog = file('.grails/cache/command-catalog.json').text
+        String catalog = file('.grails/cache/tool-catalog.json').text
         ['generate-all', 'generate-controller', 'generate-views', 'install-templates'].every {
             catalog.contains("\"name\":\"${it}\"")
         }

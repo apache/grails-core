@@ -25,13 +25,13 @@ import org.gradle.testkit.runner.BuildResult
 import org.gradle.testkit.runner.TaskOutcome
 
 /**
- * The options plugins and the application declare for {@code run-app}, as {@code grailsCommandCatalog}
+ * The options plugins and the application declare for {@code run-app}, as {@code grailsToolCatalog}
  * lists them in the catalog of the commands of the project. No jar of these projects has a class in
  * it: the declarations are read, and nothing of a plugin is run.
  */
 class CommandOptionCatalogSpec extends CommandProjectSpecification {
 
-    private static final String CATALOG = '.grails/cache/command-catalog.json'
+    private static final String CATALOG = '.grails/cache/tool-catalog.json'
     private static final String OPTIONS = 'META-INF/grails-command-options.json'
     private static final Map TAIL = [command: 'run-app', name: 'query-tail', description: 'Capture every statement GORM runs.', property: 'grails.gorm.queryTail.enabled']
 
@@ -60,11 +60,11 @@ class CommandOptionCatalogSpec extends CommandProjectSpecification {
         projectFile("src/main/resources/${OPTIONS}", options([[command: 'run-app', name: 'trace', description: 'Log every request.', property: 'logging.level.web', value: 'TRACE']]))
 
         when:
-        BuildResult result = executeTask('grailsCommandCatalog')
+        BuildResult result = executeTask('grailsToolCatalog')
         Map catalog = readCatalog()
 
         then:
-        result.task(':grailsCommandCatalog').outcome == TaskOutcome.SUCCESS
+        result.task(':grailsToolCatalog').outcome == TaskOutcome.SUCCESS
         catalog.commandOptions == [
                 [command: 'run-app', name: 'query-tail', description: 'Capture every statement GORM runs.', type: 'boolean', property: 'grails.gorm.queryTail.enabled',
                  value: 'true', origin: 'org.example:data-cli:1.0'],
@@ -83,21 +83,21 @@ class CommandOptionCatalogSpec extends CommandProjectSpecification {
 
         and: 'what is said of options leaves what the catalog says of the commands as it is'
         catalog.complete == true
-        catalog.commands*.name == ['config-report']
+        catalog.tools*.name == ['config-report']
 
         when: 'nothing changed'
-        BuildResult again = executeTask('grailsCommandCatalog')
+        BuildResult again = executeTask('grailsToolCatalog')
 
         then:
-        again.task(':grailsCommandCatalog').outcome == TaskOutcome.UP_TO_DATE
+        again.task(':grailsToolCatalog').outcome == TaskOutcome.UP_TO_DATE
 
         when: 'the application declares the name two plugins have'
         projectFile("src/main/resources/${OPTIONS}", options([[command: 'run-app', name: 'clash', description: 'Of the application.', property: 'demo.own.clash']]))
-        BuildResult changed = executeTask('grailsCommandCatalog')
+        BuildResult changed = executeTask('grailsToolCatalog')
         catalog = readCatalog()
 
         then: 'the catalog follows the resource of the application, and what the application declares holds'
-        changed.task(':grailsCommandCatalog').outcome == TaskOutcome.SUCCESS
+        changed.task(':grailsToolCatalog').outcome == TaskOutcome.SUCCESS
         catalog.commandOptions*.name == ['clash', 'query-tail', 'tenant']
         catalog.commandOptions[0] == [command: 'run-app', name: 'clash', description: 'Of the application.', type: 'boolean', property: 'demo.own.clash', value: 'true', origin: 'application']
         catalog.diagnostics.contains('The option run-app --clash is as the application declares it: what org.example:other-cli:1.0, org.example:tenants:1.0 declares for that name is not used.')
@@ -108,14 +108,14 @@ class CommandOptionCatalogSpec extends CommandProjectSpecification {
         setupCommandProject()
 
         when:
-        executeTask('grailsCommandCatalog')
+        executeTask('grailsToolCatalog')
 
         then:
         !readCatalog().containsKey('commandOptions')
 
         when:
         projectFile("grails-app/conf/${OPTIONS}", options([TAIL]))
-        executeTask('grailsCommandCatalog')
+        executeTask('grailsToolCatalog')
 
         then:
         readCatalog().commandOptions*.origin == ['application']

@@ -24,11 +24,11 @@ import groovy.util.logging.Slf4j
 import org.springframework.core.OrderComparator
 import org.springframework.util.ClassUtils
 
-import org.apache.grails.gradle.model.cli.CommandDescriptor
+import org.apache.grails.gradle.model.cli.ToolDescriptor
 import org.grails.core.io.support.GrailsFactoriesLoader
 
 /**
- * A registry of {@link org.apache.grails.core.cli.ApplicationCommand} instances
+ * A registry of {@link org.apache.grails.core.cli.GrailsTool} instances: how a runner or a test finds a tool by its name
  *
  * @since 3.0
  */
@@ -37,11 +37,11 @@ import org.grails.core.io.support.GrailsFactoriesLoader
 @Singleton(strict = false)
 class ApplicationContextCommandRegistry {
 
-    private final Map<String, ApplicationCommand> commands = [:]
+    private final Map<String, GrailsTool> commands = [:]
     // every command made, by its class, also one whose name another command has
-    private final Map<Class<?>, ApplicationCommand> madeCommands = new LinkedHashMap<>()
+    private final Map<Class<?>, GrailsTool> madeCommands = new LinkedHashMap<>()
     private final String missingCommandHint
-    private volatile Map<String, List<ApplicationCommand>> listed
+    private volatile Map<String, List<GrailsTool>> listed
 
     ApplicationContextCommandRegistry() {
         ClassLoader registryClassLoader = ApplicationContextCommandRegistry.classLoader
@@ -55,7 +55,7 @@ class ApplicationContextCommandRegistry {
     }
 
     private void addApplicationCommands(ClassLoader registryClassLoader, ClassLoader contextClassLoader) {
-        Map<Class<? extends ApplicationCommand>, String> commandOrigins = new LinkedHashMap<>()
+        Map<Class<? extends GrailsTool>, String> commandOrigins = new LinkedHashMap<>()
         addApplicationCommandClasses(commandOrigins, registryClassLoader)
 
         // If this is reflectively loaded from the delegating cli, we need to make sure the context class loader is
@@ -66,8 +66,8 @@ class ApplicationContextCommandRegistry {
             addApplicationCommandClasses(commandOrigins, contextClassLoader)
         }
 
-        List<ApplicationCommand> discoveredCommands = []
-        for (Map.Entry<Class<? extends ApplicationCommand>, String> entry : commandOrigins) {
+        List<GrailsTool> discoveredCommands = []
+        for (Map.Entry<Class<? extends GrailsTool>, String> entry : commandOrigins) {
             try {
                 discoveredCommands.add(instantiate(entry.key))
             }
@@ -83,11 +83,11 @@ class ApplicationContextCommandRegistry {
             }
         }
 
-        discoveredCommands.sort { ApplicationCommand first, ApplicationCommand second ->
+        discoveredCommands.sort { GrailsTool first, GrailsTool second ->
             first.class.name <=> second.class.name
         }
         OrderComparator.sort(discoveredCommands)
-        for (ApplicationCommand command : discoveredCommands) {
+        for (GrailsTool command : discoveredCommands) {
             madeCommands.putIfAbsent(commandClass(command), command)
             if (!commands.containsKey(command.name)) {
                 commands[command.name] = command
@@ -96,34 +96,36 @@ class ApplicationContextCommandRegistry {
     }
 
     private static void addApplicationCommandClasses(
-            Map<Class<? extends ApplicationCommand>, String> commandOrigins,
+            Map<Class<? extends GrailsTool>, String> commandOrigins,
             ClassLoader classLoader) {
-        Map<String, List<String>> declarations
-        try {
-            declarations = GrailsFactoriesLoader.loadFactoryDeclarations(
-                    ApplicationCommand, classLoader, GrailsFactoriesLoader.CLI_FACTORIES_RESOURCE_LOCATION)
-        }
-        catch (Throwable e) {
-            rethrowIfFatal(e)
-            log.warn('Unable to enumerate application command factories; skipping classloader {}.', classLoader, e)
-            return
-        }
-
+        // a tool is registered under the key of the tool contract, and by a companion of Grails 8 under the key of the command contract
         Map<String, String> declaredOrigins = new LinkedHashMap<>()
-        for (Map.Entry<String, List<String>> entry : declarations) {
-            for (String commandName : entry.value) {
-                declaredOrigins.putIfAbsent(commandName, entry.key)
+        for (String key : ToolDescriptor.FACTORIES_KEYS) {
+            Map<String, List<String>> declarations
+            try {
+                declarations = GrailsFactoriesLoader.loadFactoryDeclarations(
+                        key, classLoader, GrailsFactoriesLoader.CLI_FACTORIES_RESOURCE_LOCATION)
+            }
+            catch (Throwable e) {
+                rethrowIfFatal(e)
+                log.warn('Unable to enumerate application command factories; skipping classloader {}.', classLoader, e)
+                return
+            }
+            for (Map.Entry<String, List<String>> entry : declarations) {
+                for (String commandName : entry.value) {
+                    declaredOrigins.putIfAbsent(commandName, entry.key)
+                }
             }
         }
 
         for (Map.Entry<String, String> entry : declaredOrigins) {
             try {
                 Class<?> commandClass = ClassUtils.forName(entry.key, classLoader)
-                if (!ApplicationCommand.isAssignableFrom(commandClass)) {
+                if (!GrailsTool.isAssignableFrom(commandClass)) {
                     throw new IllegalArgumentException(
-                            "Class [${entry.key}] is not assignable to [${ApplicationCommand.name}]")
+                            "Class [${entry.key}] is not assignable to [${GrailsTool.name}]")
                 }
-                commandOrigins.putIfAbsent((Class<? extends ApplicationCommand>) commandClass, entry.value)
+                commandOrigins.putIfAbsent((Class<? extends GrailsTool>) commandClass, entry.value)
             }
             catch (LinkageError e) {
                 rethrowIfFatal(e)
@@ -248,7 +250,7 @@ class ApplicationContextCommandRegistry {
         type.protectionDomain?.codeSource?.location?.toExternalForm() ?: 'unknown'
     }
 
-    Collection<ApplicationCommand> findCommands() {
+    Collection<GrailsTool> findCommands() {
         commands.values()
     }
 
@@ -265,20 +267,20 @@ class ApplicationContextCommandRegistry {
      * @return the command, or {@code null} when the name is listed for no single command and no
      * command has it
      */
-    ApplicationCommand findCommand(String name) {
-        List<ApplicationCommand> listed = listedCommands().get(name)
+    GrailsTool findCommand(String name) {
+        List<GrailsTool> listed = listedCommands().get(name)
         listed != null && listed.size() == 1 ? listed[0] : commands[name]
     }
 
     // the commands by the names the catalog lists them by
-    private Map<String, List<ApplicationCommand>> listedCommands() {
-        Map<String, List<ApplicationCommand>> byName = listed
+    private Map<String, List<GrailsTool>> listedCommands() {
+        Map<String, List<GrailsTool>> byName = listed
         if (byName == null) {
             byName = new HashMap<>()
-            for (Map.Entry<Class<?>, ApplicationCommand> made : madeCommands) {
+            for (Map.Entry<Class<?>, GrailsTool> made : madeCommands) {
                 String name = listedName(made.key)
                 if (name != null) {
-                    byName.computeIfAbsent(name) { String key -> new ArrayList<ApplicationCommand>() }.add(made.value)
+                    byName.computeIfAbsent(name) { String key -> new ArrayList<GrailsTool>() }.add(made.value)
                 }
             }
             listed = byName
@@ -289,22 +291,22 @@ class ApplicationContextCommandRegistry {
     // the name the catalog lists the class by: the one its descriptor gives, the one its class name gives when it has
     // no descriptor, and none when its descriptor cannot be used, as the catalog does not list that command
     private static String listedName(Class<?> type) {
-        String location = CommandDescriptor.location(type.name)
+        String location = ToolDescriptor.location(type.name)
         URL descriptor = location == null ? null : type.classLoader?.getResource(location)
         if (descriptor == null) {
-            return CommandDescriptor.conventionName(type.name)
+            return ToolDescriptor.conventionName(type.name)
         }
         try {
-            byte[] bytes = descriptor.openStream().withCloseable { InputStream input -> input.readNBytes(CommandDescriptor.MAX_BYTES + 1) }
-            return CommandDescriptor.read(type.name, bytes).name
+            byte[] bytes = descriptor.openStream().withCloseable { InputStream input -> input.readNBytes(ToolDescriptor.MAX_BYTES + 1) }
+            return ToolDescriptor.read(type.name, bytes).name
         }
-        catch (CommandDescriptor.Refused | IOException ignored) {
+        catch (ToolDescriptor.Refused | IOException ignored) {
             return null
         }
     }
 
     // the class of the command, which the catalog names it by: for an adapter, the class of the command it adapts
-    private static Class<?> commandClass(ApplicationCommand command) {
+    private static Class<?> commandClass(GrailsTool command) {
         Object target = command instanceof ApplicationCommandTargetAware ? ((ApplicationCommandTargetAware) command).target : command
         target.getClass()
     }

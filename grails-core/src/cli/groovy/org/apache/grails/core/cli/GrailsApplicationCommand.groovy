@@ -16,31 +16,16 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.apache.grails.core.cli
 
-import grails.codegen.model.ModelBuilder
-import org.apache.grails.core.cli.io.FileSystemInteraction
-import org.apache.grails.core.cli.io.FileSystemInteractionImpl
-import org.apache.grails.core.cli.template.TemplateRenderer
-import org.apache.grails.core.cli.template.TemplateRendererImpl
+/**
+ * The name Grails 8 had for an {@link ApplicationTool} with {@link ToolSupport}: a class that
+ * implements it is both and runs as before.
+ *
+ * @since 3.0
+ * @deprecated implement {@link ApplicationTool} and {@link ToolSupport}; nothing else changes
+ */
+@Deprecated
+trait GrailsApplicationCommand implements ApplicationCommand, ToolSupport {
 
-trait GrailsApplicationCommand implements ApplicationCommand, ModelBuilder {
-
-    @Delegate TemplateRenderer templateRenderer
-    @Delegate FileSystemInteraction fileSystemInteraction
-    ExecutionContext executionContext
-
-    boolean handle(ExecutionContext executionContext) {
-        this.executionContext = executionContext
-        this.templateRenderer = new TemplateRendererImpl(executionContext.baseDir)
-        this.fileSystemInteraction = new FileSystemInteractionImpl(executionContext.baseDir)
-        handle()
-    }
-
-    List<String> getArgs() {
-        executionContext.commandLine.remainingArgs
-    }
-
-    abstract boolean handle()
 }

@@ -117,10 +117,10 @@ class CommandOptionCatalog {
         if (all.every { Listed each -> each.option.sameAs(all[0].option) }) {
             return all[0]
         }
-        List<Listed> own = all.findAll { Listed each -> each.origin == CommandCatalogBuilder.ORIGIN_APPLICATION }
+        List<Listed> own = all.findAll { Listed each -> each.origin == ToolCatalogBuilder.ORIGIN_APPLICATION }
         List<String> origins = all.collect { Listed each -> each.origin }.unique().sort()
         if (own.size() == 1) {
-            List<String> others = origins.findAll { String origin -> origin != CommandCatalogBuilder.ORIGIN_APPLICATION }
+            List<String> others = origins.findAll { String origin -> origin != ToolCatalogBuilder.ORIGIN_APPLICATION }
             said << "The option ${name} is as the application declares it: what ${some(others)} declares for that name is not used.".toString()
             return own[0]
         }
@@ -131,8 +131,8 @@ class CommandOptionCatalog {
     }
 
     private static String some(List<String> all) {
-        all.size() <= CommandCatalogBuilder.MAX_NAMED ? all.join(', ') :
-                "${all.subList(0, CommandCatalogBuilder.MAX_NAMED).join(', ')} and ${all.size() - CommandCatalogBuilder.MAX_NAMED} more".toString()
+        all.size() <= ToolCatalogBuilder.MAX_NAMED ? all.join(', ') :
+                "${all.subList(0, ToolCatalogBuilder.MAX_NAMED).join(', ')} and ${all.size() - ToolCatalogBuilder.MAX_NAMED} more".toString()
     }
 
     private static class Listed {

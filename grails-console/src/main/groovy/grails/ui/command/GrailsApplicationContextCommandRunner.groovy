@@ -23,9 +23,9 @@ import org.springframework.context.ConfigurableApplicationContext
 
 import grails.config.Settings
 import org.apache.grails.core.cli.ApplicationContextCommandRegistry
+import org.apache.grails.core.cli.ApplicationTool
 import org.apache.grails.core.cli.ExecutionContext
-import org.apache.grails.core.cli.GradleCommand
-import org.apache.grails.core.cli.StandaloneCommand
+import org.apache.grails.core.cli.GrailsTool
 import org.apache.grails.core.cli.ApplicationCommandTargetAware
 import grails.ui.support.DevelopmentGrailsApplication
 import org.apache.grails.gradle.model.cli.CommandArgumentsFile
@@ -35,9 +35,10 @@ import org.grails.build.parsing.CommandLineParser
 /**
  * Runs a command of the application or of one of its plugins, as the {@code runCommand} task of a
  * build starts it. The application is started around the command, which is given its application
- * context, unless the command is a {@link GradleCommand} or a {@link StandaloneCommand}: that one
- * is run without the application, and nothing of it is started. A {@link StandaloneCommand} needs no
- * build either, and the command line starts it without one; a build that is asked for it runs it here.
+ * context, unless the command is an {@link ApplicationTool} that says it does not start the
+ * application, or is no {@link ApplicationTool}, as a {@code StandaloneTool} is: that one is run
+ * without the application, and nothing of it is started. A {@code StandaloneTool} needs no build
+ * either, and the command line starts it without one; a build that is asked for it runs it here.
  *
  * @since 3.0
  */
@@ -54,12 +55,12 @@ class GrailsApplicationContextCommandRunner extends DevelopmentGrailsApplication
     @Override
     ConfigurableApplicationContext run(String... args) {
         ApplicationContextCommandRegistry commandRegistry = ApplicationContextCommandRegistry.instance
-        def command = commandRegistry.findCommand(commandName)
+        GrailsTool command = commandRegistry.findCommand(commandName)
         if (command) {
             Object autowireTarget = resolveAutowireTarget(command)
 
             // a command that says it needs no application is run as it is: nothing is started for it
-            if (autowireTarget instanceof GradleCommand || autowireTarget instanceof StandaloneCommand) {
+            if (!(command instanceof ApplicationTool) || !((ApplicationTool) command).startsApplication) {
                 try {
                     def result = command.handle(new ExecutionContext(new CommandLineParser().parse(args)))
                     result ? System.exit(0) : System.exit(1)
@@ -98,7 +99,7 @@ class GrailsApplicationContextCommandRunner extends DevelopmentGrailsApplication
                 // Parse the FULL args (including --options) for the command
                 CommandLine commandLine = new CommandLineParser().parse(args)
                 ctx.autowireCapableBeanFactory.autowireBeanProperties(autowireTarget, AutowireCapableBeanFactory.AUTOWIRE_BY_TYPE, false)
-                command.applicationContext = ctx
+                ((ApplicationTool) command).applicationContext = ctx
                 def result = command.handle(new ExecutionContext(commandLine))
                 result ? System.exit(0) : System.exit(1)
             } catch (Throwable e) {

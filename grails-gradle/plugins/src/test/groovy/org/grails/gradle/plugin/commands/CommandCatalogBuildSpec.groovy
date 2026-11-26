@@ -28,7 +28,7 @@ import org.gradle.testkit.runner.BuildResult
 import org.gradle.testkit.runner.TaskOutcome
 import spock.lang.IgnoreIf
 
-import org.apache.grails.gradle.model.cli.CommandCatalogFreshness
+import org.apache.grails.gradle.model.cli.ToolCatalogFreshness
 
 /**
  * The catalog of the commands of a project is kept current by the build: every build that compiles the
@@ -37,7 +37,7 @@ import org.apache.grails.gradle.model.cli.CommandCatalogFreshness
  */
 class CommandCatalogBuildSpec extends CommandProjectSpecification {
 
-    private static final String CATALOG = '.grails/cache/command-catalog.json'
+    private static final String CATALOG = '.grails/cache/tool-catalog.json'
 
     def "a build that compiles the project with #task writes the catalog after the classes"() {
         given:
@@ -47,9 +47,9 @@ class CommandCatalogBuildSpec extends CommandProjectSpecification {
         BuildResult result = executeTask(task)
 
         then:
-        result.task(':grailsCommandCatalog').outcome == TaskOutcome.SUCCESS
-        result.tasks*.path.indexOf(':grailsCommandCatalog') > result.tasks*.path.indexOf(':classes')
-        catalog().commands*.name == ['config-report']
+        result.task(':grailsToolCatalog').outcome == TaskOutcome.SUCCESS
+        result.tasks*.path.indexOf(':grailsToolCatalog') > result.tasks*.path.indexOf(':classes')
+        catalog().tools*.name == ['config-report']
         new File(projectDir, '.grails/cache/.gitignore').text == '*\n'
 
         and: 'the command line would not take the catalog for out of date'
@@ -67,7 +67,7 @@ class CommandCatalogBuildSpec extends CommandProjectSpecification {
         BuildResult compiled = executeTask('compileGroovy')
 
         then:
-        compiled.task(':grailsCommandCatalog') == null
+        compiled.task(':grailsToolCatalog') == null
         !new File(projectDir, CATALOG).exists()
 
         when:
@@ -75,7 +75,7 @@ class CommandCatalogBuildSpec extends CommandProjectSpecification {
         BuildResult failed = runner.withArguments('classes').buildAndFail()
 
         then:
-        failed.task(':grailsCommandCatalog') == null
+        failed.task(':grailsToolCatalog') == null
         !new File(projectDir, CATALOG).exists()
     }
 
@@ -93,7 +93,7 @@ class CommandCatalogBuildSpec extends CommandProjectSpecification {
         then:
         again.output.contains('Configuration cache entry reused')
         again.task(':classes').outcome == TaskOutcome.UP_TO_DATE
-        again.task(':grailsCommandCatalog').outcome == TaskOutcome.UP_TO_DATE
+        again.task(':grailsToolCatalog').outcome == TaskOutcome.UP_TO_DATE
         catalog.bytes == written
         Files.getLastModifiedTime(catalog.toPath()) == modified
         isCurrent()
@@ -110,8 +110,8 @@ class CommandCatalogBuildSpec extends CommandProjectSpecification {
         BuildResult result = executeTask('classes')
 
         then:
-        result.task(':grailsCommandCatalog').outcome == TaskOutcome.SUCCESS
-        catalog().commands*.name == ['config-report', 'greet']
+        result.task(':grailsToolCatalog').outcome == TaskOutcome.SUCCESS
+        catalog().tools*.name == ['config-report', 'greet']
         isCurrent()
 
         when: 'it is removed again'
@@ -120,8 +120,8 @@ class CommandCatalogBuildSpec extends CommandProjectSpecification {
         result = executeTask('classes')
 
         then:
-        result.task(':grailsCommandCatalog').outcome == TaskOutcome.SUCCESS
-        catalog().commands*.name == ['config-report']
+        result.task(':grailsToolCatalog').outcome == TaskOutcome.SUCCESS
+        catalog().tools*.name == ['config-report']
         isCurrent()
     }
 
@@ -145,7 +145,7 @@ class CommandCatalogBuildSpec extends CommandProjectSpecification {
         BuildResult result = executeTask('classes')
 
         then: 'the task ran, or took what it wrote before from the build cache, and the catalog is the same'
-        result.task(':grailsCommandCatalog').outcome in [TaskOutcome.SUCCESS, TaskOutcome.FROM_CACHE]
+        result.task(':grailsToolCatalog').outcome in [TaskOutcome.SUCCESS, TaskOutcome.FROM_CACHE]
         result.task(':classes').outcome == TaskOutcome.UP_TO_DATE
         catalog.bytes == written
         isCurrent()
@@ -154,13 +154,13 @@ class CommandCatalogBuildSpec extends CommandProjectSpecification {
         result = executeTask('classes')
 
         then:
-        result.task(':grailsCommandCatalog').outcome == TaskOutcome.UP_TO_DATE
+        result.task(':grailsToolCatalog').outcome == TaskOutcome.UP_TO_DATE
 
         where:
         changed                                                          | named
         'build.gradle'                                                   | 'build.gradle'
         'grails-app/commands/example/GreetCommand.groovy'                | 'grails-app/commands'
-        "build/resources/main/${descriptorPath('example.GreetCommand')}" | 'build/resources/main/META-INF/grails-commands'
+        "build/resources/main/${descriptorPath('example.GreetCommand')}" | 'build/resources/main/META-INF/grails-tools'
     }
 
     @IgnoreIf({ os.windows })
@@ -185,7 +185,7 @@ class CommandCatalogBuildSpec extends CommandProjectSpecification {
         then: 'nothing is out of date'
         Files.getLastModifiedTime(link.toPath(), LinkOption.NOFOLLOW_LINKS).toMillis() > catalog.lastModified()
         isCurrent()
-        executeTask('classes').task(':grailsCommandCatalog').outcome == TaskOutcome.UP_TO_DATE
+        executeTask('classes').task(':grailsToolCatalog').outcome == TaskOutcome.UP_TO_DATE
 
         when: 'the file the link leads to is written again'
         target.setLastModified(then)
@@ -197,7 +197,7 @@ class CommandCatalogBuildSpec extends CommandProjectSpecification {
         BuildResult result = executeTask('classes')
 
         then:
-        result.task(':grailsCommandCatalog').outcome in [TaskOutcome.SUCCESS, TaskOutcome.FROM_CACHE]
+        result.task(':grailsToolCatalog').outcome in [TaskOutcome.SUCCESS, TaskOutcome.FROM_CACHE]
         catalog.bytes == written
         isCurrent()
 
@@ -217,7 +217,7 @@ class CommandCatalogBuildSpec extends CommandProjectSpecification {
     private String changedSince() {
         FileTime written = Files.getLastModifiedTime(new File(projectDir, CATALOG).toPath())
         List<File> output = ['build/classes/groovy/main', 'build/classes/java/main', 'build/resources/main'].collect { new File(projectDir, it) }
-        CommandCatalogFreshness.changedSince(projectDir, output, written)
+        ToolCatalogFreshness.changedSince(projectDir, output, written)
     }
 
     // every file and directory of the project as changed at one instant, the catalog too; what Gradle keeps in its own directory is left alone

@@ -21,8 +21,8 @@ package org.apache.grails.security.acl.cli
 
 import groovy.transform.CompileStatic
 
-import org.apache.grails.core.cli.GrailsApplicationCommand
-import org.apache.grails.core.cli.StandaloneCommand
+import org.apache.grails.core.cli.StandaloneTool
+import org.apache.grails.core.cli.ToolSupport
 
 /**
  * Copies the ACL domain classes of the plugin into the project, where they can be customized, for example to
@@ -35,7 +35,7 @@ import org.apache.grails.core.cli.StandaloneCommand
  * @since 9.0
  */
 @CompileStatic
-class S2CreateAclDomainsCommand implements GrailsApplicationCommand, StandaloneCommand {
+class S2CreateAclDomainsCommand implements StandaloneTool, ToolSupport {
 
     private static final List<String> DOMAIN_CLASSES = ['AclClass', 'AclEntry', 'AclObjectIdentity', 'AclSid']
 

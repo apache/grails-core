@@ -26,7 +26,7 @@ import groovy.transform.CompileStatic
  * The options a plugin, or the application, declares for a command of the {@code grails} command
  * line: one JSON resource, {@code META-INF/grails-command-options.json}, in the jar of the plugin, in
  * its {@code -cli} companion or in the resources of the application. The build lists the declarations
- * in the catalog of the commands of the project ({@link CommandCatalogBuilder}) without loading a
+ * in the catalog of the commands of the project ({@link ToolCatalogBuilder}) without loading a
  * class, and the command line reads them there: no code of a plugin runs for an option.
  *
  * <p>Format 1 is one JSON object with the members {@code format} (the number 1) and {@code options},
@@ -176,11 +176,11 @@ final class CommandOptions {
      * @param description the description of an option
      * @return whether it is one line that can be shown in the help of a command: not blank, at most
      * {@link #MAX_DESCRIPTION_LENGTH} characters, none of them {@code $}, {@code %} or {@code @},
-     * which the help reads as its own, or a character {@link CommandDescriptor#isDescription} refuses
+     * which the help reads as its own, or a character {@link ToolDescriptor#isDescription} refuses
      */
     static boolean isDescription(String description) {
         if (description == null || description.trim().isEmpty() || description.length() > MAX_DESCRIPTION_LENGTH ||
-                !CommandDescriptor.isDescription(description)) {
+                !ToolDescriptor.isDescription(description)) {
             return false
         }
         for (int index = 0; index < description.length(); index++) {
@@ -322,7 +322,7 @@ final class CommandOptions {
     static String refusalOf(Map option) {
         Object command = option.get('command')
         if (!(command instanceof String) || !COMMANDS.contains(command)) {
-            return command instanceof String && CommandDescriptor.isCommandName((String) command) ?
+            return command instanceof String && ToolDescriptor.isCommandName((String) command) ?
                     "is for the command ${command}, which takes no declared options in this version of Grails (${COMMANDS.join(', ')} does)".toString() :
                     "names no command that takes declared options (${COMMANDS.join(', ')})".toString()
         }

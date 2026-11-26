@@ -27,11 +27,11 @@ import spock.lang.TempDir
 import spock.lang.Unroll
 
 /**
- * A {@link StandaloneCommand} as the {@code grails} command line starts it: by the {@code main}
- * method of {@link StandaloneCommandRunner} in a JVM of its own, which is no build and starts no
+ * A {@link StandaloneTool} as the {@code grails} command line starts it: by the {@code main}
+ * method of {@link StandaloneToolRunner} in a JVM of its own, which is no build and starts no
  * application, and ends with the status of the command.
  */
-class StandaloneCommandRunnerSpec extends Specification {
+class StandaloneToolRunnerSpec extends Specification {
 
     private static final int TIMEOUT_SECONDS = 120
 
@@ -97,7 +97,7 @@ class StandaloneCommandRunnerSpec extends Specification {
         then:
         result.exit == 1
         result.out.isEmpty()
-        result.err.readLines() == ["The command ${command} is not a StandaloneCommand, so it is not run as a process of its own. " +
+        result.err.readLines() == ["The command ${command} is not a StandaloneTool, so it is not run as a process of its own. " +
                                            "The build of the project runs it: grails run-command ${command}"]
 
         where:
@@ -121,12 +121,12 @@ class StandaloneCommandRunnerSpec extends Specification {
     private Map run(String... arguments) {
         File registrations = new File(dir, 'registrations')
         new File(registrations, 'META-INF').mkdirs()
-        new File(registrations, 'META-INF/grails-cli.factories').text = "${ApplicationCommand.name}=" +
+        new File(registrations, 'META-INF/grails-cli.factories').text = "${GrailsTool.name}=" +
                 [RunnerSpecSucceedsCommand, RunnerSpecReturnsFalseCommand, RunnerSpecThrowsCommand, RunnerSpecGradleCommand, RunnerSpecApplicationCommand]*.name.join(',') + '\n'
         List<String> command = [new File(System.getProperty('java.home'), 'bin/java').path,
                                 '-cp', registrations.path + File.pathSeparator + System.getProperty('java.class.path'),
                                 "-Dbase.dir=${dir.path}".toString(),
-                                StandaloneCommandRunner.name]
+                                StandaloneToolRunner.name]
         command.addAll(arguments.toList())
         File out = new File(dir, 'out.txt')
         File err = new File(dir, 'err.txt')
@@ -139,17 +139,17 @@ class StandaloneCommandRunnerSpec extends Specification {
     }
 }
 
-class RunnerSpecSucceedsCommand implements ApplicationCommand, StandaloneCommand {
+class RunnerSpecSucceedsCommand implements StandaloneTool {
 
     @Override
     boolean handle(ExecutionContext executionContext) {
         println "COMMAND=${name} ${executionContext.commandLine.remainingArgs} ${executionContext.commandLine.optionValue('flag')} " +
-                "${executionContext.commandLine.optionValue('bare')} context=${applicationContext} base=${executionContext.baseDir.canonicalPath}"
+                "${executionContext.commandLine.optionValue('bare')} context=${metaClass.hasProperty(this, 'applicationContext')} base=${executionContext.baseDir.canonicalPath}"
         true
     }
 }
 
-class RunnerSpecReturnsFalseCommand implements ApplicationCommand, StandaloneCommand {
+class RunnerSpecReturnsFalseCommand implements StandaloneTool {
 
     @Override
     boolean handle(ExecutionContext executionContext) {
@@ -158,7 +158,7 @@ class RunnerSpecReturnsFalseCommand implements ApplicationCommand, StandaloneCom
     }
 }
 
-class RunnerSpecThrowsCommand implements ApplicationCommand, StandaloneCommand {
+class RunnerSpecThrowsCommand implements StandaloneTool {
 
     @Override
     boolean handle(ExecutionContext executionContext) {
@@ -167,7 +167,9 @@ class RunnerSpecThrowsCommand implements ApplicationCommand, StandaloneCommand {
     }
 }
 
-class RunnerSpecGradleCommand implements ApplicationCommand, GradleCommand {
+class RunnerSpecGradleCommand implements ApplicationCommand {
+
+    boolean startsApplication = false
 
     @Override
     boolean handle(ExecutionContext executionContext) {

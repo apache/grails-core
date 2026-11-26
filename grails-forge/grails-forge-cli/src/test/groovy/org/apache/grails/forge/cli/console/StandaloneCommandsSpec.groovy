@@ -44,12 +44,12 @@ class StandaloneCommandsSpec extends CommandSpec implements CommandFixture {
 
     static final Map TOOL = [name: 'tool', aliases: [], description: 'Renders a file', origin: 'org.example:tool-cli:1.0', target: 'standalone', registration: 'descriptor']
     static final Map LOCAL = [name: 'local', aliases: [], description: 'Of the application', origin: 'application', target: 'standalone', registration: 'descriptor']
-    static final Map BUILD_TOOL = [name: 'build-tool', aliases: [], description: 'Needs the build', origin: 'org.example:tool-cli:1.0', target: 'gradle', registration: 'descriptor']
+    static final Map BUILD_TOOL = [name: 'build-tool', aliases: [], description: 'Needs the build', origin: 'org.example:tool-cli:1.0', target: 'application', startsApplication: false, registration: 'descriptor']
 
     static final String RUNNER = '''\
         package org.apache.grails.core.cli;
 
-        public class StandaloneCommandRunner {
+        public class StandaloneToolRunner {
 
             public static void main(String[] args) throws Exception {
                 System.out.println("arguments=" + args.length);
@@ -103,7 +103,7 @@ class StandaloneCommandsSpec extends CommandSpec implements CommandFixture {
         classes.mkdirs()
         library = new File(dir, 'lib/library')
         library.mkdirs()
-        File source = new File(dir, 'build/StandaloneCommandRunner.java')
+        File source = new File(dir, 'build/StandaloneToolRunner.java')
         source.text = RUNNER
         assert ToolProvider.getSystemJavaCompiler().run(null, null, null, '-d', library.path, source.path) == 0
         GradleBuild.setNonInteractive(false)
@@ -209,8 +209,8 @@ class StandaloneCommandsSpec extends CommandSpec implements CommandFixture {
         File file = new File(dir, StandaloneCommandFile.LOCATION)
         new File(dir, 'catalog.json').bytes = catalog.bytes
         new File(dir, 'standalone.json').bytes = file.bytes
-        new File(dir, 'when-built.sh').text = 'mkdir -p "$here/lib/library"\ncp "$here/catalog.json" "$here/.grails/cache/command-catalog.json"\n' +
-                'cp "$here/standalone.json" "$here/.grails/cache/standalone-commands.json"\n'
+        new File(dir, 'when-built.sh').text = 'mkdir -p "$here/lib/library"\ncp "$here/catalog.json" "$here/.grails/cache/tool-catalog.json"\n' +
+                'cp "$here/standalone.json" "$here/.grails/cache/standalone-tools.json"\n'
         change.call(this)
 
         when:
@@ -218,9 +218,9 @@ class StandaloneCommandsSpec extends CommandSpec implements CommandFixture {
 
         then: 'one line says why, the build ran the task that writes the file, and then the command ran'
         exit == 0
-        err.toString().readLines()[0] == "| Building the project before ${command} is run without Gradle, with the Gradle task grailsStandaloneCommands: ${reason}"
+        err.toString().readLines()[0] == "| Building the project before ${command} is run without Gradle, with the Gradle task grailsStandaloneTools: ${reason}"
         err.toString().readLines().last() == "| Running the command ${command} of ${command == 'local' ? 'the application' : 'org.example:tool-cli:1.0'}, as a process of its own, without Gradle"
-        ran.readLines().count { String argument -> argument.endsWith('grailsStandaloneCommands') } == 1
+        ran.readLines().count { String argument -> argument.endsWith('grailsStandaloneTools') } == 1
         !ran.readLines().any { String argument -> argument.endsWith('runCommand') }
         new JsonSlurper().parseText(line('vector=')) == [command, 'argument']
 
@@ -237,12 +237,12 @@ class StandaloneCommandsSpec extends CommandSpec implements CommandFixture {
 
         where:
         what                                                      | command | reason                                                                                         | change
-        'the file is not there'                                   | 'tool'  | 'there is no .grails/cache/standalone-commands.json'                                           | { StandaloneCommandsSpec spec -> new File(spec.dir, StandaloneCommandFile.LOCATION).delete() }
-        'the file is older than the list of the commands'         | 'tool'  | '.grails/cache/command-catalog.json is newer than .grails/cache/standalone-commands.json'      | { StandaloneCommandsSpec spec -> spec.older(StandaloneCommandFile.LOCATION, ApplicationCommandFile.LOCATION) }
-        'the build file is newer than the list of the commands'   | 'tool'  | 'build.gradle is newer than .grails/cache/command-catalog.json'                                | { StandaloneCommandsSpec spec -> new File(spec.dir, 'build.gradle').text = '// changed\n'; spec.older(ApplicationCommandFile.LOCATION, 'build.gradle'); spec.older(StandaloneCommandFile.LOCATION, 'build.gradle') }
+        'the file is not there'                                   | 'tool'  | 'there is no .grails/cache/standalone-tools.json'                                           | { StandaloneCommandsSpec spec -> new File(spec.dir, StandaloneCommandFile.LOCATION).delete() }
+        'the file is older than the list of the commands'         | 'tool'  | '.grails/cache/tool-catalog.json is newer than .grails/cache/standalone-tools.json'      | { StandaloneCommandsSpec spec -> spec.older(StandaloneCommandFile.LOCATION, ApplicationCommandFile.LOCATION) }
+        'the build file is newer than the list of the commands'   | 'tool'  | 'build.gradle is newer than .grails/cache/tool-catalog.json'                                | { StandaloneCommandsSpec spec -> new File(spec.dir, 'build.gradle').text = '// changed\n'; spec.older(ApplicationCommandFile.LOCATION, 'build.gradle'); spec.older(StandaloneCommandFile.LOCATION, 'build.gradle') }
         'an entry of the class path is no longer there'           | 'tool'  | 'lib/library of the class path is no longer there'                                             | { StandaloneCommandsSpec spec -> spec.moveLibraryAway() }
-        'a source of the application is newer than the file'      | 'local' | 'src/main/groovy was changed after .grails/cache/standalone-commands.json was written'         | { StandaloneCommandsSpec spec -> spec.older(StandaloneCommandFile.LOCATION, 'src/main/groovy/Thing.groovy') }
-        'the file is not the document the build writes'           | 'tool'  | '.grails/cache/standalone-commands.json is not the document of format 1 the build writes'      | { StandaloneCommandsSpec spec -> new File(spec.dir, StandaloneCommandFile.LOCATION).text = '{"format":2}\n' }
+        'a source of the application is newer than the file'      | 'local' | 'src/main/groovy was changed after .grails/cache/standalone-tools.json was written'         | { StandaloneCommandsSpec spec -> spec.older(StandaloneCommandFile.LOCATION, 'src/main/groovy/Thing.groovy') }
+        'the file is not the document the build writes'           | 'tool'  | '.grails/cache/standalone-tools.json is not the document of format 1 the build writes'      | { StandaloneCommandsSpec spec -> new File(spec.dir, StandaloneCommandFile.LOCATION).text = '{"format":2}\n' }
     }
 
     void "a source of the application that is newer than the file does not have the build run for a command of a plugin"() {
@@ -268,9 +268,9 @@ class StandaloneCommandsSpec extends CommandSpec implements CommandFixture {
 
         then:
         exit == 1
-        ran.readLines().count { String argument -> argument.endsWith('grailsStandaloneCommands') } == 1
+        ran.readLines().count { String argument -> argument.endsWith('grailsStandaloneTools') } == 1
         out.toString().isEmpty()
-        err.toString().readLines().last().endsWith('The build of the project did not write down a class path for the command tool: there is no .grails/cache/standalone-commands.json. ' +
+        err.toString().readLines().last().endsWith('The build of the project did not write down a class path for the command tool: there is no .grails/cache/standalone-tools.json. ' +
                 'The command was not run; the build runs it with: grails-forge-cli run-command tool')
 
         when: 'a build that fails'
@@ -306,9 +306,9 @@ class StandaloneCommandsSpec extends CommandSpec implements CommandFixture {
 
         where:
         what                                                   | reason                                                                                   | change
-        'the file is a link'                                   | '.grails/cache/standalone-commands.json is, or is behind, a link or is not a file'       | { StandaloneCommandsSpec spec -> spec.linked() }
-        'the file is not the user\'s own'                      | 'standalone-commands.json is not owned by the user who runs the command'                 | { StandaloneCommandsSpec spec -> spec.notOwned('standalone-commands.json') }
-        'the list of the commands is not the user\'s own'      | 'command-catalog.json is not owned by the user who runs the command'                     | { StandaloneCommandsSpec spec -> spec.notOwned('command-catalog.json') }
+        'the file is a link'                                   | '.grails/cache/standalone-tools.json is, or is behind, a link or is not a file'       | { StandaloneCommandsSpec spec -> spec.linked() }
+        'the file is not the user\'s own'                      | 'standalone-tools.json is not owned by the user who runs the command'                 | { StandaloneCommandsSpec spec -> spec.notOwned('standalone-tools.json') }
+        'the list of the commands is not the user\'s own'      | 'tool-catalog.json is not owned by the user who runs the command'                     | { StandaloneCommandsSpec spec -> spec.notOwned('tool-catalog.json') }
         'everybody can write to the directory of the file'     | '.grails/cache can be written to by everybody'                                           | { StandaloneCommandsSpec spec -> spec.writableByEverybody(new File(spec.dir, '.grails/cache')) }
         'an entry of the class path is outside the build'      | 'is not within the build of the project, the Gradle user home or the local Maven repository' | { StandaloneCommandsSpec spec -> spec.written([tool: 'dependencies'], [spec.outside().path]) }
         'an entry of the class path is not a whole path'       | 'is not a whole path that names its file itself'                                         | { StandaloneCommandsSpec spec -> spec.written([tool: 'dependencies'], ['lib/library']) }
@@ -387,7 +387,7 @@ class StandaloneCommandsSpec extends CommandSpec implements CommandFixture {
         given:
         listed([TOOL])
         File file = new File(dir, StandaloneCommandFile.LOCATION)
-        file.text = JsonOutput.toJson([format: 1, commands: [tool: 'dependencies'], application: [], dependencies: [], sources: [], java: 21,
+        file.text = JsonOutput.toJson([format: 1, tools: ['tool'], classpath: [], sources: [], java: 21,
                                        throughGradle: 'their class path has the output of another project of the build (:lib), which only the build keeps current']) + '\n'
 
         when:
@@ -486,22 +486,22 @@ class StandaloneCommandsSpec extends CommandSpec implements CommandFixture {
 
     void "the numbers of the file are those of what writes it"() {
         expect:
-        StandaloneCommandFile.LOCATION == org.apache.grails.gradle.model.cli.StandaloneCommandsDocument.LOCATION
-        StandaloneCommandFile.MAX_BYTES == org.apache.grails.gradle.model.cli.StandaloneCommandsDocument.MAX_BYTES
-        StandaloneCommandFile.MAX_ENTRIES == org.apache.grails.gradle.model.cli.StandaloneCommandsDocument.MAX_ENTRIES
-        StandaloneCommandFile.MAX_PATH == org.apache.grails.gradle.model.cli.StandaloneCommandsDocument.MAX_PATH_LENGTH
-        StandaloneCommandFile.MAX_SOURCES == org.apache.grails.gradle.model.cli.StandaloneCommandsDocument.MAX_SOURCES
-        StandaloneCommandFile.MAX_WALKED == org.apache.grails.gradle.model.cli.StandaloneCommandsDocument.MAX_WALKED
-        StandaloneCommandFile.MAX_WALK_DEPTH == org.apache.grails.gradle.model.cli.StandaloneCommandsDocument.MAX_WALK_DEPTH
+        StandaloneCommandFile.LOCATION == org.apache.grails.gradle.model.cli.StandaloneToolsDocument.LOCATION
+        StandaloneCommandFile.MAX_BYTES == org.apache.grails.gradle.model.cli.StandaloneToolsDocument.MAX_BYTES
+        StandaloneCommandFile.MAX_ENTRIES == org.apache.grails.gradle.model.cli.StandaloneToolsDocument.MAX_ENTRIES
+        StandaloneCommandFile.MAX_PATH == org.apache.grails.gradle.model.cli.StandaloneToolsDocument.MAX_PATH_LENGTH
+        StandaloneCommandFile.MAX_SOURCES == org.apache.grails.gradle.model.cli.StandaloneToolsDocument.MAX_SOURCES
+        StandaloneCommandFile.MAX_WALKED == org.apache.grails.gradle.model.cli.StandaloneToolsDocument.MAX_WALKED
+        StandaloneCommandFile.MAX_WALK_DEPTH == org.apache.grails.gradle.model.cli.StandaloneToolsDocument.MAX_WALK_DEPTH
     }
 
     void "what the build writes for the commands is what is read here"() {
         given: 'the file as the class of the build writes it, for the list as the class of the build writes it'
         String catalog = ApplicationCommandsSpec.doc([TOOL, LOCAL, BUILD_TOOL])
         listed([TOOL, LOCAL, BUILD_TOOL])
-        Map<String, String> commands = org.apache.grails.gradle.model.cli.StandaloneCommandsDocument.commandsOf(catalog.getBytes(StandardCharsets.UTF_8))
-        new File(dir, StandaloneCommandFile.LOCATION).text = org.apache.grails.gradle.model.cli.StandaloneCommandsDocument.write(
-                commands, [classes.path], [library.path], [new File(dir, 'src/main/groovy').path], 21, null)
+        Map<String, String> commands = org.apache.grails.gradle.model.cli.StandaloneToolsDocument.toolsOf(catalog.getBytes(StandardCharsets.UTF_8))
+        new File(dir, StandaloneCommandFile.LOCATION).text = org.apache.grails.gradle.model.cli.StandaloneToolsDocument.write(
+                commands.keySet().toList(), [classes.path, library.path], [new File(dir, 'src/main/groovy').path], 21, null)
 
         expect:
         commands == [local: 'application', tool: 'dependencies']
@@ -534,7 +534,7 @@ class StandaloneCommandsSpec extends CommandSpec implements CommandFixture {
         file.parentFile.mkdirs()
         Files.deleteIfExists(file.toPath())
         boolean ofApplication = commands.containsValue('application')
-        file.text = JsonOutput.toJson([format: 1, commands: commands, application: ofApplication ? [classes.path] : [], dependencies: dependencies,
+        file.text = JsonOutput.toJson([format: 1, tools: commands.keySet().toList(), classpath: (ofApplication ? [classes.path] : []) + dependencies,
                                        sources: ofApplication ? [new File(dir, 'src/main/groovy').path] : [], java: java]) + '\n'
     }
 
@@ -580,7 +580,7 @@ class StandaloneCommandsSpec extends CommandSpec implements CommandFixture {
         File outside = new File(away, 'library')
         assert library.renameTo(outside) || outside.mkdirs()
         if (!new File(outside, 'org').exists()) {
-            File source = new File(dir, 'build/StandaloneCommandRunner.java')
+            File source = new File(dir, 'build/StandaloneToolRunner.java')
             assert ToolProvider.getSystemJavaCompiler().run(null, null, null, '-d', outside.path, source.path) == 0
         }
         return outside

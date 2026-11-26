@@ -141,6 +141,7 @@ tasks.named('rat') {
             'grails-forge/grails-forge-web/aws/Procfile', // Elastic Beanstalk Procfile cannot contain comments
             'grails-forge/**/src/main/resources/**', // src/main/resources are included in generated application and should not include a license
             'grails-forge/**/src/test/resources/**', // src/test/resources are used in tests against files included in generated application and should not include a license
+            'grails-gradle/model/src/test/resources/project-record-sample/**', // records as the grails command line writes them, which the reader of the record is tested with; a license header would alter the compared bytes
             'grails-gradle/**/build/**', // grails-gradle does not have a build package name so exclude any build directories
             'grails-gradle/plugins/bin/**', // generated IDE output for the Gradle plugin build
             'end-to-end/**/build/**', // its own build, so its build directories are not covered by the root exclude
@@ -165,7 +166,7 @@ tasks.named('rat') {
             '**/*.log', // exclude log files
             'local-tasks.gradle', // exclude local helper scripts
             '**/spring-configuration-metadata.json', // JSON files cannot contain license headers
-            '**/META-INF/grails-commands/*.json', // command descriptors; JSON files cannot contain license headers
+            '**/META-INF/grails-tools/*.json', // tool descriptors; JSON files cannot contain license headers
             '**/META-INF/grails-command-options.json', // options declared for run-app; JSON files cannot contain license headers
             'end-to-end/native-i18n/src/native/resources/META-INF/native-image/reachability-metadata.json', // JSON files cannot contain license headers
             'grails-test-examples/spring-security/cas/test1/src/main/resources/cas/services/*.json', // CAS service registry definitions; JSON files cannot contain license headers

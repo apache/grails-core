@@ -20,8 +20,8 @@ package org.apache.grails.forge.cli.console
 
 import java.nio.charset.StandardCharsets
 import groovy.json.JsonSlurper
-import org.apache.grails.gradle.model.cli.CommandCatalogBuilder
-import org.apache.grails.gradle.model.cli.CommandDescriptor
+import org.apache.grails.gradle.model.cli.ToolCatalogBuilder
+import org.apache.grails.gradle.model.cli.ToolDescriptor
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.cli.CommandFixture
 import org.grails.forge.cli.CommandSpec
@@ -29,7 +29,7 @@ import org.grails.forge.cli.ForgeCli
 import spock.lang.IgnoreIf
 
 /**
- * A command the build of a project lists with the target {@code gradle}, one that is run without
+ * A command the build of a project lists as one that does not start the application, one that is run without
  * the application, as a command of the CLI: listed and run as every command of the application and
  * its plugins is, and said to be what it is. The file of the build is written here by hand, or by
  * the class of the build that writes it.
@@ -37,7 +37,7 @@ import spock.lang.IgnoreIf
 class GradleKindCommandsSpec extends CommandSpec implements CommandFixture {
 
     static final Map TAIL = [name: 'query-tail', aliases: [], description: 'Shows the statements', origin: 'org.apache.grails.data:grails-datamapping-core-cli:9.0.0',
-                             target: 'gradle', registration: 'descriptor']
+                             target: 'application', startsApplication: false, registration: 'descriptor']
 
     PrintStream originalOut
     PrintStream originalErr
@@ -116,11 +116,11 @@ class GradleKindCommandsSpec extends CommandSpec implements CommandFixture {
         new File(jar, 'META-INF').mkdirs()
         new File(jar, 'META-INF/grails-cli.factories').text = 'org.apache.grails.core.cli.ApplicationCommand=demo.TailCommand,demo.ReportCommand\n'
         [['demo.TailCommand', 'tail', 'gradle'], ['demo.ReportCommand', 'report', 'application']].each { List<String> each ->
-            File descriptor = new File(jar, CommandDescriptor.location(each[0]))
+            File descriptor = new File(jar, ToolDescriptor.location(each[0]))
             descriptor.parentFile.mkdirs()
-            descriptor.text = CommandDescriptor.describe(each[0], each[1], 'Does it', each[2])
+            descriptor.text = ToolDescriptor.describe(each[0], each[1], 'Does it', 'application', each[2] != 'gradle', [])
         }
-        CommandCatalogBuilder builder = new CommandCatalogBuilder()
+        ToolCatalogBuilder builder = new ToolCatalogBuilder()
         builder.add('org.example:element:1.0', jar)
         catalog(builder.toJson())
         jar.deleteDir()
@@ -164,7 +164,7 @@ class GradleKindCommandsSpec extends CommandSpec implements CommandFixture {
     }
 
     private void catalog(String content) {
-        File file = new File(dir, '.grails/cache/command-catalog.json')
+        File file = new File(dir, '.grails/cache/tool-catalog.json')
         file.parentFile.mkdirs()
         file.bytes = content.getBytes(StandardCharsets.UTF_8)
     }

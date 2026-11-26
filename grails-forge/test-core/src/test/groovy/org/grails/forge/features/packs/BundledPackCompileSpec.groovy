@@ -160,7 +160,7 @@ class BundledPackCompileSpec extends CommandSpec {
         result.tasks.every { BuildTask task -> task.outcome != TaskOutcome.FROM_CACHE }
 
         and: 'what the application runs with resolves, unless a pack is known to keep it from it: the catalog of its commands, which a build that compiles it writes, names a class path that does not'
-        String catalog = new File(dir, '.grails/cache/command-catalog.json').getText('US-ASCII')
+        String catalog = new File(dir, '.grails/cache/tool-catalog.json').getText('US-ASCII')
         catalog.contains('runtimeClasspath cannot be resolved completely ') == application.features.any { String name -> RUNTIME_NOT_RESOLVED.containsKey(name) }
         !catalog.contains('grailsCliClasspath cannot be resolved completely ')
 

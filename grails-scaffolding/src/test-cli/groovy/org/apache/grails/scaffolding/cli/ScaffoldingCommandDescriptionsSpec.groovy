@@ -20,8 +20,8 @@ package org.apache.grails.scaffolding.cli
 
 import spock.lang.Specification
 
-import org.apache.grails.core.cli.ApplicationCommand
-import org.apache.grails.core.cli.StandaloneCommand
+import org.apache.grails.core.cli.GrailsTool
+import org.apache.grails.core.cli.StandaloneTool
 
 /**
  * What the list of commands shows for the commands of the scaffolding plugin: a command that does not
@@ -34,14 +34,14 @@ class ScaffoldingCommandDescriptionsSpec extends Specification {
     def "every command of the plugin says what it does"() {
         given: 'the commands the plugin registers'
         List<String> registered = registeredCommands()
-        List<ApplicationCommand> commands = registered.collect { String className ->
-            (ApplicationCommand) getClass().classLoader.loadClass(className).getDeclaredConstructor().newInstance()
+        List<GrailsTool> commands = registered.collect { String className ->
+            (GrailsTool) getClass().classLoader.loadClass(className).getDeclaredConstructor().newInstance()
         }
 
         expect:
         registered.contains(GenerateViewsCommand.name)
         registered.size() >= 9
-        commands.every { ApplicationCommand command ->
+        commands.every { GrailsTool command ->
             command.description && command.description != command.name && !command.description.contains('\n')
         }
 
@@ -53,7 +53,7 @@ class ScaffoldingCommandDescriptionsSpec extends Specification {
     def "the commands only read and write files of the project, so each runs as a process of its own, without Gradle and without the application"() {
         expect:
         registeredCommands().size() >= 9
-        registeredCommands().every { String className -> StandaloneCommand.isAssignableFrom(getClass().classLoader.loadClass(className)) }
+        registeredCommands().every { String className -> StandaloneTool.isAssignableFrom(getClass().classLoader.loadClass(className)) }
     }
 
     private List<String> registeredCommands() {
@@ -61,7 +61,7 @@ class ScaffoldingCommandDescriptionsSpec extends Specification {
         getClass().classLoader.getResources(FACTORIES).each { URL url ->
             Properties properties = new Properties()
             url.withInputStream { properties.load(it) }
-            String registered = properties.getProperty(ApplicationCommand.name)
+            String registered = properties.getProperty(GrailsTool.name)
             if (registered) {
                 classNames.addAll(registered.split(',')*.trim().findAll { it.startsWith('org.apache.grails.scaffolding.') })
             }

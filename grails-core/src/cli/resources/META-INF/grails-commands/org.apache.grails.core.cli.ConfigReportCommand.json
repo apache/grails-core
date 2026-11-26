@@ -1,1 +1,0 @@
-{"format":1,"class":"org.apache.grails.core.cli.ConfigReportCommand","name":"config-report","description":"Generates an AsciiDoc report of the application configuration","target":"application"}

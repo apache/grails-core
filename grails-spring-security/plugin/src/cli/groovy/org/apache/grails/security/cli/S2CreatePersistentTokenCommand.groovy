@@ -24,8 +24,8 @@ import groovy.transform.CompileStatic
 import grails.build.logging.ConsoleLogger
 import grails.build.logging.GrailsConsole
 import grails.codegen.model.Model
-import org.apache.grails.core.cli.GrailsApplicationCommand
-import org.apache.grails.core.cli.StandaloneCommand
+import org.apache.grails.core.cli.StandaloneTool
+import org.apache.grails.core.cli.ToolSupport
 
 /**
  * Creates a persistent token domain class for the Spring Security Core plugin.
@@ -36,7 +36,7 @@ import org.apache.grails.core.cli.StandaloneCommand
  * @since 6.0.0
  */
 @CompileStatic
-class S2CreatePersistentTokenCommand implements GrailsApplicationCommand, StandaloneCommand, CommandLineHelper, SkipBootstrap {
+class S2CreatePersistentTokenCommand implements StandaloneTool, ToolSupport, CommandLineHelper, SkipBootstrap {
 
     private static final String USAGE_MESSAGE = '''
 s2-create-persistent-token <domain-class-name>

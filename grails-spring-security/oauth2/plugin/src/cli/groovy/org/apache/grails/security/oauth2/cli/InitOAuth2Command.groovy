@@ -20,8 +20,8 @@ import groovy.transform.CompileStatic
 import grails.build.logging.ConsoleLogger
 import grails.build.logging.GrailsConsole
 import grails.codegen.model.Model
-import org.apache.grails.core.cli.GrailsApplicationCommand
-import org.apache.grails.core.cli.StandaloneCommand
+import org.apache.grails.core.cli.StandaloneTool
+import org.apache.grails.core.cli.ToolSupport
 
 /**
  * Creates the domain class that records the OAuth identities of a user and names it in the configuration of
@@ -38,7 +38,7 @@ import org.apache.grails.core.cli.StandaloneCommand
  * @since 3.0.0
  */
 @CompileStatic
-class InitOAuth2Command implements GrailsApplicationCommand, StandaloneCommand, CommandLineHelper {
+class InitOAuth2Command implements StandaloneTool, ToolSupport, CommandLineHelper {
 
     private final static String USAGE_MESSAGE = '''
    grails init-oauth2 <domain-class-package> <user-class-name> <oauthid-class-name>

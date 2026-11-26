@@ -41,7 +41,7 @@ class EarlierRecordWarningSpec extends AbstractFeatureAddCommandSpec {
         new File(project, 'grails-forge-cli.yml').setText("applicationType: web\ndefaultPackage: example\nfeatures: [grails-quartz, ${features.join(', ')}]\n", 'UTF-8')
         // the build of the project has listed the commands of the application, of which there are none
         new File(project, '.grails/cache').mkdirs()
-        new File(project, '.grails/cache/command-catalog.json').text = '{"format":1,"complete":true,"diagnostics":[],"commands":[]}'
+        new File(project, '.grails/cache/tool-catalog.json').text = '{"format":1,"complete":true,"diagnostics":[],"tools":[]}'
         System.setProperty('user.dir', project.absolutePath)
         reset()
     }

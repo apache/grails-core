@@ -49,15 +49,17 @@ import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
 
-import org.apache.grails.gradle.model.cli.CommandCatalogBuilder
-import org.apache.grails.gradle.model.cli.CommandCatalogFreshness
+import org.apache.grails.gradle.model.cli.ToolBuildNames
+import org.apache.grails.gradle.model.cli.ToolCatalogBuilder
+import org.apache.grails.gradle.model.cli.ToolCatalogFreshness
+import org.apache.grails.gradle.model.cli.ToolDescriptor
 
 /**
  * Writes the catalog of the application commands of the project: the commands that
  * {@code runCommand} can run, from the commands of the project itself ({@code grails-app/commands}),
  * the companion {@code -cli} artifacts of its plugins, and the Grails 7 plugins on its class path.
  *
- * <p>The catalog is one JSON document, {@link CommandCatalogBuilder#FORMAT format 1} of the document
+ * <p>The catalog is one JSON document, {@link ToolCatalogBuilder#FORMAT format 1} of the document
  * {@code help --json} of the command line writes, in {@link #CATALOG_LOCATION} of the directory of the
  * project, which also lists the test phases of the project, its {@code Test} tasks, by the names
  * {@code grails test-app} selects them with. The task reads registrations and descriptors and loads no class, so it starts no
@@ -71,7 +73,7 @@ import org.apache.grails.gradle.model.cli.CommandCatalogFreshness
  *
  * <p>The Grails Gradle plugin has the task run after {@code classes}, so every build that compiles the
  * project leaves the catalog current. The command line takes a catalog for out of date when a file it is
- * made from was changed after it was written ({@link CommandCatalogFreshness}), which a compiler that
+ * made from was changed after it was written ({@link ToolCatalogFreshness}), which a compiler that
  * writes a descriptor again with the same content does; the task holds itself to that rule as well, and
  * writes a catalog that is older than one of those files again, although what it lists is the same.</p>
  *
@@ -87,10 +89,10 @@ import org.apache.grails.gradle.model.cli.CommandCatalogFreshness
 abstract class GrailsCommandCatalogTask extends DefaultTask {
 
     /** The name of the task. */
-    public static final String TASK_NAME = 'grailsCommandCatalog'
+    public static final String TASK_NAME = ToolBuildNames.TOOL_CATALOG_TASK
 
     /** Where the catalog is written, in the directory of the project, whatever its build directory is. */
-    public static final String CATALOG_LOCATION = CommandCatalogBuilder.LOCATION
+    public static final String CATALOG_LOCATION = ToolCatalogBuilder.LOCATION
 
     /** The file that keeps the directory of the catalog out of a commit, in the directory of the project. */
     public static final String IGNORE_LOCATION = '.grails/cache/.gitignore'
@@ -102,7 +104,7 @@ abstract class GrailsCommandCatalogTask extends DefaultTask {
     public static final List<String> REGISTRATION_PATTERNS = [
             'META-INF/grails-cli.factories',
             'META-INF/grails.factories',
-            'META-INF/grails-commands/*.json',
+            ToolDescriptor.DIRECTORY + '/*.json',
             'META-INF/grails-command-options.json',
     ].asImmutable()
 
@@ -164,7 +166,7 @@ abstract class GrailsCommandCatalogTask extends DefaultTask {
 
     /**
      * The directory of the project, in which the command line looks at what the catalog is made from
-     * to tell whether it may be out of date (see {@link CommandCatalogFreshness}).
+     * to tell whether it may be out of date (see {@link ToolCatalogFreshness}).
      */
     @Internal
     abstract DirectoryProperty getProjectDirectory()
@@ -175,10 +177,10 @@ abstract class GrailsCommandCatalogTask extends DefaultTask {
 
     @TaskAction
     void write() {
-        CommandCatalogBuilder catalog = new CommandCatalogBuilder()
+        ToolCatalogBuilder catalog = new ToolCatalogBuilder()
         // one element: the compiler copies a registration written by hand into the classes directory,
         // and the descriptor written by hand beside it stays in the resources directory
-        catalog.add(CommandCatalogBuilder.ORIGIN_APPLICATION, applicationOutput.files)
+        catalog.add(ToolCatalogBuilder.ORIGIN_APPLICATION, applicationOutput.files)
         Map<String, String> origins = originsByPath.get()
         for (File file : commandClasspath.files) {
             catalog.add(origins.get(file.absolutePath) ?: "file:${file.name}".toString(), file)
@@ -233,7 +235,7 @@ abstract class GrailsCommandCatalogTask extends DefaultTask {
             } catch (IOException ignored) {
                 return true
             }
-            String changed = CommandCatalogFreshness.changedSince(catalogTask.projectDirectory.get().asFile, catalogTask.applicationOutput.files, written)
+            String changed = ToolCatalogFreshness.changedSince(catalogTask.projectDirectory.get().asFile, catalogTask.applicationOutput.files, written)
             if (changed != null) {
                 task.logger.info('{} is newer than the catalog of the commands, which is written again', changed)
             }

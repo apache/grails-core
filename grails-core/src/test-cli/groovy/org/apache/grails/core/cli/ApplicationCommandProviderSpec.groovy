@@ -31,7 +31,7 @@ import ch.qos.logback.classic.spi.ILoggingEvent
 import org.apache.grails.core.testing.support.LogCapture
 import org.springframework.core.Ordered
 
-import org.apache.grails.gradle.model.cli.CommandDescriptor
+import org.apache.grails.gradle.model.cli.ToolDescriptor
 import org.grails.core.io.support.GrailsFactoriesLoader
 
 import spock.lang.Specification
@@ -463,8 +463,8 @@ class ApplicationCommandProviderSpec extends Specification {
         where: 'the name a class gives is the one the catalog lists the command by'
         lookedFor                                                       || found
         'ordered-collision'                                             || ZOrderedCollisionCommand
-        CommandDescriptor.conventionName(ZOrderedCollisionCommand.name)   || ZOrderedCollisionCommand
-        CommandDescriptor.conventionName(AUnorderedCollisionCommand.name) || AUnorderedCollisionCommand
+        ToolDescriptor.conventionName(ZOrderedCollisionCommand.name)   || ZOrderedCollisionCommand
+        ToolDescriptor.conventionName(AUnorderedCollisionCommand.name) || AUnorderedCollisionCommand
         'something-else'                                                || ClassGivenCommand
         'class-given'                                                   || ClassGivenCommand
         'runs-as-class-given'                                           || RunsAsClassGivenCommand

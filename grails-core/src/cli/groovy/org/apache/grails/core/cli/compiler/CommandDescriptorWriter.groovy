@@ -38,10 +38,10 @@ import org.codehaus.groovy.ast.stmt.ReturnStatement
 import org.codehaus.groovy.ast.stmt.Statement
 import org.codehaus.groovy.transform.trait.Traits
 
-import org.apache.grails.gradle.model.cli.CommandDescriptor
+import org.apache.grails.gradle.model.cli.ToolDescriptor
 
 /**
- * Writes the descriptor of a compiled command, {@code META-INF/grails-commands/<class name>.json},
+ * Writes the descriptor of a compiled command, {@code META-INF/grails-tools/<class name>.json},
  * into the compilation target directory, beside the registration of the command in
  * {@code META-INF/grails-cli.factories}. A build reads it to list the command with its name and
  * description without loading the class.
@@ -64,8 +64,10 @@ import org.apache.grails.gradle.model.cli.CommandDescriptor
  * out of the descriptor.</p>
  *
  * <p>The execution target of the descriptor is {@code standalone} for a class that implements
- * {@code StandaloneCommand}, {@code gradle} for one that implements {@code GradleCommand} and not that, itself or through a class it extends or an interface, and
- * {@code application} for every other command.</p>
+ * {@code StandaloneTool}, itself or through a class it extends or an interface, and
+ * {@code application} for every other command. A command of the target {@code application} starts
+ * the application unless the class, or a class it extends, declares the property
+ * {@code startsApplication} with the constant {@code false}.</p>
  *
  * @since 9.0
  */
@@ -76,8 +78,9 @@ class CommandDescriptorWriter {
 
     private static final String TRAIT_CLASS_MEMBER = 'traitClass'
 
-    private static final String GRADLE_COMMAND = 'org.apache.grails.core.cli.GradleCommand'
-    private static final String STANDALONE_COMMAND = 'org.apache.grails.core.cli.StandaloneCommand'
+    private static final String STANDALONE_TOOL = 'org.apache.grails.core.cli.StandaloneTool'
+
+    private static final String STARTS_APPLICATION = 'startsApplication'
 
     private static final Object UNKNOWN = new Object()
 
@@ -90,7 +93,7 @@ class CommandDescriptorWriter {
      * @return {@code true} when a descriptor was written
      */
     static boolean write(ClassNode classNode, File compilationTargetDirectory) {
-        String location = CommandDescriptor.location(classNode.name)
+        String location = ToolDescriptor.location(classNode.name)
         if (location == null) {
             return false
         }
@@ -105,14 +108,14 @@ class CommandDescriptorWriter {
             descriptor.delete()
             return false
         }
-        String name = declaredName == null ? CommandDescriptor.conventionName(classNode.name) : (String) declaredName
+        String name = declaredName == null ? ToolDescriptor.conventionName(classNode.name) : (String) declaredName
         Object declaredDescription = declared(classNode, 'description')
         String description = declaredDescription.is(UNKNOWN) ? null :
                 declaredDescription == null ? name : (String) declaredDescription
         // nothing is written that the reader of a descriptor refuses: a name that is not the name of a
         // command gets no descriptor, and a description that is not one line that can be shown is left out
-        String json = CommandDescriptor.describe(classNode.name, name, description,
-                target(classNode))
+        String json = ToolDescriptor.describe(classNode.name, name, description,
+                target(classNode), startsApplication(classNode), Collections.<String> emptyList())
         if (json == null) {
             descriptor.delete()
             return false
@@ -130,7 +133,7 @@ class CommandDescriptorWriter {
      * @param compilationTargetDirectory the compilation output directory
      */
     static void remove(String className, File compilationTargetDirectory) {
-        String location = CommandDescriptor.location(className)
+        String location = ToolDescriptor.location(className)
         if (location != null) {
             File descriptor = new File(compilationTargetDirectory, location)
             if (descriptor.isFile()) {
@@ -139,10 +142,23 @@ class CommandDescriptorWriter {
         }
     }
 
-    // the kind of the command: what the class, or a class it extends, is marked as; a class marked as both runs as a process of its own
+    // the kind of the command: what the class, or a class it extends, is marked as
     private static String target(ClassNode classNode) {
-        isMarked(classNode, STANDALONE_COMMAND) ? CommandDescriptor.TARGET_STANDALONE :
-                isMarked(classNode, GRADLE_COMMAND) ? CommandDescriptor.TARGET_GRADLE : CommandDescriptor.TARGET_APPLICATION
+        isMarked(classNode, STANDALONE_TOOL) ? ToolDescriptor.TARGET_STANDALONE : ToolDescriptor.TARGET_APPLICATION
+    }
+
+    // whether the application is started around the command: it is, unless the nearest declaration of the property says the constant false
+    private static boolean startsApplication(ClassNode classNode) {
+        ClassNode current = classNode
+        while (current != null && current != ClassHelper.OBJECT_TYPE) {
+            PropertyNode propertyNode = current.getProperty(STARTS_APPLICATION)
+            if (propertyNode != null && !propertyNode.isStatic()) {
+                Expression declared = propertyNode.initialExpression
+                return !(declared instanceof ConstantExpression && ((ConstantExpression) declared).value == Boolean.FALSE)
+            }
+            current = current.superClass
+        }
+        true
     }
 
     private static boolean isMarked(ClassNode classNode, String marker) {
@@ -192,7 +208,7 @@ class CommandDescriptorWriter {
             Expression traitClass = annotation.getMember(TRAIT_CLASS_MEMBER)
             if (traitClass instanceof ClassExpression) {
                 String traitName = ((ClassExpression) traitClass).type.name
-                return traitName == CommandFactoriesTransformation.APPLICATION_COMMAND_CLASS.name
+                return traitName == CommandFactoriesTransformation.GRAILS_TOOL_CLASS.name
             }
         }
         false

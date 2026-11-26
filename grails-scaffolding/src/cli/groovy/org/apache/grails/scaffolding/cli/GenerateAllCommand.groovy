@@ -22,8 +22,8 @@ import groovy.transform.CompileStatic
 
 import grails.build.logging.ConsoleLogger
 import grails.build.logging.GrailsConsole
-import org.apache.grails.core.cli.GrailsApplicationCommand
-import org.apache.grails.core.cli.StandaloneCommand
+import org.apache.grails.core.cli.StandaloneTool
+import org.apache.grails.core.cli.ToolSupport
 
 /**
  * Generates a controller that performs CRUD operations and the associated views
@@ -33,7 +33,7 @@ import org.apache.grails.core.cli.StandaloneCommand
  * @since 5.0.0
  */
 @CompileStatic
-class GenerateAllCommand implements GrailsApplicationCommand, StandaloneCommand, CommandLineHelper, SkipBootstrap {
+class GenerateAllCommand implements StandaloneTool, ToolSupport, CommandLineHelper, SkipBootstrap {
 
     String description = 'Generates a controller that performs CRUD operations and the associated views'
 
@@ -60,7 +60,7 @@ class GenerateAllCommand implements GrailsApplicationCommand, StandaloneCommand,
      * a domain class that is not found fails the command and does not keep the views of the others from being
      * generated.
      */
-    private boolean run(GrailsApplicationCommand command) {
+    private boolean run(ToolSupport command) {
         command.executionContext = executionContext
         command.templateRenderer = templateRenderer
         command.fileSystemInteraction = fileSystemInteraction

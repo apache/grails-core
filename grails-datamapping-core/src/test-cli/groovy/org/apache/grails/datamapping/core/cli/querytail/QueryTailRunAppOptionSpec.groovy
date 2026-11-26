@@ -21,7 +21,7 @@ package org.apache.grails.datamapping.core.cli.querytail
 import spock.lang.Specification
 
 import org.apache.grails.datastore.core.querytail.QueryTailSettings
-import org.apache.grails.gradle.model.cli.CommandCatalogBuilder
+import org.apache.grails.gradle.model.cli.ToolCatalogBuilder
 import org.apache.grails.gradle.model.cli.CommandOptions
 
 /**
@@ -40,7 +40,7 @@ class QueryTailRunAppOptionSpec extends Specification {
                 .collect { URL url -> elementOf(url) }
 
         when: 'the catalog of a project that has the artifact is put together'
-        CommandCatalogBuilder builder = new CommandCatalogBuilder()
+        ToolCatalogBuilder builder = new ToolCatalogBuilder()
         elements.each { File element -> builder.add(ORIGIN, element) }
         Map<String, Object> catalog = builder.build()
 

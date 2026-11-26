@@ -49,7 +49,7 @@ import groovy.transform.CompileStatic
 final class StandaloneCommandProcess {
 
     /** The class the JVM is started with, of {@code grails-core-cli}. */
-    public static final String MAIN_CLASS = 'org.apache.grails.core.cli.StandaloneCommandRunner'
+    public static final String MAIN_CLASS = 'org.apache.grails.core.cli.StandaloneToolRunner'
 
     /** What the main class reads the arguments of the command from; the rest of the argument is the path of the file. */
     public static final String ARGUMENTS = '--grails-args-file='

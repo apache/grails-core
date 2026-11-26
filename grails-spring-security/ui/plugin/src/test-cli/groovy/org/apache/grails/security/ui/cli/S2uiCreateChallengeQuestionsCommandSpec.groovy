@@ -23,9 +23,9 @@ import spock.lang.TempDir
 import spock.lang.Unroll
 
 import grails.build.logging.GrailsConsole
-import org.apache.grails.core.cli.ApplicationCommand
+import org.apache.grails.core.cli.GrailsTool
 import org.apache.grails.core.cli.ExecutionContext
-import org.apache.grails.core.cli.GrailsApplicationCommand
+import org.apache.grails.core.cli.ToolSupport
 import org.apache.grails.core.cli.io.FileSystemInteractionImpl
 import org.apache.grails.core.cli.script.ScriptConsole
 import org.apache.grails.core.cli.template.TemplateRendererImpl
@@ -297,18 +297,18 @@ class S2uiCreateChallengeQuestionsCommandSpec extends Specification {
         getClass().classLoader.getResources('META-INF/grails-cli.factories').each { URL url ->
             Properties properties = new Properties()
             url.withInputStream { properties.load(it) }
-            String commands = properties.getProperty(ApplicationCommand.name)
+            String commands = properties.getProperty(GrailsTool.name)
             if (commands) {
                 registered.addAll(commands.split(',')*.trim().findAll { it.startsWith('org.apache.grails.security.ui.') })
             }
         }
-        List<ApplicationCommand> commands = registered.unique().sort().collect { String className ->
-            (ApplicationCommand) getClass().classLoader.loadClass(className).getDeclaredConstructor().newInstance()
+        List<GrailsTool> commands = registered.unique().sort().collect { String className ->
+            (GrailsTool) getClass().classLoader.loadClass(className).getDeclaredConstructor().newInstance()
         }
 
         expect:
         commands*.name == ['s2ui-create-challenge-questions', 's2ui-override']
-        commands.every { ApplicationCommand command ->
+        commands.every { GrailsTool command ->
             command.description && command.description != command.name && !command.description.contains('\n')
         }
         new S2uiCreateChallengeQuestionsCommand().skipBootstrap
@@ -319,7 +319,7 @@ class S2uiCreateChallengeQuestionsCommandSpec extends Specification {
      * the project from the build settings of the JVM, which a spec cannot set.
      */
     private boolean run(String line) {
-        GrailsApplicationCommand command = new S2uiCreateChallengeQuestionsCommand()
+        ToolSupport command = new S2uiCreateChallengeQuestionsCommand()
         command.executionContext = new ExecutionContext(new CommandLineParser().parseString(line))
         command.templateRenderer = new TemplateRendererImpl(project)
         command.fileSystemInteraction = new FileSystemInteractionImpl(project)

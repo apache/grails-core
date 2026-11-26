@@ -85,10 +85,10 @@ class GeneratedApplicationCommandSpec extends CommandSpec implements CommandFixt
 
         then: 'the build listed the commands once, and the command ran in the application and succeeded'
         exit == 0
-        err.toString().readLines()[0] == '| Listing the commands of the application and its plugins, of which data-import may be one, with the Gradle task grailsCommandCatalog'
+        err.toString().readLines()[0] == '| Listing the commands of the application and its plugins, of which data-import may be one, with the Gradle task grailsToolCatalog'
         err.toString().contains('| Running the command data-import of the application, with the Gradle task runCommand')
         out.toString().readLines().contains('Ran data-import with the arguments [orders.csv]')
-        catalog().commands.find { it.name == 'data-import' }.origin == 'application'
+        catalog().tools.find { it.name == 'data-import' }.origin == 'application'
 
         when: 'a second command, and a build that compiles the project'
         assert ForgeCli.execute(beanContext, 'create-command', 'wave') == 0
@@ -98,7 +98,7 @@ class GeneratedApplicationCommandSpec extends CommandSpec implements CommandFixt
 
         then: 'the build listed it, and the list is current for the command line, which lists it as a command of the application'
         compiled == 0
-        ((List<Map>) catalog().commands)*.name.containsAll(['data-import', 'wave'])
+        ((List<Map>) catalog().tools)*.name.containsAll(['data-import', 'wave'])
 
         when:
         out.reset()
@@ -141,7 +141,7 @@ class GeneratedApplicationCommandSpec extends CommandSpec implements CommandFixt
 
         then: 'the build listed it by that name only, and the command that ran is the one listed, with the name it has'
         exit == 0
-        ((List<Map>) catalog().commands).findAll { it.origin == 'application' }.collect { [it.name, it.registration] } == [[listed, registration]]
+        ((List<Map>) catalog().tools).findAll { it.origin == 'application' }.collect { [it.name, it.registration] } == [[listed, registration]]
         err.toString().contains("| Running the command ${listed} of the application, with the Gradle task runCommand")
         out.toString().readLines().contains('Ran import-data with the arguments [orders.csv]')
 
