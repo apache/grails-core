@@ -453,21 +453,46 @@ final class CommandCatalog {
         return listed
     }
 
-    // The commands that are most like what was typed and is no command: first those it nearly is the
-    // short form of, then those whose names are most like it, as picocli finds them; three at most.
+    // The commands that are most like what was typed and is no command: the command that took the place of a command of
+    // the Grails shell of that name, then those it nearly is the short form of, then those whose names are most like it, as
+    // picocli finds them; three at most. A deprecated name is never offered: a command is offered by its own name in its
+    // place, and not at all where that name is deprecated too, as run-script is.
     private static List<String> suggestions(CommandLine parent, String typed) {
-        List<CommandLine> suggested = ShortForms.FORM.matcher(typed).matches() ?
-                ShortForms.near(typed, new Known(parent).all()) : new ArrayList<CommandLine>()
-        List<String> names = suggested.collect { CommandLine command -> command.getCommandName() }
+        List<CommandLine> suggested = []
+        List<String> names = []
+        String replacement = parent.getParent() == null ? FormerCommands.find(typed)?.getReplacement() : null
+        CommandLine replacing = replacement == null ? null : parent.getSubcommands().get(replacement)
+        List<CommandLine> near = ShortForms.FORM.matcher(typed).matches() ? ShortForms.near(typed, new Known(parent).all()) : Collections.<CommandLine>emptyList()
+        List<Map.Entry<String, CommandLine>> candidates = []
+        if (replacing != null) {
+            candidates.add(new AbstractMap.SimpleImmutableEntry<String, CommandLine>(replacing.getCommandName(), replacing))
+        }
+        near.each { CommandLine command -> candidates.add(new AbstractMap.SimpleImmutableEntry<String, CommandLine>(command.getCommandName(), command)) }
         for (String similar : new CommandLine.UnmatchedArgumentException(parent, Collections.singletonList(typed)).getSuggestions()) {
-            CommandLine command = parent.getSubcommands().get(similar)
-            // once for a command, whichever of its names is most like what was typed
-            if (names.size() < ShortForms.MAX_NEAR && !suggested.any { CommandLine each -> each.is(command) }) {
-                suggested.add(command)
-                names.add(similar)
+            candidates.add(new AbstractMap.SimpleImmutableEntry<String, CommandLine>(similar, parent.getSubcommands().get(similar)))
+        }
+        for (Map.Entry<String, CommandLine> candidate : candidates) {
+            String offered = offered(candidate.value, candidate.key)
+            // once for a command, by whichever of its names is most like what was typed
+            if (offered != null && names.size() < ShortForms.MAX_NEAR && !suggested.any { CommandLine each -> each.is(candidate.value) }) {
+                suggested.add(candidate.value)
+                names.add(offered)
             }
         }
         return names
+    }
+
+    // The name a command is offered by where it was found by one of its names: that name, or the name of the command where
+    // that name is deprecated; nothing where the command's own name is deprecated as well.
+    private static String offered(CommandLine command, String name) {
+        if (command == null) {
+            return null
+        }
+        List<String> deprecated = deprecatedNames(command.getCommandSpec())
+        if (deprecated.contains(command.getCommandName())) {
+            return null
+        }
+        return deprecated.contains(name) ? command.getCommandName() : name
     }
 
     // whether what was typed is the name of a command the Grails shell had, or of an environment in front of a command, which is answered with

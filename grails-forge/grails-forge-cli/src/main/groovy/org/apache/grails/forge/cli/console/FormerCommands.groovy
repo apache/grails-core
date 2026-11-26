@@ -18,6 +18,8 @@
  */
 package org.apache.grails.forge.cli.console
 
+import java.util.regex.Matcher
+import java.util.regex.Pattern
 import groovy.transform.CompileStatic
 import picocli.CommandLine
 
@@ -79,6 +81,22 @@ final class FormerCommands {
             this.status = status
             this.hint = hint
         }
+
+        /**
+         * @return the command of this command line that takes its place, as the hint names it to be
+         * typed ({@code Type: {cli} create-tool NAME}), which is offered where its name is typed; or
+         * {@code null} for one whose place no single command takes
+         */
+        String getReplacement() {
+            if (status != Status.REPLACED) {
+                return null
+            }
+            Matcher typed = REPLACEMENT.matcher(hint)
+            return typed.find() ? typed.group(1) : null
+        }
+
+        // how the hint of a command that was replaced ends: the command line that is typed in its place
+        private static final Pattern REPLACEMENT = Pattern.compile(/Type: \{cli\} ([a-z][a-z-]*)( NAME)?$/)
     }
 
     private static final String PROFILES_GONE = 'Profiles are replaced by application types, features and feature packs, and no command creates any of these'

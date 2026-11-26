@@ -321,7 +321,7 @@ class InteractiveConsoleSpec extends Specification {
         and: 'a form two commands fit runs neither and says how each is typed, and one that fits none says what it nearly is'
         said.contains('co is short for more than one command: compile (com), console (con). ' +
                 'Type more of the name of the one that is meant, or the short form in brackets after it')
-        said.contains('There is no command rn. Did you mean: run-app or run-script or run-tool?')
+        said.contains('There is no command rn. Did you mean: run-app or run-tool?')
         said.contains('the wrapper ran with build')
     }
 
@@ -356,8 +356,8 @@ class InteractiveConsoleSpec extends Specification {
         said.contains('run-app takes no argument app.groovy. A Groovy script is run in a Grails project with run-script, ' +
                 'with the application started around it. Type: run-script app.groovy')
 
-        and: 'no short form is read from run'
-        said.contains('There is no command ru. Did you mean: run-app or run-script or run-tool?')
+        and: 'no short form is read from run, and run-script, which is deprecated, is not offered'
+        said.contains('There is no command ru. Did you mean: run-app or run-tool?')
         !said.contains('the wrapper ran with')
     }
 

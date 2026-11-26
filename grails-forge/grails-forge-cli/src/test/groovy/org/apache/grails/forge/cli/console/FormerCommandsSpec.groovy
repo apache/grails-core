@@ -748,6 +748,35 @@ class FormerCommandsSpec extends CommandSpec {
         'create-command' | 'plugin' | CREATE_COMMAND | 'src/cli/groovy/example/cli/DataImportTool.groovy'
     }
 
+    @Unroll
+    void "#typed is answered with #offered first among the commands most like it, and never with a deprecated name"() {
+        given:
+        inProject('web')
+
+        when:
+        int exit = ForgeCli.execute(beanContext, typed, 'data-import')
+        String first = err.toString().readLines()[0]
+        String start = "There is no command ${typed}. Did you mean: "
+        List<String> offers = first.startsWith(start) ? first.substring(start.length(), first.length() - 1).split(' or ').toList() : []
+
+        then: 'the command in the place of a command of the Grails shell, or the name of the command whose deprecated name is most like it'
+        exit == 2
+        offers[0] == offered
+
+        and: 'no deprecated name, and each command once'
+        !offers.contains(RunToolCommand.DEPRECATED_NAME)
+        !offers.contains('run-script')
+        offers.size() == offers.unique(false).size()
+
+        where:
+        typed            | offered
+        'create-command' | 'create-tool'
+        'create-script'  | 'create-tool'
+        'run-comand'     | 'run-tool'
+        'run-commands'   | 'run-tool'
+        'run-scripts'    | 'run'
+    }
+
     void "create-functional-test, which was a script of the Geb plugin in a web application, is a command there, and is refused with its line in a project without Geb"() {
         given: 'a web application, which has a Geb feature by default'
         inProject('web')

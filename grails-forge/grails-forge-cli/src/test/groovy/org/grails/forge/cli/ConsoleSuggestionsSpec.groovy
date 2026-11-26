@@ -51,7 +51,7 @@ class ConsoleSuggestionsSpec extends Specification {
             'open'             : ['open opened a file with the program the desktop has for it in the Grails shell. It has no replacement in grails'],
             'install'          : ['Run: grails gradle publishToMavenLocal'],
             'create-controller': ['grails project migrate writes the record of an application that has none'],
-            'rn'               : ['There is no command rn. Did you mean: run-app or run-script or run-tool?'],
+            'rn'               : ['There is no command rn. Did you mean: run-app or run-tool?'],
             'co'               : ['co is short for more than one command: compile (com), console (con). ' +
                                           'Type more of the name of the one that is meant, or the short form in brackets after it']
     ]

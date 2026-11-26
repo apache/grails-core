@@ -366,9 +366,10 @@ class CommandCatalogSpec extends CommandSpec implements CommandFixture {
         typed  | expected | first                                                                       | what
         'run'  | 0        | 'Usage: grails-forge-cli run-app [-hvVx]'                                   | 'run-app'
         'stop' | 0        | 'Usage: grails-forge-cli stop-app [-hvVx]'                                  | 'stop-app'
-        'Run'  | 2        | 'There is no command Run. Did you mean: run-app or run-script or run-tool?' | 'no name in another case'
-        'r'    | 2        | 'There is no command r. Did you mean: run-app or run-script or run-tool?' | 'no command: it starts run as much as run-script and run-tool'
-        'ru'   | 2        | 'There is no command ru. Did you mean: run-app or run-script or run-tool?' | 'no command either'
+        // run-script, which is deprecated, is no command that is offered
+        'Run'  | 2        | 'There is no command Run. Did you mean: run-app or run-tool?'               | 'no name in another case'
+        'r'    | 2        | 'There is no command r. Did you mean: run-app or run-tool?'                 | 'no command: it starts run as much as run-script and run-tool'
+        'ru'   | 2        | 'There is no command ru. Did you mean: run-app or run-tool?'                | 'no command either'
         'st'   | 0        | 'Usage: grails-forge-cli stats '                                            | 'stats still, which no command of one word but stats starts'
         'sto'  | 2        | 'There is no command sto. Did you mean: '                                   | 'no command: it starts stop and stop-app, which have no short form of one part'
         's'    | 2        | 's is short for more than one command: stats (st), shell (sh).'             | 'stats and shell, as before'
@@ -393,7 +394,7 @@ class CommandCatalogSpec extends CommandSpec implements CommandFixture {
 
         where:
         typed         | of            | offered                                 | why
-        'rn'          | ''            | 'run-app or run-script or run-tool?' | 'one letter other than the last of each of their short forms'
+        'rn'          | ''            | 'run-app or run-tool?'                  | 'one letter other than the last of each of their short forms, but run-script, which is deprecated'
         'raa'         | ''            | 'run-app'                               | 'one letter more than ra'
         'rpa'         | ''            | 'run-app'                               | 'two letters of rap the other way round'
         'Ra'          | ''            | 'run-app'                               | 'ra in another case, which the rule of the shell reads as one word'
