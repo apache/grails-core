@@ -17,13 +17,10 @@
  *  under the License.
  */
 
-package org.grails.orm.hibernate.query;
+package org.grails.orm.hibernate.query
 
-import java.util.Locale;
-import java.util.Map;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
+import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
 
 /**
  * The HQL keywords the reader of a query looks for, and which of them start a clause: a token after the root
@@ -31,43 +28,54 @@ import java.util.stream.Stream;
  *
  * @since 8.0.1
  */
+@CompileStatic
+@PackageScope
 enum HqlKeyword {
 
-    SELECT("select", false),
-    FROM("from", false),
-    DISTINCT("distinct", false),
-    ALL("all", false),
-    AS("as", false),
-    NEW("new", false),
-    WHERE("where", true),
-    JOIN("join", true),
-    LEFT("left", true),
-    RIGHT("right", true),
-    INNER("inner", true),
-    OUTER("outer", true),
-    GROUP("group", true),
-    ORDER("order", true),
-    HAVING("having", true);
+    SELECT('select', false),
+    FROM('from', false),
+    DISTINCT('distinct', false),
+    ALL('all', false),
+    AS('as', false),
+    NEW('new', false),
+    WHERE('where', true),
+    JOIN('join', true),
+    LEFT('left', true),
+    RIGHT('right', true),
+    INNER('inner', true),
+    OUTER('outer', true),
+    GROUP('group', true),
+    ORDER('order', true),
+    HAVING('having', true)
 
-    private static final Map<String, HqlKeyword> BY_TEXT = Stream.of(values())
-            .collect(Collectors.toUnmodifiableMap(HqlKeyword::text, Function.identity()));
+    private static final Map<String, HqlKeyword> BY_TEXT = byText()
 
-    private final String text;
-    private final boolean startsClause;
+    private final String text
+    private final boolean startsClause
 
     HqlKeyword(String text, boolean startsClause) {
-        this.text = text;
-        this.startsClause = startsClause;
+        this.text = text
+        this.startsClause = startsClause
     }
 
     /** The keyword in lower case, as the reader matches it against a lowercased query. */
+    @PackageScope
     String text() {
-        return text;
+        return text
     }
 
     /** Whether a token, in any case, is a keyword that starts a clause. */
+    @PackageScope
     static boolean startsClause(String token) {
-        HqlKeyword keyword = BY_TEXT.get(token.toLowerCase(Locale.ROOT));
-        return keyword != null && keyword.startsClause;
+        HqlKeyword keyword = BY_TEXT.get(token.toLowerCase(Locale.ROOT))
+        return keyword != null && keyword.@startsClause
+    }
+
+    private static Map<String, HqlKeyword> byText() {
+        Map<String, HqlKeyword> byText = new HashMap<>()
+        for (HqlKeyword keyword : values()) {
+            byText.put(keyword.text(), keyword)
+        }
+        return Collections.unmodifiableMap(byText)
     }
 }

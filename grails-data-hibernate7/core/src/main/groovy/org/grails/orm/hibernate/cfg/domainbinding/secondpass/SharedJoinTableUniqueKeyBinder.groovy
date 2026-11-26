@@ -16,28 +16,25 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.secondpass;
+package org.grails.orm.hibernate.cfg.domainbinding.secondpass
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-
-import org.hibernate.MappingException;
-import org.hibernate.boot.Metadata;
-import org.hibernate.boot.model.naming.Identifier;
-import org.hibernate.boot.model.naming.ImplicitIndexNameSource;
-import org.hibernate.boot.model.naming.ImplicitNamingStrategy;
-import org.hibernate.boot.model.naming.ImplicitUniqueKeyNameSource;
-import org.hibernate.boot.spi.MetadataBuildingContext;
-import org.hibernate.dialect.Dialect;
-import org.hibernate.mapping.Collection;
-import org.hibernate.mapping.Column;
-import org.hibernate.mapping.IdentifierCollection;
-import org.hibernate.mapping.IndexedCollection;
-import org.hibernate.mapping.Selectable;
-import org.hibernate.mapping.Table;
-import org.hibernate.mapping.Value;
+import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
+import org.hibernate.MappingException
+import org.hibernate.boot.Metadata
+import org.hibernate.boot.model.naming.Identifier
+import org.hibernate.boot.model.naming.ImplicitIndexNameSource
+import org.hibernate.boot.model.naming.ImplicitNamingStrategy
+import org.hibernate.boot.model.naming.ImplicitUniqueKeyNameSource
+import org.hibernate.boot.spi.MetadataBuildingContext
+import org.hibernate.dialect.Dialect
+import org.hibernate.mapping.Collection
+import org.hibernate.mapping.Column
+import org.hibernate.mapping.IdentifierCollection
+import org.hibernate.mapping.IndexedCollection
+import org.hibernate.mapping.Selectable
+import org.hibernate.mapping.Table
+import org.hibernate.mapping.Value
 
 /**
  * Gives every collection with a join table a uniqueness constraint of its own over its key column and the element,
@@ -66,24 +63,26 @@ import org.hibernate.mapping.Value;
  *
  * @since 8.0.1
  */
-public class SharedJoinTableUniqueKeyBinder {
+@CompileStatic
+class SharedJoinTableUniqueKeyBinder {
 
-    private final MetadataBuildingContext metadataBuildingContext;
-    private final SharedJoinTableUniqueness uniqueness;
+    private final MetadataBuildingContext metadataBuildingContext
+    private final SharedJoinTableUniqueness uniqueness
 
     /** Resolves the uniqueness for the dialect of the metadata being built. */
-    public SharedJoinTableUniqueKeyBinder(MetadataBuildingContext metadataBuildingContext) {
-        this(metadataBuildingContext, metadataBuildingContext.getMetadataCollector().getDatabase().getDialect());
+    SharedJoinTableUniqueKeyBinder(MetadataBuildingContext metadataBuildingContext) {
+        this(metadataBuildingContext, metadataBuildingContext.getMetadataCollector().getDatabase().getDialect())
     }
 
+    @PackageScope
     SharedJoinTableUniqueKeyBinder(MetadataBuildingContext metadataBuildingContext, Dialect dialect) {
-        this.metadataBuildingContext = metadataBuildingContext;
-        this.uniqueness = SharedJoinTableUniqueness.forDialect(dialect);
+        this.metadataBuildingContext = metadataBuildingContext
+        this.uniqueness = SharedJoinTableUniqueness.forDialect(dialect)
     }
 
     /** The uniqueness this binder applies. */
-    public SharedJoinTableUniqueness getUniqueness() {
-        return uniqueness;
+    SharedJoinTableUniqueness getUniqueness() {
+        return uniqueness
     }
 
     /**
@@ -91,26 +90,26 @@ public class SharedJoinTableUniqueKeyBinder {
      * is keyed by its index, which its table has as part of the primary key, and a bag has no key at all; their
      * elements repeat by design, so they are left as Hibernate bound them.
      */
-    public void bind(Collection collection) {
-        Table table = collection.getCollectionTable();
+    void bind(Collection collection) {
+        Table table = collection.getCollectionTable()
         if (table == null || collection.isInverse() || collection.isOneToMany() || collection.getKey() == null) {
-            return;
+            return
         }
-        List<Collection> sharing = collectionsSharing(collection, table);
-        restrictRowsToOwnCollection(sharing);
+        List<Collection> sharing = collectionsSharing(collection, table)
+        restrictRowsToOwnCollection(sharing)
         if (collection instanceof IndexedCollection) {
-            makeIndexedCollectionsShareable(sharing, table);
-            return;
+            makeIndexedCollectionsShareable(sharing, table)
+            return
         }
         if (!collection.isSet()) {
-            return;
+            return
         }
-        List<Column> keyColumns = collection.getKey().getColumns();
-        List<Column> elementColumns = columnsOf(collection);
+        List<Column> keyColumns = collection.getKey().getColumns()
+        List<Column> elementColumns = columnsOf(collection)
         if (keyColumns.isEmpty() || elementColumns.isEmpty() || hasLobColumn(collection.getMetadata(), elementColumns)) {
-            return;
+            return
         }
-        uniqueness.apply(table, keyColumns, elementColumns, new ImplicitNaming(table));
+        uniqueness.apply(table, keyColumns, elementColumns, new ImplicitNaming(metadataBuildingContext, table))
     }
 
     /**
@@ -120,15 +119,15 @@ public class SharedJoinTableUniqueKeyBinder {
      */
     private List<Collection> collectionsSharing(Collection collection, Table table) {
         if (!hasColumnsOfOthers(collection, table)) {
-            return List.of();
+            return Collections.<Collection>emptyList()
         }
-        List<Collection> sharing = new ArrayList<>();
+        List<Collection> sharing = new ArrayList<>()
         for (Collection other : metadataBuildingContext.getMetadataCollector().getCollectionBindings()) {
-            if (other.getCollectionTable() == table && !other.isInverse() && !other.isOneToMany() && other.getKey() != null) {
-                sharing.add(other);
+            if (other.getCollectionTable().is(table) && !other.isInverse() && !other.isOneToMany() && other.getKey() != null) {
+                sharing.add(other)
             }
         }
-        return sharing.size() < 2 ? List.of() : sharing;
+        return sharing.size() < 2 ? Collections.<Collection>emptyList() : sharing
     }
 
     /**
@@ -141,51 +140,52 @@ public class SharedJoinTableUniqueKeyBinder {
      * which finds the others bound.
      */
     private void restrictRowsToOwnCollection(List<Collection> sharing) {
-        Dialect dialect = metadataBuildingContext.getMetadataCollector().getDatabase().getDialect();
+        Dialect dialect = metadataBuildingContext.getMetadataCollector().getDatabase().getDialect()
         for (Collection member : sharing) {
             if (!sharesKeyColumnWithOther(member, sharing)) {
-                continue;
+                continue
             }
-            List<Column> columns = restrictingColumns(member, sharing);
+            List<Column> columns = restrictingColumns(member, sharing)
             if (columns.isEmpty()) {
-                continue;
+                continue
             }
-            List<String> present = new ArrayList<>();
+            List<String> present = new ArrayList<>()
             for (Column column : columns) {
-                present.add(column.getQuotedName(dialect) + " is not null");
+                present.add(column.getQuotedName(dialect) + ' is not null')
             }
-            String restriction = String.join(" and ", present);
-            String where = member.getWhere();
+            String restriction = String.join(' and ', present)
+            String where = member.getWhere()
             if (where == null || where.isBlank()) {
-                member.setWhere(restriction);
+                member.setWhere(restriction)
             } else if (!where.contains(restriction)) {
-                member.setWhere("(" + where + ") and " + restriction);
+                member.setWhere('(' + where + ') and ' + restriction)
             }
         }
     }
 
     private static List<Column> restrictingColumns(Collection member, List<Collection> sharing) {
-        List<Column> columns = new ArrayList<>();
-        if (member instanceof IndexedCollection indexed && indexed.getIndex() != null) {
+        List<Column> columns = new ArrayList<>()
+        if (member instanceof IndexedCollection && ((IndexedCollection) member).getIndex() != null) {
+            IndexedCollection indexed = (IndexedCollection) member
             for (Selectable selectable : indexed.getIndex().getSelectables()) {
-                if (selectable instanceof Column column && !columns.contains(column)) {
-                    columns.add(column);
+                if (selectable instanceof Column && !columns.contains((Column) selectable)) {
+                    columns.add((Column) selectable)
                 }
             }
-            Set<Column> otherElements = new HashSet<>();
+            Set<Column> otherElements = new HashSet<>()
             for (Collection other : sharing) {
-                if (other != member) {
-                    otherElements.addAll(columnsOf(other));
+                if (!other.is(member)) {
+                    otherElements.addAll(columnsOf(other))
                 }
             }
             for (Column column : columnsOf(member)) {
                 if (!otherElements.contains(column) && !columns.contains(column)) {
-                    columns.add(column);
+                    columns.add(column)
                 }
             }
-            return columns;
+            return columns
         }
-        return columnsOf(member);
+        return columnsOf(member)
     }
 
     /**
@@ -199,45 +199,50 @@ public class SharedJoinTableUniqueKeyBinder {
      */
     private void makeIndexedCollectionsShareable(List<Collection> sharing, Table table) {
         for (Collection member : sharing) {
-            if (!(member instanceof IndexedCollection indexed) || indexed.getIndex() == null) {
-                continue;
+            if (!(member instanceof IndexedCollection) || ((IndexedCollection) member).getIndex() == null) {
+                continue
             }
-            List<Column> keyColumns = member.getKey().getColumns();
-            List<Column> indexColumns = new ArrayList<>();
+            IndexedCollection indexed = (IndexedCollection) member
+            List<Column> keyColumns = member.getKey().getColumns()
+            List<Column> indexColumns = new ArrayList<>()
             for (Selectable selectable : indexed.getIndex().getSelectables()) {
-                if (selectable instanceof Column column) {
-                    indexColumns.add(column);
+                if (selectable instanceof Column) {
+                    indexColumns.add((Column) selectable)
                 }
             }
             if (keyColumns.isEmpty() || indexColumns.isEmpty()) {
-                continue;
+                continue
             }
-            Set<Column> own = new HashSet<>(keyColumns);
-            own.addAll(indexColumns);
+            Set<Column> own = new HashSet<>(keyColumns)
+            own.addAll(indexColumns)
             if (table.hasPrimaryKey() && own.containsAll(table.getPrimaryKey().getColumns())) {
-                table.setPrimaryKey(null);
+                table.setPrimaryKey(null)
             }
-            keyColumns.forEach(column -> column.setNullable(true));
-            indexColumns.forEach(column -> column.setNullable(true));
-            uniqueness.apply(table, keyColumns, indexColumns, new ImplicitNaming(table));
+            for (Column column : keyColumns) {
+                column.setNullable(true)
+            }
+            for (Column column : indexColumns) {
+                column.setNullable(true)
+            }
+            uniqueness.apply(table, keyColumns, indexColumns, new ImplicitNaming(metadataBuildingContext, table))
         }
     }
 
     private static boolean sharesKeyColumnWithOther(Collection collection, List<Collection> sharing) {
         if (collection.getKey() == null) {
-            return false;
+            return false
         }
-        Set<Column> ownKeyColumns = new HashSet<>(collection.getKey().getColumns());
+        Set<Column> ownKeyColumns = new HashSet<>(collection.getKey().getColumns())
         for (Collection other : sharing) {
-            if (other != collection && other.getKey() != null) {
+            if (!other.is(collection) && other.getKey() != null) {
                 for (Column otherKeyCol : other.getKey().getColumns()) {
                     if (ownKeyColumns.contains(otherKeyCol)) {
-                        return true;
+                        return true
                     }
                 }
             }
         }
-        return false;
+        return false
     }
 
     /**
@@ -248,26 +253,26 @@ public class SharedJoinTableUniqueKeyBinder {
      * it restricts both.
      */
     private static boolean hasColumnsOfOthers(Collection collection, Table table) {
-        Set<Column> own = new HashSet<>(collection.getKey().getColumns());
-        own.addAll(columnsOf(collection));
-        if (collection instanceof IndexedCollection indexed && indexed.getIndex() != null) {
-            addColumns(own, indexed.getIndex());
+        Set<Column> own = new HashSet<>(collection.getKey().getColumns())
+        own.addAll(columnsOf(collection))
+        if (collection instanceof IndexedCollection && ((IndexedCollection) collection).getIndex() != null) {
+            addColumns(own, ((IndexedCollection) collection).getIndex())
         }
-        if (collection instanceof IdentifierCollection idbag && idbag.getIdentifier() != null) {
-            addColumns(own, idbag.getIdentifier());
+        if (collection instanceof IdentifierCollection && ((IdentifierCollection) collection).getIdentifier() != null) {
+            addColumns(own, ((IdentifierCollection) collection).getIdentifier())
         }
         for (Column column : table.getColumns()) {
             if (!own.contains(column)) {
-                return true;
+                return true
             }
         }
-        return false;
+        return false
     }
 
     private static void addColumns(Set<Column> columns, Value value) {
         for (Selectable selectable : value.getSelectables()) {
-            if (selectable instanceof Column column) {
-                columns.add(column);
+            if (selectable instanceof Column) {
+                columns.add((Column) selectable)
             }
         }
     }
@@ -276,105 +281,114 @@ public class SharedJoinTableUniqueKeyBinder {
      * Whether an element column is a large object, which a database cannot index. Hibernate leaves the set of such an
      * element without a key ({@code Set.createPrimaryKey}), and so does this binder.
      */
+    @PackageScope
     static boolean hasLobColumn(Metadata metadata, List<Column> elementColumns) {
         for (Column column : elementColumns) {
             try {
                 if (column.isSqlTypeLob(metadata)) {
-                    return true;
+                    return true
                 }
             }
             catch (MappingException ignored) {
                 // the type of the column cannot be resolved, as Hibernate decides when it makes the same check
             }
         }
-        return false;
+        return false
     }
 
     private static List<Column> columnsOf(Collection collection) {
-        List<Column> columns = new ArrayList<>();
+        List<Column> columns = new ArrayList<>()
         if (collection.getElement() != null) {
             for (Selectable selectable : collection.getElement().getSelectables()) {
-                if (selectable instanceof Column column) {
-                    columns.add(column);
+                if (selectable instanceof Column) {
+                    columns.add((Column) selectable)
                 }
             }
         }
-        return columns;
+        return columns
     }
 
     /** Names constraints and indexes with the implicit naming strategy, as Hibernate names the ones it creates. */
-    private final class ImplicitNaming implements SharedJoinTableUniqueness.Naming {
+    private static final class ImplicitNaming implements SharedJoinTableUniqueness.Naming {
 
-        private final Table table;
+        private final MetadataBuildingContext metadataBuildingContext
+        private final Table table
 
-        private ImplicitNaming(Table table) {
-            this.table = table;
+        private ImplicitNaming(MetadataBuildingContext metadataBuildingContext, Table table) {
+            this.metadataBuildingContext = metadataBuildingContext
+            this.table = table
         }
 
         @Override
-        public String uniqueKeyName(List<Column> columns) {
+        String uniqueKeyName(List<Column> columns) {
+            MetadataBuildingContext context = metadataBuildingContext
+            Identifier tableName = table.getNameIdentifier()
+            List<Identifier> columnNames = identifiers(columns)
             return strategy().determineUniqueKeyName(new ImplicitUniqueKeyNameSource() {
                 @Override
-                public Identifier getTableName() {
-                    return table.getNameIdentifier();
+                Identifier getTableName() {
+                    return tableName
                 }
 
                 @Override
-                public List<Identifier> getColumnNames() {
-                    return identifiers(columns);
+                List<Identifier> getColumnNames() {
+                    return columnNames
                 }
 
                 @Override
-                public Identifier getUserProvidedIdentifier() {
-                    return null;
+                Identifier getUserProvidedIdentifier() {
+                    return null
                 }
 
                 @Override
-                public MetadataBuildingContext getBuildingContext() {
-                    return metadataBuildingContext;
+                MetadataBuildingContext getBuildingContext() {
+                    return context
                 }
-            }).render(dialect());
+            }).render(dialect())
         }
 
         @Override
-        public String indexName(List<Column> columns) {
+        String indexName(List<Column> columns) {
+            MetadataBuildingContext context = metadataBuildingContext
+            Identifier tableName = table.getNameIdentifier()
+            List<Identifier> columnNames = identifiers(columns)
             return strategy().determineIndexName(new ImplicitIndexNameSource() {
                 @Override
-                public Identifier getTableName() {
-                    return table.getNameIdentifier();
+                Identifier getTableName() {
+                    return tableName
                 }
 
                 @Override
-                public List<Identifier> getColumnNames() {
-                    return identifiers(columns);
+                List<Identifier> getColumnNames() {
+                    return columnNames
                 }
 
                 @Override
-                public Identifier getUserProvidedIdentifier() {
-                    return null;
+                Identifier getUserProvidedIdentifier() {
+                    return null
                 }
 
                 @Override
-                public MetadataBuildingContext getBuildingContext() {
-                    return metadataBuildingContext;
+                MetadataBuildingContext getBuildingContext() {
+                    return context
                 }
-            }).render(dialect());
+            }).render(dialect())
         }
 
         private List<Identifier> identifiers(List<Column> columns) {
-            List<Identifier> names = new ArrayList<>();
+            List<Identifier> names = new ArrayList<>()
             for (Column column : columns) {
-                names.add(column.getNameIdentifier(metadataBuildingContext));
+                names.add(column.getNameIdentifier(metadataBuildingContext))
             }
-            return names;
+            return names
         }
 
         private ImplicitNamingStrategy strategy() {
-            return metadataBuildingContext.getBuildingOptions().getImplicitNamingStrategy();
+            return metadataBuildingContext.getBuildingOptions().getImplicitNamingStrategy()
         }
 
         private Dialect dialect() {
-            return metadataBuildingContext.getMetadataCollector().getDatabase().getDialect();
+            return metadataBuildingContext.getMetadataCollector().getDatabase().getDialect()
         }
     }
 }

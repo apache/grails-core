@@ -16,20 +16,16 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.cfg.domainbinding.secondpass;
+package org.grails.orm.hibernate.cfg.domainbinding.secondpass
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
+import org.hibernate.dialect.Dialect
+import org.hibernate.mapping.Column
+import org.hibernate.mapping.Table
+import org.hibernate.mapping.UniqueKey
 
-import org.hibernate.dialect.Dialect;
-import org.hibernate.mapping.Column;
-import org.hibernate.mapping.Table;
-import org.hibernate.mapping.UniqueKey;
-
-import org.grails.orm.hibernate.dialect.UniqueIndexNulls;
+import org.grails.orm.hibernate.dialect.UniqueIndexNulls
 
 /**
  * How a join table that several collections of one owner share keeps the rows of each collection unique, by
@@ -56,40 +52,44 @@ import org.grails.orm.hibernate.dialect.UniqueIndexNulls;
  *
  * @since 8.0.1
  */
-public enum SharedJoinTableUniqueness {
+@CompileStatic
+enum SharedJoinTableUniqueness {
 
     /** Where nulls are compared: one unique key over the key columns of every collection sharing the table and the element. */
     ONE_KEY_FOR_ALL_COLLECTIONS(UniqueIndexNulls.COMPARED) {
         @Override
+        @PackageScope
         void apply(Table table, List<Column> keyColumns, List<Column> elementColumns, Naming naming) {
-            List<Column> own = concat(keyColumns, elementColumns);
+            List<Column> own = concat(keyColumns, elementColumns)
             if (coveredByPrimaryKey(table, own)) {
-                return;
+                return
             }
             // the unique key Hibernate created for the first collection sharing this table takes the columns of every
             // later one that shares a column with it, the element column or the key column: Oracle compares the
             // non-null columns of a row, so a row collides only with a row of its own collection for the same element,
             // and a plain key per collection would reject the rows of the other collections, null in that collection's
             // columns and equal in the ones they have in common
-            boolean widened = false;
+            boolean widened = false
             for (UniqueKey uniqueKey : table.getUniqueKeys().values()) {
-                if (uniqueKey.isExplicit() || own.stream().noneMatch(uniqueKey::containsColumn)) {
-                    continue;
+                if (uniqueKey.isExplicit() || !own.any { Column column -> uniqueKey.containsColumn(column) }) {
+                    continue
                 }
                 for (Column column : own) {
                     if (!uniqueKey.containsColumn(column)) {
-                        uniqueKey.addColumn(column);
+                        uniqueKey.addColumn(column)
                     }
                 }
-                widened = true;
+                widened = true
             }
             // a list or a map has no implicit unique key to widen (Hibernate keyed it with a primary key instead), so
             // the first one gets a key of its own, which the next one that shares a column with it widens
             if (!widened) {
-                UniqueKey uniqueKey = new UniqueKey(table);
-                uniqueKey.setName(naming.uniqueKeyName(own));
-                own.forEach(uniqueKey::addColumn);
-                table.addUniqueKey(uniqueKey);
+                UniqueKey uniqueKey = new UniqueKey(table)
+                uniqueKey.setName(naming.uniqueKeyName(own))
+                for (Column column : own) {
+                    uniqueKey.addColumn(column)
+                }
+                table.addUniqueKey(uniqueKey)
             }
         }
     },
@@ -97,59 +97,71 @@ public enum SharedJoinTableUniqueness {
     /** Where nulls are distinct: a unique key per collection over its key column and the element. */
     KEY_PER_COLLECTION(UniqueIndexNulls.DISTINCT) {
         @Override
+        @PackageScope
         void apply(Table table, List<Column> keyColumns, List<Column> elementColumns, Naming naming) {
-            List<Column> own = concat(keyColumns, elementColumns);
+            List<Column> own = concat(keyColumns, elementColumns)
             if (coveredByPrimaryKey(table, own)) {
-                return;
+                return
             }
-            Set<Column> wanted = new HashSet<>(own);
-            boolean present = table.getUniqueKeys().values().stream()
-                    .anyMatch(uniqueKey -> new HashSet<>(uniqueKey.getColumns()).equals(wanted));
+            Set<Column> wanted = new HashSet<>(own)
+            boolean present = table.getUniqueKeys().values().any { UniqueKey uniqueKey ->
+                new HashSet<>(uniqueKey.getColumns()).equals(wanted)
+            }
             if (present) {
-                return;
+                return
             }
-            UniqueKey uniqueKey = new UniqueKey(table);
-            uniqueKey.setName(naming.uniqueKeyName(own));
-            own.forEach(uniqueKey::addColumn);
-            table.addUniqueKey(uniqueKey);
+            UniqueKey uniqueKey = new UniqueKey(table)
+            uniqueKey.setName(naming.uniqueKeyName(own))
+            for (Column column : own) {
+                uniqueKey.addColumn(column)
+            }
+            table.addUniqueKey(uniqueKey)
         }
-    };
-
-    /** Names a constraint or index the way the implicit naming strategy of the metadata would. */
-    public interface Naming {
-
-        /** The name of an implicit unique key over the columns. */
-        String uniqueKeyName(List<Column> columns);
-
-        /** The name of an implicit index over the columns. */
-        String indexName(List<Column> columns);
     }
 
-    private final UniqueIndexNulls indexNulls;
+    /** Names a constraint or index the way the implicit naming strategy of the metadata would. */
+    interface Naming {
+
+        /** The name of an implicit unique key over the columns. */
+        String uniqueKeyName(List<Column> columns)
+
+        /** The name of an implicit index over the columns. */
+        String indexName(List<Column> columns)
+    }
+
+    private final UniqueIndexNulls indexNulls
 
     SharedJoinTableUniqueness(UniqueIndexNulls indexNulls) {
-        this.indexNulls = indexNulls;
+        this.indexNulls = indexNulls
     }
 
     /** The uniqueness that fits how the unique index of the dialect's database treats a null in its key. */
-    public static SharedJoinTableUniqueness forDialect(Dialect dialect) {
-        UniqueIndexNulls nulls = UniqueIndexNulls.forDialect(dialect);
-        return Arrays.stream(values()).filter(uniqueness -> uniqueness.indexNulls == nulls).findFirst().orElseThrow();
+    static SharedJoinTableUniqueness forDialect(Dialect dialect) {
+        UniqueIndexNulls nulls = UniqueIndexNulls.forDialect(dialect)
+        for (SharedJoinTableUniqueness uniqueness : values()) {
+            if (uniqueness.@indexNulls == nulls) {
+                return uniqueness
+            }
+        }
+        throw new NoSuchElementException('No value present')
     }
 
     /**
      * Gives the collection whose key and element columns these are a constraint of its own on the table, unless the
      * table has one already.
      */
-    abstract void apply(Table table, List<Column> keyColumns, List<Column> elementColumns, Naming naming);
+    @PackageScope
+    abstract void apply(Table table, List<Column> keyColumns, List<Column> elementColumns, Naming naming)
 
-    private static boolean coveredByPrimaryKey(Table table, List<Column> columns) {
-        return table.hasPrimaryKey() && new HashSet<>(table.getPrimaryKey().getColumns()).containsAll(columns);
+    @PackageScope
+    static boolean coveredByPrimaryKey(Table table, List<Column> columns) {
+        return table.hasPrimaryKey() && new HashSet<>(table.getPrimaryKey().getColumns()).containsAll(columns)
     }
 
-    private static List<Column> concat(List<Column> first, List<Column> second) {
-        List<Column> all = new ArrayList<>(first);
-        all.addAll(second);
-        return all;
+    @PackageScope
+    static List<Column> concat(List<Column> first, List<Column> second) {
+        List<Column> all = new ArrayList<>(first)
+        all.addAll(second)
+        return all
     }
 }

@@ -16,34 +16,36 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.query;
+package org.grails.orm.hibernate.query
 
-import org.hibernate.engine.spi.LoadQueryInfluencers;
-import org.hibernate.metamodel.mapping.AttributeMapping;
-import org.hibernate.metamodel.mapping.PluralAttributeMapping;
-import org.hibernate.metamodel.model.domain.EntityDomainType;
-import org.hibernate.persister.entity.EntityPersister;
-import org.hibernate.query.spi.QueryOptions;
-import org.hibernate.query.spi.QueryParameterBindings;
-import org.hibernate.query.sqm.ComparisonOperator;
-import org.hibernate.query.sqm.internal.DomainParameterXref;
-import org.hibernate.query.sqm.sql.BaseSqmToSqlAstConverter;
-import org.hibernate.query.sqm.sql.SqmTranslator;
-import org.hibernate.query.sqm.sql.SqmTranslatorFactory;
-import org.hibernate.query.sqm.tree.SqmDmlStatement;
-import org.hibernate.query.sqm.tree.SqmStatement;
-import org.hibernate.query.sqm.tree.domain.SqmPath;
-import org.hibernate.query.sqm.tree.expression.SqmCollectionSize;
-import org.hibernate.query.sqm.tree.predicate.SqmEmptinessPredicate;
-import org.hibernate.query.sqm.tree.select.SqmSelectStatement;
-import org.hibernate.sql.ast.spi.SqlAstCreationContext;
-import org.hibernate.sql.ast.tree.MutationStatement;
-import org.hibernate.sql.ast.tree.Statement;
-import org.hibernate.sql.ast.tree.expression.Expression;
-import org.hibernate.sql.ast.tree.expression.QueryLiteral;
-import org.hibernate.sql.ast.tree.predicate.ComparisonPredicate;
-import org.hibernate.sql.ast.tree.select.SelectStatement;
-import org.hibernate.type.spi.TypeConfiguration;
+import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
+import org.hibernate.engine.spi.LoadQueryInfluencers
+import org.hibernate.metamodel.mapping.AttributeMapping
+import org.hibernate.metamodel.mapping.PluralAttributeMapping
+import org.hibernate.metamodel.model.domain.EntityDomainType
+import org.hibernate.persister.entity.EntityPersister
+import org.hibernate.query.spi.QueryOptions
+import org.hibernate.query.spi.QueryParameterBindings
+import org.hibernate.query.sqm.ComparisonOperator
+import org.hibernate.query.sqm.internal.DomainParameterXref
+import org.hibernate.query.sqm.sql.BaseSqmToSqlAstConverter
+import org.hibernate.query.sqm.sql.SqmTranslator
+import org.hibernate.query.sqm.sql.SqmTranslatorFactory
+import org.hibernate.query.sqm.tree.SqmDmlStatement
+import org.hibernate.query.sqm.tree.SqmStatement
+import org.hibernate.query.sqm.tree.domain.SqmPath
+import org.hibernate.query.sqm.tree.expression.SqmCollectionSize
+import org.hibernate.query.sqm.tree.predicate.SqmEmptinessPredicate
+import org.hibernate.query.sqm.tree.select.SqmSelectStatement
+import org.hibernate.sql.ast.spi.SqlAstCreationContext
+import org.hibernate.sql.ast.tree.MutationStatement
+import org.hibernate.sql.ast.tree.Statement
+import org.hibernate.sql.ast.tree.expression.Expression
+import org.hibernate.sql.ast.tree.expression.QueryLiteral
+import org.hibernate.sql.ast.tree.predicate.ComparisonPredicate
+import org.hibernate.sql.ast.tree.select.SelectStatement
+import org.hibernate.type.spi.TypeConfiguration
 
 /**
  * Translates queries the way Hibernate's standard translator does, except {@code is empty} and {@code is not empty}
@@ -68,10 +70,11 @@ import org.hibernate.type.spi.TypeConfiguration;
  *
  * @since 8.0.1
  */
-public class RestrictedCollectionSqmTranslatorFactory implements SqmTranslatorFactory {
+@CompileStatic
+class RestrictedCollectionSqmTranslatorFactory implements SqmTranslatorFactory {
 
     @Override
-    public SqmTranslator<SelectStatement> createSelectTranslator(
+    SqmTranslator<SelectStatement> createSelectTranslator(
             SqmSelectStatement<?> sqmSelectStatement,
             QueryOptions queryOptions,
             DomainParameterXref domainParameterXref,
@@ -79,40 +82,42 @@ public class RestrictedCollectionSqmTranslatorFactory implements SqmTranslatorFa
             LoadQueryInfluencers loadQueryInfluencers,
             SqlAstCreationContext creationContext,
             boolean deduplicateSelectionItems) {
-        SqmTranslatorFactory dialectFactory = dialectFactory(creationContext);
+        SqmTranslatorFactory dialectFactory = dialectFactory(creationContext)
         if (dialectFactory != null) {
             return dialectFactory.createSelectTranslator(sqmSelectStatement, queryOptions, domainParameterXref,
-                    domainParameterBindings, loadQueryInfluencers, creationContext, deduplicateSelectionItems);
+                    domainParameterBindings, loadQueryInfluencers, creationContext, deduplicateSelectionItems)
         }
-        return new RestrictedCollectionSqmTranslator<>(creationContext, sqmSelectStatement, queryOptions,
-                loadQueryInfluencers, domainParameterXref, domainParameterBindings, deduplicateSelectionItems);
+        return new RestrictedCollectionSqmTranslator<SelectStatement>(creationContext, sqmSelectStatement, queryOptions,
+                loadQueryInfluencers, domainParameterXref, domainParameterBindings, deduplicateSelectionItems)
     }
 
     @Override
-    public SqmTranslator<? extends MutationStatement> createMutationTranslator(
+    SqmTranslator<? extends MutationStatement> createMutationTranslator(
             SqmDmlStatement<?> sqmDmlStatement,
             QueryOptions queryOptions,
             DomainParameterXref domainParameterXref,
             QueryParameterBindings domainParameterBindings,
             LoadQueryInfluencers loadQueryInfluencers,
             SqlAstCreationContext creationContext) {
-        SqmTranslatorFactory dialectFactory = dialectFactory(creationContext);
+        SqmTranslatorFactory dialectFactory = dialectFactory(creationContext)
         if (dialectFactory != null) {
             return dialectFactory.createMutationTranslator(sqmDmlStatement, queryOptions, domainParameterXref,
-                    domainParameterBindings, loadQueryInfluencers, creationContext);
+                    domainParameterBindings, loadQueryInfluencers, creationContext)
         }
-        return new RestrictedCollectionSqmTranslator<>(creationContext, sqmDmlStatement, queryOptions,
-                loadQueryInfluencers, domainParameterXref, domainParameterBindings, false);
+        return new RestrictedCollectionSqmTranslator<MutationStatement>(creationContext, sqmDmlStatement, queryOptions,
+                loadQueryInfluencers, domainParameterXref, domainParameterBindings, false)
     }
 
     /** The translator factory of the dialect, which Hibernate would use when no factory is configured, or null. */
     private static SqmTranslatorFactory dialectFactory(SqlAstCreationContext creationContext) {
-        return creationContext.getSessionFactory().getJdbcServices().getDialect().getSqmTranslatorFactory();
+        return creationContext.getSessionFactory().getJdbcServices().getDialect().getSqmTranslatorFactory()
     }
 
     /** Hibernate's translator, with the emptiness test of a restricted many-to-many collection as a size test. */
+    @PackageScope
     static class RestrictedCollectionSqmTranslator<T extends Statement> extends BaseSqmToSqlAstConverter<T> {
 
+        @PackageScope
         RestrictedCollectionSqmTranslator(
                 SqlAstCreationContext creationContext,
                 SqmStatement<?> statement,
@@ -122,22 +127,22 @@ public class RestrictedCollectionSqmTranslatorFactory implements SqmTranslatorFa
                 QueryParameterBindings domainParameterBindings,
                 boolean deduplicateSelectionItems) {
             super(creationContext, statement, queryOptions, loadQueryInfluencers, domainParameterXref,
-                    domainParameterBindings, deduplicateSelectionItems);
+                    domainParameterBindings, deduplicateSelectionItems)
         }
 
         @Override
-        public Object visitIsEmptyPredicate(SqmEmptinessPredicate predicate) {
+        Object visitIsEmptyPredicate(SqmEmptinessPredicate predicate) {
             if (!losesRestriction(predicate.getPluralPath())) {
-                return super.visitIsEmptyPredicate(predicate);
+                return super.visitIsEmptyPredicate(predicate)
             }
-            TypeConfiguration types = getCreationContext().getMappingMetamodel().getTypeConfiguration();
+            TypeConfiguration types = getCreationContext().getMappingMetamodel().getTypeConfiguration()
             Expression size = visitPluralAttributeSizeFunction(
-                    new SqmCollectionSize(predicate.getPluralPath(), predicate.nodeBuilder()));
+                    new SqmCollectionSize(predicate.getPluralPath(), predicate.nodeBuilder()))
             return new ComparisonPredicate(
                     size,
                     predicate.isNegated() ? ComparisonOperator.GREATER_THAN : ComparisonOperator.EQUAL,
-                    new QueryLiteral<>(0, types.getBasicTypeForJavaType(Integer.class)),
-                    types.getBasicTypeForJavaType(Boolean.class));
+                    new QueryLiteral<Integer>(0, types.getBasicTypeForJavaType(Integer)),
+                    types.getBasicTypeForJavaType(Boolean))
         }
 
         /**
@@ -145,16 +150,20 @@ public class RestrictedCollectionSqmTranslatorFactory implements SqmTranslatorFa
          * collection of an entity that has one. A collection inside an embeddable keeps Hibernate's translation.
          */
         private boolean losesRestriction(SqmPath<?> pluralPath) {
-            SqmPath<?> owner = pluralPath.getLhs();
-            if (owner == null || !(owner.getReferencedPathSource().getPathType() instanceof EntityDomainType<?> entity)) {
-                return false;
+            SqmPath<?> owner = pluralPath.getLhs()
+            if (owner == null || !(owner.getReferencedPathSource().getPathType() instanceof EntityDomainType)) {
+                return false
             }
+            EntityDomainType<?> entity = (EntityDomainType<?>) owner.getReferencedPathSource().getPathType()
             EntityPersister persister =
-                    getCreationContext().getMappingMetamodel().findEntityDescriptor(entity.getHibernateEntityName());
+                    getCreationContext().getMappingMetamodel().findEntityDescriptor(entity.getHibernateEntityName())
             AttributeMapping attribute = persister == null ? null :
-                    persister.findAttributeMapping(pluralPath.getReferencedPathSource().getPathName());
-            return attribute instanceof PluralAttributeMapping collection && collection.hasWhereRestrictions() &&
-                    collection.getCollectionDescriptor().isManyToMany();
+                    persister.findAttributeMapping(pluralPath.getReferencedPathSource().getPathName())
+            if (!(attribute instanceof PluralAttributeMapping)) {
+                return false
+            }
+            PluralAttributeMapping collection = (PluralAttributeMapping) attribute
+            return collection.hasWhereRestrictions() && collection.getCollectionDescriptor().isManyToMany()
         }
     }
 }

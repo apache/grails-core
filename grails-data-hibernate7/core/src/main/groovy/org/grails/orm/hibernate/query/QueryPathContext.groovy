@@ -16,11 +16,11 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.query;
+package org.grails.orm.hibernate.query
 
-import jakarta.persistence.criteria.Expression;
-import jakarta.persistence.criteria.From;
-import jakarta.persistence.criteria.Path;
+import jakarta.persistence.criteria.Expression
+import jakarta.persistence.criteria.From
+import jakarta.persistence.criteria.Path
 
 /**
  * What a criterion or order handler sees of the query it converts for: the root of the query and the resolution
@@ -31,18 +31,18 @@ import jakarta.persistence.criteria.Path;
  *
  * @since 8.1
  */
-public interface QueryPathContext {
+interface QueryPathContext {
 
     /**
      * @return the root of the query or subquery the handler converts for
      */
-    From<?, ?> getRoot();
+    From<?, ?> getRoot()
 
     /**
      * @param path a property path: {@code property}, {@code association.property} or {@code alias.property}
      * @return the path, or {@code null} when the property path resolves to an expression that is not a path
      */
-    Path<?> getFullyQualifiedPath(String path);
+    Path<?> getFullyQualifiedPath(String path)
 
     /**
      * Resolves a path the way the built-in criteria resolve the property of a restriction, so a restriction on
@@ -55,7 +55,7 @@ public interface QueryPathContext {
      *     as SQL scopes a select alias to the order by and never to the where: ask {@link #getSelectionAlias(String)}
      *     for it
      */
-    Expression<?> getFullyQualifiedExpression(String path);
+    Expression<?> getFullyQualifiedExpression(String path)
 
     /**
      * Returns the projection a column alias stands for, which is what the built-in {@code order(alias)} sorts by: an
@@ -67,5 +67,5 @@ public interface QueryPathContext {
      * @return the projected expression recorded under that alias, so that a handler can order by it, or {@code null}
      *     when no projection of the query carries the alias
      */
-    Expression<?> getSelectionAlias(String alias);
+    Expression<?> getSelectionAlias(String alias)
 }

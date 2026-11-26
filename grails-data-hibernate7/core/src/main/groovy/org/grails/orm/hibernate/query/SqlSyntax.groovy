@@ -17,19 +17,18 @@
  *  under the License.
  */
 
-package org.grails.orm.hibernate.query;
+package org.grails.orm.hibernate.query
 
-import java.util.EnumSet;
-import java.util.Set;
+import jakarta.persistence.criteria.CriteriaBuilder
 
-import jakarta.persistence.criteria.CriteriaBuilder;
+import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
+import org.hibernate.SessionFactory
+import org.hibernate.dialect.Dialect
+import org.hibernate.engine.spi.SessionFactoryImplementor
+import org.hibernate.query.sqm.NodeBuilder
 
-import org.hibernate.SessionFactory;
-import org.hibernate.dialect.Dialect;
-import org.hibernate.engine.spi.SessionFactoryImplementor;
-import org.hibernate.query.sqm.NodeBuilder;
-
-import org.grails.orm.hibernate.dialect.SupportedDatabase;
+import org.grails.orm.hibernate.dialect.SupportedDatabase
 
 /**
  * How a query text is read: what, besides string literals in single quotes, identifiers in double quotes or
@@ -51,7 +50,8 @@ import org.grails.orm.hibernate.dialect.SupportedDatabase;
  *
  * @since 8.0.1
  */
-public enum SqlSyntax {
+@CompileStatic
+enum SqlSyntax {
 
     /**
      * Transact-SQL, as SQL Server and Sybase read it: {@code [square brackets]} quote an identifier, in which
@@ -90,9 +90,10 @@ public enum SqlSyntax {
      * HQL, which has block comments only, neither bracket identifiers, dollar-quoted strings nor escapes; square
      * brackets index.
      */
-    HQL(EnumSet.noneOf(Feature.class));
+    HQL(EnumSet.noneOf(Feature))
 
     /** A lexical rule that differs between the syntaxes; only the scanner of this package reads them. */
+    @PackageScope
     enum Feature {
         /** {@code --} starts a comment that runs to the end of the line. */
         LINE_COMMENTS,
@@ -122,32 +123,34 @@ public enum SqlSyntax {
         DOUBLE_QUESTION_MARK_ESCAPE
     }
 
-    private final Set<Feature> features;
+    private final Set<Feature> features
 
     SqlSyntax(Set<Feature> features) {
-        this.features = features;
+        this.features = features
     }
 
     /** Returns the syntax of the native SQL of the database the dialect is for: {@link #SQL} unless its dialect is listed. */
-    public static SqlSyntax forDialect(Dialect dialect) {
-        return SupportedDatabase.forDialect(dialect).sqlSyntax();
+    static SqlSyntax forDialect(Dialect dialect) {
+        return SupportedDatabase.forDialect(dialect).sqlSyntax()
     }
 
     /** Returns the syntax of the native SQL of the database the session factory connects to. */
-    public static SqlSyntax forSessionFactory(SessionFactory sessionFactory) {
-        return forDialect(sessionFactory.unwrap(SessionFactoryImplementor.class).getJdbcServices().getDialect());
+    static SqlSyntax forSessionFactory(SessionFactory sessionFactory) {
+        return forDialect(sessionFactory.unwrap(SessionFactoryImplementor).getJdbcServices().getDialect())
     }
 
     /**
      * Returns the syntax of the native SQL of the database the criteria builder builds queries for, or {@link #SQL}
      * for a criteria builder that is not Hibernate's.
      */
-    public static SqlSyntax forCriteriaBuilder(CriteriaBuilder criteriaBuilder) {
-        return criteriaBuilder instanceof NodeBuilder nodeBuilder ? forDialect(nodeBuilder.getQueryEngine().getDialect()) : SQL;
+    static SqlSyntax forCriteriaBuilder(CriteriaBuilder criteriaBuilder) {
+        return criteriaBuilder instanceof NodeBuilder ?
+                forDialect(((NodeBuilder) criteriaBuilder).getQueryEngine().getDialect()) : SQL
     }
 
     /** Whether this syntax has the lexical rule. */
+    @PackageScope
     boolean has(Feature feature) {
-        return features.contains(feature);
+        return features.contains(feature)
     }
 }

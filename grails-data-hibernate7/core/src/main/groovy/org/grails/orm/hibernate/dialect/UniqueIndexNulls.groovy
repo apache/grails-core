@@ -17,9 +17,10 @@
  *  under the License.
  */
 
-package org.grails.orm.hibernate.dialect;
+package org.grails.orm.hibernate.dialect
 
-import org.hibernate.dialect.Dialect;
+import groovy.transform.CompileStatic
+import org.hibernate.dialect.Dialect
 
 /**
  * How the unique index Hibernate creates over nullable columns treats a null in the key, by database. This is one
@@ -38,14 +39,15 @@ import org.hibernate.dialect.Dialect;
  *
  * @since 8.0.1
  */
-public enum UniqueIndexNulls {
+@CompileStatic
+enum UniqueIndexNulls {
 
     DISTINCT,
 
-    COMPARED;
+    COMPARED
 
     /** Returns how the unique index of the database the dialect is for treats a null in its key. */
-    public static UniqueIndexNulls forDialect(Dialect dialect) {
-        return SupportedDatabase.forDialect(dialect).uniqueIndexNulls();
+    static UniqueIndexNulls forDialect(Dialect dialect) {
+        return SupportedDatabase.forDialect(dialect).uniqueIndexNulls()
     }
 }

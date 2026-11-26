@@ -16,13 +16,14 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.persister;
+package org.grails.orm.hibernate.persister
 
-import org.hibernate.mapping.Collection;
-import org.hibernate.mapping.IndexedCollection;
-import org.hibernate.mapping.ManyToOne;
-import org.hibernate.persister.collection.CollectionPersister;
-import org.hibernate.persister.internal.StandardPersisterClassResolver;
+import groovy.transform.CompileStatic
+import org.hibernate.mapping.Collection
+import org.hibernate.mapping.IndexedCollection
+import org.hibernate.mapping.ManyToOne
+import org.hibernate.persister.collection.CollectionPersister
+import org.hibernate.persister.internal.StandardPersisterClassResolver
 
 /**
  * Resolves the persister of a set or a bag of entities in a join table to a {@link JoinTableCollectionPersister}, and
@@ -30,10 +31,11 @@ import org.hibernate.persister.internal.StandardPersisterClassResolver;
  *
  * @since 8.0.1
  */
-public class GormPersisterClassResolver extends StandardPersisterClassResolver {
+@CompileStatic
+class GormPersisterClassResolver extends StandardPersisterClassResolver {
 
     @Override
-    public Class<? extends CollectionPersister> getCollectionPersisterClass(Collection metadata) {
+    Class<? extends CollectionPersister> getCollectionPersisterClass(Collection metadata) {
         if (!metadata.isOneToMany() &&
                 metadata.getElement() instanceof ManyToOne &&
                 !metadata.isIdentified() &&
@@ -42,8 +44,8 @@ public class GormPersisterClassResolver extends StandardPersisterClassResolver {
                 metadata.getSoftDeleteColumn() == null &&
                 metadata.getAuxiliaryTable() == null &&
                 !(metadata instanceof IndexedCollection)) {
-            return JoinTableCollectionPersister.class;
+            return JoinTableCollectionPersister
         }
-        return super.getCollectionPersisterClass(metadata);
+        return super.getCollectionPersisterClass(metadata)
     }
 }

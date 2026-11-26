@@ -16,23 +16,24 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.orm.hibernate.dialect;
+package org.grails.orm.hibernate.dialect
 
-import org.hibernate.dialect.CockroachDialect;
-import org.hibernate.dialect.DB2Dialect;
-import org.hibernate.dialect.DB2iDialect;
-import org.hibernate.dialect.DB2zDialect;
-import org.hibernate.dialect.Dialect;
-import org.hibernate.dialect.H2Dialect;
-import org.hibernate.dialect.MariaDBDialect;
-import org.hibernate.dialect.MySQLDialect;
-import org.hibernate.dialect.OracleDialect;
-import org.hibernate.dialect.PostgreSQLDialect;
-import org.hibernate.dialect.SQLServerDialect;
-import org.hibernate.dialect.SybaseDialect;
+import groovy.transform.CompileStatic
+import org.hibernate.dialect.CockroachDialect
+import org.hibernate.dialect.DB2Dialect
+import org.hibernate.dialect.DB2iDialect
+import org.hibernate.dialect.DB2zDialect
+import org.hibernate.dialect.Dialect
+import org.hibernate.dialect.H2Dialect
+import org.hibernate.dialect.MariaDBDialect
+import org.hibernate.dialect.MySQLDialect
+import org.hibernate.dialect.OracleDialect
+import org.hibernate.dialect.PostgreSQLDialect
+import org.hibernate.dialect.SQLServerDialect
+import org.hibernate.dialect.SybaseDialect
 
-import org.grails.datastore.mapping.internal.ClassKeyed;
-import org.grails.orm.hibernate.query.SqlSyntax;
+import org.grails.datastore.mapping.internal.ClassKeyed
+import org.grails.orm.hibernate.query.SqlSyntax
 
 /**
  * <p><strong>Internal API. Do not use it from application or plugin code.</strong> It is public only because the
@@ -68,73 +69,74 @@ import org.grails.orm.hibernate.query.SqlSyntax;
  *
  * @since 8.0.1
  */
-public enum SupportedDatabase implements ClassKeyed<SupportedDatabase> {
+@CompileStatic
+enum SupportedDatabase implements ClassKeyed<SupportedDatabase> {
 
     // MariaDB's dialect extends MySQL's, so it is declared first; REGEXP and RLIKE are synonyms on both
-    MARIADB(SqlSyntax.MYSQL, "?1 REGEXP ?2", UniqueIndexNulls.DISTINCT, MariaDBDialect.class),
+    MARIADB(SqlSyntax.MYSQL, '?1 REGEXP ?2', UniqueIndexNulls.DISTINCT, MariaDBDialect),
 
-    MYSQL(SqlSyntax.MYSQL, "?1 RLIKE ?2", UniqueIndexNulls.DISTINCT, MySQLDialect.class),
+    MYSQL(SqlSyntax.MYSQL, '?1 RLIKE ?2', UniqueIndexNulls.DISTINCT, MySQLDialect),
 
     // ~ is case-sensitive; Hibernate 5 renders ~*, see #16882
-    POSTGRESQL(SqlSyntax.POSTGRESQL, "?1 ~ ?2", UniqueIndexNulls.DISTINCT, PostgreSQLDialect.class),
+    POSTGRESQL(SqlSyntax.POSTGRESQL, '?1 ~ ?2', UniqueIndexNulls.DISTINCT, PostgreSQLDialect),
 
     // reads native SQL as PostgreSQL does, and has no regular expression operator here
-    COCKROACH(SqlSyntax.POSTGRESQL, "?1 LIKE ?2", UniqueIndexNulls.DISTINCT, CockroachDialect.class),
+    COCKROACH(SqlSyntax.POSTGRESQL, '?1 LIKE ?2', UniqueIndexNulls.DISTINCT, CockroachDialect),
 
-    ORACLE(SqlSyntax.ORACLE, "REGEXP_LIKE(?1, ?2)", UniqueIndexNulls.COMPARED, OracleDialect.class),
+    ORACLE(SqlSyntax.ORACLE, 'REGEXP_LIKE(?1, ?2)', UniqueIndexNulls.COMPARED, OracleDialect),
 
-    SQL_SERVER(SqlSyntax.TRANSACT_SQL, "?1 LIKE ?2", UniqueIndexNulls.DISTINCT, SQLServerDialect.class),
+    SQL_SERVER(SqlSyntax.TRANSACT_SQL, '?1 LIKE ?2', UniqueIndexNulls.DISTINCT, SQLServerDialect),
 
     // reads native SQL as SQL Server does, and has no regular expression operator here
-    SYBASE(SqlSyntax.TRANSACT_SQL, "?1 LIKE ?2", UniqueIndexNulls.DISTINCT, SybaseDialect.class),
+    SYBASE(SqlSyntax.TRANSACT_SQL, '?1 LIKE ?2', UniqueIndexNulls.DISTINCT, SybaseDialect),
 
-    H2(SqlSyntax.H2, "REGEXP_LIKE(?1, ?2)", UniqueIndexNulls.DISTINCT, H2Dialect.class),
+    H2(SqlSyntax.H2, 'REGEXP_LIKE(?1, ?2)', UniqueIndexNulls.DISTINCT, H2Dialect),
 
     // Db2 for IBM i and z/OS: their dialects extend the one for Linux, UNIX and Windows, so they are declared first
-    DB2_IBM_I(SqlSyntax.DB2_NESTED_COMMENTS, "REGEXP_LIKE(?1, ?2)", UniqueIndexNulls.DISTINCT, DB2iDialect.class),
+    DB2_IBM_I(SqlSyntax.DB2_NESTED_COMMENTS, 'REGEXP_LIKE(?1, ?2)', UniqueIndexNulls.DISTINCT, DB2iDialect),
 
     // runs REGEXP_LIKE only through the Db2 Analytics Accelerator, so it falls back as other databases do
-    DB2_ZOS(SqlSyntax.DB2_NESTED_COMMENTS, "?1 LIKE ?2", UniqueIndexNulls.DISTINCT, DB2zDialect.class),
+    DB2_ZOS(SqlSyntax.DB2_NESTED_COMMENTS, '?1 LIKE ?2', UniqueIndexNulls.DISTINCT, DB2zDialect),
 
-    DB2(SqlSyntax.SQL, "REGEXP_LIKE(?1, ?2)", UniqueIndexNulls.COMPARED, DB2Dialect.class),
+    DB2(SqlSyntax.SQL, 'REGEXP_LIKE(?1, ?2)', UniqueIndexNulls.COMPARED, DB2Dialect),
 
-    DEFAULT(SqlSyntax.SQL, "?1 LIKE ?2", UniqueIndexNulls.DISTINCT, Object.class);
+    DEFAULT(SqlSyntax.SQL, '?1 LIKE ?2', UniqueIndexNulls.DISTINCT, Object)
 
-    private final SqlSyntax sqlSyntax;
-    private final String regexPattern;
-    private final UniqueIndexNulls uniqueIndexNulls;
-    private final Class<?>[] dialectClasses;
+    private final SqlSyntax sqlSyntax
+    private final String regexPattern
+    private final UniqueIndexNulls uniqueIndexNulls
+    private final Class<?>[] dialectClasses
 
     SupportedDatabase(SqlSyntax sqlSyntax, String regexPattern, UniqueIndexNulls uniqueIndexNulls,
             Class<?>... dialectClasses) {
-        this.sqlSyntax = sqlSyntax;
-        this.regexPattern = regexPattern;
-        this.uniqueIndexNulls = uniqueIndexNulls;
-        this.dialectClasses = dialectClasses;
+        this.sqlSyntax = sqlSyntax
+        this.regexPattern = regexPattern
+        this.uniqueIndexNulls = uniqueIndexNulls
+        this.dialectClasses = dialectClasses
     }
 
     /** Returns the database the dialect is for: {@link #DEFAULT} unless its dialect is listed. */
-    public static SupportedDatabase forDialect(Dialect dialect) {
-        return ClassKeyed.forInstance(SupportedDatabase.class, dialect);
+    static SupportedDatabase forDialect(Dialect dialect) {
+        return ClassKeyed.forInstance(SupportedDatabase, dialect)
     }
 
     /** How the database reads native SQL. */
-    public SqlSyntax sqlSyntax() {
-        return sqlSyntax;
+    SqlSyntax sqlSyntax() {
+        return sqlSyntax
     }
 
     /** The SQL that matches a value against a regular expression: {@code ?1} is the value and {@code ?2} the pattern. */
-    public String regexPattern() {
-        return regexPattern;
+    String regexPattern() {
+        return regexPattern
     }
 
     /** How the unique index of the database treats a {@code null} in its key. */
-    public UniqueIndexNulls uniqueIndexNulls() {
-        return uniqueIndexNulls;
+    UniqueIndexNulls uniqueIndexNulls() {
+        return uniqueIndexNulls
     }
 
     @Override
-    public Class<?>[] keyClasses() {
-        return dialectClasses.clone();
+    Class<?>[] keyClasses() {
+        return dialectClasses.clone()
     }
 }
