@@ -107,9 +107,6 @@ rendering details such as null handling, field exclusions, converters, and date 
 
 ```groovy
 import groovy.json.JsonGenerator
-import java.time.LocalDate
-import java.time.ZoneOffset
-import java.util.Date
 
 def jsonGenerator = new JsonGenerator.Options()
     .excludeNulls()
@@ -119,7 +116,7 @@ def jsonGenerator = new JsonGenerator.Options()
 httpPutJson('/products/1', jsonGenerator, [
     name: 'Widget',
     discontinuedAt: null,
-    releaseDate: Date.from(LocalDate.parse('2026-03-18').atStartOfDay(ZoneOffset.UTC).toInstant())
+    releaseDate: new Date()
 ])
 ```
 

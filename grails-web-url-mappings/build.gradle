@@ -73,6 +73,7 @@ dependencies {
     api 'org.slf4j:jcl-over-slf4j'
 
     // Testing
+    testImplementation 'org.apache.grails:grails-controllers' // @Controller
     testImplementation 'org.slf4j:slf4j-simple'
     testImplementation('org.spockframework:spock-core') { transitive = false }
     // Required by Spock's Mocking

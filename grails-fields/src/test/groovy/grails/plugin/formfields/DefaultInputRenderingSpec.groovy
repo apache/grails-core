@@ -37,6 +37,7 @@ import org.grails.scaffolding.model.property.Constrained
 import spock.lang.Issue
 import spock.lang.Shared
 import spock.lang.Unroll
+import org.springframework.web.servlet.i18n.FixedLocaleResolver
 
 import java.sql.Blob
 import java.time.LocalDate
@@ -696,6 +697,27 @@ class DefaultInputRenderingSpec extends AbstractFormFieldsTagLibSpec  implements
 		String       | 'search'      | /input type="search"/
 		int          | 'range'       | /input type="range"/
 		Integer      | 'range'       | /input type="range"/
+	}
+
+	@Issue('https://github.com/apache/grails-core/issues/15178')
+	def "input value for a negative number with #locale locale uses ASCII minus sign"() {
+		given:
+		def model = [type: int, property: "salary", value: -42, constraints: null, persistentProperty: basicProperty]
+		def object = new Employee(salary: -42)
+		BeanPropertyAccessor accessor = factory.accessorFor(object, "salary")
+
+		and:
+		tagLib.localeResolver = new FixedLocaleResolver(Locale.forLanguageTag(locale.replace('_', '-')))
+
+		when:
+		def output = tagLib.renderDefaultInput(accessor, model) as String
+
+		then: "value attribute contains ASCII minus (U+002D), not Unicode minus (U+2212)"
+		output =~ /value="-/
+		!output.contains('\u2212')
+
+		where:
+		locale << ['nb_NO', 'nn_NO', 'sv_SE', 'fi_FI', 'en_US']
 	}
 
 }

@@ -18,6 +18,7 @@
  */
 package org.grails.databinding.converters.web
 
+import java.text.DecimalFormat
 import java.text.NumberFormat
 import java.text.ParsePosition
 
@@ -56,12 +57,24 @@ class LocaleAwareNumberConverter implements ValueConverter {
     @Override
     Object convert(Object value) {
         def trimmedValue = value.toString().trim()
+        def formatter = numberFormatter
+        def valueToParse = replaceAsciiMinusWithLocaleMinus(formatter, trimmedValue)
         def parsePosition = new ParsePosition(0)
-        def result = numberFormatter.parse((String) value, parsePosition).asType(getTargetType())
-        if (parsePosition.index != trimmedValue.size()) {
+        def result = formatter.parse(valueToParse, parsePosition).asType(getTargetType())
+        if (parsePosition.index != valueToParse.size()) {
             throw new NumberFormatException("Unable to parse number [${value}]")
         }
         result
+    }
+
+    protected String replaceAsciiMinusWithLocaleMinus(NumberFormat formatter, String value) {
+        if (formatter instanceof DecimalFormat && value.startsWith('-')) {
+            char minusSign = formatter.decimalFormatSymbols.minusSign
+            if (minusSign != '-' as char) {
+                return String.valueOf(minusSign) + value.substring(1)
+            }
+        }
+        value
     }
 
     protected NumberFormat getNumberFormatter() {

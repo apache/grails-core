@@ -72,7 +72,7 @@ could be expressed with:
 [source, groovy]
 .grails-app/domain/demo/Speaker.groovy
 ----
-include::{sourcedir}/examples/grails-docs-app/grails-app/domain/demo/Speaker.groovy[tags=wholeFile]
+include::{sourcedir}/grails-test-examples/graphql/grails-docs-app/grails-app/domain/demo/Speaker.groovy[tags=wholeFile]
 ----
 
 <1> it exposes this domain class to the GraphQL API
@@ -80,7 +80,7 @@ include::{sourcedir}/examples/grails-docs-app/grails-app/domain/demo/Speaker.gro
 [source, groovy]
 .grails-app/domain/demo/Talk.groovy
 ----
-include::{sourcedir}/examples/grails-docs-app/grails-app/domain/demo/Talk.groovy[tags=wholeFile]
+include::{sourcedir}/grails-test-examples/graphql/grails-docs-app/grails-app/domain/demo/Talk.groovy[tags=wholeFile]
 ----
 
 

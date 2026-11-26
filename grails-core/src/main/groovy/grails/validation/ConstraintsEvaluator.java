@@ -29,7 +29,7 @@ import groovy.lang.Closure;
  * @since 2.0
  * @deprecated Use org.grails.datastore.gorm.validation.constraints.eval.ConstraintsEvaluator instead
  */
-@Deprecated
+@Deprecated(since = "3.3", forRemoval = true)
 public interface ConstraintsEvaluator {
 
     String PROPERTY_NAME = "constraints";

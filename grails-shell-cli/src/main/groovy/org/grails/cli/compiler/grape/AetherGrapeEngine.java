@@ -37,7 +37,7 @@ import org.eclipse.aether.repository.RemoteRepository;
  * @deprecated since 2.5.9 for removal in 3.0.0 in favor of
  * {@link MavenResolverGrapeEngine}
  */
-@Deprecated
+@Deprecated(forRemoval = true)
 public class AetherGrapeEngine extends MavenResolverGrapeEngine {
 
     public AetherGrapeEngine(GroovyClassLoader classLoader, RepositorySystem repositorySystem,

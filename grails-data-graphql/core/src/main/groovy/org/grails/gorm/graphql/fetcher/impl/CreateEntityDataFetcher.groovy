@@ -37,7 +37,7 @@ import org.grails.gorm.graphql.fetcher.GraphQLDataFetcherType
  */
 @CompileStatic
 @InheritConstructors
-class CreateEntityDataFetcher<T> extends DefaultGormDataFetcher<T> implements BindingGormDataFetcher {
+class CreateEntityDataFetcher<T> extends DefaultGormDataFetcher<T> implements BindingGormDataFetcher<T> {
 
     GraphQLDataBinder dataBinder
 

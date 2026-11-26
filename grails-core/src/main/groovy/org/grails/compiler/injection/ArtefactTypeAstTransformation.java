@@ -170,7 +170,7 @@ public class ArtefactTypeAstTransformation extends AbstractArtefactTypeAstTransf
         performInjection(sourceUnit, cNode, injectors);
     }
 
-    @Deprecated
+    @Deprecated(forRemoval = true)
     public static void doPerformInjectionOnArtefactType(SourceUnit sourceUnit, ClassNode cNode, String artefactType) {
         List<ClassInjector> injectors = findInjectors(artefactType, GrailsAwareInjectionOperation.getClassInjectors());
         performInjection(sourceUnit, cNode, injectors);

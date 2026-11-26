@@ -36,7 +36,7 @@ import org.grails.gorm.graphql.response.pagination.PagedResultListPaginationResp
  */
 @InheritConstructors
 @CompileStatic
-class PaginatedEntityDataFetcher<T> extends EntityDataFetcher implements PaginatingGormDataFetcher {
+class PaginatedEntityDataFetcher<T> extends EntityDataFetcher<T> implements PaginatingGormDataFetcher<T> {
 
     GraphQLPaginationResponseHandler responseHandler
 
