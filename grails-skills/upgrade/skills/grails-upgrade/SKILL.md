@@ -649,7 +649,7 @@ Grails 9 replaces compile-time `META-INF/grails-plugin.xml` generation with a bu
 - **Descriptor & index:** Built plugins now package `META-INF/grails/plugins.imports` (logical plugin names) and per-plugin `META-INF/grails/plugins/<name>/plugin.properties`. Gradle archives include an XML projection for older catalog, publishing and IDE consumers.
 - **Plugins outside `grails-plugin`:** The Groovy compiler emits discovery metadata beside compiled plugin classes when Grails compiler transforms are on its classpath. This includes application and test sources. The Grails Gradle plugin assembles metadata from all main source-set class directories.
 - **Namespaced resources:** Plugin configuration is packaged at `META-INF/grails/plugins/<name>/plugin.yml` (or `plugin.groovy`) instead of the JAR root, and precompiled plugin GSP view manifests are written to `META-INF/grails/plugins/<name>/views.properties` instead of `gsp/views.properties`. Update any custom shadow/fat-JAR rules or direct classpath lookups that assumed the old paths.
-- **Starter & typed descriptors:** New plugins can omit a `*GrailsPlugin` class entirely by configuring `grails { plugin { ... } }` in `build.gradle`, or annotate any Java or `@CompileStatic` Groovy class with `@GrailsPluginDescriptor`.
+- **Starter & typed descriptors:** New plugins can omit a `*GrailsPlugin` class entirely by setting `grails { plugin { starter = true } }` in `build.gradle`, or annotate any Java or `@CompileStatic` Groovy class with `@GrailsPluginDescriptor`.
 
 # After the Upgrade
 

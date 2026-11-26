@@ -44,6 +44,7 @@ import org.objectweb.asm.Opcodes
 @CompileStatic
 @CacheableTask
 abstract class GormServiceDescriptor extends DefaultTask {
+
     static final String PATH = 'META-INF/services/org.grails.datastore.mapping.services.Service'
 
     @InputFiles
