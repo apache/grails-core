@@ -48,6 +48,10 @@ import org.grails.spring.GrailsApplicationContext;
  * A WebApplicationContext that extends StaticApplicationContext to allow for programmatic
  * configuration at runtime. The code is adapted from StaticWebApplicationContext.
  *
+ * <p>Note: The {@link ThemeSource} interface implementation is deprecated since Grails 7.1 and
+ * will be removed in Grails 8.0.0. Spring's theme support is deprecated in Spring Boot 3 and
+ * removed in Spring Boot 4.
+ *
  * @author Graeme
  * @since 0.3
  */

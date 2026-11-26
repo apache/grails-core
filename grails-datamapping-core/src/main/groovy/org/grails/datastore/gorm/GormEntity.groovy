@@ -1459,7 +1459,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      * @deprecated Named queries are deprecated, use where queries instead
      */
     @Generated
-    @Deprecated
+    @Deprecated(since = '3.2', forRemoval = true)
     static GormQueryOperations<D> getNamedQuery(String queryName) {
         GormEnhancer.createNamedQuery(this, queryName)
     }
@@ -1472,7 +1472,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      * @deprecated Named queries are deprecated, use where queries instead
      */
     @Generated
-    @Deprecated
+    @Deprecated(since = '3.2', forRemoval = true)
     static GormQueryOperations<D> getNamedQuery(String queryName, Object...args) {
         GormEnhancer.createNamedQuery(this, queryName, args)
     }

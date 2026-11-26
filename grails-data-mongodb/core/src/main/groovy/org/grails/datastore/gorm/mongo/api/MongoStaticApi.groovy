@@ -288,7 +288,7 @@ class MongoStaticApi<D> extends GormStaticApi<D> implements MongoAllOperations<D
     }
 
     @Override
-    @Deprecated
+    @Deprecated(forRemoval = true)
     Document getDbo(D instance) {
         return ((MongoEntity) instance).dbo
     }

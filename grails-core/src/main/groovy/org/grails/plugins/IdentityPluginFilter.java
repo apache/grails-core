@@ -23,16 +23,16 @@ import java.util.List;
 import grails.plugins.PluginFilter;
 
 /**
- * No-op implementation of <code>PluginFilter</code>.
- *
- * @author Phil Zoio
+ * @deprecated Use {@link org.apache.grails.core.plugins.filters.NoOpPluginFilter} instead.
+ * This compatibility stub will be removed in Grails 8.0.0.
  */
+@Deprecated(forRemoval = true, since = "7.1")
 public class IdentityPluginFilter implements PluginFilter {
 
     /**
      * Simply returns original list reference.
      */
-    @SuppressWarnings({ "unchecked", "rawtypes" })
+    @SuppressWarnings({"unchecked", "rawtypes"})
     public List filterPluginList(List original) {
         return original;
     }

@@ -32,6 +32,7 @@ import grails.boot.config.tools.ClassPathScanner
 import grails.config.Config
 import grails.core.GrailsApplication
 import grails.core.GrailsApplicationClass
+import org.apache.grails.core.plugins.PluginDiscovery
 import org.grails.compiler.injection.AbstractGrailsArtefactTransformer
 import org.grails.spring.aop.autoproxy.GroovyAwareAspectJAwareAdvisorAutoProxyCreator
 import org.grails.spring.aop.autoproxy.GroovyAwareInfrastructureAdvisorAutoProxyCreator
@@ -71,8 +72,8 @@ class GrailsAutoConfiguration implements GrailsApplicationClass, ApplicationCont
      * @return A post processor that uses the {@link grails.plugins.GrailsPluginManager} to configure the {@link org.springframework.context.ApplicationContext}
      */
     @Bean
-    GrailsApplicationPostProcessor grailsApplicationPostProcessor() {
-        return new GrailsApplicationPostProcessor(this, applicationContext, classes() as Class[])
+    GrailsApplicationPostProcessor grailsApplicationPostProcessor(PluginDiscovery pluginDiscovery) {
+        return new GrailsApplicationPostProcessor(this, applicationContext, pluginDiscovery, classes() as Class[])
     }
 
     /**

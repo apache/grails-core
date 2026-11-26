@@ -22,7 +22,6 @@ package grails.plugin.json.view.template
 import groovy.transform.CompileStatic
 import groovy.transform.InheritConstructors
 
-import grails.plugin.json.builder.JsonGenerator
 import grails.plugin.json.view.JsonViewWritableScript
 import grails.plugin.json.view.api.jsonapi.JsonApiIdRenderStrategy
 import grails.views.GrailsViewTemplate
@@ -31,7 +30,7 @@ import grails.views.GrailsViewTemplate
 @InheritConstructors
 class JsonViewTemplate extends GrailsViewTemplate {
 
-    JsonGenerator generator
+    groovy.json.JsonGenerator generator
     JsonApiIdRenderStrategy jsonApiIdRenderStrategy
 
     @Override
@@ -40,5 +39,25 @@ class JsonViewTemplate extends GrailsViewTemplate {
         writableTemplate.setGenerator(generator)
         writableTemplate.setJsonApiIdRenderStrategy(jsonApiIdRenderStrategy)
         writableTemplate
+    }
+
+    void setGenerator(groovy.json.JsonGenerator jsonGenerator) {
+        generator = jsonGenerator
+    }
+
+    /**
+     * @deprecated Use {@code setGenerator(groovy.json.JsonGenerator)} instead.
+     */
+    @Deprecated(since = '7.1', forRemoval = true)
+    void setGenerator(grails.plugin.json.builder.JsonGenerator jsonGenerator) {
+        generator = jsonGenerator
+    }
+
+    /**
+     * @deprecated Will return {@link groovy.json.JsonGenerator} in a future version.
+     */
+    @Deprecated(since = '7.1')
+    grails.plugin.json.builder.JsonGenerator getGenerator() {
+        this.generator as grails.plugin.json.builder.JsonGenerator
     }
 }

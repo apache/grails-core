@@ -200,6 +200,8 @@ declare -a gorm_mappings=(
   "org[.]grails:grails-datastore-gorm-mongodb|org.apache.grails.data:grails-data-mongodb-core"
   "org[.]grails:grails-datastore-gorm-hibernate6|org.apache.grails.data:grails-data-hibernate6-core"
   "org[.]grails:grails-datastore-gorm-hibernate5|org.apache.grails.data:grails-data-hibernate5-core"
+  "org[.]grails:gorm-graphql|org.apache.grails.data:grails-data-graphql-core"
+  "org[.]grails:gorm-graphql-plugin|org.apache.grails:grails-data-graphql"
   "org[.]grails:grails-datastore-gorm-async|org.apache.grails.data:grails-datamapping-async"
   "org[.]grails:grails-datastore-gorm|org.apache.grails.data:grails-datamapping-core"
   "org[.]grails:grails-datastore-gorm-tck|org.apache.grails.data:grails-datamapping-tck-tests"

@@ -92,7 +92,7 @@ class RenderTagLib implements TagLibrary {
         def currentOut = out
         int statusCode = request.getAttribute('jakarta.servlet.error.status_code') as int
         currentOut << """<h1>Error ${prettyPrintStatus(statusCode)}</h1>
-<dl class="${attrs['detailsClass'] ?: 'error-details'}">
+<dl class="${htmlEncoder.encode(attrs['detailsClass'] ?: 'error-details')}">
 <dt>URI</dt><dd>${htmlEncoder.encode(WebUtils.getForwardURI(request) ?: request.getAttribute('jakarta.servlet.error.request_uri'))}</dd>
 """
 
@@ -109,7 +109,7 @@ class RenderTagLib implements TagLibrary {
         def trace = errorsViewStackTracePrinter.prettyPrint(exception.cause ?: exception, attrs)
         if (StringUtils.hasText(trace.trim())) {
             currentOut << '<h2>Trace</h2>'
-            currentOut << """<pre class="${attrs['stackClass'] ?: 'stack'}">"""
+            currentOut << """<pre class="${htmlEncoder.encode(attrs['stackClass'] ?: 'stack')}">"""
             currentOut << htmlEncoder.encode(trace)
             currentOut << '</pre>'
         }

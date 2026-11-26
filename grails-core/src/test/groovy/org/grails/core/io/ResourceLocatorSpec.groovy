@@ -18,67 +18,81 @@
  */
 package org.grails.core.io
 
-import groovy.xml.XmlSlurper
-import grails.core.DefaultGrailsApplication
-import groovy.xml.XmlSlurper
-import org.grails.plugins.*
+import spock.lang.Specification
+
+import org.springframework.context.support.GenericApplicationContext
 import org.springframework.core.io.ByteArrayResource
 import org.springframework.core.io.ResourceLoader
-import spock.lang.Specification
+
+import grails.core.DefaultGrailsApplication
+import grails.plugins.GrailsPlugin
+import grails.plugins.GrailsPluginManager
+import org.apache.grails.core.plugins.PluginDescriptor
+import org.grails.plugins.BinaryGrailsPlugin
+import org.grails.plugins.MockBinaryPluginResource
+import org.grails.plugins.TestBinaryGrailsPlugin
 
 class ResourceLocatorSpec extends Specification {
 
-    void "test find simple URI"() {
-        given: "Resource locator with mock resource loader"
-            def loader = new MockStringResourceLoader()
-            loader.registerMockResource("file:./web-app/css/main.css", "dummy contents")
-            def resourceLocator = new MockResourceLocator(defaultResourceLoader: loader)
-            resourceLocator.searchLocation = "./"
+    void 'finds a resource for a simple URI and returns null for a missing URI'() {
+        given: 'a resource locator backed by a mock resource loader'
+        def loader = new MockStringResourceLoader().tap {
+            registerMockResource('file:./web-app/css/main.css', 'dummy contents')
+        }
+        def resourceLocator = new MockResourceLocator(defaultResourceLoader: loader).tap {
+            searchLocation = './'
+        }
 
-        when: "An existing resource is queried"
-            def res = resourceLocator.findResourceForURI("/css/main.css")
+        when: 'an existing URI is resolved'
+        def resource = resourceLocator.findResourceForURI('/css/main.css')
 
-        then: "Make sure it is found"
-            assert res != null
+        then: 'the matching resource is returned'
+        resource
 
-        when: "A non-existent resource is queried"
-            res = resourceLocator.findResourceForURI("/css/notThere.css")
+        when: 'a missing URI is resolved'
+        resource = resourceLocator.findResourceForURI('/css/notThere.css')
 
-        then: "null is returned"
-            res == null
+        then: 'no resource is returned'
+        !resource
     }
 
-    void "test find resource from binary plugin"() {
-        given: "Resource locator with mock resource loader and a plugin manager"
-             def loader = new MockStringResourceLoader()
-             def resourceLocator = new MockResourceLocator(defaultResourceLoader: loader)
-             def manager = new MockGrailsPluginManager()
-             manager.registerMockPlugin(getBinaryPlugin())
-             resourceLocator.pluginManager = manager
+    void 'finds a static resource contributed by a binary plugin'() {
+        given: 'a resource locator configured with a plugin manager exposing a binary plugin'
+        def resourceLocator = new MockResourceLocator(defaultResourceLoader: new MockStringResourceLoader())
+        def binaryPlugin = binaryPlugin
 
-        when: "A binary plugin resource is queried"
-            def res = resourceLocator.findResourceForURI("/plugins/test-binary-1.0/css/main.css")
+        and: 'a plugin manager that returns the binary plugin'
+        def manager = Mock(GrailsPluginManager)
+        manager.allPlugins >> ([binaryPlugin] as GrailsPlugin[])
+        resourceLocator.pluginManager = manager
 
-        then: "The resource is found"
-            assert res != null
+        when: 'a binary plugin URI is resolved'
+        def resource = resourceLocator.findResourceForURI('/plugins/test-binary-1.0/css/main.css')
+
+        then: 'the plugin resource is returned'
+        resource
     }
 
-    BinaryGrailsPlugin getBinaryPlugin() {
-            def str = '''
-    <plugin name='testBinary'>
-      <class>org.grails.plugins.TestBinaryGrailsPlugin</class>
-    </plugin>
-    '''
-
-            def xml = new XmlSlurper().parseText(str)
-
-            def resource = new MockBinaryPluginResource(str.bytes)
-            def descriptor = new BinaryGrailsPluginDescriptor(resource, ['org.grails.plugins.TestBinaryGrailsPlugin'])
-            resource.relativesResources['static/css/main.css'] = new ByteArrayResource(''.bytes)
-            def binaryPlugin = new BinaryGrailsPlugin(TestBinaryGrailsPlugin, descriptor, new DefaultGrailsApplication())
+    private static BinaryGrailsPlugin getBinaryPlugin() {
+        def pluginXml = '''
+            <plugin name='testBinary'>
+                <class>org.grails.plugins.TestBinaryGrailsPlugin</class>
+            </plugin>
+        '''
+        def resource = new MockBinaryPluginResource(pluginXml.bytes).tap {
+            relativesResources['static/css/main.css'] = new ByteArrayResource(''.bytes)
+        }
+        new BinaryGrailsPlugin(
+                TestBinaryGrailsPlugin,
+                new PluginDescriptor(resource, ['org.grails.plugins.TestBinaryGrailsPlugin'], []),
+                new DefaultGrailsApplication().tap {
+                    mainContext = new GenericApplicationContext()
+                }
+        )
     }
 }
 
 class MockResourceLocator extends DefaultResourceLocator {
+
     ResourceLoader defaultResourceLoader
 }

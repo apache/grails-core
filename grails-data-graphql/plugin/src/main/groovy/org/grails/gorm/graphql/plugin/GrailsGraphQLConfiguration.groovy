@@ -19,21 +19,19 @@
 
 package org.grails.gorm.graphql.plugin
 
-import grails.config.Config
-import grails.core.GrailsApplication
 import groovy.transform.CompileStatic
-import org.grails.plugins.databinding.DataBindingGrailsPlugin
+import org.grails.plugins.databinding.DataBindingConfigurationProperties
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.context.properties.ConfigurationProperties
 
-import javax.annotation.PostConstruct
+import jakarta.annotation.PostConstruct
 
 @CompileStatic
 @ConfigurationProperties(prefix = 'grails.gorm.graphql')
 class GrailsGraphQLConfiguration {
 
     @Autowired
-    private GrailsApplication grailsApplication
+    private DataBindingConfigurationProperties dataBindingConfigurationProperties
 
     Boolean enabled = true
 
@@ -47,12 +45,11 @@ class GrailsGraphQLConfiguration {
 
     @PostConstruct
     void init() {
-        Config config = grailsApplication.config
         if (dateFormats == null) {
-            dateFormats = config.getProperty('grails.databinding.dateFormats', List, DataBindingGrailsPlugin.DEFAULT_DATE_FORMATS)
+            dateFormats = dataBindingConfigurationProperties.dateFormats
         }
         if (dateFormatLenient == null) {
-            dateFormatLenient = config.getProperty('grails.databinding.dateParsingLenient', Boolean, false)
+            dateFormatLenient = dataBindingConfigurationProperties.dateParsingLenient
         }
         if (browser == null) {
             browser = false

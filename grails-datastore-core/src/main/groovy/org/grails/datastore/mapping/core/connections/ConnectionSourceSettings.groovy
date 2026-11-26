@@ -75,6 +75,11 @@ class ConnectionSourceSettings implements Settings {
     Boolean markDirty
 
     /**
+     * Whether to cache auto-timestamp annotation metadata (defaults to true for production, false for development)
+     */
+    Boolean cacheAutoTimestampAnnotations
+
+    /**
      * Package names that should fail on error
      */
     List<String> failOnErrorPackages = Collections.emptyList()

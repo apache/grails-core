@@ -26,56 +26,67 @@ import groovy.xml.slurpersupport.GPathResult;
 
 import org.springframework.core.io.Resource;
 
+import org.apache.grails.core.plugins.PluginDescriptor;
 import org.grails.core.exceptions.GrailsConfigurationException;
 import org.grails.io.support.SpringIOUtils;
 
 /**
- * Holds a reference to the parsed grails-plugin.xml descriptor and the
- * resource used to parse the descriptor
- *
+ * @deprecated Use {@link PluginDescriptor} instead.
+ * This compatibility bridge will be removed in Grails 8.0.0.
  */
+@Deprecated(forRemoval = true, since = "7.1")
 public class BinaryGrailsPluginDescriptor {
 
-    private final Resource resource;
-    private final List<String> providedlassNames;
+    private final PluginDescriptor descriptor;
     private GPathResult parsedXml;
 
+    @Deprecated(forRemoval = true, since = "7.1")
     public BinaryGrailsPluginDescriptor(Resource resource, List<String> providedlassNames) {
-        this.resource = resource;
-        this.providedlassNames = providedlassNames;
+        this(new PluginDescriptor(resource, List.of(), providedlassNames));
+    }
+
+    @Deprecated(forRemoval = true, since = "7.1")
+    public BinaryGrailsPluginDescriptor(PluginDescriptor descriptor) {
+        this.descriptor = descriptor;
     }
 
     /**
      * The resource the descriptor was parsed from
      *
+     * @deprecated Use {@link PluginDescriptor#getResource()} instead.
      * @return The resource instance
      */
+    @Deprecated(forRemoval = true, since = "7.1")
     public Resource getResource() {
-        return resource;
+        return descriptor.getResource();
     }
 
     /**
+     * @deprecated Use {@link PluginDescriptor#getProvidedClasses()} instead.
      * @return The class names provided by the plugin
      */
+    @Deprecated(forRemoval = true, since = "7.1")
     public List<String> getProvidedlassNames() {
-        return providedlassNames;
+        return descriptor.getProvidedClasses();
     }
 
     /**
+     * @deprecated Removed, use record {@link PluginDescriptor} instead.
      * @return The parsed descriptor
      */
+    @Deprecated(forRemoval = true, since = "7.1")
     public GPathResult getParsedXml() {
         if (parsedXml == null) {
             InputStream inputStream;
             try {
-                inputStream = resource.getInputStream();
+                inputStream = getResource().getInputStream();
             } catch (IOException e) {
-                throw new GrailsConfigurationException("Error parsing plugin descript: " + resource.getFilename(), e);
+                throw new GrailsConfigurationException("Error parsing plugin descript: " + getResource().getFilename(), e);
             }
             try {
                 parsedXml = SpringIOUtils.createXmlSlurper().parse(inputStream);
             } catch (Throwable e) {
-                throw new GrailsConfigurationException("Error parsing plugin descript: " + resource.getFilename(), e);
+                throw new GrailsConfigurationException("Error parsing plugin descript: " + getResource().getFilename(), e);
             } finally {
                 try {
                     inputStream.close();
