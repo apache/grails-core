@@ -34,6 +34,7 @@ import org.codehaus.groovy.ast.ASTNode;
 import org.codehaus.groovy.ast.ClassCodeVisitorSupport;
 import org.codehaus.groovy.ast.ClassHelper;
 import org.codehaus.groovy.ast.ClassNode;
+import org.codehaus.groovy.ast.ConstructorNode;
 import org.codehaus.groovy.ast.FieldNode;
 import org.codehaus.groovy.ast.GenericsType;
 import org.codehaus.groovy.ast.MethodNode;
@@ -198,6 +199,38 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
                 // that no longer uses a variable still listed it, and one the transform creates had no scope of its own,
                 // so the class generator looked for a variable that the closure around it did not capture
                 AstUtils.processVariableScopes(sourceUnit, currentClassNode, node);
+            }
+        } finally {
+            closureTransformed = transformedBefore;
+            detachedCriteriaVariables.clear();
+        }
+    }
+
+    @Override
+    public void visitConstructor(ConstructorNode node) {
+        boolean transformedBefore = closureTransformed;
+        closureTransformed = false;
+        try {
+            super.visitConstructor(node);
+            if (closureTransformed && currentClassNode != null) {
+                // a constructor is visited apart from the methods, and its scopes are computed again as those of a method are
+                AstUtils.processVariableScopes(sourceUnit, currentClassNode, node);
+            }
+        } finally {
+            closureTransformed = transformedBefore;
+            detachedCriteriaVariables.clear();
+        }
+    }
+
+    @Override
+    protected void visitObjectInitializerStatements(ClassNode node) {
+        boolean transformedBefore = closureTransformed;
+        closureTransformed = false;
+        try {
+            super.visitObjectInitializerStatements(node);
+            if (closureTransformed) {
+                // the initializer blocks of a class become part of its constructors
+                AstUtils.processVariableScopes(sourceUnit, node, null);
             }
         } finally {
             closureTransformed = transformedBefore;

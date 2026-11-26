@@ -30,7 +30,8 @@ import spock.lang.Unroll
  * compiles. The transform rewrote the closures after their variable scopes were computed, and the closure it creates
  * for the {@code or} or {@code and} had no scope of its own, so the class generator failed with a
  * {@code NullPointerException} looking for the alias the inner closure still listed. The source is compiled to
- * the CLASS_GENERATION phase, where that failure happened.
+ * the CLASS_GENERATION phase, where that failure happened, from every place a class can hold such a query: a method, a
+ * constructor, an initializer block, a property, a field, a closure in any of them, and a nested or anonymous class.
  */
 @Issue('https://github.com/apache/grails-core/issues/17177')
 class WhereQueryJunctionSubqueryAliasSpec extends Specification {
@@ -40,6 +41,23 @@ class WhereQueryJunctionSubqueryAliasSpec extends Specification {
         unit.addSource('Source.groovy', source)
         unit.compile(Phases.CLASS_GENERATION)
     }
+
+    private static final Map<String, Closure<String>> DECLARATIONS = [
+        'a method'                          : { String q -> "static find() { ${q} }" },
+        'a property'                        : { String q -> "static found = ${q}" },
+        'a private field'                   : { String q -> "private static final Object FOUND = ${q}" },
+        'a constructor'                     : { String q -> "JunctionBook() { def found = ${q} }" },
+        'a constructor with a parameter'    : { String q -> "JunctionBook(String name) { this.title = name; def found = ${q} }" },
+        'an instance initializer block'     : { String q -> "{ def found = ${q} }" },
+        'a static initializer block'        : { String q -> "static { def found = ${q} }" },
+        'a closure in a method'             : { String q -> "static find() { def run = { -> ${q} }; run() }" },
+        'a closure in a constructor'        : { String q -> "JunctionBook() { def run = { -> ${q} }; run() }" },
+        'a closure field'                   : { String q -> "private Closure run = { -> ${q} }" },
+        'a method of a nested class'        : { String q -> "static class Helper { static find() { ${q} } }" },
+        'a constructor of a nested class'   : { String q -> "static class Helper { Helper() { def found = ${q} } }" },
+        'an initializer block of a nested class': { String q -> "static class Helper { { def found = ${q} } }" },
+        'a method of an anonymous class'    : { String q -> "static find() { new Object() { def search() { ${q} } } }" },
+    ]
 
     @Unroll
     void "a where query with a subquery that uses the enclosing alias on one side of #operator compiles in #declaration"() {
@@ -54,7 +72,7 @@ import org.grails.datastore.gorm.query.transform.ApplyDetachedCriteriaTransform
 class JunctionBook {
     String title
     JunctionBook other
-    ${declaration == 'a method' ? "static find() { ${query} }" : declaration == 'a property' ? "static found = ${query}" : "private static final Object FOUND = ${query}"}
+    ${DECLARATIONS[declaration].call(query)}
 }
 """
 
@@ -65,6 +83,6 @@ class JunctionBook {
         noExceptionThrown()
 
         where:
-        [operator, declaration] << [['||', '&&'], ['a method', 'a property', 'a private field']].combinations()
+        [operator, declaration] << [['||', '&&'], DECLARATIONS.keySet().toList()].combinations()
     }
 }
