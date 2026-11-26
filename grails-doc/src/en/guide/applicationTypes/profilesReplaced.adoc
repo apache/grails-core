@@ -35,6 +35,18 @@ Until Grails 8 a project was created from a _profile_: an artifact with a skelet
 |The features of a profile, selected with `--features`
 |The features of the type of application, which `--list-features` lists. `--features` adds to the default features, where it took their place with a profile, and a name that is no feature is refused. `--exclude-features` leaves a default feature out.
 
+|The `maven-publish` feature of the `plugin` profile
+|The `grails-publish` feature of the three types of plugin: `create-plugin myplugin --features grails-publish`, or `feature add grails-publish` in a plugin that is there. It applies the Grails Publish Gradle plugin and writes its `grailsPublish` block, which takes the place of the `publishing` block the profile wrote: see "Publishing a Plugin" in xref:plugins#creatingAndInstallingPlugins[Creating and Installing Plugins].
+
+|The `less-asset-pipeline` feature
+|Retired: no feature takes its place. An application that has the `asset-pipeline-grails` feature, as a web application has by default, adds what the profile feature added by hand: `assets "cloud.wondrify:less-asset-pipeline"` in the `dependencies` block of `build.gradle`, and in its `assets` block `includes = ['application.less']`, `excludes = ['**/*.less']` and `configOptions = [less: [compiler: 'less4j']]`.
+
+|The `security` feature of the `rest-api` profile
+|Retired: no feature takes its place. Declare `implementation "org.apache.grails:grails-spring-security-rest"` in `build.gradle`, whose version the Grails BOM manages, and set `grails.plugin.springsecurity.filterChain.chainMap`, which the profile feature wrote to `grails-app/conf/application.groovy`, as "REST Plugin" in xref:security[Security] describes.
+
+|The `rx-mongodb` feature
+|Retired: the plugin it added has no release for a current Grails. See "RxGORM Runs on RxJava 3" in link:upgrading.html#upgrading90x[Upgrading from Grails 8 to Grails 9].
+
 |A profile of your own: `create-profile`, the `profile` profile, a profile that is published to a repository and named by its coordinates
 |A preset, which names the type of application, gives the options their defaults, asks for features and adds dependencies, configuration and files: see xref:applicationTypes#presets[Making Applications from a Preset]. A feature that every application of the organisation can have is a plugin with a feature pack: see xref:applicationTypes#customizingGeneration[Customizing What a New Application Gets]. A preset and a feature pack add to an application of one of the types. Neither has a skeleton that takes the place of the files Grails generates or that makes several projects, and neither extends another; those parts of a profile are converted by hand, as the page on presets describes.
 

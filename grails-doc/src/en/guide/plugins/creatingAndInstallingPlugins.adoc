@@ -188,7 +188,7 @@ publishing {
 
 NOTE: Please refer to the Gradle Maven Publish plugin documentation for up-to-date information.
 
-A plugin that `grails create-plugin` generates does not apply the Maven Publish plugin, so its build has no `publishToMavenLocal` task yet: add `id "maven-publish"` to the `plugins` block of its `build.gradle` first, with the `publishing` block above.
+A plugin that `grails create-plugin` generates does not apply the Maven Publish plugin, so its build has no `publishToMavenLocal` task yet: add `id "maven-publish"` to the `plugins` block of its `build.gradle` first, with the `publishing` block above. Or give the plugin the `grails-publish` feature, which needs no `publishing` block: see <<publishingAPlugin,Publishing a Plugin>> below.
 
 To make your plugin available for use in a Grails application run the `./gradlew publishToMavenLocal` command:
 
@@ -211,6 +211,56 @@ implementation "org.apache.grails:grails-quartz:0.1"
 ----
 
 NOTE: In Grails 2.x plugins were packaged as ZIP files, however from Grails 3.x+ plugins are simple JAR files that can be added to the classpath of the IDE.
+
+[[publishingAPlugin]]
+==== Publishing a Plugin
+
+The `grails-publish` feature sets a plugin up for publishing with the Grails Publish Gradle plugin (`org.apache.grails.gradle.grails-publish`), the plugin the modules of Grails themselves are published with. It publishes the jar of the plugin with its sources, its API documentation, the plugin descriptor and a POM that has what a public repository such as Maven Central asks for. The feature can be selected for the three types of plugin, and is not selected by default:
+
+[source,console]
+----
+$ grails create-plugin myplugin --features grails-publish
+----
+
+In a plugin that is there, `grails feature add grails-publish` adds it. `grails feature diff grails-publish` shows what it would change first.
+
+The feature puts the Gradle plugin on the class path of the build script, in the version the Grails BOM manages, applies it, and writes this block to `build.gradle`:
+
+[source,groovy]
+.build.gradle
+----
+grailsPublish {
+    // TODO: the GitHub repository of the plugin, as owner/name. The links of the published POM are made from it.
+    githubSlug = 'TODO-owner/TODO-repository'
+    license {
+        name = 'Apache-2.0'
+    }
+    // The title is the name of the project unless it is set here.
+    // title = 'My Plugin'
+    // TODO: one sentence that says what the plugin is for.
+    desc = 'TODO: describe the plugin'
+    // TODO: the developers of the plugin, each by an id and a name.
+    developers = [todo: 'TODO: your name']
+}
+----
+
+Replace the values that are marked `TODO` before the first publish; the command that created the plugin, or added the feature, says so when it ends. The plugin builds with the values as they are, and they would be published as they are. A plugin that is not on GitHub sets `websiteUrl`, `scmUrl`, `scmUrlConnection` and `issueTrackerUrl` in place of `githubSlug`. The published group is the `group` of `build.gradle`, and the artifact is the name of the project.
+
+The version of the plugin, which `gradle.properties` has, decides how it is published:
+
+* A version that ends with `-SNAPSHOT` is a snapshot. `./gradlew publishToMavenLocal` installs it into the local Maven repository, and `./gradlew publish` uploads it to the Maven repository the environment variable `MAVEN_PUBLISH_URL` names, with the credentials of `MAVEN_PUBLISH_USERNAME` and `MAVEN_PUBLISH_PASSWORD` where the repository asks for them.
+* Any other version is a release, and a release is signed. Every task that publishes one, `publishToMavenLocal` among them, needs a signing key: its id in `SIGNING_KEY`, and either the keyring file `SIGNING_KEYRING` names, with `SIGNING_PASSPHRASE`, or the local `gpg` command. `./gradlew publishToSonatype closeSonatypeStagingRepository` uploads a release to the Nexus staging repository of `NEXUS_PUBLISH_URL`, with `NEXUS_PUBLISH_USERNAME`, `NEXUS_PUBLISH_PASSWORD` and `NEXUS_PUBLISH_STAGING_PROFILE_ID`.
+
+The plugin is generated with the version `0.1`, which is a release: give it a version such as `0.1.0-SNAPSHOT` while you develop it. The environment variable `GRAILS_PUBLISH_RELEASE`, set to `true` or `false`, decides between a release and a snapshot whatever the version is.
+
+Each of these values can also be given as a Gradle property, which is read before the environment variable: `mavenPublishUrl`, `mavenPublishUsername`, `mavenPublishPassword`, `nexusPublishUrl`, `nexusPublishUsername`, `nexusPublishPassword`, `nexusPublishStagingProfileId`, `signing.keyId`, `signing.secretKeyRingFile` and `signing.password`. Keep credentials out of the files of the project: in `~/.gradle/gradle.properties` or in the environment of the build server. The address can be a directory, which is a way to look at what would be published:
+
+[source,console]
+----
+$ ./gradlew publish -Pversion=0.1.0-SNAPSHOT -PmavenPublishUrl=file:///tmp/repository
+----
+
+The `README.md` of a plugin with the feature repeats the tasks and the variables. A plugin that publishes with the Maven Publish plugin and a `publishing` block of its own, as the `maven-publish` feature of the `plugin` profile set it up until Grails 8, needs neither the feature nor a change.
 
 ==== Plugins and Multi-Project Builds
 
