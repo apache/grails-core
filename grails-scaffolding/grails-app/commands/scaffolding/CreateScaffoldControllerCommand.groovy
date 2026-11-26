@@ -32,7 +32,6 @@ import org.grails.io.support.Resource
  * Creates a scaffolded controller.
  * Usage: <code>./gradlew runCommand "-Pargs=create-scaffold-controller [DOMAIN_CLASS_NAME]"</code>
  *
- * @author Puneet Behl
  * @since 5.0.0
  */
 @CompileStatic
@@ -56,11 +55,28 @@ class CreateScaffoldControllerCommand implements GrailsApplicationCommand, Comma
         }
         boolean overwrite = isFlagPresent('force')
         final Model model = model(sourceClass)
+
+        String namespace = flag('namespace')
+        boolean useService = isFlagPresent('service')
+        String extendsClass = flag('extends')
+
+        Map<String, Object> templateModel = model.asMap()
+        templateModel.put('useService', useService)
+        templateModel.put('namespace', namespace ?: '')
+        templateModel.put('extendsClass', extendsClass ?: '')
+        templateModel.put('extendsClassName', extendsClass ? extendsClass.substring(extendsClass.lastIndexOf('.') + 1) : '')
+
+        String destinationPath = "grails-app/controllers/${model.packagePath}"
+
+        if (namespace) {
+            destinationPath = "${destinationPath}/${namespace}"
+        }
+
         render(template: template('scaffolding/ScaffoldedController.groovy'),
-                destination: file("grails-app/controllers/${model.packagePath}/${model.convention('Controller')}.groovy"),
-                model: model,
+                destination: file("${destinationPath}/${model.convention('Controller')}.groovy"),
+                model: templateModel,
                 overwrite: overwrite)
-        verbose('Scaffold controller created for class domain-class')
+        verbose('Scaffold controller created for domain class')
 
         return SUCCESS
     }

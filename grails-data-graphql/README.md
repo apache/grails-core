@@ -14,15 +14,38 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Gorm GraphQL
+# GORM for GraphQL
 
-This project has not been updated for Grails 7 yet and is not included in the build.
+This project generates a GraphQL schema based on entities mapped with [GORM](https://grails.apache.org/docs/latest/grails-data/).
 
-## An automatic GraphQL schema generator for GORM
+For more information see the following links:
 
-Current documentation https://grails.github.io/grails-data-graphql/3.0.x/hibernate/guide/index.html
+* [Documentation](https://grails.apache.org/docs/latest/grails-data/graphql/manual/)
+* [API](https://grails.apache.org/docs/latest/api)
 
+For the current development version see the following links:
 
-### Dependencies
+* [Snapshot Documentation](https://grails.apache.org/docs/snapshot/grails-data/graphql/manual/)
+* [Snapshot API](https://grails.apache.org/docs/snapshot/api)
 
-- [Graphql Java](https://github.com/graphql-java/graphql-java)
+## Modules
+
+The plugin is split across the following modules in the root `settings.gradle`:
+
+| Module          | Gradle path                  | Maven coordinates                                 |
+| --------------- | ---------------------------- | ------------------------------------------------- |
+| Core schema lib | `:grails-data-graphql-core`  | `org.apache.grails.data:grails-data-graphql-core` |
+| Grails plugin   | `:grails-data-graphql`       | `org.apache.grails:grails-data-graphql`           |
+| Reference guide | `:grails-data-graphql-docs`  | (not published)                                   |
+
+## Example applications
+
+Five demo applications live under `grails-test-examples/graphql/`:
+
+| Project gradle path                                            | Description                                              |
+| -------------------------------------------------------------- | -------------------------------------------------------- |
+| `:grails-test-examples-graphql-grails-test-app`                | End-to-end Grails REST app exercising every type/feature |
+| `:grails-test-examples-graphql-grails-docs-app`                | Grails REST app backing the reference-guide examples     |
+| `:grails-test-examples-graphql-grails-tenant-app`              | Grails app demonstrating GORM multi-tenancy              |
+| `:grails-test-examples-graphql-grails-multi-datastore-app`     | Grails app combining Hibernate5 + MongoDB datastores     |
+| `:grails-test-examples-graphql-spring-boot-app`                | Standalone Spring Boot app embedding the schema generator core |

@@ -60,6 +60,7 @@ class PropertyPathAccessor implements BeanPropertyAccessor {
 
     Class getRootBeanType() { null }
 
+    @Deprecated(forRemoval = true)
     GrailsDomainClass getBeanClass() { null }
 
     PersistentEntity getEntity() { null }

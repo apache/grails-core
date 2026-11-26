@@ -27,9 +27,7 @@
         <section class="row">
             <div id="show-${propertyName}" class="col-12 content scaffold-show" role="main">
                 <h1><g:message code="default.show.label" args="[entityName]" /></h1>
-                <g:if test="\${flash.message}">
-                    <div class="alert alert-primary" role="alert"><i class="bi-info-circle"></i> \${flash.message}</div>
-                </g:if>
+                <g:flashMessages />
                 <f:display bean="${propertyName}" listClass="container" listItemClass="row mb-3" labelClass="form-label col-sm-3 text-sm-end" valueClass="col-sm-9" />
                 <g:form resource="\${this.${propertyName}}" controller="\${controllerName}" method="DELETE">
                     <fieldset class="bg-body-tertiary">

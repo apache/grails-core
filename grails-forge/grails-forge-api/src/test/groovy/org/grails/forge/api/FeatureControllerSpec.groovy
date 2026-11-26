@@ -32,6 +32,7 @@ import org.grails.forge.options.JdkVersion
 import org.grails.forge.options.DevelopmentReloading
 import org.grails.forge.options.ServletImpl
 import spock.lang.Specification
+import spock.lang.Unroll
 
 @MicronautTest
 class FeatureControllerSpec extends Specification {
@@ -169,6 +170,30 @@ class FeatureControllerSpec extends Specification {
 
         then:
         !features.any { it.name == 'asset-pipeline-grails' }
+    }
+
+    @Unroll
+    void 'test gorm-graphql is listed for the #type application type: #listed'() {
+        when:
+        List<FeatureDTO> features = applicationTypeClient
+                .features(type,
+                        RequestInfo.LOCAL,
+                        new FeatureFilter(reloading: DevelopmentReloading.DEFAULT_OPTION,
+                                gorm: GormImpl.DEFAULT_OPTION,
+                                servlet: ServletImpl.DEFAULT_OPTION,
+                                javaVersion: JdkVersion.DEFAULT_OPTION)).features
+        FeatureDTO graphql = features.find { it.name == 'gorm-graphql' }
+
+        then:
+        (graphql != null) == listed
+        !listed || graphql.category == 'API'
+
+        where:
+        type                       | listed
+        ApplicationType.WEB        | true
+        ApplicationType.REST_API   | true
+        ApplicationType.PLUGIN     | false
+        ApplicationType.WEB_PLUGIN | false
     }
 
     void "test feature filter - invalid option as query parameter"() {

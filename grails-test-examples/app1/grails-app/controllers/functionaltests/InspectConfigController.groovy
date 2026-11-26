@@ -18,6 +18,7 @@
  */
 
 package functionaltests
+
 class InspectConfigController {
 
     def showPropertyValues() {
@@ -36,5 +37,31 @@ class InspectConfigController {
           prop1Flat: prop1Flat,
           prop2Flat: prop2Flat,
           prop3Flat: prop3Flat]
+    }
+
+    /**
+     * Shows the status of conditional beans from plugins whose
+     * {@code @ConditionalOnProperty} evaluates against {@code plugin.yml} properties.
+     * This proves that the {@code grails.boot.config.GrailsEnvironmentPostProcessor} loads
+     * plugin configuration early enough for auto-configuration conditions.
+     */
+    def showConditionalBeans() {
+        boolean loadfirstPresent = applicationContext.containsBean('loadfirstFeatureInfo')
+        boolean loadsecondPresent = applicationContext.containsBean('loadsecondFeatureInfo')
+        boolean loadafterPresent = applicationContext.containsBean('loadafterFeatureInfo')
+
+        String loadfirstMessage = loadfirstPresent ?
+                applicationContext.getBean('loadfirstFeatureInfo').message() : 'NOT LOADED'
+        String loadsecondMessage = loadsecondPresent ?
+                applicationContext.getBean('loadsecondFeatureInfo').message() : 'NOT LOADED'
+        String loadafterMessage = loadafterPresent ?
+                applicationContext.getBean('loadafterFeatureInfo').message() : 'NOT LOADED'
+
+        [loadfirstPresent: loadfirstPresent,
+         loadsecondPresent: loadsecondPresent,
+         loadafterPresent: loadafterPresent,
+         loadfirstMessage: loadfirstMessage,
+         loadsecondMessage: loadsecondMessage,
+         loadafterMessage: loadafterMessage]
     }
 }

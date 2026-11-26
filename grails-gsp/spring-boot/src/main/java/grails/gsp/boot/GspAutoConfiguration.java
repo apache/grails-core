@@ -27,8 +27,6 @@ import java.util.Properties;
 
 import jakarta.servlet.ServletContext;
 
-import org.sitemesh.autoconfigure.SiteMeshAutoConfiguration;
-
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -39,7 +37,6 @@ import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProce
 import org.springframework.beans.factory.support.GenericBeanDefinition;
 import org.springframework.beans.factory.support.ManagedList;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
-import org.springframework.boot.autoconfigure.AutoConfigureBefore;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.web.servlet.WebMvcAutoConfiguration;
@@ -65,7 +62,6 @@ import org.grails.gsp.GroovyPagesTemplateEngine;
 import org.grails.gsp.io.GroovyPageScriptSource;
 import org.grails.gsp.jsp.TagLibraryResolver;
 import org.grails.gsp.jsp.TagLibraryResolverImpl;
-import org.grails.plugins.sitemesh3.GrailsLayoutHandlerMapping;
 import org.grails.plugins.sitemesh3.Sitemesh3GrailsPlugin;
 import org.grails.plugins.web.taglib.RenderSitemeshTagLib;
 import org.grails.plugins.web.taglib.RenderTagLib;
@@ -91,11 +87,6 @@ public class GspAutoConfiguration {
 
         @Value("${spring.gsp.sitmesh3:true}")
         boolean sitemesh3;
-    }
-
-    @Bean
-    GrailsLayoutHandlerMapping grailsLayoutHandlerMapping() {
-        return new GrailsLayoutHandlerMapping();
     }
 
     @Configuration
@@ -193,7 +184,6 @@ public class GspAutoConfiguration {
     }
 
     @Configuration
-    @AutoConfigureBefore(SiteMeshAutoConfiguration.class)
     @ConditionalOnMissingBean(name = "sitemesh3")
     protected static class Sitemesh3Configuration implements EnvironmentAware, BeanDefinitionRegistryPostProcessor {
         @Override

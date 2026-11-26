@@ -19,7 +19,12 @@
 
 package grails.plugin.springsecurity.acl
 
+import groovy.transform.EqualsAndHashCode
+
+@EqualsAndHashCode(includes = 'objectId', callSuper = true)
 class AclObjectIdentity extends AbstractAclObjectIdentity {
+
+    private static final long serialVersionUID = 1
 
     Long objectId
 
