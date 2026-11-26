@@ -76,6 +76,7 @@ import org.codehaus.groovy.transform.trait.Traits;
 
 import grails.gorm.DetachedCriteria;
 import org.grails.datastore.gorm.transform.AstPropertyResolveUtils;
+import org.grails.datastore.mapping.model.config.GormProperties;
 import org.grails.datastore.mapping.query.Query;
 import org.grails.datastore.mapping.query.criteria.FunctionCallingCriterion;
 import org.grails.datastore.mapping.reflect.AstUtils;
@@ -965,6 +966,21 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
                 !variableScope.isReferencedLocalVariable(((VariableExpression) expression).getName());
     }
 
+    /** Whether the expression is an alias of a class itself, such as {@code c} for {@code def c = Club}. */
+    private boolean isClassAlias(Expression expression) {
+        return expression instanceof VariableExpression && aliases.get(((VariableExpression) expression).getName()) instanceof ClassNode;
+    }
+
+    /** The identifier of an alias of a class, {@code c.id} for {@code c}, and any other expression as it is. */
+    private Expression identifierOfClassAlias(Expression expression) {
+        if (!isClassAlias(expression)) {
+            return expression;
+        }
+        PropertyExpression identifier = new PropertyExpression(expression, GormProperties.IDENTITY);
+        identifier.setSourcePosition(expression);
+        return identifier;
+    }
+
     /** Whether the expression is a property of an alias, or a path from one, such as {@code t.club} or {@code t.club.id}. */
     private boolean isAliasPath(Expression expression) {
         if (!(expression instanceof PropertyExpression)) {
@@ -993,6 +1009,14 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
         Expression leftExpression = be.getLeftExpression();
         Expression rightExpression = be.getRightExpression();
         String swappedOperator = SWAPPED_COMPARISON_OPERATORS.get(operator);
+        if (("==".equals(operator) || "!=".equals(operator)) &&
+                (isClassAlias(rightExpression) && isAliasPath(leftExpression) || isClassAlias(leftExpression) && isAliasPath(rightExpression))) {
+            // t.club == c for def c = Club: an alias of a class stands for its row, compared by its identifier, as in t.club == c.id
+            BinaryExpression byId = new BinaryExpression(identifierOfClassAlias(leftExpression), operation, identifierOfClassAlias(rightExpression));
+            byId.setSourcePosition(be);
+            addBinaryExpressionToNewBody(propertyNames, newCode, byId, addAll, variableScope);
+            return;
+        }
         if (swappedOperator != null && (isNestedAliasPath(leftExpression) && (isAliasProperty(rightExpression) || isPropertyOfQueriedClass(rightExpression, propertyNames, variableScope)) ||
                 isAliasProperty(leftExpression) && isPropertyOfQueriedClass(rightExpression, propertyNames, variableScope))) {
             // t.club.id == c.id or t.club.id == id: a nested path of an alias is handled on the right of the comparison, so
@@ -1279,6 +1303,9 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
                     args.addExpression(new ConstantExpression(rootReference));
                     args.addExpression(new ConstantExpression(oppositeProperty.getText()));
                     newCode.addStatement(new ExpressionStatement(new MethodCallExpression(new VariableExpression("this"), methodToCall, args)));
+                    // the comparison is written: the other side is not visited again as a criterion of its own, which compared
+                    // it with itself, c.id <> c.id for t.club != c.id, and so kept no row
+                    aliasExpressions.add(oppositeProperty);
                 }
 
             } else if (!variableScope.isReferencedLocalVariable(propertyName)) {

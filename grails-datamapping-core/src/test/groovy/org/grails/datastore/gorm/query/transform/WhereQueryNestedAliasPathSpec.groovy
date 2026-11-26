@@ -464,4 +464,116 @@ class AliasNonVarRootBook {
         eqPropertyCalls.isEmpty()
         eqCalls.any { constantArg(it, 0) == 'otherProperty' }
     }
+
+    void "an alias of a class compared with an alias path is compared by its identifier, in either order"() {
+        given:
+        String source = '''
+import grails.gorm.annotation.Entity
+import org.grails.datastore.gorm.query.transform.ApplyDetachedCriteriaTransform
+
+@ApplyDetachedCriteriaTransform
+@Entity
+class AliasRowBook {
+    String title
+
+    static findAliasRight() {
+        AliasRowBook.where {
+            def t = AliasRowBook
+            def c = AliasRowBook
+            t.nested == c
+        }
+    }
+
+    static findAliasLeft() {
+        AliasRowBook.where {
+            def t = AliasRowBook
+            def c = AliasRowBook
+            c != t.nested
+        }
+    }
+}
+'''
+
+        when:
+        ClassNode classNode = compileToClassNode(source, 'AliasRowBook')
+
+        then: 'the alias stands for its identifier, c.id, as in t.nested == c.id'
+        methodCallsNamed(classNode, 'eqProperty', 'findAliasRight').any { [constantArg(it, 0), constantArg(it, 1)] as Set == ['c.id', 't.nested'] as Set }
+        methodCallsNamed(classNode, 'neProperty', 'findAliasLeft').any { [constantArg(it, 0), constantArg(it, 1)] as Set == ['c.id', 't.nested'] as Set }
+    }
+
+    void "an alias of a class compared with an alias path by an order is still refused"() {
+        given:
+        String source = '''
+import grails.gorm.annotation.Entity
+import org.grails.datastore.gorm.query.transform.ApplyDetachedCriteriaTransform
+
+@ApplyDetachedCriteriaTransform
+@Entity
+class AliasRowOrderBook {
+    String title
+
+    static findOrdered() {
+        AliasRowOrderBook.where {
+            def t = AliasRowOrderBook
+            def c = AliasRowOrderBook
+            t.nested < c
+        }
+    }
+}
+'''
+
+        when:
+        compileToClassNode(source, 'AliasRowOrderBook')
+
+        then: 'a row has no order, so the comparison is refused instead of being dropped'
+        MultipleCompilationErrorsException e = thrown()
+        e.message.contains('Cannot write the comparison')
+    }
+
+    void "a comparison of two alias paths is written once, not again as the right side compared with itself"() {
+        given:
+        String source = '''
+import grails.gorm.annotation.Entity
+import org.grails.datastore.gorm.query.transform.ApplyDetachedCriteriaTransform
+
+@ApplyDetachedCriteriaTransform
+@Entity
+class AliasPairBook {
+    String title
+
+    static findNotEqualAliasFirst() {
+        AliasPairBook.where {
+            def t = AliasPairBook
+            def c = AliasPairBook
+            t.nested != c.id
+        }
+    }
+
+    static findNotEqualOwnFirst() {
+        AliasPairBook.where {
+            def t = AliasPairBook
+            def c = AliasPairBook
+            c.id != t.nested
+        }
+    }
+
+    static findEqual() {
+        AliasPairBook.where {
+            def t = AliasPairBook
+            def c = AliasPairBook
+            t.nested == c.id
+        }
+    }
+}
+'''
+
+        when:
+        ClassNode classNode = compileToClassNode(source, 'AliasPairBook')
+
+        then: 'one criterion each: a second one compared the right side with itself, c.id <> c.id, and kept no row'
+        methodCallsNamed(classNode, 'neProperty', 'findNotEqualAliasFirst').collect { [constantArg(it, 0), constantArg(it, 1)] } == [['t.nested', 'c.id']]
+        methodCallsNamed(classNode, 'neProperty', 'findNotEqualOwnFirst').collect { [constantArg(it, 0), constantArg(it, 1)] } == [['c.id', 't.nested']]
+        methodCallsNamed(classNode, 'eqProperty', 'findEqual').collect { [constantArg(it, 0), constantArg(it, 1)] } == [['t.nested', 'c.id']]
+    }
 }
