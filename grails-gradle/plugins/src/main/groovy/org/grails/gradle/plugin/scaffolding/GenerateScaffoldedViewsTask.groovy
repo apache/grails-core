@@ -124,15 +124,31 @@ abstract class GenerateScaffoldedViewsTask extends DefaultTask {
 
     /**
      * Compiled application classes, searched for scaffolded controllers. Fingerprinted by their ABI:
-     * what is read of a controller - the annotation, the domain class it names, the superclass and
-     * interfaces, and whether a namespace is declared - is part of it, and no code is read, so a
-     * change to a method body or a private member leaves the pages as they were. The one declaration
-     * the ABI leaves out is a private static {@code namespace} field with no accessor; adding one
-     * expands no namespace-specific page until the task runs for another reason, and the resolver
-     * expands such a page when it is first asked for, as it does any page this task did not expand.
+     * no code of a controller is read, so a change to a method body or a private member leaves the
+     * pages as they were. What is read of the controllers is an input of its own,
+     * {@link #getProjectControllers()}, since a namespace can be declared by a private field.
      */
     @CompileClasspath
     abstract ConfigurableFileCollection getClassesDirs()
+
+    /**
+     * What is read of the project's own scaffolded controllers, a line each: the path of its class, the
+     * domain class it scaffolds, and whether it has a namespace. An input of its own beside
+     * {@link #getClassesDirs()} because a namespace can be declared by a private static field with no
+     * accessor, which the ABI leaves out, and a controller that gains one has its namespace's pages
+     * expanded all the same.
+     *
+     * @since 9.0
+     */
+    @Input
+    List<String> getProjectControllers() {
+        URL[] classpath = (classesDirs.files + runtimeClasspath.files).collect { it.toURI().toURL() } as URL[]
+        (List<String>) new URLClassLoader(classpath, (ClassLoader) null).withCloseable { URLClassLoader resources ->
+            readProjectControllers(resources, [:]).collect { String path, Controller controller ->
+                "${path} ${controller.domain}${controller.namespaced ? ' namespaced' : ''}".toString()
+            }
+        }
+    }
 
     /**
      * The application's own templates, as trees rooted at the template directory: normally
@@ -444,18 +460,7 @@ abstract class GenerateScaffoldedViewsTask extends DefaultTask {
         URL[] pageTypes = (classesDirs.files + pageClasspath.files).collect { it.toURI().toURL() } as URL[]
         boolean checksPageTypes = !pageClasspath.empty
         new URLClassLoader(classpath, (ClassLoader) null).withCloseable { URLClassLoader resources ->
-            for (File dir : classesDirs.files) {
-                if (dir.isDirectory()) {
-                    dir.eachFileRecurse { File f ->
-                        if (f.name.endsWith('Controller.class')) {
-                            Controller controller = readController(f.bytes, f.path, resources, ancestors)
-                            if (controller != null) {
-                                controllers.add(controller)
-                            }
-                        }
-                    }
-                }
-            }
+            controllers.addAll(readProjectControllers(resources, ancestors).values())
             // with the platform's modules as the parent, as the page compiler has them, so a domain
             // type from java.sql resolves as java.lang's do
             new URLClassLoader(pageTypes, ClassLoader.platformClassLoader).withCloseable { URLClassLoader pageLoader ->
@@ -488,6 +493,26 @@ abstract class GenerateScaffoldedViewsTask extends DefaultTask {
                                     controllers.add(controller)
                                 }
                             }
+                        }
+                    }
+                }
+            }
+        }
+        controllers
+    }
+
+    /**
+     * The project's own scaffolded controllers, by the path of each class under its classes directory.
+     */
+    private Map<String, Controller> readProjectControllers(ClassLoader resources, Map<String, Boolean> ancestors) {
+        Map<String, Controller> controllers = new TreeMap<>()
+        for (File dir : classesDirs.files) {
+            if (dir.isDirectory()) {
+                dir.eachFileRecurse { File f ->
+                    if (f.name.endsWith('Controller.class')) {
+                        Controller controller = readController(f.bytes, f.path, resources, ancestors)
+                        if (controller != null) {
+                            controllers.put(dir.toPath().relativize(f.toPath()).toString().replace(File.separatorChar, '/' as char), controller)
                         }
                     }
                 }

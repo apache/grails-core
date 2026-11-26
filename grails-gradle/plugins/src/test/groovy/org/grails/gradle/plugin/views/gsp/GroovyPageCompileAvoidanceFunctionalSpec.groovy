@@ -160,6 +160,31 @@ class GroovyPageCompileAvoidanceFunctionalSpec extends GradleSpecification {
         scaffolded('java.lang.Long').listFiles().any { File copy -> new File(copy, 'admin/show.gsp').isFile() }
     }
 
+    def "a namespace a controller declares only in a private field expands its namespace's pages"() {
+        given: 'a page for the admin namespace is already expanded, for another controller'
+        project()
+        write('grails-app/controllers/admin/EventController.groovy', '''
+            package admin
+            import grails.plugin.scaffolding.annotation.Scaffold
+            @Scaffold(String)
+            class EventController { static namespace = 'admin' }
+        ''')
+        compile('generateScaffoldedViews')
+        assert !scaffolded('java.lang.Integer').listFiles().any { File copy -> new File(copy, 'admin/show.gsp').isFile() }
+
+        when: 'a controller gains a private field naming that namespace, with no accessor, which its ABI leaves out'
+        write('grails-app/controllers/BookController.groovy', '''
+            import grails.plugin.scaffolding.annotation.Scaffold
+            @Scaffold(Integer)
+            class BookController { private static String namespace = 'admin' }
+        ''')
+        BuildResult result = compile('generateScaffoldedViews')
+
+        then: 'the namespace is seen, and the page is expanded for the domain class it scaffolds'
+        result.task(':generateScaffoldedViews').outcome == TaskOutcome.SUCCESS
+        scaffolded('java.lang.Integer').listFiles().any { File copy -> new File(copy, 'admin/show.gsp').isFile() }
+    }
+
     private void project() {
         projectDir = setupTestResourceProject('gsp-compile-classpath').projectDir
         new File(projectDir, 'build.gradle').append('''
