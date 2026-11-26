@@ -55,12 +55,12 @@ include::ref/Command Line/console.adoc[]
 
 include::ref/Command Line/create-app.adoc[]
 
-[[ref-command-line-create-command]]
-==== create-command
+[[ref-command-line-create-tool]]
+==== create-tool
 [[ref-command-line-assemble]]
 ==== assemble
 
-include::ref/Command Line/create-command.adoc[]
+include::ref/Command Line/create-tool.adoc[]
 include::ref/Command Line/assemble.adoc[]
 
 [[ref-command-line-create-controller]]

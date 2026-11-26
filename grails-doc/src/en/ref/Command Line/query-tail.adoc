@@ -51,11 +51,11 @@ Usage:
 grails query-tail [--statements | --stream] [--page=<controller/action>] [--top=<n>] [--all] [--once] [--file=<path>]
 ----
 
-`query-tail` is a command of Grails Data (its command line artifact, `grails-datamapping-core-cli`, which the Grails Gradle plugin adds to the commands of every application that has GORM). The build of the project runs it with the Gradle task `runCommand`, as it runs every command of the application and its plugins:
+`query-tail` is a tool of Grails Data (in its companion artifact, `grails-datamapping-core-cli`, which the Grails Gradle plugin adds to the tools of every application that has GORM). The build of the project runs it with the Gradle task `runTool`, as it runs every tool of `src/cli` of the application and its plugins:
 
 * `grails query-tail`, with the options after the name, in any directory of the project;
-* `grails run-command query-tail`, the same;
-* `./gradlew runCommand --arg=query-tail`, with each option as a further `--arg`, such as `--arg=--once`, or `./gradlew runCommand -Pargs="query-tail --all --once"`.
+* `grails run-tool query-tail`, the same;
+* `./gradlew runTool --arg=query-tail`, with each option as a further `--arg`, such as `--arg=--once`, or `./gradlew runTool -Pargs="query-tail --all --once"`.
 
 Each option is given with its two dashes: `--statements`, `--stream`, `--page=<controller/action>`, `--top=<n>`, `--all`, `--once`, `--file=<path>`, and `--help`, which prints them. The build is no terminal, so the summary is written as plain text again each time it changes and is not redrawn in place: `--once` and `--stream` read best.
 
@@ -74,10 +74,10 @@ Arguments:
 * `once` - Print the summary of what has been captured and exit, which with `--all` is a report of the whole run so far.
 * `file` - The capture file, a relative one read against the application directory, as the application reads `grails.gorm.queryTail.file`. Defaults to the one the application writes, `build/query-tail/capture.log` or the file `grails.gorm.queryTail.file` names. A build directory moved in `build.gradle` is followed by the application and by this command: the Grails Gradle plugin hands `grails.project.target.dir` to both, since the build runs both.
 
-The command does not start the application, and it is not a reason to boot it: it is a command that
-the build runs without the application (a link:{api}org/apache/grails/core/cli/GradleCommand.html[GradleCommand]), so the task makes no
+The command does not start the application, and it is not a reason to boot it: it is a tool that
+the build runs without the application (it declares `startsApplication = false`, see link:{guidePath}commandLine.html#creatingTools[Creating Tools]), so the task makes no
 application context for it, opens no data source and runs no `BootStrap`, and it only reads the capture file. The task compiles the
-application first, as it does for every command. When there is no capture yet it waits for
+application first, as it does for every tool of `src/cli`. When there is no capture yet it waits for
 one and says how to start the application so that it writes one. When the application restarts,
 the command starts over with the new run. Statements run outside a web request, by a scheduled job
 for example, are shown under the thread that ran them, after the pages of requests, and the thread

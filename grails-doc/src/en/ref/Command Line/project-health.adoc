@@ -35,6 +35,7 @@ grails project health --json
 
 === Description
 
+// TOOLS-VERIFY: the check ids tool-catalog.* and tools.* with their levels and texts, and the number of checks (P4).
 Usage:
 
 [source,console]
@@ -48,7 +49,7 @@ Options:
 * `--strict` - End with exit code 1 when there is a warning, as when there is an error: for a job that holds a project to what the upgrade notes ask.
 * `-v`, `--verbose` - List the checks that found nothing as well.
 
-`project health` is the `health` command of the `project` command. It runs twelve checks on the project and reports what each of them found:
+`project health` is the `health` command of the `project` command. It runs thirteen checks on the project and reports what each of them found:
 
 [source,console]
 ----
@@ -57,7 +58,7 @@ $ grails project health
 | Warning java-target.release        build.gradle names Java 17 (compileJava.options.release, line 68), and Grails 9 needs Java 21 or later: a class of the project that uses one of Grails does not compile. Fix: In build.gradle, set compileJava.options.release (line 68) to Java 21 or later
 | Advice  gradle-wrapper.older       The Gradle wrapper names Gradle 9.8.0 (gradle/wrapper/gradle-wrapper.properties), and create-app generates applications with Gradle 9.9.2. Fix: ./gradlew wrapper --gradle-version 9.9.2 --gradle-distribution-sha256-sum 971fcd7150ca4ba04852c0b2ca0d2d0ab9468e14b03473eab19528809914c76b, and commit the wrapper
 | Advice  git-files.state-ignored    No .gitignore of the project leaves out .grails/transactions and .grails/history, ... Fix: Add /transactions/ and /history to .grails/.gitignore, as create-app and project migrate write it
-| 9 checks OK (-v lists them). 0 errors, 1 warning, 2 advice, 0 skipped
+| 10 checks OK (-v lists them). 0 errors, 1 warning, 2 advice, 0 skipped
 ----
 
 The first line names the project, the version of Grails it is on and the version of the command line. Then come the findings, one line each, the errors first, then the warnings, the advice and the checks that could not decide, each with the id of the finding and, after `Fix:`, what to do; where a command does it, the line names the command. The last line counts them. `-v` lists the checks that found nothing too, after the others.
@@ -286,27 +287,44 @@ The id of a finding is the name of its check and the name of the finding, as `ja
 | No `.gitattributes` keeps the line endings of the wrapper scripts, or the jars of the wrappers as binary.
 | Add the four lines `create-app` writes to `.gitattributes`.
 
-4+| `command-catalog`: the list of the commands of the application and its plugins in `.grails/cache/command-catalog.json`, which the build writes.
+4+| `tool-catalog`: the list of the tools of the application and its plugins in `.grails/cache/tool-catalog.json`, which the build writes.
 
-| `command-catalog.missing`
+| `tool-catalog.missing`
 | advice
 | There is no list.
-| A build that compiles the project lists them (`grails compile`, `run-app`, `test-app`, `assemble`), and so does typing the name of one; `grails gradle grailsCommandCatalog` lists them now.
+| A build that compiles the project lists them (`grails compile`, `run-app`, `test-app`, `assemble`), and so does typing the name of one; `grails gradle grailsToolCatalog` lists them now.
 
-| `command-catalog.refused`
+| `tool-catalog.refused`
 | advice
 | The list is not used: it is not a file, or not what the build writes.
-| As for `command-catalog.missing`.
+| As for `tool-catalog.missing`.
 
-| `command-catalog.stale`
+| `tool-catalog.stale`
 | advice
 | A file the list is made from was changed after it was written.
-| As for `command-catalog.missing`.
+| As for `tool-catalog.missing`.
 
-| `command-catalog.incomplete`
+| `tool-catalog.incomplete`
 | advice
-| The list is current and says that the build could not list every command, with the first thing it could not list: for example that the runtime class path of the project does not resolve completely, or that a plugin has commands of Grails 7.
-| `grails help` lists what is not listed and why; correct that, and a build that compiles the project lists the commands again.
+| The list is current and says that the build could not list every tool, with the first thing it could not list: for example that the runtime class path of the project does not resolve completely, or that a plugin has commands of Grails 7, which Grails 9 does not run.
+| `grails help` lists what is not listed and why; correct that, and a build that compiles the project lists the tools again. A plugin with commands of Grails 7 needs a version for Grails 9.
+
+4+| `tools`: the sources of the tools of the project, read as text, in `src/cli`, `src/standalone`, the deprecated `grails-app/commands` and `src/main/groovy`, and the list of the tools the build wrote. See link:{guidePath}commandLine.html#creatingTools[Creating Tools].
+
+| `tools.grails7-imports`
+| error
+| A source imports a type of `grails.dev.commands`, which the tools of Grails 7 implemented and Grails 9 does not have, so it does not compile. Each file is named, with the import to use in its place.
+| Import the type of the same name of `org.apache.grails.core.cli`: `org.apache.grails.core.cli.GrailsApplicationCommand` for `grails.dev.commands.GrailsApplicationCommand`, whose members are the same, or better `ApplicationTool` with `ToolSupport`.
+
+| `tools.legacy-folder`
+| advice
+| The project has tools in `grails-app/commands`, which is deprecated: they are compiled and run as before, and no longer packaged with the application. The files are listed.
+| Move each file to `src/cli/groovy`, into the directory of its package, as it is. A new tool is written there by `grails create-tool`.
+
+| `tools.legacy-type`
+| advice
+| A tool of the list implements `ApplicationCommand` or `GrailsApplicationCommand`, which are deprecated.
+| Implement `ApplicationTool` in place of `ApplicationCommand`, and `ApplicationTool` and `ToolSupport` in place of `GrailsApplicationCommand`. Nothing else changes.
 
 4+| `leftover`: what an earlier version of Grails read and Grails {grailsMajorVersion} does not.
 
@@ -348,7 +366,7 @@ The id of a finding is the name of its check and the name of the finding, as `ja
 | `./gradlew extractSkillsJars`.
 |===
 
-A project that `create-app` has just generated, of every type and with the default features, has no error and no warning, and no advice but `command-catalog.missing`, until its first build lists the commands of the application.
+A project that `create-app` has just generated, of every type and with the default features, has no error and no warning, and no advice but `tool-catalog.missing`, until its first build lists the tools of the application.
 
 ==== The JSON document
 

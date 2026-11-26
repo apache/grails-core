@@ -26,7 +26,7 @@ under the License.
 
 
 Uses Hibernate's SchemaExport tool to generate DDL or export the schema.
-NOTE: As of Grails 3, the Hibernate plugin is not by default on the build classpath. You need to add it to the build classpath to get the command working.
+NOTE: As of Grails 3, the Hibernate plugin is not by default on the build classpath. You need to add it to the build classpath to get the tool working.
 
 
 === Examples
@@ -45,13 +45,13 @@ buildscript {
 
 [source,groovy]
 ----
-grails run-command schema-export
-grails run-command schema-export --datasource=lookup
-grails run-command -Dgrails.env=production schema-export
-grails run-command -Dgrails.env=development schema-export
-grails run-command -Dgrails.env=production schema-export export
-grails run-command -Dgrails.env=production schema-export export --datasource=auditing
-grails run-command -Dgrails.env=production schema-export stdout
+grails run-tool schema-export
+grails run-tool schema-export --datasource=lookup
+grails run-tool -Dgrails.env=production schema-export
+grails run-tool -Dgrails.env=development schema-export
+grails run-tool -Dgrails.env=production schema-export export
+grails run-tool -Dgrails.env=production schema-export export --datasource=auditing
+grails run-tool -Dgrails.env=production schema-export stdout
 ----
 
 
@@ -61,12 +61,12 @@ grails run-command -Dgrails.env=production schema-export stdout
 Usage:
 [source,groovy]
 ----
-grails run-command [-Dgrails.env=<<environment>>] schema-export <<action>> ['stdout'] <<filename>> [--datasource]
+grails run-tool [-Dgrails.env=<<environment>>] schema-export <<action>> ['stdout'] <<filename>> [--datasource]
 ----
 
 Arguments:
 
-* `environment` - The environment containing the database configuration to use (`development`, `production`, etc...), given as `-Dgrails.env` before the name of the command. `schema-export` is a command of the Hibernate plugin, which `grails schema-export` runs in the application; an environment is named in front of the name with link:run-command.html[run-command].
+* `environment` - The environment containing the database configuration to use (`development`, `production`, etc...), given as `-Dgrails.env` before the name of the tool. `schema-export` is a tool of the Hibernate plugin, which `grails schema-export` runs in the application; an environment is named in front of the name with link:run-tool.html[run-tool].
 * `action` - Either 'generate' or 'export'.  The default is 'generate'. Specifying 'export' will execute the script against the specified environment's database instead of just generating the ddl file.
 * `stdout` - Passing 'stdout' will cause the script to dump the ddl to stdout.
 * `filename` - The name of the file to write the ddl to.  The default is ddl.sql in the project's 'target' directory.
@@ -75,11 +75,11 @@ Arguments:
 
 
 
-== Gradle runCommand `schema-export` Command
+== Gradle runTool `schema-export` Tool
 
 === Purpose
 
-The `schema-export` command uses Hibernate's SchemaExport tool to generate Data Definition Language (DDL) or export the schema. You need to add it to the build classpath for this command to work properly.
+The `schema-export` tool uses Hibernate's SchemaExport tool to generate Data Definition Language (DDL) or export the schema. You need to add it to the build classpath for this tool to work properly.
 
 === Examples
 
@@ -98,13 +98,13 @@ dependencies {
 
 [source,console]
 ----
-$ ./gradlew runCommand -Pargs="schema-export"
-$ ./gradlew runCommand -Pargs="schema-export --datasource=lookup"
-$ ./gradlew -Dgrails.env=prod runCommand -Pargs="schema-export"
-$ ./gradlew -Dgrails.env=dev runCommand -Pargs="schema-export"
-$ ./gradlew -Dgrails.env=prod runCommand -Pargs="schema-export export"
-$ ./gradlew -Dgrails.env=prod runCommand -Pargs="schema-export export --datasource=auditing"
-$ ./gradlew -Dgrails.env=prod runCommand -Pargs="schema-export stdout"
+$ ./gradlew runTool -Pargs="schema-export"
+$ ./gradlew runTool -Pargs="schema-export --datasource=lookup"
+$ ./gradlew -Dgrails.env=prod runTool -Pargs="schema-export"
+$ ./gradlew -Dgrails.env=dev runTool -Pargs="schema-export"
+$ ./gradlew -Dgrails.env=prod runTool -Pargs="schema-export export"
+$ ./gradlew -Dgrails.env=prod runTool -Pargs="schema-export export --datasource=auditing"
+$ ./gradlew -Dgrails.env=prod runTool -Pargs="schema-export stdout"
 ----
 
 === Description
@@ -112,7 +112,7 @@ $ ./gradlew -Dgrails.env=prod runCommand -Pargs="schema-export stdout"
 Usage:
 
 [source,console]
-$ ./gradlew -Dgrails.env=<<environment>> runCommand -Pargs="schema-export <<action>> ['stdout'] <<filename>> [--datasource]"
+$ ./gradlew -Dgrails.env=<<environment>> runTool -Pargs="schema-export <<action>> ['stdout'] <<filename>> [--datasource]"
 
 Arguments:
 

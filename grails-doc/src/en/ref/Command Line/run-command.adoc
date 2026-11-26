@@ -19,45 +19,6 @@ under the License.
 
 == run-command
 
-=== Purpose
+`run-command` is the name link:run-tool.html[run-tool] had in Grails 8. It is another name of `run-tool`, deprecated: `grails run-command NAME` runs the tool `NAME` after one warning line, and the Gradle task `runCommand` runs it as `runTool` does, after a Gradle warning.
 
-Execute Grails Commands defined in `grails-app/commands` or in plugins.
-
-A command of the application or of a plugin is run by its name, `grails hello-world`, which is what you type every day: see "Commands of the Application and its Plugins" in link:{guidePath}commandLine.html[The Command Line]. `run-command` runs the same command by the same Gradle task, and is the form for an environment in front of the name, for a command of a plugin whose name a command of `grails` itself has, and for automation that should not depend on the list of the commands. `./gradlew runCommand` is what both run.
-
-=== Examples
-
-[source,console]
-----
-grails hello-world
-grails run-command hello-world
-grails run-command -Dgrails.env=test hello-world
-./gradlew runCommand -Pargs="hello-world"
-----
-
-The above expects `grails-app/commands/HelloWorldCommand.groovy` to exist in the application or in a plugin your application depends on.
-
-`-Pargs` is split at spaces, with quotes read as a shell reads them. To give each argument exactly as it is, repeat `--arg`, the name of the command first:
-
-[source,console]
-----
-./gradlew runCommand --arg=hello-world --arg="an argument with spaces" --arg=--force
-----
-
-`--args-file=<file>` reads the arguments from a UTF-8 file that holds a JSON array of strings. See link:{guidePath}commandLine.html#creatingTools[Creating Tools] for both.
-
-=== Description
-
-Usage:
-
-[source,console]
-----
-grails run-command [-Dname=value]... <<command>> [<<argument>>...]
-----
-
-Arguments:
-
-* `command` - Which command to run
-* `argument` - The arguments of that command
-
-`run-command` runs the Gradle task `runCommand` of the project, with the application started around the command, for the development environment or for the one a `-Dgrails.env=NAME` before the name of the command names. Everything after the name of the command is given to the command as it is, each argument as the one it was, also one that is empty, has spaces or quotes, or looks like an option. See the user guide section on link:{guidePath}commandLine.html#gradleBuild[Building with Gradle] for the details.
+What Grails 8 called the commands of the application and its plugins are its _tools_ now; see link:{guidePath}commandLine.html#creatingTools[Creating Tools].

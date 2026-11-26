@@ -46,7 +46,7 @@ The templates of the `create-` commands a feature of the project gives it are no
 
 See "Templates of the Project" in link:{guidePath}commandLine.html[The Command Line] for the templates and their syntax.
 
-== The install-templates Command of the Scaffolding Plugin
+== The install-templates Tool of the Scaffolding Plugin
 
 === Purpose
 
@@ -56,10 +56,10 @@ Copies the templates the scaffolding plugin uses to generate controllers and vie
 
 [source,console]
 ----
-$ ./gradlew runCommand -Pargs="install-templates"
-$ grails run-command install-templates
+$ ./gradlew runTool -Pargs="install-templates"
+$ grails run-tool install-templates
 ----
 
 === Description
 
-The scaffolding plugin has a command of the same name, which copies its templates to the application's `src/main/templates/scaffolding` directory. `grails install-templates` is the command above and does not write those templates: the command of the plugin is run with `run-command` or with the Gradle task `runCommand`. The templates of a REST API application are among them: `index.gson`, `show.gson` and `_domain.gson` for the JSON views, and `RestController.groovy`, `RestService.groovy`, `RestSpec.groovy` and `RestServiceSpec.groovy` for the controller, the service and their tests (see link:{commandLineRefFromRef}generate-all.html[generate-all]).
+The scaffolding plugin has a tool of the same name, which copies its templates to the application's `src/main/templates/scaffolding` directory. `grails install-templates` is the command above and does not write those templates: the tool of the plugin is run with `run-tool` or with the Gradle task `runTool`. The templates of a REST API application are among them: `index.gson`, `show.gson` and `_domain.gson` for the JSON views, and `RestController.groovy`, `RestService.groovy`, `RestSpec.groovy` and `RestServiceSpec.groovy` for the controller, the service and their tests (see link:{commandLineRefFromRef}generate-all.html[generate-all]).

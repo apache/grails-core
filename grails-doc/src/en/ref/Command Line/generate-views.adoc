@@ -60,28 +60,30 @@ Flags:
 
 === JSON Views and a REST Controller
 
+// TOOLS-VERIFY: the four rules by which the scaffolding tools choose GSP or JSON views (TOOLS-DESIGN section 8; P3).
 In a REST API application and in a REST API plugin the command generates what the `rest-api` profile generated before Grails 9: JSON views in place of GSP views, and a controller for a REST resource in place of a controller for pages. Which of the two an application is given is decided as follows:
 
 * With `--views=json` it is JSON views and the REST controller, and with `--views=gsp` GSP views and the controller for pages, whatever the application has.
-* Without the option it is JSON views and the REST controller when the JSON views plugin (`org.apache.grails:grails-views-gson`, the `views-json` feature) is on the class path of the application and no file under `grails-app/views` ends with `.gsp`. That is a REST API application and a REST API plugin.
-* Everywhere else it is GSP views and the controller for pages. An application that has both GSP and JSON views is therefore given GSP views, as before, unless the option asks for JSON views.
+* Without the option the features of the project decide, as the record of the `grails` command line has them (see link:{guidePath}commandLine.html#creatingProject[Creating a Grails Project]): a project with the feature `gsp` is given GSP views and the controller for pages, and one with the feature `views-json` and without `gsp` JSON views and the REST controller. That is a REST API application and a REST API plugin. A project with neither feature is given GSP views.
+* A project without a record, which the `grails` command line neither generated nor migrated, is given what its views are: GSP views when a file under `grails-app/views` ends with `.gsp`, and JSON views and the REST controller when none does and one ends with `.gson`.
+* Everywhere else it is GSP views and the controller for pages. An application that has both GSP and JSON views is therefore given GSP views, as before, unless the option asks for JSON views. `build.gradle` is not read: the tool runs without the class path of the application, and does not ask it.
 
 link:{commandLineRefFromRef}generate-controller.html[generate-controller], link:{commandLineRefFromRef}generate-views.html[generate-views] and link:{commandLineRefFromRef}generate-all.html[generate-all] decide it the same way and take the same option, so a controller and views that are generated one after the other fit together.
 
-A REST API application has the commands when it has the `scaffolding` feature, which it does not have by default: create it with `grails create-restapi myapi --features scaffolding`, or add the feature later with `grails feature add scaffolding`. The feature gives a REST API application the commands of the scaffolding plugin and not the plugin, which the running application has no use for.
+A REST API application has the commands when it has the `scaffolding` feature, which it does not have by default: create it with `grails create-restapi myapi --features scaffolding`, or add the feature later with `grails feature add scaffolding`. The feature gives a REST API application the standalone tools of the scaffolding plugin and not the plugin, which the running application has no use for.
 
 === Running the Command
 
-The command is a command of the scaffolding plugin (`org.apache.grails:grails-scaffolding`), which the application has to depend on. It only reads and writes files of the project, so it is a standalone command: `grails` starts it by its name as a Java process of its own, without Gradle and without the application, with the class path the last build of the project wrote down, and the project need not compile (see "The Three Kinds of Command" in link:{guidePath}commandLine.html[The Command Line]). `run-command` and the Gradle task `runCommand` run it with the build, without the application. A REST API application with the `scaffolding` feature depends on the commands of the plugin alone (`grailsCli "org.apache.grails:grails-scaffolding-cli"`), which keeps the plugin, GSP and the fields plugin off the class path the application runs with. There are three ways to run it:
+The command is a tool of the scaffolding plugin (`org.apache.grails:grails-scaffolding`). It only reads and writes files of the project, so it is a standalone tool, in the companion `grails-scaffolding-cli-standalone` of the plugin: `grails` starts it by its name as a Java process of its own, without Gradle and without the application, with the class path the last build of the project wrote down, and the project need not compile (see "A Standalone Tool" in link:{guidePath}commandLine.html#creatingTools[Creating Tools]). `run-tool` and the Gradle task `runTool` run it with the build, without the application. An application that depends on the plugin has the tool, and so has one that declares the standalone tools of the plugin alone (`grailsCliStandalone "org.apache.grails:grails-scaffolding-cli-standalone"`), as a REST API application with the `scaffolding` feature does: that keeps the plugin, GSP and the fields plugin off every class path of the application, of its tests and of its other tools. There are three ways to run it:
 
 [source,console]
 ----
 $ grails generate-views org.bookstore.Book                              <1>
-$ grails run-command generate-views org.bookstore.Book                  <2>
-$ ./gradlew runCommand -Pargs="generate-views org.bookstore.Book"       <3>
+$ grails run-tool generate-views org.bookstore.Book                  <2>
+$ ./gradlew runTool -Pargs="generate-views org.bookstore.Book"       <3>
 ----
-<1> By its name. The build lists the commands of the application and its plugins whenever it compiles the project, and in a project it has not compiled yet `grails` has it list them first. See "Commands of the Application and its Plugins" in link:{guidePath}commandLine.html[The Command Line].
-<2> With `run-command`, which runs it with the build of the project.
+<1> By its name. The build lists the tools of the application and its plugins whenever it compiles the project, and in a project it has not compiled yet `grails` has it list them first. See "Tools of the Application and its Plugins" in link:{guidePath}commandLine.html[The Command Line].
+<2> With `run-tool`, which runs it with the build of the project.
 <3> With Gradle alone. `--arg=generate-views --arg=org.bookstore.Book` in place of `-Pargs` gives each argument as it is.
 
 === Failures

@@ -1356,11 +1356,6 @@ include::ref/Command Line/console.adoc[]
 
 include::ref/Command Line/create-app.adoc[]
 
-[[ref-command-line-create-command]]
-==== create-command
-
-include::ref/Command Line/create-command.adoc[]
-
 [[ref-command-line-create-controller]]
 ==== create-controller
 
@@ -1405,6 +1400,11 @@ include::ref/Command Line/create-service.adoc[]
 ==== create-taglib
 
 include::ref/Command Line/create-taglib.adoc[]
+
+[[ref-command-line-create-tool]]
+==== create-tool
+
+include::ref/Command Line/create-tool.adoc[]
 
 [[ref-command-line-create-unit-test]]
 ==== create-unit-test
@@ -1565,6 +1565,11 @@ include::ref/Command Line/run-command.adoc[]
 ==== run-script
 
 include::ref/Command Line/run-script.adoc[]
+
+[[ref-command-line-run-tool]]
+==== run-tool
+
+include::ref/Command Line/run-tool.adoc[]
 
 [[ref-command-line-schema-export]]
 ==== schema-export
