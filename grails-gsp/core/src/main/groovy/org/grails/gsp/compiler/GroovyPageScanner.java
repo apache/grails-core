@@ -177,7 +177,7 @@ class GroovyPageScanner implements Tokens {
                         return found(GDIRECT, 2);
                     }
 
-                    if (tokenLength > maxHtmlLength) {
+                    if (tokenLength > maxHtmlLength && !isInEscapedGExpressionStart(c, c1)) {
                         return found(HTML, 0);
                     }
 
@@ -285,6 +285,17 @@ class GroovyPageScanner implements Tokens {
      */
     private boolean isEscapedGExpression() {
         return end1 > 1 && text.charAt(end1 - 2) == '\\';
+    }
+
+    /**
+     * Long text is handed on in pieces, and the backslash of an escaped expression is only taken out of
+     * a piece that has the whole of <code>\${</code>: the text is not cut inside one.
+     */
+    private boolean isInEscapedGExpressionStart(char c, char c1) {
+        if (c == '$' && c1 == '{') {
+            return isEscapedGExpression();
+        }
+        return c == '{' && end1 > 2 && text.charAt(end1 - 2) == '$' && text.charAt(end1 - 3) == '\\';
     }
 
     private boolean skipComment(char c3, char c4) {
