@@ -166,6 +166,7 @@ tasks.named('rat') {
             'local-tasks.gradle', // exclude local helper scripts
             '**/spring-configuration-metadata.json', // JSON files cannot contain license headers
             '**/META-INF/grails-commands/*.json', // command descriptors; JSON files cannot contain license headers
+            '**/META-INF/grails-command-options.json', // options declared for run-app; JSON files cannot contain license headers
             'end-to-end/native-i18n/src/native/resources/META-INF/native-image/reachability-metadata.json', // JSON files cannot contain license headers
             'grails-test-examples/spring-security/cas/test1/src/main/resources/cas/services/*.json', // CAS service registry definitions; JSON files cannot contain license headers
             'grails-test-examples/benchmarks/src/reportTest/resources/jmh-golden/**', // byte-exact JMH report fixtures; a license header would alter the compared bytes
