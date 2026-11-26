@@ -1341,6 +1341,14 @@ The setting applies to `list`, to `find` and `findAll` with an example, to `find
 * A sort by a property of a collection, such as `Author.list(sort: 'books.title')`, still joins the collection with an inner join, and leaves out the instances whose collection is empty.
 * The setting is disabled by default in Grails 7 and in Grails 8.0. Explicitly setting it to `false` logs a startup warning that Grails 9 removes the setting. The planned default in Grails 8.1 is `true`. It is listed with the other settings of this kind in link:upgrading.html#compatibilitySettings[Compatibility Settings].
 
+==== A where query uses the join type that it requests for each join of the association
+
+With GORM for Hibernate, a where query, a detached criteria or a dynamic finder can request the type of the join of an association, with the `fetch` argument, as in `Book.where { ... }.list(fetch: [author: JoinType.INNER])`, or with `join('author', JoinType.INNER)`. The join type is used when the criteria, a projection or a sort of the query join the association. As of Grails 7.0.18, it no longer matters in which order the query was put together.
+
+* A join type that the `fetch` argument requests is now also used for an association that the where query or the detached criteria itself has criteria or a projection on. Such an association was joined before the argument was read: with an inner join for criteria and with a left join for a projection, whatever the argument requested. `Book.where { author.name == 'Stephen King' || title == 'Anonymous' }.list(fetch: [author: JoinType.LEFT])` now also returns the book without an author that matches the title, as it already did when the join type was requested with `join('author', JoinType.LEFT)`.
+* A join type for a nested association is requested by its path. `join('author.publisher', JoinType.LEFT)` is now used for the join that criteria on `author.publisher` make, which was an inner join whatever was requested. A join type requested for an association of the queried class, such as `publisher`, is no longer used for a nested association of the same name.
+* A sort stored on the query with `sort()`, as in `Book.where { ... }.sort('author.name').list(fetch: [author: JoinType.LEFT])`, now uses the join type requested by the `fetch` argument. It also returns books without an author. The same holds for a nested association path. Request `JoinType.INNER` to keep leaving those books out.
+
 ==== A `where` query that compares a property of an alias the query cannot write is refused
 
 A comparison in a `where` query that names an alias of a class, such as `def t = Team` with `t.club.id == c.id`, now keeps the criterion for the identifier of the queried class and for another alias of a class on the other side, in either order. On Hibernate 5 only an identifier path, such as `id == t.club.id`, can be compared that way; `name == t.club.name` fails when the query runs. An alias of a property, `def c = club`, is written on the association as it always was. A comparison the query cannot write, such as a path of an alias compared with a local variable, used to be left out of the query without a message, so the query returned more rows. It now stops compilation with `Cannot write the comparison`.
@@ -1373,3 +1381,13 @@ A value marked with `raw()` is still written as given by the tags that wrote it 
 `<g:radio>` now encodes its `value` once. It encoded it twice, so a value with `&`, `<`, `>`, `"` or `'` was submitted with character references in it, such as `+R&amp;D+` for `R&D`.
 
 A value encoded beforehand is no longer encoded twice in the `value` of `<g:textField>`, `<g:hiddenField>` and the other field tags when a `RequestDataValueProcessor` returns it unchanged, nor in an option of `<g:select>`, with or without a processor. `<g:paginate>` and `<g:sortableColumn>` write a `class` that was encoded beforehand once next to the classes they add, such as `step` and `sortable`; they encoded it twice.
+
+==== An enum stored as a string takes the length of its maxSize constraint
+
+With Hibernate 5, an enum property stored as a string ignored a `maxSize` constraint, so its column was always
+`VARCHAR(255)` while a `String` property honoured it. The column now takes the same length constraints as a `String`
+property, and a column created from an `inList` of enum constants is as long as the longest constant name. The length
+only shows in a schema that Hibernate creates: an application that manages its schema by hand or with a migration tool
+keeps the columns it has, and `hbm2ddl.auto: update` does not change an existing column.
+The one difference from a `String` property is a `maxSize` shorter than the longest constant name: `maxSize` does not validate an
+enum, so the column is made as long as the longest name, and no value of the enum fails at the database.

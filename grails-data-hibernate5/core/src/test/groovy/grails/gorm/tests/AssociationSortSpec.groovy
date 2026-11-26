@@ -485,6 +485,21 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManag
         manager.session.clear()
     }
 
+    void 'a projection of a property of an embedded component of an association uses the join of the association'() {
+        given:
+        final ground = new AssociationSortGround(name: 'Ground', address: new AssociationSortAddress(city: 'London')).save(failOnError: true)
+        new AssociationSortVenue(name: 'Venue', ground: ground).save(failOnError: true)
+        new AssociationSortVenue(name: 'Venue without a ground').save(failOnError: true, flush: true)
+        manager.session.clear()
+
+        expect:
+        AssociationSortVenue.where { name ==~ 'Venue%' }.property('ground.address.city').list() as Set == ['London', null] as Set
+
+        and: 'the sort leaves out the venue without a ground, unless the leftJoinAssociationSort setting is enabled'
+        AssociationSortVenue.where { name ==~ 'Venue%' }.list(sort: 'ground.address.city')*.name as Set ==
+                (leftJoinSort ? ['Venue', 'Venue without a ground'] : ['Venue']) as Set
+    }
+
     void 'a criteria query ordered by the identifier of an association can be distinct on it or group by it'() {
         given:
         final clubIds = [Club.findByName('Manchester United'), Club.findByName('Arsenal'), Club.findByName('Chelsea')]*.id

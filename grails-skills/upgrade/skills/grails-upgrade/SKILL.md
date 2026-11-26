@@ -911,6 +911,16 @@ A sort by a property of an association, such as `Book.list(sort: 'author.name')`
 - A sort by a property of a collection, such as `sort: 'books.title'`, joins the collection with an inner join with or without the setting.
 - Explicitly setting it to `false` logs a startup warning naming Grails 9, which removes the setting. The planned default in Grails 8.1 is `true`; check the target release's compatibility settings before upgrading.
 
+## GORM for Hibernate: a where query uses the join type that it requests for each join of the association
+
+A where query, a detached criteria or a dynamic finder can request the type of the join of an association, with the `fetch` argument, as in `Book.where { ... }.list(fetch: [author: JoinType.INNER])`, or with `join('author', JoinType.INNER)`. As of 7.0.18 the requested join type is used whenever the criteria, a projection or a sort of the query join the association, in whatever order the query was put together.
+
+- Search for `JoinType.` in `fetch:` arguments and in `join(` calls of where queries, detached criteria and dynamic finders.
+- Check queries that store a sort with `sort()` before passing a `fetch` argument to `list` or `find`. `Book.where { ... }.sort('author.name').list(fetch: [author: JoinType.LEFT])` now also returns books without an author. Request `JoinType.INNER` to keep leaving them out; nested paths follow the same rule.
+- A join type in the `fetch` argument is now also used for an association that the where query itself has criteria or a projection on. Such an association was joined with an inner join for criteria and with a left join for a projection, whatever the argument requested. `Book.where { author.name == 'Stephen King' || title == 'Anonymous' }.list(fetch: [author: JoinType.LEFT])` now also returns the book without an author that matches the title.
+- A join type for a nested association is requested by its path: `join('author.publisher', JoinType.LEFT)` is now used for the join that criteria on `author.publisher` make. A join type requested for an association of the queried class, such as `publisher`, is no longer used for a nested association of the same name.
+- To keep the previous result of a query, remove the join type that it requests, or request it for the path that the query joins.
+
 # After the Upgrade
 
 ## Verification Checklist
