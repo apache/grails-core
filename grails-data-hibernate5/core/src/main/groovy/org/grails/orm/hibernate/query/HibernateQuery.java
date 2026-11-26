@@ -75,9 +75,16 @@ public class HibernateQuery extends AbstractHibernateQuery implements QueryArgum
     }
 
     /**
+     * Returns the Hibernate criteria of the query. This method makes the joins and adds the orders
+     * that the criteria, projections and sorts of the query have registered so far, with the join
+     * types that the query requests at that point, so that the criteria can be executed as they are.
+     * Joins and orders that are registered afterwards are made when the query is executed, or by the
+     * next call of this method.
+     *
      * @return The hibernate criteria
      */
     public Criteria getHibernateCriteria() {
+        applyDeferredJoins();
         return this.criteria;
     }
 
@@ -133,6 +140,16 @@ public class HibernateQuery extends AbstractHibernateQuery implements QueryArgum
         }
     }
 
+    /**
+     * @return The hibernate detached criteria of a query that is used as a subquery. The joins of
+     * the subquery are made here, once its criteria have been added and the join types that it
+     * requests are known.
+     */
+    public DetachedCriteria getHibernateDetachedCriteria() {
+        applyDeferredJoins();
+        return this.detachedCriteria;
+    }
+
     @Override
     protected AbstractHibernateCriterionAdapter createHibernateCriterionAdapter() {
         return HIBERNATE_CRITERION_ADAPTER;
@@ -167,11 +184,12 @@ public class HibernateQuery extends AbstractHibernateQuery implements QueryArgum
 
     @Override
     public Object clone() {
+        applyDeferredJoins();
         final CriteriaImpl impl = (CriteriaImpl) criteria;
         final HibernateSession hibernateSession = (HibernateSession) getSession();
         final GrailsHibernateTemplate hibernateTemplate = (GrailsHibernateTemplate) hibernateSession.getNativeInterface();
         return hibernateTemplate.execute((GrailsHibernateTemplate.HibernateCallback<Object>) session -> {
-            Criteria newCriteria = session.createCriteria(impl.getEntityOrClassName());
+            Criteria newCriteria = session.createCriteria(impl.getEntityOrClassName(), impl.getAlias());
 
             Iterator iterator = impl.iterateExpressionEntries();
             while (iterator.hasNext()) {

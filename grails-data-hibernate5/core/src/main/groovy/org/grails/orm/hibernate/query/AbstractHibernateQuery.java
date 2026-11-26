@@ -19,9 +19,11 @@
 package org.grails.orm.hibernate.query;
 
 import java.lang.reflect.Field;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -39,11 +41,15 @@ import org.hibernate.criterion.CriteriaSpecification;
 import org.hibernate.criterion.DetachedCriteria;
 import org.hibernate.criterion.Projections;
 import org.hibernate.criterion.Restrictions;
+import org.hibernate.criterion.RowCountProjection;
 import org.hibernate.criterion.SimpleExpression;
 import org.hibernate.dialect.Dialect;
 import org.hibernate.dialect.function.SQLFunction;
+import org.hibernate.internal.CriteriaImpl;
 import org.hibernate.persister.entity.PropertyMapping;
 import org.hibernate.type.BasicType;
+import org.hibernate.type.ManyToOneType;
+import org.hibernate.type.Type;
 import org.hibernate.type.TypeResolver;
 
 import org.springframework.context.ApplicationEventPublisher;
@@ -60,6 +66,7 @@ import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.model.types.Embedded;
+import org.grails.datastore.mapping.model.types.ToMany;
 import org.grails.datastore.mapping.proxy.ProxyHandler;
 import org.grails.datastore.mapping.query.AssociationQuery;
 import org.grails.datastore.mapping.query.Query;
@@ -70,6 +77,7 @@ import org.grails.datastore.mapping.query.event.PreQueryEvent;
 import org.grails.orm.hibernate.AbstractHibernateSession;
 import org.grails.orm.hibernate.IHibernateTemplate;
 import org.grails.orm.hibernate.cfg.AbstractGrailsDomainBinder;
+import org.grails.orm.hibernate.cfg.GrailsHibernateUtil;
 import org.grails.orm.hibernate.cfg.Mapping;
 import org.grails.orm.hibernate.proxy.HibernateProxyHandler;
 
@@ -99,6 +107,17 @@ public abstract class AbstractHibernateQuery extends Query {
     protected String alias;
     protected int aliasCount;
     protected Map<String, CriteriaAndAlias> createdAssociationPaths = new HashMap<>();
+    /**
+     * The joins that the query needs but has not made yet, in the order in which it came to need
+     * them. They are made by {@link #applyDeferredJoins()}, when the query is executed.
+     */
+    private final List<CriteriaAndAlias> pendingJoins = new ArrayList<>();
+    /**
+     * The orders that have not been added to the criteria yet. They are added by
+     * {@link #applyDeferredJoins()}, when the joins that they can use are known.
+     */
+    private final List<Order> pendingOrders = new ArrayList<>();
+
     protected LinkedList<String> aliasStack = new LinkedList<>();
     protected LinkedList<PersistentEntity> entityStack = new LinkedList<>();
     protected LinkedList<Association> associationStack = new LinkedList<>();
@@ -479,15 +498,14 @@ public abstract class AbstractHibernateQuery extends Query {
     public AssociationQuery createQuery(String associationName) {
         final PersistentProperty property = entity.getPropertyByName(calculatePropertyName(associationName));
         if (property != null && (property instanceof Association)) {
-            String alias = generateAlias(associationName);
-            CriteriaAndAlias subCriteria = getOrCreateAlias(associationName, alias);
+            CriteriaAndAlias subCriteria = getOrCreateAlias(associationName, generateAlias(associationName));
 
             Association association = (Association) property;
             if (subCriteria.criteria != null) {
-                return new HibernateAssociationQuery(subCriteria.criteria, (AbstractHibernateSession) getSession(), association.getAssociatedEntity(), association, alias);
+                return new HibernateAssociationQuery(subCriteria.criteria, (AbstractHibernateSession) getSession(), association.getAssociatedEntity(), association, subCriteria.alias);
             }
             else if (subCriteria.detachedCriteria != null) {
-                return new HibernateAssociationQuery(subCriteria.detachedCriteria, (AbstractHibernateSession) getSession(), association.getAssociatedEntity(), association, alias);
+                return new HibernateAssociationQuery(subCriteria.detachedCriteria, (AbstractHibernateSession) getSession(), association.getAssociatedEntity(), association, subCriteria.alias);
             }
         }
         throw new InvalidDataAccessApiUsageException("Cannot query association [" + calculatePropertyName(associationName) + "] of entity [" + entity + "]. Property is not an association!");
@@ -503,8 +521,23 @@ public abstract class AbstractHibernateQuery extends Query {
         return getOrCreateAlias(associationPath, alias);
     }
 
+    /**
+     * Returns the join of an association that criteria of the query use. A join that the query
+     * already has for the association is reused. The join is an inner join unless the query requests
+     * another join type for the association, and is made when the query is executed: see
+     * {@link #applyDeferredJoins()}.
+     *
+     * @param associationName The name of the association, or its path
+     * @param alias The alias for the join, or the alias of the join that the association starts from
+     * @return The join
+     */
     protected CriteriaAndAlias getOrCreateAlias(String associationName, String alias) {
-        CriteriaAndAlias subCriteria = null;
+        CriteriaAndAlias join = getOrRegisterJoin(associationName, alias);
+        join.usedByCriteria = true;
+        return join;
+    }
+
+    private CriteriaAndAlias getOrRegisterJoin(String associationName, String alias) {
         String associationPath = getAssociationPath(associationName);
         Criteria parentCriteria = criteria;
         if (alias == null) {
@@ -513,34 +546,65 @@ public abstract class AbstractHibernateQuery extends Query {
         else {
             CriteriaAndAlias criteriaAndAlias = createdAssociationPaths.get(alias);
             if (criteriaAndAlias != null) {
+                if (associationPath.equals(criteriaAndAlias.associationPath)) {
+                    // the alias of the join of this association
+                    return criteriaAndAlias;
+                }
+                // the alias of the join that the association starts from
                 parentCriteria = criteriaAndAlias.criteria;
                 if (parentCriteria != null) {
-
                     alias = associationName + '_' + alias;
                     associationPath = criteriaAndAlias.associationPath + '.' + associationPath;
                 }
             }
         }
-        if (createdAssociationPaths.containsKey(associationName)) {
-            subCriteria = createdAssociationPaths.get(associationName);
-        }
-        else {
-            JoinType joinType = joinTypes.get(associationName);
-            if (parentCriteria != null) {
-                Criteria sc = parentCriteria.createAlias(associationPath, alias, resolveJoinType(joinType));
-                subCriteria = new CriteriaAndAlias(sc, alias, associationPath);
-            }
-            else if (detachedCriteria != null) {
-                DetachedCriteria sc = detachedCriteria.createAlias(associationPath, alias, resolveJoinType(joinType));
-                subCriteria = new CriteriaAndAlias(sc, alias, associationPath);
-            }
-            if (subCriteria != null) {
+        CriteriaAndAlias join = createdAssociationPaths.get(associationPath);
+        return join != null ? join : registerJoin(parentCriteria, associationPath, alias);
+    }
 
-                createdAssociationPaths.put(associationPath, subCriteria);
-                createdAssociationPaths.put(alias, subCriteria);
-            }
+    /**
+     * Returns the join of the association at the given path from the root entity. A join that the
+     * query already has for the path is reused.
+     */
+    private CriteriaAndAlias getOrRegisterJoinAt(String associationPath, String associationName) {
+        CriteriaAndAlias join = createdAssociationPaths.get(associationPath);
+        return join != null ? join : registerJoin(criteria, associationPath, generateAlias(associationName));
+    }
+
+    /**
+     * Registers a join under its association path and its alias. The alias can be used at once, in
+     * criteria, projections and orders. The join itself is made by {@link #applyDeferredJoins()}.
+     */
+    private CriteriaAndAlias registerJoin(Criteria parentCriteria, String associationPath, String alias) {
+        CriteriaAndAlias join = parentCriteria != null ?
+                new CriteriaAndAlias(parentCriteria, alias, associationPath) :
+                new CriteriaAndAlias(detachedCriteria, alias, associationPath);
+        createdAssociationPaths.put(associationPath, join);
+        createdAssociationPaths.put(alias, join);
+        pendingJoins.add(join);
+        return join;
+    }
+
+    /**
+     * Makes a join, with the join type that the query requests for the association. Without a
+     * requested join type, a join that criteria use is an inner join, and a join that only a projection
+     * uses is a left join, which keeps the rows where the association is null. A join that only a sort
+     * uses is a left join with the <code>grails.gorm.leftJoinAssociationSort</code> setting, and an
+     * inner join without it.
+     */
+    private void createJoin(CriteriaAndAlias join) {
+        String associationPath = join.associationPath;
+        JoinType joinType = joinTypes.get(associationPath);
+        if (joinType == null) {
+            joinType = join.usedByCriteria ? JoinType.INNER : JoinType.LEFT;
         }
-        return subCriteria;
+        org.hibernate.sql.JoinType hibernateJoinType = resolveJoinType(joinType);
+        if (join.criteria != null) {
+            join.criteria.createAlias(associationPath, join.alias, hibernateJoinType);
+        }
+        else if (join.detachedCriteria != null) {
+            join.detachedCriteria.createAlias(associationPath, join.alias, hibernateJoinType);
+        }
     }
 
     private org.hibernate.sql.JoinType resolveJoinType(JoinType joinType) {
@@ -609,52 +673,179 @@ public abstract class AbstractHibernateQuery extends Query {
     @Override
     public Query order(Order order) {
         super.order(order);
-
-        String property = order.getProperty();
-
-        int i = property.indexOf('.');
-        if (i > -1) {
-
-            String sortHead = property.substring(0, i);
-            String sortTail = property.substring(i + 1);
-
-            if (createdAssociationPaths.containsKey(sortHead)) {
-                CriteriaAndAlias criteriaAndAlias = createdAssociationPaths.get(sortHead);
-                Criteria criteria = criteriaAndAlias.criteria;
-                org.hibernate.criterion.Order hibernateOrder = order.getDirection() == Order.Direction.ASC ?
-                        org.hibernate.criterion.Order.asc(property) :
-                        org.hibernate.criterion.Order.desc(property);
-
-                criteria.addOrder(order.isIgnoreCase() ? hibernateOrder.ignoreCase() : hibernateOrder);
-            }
-            else {
-
-                PersistentProperty persistentProperty = entity.getPropertyByName(sortHead);
-
-                if (persistentProperty instanceof Association) {
-                    Association a = (Association) persistentProperty;
-                    if (persistentProperty instanceof Embedded) {
-                        addSimpleOrder(order, property);
-                    }
-                    else {
-                        if (criteria != null) {
-                            Criteria subCriteria = criteria.createCriteria(sortHead);
-                            addOrderToCriteria(subCriteria, sortTail, order);
-                        }
-                        else if (detachedCriteria != null) {
-                            DetachedCriteria subDetachedCriteria = detachedCriteria.createCriteria(sortHead);
-                            addOrderToDetachedCriteria(subDetachedCriteria, sortTail, order);
-                        }
-                    }
-                }
-            }
-
-        }
-        else {
-            addSimpleOrder(order, property);
-        }
-
+        pendingOrders.add(order);
         return this;
+    }
+
+    /**
+     * Adds an order to the criteria. This happens when the query is executed, so that a sort by a
+     * property of an association uses the join that the query has for the association by then,
+     * whether the sort or the criteria came first.
+     */
+    private void applyOrder(Order order) {
+        String property = order.getProperty();
+        int i = property.indexOf('.');
+        if (i < 0) {
+            addSimpleOrder(order, property);
+            return;
+        }
+
+        String sortHead = property.substring(0, i);
+        if (!createdAssociationPaths.containsKey(sortHead)) {
+            PersistentProperty persistentProperty = entity.getPropertyByName(sortHead);
+            if (!(persistentProperty instanceof Association)) {
+                // neither an alias of this query nor an association, so there is nothing to sort by: the sort is ignored
+                return;
+            }
+            if (persistentProperty instanceof Embedded) {
+                // a component path, which Hibernate resolves against the entity itself
+                addSimpleOrder(order, property);
+                return;
+            }
+        }
+
+        addAliasedOrder(order, calculateSortPropertyName(property));
+    }
+
+    /**
+     * Qualifies a sort property that crosses one or more associations with the alias of the last
+     * association on its path, since Hibernate resolves a property of a joined association only
+     * through the alias of the join. The head of the path is either an alias defined by a where
+     * query or an association of the entity. A join that the query has for an association, for
+     * example for a where query criterion, is reused; an association that it has no join for is
+     * joined for the sort. With the <code>grails.gorm.leftJoinAssociationSort</code> setting that is a
+     * left join, so that the rows where the association is null are kept. Without it, it is an inner
+     * join, except for the identifier of an association that follows another one on the path, which is
+     * sorted by its foreign key instead, as a join would leave out the rows where the association is null.
+     */
+    private String calculateSortPropertyName(String property) {
+        String[] tokens = property.split("\\.");
+        PersistentEntity currentEntity = entity;
+        String currentAlias = null;
+        StringBuilder associationPath = new StringBuilder();
+        int firstAssociation = 0;
+
+        CriteriaAndAlias head = createdAssociationPaths.get(tokens[0]);
+        if (head != null) {
+            currentAlias = head.alias;
+            associationPath.append(head.associationPath);
+            currentEntity = getAssociatedEntity(head.associationPath);
+            firstAssociation = 1;
+        }
+
+        for (int i = firstAssociation; i < tokens.length - 1; i++) {
+            String token = tokens[i];
+            PersistentProperty persistentProperty = currentEntity != null ? currentEntity.getPropertyByName(token) : null;
+            if (!(persistentProperty instanceof Association) || persistentProperty instanceof Embedded) {
+                // the rest of the path is a component path or a property, which Hibernate resolves itself
+                StringBuilder remainder = new StringBuilder(currentAlias == null ? "" : currentAlias);
+                for (int j = i; j < tokens.length; j++) {
+                    if (remainder.length() > 0) {
+                        remainder.append('.');
+                    }
+                    remainder.append(tokens[j]);
+                }
+                return remainder.toString();
+            }
+
+            if (associationPath.length() > 0) {
+                associationPath.append('.');
+            }
+            associationPath.append(token);
+            String path = associationPath.toString();
+            Association association = (Association) persistentProperty;
+            boolean leftJoin = GrailsHibernateUtil.isLeftJoinAssociationSort(entity);
+            if (!leftJoin && currentAlias != null && i == tokens.length - 2 && isForeignKeyIdentifier(currentEntity, association, tokens[i + 1])) {
+                // the first association of a path is joined even for its identifier, as it always has been
+                return currentAlias + '.' + token + '.' + tokens[i + 1];
+            }
+            boolean joined = createdAssociationPaths.containsKey(path);
+            CriteriaAndAlias join = getOrRegisterJoinAt(path, token);
+            if (!joined && (!leftJoin || persistentProperty instanceof ToMany)) {
+                // without the leftJoinAssociationSort setting, an association is joined for a sort as it is
+                // for criteria, with an inner join. A collection always is: Hibernate would fetch it through
+                // a left join
+                join.usedByCriteria = true;
+            }
+            currentAlias = join.alias;
+            currentEntity = association.getAssociatedEntity();
+        }
+        return currentAlias + '.' + tokens[tokens.length - 1];
+    }
+
+    /**
+     * Whether a property is the identifier of an association that the given entity maps to a foreign key
+     * of its own. Hibernate then reads the identifier from the foreign key, without a join. That is not
+     * the case for a <code>hasOne</code> or for the inverse side of a one-to-one, where the foreign key
+     * is on the other side.
+     */
+    private boolean isForeignKeyIdentifier(PersistentEntity owner, Association association, String property) {
+        PersistentEntity associatedEntity = association.getAssociatedEntity();
+        PersistentProperty identity = associatedEntity != null ? associatedEntity.getIdentity() : null;
+        if (session == null || identity == null || !identity.getName().equals(property)) {
+            return false;
+        }
+        SessionFactory sessionFactory = ((IHibernateTemplate) session.getNativeInterface()).getSessionFactory();
+        Type type = getEntityPersister(owner.getJavaClass().getName(), sessionFactory).toType(association.getName());
+        return type instanceof ManyToOneType && ((ManyToOneType) type).isReferenceToPrimaryKey();
+    }
+
+    /**
+     * Makes the joins of the query and adds its orders. This happens when the query is executed,
+     * because the rest of the query can still change before that: criteria passed to {@code list} are
+     * added after the criteria and the sort of a where query, and the {@code fetch} argument of
+     * {@code list}, which can request a join type, is read last. Criteria, projections and orders only
+     * need the alias of a join, which is known as soon as the join is registered. A query that is used
+     * as a subquery is not executed itself: this happens once its criteria have been added, when its
+     * detached criteria are handed to the query that embeds them.
+     * <p>
+     * Each association is joined once, by its path from the root entity, with the join type that
+     * {@link #createJoin(CriteriaAndAlias)} describes.
+     */
+    protected void applyDeferredJoins() {
+        for (Order order : pendingOrders) {
+            applyOrder(order);
+        }
+        pendingOrders.clear();
+        removeOrdersOfRowCount();
+
+        for (CriteriaAndAlias join : pendingJoins) {
+            createJoin(join);
+        }
+        pendingJoins.clear();
+    }
+
+    /**
+     * Returns the entity at the end of an association path from the root entity, or null when
+     * the path does not consist of associations only.
+     */
+    private PersistentEntity getAssociatedEntity(String associationPath) {
+        String path = associationPath;
+        if (alias != null && path.startsWith(alias + '.')) {
+            path = path.substring(alias.length() + 1);
+        }
+        PersistentEntity currentEntity = entity;
+        for (String token : path.split("\\.")) {
+            PersistentProperty persistentProperty = currentEntity != null ? currentEntity.getPropertyByName(token) : null;
+            if (!(persistentProperty instanceof Association)) {
+                return null;
+            }
+            currentEntity = ((Association) persistentProperty).getAssociatedEntity();
+        }
+        return currentEntity;
+    }
+
+    private void addAliasedOrder(Order order, String aliasedProperty) {
+        org.hibernate.criterion.Order hibernateOrder = order.getDirection() == Order.Direction.ASC ?
+                org.hibernate.criterion.Order.asc(aliasedProperty) :
+                org.hibernate.criterion.Order.desc(aliasedProperty);
+        hibernateOrder = order.isIgnoreCase() ? hibernateOrder.ignoreCase() : hibernateOrder;
+        if (criteria != null) {
+            criteria.addOrder(hibernateOrder);
+        }
+        else if (detachedCriteria != null) {
+            detachedCriteria.addOrder(hibernateOrder);
+        }
     }
 
     private void addSimpleOrder(Order order, String property) {
@@ -700,7 +891,11 @@ public abstract class AbstractHibernateQuery extends Query {
             String token = tokens[i];
             PersistentProperty persistentProperty = currentEntity != null ? currentEntity.getPropertyByName(token) : null;
             if (!(persistentProperty instanceof Association) || persistentProperty instanceof Embedded) {
-                return calculatePropertyName(propertyName);
+                if (currentAlias == null) {
+                    return calculatePropertyName(propertyName);
+                }
+                // the rest of the path is a component path or a property, which Hibernate resolves through the alias
+                return currentAlias + '.' + String.join(".", Arrays.copyOfRange(tokens, i, tokens.length));
             }
 
             if (associationPath.length() > 0) {
@@ -708,17 +903,9 @@ public abstract class AbstractHibernateQuery extends Query {
             }
             associationPath.append(token);
 
-            // Use LEFT JOIN for auto-created projection aliases so that rows
+            // A join that only a projection uses is a left join, so that rows
             // with null associations are preserved in the result set.
-            String path = associationPath.toString();
-            if (!joinTypes.containsKey(path)) {
-                joinTypes.put(path, JoinType.LEFT);
-            }
-            CriteriaAndAlias criteriaAndAlias = getOrCreateAlias(path, generateAlias(token));
-            if (criteriaAndAlias == null) {
-                return calculatePropertyName(propertyName);
-            }
-            currentAlias = criteriaAndAlias.alias;
+            currentAlias = getOrRegisterJoin(associationPath.toString(), generateAlias(token)).alias;
             currentEntity = ((Association) persistentProperty).getAssociatedEntity();
         }
 
@@ -824,11 +1011,31 @@ public abstract class AbstractHibernateQuery extends Query {
             publisher.publishEvent(new PreQueryEvent(datastore, this));
         }
 
+        applyDeferredJoins();
         List results = criteria.list();
+
         if (publisher != null) {
             publisher.publishEvent(new PostQueryEvent(datastore, this, results));
         }
         return results;
+    }
+
+    /**
+     * Removes the orders of a query that only counts its rows. Such a query returns one row, and a
+     * database rejects an order by a column that the query neither groups by nor aggregates. The joins
+     * that the orders made are kept, so that the query counts the rows that it lists.
+     */
+    private void removeOrdersOfRowCount() {
+        if (hibernateProjectionList == null || hibernateProjectionList.getHibernateProjectionList().getLength() != 1 ||
+                !(hibernateProjectionList.getHibernateProjectionList().getProjection(0) instanceof RowCountProjection) ||
+                !(criteria instanceof CriteriaImpl)) {
+            return;
+        }
+        Iterator<CriteriaImpl.OrderEntry> orders = ((CriteriaImpl) criteria).iterateOrderings();
+        while (orders.hasNext()) {
+            orders.next();
+            orders.remove();
+        }
     }
 
     protected void applyDefaultSortOrderAndCaching() {
@@ -889,6 +1096,7 @@ public abstract class AbstractHibernateQuery extends Query {
         if (publisher != null) {
             publisher.publishEvent(new PreQueryEvent(datastore, this));
         }
+        applyDeferredJoins();
 
         Object result;
         if (hasJoins) {
@@ -901,6 +1109,7 @@ public abstract class AbstractHibernateQuery extends Query {
         else {
             result = singleResultViaListCall();
         }
+
         if (publisher != null) {
             publisher.publishEvent(new PostQueryEvent(datastore, this, Collections.singletonList(result)));
         }
@@ -1306,6 +1515,11 @@ public abstract class AbstractHibernateQuery extends Query {
         protected Criteria criteria;
         protected String alias;
         protected String associationPath;
+        /**
+         * Whether criteria of the query use the join, which makes it an inner join unless the query
+         * requests another join type for the association.
+         */
+        private boolean usedByCriteria;
 
         public CriteriaAndAlias(DetachedCriteria detachedCriteria, String alias, String associationPath) {
             this.detachedCriteria = detachedCriteria;

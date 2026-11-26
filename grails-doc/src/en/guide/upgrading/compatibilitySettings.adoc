@@ -1,0 +1,43 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+A fix that changes the result of a call that works today can ship behind a setting, so that an application keeps its results when it takes a patch release. Such a setting keeps the previous result by default on the release lines that already exist, is turned on by default in the next minor release, and is removed in the next major release. While an application keeps the previous result through such a setting after the default has changed, it should plan to remove the setting before that major release.
+
+This page lists every such setting. The upgrade notes of the release that adds a setting describe the change in detail.
+
+[cols="3,5,2,2,2,2,2", options="header"]
+|===
+| Setting | What it changes | Added in | Grails 7 default | Grails 8.0 default | Grails 8.1 default (planned) | Removed in
+
+| `grails.gorm.leftJoinAssociationSort`
+| With `true`, a sort by a property of an association, such as `Book.list(sort: 'author.name')`, joins the association with a left join, so the sort keeps the instances whose association is `null`. With `false`, it joins the association with an inner join, which leaves those instances out. Applies to GORM for Hibernate. Explicit `false` logs a startup warning naming Grails 9. See link:upgrading.html#grails-7-0-18[Grails 7.0.18].
+| 7.0.18
+| `false`
+| `false`
+| `true`
+| 9.0.0
+
+| `grails.converters.json.enum.format` and `grails.converters.xml.enum.format`
+| With `simple`, an enum is rendered as its name, as in `"stage": "SUBMIT"`, which is the form that data binding accepts. Without it, an enum is rendered as an object with its type and its name. See link:upgrading.html#grails-7-0-2[Grails 7.0.2].
+| 7.0.2
+| not set
+| not applicable; enums use their names
+| not applicable; enums use their names
+| 8.0.0 removes the legacy format
+|===
