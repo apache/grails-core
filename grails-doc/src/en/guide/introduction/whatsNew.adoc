@@ -376,6 +376,28 @@ breakdown.
 The Grails Data plugin itself (`grails-data-hibernate5` or `grails-data-hibernate7`) is an application dependency only: generated builds no longer place it on the `buildscript` classpath or in `buildSrc`, where Gradle's own Groovy would run the compile-time transformations the plugin carries while compiling the build scripts.
 See the xref:upgrading#upgrading80x[upgrade guide] for the equivalent change in an existing build.
 
+==== Plugin Commands in the Grails Forge CLI
+
+Inside a Grails project, the Grails Forge CLI now offers the commands of the application and of its
+plugins next to its own, with Tab completion at its prompt. Adding the Spring Security plugin to the
+build is enough to type `s2-quickstart`:
+
+[source,shell]
+----
+$ grails-forge-cli
+grails> s2-quickstart com.example User Role --groupClassName=RoleGroup
+----
+
+The Forge CLI reads the commands from a manifest that the project's build writes with the new
+`generateCommandManifest` task, so it never loads the project's classpath itself, and runs a command
+through the project's `runCommand` task. A command describes the arguments and options it takes with
+the new `@CommandParameter` and `@CommandOption` annotations, which the Forge CLI shows in the command's
+help, checks and completes. Commands without them, such as those of plugins built for an earlier
+release, are offered too and take any arguments.
+
+See <<projectCommands,Commands of the Project>> and
+<<creatingCustomCommands,Creating Custom Commands>>.
+
 ==== GSP Tag Library Improvements
 
 Grails {grailsMajorVersion} continues the move toward method-based TagLib handlers while preserving compatibility with existing closure-based tags.

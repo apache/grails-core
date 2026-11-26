@@ -26,6 +26,7 @@ import org.jline.terminal.Terminal
 import org.jline.terminal.TerminalBuilder
 import org.springframework.context.ConfigurableApplicationContext
 import picocli.CommandLine
+import picocli.CommandLine.Model.CommandSpec
 import spock.lang.AutoCleanup
 import spock.lang.Shared
 import spock.lang.Specification
@@ -72,11 +73,26 @@ class CommandLineCompleterSpec extends Specification {
 
     void 'the completer needs a command to complete from'() {
         when:
-        new CommandLineCompleter(null)
+        new CommandLineCompleter((CommandSpec) null)
 
         then:
         NullPointerException e = thrown()
         e.message == 'spec'
+    }
+
+    void 'commands given by a supplier are completed as they are when the word is completed'() {
+        given: 'the commands of the prompt, which gain one after the completer is made'
+        CommandSpec offered = CommandSpec.create().addSubcommand('hello', CommandSpec.create())
+        CommandLineCompleter completer = new CommandLineCompleter({ -> offered } as java.util.function.Supplier<CommandSpec>)
+        LineReader reader = LineReaderBuilder.builder().terminal(terminal).build()
+
+        when:
+        offered.addSubcommand('help-me', CommandSpec.create())
+        List<Candidate> candidates = []
+        completer.complete(reader, new DefaultParser().parse('he', 2), candidates)
+
+        then:
+        candidates*.value() as Set == ['hello', 'help-me'] as Set
     }
 
     private List<String> complete(String typed) {

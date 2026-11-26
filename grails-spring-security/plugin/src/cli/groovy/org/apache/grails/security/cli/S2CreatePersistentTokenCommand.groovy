@@ -18,6 +18,7 @@ package org.apache.grails.security.cli
 import grails.build.logging.ConsoleLogger
 import grails.build.logging.GrailsConsole
 import grails.codegen.model.Model
+import org.apache.grails.core.cli.CommandParameter
 import org.apache.grails.core.cli.GrailsApplicationCommand
 import groovy.transform.CompileStatic
 
@@ -29,8 +30,12 @@ import groovy.transform.CompileStatic
  *
  * @since 6.0.0
  */
+@CommandParameter(name = 'domain-class-name',
+        description = 'The fully qualified name of the persistent token domain class, e.g. com.yourapp.PersistentLogin')
 @CompileStatic
 class S2CreatePersistentTokenCommand implements GrailsApplicationCommand, CommandLineHelper, SkipBootstrap {
+
+    String description = 'Creates a persistent token domain class for remember-me logins.'
 
     @Delegate
     ConsoleLogger consoleLogger = GrailsConsole.getInstance()

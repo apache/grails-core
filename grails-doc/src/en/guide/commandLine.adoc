@@ -195,6 +195,125 @@ features:
 
 This "grails-forge-cli.yml" configuration sets the default values for various aspects of the Grails web application, including the application type, default package, test framework, source language, build tool, GORM implementation, servlet implementation, and a list of enabled features.
 
+[[projectCommands]]
+=== Commands of the Project
+
+Inside a Grails project, the Grails Forge CLI also offers the commands of the application and of its
+plugins: the commands in `grails-app/commands` and those every plugin of the build brings with it, such
+as `s2-quickstart` from the Spring Security plugin or the `dbm-*` commands of database migration. The
+interactive prompt completes their names, the options they declare and the values those options take:
+
+[source,shell]
+----
+$ grails-forge-cli
+grails> s2-<TAB>
+s2-create-persistent-token   s2-create-role-hierarchy-entry   s2-quickstart
+grails> s2-quickstart com.example User Role --<TAB>
+--groupClassName   --help   --salt   --uiOnly
+----
+
+Each command shows its usage with `--help`, and runs through the project's `runCommand` Gradle task,
+as `./gradlew runCommand -Pargs="s2-quickstart com.example User Role"` would run it. The Forge CLI hands
+the arguments to the task in a file, so an argument with spaces or quotes reaches `runCommand` as typed,
+on every operating system, and the command reads it as `runCommand` always has: trimmed, with a pair of
+double quotes around it removed, and left out when it is empty. In a build of several projects, the task
+runs in the project of the current directory only, not also in the projects below it. The Forge CLI's
+own commands keep their name: a project command named like one of them is not offered.
+
+A command runs in the development environment unless `-D` says otherwise. `-D` sets a system property
+of the command: it reaches `runCommand` among the arguments, as `-Dname=value`, and `runCommand` starts
+the command with the property set, as `./gradlew runCommand -Pargs="dbm-update -Dgrails.env=test"` does:
+
+[source,shell]
+----
+grails> dbm-update -Dgrails.env=test
+----
+
+The Forge CLI learns the commands from the project's build: the Grails Gradle plugin's
+`generateCommandManifest` task writes them to `build/grails/commands.json`, with the directories whose
+files decide them:
+
+* the directory of every project of the build, for its `.gradle`, `.gradle.kts`, `.properties` and
+  `.toml` files, such as `build.gradle`, `settings.gradle`, `gradle.properties` and `libs.versions.toml`;
+* everything under the `gradle` and `buildSrc` directories of the build's root, under
+  `grails-app/commands`, `src/main/resources/META-INF` and `src/cli/resources/META-INF` of every
+  project, and under every included build, also one included with `pluginManagement { includeBuild }`, apart from what builds and tools
+  write outside a `src` or `grails-app` directory, such as `build`, `.gradle` and `.kotlin`, and from
+  `node_modules`;
+* everything under the directories of the `cli` source set of every project that has one, such as
+  `src/cli/groovy` and `src/cli/resources`, where a command a plugin project of the build adds registers
+  itself;
+* the source file of each command it lists that one of the projects of the build compiles, such as a
+  command of a plugin project in `src/main/groovy`;
+* the names of the files in the main Java and Groovy sources of every project, such as `src/main/groovy`,
+  that are named like a command, `AuditCommand.groovy` or `AuditCommand.java`, so a command added there
+  counts, while editing or adding another source does not.
+
+Each time it runs the task, the Forge CLI records those files, with their times and sizes, and the
+directories the manifest names, in the project's `.gradle/grails` directory, so they are still watched
+after `./gradlew clean` removes the manifest. It runs the task again when one of them is added or deleted, or
+its time or size changes, whether the time goes forward or back, and when a manifest has no record, as
+one written by `./gradlew generateCommandManifest` alone. So a plugin added to the build brings its commands the next
+time a project command is asked for. A change the Forge CLI cannot see, such as a new snapshot of a
+plugin, or a command in the main sources of a file not named after it, such as a class that becomes a
+command, is picked up by running `./gradlew generateCommandManifest`.
+
+The build runs only when the interactive prompt starts or a command the Forge CLI does not have is
+named, also after the Forge CLI's own options, as in `grails-forge-cli -x dbm-update`. Its own commands,
+such as `create-controller`, never run it, even in a project they do not apply to, and neither do its
+options alone, such as `--help`, or a command line after `--`. `grails-forge-cli --help` lists the
+project's commands from the file the build last wrote. When a command at the prompt runs the build, the
+prompt then completes the commands it found.
+
+Since the build is code of the project, the Forge CLI runs it as `./gradlew` would. In a checkout you
+do not trust, set the environment variable `GRAILS_FORGE_RUN_BUILD`, or the system property
+`grails.forge.runBuild`, to `false`. The Forge CLI then never runs the build on its own: it offers the
+commands of the file the build last wrote, which `./gradlew generateCommandManifest` writes, and runs the
+build only for a project command you name.
+
+[source,shell]
+----
+$ GRAILS_FORGE_RUN_BUILD=false grails-forge-cli
+----
+
+When the build fails, as it does while the application does not compile or in a project of a Grails
+release without `generateCommandManifest`, the Forge CLI says so once and keeps offering the commands of
+the file the build last wrote, if any. It does not run the build for them again until one of the files
+above changes, also after `./gradlew clean`, or the Gradle wrapper does, as when it is made executable
+again. While the build fails, editing any file of the main sources of the projects, such as a service in
+`grails-app/services` or a class in `src/main/groovy`, counts as a change too, so fixing what did not
+compile runs the build again; that includes a project added to the build since the file was written.
+
+Until the build has written a file of commands, and while it fails, the Forge CLI finds the projects
+itself. It takes every directory the settings files name in quotes, outside their comments, as a
+project's path or directory or as an included build, wherever it is, and every directory below the root
+of the build with a build or settings file, main sources or a `grails-app` directory, whatever it is
+named, such as `src`, or below a hidden directory like `.modules`, but not below what builds and tools
+write, such as `build` or `node_modules`, nor inside a source tree, where a test fixture may have a build
+file of its own. An included build is watched whole, its build logic and `gradle/libs.versions.toml`
+included.
+
+Run `./gradlew generateCommandManifest -PgrailsCommandManifest=build/grails/commands.json` to see what
+went wrong: it writes the file where the Forge CLI reads it, also in a build with a build directory of its
+own. Once there is a file other than the one there was when the build failed, the Forge CLI runs the build
+once more to record what the commands depend on, so a failure no source explains, such as a dependency
+that could not be downloaded, is over once it is fixed and the file written. A command of the file that
+the Forge CLI cannot offer, such as one declaring an option named `help` or values to complete that are
+not strings, is reported and left out, and the others are offered. A project command named `exit` is not
+offered, as `exit` leaves the prompt.
+
+The build runs through the Gradle wrapper of the project, or of the build it belongs to: the wrapper in
+the first directory above it with a `settings.gradle` or `settings.gradle.kts` file. A project whose build has no wrapper has no
+commands offered, and no `gradle` found on the path is run instead.
+
+A command that describes its arguments and options, as <<creatingCustomCommands,Creating Custom Commands>>
+shows, has them checked and completed. A command that declares no options takes any arguments and
+options, and is given the words of its command line in the order they were typed, as `runCommand`
+gives them.
+
+The `grails` command of an SDKMAN! installation starts the profile CLI by default. Start the Forge CLI
+with `grails-forge-cli`, with `grails -t forge`, or by default with `GRAILS_PREFERRED_SHELL=forge`.
+
 === Grails Default Package Configuration
 
 The project's default package is determined based on the project's name. For instance, running the following command:

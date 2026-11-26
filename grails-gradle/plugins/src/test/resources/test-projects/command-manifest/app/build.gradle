@@ -1,0 +1,15 @@
+plugins {
+    id 'java'
+    id 'org.apache.grails.gradle.grails-cli'
+}
+
+// commands of a plugin live in its cli source set
+sourceSets {
+    cli
+    // a resource directory of its own, whose META-INF can register commands too
+    main.resources.srcDir 'config'
+}
+
+dependencies {
+    grailsCli project(':manifest-writer')
+}

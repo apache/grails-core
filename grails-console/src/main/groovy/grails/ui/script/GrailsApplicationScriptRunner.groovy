@@ -19,6 +19,7 @@
 package grails.ui.script
 
 import groovy.transform.CompileStatic
+import grails.ui.command.CommandArguments
 import grails.ui.command.GrailsApplicationContextCommandRunner
 import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.customizers.ImportCustomizer
@@ -111,6 +112,13 @@ class GrailsApplicationScriptRunner extends DevelopmentGrailsApplication {
      * @param args The last argument is the Application class name. All other args are script names
      */
     static void main(String[] args) {
+        try {
+            args = CommandArguments.expand(args)
+        }
+        catch (IllegalArgumentException e) {
+            System.err.println("runScript: ${e.message}")
+            System.exit(1)
+        }
         if (args.size() > 1) {
             Class applicationClass = null
             String className = args.last()
@@ -120,7 +128,8 @@ class GrailsApplicationScriptRunner extends DevelopmentGrailsApplication {
                 System.err.println("runScript: Application class ${className} not found")
                 System.exit(1)
             }
-            String[] scriptNames = args.init() as String[]
+            // the system properties of the arguments were set on the JVM, and name no script
+            String[] scriptNames = CommandArguments.withoutSystemProperties(args.init().toList()) as String[]
             List<File> scripts = []
             scriptNames.each { String scriptName ->
                 File script = new File(scriptName)

@@ -1,0 +1,9 @@
+pluginManagement {
+    includeBuild 'build-logic'
+}
+
+rootProject.name = 'command-manifest'
+
+include 'manifest-writer', 'app'
+
+includeBuild 'shared'

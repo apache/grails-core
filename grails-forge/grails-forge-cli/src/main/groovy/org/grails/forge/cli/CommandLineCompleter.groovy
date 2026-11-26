@@ -18,6 +18,8 @@
  */
 package org.grails.forge.cli
 
+import java.util.function.Supplier
+
 import groovy.transform.CompileStatic
 
 import org.jline.reader.Candidate
@@ -30,22 +32,43 @@ import picocli.CommandLine.Model.CommandSpec
 /**
  * Completes the word under the cursor at the interactive prompt from the picocli commands, their
  * subcommands and their options.
+ *
+ * <p>The commands can be given as a supplier, so the prompt completes the commands offered now, such as
+ * those of a project whose build changed since the prompt started.</p>
  */
 @CompileStatic
 class CommandLineCompleter implements Completer {
 
-    private final CommandSpec spec
+    private final Supplier<CommandSpec> specs
 
     CommandLineCompleter(CommandSpec spec) {
-        this.spec = Objects.requireNonNull(spec, 'spec')
+        Objects.requireNonNull(spec, 'spec')
+        this.specs = { -> spec } as Supplier<CommandSpec>
+    }
+
+    CommandLineCompleter(Supplier<CommandSpec> specs) {
+        this.specs = Objects.requireNonNull(specs, 'specs')
     }
 
     @Override
     void complete(LineReader reader, ParsedLine line, List<Candidate> candidates) {
+        List<String> words = new ArrayList<>(line.words())
+        int wordIndex = line.wordIndex()
+        String word = wordIndex < words.size() ? words[wordIndex] : ''
+        int separator = word.indexOf('=')
+        // picocli completes the value of an option only as a word of its own, so --name=value is completed
+        // as --name value and the values are offered with the option in front of them
+        String prefix = ''
+        if (word.startsWith('--') && separator > 0) {
+            prefix = word.substring(0, separator + 1)
+            words.set(wordIndex, word.substring(0, separator))
+            words.add(wordIndex + 1, word.substring(separator + 1))
+            wordIndex++
+        }
         List<CharSequence> suggestions = []
-        AutoComplete.complete(spec, line.words().toArray(new String[0]), line.wordIndex(), 0, line.cursor(), suggestions)
+        AutoComplete.complete(specs.get(), words.toArray(new String[0]), wordIndex, 0, line.cursor(), suggestions)
         suggestions.each { CharSequence suggestion ->
-            candidates.add(new Candidate(suggestion.toString()))
+            candidates.add(new Candidate(prefix + suggestion))
         }
     }
 }
