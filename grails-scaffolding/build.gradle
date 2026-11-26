@@ -96,6 +96,10 @@ dependencies {
 
 tasks.named('testCli', Test) {
     jvmArgumentProviders.add(new RestApplicationPlugins(classpath: configurations.named('restApplicationPlugins')))
+    // the records of a web and a REST API application as the command line writes them, which the reader of the
+    // record is tested with as well, so the specs read the record a generated application has
+    jvmArgumentProviders.add(new ProjectRecordSamples(samples: rootProject.layout.projectDirectory
+            .dir('grails-gradle/model/src/test/resources/project-record-sample')))
 }
 
 /** Hands the specs the class path of the JSON views plugin, which they load beside their own where a REST application is meant. */
@@ -107,6 +111,19 @@ class RestApplicationPlugins implements CommandLineArgumentProvider {
     @Override
     Iterable<String> asArguments() {
         ["-Dscaffolding.restApplicationPlugins=${classpath.get().asPath}".toString()]
+    }
+}
+
+/** Hands the specs the directory of the sample records of the command line, one directory of a project for each type of application. */
+class ProjectRecordSamples implements CommandLineArgumentProvider {
+
+    @InputDirectory
+    @PathSensitive(PathSensitivity.RELATIVE)
+    Directory samples
+
+    @Override
+    Iterable<String> asArguments() {
+        ["-Dscaffolding.projectRecordSamples=${samples.asFile.absolutePath}".toString()]
     }
 }
 

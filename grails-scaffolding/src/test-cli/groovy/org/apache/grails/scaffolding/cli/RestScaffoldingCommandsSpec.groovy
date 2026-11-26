@@ -30,6 +30,7 @@ import org.codehaus.groovy.control.CompilerConfiguration
 
 import grails.build.logging.GrailsConsole
 import org.apache.grails.core.cli.ExecutionContext
+import org.apache.grails.core.cli.ProjectInfo
 import org.apache.grails.core.cli.ToolSupport
 import org.apache.grails.core.cli.io.FileSystemInteractionImpl
 import org.apache.grails.core.cli.script.ScriptConsole
@@ -40,10 +41,11 @@ import org.grails.build.parsing.CommandLineParser
  * What {@code generate-views}, {@code generate-controller} and {@code generate-all} write into a REST API
  * application: the JSON views and the REST controller the {@code rest-api} profile of Grails 8 generated.
  *
- * <p>A REST API application is one with the JSON views plugin on its class path and no GSP under
- * {@code grails-app/views}. The plugin is not on the class path of the tests, where it would make the project
- * of every spec such an application: the build hands its class path over, and a spec that means a REST API
- * application runs the command with a class loader that has it.</p>
+ * <p>A REST API application is one whose record of the command line has the feature {@code views-json} and not
+ * {@code gsp}: the spec writes the record the command line writes for one, which the build hands over with the
+ * record of a web application ({@link ScaffoldingViewsChoiceSpec} has every rule of the choice). The JSON views
+ * plugin is not on the class path of the tests, and does not decide anything: the build hands its class path over
+ * so that the views that are generated can be compiled and rendered.</p>
  */
 class RestScaffoldingCommandsSpec extends Specification {
 
@@ -286,8 +288,11 @@ class RestScaffoldingCommandsSpec extends Specification {
     }
 
     @Unroll
-    def "generate-all writes #kind views where the JSON views plugin #plugin, the project #gsp and the line ends with '#option'"() {
+    def "generate-all writes #kind views where the project #record, #gsp and the line ends with '#option'"() {
         given:
+        if (rest) {
+            restRecord()
+        }
         if (hasGsp) {
             write('grails-app/views/layouts/main.gsp', '<html></html>\n')
         }
@@ -295,7 +300,7 @@ class RestScaffoldingCommandsSpec extends Specification {
         String line = "generate-all com.example.Book ${option}".trim()
 
         when:
-        boolean result = hasPlugin ? runInRestApplication(new GenerateAllCommand(), line) : run(new GenerateAllCommand(), line)
+        boolean result = run(new GenerateAllCommand(), line)
 
         then:
         result
@@ -303,39 +308,44 @@ class RestScaffoldingCommandsSpec extends Specification {
         written('grails-app/controllers/com/example/BookController.groovy').contains('static responseFormats') == json
 
         where:
-        hasPlugin | hasGsp | option         || json
-        false     | false  | ''             || false
-        false     | true   | ''             || false
-        true      | false  | ''             || true
-        true      | true   | ''             || false
-        true      | true   | '--views=json' || true
-        true      | true   | '--views=JSON' || true
-        true      | true   | '--views json' || true
-        true      | false  | '--views gsp'  || false
-        true      | false  | '--views=gsp'  || false
-        false     | false  | '--views=json' || true
-        false     | true   | '--views=json' || true
-        false     | false  | '--views=gsp'  || false
+        rest  | hasGsp | option         || json
+        false | false  | ''             || false
+        false | true   | ''             || false
+        true  | false  | ''             || true
+        true  | true   | ''             || true
+        true  | true   | '--views=json' || true
+        true  | true   | '--views=JSON' || true
+        true  | true   | '--views json' || true
+        true  | false  | '--views gsp'  || false
+        true  | false  | '--views=gsp'  || false
+        false | false  | '--views=json' || true
+        false | true   | '--views=json' || true
+        false | false  | '--views=gsp'  || false
 
         kind = json ? 'JSON' : 'GSP'
-        plugin = hasPlugin ? 'is on the class path' : 'is not on the class path'
+        record = rest ? 'has the record of a REST API application' : 'has no record'
         gsp = hasGsp ? 'has a GSP' : 'has no GSP'
     }
 
-    def "a REST API plugin, which has no views at all, is given JSON views"() {
+    def "a REST API plugin, which has no views at all, is given JSON views by the feature its record has"() {
+        given: 'the record of a REST API plugin, which has the feature of JSON views and not that of GSP views'
+        write('.grails/forge.lock.yml', restRecordText().replace('applicationType: rest-api\n', 'applicationType: rest-api-plugin\n'))
+        assert ProjectInfo.of(project).applicationType == 'rest-api-plugin'
+
         expect:
         !new File(project, 'grails-app/views').exists()
-        runInRestApplication(new GenerateViewsCommand(), 'generate-views com.example.Book')
+        run(new GenerateViewsCommand(), 'generate-views com.example.Book')
         generated() == JSON_VIEWS
     }
 
-    def "a GSP anywhere under grails-app/views keeps the GSP views of an application that has the JSON views plugin as well"() {
+    def "a GSP anywhere under grails-app/views keeps the GSP views of an application without a record that has JSON views as well"() {
         given:
+        write('grails-app/views/error.gson', 'json {\n}\n')
         write('grails-app/views/admin/reports/_row.gsp', '<tr></tr>\n')
 
         expect:
-        runInRestApplication(new GenerateViewsCommand(), 'generate-views com.example.Book')
-        generated() == (GSP_VIEWS + ['grails-app/views/admin/reports/_row.gsp']).sort()
+        run(new GenerateViewsCommand(), 'generate-views com.example.Book')
+        generated() == (GSP_VIEWS + ['grails-app/views/admin/reports/_row.gsp', 'grails-app/views/error.gson']).sort()
     }
 
     @Unroll
@@ -421,22 +431,48 @@ class RestScaffoldingCommandsSpec extends Specification {
     }
 
     /**
-     * Runs a command in the project of the spec, which has what the class path of the tests has: no JSON views plugin.
+     * Runs a command in the project of the spec, as the command line runs it in a project: the command is given the
+     * directory of the project, and reads what the project is from the record in it.
      */
     private boolean run(ToolSupport command, String line) {
-        command.executionContext = new ExecutionContext(new CommandLineParser().parseString(line))
+        File directory = project
+        command.executionContext = new ExecutionContext(new CommandLineParser().parseString(line)) {
+
+            @Override
+            File getBaseDir() {
+                directory
+            }
+
+            @Override
+            ProjectInfo getProject() {
+                ProjectInfo.of(directory)
+            }
+        }
         command.templateRenderer = new TemplateRendererImpl(project)
         command.fileSystemInteraction = new FileSystemInteractionImpl(project)
         command.handle()
     }
 
     /**
-     * Runs a command as the build of a REST API application runs it: with the JSON views plugin on the class path.
+     * Runs a command in a REST API application: a project with the record the command line writes for one.
      */
     private boolean runInRestApplication(ToolSupport command, String line) {
-        withClassLoader(restApplication) {
-            run(command, line)
-        }
+        restRecord()
+        run(command, line)
+    }
+
+    private void restRecord() {
+        write('.grails/forge.lock.yml', restRecordText())
+        assert ProjectInfo.of(project).applicationType == 'rest-api'
+    }
+
+    /**
+     * @return the record the command line writes for a REST API application, which the build hands over
+     */
+    private static String restRecordText() {
+        String samples = System.getProperty('scaffolding.projectRecordSamples')
+        assert samples: 'the build hands the directory of the sample records of the command line to the tests'
+        new File(samples, 'rest-api/.grails/forge.lock.yml').getText('UTF-8').replace('\r\n', '\n')
     }
 
     private static <T> T withClassLoader(ClassLoader classLoader, Closure<T> action) {

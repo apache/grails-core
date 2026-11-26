@@ -87,6 +87,12 @@ class GenerateViewsCommand implements StandaloneTool, ToolSupport, CommandLineHe
         return failureCount ? FAILURE : SUCCESS
     }
 
+    /**
+     * The names of the GSP views to generate: those of the templates of the project, or else those of the
+     * templates on the class path. A template can be there more than once, as when the build runs the tool
+     * with the jar of the plugin beside the companion that has a copy of its templates, and each name is
+     * taken once.
+     */
     private List<String> resolveViewNames() {
         List<String> viewNames = resources('file:src/main/templates/scaffolding/*.gsp')
                 .collect { it.filename }
@@ -94,6 +100,6 @@ class GenerateViewsCommand implements StandaloneTool, ToolSupport, CommandLineHe
             viewNames = resources('classpath*:META-INF/templates/scaffolding/*.gsp')
                     .collect { it.filename }
         }
-        viewNames
+        viewNames.unique()
     }
 }

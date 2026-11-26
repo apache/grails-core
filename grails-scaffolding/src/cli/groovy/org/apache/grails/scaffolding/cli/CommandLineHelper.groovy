@@ -21,6 +21,7 @@ package org.apache.grails.scaffolding.cli
 
 import grails.codegen.model.Model
 import org.apache.grails.core.cli.ExecutionContext
+import org.apache.grails.core.cli.ProjectInfo
 import org.grails.build.parsing.CommandLine
 import org.grails.io.support.Resource
 
@@ -34,9 +35,15 @@ trait CommandLineHelper {
     static final String GSP_VIEWS = 'gsp'
     static final String JSON_VIEWS = 'json'
 
-    private static final String JSON_VIEWS_PLUGIN = 'grails/plugin/json/view/JsonViewGrailsPlugin.class'
+    /** The feature of an application with GSP views, as the record of the command line names it */
+    static final String GSP_FEATURE = 'gsp'
+
+    /** The feature of an application with JSON views, as the record of the command line names it */
+    static final String JSON_VIEWS_FEATURE = 'views-json'
+
     private static final String VIEWS_DIRECTORY = 'grails-app/views'
     private static final String GSP_EXTENSION = '.gsp'
+    private static final String JSON_VIEW_EXTENSION = '.gson'
 
     abstract ExecutionContext getExecutionContext()
 
@@ -50,12 +57,21 @@ trait CommandLineHelper {
 
     /**
      * The kind of views the project is generated for: GSP views with a controller for pages, or JSON views with
-     * a REST controller, as the {@code rest-api} profile generated them.
+     * a REST controller, as the {@code rest-api} profile generated them. The first of these that applies decides:
      *
-     * <p>The {@code --views} option decides it when it is given. Without it the project decides: JSON views where
-     * the JSON views plugin is on the class path and {@code grails-app/views} has no GSP, which is a REST API
-     * application or a REST API plugin, and GSP views everywhere else, so an application that has both kinds
-     * keeps the GSP views it has always been given.</p>
+     * <ol>
+     *   <li>The {@code --views} option, when it is given.</li>
+     *   <li>The features of a project that has a record of the command line, which every project the command line
+     *   generated or migrated has: GSP views with the feature {@code gsp}, JSON views with {@code views-json} and
+     *   without {@code gsp}, which is a REST API application or a REST API plugin, and GSP views with neither.
+     *   An application that has both kinds keeps the GSP views it has always been given.</li>
+     *   <li>The views of a project without a record: GSP views where {@code grails-app/views} has a GSP, and JSON
+     *   views where it has none and has a JSON view.</li>
+     *   <li>GSP views.</li>
+     * </ol>
+     *
+     * <p>Neither the class path nor the build file of the project is read: a tool that runs as a process of its
+     * own has neither the class path of the application nor a build to ask.</p>
      *
      * @return {@link #GSP_VIEWS} or {@link #JSON_VIEWS}, or {@code null} when the option names neither
      */
@@ -65,7 +81,15 @@ trait CommandLineHelper {
             final String kind = asked.toLowerCase(Locale.ROOT)
             return kind in [GSP_VIEWS, JSON_VIEWS] ? kind : null
         }
-        hasJsonViewsPlugin() && !hasGspViews() ? JSON_VIEWS : GSP_VIEWS
+        final ProjectInfo project = executionContext.project
+        if (project.recorded) {
+            final List<String> features = project.features
+            return features.contains(JSON_VIEWS_FEATURE) && !features.contains(GSP_FEATURE) ? JSON_VIEWS : GSP_VIEWS
+        }
+        if (hasViews(GSP_EXTENSION)) {
+            return GSP_VIEWS
+        }
+        hasViews(JSON_VIEW_EXTENSION) ? JSON_VIEWS : GSP_VIEWS
     }
 
     /**
@@ -75,19 +99,18 @@ trait CommandLineHelper {
         "The --${VIEWS_OPTION} option takes ${GSP_VIEWS} or ${JSON_VIEWS}, as in --${VIEWS_OPTION}=${JSON_VIEWS}, and not: ${flag(VIEWS_OPTION)}"
     }
 
-    private boolean hasJsonViewsPlugin() {
-        final ClassLoader classLoader = Thread.currentThread().contextClassLoader ?: getClass().classLoader
-        classLoader.getResource(JSON_VIEWS_PLUGIN) != null
-    }
-
-    private boolean hasGspViews() {
+    /**
+     * @param extension what the name of a view of the kind ends with
+     * @return whether {@code grails-app/views} of the project has a view of the kind, in any directory under it
+     */
+    private boolean hasViews(String extension) {
         final File views = file(VIEWS_DIRECTORY)
         if (!views.isDirectory()) {
             return false
         }
         boolean found = false
         views.eachFileRecurse { File each ->
-            found = found || (each.isFile() && each.name.endsWith(GSP_EXTENSION))
+            found = found || (each.isFile() && each.name.endsWith(extension))
         }
         found
     }
