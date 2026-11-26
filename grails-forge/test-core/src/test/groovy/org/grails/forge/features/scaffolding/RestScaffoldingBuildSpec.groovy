@@ -29,14 +29,18 @@ import org.grails.forge.utils.CommandSpec
  * are generated pass once the places they mark with TODO are filled in, which is all they ask of the developer.
  *
  * <p>The application has the standalone tools of the plugin, its companion grails-scaffolding-cli-standalone, and not the
- * plugin: neither it nor GSP nor the fields plugin is on the class path the application runs with, on the one its tests
- * run with, on the one the build runs tools with, or in the archive it is packaged as. The build runs the tools here, with
- * the task runTool, as it runs every tool; the command line runs them as a process of its own.</p>
+ * plugin: neither it nor GSP nor the fields plugin is on the class path the application runs with, on the one the build
+ * runs tools with, or in the archive it is packaged as, and neither the plugin nor the fields plugin is on the one its
+ * tests run with, which has GSP from the testing support of Grails, as the tests of every application have. The build
+ * runs the tools here, with the task runTool, as it runs every tool; the command line runs them as a process of its own.</p>
  */
 class RestScaffoldingBuildSpec extends CommandSpec {
 
     /** The plugin and the two it depends on, with what follows the name of each in a dependency report */
     private static final List<String> OF_THE_PLUGIN = ['grails-scaffolding:', 'grails-gsp:', 'grails-fields:']
+
+    /** What of those the tests of the application do not have either: GSP they have from grails-testing-support-web */
+    private static final List<String> NOT_IN_THE_TESTS = ['grails-scaffolding:', 'grails-fields:']
 
     void 'the specs generate-all writes into a REST API application pass once their TODOs are filled in'() {
         given: 'a REST API application with the scaffolding feature and a domain class'
@@ -103,9 +107,9 @@ class RestScaffoldingBuildSpec extends CommandSpec {
         runtime.contains('org.apache.grails:grails-views-gson')
         OF_THE_PLUGIN.every { !runtime.contains("org.apache.grails:${it}") }
 
-        and: 'nor do its tests, nor the tools, which have the companion of the standalone tools alone'
-        OF_THE_PLUGIN.every { !tests.contains("org.apache.grails:${it}") }
+        and: 'nor do the tools, which have the companion of the standalone tools alone, and the tests have neither the plugin nor the fields plugin'
         OF_THE_PLUGIN.every { !tools.contains("org.apache.grails:${it}") }
+        NOT_IN_THE_TESTS.every { !tests.contains("org.apache.grails:${it}") }
         tools.contains('org.apache.grails:grails-scaffolding-cli-standalone')
 
         when: 'the application is packaged'
