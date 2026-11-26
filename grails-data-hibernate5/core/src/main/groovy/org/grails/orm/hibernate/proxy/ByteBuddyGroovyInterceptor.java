@@ -71,8 +71,11 @@ public class ByteBuddyGroovyInterceptor extends ByteBuddyInterceptor {
             return getIdentifier();
         }
 
+        // The internal identifier, as getIdentifier() initializes the proxy when hibernate.jpa.compliance.proxy
+        // is enabled. Every call arrives here, including the one Hibernate makes to reach the lazy initializer,
+        // so none of them may initialize the proxy before it is known what the call asks for.
         GroovyProxyInterceptorLogic.InterceptorState state = new GroovyProxyInterceptorLogic.InterceptorState(
-                getEntityName(), persistentClass, getIdentifier(), lazyToString);
+                getEntityName(), persistentClass, getInternalIdentifier(), lazyToString);
 
         Object metaClass = GroovyProxyInterceptorLogic.handleMetaClass(state, methodName, args);
         if (metaClass != GroovyProxyInterceptorLogic.INVOKE_IMPLEMENTATION) { // NOPMD: sentinel comparison
