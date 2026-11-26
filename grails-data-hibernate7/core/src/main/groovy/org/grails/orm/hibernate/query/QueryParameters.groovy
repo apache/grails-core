@@ -23,6 +23,7 @@ import java.lang.reflect.Array
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.transform.RecordOptions
+import groovy.transform.TupleConstructor
 import jakarta.annotation.Nullable
 
 /**
@@ -34,6 +35,7 @@ import jakarta.annotation.Nullable
 @SuppressWarnings('Indentation')
 @CompileStatic
 @RecordOptions(getAt = false, toList = false, toMap = false, size = false)
+@TupleConstructor(defaults = false, namedVariant = false)
 record QueryParameters(Map<String, Object> namedParams, List<Object> positionalParams) {
 
     /** The query text after expansion together with the parameters it was expanded into. */

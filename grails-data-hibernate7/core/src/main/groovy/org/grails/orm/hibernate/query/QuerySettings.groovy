@@ -22,6 +22,7 @@ import java.util.stream.Collectors
 
 import groovy.transform.CompileStatic
 import groovy.transform.RecordOptions
+import groovy.transform.TupleConstructor
 import org.hibernate.jpa.AvailableHints
 
 /**
@@ -33,6 +34,7 @@ import org.hibernate.jpa.AvailableHints
 @SuppressWarnings('Indentation')
 @CompileStatic
 @RecordOptions(getAt = false, toList = false, toMap = false, size = false)
+@TupleConstructor(defaults = false, namedVariant = false)
 record QuerySettings(Map<String, Object> querySettings, Map<String, Object> hints) {
 
     QuerySettings {
