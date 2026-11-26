@@ -27,7 +27,7 @@ import java.util.concurrent.TimeUnit
 import groovy.transform.CompileStatic
 
 /**
- * The arguments of an application command, as the file the Gradle task {@code runCommand} reads with
+ * The arguments of a tool of the application, as the file the Gradle task {@code runTool} reads with
  * {@code --args-file}: a JSON array of strings in UTF-8, the name of the command first. Nothing of
  * the arguments is then on a command line, where a batch file of Windows would not get all of them,
  * where its length is limited and where other users of the computer read it.

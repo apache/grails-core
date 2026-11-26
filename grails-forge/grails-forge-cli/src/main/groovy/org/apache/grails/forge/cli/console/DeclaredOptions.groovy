@@ -24,7 +24,7 @@ import picocli.CommandLine
 
 /**
  * The options the plugins of a project, and the project itself, declare for a command of the CLI,
- * as the build of the project lists them in {@link ApplicationCommandFile}: its member
+ * as the build of the project lists them in {@link ToolCatalogFile}: its member
  * {@code commandOptions}. An option sets a property of the application the command starts, and is
  * nothing else: no code of a plugin is run for it.
  *
@@ -160,7 +160,7 @@ final class DeclaredOptions {
 
         /** @return who declares the option, in words */
         String getDeclarer() {
-            return origin == ApplicationCommandFile.APPLICATION ? 'the application' : origin
+            return origin == ToolCatalogFile.APPLICATION ? 'the application' : origin
         }
     }
 
@@ -198,7 +198,7 @@ final class DeclaredOptions {
         Object value = option.get('value')
         Object origin = option.get('origin')
         boolean typed = type == BOOLEAN ? isValue(value) : type == STRING && value == null
-        if (command != RunAppCommand.NAME || !isName(name) || !isDescription(description) || !isProperty(property) || !typed || !ApplicationCommandFile.isOrigin(origin)) {
+        if (command != RunAppCommand.NAME || !isName(name) || !isDescription(description) || !isProperty(property) || !typed || !ToolCatalogFile.isOrigin(origin)) {
             return null
         }
         return new Declared((String) command, (String) name, (String) description, (String) type, (String) property, (String) value, (String) origin)
@@ -277,7 +277,7 @@ final class DeclaredOptions {
     static final class Added {
 
         /** The file of the build. */
-        final ApplicationCommandFile file
+        final ToolCatalogFile file
 
         /** The options that are options of the command, by what is typed for each. */
         final Map<String, Declared> options = new LinkedHashMap<>()
@@ -285,7 +285,7 @@ final class DeclaredOptions {
         /** The options that are none because the command has an option of the name itself, by what would be typed for each. */
         final Map<String, Declared> taken = new LinkedHashMap<>()
 
-        Added(ApplicationCommandFile file) {
+        Added(ToolCatalogFile file) {
             this.file = file
         }
     }
@@ -301,7 +301,7 @@ final class DeclaredOptions {
      * @param file the file of the build
      * @return what there is to say of the declared options where the commands of the application are spoken of, one line each
      */
-    static List<String> addTo(CommandLine root, String name, ApplicationCommandFile file) {
+    static List<String> addTo(CommandLine root, String name, ToolCatalogFile file) {
         CommandLine command = root.getSubcommands().get(name)
         if (command == null || !(command.getCommandSpec().userObject() instanceof Taking)) {
             return Collections.<String>emptyList()
@@ -332,7 +332,7 @@ final class DeclaredOptions {
             added.options.put(option.option, option)
         }
         if (file.declaredOptions.notUsed > 0) {
-            notes.add("${file.declaredOptions.notUsed} of the options ${ApplicationCommandFile.LOCATION} lists for commands are not used: they are not as the Gradle task ${ApplicationCommandFile.TASK} writes them".toString())
+            notes.add("${file.declaredOptions.notUsed} of the options ${ToolCatalogFile.LOCATION} lists for commands are not used: they are not as the Gradle task ${ToolCatalogFile.TASK} writes them".toString())
         }
         usage(root, spec, added, notes)
         return notes
@@ -359,15 +359,15 @@ final class DeclaredOptions {
         }
         List<String> footer = ['']
         footer.addAll(notes.collect { String note -> shown(note) })
-        String gradle = UsageHelp.toType(root, "gradle ${ApplicationCommandFile.TASK}")
+        String gradle = UsageHelp.toType(root, "gradle ${ToolCatalogFile.TASK}")
         switch (added.file.state) {
-            case ApplicationCommandFile.State.MISSING:
-            case ApplicationCommandFile.State.REFUSED:
+            case ToolCatalogFile.State.MISSING:
+            case ToolCatalogFile.State.REFUSED:
                 footer.add("The options the plugins of the project declare for ${spec.name()} are options here once the build has listed them: ${gradle}".toString())
                 break
-            case ApplicationCommandFile.State.STALE:
+            case ToolCatalogFile.State.STALE:
                 footer.add(("The options the plugins of the project declare for ${spec.name()} may have changed: ${shown(added.file.reason)} is newer than " +
-                        "${ApplicationCommandFile.LOCATION}. To list them again: ${gradle}").toString())
+                        "${ToolCatalogFile.LOCATION}. To list them again: ${gradle}").toString())
                 break
             default:
                 break
@@ -398,12 +398,12 @@ final class DeclaredOptions {
         if (taken != null) {
             return "An option of that name is declared by ${taken.declarer}, and is not an option here: ${name} has an option of that name itself"
         }
-        String gradle = UsageHelp.toType(root, "gradle ${ApplicationCommandFile.TASK}")
+        String gradle = UsageHelp.toType(root, "gradle ${ToolCatalogFile.TASK}")
         switch (added.file.state) {
-            case ApplicationCommandFile.State.CURRENT:
+            case ToolCatalogFile.State.CURRENT:
                 return added.options.isEmpty() ? "The application and its plugins declare no options of ${name}, as the build of the project lists them" :
                         "The application and its plugins declare these options of ${name}: ${added.options.keySet().join(', ')}"
-            case ApplicationCommandFile.State.STALE:
+            case ToolCatalogFile.State.STALE:
                 return "The options the application and its plugins declare for ${name} may have changed since the build listed them. To list them again: ${gradle}"
             default:
                 return "A plugin of the application can declare options of ${name}, which are options here once the build of the project has listed them: ${gradle}"

@@ -55,7 +55,9 @@ enum ArtefactTemplate {
     RESTFUL_CONTROLLER('artifacts/RestfulController.groovy', Syntax.TOKENS),
     RESOURCE('artifacts/Resource.groovy', Syntax.TOKENS),
     RESOURCE_TEST('testing/Resource.groovy', Syntax.TOKENS),
-    COMMAND('artifacts/Command.groovy', Syntax.TOKENS)
+    // the tool of create-tool, which the build runs, and the one of create-tool --standalone, which runs as a process of its own
+    TOOL('artifacts/Tool.groovy', Syntax.TOKENS),
+    STANDALONE_TOOL('artifacts/StandaloneTool.groovy', Syntax.TOKENS)
 
     /**
      * How a template says where the names of the class go.

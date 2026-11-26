@@ -40,7 +40,7 @@ class ConsoleSuggestionsSpec extends Specification {
     @Shared
     Map<String, List<String>> told = [
             'no-such-command'  : ["Run 'grails help' for the commands",
-                                  'The commands of the application and its plugins are not listed yet: a build that compiles the project lists them, ' +
+                                  'The tools of the application and its plugins are not listed yet: a build that compiles the project lists them, ' +
                                           'and so does typing the name of one. To list them now: grails gradle grailsToolCatalog'],
             'compile --nothing': ["Run 'grails help compile' for the options"],
             'feature add'      : ["Run 'grails help feature add' for the options"],
@@ -51,8 +51,8 @@ class ConsoleSuggestionsSpec extends Specification {
             'open'             : ['open opened a file with the program the desktop has for it in the Grails shell. It has no replacement in grails'],
             'install'          : ['Run: grails gradle publishToMavenLocal'],
             'create-controller': ['grails project migrate writes the record of an application that has none'],
-            'rn'               : ['There is no command rn. Did you mean: run-app or run-script or run-command?'],
-            'cc'               : ['cc is short for more than one command: create-controller (ccon), create-command (ccom). ' +
+            'rn'               : ['There is no command rn. Did you mean: run-app or run-script or run-tool?'],
+            'co'               : ['co is short for more than one command: compile (com), console (con). ' +
                                           'Type more of the name of the one that is meant, or the short form in brackets after it']
     ]
 
@@ -118,7 +118,7 @@ class ConsoleSuggestionsSpec extends Specification {
         builder.environment().remove('GRAILS_SAFE_DIRECTORY')
         builder.environment().put('NO_COLOR', '1')
         // what is told to type is said without a build: a name that is no command does not have the wrapper list the commands of the application
-        builder.environment().put('GRAILS_LIST_COMMANDS', 'false')
+        builder.environment().put('GRAILS_LIST_TOOLS', 'false')
         if (input == null) {
             builder.redirectInput(ProcessBuilder.Redirect.from(new File('/dev/null')))
         } else {

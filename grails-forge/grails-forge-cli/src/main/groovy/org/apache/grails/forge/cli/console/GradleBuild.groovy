@@ -41,7 +41,7 @@ import org.apache.grails.forge.cli.Diagnostics
 @CompileStatic
 abstract class GradleBuild {
 
-    /** What a command of the application or a script reads to know that nothing may wait for what a user types. */
+    /** What a tool of the application or a script reads to know that nothing may wait for what a user types. */
     public static final String NON_INTERACTIVE = 'GRAILS_NON_INTERACTIVE'
 
     /**
@@ -103,9 +103,9 @@ abstract class GradleBuild {
      * <ul>
      * <li>A {@linkplain Purpose#BUILD build the command line asks for itself}, which is {@code compile},
      * {@code clean}, {@code assemble}, {@code war} and {@code package}, {@code test-app},
-     * {@code dependency-report}, {@code package-plugin}, {@code publish-plugin}, {@code run-command}, a
-     * command of the application by its name and the build that lists those for a name that is none
-     * yet ({@link ApplicationCommands#list}), {@code run-script} and a script by its name,
+     * {@code dependency-report}, {@code package-plugin}, {@code publish-plugin}, {@code run-tool}, a
+     * tool of the application by its name and the build that lists those for a name that is none
+     * yet ({@link ProjectTools#list}), {@code run-script} and a script by its name,
      * {@code console} and a {@code run-app} that stays with the application, is run through the
      * Tooling API of Gradle, see {@link ToolingApiRunner}: the console is one JVM that runs many
      * builds, and asks each of one connection that is there already, which takes a seventh of the

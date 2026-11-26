@@ -34,11 +34,11 @@ import java.util.regex.Pattern
 import groovy.transform.CompileStatic
 
 /**
- * The file in which the build of a project lists the commands of the application and of its plugins:
+ * The file in which the build of a project lists the tools of the application and of its plugins:
  * {@code .grails/cache/tool-catalog.json}, written by the Gradle task {@code grailsToolCatalog}.
  * The CLI reads it and never writes it, and runs nothing to read it: every build that compiles the
  * project writes it, and the CLI has the build write it only for a name that is no command yet
- * ({@link ApplicationCommands#list}).
+ * ({@link ProjectTools#list}).
  *
  * <p>The file is in the directory of the project and not in its build directory, which the build of
  * the project can move: where that is cannot be known without running the build, so the task writes
@@ -47,14 +47,20 @@ import groovy.transform.CompileStatic
  *
  * <p>The file is in a directory every build writes to, so nothing in it is taken as it is: it is a
  * file, not a link and not behind one, of a bounded size, and it is read strictly as the document the
- * task writes. A file that is not such a document is not used at all. A command in it that is not as
+ * task writes. A file that is not such a document is not used at all. A tool in it that is not as
  * the task writes one is left out, alone, and the others are used; why is one line that repeats
  * nothing of the file.</p>
+ *
+ * <p>The file may be out of date when something it is made from, as far as that is in a fixed place
+ * of the project, was changed after it was written: a build file ({@link #BUILD_FILES}), a source of
+ * a tool ({@link #SOURCE_DIRECTORIES}, files ending with one of {@link #SOURCE_ENDINGS}), or a
+ * descriptor the compiler wrote ({@link #DESCRIPTOR_DIRECTORIES}). This is the rule the task holds
+ * itself to, {@code ToolCatalogFreshness} of {@code grails-gradle-model}.</p>
  *
  * @since 9.0
  */
 @CompileStatic
-final class ApplicationCommandFile {
+final class ToolCatalogFile {
 
     /** Where the file is, in the directory of the project, whatever the build directory of the project is. */
     public static final String LOCATION = '.grails/cache/tool-catalog.json'
@@ -70,7 +76,7 @@ final class ApplicationCommandFile {
     /** How many bytes the file has, at most: as many as the task writes. */
     public static final int MAX_BYTES = 512 * 1024
 
-    /** How many commands of the file are used, at most: as many as the task writes, the first by name. */
+    /** How many tools of the file are used, at most: as many as the task writes, the first by name. */
     public static final int MAX_COMMANDS = 512
 
     /** How many lines the file has about what the build could not list: as many as the task writes, with its line that says how many more. */
@@ -79,61 +85,79 @@ final class ApplicationCommandFile {
     /** How many characters a line about what the build could not list has, at most. */
     public static final int MAX_DIAGNOSTIC = 2048
 
-    /** How many characters the name of a command has, at most. */
+    /** How many characters the name of a tool has, at most. */
     public static final int MAX_NAME = 64
 
     /** How many test phases of the file are used, at most: as many as the task writes. */
     public static final int MAX_TEST_PHASES = 64
 
-    /** How many other names a command has, at most. */
+    /** How many other names a tool has, at most. */
     public static final int MAX_ALIASES = 16
 
-    /** How many characters the description of a command has, at most. */
+    /** How many characters the description of a tool has, at most. */
     public static final int MAX_DESCRIPTION = 512
 
-    /** How many characters the origin of a command has, at most: as many as the task writes. */
+    /** How many characters the origin of a tool has, at most: as many as the task writes. */
     public static final int MAX_ORIGIN = 120
 
-    /** How many of the commands that are left out are named by their place in the file; the others are counted. */
+    /** How many of the tools that are left out are named by their place in the file; the others are counted. */
     public static final int MAX_LEFT_OUT = 3
 
-    /** How many entries of a directory of commands are looked at for what was changed, at most. */
+    /** How many entries of a directory of tools are looked at for what was changed, at most. */
     public static final int MAX_WALKED = 4096
 
-    /** How deep a directory of commands is looked at for what was changed, at most. */
+    /** How deep a directory of tools is looked at for what was changed, at most. */
     public static final int MAX_WALK_DEPTH = 24
 
-    /** The origin of a command of the project itself, and the target of a command that runs with the application started around it. */
+    /** The origin of a tool of the project itself, and the target of a tool the build runs. */
     public static final String APPLICATION = 'application'
 
-    /**
-     * The target of a command the build runs without the application: with the class path of the project, and nothing of it started.
-     * The file has such a command with the target {@link #APPLICATION} and the member {@code startsApplication} false.
-     */
-    public static final String GRADLE = 'gradle'
-
-    /** The target of a command the CLI starts as a process of its own, without Gradle and without the application. */
+    /** The target of a tool the CLI starts as a process of its own, without Gradle and without the application. */
     public static final String STANDALONE = 'standalone'
 
-    // the document is four deep; what a later task adds to a command and is not read here may go deeper
+    /** What says of a tool whether it starts the application; without it a tool of the target {@link #APPLICATION} does. */
+    public static final String STARTS_APPLICATION = 'startsApplication'
+
+    /** What says what of a tool is deprecated: {@link #DEPRECATED_TYPE}, {@link #DEPRECATED_FOLDER} or both. */
+    public static final String DEPRECATED = 'deprecated'
+
+    /** A tool that implements a deprecated type, {@code ApplicationCommand} or {@code GrailsApplicationCommand}. */
+    public static final String DEPRECATED_TYPE = 'type'
+
+    /** A tool whose source is in the deprecated folder {@code grails-app/commands}. */
+    public static final String DEPRECATED_FOLDER = 'folder'
+
+    /** The files of the directory of the project the tools of the project depend on. */
+    public static final List<String> BUILD_FILES = ['build.gradle', 'build.gradle.kts', 'settings.gradle', 'settings.gradle.kts', 'gradle.properties'].asImmutable()
+
+    /** The directories the sources of the tools of a project are in: the two folders of tools, and the deprecated one. */
+    public static final List<String> SOURCE_DIRECTORIES = ['src/cli', 'src/standalone', 'grails-app/commands'].asImmutable()
+
+    /** The endings of the sources of tools. */
+    public static final List<String> SOURCE_ENDINGS = ['.groovy', '.java'].asImmutable()
+
+    /**
+     * The directories the compiler writes the descriptors of the tools into, one for each source set that has
+     * tools; where the build puts them unless it moves its build directory, which is not known here.
+     */
+    public static final List<String> DESCRIPTOR_DIRECTORIES = ['build/classes/groovy/main/META-INF/grails-tools', 'build/classes/groovy/cli/META-INF/grails-tools',
+                                                               'build/classes/groovy/standalone/META-INF/grails-tools'].asImmutable()
+
+    /** The ending of a descriptor. */
+    public static final String DESCRIPTOR_ENDING = '.json'
+
+    // the document is four deep; what a later task adds to a tool and is not read here may go deeper
     private static final int MAX_DEPTH = 8
     private static final int MAX_VALUES = 100_000
     private static final int MAX_TEXT = 4096
     private static final Pattern NAME = Pattern.compile('[a-z][a-z0-9]*(-[a-z0-9]+)*')
     private static final Pattern TASK_NAME = Pattern.compile('[A-Za-z][A-Za-z0-9_-]*')
-    private static final List<String> REGISTRATIONS = ['descriptor', 'factories', 'legacy']
+    private static final List<String> REGISTRATIONS = ['descriptor', 'factories']
+    private static final List<String> DEPRECATIONS = [DEPRECATED_TYPE, DEPRECATED_FOLDER]
     private static final List<String> OTHER_TARGETS = ['console', 'session']
     private static final List<Integer> NOT_SHOWN = [(int) Character.CONTROL, (int) Character.FORMAT, (int) Character.LINE_SEPARATOR,
                                                     (int) Character.PARAGRAPH_SEPARATOR, (int) Character.SURROGATE, (int) Character.PRIVATE_USE,
                                                     (int) Character.UNASSIGNED]
-    // What the list of the commands is made from, as far as it is in a fixed place: when one of these
-    // was changed after the file was written, the file may not say what the build would say now.
-    private static final List<String> SOURCES = ['build.gradle', 'build.gradle.kts', 'settings.gradle', 'settings.gradle.kts', 'gradle.properties']
-    // The directories the commands of the application are in, as sources and as what the compiler says
-    // of them: every directory below them and every file of these endings is looked at, since a
-    // command is written into the directory of its package. What the compiler says is looked for where
-    // it is unless the build moves its build directory, which is not known here; the sources are where they are.
-    private static final Map<String, String> COMMAND_DIRECTORIES = ['grails-app/commands': '.groovy', 'build/classes/groovy/main/META-INF/grails-tools': '.json']
 
     /** What there is of the file. */
     static enum State {
@@ -160,16 +184,16 @@ final class ApplicationCommandFile {
      */
     final String reason
 
-    /** The commands of the file, in its order; none when it is not used. */
-    final List<Entry> commands
+    /** The tools of the file, in its order; none when it is not used. */
+    final List<Entry> tools
 
-    /** Whether the build listed every command, as the file says. */
+    /** Whether the build listed every tool, as the file says. */
     final boolean complete
 
     /** What the build could not list, as the file says: one line each, of printable ASCII. */
     final List<String> diagnostics
 
-    /** The commands of the file that are not used, and why: one line each, with nothing of the file in it. */
+    /** The tools of the file that are not used, and why: one line each, with nothing of the file in it. */
     final List<String> leftOut
 
     /**
@@ -185,13 +209,13 @@ final class ApplicationCommandFile {
      */
     final DeclaredOptions declaredOptions
 
-    private ApplicationCommandFile(State state, String reason, List<Entry> commands, boolean complete, List<String> diagnostics, List<String> leftOut,
-                                   Map<String, String> testPhases = null, DeclaredOptions declaredOptions = DeclaredOptions.NONE) {
+    private ToolCatalogFile(State state, String reason, List<Entry> tools, boolean complete, List<String> diagnostics, List<String> leftOut,
+                            Map<String, String> testPhases = null, DeclaredOptions declaredOptions = DeclaredOptions.NONE) {
         this.testPhases = testPhases
         this.declaredOptions = declaredOptions
         this.state = state
         this.reason = reason
-        this.commands = commands
+        this.tools = tools
         this.complete = complete
         this.diagnostics = diagnostics
         this.leftOut = leftOut
@@ -203,7 +227,7 @@ final class ApplicationCommandFile {
      * @param project the directory of the project
      * @return what there is of the file
      */
-    static ApplicationCommandFile read(Path project) {
+    static ToolCatalogFile read(Path project) {
         try {
             Path file = project
             for (Path step : Path.of(LOCATION)) {
@@ -236,20 +260,20 @@ final class ApplicationCommandFile {
             if (bytes == null) {
                 return refused('became longer while it was read')
             }
-            ApplicationCommandFile read = parse(bytes)
+            ToolCatalogFile read = parse(bytes)
             String changed = read.state == State.CURRENT ? changedSince(project, attributes.lastModifiedTime()) : null
-            return changed == null ? read : new ApplicationCommandFile(State.STALE, changed, read.commands, read.complete, read.diagnostics, read.leftOut, read.testPhases, read.declaredOptions)
+            return changed == null ? read : new ToolCatalogFile(State.STALE, changed, read.tools, read.complete, read.diagnostics, read.leftOut, read.testPhases, read.declaredOptions)
         } catch (IOException | RuntimeException ignored) {
             return refused('cannot be read')
         }
     }
 
-    private static ApplicationCommandFile missing() {
-        return new ApplicationCommandFile(State.MISSING, null, Collections.<Entry>emptyList(), true, Collections.<String>emptyList(), Collections.<String>emptyList())
+    private static ToolCatalogFile missing() {
+        return new ToolCatalogFile(State.MISSING, null, Collections.<Entry>emptyList(), true, Collections.<String>emptyList(), Collections.<String>emptyList())
     }
 
-    private static ApplicationCommandFile refused(String reason) {
-        return new ApplicationCommandFile(State.REFUSED, reason, Collections.<Entry>emptyList(), true, Collections.<String>emptyList(), Collections.<String>emptyList())
+    private static ToolCatalogFile refused(String reason) {
+        return new ToolCatalogFile(State.REFUSED, reason, Collections.<Entry>emptyList(), true, Collections.<String>emptyList(), Collections.<String>emptyList())
     }
 
     // the bytes the file had when its size was read, and no more however long it has become since; null when it has more
@@ -272,7 +296,7 @@ final class ApplicationCommandFile {
         }
     }
 
-    private static ApplicationCommandFile parse(byte[] bytes) {
+    private static ToolCatalogFile parse(byte[] bytes) {
         for (byte each : bytes) {
             if (each < 0) {
                 return refused('is not the ASCII the task writes')
@@ -301,11 +325,11 @@ final class ApplicationCommandFile {
         }
         Object listed = members.get('tools')
         if (!(listed instanceof List)) {
-            return refused('has no list of commands')
+            return refused('has no list of tools')
         }
-        // One command that is not as the task writes it is left out, and the others are used: a jar
-        // with an unusual name does not take the commands of every other plugin away.
-        List<Entry> commands = []
+        // One tool that is not as the task writes it is left out, and the others are used: a jar
+        // with an unusual name does not take the tools of every other plugin away.
+        List<Entry> tools = []
         List<String> leftOut = []
         int notUsed = 0
         Set<String> names = new HashSet<>()
@@ -314,37 +338,39 @@ final class ApplicationCommandFile {
             number++
             String wrong
             Entry entry = null
-            if (commands.size() == MAX_COMMANDS) {
-                leftOut.add("The commands of ${LOCATION} after the first ${MAX_COMMANDS} are not used: ${((List) listed).size() - number + 1} of them".toString())
+            if (tools.size() == MAX_COMMANDS) {
+                leftOut.add("The tools of ${LOCATION} after the first ${MAX_COMMANDS} are not used: ${((List) listed).size() - number + 1} of them".toString())
                 break
             }
             if (!(each instanceof Map)) {
-                wrong = 'it is no command'
+                wrong = 'it is no tool'
             } else {
-                Map<String, Object> command = (Map<String, Object>) each
-                wrong = wrongWith(command)
+                Map<String, Object> tool = (Map<String, Object>) each
+                wrong = wrongWith(tool)
                 if (wrong == null) {
-                    entry = new Entry((String) command.get('name'), command.containsKey('aliases') ? (List<String>) command.get('aliases') : Collections.<String>emptyList(),
-                            command.containsKey('description') ? (String) command.get('description') : '', (String) command.get('origin'), (String) command.get('registration'),
-                            command.get('target') == APPLICATION && command.get('startsApplication') == Boolean.FALSE ? GRADLE : (String) command.get('target'))
+                    String target = (String) tool.get('target')
+                    entry = new Entry((String) tool.get('name'), tool.containsKey('aliases') ? (List<String>) tool.get('aliases') : Collections.<String>emptyList(),
+                            tool.containsKey('description') ? (String) tool.get('description') : '', (String) tool.get('origin'), (String) tool.get('registration'),
+                            target, target == APPLICATION && tool.get(STARTS_APPLICATION) != Boolean.FALSE,
+                            tool.containsKey(DEPRECATED) ? (List<String>) tool.get(DEPRECATED) : Collections.<String>emptyList())
                     if (entry.names().any { String name -> names.contains(name) } || entry.names().toSet().size() < entry.names().size()) {
-                        wrong = 'it has a name that a command before it has'
+                        wrong = 'it has a name that a tool before it has'
                     }
                 }
             }
             if (wrong != null) {
                 if (notUsed++ < MAX_LEFT_OUT) {
-                    leftOut.add("Command ${number} of ${LOCATION} is not used: ${wrong}".toString())
+                    leftOut.add("Tool ${number} of ${LOCATION} is not used: ${wrong}".toString())
                 }
                 continue
             }
             names.addAll(entry.names())
-            commands.add(entry)
+            tools.add(entry)
         }
         if (notUsed > MAX_LEFT_OUT) {
-            leftOut.add(MAX_LEFT_OUT, "${notUsed - MAX_LEFT_OUT} more commands of ${LOCATION} are not used, for reasons like these".toString())
+            leftOut.add(MAX_LEFT_OUT, "${notUsed - MAX_LEFT_OUT} more tools of ${LOCATION} are not used, for reasons like these".toString())
         }
-        return new ApplicationCommandFile(State.CURRENT, null, commands.asImmutable(), (Boolean) members.get('complete'), ((List<String>) said).asImmutable(), leftOut.asImmutable(),
+        return new ToolCatalogFile(State.CURRENT, null, tools.asImmutable(), (Boolean) members.get('complete'), ((List<String>) said).asImmutable(), leftOut.asImmutable(),
                 testPhases(members.get('testPhases')), DeclaredOptions.read(members.get(DeclaredOptions.MEMBER)))
     }
 
@@ -370,29 +396,37 @@ final class ApplicationCommandFile {
         return Collections.unmodifiableMap(phases)
     }
 
-    // what a command of the file has that the task does not write, as what is said of the command; null when there is nothing
-    private static String wrongWith(Map<String, Object> command) {
-        if (!isName(command.get('name'))) {
+    // what a tool of the file has that the task does not write, as what is said of the tool; null when there is nothing
+    private static String wrongWith(Map<String, Object> tool) {
+        if (!isName(tool.get('name'))) {
             return "its name is not lower-case letters and digits in words joined by single hyphens, starting with a letter, of at most ${MAX_NAME} characters"
         }
-        Object aliases = command.get('aliases')
-        if (command.containsKey('aliases') && (!(aliases instanceof List) || ((List) aliases).size() > MAX_ALIASES || !((List) aliases).every { Object alias -> isName(alias) })) {
-            return "its other names are not at most ${MAX_ALIASES} names of a command"
+        Object aliases = tool.get('aliases')
+        if (tool.containsKey('aliases') && (!(aliases instanceof List) || ((List) aliases).size() > MAX_ALIASES || !((List) aliases).every { Object alias -> isName(alias) })) {
+            return "its other names are not at most ${MAX_ALIASES} names of a tool"
         }
-        if (command.containsKey('description') && !isDescription(command.get('description'))) {
+        if (tool.containsKey('description') && !isDescription(tool.get('description'))) {
             return "its description is not one line of at most ${MAX_DESCRIPTION} characters that can be shown"
         }
-        if (!isOrigin(command.get('origin'))) {
+        if (!isOrigin(tool.get('origin'))) {
             return "its origin is not at most ${MAX_ORIGIN} characters of printable ASCII without a space, an @ or a dollar sign, or is a word the command line keeps for itself"
         }
-        Object target = command.get('target')
+        Object target = tool.get('target')
         if (target != APPLICATION && target != STANDALONE) {
             return target in OTHER_TARGETS ? "its target is ${target}, which is not run from here" : 'its target is none there is'
         }
-        if (command.containsKey('startsApplication') && !(command.get('startsApplication') instanceof Boolean)) {
+        if (tool.containsKey(STARTS_APPLICATION) && !(tool.get(STARTS_APPLICATION) instanceof Boolean)) {
             return 'it does not say with true or false whether it starts the application'
         }
-        if (!(command.get('registration') in REGISTRATIONS)) {
+        if (target == STANDALONE && tool.get(STARTS_APPLICATION) == Boolean.TRUE) {
+            return 'it runs as a process of its own and says that it starts the application'
+        }
+        Object deprecated = tool.get(DEPRECATED)
+        if (tool.containsKey(DEPRECATED) && (!(deprecated instanceof List) || ((List) deprecated).size() > DEPRECATIONS.size() ||
+                !((List) deprecated).every { Object each -> each in DEPRECATIONS } || new HashSet<Object>((List) deprecated).size() < ((List) deprecated).size())) {
+            return "what it says is deprecated is not a list of ${DEPRECATIONS.join(' and ')}, each at most once"
+        }
+        if (!(tool.get('registration') in REGISTRATIONS)) {
             return "its registration is none of ${REGISTRATIONS.join(', ')}"
         }
         return null
@@ -403,13 +437,13 @@ final class ApplicationCommandFile {
     }
 
     /**
-     * The rule of the task for where a command comes from. The task writes the coordinates of an
+     * The rule of the task for where a tool comes from. The task writes the coordinates of an
      * artifact, or {@code file:} and the name of a file, with every character that is not printable
      * ASCII, and every space, {@code @} and dollar sign, replaced, and no more than this many
      * characters. What an origin is made of is not held to anything else: it is the name of a jar or
      * of a project, which can be almost anything, and it is only shown.
      *
-     * @param origin what a file says where a command comes from
+     * @param origin what a file says where a tool comes from
      * @return whether the task can have written it
      */
     static boolean isOrigin(Object origin) {
@@ -423,7 +457,7 @@ final class ApplicationCommandFile {
                 return false
             }
         }
-        // what the CLI says of its own commands, and of those of the application, is not said by a file in another spelling
+        // what the CLI says of its own commands, and of the tools of the application, is not said by a file in another spelling
         return !text.equalsIgnoreCase(CommandCatalog.BUILT_IN) && (text == APPLICATION || !text.equalsIgnoreCase(APPLICATION))
     }
 
@@ -457,17 +491,47 @@ final class ApplicationCommandFile {
         return true
     }
 
-    // the first of the places the list is made from that was changed after the file was written
-    private static String changedSince(Path project, FileTime written) {
-        for (String source : SOURCES) {
+    /**
+     * The first of the places the catalog is made from that was changed after the catalog was written,
+     * by the rule of the task that writes it: a build file, then a directory of the sources of the tools
+     * with a file of one of their endings, then a directory of descriptors with a descriptor. A new or a
+     * deleted file changes its directory, a file that was written again only itself.
+     *
+     * @param project the directory of the project
+     * @param written when the catalog was written
+     * @return the place, as a path in the project, or {@code null} when none was changed
+     */
+    static String changedSince(Path project, FileTime written) {
+        String build = buildFileChangedSince(project, written)
+        if (build != null) {
+            return build
+        }
+        for (String directory : SOURCE_DIRECTORIES) {
+            for (String ending : SOURCE_ENDINGS) {
+                if (isChangedBelow(project.resolve(directory), ending, written)) {
+                    return directory
+                }
+            }
+        }
+        for (String directory : DESCRIPTOR_DIRECTORIES) {
+            if (isChangedBelow(project.resolve(directory), DESCRIPTOR_ENDING, written)) {
+                return directory
+            }
+        }
+        return null
+    }
+
+    /**
+     * @param project the directory of the project
+     * @param written an instant
+     * @return the first of the build files of the project that was changed after the instant, as the
+     * task reads the time of one that is a link; {@code null} when none was
+     */
+    static String buildFileChangedSince(Path project, FileTime written) {
+        for (String source : BUILD_FILES) {
             FileTime modified = modifiedBehind(project.resolve(source))
             if (modified != null && modified.compareTo(written) > 0) {
                 return source
-            }
-        }
-        for (Map.Entry<String, String> directory : COMMAND_DIRECTORIES.entrySet()) {
-            if (isChangedBelow(project.resolve(directory.key), directory.value, written)) {
-                return directory.key
             }
         }
         return null
@@ -554,70 +618,87 @@ final class ApplicationCommandFile {
         return changed[0]
     }
 
-    /** A command of the file. */
+    /** A tool of the file, or a script of the application, which is listed with the tools. */
     static final class Entry {
 
-        /** What is typed for the command. */
+        /** What is typed for the tool. */
         final String name
 
-        /** The other names of the command. */
+        /** The other names of the tool. */
         final List<String> aliases
 
         /** One line that can be shown, or the empty text when the build does not know one. */
         final String description
 
-        /** Where the command comes from: {@code application}, {@code file:<name>} or {@code group:artifact:version}. */
+        /** Where the tool comes from: {@code application}, {@code file:<name>} or {@code group:artifact:version}. */
         final String origin
 
-        /** How the command is registered, which says how much the build knows of it. */
+        /** How the tool is registered, which says how much the build knows of it. */
         final String registration
 
         /**
-         * How the command is run: by the build, {@link #APPLICATION} with the application and {@link #GRADLE}
-         * without it, or {@link #STANDALONE} by the CLI as a process of its own.
+         * How the tool is run: {@link #APPLICATION} by the build, or {@link #STANDALONE} by the CLI as a
+         * process of its own.
          */
         final String target
 
-        private Entry(String name, List<String> aliases, String description, String origin, String registration, String target = APPLICATION) {
+        /** Whether the build starts the application around the tool; never for one of {@link #STANDALONE}. */
+        final boolean startsApplication
+
+        /** What of the tool is deprecated: {@link #DEPRECATED_TYPE}, {@link #DEPRECATED_FOLDER}, both, or nothing. */
+        final List<String> deprecated
+
+        private Entry(String name, List<String> aliases, String description, String origin, String registration, String target, boolean startsApplication,
+                      List<String> deprecated) {
             this.name = name
             this.aliases = new ArrayList<String>(aliases).asImmutable()
             this.description = description
             this.origin = origin
             this.registration = registration
             this.target = target
+            this.startsApplication = target == APPLICATION && startsApplication
+            this.deprecated = new ArrayList<String>(deprecated).asImmutable()
         }
 
         /**
-         * @return whether the build runs the command without starting the application
-         */
-        boolean isGradle() {
-            return target == GRADLE
-        }
-
-        /**
-         * @return whether the CLI starts the command as a process of its own, without Gradle and without the application
+         * @return whether the CLI starts the tool as a process of its own, without Gradle and without the application
          */
         boolean isStandalone() {
             return target == STANDALONE
         }
 
         /**
-         * @param name what is typed for the command
-         * @return a script of the application as a command: all that is known of one is the name its file gives it
+         * @param name what is typed for the script
+         * @return a script of the application as a tool: all that is known of one is the name its file
+         * gives it, and that the build runs it without the application
          */
         static Entry script(String name) {
-            return new Entry(name, Collections.<String>emptyList(), '', APPLICATION, ScriptCommandFiles.REGISTRATION)
+            return new Entry(name, Collections.<String>emptyList(), '', APPLICATION, ScriptCommandFiles.REGISTRATION, APPLICATION, false, Collections.<String>emptyList())
         }
 
         /**
-         * @return whether the command is a script of the application, which the build runs without the application
+         * @return whether the tool is a script of the application, which the build runs without the application
          */
         boolean isScript() {
             return registration == ScriptCommandFiles.REGISTRATION
         }
 
         /**
-         * @return every name of the command, the name itself first
+         * @return whether the source of the tool is in the deprecated folder {@code grails-app/commands}
+         */
+        boolean isInDeprecatedFolder() {
+            return deprecated.contains(DEPRECATED_FOLDER)
+        }
+
+        /**
+         * @return whether the tool implements a deprecated type, {@code ApplicationCommand} or {@code GrailsApplicationCommand}
+         */
+        boolean isOfDeprecatedType() {
+            return deprecated.contains(DEPRECATED_TYPE)
+        }
+
+        /**
+         * @return every name of the tool, the name itself first
          */
         List<String> names() {
             List<String> names = [name]

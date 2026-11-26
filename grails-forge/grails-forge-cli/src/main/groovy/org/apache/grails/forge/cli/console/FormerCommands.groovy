@@ -45,8 +45,8 @@ final class FormerCommands {
         REPLACED('replaced'),
         /** It is a command of this command line where a project of some kind is, and not elsewhere. */
         ELSEWHERE('kept, in some directories'),
-        /** A command of a plugin does it, which is a command here once the build of the project has listed it. */
-        PLUGIN('a command of a plugin'),
+        /** A tool of a plugin does it, which is a command here once the build of the project has listed it. */
+        PLUGIN('a tool of a plugin'),
         /** It is gone and nothing takes its place. */
         REMOVED('removed'),
         /** Nothing takes its place today, and none is recorded as decided. */
@@ -84,8 +84,8 @@ final class FormerCommands {
     private static final String PROFILES_GONE = 'Profiles are replaced by application types, features and feature packs, and no command creates any of these'
     private static final String REST_API = 'is a command in the directory of a REST API application or REST API plugin (create-restapi, create-rest-api-plugin), and the current directory is in none'
     private static final String PLUGIN_PROJECT = 'is a command in the directory of a Grails plugin, which has a class whose name ends with GrailsPlugin under src/main/groovy, and the current directory is in none'
-    private static final String SCAFFOLDING = 'is a command of the scaffolding plugin (grails-scaffolding): where the application has the plugin, ' +
-            'it is a command here by its name. In a REST API application or REST API plugin, which has the plugin with the scaffolding feature, ' +
+    private static final String SCAFFOLDING = 'is a tool of the scaffolding plugin (grails-scaffolding): where the application has the plugin, ' +
+            'it is a command here by its name. In a REST API application or REST API plugin, which has the tools of the plugin with the scaffolding feature, ' +
             'it generates what the REST API profile generated (a REST controller and JSON views)'
 
     // What ends the interactive console, as both ended the interactive mode of the Grails shell. The table has a line for
@@ -163,8 +163,8 @@ final class FormerCommands {
     }
 
     // The line for an environment in front of a command: what the environment is, and the command line to type. A command that runs the build
-    // takes the environment after its name; a command of the application takes everything after its name as its own, and is given it by
-    // run-command; a command that runs for no environment is typed without it.
+    // takes the environment after its name; a tool of the application takes everything after its name as its own, and is given it by
+    // run-tool; a command that runs for no environment is typed without it.
     private static String environmentHint(String typed, String environment, String name, CommandLine command) {
         String option = ENVIRONMENT_OPTION + environment
         boolean ofShell = SHELL_ENVIRONMENTS.containsKey(typed)
@@ -173,9 +173,9 @@ final class FormerCommands {
         if (command == null) {
             return "${start}. ${follows}. Type: {cli} COMMAND ${option}"
         }
-        if (command.getCommandSpec().userObject() instanceof ApplicationCommandCommand) {
-            return "${start}. A command of the application is given the environment by run-command, in front of the name of the command. " +
-                    "Type: {cli} run-command ${option} ${name}"
+        if (command.getCommandSpec().userObject() instanceof ToolCommand) {
+            return "${start}. A tool of the application is given the environment by run-tool, in front of the name of the tool. " +
+                    "Type: {cli} run-tool ${option} ${name}"
         }
         if (command.getCommandSpec().findOption(SYSTEM_PROPERTY) == null) {
             return "${start}. ${name} runs for no environment. Type: {cli} ${name}"
@@ -237,14 +237,17 @@ final class FormerCommands {
                 'and it never was a command. In the project, {cli} project migrate writes the record of this version from what the project has')
         add('create-script', 'base profile', Status.REPLACED,
                 'create-script wrote a script command into src/main/scripts. Script commands are deprecated, and the scripts a project has still run: ' +
-                        'a new command is a class of the application. Type: {cli} create-command NAME')
+                        'a new tool is a class of the application. Type: {cli} create-tool NAME')
+        add('create-command', 'base profile', Status.REPLACED,
+                'create-command wrote a command of the application into grails-app/commands. What an application adds to the command line is now a tool, ' +
+                        'which is written to src/cli/groovy, or with --standalone to src/standalone/groovy. Type: {cli} create-tool NAME')
 
         add('generate-all', 'rest-api profile', Status.PLUGIN, 'generate-all ' + SCAFFOLDING)
         add('generate-controller', 'rest-api profile', Status.PLUGIN, 'generate-controller ' + SCAFFOLDING)
         add('generate-views', 'rest-api profile', Status.PLUGIN, 'generate-views ' + SCAFFOLDING)
 
         add('query-tail', 'script command of Grails Data', Status.PLUGIN,
-                'query-tail is a command of Grails Data (grails-datamapping-core), which the build of a project runs without starting the application: ' +
+                'query-tail is a tool of Grails Data (grails-datamapping-core), which the build of a project runs without starting the application: ' +
                 'where the application has GORM, it is a command here by its name')
 
         add('open', 'shell', Status.NO_REPLACEMENT,

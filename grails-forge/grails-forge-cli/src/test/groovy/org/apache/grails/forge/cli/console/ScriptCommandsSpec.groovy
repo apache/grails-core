@@ -44,9 +44,9 @@ import spock.lang.Unroll
 @Timeout(600)
 class ScriptCommandsSpec extends CommandSpec implements CommandFixture {
 
-    static final String BUILD = ApplicationCommandsSpec.BUILD + "tasks.register('runScriptCommand', RunCommand)\n"
+    static final String BUILD = ProjectToolsSpec.BUILD + "tasks.register('runScriptCommand', RunTool)\n"
     static final String MARKER = 'new File("evaluated.txt").text = "a script was evaluated"\nnew File(System.getProperty("user.dir"), "evaluated.txt").text = "a script was evaluated"\n'
-    static final String DEPRECATED = '| Warning Script commands are deprecated. Write a new command as a class of the application: create-command'
+    static final String DEPRECATED = '| Warning Script commands are deprecated. Write a new tool as a class of the application: create-tool'
     static final String HOW = 'That one is run with: grails-forge-cli gradle runScriptCommand --arg='
 
     PrintStream originalOut
@@ -74,7 +74,7 @@ class ScriptCommandsSpec extends CommandSpec implements CommandFixture {
 
     void "the scripts of the application are listed by the names of their files, in the help, for a tool and for completion, and none is evaluated"() {
         given:
-        catalog([ApplicationCommandsSpec.HELLO])
+        catalog([ProjectToolsSpec.HELLO])
         script('data-import.groovy')
         script('NightlyReport.groovy')
         script('x.groovy')
@@ -82,7 +82,7 @@ class ScriptCommandsSpec extends CommandSpec implements CommandFixture {
         when:
         int exit = ForgeCli.execute(beanContext, 'help')
         List<String> lines = out.toString().readLines()
-        int application = lines.indexOf('Commands of the application and its plugins:')
+        int application = lines.indexOf('Tools of the application and its plugins:')
 
         then:
         exit == 0
@@ -102,10 +102,10 @@ class ScriptCommandsSpec extends CommandSpec implements CommandFixture {
         exit == 0
         err.toString().isEmpty()
         out.toString().readLines()[0] == 'Usage: grails-forge-cli nightly-report [ARGS...]'
-        help.contains('A script of the application, in src/main/scripts. It is run by the build of the project and not by this program: ' +
+        help.contains('A script of the application, in src/main/scripts. It is run by the build of the project, without the application, and not by this program: ' +
                 'it is started by the Gradle task runScriptCommand of the project.')
-        help.contains('Script commands are deprecated. Write a new command as a class of the application: create-command')
-        help.contains('Everything after the name of the command is given to the command as it is, the options too.')
+        help.contains('Script commands are deprecated. Write a new tool as a class of the application: create-tool')
+        help.contains('Everything after the name of the tool is given to the tool as it is, the options too.')
 
         when: 'the document for a tool'
         out.reset()
@@ -118,7 +118,7 @@ class ScriptCommandsSpec extends CommandSpec implements CommandFixture {
         described.complete == true
         described.diagnostics == []
         ((List<Map>) described.commands).findAll { it.registration == 'script' } == ['data-import', 'nightly-report', 'x'].collect {
-            [name: it, aliases: [], description: '', project: true, origin: 'application', target: 'gradle', registration: 'script', commands: []]
+            [name: it, aliases: [], description: '', project: true, origin: 'application', target: 'application', startsApplication: false, registration: 'script', commands: []]
         }
 
         when: 'completion, as the interactive shell asks for it'
@@ -291,16 +291,16 @@ class ScriptCommandsSpec extends CommandSpec implements CommandFixture {
 
     void "a script does not take the name of a command of the CLI or of a command the build lists, and it is said how it is run"() {
         given:
-        catalog([ApplicationCommandsSpec.HELLO + [aliases: ['hi']],
+        catalog([ProjectToolsSpec.HELLO + [aliases: ['hi']],
                  [name: 'compile', origin: 'org.example:helper:1', target: 'application', registration: 'descriptor']])
         ['compile.groovy', 'hello-world.groovy', 'hi.groovy', 'stat.groovy', 'CreateApp.groovy', 'fine.groovy'].each { script(it) }
         List<String> expected = [
-                'compile is a command of the CLI itself (built-in), so the command compile of org.example:helper:1 is not a command here. ' +
-                        'That one is run with: grails-forge-cli run-command compile',
+                'compile is a command of the CLI itself (built-in), so the tool compile of org.example:helper:1 is not a command here. ' +
+                        'That one is run with: grails-forge-cli run-tool compile',
                 "compile is a command of the CLI itself (built-in), so the script compile of src/main/scripts is not a command here. ${HOW}compile",
                 "create-app is a command of the CLI itself (built-in), so the script create-app of src/main/scripts is not a command here. ${HOW}create-app",
-                "hello-world is a command the build lists (org.example:hello-cli:1.2.3), so the script hello-world of src/main/scripts is not a command here. ${HOW}hello-world",
-                "hi is another name of hello-world, a command the build lists (org.example:hello-cli:1.2.3), so the script hi of src/main/scripts is not a command here. ${HOW}hi",
+                "hello-world is a tool the build lists (org.example:hello-cli:1.2.3), so the script hello-world of src/main/scripts is not a command here. ${HOW}hello-world",
+                "hi is another name of hello-world, a tool the build lists (org.example:hello-cli:1.2.3), so the script hi of src/main/scripts is not a command here. ${HOW}hi",
                 "stat is short for stats, a command of the CLI itself (built-in), so the script stat of src/main/scripts is not a command here. ${HOW}stat"]*.toString()
 
         when:
@@ -421,7 +421,7 @@ class ScriptCommandsSpec extends CommandSpec implements CommandFixture {
 
         then:
         exit == 1
-        all().contains('this command fails on purpose')
+        all().contains('this tool fails on purpose')
         errors() == ['| Error Gradle did not succeed: it ended with exit code 1']
         !all().contains('Usage:')
         new File(dir, '.grails/run').list().sort() - ProjectPathCheck.FILE == ['.gitignore']
@@ -438,7 +438,7 @@ class ScriptCommandsSpec extends CommandSpec implements CommandFixture {
 
         then:
         exit == 2
-        err.toString().readLines() == ['The command cannot be given these arguments: ' + message,
+        err.toString().readLines() == ['The tool cannot be given these arguments: ' + message,
                                        'Usage: grails-forge-cli report [ARGS...]',
                                        "Run 'grails-forge-cli help report' for the options"]
         dir.list().sort() == ['.grails', 'grails-app', 'src']
@@ -651,7 +651,7 @@ class ScriptCommandsSpec extends CommandSpec implements CommandFixture {
     private void catalog(List commands) {
         File file = new File(dir, '.grails/cache/tool-catalog.json')
         file.parentFile.mkdirs()
-        file.bytes = ApplicationCommandsSpec.doc(commands).getBytes(StandardCharsets.UTF_8)
+        file.bytes = ProjectToolsSpec.doc(commands).getBytes(StandardCharsets.UTF_8)
     }
 
     private Map document() {

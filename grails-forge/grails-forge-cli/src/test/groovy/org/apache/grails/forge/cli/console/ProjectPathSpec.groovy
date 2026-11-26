@@ -117,7 +117,7 @@ class ProjectPathSpec extends CommandSpec implements CommandFixture {
         ['test-app']              | 'app'        | ':app'         | ':service' | 'testApp'    | 'legacy-app'
         ['compile']               | 'app'        | ':app'         | ':service' | 'classes'    | 'legacy-app'
         ['run-app']               | 'app'        | ':app'         | ':service' | 'bootRun'    | 'legacy-app'
-        ['run-command', 'say']    | 'app'        | ':app'         | ':service' | 'runCommand' | 'legacy-app'
+        ['run-tool', 'say']       | 'app'        | ':app'         | ':service' | 'runTool'    | 'legacy-app'
         ['compile']               | 'legacy-app' | ':legacy-app'  | ':app'     | 'classes'    | null
         ['compile']               | 'a'          | ':a'           | ':b'       | 'classes'    | 'b'
         ['compile']               | 'b'          | ':b'           | ':a'       | 'classes'    | 'a'

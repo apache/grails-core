@@ -32,29 +32,33 @@ import java.util.function.Supplier
 import groovy.transform.CompileStatic
 
 /**
- * The file in which the build of a project writes down the class path of the commands that are run
+ * The file in which the build of a project writes down the class path of the tools that are run
  * as a process of their own, without Gradle: {@code .grails/cache/standalone-tools.json}, written
- * by the Gradle task {@code grailsStandaloneTools} beside the list of the commands. The CLI reads
- * it for a command the list says is such a command, and for no other.
+ * by the Gradle task {@code grailsStandaloneTools} beside the catalog of the tools. The CLI reads
+ * it for a tool the catalog says is such a tool, and for no other.
  *
  * <p>Starting a JVM on what the file names runs it, as starting the Gradle wrapper of the project
  * runs the build, so the file and everything it names is held to the rule the wrapper of a project
- * above is held to, in every project: the list of the commands, this file and the directories they
+ * above is held to, in every project: the catalog of the tools, this file and the directories they
  * are in are the user's own and no links; every entry of the class path is a file or a directory
  * within the build of the project, the Gradle user home or the local Maven repository, and it and
  * every directory from it up to that place are owned by the user or by root and cannot be written
  * to by everybody. A directory named in {@code GRAILS_SAFE_DIRECTORY} is used whoever owns it, with
  * what is in it, as it is for a project. What is not so is not run, and one line says why.</p>
  *
- * <p>What is run is never older than what it is made from: a file that is older than the list of
- * the commands, a list that may be out of date, an entry that is no longer there, and, for a command
- * of the project itself, a source of the project that is newer than the file, all say that the build
- * has to run once before the command does.</p>
+ * <p>What is run is never older than what it is made from: a file that is not there, that is older
+ * than a build file of the project, that is older than a file or a directory below one of the
+ * directories of sources it names, that names an entry of the class path that is no longer there,
+ * or that does not list the tool, says that the build has to run once before the tool does. Nothing
+ * else of the project counts: the tool is compiled from the sources of {@code src/standalone} and
+ * started with what they depend on, so a change to the application, to {@code src/cli} or to the
+ * catalog of the tools does not make the file out of date, and a tool runs while the application
+ * does not compile.</p>
  *
  * @since 9.0
  */
 @CompileStatic
-final class StandaloneCommandFile {
+final class StandaloneToolsFile {
 
     /** Where the file is, in the directory of the project. */
     public static final String LOCATION = '.grails/cache/standalone-tools.json'
@@ -94,35 +98,35 @@ final class StandaloneCommandFile {
 
     private static volatile Supplier<List<Path>> otherPlaces = PLACES
 
-    /** What there is of the file for a command. */
+    /** What there is of the file for a tool. */
     static enum State {
 
-        /** The command can be started with {@link #classpath}. */
+        /** The tool can be started with {@link #classpath}. */
         READY,
 
-        /** The build has to run once before the command is started; {@link #reason} says why. */
+        /** The build has to run once before the tool is started; {@link #reason} says why. */
         OUT_OF_DATE,
 
         /** Nothing of the file is run; {@link #reason} says why. */
         REFUSED,
 
-        /** The build says that it runs the command itself; {@link #reason} says why. */
+        /** The build says that it runs the tool itself; {@link #reason} says why. */
         THROUGH_GRADLE
     }
 
-    /** What there is of the file for the command. */
+    /** What there is of the file for the tool. */
     final State state
 
-    /** Why the command is not started as it is, as the end of a sentence; {@code null} when it is. */
+    /** Why the tool is not started as it is, as the end of a sentence; {@code null} when it is. */
     final String reason
 
-    /** The class path the command is started with, in its order; empty unless the command can be started. */
+    /** The class path the tool is started with, in its order; empty unless the tool can be started. */
     final List<Path> classpath
 
     /** The version of Java the classes of the project are compiled for; 0 when the file does not say. */
     final int java
 
-    private StandaloneCommandFile(State state, String reason, List<Path> classpath, int java) {
+    private StandaloneToolsFile(State state, String reason, List<Path> classpath, int java) {
         this.state = state
         this.reason = reason
         this.classpath = classpath
@@ -162,31 +166,30 @@ final class StandaloneCommandFile {
     }
 
     /**
-     * Reads what the build wrote down for a command. Nothing is thrown.
+     * Reads what the build wrote down for a tool. Nothing is thrown.
      *
      * @param project the project
-     * @param list the list of the commands of the project, as it was read
-     * @param name the name of a command the list says runs as a process of its own
-     * @return what there is of the file for the command
+     * @param catalog the catalog of the tools of the project, as it was read; whether it may be out of
+     * date does not count, since the file is made from the sources of the tools that run as a process
+     * of their own alone
+     * @param name the name of a tool the catalog says runs as a process of its own
+     * @return what there is of the file for the tool
      */
-    static StandaloneCommandFile read(ConsoleProject project, ApplicationCommandFile list, String name) {
+    static StandaloneToolsFile read(ConsoleProject project, ToolCatalogFile catalog, String name) {
         try {
-            return reading(project, list, name)
+            return reading(project, catalog, name)
         } catch (IOException | RuntimeException ignored) {
             return refused("${LOCATION} cannot be read")
         }
     }
 
-    private static StandaloneCommandFile reading(ConsoleProject project, ApplicationCommandFile list, String name) throws IOException {
+    private static StandaloneToolsFile reading(ConsoleProject project, ToolCatalogFile catalog, String name) throws IOException {
         Path directory = project.getDirectory()
-        if (list.state == ApplicationCommandFile.State.STALE) {
-            return outOfDate("${list.reason} is newer than ${ApplicationCommandFile.LOCATION}")
+        if (catalog.state != ToolCatalogFile.State.CURRENT && catalog.state != ToolCatalogFile.State.STALE) {
+            return outOfDate("${ToolCatalogFile.LOCATION} is not there or is not used")
         }
-        if (list.state != ApplicationCommandFile.State.CURRENT) {
-            return outOfDate("${ApplicationCommandFile.LOCATION} is not there or is not used")
-        }
-        // the list says which commands these are, and is the user's own as this file is
-        String distrusted = distrustStateFile(project, ApplicationCommandFile.LOCATION)
+        // the catalog says which tools these are, and is the user's own as this file is
+        String distrusted = distrustStateFile(project, ToolCatalogFile.LOCATION)
         if (distrusted != null) {
             return refused(distrusted)
         }
@@ -203,8 +206,9 @@ final class StandaloneCommandFile {
             return refused("${LOCATION} has more than the ${MAX_BYTES} bytes it can have")
         }
         FileTime written = attributes.lastModifiedTime()
-        if (written < Files.getLastModifiedTime(directory.resolve(ApplicationCommandFile.LOCATION), LinkOption.NOFOLLOW_LINKS)) {
-            return outOfDate("${ApplicationCommandFile.LOCATION} is newer than ${LOCATION}")
+        String build = ToolCatalogFile.buildFileChangedSince(directory, written)
+        if (build != null) {
+            return outOfDate("${build} is newer than ${LOCATION}")
         }
         byte[] bytes = Files.readAllBytes(file)
         if (bytes.length > MAX_BYTES) {
@@ -216,30 +220,26 @@ final class StandaloneCommandFile {
         }
         int java = document.get('java') instanceof Long ? (int) Math.max(0L, Math.min(1000L, (Long) document.get('java'))) : 0
         if (!((List) document.get(TOOLS)).contains(name)) {
-            return outOfDate("${LOCATION} does not have the command")
+            return outOfDate("${LOCATION} does not have the tool")
         }
         Object throughGradle = document.get('throughGradle')
         if (throughGradle instanceof String) {
-            return new StandaloneCommandFile(State.THROUGH_GRADLE, GradleRunner.line(shortened((String) throughGradle)), Collections.<Path>emptyList(), java)
+            return new StandaloneToolsFile(State.THROUGH_GRADLE, GradleRunner.line(shortened((String) throughGradle)), Collections.<Path>emptyList(), java)
         }
-        // the sources the file names are those of the project, which a command of the project itself is compiled
-        // from: a command of a plugin is as it was whatever was changed in them
-        ApplicationCommandFile.Entry listed = list.commands.find { ApplicationCommandFile.Entry each -> each.name == name }
-        if (listed == null || listed.origin == ApplicationCommandFile.APPLICATION) {
-            String changed = changedSince((List<String>) document.get(SOURCES), written)
-            if (changed != null) {
-                return outOfDate("${shown(directory, changed)} was changed after ${LOCATION} was written")
-            }
+        // the sources the file names are those the class path of every such tool has the output of, whichever tool it is
+        String changed = changedSince((List<String>) document.get(SOURCES), written)
+        if (changed != null) {
+            return outOfDate("${shown(directory, changed)} was changed after ${LOCATION} was written")
         }
         List<String> entries = new ArrayList<String>((List<String>) document.get(CLASSPATH))
         if (entries.isEmpty()) {
-            return outOfDate("${LOCATION} has no class path for the command")
+            return outOfDate("${LOCATION} has no class path for the tool")
         }
         return checked(project, entries, java)
     }
 
-    // the entries as the class path they are, each held to the rule of the class; the first that is not says how the command ends
-    private static StandaloneCommandFile checked(ConsoleProject project, List<String> entries, int java) throws IOException {
+    // the entries as the class path they are, each held to the rule of the class; the first that is not says how the tool ends
+    private static StandaloneToolsFile checked(ConsoleProject project, List<String> entries, int java) throws IOException {
         Path build = (project.getBuildRoot() ?: project.getDirectory()).toRealPath()
         List<Path> places = [build]
         for (Path place : otherPlaces.get()) {
@@ -284,7 +284,7 @@ final class StandaloneCommandFile {
             }
             classpath.add(real)
         }
-        return new StandaloneCommandFile(State.READY, null, classpath.asImmutable(), java)
+        return new StandaloneToolsFile(State.READY, null, classpath.asImmutable(), java)
     }
 
     // The directory to name as safe for an entry that is in none of the places: the one that it and the
@@ -523,11 +523,11 @@ final class StandaloneCommandFile {
         return reason.length() > MAX_REASON ? reason.substring(0, MAX_REASON) : reason
     }
 
-    private static StandaloneCommandFile outOfDate(String reason) {
-        return new StandaloneCommandFile(State.OUT_OF_DATE, reason, Collections.<Path>emptyList(), 0)
+    private static StandaloneToolsFile outOfDate(String reason) {
+        return new StandaloneToolsFile(State.OUT_OF_DATE, reason, Collections.<Path>emptyList(), 0)
     }
 
-    private static StandaloneCommandFile refused(String reason) {
-        return new StandaloneCommandFile(State.REFUSED, reason, Collections.<Path>emptyList(), 0)
+    private static StandaloneToolsFile refused(String reason) {
+        return new StandaloneToolsFile(State.REFUSED, reason, Collections.<Path>emptyList(), 0)
     }
 }

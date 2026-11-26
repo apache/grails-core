@@ -62,7 +62,7 @@ class ArtefactCommandsSpec extends CommandSpec implements CommandFixture {
 
     static final List<String> ALL_COMMANDS = ['create-controller', 'create-service', 'create-domain-class', 'create-taglib', 'create-interceptor', 'create-job',
                                               'create-unit-test', 'create-integration-test', 'create-functional-test', 'create-restful-controller',
-                                              'create-domain-resource', 'create-command']
+                                              'create-domain-resource', 'create-tool']
     // the commands that would write a file another command writes are given a name of their own
     static final Map<String, String> OWN_NAMES = ['create-unit-test': 'Unit', 'create-integration-test': 'Flow', 'create-functional-test': 'Api',
                                                   'create-restful-controller': 'Rest', 'create-domain-resource': 'Res']
@@ -71,7 +71,8 @@ class ArtefactCommandsSpec extends CommandSpec implements CommandFixture {
             'grails.gorm.transactions.Rollback', 'grails.rest.Resource', 'grails.rest.RestfulController', 'grails.testing.gorm.DomainUnitTest',
             'grails.testing.mixin.integration.Integration', 'grails.testing.services.ServiceUnitTest', 'grails.testing.web.controllers.ControllerUnitTest',
             'grails.testing.web.interceptor.InterceptorUnitTest', 'grails.testing.web.taglib.TagLibUnitTest', 'groovy.transform.CompileStatic',
-            'java.net.http.HttpClient', 'java.net.http.HttpRequest', 'java.net.http.HttpResponse', 'org.apache.grails.core.cli.GrailsApplicationCommand',
+            'java.net.http.HttpClient', 'java.net.http.HttpRequest', 'java.net.http.HttpResponse', 'org.apache.grails.core.cli.ApplicationTool',
+            'org.apache.grails.core.cli.StandaloneTool', 'org.apache.grails.core.cli.ToolSupport',
             'org.grails.testing.GrailsUnitTest', 'spock.lang.Specification']
     static final String NO_EXPRESSION = 'between ${ and } there can only be one of the names className, fullName, propertyName, modelName, packageName, packagePath, ' +
             'simpleName, lowerCaseName; a $ that is to be written is \\$. Templates are not run'
@@ -135,8 +136,9 @@ class ArtefactCommandsSpec extends CommandSpec implements CommandFixture {
             assert ForgeCli.execute(beanContext, 'create-unit-test', 'other.pkg.Baz') == 0
             assert ForgeCli.execute(beanContext, 'create-integration-test', 'fooBarFlow') == 0
             assert ForgeCli.execute(beanContext, 'create-integration-test', 'other.pkg.BazFlow') == 0
-            assert ForgeCli.execute(beanContext, 'create-command', 'fooBar') == 0
-            assert ForgeCli.execute(beanContext, 'create-command', 'other.pkg.Baz') == 0
+            assert ForgeCli.execute(beanContext, 'create-tool', 'fooBar') == 0
+            assert ForgeCli.execute(beanContext, 'create-tool', 'other.pkg.Baz') == 0
+            assert ForgeCli.execute(beanContext, 'create-tool', '--standalone', 'render') == 0
         }
 
         then:
@@ -146,10 +148,12 @@ class ArtefactCommandsSpec extends CommandSpec implements CommandFixture {
                 '| Rendered unit test to src/test/groovy/other/pkg/BazSpec.groovy',
                 '| Rendered integration test to src/integration-test/groovy/example/grails/FooBarFlowSpec.groovy',
                 '| Rendered integration test to src/integration-test/groovy/other/pkg/BazFlowSpec.groovy',
-                '| Rendered command to grails-app/commands/example/grails/FooBarCommand.groovy',
+                '| Rendered tool to src/cli/groovy/example/grails/FooBarTool.groovy',
                 '| Run it with: grails-forge-cli foo-bar',
-                '| Rendered command to grails-app/commands/other/pkg/BazCommand.groovy',
-                '| Run it with: grails-forge-cli baz'
+                '| Rendered tool to src/cli/groovy/other/pkg/BazTool.groovy',
+                '| Run it with: grails-forge-cli baz',
+                '| Rendered tool to src/standalone/groovy/example/grails/RenderTool.groovy',
+                '| Run it with: grails-forge-cli render'
         ]
     }
 
@@ -265,7 +269,7 @@ class ArtefactCommandsSpec extends CommandSpec implements CommandFixture {
         'create-integration-test'   | ApplicationType.REST_API_PLUGIN
         'create-integration-test'   | ApplicationType.WEB_PLUGIN
         'create-unit-test'          | ApplicationType.PLUGIN
-        'create-command'            | ApplicationType.PLUGIN
+        'create-tool'               | ApplicationType.PLUGIN
         'install-templates'         | ApplicationType.PLUGIN
     }
 
@@ -335,7 +339,7 @@ class ArtefactCommandsSpec extends CommandSpec implements CommandFixture {
         dir.list().length == 0
 
         where:
-        command << ['create-unit-test', 'create-command', 'install-templates']
+        command << ['create-unit-test', 'create-tool', 'install-templates']
     }
 
     @Unroll
@@ -360,8 +364,8 @@ class ArtefactCommandsSpec extends CommandSpec implements CommandFixture {
         'create-integration-test'   | 'a.b.BookSpec'         | 'src/integration-test/groovy/a/b/BookSpec.groovy'                | 'package a.b\n'
         'create-functional-test'    | 'a.BookSpec'           | 'src/integration-test/groovy/a/BookSpec.groovy'                  | 'class BookSpec extends'
         'create-restful-controller' | 'BookController'       | 'grails-app/controllers/example/grails/BookController.groovy'    | 'class BookController extends RestfulController<Book>'
-        'create-command'            | 'ImportCommand'        | 'grails-app/commands/example/grails/ImportCommand.groovy'        | 'class ImportCommand implements'
-        'create-command'            | 'data-import'          | 'grails-app/commands/example/grails/DataImportCommand.groovy'    | 'class DataImportCommand implements'
+        'create-tool'               | 'ImportTool'           | 'src/cli/groovy/example/grails/ImportTool.groovy'               | 'class ImportTool implements'
+        'create-tool'               | 'data-import'          | 'src/cli/groovy/example/grails/DataImportTool.groovy'           | 'class DataImportTool implements'
         'create-unit-test'          | (((char) 0xE9) as String) + 'lan' | 'src/test/groovy/example/grails/' + (((char) 0xC9) as String) + 'lanSpec.groovy' | 'Spec extends'
     }
 
@@ -456,7 +460,7 @@ class ArtefactCommandsSpec extends CommandSpec implements CommandFixture {
         'create-restful-controller' | '../Book'                   | 'is not a name for a class: it is a path'
         'create-domain-resource'  | 'con'                         | 'Con is the name of a device on Windows'
         'create-domain-resource'  | 'null.Book'                   | 'null is not a package of Java'
-        'create-command'          | '../Escape'                   | 'is not a name for a class: it is a path'
+        'create-tool'             | '../Escape'                   | 'is not a name for a class: it is a path'
     }
 
     void "a class without a package, in a project whose record names none"() {
@@ -511,7 +515,7 @@ class ArtefactCommandsSpec extends CommandSpec implements CommandFixture {
         'create-restful-controller' | 'artifacts/RestfulController.groovy' | ApplicationType.REST_API | []                | 'grails-app/controllers/org/shop/BookStoreController.groovy'     | 1
         'create-domain-resource'    | 'artifacts/Resource.groovy'          | ApplicationType.REST_API | []                | 'grails-app/domain/org/shop/BookStore.groovy'                    | 2
         'create-domain-resource'    | 'testing/Resource.groovy'            | ApplicationType.REST_API | []                | 'src/test/groovy/org/shop/BookStoreSpec.groovy'                  | 2
-        'create-command'            | 'artifacts/Command.groovy'           | ApplicationType.WEB      | []                | 'grails-app/commands/org/shop/BookStoreCommand.groovy'           | 1
+        'create-tool'               | 'artifacts/Tool.groovy'              | ApplicationType.WEB      | []                | 'src/cli/groovy/org/shop/BookStoreTool.groovy'               | 1
 
         source = location == 'Job.groovy' ? '// ours ${packageName} ${packagePath} ${className} ${propertyName} ${lowerCaseName} ${fullName} ${simpleName} ${modelName} \\$x\n' :
                 '// ours\n@artifact.package@\n// @artifact.package.name@ @artifact.package.path@\nclass @artifact.name@Thing { def @artifact.propertyName@ = "$name ${it} <% %> @other@ \\$" }\n'
@@ -757,7 +761,7 @@ class ArtefactCommandsSpec extends CommandSpec implements CommandFixture {
         ApplicationType.REST_API | []                | ['create-job']                                                                              | 34
 
         templates = (type == ApplicationType.WEB ? ['FunctionalSpec.groovy', 'Job.groovy'] : ['artifacts/Resource.groovy', 'artifacts/RestfulController.groovy', 'testing/Functional.groovy', 'testing/Resource.groovy']) + [
-                'artifacts/Command.groovy', 'artifacts/Controller.groovy', 'artifacts/DomainClass.groovy', 'artifacts/Interceptor.groovy',
+                'artifacts/StandaloneTool.groovy', 'artifacts/Tool.groovy', 'artifacts/Controller.groovy', 'artifacts/DomainClass.groovy', 'artifacts/Interceptor.groovy',
                 'artifacts/Service.groovy', 'artifacts/TagLib.groovy', 'testing/Controller.groovy', 'testing/DomainClass.groovy',
                 'testing/Generic.groovy', 'testing/Integration.groovy', 'testing/Interceptor.groovy', 'testing/Service.groovy', 'testing/TagLib.groovy']
         // the controller of a REST API project answers in JSON only, as the one of its profile did
@@ -778,7 +782,7 @@ class ArtefactCommandsSpec extends CommandSpec implements CommandFixture {
 
         then: 'the templates of a REST API application, without the two that are there'
         installed.keySet() == [
-                'artifacts/Command.groovy', 'artifacts/Controller.groovy', 'artifacts/DomainClass.groovy', 'artifacts/Interceptor.groovy',
+                'artifacts/StandaloneTool.groovy', 'artifacts/Tool.groovy', 'artifacts/Controller.groovy', 'artifacts/DomainClass.groovy', 'artifacts/Interceptor.groovy',
                 'artifacts/RestfulController.groovy', 'artifacts/Service.groovy', 'artifacts/TagLib.groovy',
                 'testing/Controller.groovy', 'testing/DomainClass.groovy', 'testing/Functional.groovy', 'testing/Generic.groovy', 'testing/Integration.groovy',
                 'testing/Interceptor.groovy', 'testing/Service.groovy', 'testing/TagLib.groovy'
@@ -799,7 +803,7 @@ class ArtefactCommandsSpec extends CommandSpec implements CommandFixture {
         then: 'all of them are written, and those that were the same are the same'
         installed.keySet() == ['src/main/templates/artifacts/Resource.groovy', 'src/main/templates/testing/Resource.groovy'] as Set
         installed['src/main/templates/artifacts/Resource.groovy'].contains('@Resource(readOnly = false')
-        out.toString().readLines().size() == 17
+        out.toString().readLines().size() == 18
         out.toString().readLines().every { it.startsWith('| Copied template to src/main/templates/') }
     }
 
@@ -902,7 +906,7 @@ class ArtefactCommandsSpec extends CommandSpec implements CommandFixture {
         'create-functional-test'    | ['Book']  | ApplicationType.REST_API | []                | 'src/integration-test'
         'create-restful-controller' | ['Book']  | ApplicationType.REST_API | []                | 'grails-app/controllers'
         'create-domain-resource'    | ['Book']  | ApplicationType.REST_API | []                | 'src/test/groovy'
-        'create-command'            | ['Book']  | ApplicationType.WEB      | []                | 'grails-app/commands'
+        'create-tool'               | ['Book']  | ApplicationType.WEB      | []                | 'src/cli'
         'install-templates'         | []        | ApplicationType.WEB      | []                | 'src/main/templates'
         'install-templates'         | []        | ApplicationType.WEB      | []                | 'src'
         'install-templates'         | ['-f']    | ApplicationType.WEB      | []                | 'src/main'
@@ -912,17 +916,17 @@ class ArtefactCommandsSpec extends CommandSpec implements CommandFixture {
     void "a repository cannot have a command write its own text outside the project"() {
         given: 'what a clone brings: a link where the commands are, and a template with the text'
         project(ApplicationType.WEB)
-        new File(dir, 'grails-app').mkdirs()
-        Files.createSymbolicLink(new File(dir, 'grails-app/commands').toPath(), outside.toPath())
-        template('artifacts/Command.groovy', 'anything at all\n')
+        new File(dir, 'src').mkdirs()
+        Files.createSymbolicLink(new File(dir, 'src/cli').toPath(), outside.toPath())
+        template('artifacts/Tool.groovy', 'anything at all\n')
 
         when:
-        int exit = ForgeCli.execute(beanContext, 'create-command', 'Deploy')
+        int exit = ForgeCli.execute(beanContext, 'create-tool', 'Deploy')
 
         then:
         exit == 1
         outside.list().length == 0
-        out.toString().readLines() == ['| Error Cannot write grails-app/commands/example/grails/DeployCommand.groovy: grails-app/commands is a link, ' +
+        out.toString().readLines() == ['| Error Cannot write src/cli/groovy/example/grails/DeployTool.groovy: src/cli is a link, ' +
                 'and a file of the project is not written through a link']
     }
 
@@ -1355,7 +1359,7 @@ class ArtefactCommandsSpec extends CommandSpec implements CommandFixture {
         'create-interceptor'     | 'com1'        | 'grails-app/controllers/example/grails/Com1Interceptor.groovy'
         'create-job'             | 'lpt1'        | 'grails-app/jobs/example/grails/Lpt1Job.groovy'
         'create-unit-test'       | 'con'         | 'src/test/groovy/example/grails/ConSpec.groovy'
-        'create-command'         | 'nul'         | 'grails-app/commands/example/grails/NulCommand.groovy'
+        'create-tool'            | 'nul'         | 'src/cli/groovy/example/grails/NulTool.groovy'
         'create-domain-class'    | 'con'         | 'Con is the name of a device on Windows'
         'create-domain-resource' | 'nul'         | 'Nul is the name of a device on Windows'
         'create-controller'      | 'aux.Book'    | 'aux is the name of a device on Windows'

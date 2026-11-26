@@ -74,7 +74,7 @@ class ToolingApiBuildSpec extends CommandSpec {
                 println "ran ${name}"
             }
         }
-        ['classes', 'clean', 'assemble', 'jar', 'publish', 'console', 'shell', 'runScript', 'runCommand', 'testApp', 'bootRun'].each { String each ->
+        ['classes', 'clean', 'assemble', 'jar', 'publish', 'console', 'shell', 'runScript', 'runTool', 'testApp', 'bootRun'].each { String each ->
             tasks.register(each, Asked) { ran = layout.projectDirectory.file('ran.txt') }
         }
         def directory = projectDir
@@ -170,7 +170,7 @@ class ToolingApiBuildSpec extends CommandSpec {
         ['test-app', '--unit', 'BookSpec', '--tests', 'a.*', '--clean', '--debug-jvm']          | 'requested=<:testApp><--phase><unit><--tests><BookSpec><--tests><a.*><--rerun-tests><--debug-jvm> system=[grails.env:test] project=[:] log=LIFECYCLE stacktrace=INTERNAL_EXCEPTIONS console=Auto' | 'testApp phase=[unit] tests=[BookSpec, a.*] rerun=true debug=true argsFile=false env=test'
         ['package-plugin']                                                                      | 'requested=<:jar> system=[:] project=[:] log=LIFECYCLE stacktrace=INTERNAL_EXCEPTIONS console=Auto'                                                          | 'jar phase=[] tests=[] rerun=false debug=false argsFile=false env=null'
         ['publish-plugin']                                                                      | 'requested=<:publish> system=[:] project=[:] log=LIFECYCLE stacktrace=INTERNAL_EXCEPTIONS console=Auto'                                                      | 'publish phase=[] tests=[] rerun=false debug=false argsFile=false env=null'
-        ['run-command', '-Dgrails.env=test', 'migrate', '--to', 'x y']                          | 'requested=<:runCommand><--args-file=FILE> system=[grails.env:test] project=[:] log=LIFECYCLE stacktrace=INTERNAL_EXCEPTIONS console=Auto'                   | 'runCommand phase=[] tests=[] rerun=false debug=false argsFile=true env=test'
+        ['run-tool', '-Dgrails.env=test', 'migrate', '--to', 'x y']                             | 'requested=<:runTool><--args-file=FILE> system=[grails.env:test] project=[:] log=LIFECYCLE stacktrace=INTERNAL_EXCEPTIONS console=Auto'                   | 'runTool phase=[] tests=[] rerun=false debug=false argsFile=true env=test'
         ['console', '--debug-jvm']                                                              | 'requested=<:console><--debug-jvm> system=[grails.env:development] project=[:] log=QUIET stacktrace=INTERNAL_EXCEPTIONS console=Auto'                        | 'console phase=[] tests=[] rerun=false debug=true argsFile=false env=development'
         ['run-app', '--foreground', '--debug-jvm', '--port', '8081', '-Pa=b', '--plain-output'] | 'requested=<:bootRun><--debug-jvm> system=[grails.env:development, grails.server.port:8081] project=[a:b] log=QUIET stacktrace=INTERNAL_EXCEPTIONS console=Plain' | 'bootRun phase=[] tests=[] rerun=false debug=true argsFile=false env=development'
     }
@@ -281,10 +281,10 @@ class ToolingApiBuildSpec extends CommandSpec {
         new File(dir, 'settings.gradle').text = "rootProject.name = 'plain'\n"
 
         when:
-        int first = ForgeCli.execute(beanContext, 'run-command', 'migrate', '--to', 'x')
+        int first = ForgeCli.execute(beanContext, 'run-tool', 'migrate', '--to', 'x')
         String stored = out.toString()
         out.reset()
-        int second = ForgeCli.execute(beanContext, 'run-command', 'migrate', '--to', 'x')
+        int second = ForgeCli.execute(beanContext, 'run-tool', 'migrate', '--to', 'x')
 
         then:
         first == 0 && second == 0

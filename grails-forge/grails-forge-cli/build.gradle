@@ -156,6 +156,9 @@ tasks.named('test', Test).configure { Test test ->
     // FormerCommandsSpec holds the guide to the table of the commands of earlier versions
     test.inputs.file(rootProject.layout.projectDirectory.file('../grails-doc/src/en/guide/commandLine.adoc'))
             .withPropertyName('commandLineGuide').withPathSensitivity(PathSensitivity.NONE)
+    // ProjectRecordSampleSpec holds the records the reader of the record in grails-gradle-model is tested with to what create-app writes
+    test.inputs.dir(rootProject.layout.projectDirectory.dir('../grails-gradle/model/src/test/resources/project-record-sample'))
+            .withPropertyName('projectRecordSamples').withPathSensitivity(PathSensitivity.RELATIVE)
 }
 
 apply {

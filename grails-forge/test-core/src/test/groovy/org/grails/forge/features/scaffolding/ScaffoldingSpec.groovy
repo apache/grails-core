@@ -38,7 +38,7 @@ class ScaffoldingSpec extends CommandSpec {
                String name
            }
         '''
-        String output = executeGradle('runCommand', '-Pargs=generate-controller example.grails.Bird').output
+        String output = executeGradle('runTool', '-Pargs=generate-controller example.grails.Bird').output
 
         then:
         output ==~ /(?s).*Rendered template Controller\.groovy to destination grails-app[\/\\]controllers[\/\\]example[\/\\]grails[\/\\]BirdController\.groovy(?s).*/

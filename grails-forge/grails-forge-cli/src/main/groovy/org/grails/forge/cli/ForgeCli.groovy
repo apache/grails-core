@@ -28,7 +28,7 @@ import org.apache.grails.forge.cli.artefact.FeatureArtefact
 import org.apache.grails.forge.cli.artefact.PackArtefactCommand
 import org.apache.grails.forge.cli.StartupPreload
 import org.apache.grails.forge.core.pack.BundledPackFeatures
-import org.apache.grails.forge.cli.console.ApplicationCommands
+import org.apache.grails.forge.cli.console.ProjectTools
 import org.apache.grails.forge.cli.console.ConsoleCommands
 import org.apache.grails.forge.cli.console.ConsoleProject
 import org.apache.grails.forge.cli.console.EarlierGrailsProject
@@ -47,7 +47,7 @@ import org.grails.forge.cli.command.AddPropertyCommand
 import org.grails.forge.cli.command.BaseCommand
 import org.grails.forge.cli.command.CodeGenCommand
 import org.grails.forge.cli.command.CreateCommand
-import org.grails.forge.cli.command.CreateCommandCommand
+import org.grails.forge.cli.command.CreateToolCommand
 import org.grails.forge.cli.command.CreateControllerCommand
 import org.grails.forge.cli.command.CreateDomainClassCommand
 import org.grails.forge.cli.command.CreateDomainResourceCommand
@@ -103,7 +103,7 @@ final class ForgeCli {
             CreateFunctionalTestCommand,
             CreateRestfulControllerCommand,
             CreateDomainResourceCommand,
-            CreateCommandCommand,
+            CreateToolCommand,
             InstallTemplatesCommand
     ] as List<Class<? extends CodeGenCommand>>
 
@@ -212,9 +212,9 @@ final class ForgeCli {
      * short form, as {@code cA} for {@code create-app}: it is replaced by the name before the
      * command line is read, see {@link CommandCatalog#expand}.
      *
-     * <p>A name that is no command, in a project whose list of the commands of the application and its
+     * <p>A name that is no command, in a project whose list of the tools of the application and its
      * plugins is missing or may be out of date, has the build list them once, and the command line is
-     * then put together again and read again: see {@link ApplicationCommands#listsFor}.</p>
+     * then put together again and read again: see {@link ProjectTools#listsFor}.</p>
      */
     static int execute(ForgeContext context, String... args) {
         // What reading the record of the project has to say is held back until the command is known:
@@ -234,7 +234,7 @@ final class ForgeCli {
             if (!held.listed) {
                 return exit
             }
-            // the build has just listed the commands of the application and its plugins: they are read
+            // the build has just listed the tools of the application and its plugins: they are read
             // again, and so is the record of the project, whose warnings were not said the first time
             HeldBack again = new HeldBack()
             CommandLine listed = createCommandLine(context, again, reads, listsApplication(args))
@@ -243,7 +243,7 @@ final class ForgeCli {
             } else {
                 again.difference = { CodeGenConfig.earlierRecordDifference(context) } as Supplier<String>
             }
-            ApplicationCommands commands = ApplicationCommands.of(listed)
+            ProjectTools commands = ProjectTools.of(listed)
             if (commands != null) {
                 commands.listedJustNow = true
             }
@@ -321,15 +321,15 @@ final class ForgeCli {
             String typed = commandOf(args)
             // The help or the version asked for in front of the name is the answer, and is no mistake that comes here;
             // after the name, as in a name followed by --help, it is an argument of the command the name may be.
-            if (held.mayList && isNoCommand(commandLine, e, typed) && ApplicationCommands.listsFor(commandLine, typed)) {
-                // it may be a command of the application or of a plugin that the build has not listed yet
-                int listing = ApplicationCommands.list(commandLine, typed)
+            if (held.mayList && isNoCommand(commandLine, e, typed) && ProjectTools.listsFor(commandLine, typed)) {
+                // it may be a tool of the application or of a plugin that the build has not listed yet
+                int listing = ProjectTools.list(commandLine, typed)
                 held.listed = listing == 0
                 return listing
             }
             held.replay(root)
-            // what was typed may be the name of a command of the application that is not there for it
-            ApplicationCommands.said(commandLine, typed)
+            // what was typed may be the name of a tool of the application that is not there for it
+            ProjectTools.said(commandLine, typed)
             return commandLine.getParameterExceptionHandler().handleParseException(e, args)
         }
         CommandLine help = commandLine.getSubcommands().get(HelpCommand.NAME)
@@ -368,7 +368,7 @@ final class ForgeCli {
             }
         }
         if (!document) {
-            ApplicationCommands.said(commandLine, commandOf(args), commandOf(expanded))
+            ProjectTools.said(commandLine, commandOf(args), commandOf(expanded))
         }
         return commandLine.execute(expanded)
     }
@@ -460,7 +460,7 @@ final class ForgeCli {
     }
 
     /**
-     * Whether the commands of the application and its plugins are looked for, for a command line: for
+     * Whether the tools of the application and its plugins are looked for, for a command line: for
      * every one that reads the project, and for {@code gradle} and {@code feature} as well, which
      * read no record of the project but have names a command of the build may have too, of which
      * something is then said.
@@ -621,9 +621,9 @@ final class ForgeCli {
         if (codeGenConfig != null) {
             addCommandsOfFeatures(commandLine, codeGenConfig, console ?: root, factory)
         }
-        // last: a command of the application does not take the name of a command that is there
-        ApplicationCommands.addTo(commandLine, listsApplication)
-        // everything after gradle is Gradle's, and everything after a command of the application is that command's
+        // last: a tool of the application does not take the name of a command that is there
+        ProjectTools.addTo(commandLine, listsApplication)
+        // everything after gradle is Gradle's, and everything after a tool of the application is that tool's
         PlainOutput.notForWhatIsPassedOn(commandLine)
         // once every command is there: the width is given to the commands there are when it is set
         commandLine.setUsageHelpWidth(USAGE_WIDTH)
@@ -684,7 +684,7 @@ final class ForgeCli {
         private final List<Closure> said = []
         private final List<String> lines = []
 
-        /** Whether a name that is no command may have the build list the commands of the application: once for a command line. */
+        /** Whether a name that is no command may have the build list the tools of the application: once for a command line. */
         boolean mayList
 
         /** Whether the build listed them, after which the command line is put together and read again. */

@@ -70,7 +70,7 @@ class MultiProjectBuildSpec extends CommandSpec implements CommandFixture {
         }
 
         configurations.create('runtimeClasspath')
-        ['test', 'cleanTest', 'testApp', 'classes', 'clean', 'assemble', 'bootRun', 'console', 'shell', 'runCommand', 'runScriptCommand'].each { String name ->
+        ['test', 'cleanTest', 'testApp', 'classes', 'clean', 'assemble', 'bootRun', 'console', 'shell', 'runTool', 'runScriptCommand'].each { String name ->
             tasks.register(name, Recorded)
         }
         '''.stripIndent()
@@ -152,7 +152,7 @@ class MultiProjectBuildSpec extends CommandSpec implements CommandFixture {
         ['test-app', '--clean', 'BookSpec']    | 'apps/admin/src'                           | 'apps/admin'    | '<:apps:admin:testApp><--tests><BookSpec><--rerun-tests>'      | [':apps:admin:testApp']
         ['war', '--clean']                     | 'apps/admin'                               | 'apps/admin'    | '<:apps:admin:clean><:apps:admin:assemble>'                    | [':apps:admin:clean', ':apps:admin:assemble']
         ['run-app']                            | 'apps/web/shop'                            | 'apps/web/shop' | '<:apps:web:shop:bootRun>'                                     | [':apps:web:shop:bootRun']
-        ['run-command', 'say', 'a b']          | 'apps/admin/grails-app'                    | 'apps/admin'    | '<:apps:admin:runCommand><--args-file=.grails/run/command-args-0.json>' | [':apps:admin:runCommand with ["say","a b"]']
+        ['run-tool', 'say', 'a b']             | 'apps/admin/grails-app'                    | 'apps/admin'    | '<:apps:admin:runTool><--args-file=.grails/run/command-args-0.json>' | [':apps:admin:runTool with ["say","a b"]']
         ['gradle', 'classes']                  | 'apps/admin'                               | 'apps/admin'    | '<classes>'                                                    | [':apps:admin:classes']
         ['gradle', 'classes', '-q']            | 'libs/core'                                | 'libs/core'     | '<classes>'                                                    | [':libs:core:classes']
         ['gradle', ':apps:admin:classes']      | 'libs/core'                                | 'libs/core'     | '<:apps:admin:classes>'                                        | [':apps:admin:classes']
@@ -196,13 +196,13 @@ class MultiProjectBuildSpec extends CommandSpec implements CommandFixture {
 
         when: 'a command of the application and its plugins'
         out.reset()
-        exit = run('tools/site', 'run-command', 'say')
+        exit = run('tools/site', 'run-tool', 'say')
 
         then:
         exit == 0
-        lineOf('requested=').startsWith('<:runCommand>')
+        lineOf('requested=').startsWith('<:runTool>')
         ran().size() == 1
-        ran()[0].startsWith(':runCommand ')
+        ran()[0].startsWith(':runTool ')
 
         when: 'Gradle itself is asked, as it is typed'
         out.reset()
@@ -403,7 +403,7 @@ class MultiProjectBuildSpec extends CommandSpec implements CommandFixture {
         File project = new File(root, path)
         new File(project, 'grails-app/controllers').mkdirs()
         new File(project, 'src').mkdirs()
-        // where run-command keeps the arguments of a command
+        // where run-tool keeps the arguments of a tool
         new File(project, '.grails').mkdirs()
         new File(project, 'build.gradle').text = PROJECT
     }

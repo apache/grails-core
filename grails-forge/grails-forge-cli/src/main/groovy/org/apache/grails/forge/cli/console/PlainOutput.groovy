@@ -67,7 +67,7 @@ final class PlainOutput {
             if (arg == PASSED_ON) {
                 return false
             }
-            // after the name of the command that run-command runs, everything is that command's
+            // after the name of the tool that run-tool runs, everything is that tool's
             if (namesAnother && arg != null && !arg.startsWith('-') && !value) {
                 return false
             }
@@ -86,7 +86,7 @@ final class PlainOutput {
                 if (command != null && command.getCommandSpec().findOption(OPTION) == null) {
                     return false
                 }
-                namesAnother = command != null && command.getCommandSpec().userObject() instanceof RunCommandCommand
+                namesAnother = command != null && command.getCommandSpec().userObject() instanceof RunToolCommand
             }
         }
         return false

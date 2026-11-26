@@ -62,16 +62,17 @@ class CompletionScriptSpec extends Specification {
 
         where:
         typed                                | expected                                                                      | absent
-        'grails '                            | ['create-app', 'run-app', 'test-app', 'feature', 'help', 'plugin-info', 'run-command', 'create-controller', 'package-plugin'] | []
-        'grails create-'                     | ['create-app', 'create-plugin', 'create-controller', 'create-domain-class', 'create-command', 'create-job'] | ['run-app', 'create-script']
-        'grails run-'                        | ['run-app', 'run-command', 'run-script']                                     | ['create-app']
+        'grails '                            | ['create-app', 'run-app', 'test-app', 'feature', 'help', 'plugin-info', 'run-tool', 'create-controller', 'package-plugin'] | ['create-command']
+        'grails create-'                     | ['create-app', 'create-plugin', 'create-controller', 'create-domain-class', 'create-tool', 'create-job'] | ['run-app', 'create-script', 'create-command']
+        'grails run-'                        | ['run-app', 'run-tool', 'run-script']                                        | ['create-app']
+        'grails create-tool --'              | ['--standalone']                                                             | []
         'grails feature '                    | ['add', 'list']                                                              | ['create-app']
         'grails feature add ca'              | ['cache']                                                                    | ['add']
         'grails create-app --serv'           | ['--servlet']                                                                | []
         'grails create-app --servlet '       | ['tomcat', 'jetty', 'undertow', 'none']                                      | []
         'grails create-app --features grails-q' | ['grails-quartz']                                                         | []
         'grails run-app --'                  | ['--detach', '--foreground', '--port']                                       | []
-        'grails ru'                          | ['run', 'run-app', 'run-command', 'run-script']                              | ['create-app']
+        'grails ru'                          | ['run', 'run-app', 'run-tool', 'run-script']                                 | ['create-app']
         'grails st'                          | ['stats', 'stop', 'stop-app']                                                | ['run']
         'grails run --'                      | ['--detach', '--foreground', '--port']                                       | []
         'grails project migrate --type '     | ['web', 'rest-api', 'plugin', 'web-plugin', 'rest-api-plugin']               | []

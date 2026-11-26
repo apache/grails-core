@@ -32,7 +32,7 @@ import spock.lang.Unroll
  * here writes down that it ran, and is no Gradle.
  */
 @IgnoreIf({ os.windows })
-class ApplicationCommandHelpSpec extends CommandSpec {
+class ToolHelpSpec extends CommandSpec {
 
     static final List<Map> COMMANDS = [
             [name: 'audit-report', aliases: [], description: 'Writes the audit report', origin: 'application', target: 'application', registration: 'factories'],
@@ -77,17 +77,17 @@ class ApplicationCommandHelpSpec extends CommandSpec {
         err.toString().isEmpty()
         out.toString().readLines()[0] == "Usage: grails-forge-cli ${name} [ARGS...]"
         out.toString().replaceAll(/\s+/, ' ').contains(said)
-        out.toString().replaceAll(/\s+/, ' ').contains('--help after the name is given to the command as well')
+        out.toString().replaceAll(/\s+/, ' ').contains('--help after the name is given to the tool as well')
 
         and:
         !ran.exists()
         // the catalog the build listed is all there is under .grails: nothing was run or recorded
-        writtenUnderRecord() == [ApplicationCommandFile.LOCATION]
+        writtenUnderRecord() == [ToolCatalogFile.LOCATION]
 
         where:
         name           | said
-        'audit-report' | 'Writes the audit report A command of the application, which runs in the application'
-        'hello-world'  | 'Says hello A command of org.example:hello-cli:1.2.3, which runs with Gradle, without the application'
+        'audit-report' | 'Writes the audit report A tool of the application, which runs in the application'
+        'hello-world'  | 'Says hello A tool of org.example:hello-cli:1.2.3, which the build runs without the application'
         'data-import'  | 'A script of the application, in src/main/scripts'
     }
 
@@ -106,8 +106,8 @@ class ApplicationCommandHelpSpec extends CommandSpec {
 
         where:
         name           | task
-        'audit-report' | 'runCommand'
-        'hello-world'  | 'runCommand'
+        'audit-report' | 'runTool'
+        'hello-world'  | 'runTool'
         'data-import'  | 'runScriptCommand'
     }
 
@@ -118,7 +118,7 @@ class ApplicationCommandHelpSpec extends CommandSpec {
         then:
         exit == 2
         err.toString().readLines()[0].startsWith('There is no command audit-report')
-        err.toString().contains('The commands of the application and its plugins are not listed yet: a build that compiles the project lists them, and so does typing the name of one. To list them now: grails-forge-cli gradle grailsToolCatalog')
+        err.toString().contains('The tools of the application and its plugins are not listed yet: a build that compiles the project lists them, and so does typing the name of one. To list them now: grails-forge-cli gradle grailsToolCatalog')
         !ran.exists()
     }
 
@@ -132,8 +132,8 @@ class ApplicationCommandHelpSpec extends CommandSpec {
     }
 
     private void listed() {
-        File file = new File(dir, ApplicationCommandFile.LOCATION)
+        File file = new File(dir, ToolCatalogFile.LOCATION)
         file.parentFile.mkdirs()
-        file.setText(ApplicationCommandsSpec.doc(COMMANDS), StandardCharsets.UTF_8.name())
+        file.setText(ProjectToolsSpec.doc(COMMANDS), StandardCharsets.UTF_8.name())
     }
 }

@@ -52,11 +52,12 @@ final class ScriptCommandFiles {
     /** The Gradle task that runs a script. */
     public static final String TASK = 'runScriptCommand'
 
-    /** How a script is registered, in the description of a command for a tool. */
+    /**
+     * How a script is registered, in the description of the tools {@code help --json} writes, where a
+     * script is a tool of the target {@code application} that does not start the application: a JVM of
+     * the build runs it.
+     */
     public static final String REGISTRATION = 'script'
-
-    /** What runs a script, in the description of a command for a tool: a JVM of the build, without the application. */
-    public static final String TARGET = 'gradle'
 
     /** How many entries of the directory are looked at, at most. */
     public static final int MAX_ENTRIES = 4096
@@ -71,7 +72,7 @@ final class ScriptCommandFiles {
     private static final String OF_WHAT = 'The scripts of the application'
 
     /** The scripts, by the name of the command each is, in the order of the names. */
-    final List<ApplicationCommandFile.Entry> commands
+    final List<ToolCatalogFile.Entry> commands
 
     /** What there is to say about files that are not listed, one line each; nothing of the name of a file is in them. */
     final List<String> diagnostics
@@ -79,7 +80,7 @@ final class ScriptCommandFiles {
     /** Whether every script of the directory that can be a command is among the commands. */
     final boolean complete
 
-    private ScriptCommandFiles(List<ApplicationCommandFile.Entry> commands, List<String> diagnostics, boolean complete) {
+    private ScriptCommandFiles(List<ToolCatalogFile.Entry> commands, List<String> diagnostics, boolean complete) {
         this.commands = commands.asImmutable()
         this.diagnostics = diagnostics.asImmutable()
         this.complete = complete
@@ -120,7 +121,7 @@ final class ScriptCommandFiles {
      * words); {@code null} when the file is no script or its name gives no name of a command
      */
     static String commandName(String fileName) {
-        if (fileName == null || !fileName.endsWith(ENDING) || fileName.length() > ApplicationCommandFile.MAX_NAME + ENDING.length()) {
+        if (fileName == null || !fileName.endsWith(ENDING) || fileName.length() > ToolCatalogFile.MAX_NAME + ENDING.length()) {
             return null
         }
         String base = fileName.substring(0, fileName.length() - ENDING.length())
@@ -128,15 +129,15 @@ final class ScriptCommandFiles {
             return null
         }
         String name = base.contains('-') ? base.toLowerCase(Locale.ROOT) : GrailsNameUtils.getScriptName(base)
-        return name != null && name.length() <= ApplicationCommandFile.MAX_NAME && NAME.matcher(name).matches() ? name : null
+        return name != null && name.length() <= ToolCatalogFile.MAX_NAME && NAME.matcher(name).matches() ? name : null
     }
 
     private static ScriptCommandFiles none() {
-        return new ScriptCommandFiles(Collections.<ApplicationCommandFile.Entry>emptyList(), Collections.<String>emptyList(), true)
+        return new ScriptCommandFiles(Collections.<ToolCatalogFile.Entry>emptyList(), Collections.<String>emptyList(), true)
     }
 
     private static ScriptCommandFiles notListed(String reason) {
-        return new ScriptCommandFiles(Collections.<ApplicationCommandFile.Entry>emptyList(), ["${OF_WHAT} are not listed: ${reason}".toString()], false)
+        return new ScriptCommandFiles(Collections.<ToolCatalogFile.Entry>emptyList(), ["${OF_WHAT} are not listed: ${reason}".toString()], false)
     }
 
     private static ScriptCommandFiles read(Path directory) throws IOException {
@@ -186,9 +187,9 @@ final class ScriptCommandFiles {
         if (notCommands > 0) {
             said.add(("${notCommands} of the .groovy files in ${LOCATION} ${notCommands == 1 ? 'is no command' : 'are no commands'}: a script is a file, " +
                     'and not a link, that is named with the letters a to z and digits in words that capitals or hyphens set apart, as in ' +
-                    "data-import.groovy or DataImport.groovy, with at most ${ApplicationCommandFile.MAX_NAME} characters, and the only one of its name").toString())
+                    "data-import.groovy or DataImport.groovy, with at most ${ToolCatalogFile.MAX_NAME} characters, and the only one of its name").toString())
         }
-        return new ScriptCommandFiles(names.collect { String name -> ApplicationCommandFile.Entry.script(name) }, said, scripts.size() <= MAX_SCRIPTS)
+        return new ScriptCommandFiles(names.collect { String name -> ToolCatalogFile.Entry.script(name) }, said, scripts.size() <= MAX_SCRIPTS)
     }
 
     // a link, a pipe, a device or a directory is no script, and is not opened to find out

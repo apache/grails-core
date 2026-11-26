@@ -38,7 +38,7 @@ import org.grails.forge.cli.ForgeCli
  * environment variable {@code GRAILS_NON_INTERACTIVE=true}, which a command or a script of an
  * application can read. Both are accepted in front of the command and after the name of every
  * command that does not give all that follows its name to something else, as {@code gradle}, a
- * command of the application and the command {@code run-command} runs do. {@code help --json} writes the commands
+ * tool of the application and the tool {@code run-tool} runs do. {@code help --json} writes the commands
  * there are in the current directory, with their options, as one JSON document on the standard
  * output.</p>
  *

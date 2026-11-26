@@ -46,7 +46,7 @@ import picocli.CommandLine
  * {@code war} of {@code assemble}, except another name that is the first word of the name: {@code run}
  * of {@code run-app} and {@code stop} of {@code stop-app} are those commands when they are typed
  * whole, and nothing is short for them, so that {@code r} and {@code ru}, which start
- * {@code run-script} and {@code run-command} too, are no command, and {@code st} is {@code stats}.</p>
+ * {@code run-script} and {@code run-tool} too, are no command, and {@code st} is {@code stats}.</p>
  *
  * @since 9.0
  */
@@ -55,6 +55,14 @@ final class ShortForms {
 
     /** What can be a short form at all: anything else, a path or an option among them, is short for nothing. */
     public static final Pattern FORM = Pattern.compile('[A-Za-z][A-Za-z-]{0,63}')
+
+    /**
+     * The commands that are typed by their whole name only, and that no short form is read against: a short form
+     * of such a command stays the short form of the commands it was one of before the command was there.
+     * {@code create-tool} came after {@code create-taglib}, whose short forms, {@code ct} and {@code cT} among
+     * them, it would otherwise take away.
+     */
+    public static final Set<String> WHOLE_NAME_ONLY = Collections.unmodifiableSet(['create-tool'] as LinkedHashSet<String>)
 
     /** How many commands a mistake names as those it was nearly the short form of, at most. */
     public static final int MAX_NEAR = 3
@@ -77,10 +85,11 @@ final class ShortForms {
      * The commands a form is short for, by the first of the three readings any of them fits.
      *
      * @param typed what was typed, which {@link #FORM} matches
-     * @param commands the commands it may be short for
+     * @param given the commands it may be short for; one of {@link #WHOLE_NAME_ONLY} is none of them
      * @return those it is short for, in their order; none, one or several
      */
-    static List<CommandLine> fitting(String typed, List<CommandLine> commands) {
+    static List<CommandLine> fitting(String typed, List<CommandLine> given) {
+        List<CommandLine> commands = given.findAll { CommandLine command -> !WHOLE_NAME_ONLY.contains(command.getCommandSpec().name()) }
         List<CommandLine> fits = commands.findAll { CommandLine command ->
             names(command).any { String name -> ScriptNameResolver.resolvesTo(typed, name) }
         }
@@ -210,7 +219,7 @@ final class ShortForms {
 
     // The name of a command and the other names it has, but for another name that is the first word of
     // the name, as run is of run-app: what starts it starts that word of every command that has it, ru
-    // that of run-script and run-command as much as that of run-app, and st that of stats as well as
+    // that of run-script and run-tool as much as that of run-app, and st that of stats as well as
     // that of stop. Such a name is that command when it is typed whole, and short for nothing.
     private static List<String> names(CommandLine command) {
         CommandLine.Model.CommandSpec spec = command.getCommandSpec()

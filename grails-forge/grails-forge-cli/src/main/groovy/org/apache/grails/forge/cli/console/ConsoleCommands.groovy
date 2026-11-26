@@ -87,7 +87,7 @@ final class ConsoleCommands {
                 new ConsoleCommand(),
                 new ShellCommand(),
                 new RunScriptCommand(),
-                new RunCommandCommand(),
+                new RunToolCommand(),
                 new UpdateWrapperCommand()
         ] as List<Object>
         if (readsProject) {

@@ -24,21 +24,27 @@ import org.grails.forge.cli.CommandFixture
 import org.grails.forge.cli.CommandSpec
 import org.grails.forge.cli.ForgeCli
 import spock.lang.IgnoreIf
+import spock.lang.Requires
 import spock.lang.Shared
 import spock.lang.Timeout
 import spock.lang.Unroll
 
 /**
- * A command the application was given with {@code create-command} is a command of the command line by its
- * name, in a project that was never built: the build lists the commands of the application, which
- * compiles it, and the command is run in the application. As {@code create-command} writes it, the command says
- * what it was given and succeeds. Once the build has compiled the project the list is current, also for a
- * command added since. A command that extends another is listed by a name it runs by: the name it has when it runs,
- * when the compiler can read it, and the name its class gives otherwise.
+ * A tool the application was given with {@code create-tool} is a command of the command line by its
+ * name, in a project that was never built: the build lists the tools of the application, which
+ * compiles it, and the tool is run in the application. As {@code create-tool} writes it, the tool says
+ * what it was given and succeeds. Once the build has compiled the project the catalog is current, also for a
+ * tool added since. A tool in the deprecated folder grails-app/commands that extends another is listed by a name it runs by:
+ * the name it has when it runs, when the compiler can read it, and the name its class gives otherwise, and is run after a
+ * warning that the folder is deprecated.
+ *
+ * <p>The build compiles src/cli and runs a tool with the task runTool where the Gradle plugin of the checkout has the folders
+ * of tools; the specification runs there.</p>
  */
 @IgnoreIf({ os.windows })
+@Requires({ ToolsOfTheBuild.hasToolFolders() })
 @Timeout(900)
-class GeneratedApplicationCommandSpec extends CommandSpec implements CommandFixture {
+class GeneratedApplicationToolSpec extends CommandSpec implements CommandFixture {
 
     // the Gradle daemon of the builds of the application is one of this specification, which ends it
     @Shared
@@ -65,38 +71,38 @@ class GeneratedApplicationCommandSpec extends CommandSpec implements CommandFixt
         gradle.close()
     }
 
-    void "a command created in an application that was never built is run by its name, as it was created"() {
-        given: 'a generated application with a command as create-command writes it, and no list of its commands'
+    void "a tool created in an application that was never built is run by its name, as it was created"() {
+        given: 'a generated application with a tool as create-tool writes it, and no catalog of its tools'
         generateProject(ApplicationType.WEB)
         new File(dir, 'settings.gradle') << '\n' + gradle.recording
         new File(dir, 'gradle.properties') << "\norg.gradle.daemon.registry.base=${gradle.registry.canonicalPath}\norg.gradle.daemon.idletimeout=${IsolatedGradle.IDLE_MILLIS}\n"
         out.reset()
-        assert ForgeCli.execute(beanContext, 'create-command', 'data-import') == 0
+        assert ForgeCli.execute(beanContext, 'create-tool', 'data-import') == 0
         assert out.toString().readLines() == [
-                '| Rendered command to grails-app/commands/example/grails/DataImportCommand.groovy',
+                '| Rendered tool to src/cli/groovy/example/grails/DataImportTool.groovy',
                 '| Run it with: grails-forge-cli data-import'
         ]
-        assert !new File(dir, ApplicationCommandFile.LOCATION).exists()
+        assert !new File(dir, ToolCatalogFile.LOCATION).exists()
         out.reset()
         err.reset()
 
         when: 'it is run by its name, as the guide shows it'
         int exit = ForgeCli.execute(beanContext, 'data-import', 'orders.csv')
 
-        then: 'the build listed the commands once, and the command ran in the application and succeeded'
+        then: 'the build listed the tools once, and the tool ran in the application and succeeded'
         exit == 0
-        err.toString().readLines()[0] == '| Listing the commands of the application and its plugins, of which data-import may be one, with the Gradle task grailsToolCatalog'
-        err.toString().contains('| Running the command data-import of the application, with the Gradle task runCommand')
+        err.toString().readLines()[0] == '| Listing the tools of the application and its plugins, of which data-import may be one, with the Gradle task grailsToolCatalog'
+        err.toString().contains('| Running the tool data-import of the application, with the Gradle task runTool')
         out.toString().readLines().contains('Ran data-import with the arguments [orders.csv]')
         catalog().tools.find { it.name == 'data-import' }.origin == 'application'
 
-        when: 'a second command, and a build that compiles the project'
-        assert ForgeCli.execute(beanContext, 'create-command', 'wave') == 0
+        when: 'a second tool, one that runs as a process of its own, and a build that compiles the project'
+        assert ForgeCli.execute(beanContext, 'create-tool', '--standalone', 'wave') == 0
         out.reset()
         err.reset()
         int compiled = ForgeCli.execute(beanContext, 'compile')
 
-        then: 'the build listed it, and the list is current for the command line, which lists it as a command of the application'
+        then: 'the build listed it, and the catalog is current for the command line, which lists it as a tool of the application'
         compiled == 0
         ((List<Map>) catalog().tools)*.name.containsAll(['data-import', 'wave'])
 
@@ -108,14 +114,14 @@ class GeneratedApplicationCommandSpec extends CommandSpec implements CommandFixt
 
         then:
         described.complete == true
-        !((List<String>) described.diagnostics).any { String line -> line.contains(ApplicationCommandFile.LOCATION) }
+        !((List<String>) described.diagnostics).any { String line -> line.contains(ToolCatalogFile.LOCATION) }
         ((List<Map>) described.commands).findAll { it.origin == 'application' }*.name.containsAll(['data-import', 'wave'])
         !err.toString().contains('| Listing')
     }
 
     @Unroll
-    void "a command that extends another is listed by a name it runs under, and is run by it: #how"() {
-        given: 'a generated application with a command that has a name of its own, over the name the command it extends has'
+    void "a tool in grails-app/commands that extends another is listed by a name it runs under, and is run by it, after a warning: #how"() {
+        given: 'a generated application with a tool in the deprecated folder that has a name of its own, over the name the tool it extends has'
         generateProject(ApplicationType.WEB)
         new File(dir, 'settings.gradle') << '\n' + gradle.recording
         new File(dir, 'gradle.properties') << "\norg.gradle.daemon.registry.base=${gradle.registry.canonicalPath}\norg.gradle.daemon.idletimeout=${IsolatedGradle.IDLE_MILLIS}\n"
@@ -139,10 +145,11 @@ class GeneratedApplicationCommandSpec extends CommandSpec implements CommandFixt
         when: 'it is run by the name the build lists it by'
         int exit = ForgeCli.execute(beanContext, listed, 'orders.csv')
 
-        then: 'the build listed it by that name only, and the command that ran is the one listed, with the name it has'
+        then: 'the build listed it by that name only, and the tool that ran is the one listed, with the name it has'
         exit == 0
         ((List<Map>) catalog().tools).findAll { it.origin == 'application' }.collect { [it.name, it.registration] } == [[listed, registration]]
-        err.toString().contains("| Running the command ${listed} of the application, with the Gradle task runCommand")
+        err.toString().contains("| Running the tool ${listed} of the application, with the Gradle task runTool")
+        err.toString().contains("| Warning ${listed} is in grails-app/commands, which is deprecated: move it to src/cli/groovy")
         out.toString().readLines().contains('Ran import-data with the arguments [orders.csv]')
 
         where:
@@ -153,6 +160,6 @@ class GeneratedApplicationCommandSpec extends CommandSpec implements CommandFixt
     }
 
     private Map catalog() {
-        return (Map) new JsonSlurper().parse(new File(dir, ApplicationCommandFile.LOCATION))
+        return (Map) new JsonSlurper().parse(new File(dir, ToolCatalogFile.LOCATION))
     }
 }

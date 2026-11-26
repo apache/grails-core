@@ -44,7 +44,7 @@ final class ProjectHealth {
      */
     static List<HealthCheck> checks() {
         return [new GrailsVersionCheck(), new GradleWrapperCheck(), new JavaTargetCheck(), new SdkmanrcCheck(), new RemovedDependencyCheck(),
-                new DeprecatedDependencyCheck(), new RecordCheck(), new GrailsWrapperCheck(), new GitFilesCheck(), new CommandCatalogCheck(),
+                new DeprecatedDependencyCheck(), new RecordCheck(), new GrailsWrapperCheck(), new GitFilesCheck(), new ToolCatalogCheck(), new ToolsCheck(),
                 new LeftoverCheck(), new AgentSkillsCheck()] as List<HealthCheck>
     }
 

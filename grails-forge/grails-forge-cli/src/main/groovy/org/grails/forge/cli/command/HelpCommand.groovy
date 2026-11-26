@@ -22,7 +22,7 @@ import java.nio.file.Path
 import java.util.concurrent.Callable
 import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
-import org.apache.grails.forge.cli.console.ApplicationCommands
+import org.apache.grails.forge.cli.console.ProjectTools
 import org.apache.grails.forge.cli.console.CommandCatalog
 import org.apache.grails.forge.cli.console.ConsoleProject
 import org.apache.grails.forge.cli.console.OptionRelation
@@ -81,8 +81,8 @@ class HelpCommand extends BaseCommand implements Callable<Integer>, OptionRelati
                 // the commands of a project above that is not used are not there, and a tool is told why
                 said.add(search.untrusted)
             }
-            // what the build of the project lists of the commands of the application, and what is not there of it
-            ApplicationCommands application = ApplicationCommands.of(catalog.getRoot())
+            // what the build of the project lists of the tools of the application, and what is not there of it
+            ProjectTools application = ProjectTools.of(catalog.getRoot())
             if (application != null) {
                 said.addAll(application.diagnostics(catalog.getRoot()))
             }

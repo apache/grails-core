@@ -34,7 +34,7 @@ import picocli.CommandLine
  * {@code --integration} the task {@code integrationTest}, and any other switch {@code --<name>} the
  * task {@code <name>Test}, or the task {@code <name>} where there is no such task, with the hyphens
  * of the switch for the capitals of the task: {@code --end-to-end} is {@code endToEndTest}. Only the
- * build knows which phases there are. Where it has listed them ({@link ApplicationCommandFile}),
+ * build knows which phases there are. Where it has listed them ({@link ToolCatalogFile}),
  * each is an option of the command, and a switch that is none of them is refused. Where it has not,
  * a switch that is no option of the command is taken for a phase, unless it is one letter away from
  * an option, and the task {@value #TASK} fails when the project has no such phase, with the phases
@@ -94,7 +94,7 @@ class TestAppCommand extends GradleEnvironmentCommand {
     // those of them that are no option of the command, and were taken for a phase by their form alone
     private final List<String> taken = []
     // what the build listed of the project; null where it was not looked at
-    private ApplicationCommandFile listed
+    private ToolCatalogFile listed
 
     @Override
     protected String defaultEnvironment() {
@@ -110,7 +110,7 @@ class TestAppCommand extends GradleEnvironmentCommand {
      * @param root the command line of the CLI
      * @param file the file of the build
      */
-    static void phasesOf(CommandLine root, ApplicationCommandFile file) {
+    static void phasesOf(CommandLine root, ToolCatalogFile file) {
         CommandLine command = root.getSubcommands().get('test-app')
         if (command == null || !(command.getCommandSpec().userObject() instanceof TestAppCommand)) {
             return
@@ -136,11 +136,11 @@ class TestAppCommand extends GradleEnvironmentCommand {
                     .setter(new Selected(testApp.phases, name))
                     .build())
         }
-        String gradle = UsageHelp.toType(root, "gradle ${ApplicationCommandFile.TASK}")
+        String gradle = UsageHelp.toType(root, "gradle ${ToolCatalogFile.TASK}")
         if (file.testPhases == null) {
             footer.add("The test phases the project adds have a switch each, and are listed here once the build has listed them: ${gradle}".toString())
-        } else if (file.state == ApplicationCommandFile.State.STALE) {
-            footer.add("The test phases may have changed: ${file.reason} is newer than ${ApplicationCommandFile.LOCATION}. To list them again: ${gradle}".toString())
+        } else if (file.state == ToolCatalogFile.State.STALE) {
+            footer.add("The test phases may have changed: ${file.reason} is newer than ${ToolCatalogFile.LOCATION}. To list them again: ${gradle}".toString())
         }
         if (footer.size() > 1) {
             spec.usageMessage().footer(footer as String[])
@@ -216,7 +216,7 @@ class TestAppCommand extends GradleEnvironmentCommand {
     private void takePhases(List<String> args, CommandLine.Model.CommandSpec commandSpec) {
         phases.clear()
         taken.clear()
-        boolean known = listed != null && listed.testPhases != null && listed.state == ApplicationCommandFile.State.CURRENT
+        boolean known = listed != null && listed.testPhases != null && listed.state == ToolCatalogFile.State.CURRENT
         // the next argument is the top of the stack
         for (int i = args.size() - 1; i >= 0; i--) {
             String arg = args.get(i)
@@ -243,12 +243,12 @@ class TestAppCommand extends GradleEnvironmentCommand {
                 }.collect { String phase -> LONG + phase }
                 throw new UsageHelp.Lines(commandSpec.commandLine(), "test-app has no option ${arg}, and the project has no test phase of that name: " +
                         "its build lists ${there.join(', ')}.${meant}${System.lineSeparator()}" +
-                        "A phase that was added since is listed with: ${UsageHelp.toType(commandSpec, "gradle ${ApplicationCommandFile.TASK}")}")
+                        "A phase that was added since is listed with: ${UsageHelp.toType(commandSpec, "gradle ${ToolCatalogFile.TASK}")}")
             }
             if (similar != null) {
                 throw new UsageHelp.Lines(commandSpec.commandLine(), "test-app has no option ${arg}.${meant}${System.lineSeparator()}" +
                         "If the project has a test phase of that name, the task ${taskOf(name)}, the switch is taken once the build has listed its phases " +
-                        "(${UsageHelp.toType(commandSpec, "gradle ${ApplicationCommandFile.TASK}")}), and the phase is run by its task with: ${UsageHelp.toType(commandSpec, "gradle ${taskOf(name)}")}")
+                        "(${UsageHelp.toType(commandSpec, "gradle ${ToolCatalogFile.TASK}")}), and the phase is run by its task with: ${UsageHelp.toType(commandSpec, "gradle ${taskOf(name)}")}")
             }
             phases.add(name)
             taken.add(name)

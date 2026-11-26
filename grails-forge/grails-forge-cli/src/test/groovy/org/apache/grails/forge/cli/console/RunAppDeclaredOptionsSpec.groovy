@@ -407,10 +407,10 @@ class RunAppDeclaredOptionsSpec extends CommandSpec implements CommandFixture {
         File file = new File(dir, '.grails/cache/tool-catalog.json')
         file.parentFile.mkdirs()
         file.text = builder.toJson()
-        ApplicationCommandFile read = ApplicationCommandFile.read(dir.toPath())
+        ToolCatalogFile read = ToolCatalogFile.read(dir.toPath())
 
         then:
-        read.state == ApplicationCommandFile.State.CURRENT
+        read.state == ToolCatalogFile.State.CURRENT
         read.declaredOptions.options.size() == CommandOptions.MAX_OPTIONS
         read.declaredOptions.notUsed == 0
         read.declaredOptions.options*.name == ((Map) builder.build()).commandOptions*.name

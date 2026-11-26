@@ -18,7 +18,7 @@
  */
 package org.grails.forge.features.querytail
 
-import org.apache.grails.forge.cli.console.ApplicationCommandFile
+import org.apache.grails.forge.cli.console.ToolCatalogFile
 import org.apache.grails.forge.cli.console.DeclaredOptions
 import org.gradle.testkit.runner.BuildResult
 import org.gradle.testkit.runner.TaskOutcome
@@ -48,12 +48,12 @@ class RunAppQueryTailOptionBuildSpec extends CommandSpec {
 
         when: 'the project is compiled, which lists its commands and the options declared for them'
         BuildResult compiled = executeGradle('classes')
-        ApplicationCommandFile catalog = ApplicationCommandFile.read(dir.toPath())
+        ToolCatalogFile catalog = ToolCatalogFile.read(dir.toPath())
         DeclaredOptions.Declared option = catalog.declaredOptions.options.find { DeclaredOptions.Declared each -> each.name == 'query-tail' }
 
         then: 'the command line reads the option from the file the build wrote'
         compiled.task(':grailsToolCatalog').outcome == TaskOutcome.SUCCESS
-        catalog.state == ApplicationCommandFile.State.CURRENT
+        catalog.state == ToolCatalogFile.State.CURRENT
         catalog.declaredOptions.notUsed == 0
         option.command == 'run-app'
         option.type == 'boolean'

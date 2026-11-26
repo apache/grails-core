@@ -47,13 +47,13 @@ class ProjectHealthCommandSpec extends CommandSpec {
 
     /** The checks, in the order they run. */
     static final List<String> CHECKS = ['grails-version', 'gradle-wrapper', 'java-target', 'sdkmanrc', 'removed-dependency', 'deprecated-dependency', 'record',
-                                        'grails-wrapper', 'git-files', 'command-catalog', 'leftover', 'agent-skills']
+                                        'grails-wrapper', 'git-files', 'tool-catalog', 'tools', 'leftover', 'agent-skills']
 
     /**
-     * What a project that create-app has just generated is advised, and nothing else: the build has not run, so the commands of the application
+     * What a project that create-app has just generated is advised, and nothing else: the build has not run, so the tools of the application
      * are not listed yet. Its Gradle wrapper names the SHA-256 of its distribution, so it is not advised to.
      */
-    static final List<String> ADVICE_OF_A_NEW_PROJECT = ['command-catalog.missing']
+    static final List<String> ADVICE_OF_A_NEW_PROJECT = ['tool-catalog.missing']
 
     /** Every finding of every check, by its id: what the reference page of the command lists, and what a tool goes by. */
     static final List<String> IDS = [
@@ -66,7 +66,8 @@ class ProjectHealthCommandSpec extends CommandSpec {
             'record.missing', 'record.unreadable', 'record.baseline', 'record.earlier-generator', 'record.version-drift', 'record.interrupted',
             'grails-wrapper.version', 'grails-wrapper.outdated', 'grails-wrapper.leftover',
             'git-files.record-ignored', 'git-files.state-ignored', 'git-files.wrapper-line-endings',
-            'command-catalog.missing', 'command-catalog.refused', 'command-catalog.stale', 'command-catalog.incomplete',
+            'tool-catalog.missing', 'tool-catalog.refused', 'tool-catalog.stale', 'tool-catalog.incomplete',
+            'tools.grails7-imports', 'tools.legacy-folder', 'tools.legacy-type',
             'leftover.settings-groovy', 'leftover.earlier-record', 'leftover.earlier-record-differs', 'leftover.profile-config', 'leftover.preferred-shell',
             'agent-skills.upgrade-skill', 'agent-skills.not-extracted'].asImmutable()
 
@@ -261,12 +262,16 @@ class ProjectHealthCommandSpec extends CommandSpec {
         'git-files.wrapper-line-endings'       | 'advice'  | 'there is no .gitattributes'                           | { File p, File h -> new File(p, '.gitattributes').delete() }
         'git-files.ok'                         | 'ok'      | '.grails/.gitignore leaves out what is of one machine' | { File p, File h -> without(p, '.gitignore', ~/\.grails\/(transactions\/|history)\n/) }
         'git-files.ok'                         | 'ok'      | '.gitignore does, and the record of a snapshot not'    | { File p, File h -> without(p, '.grails/.gitignore', ~/\/(transactions\/|history)\n/) }
-        'command-catalog.missing'              | 'advice'  | 'the build has not listed the commands'                | { File p, File h -> }
-        'command-catalog.refused'              | 'advice'  | 'the list is no file'                                  | { File p, File h -> new File(p, '.grails/cache/tool-catalog.json').mkdirs() }
-        'command-catalog.stale'                | 'advice'  | 'the build file was changed after the list'            | { File p, File h -> catalog(p); new File(p, 'build.gradle').setLastModified(System.currentTimeMillis() + 60_000) }
-        'command-catalog.incomplete'           | 'advice'  | 'the runtime class path did not resolve completely'    | { File p, File h -> catalog(p, false, [UNRESOLVED]) }
-        'command-catalog.incomplete'           | 'advice'  | 'a command of the list is not as the task writes one'  | { File p, File h -> catalog(p, true, [], [name: 'Not A Name']) }
-        'command-catalog.ok'                   | 'ok'      | 'the build listed the commands'                        | { File p, File h -> catalog(p) }
+        'tool-catalog.missing'                 | 'advice'  | 'the build has not listed the tools'                   | { File p, File h -> }
+        'tool-catalog.refused'                 | 'advice'  | 'the catalog is no file'                               | { File p, File h -> new File(p, '.grails/cache/tool-catalog.json').mkdirs() }
+        'tool-catalog.stale'                   | 'advice'  | 'the build file was changed after the catalog'         | { File p, File h -> catalog(p); new File(p, 'build.gradle').setLastModified(System.currentTimeMillis() + 60_000) }
+        'tool-catalog.incomplete'              | 'advice'  | 'the runtime class path did not resolve completely'    | { File p, File h -> catalog(p, false, [UNRESOLVED]) }
+        'tool-catalog.incomplete'              | 'advice'  | 'a tool of the catalog is not as the task writes one'  | { File p, File h -> catalog(p, true, [], [name: 'Not A Name']) }
+        'tool-catalog.ok'                      | 'ok'      | 'the build listed the tools'                           | { File p, File h -> catalog(p) }
+        'tools.grails7-imports'                | 'error'   | 'a tool imports a type of the commands of Grails 7'    | { File p, File h -> source(p, 'src/cli/groovy/example/OldCommand.groovy', 'import grails.dev.commands.ApplicationCommand\nclass OldCommand { }\n') }
+        'tools.legacy-folder'                  | 'advice'  | 'a tool is in the deprecated grails-app/commands'      | { File p, File h -> source(p, 'grails-app/commands/example/GreetCommand.groovy', 'class GreetCommand { }\n') }
+        'tools.legacy-type'                    | 'advice'  | 'a tool of the application is of a deprecated type'    | { File p, File h -> catalog(p, true, [], [name: 'old', origin: 'application', target: 'application', registration: 'descriptor', deprecated: ['type']]) }
+        'tools.ok'                             | 'ok'      | 'the tools are in src/cli and src/standalone'          | { File p, File h -> source(p, 'src/cli/groovy/example/GreetTool.groovy', 'class GreetTool { }\n'); source(p, 'src/standalone/groovy/example/RenderTool.groovy', 'class RenderTool { }\n') }
         'leftover.settings-groovy'             | 'warning' | '~/.grails/settings.groovy is there'                   | { File p, File h -> new File(h, '.grails').mkdirs(); new File(h, '.grails/settings.groovy').text = 'grails { }\n' }
         'leftover.earlier-record'              | 'advice'  | 'grails-forge-cli.yml is beside .grails'               | { File p, File h -> new File(p, 'grails-forge-cli.yml').text = 'applicationType: web\n' }
         'leftover.earlier-record-differs'      | 'warning' | 'grails-forge-cli.yml names another package'           | { File p, File h -> new File(p, 'grails-forge-cli.yml').text = 'applicationType: web\ndefaultPackage: org.other\n' }
@@ -474,23 +479,23 @@ class ProjectHealthCommandSpec extends CommandSpec {
         profile.level == 'error'
         profile.files == ['build.gradle']
         profile.upgradeNote == "https://grails.apache.org/docs/${VersionInfo.documentationVersion}/guide/upgrading.html#upgradingShellNotPublished".toString()
-        findings.find { it.id == 'command-catalog.missing' }.command == 'grails-forge-cli gradle grailsToolCatalog'
+        findings.find { it.id == 'tool-catalog.missing' }.command == 'grails-forge-cli gradle grailsToolCatalog'
     }
 
-    void "command-catalog.incomplete names what the build could not list, as it says it, and how many more things it says"() {
+    void "tool-catalog.incomplete names what the build could not list, as it says it, and how many more things it says"() {
         given: 'a list the build wrote while the runtime class path of the project did not resolve completely, with another line'
         File project = copyOfTemplate()
         catalog(project, false, [UNRESOLVED, 'org.example:old-plugin:7.0.0 has commands of Grails 7, which are not listed because they cannot be run.'])
 
         when:
         int exit = run(project, 'project', 'health', '--json')
-        Map finding = (parsed().findings as List<Map>).find { it.id == 'command-catalog.incomplete' }
+        Map finding = (parsed().findings as List<Map>).find { it.id == 'tool-catalog.incomplete' }
 
         then: 'advice, which fails nothing'
         exit == 0
         finding.level == 'advice'
-        finding.message == ".grails/cache/tool-catalog.json lists 0 commands of the application and its plugins, and not every one the build has: ${UNRESOLVED} (and 1 more)".toString()
-        finding.fix == 'grails-forge-cli help lists what is not listed and why. A build that compiles the project lists the commands again once that is corrected'
+        finding.message == ".grails/cache/tool-catalog.json lists 0 tools of the application and its plugins, and not every one the build has: ${UNRESOLVED} (and 1 more)".toString()
+        finding.fix == 'grails-forge-cli help lists what is not listed and why. A build that compiles the project lists the tools again once that is corrected'
         finding.command == 'grails-forge-cli help'
         finding.files == ['.grails/cache/tool-catalog.json']
         finding.upgradeNote == "https://grails.apache.org/docs/${VersionInfo.documentationVersion}/guide/upgrading.html#upgradingCommandCatalog".toString()
@@ -849,6 +854,12 @@ class ProjectHealthCommandSpec extends CommandSpec {
     static void append(File project, String path, String text) {
         File file = new File(project, path)
         file.text = file.text + text
+    }
+
+    static void source(File project, String path, String text) {
+        File file = new File(project, path)
+        file.parentFile.mkdirs()
+        file.text = text
     }
 
     // the record written by project migrate, for an application whose record says what it is taken to be

@@ -24,7 +24,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.function.BiFunction
 import java.util.function.Consumer
-import org.apache.grails.forge.cli.console.ApplicationCommands
+import org.apache.grails.forge.cli.console.ProjectTools
 import org.apache.grails.forge.cli.console.GradleRunner
 import org.jline.terminal.Terminal
 import org.jline.terminal.impl.ExternalTerminal
@@ -130,7 +130,7 @@ class InteractiveConsoleSpec extends Specification {
 
         when: 'a name that is no command is answered without a build: the wrapper here names no Gradle that would list the commands of the application'
         ProcessBuilder console = command(true, [], [])
-        console.environment().put(ApplicationCommands.LISTING, 'false')
+        console.environment().put(ProjectTools.LISTING, 'false')
         program = console.redirectInput(typed('# a line that is a comment\n' +
                 'no-such-command\n' +
                 'gradle build "two  words"\n' +
@@ -159,7 +159,7 @@ class InteractiveConsoleSpec extends Specification {
 
         when:
         ProcessBuilder console = command(true, [], [])
-        console.environment().put(ApplicationCommands.LISTING, 'false')
+        console.environment().put(ProjectTools.LISTING, 'false')
         console.environment().put('NO_COLOR', '1')
         program = console.redirectInput(typed("gradle build\n${line}\ngradle never\n")).start()
         boolean ended = program.waitFor(SECONDS, TimeUnit.SECONDS)
@@ -192,7 +192,7 @@ class InteractiveConsoleSpec extends Specification {
 
         when:
         ProcessBuilder console = command(true, [], [])
-        console.environment().put(ApplicationCommands.LISTING, 'false')
+        console.environment().put(ProjectTools.LISTING, 'false')
         console.environment().put('NO_COLOR', '1')
         program = console.redirectInput(typed("${line}\ngradle after\n")).start()
         boolean ended = program.waitFor(SECONDS, TimeUnit.SECONDS)
@@ -297,11 +297,11 @@ class InteractiveConsoleSpec extends Specification {
 
         when:
         ProcessBuilder console = command(true, [], [])
-        console.environment().put(ApplicationCommands.LISTING, 'false')
+        console.environment().put(ProjectTools.LISTING, 'false')
         console.environment().put('NO_COLOR', '1')
         program = console.redirectInput(typed('ra --help\n' +
                 'help sa\n' +
-                'cc\n' +
+                'co\n' +
                 'rn\n' +
                 'g build\n' +
                 'exit\n')).start()
@@ -319,9 +319,9 @@ class InteractiveConsoleSpec extends Specification {
         said.contains('Short form: sa')
 
         and: 'a form two commands fit runs neither and says how each is typed, and one that fits none says what it nearly is'
-        said.contains('cc is short for more than one command: create-controller (ccon), create-command (ccom). ' +
+        said.contains('co is short for more than one command: compile (com), console (con). ' +
                 'Type more of the name of the one that is meant, or the short form in brackets after it')
-        said.contains('There is no command rn. Did you mean: run-app or run-script or run-command?')
+        said.contains('There is no command rn. Did you mean: run-app or run-script or run-tool?')
         said.contains('the wrapper ran with build')
     }
 
@@ -331,7 +331,7 @@ class InteractiveConsoleSpec extends Specification {
 
         when:
         ProcessBuilder console = command(true, [], [])
-        console.environment().put(ApplicationCommands.LISTING, 'false')
+        console.environment().put(ProjectTools.LISTING, 'false')
         console.environment().put('NO_COLOR', '1')
         program = console.redirectInput(typed('run --help\n' +
                 'help stop\n' +
@@ -357,7 +357,7 @@ class InteractiveConsoleSpec extends Specification {
                 'with the application started around it. Type: run-script app.groovy')
 
         and: 'no short form is read from run'
-        said.contains('There is no command ru. Did you mean: run-app or run-script or run-command?')
+        said.contains('There is no command ru. Did you mean: run-app or run-script or run-tool?')
         !said.contains('the wrapper ran with')
     }
 

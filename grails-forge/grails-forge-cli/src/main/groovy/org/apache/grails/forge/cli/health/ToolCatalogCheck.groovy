@@ -19,52 +19,52 @@
 package org.apache.grails.forge.cli.health
 
 import groovy.transform.CompileStatic
-import org.apache.grails.forge.cli.console.ApplicationCommandFile
+import org.apache.grails.forge.cli.console.ToolCatalogFile
 
 /**
- * {@code command-catalog}: the list of the commands of the application and its plugins that the
- * build writes to {@code .grails/cache/command-catalog.json}, which is how the {@code grails}
- * command has them. Nothing here is more than advice: the build of the project lists them. A list
- * that is current and says that the build could not list everything, such as when the class path
- * the commands run with does not resolve, is named with the first thing the build says.
+ * {@code tool-catalog}: the catalog of the tools of the application and its plugins that the build
+ * writes to {@code .grails/cache/tool-catalog.json}, which is how the {@code grails} command has
+ * them. Nothing here is more than advice: the build of the project lists them. A catalog that is
+ * current and says that the build could not list everything, such as when the class path the tools
+ * run with does not resolve, is named with the first thing the build says.
  *
  * @since 9.0
  */
 @CompileStatic
-final class CommandCatalogCheck extends HealthCheck {
+final class ToolCatalogCheck extends HealthCheck {
 
     @Override
     String getName() {
-        return 'command-catalog'
+        return 'tool-catalog'
     }
 
     @Override
     List<HealthFinding> check(HealthContext context) {
-        ApplicationCommandFile file = ApplicationCommandFile.read(context.directory)
-        String task = context.toType("gradle ${ApplicationCommandFile.TASK}")
+        ToolCatalogFile file = ToolCatalogFile.read(context.directory)
+        String task = context.toType("gradle ${ToolCatalogFile.TASK}")
         String fix = "A build that compiles the project lists them (grails compile, run-app, test-app, assemble), and so does typing the name of one; ${task} lists them now"
-        List<String> files = [ApplicationCommandFile.LOCATION]
+        List<String> files = [ToolCatalogFile.LOCATION]
         switch (file.state) {
-            case ApplicationCommandFile.State.MISSING:
-                return [found('missing', HealthLevel.ADVICE, "The commands of the application and its plugins are not listed: there is no ${ApplicationCommandFile.LOCATION}, " +
+            case ToolCatalogFile.State.MISSING:
+                return [found('missing', HealthLevel.ADVICE, "The tools of the application and its plugins are not listed: there is no ${ToolCatalogFile.LOCATION}, " +
                         'so the grails command does not have them by their names', fix, task, files, NOTE_COMMAND_CATALOG)]
-            case ApplicationCommandFile.State.REFUSED:
-                return [found('refused', HealthLevel.ADVICE, "${ApplicationCommandFile.LOCATION} ${file.reason}, so it is not used, and the grails command does not have " +
-                        'the commands of the application and its plugins by their names', fix, task, files, NOTE_COMMAND_CATALOG)]
-            case ApplicationCommandFile.State.STALE:
-                return [found('stale', HealthLevel.ADVICE, "${ApplicationCommandFile.LOCATION} may not list the commands the build has now: ${file.reason} was changed " +
+            case ToolCatalogFile.State.REFUSED:
+                return [found('refused', HealthLevel.ADVICE, "${ToolCatalogFile.LOCATION} ${file.reason}, so it is not used, and the grails command does not have " +
+                        'the tools of the application and its plugins by their names', fix, task, files, NOTE_COMMAND_CATALOG)]
+            case ToolCatalogFile.State.STALE:
+                return [found('stale', HealthLevel.ADVICE, "${ToolCatalogFile.LOCATION} may not list the tools the build has now: ${file.reason} was changed " +
                         'after it was written', fix, task, files, NOTE_COMMAND_CATALOG)]
         }
-        String listed = "${file.commands.size()} ${file.commands.size() == 1 ? 'command' : 'commands'}"
+        String listed = "${file.tools.size()} ${file.tools.size() == 1 ? 'tool' : 'tools'}"
         // what the build could not list, as it says it, and what of the file is not used
         List<String> said = file.diagnostics + file.leftOut
         if (!file.complete || !file.leftOut.isEmpty()) {
             String first = said ? said.first() : 'the build does not say why'
             String more = said.size() > 1 ? " (and ${said.size() - 1} more)" : ''
-            return [found('incomplete', HealthLevel.ADVICE, "${ApplicationCommandFile.LOCATION} lists ${listed} of the application and its plugins, and not every one " +
+            return [found('incomplete', HealthLevel.ADVICE, "${ToolCatalogFile.LOCATION} lists ${listed} of the application and its plugins, and not every one " +
                     "the build has: ${first}${more}", "${context.toType('help')} lists what is not listed and why. A build that compiles the project lists " +
-                    'the commands again once that is corrected', context.toType('help'), files, NOTE_COMMAND_CATALOG)]
+                    'the tools again once that is corrected', context.toType('help'), files, NOTE_COMMAND_CATALOG)]
         }
-        return [ok("The commands of the application and its plugins are listed (${ApplicationCommandFile.LOCATION}): ${listed}", files)]
+        return [ok("The tools of the application and its plugins are listed (${ToolCatalogFile.LOCATION}): ${listed}", files)]
     }
 }

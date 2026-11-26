@@ -49,6 +49,8 @@ abstract class HealthCheck {
     static final String NOTE_RECORD_IGNORE = 'upgradingRecordIgnoresMachineState'
     static final String NOTE_COMMAND_CATALOG = 'upgradingCommandCatalog'
     static final String NOTE_SETTINGS_GROOVY = 'upgradingSettingsGroovy'
+    static final String NOTE_TOOLS_RENAMED = 'upgradingToolsRenamed'
+    static final String NOTE_TOOLS_GRAILS_7 = 'upgradingLegacyBridgeRemoved'
 
     /**
      * @return the name of the check, which is the first part of the id of each of its findings

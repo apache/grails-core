@@ -39,7 +39,7 @@ import spock.util.concurrent.PollingConditions
 
 /**
  * The commands that run the application of the project and the sessions around it: {@code run-app},
- * {@code stop-app}, {@code console}, {@code shell}, {@code run-script} and {@code run-command}.
+ * {@code stop-app}, {@code console}, {@code shell}, {@code run-script} and {@code run-tool}.
  *
  * <p>Most projects here have a Gradle wrapper that is a script of two lines around a program of one
  * file: it writes down the arguments it was given and, for {@code bootRun}, answers on a port of the
@@ -192,7 +192,7 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
             }
         }
 
-        tasks.register('runCommand', Arguments)
+        tasks.register('runTool', Arguments)
         tasks.register('bootRun') {
             def port = gradle.startParameter.systemPropertiesArgs['grails.server.port']
             def marker = new File(projectDir, 'server.pid')
@@ -281,8 +281,8 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
         ['shell', '-debug-jvm', '-Dother=1', '--stacktrace']                                        | '<shell><--debug-jvm><--quiet><-Dgrails.env=development><-Dother=1><--stacktrace><-Dgrails.full.stacktrace=true>'
         ['run-script', 'scripts/one.groovy']                                                       | '<runScript><-Pargs=scripts/one.groovy><-Dgrails.env=development>'
         ['run-script', 'scripts/one.groovy', 'scripts/two words/it\'s "2".groovy', '-Dgrails.env=test', '--', '-q'] | '<runScript><-Pargs=scripts/one.groovy "scripts/two words/it\'s "\'"\'"2"\'"\'".groovy"><-Dgrails.env=test><-q>'
-        ['run-command', 'hello-world']                                                             | '<runCommand><--args-file=.grails/run/command-args-0.json><-Dgrails.env=development>'
-        ['run-command', '-Dgrails.env=test', '-x', 'hello-world', '-x', '--', '-Dno=option']       | '<runCommand><--args-file=.grails/run/command-args-0.json><-Dgrails.env=test><--stacktrace><-Dgrails.full.stacktrace=true>'
+        ['run-tool', 'hello-world']                                                             | '<runTool><--args-file=.grails/run/command-args-0.json><-Dgrails.env=development>'
+        ['run-tool', '-Dgrails.env=test', '-x', 'hello-world', '-x', '--', '-Dno=option']       | '<runTool><--args-file=.grails/run/command-args-0.json><-Dgrails.env=test><--stacktrace><-Dgrails.full.stacktrace=true>'
     }
 
     void "the files run-script gives the task are split into the files that were given"() {
@@ -316,20 +316,20 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
         !new File(dir, 'invoked.txt').exists()
     }
 
-    void "run-command gives the command its arguments as they are, in a file only the user reads that is gone afterwards"() {
+    void "run-tool gives the tool its arguments as they are, in a file only the user reads that is gone afterwards"() {
         given:
         scriptedProject('record')
         List<String> hostile = ['two  words', '"double" \'single\'', '--', '-Dnot=ours', '--help', '$HOME `id` *', 'line\nbreak', '', 'café 😀', '\\', '@|red x|@']
 
         when:
-        int exit = ForgeCli.execute(beanContext, (['run-command', 'my-command'] + hostile) as String[])
+        int exit = ForgeCli.execute(beanContext, (['run-tool', 'my-command'] + hostile) as String[])
 
         then:
         exit == 0
         errors() == []
         new JsonSlurper().parseText(new File(dir, 'args-file.txt').text) == ['my-command'] + hostile
         new File(dir, 'args-file-permissions.txt').text == 'rw-------'
-        new File(dir, 'invoked.txt').text == '<runCommand><--args-file=.grails/run/command-args-0.json><-Dgrails.env=development>\n'
+        new File(dir, 'invoked.txt').text == '<runTool><--args-file=.grails/run/command-args-0.json><-Dgrails.env=development>\n'
 
         and: 'the file is UTF-8, with what is not ASCII as it is, and it is deleted with the file that names its process'
         new File(dir, 'args-file.txt').getText('UTF-8').contains('caf\u00e9 \ud83d\ude00')
@@ -339,19 +339,19 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
         PosixFilePermissions.toString(Files.getPosixFilePermissions(new File(dir, '.grails/run').toPath())) == 'rwx------'
     }
 
-    void "run-command deletes the file of the arguments when the command fails too, and uses the next name while one is taken"() {
+    void "run-tool deletes the file of the arguments when the command fails too, and uses the next name while one is taken"() {
         given:
         scriptedProject('fail')
         new File(dir, '.grails/run').mkdirs()
         new File(dir, '.grails/run/command-args-0.json').text = '["of a command that runs"]'
 
         when:
-        int exit = ForgeCli.execute(beanContext, 'run-command', 'my-command', 'one')
+        int exit = ForgeCli.execute(beanContext, 'run-tool', 'my-command', 'one')
 
         then:
         exit == 1
         errors() == ['| Error Gradle did not succeed: it ended with exit code 3']
-        new File(dir, 'invoked.txt').text.startsWith('<runCommand><--args-file=.grails/run/command-args-1.json>')
+        new File(dir, 'invoked.txt').text.startsWith('<runTool><--args-file=.grails/run/command-args-1.json>')
         new File(dir, 'args-file.txt').text == '["my-command","one"]'
         new File(dir, '.grails/run').list().toList().sort() == ['.gitignore', 'command-args-0.json']
         new File(dir, '.grails/run/command-args-0.json').text == '["of a command that runs"]'
@@ -360,16 +360,16 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
         new File(dir, '.grails/run/command-args-0.json').setLastModified(System.currentTimeMillis() - 2 * 24 * 60 * 60 * 1000L)
         new File(dir, 'mode.txt').text = 'record'
         out.reset()
-        exit = ForgeCli.execute(beanContext, 'run-command', 'my-command', 'two')
+        exit = ForgeCli.execute(beanContext, 'run-tool', 'my-command', 'two')
 
         then:
         exit == 0
-        new File(dir, 'invoked.txt').text.startsWith('<runCommand><--args-file=.grails/run/command-args-0.json>')
+        new File(dir, 'invoked.txt').text.startsWith('<runTool><--args-file=.grails/run/command-args-0.json>')
         new File(dir, '.grails/run').list().toList() == ['.gitignore']
     }
 
     @Unroll
-    void "run-command refuses #what, and runs nothing"() {
+    void "run-tool refuses #what, and runs nothing"() {
         given:
         scriptedProject('record')
 
@@ -385,12 +385,12 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
 
         where:
         what                           | line                                               | said
-        'no name'                      | ['run-command']                                    | 'Missing required parameter'
-        'no name after its options'    | ['run-command', '-Dgrails.env=test']               | 'Missing required parameter'
-        'an argument with U+0000'      | ['run-command', 'name', 'secret\u0000']            | 'The command cannot be given these arguments: argument 2 has the character U+0000'
-        'half of a pair'               | ['run-command', 'name', 'ok', 'secret\ud83d']      | 'The command cannot be given these arguments: argument 3 has half of a character of two code units'
-        'more arguments than the task' | ['run-command', 'name'] + ['secret'] * 4096        | 'The command cannot be given these arguments: these are 4097 arguments'
-        'an option it does not have'   | ['run-command', '--bogus', 'name']                 | '--bogus'
+        'no name'                      | ['run-tool']                                    | 'Missing required parameter'
+        'no name after its options'    | ['run-tool', '-Dgrails.env=test']               | 'Missing required parameter'
+        'an argument with U+0000'      | ['run-tool', 'name', 'secret\u0000']            | 'The tool cannot be given these arguments: argument 2 has the character U+0000'
+        'half of a pair'               | ['run-tool', 'name', 'ok', 'secret\ud83d']      | 'The tool cannot be given these arguments: argument 3 has half of a character of two code units'
+        'more arguments than the task' | ['run-tool', 'name'] + ['secret'] * 4096        | 'The tool cannot be given these arguments: these are 4097 arguments'
+        'an option it does not have'   | ['run-tool', '--bogus', 'name']                 | '--bogus'
     }
 
     void "run-app --https creates a certificate once, where the shell has it, and gives it to the application"() {
@@ -1315,7 +1315,7 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
         out.reset()
         int run = ForgeCli.execute(beanContext, 'run-app', '--detach', '--port', freePort() as String, '--ready-timeout', '30')
         List<String> runSaid = errors()
-        int command = ForgeCli.execute(beanContext, 'run-command', 'name')
+        int command = ForgeCli.execute(beanContext, 'run-tool', 'name')
 
         then:
         stop == 1
@@ -1329,7 +1329,7 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
         new File(outside, 'run').list().toList() == ['app.json']
         outside.list().toList().sort() == ['app.json', 'run']
 
-        and: 'run-app and run-command, which would write there, do not either'
+        and: 'run-app and run-tool, which would write there, do not either'
         run == runExit
         runExit == 0 || (runSaid.size() == 1 && runSaid[0].contains(said))
         command == runExit
@@ -1380,7 +1380,7 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
         ConsoleProject.setOwnedByUser({ Path path -> false } as Predicate<Path>)
 
         when: 'nothing names the directory'
-        int exit = ForgeCli.execute(beanContext, 'run-command', 'my-command', 'one')
+        int exit = ForgeCli.execute(beanContext, 'run-tool', 'my-command', 'one')
 
         then:
         exit == 1
@@ -1392,12 +1392,12 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
         when: 'the environment names it'
         out.reset()
         ConsoleProject.setSafeDirectories(dir.canonicalPath)
-        exit = ForgeCli.execute(beanContext, 'run-command', 'my-command', 'one')
+        exit = ForgeCli.execute(beanContext, 'run-tool', 'my-command', 'one')
 
         then: 'its wrapper is run, and the directory the commands keep their files in is used'
         exit == 0
         errors() == []
-        new File(dir, 'invoked.txt').text.startsWith('<runCommand><--args-file=.grails/run/command-args-0.json>')
+        new File(dir, 'invoked.txt').text.startsWith('<runTool><--args-file=.grails/run/command-args-0.json>')
 
         when: 'a record that is there is read, and held to what a record is and not to whose it is'
         out.reset()
@@ -1441,7 +1441,7 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
         !new File(dir, '.grails').exists()
 
         where:
-        line << [['run-app'], ['run-app', '--detach'], ['stop-app'], ['console'], ['shell'], ['run-script', 'scripts/one.groovy'], ['run-command', 'name', 'argument'],
+        line << [['run-app'], ['run-app', '--detach'], ['stop-app'], ['console'], ['shell'], ['run-script', 'scripts/one.groovy'], ['run-tool', 'name', 'argument'],
                  ['run'], ['run', '--detach'], ['stop']]
         command = line[0..<(line.size() > 1 && line[1].startsWith('--') ? 2 : 1)].join(' ')
     }
@@ -1527,7 +1527,7 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
         listed.any { String line -> line =~ /^  console +Runs the Swing console of the Grails application: the Gradle task console\./ }
         listed.any { String line -> line =~ /^  shell +Runs the Groovy shell of the Grails application: the Gradle task shell\./ }
         listed.any { String line -> line =~ /^  run-script +Runs Groovy scripts in the Grails application: the Gradle task runScript\.$/ }
-        listed.any { String line -> line =~ /^  run-command +Runs a command of the Grails application: the Gradle task runCommand\.$/ }
+        listed.any { String line -> line =~ /^  run-tool, run-command +Runs a tool of the Grails application by its name: the Gradle task runTool\.$/ }
 
         when:
         out.reset()
@@ -1537,7 +1537,7 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
 
         then:
         exit == 0
-        ['run-app', 'stop-app', 'console', 'shell', 'run-script', 'run-command'].every { String name -> commands[name].project == true && commands[name].origin == 'built-in' }
+        ['run-app', 'stop-app', 'console', 'shell', 'run-script', 'run-tool'].every { String name -> commands[name].project == true && commands[name].origin == 'built-in' }
         commands['run-app'].aliases == ['run']
         commands['stop-app'].aliases == ['stop']
         commands['shell'].aliases == []
@@ -1545,7 +1545,8 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
         !(commands['run-app'].options as List<Map>).collectMany { Map option -> option.names as List<String> }.any { String name -> name in ['-port', '-host', '-https', '-debug-jvm', '--query-tail'] }
         (commands['run-app'].options as List<Map>).collectMany { Map option -> option.names as List<String> }.containsAll(
                 ['--port', '--host', '--https', '--debug-jvm', '-P', '-D', '--detach', '--foreground', '--ready-timeout'])
-        (commands['run-command'].parameters as List<Map>)*.label == ['NAME', 'ARG']
+        commands['run-tool'].aliases == ['run-command']
+        (commands['run-tool'].parameters as List<Map>)*.label == ['NAME', 'ARG']
         (commands['run-script'].parameters as List<Map>)*.label == ['FILE']
 
         when: 'the other names of the shell, its short forms, and those of lower-case letters'
@@ -1576,7 +1577,7 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
         stopApp.contains(' stop-app [-hvVx]')
 
         when: 'how the other commands are used'
-        Map<String, String> usage = ['console', 'shell', 'run-script', 'run-command'].collectEntries { String name ->
+        Map<String, String> usage = ['console', 'shell', 'run-script', 'run-tool'].collectEntries { String name ->
             out.reset()
             ForgeCli.execute(beanContext, name, '--help')
             // the usage is two lines, each within the width of the help: the options of the command line, and those of the command
@@ -1588,7 +1589,7 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
         usage['console'].endsWith(' console [-hvVx] [--non-interactive] [--plain-output] [--debug-jvm] [-DNAME=VALUE]... [-- GRADLE-ARGUMENT...]')
         usage['shell'].endsWith(' shell [-hvVx] [--non-interactive] [--plain-output] [--debug-jvm] [-DNAME=VALUE]... [-- GRADLE-ARGUMENT...]')
         usage['run-script'].endsWith(' run-script [-hvVx] [--non-interactive] [--plain-output] [-DNAME=VALUE]... FILE... [-- GRADLE-ARGUMENT...]')
-        usage['run-command'].endsWith(' run-command [-hvVx] [--non-interactive] [--plain-output] [-DNAME=VALUE]... NAME [ARG...]')
+        usage['run-tool'].endsWith(' run-tool [-hvVx] [--non-interactive] [--plain-output] [-DNAME=VALUE]... NAME [ARG...]')
 
         when: 'the short forms that fit one of these commands and another one'
         Map<String, String> ambiguous = ['s', 'co', 'c', 'r', 'st', 'ru', 'sto'].collectEntries { String form ->
@@ -1597,7 +1598,7 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
             [(form): "${code} ${out.toString().readLines()[0]}".toString()]
         }
 
-        then: 'before these commands s was stats and co was compile; r and ru, which start run as much as run-script and run-command, are no command ' +
+        then: 'before these commands s was stats and co was compile; r and ru, which start run as much as run-script and run-tool, are no command ' +
                 'of the command line, so they start nothing, sto is none either, and st is stats still'
         ambiguous.s == '2 s is short for more than one command: stats (st), shell (sh). ' +
                 'Type more of the name of the one that is meant, or the short form in brackets after it'
@@ -1982,7 +1983,7 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
         when:
         int stop = ForgeCli.execute(beanContext, 'stop-app')
         int run = ForgeCli.execute(beanContext, 'run-app')
-        int command = ForgeCli.execute(beanContext, 'run-command', 'name')
+        int command = ForgeCli.execute(beanContext, 'run-tool', 'name')
 
         then:
         stop == 1 && run == 1 && command == 1
@@ -2000,7 +2001,7 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
         mode << ['rwxrwx---', 'rwx---rwx', 'rwx-w----']
     }
 
-    void "run-command deletes the file of a command that is no longer there, and keeps the file of one that is"() {
+    void "run-tool deletes the file of a command that is no longer there, and keeps the file of one that is"() {
         given:
         scriptedProject('record')
         new File(dir, '.grails/run').mkdirs()
@@ -2017,21 +2018,21 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
         new File(dir, '.grails/run/command-args-3.pid').setLastModified(System.currentTimeMillis() - 5 * 60 * 1000L)
 
         when:
-        int exit = ForgeCli.execute(beanContext, 'run-command', 'my-command')
+        int exit = ForgeCli.execute(beanContext, 'run-tool', 'my-command')
 
         then: 'the first name that is free again is used'
         exit == 0
-        new File(dir, 'invoked.txt').text.startsWith('<runCommand><--args-file=.grails/run/command-args-1.json>')
+        new File(dir, 'invoked.txt').text.startsWith('<runTool><--args-file=.grails/run/command-args-1.json>')
         new File(dir, '.grails/run').list().toList().sort() == ['.gitignore', 'command-args-0.json', 'command-args-0.pid']
         new File(dir, '.grails/run/command-args-0.json').text == '["of a CLI that runs","secret"]'
     }
 
-    void "the arguments of run-command are held to their size in UTF-8, which is what the task reads"() {
+    void "the arguments of run-tool are held to their size in UTF-8, which is what the task reads"() {
         given:
         scriptedProject('record')
 
         when: 'six hundred thousand bytes that would be more than a million as escapes'
-        int exit = ForgeCli.execute(beanContext, 'run-command', 'name', '\u4e2d' * 200_000)
+        int exit = ForgeCli.execute(beanContext, 'run-tool', 'name', '\u4e2d' * 200_000)
 
         then:
         exit == 0
@@ -2040,15 +2041,15 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
         when:
         new File(dir, 'invoked.txt').delete()
         out.reset()
-        exit = ForgeCli.execute(beanContext, 'run-command', 'name', '\u4e2d' * 349_524)
+        exit = ForgeCli.execute(beanContext, 'run-tool', 'name', '\u4e2d' * 349_524)
 
         then: 'three bytes each, and the brackets, quotes and name around them: more than 1048576'
         exit == 2
-        out.toString().contains('The command cannot be given these arguments: the arguments are more than 1048576 bytes in UTF-8')
+        out.toString().contains('The tool cannot be given these arguments: the arguments are more than 1048576 bytes in UTF-8')
         !new File(dir, 'invoked.txt').exists()
     }
 
-    void "run-app and stop-app work with the Gradle wrapper of a project, and run-command gives Gradle the file of the arguments"() {
+    void "run-app and stop-app work with the Gradle wrapper of a project, and run-tool gives Gradle the file of the arguments"() {
         given:
         plainProject()
         int port = freePort()
@@ -2076,7 +2077,7 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
 
         when:
         out.reset()
-        exit = ForgeCli.execute(beanContext, 'run-command', 'hello-world', 'two  words', '--', '"quoted"')
+        exit = ForgeCli.execute(beanContext, 'run-tool', 'hello-world', 'two  words', '--', '"quoted"')
 
         then:
         exit == 0

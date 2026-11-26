@@ -39,8 +39,10 @@ class FormerCommandsSpec extends CommandSpec {
             'which now follows the command as -Dgrails.env=test. Type: grails-forge-cli test-app'
     static final String FOLLOWS = '. The environment now follows the command as -Dgrails.env='
     static final String CREATE_SCRIPT = 'create-script wrote a script command into src/main/scripts. Script commands are deprecated, and the scripts a project has still run: ' +
-            'a new command is a class of the application. Type: grails-forge-cli create-command NAME'
-    static final String MISSING ='The commands of the application and its plugins are not listed yet: a build that compiles the project lists them, ' +
+            'a new tool is a class of the application. Type: grails-forge-cli create-tool NAME'
+    static final String CREATE_COMMAND = 'create-command wrote a command of the application into grails-app/commands. What an application adds to the command line is now a tool, ' +
+            'which is written to src/cli/groovy, or with --standalone to src/standalone/groovy. Type: grails-forge-cli create-tool NAME'
+    static final String MISSING ='The tools of the application and its plugins are not listed yet: a build that compiles the project lists them, ' +
             'and so does typing the name of one. To list them now: grails-forge-cli gradle grailsToolCatalog'
     static final Map<String, List<String>> PROJECTS = [
             web        : ['create-app', 'example.web'],
@@ -63,14 +65,14 @@ class FormerCommandsSpec extends CommandSpec {
         System.setErr(new PrintStream(err, true))
         top = dir
         // the projects are not built: a name of a command of a plugin does not have the build list the commands of the application
-        ApplicationCommands.setListing('false')
+        ProjectTools.setListing('false')
     }
 
     void cleanup() {
         System.setOut(originalOut)
         System.setErr(originalErr)
         ConsoleProject.setOwnedByUser(null)
-        ApplicationCommands.setListing(null)
+        ProjectTools.setListing(null)
     }
 
     @Unroll
@@ -142,7 +144,7 @@ class FormerCommandsSpec extends CommandSpec {
             // a command of a plugin the build of the project lists
             File catalog = new File(top, 'web/.grails/cache/tool-catalog.json')
             catalog.parentFile.mkdirs()
-            catalog.text = ApplicationCommandsSpec.doc([[name: 'dbm-update', aliases: [], description: '', origin: 'org.grails.plugins:database-migration:5.0.0',
+            catalog.text = ProjectToolsSpec.doc([[name: 'dbm-update', aliases: [], description: '', origin: 'org.grails.plugins:database-migration:5.0.0',
                                                          target: 'application', registration: 'factories']])
         }
         ConsoleCommands.setInteractive(console)
@@ -181,8 +183,8 @@ class FormerCommandsSpec extends CommandSpec {
         'prod'        | 'war'             | true       | false   || shell('prod', 'production') + FOLLOWS + 'production. Type: {cli} war -Dgrails.env=production'
         'test'        | 'run'             | true       | false   || shell('test', 'test') + FOLLOWS + 'test. Type: {cli} run -Dgrails.env=test'
         'dev'         | 'test-app'        | true       | false   || shell('dev', 'development') + FOLLOWS + 'development. Type: {cli} test-app -Dgrails.env=development'
-        'prod'        | 'dbm-update'      | true       | false   || shell('prod', 'production') + '. A command of the application is given the environment by run-command, ' +
-                                                                      'in front of the name of the command. Type: {cli} run-command -Dgrails.env=production dbm-update'
+        'prod'        | 'dbm-update'      | true       | false   || shell('prod', 'production') + '. A tool of the application is given the environment by run-tool, ' +
+                                                                      'in front of the name of the tool. Type: {cli} run-tool -Dgrails.env=production dbm-update'
         'prod'        | 'war'             | true       | true    || shell('prod', 'production') + FOLLOWS + 'production. Type: {cli} war -Dgrails.env=production'
         'production'  | 'run-app'         | true       | true    || named('production') + 'production. Type: {cli} run-app -Dgrails.env=production'
         'dev'         | null              | false      | true    || shell('dev', 'development') + FOLLOWS + 'development. Type: {cli} COMMAND -Dgrails.env=development'
@@ -222,7 +224,7 @@ class FormerCommandsSpec extends CommandSpec {
         inProject('web')
         File catalog = new File(top, 'web/.grails/cache/tool-catalog.json')
         catalog.parentFile.mkdirs()
-        catalog.text = ApplicationCommandsSpec.doc(['dev-tools', 'prod-check', 'production-report', 'development-report'].collect { String each ->
+        catalog.text = ProjectToolsSpec.doc(['dev-tools', 'prod-check', 'production-report', 'development-report'].collect { String each ->
             [name: each, aliases: [], description: '', origin: 'application', target: 'application', registration: 'factories']
         })
 
@@ -322,8 +324,8 @@ class FormerCommandsSpec extends CommandSpec {
         (inProjects.values().flatten() as Set<String>).findAll { String name -> inProjects.values().any { !it.contains(name) } }.every { names.contains(it) }
 
         and: 'a command a line tells to type is a command of a web application'
-        table.collect { (it.hint =~ /Type: \{cli\} ([a-z-]+)( NAME)?$/) }.findAll { it.find() }*.group(1).sort() == ['create-command', 'create-taglib', 'test-app']
-        ['create-taglib', 'run-app', 'stop-app', 'test-app', 'help', 'gradle', 'feature', 'create-app', 'create-unit-test', 'create-command'].every { commands.web.contains(it) }
+        table.collect { (it.hint =~ /Type: \{cli\} ([a-z-]+)( NAME)?$/) }.findAll { it.find() }*.group(1).sort() == ['create-taglib', 'create-tool', 'create-tool', 'test-app']
+        ['create-taglib', 'run-app', 'stop-app', 'test-app', 'help', 'gradle', 'feature', 'create-app', 'create-unit-test', 'create-tool'].every { commands.web.contains(it) }
         ['create-restful-controller', 'create-functional-test'].every { commands.rest.contains(it) }
         ['create-restful-controller', 'create-functional-test', 'package-plugin'].every { commands['rest-plugin'].contains(it) }
 
@@ -384,8 +386,8 @@ class FormerCommandsSpec extends CommandSpec {
         then:
         exit == 2
         lines[1] == MISSING
-        lines[2] == 'generate-all is a command of the scaffolding plugin (grails-scaffolding): where the application has the plugin, ' +
-                'it is a command here by its name. In a REST API application or REST API plugin, which has the plugin with the scaffolding feature, ' +
+        lines[2] == 'generate-all is a tool of the scaffolding plugin (grails-scaffolding): where the application has the plugin, ' +
+                'it is a command here by its name. In a REST API application or REST API plugin, which has the tools of the plugin with the scaffolding feature, ' +
                 'it generates what the REST API profile generated (a REST controller and JSON views)'
 
         when: 'a command the directory has'
@@ -418,7 +420,7 @@ class FormerCommandsSpec extends CommandSpec {
 
         then: 'nothing is said about the list, and the line of the table follows the refusal'
         other == 2
-        err.toString().readLines()[1].startsWith('generate-views is a command of the scaffolding plugin')
+        err.toString().readLines()[1].startsWith('generate-views is a tool of the scaffolding plugin')
     }
 
     @Unroll
@@ -427,7 +429,7 @@ class FormerCommandsSpec extends CommandSpec {
         inProject('web')
         File catalog = new File(top, 'web/.grails/cache/tool-catalog.json')
         catalog.parentFile.mkdirs()
-        catalog.text = ApplicationCommandsSpec.doc(['run-now', 'test-tool', 'stop-point'].collect { String each ->
+        catalog.text = ProjectToolsSpec.doc(['run-now', 'test-tool', 'stop-point'].collect { String each ->
             [name: each, aliases: [], description: '', origin: 'application', target: 'application', registration: 'factories']
         })
 
@@ -460,7 +462,7 @@ class FormerCommandsSpec extends CommandSpec {
         inProject('web')
         File catalog = new File(top, 'web/.grails/cache/tool-catalog.json')
         catalog.parentFile.mkdirs()
-        catalog.text = ApplicationCommandsSpec.doc(['run-now', 'stop-point'].collect { String each ->
+        catalog.text = ProjectToolsSpec.doc(['run-now', 'stop-point'].collect { String each ->
             [name: each, aliases: [], description: '', origin: 'application', target: 'application', registration: 'factories']
         })
 
@@ -525,7 +527,7 @@ class FormerCommandsSpec extends CommandSpec {
         exit == 2
         lines[0].startsWith('There is no command generate-all')
         lines[1].startsWith('The commands of a project are not there: The Grails project in ')
-        lines[2].startsWith('generate-all is a command of the scaffolding plugin')
+        lines[2].startsWith('generate-all is a tool of the scaffolding plugin')
     }
 
     @Unroll
@@ -701,33 +703,35 @@ class FormerCommandsSpec extends CommandSpec {
     }
 
     @Unroll
-    void "create-script, whose scripts are deprecated, is refused with its line in a #kind project and writes nothing, and the command the line names writes a command there"() {
+    void "#former is refused with its line in a #kind project and writes nothing, and the command the line names writes a tool there"() {
         given:
         inProject(kind)
         File project = new File(top, PROJECTS[kind][1].substring('example.'.length()))
 
         when:
-        int exit = ForgeCli.execute(beanContext, 'create-script', 'data-import')
+        int exit = ForgeCli.execute(beanContext, former, 'data-import')
         List<String> lines = err.toString().readLines()
 
-        then: 'a mistake in the command line, with the line after what is said about the commands of the application'
+        then: 'a mistake in the command line, with the line after what is said about the tools of the application'
         exit == 2
         out.toString().isEmpty()
-        lines[0].startsWith('There is no command create-script')
+        lines[0].startsWith("There is no command ${former}")
         lines[1] == MISSING
-        lines[2] == CREATE_SCRIPT
+        lines[2] == line
         lines[3] == 'Usage: grails-forge-cli [-hvVx] [--non-interactive] [--plain-output] [COMMAND]'
         !new File(project, 'src/main/scripts').exists()
+        !new File(project, 'grails-app/commands').exists()
 
         when: 'what the line says to type'
         err.reset()
-        exit = ForgeCli.execute(beanContext, 'create-command', 'data-import')
+        exit = ForgeCli.execute(beanContext, 'create-tool', 'data-import')
 
         then:
         exit == 0
         err.toString().isEmpty()
-        new File(project, 'grails-app/commands/example/DataImportCommand.groovy').isFile()
+        new File(project, 'src/cli/groovy/example/DataImportTool.groovy').isFile()
         !new File(project, 'src/main/scripts').exists()
+        !new File(project, 'grails-app/commands').exists()
 
         when: 'the start of the name is completed, as the interactive console asks for it'
         List<CharSequence> candidates = []
@@ -737,7 +741,11 @@ class FormerCommandsSpec extends CommandSpec {
         candidates*.toString() == ['ervice']
 
         where:
-        kind << ['web', 'plugin']
+        former           | kind     | line
+        'create-script'  | 'web'    | CREATE_SCRIPT
+        'create-script'  | 'plugin' | CREATE_SCRIPT
+        'create-command' | 'web'    | CREATE_COMMAND
+        'create-command' | 'plugin' | CREATE_COMMAND
     }
 
     void "create-functional-test, which was a script of the Geb plugin in a web application, is a command there, and is refused with its line in a project without Geb"() {

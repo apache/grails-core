@@ -148,8 +148,8 @@ final class CommandCatalog {
         String given = FeatureSelectionException.shown(typed)
         // what was typed is compared, and nothing else: not what stands for an empty name or for one that cannot be shown as it is
         List<String> similar = typed == null || typed.isEmpty() || given != typed ? Collections.<String>emptyList() : suggestions(parent, typed)
-        // it may be a command of the application, where the build of the project has not listed those
-        String listed = parent.getParent() == null ? ApplicationCommands.whenUnknown(parent, given) : null
+        // it may be a tool of the application, where the build of the project has not listed those
+        String listed = parent.getParent() == null ? ProjectTools.whenUnknown(parent, given) : null
         // below a project that is not used its commands are not there, which is then why there is none of that name
         String untrusted = parent.getParent() == null ? ConsoleProject.search(FileSystemOutputHandler.getDefaultBaseDirectory().toPath()).untrusted : null
         return new UsageHelp.Lines(parent, "There is no command ${given}" +
@@ -304,9 +304,9 @@ final class CommandCatalog {
         List<Map<String, Object>> described = []
         for (CommandLine command : listed(parent)) {
             CommandLine.Model.CommandSpec spec = command.getCommandSpec()
-            if (spec.userObject() instanceof ApplicationCommandCommand) {
-                // a command of the application is described by the build of the project
-                described.add(((ApplicationCommandCommand) spec.userObject()).describe())
+            if (spec.userObject() instanceof ToolCommand) {
+                // a tool of the application is described by the build of the project
+                described.add(((ToolCommand) spec.userObject()).describe())
                 continue
             }
             Map<String, Object> each = new LinkedHashMap<>()
@@ -485,7 +485,7 @@ final class CommandCatalog {
             }
             for (CommandLine command : known) {
                 Object object = command.getCommandSpec().userObject()
-                (object instanceof ApplicationCommandCommand ? ofTheBuild : object instanceof PackArtefactCommand ? ofFeatures : own).add(command)
+                (object instanceof ToolCommand ? ofTheBuild : object instanceof PackArtefactCommand ? ofFeatures : own).add(command)
             }
         }
 

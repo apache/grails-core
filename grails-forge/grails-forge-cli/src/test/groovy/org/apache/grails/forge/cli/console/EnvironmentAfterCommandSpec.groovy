@@ -28,8 +28,8 @@ import spock.lang.Unroll
  * What {@code -Dgrails.env=NAME} after the name of a command does, for each kind of command: a command
  * of {@code grails} itself that runs the build runs in that environment; a command of the application
  * or of a plugin, run by its name, is given it as an argument, runs in {@code development}, and a
- * warning says so; {@code run-command} takes the environment in front of the name of the command, and
- * after it gives it to the command without a word; a script is given it as an argument and runs in the
+ * warning says so; {@code run-tool}, and its deprecated name {@code run-command}, takes the environment in front of the
+ * name of the tool, and after it gives it to the tool without a word; a script is given it as an argument and runs in the
  * environment of the build. The wrapper of the project here writes down what Gradle would be given.
  */
 @IgnoreIf({ os.windows })
@@ -51,9 +51,9 @@ class EnvironmentAfterCommandSpec extends CommandSpec {
         new File(dir, 'grails-app').mkdirs()
         new File(dir, 'src/main/scripts').mkdirs()
         new File(dir, 'src/main/scripts/data-import.groovy').text = 'println args\n'
-        File catalog = new File(dir, ApplicationCommandFile.LOCATION)
+        File catalog = new File(dir, ToolCatalogFile.LOCATION)
         catalog.parentFile.mkdirs()
-        catalog.setText(ApplicationCommandsSpec.doc([
+        catalog.setText(ProjectToolsSpec.doc([
                 [name: 'audit-report', aliases: [], description: 'Writes the audit report', origin: 'application', target: 'application', registration: 'factories'],
                 [name: 'hello-world', aliases: [], description: 'Says hello', origin: 'org.example:hello-cli:1.2.3', target: 'application', registration: 'descriptor']
         ]), StandardCharsets.UTF_8.name())
@@ -78,17 +78,18 @@ class EnvironmentAfterCommandSpec extends CommandSpec {
         exit == 0
         gradle.findAll { it.startsWith('-Dgrails.env=') } == (environment == 'the build' ? [] : ["-Dgrails.env=${environment}".toString()])
         err.toString().contains(WARNING) == warned
-        !warned || err.toString().readLines().contains(WARNING + typed.split(' ')[0] + ' is given to the command as an argument, and the command runs for the environment ' +
-                "development. To run it for another environment, name it before the command: grails-forge-cli run-command -Dgrails.env=production ${typed.split(' ')[0]}")
+        !warned || err.toString().readLines().contains(WARNING + typed.split(' ')[0] + ' is given to the tool as an argument, and the tool runs for the environment ' +
+                "development. To run it for another environment, name it before the tool: grails-forge-cli run-tool -Dgrails.env=production ${typed.split(' ')[0]}")
 
         where:
         typed                                                  | environment   | warned
         'compile -Dgrails.env=production'                      | 'production'  | false
         'audit-report -Dgrails.env=production'                 | 'development' | true
         'hello-world -Dgrails.env=production'                  | 'development' | true
+        'run-tool -Dgrails.env=production hello-world'         | 'production'  | false
+        'run-tool hello-world -Dgrails.env=production'         | 'development' | false
         'run-command -Dgrails.env=production hello-world'      | 'production'  | false
-        'run-command hello-world -Dgrails.env=production'      | 'development' | false
         'data-import -Dgrails.env=production'                  | 'the build'   | false
-        what = warned ? 'a warning says that the option is an argument of the command' : 'nothing is said of the option'
+        what = warned ? 'a warning says that the option is an argument of the tool' : 'nothing is said of the option'
     }
 }

@@ -23,9 +23,9 @@ import java.nio.file.Files
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 import groovy.json.JsonSlurper
-import org.apache.grails.forge.cli.console.ApplicationCommandFile
-import org.apache.grails.forge.cli.console.ApplicationCommands
-import org.apache.grails.forge.cli.console.ApplicationCommandsSpec
+import org.apache.grails.forge.cli.console.ToolCatalogFile
+import org.apache.grails.forge.cli.console.ProjectTools
+import org.apache.grails.forge.cli.console.ProjectToolsSpec
 import org.apache.grails.forge.core.pack.PackArtefact
 import org.apache.grails.forge.core.state.StateYaml
 import org.grails.forge.cli.CommandLineCompleter
@@ -102,11 +102,11 @@ class PackArtefactCommandsSpec extends CommandSpec {
         previousHome = System.getProperty('user.home')
         System.setProperty('user.home', home.absolutePath)
         // a name that is no command is refused at once: no build of the application lists its commands for it
-        ApplicationCommands.setListing('false')
+        ProjectTools.setListing('false')
     }
 
     void cleanup() {
-        ApplicationCommands.setListing(null)
+        ProjectTools.setListing(null)
         System.setOut(originalOut)
         System.setErr(originalErr)
         System.setProperty('user.home', previousHome)
@@ -299,7 +299,7 @@ class PackArtefactCommandsSpec extends CommandSpec {
 
         then:
         exit == 2
-        err.toString().contains('create-command')
+        err.toString().contains('create-tool')
         !err.toString().contains('A feature can give the command line a command of this name')
     }
 
@@ -367,9 +367,9 @@ class PackArtefactCommandsSpec extends CommandSpec {
         given:
         File app = new File(work, 'app')
         create(app, ['--features', 'acme-audit', '--feature-pack-dir', directoryPack().absolutePath])
-        File listed = new File(app, ApplicationCommandFile.LOCATION)
+        File listed = new File(app, ToolCatalogFile.LOCATION)
         listed.parentFile.mkdirs()
-        listed.setText(ApplicationCommandsSpec.doc([[name: 'create-audit-listener', aliases: [], description: 'Another one', origin: 'org.example:audit-cli:1.0.0',
+        listed.setText(ProjectToolsSpec.doc([[name: 'create-audit-listener', aliases: [], description: 'Another one', origin: 'org.example:audit-cli:1.0.0',
                                                      target: 'application', registration: 'descriptor']]), StandardCharsets.UTF_8.name())
         ForgeContext context = new ForgeContext()
 
@@ -380,7 +380,7 @@ class PackArtefactCommandsSpec extends CommandSpec {
         exit == 0
         new File(app, 'grails-app/services/com/example/OrderAuditListener.groovy').exists()
         (out.toString() + err.toString()).replaceAll(/\s+/, ' ').contains('create-audit-listener is a command of the feature acme-audit of the application, ' +
-                'so the command create-audit-listener of org.example:audit-cli:1.0.0 is not a command here. That one is run with: grails-forge-cli run-command create-audit-listener')
+                'so the tool create-audit-listener of org.example:audit-cli:1.0.0 is not a command here. That one is run with: grails-forge-cli run-tool create-audit-listener')
     }
 
     void "of two features whose record gives the same command, the first has it, and the other is said not to"() {

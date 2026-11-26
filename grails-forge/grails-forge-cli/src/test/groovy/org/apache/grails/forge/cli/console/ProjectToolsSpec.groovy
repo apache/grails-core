@@ -44,14 +44,14 @@ import spock.util.concurrent.PollingConditions
  * The commands of the application and of its plugins as commands of the CLI. The file in which the
  * build of a project lists them is written here by hand, and where a command is run the project has
  * the wrapper of a generated application around a build that needs nothing of the framework: its
- * {@code runCommand} task says what the file of the arguments held. No application is built.
+ * {@code runTool} task says what the file of the arguments held. No application is built.
  */
-class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
+class ProjectToolsSpec extends CommandSpec implements CommandFixture {
 
     static final String BUILD = '''\
         import org.gradle.api.tasks.options.Option
 
-        abstract class RunCommand extends DefaultTask {
+        abstract class RunTool extends DefaultTask {
 
             @Input @Optional @Option(option = 'args-file', description = 'The file of the arguments')
             String argsFile
@@ -72,7 +72,7 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
                 List vector = (List) new groovy.json.JsonSlurper().parse(file, 'UTF-8')
                 println 'vector=' + vector.collect { '<' + it.getBytes('UTF-8').encodeHex() + '>' }.join('')
                 if (vector.contains('fail')) {
-                    throw new GradleException('this command fails on purpose')
+                    throw new GradleException('this tool fails on purpose')
                 }
                 if (vector.contains('hang')) {
                     new File(base, 'started.txt').text = file.absolutePath + '\\n'
@@ -84,14 +84,14 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
         println 'requested=' + gradle.startParameter.taskNames.collect { '<' + it.replaceAll(/=.*/, '=') + '>' }.join('')
         println 'system=' + gradle.startParameter.systemPropertiesArgs.findAll { it.key.startsWith('grails.') }.sort().collect { name, value -> '<' + name + '=' + value + '>' }.join('')
         println 'stacktrace=' + gradle.startParameter.showStacktrace
-        tasks.register('runCommand', RunCommand)
+        tasks.register('runTool', RunTool)
         '''.stripIndent()
 
     static final Map HELLO = [name: 'hello-world', aliases: [], description: 'Says hello', origin: 'org.example:hello-cli:1.2.3', target: 'application', registration: 'descriptor']
-    static final String MISSING = 'The commands of the application and its plugins are not listed yet: a build that compiles the project lists them, ' +
+    static final String MISSING = 'The tools of the application and its plugins are not listed yet: a build that compiles the project lists them, ' +
             'and so does typing the name of one. To list them now: grails-forge-cli gradle grailsToolCatalog'
-    static final String REFUSED = 'The commands of the application and its plugins are not listed: .grails/cache/tool-catalog.json '
-    static final String NOT_ALL = 'Not every command of the application and its plugins is listed, so audit-report may be one that is not. ' +
+    static final String REFUSED = 'The tools of the application and its plugins are not listed: .grails/cache/tool-catalog.json '
+    static final String NOT_ALL = 'Not every tool of the application and its plugins is listed, so audit-report may be one that is not. ' +
             'What is not listed, and why: grails-forge-cli help'
 
     // One Gradle daemon, of this specification alone, runs the builds of its features: they have nothing to
@@ -128,13 +128,14 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
         given:
         catalog([HELLO,
                  [name: 'audit-report', description: '', origin: 'application', target: 'application', registration: 'factories'],
-                 [name: 'old-one', aliases: ['oldest'], description: 'From a Grails 7 plugin', origin: 'file:legacy-plugin.jar', target: 'application', registration: 'legacy']])
+                 [name: 'old-one', aliases: ['oldest'], description: 'From a Grails 8 plugin', origin: 'file:old-plugin.jar', target: 'application', registration: 'factories',
+                  deprecated: ['type']]])
 
         when:
         int exit = ForgeCli.execute(beanContext, 'help')
         List<String> lines = out.toString().readLines()
         int own = lines.indexOf('Commands:')
-        int application = lines.indexOf('Commands of the application and its plugins:')
+        int application = lines.indexOf('Tools of the application and its plugins:')
 
         then:
         exit == 0
@@ -145,7 +146,7 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
         lines.subList(application + 1, lines.size()).findAll { !it.trim().isEmpty() }*.replaceAll(/\s+$/, '') == [
                 '  audit-report     (application)',
                 '  hello-world      Says hello (org.example:hello-cli:1.2.3)',
-                '  old-one, oldest  From a Grails 7 plugin (file:legacy-plugin.jar)']
+                '  old-one, oldest  From a Grails 8 plugin (file:old-plugin.jar, deprecated)']
 
         when: 'the help of one of them'
         out.reset()
@@ -156,8 +157,9 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
         err.toString().isEmpty()
         out.toString().readLines()[0] == usage
         out.toString().contains(from)
-        out.toString().contains('Everything after the name of the command is given to the command as it is, the options too.')
+        out.toString().contains('Everything after the name of the tool is given to the tool as it is, the options too.')
         out.toString().readLines().contains("Short form: ${form}".toString())
+        name != 'oldest' || out.toString().replaceAll(/\s+/, ' ').contains('old-one implements ApplicationCommand, which is deprecated: implement ApplicationTool.')
 
         and: 'nothing was run for any of it, and nothing written'
         dir.list().sort() == ['.grails', 'grails-app']
@@ -166,12 +168,12 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
 
         where:
         name           | usage                                                          | from                                                                     | form
-        'hello-world'  | 'Usage: grails-forge-cli hello-world [ARGS...]'                | 'A command of org.example:hello-cli:1.2.3, which runs in the application' | 'hw'
+        'hello-world'  | 'Usage: grails-forge-cli hello-world [ARGS...]'                | 'A tool of org.example:hello-cli:1.2.3, which runs in the application' | 'hw'
         'hW'           | 'Usage: grails-forge-cli hello-world [ARGS...]'                | 'Says hello'                                                             | 'hw'
         'hw'           | 'Usage: grails-forge-cli hello-world [ARGS...]'                | 'Says hello'                                                             | 'hw'
-        'audit-report' | 'Usage: grails-forge-cli audit-report [ARGS...]'               | 'A command of the application, which runs in the application'           | 'ar'
-        'ar'           | 'Usage: grails-forge-cli audit-report [ARGS...]'               | 'A command of the application, which runs in the application'           | 'ar'
-        'oldest'       | 'Usage: grails-forge-cli old-one [ARGS...]'                    | 'A command of file:legacy-plugin.jar, which runs in the application'    | 'oo'
+        'audit-report' | 'Usage: grails-forge-cli audit-report [ARGS...]'               | 'A tool of the application, which runs in the application'           | 'ar'
+        'ar'           | 'Usage: grails-forge-cli audit-report [ARGS...]'               | 'A tool of the application, which runs in the application'           | 'ar'
+        'oldest'       | 'Usage: grails-forge-cli old-one [ARGS...]'                    | 'A tool of file:old-plugin.jar, which runs in the application'       | 'oo'
     }
 
     void "the document for a tool has the commands the build lists after those of the CLI, with what the build says of them"() {
@@ -193,8 +195,10 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
         described.projectDirectory == dir.canonicalPath
         commands.subList(0, first).every { it.origin == 'built-in' } && commands.subList(0, first)*.name.containsAll(['compile', 'help', 'gradle'])
         commands.subList(first, commands.size()) == [
-                [name: 'audit-report', aliases: [], description: '', project: true, origin: 'application', target: 'application', registration: 'factories', commands: []],
-                [name: 'hello-world', aliases: [], description: 'Says hello', project: true, origin: 'org.example:hello-cli:1.2.3', target: 'application', registration: 'descriptor', commands: []]]
+                [name: 'audit-report', aliases: [], description: '', project: true, origin: 'application', target: 'application', startsApplication: true, registration: 'factories',
+                 commands: []],
+                [name: 'hello-world', aliases: [], description: 'Says hello', project: true, origin: 'org.example:hello-cli:1.2.3', target: 'application', startsApplication: true,
+                 registration: 'descriptor', commands: []]]
         commands*.name.unique(false) == commands*.name
     }
 
@@ -267,7 +271,7 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
 
         then:
         exit == 0
-        out.toString().contains('Commands of the application and its plugins:')
+        out.toString().contains('Tools of the application and its plugins:')
         out.toString().replaceAll(/\s+/, ' ').contains(MISSING)
 
         when: 'what is typed may be a command of the application'
@@ -327,7 +331,7 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
         for (File each = newer.parentFile; each != dir && written.contains('/'); each = each.parentFile) {
             assert each.setLastModified(System.currentTimeMillis() - 240_000)
         }
-        String stale = "The commands of the application and its plugins may have changed: ${changed} is newer than .grails/cache/tool-catalog.json. " +
+        String stale = "The tools of the application and its plugins may have changed: ${changed} is newer than .grails/cache/tool-catalog.json. " +
                 'To list them again: grails-forge-cli gradle grailsToolCatalog --rerun'
 
         when:
@@ -387,7 +391,7 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
         exit == 0
         document().complete == !stale
         document().diagnostics.size() == (stale ? 1 : 0)
-        !stale || document().diagnostics[0].startsWith('The commands of the application and its plugins may have changed: grails-app/commands is newer than')
+        !stale || document().diagnostics[0].startsWith('The tools of the application and its plugins may have changed: grails-app/commands is newer than')
 
         where:
         what                                        | stale | change
@@ -484,7 +488,7 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
         'a diagnostic that is no text'            | doc([HELLO], [diagnostics: [1]])                                    | 'has diagnostics that are not at most 65 lines of at most 2048 characters of printable ASCII'
         'too many diagnostics'                    | doc([HELLO], [diagnostics: ['hostile'] * 66])                       | 'has diagnostics that are not at most 65 lines of at most 2048 characters of printable ASCII'
         'a diagnostic that is too long'           | doc([HELLO], [diagnostics: ['h' * 2049]])                           | 'has diagnostics that are not at most 65 lines of at most 2048 characters of printable ASCII'
-        'commands that are no list'               | doc([HELLO], [tools: [name: 'hostile']])                         | 'has no list of commands'
+        'commands that are no list'               | doc([HELLO], [tools: [name: 'hostile']])                         | 'has no list of tools'
     }
 
     static final String NAME = 'its name is not lower-case letters and digits in words joined by single hyphens, starting with a letter, of at most 64 characters'
@@ -496,7 +500,7 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
     void "a command that is not as the build writes one is left out, and the others are used: #what"() {
         given: 'the command between two that are as they should be'
         write(JsonOutput.toJson([format: 1, complete: true, diagnostics: [], tools: [HELLO, bad, FINE]]))
-        String leftOut = 'Command 2 of .grails/cache/tool-catalog.json is not used: ' + reason
+        String leftOut = 'Tool 2 of .grails/cache/tool-catalog.json is not used: ' + reason
 
         when:
         int exit = ForgeCli.execute(beanContext, 'help', '--json')
@@ -523,8 +527,8 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
 
         where:
         what                                      | bad                                                    | reason
-        'a command that is text'                  | 'hostile'                                              | 'it is no command'
-        'a command that is a list'                | ['hostile']                                            | 'it is no command'
+        'a command that is text'                  | 'hostile'                                              | 'it is no tool'
+        'a command that is a list'                | ['hostile']                                            | 'it is no tool'
         'a name in upper case'                    | HELLO + [name: 'Hostile']                              | NAME
         'a name that is a number'                 | HELLO + [name: 7]                                      | NAME
         'no name'                                 | HELLO - [name: 'hello-world']                          | NAME
@@ -536,9 +540,9 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
         'a name with an escape sequence'          | HELLO + [name: 'hostile\u001b[31m']                    | NAME
         'a name that turns the line around'       | HELLO + [name: 'hostile\u202e']                        | NAME
         'a name of 65 characters'                 | HELLO + [name: 'h' * 65]                               | NAME
-        'other names that are no list'            | HELLO + [name: 'other', aliases: 'hostile']            | 'its other names are not at most 16 names of a command'
-        'another name that is none'               | HELLO + [name: 'other', aliases: ['@|red hostile|@']]  | 'its other names are not at most 16 names of a command'
-        'seventeen other names'                   | HELLO + [name: 'other', aliases: (1..17).collect { 'hostile-' + it }] | 'its other names are not at most 16 names of a command'
+        'other names that are no list'            | HELLO + [name: 'other', aliases: 'hostile']            | 'its other names are not at most 16 names of a tool'
+        'another name that is none'               | HELLO + [name: 'other', aliases: ['@|red hostile|@']]  | 'its other names are not at most 16 names of a tool'
+        'seventeen other names'                   | HELLO + [name: 'other', aliases: (1..17).collect { 'hostile-' + it }] | 'its other names are not at most 16 names of a tool'
         'a description of two lines'              | HELLO + [name: 'other', description: 'hostile\nline']  | DESCRIPTION
         'a description with an escape sequence'   | HELLO + [name: 'other', description: 'hostile \u001b[31m'] | DESCRIPTION
         'a description that turns the line around' | HELLO + [name: 'other', description: 'hostile \u202e'] | DESCRIPTION
@@ -559,10 +563,10 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
         'a command for the console'               | HELLO + [name: 'other', target: 'console']             | 'its target is console, which is not run from here'
         'a target there is not'                   | HELLO + [name: 'other', target: 'hostile']             | 'its target is none there is'
         'no target'                               | HELLO + [name: 'other'] - [target: 'application']      | 'its target is none there is'
-        'a registration there is not'             | HELLO + [name: 'other', registration: 'hostile']       | 'its registration is none of descriptor, factories, legacy'
-        'a name twice'                            | HELLO                                                  | 'it has a name that a command before it has'
-        'another name that is a name'             | HELLO + [name: 'other', aliases: ['hello-world']]      | 'it has a name that a command before it has'
-        'its own name twice'                      | HELLO + [name: 'other', aliases: ['other']]            | 'it has a name that a command before it has'
+        'a registration there is not'             | HELLO + [name: 'other', registration: 'hostile']       | 'its registration is none of descriptor, factories'
+        'a name twice'                            | HELLO                                                  | 'it has a name that a tool before it has'
+        'another name that is a name'             | HELLO + [name: 'other', aliases: ['hello-world']]      | 'it has a name that a tool before it has'
+        'its own name twice'                      | HELLO + [name: 'other', aliases: ['other']]            | 'it has a name that a tool before it has'
     }
 
     void "of many commands that are not as the build writes them the first are named and the others counted, and of too many commands the first are used"() {
@@ -578,11 +582,11 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
         exit == 0
         described.complete == false
         described.diagnostics == [
-                'Command 1 of .grails/cache/tool-catalog.json is not used: ' + NAME,
-                'Command 2 of .grails/cache/tool-catalog.json is not used: ' + NAME,
-                'Command 3 of .grails/cache/tool-catalog.json is not used: ' + NAME,
-                '2 more commands of .grails/cache/tool-catalog.json are not used, for reasons like these',
-                'The commands of .grails/cache/tool-catalog.json after the first 512 are not used: 88 of them']
+                'Tool 1 of .grails/cache/tool-catalog.json is not used: ' + NAME,
+                'Tool 2 of .grails/cache/tool-catalog.json is not used: ' + NAME,
+                'Tool 3 of .grails/cache/tool-catalog.json is not used: ' + NAME,
+                '2 more tools of .grails/cache/tool-catalog.json are not used, for reasons like these',
+                'The tools of .grails/cache/tool-catalog.json after the first 512 are not used: 88 of them']
         ((List<Map>) described.commands).findAll { it.origin != 'built-in' }*.name == (1..512).collect { 'fine-' + it }
     }
 
@@ -604,12 +608,12 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
         Map described = document()
 
         then: 'one definition of where a command can come from: nothing the task writes is refused'
-        ApplicationCommandFile.isOrigin(written)
+        ToolCatalogFile.isOrigin(written)
         exit == 0
         described.diagnostics == []
         described.complete == true
         ((List<Map>) described.commands).findAll { it.origin != 'built-in' } ==
-                [[name: 'seed', aliases: [], description: '', project: true, origin: written, target: 'application', registration: 'factories', commands: []]]
+                [[name: 'seed', aliases: [], description: '', project: true, origin: written, target: 'application', startsApplication: true, registration: 'factories', commands: []]]
 
         when: 'and it is shown as it is written'
         out.reset()
@@ -629,7 +633,7 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
         err.toString().isEmpty()
         shown[0] == 'Usage: grails-forge-cli seed [ARGS...]'
         shown.count { it.startsWith('Usage:') } == 1
-        out.toString().replaceAll(/\s+/, '').contains("A command of ${written == 'application' ? 'the application' : written}, which runs in the application".replaceAll(/\s+/, ''))
+        out.toString().replaceAll(/\s+/, '').contains("A tool of ${written == 'application' ? 'the application' : written}, which runs in the application".replaceAll(/\s+/, ''))
 
         where:
         origin << ['application', 'org.example:reports:1.0', 'file:reports-1.0.jar', 'file:my plugin.jar', 'file:lib (1).jar', 'file:reports~1.jar', 'file:.hidden.jar',
@@ -704,7 +708,7 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
         catalog([HELLO,
                  [name: 'install-templates', description: 'Installs the scaffolding templates', origin: 'org.apache.grails:grails-scaffolding:9.0.0', target: 'application', registration: 'descriptor'],
                  [name: 'war', origin: 'application', target: 'application', registration: 'factories'],
-                 [name: 'stat', origin: 'file:stat.jar', target: 'application', registration: 'legacy'],
+                 [name: 'stat', origin: 'file:stat.jar', target: 'application', registration: 'factories'],
                  [name: 'ra', origin: 'application', target: 'application', registration: 'factories'],
                  [name: 'stop', origin: 'application', target: 'application', registration: 'factories'],
                  [name: 'c', origin: 'application', target: 'application', registration: 'factories'],
@@ -714,17 +718,17 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
         new File(dir, 'build.gradle').setLastModified(System.currentTimeMillis() - 120_000)
         new File(dir, 'settings.gradle').setLastModified(System.currentTimeMillis() - 120_000)
         new File(dir, 'gradle.properties').setLastModified(System.currentTimeMillis() - 120_000)
-        String how = 'That one is run with: grails-forge-cli run-command '
+        String how = 'That one is run with: grails-forge-cli run-tool '
         List<String> expected = [
-                "c is short for more than one command of the CLI itself (built-in), so the command c of application is not a command here. ${how}c",
-                "install is a command of the CLI itself (built-in), so the command fine of org.example:helper:1 is not a command here. ${how}fine",
-                "gradle is a command of the CLI itself (built-in), so the command gradle of org.example:helper:1 is not a command here. ${how}gradle",
-                "help is a command of the CLI itself (built-in), so the command help of org.example:helper:1 is not a command here. ${how}help",
-                "install-templates is a command of the CLI itself (built-in), so the command install-templates of org.apache.grails:grails-scaffolding:9.0.0 is not a command here. ${how}install-templates",
-                "ra is short for run-app, a command of the CLI itself (built-in), so the command ra of application is not a command here. ${how}ra",
-                "stat is short for stats, a command of the CLI itself (built-in), so the command stat of file:stat.jar is not a command here. ${how}stat",
-                "stop is another name of stop-app, a command of the CLI itself (built-in), so the command stop of application is not a command here. ${how}stop",
-                "war is another name of assemble, a command of the CLI itself (built-in), so the command war of application is not a command here. ${how}war"]
+                "c is short for more than one command of the CLI itself (built-in), so the tool c of application is not a command here. ${how}c",
+                "install is a command of the CLI itself (built-in), so the tool fine of org.example:helper:1 is not a command here. ${how}fine",
+                "gradle is a command of the CLI itself (built-in), so the tool gradle of org.example:helper:1 is not a command here. ${how}gradle",
+                "help is a command of the CLI itself (built-in), so the tool help of org.example:helper:1 is not a command here. ${how}help",
+                "install-templates is a command of the CLI itself (built-in), so the tool install-templates of org.apache.grails:grails-scaffolding:9.0.0 is not a command here. ${how}install-templates",
+                "ra is short for run-app, a command of the CLI itself (built-in), so the tool ra of application is not a command here. ${how}ra",
+                "stat is short for stats, a command of the CLI itself (built-in), so the tool stat of file:stat.jar is not a command here. ${how}stat",
+                "stop is another name of stop-app, a command of the CLI itself (built-in), so the tool stop of application is not a command here. ${how}stop",
+                "war is another name of assemble, a command of the CLI itself (built-in), so the tool war of application is not a command here. ${how}war"]
 
         when:
         int exit = ForgeCli.execute(beanContext, 'help', '--json')
@@ -770,7 +774,7 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
         'stop'              | 'stop-app'
     }
 
-    void "a command of the build that is not there is said to be run with run-command"() {
+    void "a tool of the build that is not there is said to be run with run-tool"() {
         given:
         catalog([[name: 'compile', origin: 'org.example:helper:1', target: 'application', registration: 'descriptor']])
         CommandLine commandLine = ForgeCli.createCommandLine(beanContext, false)
@@ -780,25 +784,24 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
 
         then:
         exit == 0
-        document().diagnostics == ['compile is a command of the CLI itself (built-in), so the command compile of org.example:helper:1 is not a command here. ' +
-                                           'That one is run with: grails-forge-cli run-command compile']
+        document().diagnostics == ['compile is a command of the CLI itself (built-in), so the tool compile of org.example:helper:1 is not a command here. ' +
+                                           'That one is run with: grails-forge-cli run-tool compile']
     }
 
     void "a short form is one of a command of the CLI before it is one of a command of the build, which takes none away"() {
-        given: 'a generated application, which has create-controller and create-command, and commands of the build that are named like commands of the CLI'
+        given: 'a generated application, which has create-controller and create-tool, and tools of the build that are named like commands of the CLI'
         generateProject(ApplicationType.WEB)
         catalog([HELLO] + ['create-cat', 'hello-there', 'hlep', 'complie', 'create-application'].collect { String name ->
             [name: name, origin: 'org.example:typos:1.0', target: 'application', registration: 'descriptor']
         })
 
         when: 'what was short for two commands of the CLI is short for those two'
-        int exit = ForgeCli.execute(beanContext, 'cC', 'Book')
+        int exit = ForgeCli.execute(beanContext, 'co', 'Book')
 
         then:
         exit == 2
-        err.toString().readLines()[0] == 'cC is short for more than one command: create-controller (ccon), create-command (ccom). ' +
+        err.toString().readLines()[0] == 'co is short for more than one command: compile (com), console (con). ' +
                 'Type more of the name of the one that is meant, or the short form in brackets after it'
-        !new File(dir, 'grails-app/controllers/example/grails/BookController.groovy').exists()
 
         when: 'and what was short for one command of the CLI is that command'
         err.reset()
@@ -849,7 +852,7 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
     }
 
     @IgnoreIf({ os.windows })
-    void "a command of the build is run by the Gradle task runCommand, with every argument as the one argument it is, in a file only the user can read that is gone afterwards"() {
+    void "a command of the build is run by the Gradle task runTool, with every argument as the one argument it is, in a file only the user can read that is gone afterwards"() {
         given:
         plainProject()
         catalog([HELLO + [aliases: ['hi']]])
@@ -862,7 +865,7 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
 
         then:
         exit == 0
-        lineOf('requested=') == '<runCommand><--args-file=>'
+        lineOf('requested=') == '<runTool><--args-file=>'
         lineOf('system=') == '<grails.env=development>'
         lineOf('stacktrace=') == 'INTERNAL_EXCEPTIONS'
         lineOf('vector=') == (['hello-world'] + arguments).collect { '<' + it.getBytes('UTF-8').encodeHex() + '>' }.join('')
@@ -870,11 +873,11 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
         errors() == []
 
         and: 'before Gradle is started it is said what is run, and where it comes from, on the error stream'
-        err.toString().readLines()[0] == '| Running the command hello-world of org.example:hello-cli:1.2.3, with the Gradle task runCommand'
+        err.toString().readLines()[0] == '| Running the tool hello-world of org.example:hello-cli:1.2.3, with the Gradle task runTool'
 
-        and: 'an environment after the name is an argument of the command like any other, and it is said that the command runs for another one'
-        err.toString().readLines()[1] == '| Warning -Dgrails.env=... after the name of hello-world is given to the command as an argument, and the command runs for the ' +
-                'environment development. To run it for another environment, name it before the command: grails-forge-cli run-command -Dgrails.env=production hello-world'
+        and: 'an environment after the name is an argument of the tool like any other, and it is said that the tool runs for another one'
+        err.toString().readLines()[1] == '| Warning -Dgrails.env=... after the name of hello-world is given to the tool as an argument, and the tool runs for the ' +
+                'environment development. To run it for another environment, name it before the tool: grails-forge-cli run-tool -Dgrails.env=production hello-world'
 
         and: 'the file has the same name in the project every time, which is what Gradle is given, and is gone afterwards'
         lineOf('option=') == '.grails/run/command-args-0.json'
@@ -907,19 +910,19 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
 
         then: 'in front of the name it is the option of the command line; after it, an argument of the command'
         exit == 0
-        lineOf('requested=') == '<runCommand><--args-file=>'
+        lineOf('requested=') == '<runTool><--args-file=>'
         lineOf('system=') == '<grails.env=development><grails.full.stacktrace=true>'
         lineOf('stacktrace=') == 'ALWAYS'
         lineOf('vector=') == ['hello-world', '-x'].collect { '<' + it.bytes.encodeHex() + '>' }.join('')
     }
 
     @IgnoreIf({ os.windows })
-    void "a command is one build to Gradle whether it is run by its name or by run-command, and both say what is run"() {
+    void "a tool is one build to Gradle whether it is run by its name or by run-tool, and both say what is run"() {
         given:
         plainProject()
         new File(dir, 'gradle.properties') << 'org.gradle.configuration-cache=true\n'
         catalog([HELLO])
-        String running = '| Running the command hello-world of org.example:hello-cli:1.2.3, with the Gradle task runCommand'
+        String running = '| Running the tool hello-world of org.example:hello-cli:1.2.3, with the Gradle task runTool'
 
         when:
         int byName = ForgeCli.execute(beanContext, 'hello-world', 'one')
@@ -927,7 +930,7 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
         List<String> saidFirst = err.toString().readLines()
         out.reset()
         err.reset()
-        int byRunCommand = ForgeCli.execute(beanContext, 'run-command', 'hello-world', 'two')
+        int byRunTool = ForgeCli.execute(beanContext, 'run-tool', 'hello-world', 'two')
 
         then:
         byName == 0
@@ -935,18 +938,18 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
         saidFirst[0] == running
 
         and: 'the second is the build the first was: nothing of its command line differs but what the file holds'
-        byRunCommand == 0
+        byRunTool == 0
         out.toString().contains('Reusing configuration cache')
         !out.toString().contains('cannot be reused')
         err.toString().readLines()[0] == running
         lineOf('vector=') == ['hello-world', 'two'].collect { '<' + it.bytes.encodeHex() + '>' }.join('')
 
-        when: 'a command the build has not listed is said to be that'
+        when: 'a tool the build has not listed is said to be that'
         err.reset()
-        ForgeCli.execute(beanContext, 'run-command', 'not-listed\u001b[31m')
+        ForgeCli.execute(beanContext, 'run-tool', 'not-listed\u001b[31m')
 
         then:
-        err.toString().readLines()[0] == '| Running the command not-listed?[31m, which the build of the project has not listed, with the Gradle task runCommand'
+        err.toString().readLines()[0] == '| Running the tool not-listed?[31m, which the build of the project has not listed, with the Gradle task runTool'
     }
 
     @IgnoreIf({ os.windows })
@@ -973,7 +976,7 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
         !out.toString().contains('told=true')
 
         where:
-        line << [['hello-world', 'x'], ['run-command', 'hello-world'], ['gradle', 'build'], ['compile'], ['test-app', '--unit'], ['run-script', 'one.groovy']]
+        line << [['hello-world', 'x'], ['run-tool', 'hello-world'], ['run-command', 'hello-world'], ['gradle', 'build'], ['compile'], ['test-app', '--unit'], ['run-script', 'one.groovy']]
     }
 
     @IgnoreIf({ os.windows })
@@ -1060,7 +1063,7 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
 
         then:
         exit == 1
-        errors() == ['| Error The arguments of the command could not be written for Gradle: .grails/run has 16 files of arguments already, one for each command that runs: ' +
+        errors() == ['| Error The arguments of the tool could not be written for Gradle: .grails/run has 16 files of arguments already, one for each command that runs: ' +
                              'delete the files command-args-* there when no command runs. Gradle was not run']
         !out.toString().contains('waits')
     }
@@ -1075,8 +1078,8 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
 
         then: 'gradle is run, which has no wrapper here, after the line that says so'
         exit == 1
-        err.toString().readLines()[0] == '| Warning gradle is a command of the CLI itself (built-in), so the command gradle of org.example:helper:1 is not a command here. ' +
-                'That one is run with: grails-forge-cli run-command gradle'
+        err.toString().readLines()[0] == '| Warning gradle is a command of the CLI itself (built-in), so the tool gradle of org.example:helper:1 is not a command here. ' +
+                'That one is run with: grails-forge-cli run-tool gradle'
 
         when:
         err.reset()
@@ -1084,8 +1087,8 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
 
         then:
         exit == 2
-        err.toString().readLines()[0] == '| Warning c is short for more than one command of the CLI itself (built-in), so the command c of application is not a command here. ' +
-                'That one is run with: grails-forge-cli run-command c'
+        err.toString().readLines()[0] == '| Warning c is short for more than one command of the CLI itself (built-in), so the tool c of application is not a command here. ' +
+                'That one is run with: grails-forge-cli run-tool c'
         err.toString().readLines()[1].startsWith('c is short for more than one command: ')
     }
 
@@ -1114,17 +1117,17 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
         Map described = document()
 
         then: 'the numbers are the same in the two builds'
-        ApplicationCommandFile.MAX_BYTES == ToolCatalogBuilder.MAX_BYTES
-        ApplicationCommandFile.MAX_COMMANDS == ToolCatalogBuilder.MAX_COMMANDS
-        ApplicationCommandFile.MAX_ORIGIN == ToolCatalogBuilder.MAX_ORIGIN_LENGTH
-        ApplicationCommandFile.MAX_DESCRIPTION == ToolDescriptor.MAX_DESCRIPTION_LENGTH
-        ApplicationCommandFile.MAX_NAME == ToolDescriptor.MAX_NAME_LENGTH
-        ApplicationCommandFile.MAX_DIAGNOSTICS == ToolCatalogBuilder.MAX_DIAGNOSTICS + 1
-        ApplicationCommandFile.MAX_DIAGNOSTIC >= ToolCatalogBuilder.MAX_DIAGNOSTIC_LENGTH
+        ToolCatalogFile.MAX_BYTES == ToolCatalogBuilder.MAX_BYTES
+        ToolCatalogFile.MAX_COMMANDS == ToolCatalogBuilder.MAX_COMMANDS
+        ToolCatalogFile.MAX_ORIGIN == ToolCatalogBuilder.MAX_ORIGIN_LENGTH
+        ToolCatalogFile.MAX_DESCRIPTION == ToolDescriptor.MAX_DESCRIPTION_LENGTH
+        ToolCatalogFile.MAX_NAME == ToolDescriptor.MAX_NAME_LENGTH
+        ToolCatalogFile.MAX_DIAGNOSTICS == ToolCatalogBuilder.MAX_DIAGNOSTICS + 1
+        ToolCatalogFile.MAX_DIAGNOSTIC >= ToolCatalogBuilder.MAX_DIAGNOSTIC_LENGTH
 
         and: 'the writer wrote no more than is read, and said what it left out'
-        json.length() <= ApplicationCommandFile.MAX_BYTES
-        ((List) written.tools).size() <= ApplicationCommandFile.MAX_COMMANDS
+        json.length() <= ToolCatalogFile.MAX_BYTES
+        ((List) written.tools).size() <= ToolCatalogFile.MAX_COMMANDS
         ((List) written.tools).size() >= atLeast
         ((List<String>) written.diagnostics).size() == 1
         ((List<String>) written.diagnostics)[0] == "There are 600 commands, more than a catalog lists${how}: the last ${600 - ((List) written.tools).size()} by name are not listed."
@@ -1173,7 +1176,7 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
 
         then:
         exit == 1
-        all().contains('this command fails on purpose')
+        all().contains('this tool fails on purpose')
         errors() == ['| Error Gradle did not succeed: it ended with exit code 1']
         !all().contains('Usage:')
         new File(dir, '.grails/run').list().sort() - ProjectPathCheck.FILE == ['.gitignore']
@@ -1217,7 +1220,7 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
 
         then:
         exit == 2
-        err.toString().readLines() == ['The command cannot be given these arguments: ' + message,
+        err.toString().readLines() == ['The tool cannot be given these arguments: ' + message,
                                        'Usage: grails-forge-cli hello-world [ARGS...]',
                                        "Run 'grails-forge-cli help hello-world' for the options"]
         dir.list().sort() == ['.grails', 'grails-app']

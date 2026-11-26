@@ -162,7 +162,7 @@ class CreateRestApiPluginCommandSpec extends CommandSpec {
         refused != 0
         !ProjectState.read(project.toPath()).lock.featureNames.contains('openapi')
 
-        when: 'scaffolding, whose commands generate a REST controller and JSON views in a REST API plugin'
+        when: 'scaffolding, whose tools generate a REST controller and JSON views in a REST API plugin'
         int scaffolding = inProject(project, 'feature', 'add', 'scaffolding')
         List<String> features = ProjectState.read(project.toPath()).lock.featureNames
 
@@ -170,7 +170,7 @@ class CreateRestApiPluginCommandSpec extends CommandSpec {
         scaffolding == 0
         features.contains('scaffolding')
         !features.contains('gsp')
-        new File(project, 'build.gradle').getText('UTF-8').contains('grailsCli "org.apache.grails:grails-scaffolding-cli"')
+        new File(project, 'build.gradle').getText('UTF-8').contains('grailsCliStandalone "org.apache.grails:grails-scaffolding-cli-standalone"')
         !new File(project, 'build.gradle').getText('UTF-8').contains('"org.apache.grails:grails-scaffolding"')
         !new File(project, 'build.gradle').getText('UTF-8').contains('grails-gsp')
     }

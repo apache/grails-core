@@ -33,7 +33,7 @@ import spock.lang.Timeout
  */
 @IgnoreIf({ os.windows })
 @Timeout(600)
-class ApplicationCommandListingSpec extends CommandSpec {
+class ToolListingSpec extends CommandSpec {
 
     static final String BUILD = '''\
         import org.gradle.api.tasks.options.Option
@@ -74,15 +74,15 @@ class ApplicationCommandListingSpec extends CommandSpec {
             }
         }
 
-        tasks.register('runCommand', RunCommand)
+        tasks.register('runTool', RunCommand)
         tasks.register('grailsToolCatalog', ListCommands)
         '''.stripIndent()
 
     static final Map GREET = [name: 'greet', aliases: [], description: 'Greets', origin: 'application', target: 'application', registration: 'descriptor']
     static final Map STATS = [name: 'stats', aliases: [], description: 'Counts', origin: 'org.example:stats-cli:1.0', target: 'application', registration: 'descriptor']
-    static final String MISSING = 'The commands of the application and its plugins are not listed yet: a build that compiles the project lists them, and so does typing ' +
+    static final String MISSING = 'The tools of the application and its plugins are not listed yet: a build that compiles the project lists them, and so does typing ' +
             'the name of one. To list them now: grails-forge-cli gradle grailsToolCatalog'
-    static final String LISTING = '| Listing the commands of the application and its plugins, of which greet may be one, with the Gradle task grailsToolCatalog'
+    static final String LISTING = '| Listing the tools of the application and its plugins, of which greet may be one, with the Gradle task grailsToolCatalog'
     // what the task writes when the runtime class path of the project does not resolve completely
     static final String UNRESOLVED = 'runtimeClasspath cannot be resolved completely (gradle dependencies --configuration runtimeClasspath says why), ' +
             'so the commands of what is missing from it are not listed: Could not resolve org.neo4j.driver:neo4j-java-driver:4.4.13. ' +
@@ -103,11 +103,11 @@ class ApplicationCommandListingSpec extends CommandSpec {
         System.setErr(new PrintStream(err, true))
         gradle.project(dir, new File(previousUsrDir, '..'))
         new File(dir, 'build.gradle').text = BUILD
-        new File(dir, 'commands.json').text = ApplicationCommandsSpec.doc([GREET, STATS])
+        new File(dir, 'commands.json').text = ProjectToolsSpec.doc([GREET, STATS])
     }
 
     void cleanup() {
-        ApplicationCommands.setListing(null)
+        ProjectTools.setListing(null)
         ConsoleCommands.setInteractive(false)
         GradleBuild.closeConnections()
         GradleBuild.setRunner(null)
@@ -126,7 +126,7 @@ class ApplicationCommandListingSpec extends CommandSpec {
         then:
         exit == 0
         err.toString().readLines()[0] == LISTING
-        err.toString().contains('| Running the command greet of the application, with the Gradle task runCommand')
+        err.toString().contains('| Running the tool greet of the application, with the Gradle task runTool')
         ran() == ['greet Alice --help']
 
         and: 'the task was asked to run although Gradle may take it for up to date, with an input that has ended'
@@ -150,9 +150,9 @@ class ApplicationCommandListingSpec extends CommandSpec {
 
         then:
         exit == 2
-        lines[0] == '| Listing the commands of the application and its plugins, of which gret may be one, with the Gradle task grailsToolCatalog'
+        lines[0] == '| Listing the tools of the application and its plugins, of which gret may be one, with the Gradle task grailsToolCatalog'
         lines.any { String line -> line.startsWith('There is no command gret. Did you mean: ') && line.contains('greet') }
-        lines.contains('The build of the project has just listed the commands of the application and its plugins, and gret is none of them')
+        lines.contains('The build of the project has just listed the tools of the application and its plugins, and gret is none of them')
         listed().size() == 1
         !new File(dir, 'ran.txt').exists()
 
@@ -170,7 +170,7 @@ class ApplicationCommandListingSpec extends CommandSpec {
 
     void "a name that is no command of a list the build could not make complete is refused with a line that says so, and the build is not run again for it"() {
         given: 'a build whose runtime class path does not resolve completely, as it lists the commands'
-        new File(dir, 'commands.json').text = ApplicationCommandsSpec.doc([GREET, STATS], [complete: false, diagnostics: [UNRESOLVED]])
+        new File(dir, 'commands.json').text = ProjectToolsSpec.doc([GREET, STATS], [complete: false, diagnostics: [UNRESOLVED]])
 
         when:
         int exit = ForgeCli.execute(beanContext, 'audit')
@@ -178,10 +178,10 @@ class ApplicationCommandListingSpec extends CommandSpec {
 
         then: 'the build lists the commands once, and the name may be one it could not list'
         exit == 2
-        lines[0] == '| Listing the commands of the application and its plugins, of which audit may be one, with the Gradle task grailsToolCatalog'
+        lines[0] == '| Listing the tools of the application and its plugins, of which audit may be one, with the Gradle task grailsToolCatalog'
         lines.any { String line -> line.startsWith('There is no command audit') }
-        lines.contains('The build of the project has just listed the commands of the application and its plugins, and audit is none of them. ' +
-                'Not every command of the application and its plugins is listed, so audit may be one that is not. What is not listed, and why: grails-forge-cli help')
+        lines.contains('The build of the project has just listed the tools of the application and its plugins, and audit is none of them. ' +
+                'Not every tool of the application and its plugins is listed, so audit may be one that is not. What is not listed, and why: grails-forge-cli help')
         listed().size() == 1
         !new File(dir, 'ran.txt').exists()
 
@@ -192,7 +192,7 @@ class ApplicationCommandListingSpec extends CommandSpec {
 
         then: 'the list is current, so it is not made again: the build would not list more'
         exit == 2
-        lines.contains('Not every command of the application and its plugins is listed, so audit-trail may be one that is not. ' +
+        lines.contains('Not every tool of the application and its plugins is listed, so audit-trail may be one that is not. ' +
                 'What is not listed, and why: grails-forge-cli help')
         listed().size() == 1
 
@@ -216,9 +216,9 @@ class ApplicationCommandListingSpec extends CommandSpec {
 
     void "a list that may be out of date is made again for a name that is not in it, and the command it now has is run"() {
         given: 'a list without the command, older than the build script'
-        File catalog = new File(dir, ApplicationCommandFile.LOCATION)
+        File catalog = new File(dir, ToolCatalogFile.LOCATION)
         catalog.parentFile.mkdirs()
-        catalog.text = ApplicationCommandsSpec.doc([STATS])
+        catalog.text = ProjectToolsSpec.doc([STATS])
         catalog.setLastModified(System.currentTimeMillis() - 60_000)
 
         when:
@@ -242,14 +242,14 @@ class ApplicationCommandListingSpec extends CommandSpec {
 
     void "a form of lower-case letters that only a command of the application fits has the build list the commands, and the command is run"() {
         given:
-        new File(dir, 'commands.json').text = ApplicationCommandsSpec.doc([GREET, STATS, ApplicationCommandsSpec.HELLO])
+        new File(dir, 'commands.json').text = ProjectToolsSpec.doc([GREET, STATS, ProjectToolsSpec.HELLO])
 
         when: 'the first letters of hello-world'
         int exit = ForgeCli.execute(beanContext, 'hw', 'Ann')
 
         then:
         exit == 0
-        err.toString().readLines()[0] == '| Listing the commands of the application and its plugins, of which hw may be one, with the Gradle task grailsToolCatalog'
+        err.toString().readLines()[0] == '| Listing the tools of the application and its plugins, of which hw may be one, with the Gradle task grailsToolCatalog'
         listed().size() == 1
         ran() == ['hello-world Ann']
 
@@ -284,7 +284,7 @@ class ApplicationCommandListingSpec extends CommandSpec {
         'a command of the command line by its initials'  | ['ra', '--help']         | 0        | ['Usage: grails-forge-cli run-app']
         'another one by its initials'                    | ['sa', '--help']         | 0        | ['Usage: grails-forge-cli stop-app']
         'a command of the command line by more letters'  | ['ccon', '--help']       | 0        | ['Usage: grails-forge-cli create-controller']
-        'a form several commands of the command line fit' | ['cc']                  | 2        | ['cc is short for more than one command: create-controller (ccon), create-command (ccom)']
+        'a form several commands of the command line fit' | ['co']                  | 2        | ['co is short for more than one command: compile (com), console (con)']
         'a command of the command line'                  | ['stats']                | 0        | []
         'what cannot be the name of a command'           | ['greet.groovy']         | 2        | ['There is no command greet.groovy', MISSING]
         'a command of the Grails shell that is replaced' | ['test']                 | 2        | ['Type: grails-forge-cli test-app']
@@ -308,17 +308,17 @@ class ApplicationCommandListingSpec extends CommandSpec {
 
         then:
         exit == 0
-        err.toString().contains('| Warning stats is a command of the CLI itself (built-in), so the command stats of org.example:stats-cli:1.0 is not a command here')
+        err.toString().contains('| Warning stats is a command of the CLI itself (built-in), so the tool stats of org.example:stats-cli:1.0 is not a command here')
         listed().size() == 1
         ran() == ['greet']
     }
 
-    void "with GRAILS_LIST_COMMANDS=false a name that is no command is refused at once, as a check without a build"() {
+    void "with GRAILS_LIST_TOOLS=false a name that is no command is refused at once, as a check without a build"() {
         expect:
-        ApplicationCommands.LISTING == 'GRAILS_LIST_COMMANDS'
+        ProjectTools.LISTING == 'GRAILS_LIST_TOOLS'
 
         when:
-        ApplicationCommands.setListing(' False ')
+        ProjectTools.setListing(' False ')
         int exit = ForgeCli.execute(beanContext, 'greet')
 
         then:
@@ -328,7 +328,7 @@ class ApplicationCommandListingSpec extends CommandSpec {
         !new File(dir, 'listed.txt').exists()
 
         when: 'any other value lists'
-        ApplicationCommands.setListing('true')
+        ProjectTools.setListing('true')
         err.reset()
         exit = ForgeCli.execute(beanContext, 'greet')
 
@@ -348,7 +348,7 @@ class ApplicationCommandListingSpec extends CommandSpec {
         exit == 1
         all().contains('the listing fails as it is asked to')
         err.toString().readLines().findAll { String line -> line.startsWith('| Error') }.last() ==
-                '| Error The commands of the application and its plugins could not be listed, so it is not known whether greet is one of them. It was not run'
+                '| Error The tools of the application and its plugins could not be listed, so it is not known whether greet is one of them. It was not run'
         listed().size() == 1
         !new File(dir, 'ran.txt').exists()
 
@@ -379,11 +379,11 @@ class ApplicationCommandListingSpec extends CommandSpec {
         where                                                        | prepare                                                                    | said
         'outside a project'                                          | { File directory -> new File(directory, 'grails-app').deleteDir() }        | null
         'in a project without a Gradle wrapper'                      | { File directory -> new File(directory, 'gradlew').delete() }              | MISSING
-        'where the catalog is not used, which is said with its task' | { File directory -> written(directory, '{"format":2}') }                   | ApplicationCommandsSpec.REFUSED
+        'where the catalog is not used, which is said with its task' | { File directory -> written(directory, '{"format":2}') }                   | ProjectToolsSpec.REFUSED
     }
 
     private static void written(File directory, String catalog) {
-        File file = new File(directory, ApplicationCommandFile.LOCATION)
+        File file = new File(directory, ToolCatalogFile.LOCATION)
         file.parentFile.mkdirs()
         file.text = catalog
     }

@@ -24,7 +24,7 @@ import java.security.MessageDigest
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 import groovy.json.JsonSlurper
-import org.apache.grails.forge.cli.console.ApplicationCommands
+import org.apache.grails.forge.cli.console.ProjectTools
 import org.apache.grails.forge.core.state.ProjectManifest
 import org.apache.grails.forge.core.state.ProjectState
 import org.grails.forge.cli.CommandFixture
@@ -66,7 +66,7 @@ class FeatureAddArtefactsSpec extends CommandSpec implements CommandFixture {
     }
 
     void cleanup() {
-        ApplicationCommands.setListing(null)
+        ProjectTools.setListing(null)
         System.setOut(originalOut)
         System.setErr(originalErr)
         System.setProperty('user.home', previousHome)

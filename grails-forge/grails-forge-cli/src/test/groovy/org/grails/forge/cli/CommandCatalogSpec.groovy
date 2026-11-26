@@ -119,7 +119,8 @@ class CommandCatalogSpec extends CommandSpec implements CommandFixture {
         'sa'          | 'stop-app'                  | 'the first letter of each word'
         'ta'          | 'test-app'                  | 'the first letter of each word'
         'rs'          | 'run-script'                | 'the first letter of each word'
-        'rc'          | 'run-command'               | 'the first letter of each word'
+        'rt'          | 'run-tool'                  | 'the first letter of each word'
+        'rc'          | 'run-tool'                  | 'the first letter of each word of run-command, its other name'
         'uw'          | 'update-wrapper'            | 'the first letter of each word'
         'dr'          | 'dependency-report'         | 'the first letter of each word'
         'br'          | 'bug-report'                | 'the first letter of each word'
@@ -136,8 +137,11 @@ class CommandCatalogSpec extends CommandSpec implements CommandFixture {
         'rapp'        | 'run-app'                   | 'more of the last word'
         'runapp'      | 'run-app'                   | 'every letter'
         'creatapp'    | 'create-app'                | 'more of each word'
-        'ccon'        | 'create-controller'         | 'more of the word that tells it from create-command'
-        'ccom'        | 'create-command'            | 'more of the word that tells it from create-controller'
+        'cc'          | 'create-controller'         | 'the first letter of each word'
+        'ccon'        | 'create-controller'         | 'more of the last word'
+        'ct'          | 'create-taglib'             | 'the first letter of each word, which create-tool, typed by its whole name only, does not take'
+        'cta'         | 'create-taglib'             | 'more of the last word'
+        'crt'         | 'create-taglib'             | 'more of the first word, which create-tool does not take either'
         'cs'          | 'create-service'            | 'the first letter of each word, of a command of a project'
         'cse'         | 'create-service'            | 'more of the last word'
         'crestc'      | 'create-restful-controller' | 'more of a word in the middle'
@@ -314,7 +318,6 @@ class CommandCatalogSpec extends CommandSpec implements CommandFixture {
 
         where:
         typed    | named
-        'cc'     | 'create-controller (ccon), create-command (ccom)'
         'creapp' | 'create-app (ca), create-rest-api-plugin (crap)'
         'pp'     | 'package-plugin (pap), publish-plugin (pup)'
         'co'     | 'compile (com), console (con)'
@@ -363,9 +366,9 @@ class CommandCatalogSpec extends CommandSpec implements CommandFixture {
         typed  | expected | first                                                                       | what
         'run'  | 0        | 'Usage: grails-forge-cli run-app [-hvVx]'                                   | 'run-app'
         'stop' | 0        | 'Usage: grails-forge-cli stop-app [-hvVx]'                                  | 'stop-app'
-        'Run'  | 2        | 'There is no command Run. Did you mean: run-app or run-script or run-command?' | 'no name in another case'
-        'r'    | 2        | 'There is no command r. Did you mean: run-app or run-script or run-command?' | 'no command: it starts run as much as run-script and run-command'
-        'ru'   | 2        | 'There is no command ru. Did you mean: run-app or run-script or run-command?' | 'no command either'
+        'Run'  | 2        | 'There is no command Run. Did you mean: run-app or run-script or run-tool?' | 'no name in another case'
+        'r'    | 2        | 'There is no command r. Did you mean: run-app or run-script or run-tool?' | 'no command: it starts run as much as run-script and run-tool'
+        'ru'   | 2        | 'There is no command ru. Did you mean: run-app or run-script or run-tool?' | 'no command either'
         'st'   | 0        | 'Usage: grails-forge-cli stats '                                            | 'stats still, which no command of one word but stats starts'
         'sto'  | 2        | 'There is no command sto. Did you mean: '                                   | 'no command: it starts stop and stop-app, which have no short form of one part'
         's'    | 2        | 's is short for more than one command: stats (st), shell (sh).'             | 'stats and shell, as before'
@@ -390,7 +393,7 @@ class CommandCatalogSpec extends CommandSpec implements CommandFixture {
 
         where:
         typed         | of            | offered                                 | why
-        'rn'          | ''            | 'run-app or run-script or run-command?' | 'one letter other than the last of each of their short forms'
+        'rn'          | ''            | 'run-app or run-script or run-tool?' | 'one letter other than the last of each of their short forms'
         'raa'         | ''            | 'run-app'                               | 'one letter more than ra'
         'rpa'         | ''            | 'run-app'                               | 'two letters of rap the other way round'
         'Ra'          | ''            | 'run-app'                               | 'ra in another case, which the rule of the shell reads as one word'
@@ -445,8 +448,8 @@ class CommandCatalogSpec extends CommandSpec implements CommandFixture {
         'run-app'             | 'ra'
         'stop-app'            | 'sa'
         'create-app'          | 'ca'
-        'create-controller'   | 'ccon'
-        'create-command'      | 'ccom'
+        'create-controller'   | 'cc'
+        'create-taglib'       | 'ct'
         'create-restful-controller' | 'crc'
         'stats'               | 'st'
         'clean'               | 'cl'
@@ -612,7 +615,7 @@ class CommandCatalogSpec extends CommandSpec implements CommandFixture {
 
         where:
         line                 | named
-        ['run-command']      | 'run-command'
+        ['run-tool']         | 'run-tool'
         ['run-script']       | 'run-script'
         ['gradle']           | 'gradle'
         ['feature', 'add']   | 'feature add'
@@ -671,20 +674,11 @@ class CommandCatalogSpec extends CommandSpec implements CommandFixture {
 
         when: 'a short form that fits two of them is refused as in a project'
         err.reset()
-        exit = ForgeCli.execute(beanContext, 'cC', 'Book')
+        exit = ForgeCli.execute(beanContext, 'co', 'Book')
 
         then:
         exit == 2
-        err.toString().readLines()[0] == 'cC is short for more than one command: create-controller (ccon), create-command (ccom). ' +
-                'Type more of the name of the one that is meant, or the short form in brackets after it'
-
-        when: 'and so is the form of lower-case letters'
-        err.reset()
-        exit = ForgeCli.execute(beanContext, 'cc', 'Book')
-
-        then:
-        exit == 2
-        err.toString().readLines()[0] == 'cc is short for more than one command: create-controller (ccon), create-command (ccom). ' +
+        err.toString().readLines()[0] == 'co is short for more than one command: compile (com), console (con). ' +
                 'Type more of the name of the one that is meant, or the short form in brackets after it'
 
         when: 'a tool is not told of it'
@@ -843,14 +837,12 @@ class CommandCatalogSpec extends CommandSpec implements CommandFixture {
         err.toString().isEmpty()
 
         when: 'a short form that two commands of the project have'
-        int ambiguous = ForgeCli.execute(beanContext, 'cC', 'Other')
+        int ambiguous = ForgeCli.execute(beanContext, 'co', 'Other')
 
         then: 'neither is run'
         ambiguous == 2
-        err.toString().readLines()[0] == 'cC is short for more than one command: create-controller (ccon), create-command (ccom). ' +
+        err.toString().readLines()[0] == 'co is short for more than one command: compile (com), console (con). ' +
                 'Type more of the name of the one that is meant, or the short form in brackets after it'
-        !new File(project, 'grails-app/controllers/example/OtherController.groovy').exists()
-        !new File(project, 'grails-app/commands/example/OtherCommand.groovy').exists()
 
         when: 'a feature is added from there'
         out.reset()
@@ -873,7 +865,7 @@ class CommandCatalogSpec extends CommandSpec implements CommandFixture {
 
         and: 'the build of the project has not listed the commands of the application, so they are not all there'
         described.complete == false
-        described.diagnostics == ['The commands of the application and its plugins are not listed yet: a build that compiles the project lists them, and so does typing the name of one. To list them now: grails-forge-cli gradle grailsToolCatalog']
+        described.diagnostics == ['The tools of the application and its plugins are not listed yet: a build that compiles the project lists them, and so does typing the name of one. To list them now: grails-forge-cli gradle grailsToolCatalog']
     }
 
     void "the commands are not those of a project in another repository, or of a project above the nearest one"() {
@@ -922,7 +914,7 @@ class CommandCatalogSpec extends CommandSpec implements CommandFixture {
         described.complete == false
         described.diagnostics.size() == 2
         described.diagnostics[0].startsWith("grails-forge-cli.yml: applicationType is not a type of application, but 'nonsense'")
-        described.diagnostics[1] == 'The commands of the application and its plugins are not listed yet: a build that compiles the project lists them, and so does typing the name of one. To list them now: grails-forge-cli gradle grailsToolCatalog'
+        described.diagnostics[1] == 'The tools of the application and its plugins are not listed yet: a build that compiles the project lists them, and so does typing the name of one. To list them now: grails-forge-cli gradle grailsToolCatalog'
         described.projectDirectory == dir.canonicalPath
         !((List<Map>) described.commands).any { it.name == 'create-controller' }
 

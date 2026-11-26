@@ -32,7 +32,7 @@ import groovy.transform.CompileStatic
 /**
  * Starts a command that runs as a process of its own, without Gradle, and waits for it: a plain JVM
  * with the class path the build of the project wrote down for the command
- * ({@link StandaloneCommandFile}), whose main class, shipped with Grails, finds the command by its
+ * ({@link StandaloneToolsFile}), whose main class, shipped with Grails, finds the command by its
  * name and runs it without the application.
  *
  * <p>The JVM is the one the Gradle wrapper of the project would be started with: the one the
@@ -46,7 +46,7 @@ import groovy.transform.CompileStatic
  * @since 9.0
  */
 @CompileStatic
-final class StandaloneCommandProcess {
+final class StandaloneToolProcess {
 
     /** The class the JVM is started with, of {@code grails-core-cli}. */
     public static final String MAIN_CLASS = 'org.apache.grails.core.cli.StandaloneToolRunner'
@@ -64,7 +64,7 @@ final class StandaloneCommandProcess {
 
     private static volatile Supplier<String> javaHome = ENVIRONMENT
 
-    private StandaloneCommandProcess() {
+    private StandaloneToolProcess() {
     }
 
     /**
@@ -178,7 +178,7 @@ final class StandaloneCommandProcess {
             return 1
         }
         try {
-            List<String> command = [java, "-Dgrails.env=${ApplicationCommandCommand.ENVIRONMENT}".toString(),
+            List<String> command = [java, "-Dgrails.env=${ToolCommand.ENVIRONMENT}".toString(),
                                     "-Dbase.dir=${project.getDirectory()}".toString()]
             if (stacktrace) {
                 command.add('-Dgrails.full.stacktrace=true')

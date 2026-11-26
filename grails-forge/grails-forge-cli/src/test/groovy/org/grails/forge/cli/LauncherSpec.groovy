@@ -162,12 +162,12 @@ class LauncherSpec extends Specification {
     }
 
     @IgnoreIf({ os.windows })
-    void "after the name of the command run-command runs, --plain-output is that command's and not the command line's"() {
+    void "after the name of the tool run-tool runs, --plain-output is that tool's and not the command line's"() {
         given:
         project('echo "the wrapper ran with $*"\ncat .grails/run/command-args-0.json\n')
 
         when:
-        int exit = ForgeCli.execute(another(), 'run-command', 'report', '--plain-output')
+        int exit = ForgeCli.execute(another(), 'run-tool', 'report', '--plain-output')
 
         then: 'it is given to the command, and Gradle is not asked for its plain console'
         exit == 0
@@ -176,11 +176,11 @@ class LauncherSpec extends Specification {
 
         when: 'in front of the name it is the command line\'s'
         out.reset()
-        exit = ForgeCli.execute(another(), 'run-command', '--plain-output', 'report')
+        exit = ForgeCli.execute(another(), 'run-tool', '--plain-output', 'report')
 
         then:
         exit == 0
-        out.toString().contains('the wrapper ran with --console=plain runCommand')
+        out.toString().contains('the wrapper ran with --console=plain runTool')
         out.toString().contains('["report"]')
     }
 
@@ -231,7 +231,7 @@ class LauncherSpec extends Specification {
         ['console']                           | 1
         ['shell']                             | 1
         ['run-script', 'x.groovy']            | 1
-        ['run-command', 'x']                  | 1
+        ['run-tool', 'x']                     | 1
         ['stats']                             | 1
         ['bug-report']                        | 1
         ['gradle', 'build']                   | 1
@@ -817,7 +817,7 @@ class LauncherSpec extends Specification {
         ['gradle', 'build']              | false
         ['test-app', '--unit']           | false
         ['stats']                        | false
-        ['run-command', 'dbm-update']    | false
+        ['run-tool', 'dbm-update']       | false
         ['dbm-update']                   | false
         ['feature', 'add', 'cache']      | false
         ['project', 'show']              | false
