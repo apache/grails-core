@@ -106,7 +106,8 @@ class JoinTracker {
      */
     @PackageScope
     void setPlan(JoinPlan plan) {
-        owner.plan = plan
+        // the field, not the setter: through another reference Groovy would call this very method
+        owner.@plan = plan
     }
 
     /**
@@ -114,7 +115,7 @@ class JoinTracker {
      */
     @PackageScope
     JoinType plannedType(String path) {
-        return owner.plan == null ? null : owner.plan.typeOf(key(path))
+        return owner.@plan == null ? null : owner.@plan.typeOf(key(path))
     }
 
     From<?, ?> getRoot() {
