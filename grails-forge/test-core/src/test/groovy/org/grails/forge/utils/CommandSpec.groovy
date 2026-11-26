@@ -79,9 +79,12 @@ abstract class CommandSpec extends Specification {
     }
 
     BuildResult executeGradle(String... arguments) {
-        gradleRunner.withProjectDir(dir)
-                .withArguments(GeneratedBuild.arguments() + arguments.toList())
-                .build()
+        // without the Grails environment of this JVM, which is that of Forge and not one somebody asked the build for
+        GeneratedBuild.asFromACommandLine {
+            gradleRunner.withProjectDir(dir)
+                    .withArguments(GeneratedBuild.arguments() + arguments.toList())
+                    .build()
+        }
     }
 
     void generateProject(OperatingSystem operatingSystem = OperatingSystem.LINUX,

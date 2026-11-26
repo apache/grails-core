@@ -202,9 +202,11 @@ class FeaturePackTasksSpec extends CommandSpec {
     }
 
     private BuildResult fail(String... arguments) {
-        gradleRunner.withProjectDir(dir)
-                .withArguments(GeneratedBuild.arguments() + arguments.toList())
-                .buildAndFail()
+        GeneratedBuild.asFromACommandLine {
+            gradleRunner.withProjectDir(dir)
+                    .withArguments(GeneratedBuild.arguments() + arguments.toList())
+                    .buildAndFail()
+        }
     }
 
     @Override

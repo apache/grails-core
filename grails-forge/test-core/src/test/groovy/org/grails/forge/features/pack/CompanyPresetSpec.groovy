@@ -116,9 +116,11 @@ class CompanyPresetSpec extends CommandSpec {
         new File(application, '.grails/forge.lock.yml').text.contains('  coordinates: com.acme:acme-service-preset\n  version: 1.0.0\n')
 
         when: 'the application is compiled'
-        BuildResult compiled = gradleRunner.withProjectDir(application)
-                .withArguments(GeneratedBuild.arguments() + ['compileGroovy', 'compileTestGroovy', '--no-build-cache'])
-                .build()
+        BuildResult compiled = GeneratedBuild.asFromACommandLine {
+            gradleRunner.withProjectDir(application)
+                    .withArguments(GeneratedBuild.arguments() + ['compileGroovy', 'compileTestGroovy', '--no-build-cache'])
+                    .build()
+        }
 
         then: 'the sources were compiled in this build, not taken from a cache'
         compiled.task(':compileGroovy').outcome == TaskOutcome.SUCCESS

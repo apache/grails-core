@@ -77,9 +77,7 @@ class RestScaffoldingBuildSpec extends CommandSpec {
         !file('src/integration-test/groovy/example/grails/BirdServiceSpec.groovy').text.contains('assert false')
 
         when: 'the application runs its unit tests and its integration tests'
-        // the build is given the environment of the tests, which it has by itself when it is run from a command line: the
-        // JVM of this spec has the generator's, production, and TestKit hands its system properties to the build
-        executeGradle('test', 'integrationTest', '-Dgrails.env=test')
+        executeGradle('test', 'integrationTest')
 
         then: 'every test of the two specs ran and passed'
         results('test', 'BirdControllerSpec') == [tests: 11, failures: 0, errors: 0, skipped: 0]
