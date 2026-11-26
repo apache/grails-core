@@ -22,9 +22,8 @@ package grails.plugin.json.converters
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 
+import groovy.json.JsonGenerator
 import groovy.transform.CompileStatic
-
-import grails.plugin.json.builder.JsonGenerator
 
 /**
  * A class to render a {@link LocalTime} as json

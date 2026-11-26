@@ -165,6 +165,11 @@ include::conf/config/logging/loggerName.adoc[]
 
 include::conf/config/logging/maskingRequestParametersFromStacktraceLogs.adoc[]
 
+[[loggingFullStackTraces]]
+===== Logging Full Stack Traces
+
+include::conf/config/logging/loggingFullStackTraces.adoc[]
+
 [[externalLoggingConfiguration]]
 ===== External Logging Configuration
 
@@ -1004,6 +1009,11 @@ include::testing/integrationTesting.adoc[]
 === Functional Testing
 
 include::testing/functionalTesting.adoc[]
+
+[[testPhases]]
+=== Custom Test Phases
+
+include::testing/testPhases.adoc[]
 
 [[i18n]]
 == Internationalization
@@ -1890,10 +1900,10 @@ include::ref/Database Mapping/table.adoc[]
 
 include::ref/Database Mapping/type.adoc[]
 
-[[ref-database-mapping-updateable]]
-==== updateable
+[[ref-database-mapping-updatable]]
+==== updatable
 
-include::ref/Database Mapping/updateable.adoc[]
+include::ref/Database Mapping/updatable.adoc[]
 
 [[ref-database-mapping-version]]
 ==== version

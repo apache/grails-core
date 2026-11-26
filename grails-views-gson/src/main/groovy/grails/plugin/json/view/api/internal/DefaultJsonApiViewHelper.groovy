@@ -27,7 +27,6 @@ import org.springframework.validation.Errors
 import org.springframework.validation.FieldError
 import org.springframework.validation.ObjectError
 
-import grails.plugin.json.builder.JsonGenerator
 import grails.plugin.json.builder.JsonOutput
 import grails.plugin.json.view.api.GrailsJsonViewHelper
 import grails.plugin.json.view.api.JsonApiViewHelper
@@ -339,7 +338,7 @@ class DefaultJsonApiViewHelper extends DefaultJsonViewHelper implements JsonApiV
     }
 
     private JsonOutput.JsonWritable renderData(Object object, Map arguments) {
-        JsonGenerator generator = getGenerator()
+        groovy.json.JsonGenerator generator = getGenerator()
         new JsonOutput.JsonWritable() {
             @Override
             Writer writeTo(Writer out) throws IOException {
@@ -366,7 +365,7 @@ class DefaultJsonApiViewHelper extends DefaultJsonViewHelper implements JsonApiV
     }
 
     JsonOutput.JsonWritable renderErrors(Object object) {
-        JsonGenerator generator = getGenerator()
+        groovy.json.JsonGenerator generator = getGenerator()
         JsonOutput.JsonWritable writable = new JsonOutput.JsonWritable() {
 
             @Override
@@ -438,7 +437,7 @@ class DefaultJsonApiViewHelper extends DefaultJsonViewHelper implements JsonApiV
     }
 
     JsonOutput.JsonWritable renderRelationshipLinks(Object object) {
-        JsonGenerator generator = getGenerator()
+        groovy.json.JsonGenerator generator = getGenerator()
         new JsonOutput.JsonWritable() {
             @Override
             Writer writeTo(Writer out) throws IOException {
@@ -455,7 +454,7 @@ class DefaultJsonApiViewHelper extends DefaultJsonViewHelper implements JsonApiV
     }
 
     JsonOutput.JsonWritable renderLinks(Object object, Map arguments) {
-        JsonGenerator generator = getGenerator()
+        groovy.json.JsonGenerator generator = getGenerator()
         JsonOutput.JsonWritable writable = new JsonOutput.JsonWritable() {
 
             @Override
@@ -557,7 +556,7 @@ class DefaultJsonApiViewHelper extends DefaultJsonViewHelper implements JsonApiV
     }
 
     void renderException(Writer out, Throwable object) {
-        JsonGenerator generator = getGenerator()
+        groovy.json.JsonGenerator generator = getGenerator()
 
         StackTraceUtils.sanitize(object)
         out.write(generator.toJson('errors'))

@@ -63,7 +63,6 @@ tmp/
 etc/bin/results
 .vscode/
 /scratch/
-/local.properties
 node_modules/
 local-tasks.gradle
 local-init.gradle

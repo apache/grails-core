@@ -51,7 +51,7 @@ class DirtyCheckingSupport {
      * @return True if they are
      * @deprecated Use {@link #areAssociationsDirty(org.grails.datastore.mapping.model.PersistentEntity, java.lang.Object)} instead
      */
-    @Deprecated
+    @Deprecated(forRemoval = true)
     static boolean areAssociationsDirty(Session session, PersistentEntity entity, Object instance) {
         areAssociationsDirty(entity, instance)
     }
