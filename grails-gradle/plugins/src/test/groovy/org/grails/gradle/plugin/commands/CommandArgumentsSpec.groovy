@@ -247,23 +247,4 @@ class CommandArgumentsSpec extends CommandProjectSpecification {
         !result.output.contains('ARGUMENTS=')
     }
 
-    // the arguments of the command, with the class of the application after them, as the class that runs a command has them
-    private static List<String> arguments(BuildResult result) {
-        said(result, 'ARGUMENT')
-    }
-
-    // what the JVM of the command was started with
-    private static List<String> started(BuildResult result) {
-        said(result, 'STARTED')
-    }
-
-    private static List<String> said(BuildResult result, String what) {
-        List<String> lines = result.output.readLines()
-        int count = lines.find { String line -> line.startsWith("${what}S=") }.substring(what.length() + 2) as int
-        List<String> values = lines.findAll { String line -> line.startsWith("${what}[") }.collect { String line ->
-            new String(line.substring(line.indexOf('<') + 1, line.lastIndexOf('>')).decodeHex(), 'UTF-8')
-        }
-        assert values.size() == count
-        values
-    }
 }

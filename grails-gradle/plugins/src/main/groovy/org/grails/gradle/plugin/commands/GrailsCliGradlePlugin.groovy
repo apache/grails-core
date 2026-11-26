@@ -569,12 +569,17 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
             // builds. Those commands remain available through the generic runCommand task and the
             // shell adapter once grails-core-cli-legacy is on grailsCliClasspath.
             for (ctxCommand in commandClassNames) {
-                String taskName = GrailsNameUtils.getLogicalPropertyName(ctxCommand, 'Command')
-                String commandName = GrailsNameUtils.getScriptName(GrailsNameUtils.getLogicalName(ctxCommand, 'Command'))
+                // the name a tool has by its class name, as the tool works it out: CreateReportTool and
+                // CreateReportCommand are both create-report, and the task is createReport
+                String commandName = ToolDescriptor.conventionName(ctxCommand)
+                if (!ToolDescriptor.isCommandName(commandName)) {
+                    continue
+                }
+                String taskName = GrailsNameUtils.getPropertyNameForLowerCaseHyphenSeparatedName(commandName)
                 if (!project.tasks.names.contains(taskName)) {
                     project.tasks.register(taskName, ApplicationContextCommandTask).configure {
                         it.group = GRAILS_COMMAND_GROUP
-                        it.description = "Runs the Grails ${commandName} command"
+                        it.description = "Runs the tool ${commandName}"
                         it.classpath = fileCollection
                         it.command = commandName
                         it.systemProperty(Environment.KEY, System.getProperty(Environment.KEY, Environment.DEVELOPMENT.getName()))

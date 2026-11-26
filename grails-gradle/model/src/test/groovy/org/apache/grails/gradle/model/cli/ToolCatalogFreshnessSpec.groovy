@@ -49,9 +49,12 @@ class ToolCatalogFreshnessSpec extends Specification {
         file('settings.gradle', WRITTEN - 1000)
         file('gradle.properties', WRITTEN - 1000)
         file('grails-app/commands/example/GreetCommand.groovy', WRITTEN - 1000)
+        file('src/cli/groovy/example/ReportTool.groovy', WRITTEN - 1000)
+        file('src/standalone/java/example/CopyTool.java', WRITTEN - 1000)
         file('build/classes/groovy/main/META-INF/grails-tools/example.GreetCommand.json', WRITTEN - 1000)
         // the directories were changed when their files were written, which was before the catalog
-        ['grails-app/commands/example', 'grails-app/commands', 'build/classes/groovy/main/META-INF/grails-tools'].each { String path ->
+        ['grails-app/commands/example', 'grails-app/commands', 'src/cli/groovy/example', 'src/cli/groovy', 'src/cli',
+         'src/standalone/java/example', 'src/standalone/java', 'src/standalone', 'build/classes/groovy/main/META-INF/grails-tools'].each { String path ->
             new File(project, path).setLastModified(WRITTEN - 1000)
         }
     }
@@ -84,7 +87,67 @@ class ToolCatalogFreshnessSpec extends Specification {
         'gradle.properties'                                                     | 'gradle.properties'
         'grails-app/commands/example/GreetCommand.groovy'                       | 'grails-app/commands'
         'grails-app/commands/example/deeper/OtherCommand.groovy'                | 'grails-app/commands'
+        'grails-app/commands/example/OtherCommand.java'                         | 'grails-app/commands'
+        'src/cli/groovy/example/ReportTool.groovy'                              | 'src/cli'
+        'src/cli/groovy/example/deeper/OtherTool.groovy'                        | 'src/cli'
+        'src/cli/java/example/OtherTool.java'                                   | 'src/cli'
+        'src/standalone/java/example/CopyTool.java'                             | 'src/standalone'
+        'src/standalone/groovy/example/OtherTool.groovy'                        | 'src/standalone'
         'build/classes/groovy/main/META-INF/grails-tools/example.Other.json' | 'build/classes/groovy/main/META-INF/grails-tools'
+    }
+
+    def "the directories of the sources of tools are looked at in their order: src/cli, src/standalone, grails-app/commands"() {
+        given: 'a newer source in each of them'
+        file('grails-app/commands/example/GreetCommand.groovy', WRITTEN + 1000)
+        file('src/standalone/java/example/CopyTool.java', WRITTEN + 1000)
+        file('src/cli/groovy/example/ReportTool.groovy', WRITTEN + 1000)
+
+        expect:
+        ToolCatalogFreshness.changedSince(project, [classes], at(WRITTEN)) == 'src/cli'
+
+        when:
+        file('src/cli/groovy/example/ReportTool.groovy', WRITTEN - 1000)
+
+        then:
+        ToolCatalogFreshness.changedSince(project, [classes], at(WRITTEN)) == 'src/standalone'
+
+        when:
+        file('src/standalone/java/example/CopyTool.java', WRITTEN - 1000)
+
+        then:
+        ToolCatalogFreshness.changedSince(project, [classes], at(WRITTEN)) == 'grails-app/commands'
+    }
+
+    def "a resource of a source set of tools is not looked at, and its directory is"() {
+        given: 'a resource written again, in a directory that is as old as the catalog'
+        file('src/cli/resources/META-INF/grails-cli.factories', WRITTEN + 1000)
+        file('src/standalone/resources/templates/report.txt', WRITTEN + 1000)
+        ['src/cli/resources/META-INF', 'src/cli/resources', 'src/cli', 'src/standalone/resources/templates', 'src/standalone/resources',
+         'src/standalone'].each { String path ->
+            new File(project, path).setLastModified(WRITTEN - 1000)
+        }
+
+        expect:
+        ToolCatalogFreshness.changedSince(project, [classes], at(WRITTEN)) == null
+    }
+
+    @Unroll
+    def "without the directories of classes, those the Grails Gradle plugin has are looked at: #path"() {
+        given:
+        file(path, WRITTEN + 1000)
+        new File(project, path).parentFile.setLastModified(WRITTEN - 1000)
+
+        expect:
+        ToolCatalogFreshness.changedSince(project, at(WRITTEN)) == named
+
+        and: 'a reader that is given only the directory of the main classes does not see the others'
+        ToolCatalogFreshness.changedSince(project, [classes], at(WRITTEN)) == (path.contains('/main/') ? named : null)
+
+        where:
+        path                                                                          | named
+        'build/classes/groovy/main/META-INF/grails-tools/example.Other.json'       | 'build/classes/groovy/main/META-INF/grails-tools'
+        'build/classes/groovy/cli/META-INF/grails-tools/example.ReportTool.json'   | 'build/classes/groovy/cli/META-INF/grails-tools'
+        'build/classes/groovy/standalone/META-INF/grails-tools/example.Copy.json'  | 'build/classes/groovy/standalone/META-INF/grails-tools'
     }
 
     def "a file of another ending is not looked at, and its directory is"() {
@@ -225,6 +288,10 @@ class ToolCatalogFreshnessSpec extends Specification {
     def "the rule names the places the command line reads the catalog by"() {
         expect:
         ToolCatalogFreshness.BUILD_FILES == ['build.gradle', 'build.gradle.kts', 'settings.gradle', 'settings.gradle.kts', 'gradle.properties']
+        ToolCatalogFreshness.TOOL_SOURCES == ['src/cli', 'src/standalone', 'grails-app/commands']
+        ToolCatalogFreshness.TOOL_SOURCES == [ToolBuildNames.CLI_SOURCE_FOLDER, ToolBuildNames.STANDALONE_SOURCE_FOLDER, ToolBuildNames.LEGACY_SOURCE_FOLDER]
+        ToolCatalogFreshness.SOURCE_ENDINGS == ['.groovy', '.java']
+        ToolCatalogFreshness.CLASSES_DIRECTORIES == ['build/classes/groovy/main', 'build/classes/groovy/cli', 'build/classes/groovy/standalone']
         ToolCatalogFreshness.COMMAND_SOURCES == 'grails-app/commands'
         ToolCatalogFreshness.SOURCE_ENDING == '.groovy'
         ToolCatalogFreshness.DESCRIPTORS == 'META-INF/grails-tools'

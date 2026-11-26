@@ -25,6 +25,7 @@ import java.util.jar.Manifest
 
 import groovy.json.JsonOutput
 
+import org.gradle.testkit.runner.BuildResult
 import org.gradle.testkit.runner.GradleRunner
 
 import org.apache.grails.gradle.model.cli.CommandArgumentsFile
@@ -128,5 +129,25 @@ abstract class CommandProjectSpecification extends GradleSpecification {
         file.parentFile.mkdirs()
         file.bytes = content instanceof byte[] ? (byte[]) content : content.toString().getBytes('UTF-8')
         file
+    }
+
+    /** The arguments of the tool, with the class of the application after them, as the stand-in for the class that runs a tool has them. */
+    protected static List<String> arguments(BuildResult result) {
+        said(result, 'ARGUMENT')
+    }
+
+    /** What the JVM of the tool was started with, as the stand-in for the class that runs a tool says. */
+    protected static List<String> started(BuildResult result) {
+        said(result, 'STARTED')
+    }
+
+    private static List<String> said(BuildResult result, String what) {
+        List<String> lines = result.output.readLines()
+        int count = lines.find { String line -> line.startsWith("${what}S=") }.substring(what.length() + 2) as int
+        List<String> values = lines.findAll { String line -> line.startsWith("${what}[") }.collect { String line ->
+            new String(line.substring(line.indexOf('<') + 1, line.lastIndexOf('>')).decodeHex(), 'UTF-8')
+        }
+        assert values.size() == count
+        values
     }
 }
