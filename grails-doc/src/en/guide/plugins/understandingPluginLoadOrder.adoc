@@ -75,23 +75,29 @@ start. It is possible though to have a weaker dependency using `loadAfter` and `
 ----
 
 Here the plugin will be loaded after the `controllers` plugin if it exists, otherwise it will just be loaded. The
-plugin can then adapt to the presence of the other plugin, for example the Hibernate plugin has this code in its
-`doWithSpring` closure:
+plugin can then adapt to the presence of the other plugin, for example by registering a bean only when the other
+plugin is there:
 
 [source,groovy]
 ----
-if (manager?.hasGrailsPlugin("controllers")) {
-    openSessionInViewInterceptor(OpenSessionInViewInterceptor) {
-        flushMode = HibernateAccessor.FLUSH_MANUAL
-        sessionFactory = sessionFactory
-    }
-    grailsUrlHandlerMapping.interceptors << openSessionInViewInterceptor
+@Override
+BeanRegistrar beanRegistrar() {
+    { BeanRegistry registry, Environment environment ->
+        if (manager.hasGrailsPlugin('controllers')) {
+            registry.registerBean('auditInterceptor', AuditInterceptor)
+        }
+    } as BeanRegistrar
 }
 ----
 
-Here the Hibernate plugin will only register an `OpenSessionInViewInterceptor` if the `controllers` plugin has been
-loaded. The `manager` variable is an instance of the link:{api}grails/plugins/GrailsPluginManager.html[GrailsPluginManager]
-interface and it provides methods to interact with other plugins.
+Here the plugin only registers its `AuditInterceptor` if the `controllers` plugin has been loaded. The `manager`
+property is an instance of the link:{api}grails/plugins/GrailsPluginManager.html[GrailsPluginManager] interface and it
+provides methods to interact with other plugins.
+
+The load order is also the order in which the plugins' beans are registered. Each plugin's `beanRegistrar()` is applied
+in load order, and the registry post-processors that registrars register run in the same order, so a plugin that loads
+after another replaces a bean of the same name the other one registered. A plugin that replaces a bean of another
+plugin declares `loadAfter` (or `dependsOn`) on it.
 
 You can also use `loadBefore` to specify one or more plugins that your plugin should load before:
 

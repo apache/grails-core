@@ -29,9 +29,9 @@ class Application extends GrailsAutoConfiguration {
         GrailsApp.run(Application, args)
     }
 
-    // Default for the probe the loadafter plugin registers in doWithSpring. Plugin beans now
-    // register ahead of auto-configuration, so this @ConditionalOnMissingBean default must defer
-    // to it — PluginBeansBeforeAutoConfigurationSpec asserts the plugin's value wins.
+    // Default for the probe the loadafter plugin registers from a post-processor its registrar
+    // registers. Plugin beans register ahead of auto-configuration, so this @ConditionalOnMissingBean
+    // default must defer to it — PluginBeansBeforeAutoConfigurationSpec asserts the plugin's value wins.
     @Bean
     @ConditionalOnMissingBean(name = 'earlyPluginProbe')
     String earlyPluginProbe() { 'from-conditional-default' }

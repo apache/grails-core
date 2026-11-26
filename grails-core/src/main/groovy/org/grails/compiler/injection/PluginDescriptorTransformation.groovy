@@ -23,9 +23,11 @@ import groovy.transform.CompileStatic
 import org.codehaus.groovy.ast.ASTNode
 import org.codehaus.groovy.ast.ClassHelper
 import org.codehaus.groovy.ast.ClassNode
+import org.codehaus.groovy.ast.MethodNode
 import org.codehaus.groovy.control.CompilationUnit
 import org.codehaus.groovy.control.Phases
 import org.codehaus.groovy.control.SourceUnit
+import org.codehaus.groovy.syntax.SyntaxException
 import org.codehaus.groovy.transform.ASTTransformation
 import org.codehaus.groovy.transform.GroovyASTTransformation
 
@@ -35,7 +37,8 @@ import org.apache.grails.plugin.descriptor.PluginDescriptorWriter
 /**
  * Writes the descriptors of the plugins a Groovy compilation produces, beside its classes, once the
  * compilation has written them. A plugin is a concrete {@code grails.plugins.Plugin} subclass annotated
- * with {@link GrailsPluginDescriptor}; an annotated class that is not one fails the compilation.
+ * with {@link GrailsPluginDescriptor}; an annotated class that is not one fails the compilation, as does a
+ * plugin that declares {@code doWithSpring}, a hook plugins no longer have.
  *
  * @see CompilerPluginDescriptors
  */
@@ -45,6 +48,17 @@ class PluginDescriptorTransformation implements ASTTransformation, CompilationUn
 
     private static final ClassNode DESCRIPTOR = ClassHelper.make(GrailsPluginDescriptor)
     private static final String PLUGIN_CLASS = 'grails.plugins.Plugin'
+    static final String REMOVED_BEAN_HOOK = 'doWithSpring'
+
+    /**
+     * The error a plugin declaring {@code doWithSpring} fails with: a plugin has no such hook, so the
+     * method would never be called and the beans it declares would be missing.
+     */
+    static String removedBeanHookMessage(String pluginClassName) {
+        "${pluginClassName} declares ${REMOVED_BEAN_HOOK}, which a plugin no longer has: nothing would call it. " +
+                'Register the beans from beanRegistrar() or a beans block instead; see "Hooking into Runtime ' +
+                'Configuration" in the Grails guide'.toString()
+    }
 
     CompilationUnit compilationUnit
     private final Set<File> scheduled = []
@@ -55,21 +69,30 @@ class PluginDescriptorTransformation implements ASTTransformation, CompilationUn
         if (source.class.name == 'org.codehaus.jdt.groovy.control.EclipseSourceUnit') {
             target = GroovyEclipseCompilationHelper.resolveEclipseCompilationTargetDirectory(source)
         }
-        if (target == null) {
-            return
-        }
         boolean declaresPlugin = false
         for (ClassNode type : source.AST.classes) {
             if (type.getAnnotations(DESCRIPTOR).empty) {
                 continue
             }
             if (type.abstract || type.interface || !GrailsASTUtils.isSubclassOf(type, PLUGIN_CLASS)) {
-                source.addErrorAndContinue(new org.codehaus.groovy.syntax.SyntaxException(
-                        "${type.name} is annotated with @GrailsPluginDescriptor, so it must be a concrete " +
-                                "subclass of ${PLUGIN_CLASS}".toString(), type.lineNumber, type.columnNumber))
+                if (target != null) {
+                    source.addErrorAndContinue(new SyntaxException(
+                            "${type.name} is annotated with @GrailsPluginDescriptor, so it must be a concrete " +
+                                    "subclass of ${PLUGIN_CLASS}".toString(), type.lineNumber, type.columnNumber))
+                }
                 continue
             }
+            // whether or not descriptors are written, a plugin compiled with doWithSpring would lose its beans
+            for (ClassNode declaring = type; declaring != null && declaring.name != PLUGIN_CLASS; declaring = declaring.superClass) {
+                for (MethodNode method : declaring.getMethods(REMOVED_BEAN_HOOK)) {
+                    ASTNode at = declaring.is(type) ? method : type
+                    source.addErrorAndContinue(new SyntaxException(removedBeanHookMessage(type.name), at.lineNumber, at.columnNumber))
+                }
+            }
             declaresPlugin = true
+        }
+        if (target == null) {
+            return
         }
         File imports = new File(target, PluginDescriptorWriter.PLUGINS_IMPORTS_PATH)
         if ((declaresPlugin || imports.isFile()) && scheduled.add(target)) {

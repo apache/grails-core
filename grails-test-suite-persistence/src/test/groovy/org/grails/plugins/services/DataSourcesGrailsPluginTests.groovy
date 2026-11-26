@@ -71,19 +71,15 @@ class DataSourcesGrailsPluginTests  extends AbstractGrailsMockTests {
 
     private ApplicationContext initializeContext(Map dataSources) {
         ga.getConfig().putAll(dataSources)
-        def corePluginClass = gcl.loadClass("org.grails.plugins.CoreGrailsPlugin")
-        def corePlugin = new DefaultGrailsPlugin(corePluginClass, ga)
         def dataSourcePluginClass = gcl.loadClass("org.grails.plugins.datasource.DataSourceGrailsPlugin")
 
         def dataSourcePlugin = new DefaultGrailsPlugin(dataSourcePluginClass, ga)
         def springConfig = new WebRuntimeSpringConfiguration(ctx)
         springConfig.servletContext = createMockServletContext()
 
-        corePlugin.doWithRuntimeConfiguration(springConfig)
         dataSourcePlugin.manager = new MockGrailsPluginManager(ga)
-        dataSourcePlugin.doWithRuntimeConfiguration(springConfig)
 
-        // the dataSource beans come from the registrar of the plugin, which the runtime applies after doWithSpring
+        // the dataSource beans come from the registrar of the plugin, as the runtime applies it
         def context = springConfig.getUnrefreshedApplicationContext() as GenericApplicationContext
         BeanRegistrar registrar = dataSourcePlugin.beanRegistrar
         new BeanRegistryAdapter(context, context.beanFactory, context.environment, registrar.getClass())

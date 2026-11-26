@@ -28,7 +28,6 @@ import org.springframework.context.ApplicationContextAware;
 import grails.core.GrailsApplication;
 import grails.util.Environment;
 import org.grails.plugins.support.WatchPattern;
-import org.grails.spring.RuntimeSpringConfiguration;
 
 /**
  * A loaded Grails plugin: an instance of the plugin's {@link Plugin} subclass, which the
@@ -79,17 +78,12 @@ public interface GrailsPlugin extends ApplicationContextAware {
     void doWithApplicationContext(ApplicationContext applicationContext);
 
     /**
-     * Executes the plugin code that performs runtime configuration as defined in its {@code doWithSpring} hook
-     * @param springConfig The RuntimeSpringConfiguration instance
-     */
-    void doWithRuntimeConfiguration(RuntimeSpringConfiguration springConfig);
-
-    /**
      * Returns the {@link BeanRegistrar} exposed by this plugin's
      * {@link grails.core.GrailsApplicationLifeCycle#beanRegistrar()} hook, if any. The registrar
      * is applied to the bean definition registry before Spring Boot auto-configuration is
-     * processed, so its beans take precedence over Boot's {@code @ConditionalOnMissingBean}
-     * defaults.
+     * processed, plugin by plugin in load order, so its beans take precedence over Boot's
+     * {@code @ConditionalOnMissingBean} defaults and over a bean of the same name that an earlier
+     * plugin registered.
      * @return The plugin's {@link BeanRegistrar}, or {@code null} if the plugin does not define one
      * @since 8.0
      */

@@ -110,11 +110,11 @@ Set<Class<?>> getConfigurationClasses() {
 
 A test may use more than one of these. For a name declared by more than one, the one applied last wins: `beanRegistrar`, then `doWithSpring`, then the `beans` block, then a hand-written nested configuration class.
 
-A condition on one of the test's beans, such as `.conditionalOnMissingBean()` in the block or `@ConditionalOnMissingBean` on a nested class's method, is evaluated while the test's configuration is read. It sees what an application's configuration would see at that point: the `doWithSpring` and `beanRegistrar` beans of included plugins, which are registered first, and those of the test's configuration classes read before it. It does not see the beans `doWithSpring` or `beanRegistrar` register, which come afterwards, as an application's own `doWithSpring` and `beanRegistrar` do.
+A condition on one of the test's beans, such as `.conditionalOnMissingBean()` in the block or `@ConditionalOnMissingBean` on a nested class's method, is evaluated while the test's configuration is read. It sees what an application's configuration would see at that point: the `beanRegistrar` beans of included plugins, and those of the post-processors their registrars register, which are registered first, and those of the test's configuration classes read before it. It does not see the beans `doWithSpring` or `beanRegistrar` register, which come afterwards, as an application's own `doWithSpring` and `beanRegistrar` do.
 
 ==== doWithSpring
 
-WARNING: `doWithSpring` is deprecated in Grails {grailsMajorVersion}, as it is on plugins and applications. It keeps working, but the bean builder DSL receives no fixes for new issues — prefer a `beans` block, `beanRegistrar` or a configuration class.
+WARNING: `doWithSpring` is deprecated in Grails {grailsMajorVersion}, as it is on applications; plugins no longer have it. It keeps working, but the bean builder DSL receives no fixes for new issues — prefer a `beans` block, `beanRegistrar` or a configuration class.
 
 [source,groovy]
 ----
@@ -138,7 +138,7 @@ boolean loadExternalBeans() {
 
 ==== Spring configuration from plugins
 
-If you would like the beans of any loaded plugins to be registered for your tests, override the `getIncludePlugins` method and return a list of strings representing the plugin names. An included plugin contributes its `doWithSpring` and `beanRegistrar` beans and the beans its `beans` block declares.
+If you would like the beans of any loaded plugins to be registered for your tests, override the `getIncludePlugins` method and return a list of strings representing the plugin names. An included plugin contributes its `beanRegistrar` beans, those of the post-processors its registrar registers, and the beans its `beans` block declares.
 
 [source,groovy]
 ----
@@ -149,7 +149,7 @@ Set<String> getIncludePlugins() {
 
 WARNING: If you override this method, the default plugins will not be included. The default plugins are `core` and `eventBus`. If you want to add a plugin in addition to the defaults, add the defaults to your list.
 
-An included plugin's `doWithSpring` and `beanRegistrar` beans are registered before the test's configuration is read, as an application's early phase registers them, and after the test's `doWithConfig` is applied. So a `@ConditionalOnMissingBean` bean backs off from them, whether it is the framework's, the plugin's own (from its `beans` block) or the test's. A bean the test's `doWithSpring` or `beanRegistrar` registers under the same name replaces one, as an application's does.
+An included plugin's `beanRegistrar` beans, and those of the post-processors its registrar registers, are registered before the test's configuration is read, as an application's early phase registers them, and after the test's `doWithConfig` is applied. So a `@ConditionalOnMissingBean` bean backs off from them, whether it is the framework's, the plugin's own (from its `beans` block) or the test's. A bean the test's `doWithSpring` or `beanRegistrar` registers under the same name replaces one, as an application's does.
 
 NOTE: The framework's own auto-configurations are registered whichever plugins are included.
 
@@ -162,7 +162,7 @@ At any time during your tests, you can also directly call the `defineBeans` meth
 include::{functionalSourceDir}/demo33/src/test/groovy/demo/DefineBeansSpec.groovy[tags=test_declaration,indent=0]
 ----
 
-If you pass a plugin instance to the method, its `doWithSpring` and `beanRegistrar` are applied. Its `beans` block is not: that compiles to an auto-configuration, which is registered before the context starts, so include the plugin through `getIncludePlugins` for those beans.
+If you pass a plugin instance to the method, its `beanRegistrar` is applied, and the post-processors the registrar registers are run, since the context has already been refreshed. Its `beans` block is not: that compiles to an auto-configuration, which is registered before the context starts, so include the plugin through `getIncludePlugins` for those beans.
 
 [source,groovy]
 ----

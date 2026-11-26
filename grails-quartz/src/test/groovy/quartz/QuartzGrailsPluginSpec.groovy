@@ -24,20 +24,27 @@ import grails.plugins.GrailsPluginManager
 import grails.plugins.quartz.JobArtefactHandler
 import grails.plugins.quartz.listeners.ExceptionPrinterJobListener
 import grails.plugins.quartz.listeners.SessionBinderJobListener
-import grails.spring.BeanBuilder
 import grails.util.Metadata
 import org.grails.config.PropertySourcesConfig
 import org.quartz.Scheduler
 import org.quartz.impl.matchers.GroupMatcher
+import org.springframework.beans.factory.BeanRegistrar
 import org.springframework.beans.factory.config.BeanDefinition
+import org.springframework.beans.factory.config.MethodInvokingFactoryBean
 import org.springframework.beans.factory.config.RuntimeBeanReference
+import org.springframework.beans.factory.support.AbstractBeanDefinition
+import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor
+import org.springframework.beans.factory.support.BeanRegistryAdapter
 import org.springframework.context.support.GenericApplicationContext
+import quartz.jobs.ContextSpecJob
 import spock.lang.Specification
 
 /**
  * Tests the configuration and the Spring bean definitions of the Quartz plugin.
  */
 class QuartzGrailsPluginSpec extends Specification {
+
+    private static final String POST_PROCESSOR = 'quartzBeanDefinitionsPostProcessor'
 
     void 'unconfigured options fall back to their documented defaults'() {
         given:
@@ -146,6 +153,46 @@ class QuartzGrailsPluginSpec extends Specification {
 
         and: 'no hibernate plugin means no session binder'
             !beans.containsKey(SessionBinderJobListener.NAME)
+    }
+
+    void 'a job artefact gets a factory bean looking up its class and a prototype job bean autowired by name'() {
+        when:
+            Map<String, BeanDefinition> beans = beanDefinitionsFor([:], false, [ContextSpecJob])
+            BeanDefinition lookup = beans.get(ContextSpecJob.name + 'Class')
+            AbstractBeanDefinition job = (AbstractBeanDefinition) beans.get(ContextSpecJob.name)
+
+        then:
+            lookup.beanClassName == MethodInvokingFactoryBean.name
+            beanReferenceName(lookup, 'targetObject') == 'grailsApplication'
+            lookup.propertyValues.getPropertyValue('targetMethod').value == 'getArtefact'
+            lookup.propertyValues.getPropertyValue('arguments').value == [JobArtefactHandler.TYPE, ContextSpecJob.name]
+
+        and:
+            job.factoryBeanName == ContextSpecJob.name + 'Class'
+            job.factoryMethodName == 'newInstance'
+            job.scope == BeanDefinition.SCOPE_PROTOTYPE
+            job.autowireMode == AbstractBeanDefinition.AUTOWIRE_BY_NAME
+    }
+
+    void 'the session binder and the table cleanup autowire by name'() {
+        when:
+            Map<String, BeanDefinition> beans = beanDefinitionsFor(
+                    ['quartz.jdbcStore': true, 'quartz.purgeQuartzTablesOnStartup': true, 'quartz.jdbcStoreDataSource': 'jobs'], true)
+
+        then:
+            ((AbstractBeanDefinition) beans.get(SessionBinderJobListener.NAME)).autowireMode == AbstractBeanDefinition.AUTOWIRE_BY_NAME
+            ((AbstractBeanDefinition) beans.get('purgeTablesBean')).autowireMode == AbstractBeanDefinition.AUTOWIRE_BY_NAME
+            beanReferenceName(beans.get('purgeTablesBean'), 'dataSource') == 'jobs'
+    }
+
+    void 'the scheduler creates its jobs with the job factory and reports their exceptions to the exception listener'() {
+        when:
+            BeanDefinition scheduler = beanDefinitionsFor([:]).get('quartzScheduler')
+
+        then:
+            beanReferenceName(scheduler, 'jobFactory') == 'quartzJobFactory'
+            (scheduler.propertyValues.getPropertyValue('globalJobListeners').value as List<RuntimeBeanReference>)*.beanName ==
+                    [ExceptionPrinterJobListener.NAME]
     }
 
     void 'no beans are registered when the plugin is disabled'() {
@@ -343,14 +390,22 @@ class QuartzGrailsPluginSpec extends Specification {
         (beanDefinition.propertyValues.getPropertyValue(propertyName).value as RuntimeBeanReference).beanName
     }
 
-    private Map<String, BeanDefinition> beanDefinitionsFor(Map<String, Object> config, boolean hibernate = false) {
-        BeanBuilder beanBuilder = new BeanBuilder()
-        beanBuilder.beans pluginFor(config, hibernate).doWithSpring()
-        beanBuilder.beanDefinitions
+    /**
+     * The definitions the plugin registers: its registrar is applied, and the post-processor it registers
+     * run, as Spring runs it before it reads the configuration classes.
+     */
+    private Map<String, BeanDefinition> beanDefinitionsFor(Map<String, Object> config, boolean hibernate = false,
+                                                         List<Class> jobClasses = []) {
+        GenericApplicationContext context = new GenericApplicationContext()
+        BeanRegistrar registrar = pluginFor(config, hibernate, null, jobClasses).beanRegistrar()
+        new BeanRegistryAdapter(context, context.beanFactory, context.environment, registrar.getClass()).register(registrar)
+        context.beanFactory.getBean(POST_PROCESSOR, BeanDefinitionRegistryPostProcessor).postProcessBeanDefinitionRegistry(context)
+        context.beanDefinitionNames.findAll { it != POST_PROCESSOR }.collectEntries { [(it): context.getBeanDefinition(it)] }
     }
 
-    private QuartzGrailsPlugin pluginFor(Map<String, Object> config, boolean hibernate = false, Scheduler scheduler = null) {
-        GrailsApplication grailsApplication = new DefaultGrailsApplication()
+    private QuartzGrailsPlugin pluginFor(Map<String, Object> config, boolean hibernate = false, Scheduler scheduler = null,
+                                         List<Class> jobClasses = []) {
+        GrailsApplication grailsApplication = new DefaultGrailsApplication(jobClasses as Class[])
         grailsApplication.config = new PropertySourcesConfig(config)
         grailsApplication.registerArtefactHandler(new JobArtefactHandler())
         grailsApplication.initialise()

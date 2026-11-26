@@ -35,14 +35,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import org.springframework.beans.BeansException;
-import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
-import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.annotation.AnnotationUtils;
-import org.springframework.core.convert.ConversionService;
-import org.springframework.core.convert.converter.Converter;
-import org.springframework.core.convert.converter.ConverterRegistry;
-import org.springframework.core.convert.support.GenericConversionService;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
@@ -52,14 +46,11 @@ import grails.core.GrailsApplication;
 import grails.core.GrailsApplicationLifeCycle;
 import grails.plugins.GrailsPlugin;
 import grails.plugins.GrailsPluginManager;
-import grails.plugins.exceptions.PluginException;
 import grails.util.Environment;
 import grails.util.GrailsNameUtils;
 import org.apache.grails.core.plugins.PluginDiscovery;
 import org.apache.grails.core.plugins.PluginInfo;
-import org.grails.config.NavigableMap;
 import org.grails.io.support.GrailsResourceUtils;
-import org.grails.spring.RuntimeSpringConfiguration;
 
 /**
  * Abstract implementation of the GrailsPluginManager interface
@@ -109,83 +100,6 @@ public abstract class AbstractGrailsPluginManager implements GrailsPluginManager
 
     protected void checkInitialised() {
         Assert.state(initialised, "Must call loadPlugins() before invoking configurational methods on GrailsPluginManager");
-    }
-
-    /**
-     * Base implementation that simply goes through the list of plugins and calls doWithRuntimeConfiguration on each
-     * @param springConfig The RuntimeSpringConfiguration instance
-     */
-    public void doRuntimeConfiguration(RuntimeSpringConfiguration springConfig) {
-        ApplicationContext context = springConfig.getUnrefreshedApplicationContext();
-        AutowireCapableBeanFactory autowireCapableBeanFactory = context.getAutowireCapableBeanFactory();
-        if (autowireCapableBeanFactory instanceof ConfigurableListableBeanFactory) {
-            ConfigurableListableBeanFactory beanFactory = (ConfigurableListableBeanFactory) autowireCapableBeanFactory;
-            ConversionService existingConversionService = beanFactory.getConversionService();
-            ConverterRegistry converterRegistry;
-            if (existingConversionService == null) {
-                GenericConversionService conversionService = new GenericConversionService();
-                converterRegistry = conversionService;
-                beanFactory.setConversionService(conversionService);
-            } else {
-                converterRegistry = (ConverterRegistry) existingConversionService;
-            }
-
-            // This can't be converted to a lambda because of how spring accesses it
-            converterRegistry.addConverter(new Converter<NavigableMap.NullSafeNavigator, Object>() {
-                @Override
-                public Object convert(NavigableMap.NullSafeNavigator source) {
-                    return null;
-                }
-            });
-        }
-        checkInitialised();
-        for (PluginInfo pluginInfo : pluginDiscovery.getPluginsInTopologicalOrder()) {
-            GrailsPlugin grailsPlugin = plugins.get(pluginInfo.getName());
-            if (grailsPlugin.supportsCurrentScopeAndEnvironment()) {
-                grailsPlugin.doWithRuntimeConfiguration(springConfig);
-            }
-        }
-    }
-
-    /**
-     * Base implementation that will perform runtime configuration for the specified plugin name.
-     */
-    public void doRuntimeConfiguration(String pluginName, RuntimeSpringConfiguration springConfig) {
-        checkInitialised();
-        GrailsPlugin plugin = getGrailsPlugin(pluginName);
-        if (plugin == null) {
-            throw new PluginException("Plugin [" + pluginName + "] not found");
-        }
-
-        if (!plugin.supportsCurrentScopeAndEnvironment()) {
-            return;
-        }
-
-        String[] dependencyNames = plugin.getDependencyNames();
-        doRuntimeConfigurationForDependencies(dependencyNames, springConfig);
-        String[] loadAfters = plugin.getLoadAfterNames();
-        for (String name : loadAfters) {
-            GrailsPlugin current = getGrailsPlugin(name);
-            if (current != null) {
-                current.doWithRuntimeConfiguration(springConfig);
-            }
-        }
-        plugin.doWithRuntimeConfiguration(springConfig);
-    }
-
-    private void doRuntimeConfigurationForDependencies(String[] dependencyNames, RuntimeSpringConfiguration springConfig) {
-        for (String dn : dependencyNames) {
-            GrailsPlugin current = getGrailsPlugin(dn);
-            if (current == null) {
-                throw new PluginException("Cannot load Plugin. Dependency [" + current + "] not found");
-            }
-
-            String[] pluginDependencies = current.getDependencyNames();
-            if (pluginDependencies.length > 0) {
-                doRuntimeConfigurationForDependencies(pluginDependencies, springConfig);
-            }
-            current.doWithRuntimeConfiguration(springConfig);
-        }
     }
 
     /**

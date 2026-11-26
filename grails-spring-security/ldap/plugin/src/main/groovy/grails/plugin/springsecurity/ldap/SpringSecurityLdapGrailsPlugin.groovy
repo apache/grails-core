@@ -18,6 +18,7 @@
  */
 package grails.plugin.springsecurity.ldap
 
+import org.springframework.beans.factory.BeanRegistrar
 import org.springframework.security.core.authority.mapping.NullAuthoritiesMapper
 import org.springframework.security.ldap.DefaultLdapUsernameToDnMapper
 import org.springframework.security.ldap.DefaultSpringSecurityContextSource
@@ -30,6 +31,7 @@ import org.springframework.security.ldap.userdetails.InetOrgPersonContextMapper
 import org.springframework.security.ldap.userdetails.LdapUserDetailsMapper
 import org.springframework.security.ldap.userdetails.PersonContextMapper
 
+import grails.plugin.springsecurity.SpringSecurityBeanDefinitions
 import grails.plugin.springsecurity.SpringSecurityUtils
 import grails.plugin.springsecurity.ldap.core.GrailsLdapRoleMapper
 import grails.plugin.springsecurity.ldap.core.GrailsSimpleDirContextAuthenticationStrategy
@@ -45,7 +47,22 @@ import grails.plugins.metadata.GrailsPluginDescriptor
 @GrailsPluginDescriptor(loadAfter = ['springSecurityCore'])
 class SpringSecurityLdapGrailsPlugin extends Plugin {
 
-    Closure doWithSpring() {
+    /**
+     * Registers the beans of the plugin, declared in the bean builder DSL by {@link #beanDefinitions()},
+     * through a post-processor that Spring runs before it reads the configuration classes, in plugin
+     * load order. A plugin loaded after the core plugin replaces its beans of the same name.
+     */
+    @Override
+    BeanRegistrar beanRegistrar() {
+        SpringSecurityBeanDefinitions.registrar(this, 'springSecurityLdapBeanDefinitionsPostProcessor') { -> beanDefinitions() }
+    }
+
+    /**
+     * The beans of the Spring Security LDAP plugin, in the bean builder DSL.
+     *
+     * @return the bean builder closure
+     */
+    Closure beanDefinitions() {
         { ->
 
             def conf = SpringSecurityUtils.securityConfig

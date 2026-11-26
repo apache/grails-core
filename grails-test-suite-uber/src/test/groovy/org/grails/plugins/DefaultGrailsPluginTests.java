@@ -31,17 +31,18 @@ import groovy.lang.GroovyClassLoader;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+
+import org.springframework.beans.factory.BeanRegistrar;
+import org.springframework.beans.factory.support.BeanRegistryAdapter;
 import org.springframework.context.ApplicationContext;
+import org.springframework.context.support.GenericApplicationContext;
 
 import grails.plugins.GrailsPlugin;
 import grails.plugins.exceptions.PluginException;
 import org.apache.grails.core.plugins.PluginUtils;
 import org.grails.commons.test.AbstractGrailsMockTests;
-import org.grails.spring.DefaultRuntimeSpringConfiguration;
-import org.grails.spring.RuntimeSpringConfiguration;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -59,7 +60,6 @@ public class DefaultGrailsPluginTests extends AbstractGrailsMockTests {
 
     private Class<?> versioned;
     private Class<?> versioned2;
-    private Class<?> versioned3;
     private Class<?> unversioned;
     private Class<?> observed;
     private Class<?> camelCased;
@@ -71,9 +71,10 @@ public class DefaultGrailsPluginTests extends AbstractGrailsMockTests {
         versioned = versionedLoader.parseClass("@grails.plugins.metadata.GrailsPluginDescriptor(watchedResources = " +
                 "['file:./grails-app/taglib/**/*TagLib.groovy', './grails-app/controller/**/*.groovy', 'file:/absolutePath/**/*.gsp'])\n" +
                 "class MyGrailsPlugin extends grails.plugins.Plugin {\n" +
-                "Closure doWithSpring() { {->" +
-                "classEditor(org.springframework.beans.propertyeditors.ClassEditor, grailsApplication.classLoader)" +
-                "}}\n" +
+                "org.springframework.beans.factory.BeanRegistrar beanRegistrar() { " +
+                "{ registry, environment -> registry.registerBean('classEditor', org.springframework.beans.propertyeditors.ClassEditor) " +
+                "{ it.supplier { new org.springframework.beans.propertyeditors.ClassEditor(grailsApplication.classLoader) } } } " +
+                "as org.springframework.beans.factory.BeanRegistrar }\n" +
                 "void doWithApplicationContext() {" +
                 "assert applicationContext != null" +
                 "}\n" +
@@ -85,18 +86,10 @@ public class DefaultGrailsPluginTests extends AbstractGrailsMockTests {
                 "class CamelCasedGrailsPlugin extends grails.plugins.Plugin {}");
         versioned2 = gcl.parseClass("@grails.plugins.metadata.GrailsPluginDescriptor\n" +
                 "class MyTwoGrailsPlugin extends grails.plugins.Plugin {\n" +
-                "Closure doWithSpring() { {->" +
-                "classEditor(org.springframework.beans.propertyeditors.ClassEditor, grailsApplication.classLoader)" +
-                "}}\n" +
-                "}");
-        versioned3 = gcl.parseClass("@grails.plugins.metadata.GrailsPluginDescriptor\n" +
-                "class MyThreeGrailsPlugin extends grails.plugins.Plugin {\n" +
-                "Object invokeMethod(String name, Object args) {" +
-                "true" +
-                "}\n" +
-                "Closure doWithSpring() { {->" +
-                "classEditor(org.springframework.beans.propertyeditors.ClassEditor, grailsApplication.classLoader)" +
-                "}}\n" +
+                "org.springframework.beans.factory.BeanRegistrar beanRegistrar() { " +
+                "{ registry, environment -> registry.registerBean('classEditor', org.springframework.beans.propertyeditors.ClassEditor) " +
+                "{ it.supplier { new org.springframework.beans.propertyeditors.ClassEditor(grailsApplication.classLoader) } } } " +
+                "as org.springframework.beans.factory.BeanRegistrar }\n" +
                 "}");
         unversioned = gcl.parseClass("@grails.plugins.metadata.GrailsPluginDescriptor\n" +
                 "class AnotherGrailsPlugin extends grails.plugins.Plugin {\n" +
@@ -167,10 +160,7 @@ public class DefaultGrailsPluginTests extends AbstractGrailsMockTests {
     public void testDoWithApplicationContext() {
         GrailsPlugin versionPlugin = new DefaultGrailsPlugin(versioned, ga);
 
-        RuntimeSpringConfiguration springConfig = new DefaultRuntimeSpringConfiguration();
-        versionPlugin.doWithRuntimeConfiguration(springConfig);
-
-        ApplicationContext ctx = springConfig.getApplicationContext();
+        ApplicationContext ctx = contextWithBeansOf(versionPlugin);
 
         assertTrue(ctx.containsBean("classEditor"));
 
@@ -178,44 +168,38 @@ public class DefaultGrailsPluginTests extends AbstractGrailsMockTests {
     }
 
     @Test
-    public void testDoWithRuntimeConfiguration() {
+    public void testBeanRegistrar() {
         GrailsPlugin versionPlugin = new DefaultGrailsPlugin(versioned, ga);
 
-        RuntimeSpringConfiguration springConfig = new DefaultRuntimeSpringConfiguration();
-        versionPlugin.doWithRuntimeConfiguration(springConfig);
-
-        ApplicationContext ctx = springConfig.getApplicationContext();
+        ApplicationContext ctx = contextWithBeansOf(versionPlugin);
 
         assertTrue(ctx.containsBean("classEditor"));
 
         // Version 2
         GrailsPlugin versionPlugin2 = new DefaultGrailsPlugin(versioned2, ga);
 
-        RuntimeSpringConfiguration springConfig2 = new DefaultRuntimeSpringConfiguration();
-        versionPlugin2.doWithRuntimeConfiguration(springConfig2);
-
-        ApplicationContext ctx2 = springConfig2.getApplicationContext();
+        ApplicationContext ctx2 = contextWithBeansOf(versionPlugin2);
 
         assertTrue(ctx2.containsBean("classEditor"));
     }
 
-    /**
-     * A closure resolves a call to its owner first, and the bean builder of {@code doWithSpring} does not change that
-     * (its delegate-first strategy has been commented out since the builder was restored for GRAILS-5779). A plugin
-     * that overrides {@code invokeMethod} therefore answers the {@code classEditor(...)} call of its own closure, and
-     * the bean is never defined. This test did not run between the move of the suites to the JUnit Platform and its
-     * conversion to JUnit 5, and expected the bean to be defined.
-     */
     @Test
-    public void testDoWithRuntimeConfigurationOfAPluginThatOverridesInvokeMethod() {
-        GrailsPlugin versionPlugin3 = new DefaultGrailsPlugin(versioned3, ga);
+    public void testAPluginWithoutBeansHasNoRegistrar() {
+        GrailsPlugin unversionedPlugin = new DefaultGrailsPlugin(unversioned, ga);
 
-        RuntimeSpringConfiguration springConfig3 = new DefaultRuntimeSpringConfiguration();
-        versionPlugin3.doWithRuntimeConfiguration(springConfig3);
+        assertNull(unversionedPlugin.getBeanRegistrar());
+    }
 
-        ApplicationContext ctx3 = springConfig3.getApplicationContext();
-
-        assertFalse(ctx3.containsBean("classEditor"));
+    /**
+     * A refreshed context holding the beans the plugin's registrar registers, applied as the runtime applies it.
+     */
+    private static ApplicationContext contextWithBeansOf(GrailsPlugin plugin) {
+        GenericApplicationContext context = new GenericApplicationContext();
+        BeanRegistrar registrar = plugin.getBeanRegistrar();
+        new BeanRegistryAdapter(context, context.getBeanFactory(), context.getEnvironment(), registrar.getClass())
+                .register(registrar);
+        context.refresh();
+        return context;
     }
 
     @Test

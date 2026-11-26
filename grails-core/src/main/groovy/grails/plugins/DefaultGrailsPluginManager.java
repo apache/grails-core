@@ -29,7 +29,6 @@ import org.apache.commons.logging.LogFactory;
 
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
-import org.springframework.context.support.GenericApplicationContext;
 
 import grails.core.GrailsApplication;
 import grails.plugins.exceptions.PluginException;
@@ -37,8 +36,6 @@ import org.apache.grails.core.plugins.PluginDiscovery;
 import org.apache.grails.core.plugins.PluginInfo;
 import org.grails.plugins.AbstractGrailsPluginManager;
 import org.grails.plugins.DefaultGrailsPlugin;
-import org.grails.spring.DefaultRuntimeSpringConfiguration;
-import org.grails.spring.RuntimeSpringConfiguration;
 
 /**
  * @author Graeme Rocher
@@ -48,8 +45,6 @@ import org.grails.spring.RuntimeSpringConfiguration;
 public class DefaultGrailsPluginManager extends AbstractGrailsPluginManager {
 
     private static final Log LOG = LogFactory.getLog(DefaultGrailsPluginManager.class);
-
-    private ApplicationContext parentCtx;
 
     public DefaultGrailsPluginManager(GrailsApplication application, PluginDiscovery pluginDiscovery) {
         super(application, pluginDiscovery);
@@ -126,18 +121,5 @@ public class DefaultGrailsPluginManager extends AbstractGrailsPluginManager {
         for (GrailsPlugin plugin : getOrderedPlugins()) {
             plugin.setApplicationContext(applicationContext);
         }
-    }
-
-    public void setParentApplicationContext(ApplicationContext parent) {
-        parentCtx = parent;
-    }
-
-    public void reloadPlugin(GrailsPlugin plugin) {
-        RuntimeSpringConfiguration springConfig = new DefaultRuntimeSpringConfiguration(parentCtx);
-
-        doRuntimeConfiguration(plugin.getName(), springConfig);
-        springConfig.registerBeansWithContext((GenericApplicationContext) applicationContext);
-
-        plugin.doWithApplicationContext(applicationContext);
     }
 }

@@ -29,8 +29,8 @@ import grails.plugins.metadata.GrailsPluginDescriptor
 
 /**
  * A plugin whose {@code beans} block reaches a unit test through its generated
- * {@code IncludedBeansAutoConfiguration} or not at all, and whose {@code beanRegistrar()} bean is
- * applied as a loaded plugin's is. Deliberately outside {@code org.grails}, whose auto-configurations
+ * {@code IncludedBeansAutoConfiguration} or not at all, and whose {@code beanRegistrar()} beans, and
+ * the beans of the post-processor it registers, are applied as a loaded plugin's are. Deliberately outside {@code org.grails}, whose auto-configurations
  * the test harness registers regardless.
  */
 // @AutoConfiguration is required, not decoration: a Plugin using @GrailsBeans must carry it, and the
@@ -50,14 +50,6 @@ class IncludedBeansGrailsPlugin extends Plugin {
         }
     }
 
-    // Reads the test's doWithConfig, which has to be applied before plugin beans are registered
-    @Override
-    Closure doWithSpring() {
-        { ->
-            configuredGreeting(String, config.getProperty('included.greeting', String, 'unset'))
-        }
-    }
-
     @Override
     BeanRegistrar beanRegistrar() {
         return { BeanRegistry registry, Environment environment ->
@@ -65,7 +57,10 @@ class IncludedBeansGrailsPlugin extends Plugin {
                 spec.supplier { new RegisteredGreeting(text: 'from the plugin') }
             }
             // A name the harness has a default for, which the plugin's bean wins over (ReplacingBeansSpec)
-            registry.registerBean('messageSource', IncludedMessageSource)
+            registry.registerBean('proxyHandler', IncludedProxyHandler)
+            registry.registerBean('includedBeanDefinitionsPostProcessor', IncludedBeanDefinitionsPostProcessor) {
+                it.infrastructure().supplier { new IncludedBeanDefinitionsPostProcessor(grailsApplication) }
+            }
         } as BeanRegistrar
     }
 }

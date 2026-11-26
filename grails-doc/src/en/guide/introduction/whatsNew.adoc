@@ -96,6 +96,11 @@ class QuartzGrailsPlugin extends Plugin {
   instantiating a plugin class to find out what it is, and stops at a broken descriptor instead of skipping the plugin.
 * **Unmet dependencies stop the application.** A plugin whose `dependsOn` is not met no longer leaves the application
   running without it: startup fails with one exception that names every such plugin, every dependency it lacks and why.
+* **One way to register beans.** A plugin registers its beans with `beanRegistrar()` and with a `beans` block, and
+  registers what the `BeanRegistry` API cannot express, such as abstract parents, aliases and autowiring by name, from
+  a post-processor its registrar registers. The `doWithSpring` bean builder hook is gone from plugins, and a plugin
+  that declares it fails to compile. The plugins' beans are registered in plugin load order, so a plugin that loads
+  later replaces an earlier plugin's bean of the same name. Applications keep `doWithSpring` and `resources.groovy`.
 * **Namespaced plugin resources.** A plugin's `plugin.yml` or `plugin.groovy`, and its precompiled GSP manifest, sit
   under `META-INF/grails/plugins/<name>/`, so plugins never collide at the jar root in executable jars, shaded jars and
   native images.
@@ -311,9 +316,9 @@ class MyGrailsPlugin extends Plugin {
 }
 ----
 
-`beanRegistrar()` replaces the `doWithSpring` bean builder DSL, which is deprecated in Grails {grailsMajorVersion}.
-The DSL continues to work for now, but you are strongly urged to migrate.
-See the xref:upgrading#upgrading80x[upgrade guide] for details.
+`beanRegistrar()` replaces the `doWithSpring` bean builder hook, which a plugin no longer has; an application's
+`doWithSpring` is deprecated. See the xref:upgrading#upgradingPluginDescriptors[upgrade guide] for how to move a plugin's
+beans.
 
 Unit tests get the same hooks: a test declares its beans in a `beans` block, as an application or plugin does, or overrides `beanRegistrar()`, or declares a static nested `@Configuration` class — and `doWithSpring()` on the testing traits is deprecated to match.
 See <<unitTesting,Unit Testing>>.

@@ -19,8 +19,12 @@
 
 package grails.plugin.hibernate
 
+import java.util.function.Supplier
+
 import groovy.transform.CompileStatic
 
+import org.springframework.beans.factory.BeanRegistrar
+import org.springframework.beans.factory.BeanRegistry
 import org.springframework.beans.factory.support.BeanDefinitionRegistry
 import org.springframework.context.ConfigurableApplicationContext
 import org.springframework.core.env.PropertyResolver
@@ -34,6 +38,7 @@ import grails.plugins.metadata.GrailsPluginDescriptor
 import grails.util.Environment
 import org.grails.core.artefact.DomainClassArtefactHandler
 import org.grails.datastore.gorm.plugin.support.ConfigSupport
+import org.grails.spring.BeanBuilderRegistryPostProcessor
 
 /**
  * Plugin that integrates Hibernate into a Grails application
@@ -50,27 +55,46 @@ class HibernateGrailsPlugin extends Plugin {
 
     public static final String DEFAULT_DATA_SOURCE_NAME = HibernateDatastoreSpringInitializer.DEFAULT_DATA_SOURCE_NAME
 
+    /** The name of the post-processor that registers the datastore's bean definitions. */
+    public static final String BEAN_DEFINITIONS_POST_PROCESSOR = 'hibernateBeanDefinitionsPostProcessor'
+
     Set<String> dataSourceNames
 
-    Closure doWithSpring() {
-        { ->
-            ConfigurableApplicationContext applicationContext = (ConfigurableApplicationContext) applicationContext
+    /**
+     * Registers the Hibernate datastore's beans through a post-processor, which Spring runs before it
+     * reads the configuration classes, so an auto-configuration's {@code @ConditionalOnMissingBean}
+     * backs off from them as it does from the beans of a registrar.
+     */
+    @Override
+    BeanRegistrar beanRegistrar() {
+        { BeanRegistry registry, org.springframework.core.env.Environment environment ->
+            registry.registerBean(BEAN_DEFINITIONS_POST_PROCESSOR, BeanBuilderRegistryPostProcessor) {
+                it.infrastructure().supplier {
+                    new BeanBuilderRegistryPostProcessor(grailsApplication.parentContext, grailsApplication.classLoader,
+                            [:], { -> datastoreBeans() } as Supplier<Closure<?>>)
+                }
+            }
+        } as BeanRegistrar
+    }
 
-            GrailsApplication grailsApplication = grailsApplication
-            Config config = grailsApplication.config
-            ConfigSupport.prepareConfig(config, applicationContext)
+    /**
+     * The bean definitions of the Hibernate datastore, in the bean builder DSL the datastore's
+     * initializer writes them in. Reads the configuration and records the data source names.
+     */
+    protected Closure datastoreBeans() {
+        ConfigurableApplicationContext applicationContext = (ConfigurableApplicationContext) applicationContext
 
-            def domainClasses = grailsApplication.getArtefacts(DomainClassArtefactHandler.TYPE)
-                                                 .collect() { GrailsClass cls -> cls.clazz }
+        GrailsApplication grailsApplication = grailsApplication
+        Config config = grailsApplication.config
+        ConfigSupport.prepareConfig(config, applicationContext)
 
-            def springInitializer = new HibernateDatastoreSpringInitializer((PropertyResolver) config, domainClasses)
-            springInitializer.enableReload = Environment.isDevelopmentMode()
-            dataSourceNames = springInitializer.dataSources
-            def beans = springInitializer.getBeanDefinitions((BeanDefinitionRegistry) applicationContext)
+        def domainClasses = grailsApplication.getArtefacts(DomainClassArtefactHandler.TYPE)
+                                             .collect() { GrailsClass cls -> cls.clazz }
 
-            beans.delegate = delegate
-            beans.call()
-        }
+        def springInitializer = new HibernateDatastoreSpringInitializer((PropertyResolver) config, domainClasses)
+        springInitializer.enableReload = Environment.isDevelopmentMode()
+        dataSourceNames = springInitializer.dataSources
+        springInitializer.getBeanDefinitions((BeanDefinitionRegistry) applicationContext)
     }
 
     @Override

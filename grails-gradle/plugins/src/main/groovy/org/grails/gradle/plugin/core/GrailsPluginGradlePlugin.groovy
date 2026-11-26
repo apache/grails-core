@@ -335,7 +335,7 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
                     'logback.groovy',
                     'logback.xml',
                     'logback-spring.xml',
-                    // Plugins must not ship spring/resources.groovy (use doWithSpring instead),
+                    // Plugins must not ship spring/resources.groovy (use beanRegistrar() or a beans block instead),
                     // but it must remain in build/resources/main/ so it is on the integration
                     // test classpath for plugin modules that test their own resources.groovy.
                     'spring/resources.groovy'

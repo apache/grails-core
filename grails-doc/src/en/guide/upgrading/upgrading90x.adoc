@@ -1658,7 +1658,8 @@ and nothing else is:
 * The class name no longer matters. A `*GrailsPlugin` class without the annotation is not a plugin, and an annotated class
   may have any name.
 * A plugin class must extend `Plugin`. Plugin classes that declared their hooks as closure properties
-  (`def doWithSpring = { ... }`, `def onChange = { event -> ... }`) override the `Plugin` methods instead.
+  (`def onChange = { event -> ... }`) override the `Plugin` methods instead; beans move to `beanRegistrar()` (see
+  <<pluginBeanRegistrar,below>>).
 * Every piece of metadata Grails needs before it creates the plugin is an attribute of the annotation, as a constant:
   `name`, `grailsVersion`, `dependsOn`, `loadAfter`, `loadBefore`, `observe`, `evict`, `environmentsIncludes`,
   `environmentsExcludes`, `watchedResources`, `providedArtefacts` and `pluginExcludes`. The plugin class's
@@ -1738,6 +1739,135 @@ out by `grails.plugin.excludes` or `grails.plugin.includes`, or does not support
 * `PluginDiscovery.hasFailedPlugin`, `getFailedPlugin` and `getFailedPlugins`, and `GrailsPluginManager.getFailedPlugin`
   and `getFailedLoadPlugins`, are removed: discovery never finishes with a plugin that failed to load.
 
+[[pluginBeanRegistrar]]
+===== Plugins Register Beans with `beanRegistrar()`
+
+A plugin registers its beans with `beanRegistrar()` and with a `beans` block, which the compiler turns into an
+auto-configuration. The bean builder hook, `doWithSpring`, is removed from `Plugin`, in both its forms: the
+closure-returning `Closure doWithSpring()` and `void doWithSpring(BeanBuilder)`. A plugin class that still declares a
+method named `doWithSpring`, itself or in a superclass below `Plugin`, fails to compile with a message pointing to
+`beanRegistrar()`: nothing would call it, and its beans would be missing.
+
+The application keeps its `doWithSpring`. It moved from `GrailsApplicationLifeCycle`, the hooks a plugin and an
+application share, to `GrailsApplicationClass`, which `GrailsAutoConfiguration` and so the `Application` class
+implement; `grails-app/conf/spring/resources.groovy` works as before. A class that implements
+`GrailsApplicationLifeCycle` directly, without being the application class, no longer declares `doWithSpring`, and
+`GrailsApplicationLifeCycleAdapter` no longer implements it.
+
+The beans are registered at the same point as before: the registrars, in plugin load order, before Spring Boot reads
+the configuration classes, so an auto-configuration's `@ConditionalOnMissingBean` still backs off from a plugin's
+bean. Two rules change with it:
+
+* A plugin that loads later replaces a bean of the same name an earlier plugin registered, whichever way either of
+  them registers it. Grails 8 registered every plugin's `doWithSpring` beans before any plugin's registrar beans, so a
+  registrar bean of an earlier plugin won over a `doWithSpring` bean of a later one. A plugin that replaces another
+  plugin's bean declares `loadAfter` or `dependsOn` on it.
+* The beans of the application's `resources.groovy` and `doWithSpring` still replace a plugin bean of the same name.
+
+Move a plugin's beans as follows:
+
+* A bean the `BeanRegistry` API expresses, a class with a supplier, a scope, `primary`, `lazy`, `fallback`,
+  `prototype` or a description, is registered from `beanRegistrar()`:
++
+[source,groovy]
+.Grails 8
+----
+Closure doWithSpring() {{ ->
+    auditTrail(AuditTrail) { bean ->
+        bean.lazyInit = true
+        storeName = config.getProperty('audit.store', 'audit')
+    }
+}}
+----
++
+[source,groovy]
+.Grails 9
+----
+@Override
+BeanRegistrar beanRegistrar() {
+    { BeanRegistry registry, Environment environment ->
+        registry.registerBean('auditTrail', AuditTrail) { spec ->
+            spec.lazyInit().supplier { new AuditTrail(storeName: environment.getProperty('audit.store', 'audit')) }
+        }
+    } as BeanRegistrar
+}
+----
+* A definition the `BeanRegistry` API cannot express, an abstract parent (`bean.parent`, or a bean declared with a
+  closure only), an alias (`springConfig.addAlias`), autowiring by name (`bean.autowire = 'byName'`), property values
+  that are references to other beans (`ref('other')`, or a bare bean name), lists and maps of them, a factory bean and
+  method (`"name"(ref('factory')) { bean.factoryMethod = 'create' }`), a destroy method or an inner bean, is registered
+  from a `BeanDefinitionRegistryPostProcessor` that implements `PriorityOrdered` with `Ordered.HIGHEST_PRECEDENCE`,
+  registered by the registrar. Spring runs it before it reads the configuration classes, and runs those of different
+  plugins in plugin load order. The DSL maps onto the definition API one to one: `GenericBeanDefinition` with
+  `setParentName`, `setAbstract`, `setAutowireMode(AbstractBeanDefinition.AUTOWIRE_BY_NAME)`, `setScope`,
+  `setLazyInit`, `setFactoryBeanName`, `setFactoryMethodName`, `setDestroyMethodName`; `getPropertyValues().add(...)`
+  with `RuntimeBeanReference`, `ManagedList` and `ManagedMap`; `getConstructorArgumentValues()`; and
+  `registry.registerAlias(name, alias)`. The DSL replaced a definition of the same name, so register without checking
+  for one, unless the old code checked first. See
+  link:plugins.html#hookingIntoRuntimeConfiguration[Hooking into Runtime Configuration] for a complete example.
+* Beans that are better written once, at compile time, go in a `beans` block.
+* A plugin whose bean builder closure is too large to translate at once, or that builds its beans from configuration
+  read in the closure, can keep the closure and run it from such a post-processor through `grails.spring.BeanBuilder`.
+  This is the one place a plugin still meets the DSL, and it is the plugin's own code, not a hook of the plugin system:
++
+[source,groovy]
+----
+@Override
+BeanRegistrar beanRegistrar() {
+    { BeanRegistry registry, Environment environment ->
+        registry.registerBean('auditBeanDefinitionsPostProcessor', AuditBeanDefinitionsPostProcessor) {
+            it.infrastructure().supplier { new AuditBeanDefinitionsPostProcessor(this) }
+        }
+    } as BeanRegistrar
+}
+
+Closure auditBeans() {{ ->
+    // the closure doWithSpring returned, unchanged
+}}
+
+class AuditBeanDefinitionsPostProcessor implements BeanDefinitionRegistryPostProcessor, PriorityOrdered {
+
+    final AuditGrailsPlugin plugin
+
+    AuditBeanDefinitionsPostProcessor(AuditGrailsPlugin plugin) {
+        this.plugin = plugin
+    }
+
+    @Override
+    void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) {
+        def beans = new BeanBuilder(null, plugin.grailsApplication.classLoader)
+        // variables the closure read from the plugin bean builder
+        beans.binding = new Binding(application: plugin.grailsApplication, manager: plugin.pluginManager)
+        beans.beans(plugin.auditBeans())
+        beans.registerBeans(registry)
+    }
+
+    @Override
+    void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) {
+    }
+
+    @Override
+    int getOrder() {
+        Ordered.HIGHEST_PRECEDENCE
+    }
+}
+----
++
+A closure that used `springConfig` reads the bean builder's own configuration: the beans of other plugins are no longer
+in it, so refer to them with `ref('name')`, and check for one with `registry.containsBeanDefinition('name')`.
+
+The runtime API of the hook is removed with it: `GrailsPlugin.doWithRuntimeConfiguration`, both
+`GrailsPluginManager.doRuntimeConfiguration` methods, and `DefaultGrailsPluginManager.reloadPlugin` and
+`setParentApplicationContext`. A test that ran a plugin's `doWithSpring` applies its `beanRegistrar()` instead:
+`GrailsUnitTest.defineBeans(plugin)` does that, and runs the post-processors the registrar registers, and an included
+plugin (`getIncludePlugins()`) is registered as at startup. `Plugin.beans(Closure)`, which registers beans when a
+watched file changes during development, is unchanged.
+
+A bean property of an application's `resources.groovy` or `doWithSpring` bean assigned from a configuration key that is
+not set, such as `grailsApplication.config.some.missing.key`, is `null` for a `String` or `Object` property in any
+context; Grails 8 left it `null` only in a context whose bean factory shares the conversion service of its
+environment, as a Spring Boot application's does.
+
 ===== The Runtime Plugin API
 
 Every loaded plugin, whether discovery found it on the class path or its class was registered directly, is one class,
@@ -1793,6 +1923,7 @@ loaded from. The public APIs that described the old model are removed:
 * Annotate each plugin class with `@GrailsPluginDescriptor`, make it extend `grails.plugins.Plugin`, move its metadata
   properties into the annotation, and delete `version`, the informational properties and `profiles`.
 * Replace closure-valued hooks with the `Plugin` methods they stand for.
+* Move the beans of `doWithSpring` to `beanRegistrar()`, to a post-processor it registers, or to a `beans` block.
 * Write `dependsOn` as a list of `'name'` or `'name:range'` strings rather than a map.
 * Move the code of `doWithDynamicMethods` into `doWithApplicationContext`, delete a `def artefacts = [...]` list (the
   compiler registers the plugin's artefact handlers) and an `enabled` property.

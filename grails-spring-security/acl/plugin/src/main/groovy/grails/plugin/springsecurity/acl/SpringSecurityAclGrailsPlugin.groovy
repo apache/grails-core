@@ -18,6 +18,7 @@
  */
 package grails.plugin.springsecurity.acl
 
+import org.springframework.beans.factory.BeanRegistrar
 import org.springframework.cache.jcache.JCacheCacheManager
 import org.springframework.expression.spel.standard.SpelExpressionParser
 import org.springframework.security.access.annotation.SecuredAnnotationSecurityMetadataSource as SpringSecuredAnnotationSecurityMetadataSource
@@ -57,6 +58,7 @@ import org.springframework.security.crypto.password.StandardPasswordEncoder
 import org.springframework.security.crypto.scrypt.SCryptPasswordEncoder
 
 import grails.plugin.springsecurity.BeanTypeResolver
+import grails.plugin.springsecurity.SpringSecurityBeanDefinitions
 import grails.plugin.springsecurity.SpringSecurityUtils
 import grails.plugin.springsecurity.acl.access.GroovyAwareAclVoter
 import grails.plugin.springsecurity.acl.access.method.ProxyAwareDelegatingMethodSecurityMetadataSource
@@ -90,7 +92,22 @@ class SpringSecurityAclGrailsPlugin extends Plugin {
 
     private beanTypeResolver
 
-    Closure doWithSpring() {
+    /**
+     * Registers the beans of the plugin, declared in the bean builder DSL by {@link #beanDefinitions()},
+     * through a post-processor that Spring runs before it reads the configuration classes, in plugin
+     * load order. A plugin loaded after the core plugin replaces its beans of the same name.
+     */
+    @Override
+    BeanRegistrar beanRegistrar() {
+        SpringSecurityBeanDefinitions.registrar(this, 'springSecurityAclBeanDefinitionsPostProcessor') { -> beanDefinitions() }
+    }
+
+    /**
+     * The beans of the Spring Security ACL plugin, in the bean builder DSL.
+     *
+     * @return the bean builder closure
+     */
+    Closure beanDefinitions() {
         { ->
 
             def conf = SpringSecurityUtils.securityConfig

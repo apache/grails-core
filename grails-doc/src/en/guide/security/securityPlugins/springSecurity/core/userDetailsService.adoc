@@ -121,7 +121,7 @@ beans = {
 
 Another option for loading users and roles from the database is to subclass `grails.plugin.springsecurity.userdetails.GormUserDetailsService` - the methods are all protected so you can override as needed.
 
-This approach works with all beans defined in `SpringSecurityCoreGrailsPlugin.doWithSpring()` - you can replace or subclass any of the Spring beans to provide your own functionality when the standard extension mechanisms are insufficient.
+This approach works with all beans the core plugin defines - you can replace or subclass any of the Spring beans to provide your own functionality when the standard extension mechanisms are insufficient.
 
 === Flushing the Cached Authentication
 If you store mutable data in your custom `UserDetails` implementation (such as full name in the preceding example), be sure to rebuild the `Authentication` if it changes. `springSecurityService` has a `reauthenticate` method that does this for you:

@@ -135,7 +135,13 @@ class MongoDbDataStoreSpringInitializer extends AbstractDatastoreInitializer {
             mongoMappingContext(mongoDatastore: 'getMappingContext')
 
             if (!secondaryDatastore) {
-                registerAlias('mongoMappingContext', 'grailsDomainClassMappingContext')
+                // registered with the bean definitions, so the alias reaches the registry they are copied to;
+                // a bean builder answers registerAlias from a context of its own, which nothing copies
+                if (delegate.getClass().name == 'grails.spring.BeanBuilder') {
+                    springConfig.addAlias 'grailsDomainClassMappingContext', 'mongoMappingContext'
+                } else {
+                    registerAlias 'mongoMappingContext', 'grailsDomainClassMappingContext'
+                }
             }
 
             mongoTransactionManager(mongoDatastore: 'getTransactionManager')

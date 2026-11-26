@@ -62,24 +62,36 @@ class ScaffoldingViewResolver extends GroovyPageViewResolver implements Resource
 
     /**
      * This constructor allows a plugin to override the default templates provided by the Scaffolding
-     * plugin.  The plugin that contains the template override should be configured to load AFTER the
-     * scaffolding plugin.  An example implementation follows:
+     * plugin. The plugin that contains the template override should load after the scaffolding plugin,
+     * and register its own {@code jspViewResolver} definition from a post-processor its
+     * {@code beanRegistrar()} registers; the scaffolding plugin then leaves it in place. An example
+     * implementation follows:
      *
      * <pre>
      * {@code
-     * def loadAfter = ['scaffolding']
+     * @GrailsPluginDescriptor(loadAfter = ['scaffolding'])
+     * class MyTemplatesGrailsPlugin extends Plugin {
+     *     BeanRegistrar beanRegistrar() {
+     *         { BeanRegistry registry, Environment environment ->
+     *             registry.registerBean('myTemplatesViewResolverPostProcessor', MyTemplatesViewResolverPostProcessor) {
+     *                 it.infrastructure().supplier { new MyTemplatesViewResolverPostProcessor(MyTemplatesGrailsPlugin) }
+     *             }
+     *         } as BeanRegistrar
+     *     }
      * }
-     * </pre>
-     * ...
-     * <pre>
-     * {@code
-     * @Override
-     * Closure doWithSpring() { { ->
-     *    jspViewResolver(ScaffoldingViewResolver, this.class) { bean ->
-     *        bean.lazyInit = true
-     *        bean.parent = "abstractViewResolver"
-     *    }
-     * }}
+     *
+     * class MyTemplatesViewResolverPostProcessor implements BeanDefinitionRegistryPostProcessor, PriorityOrdered {
+     *     final Class pluginClass
+     *     MyTemplatesViewResolverPostProcessor(Class pluginClass) { this.pluginClass = pluginClass }
+     *     void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) {
+     *         def definition = new GenericBeanDefinition(beanClass: ScaffoldingViewResolver,
+     *                 parentName: 'abstractViewResolver', lazyInit: true)
+     *         definition.constructorArgumentValues.addGenericArgumentValue(pluginClass)
+     *         registry.registerBeanDefinition('jspViewResolver', definition)
+     *     }
+     *     int getOrder() { Ordered.HIGHEST_PRECEDENCE }
+     * }
+     * }
      * </pre>
      *
      * @param templateOverridePluginDescriptor

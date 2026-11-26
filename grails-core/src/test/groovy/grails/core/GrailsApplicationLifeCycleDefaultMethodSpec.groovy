@@ -31,11 +31,6 @@ class GrailsApplicationLifeCycleDefaultMethodSpec extends Specification {
         given:
         GrailsApplicationLifeCycle lifeCycle = new GrailsApplicationLifeCycle() {
             @Override
-            Closure doWithSpring() {
-                return { -> }
-            }
-
-            @Override
             void doWithApplicationContext() {
             }
 

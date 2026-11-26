@@ -38,8 +38,9 @@ import org.grails.spring.context.support.MapBasedSmartPropertyOverrideConfigurer
 /**
  * The super class of every Grails plugin. A plugin is a concrete subclass annotated with
  * {@link grails.plugins.metadata.GrailsPluginDescriptor}, which declares its name, ordering and other
- * metadata; the subclass overrides the hooks it needs ({@link #beanRegistrar()}, {@link #doWithSpring()},
- * {@link #doWithApplicationContext()}, {@link #onChange(Map)} and the rest).
+ * metadata; the subclass overrides the hooks it needs ({@link #beanRegistrar()},
+ * {@link #doWithApplicationContext()}, {@link #onChange(Map)} and the rest), and declares its beans with
+ * {@link #beanRegistrar()} or a {@code beans} block.
  *
  * @author Graeme Rocher
  * @since 3.0
@@ -93,26 +94,20 @@ abstract class Plugin implements GrailsApplicationLifeCycle, GrailsApplicationAw
     void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext
     }
-/**
-     * Sub classes should override to provide implementations
-     *
-     * @return A closure that defines beans to be executed by Spring
-     * @deprecated since 8.0 in favour of {@link #beanRegistrar()}. The underlying bean builder DSL
-     * remains available but is no longer actively supported and will not receive fixes for new
-     * issues — you are strongly urged to migrate to {@link #beanRegistrar()}.
-     */
-    @Deprecated(since = '8.0')
-    @Override
-    Closure doWithSpring() { null }
-
     /**
      * Sub classes should override to register beans with the Spring Framework
      * {@link org.springframework.beans.factory.BeanRegistry} using a
-     * {@link org.springframework.beans.factory.BeanRegistrar}. This is the modern, Spring-native
-     * replacement for the {@link #doWithSpring()} bean builder DSL.
+     * {@link org.springframework.beans.factory.BeanRegistrar}. With a {@code beans} block, which the
+     * compiler turns into an auto-configuration, it is how a plugin contributes beans.
      *
-     * <p>The returned registrar is applied before Spring Boot auto-configuration is processed, so
-     * beans registered here take precedence over Boot's {@code @ConditionalOnMissingBean} defaults.</p>
+     * <p>The returned registrar is applied before Spring Boot auto-configuration is processed, plugin by
+     * plugin in load order, so beans registered here take precedence over Boot's
+     * {@code @ConditionalOnMissingBean} defaults, and a plugin loaded later replaces a bean of the same
+     * name that an earlier plugin registered. A definition the {@code BeanRegistry} API cannot express,
+     * such as an abstract parent, an alias or autowiring by name, is registered by a
+     * {@link org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor} that the
+     * registrar registers; implementing {@link org.springframework.core.PriorityOrdered} with
+     * {@link org.springframework.core.Ordered#HIGHEST_PRECEDENCE} runs it at the same point.</p>
      *
      * @return A {@link org.springframework.beans.factory.BeanRegistrar} that registers beans,
      * or {@code null} if none (the default)
@@ -120,20 +115,6 @@ abstract class Plugin implements GrailsApplicationLifeCycle, GrailsApplicationAw
      */
     @Override
     BeanRegistrar beanRegistrar() { null }
-
-    /**
-     * Registers Spring beans directly against the supplied {@link BeanBuilder}. This is the statically-compilable
-     * alternative to {@link #doWithSpring()}: instead of returning a closure whose delegate the container wires up,
-     * an implementation registers beans against the builder passed as an argument. Subclasses should override.
-     *
-     * A plugin should override either this method or {@link #doWithSpring()}, but not both: the two forms are
-     * alternatives, and defining both causes the plugin to fail to load.
-     *
-     * @param beans The {@link BeanBuilder} to register beans against
-     */
-    void doWithSpring(BeanBuilder beans) {
-        // no-op
-    }
 
     /**
      * Invoked once the {@link ApplicationContext} has been refreshed, for each plugin in load order. This is

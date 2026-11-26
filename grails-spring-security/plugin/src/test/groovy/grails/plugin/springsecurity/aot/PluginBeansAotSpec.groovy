@@ -21,6 +21,8 @@ package grails.plugin.springsecurity.aot
 import org.springframework.aot.generate.DefaultGenerationContext
 import org.springframework.aot.generate.InMemoryGeneratedFiles
 import org.springframework.aot.generate.NameGenerator
+import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor
+import org.springframework.beans.factory.support.BeanRegistryAdapter
 import org.springframework.context.aot.ApplicationContextAotGenerator
 import org.springframework.context.support.GenericApplicationContext
 import org.springframework.javapoet.ClassName
@@ -30,7 +32,6 @@ import grails.plugin.springsecurity.CustomClassesPluginBeansSpec
 import grails.plugin.springsecurity.ReflectionUtils
 import grails.plugin.springsecurity.SpringSecurityCoreGrailsPlugin
 import grails.plugin.springsecurity.SpringSecurityUtils
-import grails.spring.BeanBuilder
 import grails.testing.web.GrailsWebUnitTest
 
 /**
@@ -61,10 +62,8 @@ abstract class AbstractPluginBeansAotSpec extends Specification implements Grail
     void 'what the plugin declares can be written out ahead of time'() {
         given:
             def plugin = new SpringSecurityCoreGrailsPlugin(grailsApplication: grailsApplication)
-            def builder = new BeanBuilder(null, getClass().classLoader)
-            builder.beans(plugin.doWithSpring())
             def context = new GenericApplicationContext()
-            builder.registerBeans(context)
+            registerPluginBeans(plugin, context)
             def generationContext = new DefaultGenerationContext(
                     new NameGenerator(ClassName.get('generated', 'Application')), new InMemoryGeneratedFiles())
 
@@ -76,6 +75,18 @@ abstract class AbstractPluginBeansAotSpec extends Specification implements Grail
             context.getBeanDefinition('passwordEncoder')
             context.getBeanDefinition('authenticationManager')
             context.getBeanDefinition('springSecurityFilterChainProxy')
+    }
+
+    /**
+     * Registers the plugin's bean definitions in the context: its registrar is applied to a context of its
+     * own, whose post-processor then registers them in the context, as Spring runs it at startup.
+     */
+    private static void registerPluginBeans(SpringSecurityCoreGrailsPlugin plugin, GenericApplicationContext context) {
+        def scratch = new GenericApplicationContext()
+        def registrar = plugin.beanRegistrar()
+        new BeanRegistryAdapter(scratch, scratch.beanFactory, scratch.environment, registrar.getClass()).register(registrar)
+        scratch.beanFactory.getBean('springSecurityCoreBeanDefinitionsPostProcessor', BeanDefinitionRegistryPostProcessor)
+                .postProcessBeanDefinitionRegistry(context)
     }
 }
 

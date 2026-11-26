@@ -127,6 +127,51 @@ class PluginDescriptorTransformationSpec extends Specification {
         'an interface'            | '@grails.plugins.metadata.GrailsPluginDescriptor interface BrokenGrailsPlugin { }'
     }
 
+    void 'a plugin that declares doWithSpring fails the compilation: #description'() {
+        given:
+        File output = new File(project, 'classes')
+        File source = new File(project, 'src/main/groovy/sources.groovy')
+        source.parentFile.mkdirs()
+        source.text = declaration
+
+        when:
+        compile(output, source)
+
+        then: 'a plugin has no such hook, so the method would never be called'
+        def e = thrown(MultipleCompilationErrorsException)
+        e.message.contains('HookGrailsPlugin declares doWithSpring, which a plugin no longer has')
+        e.message.contains('beanRegistrar()')
+
+        where:
+        description                | declaration
+        'the closure form'         | '''@grails.plugins.metadata.GrailsPluginDescriptor
+            class HookGrailsPlugin extends grails.plugins.Plugin { Closure doWithSpring() { { -> } } }'''
+        'the bean builder form'    | '''@grails.plugins.metadata.GrailsPluginDescriptor
+            class HookGrailsPlugin extends grails.plugins.Plugin { void doWithSpring(grails.spring.BeanBuilder beans) { } }'''
+        'an inherited declaration' | '''abstract class HookBase extends grails.plugins.Plugin { Closure doWithSpring() { { -> } } }
+            @grails.plugins.metadata.GrailsPluginDescriptor
+            class HookGrailsPlugin extends HookBase { }'''
+    }
+
+    void 'a plugin may declare beanRegistrar, the hook that replaces doWithSpring'() {
+        given:
+        File output = new File(project, 'classes')
+        File source = new File(project, 'src/main/groovy/RegistrarGrailsPlugin.groovy')
+        source.parentFile.mkdirs()
+        source.text = '''
+            @grails.plugins.metadata.GrailsPluginDescriptor
+            class RegistrarGrailsPlugin extends grails.plugins.Plugin {
+                org.springframework.beans.factory.BeanRegistrar beanRegistrar() { null }
+            }
+        '''
+
+        when:
+        compile(output, source)
+
+        then:
+        descriptors(output).keySet() == ['registrar'] as Set
+    }
+
     @RestoreSystemProperties
     void 'the descriptor records the build version and resolves ${plugin.version} in dependencies'() {
         given:
@@ -204,15 +249,30 @@ class PluginDescriptorTransformationSpec extends Specification {
         !new File(output, 'META-INF/grails/plugins.imports').exists()
     }
 
+    void 'javac rejects a Java plugin that declares doWithSpring'() {
+        given:
+        File source = new File(project, 'JavaHookPlugin.java')
+        source.text = '@grails.plugins.metadata.GrailsPluginDescriptor(name="java-hook") public class JavaHookPlugin extends ' +
+                'grails.plugins.Plugin { public groovy.lang.Closure doWithSpring() { return null; } }'
+        File output = new File(project, 'java-classes')
+        output.mkdirs()
+        StringWriter messages = new StringWriter()
+
+        expect:
+        !compileJavaTask(output, source, messages).call()
+        messages.toString().contains('JavaHookPlugin declares doWithSpring, which a plugin no longer has')
+    }
+
     private static void compileJava(File output, File source) {
         assert compileJavaTask(output, source).call()
     }
 
-    private static javax.tools.JavaCompiler.CompilationTask compileJavaTask(File output, File source) {
+    private static javax.tools.JavaCompiler.CompilationTask compileJavaTask(File output, File source,
+                                                                          Writer messages = new StringWriter()) {
         def compiler = javax.tools.ToolProvider.systemJavaCompiler
         String classpath = System.getProperty('java.class.path')
         def files = compiler.getStandardFileManager(null, null, null)
-        def task = compiler.getTask(new StringWriter(), files, null, ['-classpath', classpath, '-d', output.path,
+        def task = compiler.getTask(messages, files, null, ['-classpath', classpath, '-d', output.path,
                 '-Agrails.plugin.version=3.0'], null, files.getJavaFileObjects(source))
         task.processors = [new JavaPluginDescriptorProcessor()]
         task

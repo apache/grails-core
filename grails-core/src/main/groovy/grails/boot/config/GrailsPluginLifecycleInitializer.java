@@ -25,8 +25,8 @@ import org.springframework.context.ConfigurableApplicationContext;
  * Registers the {@link GrailsEarlyPluginRegistrationPostProcessor} on the context via
  * {@code addBeanFactoryPostProcessor}, which guarantees it runs ahead of Spring Boot's
  * registry-discovered post-processors (including {@code ConfigurationClassPostProcessor},
- * which expands auto-configuration). That ordering is what lets plugin beans contributed via
- * {@code doWithSpring} be present in the registry before Boot's {@code @ConditionalOnMissingBean}
+ * which expands auto-configuration). That ordering is what lets plugin beans contributed through
+ * {@code beanRegistrar()} be present in the registry before Boot's {@code @ConditionalOnMissingBean}
  * guards are evaluated, so auto-configured defaults back off in favour of plugin beans.
  *
  * @since 8.0

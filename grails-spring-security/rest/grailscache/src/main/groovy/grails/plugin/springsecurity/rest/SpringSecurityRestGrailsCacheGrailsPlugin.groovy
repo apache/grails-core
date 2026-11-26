@@ -19,7 +19,10 @@
 
 package grails.plugin.springsecurity.rest
 
+import org.springframework.beans.factory.BeanRegistrar
+
 import grails.plugin.springsecurity.SecurityFilterPosition
+import grails.plugin.springsecurity.SpringSecurityBeanDefinitions
 import grails.plugin.springsecurity.SpringSecurityUtils
 import grails.plugin.springsecurity.rest.token.generation.SecureRandomTokenGenerator
 import grails.plugin.springsecurity.rest.token.storage.GrailsCacheTokenStorageService
@@ -30,7 +33,22 @@ import grails.plugins.metadata.GrailsPluginDescriptor
         loadAfter = ['springSecurityRest'])
 class SpringSecurityRestGrailsCacheGrailsPlugin extends Plugin {
 
-    Closure doWithSpring() {
+    /**
+     * Registers the beans of the plugin, declared in the bean builder DSL by {@link #beanDefinitions()},
+     * through a post-processor that Spring runs before it reads the configuration classes, in plugin
+     * load order. A plugin loaded after the core plugin replaces its beans of the same name.
+     */
+    @Override
+    BeanRegistrar beanRegistrar() {
+        SpringSecurityBeanDefinitions.registrar(this, 'springSecurityRestGrailsCacheBeanDefinitionsPostProcessor') { -> beanDefinitions() }
+    }
+
+    /**
+     * The beans of the Spring Security REST Grails cache token storage plugin, in the bean builder DSL.
+     *
+     * @return the bean builder closure
+     */
+    Closure beanDefinitions() {
         { ->
             def conf = SpringSecurityUtils.securityConfig
             if (!conf || !conf.active || !conf.rest.active) {

@@ -20,6 +20,9 @@ package grails.plugin.springsecurity.ui
 
 import groovy.util.logging.Slf4j
 
+import org.springframework.beans.factory.BeanRegistrar
+
+import grails.plugin.springsecurity.SpringSecurityBeanDefinitions
 import grails.plugin.springsecurity.SpringSecurityUtils
 import grails.plugin.springsecurity.ui.strategy.DefaultAclStrategy
 import grails.plugin.springsecurity.ui.strategy.DefaultErrorsStrategy
@@ -41,7 +44,22 @@ import grails.plugins.metadata.GrailsPluginDescriptor
 @GrailsPluginDescriptor(loadAfter = ['springSecurityCore', 'springSecurityAcl'])
 class SpringSecurityUiGrailsPlugin extends Plugin {
 
-    Closure doWithSpring() {
+    /**
+     * Registers the beans of the plugin, declared in the bean builder DSL by {@link #beanDefinitions()},
+     * through a post-processor that Spring runs before it reads the configuration classes, in plugin
+     * load order. A plugin loaded after the core plugin replaces its beans of the same name.
+     */
+    @Override
+    BeanRegistrar beanRegistrar() {
+        SpringSecurityBeanDefinitions.registrar(this, 'springSecurityUiBeanDefinitionsPostProcessor') { -> beanDefinitions() }
+    }
+
+    /**
+     * The beans of the Spring Security UI plugin, in the bean builder DSL.
+     *
+     * @return the bean builder closure
+     */
+    Closure beanDefinitions() {
         { ->
 
             def conf = SpringSecurityUtils.securityConfig

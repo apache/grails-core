@@ -21,10 +21,14 @@ package grails.boot.config;
 import java.util.Collection;
 import java.util.Set;
 
+import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.context.ApplicationContext;
+import org.springframework.core.convert.ConversionService;
 import org.springframework.core.convert.TypeDescriptor;
 import org.springframework.core.convert.converter.ConditionalGenericConverter;
+import org.springframework.core.convert.converter.ConverterRegistry;
 import org.springframework.core.convert.support.ConfigurableConversionService;
+import org.springframework.core.convert.support.GenericConversionService;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.ResourceArrayPropertyEditor;
 
@@ -45,6 +49,13 @@ import org.grails.config.NavigableMap;
  * <p>Both phases run for the same context when the early phase is active, so registration is
  * idempotent per conversion service and application context.
  *
+ * <p>{@link #registerOnBeanFactory} gives the bean factory the conversion of a missing configuration
+ * key to {@code null}, before any bean definition is registered, so a bean of an application's
+ * {@code resources.groovy} or {@code doWithSpring}, or of a plugin's bean builder, that assigns
+ * {@code grailsApplication.config.some.missing.key} gets {@code null} rather than the navigator that
+ * stands for the missing key. A Spring Boot context shares the environment's conversion service with
+ * its bean factory, so {@link #register} already covers it; another context gets the converter here.
+ *
  * @since 8.0
  */
 final class GrailsConversionServiceConverters {
@@ -63,6 +74,26 @@ final class GrailsConversionServiceConverters {
         conversionService.addConverter(RegistrationMarker.class, ApplicationContext.class, marker -> applicationContext);
     }
 
+    static void registerOnBeanFactory(ConfigurableListableBeanFactory beanFactory) {
+        ConversionService existing = beanFactory.getConversionService();
+        if (existing == null) {
+            GenericConversionService conversionService = new GenericConversionService();
+            addNullSafeNavigatorConverter(conversionService);
+            beanFactory.setConversionService(conversionService);
+        }
+        else if (existing instanceof ConverterRegistry registry &&
+                !existing.canConvert(NullSafeNavigatorMarker.class, NullSafeNavigatorConverterAdded.class)) {
+            addNullSafeNavigatorConverter(registry);
+        }
+    }
+
+    private static void addNullSafeNavigatorConverter(ConverterRegistry registry) {
+        registry.addConverter(NavigableMap.NullSafeNavigator.class, String.class, source -> null);
+        registry.addConverter(NavigableMap.NullSafeNavigator.class, Object.class, source -> null);
+        registry.addConverter(NullSafeNavigatorMarker.class, NullSafeNavigatorConverterAdded.class,
+                marker -> NullSafeNavigatorConverterAdded.INSTANCE);
+    }
+
     private static boolean isRegistered(ConfigurableConversionService conversionService, ApplicationContext applicationContext) {
         return conversionService.canConvert(RegistrationMarker.class, ApplicationContext.class) &&
                 conversionService.convert(RegistrationMarker.INSTANCE, ApplicationContext.class) == applicationContext;
@@ -74,6 +105,25 @@ final class GrailsConversionServiceConverters {
      */
     private enum RegistrationMarker {
         INSTANCE
+    }
+
+    /**
+     * Records on a bean factory's conversion service that the missing-key converter was added, so it
+     * is added once however many phases run for the context.
+     */
+    private enum NullSafeNavigatorMarker {
+        INSTANCE
+    }
+
+    /**
+     * What only the converter of {@link NullSafeNavigatorMarker} converts to.
+     */
+    private static final class NullSafeNavigatorConverterAdded {
+
+        private static final NullSafeNavigatorConverterAdded INSTANCE = new NullSafeNavigatorConverterAdded();
+
+        private NullSafeNavigatorConverterAdded() {
+        }
     }
 
     /**

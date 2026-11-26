@@ -23,7 +23,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.net.URL;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
@@ -34,9 +33,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Properties;
-
-import groovy.lang.Binding;
-import groovy.lang.Closure;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -62,18 +58,15 @@ import grails.plugins.GrailsPluginManager;
 import grails.plugins.Plugin;
 import grails.plugins.exceptions.PluginException;
 import grails.plugins.metadata.PluginDefinition;
-import grails.spring.BeanBuilder;
 import grails.util.BuildSettings;
 import grails.util.CollectionUtils;
 import grails.util.Environment;
 import grails.util.GrailsNameUtils;
 import org.apache.grails.core.plugins.PluginInfo;
 import org.apache.grails.core.plugins.PluginUtils;
-import org.grails.core.io.CachingPathMatchingResourcePatternResolver;
 import org.grails.core.io.StaticResourceLoader;
 import org.grails.plugins.support.WatchPattern;
 import org.grails.plugins.support.WatchPatternParser;
-import org.grails.spring.RuntimeSpringConfiguration;
 
 /**
  * A Grails plugin: an instance of the plugin's {@link Plugin} subclass, described by its {@link PluginInfo}.
@@ -116,7 +109,6 @@ public class DefaultGrailsPlugin implements GrailsPlugin {
     private final PluginInfo pluginInfo;
     private final PluginDefinition definition;
     private final Plugin plugin;
-    private final PathMatchingResourcePatternResolver resolver = CachingPathMatchingResourcePatternResolver.INSTANCE;
     private final Class<?>[] providedArtefacts;
     private final List<WatchPattern> watchedResourcePatterns;
     private final Map<String, Class<?>> precompiledViewMap = new HashMap<>();
@@ -464,43 +456,6 @@ public class DefaultGrailsPlugin implements GrailsPlugin {
     public void doWithApplicationContext(ApplicationContext ctx) {
         plugin.setApplicationContext(ctx);
         plugin.doWithApplicationContext();
-    }
-
-    @Override
-    public void doWithRuntimeConfiguration(RuntimeSpringConfiguration springConfig) {
-        ApplicationContext parentCtx = grailsApplication.getParentContext();
-        Binding b = new Binding();
-        b.setVariable("application", grailsApplication);
-        b.setVariable(GrailsApplication.APPLICATION_ID, grailsApplication);
-        b.setVariable("manager", getManager());
-        b.setVariable("plugin", this);
-        b.setVariable("parentCtx", parentCtx);
-        b.setVariable("resolver", resolver);
-
-        Closure c = plugin.doWithSpring();
-        // A plugin defines at most one Spring configuration hook. Both forms are explicit overrides, so
-        // defining both is an authoring error rather than a supported combination.
-        if (c != null && isDoWithSpringMethodOverridden(plugin)) {
-            throw new PluginException("Plugin [" + this + "] defines both the closure-returning doWithSpring() " +
-                    "and the doWithSpring(BeanBuilder) method. Define only one Spring configuration hook.");
-        }
-        BeanBuilder bb = new BeanBuilder(parentCtx, springConfig, grailsApplication.getClassLoader());
-        bb.setBinding(b);
-        if (c != null) {
-            c.setDelegate(bb);
-            bb.invokeMethod("beans", new Object[]{c});
-        }
-        plugin.doWithSpring(bb);
-    }
-
-    private static boolean isDoWithSpringMethodOverridden(Plugin pluginObject) {
-        try {
-            Method method = pluginObject.getClass().getMethod("doWithSpring", BeanBuilder.class);
-            return method.getDeclaringClass() != Plugin.class;
-        }
-        catch (NoSuchMethodException e) {
-            return false;
-        }
     }
 
     @Override

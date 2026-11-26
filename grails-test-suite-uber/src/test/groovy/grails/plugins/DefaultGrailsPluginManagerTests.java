@@ -63,7 +63,6 @@ public class DefaultGrailsPluginManagerTests {
         discovery.init(new StandardEnvironment());
         parent.getDefaultListableBeanFactory().registerSingleton(PluginDiscovery.BEAN_NAME, discovery);
         var manager = new DefaultGrailsPluginManager(app, discovery);
-        manager.setParentApplicationContext(parent);
 
         manager.loadPlugins();
 
@@ -111,7 +110,6 @@ public class DefaultGrailsPluginManagerTests {
         discovery.init(new StandardEnvironment());
         parent.getDefaultListableBeanFactory().registerSingleton(PluginDiscovery.BEAN_NAME, discovery);
         var manager = new DefaultGrailsPluginManager(app, discovery);
-        manager.setParentApplicationContext(parent);
 
         manager.loadPlugins();
 
@@ -182,7 +180,6 @@ public class DefaultGrailsPluginManagerTests {
         discovery.setPluginFilter(new IncludingPluginFilter("first", "second", "third", "fourth"));
         discovery.init(new StandardEnvironment());
         var manager = new DefaultGrailsPluginManager(app, discovery);
-        manager.setParentApplicationContext(parent);
 
         manager.loadPlugins();
         return manager;

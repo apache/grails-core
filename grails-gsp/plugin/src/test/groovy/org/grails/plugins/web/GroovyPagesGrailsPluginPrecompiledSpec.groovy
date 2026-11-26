@@ -18,11 +18,14 @@
  */
 package org.grails.plugins.web
 
+import org.springframework.beans.factory.config.BeanDefinition
+import org.springframework.beans.factory.config.PropertiesFactoryBean
 import org.springframework.beans.factory.support.AbstractBeanDefinition
-import org.springframework.beans.factory.support.DefaultListableBeanFactory
+import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor
+import org.springframework.beans.factory.support.BeanRegistryAdapter
+import org.springframework.context.support.GenericApplicationContext
 
 import grails.core.DefaultGrailsApplication
-import grails.spring.BeanBuilder
 import spock.lang.Specification
 
 /**
@@ -42,11 +45,13 @@ class GroovyPagesGrailsPluginPrecompiledSpec extends Specification {
         def application = new DefaultGrailsApplication()
         application.initialise()
         def plugin = new Plugin(developmentMode: developmentMode, grailsApplication: application)
-        def beanFactory = new DefaultListableBeanFactory()
-        def builder = new BeanBuilder(null, null, getClass().classLoader)
-        builder.beans(plugin.doWithSpring())
-        builder.registerBeans(beanFactory)
-        (AbstractBeanDefinition) beanFactory.getBeanDefinition(LOCATOR)
+        def context = new GenericApplicationContext()
+        def registrar = plugin.beanRegistrar()
+        new BeanRegistryAdapter(context, context.beanFactory, context.environment, registrar.getClass()).register(registrar)
+        // what Spring does with the post-processor the registrar registered, before it reads the configuration classes
+        context.beanFactory.getBean('groovyPagesBeanDefinitionsPostProcessor', BeanDefinitionRegistryPostProcessor)
+                .postProcessBeanDefinitionRegistry(context)
+        (AbstractBeanDefinition) context.getBeanDefinition(LOCATOR)
     }
 
     private static boolean readsPrecompiledPages(AbstractBeanDefinition locator) {
@@ -54,8 +59,17 @@ class GroovyPagesGrailsPluginPrecompiledSpec extends Specification {
     }
 
     void 'a deployed application reads the pages compiled at build time'() {
-        expect:
-            readsPrecompiledPages(locatorFrom(false))
+        when:
+            AbstractBeanDefinition locator = locatorFrom(false)
+
+        then:
+            readsPrecompiledPages(locator)
+
+        and: 'from the manifests a build writes, wherever they are, and without failing when there is none'
+            BeanDefinition manifest = (BeanDefinition) locator.propertyValues.get('precompiledGspMap')
+            manifest.beanClassName == PropertiesFactoryBean.name
+            manifest.propertyValues.get('ignoreResourceNotFound') == true
+            manifest.propertyValues.get('locations') == ['gsp/views.properties', 'classpath:gsp/views.properties']
     }
 
     void 'a project on disk does not, whatever manifest is on its classpath'() {

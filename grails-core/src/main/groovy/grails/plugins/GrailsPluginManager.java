@@ -27,7 +27,6 @@ import org.springframework.context.ApplicationContextAware;
 
 import grails.core.GrailsApplication;
 import grails.plugins.exceptions.PluginException;
-import org.grails.spring.RuntimeSpringConfiguration;
 
 /**
  * Handles the loading and management of plugins in the Grails framework.
@@ -35,8 +34,7 @@ import org.grails.spring.RuntimeSpringConfiguration;
  * A plugin is a concrete subclass of {@link Plugin} annotated with
  * {@link grails.plugins.metadata.GrailsPluginDescriptor}, which declares its name, ordering and other metadata.
  * The manager creates a {@link GrailsPlugin} for each plugin discovery finds, and drives it through the
- * application's lifecycle: {@link Plugin#beanRegistrar() beanRegistrar} and
- * {@link Plugin#doWithSpring() doWithSpring} contribute beans,
+ * application's lifecycle: {@link Plugin#beanRegistrar() beanRegistrar} contributes beans,
  * {@link Plugin#doWithApplicationContext() doWithApplicationContext} runs once the
  * {@link ApplicationContext} is refreshed, and {@link Plugin#onChange(Map) onChange},
  * {@link Plugin#onConfigChange(Map) onConfigChange} and {@link Plugin#onShutdown(Map) onShutdown} react to events.
@@ -71,13 +69,6 @@ public interface GrailsPluginManager extends ApplicationContextAware {
      * @throws PluginException if any error occurs when loading the plugins
      */
     void loadPlugins() throws PluginException;
-
-    /**
-     * Executes the runtime configuration phase of the loaded plugins (e.g., {@code doWithSpring}).
-     *
-     * @param springConfig The {@link RuntimeSpringConfiguration} instance
-     */
-    void doRuntimeConfiguration(RuntimeSpringConfiguration springConfig);
 
     /**
      * Performs post-initialization configuration for each plugin,
@@ -126,14 +117,6 @@ public interface GrailsPluginManager extends ApplicationContextAware {
      * @return A {@link GrailsPlugin} instance, or null if it doesn't exist
      */
     GrailsPlugin getGrailsPlugin(String name, Object version);
-
-    /**
-     * Executes the runtime configuration for a specific plugin AND all its dependencies.
-     *
-     * @param pluginName The name of the plugin
-     * @param springConfig The runtime spring config instance
-     */
-    void doRuntimeConfiguration(String pluginName, RuntimeSpringConfiguration springConfig);
 
     /**
      * Assigns the {@link GrailsApplication} instance to be used by this plugin manager.

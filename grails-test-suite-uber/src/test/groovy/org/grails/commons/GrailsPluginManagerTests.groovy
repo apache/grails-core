@@ -49,8 +49,11 @@ class GrailsPluginManagerTests extends Specification {
 
     @Shared GroovyClassLoader fixtures = new GroovyClassLoader(GrailsPluginManagerTests.classLoader).tap {
         parseClass('''
+import org.springframework.beans.factory.BeanRegistrar
+import org.springframework.beans.factory.BeanRegistry
 import org.springframework.beans.factory.support.RootBeanDefinition
 import org.springframework.beans.propertyeditors.ClassEditor
+import org.springframework.core.env.Environment
 import org.springframework.web.servlet.i18n.CookieLocaleResolver
 
 import grails.plugins.Plugin
@@ -61,10 +64,10 @@ class MyGrailsPlugin extends Plugin {
 
     static String SHUTDOWN_FIELD = 'not-updated'
 
-    Closure doWithSpring() {
-        { ->
-            classEditor(ClassEditor, grailsApplication.classLoader)
-        }
+    BeanRegistrar beanRegistrar() {
+        { BeanRegistry registry, Environment environment ->
+            registry.registerBean('classEditor', ClassEditor) { it.supplier { new ClassEditor(grailsApplication.classLoader) } }
+        } as BeanRegistrar
     }
 
     void onShutdown(Map<String, Object> event) {

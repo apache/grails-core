@@ -220,7 +220,7 @@ class GrailsResourceConversionSpec extends Specification {
         context.getBean('earlyOptionalProperties', Properties).isEmpty()
         urls(context.getBean('earlyHolder', ResourceConversionHolder).resources) == urls(context.getResources(PATTERN))
 
-        and: 'doWithSpring read an expanded Resource[] from the configuration'
+        and: 'the plugin read an expanded Resource[] from the configuration while registering its beans'
         context.getBean('earlyConfigHolder', ResourceConversionHolder).resources.length == context.getResources(PATTERN).length
 
         cleanup:
@@ -255,16 +255,32 @@ class GrailsResourceConversionSpec extends Specification {
     /** A plugin compiled at run time, so that the test class path does not list it as a plugin of its own. */
     private static Class<?> getResourceConversionPluginClass() {
         new GroovyClassLoader(GrailsResourceConversionSpec.classLoader).parseClass('''
+            import java.util.function.Supplier
+
+            import org.springframework.beans.factory.BeanRegistrar
+            import org.springframework.beans.factory.BeanRegistry
             import org.springframework.beans.factory.config.PropertiesFactoryBean
+            import org.springframework.core.env.Environment
             import org.springframework.core.io.Resource
             import grails.boot.config.GrailsResourceConversionSpec
             import grails.boot.config.ResourceConversionHolder
+            import org.grails.spring.BeanBuilderRegistryPostProcessor
 
             @grails.plugins.metadata.GrailsPluginDescriptor
             class ResourceConversionGrailsPlugin extends grails.plugins.Plugin {
 
                 @Override
-                Closure doWithSpring() {
+                BeanRegistrar beanRegistrar() {
+                    { BeanRegistry registry, Environment environment ->
+                        registry.registerBean('resourceConversionPostProcessor', BeanBuilderRegistryPostProcessor) {
+                            it.infrastructure().supplier {
+                                new BeanBuilderRegistryPostProcessor(null, getClass().classLoader, [:], { -> beanDefinitions() } as Supplier)
+                            }
+                        }
+                    } as BeanRegistrar
+                }
+
+                Closure beanDefinitions() {
                     { ->
                         earlyOptionalProperties(PropertiesFactoryBean) {
                             locations = GrailsResourceConversionSpec.MISSING

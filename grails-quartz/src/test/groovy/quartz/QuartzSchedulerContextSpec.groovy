@@ -22,9 +22,10 @@ import grails.core.DefaultGrailsApplication
 import grails.core.GrailsApplication
 import grails.plugins.GrailsPluginManager
 import grails.plugins.quartz.JobArtefactHandler
-import grails.spring.BeanBuilder
 import org.grails.config.PropertySourcesConfig
 import org.quartz.Scheduler
+import org.springframework.beans.factory.BeanRegistrar
+import org.springframework.beans.factory.support.BeanRegistryAdapter
 import org.springframework.context.ConfigurableApplicationContext
 import org.springframework.context.support.GenericApplicationContext
 import quartz.jobs.ContextSpecJob
@@ -136,9 +137,12 @@ class QuartzSchedulerContextSpec extends Specification {
         plugin.grailsApplication = grailsApplication
         plugin.pluginManager = Stub(GrailsPluginManager)
 
-        BeanBuilder beanBuilder = new BeanBuilder(parent)
-        beanBuilder.beans plugin.doWithSpring()
-        applicationContext = beanBuilder.createApplicationContext() as ConfigurableApplicationContext
+        GenericApplicationContext context = new GenericApplicationContext(parent)
+        BeanRegistrar registrar = plugin.beanRegistrar()
+        new BeanRegistryAdapter(context, context.beanFactory, context.environment, registrar.getClass()).register(registrar)
+        // refreshing runs the post-processor the registrar registered, which registers the scheduler and job beans
+        context.refresh()
+        applicationContext = context
         plugin.applicationContext = applicationContext
         plugin
     }

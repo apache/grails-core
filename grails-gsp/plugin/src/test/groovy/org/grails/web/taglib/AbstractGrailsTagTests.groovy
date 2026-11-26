@@ -334,8 +334,6 @@ abstract class AbstractGrailsTagTests {
 
         springConfig.servletContext = servletContext
 
-        dependentPlugins*.doWithRuntimeConfiguration(springConfig)
-
         GenericApplicationContext unrefreshedContext = springConfig.getUnrefreshedApplicationContext() as GenericApplicationContext
         applyPluginBeanRegistrars(dependentPlugins, unrefreshedContext)
 
@@ -356,10 +354,9 @@ abstract class AbstractGrailsTagTests {
     }
 
     /**
-     * Applies each plugin's {@link BeanRegistrar} to the unrefreshed context, the second half of
-     * what the runtime does for a plugin: {@code doWithRuntimeConfiguration} drains the deprecated
-     * {@code doWithSpring} DSL, then the registrars run. A harness that only does the former sees
-     * none of the beans a plugin contributes through {@code beanRegistrar()}.
+     * Applies each plugin's {@link BeanRegistrar} to the unrefreshed context, as the runtime does for a
+     * plugin. The post-processors a registrar registers, such as the one that registers the GSP beans,
+     * run when the context is refreshed.
      */
     private static void applyPluginBeanRegistrars(List<DefaultGrailsPlugin> plugins, GenericApplicationContext context) {
         for (DefaultGrailsPlugin plugin in plugins) {

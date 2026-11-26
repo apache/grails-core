@@ -43,11 +43,6 @@ class Issue11005GrailsPlugin extends Plugin {
     // Online location of the plugin's browseable source code.
 //    def scm = [ url: "http://svn.codehaus.org/grails-plugins/" ]
 
-    Closure doWithSpring() { {->
-            // TODO Implement runtime spring config (optional)
-        }
-    }
-
     void doWithApplicationContext() {
         // TODO Implement post initialization spring config, such as registering dynamic methods (optional)
     }

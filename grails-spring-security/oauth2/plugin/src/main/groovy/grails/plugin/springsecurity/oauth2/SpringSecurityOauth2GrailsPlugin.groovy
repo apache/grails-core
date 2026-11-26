@@ -21,7 +21,10 @@ package grails.plugin.springsecurity.oauth2
 
 import groovy.util.logging.Slf4j
 
+import org.springframework.beans.factory.BeanRegistrar
+
 import grails.plugin.springsecurity.ReflectionUtils
+import grails.plugin.springsecurity.SpringSecurityBeanDefinitions
 import grails.plugin.springsecurity.SpringSecurityUtils
 import grails.plugins.Plugin
 import grails.plugins.metadata.GrailsPluginDescriptor
@@ -30,8 +33,22 @@ import grails.plugins.metadata.GrailsPluginDescriptor
 @GrailsPluginDescriptor(loadAfter = ['spring-security-core'])
 class SpringSecurityOauth2GrailsPlugin extends Plugin {
 
+    /**
+     * Registers the beans of the plugin, declared in the bean builder DSL by {@link #beanDefinitions()},
+     * through a post-processor that Spring runs before it reads the configuration classes, in plugin
+     * load order. A plugin loaded after the core plugin replaces its beans of the same name.
+     */
     @Override
-    Closure doWithSpring() {
+    BeanRegistrar beanRegistrar() {
+        SpringSecurityBeanDefinitions.registrar(this, 'springSecurityOauth2BeanDefinitionsPostProcessor') { -> beanDefinitions() }
+    }
+
+    /**
+     * The beans of the Spring Security OAuth2 plugin, in the bean builder DSL.
+     *
+     * @return the bean builder closure
+     */
+    Closure beanDefinitions() {
         { ->
             ReflectionUtils.application = grailsApplication
             if (grailsApplication.warDeployed) {

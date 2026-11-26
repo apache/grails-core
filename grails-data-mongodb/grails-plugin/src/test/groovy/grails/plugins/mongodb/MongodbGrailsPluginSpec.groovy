@@ -18,6 +18,8 @@
  */
 package grails.plugins.mongodb
 
+import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor
+import org.springframework.beans.factory.support.BeanRegistryAdapter
 import org.springframework.context.support.GenericApplicationContext
 
 import grails.config.Config
@@ -25,7 +27,7 @@ import grails.core.GrailsApplication
 import grails.core.GrailsClass
 import grails.plugins.GrailsPlugin
 import grails.plugins.GrailsPluginManager
-import grails.spring.BeanBuilder
+import grails.plugins.metadata.GrailsPluginDescriptor
 import spock.lang.Specification
 
 class MongodbGrailsPluginSpec extends Specification {
@@ -44,74 +46,77 @@ class MongodbGrailsPluginSpec extends Specification {
     )
 
     void "exposes the expected Grails plugin descriptor metadata"() {
-        expect:
-        plugin.license == 'Apache 2.0 License'
-        plugin.title == 'GORM MongoDB'
-        plugin.description
-        plugin.documentation
-        plugin.organization == [name: 'Apache Grails', url: 'https://grails.apache.org/']
-        plugin.issueManagement == [system: 'Github', url: 'https://github.com/apache/grails-core/issues']
-        plugin.scm == [url: 'https://github.com/apache/grails-core']
-        plugin.observe == ['services', 'domainClass']
-        plugin.loadAfter == ['domainClass', 'hibernate', 'hibernate5', 'hibernate7', 'services']
+        when:
+        GrailsPluginDescriptor descriptor = MongodbGrailsPlugin.getAnnotation(GrailsPluginDescriptor)
+
+        then:
+        descriptor.observe() as List == ['services', 'domainClass']
+        descriptor.loadAfter() as List == ['domainClass', 'hibernate', 'hibernate5', 'hibernate7', 'services']
     }
 
-    void "doWithSpring registers the core MongoDB datastore bean definitions"() {
+    void "the post-processor the registrar registers registers the core MongoDB datastore bean definitions"() {
         given:
         plugin.pluginManager = Stub(GrailsPluginManager) {
             getAllPlugins() >> ([] as GrailsPlugin[])
         }
 
         when:
-        def beanClosure = plugin.doWithSpring()
-        def bb = new BeanBuilder()
-        bb.beans(beanClosure)
+        registerPluginBeans()
 
         then:
-        beanClosure != null
-        bb.beanDefinitions.keySet().containsAll(['mongoDatastore', 'mongoMappingContext', 'mongoTransactionManager'])
+        applicationContext.containsBeanDefinition(MongodbGrailsPlugin.BEAN_DEFINITIONS_POST_PROCESSOR)
+        ['mongoDatastore', 'mongoMappingContext', 'mongoTransactionManager'].every { applicationContext.containsBeanDefinition(it) }
     }
 
-    void "doWithSpring registers the domain mapping context alias when Hibernate is not present"() {
+    void "the domain mapping context alias is registered when Hibernate is not present"() {
         given:
         plugin.pluginManager = Stub(GrailsPluginManager) {
             getAllPlugins() >> ([] as GrailsPlugin[])
         }
 
         when:
-        def bb = new BeanBuilder()
-        bb.beans(plugin.doWithSpring())
+        registerPluginBeans()
 
         then:
-        bb.springConfig.unrefreshedApplicationContext.isAlias('grailsDomainClassMappingContext')
+        applicationContext.isAlias('grailsDomainClassMappingContext')
     }
 
-    void "doWithSpring does not register the domain mapping context alias when Hibernate is present"() {
+    void "the domain mapping context alias is not registered when Hibernate is present"() {
         given:
         plugin.pluginManager = Stub(GrailsPluginManager) {
             getAllPlugins() >> ([Stub(GrailsPlugin) { getName() >> 'hibernate' }] as GrailsPlugin[])
         }
 
         when:
-        def bb = new BeanBuilder()
-        bb.beans(plugin.doWithSpring())
+        registerPluginBeans()
 
         then:
-        !bb.springConfig.unrefreshedApplicationContext.isAlias('grailsDomainClassMappingContext')
+        !applicationContext.isAlias('grailsDomainClassMappingContext')
     }
 
-    void "doWithSpring aliases the mongo transaction manager as the default transactionManager bean"() {
+    void "the mongo transaction manager is aliased as the default transactionManager bean"() {
         given:
         plugin.pluginManager = Stub(GrailsPluginManager) {
             getAllPlugins() >> ([] as GrailsPlugin[])
         }
 
         when:
-        def bb = new BeanBuilder()
-        bb.beans(plugin.doWithSpring())
+        registerPluginBeans()
 
         then:
         applicationContext.isAlias('transactionManager')
         applicationContext.getAliases('mongoTransactionManager').contains('transactionManager')
+    }
+
+    /**
+     * Applies the plugin's registrar to the context, and runs the post-processor it registers, as
+     * Spring does before it reads the configuration classes.
+     */
+    private void registerPluginBeans() {
+        def registrar = plugin.beanRegistrar()
+        new BeanRegistryAdapter(applicationContext, applicationContext.beanFactory, applicationContext.environment, registrar.getClass())
+                .register(registrar)
+        applicationContext.beanFactory.getBean(MongodbGrailsPlugin.BEAN_DEFINITIONS_POST_PROCESSOR, BeanDefinitionRegistryPostProcessor)
+                .postProcessBeanDefinitionRegistry(applicationContext)
     }
 }

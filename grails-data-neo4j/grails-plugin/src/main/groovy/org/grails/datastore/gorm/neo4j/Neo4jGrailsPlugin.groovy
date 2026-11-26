@@ -43,20 +43,49 @@ import org.grails.datastore.gorm.neo4j.converters.PeriodToStringConverter
 import org.grails.datastore.gorm.neo4j.converters.StringToPeriodConverter
 import org.grails.datastore.gorm.neo4j.converters.ZonedDateTimeToLongConverter
 import org.grails.datastore.gorm.plugin.support.ConfigSupport
+import org.grails.spring.BeanBuilderRegistryPostProcessor
+import org.springframework.beans.factory.BeanRegistrar
+import org.springframework.beans.factory.BeanRegistry
 import org.springframework.beans.factory.support.BeanDefinitionRegistry
 import org.springframework.context.ConfigurableApplicationContext
+import org.springframework.core.env.Environment
 import org.springframework.core.env.PropertyResolver
+
+import java.util.function.Supplier
 
 @GrailsPluginDescriptor(
         loadAfter = ['domainClass', 'hibernate', 'services', 'converters'],
         observe = ['services', 'domainClass'])
 class Neo4jGrailsPlugin extends Plugin {
 
-    // resources that are excluded from plugin packaging
+    /** The name of the post-processor that registers the datastore's bean definitions. */
+    public static final String BEAN_DEFINITIONS_POST_PROCESSOR = 'neo4jBeanDefinitionsPostProcessor'
 
+    /**
+     * Registers the Neo4j datastore's beans through a post-processor, which Spring runs before it
+     * reads the configuration classes, so an auto-configuration's {@code @ConditionalOnMissingBean}
+     * backs off from them as it does from the beans of a registrar. It runs after the post-processor
+     * of a Hibernate plugin loaded before this one, whose transaction manager it then finds.
+     */
     @Override
     @CompileStatic
-    Closure doWithSpring() {
+    BeanRegistrar beanRegistrar() {
+        { BeanRegistry registry, Environment environment ->
+            registry.registerBean(BEAN_DEFINITIONS_POST_PROCESSOR, BeanBuilderRegistryPostProcessor) {
+                it.infrastructure().supplier {
+                    new BeanBuilderRegistryPostProcessor(grailsApplication.parentContext, grailsApplication.classLoader,
+                            [:], { -> datastoreBeans() } as Supplier<Closure<?>>)
+                }
+            }
+        } as BeanRegistrar
+    }
+
+    /**
+     * The bean definitions of the Neo4j datastore, in the bean builder DSL the datastore's
+     * initializer writes them in.
+     */
+    @CompileStatic
+    protected Closure datastoreBeans() {
         ConfigSupport.prepareConfig(config, (ConfigurableApplicationContext) applicationContext)
         def initializer = new Neo4jDataStoreSpringInitializer((PropertyResolver) config, grailsApplication.getArtefacts(DomainClassArtefactHandler.TYPE).collect() { GrailsClass cls -> cls.clazz })
         initializer.setSecondaryDatastore(hasHibernatePlugin())

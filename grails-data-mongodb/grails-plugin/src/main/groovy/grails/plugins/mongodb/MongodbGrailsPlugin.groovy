@@ -19,10 +19,15 @@
 
 package grails.plugins.mongodb
 
+import java.util.function.Supplier
+
 import groovy.transform.CompileStatic
 
+import org.springframework.beans.factory.BeanRegistrar
+import org.springframework.beans.factory.BeanRegistry
 import org.springframework.beans.factory.support.BeanDefinitionRegistry
 import org.springframework.context.ConfigurableApplicationContext
+import org.springframework.core.env.Environment
 import org.springframework.core.env.PropertyResolver
 import org.springframework.transaction.PlatformTransactionManager
 
@@ -35,15 +40,41 @@ import grails.util.Metadata
 import org.grails.core.artefact.DomainClassArtefactHandler
 import org.grails.datastore.gorm.plugin.support.ConfigSupport
 import org.grails.datastore.mapping.mongo.MongoDatastore
+import org.grails.spring.BeanBuilderRegistryPostProcessor
 
 @GrailsPluginDescriptor(
         loadAfter = ['domainClass', 'hibernate', 'hibernate5', 'hibernate7', 'services'],
         observe = ['services', 'domainClass'])
 class MongodbGrailsPlugin extends Plugin {
 
+    /** The name of the post-processor that registers the datastore's bean definitions. */
+    public static final String BEAN_DEFINITIONS_POST_PROCESSOR = 'mongoBeanDefinitionsPostProcessor'
+
+    /**
+     * Registers the MongoDB datastore's beans through a post-processor, which Spring runs before it
+     * reads the configuration classes, so an auto-configuration's {@code @ConditionalOnMissingBean}
+     * backs off from them as it does from the beans of a registrar. It runs after the post-processor
+     * of a Hibernate plugin loaded before this one, whose transaction manager it then finds.
+     */
     @Override
     @CompileStatic
-    Closure doWithSpring() {
+    BeanRegistrar beanRegistrar() {
+        { BeanRegistry registry, Environment environment ->
+            registry.registerBean(BEAN_DEFINITIONS_POST_PROCESSOR, BeanBuilderRegistryPostProcessor) {
+                it.infrastructure().supplier {
+                    new BeanBuilderRegistryPostProcessor(grailsApplication.parentContext, grailsApplication.classLoader,
+                            [:], { -> datastoreBeans() } as Supplier<Closure<?>>)
+                }
+            }
+        } as BeanRegistrar
+    }
+
+    /**
+     * The bean definitions of the MongoDB datastore, in the bean builder DSL the datastore's
+     * initializer writes them in.
+     */
+    @CompileStatic
+    protected Closure datastoreBeans() {
         ConfigSupport.prepareConfig(config, (ConfigurableApplicationContext) applicationContext)
         def initializer = new MongoDbDataStoreSpringInitializer((PropertyResolver) config, grailsApplication.getArtefacts(DomainClassArtefactHandler.TYPE).collect() { GrailsClass cls -> cls.clazz })
 

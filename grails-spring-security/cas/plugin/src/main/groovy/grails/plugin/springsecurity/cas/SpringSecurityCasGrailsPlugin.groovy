@@ -28,6 +28,7 @@ import org.apereo.cas.client.session.SingleSignOutFilter
 import org.apereo.cas.client.session.SingleSignOutHttpSessionListener
 import org.apereo.cas.client.validation.Cas20ServiceTicketValidator
 
+import org.springframework.beans.factory.BeanRegistrar
 import org.springframework.boot.web.servlet.FilterRegistrationBean
 import org.springframework.boot.web.servlet.ServletListenerRegistrationBean
 import org.springframework.security.cas.ServiceProperties
@@ -39,6 +40,7 @@ import org.springframework.security.web.authentication.session.NullAuthenticated
 
 import grails.plugin.springsecurity.BeanTypeResolver
 import grails.plugin.springsecurity.SecurityFilterPosition
+import grails.plugin.springsecurity.SpringSecurityBeanDefinitions
 import grails.plugin.springsecurity.SpringSecurityUtils
 import grails.plugins.Plugin
 import grails.plugins.metadata.GrailsPluginDescriptor
@@ -49,8 +51,23 @@ import org.grails.web.config.http.GrailsFilters
 @GrailsPluginDescriptor(loadAfter = ['springSecurityCore'])
 class SpringSecurityCasGrailsPlugin extends Plugin {
 
+    /**
+     * Registers the beans of the plugin, declared in the bean builder DSL by {@link #beanDefinitions()},
+     * through a post-processor that Spring runs before it reads the configuration classes, in plugin
+     * load order. A plugin loaded after the core plugin replaces its beans of the same name.
+     */
+    @Override
+    BeanRegistrar beanRegistrar() {
+        SpringSecurityBeanDefinitions.registrar(this, 'springSecurityCasBeanDefinitionsPostProcessor') { -> beanDefinitions() }
+    }
+
+    /**
+     * The beans of the Spring Security CAS plugin, in the bean builder DSL.
+     *
+     * @return the bean builder closure
+     */
     @CompileDynamic
-    Closure doWithSpring() {
+    Closure beanDefinitions() {
         { ->
 
             def conf = SpringSecurityUtils.securityConfig

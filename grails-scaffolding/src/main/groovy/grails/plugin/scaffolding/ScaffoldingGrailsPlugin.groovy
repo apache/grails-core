@@ -33,9 +33,7 @@ import grails.plugins.metadata.GrailsPluginDescriptor
  *
  * <p>The scaffolding view resolver is contributed by
  * {@link ScaffoldingViewResolverDefinitionPostProcessor}, registered here
- * through {@link #beanRegistrar()} — the modern replacement for the deprecated
- * {@code doWithSpring()} bean DSL, whose absence is also what allows this
- * descriptor to be statically compiled.</p>
+ * through {@link #beanRegistrar()}.</p>
  */
 @CompileStatic
 @GrailsPluginDescriptor(

@@ -66,6 +66,7 @@ import grails.plugins.metadata.GrailsPluginDescriptor
 import groovy.util.logging.Slf4j
 import org.grails.web.config.http.GrailsFilters
 import org.grails.web.mime.HttpServletResponseExtension
+import org.springframework.beans.factory.BeanRegistrar
 import org.springframework.boot.context.properties.bind.Bindable
 import org.springframework.boot.context.properties.bind.Binder
 import org.springframework.boot.web.servlet.FilterRegistrationBean
@@ -165,7 +166,22 @@ class SpringSecurityCoreGrailsPlugin extends Plugin {
 
     private beanTypeResolver
 
-    Closure doWithSpring() {
+    /**
+     * Registers the beans of the plugin, declared in the bean builder DSL by {@link #beanDefinitions()},
+     * through a post-processor that Spring runs before it reads the configuration classes, in plugin
+     * load order.
+     */
+    @Override
+    BeanRegistrar beanRegistrar() {
+        SpringSecurityBeanDefinitions.registrar(this, 'springSecurityCoreBeanDefinitionsPostProcessor') { -> beanDefinitions() }
+    }
+
+    /**
+     * The beans of the Spring Security Core plugin, in the bean builder DSL.
+     *
+     * @return the bean builder closure
+     */
+    Closure beanDefinitions() {
         { ->
             ReflectionUtils.application = SpringSecurityUtils.application = grailsApplication
 
@@ -181,7 +197,7 @@ class SpringSecurityCoreGrailsPlugin extends Plugin {
                 return
             }
 
-            log.trace 'doWithSpring'
+            log.trace 'beanDefinitions'
 
             if (printStatusMessages) {
                 String message = '\nConfiguring Spring Security Core ...'

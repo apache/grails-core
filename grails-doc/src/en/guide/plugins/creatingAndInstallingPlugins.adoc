@@ -146,8 +146,8 @@ The plugin's version is not declared: it is the version of the project that buil
 developers and source locations of a plugin are the publication's, declared in the `grailsPublish` block of
 `build.gradle` and written to its POM.
 
-The plugin's behaviour is the `Plugin` methods it overrides: `beanRegistrar()` (or `doWithSpring()`),
-`doWithApplicationContext()`, `onChange(Map)`, `onConfigChange(Map)`, `onStartup(Map)` and
+The plugin's behaviour is the `Plugin` methods it overrides: `beanRegistrar()`, which with a `beans` block is how a
+plugin registers beans, `doWithApplicationContext()`, `onChange(Map)`, `onConfigChange(Map)`, `onStartup(Map)` and
 `onShutdown(Map)`, described in <<hookingIntoRuntimeConfiguration>> and <<participatingInAutoReloadEvents>>.
 
 [[unmetPluginDependencies]]

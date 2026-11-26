@@ -57,7 +57,7 @@ bb.beans {
 ApplicationContext appContext = bb.createApplicationContext()
 ----
 
-NOTE: Within link:plugins.html[plugins] and the `grails-app/conf/spring/resources.groovy` file you don't need to create a new instance of `BeanBuilder`. Instead the DSL is implicitly available inside the `doWithSpring` and `beans` blocks respectively.
+NOTE: Within the `grails-app/conf/spring/resources.groovy` file and the `doWithSpring` method of the `Application` class you don't need to create a new instance of `BeanBuilder`. Instead the DSL is implicitly available inside the `beans` block and the returned closure respectively. A plugin registers its beans with `beanRegistrar()` instead; see link:plugins.html#hookingIntoRuntimeConfiguration[Hooking into Runtime Configuration].
 
 This example shows how you would configure Hibernate with a data source with the `BeanBuilder` class.
 

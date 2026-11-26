@@ -43,7 +43,6 @@ import org.apache.grails.core.plugins.DefaultPluginDiscovery
 import org.apache.grails.core.plugins.PluginClassFixtures
 import org.apache.grails.core.plugins.PluginInfo
 import org.apache.grails.core.plugins.PluginUtils
-import org.grails.spring.DefaultRuntimeSpringConfiguration
 
 class DefaultGrailsPluginSpec extends Specification {
 
@@ -238,13 +237,8 @@ class DefaultGrailsPluginSpec extends Specification {
                 List<String> events = []
 
                 @Override
-                Closure doWithSpring() {
-                    events << 'doWithSpring'
-                    return { -> }
-                }
-
-                @Override
                 BeanRegistrar beanRegistrar() {
+                    events << 'beanRegistrar'
                     return { registry, env -> } as BeanRegistrar
                 }
 
@@ -273,7 +267,6 @@ class DefaultGrailsPluginSpec extends Specification {
         def descriptor = registered(pluginClass, new ByteArrayResource(new byte[0]))
         def plugin = new DefaultGrailsPlugin(descriptor, grailsApp)
         def appCtx = new GenericApplicationContext()
-        def springConfig = new DefaultRuntimeSpringConfiguration(appCtx)
         def discovery = new DefaultPluginDiscovery([pluginClass] as Class<?>[]).tap {
             loadPluginsFromClasspath = false
         }
@@ -283,7 +276,7 @@ class DefaultGrailsPluginSpec extends Specification {
 
         when: 'lifecycle methods are dispatched through GrailsPlugin and GrailsPluginManager'
         plugin.manager = manager
-        plugin.doWithRuntimeConfiguration(springConfig)
+        def registrar = plugin.beanRegistrar
         plugin.doWithApplicationContext(appCtx)
         plugin.notifyOfEvent(DefaultGrailsPlugin.EVENT_ON_CONFIG_CHANGE, [key: 'val'])
         plugin.notifyOfEvent(DefaultGrailsPlugin.EVENT_ON_SHUTDOWN, [:])
@@ -294,8 +287,8 @@ class DefaultGrailsPluginSpec extends Specification {
         then: 'every hook and aware callback was invoked'
         instance.pluginManager == manager
         instance.applicationContext == appCtx
-        instance.events == ['doWithSpring', 'doWithApplicationContext', 'onConfigChange', 'onShutdown']
-        plugin.beanRegistrar != null
+        instance.events == ['beanRegistrar', 'doWithApplicationContext', 'onConfigChange', 'onShutdown']
+        registrar != null
         manager.getGrailsPlugin('lifecycleStarter').pluginInstance.events.contains('onStartup')
     }
 

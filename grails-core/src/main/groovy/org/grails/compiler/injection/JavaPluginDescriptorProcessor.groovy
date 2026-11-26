@@ -28,6 +28,7 @@ import javax.lang.model.element.Element
 import javax.lang.model.element.ElementKind
 import javax.lang.model.element.Modifier
 import javax.lang.model.element.TypeElement
+import javax.lang.model.type.DeclaredType
 import javax.lang.model.type.TypeMirror
 import javax.tools.Diagnostic
 import javax.tools.StandardLocation
@@ -43,7 +44,8 @@ import org.apache.grails.plugin.descriptor.PluginDescriptorWriter
 /**
  * Writes the descriptors of the plugins a javac compilation produces, beside its classes, once javac has
  * written them all, as {@link PluginDescriptorTransformation} does for Groovy. An annotated class that is
- * not a concrete {@code grails.plugins.Plugin} subclass is reported as an error. The plugin version is
+ * not a concrete {@code grails.plugins.Plugin} subclass is reported as an error, as is a plugin that
+ * declares {@code doWithSpring}, a hook plugins no longer have. The plugin version is
  * the {@code grails.plugin.version} processor option.
  */
 @CompileStatic
@@ -81,9 +83,26 @@ class JavaPluginDescriptorProcessor extends AbstractProcessor {
                 processingEnv.messager.printMessage(Diagnostic.Kind.ERROR,
                         "${element} is annotated with @GrailsPluginDescriptor, so it must be a concrete subclass of ${PLUGIN_CLASS}".toString(),
                         element)
+                continue
+            }
+            for (TypeElement declaring = (TypeElement) element; declaring != null && !declaring.qualifiedName.contentEquals(PLUGIN_CLASS);
+                    declaring = superclassOf(declaring)) {
+                for (Element member : declaring.enclosedElements) {
+                    if (member.kind == ElementKind.METHOD &&
+                            member.simpleName.contentEquals(PluginDescriptorTransformation.REMOVED_BEAN_HOOK)) {
+                        processingEnv.messager.printMessage(Diagnostic.Kind.ERROR,
+                                PluginDescriptorTransformation.removedBeanHookMessage(element.toString()),
+                                declaring.is(element) ? member : element)
+                    }
+                }
             }
         }
         false
+    }
+
+    private TypeElement superclassOf(TypeElement type) {
+        TypeMirror superclass = type.superclass
+        superclass instanceof DeclaredType ? (TypeElement) ((DeclaredType) superclass).asElement() : null
     }
 
     private static void writeDescriptors(ProcessingEnvironment environment) {

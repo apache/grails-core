@@ -39,7 +39,7 @@ class OtherPostProcessorSpec extends Specification {
     static class OtherPostProcessor extends GrailsApplicationPostProcessor {
 
         OtherPostProcessor(PluginDiscovery pluginDiscovery) {
-            super([doWithSpring: { -> null }] as GrailsApplicationLifeCycle, null, pluginDiscovery)
+            super((GrailsApplicationLifeCycle) null, null, pluginDiscovery)
         }
     }
 
