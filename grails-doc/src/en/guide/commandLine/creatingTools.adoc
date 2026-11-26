@@ -59,7 +59,7 @@ dependencies {
 
 * What `grailsCli` holds is on the class path the tools of `src/cli` are compiled and run with, and what `grailsCliStandalone` holds is on that of both folders.
 * Neither scope is on the class path of `src/main` and `grails-app`: code of the application that uses a class of such a library does not compile. A library the application uses itself is declared with `implementation`, as any other.
-* The tests of the project have both folders and both scopes on their class paths, so a spec in `src/test/groovy` can make a tool and call it.
+* The tests of an application have both folders and both scopes on their class paths, so a spec in `src/test/groovy` can make a tool and call it. The `test` phase of a plugin does not: the tool classes of a plugin are not on its class path, so its tests of its tools belong in `src/test-cli` (the phase `testCli`, and `integrationTestCli` for `src/integration-test-cli`).
 
 A tool in `src/standalone` that implements `org.apache.grails.core.cli.ApplicationTool`, or a tool in `src/cli`, `grails-app` or `src/main` that implements `org.apache.grails.core.cli.StandaloneTool`, does not compile, and the error says which folder the tool belongs in. So does a class that implements both, or neither of the two:
 
