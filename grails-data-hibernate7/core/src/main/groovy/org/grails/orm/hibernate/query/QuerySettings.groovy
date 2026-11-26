@@ -35,11 +35,11 @@ import org.hibernate.jpa.AvailableHints
 @RecordOptions(getAt = false, toList = false, toMap = false, size = false)
 record QuerySettings(Map<String, Object> querySettings, Map<String, Object> hints) {
 
-    QuerySettings(Map<String, Object> querySettings, Map<String, Object> hints) {
-        this.querySettings = querySettings == null ?
+    QuerySettings {
+        querySettings = querySettings == null ?
                 Collections.<String, Object> emptyMap() :
                 Collections.unmodifiableMap(new HashMap<String, Object>(querySettings))
-        this.hints = filterHints(hints)
+        hints = filterHints(hints)
     }
 
     static QuerySettings of(Map<String, Object> settings, Map<String, Object> hints) {

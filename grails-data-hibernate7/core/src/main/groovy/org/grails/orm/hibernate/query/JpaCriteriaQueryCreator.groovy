@@ -312,7 +312,7 @@ class JpaCriteriaQueryCreator<T> {
             AbstractQuery<?> cq, Root<?> root, JpaQueryContext context, GrailsHibernatePersistentEntity entity) {
         List<Query.Criterion> criteriaList = detachedCriteria.criteria
         if (!criteriaList.isEmpty()) {
-            discoverAliases(criteriaList, context)
+            aliasRegistrar.discover(criteriaList, context)
             PredicateGenerator predicateGenerator = new PredicateGenerator(criteriaBuilder, conversionService)
             def predicate = predicateGenerator.generate(cq, root, criteriaList, context, entity)
             if (predicate != null) {

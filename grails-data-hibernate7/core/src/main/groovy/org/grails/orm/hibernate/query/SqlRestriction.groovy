@@ -45,7 +45,7 @@ import org.grails.datastore.mapping.query.Query
 @RecordOptions(getAt = false, toList = false, toMap = false, size = false)
 record SqlRestriction(String sql, List<?> values) implements Query.Criterion {
 
-    SqlRestriction(String sql, List<?> values) {
+    SqlRestriction {
         if (sql == null) {
             throw new IllegalArgumentException('The SQL of a sqlRestriction must not be null')
         }
@@ -57,8 +57,7 @@ record SqlRestriction(String sql, List<?> values) implements Query.Criterion {
             }
             copy.add(value instanceof CharSequence ? value.toString() : value)
         }
-        this.sql = sql
-        this.values = Collections.unmodifiableList(copy)
+        values = Collections.unmodifiableList(copy)
     }
 
     /**
