@@ -146,9 +146,38 @@ class GspLineNumberSpec extends Specification {
         'after carriage returns in a page with Windows line breaks' | 'one\r\n${[1,\r 2,\r 3,\r 4,\r\n 5].size()}\r\nfour\r\n<% new no.such.Thing() %>' + AFTER || 5
         'in a page that has carriage returns only, which is one line' | 'one\r<% int a = 1 %>\rthree\r<% new no.such.Thing() %>\rfive\r${1}\r'            || 1
         'because an expression has a bracket that closes nothing' | 'one\n${a]}b\nthree\n'                                                                    || 2
-        'inside a scriptlet of several lines'              | 'one\n<%\n int a = 1\n def x = )\n%>\nsix\n'                        || 2
+        'inside a scriptlet of several lines'              | 'one\n<%\n int a = 1\n def x = )\n%>\nsix\n'                        || 4
+        'on the last line of a scriptlet of several lines' | 'one\n<% int a = 1\n int b = 2\n def x = ) %>\nfive' + AFTER       || 4
+        'inside a scriptlet whose code starts after blank lines' | 'one\n<%\n\n\n def x = )\n%>\nseven' + AFTER               || 5
+        'inside a scriptlet with Windows line breaks'      | 'one\r\n<%\r\n int a = 1\r\n int b = 2\r\n def x = )\r\n%>\r\nseven' + AFTER || 5
+        'inside a scriptlet with carriage returns in it'   | 'one\n<% int a = 1;\r int b = 2;\n int c = 3;\r def x = ) %>\nfour' + AFTER || 3
+        'inside a scriptlet of several lines, after a comment of several lines' | '<%-- a\n b --%>\nthree\n<%\n int a = 1\n def x = )\n%>' + AFTER || 6
+        'inside an expression of several lines'            | 'one\n${[1,\n 2,\n new no.such.Thing()].size()}\nfive' + AFTER     || 4
+        'inside an expression that starts after a line break' | 'one\n${\n\n [1,\n new no.such.Thing()].size()}\nsix' + AFTER || 5
+        'inside an output scriptlet of several lines'      | 'one\n<%= [1,\n 2,\n new no.such.Thing()].size() %>\nfive' + AFTER || 4
         'because a block is left open, in a page that ends with a line break'    | 'one\n<% if (true) { %>\nthree\n' || 3
         'because a block is left open, in a page that ends without a line break' | 'one\n<% if (true) { %>\nthree'   || 3
+    }
+
+    @Unroll
+    void "a scriptlet that fails when it runs #where is mapped to the line it fails on"() {
+        given:
+        GroovyPageTemplate template = (GroovyPageTemplate) engine.createTemplate(source, "runtime${source.hashCode().abs()}")
+
+        when:
+        template.make([:]).writeTo(new StringWriter())
+
+        then: 'the line of the page class in the stack trace is the one of the page in the table of lines, as a view maps it'
+        MissingMethodException e = thrown()
+        StackTraceElement frame = e.stackTrace.find { StackTraceElement each -> each.className == template.metaInfo.pageClass.name }
+        template.metaInfo.lineNumbers[frame.lineNumber - 1] == line
+
+        where:
+        where                                    | source                                                          || line
+        'on the line it opens on'                | 'one\n<% [].nope() %>\nthree\n'                                  || 2
+        'on a later line'                        | 'one\n<%\n int a = 1\n int b = 2\n [].nope()\n%>\nseven\n'     || 5
+        'on a later line, with Windows line breaks' | 'one\r\n<%\r\n int a = 1\r\n [].nope()\r\n%>\r\nsix\r\n' || 4
+        'after a scriptlet of several lines'     | '<%\n int a = 1\n int b = 2\n%>\nfive\n<% [].nope() %>\nseven\n' || 6
     }
 
     void "a scriptlet that does not compile at the end of a page of 5000 lines names line 5000"() {

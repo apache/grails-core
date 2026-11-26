@@ -76,6 +76,32 @@ class GSPWriterSpec extends Specification {
         'a carriage return' | 'a\r'   || 1     | (System.lineSeparator() == '\n' ? 1 : 2)
     }
 
+    @Unroll
+    void "the lines of code of a scriptlet #what are recorded as #lines, and #withCarriageReturns for a compiler that counts a carriage return by itself"() {
+        expect: 'each line of the generated source has the line of the page that its code is on'
+        linesOfPage(false) { GSPWriter writer -> writer.printlnPageText(code, 5) } == lines
+        linesOfPage(true) { GSPWriter writer -> writer.printlnPageText(code, 5) } == withCarriageReturns
+
+        where: 'a line of the page ends with a line feed only'
+        what                                  | code             || lines     | withCarriageReturns
+        'of one line'                         | 'a'              || [5]       | [5]
+        'of three lines'                      | 'a\nb\nc'        || [5, 6, 7] | [5, 6, 7]
+        'with a blank line'                   | 'a\n\nc'         || [5, 6, 7] | [5, 6, 7]
+        'with Windows line breaks'            | 'a\r\nb\r\nc'    || [5, 6, 7] | [5, 6, 7]
+        'with a carriage return by itself'    | 'a\rb\nc'        || [5, 6]    | [5, 5, 6]
+    }
+
+    void "the lines of an expression of several lines are those of the page it is on, and what is printed after it is the line of the token again"() {
+        when:
+        List<Integer> lines = linesOfPage(false) { GSPWriter writer ->
+            writer.printlnToResponse('out', '[1,\n 2,\n 3]', 7)
+            writer.printlnToResponse('out', 'a')
+        }
+
+        then: 'the lines of what is printed for no line of the page are those of the token the parser is at'
+        lines == [7, 8, 9, 1]
+    }
+
     void "the writer of a page counts what the compiler on the class path counts"() {
         when:
         new GroovyShell().parse('/* a\rb */ new no.such.Thing()')
@@ -90,6 +116,12 @@ class GSPWriterSpec extends Specification {
         GSPWriter writer = writer(carriageReturnEndsLine)
         written.each { String each -> writer.print(each) }
         writer.currentLineNumber - 1
+    }
+
+    private static List<Integer> linesOfPage(boolean carriageReturnEndsLine, Closure<?> print) {
+        GSPWriter writer = writer(carriageReturnEndsLine)
+        print(writer)
+        writer.lineNumbers.toList().subList(0, writer.currentLineNumber - 1)
     }
 
     private static GSPWriter writer(boolean carriageReturnEndsLine) {

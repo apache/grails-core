@@ -563,20 +563,35 @@ public class GroovyPageParser implements Tokens {
             return;
         }
 
-        String text = scan.getToken().trim();
-        out.printlnToResponse(text);
+        String token = scan.getToken();
+        out.printlnToResponse(GroovyPage.OUT_STATEMENT, token.trim(), getLineNumberOfTrimmedToken(token));
     }
 
     private void expr() {
         if (!finalPass) return;
 
-        String text = scan.getToken().trim();
-        text = getExpressionText(text);
+        String token = scan.getToken();
+        int line = getLineNumberOfTrimmedToken(token);
+        String text = getExpressionText(token.trim());
         if (text != null && text.length() > 2 && text.startsWith("(") && text.endsWith(")")) {
-            out.printlnToResponse(GroovyPage.EXPRESSION_OUT_STATEMENT, text.substring(1, text.length() - 1));
+            out.printlnToResponse(GroovyPage.EXPRESSION_OUT_STATEMENT, text.substring(1, text.length() - 1), line);
         } else {
-            out.printlnToResponse(GroovyPage.EXPRESSION_OUT_STATEMENT, text);
+            out.printlnToResponse(GroovyPage.EXPRESSION_OUT_STATEMENT, text, line);
         }
+    }
+
+    /**
+     * The line of the page that the text of the token starts on once the white space in front of it is
+     * left out, as {@link String#trim()} leaves it out.
+     */
+    private int getLineNumberOfTrimmedToken(String token) {
+        int line = getCurrentOutputLineNumber();
+        for (int i = 0; i < token.length() && token.charAt(i) <= ' '; i++) {
+            if (token.charAt(i) == '\n') {
+                line++;
+            }
+        }
+        return line;
     }
 
     /**
@@ -1311,8 +1326,15 @@ public class GroovyPageParser implements Tokens {
         if (!finalPass) return;
 
         out.println();
-        write(scan.getToken().trim(), gsp);
-        out.println();
+        String token = scan.getToken();
+        if (gsp) {
+            // the white space of the code is printed as one space, so its lines are one, and a line feed
+            // that is printed for a line break of HTML is none of the page
+            write(token.trim(), true);
+            out.println();
+        } else {
+            out.printlnPageText(token.trim(), getLineNumberOfTrimmedToken(token));
+        }
         out.println();
     }
 

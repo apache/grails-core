@@ -39,6 +39,8 @@ public class GSPWriter extends PrintWriter {
     private GroovyPageParser parse;
     private final boolean carriageReturnEndsLine;
     private boolean afterCarriageReturn;
+    // the line of the page that the text of the page being printed is on, or 0 when no text of the page is
+    private int pageLine;
 
     public GSPWriter(Writer out, GroovyPageParser parse) {
         this(out, parse, GroovyCompilerLines.carriageReturnEndsLine());
@@ -91,6 +93,10 @@ public class GSPWriter extends PrintWriter {
                 addLineNumber();
             }
             afterCarriageReturn = false;
+            // a line feed of the text of a page is the one that ends a line of the page
+            if (pageLine > 0) {
+                pageLine++;
+            }
         } else if (c == '\r' && carriageReturnEndsLine) {
             addLineNumber();
             afterCarriageReturn = true;
@@ -104,6 +110,18 @@ public class GSPWriter extends PrintWriter {
     }
 
     public void printlnToResponse(String outVarName, String s) {
+        printlnToResponse(outVarName, s, 0);
+    }
+
+    /**
+     * Prints, as {@link #printlnToResponse(String, String)} does, an expression that has the text of an
+     * expression of the page in it, as it is in the page.
+     *
+     * @param line the line of the page that the text of the expression starts on, so that each line of
+     * the generated source is recorded with the line of the page it has the text of; 0 records each with
+     * the line of the page that the token the parser is at starts on
+     */
+    void printlnToResponse(String outVarName, String s, int line) {
         if (GrailsStringUtils.isEmpty(s)) {
             return;
         }
@@ -111,9 +129,24 @@ public class GSPWriter extends PrintWriter {
         parse.flushTagBuffering();
         super.print(outVarName);
         super.print(".print(");
+        pageLine = line;
         super.print(s);
         super.print(")");
         println();
+        pageLine = 0;
+    }
+
+    /**
+     * Prints the code of a scriptlet as it is in the page and ends the line it ends on. Each line of the
+     * generated source is recorded with the line of the page it has the code of.
+     *
+     * @param line the line of the page that the code starts on
+     */
+    void printlnPageText(String text, int line) {
+        pageLine = line;
+        print(text);
+        println();
+        pageLine = 0;
     }
 
     public void printlnToBuffer(String s, int index) {
@@ -137,7 +170,7 @@ public class GSPWriter extends PrintWriter {
         if (lineNumber > lineNumbers.length) {
             lineNumbers = (int[]) resizeArray(lineNumbers, lineNumbers.length * 2);
         }
-        lineNumbers[lineNumber - 1] = parse.getCurrentOutputLineNumber();
+        lineNumbers[lineNumber - 1] = pageLine > 0 ? pageLine : parse.getCurrentOutputLineNumber();
         lineNumber++;
     }
 
