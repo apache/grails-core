@@ -54,12 +54,15 @@ class GspLongTextEscapeSpec extends Specification {
     }
 
     @Unroll
-    void "an expression after #length characters of text is evaluated"() {
+    void "#lookalike after #length characters of text is not an escaped expression and is written as it is"() {
+        given:
+        String text = 'x' * length
+
         expect:
-        render('x' * length + '${1 + 1}$ {\\$ \\{') == 'x' * length + '2$ {\\$ \\{'
+        render(text + lookalike + ' and ${1 + 1}') == text + lookalike + ' and 2'
 
         where:
-        length << (63_996..64_002)
+        [length, lookalike] << [63_997..64_000, ['\\$ {a}', '\\{a}', '$\\{a}']].combinations()
     }
 
     @Unroll
