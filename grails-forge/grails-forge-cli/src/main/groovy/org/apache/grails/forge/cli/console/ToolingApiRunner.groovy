@@ -66,7 +66,9 @@ import org.gradle.tooling.ResultHandler
  * console is left. It is replaced when a command is run for another project, and when the file that
  * names the Gradle of the project has changed, as after {@code update-wrapper}. The checks of the
  * wrapper are made before every build all the same, and a build that failed or was cancelled leaves
- * the connection as it was.</p>
+ * the connection as it was. Closing a connection waits for the builds it still runs, for
+ * {@link #CLOSE_SECONDS} at most, and then gives the connection up: a build that does not end, such
+ * as a continuous build nothing cancelled, does not keep the command line waiting for good.</p>
  *
  * <p><strong>What the build is given.</strong> The arguments as the command put them together, tasks
  * and options alike, in their order, after what the command line adds in front of them as the wrapper is
@@ -103,6 +105,15 @@ final class ToolingApiRunner extends GradleBuild {
     private static final String BUILD_SOURCES = 'buildSrc'
     private static final int MAX_PROPERTIES = 64 * 1024
     private static final int STOP_SECONDS = 10
+
+    /**
+     * How long closing a connection waits for the builds it still runs before it gives up on the connection: a
+     * build that was not cancelled, or that went on when it was, as a continuous build can, would keep it waiting
+     * for good.
+     */
+    static final int CLOSE_SECONDS = 60
+
+    private static volatile int closeSeconds = CLOSE_SECONDS
     // what the program gradle reads itself, before there is a build to give an argument to
     private static final List<String> OF_THE_PROGRAM = ['--daemon', '--no-daemon', '--status', '--stop', '--foreground', '--gui',
                                                         '-g', '--gradle-user-home', '-p', '--project-dir', '-b', '--build-file', '-c', '--settings-file']
@@ -179,17 +190,28 @@ final class ToolingApiRunner extends GradleBuild {
 
     /**
      * Closes the connection the interactive console kept, when there is one. The console does it when it is left.
+     * Closing waits for the builds the connection still runs, for {@link #CLOSE_SECONDS} at most, and then gives the
+     * connection up, so that nothing waits for a build that does not end.
+     *
+     * @return whether the connection closed, or there was none; {@code false} when it was given up on
      */
-    static void closeConnections() {
+    static boolean closeConnections() {
         ProjectConnection closed
         synchronized (KEPT) {
             closed = kept
             kept = null
             keptFor = null
         }
-        if (closed != null) {
-            close(closed)
-        }
+        return closed == null || close(closed)
+    }
+
+    /**
+     * Sets how long closing a connection waits before it gives the connection up, for a specification.
+     *
+     * @param seconds the seconds, or {@code null} for {@link #CLOSE_SECONDS}
+     */
+    static void setCloseSeconds(Integer seconds) {
+        closeSeconds = seconds == null ? CLOSE_SECONDS : seconds
     }
 
     /**
@@ -467,11 +489,55 @@ final class ToolingApiRunner extends GradleBuild {
         }
     }
 
-    private static void close(ProjectConnection connection) {
-        try {
-            connection.close()
-        } catch (RuntimeException ignored) {
-            // nothing is asked of it again
+    // Closes the connection, which waits until the builds it runs have ended, in a thread of its own, and gives it up when
+    // that has not happened in time: the thread is left to it, and does not keep the JVM from ending. Says whether it closed.
+    private static boolean close(ProjectConnection open) {
+        Closing closing = new Closing(open)
+        Thread thread = new Thread(closing, 'grails-gradle-close')
+        thread.setDaemon(true)
+        thread.start()
+        boolean closed = closing.await(closeSeconds)
+        if (!closed && Diagnostics.isOn()) {
+            connection("given up on: a build it runs did not end within ${closeSeconds} seconds of closing it".toString())
+        }
+        return closed
+    }
+
+    /** Closes a connection, and says when it has. */
+    private static final class Closing implements Runnable {
+
+        private final ProjectConnection connection
+        private final CountDownLatch closed = new CountDownLatch(1)
+
+        Closing(ProjectConnection connection) {
+            this.connection = connection
+        }
+
+        // whether the connection closed within the seconds; a thread that was interrupted, as that of a cancelled command
+        // is, waits all the same, as for a cancelled build, and keeps its interrupt
+        boolean await(int seconds) {
+            boolean interrupted = Thread.interrupted()
+            try {
+                return closed.await(seconds, TimeUnit.SECONDS)
+            } catch (InterruptedException ignored) {
+                interrupted = true
+                return false
+            } finally {
+                if (interrupted) {
+                    Thread.currentThread().interrupt()
+                }
+            }
+        }
+
+        @Override
+        void run() {
+            try {
+                connection.close()
+            } catch (RuntimeException ignored) {
+                // nothing is asked of it again
+            } finally {
+                closed.countDown()
+            }
         }
     }
 

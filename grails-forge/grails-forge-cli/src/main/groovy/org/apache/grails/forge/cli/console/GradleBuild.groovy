@@ -265,10 +265,13 @@ abstract class GradleBuild {
 
     /**
      * Closes what was kept open between the builds of the interactive console, which is the
-     * connection to the Gradle of the project. The console does it when it is left.
+     * connection to the Gradle of the project. The console does it when it is left. A connection
+     * a build still runs on is given up on after a while, so that leaving does not wait for good.
+     *
+     * @return whether everything closed; {@code false} when a connection was given up on
      */
-    static void closeConnections() {
-        ToolingApiRunner.closeConnections()
+    static boolean closeConnections() {
+        return ToolingApiRunner.closeConnections()
     }
 
     /** Called by what runs a build when a command begins to wait for it. */

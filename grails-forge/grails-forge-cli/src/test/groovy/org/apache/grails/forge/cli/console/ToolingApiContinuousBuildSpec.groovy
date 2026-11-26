@@ -36,6 +36,10 @@ import spock.util.concurrent.PollingConditions
  * user types into, and a continuous build of that kind ends when its input ends. So where nothing
  * may be read, the build is given no input at all, and not an input that has ended.</p>
  *
+ * <p>Closing the connection of the console waits for a build that runs on it for a while, and then
+ * gives the connection up: a continuous build nothing cancelled does not keep the console, or this
+ * specification, waiting for good.</p>
+ *
  * <p>The build is a build of Gradle itself, with a daemon of its own that the features share, see
  * {@link IsolatedGradle}.</p>
  */
@@ -69,6 +73,8 @@ class ToolingApiContinuousBuildSpec extends CommandSpec {
     ByteArrayOutputStream out = new ByteArrayOutputStream()
     File watched
     File ran
+    // the thread of the command of a feature, which a feature that failed may leave running its build
+    Thread command
 
     void setup() {
         originalOut = System.out
@@ -86,14 +92,24 @@ class ToolingApiContinuousBuildSpec extends CommandSpec {
     }
 
     void cleanup() {
+        // a feature that failed before it cancelled its command leaves the continuous build running, which the connection
+        // would wait for when it is closed: the command is cancelled, as the console cancels it
+        boolean stillRunning = command?.alive
+        if (stillRunning) {
+            command.interrupt()
+            command.join(60_000)
+        }
         ConsoleCommands.setInteractive(false)
-        GradleBuild.closeConnections()
+        boolean closed = GradleBuild.closeConnections()
+        ToolingApiRunner.setCloseSeconds(null)
         GradleBuild.setRunner(null)
         GradleBuild.setNonInteractive(false)
         GradleBuild.outputOfProcess(null, null)
         System.setOut(originalOut)
         System.setErr(originalErr)
         System.setIn(originalIn)
+        assert closed : "The connection to the Gradle of the feature did not close within ${ToolingApiRunner.CLOSE_SECONDS} seconds, and was given up on: " +
+                "a build still ran on it${stillRunning ? ', also after the command of the feature was cancelled' : ''}"
     }
 
     void cleanupSpec() {
@@ -112,7 +128,7 @@ class ToolingApiContinuousBuildSpec extends CommandSpec {
         }
         AtomicInteger exit = new AtomicInteger(-1)
         String[] line = (options + ['test-app', '--continuous']) as String[]
-        Thread command = new Thread({ exit.set(ForgeCli.execute(beanContext, line)) })
+        command = new Thread({ exit.set(ForgeCli.execute(beanContext, line)) })
 
         when: 'the first build has run'
         command.start()
@@ -159,6 +175,40 @@ class ToolingApiContinuousBuildSpec extends CommandSpec {
         'in the interactive console with --non-interactive'                    | GradleBuild.AUTO          | true    | false   | ['--non-interactive']
         'where a caller runs the command line in its own JVM'                  | GradleBuild.TOOLING_API   | false   | false   | []
         'in a program that runs one command with --non-interactive'            | GradleBuild.TOOLING_API   | false   | true    | ['--non-interactive']
+    }
+
+    void "the connection of the console is given up on when a build that runs on it does not end in time, and the build ends when its command is cancelled"() {
+        given: 'the interactive console, which keeps its connection, and a continuous build on it that nothing cancels'
+        GradleBuild.setRunner(GradleBuild.AUTO)
+        ConsoleCommands.setInteractive(true)
+        ToolingApiRunner.setCloseSeconds(30)
+        AtomicInteger exit = new AtomicInteger(-1)
+        command = new Thread({ exit.set(ForgeCli.execute(beanContext, 'test-app', '--continuous')) })
+        command.start()
+        new PollingConditions(timeout: 300, delay: 0.2).eventually {
+            assert ran.isFile() && ran.readLines() == ['first']
+            assert out.toString().contains('Waiting for changes to input files')
+        }
+
+        when: 'the connection is closed, as the console closes it when it is left'
+        long before = System.nanoTime()
+        boolean closed = GradleBuild.closeConnections()
+        long waited = (System.nanoTime() - before).intdiv(1_000_000_000L)
+
+        then: 'it is given up on after the time closing is given, and not waited for for good'
+        !closed
+        waited < 120
+        command.alive
+
+        when: 'the command is cancelled'
+        command.interrupt()
+        command.join(60_000)
+
+        then: 'the build ends as a cancelled one does'
+        !command.alive
+        exit.get() == 1
+        errors() == ['| Error Gradle was stopped before it finished, because the command was cancelled']
+        !GradleBuild.isRunning()
     }
 
     private List<String> errors() {
