@@ -37,7 +37,8 @@ import org.grails.forge.utils.CommandSpec
  * {@code <artifact>-cli-standalone} with the tool of {@code src/standalone}, which does not. A generated
  * application that depends on the plugin has both companions without a line for either, and runs a tool of
  * each kind. The plugin is published to a directory of the test, so nothing is written to the local Maven
- * repository of whoever runs the spec.
+ * repository of whoever runs the spec, and as a snapshot, which the publish plugin does not sign: a release would
+ * need the signing key of whoever runs the spec.
  */
 class ToolsPluginProjectSpec extends CommandSpec {
 
@@ -79,25 +80,25 @@ class ToolsPluginProjectSpec extends CommandSpec {
         File repository = new File(plugin, 'build/published-by-the-spec')
 
         when: 'the plugin is published to the repository of the test'
-        BuildResult published = executeGradle('publish', '-Pversion=0.1', "-PmavenPublishUrl=${repository.toURI()}".toString())
+        BuildResult published = executeGradle('publish', '-Pversion=0.1-SNAPSHOT', "-PmavenPublishUrl=${repository.toURI()}".toString())
         File group = new File(repository, 'example/grails')
 
         then: 'the plugin and its two companions'
         published.output.contains('BUILD SUCCESSFUL')
-        [artifact, "${artifact}-cli", "${artifact}-cli-standalone"].every { String name -> new File(group, "${name}/0.1/${name}-0.1.jar").isFile() }
+        [artifact, "${artifact}-cli", "${artifact}-cli-standalone"].every { String name -> publishedFile(group, name, '.jar') != null }
 
         and: 'the companion of the tools the build runs depends on the plugin and on the other companion; the standalone one on neither'
-        String cliPom = new File(group, "${artifact}-cli/0.1/${artifact}-cli-0.1.pom").text
-        String standalonePom = new File(group, "${artifact}-cli-standalone/0.1/${artifact}-cli-standalone-0.1.pom").text
+        String cliPom = publishedFile(group, "${artifact}-cli", '.pom').text
+        String standalonePom = publishedFile(group, "${artifact}-cli-standalone", '.pom').text
         cliPom.contains("<artifactId>${artifact}</artifactId>")
         cliPom.contains("<artifactId>${artifact}-cli-standalone</artifactId>")
         !standalonePom.contains("<artifactId>${artifact}</artifactId>")
         standalonePom.contains('<artifactId>grails-core-cli</artifactId>')
 
         and: 'each tool is in its companion, and none is in the plugin'
-        entries(new File(group, "${artifact}-cli/0.1/${artifact}-cli-0.1.jar")).contains('example/grails/HelloTool.class')
-        entries(new File(group, "${artifact}-cli-standalone/0.1/${artifact}-cli-standalone-0.1.jar")).contains('example/grails/PlainTool.class')
-        !entries(new File(group, "${artifact}/0.1/${artifact}-0.1.jar")).any { it.endsWith('/HelloTool.class') || it.endsWith('/PlainTool.class') }
+        entries(publishedFile(group, "${artifact}-cli", '.jar')).contains('example/grails/HelloTool.class')
+        entries(publishedFile(group, "${artifact}-cli-standalone", '.jar')).contains('example/grails/PlainTool.class')
+        !entries(publishedFile(group, artifact, '.jar')).any { it.endsWith('/HelloTool.class') || it.endsWith('/PlainTool.class') }
 
         when: 'a generated application depends on the plugin, from the repository of the test, and nothing else of it'
         File application = Files.createTempDirectory('testtoolsapplication').toFile()
@@ -108,7 +109,7 @@ class ToolsPluginProjectSpec extends CommandSpec {
                 maven { url = uri('${repository.toURI()}') }
             }
             dependencies {
-                implementation 'example.grails:${artifact}:0.1'
+                implementation 'example.grails:${artifact}:0.1-SNAPSHOT'
             }
             """.stripIndent()
         dir = application
@@ -134,8 +135,8 @@ class ToolsPluginProjectSpec extends CommandSpec {
 
         and: 'the standalone tool is started with its companion, and with nothing of the plugin'
         record.contains('"plain"')
-        record.contains("${artifact}-cli-standalone-0.1.jar")
-        !record.contains("${artifact}-0.1.jar")
+        record.contains("/${artifact}-cli-standalone-0.1-")
+        !record.contains("/${artifact}-0.1-")
 
         cleanup:
         plugin?.deleteDir()
@@ -145,6 +146,12 @@ class ToolsPluginProjectSpec extends CommandSpec {
         File file = new File(project, path)
         file.parentFile.mkdirs()
         file.text = text.stripIndent()
+    }
+
+    // the jar or the POM of a module of the snapshot the spec published, whose names have the time of the publish
+    private static File publishedFile(File group, String module, String ending) {
+        File[] files = new File(group, "${module}/0.1-SNAPSHOT").listFiles()
+        return files?.find { File file -> file.name.startsWith("${module}-0.1-") && file.name.endsWith(ending) && !file.name.endsWith("-sources${ending}") && !file.name.endsWith("-javadoc${ending}") }
     }
 
     private static List<String> entries(File jar) {
