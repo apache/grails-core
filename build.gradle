@@ -52,6 +52,7 @@ ext {
     docProjects = [ /* Will be populated by subprojects loop below */]
     cliProjects = [ /* Will be populated by subprojects loop below */]
     profileProjects = [ /* Will be populated by subprojects loop below */]
+    skillProjects = [ /* Will be populated by subprojects loop below */]
 }
 
 subprojects {
@@ -72,6 +73,10 @@ subprojects {
 
     if (name.startsWith('grails-profiles')) {
         rootProject.ext['profileProjects'] << name
+    }
+
+    if (name.startsWith('grails-skills')) {
+        rootProject.ext['skillProjects'] << name
     }
 
     configurations.configureEach {

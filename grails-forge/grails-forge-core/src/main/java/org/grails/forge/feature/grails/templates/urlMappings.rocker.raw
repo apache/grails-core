@@ -27,6 +27,7 @@ package @project.getPackageName()
 class UrlMappings {
     static mappings = {
 @if(applicationType == ApplicationType.WEB || applicationType == ApplicationType.WEB_PLUGIN) {
+        "/$namespace/$controller/$action?/$id?(.$format)?" {}
         "/$controller/$action?/$id?(.$format)?"{
             constraints {
                 // apply constraints here

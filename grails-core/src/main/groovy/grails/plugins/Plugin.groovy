@@ -50,7 +50,7 @@ abstract class Plugin implements GrailsApplicationLifeCycle, GrailsApplicationAw
      */
     GrailsApplication grailsApplication
     /**
-     * The {@link GrailsPlugin} definition for this plugin
+     * The {@link grails.plugins.GrailsPlugin} definition for this plugin
      */
     GrailsPlugin plugin
     /**
@@ -75,7 +75,7 @@ abstract class Plugin implements GrailsApplicationLifeCycle, GrailsApplicationAw
     /**
      * Whether the plugin is enabled
      */
-    boolean enabled = true
+    public boolean enabled = true
 
     /**
      * List of {@link ArtefactHandler} instances provided by this plugin

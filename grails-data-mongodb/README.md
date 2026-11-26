@@ -27,3 +27,11 @@ For the current development version see the following links:
 * [Snapshot Documentation](https://grails.apache.org/docs/snapshot/grails-data/mongodb/manual/)
 * [Snapshot API](https://grails.apache.org/docs/snapshot/api)
 
+## Running the tests
+
+The tests start MongoDB in a Docker container through Testcontainers: one container for each test worker, shared by the specs that worker runs, and removed when the worker ends. Gradle starts three quarters of the processor count of workers, which is seven on a ten core machine, so on a Docker VM with little memory give the suite fewer of them:
+
+```bash
+./gradlew :grails-data-mongodb-core:test -PmaxTestParallel=2
+```
+

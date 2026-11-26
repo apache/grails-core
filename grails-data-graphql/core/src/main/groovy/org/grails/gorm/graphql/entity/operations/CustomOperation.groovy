@@ -19,7 +19,10 @@
 
 package org.grails.gorm.graphql.entity.operations
 
-import graphql.schema.*
+import graphql.schema.DataFetcher
+import graphql.schema.GraphQLFieldDefinition
+import graphql.schema.GraphQLInputType
+import graphql.schema.GraphQLOutputType
 import groovy.transform.CompileStatic
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity

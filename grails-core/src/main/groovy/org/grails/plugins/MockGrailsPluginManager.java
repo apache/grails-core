@@ -28,6 +28,7 @@ import grails.core.DefaultGrailsApplication;
 import grails.core.GrailsApplication;
 import grails.plugins.GrailsPlugin;
 import grails.plugins.exceptions.PluginException;
+import org.apache.grails.core.plugins.PluginDiscovery;
 
 /**
  * @author Graeme Rocher
@@ -35,7 +36,11 @@ import grails.plugins.exceptions.PluginException;
  */
 public class MockGrailsPluginManager extends AbstractGrailsPluginManager {
     public MockGrailsPluginManager(GrailsApplication application) {
-        super(application);
+        this(application, new MockPluginDiscovery());
+    }
+
+    public MockGrailsPluginManager(GrailsApplication application, PluginDiscovery pluginDiscovery) {
+        super(application, pluginDiscovery);
         loadPlugins();
     }
 
@@ -59,7 +64,7 @@ public class MockGrailsPluginManager extends AbstractGrailsPluginManager {
 
     public void registerMockPlugin(GrailsPlugin plugin) {
         plugins.put(plugin.getName(), plugin);
-        pluginList.add(plugin);
+        ((MockPluginDiscovery) pluginDiscovery).registerMockPlugin(plugin);
     }
 
     public GrailsPlugin[] getUserPlugins() {
@@ -67,6 +72,23 @@ public class MockGrailsPluginManager extends AbstractGrailsPluginManager {
     }
 
     public void loadPlugins() throws PluginException {
+        if (initialised) {
+            return;
+        }
+
+        pluginDiscovery.getPluginsInLoadOrder().forEach(pluginInfo -> {
+            GrailsPlugin plugin;
+            if (pluginInfo.isDynamic()) {
+                plugin = new DefaultGrailsPlugin(pluginInfo.getPluginClass(), application);
+            } else {
+                plugin = new BinaryGrailsPlugin(pluginInfo.getPluginClass(), pluginInfo.getPluginDescriptor(), application);
+            }
+
+            plugin.setApplicationContext(applicationContext);
+            plugin.setManager(this);
+            plugins.put(plugin.getName(), plugin);
+        });
+
         initialised = true;
     }
 

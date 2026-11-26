@@ -96,6 +96,8 @@ ext {
             'commons-compress.version'      : '1.28.0',
             'commons-lang3.version'         : '3.20.0',
             'geb-spock.version'             : '8.0.1',
+            'graphql-java.version'          : '24.4',
+            'graphql-java-extended-scalars.version': '24.0',
             'groovy.version'                : '4.0.33',
             // Security: 33.7.2 fixes CVE-2026-102554, unbounded allocation when deserializing CompactHashMap,
             // CompactHashSet and MapMakerInternalMap.
@@ -164,9 +166,8 @@ ext {
             'spock.version'                 : '2.3-groovy-4.0',
             'scribejava.version'            : '8.3.3',
             'sitemesh.version'              : '2.6.0',
-            // Do not upgrade to 3.2.3 until cleared by the sitemesh author. 3.2.3 is not a small patch:
-            // it adds a spring-webmvc-sitemesh module and an opt-in view-resolver integration.
-            'starter-sitemesh.version'      : '3.2.2',
+            'starter-sitemesh.version'      : '3.2.3',
+            'spring-webmvc-sitemesh.version': '3.2.3',
             // Security: overrides spring-boot-dependencies (10.1.55). 10.1.61 fixes CVE-2026-101356 (HTTP/2
             // request/response mix-up after an async error) and CVE-2026-101296 (JNDIRealm bind validation fails
             // open), and retains the 10.1.60 fixes for CVE-2026-65905, CVE-2026-65182, CVE-2026-68525 and
@@ -191,11 +192,13 @@ ext {
             'bootstrap'                   : "org.webjars.npm:bootstrap:${bomDependencyVersions['bootstrap.version']}",
             'bootstrap-icons'             : "org.webjars.npm:bootstrap-icons:${bomDependencyVersions['bootstrap-icons.version']}",
             'cas-client-core'             : "org.apereo.cas.client:cas-client-core:${bomDependencyVersions['cas-client-core.version']}",
-            'commons-codec'                                : "commons-codec:commons-codec:${bomDependencyVersions['commons-codec.version']}",
-            'commons-compress'                             : "org.apache.commons:commons-compress:${bomDependencyVersions['commons-compress.version']}",
+            'commons-codec'               : "commons-codec:commons-codec:${bomDependencyVersions['commons-codec.version']}",
+            'commons-compress'            : "org.apache.commons:commons-compress:${bomDependencyVersions['commons-compress.version']}",
             'commons-lang3'               : "org.apache.commons:commons-lang3:${bomDependencyVersions['commons-lang3.version']}",
             'geb-spock'                   : "org.apache.groovy.geb:geb-spock:${bomDependencyVersions['geb-spock.version']}",
             'h2'                                           : "com.h2database:h2:${bomDependencyVersions['h2.version']}",
+            'graphql-java'                : "com.graphql-java:graphql-java:${bomDependencyVersions['graphql-java.version']}",
+            'graphql-java-extended-scalars': "com.graphql-java:graphql-java-extended-scalars:${bomDependencyVersions['graphql-java-extended-scalars.version']}",
             // start - restate the groovy-bom includes here because the spring dependency management will pick the library from spring-boot-dependencies otherwise
             'groovy'                      : "org.apache.groovy:groovy:${bomDependencyVersions['groovy.version']}",
             'groovy-ant'                  : "org.apache.groovy:groovy-ant:${bomDependencyVersions['groovy.version']}",
@@ -300,6 +303,7 @@ ext {
             'scribejava-core'                                : "com.github.scribejava:scribejava-core:${bomDependencyVersions['scribejava.version']}",
             'sitemesh'                                       : "opensymphony:sitemesh:${bomDependencyVersions['sitemesh.version']}",
             'starter-sitemesh'                               : "org.sitemesh:spring-boot-starter-sitemesh:${bomDependencyVersions['starter-sitemesh.version']}",
+            'spring-webmvc-sitemesh'                         : "org.sitemesh:spring-webmvc-sitemesh:${bomDependencyVersions['spring-webmvc-sitemesh.version']}",
             // Security override of spring-boot-dependencies - see tomcat.version
             'tomcat-annotations-api'                         : "org.apache.tomcat:tomcat-annotations-api:${bomDependencyVersions['tomcat.version']}",
             'tomcat-jdbc'                                    : "org.apache.tomcat:tomcat-jdbc:${bomDependencyVersions['tomcat.version']}",
@@ -353,8 +357,6 @@ ext {
         combinedVersions += customBomVersions
         customBomDependencies = [
                 'javaparser-core': "com.github.javaparser:javaparser-core:${combinedVersions['javaparser-core.version']}",
-                'asm'            : "org.ow2.asm:asm:${combinedVersions['asm.version']}",
-                'asm-util'       : "org.ow2.asm:asm-util:${combinedVersions['asm.version']}",
         ]
         combinedDependencies += customBomDependencies
     }

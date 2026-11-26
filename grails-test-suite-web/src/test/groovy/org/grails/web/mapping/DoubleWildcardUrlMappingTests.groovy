@@ -28,13 +28,14 @@ import spock.lang.Specification
  */
 class DoubleWildcardUrlMappingTests extends Specification implements UrlMappingsUnitTest<UrlMappings> {
 
-
+    Class[] getControllersToMock() {
+        [SomeOtherController, DoubleWildCardController, WikiController]
+    }
 
     void testDoubleWildcardWithMatchingController() {
         given:
         def holder = urlMappingsHolder
         assert webRequest
-
         when:
         def infos = holder.matchAll('/someOther/index')
 
@@ -48,17 +49,12 @@ class DoubleWildcardUrlMappingTests extends Specification implements UrlMappings
         then:
         'someOther' == info.getControllerName()
 
-        when:
-        infos = holder.matchAll('/someOther/1+2')
-
-        then:
-        assert infos
-
-        when:
+        when: "matching a URL with + character in the action name using delegate to test URL encoding"
+        infos = holder.urlMappingsHolderDelegate.matchAll('/someOther/1+2')
         info = infos[0]
         info.configure webRequest
 
-        then:
+        then: "the + character is preserved in the action name"
         'someOther' == info.getControllerName()
         '1+2' == info.getActionName()
 
@@ -197,8 +193,15 @@ class DoubleWildcardUrlMappingTests extends Specification implements UrlMappings
 
 }
 
+@grails.artefact.Artefact('Controller')
 class SomeOtherController {
+    @grails.web.Action
     def index() {}
+}
+
+@grails.artefact.Artefact('Controller')
+class WikiController {
+    def show() {}
 }
 
 @grails.artefact.Artefact('Controller')

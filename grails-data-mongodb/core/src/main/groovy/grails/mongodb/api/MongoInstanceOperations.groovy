@@ -27,7 +27,10 @@ import grails.gorm.api.GormInstanceOperations
  * Instance methods for GORM for MongoDB
  * @author Graeme Rocher
  * @since 6.0
+ * @deprecated The sole getDbo method is deprecated and will be removed in a future release.
+ *             Use dynamic properties instead to access the underlying Document.
  */
+@Deprecated(forRemoval = true)
 interface MongoInstanceOperations<D> extends GormInstanceOperations<D> {
 
     /**
@@ -37,6 +40,6 @@ interface MongoInstanceOperations<D> extends GormInstanceOperations<D> {
      * @param instance The instance
      * @return The DBObject instance
      */
-    @Deprecated
+    @Deprecated(forRemoval = true)
     Document getDbo(D instance)
 }

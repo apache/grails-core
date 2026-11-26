@@ -377,4 +377,220 @@ class Gadget {
         thrown(IllegalStateException)
     }
 
+    void "test service auto-inherits datasource from domain mapping"() {
+        when: "a service targets a domain with datasource 'secondary' but has no @Transactional(connection)"
+        def service = new GroovyClassLoader().parseClass('''
+import grails.gorm.services.Service
+import grails.gorm.annotation.Entity
+import grails.gorm.transactions.Transactional
+
+@Service(AutoWidget)
+abstract class AutoWidgetService {
+
+    abstract AutoWidget save(AutoWidget widget)
+
+    abstract AutoWidget find(Serializable id)
+
+    abstract AutoWidget delete(Serializable id)
+}
+
+@Entity
+class AutoWidget {
+    String name
+
+    static mapping = {
+        datasource 'secondary'
+    }
+}
+''')
+
+        then: "the class compiles without errors"
+        !service.isInterface()
+
+        when: "the implementation is loaded"
+        def impl = service.classLoader.loadClass('$AutoWidgetServiceImplementation')
+
+        then: "the implementation inherits @Transactional(connection) from the domain datasource"
+        impl != null
+        impl.getAnnotation(Transactional) != null
+        impl.getAnnotation(Transactional).connection() == 'secondary'
+    }
+
+    void "test interface service auto-inherits datasource from domain mapping"() {
+        when: "an interface service targets a domain with datasource 'secondary' but has no @Transactional(connection)"
+        def service = new GroovyClassLoader().parseClass('''
+import grails.gorm.services.Service
+import grails.gorm.annotation.Entity
+import grails.gorm.transactions.Transactional
+
+@Service(AutoGadget)
+interface AutoGadgetService {
+
+    AutoGadget save(AutoGadget gadget)
+
+    AutoGadget find(Serializable id)
+
+    AutoGadget delete(Serializable id)
+}
+
+@Entity
+class AutoGadget {
+    String label
+
+    static mapping = {
+        datasource 'secondary'
+    }
+}
+''')
+
+        then: "the interface compiles without errors"
+        service.isInterface()
+
+        when: "the implementation is loaded"
+        def impl = service.classLoader.loadClass('$AutoGadgetServiceImplementation')
+
+        then: "the implementation inherits @Transactional(connection) from the domain datasource"
+        impl != null
+        impl.getAnnotation(Transactional) != null
+        impl.getAnnotation(Transactional).connection() == 'secondary'
+    }
+
+    void "test explicit @Transactional(connection) wins over domain datasource"() {
+        when: "a service has explicit @Transactional(connection='primary') but domain has datasource 'secondary'"
+        def service = new GroovyClassLoader().parseClass('''
+import grails.gorm.services.Service
+import grails.gorm.annotation.Entity
+import grails.gorm.transactions.Transactional
+
+@Service(ExplicitItem)
+@Transactional(connection = 'primary')
+abstract class ExplicitItemService {
+
+    abstract ExplicitItem save(ExplicitItem item)
+}
+
+@Entity
+class ExplicitItem {
+    String name
+
+    static mapping = {
+        datasource 'secondary'
+    }
+}
+''')
+
+        then: "the class compiles without errors"
+        !service.isInterface()
+
+        when: "the implementation is loaded"
+        def impl = service.classLoader.loadClass('$ExplicitItemServiceImplementation')
+
+        then: "the explicit connection annotation wins"
+        impl != null
+        impl.getAnnotation(Transactional) != null
+        impl.getAnnotation(Transactional).connection() == 'primary'
+    }
+
+    void "test service with domain on default datasource gets no connection annotation"() {
+        when: "a service targets a domain with no datasource mapping (default)"
+        def service = new GroovyClassLoader().parseClass('''
+import grails.gorm.services.Service
+import grails.gorm.annotation.Entity
+import grails.gorm.transactions.Transactional
+
+@Service(DefaultItem)
+abstract class DefaultItemService {
+
+    abstract DefaultItem save(DefaultItem item)
+}
+
+@Entity
+class DefaultItem {
+    String name
+}
+''')
+
+        then: "the class compiles without errors"
+        !service.isInterface()
+
+        when: "the implementation is loaded"
+        def impl = service.classLoader.loadClass('$DefaultItemServiceImplementation')
+
+        then: "no @Transactional(connection) is added"
+        impl != null
+        def txAnn = impl.getAnnotation(Transactional)
+        txAnn == null || txAnn.connection() == ''
+    }
+
+    void "test service auto-inherits connection from domain using connection() method"() {
+        when: "a domain uses connection() instead of datasource() in its mapping"
+        def service = new GroovyClassLoader().parseClass('''
+import grails.gorm.services.Service
+import grails.gorm.annotation.Entity
+import grails.gorm.transactions.Transactional
+
+@Service(ConnItem)
+abstract class ConnItemService {
+
+    abstract ConnItem save(ConnItem item)
+}
+
+@Entity
+class ConnItem {
+    String name
+
+    static mapping = {
+        connection 'warehouse'
+    }
+}
+''')
+
+        then: "the class compiles without errors"
+        !service.isInterface()
+
+        when: "the implementation is loaded"
+        def impl = service.classLoader.loadClass('$ConnItemServiceImplementation')
+
+        then: "the implementation inherits @Transactional(connection) from the domain's connection"
+        impl != null
+        impl.getAnnotation(Transactional) != null
+        impl.getAnnotation(Transactional).connection() == 'warehouse'
+    }
+
+    void "test @Transactional without connection gets connection added from domain"() {
+        when: "a service has @Transactional (no connection) and domain has datasource 'secondary'"
+        def service = new GroovyClassLoader().parseClass('''
+import grails.gorm.services.Service
+import grails.gorm.annotation.Entity
+import grails.gorm.transactions.Transactional
+
+@Service(TxItem)
+@Transactional
+abstract class TxItemService {
+
+    abstract TxItem save(TxItem item)
+}
+
+@Entity
+class TxItem {
+    String name
+
+    static mapping = {
+        datasource 'secondary'
+    }
+}
+''')
+
+        then: "the class compiles without errors"
+        !service.isInterface()
+
+        when: "the implementation is loaded"
+        def impl = service.classLoader.loadClass('$TxItemServiceImplementation')
+
+        then: "the existing @Transactional gets the connection member from the domain"
+        impl != null
+        impl.getAnnotation(Transactional) != null
+        impl.getAnnotation(Transactional).connection() == 'secondary'
+    }
+
 }

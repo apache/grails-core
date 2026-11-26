@@ -19,23 +19,48 @@
 package grails.plugins
 
 import grails.core.GrailsApplication
-import grails.util.Metadata
-import org.apache.commons.logging.Log
-import org.grails.plugins.DefaultGrailsPlugin
+import org.apache.grails.core.plugins.PluginInfo
+import org.apache.grails.core.plugins.PluginDiscovery
+import org.apache.grails.core.plugins.PluginUtils
 import spock.lang.Specification
 import spock.lang.Unroll
 
+/**
+ * Test suite for DefaultGrailsPluginManager
+ */
 class DefaultGrailsPluginManagerSpec extends Specification {
+
+    def "plugin manager can be created with application and discovery bean"() {
+        given:
+        def app = Mock(GrailsApplication)
+        def discovery = Mock(PluginDiscovery)
+
+        when:
+        def manager = new DefaultGrailsPluginManager(app, discovery)
+
+        then:
+        manager != null
+    }
+
+    def "plugin manager can be created with just application"() {
+        given:
+        def app = Mock(GrailsApplication)
+        def discovery = Mock(PluginDiscovery)
+
+        when:
+        def manager = new DefaultGrailsPluginManager(app, discovery)
+
+        then:
+        manager != null
+    }
 
     @Unroll
     def "should return #pluginGrailsVersion as plugin grails version"() {
         given:
-        GrailsApplication app = stubGrailsApplicationWithVersion("4.0.1")
-        DefaultGrailsPluginManager sut = buildPluginsManager(app)
-        DefaultGrailsPlugin plugin = stubPluginWithGrailsVersion(app, pluginGrailsVersion)
+        PluginInfo plugin = stubPluginWithGrailsVersion(pluginGrailsVersion)
 
         when:
-        def version = sut.getPluginGrailsVersion(plugin)
+        def version = plugin.getGrailsVersionRange()
 
         then:
         version == pluginGrailsVersion
@@ -48,12 +73,10 @@ class DefaultGrailsPluginManagerSpec extends Specification {
     @Unroll
     def "it should check that plugin with grailsVersion=#pluginGrailsVersion is compatible with grails #grailsVersion"() {
         given:
-        GrailsApplication app = stubGrailsApplicationWithVersion(grailsVersion)
-        DefaultGrailsPluginManager sut = buildPluginsManager(app)
-        DefaultGrailsPlugin plugin = stubPluginWithGrailsVersion(app, pluginGrailsVersion)
+        PluginInfo plugin = stubPluginWithGrailsVersion(pluginGrailsVersion)
 
         when:
-        def compatible = sut.isCompatiblePlugin(plugin)
+        def compatible = plugin.isGrailsVersionCompatible(grailsVersion)
 
         then:
         compatible == expectedCompatible
@@ -83,27 +106,11 @@ class DefaultGrailsPluginManagerSpec extends Specification {
         "7.0.0-M2"       | "7.0.0-M1"                 || false
     }
 
-    def stubGrailsApplicationWithVersion(def version) {
-        GrailsApplication app = Mock(GrailsApplication)
-        app.getMetadata() >> Metadata.getInstance(new ByteArrayInputStream("""
-info:
-    app:
-        grailsVersion: $version
-""".bytes))
-        return app
-    }
-
-    def stubPluginWithGrailsVersion(GrailsApplication app, String grailsVersion) {
+    PluginInfo stubPluginWithGrailsVersion(String grailsVersion) {
         def gcl = new GroovyClassLoader()
-        return new DefaultGrailsPlugin(gcl.parseClass("class ACustomGrailsPlugin {\n" +
+        return PluginUtils.createPluginInfo(gcl.parseClass("class ACustomGrailsPlugin {\n" +
                 "def version = \"1.0.0\"\n" +
                 "def grailsVersion = \"$grailsVersion\"\n" +
-                "}"), app)
-    }
-
-    def buildPluginsManager(GrailsApplication app) {
-        def pluginsManager = new DefaultGrailsPluginManager(app)
-        pluginsManager.LOG >> Mock(Log)
-        return pluginsManager
+                "}"), null, true)
     }
 }

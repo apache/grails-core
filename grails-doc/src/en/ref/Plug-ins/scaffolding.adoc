@@ -31,18 +31,50 @@ The `scaffolding` plugin configures Grails' support for CRUD via link:{guidePath
 === Examples
 
 
-An example of enabling "dynamic" scaffolding:
+An example of enabling "dynamic" scaffolding using the `@Scaffold` annotation:
 
+[source,groovy]
+----
+import grails.plugin.scaffolding.annotation.Scaffold
+
+@Scaffold(Book)
+class BookController {
+}
+----
+
+You can also scaffold services:
+
+[source,groovy]
+----
+import grails.plugin.scaffolding.annotation.Scaffold
+
+@Scaffold(Book)
+class BookService {
+}
+----
+
+For controllers that delegate to a service layer:
+
+[source,groovy]
+----
+import grails.plugin.scaffolding.annotation.Scaffold
+import grails.plugin.scaffolding.RestfulServiceController
+
+@Scaffold(RestfulServiceController<Book>)
+class BookController {
+}
+----
+
+The legacy `static scaffold` syntax is still supported but the `@Scaffold` annotation is preferred:
 
 [source,groovy]
 ----
 class BookController {
-   static scaffold = Book   // static scaffold = true  form is not supported in grails 3.0 and above
+   static scaffold = Book   // Legacy syntax - @Scaffold annotation is preferred
 }
 ----
 
-
-
+NOTE: The `static scaffold = true` form is not supported in Grails 3.0 and above.
 
 
 === Description

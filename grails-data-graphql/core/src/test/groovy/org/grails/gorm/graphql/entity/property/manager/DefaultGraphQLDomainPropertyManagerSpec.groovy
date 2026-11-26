@@ -43,8 +43,10 @@ class DefaultGraphQLDomainPropertyManagerSpec extends HibernateSpec {
         List<GraphQLDomainProperty> properties = manager.builder().getProperties(mappingContext.getPersistentEntity(NormalId.name))
 
         then:
-        //The timestamp, version, identifiers of the embedded properties are ignored
-        properties*.name == ['id', 'version', 'embeddedEntity', 'age', 'taxRate', 'price', 'embeddedPogo', 'tax']
+        //The timestamp, version, identifiers of the embedded properties are ignored.
+        //Non-identifier/version properties fall back to the natural iteration order
+        //of entity.persistentProperties under Grails 7 (no constraint-driven ordering).
+        properties*.name == ['id', 'version', 'age', 'embeddedPogo', 'embeddedEntity', 'price', 'taxRate', 'tax']
         !properties.find { it.name == 'tax' }.input // Derived properties are input false by default
         !properties.find { it.name == 'id' }.nullable
     }
@@ -57,7 +59,7 @@ class DefaultGraphQLDomainPropertyManagerSpec extends HibernateSpec {
                 .getProperties(mappingContext.getPersistentEntity(NormalId.name))
 
         then:
-        properties*.name == ['id', 'embeddedEntity', 'taxRate', 'price', 'embeddedPogo', 'tax']
+        properties*.name == ['id', 'embeddedPogo', 'embeddedEntity', 'price', 'taxRate', 'tax']
     }
 
     void "test retrieving domain properties exclude identifers"() {
@@ -68,7 +70,7 @@ class DefaultGraphQLDomainPropertyManagerSpec extends HibernateSpec {
                 .getProperties(mappingContext.getPersistentEntity(NormalId.name))
 
         then:
-        properties*.name == ['version', 'embeddedEntity', 'age', 'taxRate', 'price', 'embeddedPogo', 'tax']
+        properties*.name == ['version', 'age', 'embeddedPogo', 'embeddedEntity', 'price', 'taxRate', 'tax']
     }
 
     void "test retrieving domain properties exclude version"() {
@@ -79,7 +81,7 @@ class DefaultGraphQLDomainPropertyManagerSpec extends HibernateSpec {
                 .getProperties(mappingContext.getPersistentEntity(NormalId.name))
 
         then:
-        properties*.name == ['id', 'embeddedEntity', 'age', 'taxRate', 'price', 'embeddedPogo', 'tax']
+        properties*.name == ['id', 'age', 'embeddedPogo', 'embeddedEntity', 'price', 'taxRate', 'tax']
     }
 
     void "test retrieving domain properties always nullable"() {
@@ -90,7 +92,7 @@ class DefaultGraphQLDomainPropertyManagerSpec extends HibernateSpec {
                 .getProperties(mappingContext.getPersistentEntity(NormalId.name))
 
         then:
-        properties*.name == ['id', 'version', 'embeddedEntity', 'age', 'taxRate', 'price', 'embeddedPogo', 'tax']
+        properties*.name == ['id', 'version', 'age', 'embeddedPogo', 'embeddedEntity', 'price', 'taxRate', 'tax']
         properties.findAll { !it.nullable }.empty
     }
 

@@ -122,3 +122,5 @@ grails.mongodb.default.mapping = {
 ----
 
 The `*` method is used to indicate that the setting applies to all properties.
+
+You can also set a global default for the storage type of `String id` fields via `grails.mongodb.stringIds.defaultStoredAs` (values `string` or `objectid`). See <<idGeneration,Identity Generation>> for details.

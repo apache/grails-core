@@ -22,6 +22,7 @@ import grails.boot.GrailsApp
 import grails.boot.config.GrailsAutoConfiguration
 
 import groovy.transform.CompileStatic
+import org.grails.datastore.gorm.timestamp.AuditorAware
 import org.springframework.context.annotation.Bean
 import org.springframework.security.config.Customizer
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
@@ -31,6 +32,11 @@ import org.springframework.security.web.SecurityFilterChain
 class Application extends GrailsAutoConfiguration {
     static void main(String[] args) {
         GrailsApp.run(Application, args)
+    }
+
+    @Bean
+    AuditorAware<String> auditorAware() {
+        return new SpringSecurityAuditorAware()
     }
 
     // Spring Security's login page declares no icon, so the browser falls back to /favicon.ico

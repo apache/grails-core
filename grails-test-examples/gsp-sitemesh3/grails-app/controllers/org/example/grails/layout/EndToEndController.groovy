@@ -19,10 +19,24 @@
 
 package org.example.grails.layout
 
+import static grails.async.web.WebPromises.task
+
 class EndToEndController {
 
     def simpleLayout() {
         render view: 'simple', layout: 'simple'
+    }
+
+    def asyncSimpleLayout() {
+        task {
+            render view: 'simple', layout: 'simple'
+        }
+    }
+
+    def asyncMultipleLevelsOfLayouts() {
+        task {
+            render view: 'multipleLevelsOfLayouts', layout: 'simple'
+        }
     }
 
     def titleInSubtemplate() {

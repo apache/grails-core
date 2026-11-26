@@ -26,6 +26,7 @@ import java.util.List;
  *
  * @author Phil Zoio
  */
+@Deprecated(forRemoval = true, since = "7.1")
 public interface PluginFilter {
 
     /**
