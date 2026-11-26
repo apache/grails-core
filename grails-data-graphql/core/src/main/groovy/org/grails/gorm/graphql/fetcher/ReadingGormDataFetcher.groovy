@@ -25,6 +25,6 @@ package org.grails.gorm.graphql.fetcher
  * @author James Kleeh
  * @since 1.0.0
  */
-interface ReadingGormDataFetcher extends GormDataFetcher {
+interface ReadingGormDataFetcher<T> extends GormDataFetcher<T> {
 
 }

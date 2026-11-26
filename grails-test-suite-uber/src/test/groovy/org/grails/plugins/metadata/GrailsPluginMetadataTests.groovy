@@ -18,35 +18,114 @@
  */
 package org.grails.plugins.metadata
 
+import spock.lang.Shared
+import spock.lang.Specification
+
+import org.springframework.core.env.StandardEnvironment
+
 import grails.core.DefaultGrailsApplication
 import grails.plugins.DefaultGrailsPluginManager
+import grails.plugins.GrailsPluginManager
 import grails.plugins.metadata.GrailsPlugin
 import grails.util.GrailsUtil
-import org.junit.Test
+import org.apache.grails.core.plugins.DefaultPluginDiscovery
 
-import static org.junit.jupiter.api.Assertions.assertEquals
-import static org.junit.jupiter.api.Assertions.assertNull
+class GrailsPluginMetadataTests extends Specification {
 
-/**
- * @author Graeme Rocher
- * @since 1.2
- */
-class GrailsPluginMetadataTests {
+    @Shared GrailsPluginManager pluginManager
 
-    @Test
-    void testAnnotatedMetadata() {
+    void setupSpec() {
         def app = new DefaultGrailsApplication([Test1, Test2, Test3] as Class[], getClass().classLoader)
-        def pluginManager = new DefaultGrailsPluginManager([] as Class[], app)
-        pluginManager.loadPlugins()
+        def discovery = new DefaultPluginDiscovery().tap {
+            init(new StandardEnvironment())
+        }
+        pluginManager = new DefaultGrailsPluginManager(app, discovery).tap {
+            loadPlugins()
+        }
+    }
 
-        assertEquals "/plugins/controllers-${GrailsUtil.grailsVersion}", pluginManager.getPluginPathForClass(Test1)
-        assertNull pluginManager.getPluginPathForClass(Test3)
+    void 'returns plugins for instances'(Object instance, String name) {
+        given:
+        def plugin = pluginManager.getPluginForInstance(instance)
 
-        assertEquals "/plugins/controllers-${GrailsUtil.grailsVersion}", pluginManager.getPluginPathForInstance(new Test1())
-        assertNull pluginManager.getPluginPathForInstance(new Test3())
+        expect:
+        plugin?.name == name
 
-        assertEquals "/plugins/controllers-${GrailsUtil.grailsVersion}/grails-app/views", pluginManager.getPluginViewsPathForClass(Test1)
-        assertNull pluginManager.getPluginViewsPathForClass(Test3)
+        where:
+        instance    | name
+        new Test1() | 'controllers'
+        new Test2() | 'dataBinding'
+        new Test3() | null
+    }
+
+    void 'returns plugins for classes'(Class clazz, String name) {
+        given:
+        def plugin = pluginManager.getPluginForClass(clazz)
+
+        expect:
+        plugin?.name == name
+
+        where:
+        clazz | name
+        Test1 | 'controllers'
+        Test2 | 'dataBinding'
+        Test3 | null
+    }
+
+    void 'returns plugin path for instances'(Object instance, String expectedPath) {
+        given:
+        def path = pluginManager.getPluginPathForInstance(instance)
+
+        expect:
+        path == expectedPath
+
+        where:
+        instance    | expectedPath
+        new Test1() | "/plugins/controllers-$GrailsUtil.grailsVersion"
+        new Test2() | "/plugins/data-binding-$GrailsUtil.grailsVersion"
+        new Test3() | null
+    }
+
+    void 'returns plugin path for classes'(Class clazz, String expectedPath) {
+        given:
+        def path = pluginManager.getPluginPathForClass(clazz)
+
+        expect:
+        path == expectedPath
+
+        where:
+        clazz | expectedPath
+        Test1 | "/plugins/controllers-$GrailsUtil.grailsVersion"
+        Test2 | "/plugins/data-binding-$GrailsUtil.grailsVersion"
+        Test3 | null
+    }
+
+    void 'returns plugin views path for instances'(Object instance, String expectedPath) {
+        given:
+        def viewsPath = pluginManager.getPluginViewsPathForInstance(instance)
+
+        expect:
+        viewsPath == expectedPath
+
+        where:
+        instance    | expectedPath
+        new Test1() | "/plugins/controllers-$GrailsUtil.grailsVersion/grails-app/views"
+        new Test2() | "/plugins/data-binding-$GrailsUtil.grailsVersion/grails-app/views"
+        new Test3() | null
+    }
+
+    void 'returns plugin views path for classes'(Class clazz, String expectedPath) {
+        given:
+        def viewsPath = pluginManager.getPluginViewsPathForClass(clazz)
+
+        expect:
+        viewsPath == expectedPath
+
+        where:
+        clazz | expectedPath
+        Test1 | "/plugins/controllers-$GrailsUtil.grailsVersion/grails-app/views"
+        Test2 | "/plugins/data-binding-$GrailsUtil.grailsVersion/grails-app/views"
+        Test3 | null
     }
 }
 

@@ -29,7 +29,6 @@ import org.codehaus.groovy.runtime.StackTraceUtils
 import org.springframework.http.HttpMethod
 import org.springframework.util.ReflectionUtils
 
-import grails.plugin.json.builder.JsonGenerator
 import grails.plugin.json.builder.JsonOutput
 import grails.plugin.json.view.api.JsonView
 import grails.rest.Link
@@ -256,7 +255,7 @@ class DefaultJsonViewHelper extends DefaultGrailsViewHelper {
         return Math.max((laststep * max), 0)
     }
 
-    JsonGenerator getGenerator() {
+    groovy.json.JsonGenerator getGenerator() {
         ((JsonView) view).generator
     }
 

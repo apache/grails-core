@@ -34,7 +34,7 @@ import org.grails.datastore.mapping.model.PersistentEntity
  * @since 5.0
  * @deprecated Use where queries instead
  */
-@Deprecated
+@Deprecated(forRemoval = true)
 class NamedCriteriaProxy<D> implements GormQueryOperations<D> {
 
     final Closure criteriaClosure

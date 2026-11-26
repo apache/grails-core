@@ -38,7 +38,7 @@ import org.grails.gorm.graphql.fetcher.ReadingGormDataFetcher
 @InheritConstructors
 @Slf4j
 @CompileStatic
-class EntityDataFetcher<T> extends DefaultGormDataFetcher<T> implements ReadingGormDataFetcher {
+class EntityDataFetcher<T> extends DefaultGormDataFetcher<T> implements ReadingGormDataFetcher<T> {
 
     //The new LinkedHasMap is to work around a static compilation bug
     static final Map<String, Class> ARGUMENTS = new LinkedHashMap<String, Class>([

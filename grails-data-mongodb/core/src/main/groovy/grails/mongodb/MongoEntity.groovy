@@ -82,7 +82,7 @@ trait MongoEntity<D> implements GormEntity<D>, DynamicAttributes {
      * @param instance The instance
      * @return The DBObject instance
      */
-    @Deprecated
+    @Deprecated(forRemoval = true)
     Document getDbo() {
         AbstractMongoSession session = (AbstractMongoSession) AbstractDatastore.retrieveSession(MongoDatastore)
         // check first for embedded cached entries

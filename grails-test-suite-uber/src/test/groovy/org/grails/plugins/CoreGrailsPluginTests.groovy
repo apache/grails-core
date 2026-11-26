@@ -19,12 +19,15 @@
 
 package org.grails.plugins
 
+import org.junit.jupiter.api.Test
+import org.springframework.core.env.StandardEnvironment
+
+import static org.junit.jupiter.api.Assertions.assertEquals
 import grails.plugins.GrailsPlugin
 import grails.plugins.GrailsPluginManager
 import grails.web.servlet.plugins.GrailsWebPluginManager
+import org.apache.grails.core.plugins.DefaultPluginDiscovery
 import org.grails.config.PropertySourcesConfig
-import org.grails.plugins.DefaultGrailsPlugin
-import org.grails.plugins.MockGrailsPluginManager
 import org.grails.spring.aop.autoproxy.GroovyAwareAspectJAwareAdvisorAutoProxyCreator
 import org.grails.spring.aop.autoproxy.GroovyAwareInfrastructureAdvisorAutoProxyCreator
 import org.grails.web.servlet.context.support.WebRuntimeSpringConfiguration
@@ -34,11 +37,12 @@ import org.springframework.beans.factory.config.RuntimeBeanReference
 
 class CoreGrailsPluginTests extends AbstractGrailsMockTests {
 
+    @Test
     void testComponentScan() {
         def pluginClass = gcl.loadClass("org.grails.plugins.CoreGrailsPlugin")
 
         def plugin = new DefaultGrailsPlugin(pluginClass, ga)
-        def pluginManager = new MockGrailsPluginManager()
+        def pluginManager = new MockGrailsPluginManager(ga)
         ctx.registerMockBean(GrailsPluginManager.BEAN_NAME, pluginManager)
         ga.config.grails.spring.bean.packages = ['org.grails.plugins.test']
 
@@ -50,6 +54,7 @@ class CoreGrailsPluginTests extends AbstractGrailsMockTests {
         def appCtx = springConfig.getApplicationContext()
 
     }
+    @Test
     void testCorePlugin() {
         def pluginClass = gcl.loadClass("org.grails.plugins.CoreGrailsPlugin")
 
@@ -67,6 +72,7 @@ class CoreGrailsPluginTests extends AbstractGrailsMockTests {
         assert appCtx.getBean("org.springframework.aop.config.internalAutoProxyCreator") instanceof GroovyAwareAspectJAwareAdvisorAutoProxyCreator
     }
 
+    @Test
     void testDisableAspectj() {
         def pluginClass = gcl.loadClass("org.grails.plugins.CoreGrailsPlugin")
 
@@ -105,6 +111,7 @@ class CoreGrailsPluginTests extends AbstractGrailsMockTests {
      *
      * @author Luke Daley
      */
+    @Test
     void testBeanPropertyOverride() {
         def co = new ConfigSlurper().parse('''
             dataSource {
@@ -137,7 +144,9 @@ class CoreGrailsPluginTests extends AbstractGrailsMockTests {
         springConfig.servletContext = createMockServletContext()
 
         corePlugin.doWithRuntimeConfiguration(springConfig)
-        dataSourcePlugin.manager = new GrailsWebPluginManager([corePluginClass] as Class[], ga)
+        def discovery = new DefaultPluginDiscovery([corePluginClass] as Class[])
+        discovery.init(new StandardEnvironment())
+        dataSourcePlugin.manager = new GrailsWebPluginManager(ga, discovery)
         dataSourcePlugin.doWithRuntimeConfiguration(springConfig)
 
         def pluginClass = gcl.loadClass("org.grails.plugins.services.ServicesGrailsPlugin")
