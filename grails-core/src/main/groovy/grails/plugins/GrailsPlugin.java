@@ -64,15 +64,8 @@ public interface GrailsPlugin extends ApplicationContextAware, Comparable, Grail
     int EVENT_ON_CONFIG_CHANGE = 1;
     int EVENT_ON_SHUTDOWN = 2;
 
-    String DO_WITH_DYNAMIC_METHODS = "doWithDynamicMethods";
-
     /**
-     * The scopes to which this plugin applies
-     */
-    String SCOPES = "scopes";
-
-    /**
-     * The environments to which this plugin applies
+     * The key below which a plugin's configuration holds per-environment values
      */
     String ENVIRONMENTS = "environments";
 
@@ -80,106 +73,6 @@ public interface GrailsPlugin extends ApplicationContextAware, Comparable, Grail
      * The prefix used in plug-ins paths
      */
     String PLUGINS_PATH = "/plugins";
-
-    /**
-     * Defines the name of the property that specifies resources which
-     * this plugin monitors for changes in the format of an Ant-style path
-     */
-    String WATCHED_RESOURCES = "watchedResources";
-
-    /**
-     * Defines the name of the property that specifies a List or plugins that this plugin evicts
-     * Eviction occurs when the PluginManager loads
-     */
-    String EVICT = "evict";
-
-    /**
-     * The status of the plugin.
-     */
-    String STATUS = "status";
-
-    /**
-     * When a plugin is "enabled" it will be loaded as usual.
-     */
-    String STATUS_ENABLED = "enabled";
-
-    /**
-     * When a plugin is "disabled" it will not be loaded
-     */
-    String STATUS_DISABLED = "disabled";
-
-    /**
-     * Defines the name of the property that defines the closure that will be invoked
-     * when a watched resource changes
-     */
-    String ON_CHANGE = "onChange";
-
-    /**
-     * Defines the name of the property that holds a closure to be invoked when shutdown is called
-     */
-    String ON_SHUTDOWN = "onShutdown";
-
-    /**
-     * Defines the name of the property that defines the closure that will be invoked
-     * when a Grails configuration object changes
-     */
-    String ON_CONFIG_CHANGE = "onConfigChange";
-
-    /**
-     * Defines the name of the property that defines the closure that will be invoked during runtime spring configuration
-     */
-    String DO_WITH_SPRING = "doWithSpring";
-
-    /**
-     * Defines the name of the property that defines a closure that will be invoked after initialisation
-     * and when the application context has been built
-     */
-    String DO_WITH_APPLICATION_CONTEXT = "doWithApplicationContext";
-
-    /**
-     * Defines the name of the property that specifies which plugins this plugin depends on
-     */
-    String DEPENDS_ON = "dependsOn";
-
-    /**
-     * Define the list of ArtefactHandlers supporting by the plugin
-     */
-    String ARTEFACTS = "artefacts";
-
-    /**
-     * The name of the property that provides a list of shipped, but overridable artefacts
-     */
-    String PROVIDED_ARTEFACTS = "providedArtefacts";
-
-    /**
-     * The profiles for which this plugin is active
-     */
-    String PROFILES = "profiles";
-
-    /**
-     * The name of the property that provides a list of plugins this plugin should load before
-     */
-    String PLUGIN_LOAD_BEFORE_NAMES = "loadBefore";
-
-    /**
-     * The name of the property that provides a list of plugins this plugin should after before
-     */
-    String PLUGIN_LOAD_AFTER_NAMES = "loadAfter";
-
-    /**
-     * The field that represents the list of resources to exclude from plugin packaging
-     */
-    String PLUGIN_EXCLUDES = "pluginExcludes";
-
-    /**
-     * The field that represents the list of type filters a plugin provides
-     */
-    String TYPE_FILTERS = "typeFilters";
-
-    /**
-     * The field that represents the plugin names that this plugin is observing for changes.
-     */
-    String OBSERVE = "observe";
 
     /**
      * <p>This method is called to allow the plugin to add {@link org.springframework.beans.factory.config.BeanDefinition}s
@@ -341,13 +234,6 @@ public interface GrailsPlugin extends ApplicationContextAware, Comparable, Grail
      * @return Whether the plugin is enabled or not
      */
     boolean isEnabled();
-
-    /**
-     * Check whether the plugin is enabled for the given profile
-     * @param activeProfiles
-     * @return True if it is
-     */
-    boolean isEnabled(String[] activeProfiles);
 
     /**
      * Retrieve the plugin names that this plugin is observing for changes

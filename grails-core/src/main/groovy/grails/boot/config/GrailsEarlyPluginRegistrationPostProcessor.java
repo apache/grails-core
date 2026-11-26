@@ -209,9 +209,8 @@ public class GrailsEarlyPluginRegistrationPostProcessor
      * deprecated DSL.
      */
     private void applyBeanRegistrars(DefaultGrailsPluginManager pluginManager, BeanDefinitionRegistry registry) {
-        String[] activeProfiles = applicationContext.getEnvironment().getActiveProfiles();
         for (GrailsPlugin plugin : pluginManager.getAllPlugins()) {
-            if (!plugin.supportsCurrentScopeAndEnvironment() || !plugin.isEnabled(activeProfiles)) {
+            if (!plugin.supportsCurrentScopeAndEnvironment()) {
                 continue;
             }
             BeanRegistrar registrar = plugin.getBeanRegistrar();

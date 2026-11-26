@@ -138,11 +138,7 @@ public class DefaultGrailsPluginManager extends AbstractGrailsPluginManager {
         if (plugin == null) {
             return;
         }
-        if (!plugin.isEnabled(applicationContext.getEnvironment().getActiveProfiles())) return;
-
         for (GrailsPlugin observingPlugin : getPluginObservers(plugin)) {
-
-            if (!observingPlugin.isEnabled(applicationContext.getEnvironment().getActiveProfiles())) continue;
 
             observingPlugin.notifyOfEvent(event);
         }

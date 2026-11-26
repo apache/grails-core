@@ -318,9 +318,8 @@ class GrailsApplicationPostProcessor implements BeanDefinitionRegistryPostProces
      * the DSL flush so registrar beans win name conflicts with the deprecated {@code doWithSpring} DSL.
      */
     protected void applyPluginBeanRegistrars(BeanDefinitionRegistry registry) {
-        String[] activeProfiles = applicationContext.environment.activeProfiles
         for (GrailsPlugin plugin in pluginManager.allPlugins) {
-            if (!plugin.supportsCurrentScopeAndEnvironment() || !plugin.isEnabled(activeProfiles)) {
+            if (!plugin.supportsCurrentScopeAndEnvironment()) {
                 continue
             }
             BeanRegistrar registrar = plugin.beanRegistrar

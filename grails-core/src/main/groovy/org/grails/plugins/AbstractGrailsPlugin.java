@@ -119,11 +119,6 @@ public abstract class AbstractGrailsPlugin extends GroovyObjectSupport implement
         // do nothing
     }
 
-    @Override
-    public boolean isEnabled(String[] profiles) {
-        return true;
-    }
-
     public String getFileSystemName() {
         return getFileSystemShortName() + '-' + getVersion();
     }

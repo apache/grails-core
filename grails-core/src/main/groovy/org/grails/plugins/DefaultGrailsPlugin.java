@@ -209,11 +209,6 @@ public class DefaultGrailsPlugin extends AbstractGrailsPlugin implements ParentA
     }
 
     @Override
-    public boolean isEnabled(String[] activeProfiles) {
-        return true;
-    }
-
-    @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         super.setApplicationContext(applicationContext);
         plugin.setApplicationContext(applicationContext);
