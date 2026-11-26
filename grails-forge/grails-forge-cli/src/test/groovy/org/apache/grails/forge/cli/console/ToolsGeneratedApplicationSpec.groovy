@@ -50,8 +50,14 @@ import spock.lang.Timeout
 @Timeout(1200)
 class ToolsGeneratedApplicationSpec extends CommandSpec implements CommandFixture {
 
-    /** The scaffolding plugin and the two it depends on, with what follows the name of each in a dependency report */
-    private static final List<String> OF_THE_PLUGIN = ['grails-scaffolding:', 'grails-gsp:', 'grails-fields:']
+    /** The scaffolding plugin and the fields plugin it depends on, with what follows the name of each in a dependency report */
+    private static final List<String> OF_THE_PLUGIN = ['grails-scaffolding:', 'grails-fields:']
+
+    /** GSP, which the scaffolding plugin depends on too, with what follows its name in a dependency report */
+    private static final String GSP = 'grails-gsp:'
+
+    /** The class paths of a REST API application that GSP is not on: the tests have it from grails-testing-support-web */
+    private static final List<String> WITHOUT_GSP = ['runtimeClasspath', 'grailsCliClasspath', 'grailsCliStandaloneClasspath']
 
     // the Gradle daemon of the builds of the application is one of this specification, which ends it
     @Shared
@@ -309,16 +315,21 @@ class ToolsGeneratedApplicationSpec extends CommandSpec implements CommandFixtur
         new File(dir, 'grails-app/views/bird/show.gson').isFile()
         !new File(dir, 'grails-app/views/bird/show.gsp').exists()
 
-        when: 'the class paths of the application, of its tests and of the tools the build runs'
-        Map<String, String> reports = ['runtimeClasspath', 'testRuntimeClasspath', 'grailsCliClasspath'].collectEntries { String configuration ->
+        when: 'the class paths of the application, of its tests, of the tools the build runs and of the standalone tools'
+        Map<String, String> reports = ['runtimeClasspath', 'testRuntimeClasspath', 'integrationTestRuntimeClasspath', 'grailsCliClasspath',
+                                       'grailsCliStandaloneClasspath'].collectEntries { String configuration ->
             out.reset()
             assert ForgeCli.execute(beanContext, 'gradle', 'dependencies', '--configuration', configuration) == 0
             [(configuration): out.toString()]
         }
 
-        then: 'none has the scaffolding plugin, GSP or the fields plugin; the tools have the companion of the standalone tools'
-        reports.every { String configuration, String report -> OF_THE_PLUGIN.every { !report.contains("org.apache.grails:${it}") } }
+        then: 'none has the scaffolding plugin or the fields plugin; the tools have the companion of the standalone tools'
+        reports.findAll { String configuration, String report -> OF_THE_PLUGIN.any { report.contains("org.apache.grails:${it}") } }.keySet() == [] as Set
         reports.grailsCliClasspath.contains('org.apache.grails:grails-scaffolding-cli-standalone')
+        reports.grailsCliStandaloneClasspath.contains('org.apache.grails:grails-scaffolding-cli-standalone')
+
+        and: 'neither the application nor its tools have GSP, which the tests have from the testing support of Grails, and not from the plugin'
+        WITHOUT_GSP.findAll { String configuration -> reports[configuration].contains("org.apache.grails:${GSP}") } == []
     }
 
     // a generated application of this specification, with the wrapper writing down each time it is started
