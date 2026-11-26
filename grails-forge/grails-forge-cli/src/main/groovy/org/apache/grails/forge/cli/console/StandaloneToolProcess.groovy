@@ -54,6 +54,9 @@ final class StandaloneToolProcess {
     /** What the main class reads the arguments of the command from; the rest of the argument is the path of the file. */
     public static final String ARGUMENTS = '--grails-args-file='
 
+    /** The system property that says which of the diagnostics of SLF4J itself it writes. */
+    static final String SLF4J_VERBOSITY = 'slf4j.internal.verbosity'
+
     private static final String JAVA_HOME = 'JAVA_HOME'
     private static final String ARGUMENTS_OPTION = '--args-file='
     private static final int STOP_SECONDS = 10
@@ -178,8 +181,10 @@ final class StandaloneToolProcess {
             return 1
         }
         try {
+            // The class path of a standalone tool has none of the application, and so no logging backend for SLF4J, which the
+            // tool API logs through: SLF4J would say so in three lines of its own each time a tool runs. Its errors it still says.
             List<String> command = [java, "-Dgrails.env=${ToolCommand.ENVIRONMENT}".toString(),
-                                    "-Dbase.dir=${project.getDirectory()}".toString()]
+                                    "-Dbase.dir=${project.getDirectory()}".toString(), "-D${SLF4J_VERBOSITY}=ERROR".toString()]
             if (stacktrace) {
                 command.add('-Dgrails.full.stacktrace=true')
             }

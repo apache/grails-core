@@ -67,6 +67,7 @@ class StandaloneToolsSpec extends CommandSpec implements CommandFixture {
                         + " " + System.getProperty("grails.console.enable.terminal") + " " + System.getProperty("grails.console.enable.interactive")
                         + " " + System.getenv("GRAILS_NON_INTERACTIVE"));
                 System.out.println("base=" + System.getProperty("base.dir"));
+                System.out.println("slf4j=" + System.getProperty("slf4j.internal.verbosity"));
                 System.out.println("directory=" + new java.io.File("").getAbsolutePath());
                 System.out.println("classpath=" + System.getProperty("java.class.path"));
                 if (vector.contains("\\"read-input\\"")) {
@@ -147,6 +148,9 @@ class StandaloneToolsSpec extends CommandSpec implements CommandFixture {
         line('system=') == 'development null null null null'
         line('base=') == dir.path
         line('directory=') == dir.path
+
+        and: 'SLF4J, which has no logging backend there, says nothing of it, and only its errors'
+        line('slf4j=') == 'ERROR'
 
         and: 'with the class path the file names, the output of src/standalone before what the tools depend on'
         line('classpath=') == [classes.path, library.path].join(File.pathSeparator)
