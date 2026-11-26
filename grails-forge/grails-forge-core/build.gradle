@@ -393,6 +393,10 @@ tasks.named('test', Test).configure { Test test ->
     test.inputs.files(layout.projectDirectory.file('src/main/groovy/org/apache/grails/forge/core/pack/PackModel.groovy'))
             .withPropertyName('templateApiJavadoc')
             .withPathSensitivity(PathSensitivity.RELATIVE)
+    // FeatureNamesSharedSpec holds the name of a feature to the reader of the record in grails-gradle-model, by a file the two share
+    test.inputs.files(sources.file('grails-gradle/model/src/test/resources/project-record-sample/feature-names.txt'))
+            .withPropertyName('sharedFeatureNames')
+            .withPathSensitivity(PathSensitivity.RELATIVE)
     if (providers.gradleProperty('allRepositoryViews').present) {
         test.systemProperty('forge.packTemplateViews.all', 'true')
         // the views are no inputs of the tests: a run that was asked for is a run
