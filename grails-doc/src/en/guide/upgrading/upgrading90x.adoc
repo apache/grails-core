@@ -3063,3 +3063,17 @@ An application with GORM for Neo4j imports `grails-neo4j-bom` as its one Grails 
 * In an application with GORM for Neo4j (`org.apache.grails:grails-data-neo4j`), replace `grails-bom` with `grails-neo4j-bom` wherever the build imports it, keeping the version: `implementation platform("org.apache.grails:grails-neo4j-bom:$grailsVersion")`, `classpath platform("org.apache.grails:grails-neo4j-bom:$grailsVersion")`, and `buildSrc/build.gradle`. A build that lets the Grails Gradle plugin import the BOM sets `grails { bom = 'grails-neo4j-bom' }`.
 * To keep `grails-bom`, hold the driver with a version of the application's own that no BOM moves, `implementation('org.neo4j.driver:neo4j-java-driver') { version { strictly '4.4.13' } }`, at the version `grails-neo4j-bom` manages; the BOM is the simpler way.
 * Scripts that create an application with GORM for Neo4j together with Hibernate 7 or Micronaut fail now, where the application they made did not run; keep GORM for Neo4j with Hibernate 5, or put the Neo4j data in an application of its own.
+
+[[upgradingViewsWithoutADirectory]]
+==== 62. A Project With the JSON or Markup Views Gradle Plugin Builds Without `grails-app/views`
+
+Until Grails 9 a build that applied `org.apache.grails.gradle.grails-gson` or `org.apache.grails.gradle.grails-markup` failed while it was configured when the project had no `grails-app/views` directory, with `The source for GSON compilation must be a single directory`: a plugin that had no views yet, or an application whose last view was deleted, needed an empty directory kept in version control. In Grails 9 such a project builds: `compileGsonViews` and `compileGmlViews` have no source then (`NO-SOURCE`), and compile once the directory has a file. A `grails-app/views` that is a file is still refused. What goes with it:
+
+* *The two tasks are registered, not created, when the plugin is applied.* They are configured when a build needs them. A build script that configures one by `tasks.named('compileGsonViews') { ... }` or `compileGsonViews { ... }` is not affected.
+* *The directory of the views is no input directory of the tasks any more.* `srcDir` is not an input; what is beneath it is an input as before, so the tasks are up to date and cached as before. The cache key of the tasks changes once with this release.
+* *A project the `create-rest-api-plugin` command generates has no `grails-app/views`,* and builds as it is generated.
+* *`groovydoc` and `javadoc` run after the two tasks when a build runs both.* The documentation tasks read the output of the main source set, which has the directory of the compiled views, and Gradle failed a build that ran them with `compileGsonViews` or `compileGmlViews`, as a build that publishes a plugin with its documentation does, with `Task ':groovydoc' uses this output of task ':compileGsonViews' without declaring an explicit or implicit dependency`. A `mustRunAfter` of your own that worked around it can be removed.
+
+===== Required Actions
+
+None. A `.gitkeep` that was only there to keep `grails-app/views` for the build can be removed; with a file in the directory the tasks start the view compiler, which then finds nothing to compile.

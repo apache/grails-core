@@ -34,7 +34,7 @@ import org.gradle.api.provider.Property
 import org.gradle.api.provider.SetProperty
 import org.gradle.api.tasks.CacheableTask
 import org.gradle.api.tasks.Input
-import org.gradle.api.tasks.InputDirectory
+import org.gradle.api.tasks.IgnoreEmptyDirectories
 import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Nested
@@ -77,8 +77,13 @@ abstract class AbstractGroovyTemplateCompileTask extends AbstractCompile {
     @PathSensitive(PathSensitivity.RELATIVE)
     final ConfigurableFileCollection grailsConfigurationPaths
 
-    @InputDirectory
-    @PathSensitive(PathSensitivity.RELATIVE)
+    /**
+     * The directory of the views, which the compiler finds them by. Internal rather than an input
+     * directory: it need not exist - a plugin that has no views yet, or an application whose last view
+     * was deleted, has none, and an input directory that does not exist fails validation. What is
+     * beneath it is an input all the same, as {@link #getViewsDirectoryContent()}.
+     */
+    @Internal
     final DirectoryProperty srcDir
 
     @Nested
@@ -139,6 +144,21 @@ abstract class AbstractGroovyTemplateCompileTask extends AbstractCompile {
         return super.getSource()
     }
 
+    /**
+     * Every file beneath {@link #getSrcDir()}, as the compiler reads them: it finds the views by the
+     * directory, whatever the filters of {@link #getSource()}. Empty for a directory that does not
+     * exist. Fingerprinted by path under the directory, so a checkout elsewhere reuses what this one
+     * compiled.
+     *
+     * @since 9.0
+     */
+    @InputFiles
+    @IgnoreEmptyDirectories
+    @PathSensitive(PathSensitivity.RELATIVE)
+    FileTree getViewsDirectoryContent() {
+        srcDir.asFileTree
+    }
+
     private ExecOperations execOperations
 
     /** The build directory, which the destination directory has to be within; see {@link ViewCompileDestination}. */
@@ -168,10 +188,16 @@ abstract class AbstractGroovyTemplateCompileTask extends AbstractCompile {
         })
     }
 
+    /**
+     * Sets the directory of the views. A directory that does not exist is no error: the task then has no
+     * source and compiles nothing, and compiles once the directory has a view. A path that is there and is
+     * no directory is refused.
+     */
     @Override
     void setSource(Object source) {
         srcDir.set(project.layout.projectDirectory.dir(source.toString()))
-        if (!srcDir.getAsFile().get().isDirectory()) {
+        File directory = srcDir.getAsFile().get()
+        if (directory.exists() && !directory.isDirectory()) {
             throw new IllegalArgumentException("The source for ${fileExtension.get().toUpperCase()} compilation must be a single directory, but was $source")
         }
         super.setSource(source)
@@ -182,6 +208,12 @@ abstract class AbstractGroovyTemplateCompileTask extends AbstractCompile {
         String environment = statedEnvironment
         logger.info('Compiling the {} views for the {} environment', fileExtension.get(), environment)
         ViewCompileDestination.empty(fileSystemOperations, destinationDirectory.get().asFile, buildDirectory.get().asFile, classpath.files, path)
+        if (!srcDir.get().asFile.isDirectory()) {
+            // a build that gave the task other sources than the directory of the views, which is not there:
+            // the compiler finds the views by that directory, so there is nothing for it to compile
+            logger.info('No directory {}: no {} views to compile', srcDir.get().asFile, fileExtension.get())
+            return
+        }
         ExecResult result = execOperations.javaexec(
                 new Action<JavaExecSpec>() {
                     @Override

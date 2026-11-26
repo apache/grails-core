@@ -30,10 +30,6 @@ import spock.lang.Unroll
  * and without credentials. The snapshot is published to a directory of the test, by the Gradle property
  * the Grails Publish plugin reads the address of a Maven repository from, so nothing is written to the
  * local Maven repository of whoever runs the spec.
- *
- * <p>A REST API plugin is not built here: as it is generated it has no {@code grails-app/views}, which the
- * Gradle plugin of the JSON views asks for when it is applied, with the feature and without it. What the
- * feature gives that type is held by {@code GrailsPublishSpec} of the core module.</p>
  */
 class GrailsPublishBuildSpec extends CommandSpec {
 
@@ -70,7 +66,7 @@ class GrailsPublishBuildSpec extends CommandSpec {
         pom.contains('<id>todo</id>')
 
         where:
-        type << [ApplicationType.PLUGIN, ApplicationType.WEB_PLUGIN]
+        type << [ApplicationType.PLUGIN, ApplicationType.WEB_PLUGIN, ApplicationType.REST_API_PLUGIN]
     }
 
     @Override

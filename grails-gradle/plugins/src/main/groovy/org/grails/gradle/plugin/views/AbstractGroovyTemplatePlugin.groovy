@@ -30,7 +30,10 @@ import org.gradle.api.file.FileCollection
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.SourceSetOutput
 import org.gradle.api.tasks.TaskContainer
+import org.gradle.api.tasks.TaskProvider
 import org.gradle.api.tasks.bundling.Jar
+import org.gradle.api.tasks.javadoc.Groovydoc
+import org.gradle.api.tasks.javadoc.Javadoc
 
 import org.gradle.api.NamedDomainObjectContainer
 
@@ -69,20 +72,35 @@ class AbstractGroovyTemplatePlugin implements Plugin<Project> {
     void apply(Project project) {
         TaskContainer tasks = project.tasks
         String upperCaseName = GrailsNameUtils.getClassName(fileExtension)
-        AbstractGroovyTemplateCompileTask templateCompileTask = (AbstractGroovyTemplateCompileTask) tasks.register(
-                "compile${upperCaseName}Views".toString(),
-                (Class<? extends Task>) taskClass
-        ).get()
         SourceSetOutput output = SourceSets.findMainSourceSet(project)?.output
         FileCollection classesDir = resolveClassesDirs(output, project)
-        Provider<Directory> destDir = project.layout.buildDirectory.dir("${templateCompileTask.fileExtension.get()}-classes/main")
+        // named after the extension of the plugin, which is the one its task compiles by default
+        Provider<Directory> destDir = project.layout.buildDirectory.dir("${fileExtension}-classes/main")
         output?.dir(destDir)
-        def allClasspath = classesDir + project.configurations.named('compileClasspath').get()
-        templateCompileTask.destinationDirectory.set(destDir)
-        templateCompileTask.classpath = allClasspath
-        templateCompileTask.packageName.set(project.name)
-        templateCompileTask.setSource(project.file("${project.projectDir}/$pathToSource"))
-        templateCompileTask.dependsOn(tasks.named('classes').get())
+        // Registered, not created: the task is configured when a build needs it. The directory of the views
+        // need not exist: a plugin that has no views yet, or an application whose last view was deleted, has
+        // none, and its build has nothing to compile.
+        TaskProvider<? extends Task> templateCompileTask = tasks.register(
+                "compile${upperCaseName}Views".toString(),
+                (Class<? extends Task>) taskClass
+        ) { Task task ->
+            AbstractGroovyTemplateCompileTask compile = (AbstractGroovyTemplateCompileTask) task
+            compile.destinationDirectory.set(destDir)
+            compile.classpath = classesDir + project.configurations.named('compileClasspath').get()
+            compile.packageName.set(project.name)
+            compile.setSource(project.file("${project.projectDir}/$pathToSource"))
+            compile.dependsOn(tasks.named('classes'))
+        }
+        // The documentation tasks read the whole output of the main source set as their class path, and so the
+        // directory of the compiled views, which this task cannot be named the producer of: it runs after the
+        // classes task, which depends on what produces the output. Without an order between them Gradle fails
+        // a build that runs both, as one that publishes a plugin with its documentation does.
+        tasks.withType(Groovydoc).configureEach { Task task ->
+            task.mustRunAfter(templateCompileTask)
+        }
+        tasks.withType(Javadoc).configureEach { Task task ->
+            task.mustRunAfter(templateCompileTask)
+        }
         tasks.withType(Jar).configureEach { Task task ->
             if (task.name in ['jar', 'bootJar', 'war', 'bootWar']) {
                 task.dependsOn(templateCompileTask)
