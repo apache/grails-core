@@ -68,17 +68,10 @@ Example: s2-quickstart --uiOnly
 
     String description = 'Creates domain classes and updates config settings for the Spring Security plugin'
 
+    boolean startsApplication = false
+
     @Delegate
     ConsoleLogger consoleLogger = GrailsConsole.getInstance()
-
-    /**
-     * The build runs the tool without starting the application. The value is set here rather than where the
-     * property is declared because the helpers the tool shares with the standalone tools are compiled apart from it,
-     * and the build reads the value without running the tool.
-     */
-    S2QuickstartTool() {
-        startsApplication = false
-    }
 
     private Map<String, String> templateAttributes
     private Model userModel

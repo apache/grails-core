@@ -441,6 +441,46 @@ class ToolDescriptorWriterSpec extends Specification {
         !startsApplication('example.TailCommand', classes)
     }
 
+    def "a tool that declares startsApplication beside traits compiled before, which have nothing of it, is described by what it declares"() {
+        given: 'helper traits compiled on their own, as those of src/standalone are for a tool of src/cli'
+        File classes = new File(tempDir, 'build/classes/groovy/standalone')
+        compile('Skipping', 'trait Skipping {\nboolean skipBootstrap = true\n}', Phases.ALL, classes, [], 'src/standalone/groovy')
+        compile('Flags', "trait Flags {\nstatic final boolean SUCCESS = true\nList<String> words = ['a']\n" +
+                "abstract org.apache.grails.core.cli.ExecutionContext getExecutionContext()\nboolean isFlagPresent(String name) { name in words }\n}",
+                Phases.ALL, classes, [], 'src/standalone/groovy')
+
+        when:
+        compile('TailCommand', "class TailCommand implements ${APPLICATION}, ${SUPPORT}, Flags, Skipping {\nboolean startsApplication = false\n" +
+                "String description = 'Follows a file'\nboolean handle() { true }\n}", Phases.ALL, targetDirectory, [classes])
+
+        then:
+        descriptor('example.TailCommand') == [format: 1, class: 'example.TailCommand', name: 'tail', description: 'Follows a file',
+                                              target: 'application', startsApplication: false]
+        !startsApplication('example.TailCommand', classes)
+    }
+
+    @Unroll
+    def "a tool that declares startsApplication beside a trait compiled before, which #what, does not compile"() {
+        given: 'the trait, compiled on its own'
+        File classes = new File(tempDir, 'build/classes/groovy/standalone')
+        compile('Starting', "trait Starting {\n${members}\n}", Phases.ALL, classes, [], 'src/standalone/groovy')
+
+        when:
+        List<String> errors = errors('TailCommand', "class TailCommand implements ${APPLICATION}, Starting {\nboolean startsApplication = false\n${HANDLE}\n}",
+                'src/cli/groovy', [classes])
+
+        then:
+        errors == ['startsApplication of TailCommand has to be the constant true or false, where it is declared or in every constructor: ' +
+                           'the build reads it without running the tool.']
+
+        where:
+        what                                 | members
+        'declares the property'              | 'boolean startsApplication = true'
+        'writes isStartsApplication'         | 'boolean isStartsApplication() { true }'
+        'writes getStartsApplication'        | 'boolean getStartsApplication() { true }'
+        'writes setStartsApplication'        | 'void setStartsApplication(boolean value) { }'
+    }
+
     @Unroll
     def "a tool that runs as a process of its own, marked #where, is described as standalone"() {
         when:

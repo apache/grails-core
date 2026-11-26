@@ -100,12 +100,14 @@ import org.codehaus.groovy.transform.trait.Traits
  *
  * <p>The code with which a trait compiled with the command gives its fields their values when the
  * command is made is read as the rest; that of a trait compiled elsewhere, other than those of the
- * command contract, is not.</p>
+ * command contract, is not. Such a trait is read from its class instead: one that has neither the
+ * property nor a getter or a setter of it, as a helper trait of a module's standalone tools has not,
+ * leaves the property as it is.</p>
  *
  * <p>What can set the property and is not read makes it unknown: a method that is not compiled with
  * the command or has no code, one of the Groovy runtime or one the runtime looks for, an assignment
  * through {@code super}, by a name that is worked out or through a subscript, a setter of the property
- * written by hand, a trait compiled elsewhere that gives its fields values, and a
+ * written by hand, a trait compiled elsewhere that has the property, its getter or its setter, and a
  * class that takes over how its properties are set and its methods found. Code that is not read and is
  * not given the command, such as {@code new JsonSlurper()}, cannot reach it, and leaves the property
  * as it is until the command is handed to code that is not read (a closure holds the command, and a
@@ -959,8 +961,9 @@ class ConstructionReader {
     }
 
     // the traits of the command contract give their fields no value the property is read for; a trait compiled with
-    // the command gives its fields values with code that is read as any other; any other trait may set the property,
-    // and keep the command. The trait of a trait's property gives it its value, and undoes what was set before.
+    // the command gives its fields values with code that is read as any other; a trait compiled elsewhere that has
+    // nothing of the property leaves it as it is; any other trait may set the property, and keep the command. The
+    // trait of a trait's property gives it its value, and undoes what was set before.
     private void traitInit(ClassNode helper, String method, State state, Frame frame) {
         String initialized = helper.name.substring(0, helper.name.length() - TRAIT_HELPER.length())
         if (trait != null && frame.owner.name == declaring.name && initialized == trait && method == TRAIT_INIT) {
@@ -968,9 +971,25 @@ class ConstructionReader {
             state.value = kind.isInstance(state.value) ? UNKNOWN : traitValue
             return
         }
-        if (!CONTRACT_TRAITS.contains(initialized) && !(method == TRAIT_INIT && followed(helper, state))) {
-            unknown(state)
+        if (CONTRACT_TRAITS.contains(initialized) || (method == TRAIT_INIT && (followed(helper, state) || hasNothingOf(helper, initialized, frame)))) {
+            return
         }
+        unknown(state)
+    }
+
+    // whether a trait compiled elsewhere, which is not read, has nothing of the property: neither the property nor a
+    // getter or a setter of it, which are what the class it is compiled into gets of a property of a trait
+    private boolean hasNothingOf(ClassNode helper, String traitName, Frame frame) {
+        if (helper.isPrimaryClassNode()) {
+            return false
+        }
+        ClassNode traitNode = frame.owner.allInterfaces.find { ClassNode type -> type.name == traitName }
+        if (traitNode == null || !Traits.isTrait(traitNode)) {
+            return false
+        }
+        String capitalized = property.capitalize()
+        traitNode.getProperty(property) == null && traitNode.getDeclaredField(property) == null &&
+                ['get', 'is', 'set'].every { String prefix -> traitNode.getDeclaredMethods(prefix + capitalized).isEmpty() }
     }
 
     // reads what a trait compiled with the command runs to give the fields of the instance their values, which it is
