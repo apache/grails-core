@@ -343,6 +343,40 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
         query.list(max: 10).totalCount == 6
     }
 
+    void 'a right join that criteria on the association make keeps one null row for each club that no team refers to when a fetch mode replaced it'() {
+        given:
+        new Club(name: 'Another teamless club').save()
+        new Club(name: 'Teamless').save(flush: true)
+        manager.session.clear()
+
+        when:
+        final query = Team.where { club.name ==~ '%' }.join('club', JoinType.RIGHT).join('club')
+        final results = query.list()
+
+        then: 'the right join is kept for the criteria, so each club without a team adds a row without a team'
+        results.findAll { it != null }*.name.sort() == TEAMS_WITH_A_CLUB
+        results.count { it == null } == 2
+        query.count() == 6
+
+        and:
+        query.list(max: 10).count { it == null } == 2
+        query.list(max: 10).totalCount == 6
+    }
+
+    void 'an alias named like an association does not take the place of the join that the query requests for the association'() {
+        given: 'an alias of the players named club, and an alias of the club named players'
+        final aliasNamedClub = new DetachedCriteria(Team).build { createAlias('players', 'club') }.join('club', JoinType.INNER)
+        final aliasNamedPlayers = new DetachedCriteria(Team).build { createAlias('club', 'players') }.join('players', JoinType.INNER)
+        final teamsWithAClubAndPlayers = TEAMS_WITH_A_CLUB.intersect(TEAMS_WITH_PLAYERS).sort()
+
+        expect: 'both joins are inner joins, so the team without a club and the team without players are left out'
+        aliasNamedClub.list()*.name.sort() == teamsWithAClubAndPlayers
+        aliasNamedClub.count() == 3
+        aliasNamedPlayers.list()*.name.sort() == teamsWithAClubAndPlayers
+        aliasNamedPlayers.count() == 3
+        Team.where { name ==~ '%First%' }.list(fetch: [club: JoinType.INNER]) { createAlias('players', 'club') }*.name.sort() == teamsWithAClubAndPlayers
+    }
+
     void 'a paged #api with a requested #joinType join through a collection keeps its elements'() {
         given:
         saveTeamWithAPlayerWithoutContract()

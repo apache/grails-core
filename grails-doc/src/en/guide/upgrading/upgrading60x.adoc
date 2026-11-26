@@ -1275,6 +1275,14 @@ With `DISCRIMINATOR` multi-tenancy, GORM for MongoDB and GORM's in-memory datast
 * Inside `Tenants.withoutId { }` a lookup by id is still not restricted to a tenant, and neither is a proxy returned by `load` or `proxy` that is initialized there. As the previous note says, only `withoutId` lifts the restriction: a tenant id of `DEFAULT` restricts a lookup by id to that tenant as it restricts a query.
 * A lookup by id still finds an instance that the session holds for the current tenant, including one that has been saved but not flushed, and it does not flush the session.
 
+==== A sort by an association uses the left join that a query requests for it
+
+With GORM for Hibernate, a where query, a detached criteria or a dynamic finder that requests a left join of an association, with `join('owner', JoinType.LEFT)` or `fetch: [owner: JoinType.LEFT]`, and sorts by a property of that association, as with `sort: 'owner.lastName'`, now returns the instances without the association. As of Grails 7.0.18 the sort uses the left join that the query requests. Previously the sort joined the association again with an inner join, so those instances were left out, although the same query without the sort returned them.
+
+* The `totalCount` of a paged list counts the same instances as the list.
+* To leave out the instances without the association, as before, request an inner join with `JoinType.INNER`, or add a criterion such as `owner != null`.
+* A sort by an association for which the query requests no join type, or the fetch mode `join`, still joins it with an inner join.
+
 ==== Data binding white lists apply wherever a class is compiled
 
 As of Grails 7.0.18, the list of bindable properties that Grails generates for a class at compile time, from its statically typed properties, its `bindable` constraints, its `transients` list and its `transient` fields, is generated for every class that implements `grails.validation.Validateable` or declares `constraints` or `transients`, and for every class that extends one, wherever the class is compiled with the data binding library, `grails-web-databinding`, on the compilation's classpath, as it is in an application or a plugin. A library module that compiles against GORM alone generates no list and gets no warning. Previously only domain classes and the parameter types of controller actions compiled with their controller got the list, and a class without one was bound without restriction.
@@ -1384,3 +1392,13 @@ A value marked with `raw()` is still written as given by the tags that wrote it 
 `<g:radio>` now encodes its `value` once. It encoded it twice, so a value with `&`, `<`, `>`, `"` or `'` was submitted with character references in it, such as `+R&amp;D+` for `R&D`.
 
 A value encoded beforehand is no longer encoded twice in the `value` of `<g:textField>`, `<g:hiddenField>` and the other field tags when a `RequestDataValueProcessor` returns it unchanged, nor in an option of `<g:select>`, with or without a processor. `<g:paginate>` and `<g:sortableColumn>` write a `class` that was encoded beforehand once next to the classes they add, such as `step` and `sortable`; they encoded it twice.
+
+==== An enum stored as a string takes the length of its maxSize constraint
+
+With Hibernate 5, an enum property stored as a string ignored a `maxSize` constraint, so its column was always
+`VARCHAR(255)` while a `String` property honoured it. The column now takes the same length constraints as a `String`
+property, and a column created from an `inList` of enum constants is as long as the longest constant name. The length
+only shows in a schema that Hibernate creates: an application that manages its schema by hand or with a migration tool
+keeps the columns it has, and `hbm2ddl.auto: update` does not change an existing column.
+The one difference from a `String` property is a `maxSize` shorter than the longest constant name: `maxSize` does not validate an
+enum, so the column is made as long as the longest name, and no value of the enum fails at the database.
