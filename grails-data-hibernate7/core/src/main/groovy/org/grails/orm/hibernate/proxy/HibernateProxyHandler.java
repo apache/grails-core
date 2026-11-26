@@ -105,7 +105,7 @@ public class HibernateProxyHandler implements ProxyHandler, ProxyFactory {
         // LazyInitializationException when detached), while the LazyInitializer holds the
         // identifier without needing a session
         if (o instanceof HibernateProxy hp) {
-            return (Serializable) hp.getHibernateLazyInitializer().getIdentifier();
+            return (Serializable) hp.getHibernateLazyInitializer().getInternalIdentifier();
         }
 
         return GroovyProxyInterceptorLogic.getIdentifier(o);

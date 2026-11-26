@@ -25,10 +25,10 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 /**
  * With {@code hibernate.jpa.compliance.proxy} enabled, Hibernate initializes a proxy when its identifier
- * is read. Asking a proxy for its metaclass must not read the identifier, so that it does not load the
- * entity.
+ * is read. A GORM proxy answers its identifier and its metaclass without loading the entity, whatever the
+ * setting.
  */
-class JpaCompliantProxyMetaClassSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManager> {
+class JpaCompliantProxySpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManager> {
 
     void setupSpec() {
         // nested config: only nested config reaches the arbitrary hibernate settings map, producing the
@@ -37,14 +37,27 @@ class JpaCompliantProxyMetaClassSpec extends GrailsDataTckSpec<GrailsDataHiberna
         manager.registerDomainClasses(Shape, Circle, Drawing)
     }
 
-    void "the setting is in effect: the identifier getter initializes the proxy"() {
+    void "the setting is in effect"() {
+        expect:
+        manager.sessionFactory.sessionFactoryOptions.jpaCompliance.jpaProxyComplianceEnabled
+    }
+
+    void "reading the identifier of an uninitialized proxy through #request does not initialize it"() {
         given:
         Shape shape = loadShapeProxy()
 
         expect:
         !Hibernate.isInitialized(shape)
-        shape.getId()
-        Hibernate.isInitialized(shape)
+        identifier(shape) == savedId
+        !Hibernate.isInitialized(shape)
+
+        where:
+        request             | identifier
+        'getId()'           | { Shape proxy -> idOf(proxy) }
+        'the id property'   | { Shape proxy -> idPropertyOf(proxy) }
+        "getProperty('id')" | { Shape proxy -> proxy.getProperty('id') }
+        'ident()'           | { Shape proxy -> proxy.ident() }
+        'the proxy handler' | { Shape proxy -> manager.session.mappingContext.proxyHandler.getIdentifier(proxy) }
     }
 
     void "asking an uninitialized proxy for its metaclass through #request does not initialize it"() {
@@ -63,14 +76,34 @@ class JpaCompliantProxyMetaClassSpec extends GrailsDataTckSpec<GrailsDataHiberna
         "getProperty('metaClass')" | { Shape proxy -> metaClassPropertyTypeOf(proxy) }
     }
 
+    void "a property other than the identifier still initializes the proxy"() {
+        given:
+        Shape shape = loadShapeProxy()
+
+        expect:
+        !Hibernate.isInitialized(shape)
+        shape.name == 'round'
+        Hibernate.isInitialized(shape)
+    }
+
+    private Long savedId
+
     private Shape loadShapeProxy() {
-        Long id = new Circle(name: 'round').save(failOnError: true).id
+        savedId = new Circle(name: 'round').save(failOnError: true).id
         manager.session.flush()
         manager.session.clear()
-        Shape.load(id)
+        Shape.load(savedId)
     }
 
     // Spock rewrites the calls in a condition, so the calls under test are made from ordinary methods
+
+    private static Serializable idOf(Shape shape) {
+        shape.getId()
+    }
+
+    private static Serializable idPropertyOf(Shape shape) {
+        shape.id
+    }
 
     private static Class metaClassTypeOf(Shape shape) {
         shape.metaClass.theClass

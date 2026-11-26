@@ -147,7 +147,7 @@ public class SimpleHibernateProxyHandler extends JavassistProxyFactory implement
 
     public Object getProxyIdentifier(Object o) {
         if (o instanceof HibernateProxy) {
-            return ((HibernateProxy) o).getHibernateLazyInitializer().getIdentifier();
+            return ((HibernateProxy) o).getHibernateLazyInitializer().getInternalIdentifier();
         }
         return super.getIdentifier(o);
     }

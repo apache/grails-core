@@ -41,7 +41,7 @@ class HibernateProxyHandlerMetaClassProbeSpec extends Specification {
     void "getIdentifier reads the identifier from the LazyInitializer without dispatching through the proxy"() {
         given:
         LazyInitializer initializer = Stub(LazyInitializer) {
-            getIdentifier() >> 42L
+            getInternalIdentifier() >> 42L
             isUninitialized() >> true
         }
 

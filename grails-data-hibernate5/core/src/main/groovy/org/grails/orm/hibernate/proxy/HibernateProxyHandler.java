@@ -123,7 +123,7 @@ public class HibernateProxyHandler implements ProxyHandler, ProxyFactory {
             return proxyMc.getKey();
         }
         if (o instanceof HibernateProxy) {
-            return ((HibernateProxy) o).getHibernateLazyInitializer().getIdentifier();
+            return ((HibernateProxy) o).getHibernateLazyInitializer().getInternalIdentifier();
         }
         else {
             return null;
