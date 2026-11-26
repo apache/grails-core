@@ -411,7 +411,7 @@ class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterceptor {
         if (count == null) {
             return false
         }
-        if (count > 1) {
+        if (count.intValue() > 1) {
             request.setAttribute(participateAttributeName, count - 1, WebRequest.SCOPE_REQUEST)
         } else {
             request.removeAttribute(participateAttributeName, WebRequest.SCOPE_REQUEST)
