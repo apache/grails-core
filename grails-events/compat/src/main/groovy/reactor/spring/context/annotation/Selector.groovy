@@ -36,6 +36,7 @@ import org.codehaus.groovy.transform.GroovyASTTransformationClass
 @Inherited
 @Documented
 @GroovyASTTransformationClass('org.grails.events.transform.SubscriberTransform')
+@Deprecated(since = '3.3', forRemoval = true)
 @interface Selector {
 
     /**

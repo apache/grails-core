@@ -47,6 +47,7 @@ class GrailsRepoSettingsPlugin implements Plugin<Settings> {
                     url = 'https://central.sonatype.com/repository/maven-snapshots'
                     content {
                         it.includeVersionByRegex('cloud[.]wondrify.*', '.*', '.*-SNAPSHOT')
+                        it.includeVersionByRegex('org[.]sitemesh.*', '.*', '.*-SNAPSHOT')
                     }
                     mavenContent {
                         it.snapshotsOnly()
@@ -100,6 +101,7 @@ class GrailsRepoSettingsPlugin implements Plugin<Settings> {
                     url = 'https://central.sonatype.com/repository/maven-snapshots'
                     content {
                         it.includeVersionByRegex('cloud[.]wondrify.*', '.*', '.*-SNAPSHOT')
+                        it.includeVersionByRegex('org[.]sitemesh.*', '.*', '.*-SNAPSHOT')
                     }
                     mavenContent {
                         it.snapshotsOnly()

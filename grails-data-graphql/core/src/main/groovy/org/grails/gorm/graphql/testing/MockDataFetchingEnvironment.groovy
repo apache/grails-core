@@ -20,7 +20,6 @@
 package org.grails.gorm.graphql.testing
 
 import graphql.GraphQLContext
-import graphql.cachecontrol.CacheControl
 import graphql.execution.ExecutionId
 import graphql.execution.ExecutionStepInfo
 import graphql.execution.MergedField
@@ -29,7 +28,12 @@ import graphql.language.Document
 import graphql.language.Field
 import graphql.language.FragmentDefinition
 import graphql.language.OperationDefinition
-import graphql.schema.*
+import graphql.schema.DataFetchingEnvironment
+import graphql.schema.DataFetchingFieldSelectionSet
+import graphql.schema.GraphQLFieldDefinition
+import graphql.schema.GraphQLOutputType
+import graphql.schema.GraphQLSchema
+import graphql.schema.GraphQLType
 import groovy.transform.CompileStatic
 import org.dataloader.DataLoader
 import org.dataloader.DataLoaderRegistry
@@ -55,7 +59,6 @@ class MockDataFetchingEnvironment implements DataFetchingEnvironment {
     Map<String, FragmentDefinition> fragmentsByName
     ExecutionId executionId
     DataLoaderRegistry dataLoaderRegistry
-    CacheControl cacheControl
     OperationDefinition operationDefinition
     Locale locale
     DataFetchingFieldSelectionSet selectionSet
@@ -104,18 +107,13 @@ class MockDataFetchingEnvironment implements DataFetchingEnvironment {
     }
 
     @Override
-    CacheControl getCacheControl() {
-        cacheControl
-    }
-
-    @Override
     Locale getLocale() {
         locale
     }
 
     @Override
     OperationDefinition getOperationDefinition() {
-         operationDefinition
+        operationDefinition
     }
 
     @Override

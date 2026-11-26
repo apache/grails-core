@@ -31,11 +31,10 @@ import grails.plugins.GrailsPlugin;
 import grails.plugins.PluginFilter;
 
 /**
- * Base functionality shared by <code>IncludingPluginFilter</code> and
- * <code>ExcludingPluginFilter</code>.
- *
- * @author Phil Zoio
+ * @deprecated Use {@link org.apache.grails.core.plugins.filters.BasePluginFilter} instead.
+ * This compatibility stub will be removed in Grails 8.0.0.
  */
+@Deprecated(forRemoval = true, since = "7.1")
 public abstract class BasePluginFilter implements PluginFilter {
 
     /**

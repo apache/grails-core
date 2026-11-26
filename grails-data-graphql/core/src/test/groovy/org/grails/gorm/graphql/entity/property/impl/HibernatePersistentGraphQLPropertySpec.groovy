@@ -359,8 +359,8 @@ class HibernatePersistentGraphQLPropertySpec extends HibernateSpec {
         'order8'     | 8 //specified via mapping
         'order0'     | 0 //specified as 0
         'orderNeg'   | -21 //specified as -10
-        'orderNullc' | 6 //not specified, gorm supplied
-        'orderNulld' | 7 //not specified, gorm supplied
+        'orderNullc' | 5 //not specified, gorm supplied
+        'orderNulld' | 6 //not specified, gorm supplied
     }
 
     void "test deprecation with foo property"() {

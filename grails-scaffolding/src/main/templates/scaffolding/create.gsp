@@ -24,9 +24,7 @@
         <section class="row">
             <div id="create-${propertyName}" class="col-12 content scaffold-create" role="main">
                 <h1><g:message code="default.create.label" args="[entityName]" /></h1>
-                <g:if test="\${flash.message}">
-                    <div class="message" role="status">\${flash.message}</div>
-                </g:if>
+                <g:flashMessages />
                 <g:hasErrors bean="\${this.${propertyName}}">
                     <ul class="alert alert-danger list-unstyled" role="alert">
                         <g:eachError bean="\${this.${propertyName}}" var="error">
