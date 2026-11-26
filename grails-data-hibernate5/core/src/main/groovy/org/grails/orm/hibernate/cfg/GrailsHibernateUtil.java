@@ -25,6 +25,7 @@ import java.util.Map;
 import groovy.lang.GroovyObject;
 import groovy.lang.GroovySystem;
 import groovy.lang.MetaClass;
+import groovy.transform.Internal;
 
 import org.hibernate.Criteria;
 import org.hibernate.FetchMode;
@@ -126,6 +127,14 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
         if (argMap.containsKey(ARGUMENT_READ_ONLY)) {
             c.setReadOnly(ClassUtils.getBooleanFromMap(ARGUMENT_READ_ONLY, argMap));
         }
+        final int max = maxParam == null ? -1 : maxParam;
+        final int offset = offsetParam == null ? -1 : offsetParam;
+        if (max > -1) {
+            c.setMaxResults(max);
+        }
+        if (offset > -1) {
+            c.setFirstResult(offset);
+        }
         String orderParam = (String) argMap.get(ARGUMENT_ORDER);
         Object fetchObj = argMap.get(ARGUMENT_FETCH);
         if (fetchObj instanceof Map) {
@@ -142,14 +151,6 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
             }
         }
 
-        final int max = maxParam == null ? -1 : maxParam;
-        final int offset = offsetParam == null ? -1 : offsetParam;
-        if (max > -1) {
-            c.setMaxResults(max);
-        }
-        if (offset > -1) {
-            c.setFirstResult(offset);
-        }
         if (ClassUtils.getBooleanFromMap(ARGUMENT_LOCK, argMap)) {
             c.setLockMode(LockMode.PESSIMISTIC_WRITE);
             c.setCacheable(false);
@@ -339,6 +340,7 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
      * @param associationPath The path of the association from the target class
      * @param joinType The requested join type
      */
+    @Internal
     public static void applyJoinType(AbstractHibernateDatastore datastore, Class<?> targetClass, Criteria root, String associationPath, jakarta.persistence.criteria.JoinType joinType) {
         PersistentEntity entity = datastore != null && targetClass != null ? datastore.getMappingContext().getPersistentEntity(targetClass.getName()) : null;
         applyJoinType(entity, root, associationPath, joinType);
@@ -353,6 +355,7 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
      * @param associationPath The path of the association from the entity
      * @param joinType The requested join type
      */
+    @Internal
     public static void applyJoinType(PersistentEntity entity, Criteria root, String associationPath, jakarta.persistence.criteria.JoinType joinType) {
         root.setFetchMode(associationPath, FetchMode.JOIN);
         if (entity == null) {

@@ -22,7 +22,9 @@ import grails.gorm.DetachedCriteria
 import grails.gorm.annotation.Entity
 import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
+import org.grails.orm.hibernate.cfg.GrailsHibernateUtil
 import org.hibernate.Hibernate
+import org.hibernate.criterion.Restrictions
 import spock.lang.IgnoreIf
 
 import jakarta.persistence.criteria.JoinType
@@ -166,6 +168,30 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
 
         where:
         [associationForm, request] << [['block', 'alias'], ['before', 'after', 'fetch']].combinations()
+    }
+
+    void 'criteria arguments apply #paging before the requested #joinType fetch of #path'() {
+        given:
+        saveTeamWithAPlayerWithoutContract()
+
+        when:
+        final results = Team.withSession { session ->
+            final criteria = session.createCriteria(Team)
+            criteria.add(Restrictions.like('name', '%Team'))
+            GrailsHibernateUtil.populateArgumentsForCriteria(manager.hibernateDatastore, Team, criteria,
+                    paging + [sort: 'name', order: 'desc', fetch: [(path): joinType]], manager.hibernateDatastore.mappingContext.conversionService)
+            criteria.list()
+        }
+
+        then:
+        results*.name == expected
+        results.every { !Hibernate.isInitialized(it.players) }
+        results.findAll { it.name == 'Squad Team' }.every { it.players*.name.sort() == ['Squad Player A', 'Squad Player B', 'Squad Player without contract'] }
+
+        where:
+        [path, joinType, paging] << [['players', 'players.contract'], [JoinType.LEFT, JoinType.INNER], [[max: 2], [max: 1, offset: 1], [offset: 2]]].combinations()
+        expected = paging.offset == 2 ? (joinType == JoinType.LEFT ? ['Playerless First Team', 'MU First Team', 'Chelsea First Team', 'Arsenal First Team'] :
+                ['MU First Team', 'Chelsea First Team', 'Arsenal First Team']) : paging.offset == 1 ? ['Squad Team'] : ['Unattached First Team', 'Squad Team']
     }
 
     void 'a paged criteria requested join keeps every element of a collection on its path'() {
