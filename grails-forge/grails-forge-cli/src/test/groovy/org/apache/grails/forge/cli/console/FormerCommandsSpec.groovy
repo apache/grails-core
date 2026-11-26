@@ -726,10 +726,10 @@ class FormerCommandsSpec extends CommandSpec {
         err.reset()
         exit = ForgeCli.execute(beanContext, 'create-tool', 'data-import')
 
-        then:
+        then: 'in the package of the application, and in a plugin in a package of the companion -cli'
         exit == 0
         err.toString().isEmpty()
-        new File(project, 'src/cli/groovy/example/DataImportTool.groovy').isFile()
+        new File(project, written).isFile()
         !new File(project, 'src/main/scripts').exists()
         !new File(project, 'grails-app/commands').exists()
 
@@ -741,11 +741,11 @@ class FormerCommandsSpec extends CommandSpec {
         candidates*.toString() == ['ervice']
 
         where:
-        former           | kind     | line
-        'create-script'  | 'web'    | CREATE_SCRIPT
-        'create-script'  | 'plugin' | CREATE_SCRIPT
-        'create-command' | 'web'    | CREATE_COMMAND
-        'create-command' | 'plugin' | CREATE_COMMAND
+        former           | kind     | line           | written
+        'create-script'  | 'web'    | CREATE_SCRIPT  | 'src/cli/groovy/example/DataImportTool.groovy'
+        'create-script'  | 'plugin' | CREATE_SCRIPT  | 'src/cli/groovy/example/cli/DataImportTool.groovy'
+        'create-command' | 'web'    | CREATE_COMMAND | 'src/cli/groovy/example/DataImportTool.groovy'
+        'create-command' | 'plugin' | CREATE_COMMAND | 'src/cli/groovy/example/cli/DataImportTool.groovy'
     }
 
     void "create-functional-test, which was a script of the Geb plugin in a web application, is a command there, and is refused with its line in a project without Geb"() {

@@ -148,8 +148,19 @@ abstract class CodeGenCommand extends BaseCommand implements Callable<Integer>, 
      * @throws CommandLine.ParameterException when the name cannot be the name of a class
      */
     protected Project newArtefact(String name, String convention) {
+        return newArtefact(name, convention, config?.getDefaultPackage())
+    }
+
+    /**
+     * The names of a class that is to be created, as {@link #newArtefact(String, String)} gives them,
+     * for a command that puts a class given without a package into another package than the default
+     * package of the project.
+     *
+     * @param defaultPackage the package of a name that has none, which can be missing
+     */
+    protected Project newArtefact(String name, String convention, String defaultPackage) {
         try {
-            return ArtefactName.parse(name, config?.getDefaultPackage(), convention)
+            return ArtefactName.parse(name, defaultPackage, convention)
         } catch (IllegalArgumentException e) {
             throw new CommandLine.ParameterException(spec.commandLine(), e.getMessage())
         }

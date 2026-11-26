@@ -371,7 +371,7 @@ A plugin with tools publishes `<artifact>-cli`, and `<artifact>-cli-standalone` 
 grails create-plugin my-plugin
 ----
 
-. *Write the tools* into `src/cli/groovy` and `src/standalone/groovy` of the plugin, with `grails create-tool` as in an application. Give them a package that is the plugin's own: without a package, `create-tool` writes a tool into the package of the project, which in a plugin is the package of the plugin class, and that package would then be in the jar of the plugin and in both companions. Name the package with the tool, as in `grails create-tool com.example.myplugin.cli.AuditReport` and `grails create-tool --standalone com.example.myplugin.cli.standalone.CreateReport`:
+. *Write the tools* into `src/cli/groovy` and `src/standalone/groovy` of the plugin, with `grails create-tool` as in an application. Each jar of a plugin has packages of its own, so `create-tool` in a plugin writes a tool given without a package into a package of its companion, beside the package of the project, which is that of the plugin class: a tool of `src/cli` into `<package>.cli`, and with `--standalone` into `<package>.cli.standalone`. In a plugin of the package `com.example.myplugin`, `grails create-tool audit-report` writes `com.example.myplugin.cli.AuditReportTool`, and `grails create-tool --standalone create-report` writes `com.example.myplugin.cli.standalone.CreateReportTool`:
 +
 [source,groovy]
 .src/cli/groovy/com/example/myplugin/cli/AuditReportTool.groovy
@@ -390,6 +390,16 @@ class AuditReportTool implements ApplicationTool, ToolSupport {
         return true
     }
 }
+----
++
+A name with a package is taken as it is given. When a source of that package is in a folder whose classes are in another jar of the plugin, which is `src/main`, a folder of sources under `grails-app`, or the folder of the other companion, `create-tool` writes the tool all the same, and warns that the package is then in two jars:
++
+[source,console]
+----
+$ grails create-tool com.example.myplugin.AuditReport
+| Rendered tool to src/cli/groovy/com/example/myplugin/AuditReportTool.groovy
+| Warning The package com.example.myplugin has classes in src/main/groovy, which are in the jar of the plugin, and the tool puts it into its companion -cli as well. No package of a plugin is to be in two of its jars (the plugin, -cli and -cli-standalone), so that each jar can be a module of its own: give the tool a package of its own, as com.example.myplugin.cli
+| Run it with: grails audit-report
 ----
 +
 Compiling a folder registers its tools in `META-INF/grails-cli.factories` of its output, so no registration file is written by hand. Templates a standalone tool renders go into `src/standalone/resources/META-INF/templates`, so that they are in the `-cli-standalone` jar.
@@ -447,7 +457,7 @@ cliArtifact {
 }
 ----
 
-Each companion is a module of its own: with `automaticModuleName` set, the `-cli` jar has that `Automatic-Module-Name` and the `-cli-standalone` jar the one of `standaloneAutomaticModuleName`. No two jars of the plugin should share a package either. Give the classes of `src/cli`, of `src/standalone` and of the plugin itself packages of their own, such as `com.example.myplugin.cli` and `com.example.myplugin.cli.standalone`, so that no package is in both companions, or in a companion and the plugin: two jars with classes of one package cannot be on one module path.
+Each companion is a module of its own: with `automaticModuleName` set, the `-cli` jar has that `Automatic-Module-Name` and the `-cli-standalone` jar the one of `standaloneAutomaticModuleName`. No two jars of the plugin should share a package either. Give the classes of `src/cli`, of `src/standalone` and of the plugin itself packages of their own, such as `com.example.myplugin.cli` and `com.example.myplugin.cli.standalone`, which `create-tool` gives a tool written without a package, so that no package is in both companions, or in a companion and the plugin: two jars with classes of one package cannot be on one module path.
 
 *Taking the tools of a plugin without the plugin.* An application can declare a companion instead of the plugin. The standalone tools of a plugin need nothing of the plugin, so an application that only wants those declares `-cli-standalone`, and then nothing of the plugin is on any of its class paths: not on the class path of the application, of its tests, or of its tools. This is what a REST API application with the `scaffolding` feature declares, to generate controllers and views without the Scaffolding plugin or the Fields plugin, and without GSP but on the class paths of its tests, which have it from the testing support of Grails:
 

@@ -49,6 +49,8 @@ It is a command of every project. As it is written, the class prints its name an
 
 The name is needed: the command does not ask for one. It can include a package, such as `org.bookstore` in the last example above; without one, the class goes into the default package of the project. The first letter of the name is made upper case.
 
+In a plugin, which publishes its tools in two jars beside its own, `<artifact>-cli` and `<artifact>-cli-standalone`, a tool given without a package goes into a package of its jar beside the default package, so that no package is in two jars of the plugin: a tool of `src/cli` into `<package>.cli`, and with `--standalone` into `<package>.cli.standalone`. A name with a package is taken as it is given; when a source of that package is in `src/main`, in a folder of sources under `grails-app`, or in the folder of the other kind of tool, the tool is written and a warning says that the package is then in two jars of the plugin. See link:{guidePath}commandLine.html#toolsOfAPlugin[Tools of a Plugin].
+
 Options:
 
 * `--standalone` - Write a standalone tool into `src/standalone/groovy`, in place of a tool into `src/cli/groovy`.

@@ -157,6 +157,29 @@ class ArtefactCommandsSpec extends CommandSpec implements CommandFixture {
         ]
     }
 
+    void "the tools of a plugin given without a package are in packages of their own, one for each companion"() {
+        given:
+        project(ApplicationType.PLUGIN)
+
+        when:
+        Map<String, String> written = writtenBy {
+            assert ForgeCli.execute(beanContext, 'create-tool', 'fooBar') == 0
+            assert ForgeCli.execute(beanContext, 'create-tool', 'other.pkg.Baz') == 0
+            assert ForgeCli.execute(beanContext, 'create-tool', '--standalone', 'render') == 0
+        }
+
+        then: 'the same classes as in an application, a tool of src/cli in <package>.cli and a standalone tool in <package>.cli.standalone'
+        written == golden('plugin')
+        out.toString().readLines() == [
+                '| Rendered tool to src/cli/groovy/example/grails/cli/FooBarTool.groovy',
+                '| Run it with: grails-forge-cli foo-bar',
+                '| Rendered tool to src/cli/groovy/other/pkg/BazTool.groovy',
+                '| Run it with: grails-forge-cli baz',
+                '| Rendered tool to src/standalone/groovy/example/grails/cli/standalone/RenderTool.groovy',
+                '| Run it with: grails-forge-cli render'
+        ]
+    }
+
     void "the commands of a REST API application"() {
         given:
         project(ApplicationType.REST_API)
@@ -205,7 +228,7 @@ class ArtefactCommandsSpec extends CommandSpec implements CommandFixture {
         }
 
         where:
-        set << ['existing', 'web', 'rest-api']
+        set << ['existing', 'web', 'rest-api', 'plugin']
     }
 
     @Unroll

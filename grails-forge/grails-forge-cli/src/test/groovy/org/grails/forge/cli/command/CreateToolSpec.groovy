@@ -31,7 +31,8 @@ import spock.lang.Unroll
  * {@code --standalone} a tool that runs as a process of its own into {@code src/standalone/groovy},
  * each from its template; never into {@code grails-app/commands}, where tools were before, and never a
  * class of a deprecated type. No application is built: what the build does with the two folders is
- * specified with the Gradle plugin.
+ * specified with the Gradle plugin. In a plugin, whose tools are in two jars of their own beside the
+ * jar of the plugin, a tool given without a package goes into a package of its jar.
  */
 class CreateToolSpec extends CommandSpec implements CommandFixture {
 
@@ -99,6 +100,98 @@ class CreateToolSpec extends CommandSpec implements CommandFixture {
         'ImportTool'         | 'import'         | 'src/cli/groovy/example/grails/ImportTool.groovy'
         'create-report-tool' | 'create-report'  | 'src/cli/groovy/example/grails/CreateReportTool.groovy'
         'org.shop.Audit'     | 'audit'          | 'src/cli/groovy/org/shop/AuditTool.groovy'
+    }
+
+    void "in a plugin a tool given without a package goes into a package of its companion, and the package of the plugin class is in no companion"() {
+        given:
+        inAPlugin()
+
+        when:
+        int built = ForgeCli.execute(beanContext, 'create-tool', 'data-import')
+        int alone = ForgeCli.execute(beanContext, 'create-tool', '--standalone', 'render')
+
+        then: 'a tool of src/cli in <package>.cli, the package of the companion -cli, and a standalone tool in <package>.cli.standalone'
+        built == 0
+        alone == 0
+        new File(dir, 'src/cli/groovy/example/grails/cli/DataImportTool.groovy').text.startsWith('package example.grails.cli\n')
+        new File(dir, 'src/standalone/groovy/example/grails/cli/standalone/RenderTool.groovy').text.startsWith('package example.grails.cli.standalone\n')
+        out.toString().readLines() == [
+                '| Rendered tool to src/cli/groovy/example/grails/cli/DataImportTool.groovy',
+                '| Run it with: grails-forge-cli data-import',
+                '| Rendered tool to src/standalone/groovy/example/grails/cli/standalone/RenderTool.groovy',
+                '| Run it with: grails-forge-cli render']
+        err.toString().isEmpty()
+
+        and: 'the plugin class is where it was, and no tool beside it'
+        new File(dir, 'src/main/groovy/example/grails/FooGrailsPlugin.groovy').isFile()
+        !new File(dir, 'src/cli/groovy/example/grails').list().any { String name -> name.endsWith('.groovy') }
+        !new File(dir, 'src/standalone/groovy/example/grails').list().any { String name -> name.endsWith('.groovy') }
+    }
+
+    @Unroll
+    void "in a plugin create-tool #options #given is written to #file, and is said to share a package with #shared"() {
+        given:
+        inAPlugin()
+        if (existing) {
+            File other = new File(dir, existing)
+            other.parentFile.mkdirs()
+            other.text = "package ${given.substring(0, given.lastIndexOf('.'))}\n\nclass Existing { }\n"
+        }
+
+        when:
+        int exit = ForgeCli.execute(beanContext, (['create-tool'] + options + [given]) as String[])
+
+        then: 'the name is taken as it is given, and a package another jar of the plugin has is said to be in two jars then'
+        exit == 0
+        new File(dir, file).isFile()
+        out.toString().readLines().findAll { String line -> line.startsWith('| Warning') } == (shared == 'nothing' ? [] : [
+                "| Warning The package ${given.substring(0, given.lastIndexOf('.'))} has classes in ${shared}, and the tool puts it into ${own} as well. ".toString() +
+                        'No package of a plugin is to be in two of its jars (the plugin, -cli and -cli-standalone), so that each jar can be a module of its own: ' +
+                        "give the tool a package of its own, as ${options ? 'example.grails.cli.standalone' : 'example.grails.cli'}"])
+        out.toString().readLines().last().startsWith('| Run it with: ')
+
+        where:
+        options          | given                                  | existing                                                            | file                                                                  | shared                                                                 | own
+        []               | 'org.shop.Audit'                       | null                                                                | 'src/cli/groovy/org/shop/AuditTool.groovy'                            | 'nothing'                                                              | null
+        []               | 'example.grails.cli.Audit'             | 'src/cli/groovy/example/grails/cli/ReportTool.groovy'               | 'src/cli/groovy/example/grails/cli/AuditTool.groovy'                  | 'nothing'                                                              | null
+        []               | 'example.grails.Audit'                 | null                                                                | 'src/cli/groovy/example/grails/AuditTool.groovy'                      | 'src/main/groovy, which are in the jar of the plugin'                  | 'its companion -cli'
+        ['--standalone'] | 'example.grails.Audit'                 | null                                                                | 'src/standalone/groovy/example/grails/AuditTool.groovy'               | 'src/main/groovy, which are in the jar of the plugin'                  | 'its companion -cli-standalone'
+        []               | 'example.shop.Audit'                   | 'grails-app/services/example/shop/StockService.groovy'              | 'src/cli/groovy/example/shop/AuditTool.groovy'                        | 'grails-app/services, which are in the jar of the plugin'              | 'its companion -cli'
+        ['--standalone'] | 'example.grails.cli.Audit'             | 'src/cli/groovy/example/grails/cli/ReportTool.groovy'               | 'src/standalone/groovy/example/grails/cli/AuditTool.groovy'           | 'src/cli/groovy, which are in its companion -cli'                      | 'its companion -cli-standalone'
+        []               | 'example.grails.cli.standalone.Audit'  | 'src/standalone/groovy/example/grails/cli/standalone/RenderTool.groovy' | 'src/cli/groovy/example/grails/cli/standalone/AuditTool.groovy'  | 'src/standalone/groovy, which are in its companion -cli-standalone'    | 'its companion -cli'
+        ['--standalone'] | 'example.legacy.Audit'                 | 'grails-app/commands/example/legacy/ImportCommand.groovy'           | 'src/standalone/groovy/example/legacy/AuditTool.groovy'               | 'grails-app/commands, which are in its companion -cli'                 | 'its companion -cli-standalone'
+    }
+
+    void "in a plugin a tool of the name of a tool in the other folder is refused, each in the package of its folder"() {
+        given:
+        inAPlugin()
+        assert ForgeCli.execute(beanContext, 'create-tool', 'greet') == 0
+        out.reset()
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'create-tool', '--standalone', 'greet')
+
+        then:
+        exit == 1
+        err.toString().readLines() == ['| Error src/cli/groovy/example/grails/cli/GreetTool.groovy is a tool of the name greet already, and a project has one tool of a name. ' +
+                                               'Rename one of them. Nothing was written']
+        !new File(dir, 'src/standalone').exists()
+    }
+
+    void "in an application a tool of the package of the application is written as before, and nothing is said of its package"() {
+        given: 'the application class in the default package'
+        assert new File(dir, 'grails-app/init/example/grails/Application.groovy').isFile()
+
+        when:
+        int built = ForgeCli.execute(beanContext, 'create-tool', 'example.grails.Audit')
+        int alone = ForgeCli.execute(beanContext, 'create-tool', '--standalone', 'render')
+
+        then:
+        built == 0
+        alone == 0
+        new File(dir, 'src/cli/groovy/example/grails/AuditTool.groovy').isFile()
+        new File(dir, 'src/standalone/groovy/example/grails/RenderTool.groovy').isFile()
+        !out.toString().contains('Warning')
     }
 
     void "the templates of the project are used for each kind, and install-templates copies the two of a tool"() {
@@ -269,5 +362,11 @@ class CreateToolSpec extends CommandSpec implements CommandFixture {
         help.contains('With --standalone it is written to src/standalone/groovy and runs as a process of its own, without Gradle and without the application, on the files of the project.')
         help.contains('--standalone Creates a tool that runs as a process of its own, without Gradle and without the application, in src/standalone/groovy')
         help.contains('TOOL-NAME The name of the tool to create')
+    }
+
+    // the directory has a generated plugin in place of the application, which has the record of a plugin
+    private void inAPlugin() {
+        dir.listFiles().each { File each -> each.directory ? each.deleteDir() : each.delete() }
+        generateProject(ApplicationType.PLUGIN)
     }
 }
