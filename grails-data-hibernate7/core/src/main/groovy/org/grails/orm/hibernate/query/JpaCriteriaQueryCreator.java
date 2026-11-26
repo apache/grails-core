@@ -220,10 +220,10 @@ public class JpaCriteriaQueryCreator<T> {
                 }
                 // a path through a collection is fetched with left joins, so that the collection holds all of its
                 // elements; the subquery decides which instances the query returns
-                fetchPath(root, tokens, restricts && collection < 0 ? joinType : JoinType.LEFT, fetches);
+                fetchPath(root, tokens, collection, requested, fetches);
             }
             else if (collection < 0) {
-                joinProjectionPath(root, tokens, joinType, projectionJoins);
+                joinProjectionPath(root, tokens, requested, projectionJoins);
             }
         });
     }
@@ -308,10 +308,10 @@ public class JpaCriteriaQueryCreator<T> {
     }
 
     /**
-     * Fetches every association on a path, the last one with the given join type and the ones before it with a
-     * left join. An association that an earlier path already fetches is fetched once.
+     * Fetches each to-one prefix with its own requested type, or LEFT when none was requested, independently of
+     * which path reaches it first. From the first collection onwards, LEFT keeps every fetched element.
      */
-    private void fetchPath(Root<?> root, String[] tokens, JoinType lastJoinType, Map<String, Fetch<?, ?>> fetches) {
+    private void fetchPath(Root<?> root, String[] tokens, int collection, Map<String, JoinType> requested, Map<String, Fetch<?, ?>> fetches) {
         FetchParent<?, ?> parent = root;
         StringBuilder path = new StringBuilder();
         for (int i = 0; i < tokens.length; i++) {
@@ -319,7 +319,8 @@ public class JpaCriteriaQueryCreator<T> {
             Fetch<?, ?> fetch = fetches.get(path.toString());
             if (fetch == null) {
                 try {
-                    fetch = parent.fetch(tokens[i], i == tokens.length - 1 ? lastJoinType : JoinType.LEFT);
+                    JoinType type = collection < 0 || i < collection ? requested.getOrDefault(path.toString(), JoinType.LEFT) : JoinType.LEFT;
+                    fetch = parent.fetch(tokens[i], type);
                 }
                 catch (IllegalArgumentException ignored) {
                     // not a fetchable association; the plain join handling remains in place
@@ -331,15 +332,15 @@ public class JpaCriteriaQueryCreator<T> {
         }
     }
 
-    /** A projection uses the same to-one join chain as the entity fetch, including its left-joined prefixes. */
-    private static void joinProjectionPath(Root<?> root, String[] tokens, JoinType lastJoinType, Map<String, From<?, ?>> joins) {
+    /** A projection uses the same requested types for each to-one prefix as the entity fetch. */
+    private static void joinProjectionPath(Root<?> root, String[] tokens, Map<String, JoinType> requested, Map<String, From<?, ?>> joins) {
         From<?, ?> parent = root;
         String path = "";
         for (int i = 0; i < tokens.length; i++) {
             path = path.isEmpty() ? tokens[i] : path + '.' + tokens[i];
             From<?, ?> join = joins.get(path);
             if (join == null) {
-                join = parent.join(tokens[i], i == tokens.length - 1 ? lastJoinType : JoinType.LEFT);
+                join = parent.join(tokens[i], requested.getOrDefault(path, JoinType.LEFT));
                 joins.put(path, join);
             }
             parent = join;

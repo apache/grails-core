@@ -274,6 +274,90 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckM
         }*.name.sort() == ALL_TEAMS
     }
 
+    void 'an explicit parent #parentType wins over a nested fetch through #api with parent first #parentFirst'() {
+        given:
+        new Player(name: 'No team').save(validate: false, flush: true)
+        manager.session.clear()
+        final fetches = parentFirst ? [team: parentType, 'team.club': JoinType.LEFT] : ['team.club': JoinType.LEFT, team: parentType]
+        final arguments = [fetch: fetches, max: 10]
+
+        when:
+        final results = api == 'criteria' ? Player.createCriteria().list(arguments) { } :
+                api == 'static' ? Player.list(arguments) :
+                api == 'where' ? Player.where { name != 'Missing' }.list(arguments) :
+                new DetachedCriteria(Player).list(arguments)
+
+        then:
+        results*.name.sort() == (parentType == JoinType.LEFT ?
+                ['Arsenal Player', 'Chelsea Player', 'MU Player', 'No team', 'Unattached Player'] :
+                ['Arsenal Player', 'Chelsea Player', 'MU Player', 'Unattached Player'])
+        results.totalCount == results.size()
+        results.findAll { it.team != null }.every { Hibernate.isInitialized(it.team) && Hibernate.isInitialized(it.team.club) }
+
+        where:
+        [parentType, parentFirst, api] << [[JoinType.INNER, JoinType.LEFT], [false, true], ['criteria', 'static', 'where', 'detached']].combinations()
+    }
+
+    void 'a parent type replaced by #mode stays replaced with a nested fetch and parent first #parentFirst'() {
+        given:
+        new Player(name: 'No team').save(validate: false, flush: true)
+        manager.session.clear()
+        final query = new DetachedCriteria(Player)
+        if (!parentFirst) {
+            query.join('team.club', JoinType.LEFT)
+        }
+        query.join('team', JoinType.INNER)
+        query."$mode"('team')
+        if (parentFirst) {
+            query.join('team.club', JoinType.LEFT)
+        }
+
+        when:
+        final results = query.list(max: 10)
+
+        then:
+        results*.name.sort() == ['Arsenal Player', 'Chelsea Player', 'MU Player', 'No team', 'Unattached Player']
+        results.totalCount == 5
+        query.count() == 5
+
+        where:
+        [mode, parentFirst] << [['join', 'select'], [false, true]].combinations()
+    }
+
+    void 'a parent #parentType requested by join agrees across list count and projection with parent first #parentFirst'() {
+        given:
+        new Player(name: 'No team').save(validate: false, flush: true)
+        manager.session.clear()
+        final query = new DetachedCriteria(Player)
+        if (parentFirst) {
+            query.join('team', parentType)
+        }
+        query.join('team.club', JoinType.LEFT)
+        if (!parentFirst) {
+            query.join('team', parentType)
+        }
+        final expected = parentType == JoinType.LEFT ?
+                ['Arsenal Player', 'Chelsea Player', 'MU Player', 'No team', 'Unattached Player'] :
+                ['Arsenal Player', 'Chelsea Player', 'MU Player', 'Unattached Player']
+
+        expect:
+        query.list()*.name.sort() == expected
+        query.count() == expected.size()
+        query.property('name').list().sort() == expected
+        Player.createCriteria().list {
+            if (parentFirst) {
+                join('team', parentType)
+            }
+            join('team.club', JoinType.LEFT)
+            if (!parentFirst) {
+                join('team', parentType)
+            }
+        }*.name.sort() == expected
+
+        where:
+        [parentType, parentFirst] << [[JoinType.INNER, JoinType.LEFT], [false, true]].combinations()
+    }
+
     void 'a nested right join has the same rows in its list count and paged total'() {
         given: 'a playerless team already refers to Arsenal, and two clubs have no teams'
         new Club(name: 'Teamless A').save(failOnError: true)
