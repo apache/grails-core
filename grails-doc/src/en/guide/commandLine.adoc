@@ -198,7 +198,6 @@ A JDK 8 that has no `release` file is told by its `rt.jar`. A Java whose install
 
 These are the environment variables the command line and the Grails wrapper read or set:
 
-// TOOLS-VERIFY: GRAILS_LIST_TOOLS replaces GRAILS_LIST_COMMANDS (P4); whether the old name is still read.
 [cols="2,5"]
 |===
 |Variable |Meaning
@@ -237,7 +236,7 @@ These are the environment variables the command line and the Grails wrapper read
 |When `true`, the command line says on its error output how it runs each command: which way it runs Gradle and why, whether it made a connection to Gradle or reused one, whether it loaded its classes ahead, and whether the project generator runs and compiled templates. See link:commandLine.html#gradleRunnerDiagnostics[Seeing How a Command Runs].
 
 |`GRAILS_LIST_TOOLS`
-|When `false`, a name that is none of the commands of a project is refused at once, and `grails` does not run the build to list the tools of the application and its plugins for it. With any other value, or not set, it does. See "Tools of the Application and its Plugins" below.
+|When `false`, a name that is none of the commands of a project is refused at once, and `grails` does not run the build to list the tools of the application and its plugins for it. With any other value, or not set, it does. `GRAILS_LIST_COMMANDS`, the name of earlier builds of Grails 9, is no longer read. See "Tools of the Application and its Plugins" below.
 
 |`GRAILS_NON_INTERACTIVE`
 |Set to `true` by the command line for the build it starts when `--non-interactive` was given, so that a tool of the application or a script knows that nothing may wait for what a user types. The command line itself does not read it.
@@ -955,7 +954,7 @@ $ grails run-tool install-templates
 
 ==== Scripts of the application
 
-The scripts in `src/main/scripts` of a project are run by their names in the same way, listed after the tools the build lists and marked `(script of the application)`. A script is run by the build of the project, through the Gradle task `runScriptCommand`, and never by the `grails` command, which only reads the names of the files. Script commands are deprecated: the scripts a project has still run, with a warning, and no command creates a new one. A new one is a tool that `create-tool` writes. See xref:commandLine#creatingCustomScripts[Creating Custom Scripts] for the rules and for what a script has where the build runs it.
+The scripts in `src/main/scripts` of a project are run by their names in the same way, listed after the tools the build lists and marked `(script of the application)`. A script is run by the build of the project, through the Gradle task `runScriptCommand`, and never by the `grails` command, which only reads the names of the files. Script commands are deprecated: the scripts a project has still run, with a warning said once that names tools, and no command creates a new one. A new one is a tool that `create-tool` writes. See xref:commandLine#creatingCustomScripts[Creating Custom Scripts] for the rules and for what a script has where the build runs it.
 
 [[findingPlugins]]
 === Finding Plugins

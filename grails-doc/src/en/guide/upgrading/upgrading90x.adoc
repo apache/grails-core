@@ -2632,7 +2632,7 @@ Every command the Grails shell of Grails 8 had, of itself and of the profiles `b
 
 |`run-script`
 |every project
-|Unchanged: the Gradle task `runScript`.
+|Kept, and deprecated: `grails run-script FILE` and the Gradle task `runScript` run the script as before and warn once, naming tools (64).
 
 |`sh`
 |every project, another name of `shell`
@@ -3184,7 +3184,7 @@ Grails 9 keeps the word _command_ for what the `grails` command line has itself:
 
 |`GRAILS_LIST_COMMANDS`
 |`GRAILS_LIST_TOOLS`
-|Renamed.
+|Renamed. `GRAILS_LIST_COMMANDS` is no longer read: a job that sets it has to set `GRAILS_LIST_TOOLS`.
 
 |The findings `command-catalog.*` of `project health`
 |`tool-catalog.*`
@@ -3210,18 +3210,22 @@ DataImportCommand implements ApplicationCommand, which is deprecated: implement 
 | Warning data-import is in grails-app/commands, which is deprecated: move it to src/cli/groovy
 | Warning data-import implements ApplicationCommand, which is deprecated: implement ApplicationTool
 | Warning run-command is deprecated: use run-tool
+| Warning run-script is deprecated: write a tool (grails create-tool NAME) and run it by its name
+runCommand is deprecated: use runTool
+runScript is deprecated: write a tool and run it with runTool
+Script commands are deprecated: write a tool and run it with runTool
 ----
 
-The first is a warning of the build, once each time it compiles the folder, the second one of the compiler, and the other three are said on the standard error when `grails` runs such a tool. `grails project health` advises with `tools.legacy-folder`, which lists the files in `grails-app/commands`, and `tools.legacy-type`, which names the tools of a deprecated type.
+The first is a warning of the build, once each time it compiles the folder, the second one of the compiler, and the next four are said on the standard error when `grails` runs such a tool, or runs `run-command` or `run-script`. The last three are warnings of the Gradle tasks `runCommand`, `runScript` and `runScriptCommand`, each said once per build. Nothing that worked in Grails 8 stops working: the tasks `runScript`, `runCommand` and `runScriptCommand`, the scripts in `src/main/scripts`, `grails run-script FILE` and `grails run-command NAME` keep running, and each warns that it is deprecated and names the new way, a tool run with `runTool`. Only the bridge for the commands of Grails 7 is removed (note 65). `grails project health` advises with `tools.legacy-folder`, which lists the files in `grails-app/commands`, and `tools.legacy-type`, which names the tools of a deprecated type.
 
 ===== Required Actions
 
 * None to keep the commands of Grails 8 running.
 * *When a class is touched,* move it from `grails-app/commands` to `src/cli/groovy`, into the directory of its package, and replace `implements GrailsApplicationCommand` with `implements ApplicationTool, ToolSupport`, or `implements ApplicationCommand` with `implements ApplicationTool`. Nothing else in the class changes, its name included.
 * *Replace `grails create-command`* with `grails create-tool` in scripts, continuous integration jobs and documentation of your own: it ends with exit code 2 and writes nothing.
-* *Replace `grails run-command` and `./gradlew runCommand`* with `grails run-tool` and `./gradlew runTool` when convenient: they run, and warn.
+* *Replace `grails run-command` and `./gradlew runCommand`* with `grails run-tool` and `./gradlew runTool` when convenient: they run, and warn. The same holds for `grails run-script FILE`, `./gradlew runScript` and the scripts in `src/main/scripts` (`runScriptCommand`): they run, and warn once; write a tool in their place.
 * *Code that names a class of a tool of the framework*, to extend it or to call it, uses its new name, such as `UrlMappingsReportTool` for `UrlMappingsReportCommand`.
-* *A tool or a build written against an earlier build of Grails 9* declares `boolean startsApplication = false` where it implemented `GradleCommand`, moves to `src/standalone/groovy` and implements `StandaloneTool` where it implemented `StandaloneCommand`, moves a descriptor it wrote by hand to `META-INF/grails-tools` and names `"target": "application", "startsApplication": false` there for `"target": "gradle"`, declares `grailsCliStandalone "org.apache.grails:grails-scaffolding-cli-standalone"` where the `scaffolding` feature of a REST API application declared `grailsCli "org.apache.grails:grails-scaffolding-cli"`, sets `GRAILS_LIST_TOOLS` for `GRAILS_LIST_COMMANDS`, and reads `.grails/cache/tool-catalog.json` and its member `tools` where a tool of its own read the catalog file.
+* *A tool or a build written against an earlier build of Grails 9* declares `boolean startsApplication = false` where it implemented `GradleCommand`, moves to `src/standalone/groovy` and implements `StandaloneTool` where it implemented `StandaloneCommand`, moves a descriptor it wrote by hand to `META-INF/grails-tools` and names `"target": "application", "startsApplication": false` there for `"target": "gradle"`, declares `grailsCliStandalone "org.apache.grails:grails-scaffolding-cli-standalone"` where the `scaffolding` feature of a REST API application declared `grailsCli "org.apache.grails:grails-scaffolding-cli"`, sets `GRAILS_LIST_TOOLS` for `GRAILS_LIST_COMMANDS` (which is no longer read), and reads `.grails/cache/tool-catalog.json` and its member `tools` where a tool of its own read the catalog file.
 
 [[upgradingLegacyBridgeRemoved]]
 ==== 65. The Bridge for the Commands of Grails 7 Is Removed

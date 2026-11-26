@@ -314,7 +314,7 @@ The `grails` command has the commands of the Grails shell that run the applicati
 |`gradlew shell --quiet -Dgrails.env=development`
 |`--debug-jvm`, `-Dname=value`
 
-|`run-script FILE...`
+|`run-script FILE...`, deprecated
 |`gradlew runScript -Pargs=FILES -Dgrails.env=development`
 |`-Dname=value`
 
@@ -396,7 +396,7 @@ The directory `.grails/run`, and the files in it, can be read and written by you
 
 `console` runs the Swing console of the application and stays with it until its window is closed. `shell` runs the Groovy shell of the application: what you type goes to it until you leave it. Both run Gradle with `--quiet`, so that what is on the terminal is theirs.
 
-`run-script` runs each file with the application started around it, in the order given. A file is named by its path in the project, or by its full path; a name with spaces or quotes reaches the task as the one file it is. A file that is not there is reported before Gradle is started.
+`run-script` runs each file with the application started around it, in the order given. A file is named by its path in the project, or by its full path; a name with spaces or quotes reaches the task as the one file it is. A file that is not there is reported before Gradle is started. `run-script` and the task `runScript` are deprecated: they keep working and warn once that a tool, run with `run-tool`, is the newer way.
 
 `run-tool` runs a tool of the application (`src/cli`, `src/standalone`) or of one of its plugins by its name, with the build: what `grails NAME` runs, with options of its own in front of the name, and for a standalone tool what the build runs in place of the process `grails NAME` starts. `run-command` is its deprecated other name. Everything after the name is given to that tool as it is, each argument as the one it was, also an argument that is empty, has spaces, quotes or line breaks, looks like an option of `run-tool`, or is `--`: options of `run-tool` itself therefore come before the name. The name and the arguments are not on the command line of Gradle. They are written to a file in `.grails/run` that only you can read, which the task reads and which is deleted when the command has ended, also when `grails` is ended while Gradle runs. A file that is left all the same, as after `grails` was killed, is deleted by the next `run-tool`, which sees that the process that wrote it is gone. An argument with the character U+0000 or with half of a character of two code units, more than 4096 arguments, and arguments of more than 1 MiB in UTF-8 are refused with exit code 2.
 

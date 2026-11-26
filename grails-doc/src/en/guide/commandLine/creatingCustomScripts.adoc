@@ -190,4 +190,4 @@ before('data-import') { context ->
 dataImport('orders.csv')
 ----
 
-Script commands are kept for the applications that have them and are deprecated. What a script did is written as a tool, in `src/cli/groovy` or, for one that only works on the files of the project, in `src/standalone/groovy` (see xref:commandLine#creatingTools[Creating Tools]), which the `grails` command lists with its description.
+Script commands are kept for the applications that have them and are deprecated: the scripts in `src/main/scripts`, the Gradle tasks `runScriptCommand` and `runScript`, and `grails run-script FILE` keep working, and each warns once that it is deprecated and names tools as the newer way (`Script commands are deprecated: write a tool and run it with runTool`, and for the task `runScript`, `runScript is deprecated: write a tool and run it with runTool`). What a script did is written as a tool, in `src/cli/groovy` or, for one that only works on the files of the project, in `src/standalone/groovy` (see xref:commandLine#creatingTools[Creating Tools]), which the `grails` command lists with its description.

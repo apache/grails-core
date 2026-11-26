@@ -33,7 +33,7 @@ test-app --integration,integrationTest
 console,console
 shell,shell
 run-tool (also run-command),runTool (also runCommand)
-run-script,runScript
+run-script (deprecated),runScript (deprecated)
 dependency-report,dependencies
 package-plugin,jar
 publish-plugin,publish
