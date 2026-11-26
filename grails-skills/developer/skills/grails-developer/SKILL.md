@@ -47,7 +47,7 @@ Grails is built on:
 myapp/
 ├── .grails/                  # Record of how the project was generated (commit it, never edit it)
 ├── grails-app/
-│   ├── commands/             # Commands of the application (grails NAME)
+│   ├── commands/             # Tools of Grails 8 (deprecated; new tools go in src/cli or src/standalone)
 │   ├── conf/                 # Configuration
 │   │   ├── application.yml   # Main config
 │   │   ├── logback-spring.xml # Logging config
@@ -63,6 +63,8 @@ myapp/
 ├── src/
 │   ├── main/groovy/          # Additional Groovy classes
 │   ├── main/java/            # Java classes
+│   ├── cli/groovy/           # Tools run by the build (grails NAME); not packaged
+│   ├── standalone/groovy/    # Tools that only work on files, run without Gradle; not packaged
 │   ├── test/groovy/          # Test specifications
 │   └── integration-test/groovy/ # Integration test specifications
 ├── build.gradle              # Build configuration
@@ -923,7 +925,7 @@ The commands work in every directory of the project. The ones that build, test o
 | `grails compile`, `grails clean` | Gradle `classes`, `clean` |
 | `grails assemble` (also `war`, `package`) | Gradle `assemble`, in `production`; `--clean` runs `clean` first |
 | `grails gradle ARGS` | The Gradle wrapper with exactly these arguments: `grails gradle dependencies --configuration runtimeClasspath` |
-| `grails create-controller Book` | A class and its test, in the default package unless the name has one; likewise `create-domain-class`, `create-service`, `create-taglib`, `create-interceptor`, `create-unit-test`, `create-integration-test`, `create-functional-test`, `create-command`, and `create-restful-controller`, `create-domain-resource`, `create-job` where the project has them |
+| `grails create-controller Book` | A class and its test, in the default package unless the name has one; likewise `create-domain-class`, `create-service`, `create-taglib`, `create-interceptor`, `create-unit-test`, `create-integration-test`, `create-functional-test`, `create-tool`, and `create-restful-controller`, `create-domain-resource`, `create-job` where the project has them |
 | `grails create-controller Book --force` | Replaces files that exist. Without `--force` an existing file ends the command with exit code 1 and nothing is written |
 | `grails add-property Book title:String` | Adds a property to a domain class |
 | `grails install-templates` | Copies the templates of the `create-*` commands to `src/main/templates`, where the project can change them |
@@ -954,30 +956,43 @@ grails --plain-output --non-interactive test-app     # options of grails itself
 grails cDC Book                                      # short form of create-domain-class
 ```
 
-- The environment is `-Dgrails.env=NAME` after the name of the command. Without it, `run-app`, `console`, `shell`, `run-script` and `run-command` run in `development`, `test-app` in `test`, and `assemble`, `war` and `package` in `production`. An environment or a `-D` in front of the command (`grails prod war`, `grails test run-app`, `grails -Dgrails.env=staging war`) is refused with exit code 2. The command line does not read `GRAILS_ENV`.
+- The environment is `-Dgrails.env=NAME` after the name of the command. Without it, `run-app`, `console`, `shell`, `run-script` and `run-tool` run in `development`, `test-app` in `test`, and `assemble`, `war` and `package` in `production`. An environment or a `-D` in front of the command (`grails prod war`, `grails test run-app`, `grails -Dgrails.env=staging war`) is refused with exit code 2. The command line does not read `GRAILS_ENV`.
 - Options and tasks of Gradle follow `--`. An option the command does not have is refused with exit code 2, never ignored.
 - In front of the command only the options of `grails` itself are taken: `--plain-output`, `--non-interactive`, `-x` (`--stacktrace`), `-v` (`--verbose`), `-h` (`--help`) and `-V` (`--version`). `-v` is not the version.
 - `--non-interactive`: nothing waits for input; the builds it starts get no input and see `GRAILS_NON_INTERACTIVE=true`, and `shell` and `console` are refused. `--plain-output`: plain text, no colours, no progress display of Gradle. Give both in scripts, CI jobs and agent runs.
-- Short forms are the starts of the words of a name: `cDC` is `create-domain-class`, `rA` is `run-app`, `tA` is `test-app`, `cA` is `create-app`. All-lowercase initials work as well: `ra`, `sa` (`stop-app`), `cdc`. A short form that fits two commands runs neither and ends with exit code 2: in a project `cC` fits `create-controller` and `create-command`, and `s` fits `stats` and `shell`, so type more (`cCont`, `st`). Write whole names in scripts and documentation.
+- Short forms are the starts of the words of a name: `cDC` is `create-domain-class`, `rA` is `run-app`, `tA` is `test-app`, `cA` is `create-app`. All-lowercase initials work as well: `ra`, `sa` (`stop-app`), `cdc`. A short form that fits two commands runs neither and ends with exit code 2: in a project `cT` fits `create-taglib` and `create-tool`, and `s` fits `stats` and `shell`, so type more (`cCont`, `st`). Write whole names in scripts and documentation.
 - Exit codes: `0` the command did what it was asked; `2` a mistake in the command line (a command or option there is not, features that cannot be had together), and nothing ran; `1` any other failure (a failed build, no project, a file in the way).
 
-### Commands of the Application and Its Plugins
+### Tools of the Application and Its Plugins
+
+What an application or a plugin adds to `grails` is a **tool**, run by its name. Where its source is decides what it can use and how it runs:
+
+| Folder | Can use | Runs |
+|--------|---------|------|
+| `src/cli/groovy` (`implements ApplicationTool, ToolSupport`) | the project's classes, and the running application (beans, GORM, config) unless `boolean startsApplication = false` | by the build, Gradle task `runTool` |
+| `src/standalone/groovy` (`implements StandaloneTool, ToolSupport`) | the project's files and the tool API only, never its classes | by `grails` as a Java process, no Gradle, also while the project does not compile |
+
+Put a tool that only reads and writes project files (rendering templates, generating sources) in `src/standalone`; every other tool in `src/cli`. Nothing of either folder is in the packaged application. Libraries only tools use go in the scopes `grailsCli` (and `grailsCliStandalone` for standalone tools), which are not on the application's compile class path.
 
 ```bash
 grails dbm-update                                    # Database Migration plugin
 grails s2-quickstart com.example User Role           # Spring Security plugin
 grails url-mappings-report
-grails create-command data-import                    # grails-app/commands/<package>/DataImportCommand.groovy
+grails create-tool data-import                       # src/cli/groovy/<package>/DataImportTool.groovy
+grails create-tool --standalone create-report        # src/standalone/groovy/<package>/CreateReportTool.groovy
 grails data-import orders.csv
-grails run-command -Dgrails.env=production dbm-update
-./gradlew runCommand -Pargs="dbm-update"             # the same command without grails
+grails run-tool -Dgrails.env=production dbm-update
+./gradlew runTool -Pargs="dbm-update"                # the same tool without grails
 ```
 
-- The commands of the plugins and of `grails-app/commands` are commands of `grails` by their names. They run through the Gradle task `runCommand`, in `development`, most of them with the application started. Everything after the name is the command's own: `grails dbm-update -Dgrails.env=production` still runs in `development`, with a warning.
-- `grails run-command NAME ARGS` runs the same command. Use it to put the environment in front of the name, for a command whose name a command of `grails` has (`grails run-command install-templates` copies the scaffolding templates; `grails install-templates` is the built-in one), and in scripts and CI jobs.
-- The build lists these commands every time it compiles the project, in `.grails/cache/command-catalog.json` (not committed). In a checkout that was never built, the first such name you type has the build list them, which compiles the project, and then runs the command; `grails gradle grailsCommandCatalog` lists them on purpose. With `GRAILS_LIST_COMMANDS=false` a name that is not listed is refused at once with exit code 2 and no build is started.
-- `grails help NAME` describes such a command without running it. `grails NAME --help` runs the command and gives it `--help`.
-- Scripts in `src/main/scripts/<name>.groovy` are commands by their names too. The build runs them (`runScriptCommand`) without the application and its classes. They are deprecated, and no command creates one (`create-script` is removed): write a new command with `create-command`, which runs with the application started.
+- The tools of the plugins and of the application are run by their names, in `development`. Everything after the name is the tool's own: `grails dbm-update -Dgrails.env=production` still runs in `development`, with a warning.
+- `grails run-tool NAME ARGS` runs the same tool with the build. Use it to put the environment in front of the name, for a tool whose name a command of `grails` has (`grails run-tool install-templates` copies the scaffolding templates; `grails install-templates` is the built-in one), and in scripts and CI jobs. `run-command` and `runCommand` are deprecated names of `run-tool` and `runTool`.
+- A standalone tool reads what the project is (type, features) from `executionContext.project`. A tool of `src/cli` that needs the project's classes but not the running application declares `boolean startsApplication = false` (a constant).
+- The build lists the tools every time it compiles the project, in `.grails/cache/tool-catalog.json` (not committed). In a checkout that was never built, the first such name you type has the build list them, which compiles the project, and then runs the tool; `grails gradle grailsToolCatalog` lists them on purpose. With `GRAILS_LIST_TOOLS=false` a name that is not listed is refused at once with exit code 2 and no build is started.
+- `grails help NAME` describes a tool without running it. `grails NAME --help` runs the tool and gives it `--help`.
+- A plugin's tools are published in companions, `<artifact>-cli` (from `src/cli`) and `<artifact>-cli-standalone` (from `src/standalone`), which an application gets by depending on the plugin.
+- `grails-app/commands` and the types `ApplicationCommand`/`GrailsApplicationCommand` of Grails 8 still work, with warnings; `create-tool` never writes them. Move such a class to `src/cli/groovy` when touching it.
+- Scripts in `src/main/scripts/<name>.groovy` are run by their names too. The build runs them (`runScriptCommand`) without the application and its classes. They are deprecated, and no command creates one (`create-script` is removed): write a tool with `create-tool` instead.
 
 ### Interactive Mode
 
@@ -1005,7 +1020,7 @@ grails> exit
 
 | Command | Writes |
 |---------|--------|
-| `grails help --json` | The commands of the current directory with their options, parameters, choices and defaults; `complete` is `false` while the commands of the application are not listed |
+| `grails help --json` | The commands of the current directory with their options, parameters, choices and defaults, and the tools of the project; `complete` is `false` while the tools of the application are not listed |
 | `grails feature add NAME --dry-run --json` | `outcome`, `reason`, `applicable`, the features `added` and `replaced`, and the `files` with what would be done to each |
 | `grails project regenerate --diff --json` | `outcome`, and the `files` that were `added`, `removed` or `changed` |
 | `grails project health --json` | Every finding with its id, level and fix |
@@ -1024,7 +1039,7 @@ Each writes one JSON document on one line of the standard output and nothing els
 | `GRAILS_REPO_URL` | Maven repositories ahead of the default ones: for the wrapper, and in the build of a project that is generated |
 | `GRAILS_PLUGIN_INDEX` | The plugin index of `list-plugins` and `plugin-info` (an `https` or `file:` address, or `none`), and the feature catalog of the `create-` commands when `GRAILS_FORGE_CATALOG` is not set |
 | `GRAILS_FORGE_CATALOG` | The feature catalogs of the `create-` commands, separated by `;`, or `none` |
-| `GRAILS_LIST_COMMANDS` | `false`: a name that is no command is refused at once, without having the build list the commands of the application |
+| `GRAILS_LIST_TOOLS` | `false`: a name that is no command is refused at once, without having the build list the tools of the application |
 | `GRAILS_GRADLE_RUNNER` | `process`: every command starts the Gradle wrapper, also in interactive mode, the way out when a build fails through the Gradle Tooling API. `tooling-api` and `auto` (the default) are the others |
 | `GRAILS_CLI_DIAGNOSTICS` | `true`: the standard error says how each command runs Gradle, for a bug report |
 | `GRAILS_SAFE_DIRECTORY` | Projects to use although another user owns them, as in a container, a CI job or under `sudo` |
@@ -1044,7 +1059,7 @@ Each writes one JSON document on one line of the standard output and nothing els
 - No `open` in interactive mode: `!open FILE`.
 - No `grails -v` for the version: `grails --version`.
 - No hand edits of `.grails`, and no `grails-forge-cli.yml` for a new project.
-- No new script commands, and no `grails create-script` (removed, exit code 2): `grails create-command NAME`.
+- No new script commands, and no `grails create-script` or `grails create-command` (removed, exit code 2): `grails create-tool NAME`, or `grails create-tool --standalone NAME` for a tool that only works on files.
 - Do not count on an unknown option being ignored, on `cC` meaning `create-controller`, or on `stop-app` stopping `./gradlew bootRun`.
 
 ## Build Commands
