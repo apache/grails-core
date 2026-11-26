@@ -170,6 +170,10 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
 
         project.pluginManager.apply('java-library')
 
+        // every Grails plugin publishes the companions of its tools, each when its folder has sources; applying
+        // the id org.apache.grails.gradle.grails-plugin-cli in the build script as well changes nothing
+        project.pluginManager.apply(GrailsCliArtifactGradlePlugin)
+
         checkForConfigurationClash(project)
         configureAstSources(project)
         configureAssembleTask(project)
@@ -657,16 +661,14 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
     }
 
     /**
-     * Packages plugin templates into the runtime jar and routes command scripts into either the
-     * runtime jar or the companion {@code -cli} jar.
+     * Packages plugin templates into the runtime jar and routes command scripts into the companion
+     * {@code -cli} jar.
      *
-     * <p>When {@link GrailsCliArtifactGradlePlugin} is applied, {@code src/main/scripts} is staged
-     * as {@code META-INF/commands} on the cli source set, so Groovy/YAML/JSON command resources
-     * ship only on {@code grailsCliClasspath} and stay out of {@code runtimeClasspath},
-     * {@code bootJar}, and {@code bootWar}. Without a companion, the historical behavior is
-     * preserved: scripts remain in the runtime plugin jar so unmigrated Grails 7 plugins and
-     * {@code legacyCommandSupport} consumers keep discovering them on the application classpath.
-     * Templates always stay on the runtime jar.</p>
+     * <p>{@code src/main/scripts} is staged as {@code META-INF/commands} on the cli source set, so
+     * Groovy/YAML/JSON command resources ship only on {@code grailsCliClasspath} and stay out of
+     * {@code runtimeClasspath}, {@code bootJar}, and {@code bootWar}: every Grails plugin publishes a
+     * {@code -cli} companion when it has a script ({@link GrailsCliArtifactGradlePlugin}). Templates
+     * always stay on the runtime jar.</p>
      *
      * <p>{@code copyCommands} and {@code copyTemplates} stay {@link Copy} tasks - build scripts
      * configure them through {@code tasks.named('copyTemplates', Copy)} - and each owns one
@@ -724,19 +726,13 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
     }
 
     /**
-     * Sends {@code src/main/scripts} to the cli source set when a companion is published and to the
-     * main source set otherwise. The choice can only be made once the build script has been
-     * evaluated, because {@code grails-plugin-cli} is applied after this plugin.
+     * Sends {@code src/main/scripts} to the cli source set, whose companion every Grails plugin with a
+     * script publishes.
      */
     private void routeCommandResources(Project project, TaskProvider<Copy> copyCommands) {
-        project.afterEvaluate {
-            SourceSetContainer sourceSets = project.extensions.getByType(SourceSetContainer)
-            SourceSet target = project.pluginManager.hasPlugin(GrailsCliArtifactGradlePlugin.PLUGIN_ID)
-                    ? sourceSets.getByName(GrailsCliArtifactGradlePlugin.CLI_SOURCE_SET_NAME)
-                    : sourceSets.getByName(SourceSet.MAIN_SOURCE_SET_NAME)
-            target.output.dir([builtBy: copyCommands],
-                    project.layout.buildDirectory.dir(COMMANDS_STAGING_DIR))
-        }
+        SourceSetContainer sourceSets = project.extensions.getByType(SourceSetContainer)
+        sourceSets.getByName(GrailsCliArtifactGradlePlugin.CLI_SOURCE_SET_NAME).output.dir([builtBy: copyCommands],
+                project.layout.buildDirectory.dir(COMMANDS_STAGING_DIR))
     }
 
     protected void checkForConfigurationClash(Project project) {

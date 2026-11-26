@@ -16,6 +16,10 @@ subprojects {
     tasks.named('jar', Jar).configure {
         manifest {
             attributes('Grails-Cli-Artifact': "org.example.test:${artifactName}-cli")
+            // one of them has standalone tools as well, advertised beside the tools the build runs
+            if (artifactName == 'my-plugin-2fa-one') {
+                attributes('Grails-Cli-Standalone-Artifact': "org.example.test:${artifactName}-cli-standalone")
+            }
         }
     }
 }

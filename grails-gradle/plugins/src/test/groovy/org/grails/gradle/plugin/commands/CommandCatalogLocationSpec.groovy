@@ -39,7 +39,7 @@ class CommandCatalogLocationSpec extends CommandProjectSpecification {
     def "the catalog is where the command line reads it, in the directory of the project"() {
         expect:
         CATALOG == ToolCatalogBuilder.LOCATION
-        GrailsCommandCatalogTask.CATALOG_LOCATION == ToolCatalogBuilder.LOCATION
+        GrailsToolCatalogTask.CATALOG_LOCATION == ToolCatalogBuilder.LOCATION
     }
 
     def "a project whose build directory is moved in #dsl has its catalog in the directory of the project, and a catalog of an earlier build is left as it is"() {

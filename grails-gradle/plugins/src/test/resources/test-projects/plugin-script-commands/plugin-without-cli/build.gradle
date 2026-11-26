@@ -1,5 +1,5 @@
-// Plugin without a companion -cli artifact. Historical packaging keeps src/main/scripts in the
-// runtime jar so unmigrated Grails 7 plugins and legacyCommandSupport consumers still discover them.
+// Plugin that does not apply grails-plugin-cli. Every Grails plugin publishes the companions of its
+// tools whether or not it applies the id, so src/main/scripts goes into its -cli jar all the same.
 plugins {
     id 'org.apache.grails.gradle.grails-plugin'
 }
@@ -11,9 +11,15 @@ grails {
     cliAutoProvision = false
 }
 
+// the extension is there without the id; no default dependency keeps the build offline
+cliArtifact {
+    defaultDependencies = false
+}
+
 tasks.register('inspectCommandPackaging') {
-    dependsOn 'jar'
+    dependsOn 'jar', 'cliJar'
     def runtimeJarFile = providers.provider { tasks.named('jar', Jar).get().archiveFile.get().asFile }
+    def cliJarFile = providers.provider { tasks.named('cliJar', Jar).get().archiveFile.get().asFile }
     def jarEntries = { File jarFile ->
         def entries = new LinkedHashSet<String>()
         jarFile.withInputStream { InputStream input ->
@@ -29,10 +35,12 @@ tasks.register('inspectCommandPackaging') {
     doLast {
         def runtimeJar = runtimeJarFile.get()
         def runtimeEntries = jarEntries(runtimeJar)
+        def cliEntries = jarEntries(cliJarFile.get())
         println "RUNTIME_JAR=${runtimeJar.name}"
         println "RUNTIME_HAS_SCRIPT=${runtimeEntries.contains('META-INF/commands/legacy-only-script.groovy')}"
+        println "CLI_HAS_SCRIPT=${cliEntries.contains('META-INF/commands/legacy-only-script.groovy')}"
         println "RUNTIME_HAS_TEMPLATE=${runtimeEntries.contains('META-INF/templates/legacy-only.txt')}"
         println "RUNTIME_HAS_GSP_TEMPLATE=${runtimeEntries.contains('META-INF/templates/legacy-only.gsp')}"
-        println "RUNTIME_SCRIPT_COUNT=${runtimeEntries.count { it.startsWith('META-INF/commands/') && !it.endsWith('/') }}"
+        println "CLI_SCRIPT_COUNT=${cliEntries.count { it.startsWith('META-INF/commands/') && !it.endsWith('/') }}"
     }
 }

@@ -20,13 +20,17 @@ package grails.ui.command
 
 import org.apache.grails.gradle.model.cli.CommandArgumentsFile
 
-// Stands in for the class of grails-console that runs a command. It says what its JVM was started
-// with, and what the arguments of the command are once it has done what the real class does first
+// Stands in for the class of grails-console that runs a tool. It says what its JVM was started
+// with, and what the arguments of the tool are once it has done what the real class does first
 // with them (a build can give them in a file), each as the bytes of its UTF-8 form, so that nothing
-// a terminal or a log does to a character can make two arguments look alike.
+// a terminal or a log does to a character can make two arguments look alike. It says its class path
+// as well, one entry a line.
 class GrailsApplicationContextCommandRunner {
 
     static void main(String[] args) {
+        System.getProperty('java.class.path').split(File.pathSeparator).each { String entry ->
+            println "CLASSPATH_ENTRY=${entry}"
+        }
         say('STARTED', args)
         try {
             say('ARGUMENT', CommandArgumentsFile.expand(args))

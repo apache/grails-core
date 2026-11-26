@@ -37,9 +37,11 @@ import org.apache.grails.gradle.model.cli.CommandArgumentsFile
 import org.grails.gradle.plugin.core.GrailsSystemPropertyArgumentProvider
 
 /**
- * Runs a Grails command with the application context.
+ * Runs a tool of the project or of one of its plugins: the type of {@code runTool}, of its deprecated
+ * other name {@code runCommand} and of the task of each tool. The runner it starts decides, from the
+ * tool, whether the application is started around it.
  *
- * <p>The arguments of the command are given in one of three ways, never two of them at once:</p>
+ * <p>The arguments of the tool are given in one of three ways, never two of them at once:</p>
  * <ul>
  *   <li>{@code --arg=<argument>}, once for each argument, in their order. Each value is one argument as
  *       it is, whatever it contains. Gradle does not take an empty value.</li>

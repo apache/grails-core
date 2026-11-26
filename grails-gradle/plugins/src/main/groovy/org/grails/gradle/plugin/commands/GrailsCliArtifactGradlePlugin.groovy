@@ -25,22 +25,21 @@ import org.gradle.api.NamedDomainObjectContainer
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
+import org.gradle.api.artifacts.DependencySet
+import org.gradle.api.artifacts.ModuleDependency
 import org.gradle.api.artifacts.PublishArtifact
 import org.gradle.api.component.AdhocComponentWithVariants
 import org.gradle.api.component.ConfigurationVariantDetails
 import org.gradle.api.component.SoftwareComponentFactory
+import org.gradle.api.provider.Property
 import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.bundling.Jar
-import org.gradle.api.tasks.compile.GroovyCompile
-import org.gradle.api.plugins.JavaPlugin
 import org.gradle.api.plugins.JavaPluginExtension
 
 import javax.inject.Inject
 
 import org.apache.grails.gradle.model.cli.ToolBuildNames
-import org.grails.gradle.plugin.core.FactoriesCompileInput
-import org.grails.gradle.plugin.core.PruneGeneratedFactories
 import org.grails.gradle.plugin.core.TestPhase
 import org.grails.gradle.plugin.core.TestPhasesGradlePlugin
 
@@ -48,24 +47,44 @@ import org.apache.grails.gradle.publish.AdditionalPublication
 import org.apache.grails.gradle.publish.GrailsPublishExtension
 
 /**
- * Configures a Grails plugin project to ship its CLI commands as a companion artifact under its
- * own Maven coordinate ({@code <artifactId>-cli}), keeping command code and CLI-only dependencies
- * off the runtime classpath of consuming applications.
+ * Configures a project to ship its tools as companions under Maven coordinates of their own, the
+ * producing side: {@code <artifactId>-cli} with the tools the build runs ({@code src/cli}, the
+ * deprecated {@code grails-app/commands} and the scripts of {@code src/main/scripts}), and
+ * {@code <artifactId>-cli-standalone} with the tools that run as a process of their own
+ * ({@code src/standalone}). The code of tools and the dependencies only tools need stay off the
+ * runtime class path of consuming applications. The Grails plugin Gradle plugin applies it to every
+ * Grails plugin project; applying its id as well changes nothing. A project that is not a Grails
+ * plugin, such as a library module of the framework, applies the id itself.
  *
  * Applying the plugin:
  * <ul>
- *   <li>creates a {@code cli} source set ({@code src/cli/groovy}) exposed as a feature variant;</li>
- *   <li>adds {@code org.apache.grails:grails-core-cli} (the command contract) and the plugin's own
- *       runtime classes to the cli compile classpath, so commands compile with no additional
- *       configuration and are registered automatically in {@code META-INF/grails-cli.factories};</li>
- *   <li>keeps the cli variants out of the plugin's default publication and exposes them through a
- *       dedicated {@code cli} software component;</li>
- *   <li>stamps the runtime jar with the {@code Grails-Cli-Artifact} manifest attribute, so the
- *       Grails Gradle plugin adds the companion to a consuming application's {@code grailsCli}
- *       configuration automatically;</li>
- *   <li>registers the companion publication with the Grails publish plugin
+ *   <li>makes the source sets {@code cli} ({@code src/cli}) and {@code standalone}
+ *       ({@code src/standalone}), or reuses them when the Grails Gradle plugin has made them, and
+ *       exposes each as a feature variant ({@code cli} and {@code cliStandalone});</li>
+ *   <li>adds the tool API ({@code org.apache.grails:grails-core-cli}) and the plugin's own runtime
+ *       classes to {@code cliApi}, and the tool API alone to {@code standaloneApi}, so tools compile
+ *       with no additional configuration and are registered automatically in
+ *       {@code META-INF/grails-cli.factories}; {@code -cli} depends on {@code -cli-standalone} when
+ *       the plugin has both, and {@code -cli-standalone} never depends on the plugin;</li>
+ *   <li>keeps the variants of the tools out of the plugin's default publication and exposes each
+ *       companion through a software component of its own ({@code cli}, {@code cliStandalone});</li>
+ *   <li>stamps the runtime jar with the {@code Grails-Cli-Artifact} and
+ *       {@code Grails-Cli-Standalone-Artifact} manifest attributes, so the Grails Gradle plugin adds
+ *       each companion to the scope of its kind ({@code grailsCli}, {@code grailsCliStandalone}) of a
+ *       consuming application automatically;</li>
+ *   <li>registers the companion publications with the Grails publish plugin
  *       ({@code org.apache.grails.gradle.grails-publish}) when it is applied.</li>
  * </ul>
+ *
+ * <p>A companion is made only when the project has sources of tools, which is decided when the build is
+ * configured: {@code -cli-standalone} when there is a Groovy or Java file below {@code src/standalone};
+ * {@code -cli} when there is one below {@code src/cli}, {@code grails-app/commands} or
+ * {@code src/standalone}, or any file below {@code src/main/scripts}. A project whose tools are all
+ * standalone tools therefore still publishes {@code -cli}, without classes of tools, depending on
+ * {@code -cli-standalone}: a build that names {@code -cli} gets the standalone tools through it. Without
+ * sources, the source set is there and empty, and the software component, the publication, the manifest
+ * attribute and the extra property ({@code cliArtifactId}, {@code cliStandaloneArtifactId}) of the
+ * companion are not made.</p>
  *
  * Configure through the {@code cliArtifact} extension:
  * <pre>
@@ -80,8 +99,11 @@ import org.apache.grails.gradle.publish.GrailsPublishExtension
 abstract class GrailsCliArtifactGradlePlugin implements Plugin<Project> {
 
     public static final String PLUGIN_ID = 'org.apache.grails.gradle.grails-plugin-cli'
-    public static final String CLI_SOURCE_SET_NAME = 'cli'
+    public static final String CLI_SOURCE_SET_NAME = ToolBuildNames.CLI_SOURCE_SET
     public static final String CLI_TEST_SOURCE_SET_NAME = 'testCli'
+
+    /** The source set of the standalone tools, published as {@code -cli-standalone}. */
+    public static final String STANDALONE_SOURCE_SET_NAME = ToolBuildNames.STANDALONE_SOURCE_SET
 
     /** Test phase for cli tests that need a booted application; sources in {@code src/integration-test-cli} */
     public static final String CLI_INTEGRATION_TEST_PHASE_NAME = 'integrationTestCli'
@@ -93,8 +115,15 @@ abstract class GrailsCliArtifactGradlePlugin implements Plugin<Project> {
     public static final String CLI_COMPONENT_NAME = 'cli'
     public static final String CLI_PUBLICATION_NAME = 'cli'
 
+    /** The feature, the software component and the publication of the companion {@code -cli-standalone}. */
+    public static final String CLI_STANDALONE_COMPONENT_NAME = 'cliStandalone'
+    public static final String CLI_STANDALONE_PUBLICATION_NAME = 'cliStandalone'
+
     /** The runtime-jar manifest attribute advertising the companion cli coordinate */
     public static final String CLI_ARTIFACT_MANIFEST_ATTRIBUTE = ToolBuildNames.CLI_ARTIFACT_MANIFEST_ATTRIBUTE
+
+    /** The runtime-jar manifest attribute advertising the companion cli-standalone coordinate */
+    public static final String CLI_STANDALONE_ARTIFACT_MANIFEST_ATTRIBUTE = ToolBuildNames.CLI_STANDALONE_ARTIFACT_MANIFEST_ATTRIBUTE
 
     @Inject
     abstract SoftwareComponentFactory getSoftwareComponentFactory()
@@ -106,93 +135,95 @@ abstract class GrailsCliArtifactGradlePlugin implements Plugin<Project> {
         }
 
         CliArtifactExtension extension = project.extensions.create('cliArtifact', CliArtifactExtension)
-        extension.artifactId.convention(project.provider { "${project.name}-cli" as String })
+        extension.artifactId.convention(project.provider { "${project.name}${ToolBuildNames.CLI_ARTIFACT_SUFFIX}" as String })
+        extension.standaloneArtifactId.convention(project.provider { "${project.name}${ToolBuildNames.CLI_STANDALONE_ARTIFACT_SUFFIX}" as String })
         extension.defaultDependencies.convention(true)
 
+        // the source sets every Grails project has for its tools, which the Grails Gradle plugin has made already where it is applied
         SourceSetContainer sourceSets = project.extensions.getByType(SourceSetContainer)
-        SourceSet cliSourceSet = sourceSets.create(CLI_SOURCE_SET_NAME)
+        SourceSet cliSourceSet = ToolSourceSets.cli(project)
+        SourceSet standaloneSourceSet = ToolSourceSets.standalone(project)
 
-        // the compiler merges the hand-authored grails-cli.factories into the one it generates for the
-        // commands, so a change to that file has to recompile them even when no command changed, and a
-        // command deleted without anything being recompiled, which only an incremental Groovy
-        // compilation (options.incremental = true) does, has to leave the generated file all the same
-        project.plugins.withId('groovy') {
-            project.tasks.named(cliSourceSet.getCompileTaskName('groovy'), GroovyCompile).configure { GroovyCompile task ->
-                FactoriesCompileInput.registerCliFactories(project, task)
-                PruneGeneratedFactories.register(project, task, PruneGeneratedFactories.CLI_FACTORIES_LOCATION,
-                        FactoriesCompileInput.CLI_FACTORIES_PATHS)
-            }
-        }
+        // -cli-standalone when src/standalone has a source; -cli when any folder of tools has one, so that a project
+        // whose tools are all standalone tools still has the -cli a build may name, which then brings them
+        boolean publishesStandalone = ToolSourceSets.hasStandaloneSources(project)
+        boolean publishesCli = publishesStandalone || ToolSourceSets.hasCliSources(project)
 
         JavaPluginExtension java = project.extensions.getByType(JavaPluginExtension)
+        // no explicit capability: the default (`${group}:${project.name}-cli`, `${group}:${project.name}-cli-standalone`)
+        // is derived lazily from the project and matches the default published coordinate
         java.registerFeature(CLI_SOURCE_SET_NAME) { spec ->
-            // no explicit capability: the default (`${group}:${project.name}-cli:${version}`)
-            // is derived lazily from the project and matches the default published coordinate
             spec.usingSourceSet(cliSourceSet)
         }
-
-        Configuration cliApiElements = project.configurations.getByName('cliApiElements')
-        Configuration cliRuntimeElements = project.configurations.getByName('cliRuntimeElements')
-        Configuration cliRuntimeClasspath = project.configurations.getByName('cliRuntimeClasspath')
-
-        // when the companion coordinate is customized, the cli variants additionally carry the
-        // custom capability (`${group}:${artifactId}`), so an in-build consumer requiring the
-        // advertised coordinate resolves regardless of the customization; the Gradle default
-        // capability is kept for compatibility
-        project.afterEvaluate {
-            String artifactId = extension.artifactId.get()
-            if (artifactId != "${project.name}-cli" as String) {
-                String capability = "${project.group}:${artifactId}:${project.version}"
-                cliApiElements.outgoing.capability(capability)
-                cliRuntimeElements.outgoing.capability(capability)
-            }
+        java.registerFeature(CLI_STANDALONE_COMPONENT_NAME) { spec ->
+            spec.usingSourceSet(standaloneSourceSet)
         }
 
-        // commands compile out of the box: the contract plus the plugin's own runtime classes
-        // (computed lazily so `cliArtifact { defaultDependencies = false }` can opt out)
-        project.configurations.named('cliApi').configure { Configuration cliApi ->
-            cliApi.withDependencies { dependencies ->
-                if (extension.defaultDependencies.get()) {
+        Configuration cliApiElements = project.configurations.getByName(cliSourceSet.apiElementsConfigurationName)
+        Configuration cliRuntimeElements = project.configurations.getByName(cliSourceSet.runtimeElementsConfigurationName)
+        Configuration cliRuntimeClasspath = project.configurations.getByName(cliSourceSet.runtimeClasspathConfigurationName)
+        Configuration standaloneApiElements = project.configurations.getByName(standaloneSourceSet.apiElementsConfigurationName)
+        Configuration standaloneRuntimeElements = project.configurations.getByName(standaloneSourceSet.runtimeElementsConfigurationName)
+        Configuration standaloneRuntimeClasspath = project.configurations.getByName(standaloneSourceSet.runtimeClasspathConfigurationName)
+
+        // when the companion coordinate is customized, the variants additionally carry the custom
+        // capability (`${group}:${artifactId}`), so an in-build consumer requiring the advertised
+        // coordinate resolves regardless of the customization; the Gradle default capability is
+        // kept for compatibility
+        project.afterEvaluate {
+            addCustomCapability(project, extension.artifactId, ToolBuildNames.CLI_ARTIFACT_SUFFIX, [cliApiElements, cliRuntimeElements])
+            addCustomCapability(project, extension.standaloneArtifactId, ToolBuildNames.CLI_STANDALONE_ARTIFACT_SUFFIX,
+                    [standaloneApiElements, standaloneRuntimeElements])
+        }
+
+        // tools compile out of the box: the tool API plus the plugin's own runtime classes and its own standalone tools
+        // (computed lazily so `cliArtifact { defaultDependencies = false }` can opt out); a project without tools has
+        // no companion, and its empty source sets need nothing
+        project.configurations.named(cliSourceSet.apiConfigurationName).configure { Configuration cliApi ->
+            cliApi.withDependencies { DependencySet dependencies ->
+                if (publishesCli && extension.defaultDependencies.get()) {
                     dependencies.add(project.dependencies.create(project))
+                    dependencies.add(project.dependencies.create('org.apache.grails:grails-core-cli'))
+                    if (publishesStandalone) {
+                        // the companion -cli-standalone of this very project, by the capability its feature always has
+                        ModuleDependency standalone = (ModuleDependency) project.dependencies.create(project)
+                        standalone.capabilities { capabilities ->
+                            capabilities.requireCapability("${project.group}:${project.name}${ToolBuildNames.CLI_STANDALONE_ARTIFACT_SUFFIX}")
+                        }
+                        dependencies.add(standalone)
+                    }
+                }
+            }
+        }
+        // a standalone tool is compiled against the tool API and nothing of the plugin
+        project.configurations.named(standaloneSourceSet.apiConfigurationName).configure { Configuration standaloneApi ->
+            standaloneApi.withDependencies { DependencySet dependencies ->
+                if (publishesStandalone && extension.defaultDependencies.get()) {
                     dependencies.add(project.dependencies.create('org.apache.grails:grails-core-cli'))
                 }
             }
         }
 
-        // exported for tooling that maps a project to its companion coordinate (e.g. the Grails
-        // Gradle plugin's discovery inside composite builds)
-        project.afterEvaluate {
-            project.extensions.extraProperties.set('cliArtifactId', extension.artifactId.get())
-        }
-
-        // the plugin's default publication must carry no trace of the cli tier
+        // the plugin's default publication must carry no trace of the tools
         AdhocComponentWithVariants javaComponent = (AdhocComponentWithVariants) project.components.getByName('java')
-        javaComponent.withVariantsFromConfiguration(cliApiElements) { ConfigurationVariantDetails details ->
-            details.skip()
-        }
-        javaComponent.withVariantsFromConfiguration(cliRuntimeElements) { ConfigurationVariantDetails details ->
-            details.skip()
+        for (Configuration elements : [cliApiElements, cliRuntimeElements, standaloneApiElements, standaloneRuntimeElements]) {
+            javaComponent.withVariantsFromConfiguration(elements) { ConfigurationVariantDetails details ->
+                details.skip()
+            }
         }
 
-        // expose the cli variants as their own software component / coordinate; the secondary
-        // classes/resources variants are build-local and must not be published
-        AdhocComponentWithVariants cliComponent = softwareComponentFactory.adhoc(CLI_COMPONENT_NAME)
-        project.components.add(cliComponent)
-        cliComponent.addVariantsFromConfiguration(cliApiElements) { ConfigurationVariantDetails details ->
-            if (hasDirectoryArtifacts(details)) {
-                details.skip()
-                return
-            }
-            details.mapToMavenScope('compile')
-            CliPublishingSupport.configureDependencyMapping(project, details, cliRuntimeClasspath)
+        if (publishesCli) {
+            publishCompanion(project, CLI_COMPONENT_NAME, cliApiElements, cliRuntimeElements, cliRuntimeClasspath)
+            // exported for tooling that maps a project to its companion coordinate (e.g. the Grails
+            // Gradle plugin's discovery inside composite builds), and for the BOM of the framework
+            exportArtifactId(project, ToolBuildNames.CLI_ARTIFACT_ID_PROPERTY, extension.artifactId)
+            // consuming applications discover the companion through this runtime-jar attribute
+            advertise(project, CLI_ARTIFACT_MANIFEST_ATTRIBUTE, extension.artifactId)
         }
-        cliComponent.addVariantsFromConfiguration(cliRuntimeElements) { ConfigurationVariantDetails details ->
-            if (hasDirectoryArtifacts(details)) {
-                details.skip()
-                return
-            }
-            details.mapToMavenScope('runtime')
-            CliPublishingSupport.configureDependencyMapping(project, details, cliRuntimeClasspath)
+        if (publishesStandalone) {
+            publishCompanion(project, CLI_STANDALONE_COMPONENT_NAME, standaloneApiElements, standaloneRuntimeElements, standaloneRuntimeClasspath)
+            exportArtifactId(project, ToolBuildNames.CLI_STANDALONE_ARTIFACT_ID_PROPERTY, extension.standaloneArtifactId)
+            advertise(project, CLI_STANDALONE_ARTIFACT_MANIFEST_ATTRIBUTE, extension.standaloneArtifactId)
         }
 
         // dependency mapping fixes the pom only; the module metadata keeps the capability
@@ -212,23 +243,26 @@ abstract class GrailsCliArtifactGradlePlugin implements Plugin<Project> {
         NamedDomainObjectContainer<TestPhase> testPhases =
                 project.extensions.getByName(TestPhasesGradlePlugin.EXTENSION_NAME) as NamedDomainObjectContainer<TestPhase>
 
-        // testCli's derived source folder is already src/test-cli, so it needs no override. A command
+        // testCli's derived source folder is already src/test-cli, so it needs no override. A tool
         // boots an application the same way the shell does, so tests that need a real application context
         // get the second phase - never the application's own integrationTest phase, which has to keep the
         // production classpath shape.
         addTestPhase(project, testPhases, CLI_TEST_SOURCE_SET_NAME, null)
         addTestPhase(project, testPhases, CLI_INTEGRATION_TEST_PHASE_NAME, CLI_INTEGRATION_TEST_SOURCE_FOLDER)
 
-        // On top of the shared test wiring, both phases see the cli classes they exercise and the cli
-        // dependency buckets. The direction is one-way by design: a cli phase may read `test`, but `test`
-        // never sees cli.
+        // On top of the shared test wiring, both phases see the classes of the tools they exercise and the
+        // dependency buckets of the tools. The direction is one-way by design: a cli phase may read `test`,
+        // but `test` never sees cli.
         for (String phaseName : [CLI_TEST_SOURCE_SET_NAME, CLI_INTEGRATION_TEST_PHASE_NAME]) {
             SourceSet phaseSourceSet = sourceSets.getByName(phaseName)
             project.dependencies.add(phaseSourceSet.implementationConfigurationName, cliSourceSet.output)
+            project.dependencies.add(phaseSourceSet.implementationConfigurationName, standaloneSourceSet.output)
             project.configurations.named(phaseSourceSet.implementationConfigurationName).configure { Configuration it ->
                 it.extendsFrom(
-                        project.configurations.getByName('cliApi'),
-                        project.configurations.getByName('cliImplementation'))
+                        project.configurations.getByName(cliSourceSet.apiConfigurationName),
+                        project.configurations.getByName(cliSourceSet.implementationConfigurationName),
+                        project.configurations.getByName(standaloneSourceSet.apiConfigurationName),
+                        project.configurations.getByName(standaloneSourceSet.implementationConfigurationName))
             }
             // compileOnly and the annotation processor path are part of the module's declared test
             // toolchain too: a spec moved verbatim out of src/test must still compile against whatever
@@ -249,47 +283,98 @@ abstract class GrailsCliArtifactGradlePlugin implements Plugin<Project> {
         if (sharedResources.directory) {
             cliIntegrationTestSourceSet.resources.srcDir(sharedResources)
         }
-        project.configurations.named(cliIntegrationTestSourceSet.implementationConfigurationName)
-                .configure { Configuration it ->
-                    project.dependencies.add(it.name, cliSourceSet.output)
-                    it.extendsFrom(
-                            project.configurations.getByName('cliApi'),
-                            project.configurations.getByName('cliImplementation'))
-                }
 
-        project.tasks.named(cliSourceSet.jarTaskName, Jar).configure { Jar jar ->
-            // the jar is the primary artifact of its own coordinate — publish it unclassified
-            // (a `cli` classifier would leave the publication with pom packaging and no jar for
-            // Maven consumers); the base name keeps the local file distinct from the main jar
-            jar.archiveBaseName.set(extension.artifactId)
+        nameCompanionJar(project, cliSourceSet, extension.artifactId, extension)
+        nameCompanionJar(project, standaloneSourceSet, extension.standaloneArtifactId, extension)
+
+        project.pluginManager.withPlugin('org.apache.grails.gradle.grails-publish') {
+            project.extensions.configure(GrailsPublishExtension) { GrailsPublishExtension gpe ->
+                if (publishesCli) {
+                    gpe.additionalPublication(CLI_PUBLICATION_NAME) { AdditionalPublication publication ->
+                        publication.artifactId.set(extension.artifactId)
+                    }
+                }
+                if (publishesStandalone) {
+                    gpe.additionalPublication(CLI_STANDALONE_PUBLICATION_NAME) { AdditionalPublication publication ->
+                        publication.artifactId.set(extension.standaloneArtifactId)
+                        publication.sourceSetName.set(STANDALONE_SOURCE_SET_NAME)
+                    }
+                }
+            }
+        }
+        if (publishesCli || publishesStandalone) {
+            project.afterEvaluate {
+                if (!project.pluginManager.hasPlugin('org.apache.grails.gradle.grails-publish')
+                        && project.pluginManager.hasPlugin('maven-publish')) {
+                    project.logger.warn('Project {} publishes the companions of its tools but does not apply the Grails publish plugin (org.apache.grails.gradle.grails-publish). Apply it to publish them automatically, or configure publications for the `cli` and `cliStandalone` components manually.',
+                            project.name)
+                }
+            }
+        }
+    }
+
+    // a software component of its own for a companion; the secondary classes/resources variants are build-local and are not published
+    private void publishCompanion(Project project, String componentName, Configuration apiElements, Configuration runtimeElements,
+                                  Configuration runtimeClasspath) {
+        AdhocComponentWithVariants component = softwareComponentFactory.adhoc(componentName)
+        project.components.add(component)
+        component.addVariantsFromConfiguration(apiElements) { ConfigurationVariantDetails details ->
+            if (hasDirectoryArtifacts(details)) {
+                details.skip()
+                return
+            }
+            details.mapToMavenScope('compile')
+            CliPublishingSupport.configureDependencyMapping(project, details, runtimeClasspath)
+        }
+        component.addVariantsFromConfiguration(runtimeElements) { ConfigurationVariantDetails details ->
+            if (hasDirectoryArtifacts(details)) {
+                details.skip()
+                return
+            }
+            details.mapToMavenScope('runtime')
+            CliPublishingSupport.configureDependencyMapping(project, details, runtimeClasspath)
+        }
+    }
+
+    // the coordinate of a companion as an extra property of the project, there as soon as the plugin is applied and the
+    // one the build script customized once it was evaluated
+    private static void exportArtifactId(Project project, String propertyName, Property<String> artifactId) {
+        project.extensions.extraProperties.set(propertyName, artifactId.get())
+        project.afterEvaluate {
+            project.extensions.extraProperties.set(propertyName, artifactId.get())
+        }
+    }
+
+    private static void advertise(Project project, String attribute, Property<String> artifactId) {
+        project.tasks.named('jar', Jar).configure { Jar jar ->
+            jar.manifest.attributes((attribute): project.provider {
+                "${project.group}:${artifactId.get()}" as String
+            })
+        }
+    }
+
+    private static void addCustomCapability(Project project, Property<String> artifactId, String suffix, List<Configuration> elements) {
+        String customized = artifactId.get()
+        if (customized != "${project.name}${suffix}" as String) {
+            String capability = "${project.group}:${customized}:${project.version}"
+            for (Configuration each : elements) {
+                each.outgoing.capability(capability)
+            }
+        }
+    }
+
+    // the jar of a companion is the primary artifact of its own coordinate — published unclassified (a classifier
+    // would leave the publication with pom packaging and no jar for Maven consumers); the base name keeps the local
+    // file distinct from the main jar
+    private static void nameCompanionJar(Project project, SourceSet sourceSet, Property<String> artifactId, CliArtifactExtension extension) {
+        project.tasks.named(sourceSet.jarTaskName, Jar).configure { Jar jar ->
+            jar.archiveBaseName.set(artifactId)
             jar.archiveClassifier.set('')
             jar.manifest.attributes('Automatic-Module-Name': extension.automaticModuleName.orElse(''))
             jar.doFirst {
                 if (!extension.automaticModuleName.present) {
                     jar.manifest.attributes.remove('Automatic-Module-Name')
                 }
-            }
-        }
-
-        // consuming applications discover the companion through this runtime-jar attribute
-        project.tasks.named('jar', Jar).configure { Jar jar ->
-            jar.manifest.attributes((CLI_ARTIFACT_MANIFEST_ATTRIBUTE): project.provider {
-                "${project.group}:${extension.artifactId.get()}" as String
-            })
-        }
-
-        project.pluginManager.withPlugin('org.apache.grails.gradle.grails-publish') {
-            project.extensions.configure(GrailsPublishExtension) { GrailsPublishExtension gpe ->
-                gpe.additionalPublication(CLI_PUBLICATION_NAME) { AdditionalPublication publication ->
-                    publication.artifactId.set(extension.artifactId)
-                }
-            }
-        }
-        project.afterEvaluate {
-            if (!project.pluginManager.hasPlugin('org.apache.grails.gradle.grails-publish')
-                    && project.pluginManager.hasPlugin('maven-publish')) {
-                project.logger.warn('Project {} publishes a cli companion artifact but does not apply the Grails publish plugin (org.apache.grails.gradle.grails-publish). Apply it to publish `{}` automatically, or configure a publication for the `cli` component manually.',
-                        project.name, extension.artifactId.get())
             }
         }
     }

@@ -37,6 +37,15 @@ abstract class CliArtifactExtension {
     abstract Property<String> getArtifactId()
 
     /**
+     * The artifactId of the companion with the standalone tools of {@code src/standalone}; defaults to
+     * {@code "${project.name}-cli-standalone"}. Customized, it is an additional capability of the
+     * companion's variants, as {@link #getArtifactId} is.
+     *
+     * @since 9.0
+     */
+    abstract Property<String> getStandaloneArtifactId()
+
+    /**
      * The optional {@code Automatic-Module-Name} of the companion cli jar. Recommended: a unique,
      * stable JPMS module name matching the cli source set's package
      * (e.g. {@code com.example.myplugin.cli}).
@@ -44,9 +53,11 @@ abstract class CliArtifactExtension {
     abstract Property<String> getAutomaticModuleName()
 
     /**
-     * Whether the plugin adds the default cli dependencies — the plugin project's own runtime
-     * classes and the {@code org.apache.grails:grails-core-cli} command contract — to
-     * {@code cliApi}. Defaults to {@code true}; disable to wire the cli dependency graph manually
+     * Whether the plugin adds the default dependencies of the companions — to {@code cliApi} the plugin
+     * project's own runtime classes, the {@code org.apache.grails:grails-core-cli} tool API and, when the
+     * plugin has standalone tools, its own {@code -cli-standalone}; to {@code standaloneApi} the tool API
+     * alone. Each only when the companion is made, which it is when the project has sources of tools.
+     * Defaults to {@code true}; disable to wire the dependency graph of the companions manually
      * (e.g. with project dependencies inside a composite build).
      */
     abstract Property<Boolean> getDefaultDependencies()

@@ -27,13 +27,14 @@ import groovy.transform.CompileStatic
 import org.grails.io.support.FactoriesLoaderSupport
 
 /**
- * Puts the catalog of the application commands of a project together from the jars and directories
- * of the class path its commands run with, without loading a class from them.
+ * Puts the catalog of the tools of a project together from the jars and directories of the class path
+ * its tools run with, without loading a class from them.
  *
- * <p>What is read is the registration of the commands ({@code META-INF/grails-cli.factories}, under each
- * of the keys of {@link ToolDescriptor#FACTORIES_KEYS}; for the
- * commands of a Grails 7 plugin {@code META-INF/grails.factories}) and the descriptors of the
- * registered classes ({@link ToolDescriptor}). A class can be registered by more than one element
+ * <p>What is read is the registration of the tools ({@code META-INF/grails-cli.factories}, under each
+ * of the keys of {@link ToolDescriptor#FACTORIES_KEYS}) and the descriptors of the registered classes
+ * ({@link ToolDescriptor}). The commands a plugin of Grails 7 registers in {@code META-INF/grails.factories}
+ * are not run by this version of Grails: they are not listed, and the diagnostics name the plugin. A
+ * class can be registered by more than one element
  * of the class path: the compiler copies a registration written by hand into the classes directory,
  * and a jar can register a class another jar has. The descriptor of a class is therefore looked for
  * in every element that registers it, and the first one in the order of the class path that has a
@@ -72,9 +73,6 @@ class ToolCatalogBuilder {
 
     /** How a command is declared that is registered without a descriptor: its name is the one its class name gives. */
     public static final String REGISTRATION_FACTORIES = 'factories'
-
-    /** How a command of a Grails 7 plugin is declared: its name is the one its class name gives. */
-    public static final String REGISTRATION_LEGACY = 'legacy'
 
     /** The most bytes of a factories file that are read. */
     public static final int MAX_FACTORIES_BYTES = 256 * 1024
@@ -115,18 +113,15 @@ class ToolCatalogBuilder {
     public static final int MAX_NAMED = 3
 
     private static final String LEGACY_COMMAND_KEY = 'grails.dev.commands.ApplicationCommand'
-    private static final String PROVIDER_KEY = 'org.apache.grails.core.cli.ApplicationCommandProvider'
-    private static final String LEGACY_PROVIDER = 'org.apache.grails.core.cli.compat.LegacyApplicationCommandProvider'
-    private static final String LEGACY_PROVIDER_CLASS = 'org/apache/grails/core/cli/compat/LegacyApplicationCommandProvider.class'
     private static final String TEST_PHASE_NAME = '[a-z][a-z0-9]*(-[a-z0-9]+)*'
     private static final String TEST_TASK_NAME = '[A-Za-z][A-Za-z0-9_-]*'
     private static final List<String> ARCHIVES = ['.jar', '.zip'].asImmutable()
 
     // class name -> where it is registered, in the order of the class path
     private final Map<String, List<Candidate>> registered = new LinkedHashMap<String, List<Candidate>>()
+    // the class name of a command of Grails 7 -> where it is registered
     private final Map<String, String> legacy = new LinkedHashMap<String, String>()
     private final Set<String> diagnostics = new TreeSet<String>()
-    private boolean legacySupport
     // the task of each test phase by the name of the phase; null when the phases of the project were not given
     private Map<String, String> testPhases
     // the options the elements of the class path declare for commands
@@ -151,6 +146,22 @@ class ToolCatalogBuilder {
      * @param parts directories or archives; a file that is not an archive has no commands
      */
     void add(String origin, Collection<File> parts) {
+        add(origin, parts, null, null)
+    }
+
+    /**
+     * Reads the tools of the output of one source set of the project, whose tools have to be of one
+     * target: those of {@code src/standalone} are standalone tools, those of every other source set are
+     * tools the build runs. A tool whose descriptor says another target is not listed, and the
+     * diagnostics say why, in the words the compiler uses for a source in the wrong folder.
+     *
+     * @param origin where the element comes from, {@link #ORIGIN_APPLICATION} for the project
+     * @param parts directories or archives; a file that is not an archive has no tools
+     * @param folders how the diagnostics name the folders of the source set, such as {@code src/cli}
+     * @param target the target the tools of the source set have, one of {@link ToolDescriptor#RUN_TARGETS};
+     * {@code null} for any
+     */
+    void add(String origin, Collection<File> parts, String folders, String target) {
         String from = shown(origin)
         List<Source> sources = []
         try {
@@ -169,7 +180,7 @@ class ToolCatalogBuilder {
                     }
                 }
             }
-            read(from, sources)
+            read(from, sources, folders, target)
         } finally {
             for (Source source : sources) {
                 source.close()
@@ -236,21 +247,12 @@ class ToolCatalogBuilder {
         }
         Set<String> legacyOrigins = new TreeSet<String>()
         for (Map.Entry<String, String> registration : legacy) {
-            if (registered.containsKey(registration.key)) {
-                continue
-            }
-            if (!legacySupport) {
+            if (!registered.containsKey(registration.key)) {
                 legacyOrigins << registration.value
-                continue
-            }
-            Entry entry = named(registration.value, registration.key, REGISTRATION_LEGACY, said)
-            if (entry != null) {
-                entries << entry
             }
         }
         for (String origin : legacyOrigins) {
-            said << line("${origin} has commands of Grails 7, which are not listed because they cannot be run: " +
-                    'set grails { legacyCommandSupport = true }, or use a version of the plugin for this version of Grails.')
+            said << line("${origin} has commands of Grails 7, which Grails 9 does not run: use a version of the plugin for Grails 9.")
         }
         Map<String, List<Entry>> byName = new TreeMap<String, List<Entry>>()
         for (Entry entry : entries) {
@@ -353,6 +355,10 @@ class ToolCatalogBuilder {
                 said << line("The command class ${className} of ${application.origin} is not listed: its descriptor ${application.refusal}.")
                 return null
             }
+            if (application.target != null && application.described.target != application.target) {
+                said << line(misplaced(className, application))
+                return null
+            }
             return new Entry(name: application.described.name, description: application.described.description, origin: application.origin,
                     className: className, registration: REGISTRATION_DESCRIPTOR, target: application.described.target,
                     startsApplication: application.described.startsApplication, deprecated: application.described.deprecated)
@@ -372,9 +378,24 @@ class ToolCatalogBuilder {
             said << line("The command class ${className} of ${first.origin} is not listed: its descriptor ${first.refusal}.")
             return null
         }
+        if (first.target != null && first.described.target != first.target) {
+            said << line(misplaced(className, first))
+            return null
+        }
         new Entry(name: first.described.name, description: first.described.description, origin: first.origin,
                 className: className, registration: REGISTRATION_DESCRIPTOR, target: first.described.target,
                 startsApplication: first.described.startsApplication, deprecated: first.described.deprecated)
+    }
+
+    // what the compiler says of a source in the wrong folder, of a descriptor in the output of the wrong source set
+    private static String misplaced(String className, Candidate candidate) {
+        if (candidate.described.target == ToolDescriptor.TARGET_STANDALONE) {
+            return "${className} is a StandaloneTool, and it is compiled from ${candidate.folders}, not from ${ToolBuildNames.STANDALONE_SOURCE_FOLDER}: " +
+                    'a standalone tool is compiled without the classes of the project. Move it to src/standalone/groovy, ' +
+                    'or implement ApplicationTool to keep it here. It is not listed.'
+        }
+        "${className} is an ApplicationTool, and it is compiled from ${candidate.folders}, which has neither the application nor its classes. " +
+                'Move it to src/cli/groovy, or implement StandaloneTool. It is not listed.'
     }
 
     private static Entry named(String origin, String className, String registration, Set<String> said) {
@@ -387,16 +408,12 @@ class ToolCatalogBuilder {
         new Entry(name: name, origin: origin, className: className, registration: registration)
     }
 
-    private void read(String origin, List<Source> sources) {
+    private void read(String origin, List<Source> sources, String folders, String target) {
         Set<String> commandClasses = new LinkedHashSet<String>()
         Set<String> legacyClasses = new LinkedHashSet<String>()
         for (Source source : sources) {
             Properties registrations = factories(origin, source, FactoriesLoaderSupport.CLI_FACTORIES_RESOURCE_LOCATION)
             if (registrations != null) {
-                // the bridge that runs the commands of Grails 7 is there when its class is, not when something names it
-                if (names(registrations, PROVIDER_KEY).contains(LEGACY_PROVIDER) && source.has(LEGACY_PROVIDER_CLASS)) {
-                    legacySupport = true
-                }
                 for (String key : ToolDescriptor.FACTORIES_KEYS) {
                     commandClasses.addAll(names(registrations, key))
                 }
@@ -421,6 +438,8 @@ class ToolCatalogBuilder {
             for (Source source : sources) {
                 Candidate candidate = descriptor(origin, source, className)
                 if (candidate != null) {
+                    candidate.folders = folders
+                    candidate.target = target
                     found = true
                     // a class registered again and again is kept once for each descriptor that differs, and no more
                     if (!candidates.any { Candidate known -> known.digest == candidate.digest }) {
@@ -584,6 +603,9 @@ class ToolCatalogBuilder {
         String digest
         ToolDescriptor.Described described
         String refusal
+        // the folders of the source set of the project the element is the output of, and the target its tools have; null for any other
+        String folders
+        String target
     }
 
     private static interface Source {

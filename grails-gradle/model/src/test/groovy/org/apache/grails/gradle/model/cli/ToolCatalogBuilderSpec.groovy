@@ -154,6 +154,72 @@ class ToolCatalogBuilderSpec extends Specification {
         'that is too long'            | 'Could not find ' + 'x' * 1000                      | 'Could not find ' + 'x' * 1000
     }
 
+    @Unroll
+    def "a tool of the output of #folders is listed when it is of the target of the source set, and left out with the reason when it is not: #target"() {
+        given:
+        File output = element('output', ToolDescriptor.describe(CLASS, 'report', 'Writes it', target, false, []))
+
+        when:
+        ToolCatalogBuilder builder = new ToolCatalogBuilder()
+        builder.add(ToolCatalogBuilder.ORIGIN_APPLICATION, [output], folders, expected)
+        Map<String, Object> catalog = builder.build()
+
+        then:
+        ((List<Map>) catalog.tools)*.name == (said == null ? ['report'] : [])
+        catalog.diagnostics == (said == null ? [] : [said])
+        catalog.complete == (said == null)
+
+        where:
+        folders           | expected                            | target                              || said
+        'src/standalone'  | ToolDescriptor.TARGET_STANDALONE    | ToolDescriptor.TARGET_STANDALONE    || null
+        'src/cli'         | ToolDescriptor.TARGET_APPLICATION   | ToolDescriptor.TARGET_APPLICATION   || null
+        'src/cli'         | ToolDescriptor.TARGET_APPLICATION   | ToolDescriptor.TARGET_STANDALONE    || STANDALONE_ELSEWHERE
+        'src/standalone'  | ToolDescriptor.TARGET_STANDALONE    | ToolDescriptor.TARGET_APPLICATION   || APPLICATION_IN_STANDALONE
+    }
+
+    private static final String STANDALONE_ELSEWHERE = 'demo.ReportCommand is a StandaloneTool, and it is compiled from src/cli, not from src/standalone: ' +
+            'a standalone tool is compiled without the classes of the project. Move it to src/standalone/groovy, or implement ApplicationTool to keep it here. ' +
+            'It is not listed.'
+
+    private static final String APPLICATION_IN_STANDALONE = 'demo.ReportCommand is an ApplicationTool, and it is compiled from src/standalone, ' +
+            'which has neither the application nor its classes. Move it to src/cli/groovy, or implement StandaloneTool. It is not listed.'
+
+    def "a jar with a tool of either target is held to no source set"() {
+        given:
+        File jar = element('jar', ToolDescriptor.describe(CLASS, 'report', null, ToolDescriptor.TARGET_STANDALONE, false, []))
+
+        when:
+        ToolCatalogBuilder builder = new ToolCatalogBuilder()
+        builder.add('org.example:tools-cli:1.0', jar)
+
+        then:
+        ((List<Map>) builder.build().tools).collect { [it.name, it.target] } == [['report', 'standalone']]
+    }
+
+    def "the commands of a plugin of Grails 7 are not listed, and the plugin is named once, also beside the bridge that ran them"() {
+        given:
+        File plugin = new File(dir, 'old-plugin')
+        new File(plugin, 'META-INF').mkdirs()
+        new File(plugin, 'META-INF/grails.factories').text = 'grails.dev.commands.ApplicationCommand=old.FirstCommand,old.SecondCommand\n'
+        File bridge = new File(dir, 'bridge')
+        new File(bridge, 'META-INF').mkdirs()
+        new File(bridge, 'META-INF/grails-cli.factories').text =
+                'org.apache.grails.core.cli.ApplicationCommandProvider=org.apache.grails.core.cli.compat.LegacyApplicationCommandProvider\n'
+        new File(bridge, 'org/apache/grails/core/cli/compat').mkdirs()
+        new File(bridge, 'org/apache/grails/core/cli/compat/LegacyApplicationCommandProvider.class').text = 'not a class'
+
+        when:
+        ToolCatalogBuilder builder = new ToolCatalogBuilder()
+        builder.add('org.apache.grails:grails-core-cli-legacy:8.0.0', bridge)
+        builder.add('org.example:old-plugin:7.0.0', plugin)
+        Map<String, Object> catalog = builder.build()
+
+        then:
+        catalog.tools == []
+        catalog.complete == false
+        catalog.diagnostics == ['org.example:old-plugin:7.0.0 has commands of Grails 7, which Grails 9 does not run: use a version of the plugin for Grails 9.']
+    }
+
     // a directory that registers the class, with the descriptor when there is one
     private File element(String name, String descriptor) {
         File element = new File(dir, name)

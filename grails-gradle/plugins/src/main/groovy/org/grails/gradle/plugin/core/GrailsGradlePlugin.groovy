@@ -158,7 +158,8 @@ class GrailsGradlePlugin implements Plugin<Project> {
     private boolean rejectsProfileDependencies
 
     List<Class<Plugin>> basePluginClasses = [IntegrationTestGradlePlugin] as List<Class<Plugin>>
-    List<String> excludedGrailsAppSourceDirs = ['migrations', 'assets']
+    // grails-app/commands is compiled with the source set of the tools, src/cli, and is not of the application
+    List<String> excludedGrailsAppSourceDirs = ['migrations', 'assets', 'commands']
     List<String> grailsAppResourceDirs = ['views', 'i18n', 'conf', 'migrations']
     void apply(Project project) {
 

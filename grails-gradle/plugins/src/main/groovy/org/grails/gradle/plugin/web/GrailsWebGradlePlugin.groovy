@@ -25,7 +25,6 @@ import org.gradle.process.CommandLineArgumentProvider
 
 import grails.util.Environment
 import org.grails.gradle.plugin.commands.GrailsCliGradlePlugin
-import org.grails.gradle.plugin.util.ClasspathUtils
 import org.grails.gradle.plugin.commands.ApplicationContextCommandTask
 import org.grails.gradle.plugin.core.GrailsGradlePlugin
 
@@ -54,10 +53,7 @@ class GrailsWebGradlePlugin extends GrailsGradlePlugin {
 
     private void registerUrlMappingsTask(Project project) {
         project.tasks.register(URL_MAPPINGS_REPORT, ApplicationContextCommandTask) { task ->
-            task.classpath = ClasspathUtils.buildClasspath(
-                    project,
-                    'runtimeClasspath', GrailsCliGradlePlugin.GRAILS_CLI_CLASSPATH_CONFIGURATION
-            )
+            task.classpath = GrailsCliGradlePlugin.toolClasspath(project)
             task.systemProperty(
                     Environment.KEY,
                     System.getProperty(
