@@ -73,26 +73,18 @@ This git repo is **several independent Gradle builds**, not one flat multiprojec
 
 **end-to-end is not a composite consumer of the root build.** It resolves real published coordinates from **`<repo>/build/local-maven`** (the TestCaseMavenRepo), **not** `~/.m2` and **not** via `publishAllToMavenLocal`. Do not add `includeBuild('..')` substitution - that defeats validating consumer metadata, CLI companions, and POM/BOM shape.
 
-Full local run (three steps, in order):
+Full local run (two steps, in order):
 
 ```bash
 # 1) Publish grails-gradle + root into build/local-maven (both required)
 (cd grails-gradle && ./gradlew publishAllPublicationsToTestCaseMavenRepoRepository)
 ./gradlew publishAllPublicationsToTestCaseMavenRepoRepository
 
-# 2) Build the standalone Grails 7 fixture jar (JDK 17 / Gradle 8.x via its .sdkmanrc)
-cd end-to-end/legacy-g7-command-plugin
-sdk env
-./gradlew jar
-cd ../..
-
-# 3) Run the suite on the root JDK 21 environment
+# 2) Run the suite on the root JDK 21 environment
 sdk env   # from repository root (.sdkmanrc)
 cd end-to-end
 ./gradlew check
 ```
-
-Leave `legacy-g7-command-plugin`'s wrapper on its pinned Grails 7 Gradle version when bumping the main line.
 
 ### Forge specs without building the framework (`-PprebuiltTestRepository`)
 
@@ -180,7 +172,7 @@ In short, a bump is the wrappers (the root one through bootstrap), and `gradleTo
    gradle -p gradle-bootstrap
    ```
 
-   Bootstrap overwrites the shared `gradle-wrapper.properties` files, which drops the "keep synced" comments at the top of some of them; restore those. Bootstrap generates the wrapper under `gradle-bootstrap/`, **copies** it to **grails-forge**, **grails-gradle**, and **end-to-end**, then **moves** the generated wrapper into the **repository root**. It also runs `legacyG7Wrapper` so **`end-to-end/legacy-g7-command-plugin` stays on its pinned Grails 7 Gradle version** (currently 8.x - do **not** force it to 9). Root is therefore bootstrap-covered; do not re-list it as a manual step.
+   Bootstrap overwrites the shared `gradle-wrapper.properties` files, which drops the "keep synced" comments at the top of some of them; restore those. Bootstrap generates the wrapper under `gradle-bootstrap/`, **copies** it to **grails-forge**, **grails-gradle**, and **end-to-end**, then **moves** the generated wrapper into the **repository root**. Root is therefore bootstrap-covered; do not re-list it as a manual step.
 
 3. Manually refresh the locations bootstrap does **not** cover. For each tree, keep the **full** wrapper set in sync (`gradle-wrapper.properties`, `gradle-wrapper.jar`, `gradlew`, `gradlew.bat`) - not properties alone:
 
@@ -191,7 +183,7 @@ In short, a bump is the wrappers (the root one through bootstrap), and `gradleTo
      - `grails-forge/grails-forge-core/src/main/resources/gradle/gradlew.bat`
      - `grails-forge/grails-forge-core/src/main/resources/gradle/wrapper/gradle-wrapper.jar`
 
-4. Verify every **main-line** tree matches on properties **and** scripts/jars. The only intentional holdout is `end-to-end/legacy-g7-command-plugin` (Gradle 8.x).
+4. Verify every tree matches on properties **and** scripts/jars.
 
 Also keep `gradlew.bat` LF line endings on this line (PR #15709). Comment at top of root `gradle-wrapper.properties` remains a human checklist.
 
@@ -679,7 +671,6 @@ Develocity: `https://develocity.apache.org` - build scans publish when authentic
 | Add `repositories {}` in a subproject | Root/settings repo management (`FAIL_ON_PROJECT_REPOS`) |
 | `includeBuild` the root into `end-to-end` | Publish to `build/local-maven` via `publishAllPublicationsToTestCaseMavenRepoRepository` |
 | Use `publishAllToMavenLocal` to feed end-to-end | That fills `~/.m2`; end-to-end reads `<repo>/build/local-maven` |
-| Bump `legacy-g7-command-plugin` wrapper to Gradle 9 | Leave it on the Grails 7-pinned Gradle 8.x |
 | Mix Gradle-embedded Groovy 4 pins into app Groovy 5 BOM | Keep `gradleBom*` vs `bom*` maps separate |
 
 ---
