@@ -28,7 +28,7 @@ The general format is:
 
 [source,bash]
 ----
-./gradlew runCommand -Pargs="s2ui-override <type> [controllerPackage]"
+./gradlew runTool -Pargs="s2ui-override <type> [controllerPackage]"
 ----
 
 The command will copy an empty controller that extends the corresponding plugin controller into your application so you can override individual actions and methods as needed. It also copies the controller's GSPs. The exceptions are when type is 'auth' or 'layout' which only copy GSPs and take no package.

@@ -30,7 +30,7 @@ The basic usage scenario is:
 grails <<command name>> <<options>>*
 ----
 
-`grails help` lists the commands there are in the current directory: outside a project the commands that create one, and in a project also the commands that create its classes, the commands of the application and its plugins, and the scripts in `src/main/scripts` of the project. `grails help NAME` shows how the command `NAME` is used.
+`grails help` lists the commands there are in the current directory: outside a project the commands that create one, and in a project also the commands that create its classes, the tools of the application and its plugins, and the scripts in `src/main/scripts` of the project. `grails help NAME` shows how the command `NAME` is used.
 
 The commands that run the build of a project take the environment after their name, either with one of the built-in environment names or with one of your own:
 

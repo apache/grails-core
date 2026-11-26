@@ -28,7 +28,7 @@ The general format is:
 
 [source,bash]
 ----
-./gradlew runCommand -Pargs="s2ui-create-challenge-questions <domain-class-package> <challenge-qa-class-name> <user-domain-class-name> [number-of-questions]"
+./gradlew runTool -Pargs="s2ui-create-challenge-questions <domain-class-package> <challenge-qa-class-name> <user-domain-class-name> [number-of-questions]"
 ----
 
 - domain-class-package is required and is the package where the Domain, Controller, and Services will be created.  It is recommend to use the same class where your 'User' class is created.
@@ -40,7 +40,7 @@ For example:
 
 [source,bash]
 ----
-./gradlew runCommand -Pargs="s2ui-create-challenge-questions com.mycompany Profile com.mycompany.User 4"
+./gradlew runTool -Pargs="s2ui-create-challenge-questions com.mycompany Profile com.mycompany.User 4"
 ----
 
 The command fails, and writes nothing, when it is given fewer than three or more than four arguments, a number of questions that is not a number of 1 or more, or names that are not the names of a package and of classes.

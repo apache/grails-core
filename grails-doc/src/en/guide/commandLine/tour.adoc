@@ -23,7 +23,7 @@ Three ideas carry the whole command line:
 
 * A project is created from an _application type_ and a set of _features_.
 * A generated project keeps a _record_ of how it was generated, in its `.grails` directory. The record is what lets the command line add a feature to the project later.
-* Whatever needs the classes of the application (compiling, testing, running, the commands of the application and its plugins) runs in the Gradle build of the project. The `grails` command starts that build with the Gradle wrapper of the project, so `grails` and `./gradlew` always build the same thing. In the interactive console the builds are asked of Gradle through its Tooling API, with the Gradle the wrapper names, which makes a build there begin at once.
+* Whatever needs the classes of the application (compiling, testing, running, and the tools of the application and its plugins that use them) runs in the Gradle build of the project. The `grails` command starts that build with the Gradle wrapper of the project, so `grails` and `./gradlew` always build the same thing. In the interactive console the builds are asked of Gradle through its Tooling API, with the Gradle the wrapper names, which makes a build there begin at once.
 
 If you know the Grails shell and the profiles of Grails 8 and earlier, link:upgrading.html#upgrading90x[Upgrading from Grails 8 to Grails 9] and link:applicationTypes.html#profilesReplaced[What Became of Profiles] say what changed, and link:upgrading.html#cliMappingGrails8[note 55 of the upgrade notes] has every command of Grails 8 with what it is now.
 
@@ -38,7 +38,7 @@ $ grails --version
 $ grails help
 ----
 
-`grails help` lists the commands of the current directory. Outside a project those are the commands that create one and a few that work anywhere; inside a project there are more. `grails help NAME` describes one command, and it never runs anything to do so: not the build of the project, and not the command. For a command of `grails` itself, `grails NAME --help` shows the same. A command of the application or of a plugin (see below) is given everything after its name, `--help` included, so `grails NAME --help` runs that command through the build of the project, and what it then shows is up to the command; `grails help NAME` is the way to ask about it.
+`grails help` lists the commands of the current directory. Outside a project those are the commands that create one and a few that work anywhere; inside a project there are more. `grails help NAME` describes one command, and it never runs anything to do so: not the build of the project, and not the command. For a command of `grails` itself, `grails NAME --help` shows the same. A tool of the application or of a plugin (see below) is given everything after its name, `--help` included, so `grails NAME --help` runs that tool, and what it then shows is up to the tool; `grails help NAME` is the way to ask about it.
 
 Nothing has to be installed to create a project: https://start.grails.org/[the Grails Forge website] generates the same projects from the same application types and features, and each generated project brings the Grails wrapper, `grailsw`, described at the end of this section.
 
@@ -151,7 +151,8 @@ A name without a package goes into the default package of the project. The comma
 
 Which commands there are depends on the record. `create-job` is there because this project has the `grails-quartz` feature, and `create-functional-test` writes a Geb test because it has the `geb-with-testcontainers` feature, as a web application has by default; `create-restful-controller` and `create-domain-resource` are commands of REST API applications and REST API plugins, where `create-functional-test` writes a test that calls the application over HTTP.
 
-Names can be shortened to the first letters of their words: `cDC` is `create-domain-class`. A short form that fits two commands runs neither: in a project `cC` fits `create-controller` and `create-command`, so type `cCont`.
+// TOOLS-VERIFY: that cT fits create-taglib and create-tool, and cTo is create-tool (P4).
+Names can be shortened to the first letters of their words: `cDC` is `create-domain-class`. A short form that fits two commands runs neither: in a project `cT` fits `create-taglib` and `create-tool`, so type `cTo`.
 
 The files come from templates, and a project can have its own under `src/main/templates`; `install-templates` copies the built-in ones there as a starting point. The table of commands and the template syntax are under "Creating Classes with the `grails` Command" in xref:commandLine[the introduction of this chapter].
 
@@ -193,40 +194,45 @@ $ grails assemble
 * `test-app` runs every test phase of the project: the unit tests, the integration tests, and every phase the project adds, such as the functional tests of a `functionalTest` task. A phase is a `Test` task of the build, so a phase that is added to the build is run without anything else to do.
 * A switch of the name of a phase runs that phase alone: `--unit`, `--integration`, and for a phase the project adds the name of its task without the ending `Test`, as `--functional` for `functionalTest`. Several switches run several phases.
 * `test-app` with the name of a test runs the test wherever it is found, in any of the phases that are run.
-* The environment is `development` for `run-app`, `test` for `test-app` and `production` for `assemble`. `-Dgrails.env=NAME` after the name of the command selects another one. This holds for the commands of `grails` itself, and not for a command of the application or of a plugin, which takes everything after its name as its own arguments: such a command runs in `development`, and `grails run-command -Dgrails.env=NAME COMMAND` runs it in another environment (see the next section). An environment in front of the command, as in `grails prod war` of earlier versions, is refused.
+* The environment is `development` for `run-app`, `test` for `test-app` and `production` for `assemble`. `-Dgrails.env=NAME` after the name of the command selects another one. This holds for the commands of `grails` itself, and not for a tool of the application or of a plugin, which takes everything after its name as its own arguments: such a tool runs in `development`, and `grails run-tool -Dgrails.env=NAME TOOL` runs it in another environment (see the next section). An environment in front of the command, as in `grails prod war` of earlier versions, is refused.
 * `run-app` stays with the application until it ends or you press Ctrl-C. `run-app --detach` returns once the application answers on its port and leaves it running; `stop-app` stops it.
 * Whatever follows `--` is given to Gradle as it is: `grails compile -- --offline`.
 
 The project needs its Gradle wrapper for these commands: the `grails` command brings no Gradle of its own. xref:commandLine#gradleBuild[Building with Gradle] has every command and option, and the rule by which a project above the current directory is used only when it is your own.
 
-=== Commands of the application and its plugins
+=== Tools of the application and its plugins
 
-An application can have commands of its own, and so can each of its plugins. A command is a class that runs with the application started around it, which makes it the place for work that needs the services and the domain classes of the application, such as an import or a report:
+An application can add _tools_ of its own to the `grails` command, and so can each of its plugins. A tool is a class, and where its source is decides what it can use. A tool in `src/cli` is run by the build with the application started around it, which makes it the place for work that needs the services and the domain classes of the application, such as an import or a report:
 
+// TOOLS-VERIFY: the output of create-tool (P4).
 [source,console]
 ----
-$ grails create-command data-import
-| Rendered command to grails-app/commands/com/example/DataImportCommand.groovy
+$ grails create-tool data-import
+| Rendered tool to src/cli/groovy/com/example/DataImportTool.groovy
 | Run it with: grails data-import
 $ grails data-import orders.csv
 ----
 
-As it is written, the command prints its name and what it was given, `Ran data-import with the arguments [orders.csv]`, and succeeds. Its work goes into its `handle()` method, which returns `true` when the command has done it and `false` to end the command with exit code 1.
+As it is written, the tool prints its name and what it was given, `Ran data-import with the arguments [orders.csv]`, and succeeds. Its work goes into its `handle()` method, which returns `true` when the tool has done it and `false` to end the tool with exit code 1.
 
-The build of the project lists these commands, with the Gradle task `grailsCommandCatalog`, every time it compiles the project. A command the build has not listed yet, as in a checkout that was never built or right after `create-command`, is listed when its name is typed: `grails` has the build list the commands once, which compiles the project, and runs the command. In a project that was built, `help` and a mistyped name answer at once, without a build.
+A tool that only reads and writes files of the project, such as one that renders a template into the project, goes into `src/standalone` instead: `grails create-tool --standalone create-report`. `grails` runs such a tool as a Java process of its own, without Gradle and without the application, so it starts at once and works also while the project does not compile. Neither folder is part of the application: no tool, and no library that only tools use, is in the application as it runs or as it is packaged.
 
-`help` lists the commands of the application and of its plugins after its own, each with where it comes from, and each is run by its name. `grails help data-import` describes the command from that list and runs nothing, while `grails data-import --help` gives `--help` to the command and runs it. Such a command runs in the `development` environment. Everything after its name is its own, so `-Dgrails.env=production` after the name does not select an environment: it reaches the command as an argument, and `grails` warns that the command runs in `development`. Name the environment in front of the command with `run-command`:
+The build of the project lists the tools, with the Gradle task `grailsToolCatalog`, every time it compiles the project. A tool the build has not listed yet, as in a checkout that was never built or right after `create-tool`, is listed when its name is typed: `grails` has the build list the tools once, which compiles the project, and runs the tool. In a project that was built, `help` and a mistyped name answer at once, without a build.
+
+`help` lists the tools of the application and of its plugins after its own commands, each with where it comes from, and each is run by its name. `grails help data-import` describes the tool from that list and runs nothing, while `grails data-import --help` gives `--help` to the tool and runs it. A tool runs in the `development` environment. Everything after its name is its own, so `-Dgrails.env=production` after the name does not select an environment: it reaches the tool as an argument, and `grails` warns that the tool runs in `development`. Name the environment in front of the tool with `run-tool`:
 
 [source,console]
 ----
-$ grails run-command -Dgrails.env=production data-import orders.csv
+$ grails run-tool -Dgrails.env=production data-import orders.csv
 ----
 
-The scaffolding plugin, which a web application has by default, brings link:{commandLineRef}generate-all.html[generate-all], link:{commandLineRef}generate-controller.html[generate-controller] and link:{commandLineRef}generate-views.html[generate-views] this way. In a REST API application with the `scaffolding` feature they generate a REST controller and JSON views in place of pages. `run-command NAME` is also how to reach a command of a plugin whose name a command of `grails` itself has. A command that needs no application, because it only works on the files of the project, can say so and is then run without starting it; `query-tail` of Grails Data is one.
+The scaffolding plugin, which a web application has by default, brings link:{commandLineRef}generate-all.html[generate-all], link:{commandLineRef}generate-controller.html[generate-controller] and link:{commandLineRef}generate-views.html[generate-views] as standalone tools. In a REST API application with the `scaffolding` feature they generate a REST controller and JSON views in place of pages. `run-tool NAME` is also how to reach a tool of a plugin whose name a command of `grails` itself has. A tool in `src/cli` that needs the classes of the application but not the running application says `startsApplication = false`, and is run without starting it; `query-tail` of Grails Data is one.
 
-A project can also have _scripts_ in `src/main/scripts`. A script is run by the build without the application and cannot use the classes of the application. Scripts are deprecated: the scripts a project has still run, no command creates a new one, and a new command is a class that `create-command` writes.
+An application of Grails 8 has its tools, which Grails 8 called commands, in `grails-app/commands`. They still run, each with a warning: the folder is deprecated, and `create-tool` never writes into it.
 
-See "Commands of the Application and its Plugins" in xref:commandLine[the introduction of this chapter], xref:commandLine#creatingTools[Creating Tools] and xref:commandLine#creatingCustomScripts[Creating Custom Scripts].
+A project can also have _scripts_ in `src/main/scripts`. A script is run by the build without the application and cannot use the classes of the application. Scripts are deprecated: the scripts a project has still run, no command creates a new one, and a new one is a tool that `create-tool` writes.
+
+See "Tools of the Application and its Plugins" in xref:commandLine[the introduction of this chapter], xref:commandLine#creatingTools[Creating Tools] and xref:commandLine#creatingCustomScripts[Creating Custom Scripts].
 
 === Finding plugins
 
@@ -307,10 +313,10 @@ grails create-app com.example.shop --features cache,grails-quartz,postgres --exc
 ----
 $ grails project regenerate --diff
 changed  build.gradle
-added    grails-app/commands/com/example/DataImportCommand.groovy
 added    grails-app/controllers/com/example/BookController.groovy
 added    grails-app/domain/com/example/Book.groovy
 added    grails-app/jobs/com/example/NightlyJob.groovy
+added    src/cli/groovy/com/example/DataImportTool.groovy
 added    src/test/groovy/com/example/BookControllerSpec.groovy
 added    src/test/groovy/com/example/BookSpec.groovy
 | 7 files are not as the application was generated: 6 added, 1 changed
@@ -320,12 +326,13 @@ added    src/test/groovy/com/example/BookSpec.groovy
 
 `project health` reads the project and says what makes its build fail, what the upgrade notes ask for and is not done, and what the guide recommends, each with what to do. It changes nothing and runs nothing of the build. It ends with exit code 1 when there is an error, and with `--strict` when there is a warning too, so a job can hold the project to it:
 
+// TOOLS-VERIFY: the id and text of tool-catalog.missing and the number of checks (P4).
 [source,console]
 ----
 $ grails project health
 | Project shop on Grails 9.0.0 (gradle.properties), checked by the command line of Grails 9.0.0, offline
-| Advice  command-catalog.missing  The commands of the application and its plugins are not listed: ... Fix: A build that compiles the project lists them (grails compile, run-app, test-app, assemble), and so does typing the name of one; grails gradle grailsCommandCatalog lists them now
-| 11 checks OK (-v lists them). 0 errors, 0 warnings, 1 advice, 0 skipped
+| Advice  tool-catalog.missing  The tools of the application and its plugins are not listed: ... Fix: A build that compiles the project lists them (grails compile, run-app, test-app, assemble), and so does typing the name of one; grails gradle grailsToolCatalog lists them now
+| 12 checks OK (-v lists them). 0 errors, 0 warnings, 1 advice, 0 skipped
 ----
 
 See "The state of a project" in xref:commandLine#creatingProject[Creating a Grails Project].
@@ -334,7 +341,7 @@ See "The state of a project" in xref:commandLine#creatingProject[Creating a Grai
 
 A plugin can give its users two things on the command line.
 
-*Commands.* A plugin has commands like an application has. A plugin that applies the `org.apache.grails.gradle.grails-plugin-cli` Gradle plugin keeps them in `src/cli/groovy` and publishes them in a companion artifact, so that they are not on the class path of the running application. Users of the plugin get them as described above. See xref:commandLine#creatingTools[Creating Tools] and link:plugins.html#providingBasicArtefacts[Providing Basic Artefacts].
+*Tools.* A plugin has tools like an application has, in `src/cli` and `src/standalone`. Every Grails plugin publishes them in companion artifacts, `<artifact>-cli` and `<artifact>-cli-standalone`, one for each folder that has a tool, so that they are neither in the jar of the plugin nor on the class path of the running application. Users of the plugin get them by depending on the plugin, as described above. See xref:commandLine#creatingTools[Creating Tools] and link:plugins.html#providingBasicArtefacts[Providing Basic Artefacts].
 
 *A feature.* A _feature pack_ describes what an application needs in order to use the plugin: the dependency, configuration, files rendered from templates. It is a `feature.yml` and a `templates` directory in `src/main/forge` of the plugin, and it is published inside the jar of the plugin. Most of the features of Grails itself are written in the same format. A user selects the feature of a published plugin by the coordinates of the plugin when creating an application:
 

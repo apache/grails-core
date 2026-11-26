@@ -28,7 +28,7 @@ Runs Gradle in the Grails project of the current directory, with the Gradle wrap
 [source,console]
 ----
 grails gradle build --offline
-grails gradle grailsCommandCatalog
+grails gradle grailsToolCatalog
 grails gradle publishToMavenLocal
 grails help gradle
 ----

@@ -190,7 +190,7 @@ grails test-app --unit --functional
 
 The first runs the task `functionalTest`, the second the task `endToEndTest`, and the third the unit tests and the functional tests. A `Test` task whose name does not end in `Test`, such as `smoke`, has the switch of its own name, `--smoke`. An option of the command is not the switch of a phase: a phase whose task is `cleanTest` is run with `grails gradle cleanTest`, as any Gradle task can be.
 
-When the project has no phase of the name, Gradle fails and names the phases the project has. The build lists the phases of the project for the command line whenever it compiles the project (and `grails gradle grailsCommandCatalog` lists them by hand); the command line then shows their switches in `grails help test-app` and refuses a switch that is none of them before Gradle is started. The link:{commandLineRef}test-app.html[reference of the command] has the details.
+When the project has no phase of the name, Gradle fails and names the phases the project has. The build lists the phases of the project for the command line whenever it compiles the project (and `grails gradle grailsToolCatalog` lists them by hand); the command line then shows their switches in `grails help test-app` and refuses a switch that is none of them before Gradle is started. The link:{commandLineRef}test-app.html[reference of the command] has the details.
 
 NOTE: Before Grails 9, `test-app` ran the unit tests and the integration tests, and a phase the project added was run with Gradle. It is now run by `test-app` as well. To leave a slow phase out of a run, name the phases that are wanted (`grails test-app --unit --integration`), or leave its task out: `grails test-app -- -x functionalTest`.
 

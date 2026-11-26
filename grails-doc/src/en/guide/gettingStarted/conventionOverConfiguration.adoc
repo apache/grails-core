@@ -29,14 +29,16 @@ Grails adopts the "convention over configuration" approach to configure itself. 
 * `taglib` - link:theWebLayer.html#taglibs[Tag Libraries].
 * `utils` - Houses Grails-specific utilities.
 * `views` - link:theWebLayer.html#gsp[Groovy Server Pages (GSP)] or link:theWebLayer.html#gson[JSON Views] - Responsible for the "V" in MVC.
-* `commands` - <<creatingTools,Tools of the Application>> - Create your own Grails CLI commands.
+* `commands` - <<creatingTools,Tools of the Application>> of Grails 8, which still run; the folder is deprecated, and a new tool goes into `src/cli/groovy` or `src/standalone/groovy`.
 
 2.  `src/main/groovy` - Supporting Sources
 
-3.  `src/test/groovy` - link:testing.html[Unit Tests]
+3.  `src/cli/groovy` and `src/standalone/groovy` - <<creatingTools,Tools of the Application>>, run by the `grails` command and never part of the application as it runs or is packaged.
 
-4.  `src/integration-test/groovy` - <<integrationTesting,Integration Tests>> - For testing Grails applications at the integration level.
+4.  `src/test/groovy` - link:testing.html[Unit Tests]
 
-5.  `src/main/scripts` - link:commandLine.html[Code generation scripts], which are deprecated: a new command is a class in `grails-app/commands`.
+5.  `src/integration-test/groovy` - <<integrationTesting,Integration Tests>> - For testing Grails applications at the integration level.
+
+6.  `src/main/scripts` - link:commandLine.html[Code generation scripts], which are deprecated: a new one is a tool in `src/cli/groovy` or `src/standalone/groovy`.
 
 Understanding this directory structure and its conventions is fundamental to efficient Grails development.

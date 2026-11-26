@@ -193,7 +193,7 @@ A profile of your own had a skeleton of files, features, the dependencies and se
 |An entry of `files`, as it is or as a template with the names of the project.
 
 |The commands of the profile, `commands/*.groovy` and `commands/*.yml`
-|Not in a preset. The commands of a plugin (xref:commandLine#creatingTools[Creating Tools]) or the scripts of a project (xref:commandLine#creatingCustomScripts[Creating Custom Scripts]).
+|Not in a preset. The tools of a plugin (xref:commandLine#creatingTools[Creating Tools]) or the scripts of a project (xref:commandLine#creatingCustomScripts[Creating Custom Scripts]).
 |===
 
 What does not convert, and is converted by hand:

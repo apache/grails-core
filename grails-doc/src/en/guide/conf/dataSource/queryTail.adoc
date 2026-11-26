@@ -44,7 +44,7 @@ application:
 grails query-tail
 ----
 
-`query-tail` is a command of Grails Data, which the build of the project runs with the Gradle task `runCommand`: `./gradlew runCommand --arg=query-tail` is the same without the `grails` command, with each option as a further `--arg`. `grails run-command query-tail` runs it too. The command is one the build runs without the application (a Gradle command, see xref:commandLine#creatingTools[Creating Tools]): nothing of the application is started for it, no data source is opened and `BootStrap` does not run, so it can follow an application that is running without being a second one. The summary is written again as requests are served:
+`query-tail` is a tool of Grails Data, which the build of the project runs with the Gradle task `runTool`: `./gradlew runTool --arg=query-tail` is the same without the `grails` command, with each option as a further `--arg`. `grails run-tool query-tail` runs it too. The tool is one the build runs without the application (it declares `startsApplication = false`, see xref:commandLine#creatingTools[Creating Tools]): nothing of the application is started for it, no data source is opened and `BootStrap` does not run, so it can follow an application that is running without being a second one. The summary is written again as requests are served:
 
 ----
 query-tail build/query-tail/capture.log  312 statements in 14 requests  (refreshes as statements run; Ctrl-C to stop)
@@ -67,7 +67,7 @@ so far and exits, which is also how to look at what an integration test run exec
 [source,shell]
 ----
 ./gradlew integrationTest -Pgrails.gorm.queryTail.enabled
-./gradlew runCommand --arg=query-tail --arg=--all --arg=--once
+./gradlew runTool --arg=query-tail --arg=--all --arg=--once
 ----
 
 The Grails Gradle plugin names one run for each build and hands it to every test JVM the build
@@ -341,8 +341,8 @@ statements as one GORM builds does, reading the capture settings from `grails.go
 other datastores may be configured with.
 An application started by Gradle writes under the build directory the
 build configures, even one moved with `layout.buildDirectory`, which the Grails Gradle plugin hands
-the application as `grails.project.target.dir`. The `query-tail` command is run by the same build, through
-the Gradle task `runCommand`, and is handed the same property, so it looks where the application
+the application as `grails.project.target.dir`. The `query-tail` tool is run by the same build, through
+the Gradle task `runTool`, and is handed the same property, so it looks where the application
 writes. Run in another way, without that property, it looks under `build`: set
 `grails.gorm.queryTail.file`, which both sides read, or pass `--file`. An application that configures its own Hibernate `StatementInspector`,
 with `hibernate.session_factory.statement_inspector`, by its class or by a name registered with

@@ -27,7 +27,7 @@ Creates the domain classes that manage ACL data.
 .Example
 
 ....
-./gradlew runCommand -Pargs="s2-create-acl-domains"
+./gradlew runTool -Pargs="s2-create-acl-domains"
 ....
 
 .Description
@@ -36,7 +36,7 @@ The plugin includes the required ACL domain classes, but if you want to customiz
 
 The command writes `AclClass`, `AclEntry`, `AclObjectIdentity` and `AclSid` to `grails-app/domain/grails/plugin/springsecurity/acl`. It takes no arguments. A class that is already there is kept as it is, with a warning, so delete a class to have it written again. The classes are rendered from the templates `_AclClass.groovy`, `_AclEntry.groovy`, `_AclObjectIdentity.groovy` and `_AclSid.groovy` of the plugin; a file of that name in `src/main/templates` of your application is used in its place.
 
-`s2-create-acl-domains` is a command of the plugin that only writes files of the project, so it is run without the application being started, and an application that cannot start yet has the command all the same. `grails s2-create-acl-domains` starts it as a Java process of its own, without Gradle (it is a standalone command, see xref:commandLine#creatingTools[Creating Tools]), so the project need not compile. The Gradle task above, and `grails run-command s2-create-acl-domains`, run it with the build, which compiles the project first.
+`s2-create-acl-domains` is a tool of the plugin that only writes files of the project, so it is run without the application being started, and an application that cannot start yet has the tool all the same. `grails s2-create-acl-domains` starts it as a Java process of its own, without Gradle (it is a standalone tool, see xref:commandLine#creatingTools[Creating Tools]), so the project need not compile. The Gradle task above, and `grails run-tool s2-create-acl-domains`, run it with the build, which compiles the project first.
 
 NOTE: Before Grails 9 this was a script in the plugin, which the Grails shell ran as `grails s2-create-acl-domains`, and earlier builds of Grails 9 with `./gradlew runScriptCommand --arg=s2-create-acl-domains`. The script is gone; the command has its name and writes the same files.
 

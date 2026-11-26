@@ -37,7 +37,7 @@ Many commands of `grails` are a Gradle build of the project, and those can be ru
 | `grails run-app -Dgrails.env=test` | `./gradlew bootRun -Dgrails.env=test`
 | `grails test-app` | `./gradlew test integrationTest`
 | `grails assemble` | `./gradlew assemble -Dgrails.env=production`
-| `grails dbm-update` | `./gradlew runCommand -Pargs="dbm-update"`, or `./gradlew dbmUpdate`
+| `grails dbm-update` | `./gradlew runTool -Pargs="dbm-update"`, or `./gradlew dbmUpdate`
 |===
 
 NOTE: Before Grails 9 an installation had three commands: `grails-shell-cli`, the Grails shell with its profiles, `grails-forge-cli`, and `grails`, which started one of the two according to its `-t` option or the `GRAILS_PREFERRED_SHELL` environment variable. Grails 9 has the `grails` command only, without that option, and no profiles: see link:applicationTypes.html#profilesReplaced[What Became of Profiles] and link:upgrading.html#upgrading90x[Upgrading from Grails 8 to Grails 9].

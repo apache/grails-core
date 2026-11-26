@@ -32,7 +32,7 @@ test-app --unit,test
 test-app --integration,integrationTest
 console,console
 shell,shell
-run-command,runCommand
+run-tool (also run-command),runTool (also runCommand)
 run-script,runScript
 dependency-report,dependencies
 package-plugin,jar

@@ -97,7 +97,7 @@ The `--output-directory` and `--format` options, or the `grails.openapi.output-d
 
 [source,shell]
 ----
-./gradlew runCommand -Pargs="generate-open-api --format=json --output-directory=build/api"
+./gradlew runTool -Pargs="generate-open-api --format=json --output-directory=build/api"
 ----
 
 Because the command starts the application, it needs whatever the application needs to start in

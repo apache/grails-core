@@ -62,14 +62,14 @@ grails:
 Once you have a User domain class, initialize this plugin with the `init-oauth2` command
 [source,bash]
 ----
-./gradlew runCommand -Pargs="init-oauth2 <domain-class-package> <user-class-name> <oauthid-class-name>"
+./gradlew runTool -Pargs="init-oauth2 <domain-class-package> <user-class-name> <oauthid-class-name>"
 ----
 
-The above command will create the domain class with the provided name and package. For example, the command `./gradlew runCommand -Pargs="init-oauth2 com.yourapp User OAuthID"` will create a domain class `grails-app/domain/com/yourapp/OAuthID.groovy` that belongs to `com.yourapp.User`. A user class in another package is given with its package: `init-oauth2 com.yourapp com.yourapp.user.User OAuthID`. With fewer than three arguments the command says how it is used and fails.
+The above command will create the domain class with the provided name and package. For example, the command `./gradlew runTool -Pargs="init-oauth2 com.yourapp User OAuthID"` will create a domain class `grails-app/domain/com/yourapp/OAuthID.groovy` that belongs to `com.yourapp.User`. A user class in another package is given with its package: `init-oauth2 com.yourapp com.yourapp.user.User OAuthID`. With fewer than three arguments the command says how it is used and fails.
 
 The command also adds the setting `grails.plugin.springsecurity.oauth2.domainClass`, with the name of the class it created, at the end of `grails-app/conf/application.groovy`, which it creates when the application has none. A domain class that is already there is kept as it is, with a warning; the setting is added all the same, so running the command twice leaves the setting in the file twice. The class is rendered from the template `OAuthID.groovy.template` of the plugin; a file of that name in `src/main/templates` of your application is used in its place.
 
-`init-oauth2` is a command of the plugin that only writes files of the project, so it is run without the application being started. `grails init-oauth2 com.yourapp User OAuthID` starts it as a Java process of its own, without Gradle (it is a standalone command, see xref:commandLine#creatingTools[Creating Tools]), so the project need not compile. The Gradle task above, and `grails run-command init-oauth2 com.yourapp User OAuthID`, run it with the build, which compiles the project first.
+`init-oauth2` is a tool of the plugin that only writes files of the project, so it is run without the application being started. `grails init-oauth2 com.yourapp User OAuthID` starts it as a Java process of its own, without Gradle (it is a standalone tool, see xref:commandLine#creatingTools[Creating Tools]), so the project need not compile. The Gradle task above, and `grails run-tool init-oauth2 com.yourapp User OAuthID`, run it with the build, which compiles the project first.
 
 NOTE: Before Grails 9 the plugin also had a script of this name, which the Grails shell ran as `grails init-oauth2 com.yourapp User OAuthID`, and earlier builds of Grails 9 with `./gradlew runScriptCommand --arg=init-oauth2 --arg=com.yourapp --arg=User --arg=OAuthID`. The script is gone; the command takes the same arguments and writes the same files.
 

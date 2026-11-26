@@ -40,7 +40,7 @@ After installation, execute the `s2-quickstart` initialization command (<<core-s
 grails s2-quickstart com.yourapp User Role
 ----
 
-`./gradlew runCommand -Pargs="s2-quickstart com.yourapp User Role"` runs the same command without the `grails` command line.
+`./gradlew runTool -Pargs="s2-quickstart com.yourapp User Role"` runs the same tool without the `grails` command line.
 
 An application created with the `grails-spring-security` feature has the classes and the settings already, so skip this step there: `s2-quickstart` writes nothing in an application whose configuration has the settings it writes, and says which, unless it is given `--force`.
 

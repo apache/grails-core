@@ -51,7 +51,7 @@ Options:
 
 * `--json` - Write the commands there are in the current directory, with their options, as one JSON document for a tool to read.
 
-Without a command, `help` shows how the command line is used and lists the commands there are in the current directory, with the first sentence of the description of each. Outside a project those are the commands that create one and the commands that run a build; in a project there are also the commands that create its classes, those of the command line and those a feature of the project gives it, and the commands of the application and its plugins:
+Without a command, `help` shows how the command line is used and lists the commands there are in the current directory, with the first sentence of the description of each. Outside a project those are the commands that create one and the commands that run a build; in a project there are also the commands that create its classes, those of the command line and those a feature of the project gives it, and the tools of the application and its plugins:
 
 [source,console]
 ----
@@ -80,8 +80,8 @@ Commands:
 ...
 ----
 
-`help` runs nothing to answer, also for a command of the application or of a plugin, or a script of the application: it describes those from what the build of the project listed of them, with where each comes from and how it is run, and starts neither the build nor the command.
+`help` runs nothing to answer, also for a tool of the application or of a plugin, or a script of the application: it describes those from what the build of the project listed of them, with where each comes from and how it is run, and starts neither the build nor the tool.
 
-Every command of `grails` itself also shows how it is used when it is given `--help` (`-h`): `grails create-app --help` is `grails help create-app`. A command that gives everything after its name to something else does not: `help gradle` is how to see the help of the link:gradle.html[gradle] command itself, since `gradle --help` is given to Gradle, and `NAME --help` for a command of the application or of a plugin gives `--help` to that command and runs it through the build of the project, so `grails help NAME` is the way to ask about such a command. A command there is not ends `help` with exit code 2.
+Every command of `grails` itself also shows how it is used when it is given `--help` (`-h`): `grails create-app --help` is `grails help create-app`. A command that gives everything after its name to something else does not: `help gradle` is how to see the help of the link:gradle.html[gradle] command itself, since `gradle --help` is given to Gradle, and `NAME --help` for a tool of the application or of a plugin gives `--help` to that tool and runs it, so `grails help NAME` is the way to ask about a tool. A command there is not ends `help` with exit code 2.
 
 See "Help" in link:{guidePath}commandLine.html[The Command Line] for the JSON document.

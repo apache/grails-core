@@ -22,7 +22,7 @@ under the License.
 
 Most of the plugin's controllers are intended to be part of a backend admin application, but the Registration and Forgot Password workflows are expected to be user-facing. So they're not available in the admin menu like the User, Role, and other backend functionality - you'll need to expose them to your users.
 
-One way to do this is to replace the default `login.gsp` that's provided by the Spring Security Core plugin with this plugin's version. You can do this by running `./gradlew runCommand -Pargs="s2ui-override auth"` - the <<ui-s2ui-override>> command - see the <<ui-customization>> section for details. If you do this your users will have links to both workflows from the login screen:
+One way to do this is to replace the default `login.gsp` that's provided by the Spring Security Core plugin with this plugin's version. You can do this by running `./gradlew runTool -Pargs="s2ui-override auth"` - the <<ui-s2ui-override>> command - see the <<ui-customization>> section for details. If you do this your users will have links to both workflows from the login screen:
 
 image::login.png[]
 
@@ -103,7 +103,7 @@ The `emailBody` property should be a GString and will have the User domain class
 
 === Notes
 
-You should consider the registration code as starter code - every signup workflow will be different, and this should help you get going but is unlikely to be sufficient. You may wish to collect more information than just username and email - first and last name for example. Run `./gradlew runCommand -Pargs="s2ui-override register com.yourcompany.yourapp"` to copy the registration controller and GSPs into your application to be customized.
+You should consider the registration code as starter code - every signup workflow will be different, and this should help you get going but is unlikely to be sufficient. You may wish to collect more information than just username and email - first and last name for example. Run `./gradlew runTool -Pargs="s2ui-override register com.yourcompany.yourapp"` to copy the registration controller and GSPs into your application to be customized.
 
 If there are unexpected validation errors during registration (which can happen when there is a disconnect between the domain classes and the code in `RegisterController` they will be logged at the `warn` or `error` level, so enable logging to ensure that you see the messages, e.g.
 
