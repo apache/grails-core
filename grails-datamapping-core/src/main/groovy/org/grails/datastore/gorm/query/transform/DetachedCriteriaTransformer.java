@@ -997,7 +997,7 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
         if (newCode.getStatements().size() == statementsBefore && SWAPPED_COMPARISON_OPERATORS.containsKey(be.getOperation().getRootText()) &&
                 (isAliasPath(be.getLeftExpression()) || isAliasPath(be.getRightExpression())) &&
                 !aliasExpressions.contains(be.getLeftExpression()) && !aliasExpressions.contains(be.getRightExpression())) {
-            sourceUnit.getErrorCollector().addError(new LocatedMessage("Cannot write the comparison [" + be.getText() + "] in a where query: it compares a path of an alias with an expression this query form does not support. Only the identifier of an association, as in id == t.club.id, can be compared with a property of the queried class; write any other condition in a subquery", be.getOperation(), sourceUnit));
+            sourceUnit.getErrorCollector().addError(new LocatedMessage("Cannot write the comparison [" + be.getText() + "] in a where query: it compares a path of an alias with an expression this query form does not support. A path of an alias can be compared with a property of the queried class or of another alias, as in id == t.club.id or name == t.club.name; write any other condition in a subquery", be.getOperation(), sourceUnit));
         }
     }
 

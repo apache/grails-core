@@ -381,4 +381,69 @@ class NestedAliasPathSubqueryHibernateSpec extends GrailsDataTckSpec<GrailsDataH
         then:
         clubs*.name == ['Arsenal']
     }
+
+    void "a subquery compares its own property with a property of the association of the enclosing alias, in either order"() {
+        when:
+        def subqueryFirst = Team.where {
+            def t = Team
+            exists(Club.where { name == t.club.name && name == 'Arsenal' }.property('name'))
+        }.list()
+        def aliasFirst = Team.where {
+            def t = Team
+            exists(Club.where { t.club.name == name && name == 'Arsenal' }.property('name'))
+        }.list()
+
+        then: 'the club of the team is joined in the enclosing query, so its name can be compared'
+        subqueryFirst*.name == ['Arsenal First Team']
+        aliasFirst*.name == ['Arsenal First Team']
+    }
+
+    void "a subquery compares a property of the association of the enclosing alias with !="() {
+        when:
+        def teams = Team.where {
+            def t = Team
+            exists(Club.where { name != t.club.name && name == 'Arsenal' }.property('name'))
+        }.list()
+
+        then:
+        teams*.name.sort() == ['United First Team', 'United Reserves']
+    }
+
+    void "a subquery that aliases its own root compares it with a property of the association of the enclosing alias"() {
+        when:
+        def teams = Team.where {
+            def t = Team
+            exists(Club.where { def c = Club; c.name == t.club.name && name == 'Manchester United' }.property('name'))
+        }.list()
+
+        then:
+        teams*.name.sort() == ['United First Team', 'United Reserves']
+    }
+
+    void "the join for a property of the association of the enclosing alias keeps the rows where the association is null"() {
+        given: 'a team without a club'
+        new Team(name: 'Clubless').save(flush: true, failOnError: true)
+        manager.session.clear()
+
+        when: 'no Arsenal club has the name of the club of the team'
+        def teams = Team.where {
+            def t = Team
+            notExists(Club.where { name == t.club.name && name == 'Arsenal' }.property('name'))
+        }.list()
+
+        then: 'the team without a club is kept, so the join is a left join'
+        teams*.name.sort() == ['Clubless', 'United First Team', 'United Reserves']
+    }
+
+    void "a property of a collection of the enclosing alias is not joined, and the query fails as before"() {
+        when: 'a join of a collection would repeat the rows of the enclosing query'
+        Team.where {
+            def t = Team
+            exists(Club.where { name == t.players.name }.property('name'))
+        }.list()
+
+        then:
+        Exception e = thrown()
+        (e.message + e.cause?.message).contains('could not resolve property')
+    }
 }
