@@ -91,9 +91,9 @@ dependencies {
     integrationTestImplementation 'org.apache.grails:grails-testing-support-http-client'
 }
 
-// The core build's gradle/functional-test-config.gradle is deliberately not applied here, for the
-// same reasons as in legacy-commands: its dependency substitution enumerates
-// rootProject.subprojects, which only makes sense inside the core build - and substituting
+// The core build's gradle/functional-test-config.gradle is deliberately not applied here: its
+// dependency substitution enumerates rootProject.subprojects, which only makes sense inside the
+// core build, where the org.apache.grails coordinates are projects - and substituting
 // projects is the very thing this project must not do, since the point is to import a published
 // grails-bom pom. Its remaining job, the per-suite skip flags keyed off grails-test-examples-*
 // project names, has no meaning in this build, which is driven by its own workflow.

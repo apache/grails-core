@@ -27,28 +27,13 @@ def loadSdkmanrc = { String relativePath ->
 
 def props = loadSdkmanrc('../.sdkmanrc')
 
-// Scoped to the default wrapper task on purpose. legacyG7Wrapper below pins a different version,
-// which a `tasks.withType(Wrapper)` block here would silently overwrite.
 tasks.named('wrapper', Wrapper) {
     gradleVersion = props.gradle
 }
 
-// The Grails 7 fixture is built by the Gradle version Grails 7 uses, not the one this repository
-// builds with, so that it stands in for a plugin the way one was actually published. It therefore
-// gets its own wrapper generated from its own .sdkmanrc, written straight into the fixture rather
-// than copied from the shared one below.
-def legacyG7Dir = project.rootProject.layout.projectDirectory.dir('../end-to-end/legacy-g7-command-plugin')
-def legacyG7Props = loadSdkmanrc('../end-to-end/legacy-g7-command-plugin/.sdkmanrc')
-tasks.register('legacyG7Wrapper', Wrapper) {
-    description = "Generates the Grails 7 fixture's wrapper at the Gradle version Grails 7 pins."
-    gradleVersion = legacyG7Props.gradle
-    scriptFile = legacyG7Dir.file('gradlew').asFile
-    jarFile = legacyG7Dir.file('gradle/wrapper/gradle-wrapper.jar').asFile
-}
-
 defaultTasks 'bootstrap'
 tasks.register('bootstrap') {
-    dependsOn 'wrapper', 'legacyG7Wrapper'
+    dependsOn 'wrapper'
     doLast {
         ant.copy file: "${projectDir}/gradlew", todir: "${projectDir}/../grails-forge"
         ant.copy file: "${projectDir}/gradlew.bat", todir: "${projectDir}/../grails-forge"
@@ -71,11 +56,6 @@ tasks.register('bootstrap') {
         }
         ant.chmod(file: "${projectDir}/../grails-gradle/gradlew", perm: '755')
         ant.chmod(file: "${projectDir}/../grails-gradle/gradlew.bat", perm: '755')
-
-        // end-to-end/legacy-g7-command-plugin is deliberately absent from these copies: its
-        // wrapper comes from legacyG7Wrapper at the Grails 7 Gradle version instead.
-        ant.chmod(file: "${projectDir}/../end-to-end/legacy-g7-command-plugin/gradlew", perm: '755')
-        ant.chmod(file: "${projectDir}/../end-to-end/legacy-g7-command-plugin/gradlew.bat", perm: '755')
 
         ant.copy file: "${projectDir}/gradlew", todir: "${projectDir}/../end-to-end"
         ant.copy file: "${projectDir}/gradlew.bat", todir: "${projectDir}/../end-to-end"
