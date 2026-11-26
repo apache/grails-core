@@ -502,7 +502,7 @@ class ScriptCommandRunnerSpec extends Specification {
 
         where:
         module                               | name                              | arguments          | outcome | written
-        'end-to-end/legacy-commands-plugin' | 'hello-legacy-script' | ['hello'] | '' | []
+        'grails-core/src/test-cli/resources/script-command-plugin' | 'hello-script' | ['hello'] | '' | []
     }
 
     @Unroll
