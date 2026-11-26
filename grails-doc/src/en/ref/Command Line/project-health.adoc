@@ -314,7 +314,7 @@ The id of a finding is the name of its check and the name of the finding, as `ja
 | `tools.grails7-imports`
 | error
 | A source imports a type of `grails.dev.commands`, which the tools of Grails 7 implemented and Grails 9 does not have, so it does not compile. Each file is named, with the import to use in its place.
-| Import the type of the same name of `org.apache.grails.core.cli`: `org.apache.grails.core.cli.GrailsApplicationCommand` for `grails.dev.commands.GrailsApplicationCommand`, whose members are the same, or better `ApplicationTool` with `ToolSupport`.
+| Import the type of the same name in `org.apache.grails.core.cli`, or in its packages `io` and `template` for the types of `grails.dev.commands.io` and `grails.dev.commands.template`: `org.apache.grails.core.cli.GrailsApplicationCommand` for `grails.dev.commands.GrailsApplicationCommand`, whose members are the same, or better `ApplicationTool` with `ToolSupport`.
 
 | `tools.legacy-folder`
 | advice
