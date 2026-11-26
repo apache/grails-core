@@ -79,6 +79,7 @@ public abstract class AbstractGrailsPluginManager implements GrailsPluginManager
     protected GrailsApplication application;
     protected PluginDiscovery pluginDiscovery;
     protected Map<String, GrailsPlugin> plugins = new HashMap<>();
+    private volatile ArtefactIndex artefactIndex;
     protected boolean initialised = false;
     protected boolean shutdown = false;
     protected ApplicationContext applicationContext;
@@ -458,21 +459,58 @@ public abstract class AbstractGrailsPluginManager implements GrailsPluginManager
 
     /**
      * The plugin whose descriptor lists the class among its artefacts. Classes are matched by name, so a class
-     * reloaded in development still finds its plugin.
+     * reloaded in development still finds its plugin. View resolution asks on every render, so the answer comes
+     * from an index of the plugins' artefacts, built again only when the loaded plugins change.
      */
     public GrailsPlugin getPluginForClass(Class<?> theClass) {
         if (theClass == null) {
             return null;
         }
-        String className = theClass.getName();
-        for (GrailsPlugin plugin : plugins.values()) {
-            for (Class<?> artefact : plugin.getProvidedArtefacts()) {
-                if (artefact.getName().equals(className)) {
-                    return plugin;
+        return artefactIndex().get(theClass.getName());
+    }
+
+    /** Drops the artefact index, after a plugin's artefacts changed without the plugins changing. */
+    protected void artefactsChanged() {
+        artefactIndex = null;
+    }
+
+    private Map<String, GrailsPlugin> artefactIndex() {
+        ArtefactIndex index = artefactIndex;
+        if (index == null || !index.describes(plugins)) {
+            index = new ArtefactIndex(plugins);
+            artefactIndex = index;
+        }
+        return index.pluginsByArtefact;
+    }
+
+    /** The plugins' artefacts by class name, with the plugins it was built from to tell when it is stale. */
+    private static final class ArtefactIndex {
+
+        private final Map<String, GrailsPlugin> plugins;
+        private final Map<String, GrailsPlugin> pluginsByArtefact;
+
+        ArtefactIndex(Map<String, GrailsPlugin> plugins) {
+            this.plugins = Map.copyOf(plugins);
+            Map<String, GrailsPlugin> byArtefact = new HashMap<>();
+            for (GrailsPlugin plugin : this.plugins.values()) {
+                for (Class<?> artefact : plugin.getProvidedArtefacts()) {
+                    byArtefact.putIfAbsent(artefact.getName(), plugin);
                 }
             }
+            this.pluginsByArtefact = Map.copyOf(byArtefact);
         }
-        return null;
+
+        boolean describes(Map<String, GrailsPlugin> current) {
+            if (current.size() != plugins.size()) {
+                return false;
+            }
+            for (Map.Entry<String, GrailsPlugin> entry : current.entrySet()) {
+                if (plugins.get(entry.getKey()) != entry.getValue()) {
+                    return false;
+                }
+            }
+            return true;
+        }
     }
 
     @Override

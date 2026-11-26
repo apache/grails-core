@@ -118,6 +118,7 @@ public class DefaultGrailsPluginManager extends AbstractGrailsPluginManager {
     public void refreshPlugin(String name) {
         if (hasGrailsPlugin(name)) {
             getGrailsPlugin(name).refresh();
+            artefactsChanged();
         }
     }
 
