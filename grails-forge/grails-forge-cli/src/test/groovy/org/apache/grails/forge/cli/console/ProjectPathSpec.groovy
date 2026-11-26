@@ -55,6 +55,13 @@ class ProjectPathSpec extends CommandSpec implements CommandFixture {
 
     static final String REUSED = 'Reusing configuration cache'
 
+    // The features change the settings between two builds of one daemon and expect the second build to read them
+    // again. A daemon that watches the file system knows of a change by the events of the system, and those come late
+    // while the system has many of them, as it has while the other specs run: the second build then took the settings
+    // for unchanged and reused the entry of the configuration cache the first build stored. Without watching, a
+    // build looks at the files it reads itself.
+    static final String NOT_WATCHED = 'org.gradle.vfs.watch=false\n'
+
     @Shared
     IsolatedGradle daemon = new IsolatedGradle()
 
@@ -87,7 +94,7 @@ class ProjectPathSpec extends CommandSpec implements CommandFixture {
             project(':a').projectDir = file('b')
             project(':b').projectDir = file('a')
             '''.stripIndent() + daemon.recordingOf(true)
-        new File(root, 'gradle.properties').text = daemon.propertiesOf(true)
+        new File(root, 'gradle.properties').text = daemon.propertiesOf(true) + NOT_WATCHED
         new File(root, 'build.gradle').text = MultiProjectBuildSpec.ROOT
         ['app', 'legacy-app', 'a', 'b', 'apps/web/shop'].each { String project -> grailsProject(new File(root, project)) }
     }
@@ -316,7 +323,7 @@ class ProjectPathSpec extends CommandSpec implements CommandFixture {
     }
 
     private void configurationCache(boolean on) {
-        new File(root, 'gradle.properties').text = daemon.propertiesOf(true) + (on ? 'org.gradle.configuration-cache=true\n' : '')
+        new File(root, 'gradle.properties').text = daemon.propertiesOf(true) + NOT_WATCHED + (on ? 'org.gradle.configuration-cache=true\n' : '')
     }
 
     // what the check says in app, whose path :app the callback gives legacy-app
