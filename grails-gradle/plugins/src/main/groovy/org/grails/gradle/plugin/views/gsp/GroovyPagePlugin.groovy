@@ -206,6 +206,12 @@ class GroovyPagePlugin implements Plugin<Project> {
         SourceSet mainSourceSet = SourceSets.findMainSourceSet(project)
         SourceSetOutput output = mainSourceSet?.output
         FileCollection classesDirs = resolveClassesDirs(output, project)
+        // The classes of the project's AST transformations, which a plugin's build compiles in a source
+        // set of their own and copies into the main classes directory. Looked up when the pages are
+        // compiled, as the source set is added by a plugin that may be applied after this one.
+        FileCollection astTransformationClasses = project.files {
+            SourceSets.findSourceSet(project, 'ast')?.output?.classesDirs ?: []
+        }
         Provider<Directory> destDir = project.layout.buildDirectory.dir('gsp-classes/main')
         Provider<Directory> webappDestDir = project.layout.buildDirectory.dir('gsp-classes/webapp')
 
@@ -384,6 +390,8 @@ class GroovyPagePlugin implements Plugin<Project> {
             it.source = project.layout.projectDirectory.dir('grails-app/views')
             it.serverpath.set(VIEWS_SERVER_PATH)
             it.classpath = allClasspath
+            it.projectClasses.from(classesDirs)
+            it.astTransformationClasses.from(astTransformationClasses)
             it.javaLauncher.convention(launcher)
             it.compileStatic.set(false)
             it.compileStaticStrict.set(false)
@@ -405,6 +413,8 @@ class GroovyPagePlugin implements Plugin<Project> {
             it.tmpDirPath = getTmpDirPath(project)
             it.serverpath.set('/')
             it.classpath = allClasspath
+            it.projectClasses.from(classesDirs)
+            it.astTransformationClasses.from(astTransformationClasses)
             it.javaLauncher.convention(launcher)
             it.compileStatic.set(false)
             it.compileStaticStrict.set(false)

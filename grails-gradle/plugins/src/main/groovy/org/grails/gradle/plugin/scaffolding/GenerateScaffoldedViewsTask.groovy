@@ -122,9 +122,16 @@ abstract class GenerateScaffoldedViewsTask extends DefaultTask {
      */
     public static final int GENERATOR_PROTOCOL = 1
 
-    /** Compiled application classes, searched for scaffolded controllers. */
-    @InputFiles
-    @PathSensitive(PathSensitivity.RELATIVE)
+    /**
+     * Compiled application classes, searched for scaffolded controllers. Fingerprinted by their ABI:
+     * what is read of a controller - the annotation, the domain class it names, the superclass and
+     * interfaces, and whether a namespace is declared - is part of it, and no code is read, so a
+     * change to a method body or a private member leaves the pages as they were. The one declaration
+     * the ABI leaves out is a private static {@code namespace} field with no accessor; adding one
+     * expands no namespace-specific page until the task runs for another reason, and the resolver
+     * expands such a page when it is first asked for, as it does any page this task did not expand.
+     */
+    @CompileClasspath
     abstract ConfigurableFileCollection getClassesDirs()
 
     /**

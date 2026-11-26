@@ -1645,3 +1645,12 @@ API that Hibernate Validator 9 uses. This fixes message interpolation in standal
 
 If the application replaces GORM's default EL implementation, supply an EL 6-compatible implementation and remove
 explicit EL 5 version overrides. Applications using the default dependencies need no code changes.
+
+==== 35. Pages Are Compiled Again Only for Changes They Can See
+
+`compileGroovyPages` and `compileWebappGroovyPages` compare the project's own classes by their ABI, as Gradle compares the classpath of a Java compilation: the classes, their members and signatures, and their annotations. A change to a method body or a private member of an application class leaves the compiled pages up to date, where every change to any class of the project compiled every page again. The libraries the pages are compiled against, the Groovy and the page compiler among them, are still compared by content, and so are the classes of the project's `ast` source set, whose transformations run while the pages are compiled. `generateScaffoldedViews` reads only the annotations and declarations of the controllers, and compares the classes the same way, so a change to a scaffolded controller's code no longer expands its pages again.
+
+===== Required Actions
+
+* To have the pages compiled again when an AST transformation they apply changes what it does, keep it in the `ast` source set, as a plugin's build does, or in a library. One compiled with the application's main sources is compared by its ABI only, so the pages keep what its previous version did until a change they can see, or a `clean`, compiles them again.
+* A `GroovyPageForkCompileTask` the build registers itself compares its whole `classpath` by content, as before, unless it sets `projectClasses`.
