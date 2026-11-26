@@ -110,6 +110,19 @@ class MultiTenancyRequestedJoinSpec extends Specification {
         count == 1
     }
 
+    void 'a bulk update of a bidirectional collection uses the tenant filter of its elements'() {
+        expect:
+        RequestedJoinShelf.withTransaction { status ->
+            status.setRollbackOnly()
+            final query = RequestedJoinShelf.where { name ==~ '%shelf' }.join('books', JoinType.INNER)
+            assert query.list()*.name == ['Shared shelf']
+            assert query.updateAll(name: 'Updated shelf') == 1
+            datastore.currentSession.clear()
+            assert RequestedJoinShelf.list(sort: 'name')*.name == ['Travel shelf', 'Updated shelf']
+            true
+        }
+    }
+
     void 'a left join requested for a collection returns an instance whose elements belong to another tenant'() {
         when:
         final List<RequestedJoinShelf> results = RequestedJoinShelf.withTransaction {

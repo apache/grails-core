@@ -46,7 +46,7 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
         manager.domainClasses.addAll([Club, Team, Player, Contract, AssociationJoinTypeCategory, AssociationJoinTypeShelf, AssociationJoinTypeTag,
                                       AssociationJoinTypeFace, AssociationJoinTypeNose, AssociationJoinTypePost, AssociationJoinTypeAuthor,
                                       AssociationJoinTypeBook, AssociationJoinTypeSquad, AssociationJoinTypeSquadMember, AssociationJoinTypeTrophy, AssociationJoinTypeMedal,
-                                      AssociationJoinTypePrize, AssociationJoinTypeRibbon])
+                                      AssociationJoinTypePrize, AssociationJoinTypeRibbon, Join0_0])
     }
 
     void setup() {
@@ -60,6 +60,28 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
         new Team(club: arsenal, name: 'Playerless First Team').save(failOnError: true)
         manager.session.flush()
         manager.session.clear()
+    }
+
+    void 'a requested bulk join does not shadow the queried entity alias for #operation'() {
+        given:
+        final category = new AssociationJoinTypeTag(name: 'Category').save(failOnError: true)
+        new Join0_0(name: 'With category', category: category).save(failOnError: true)
+        new Join0_0(name: 'Without category').save(failOnError: true, flush: true)
+        manager.session.clear()
+        final query = new DetachedCriteria(Join0_0).join('category', JoinType.INNER)
+
+        when:
+        final changed = mutate.call(query)
+        manager.session.clear()
+
+        then:
+        changed == 1
+        Join0_0.list(sort: 'name')*.name == expected
+
+        where:
+        operation | mutate                                             | expected
+        'update'  | { criteria -> criteria.updateAll(name: 'Updated') } | ['Updated', 'Without category']
+        'delete'  | { criteria -> criteria.deleteAll() }                | ['Without category']
     }
 
     protected static void savePlayer(String name, Team team) {
@@ -184,6 +206,123 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
         query.count() == 4
     }
 
+    void 'a bulk #operation applies the join requested by a subquery inside a junction'() {
+        given:
+        new Team(name: 'Bulk linked', club: Club.findByName('Arsenal')).save(failOnError: true)
+        new Team(name: 'Bulk unlinked').save(failOnError: true, flush: true)
+        manager.session.clear()
+        final subquery = Team.where { name ==~ 'Bulk%' }.join('club', JoinType.INNER).id()
+        final query = {
+            new DetachedCriteria(Team).build {
+                or {
+                    inList('id', subquery)
+                    eq('name', 'No matching team')
+                }
+            }
+        }
+
+        expect:
+        query.call().list()*.name == ['Bulk linked']
+
+        when:
+        final changed = operation == 'update' ? query.call().updateAll(name: 'Bulk updated') : query.call().deleteAll()
+        manager.session.clear()
+
+        then:
+        changed == 1
+        Team.findByName('Bulk unlinked') != null
+        Team.findByName('Bulk linked') == null
+        (Team.findByName('Bulk updated') != null) == (operation == 'update')
+
+        where:
+        operation << ['update', 'delete']
+    }
+
+    void 'updateAll updates the teams that list returns when the query requests #description'() {
+        given:
+        final uncontracted = new Team(name: 'Uncontracted First Team').save(failOnError: true)
+        new Player(name: 'Player without contract', team: uncontracted).save(validate: false, flush: true)
+        manager.session.clear()
+        final allTeams = (ALL_TEAMS + 'Uncontracted First Team').sort()
+
+        when:
+        final listed = query.call().list()*.name.sort()
+        final updated = query.call().updateAll(name: 'Updated Team')
+        manager.session.clear()
+
+        then:
+        listed == expected
+        updated == expected.size()
+
+        and: 'the other teams keep their name'
+        (Team.list()*.name - 'Updated Team').sort() == allTeams - expected
+
+        where:
+        description                                       | query                                                                                                           || expected
+        'an inner join of an association'                 | { Team.where { name ==~ '%First%' }.join('club', JoinType.INNER) }                                              || TEAMS_WITH_A_CLUB
+        'a right join of an association'                  | { Team.where { name ==~ '%First%' }.join('club', JoinType.RIGHT) }                                              || TEAMS_WITH_A_CLUB
+        'an inner join, without criteria'                 | { new DetachedCriteria(Team).join('club', JoinType.INNER) }                                                     || TEAMS_WITH_A_CLUB
+        'an inner join of a collection'                   | { Team.where { name ==~ '%First%' }.join('players', JoinType.INNER) }                                           || (TEAMS_WITH_PLAYERS + 'Uncontracted First Team').sort()
+        'an inner join of an association of a collection' | { Team.where { name ==~ '%First%' }.join('players.contract', JoinType.INNER) }                                  || TEAMS_WITH_PLAYERS
+        'inner joins of an association and a collection'  | { Team.where { name ==~ '%First%' }.join('club', JoinType.INNER).join('players', JoinType.INNER) }              || ['Arsenal First Team', 'Chelsea First Team', 'MU First Team']
+        'a left join of an association'                   | { Team.where { name ==~ '%First%' }.join('club', JoinType.LEFT) }                                               || (ALL_TEAMS + 'Uncontracted First Team').sort()
+        'a join without a join type'                      | { Team.where { name ==~ '%First%' }.join('club') }                                                              || (ALL_TEAMS + 'Uncontracted First Team').sort()
+    }
+
+    void 'updateAll updates the players that list returns when the query requests an inner join of #description'() {
+        given:
+        new Player(name: 'Player without contract', team: Team.findByName('Playerless First Team')).save(validate: false, flush: true)
+        manager.session.clear()
+        final allPlayers = ['Arsenal Player', 'Chelsea Player', 'MU Player', 'Player without contract', 'Unattached Player']
+
+        when:
+        final listed = query.call().list()*.name.sort()
+        final updated = query.call().updateAll(name: 'Updated')
+        manager.session.clear()
+
+        then:
+        listed == expected
+        updated == expected.size()
+
+        and: 'the other players keep their name'
+        (Player.list()*.name - 'Updated').sort() == allPlayers - expected
+
+        where:
+        description                                               | query                                                                         || expected
+        'an association whose key the associated class has'       | { Player.where { name ==~ '%Player%' }.join('contract', JoinType.INNER) }     || ['Arsenal Player', 'Chelsea Player', 'MU Player', 'Unattached Player']
+        'an association of an association'                        | { Player.where { name ==~ '%Player%' }.join('team.club', JoinType.INNER) }    || ['Arsenal Player', 'Chelsea Player', 'MU Player', 'Player without contract']
+    }
+
+    void 'updateAll applies an inner join that the query requests for an association to the queried class itself'() {
+        given:
+        final root = new AssociationJoinTypeCategory(name: 'Root category').save(failOnError: true)
+        new AssociationJoinTypeCategory(name: 'Child category', parent: root).save(failOnError: true, flush: true)
+        manager.session.clear()
+
+        when:
+        final updated = AssociationJoinTypeCategory.where {
+            name ==~ '%category'
+        }.join('parent', JoinType.INNER).updateAll(name: 'Updated')
+        manager.session.clear()
+
+        then:
+        updated == 1
+        AssociationJoinTypeCategory.list()*.name.sort() == ['Root category', 'Updated']
+    }
+
+    void 'deleteAll deletes the instances that list returns when the query requests an inner join'() {
+        given: 'no contract refers to a player any more'
+        Contract.where { salary > 0G }.deleteAll()
+
+        when:
+        final deleted = Player.where { name ==~ '%Player' }.join('team.club', JoinType.INNER).deleteAll()
+        manager.session.clear()
+
+        then: 'the player whose team has no club is left'
+        deleted == 3
+        Player.list()*.name == ['Unattached Player']
+    }
+
     void 'a right join keeps one null row for each club that no team refers to'() {
         given:
         new Club(name: 'Another teamless club').save()
@@ -270,6 +409,38 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
         fetch << ['lazy', 'join']
     }
 
+    void 'deleteAll deletes the instances that list returns when the query requests an inner join of a collection that has a join table'() {
+        given:
+        saveShelves()
+
+        when:
+        final query = AssociationJoinTypeShelf.where { name ==~ 'First%' }.join('tags', JoinType.INNER)
+        final listed = query.list()*.name
+        final deleted = query.deleteAll()
+        manager.session.flush()
+        manager.session.clear()
+
+        then:
+        listed == ['First tagged shelf']
+        deleted == 1
+
+        and: 'the other shelves keep their tags'
+        AssociationJoinTypeShelf.list().collect { "${it.name}: ${it.tags*.name.sort()}" }.sort() == ['First untagged shelf: []', 'Other shelf: [y]']
+    }
+
+    void 'updateAll updates the instances that list returns when the query requests an inner join of a collection that has a join table'() {
+        given:
+        saveShelves()
+
+        when:
+        final updated = AssociationJoinTypeShelf.where { name ==~ 'First%' }.join('tags', JoinType.INNER).updateAll(name: 'Updated shelf')
+        manager.session.clear()
+
+        then:
+        updated == 1
+        AssociationJoinTypeShelf.list().collect { "${it.name}: ${it.tags*.name.sort()}" }.sort() == ['First untagged shelf: []', 'Other shelf: [y]', 'Updated shelf: [x]']
+    }
+
     void 'a copied query keeps its replacement fetch mode when the original requests another join type'() {
         given:
         final original = new DetachedCriteria(Team).join('club', JoinType.INNER).join('club')
@@ -290,6 +461,41 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
         new AssociationJoinTypeShelf(name: 'First untagged shelf').save(failOnError: true)
         new AssociationJoinTypeShelf(name: 'Other shelf').addToTags(new AssociationJoinTypeTag(name: 'y')).save(failOnError: true, flush: true)
         manager.session.clear()
+    }
+
+    void 'updateAll applies an inner join of the side of a one-to-one that the other class has the foreign key of'() {
+        given: 'one nose of a face, and noses of no face'
+        final noses = (1..3).collect { new AssociationJoinTypeNose(freckles: true).save(validate: false) }
+        new AssociationJoinTypeFace(name: 'Face with a nose', nose: noses.last()).save(failOnError: true)
+        new AssociationJoinTypeFace(name: 'Face without a nose').save(failOnError: true, flush: true)
+        manager.session.clear()
+
+        when:
+        final listed = AssociationJoinTypeNose.where { freckles == true }.join('face', JoinType.INNER).list()*.id
+        final updated = AssociationJoinTypeNose.where { freckles == true }.join('face', JoinType.INNER).updateAll(freckles: false)
+        manager.session.clear()
+
+        then:
+        listed == [noses.last().id]
+        updated == 1
+        AssociationJoinTypeNose.findAllByFreckles(false)*.id == [noses.last().id]
+    }
+
+    void 'count and updateAll apply an inner join requested for a collection of a basic type'() {
+        given:
+        new AssociationJoinTypePost(title: 'Tagged post', tags: ['x']).save(failOnError: true)
+        new AssociationJoinTypePost(title: 'Untagged post').save(failOnError: true, flush: true)
+        manager.session.clear()
+
+        when:
+        final counted = AssociationJoinTypePost.where { title ==~ '%post' }.join('tags', JoinType.INNER).count()
+        final updated = AssociationJoinTypePost.where { title ==~ '%post' }.join('tags', JoinType.INNER).updateAll(title: 'Updated post')
+        manager.session.clear()
+
+        then:
+        counted == 1
+        updated == 1
+        AssociationJoinTypePost.list()*.title.sort() == ['Untagged post', 'Updated post']
     }
 
     void 'a right join requested for a collection that criteria on the collection join returns the instances that an inner join returns'() {
@@ -973,5 +1179,16 @@ class AssociationJoinTypeCategory {
 
     static constraints = {
         parent nullable: true
+    }
+}
+
+// Its decapitalized name collides with the first generated alias of a requested bulk join.
+@Entity
+class Join0_0 {
+    String name
+    AssociationJoinTypeTag category
+
+    static constraints = {
+        category nullable: true
     }
 }
