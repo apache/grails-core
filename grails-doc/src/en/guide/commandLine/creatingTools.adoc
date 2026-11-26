@@ -352,9 +352,9 @@ A plugin has its tools in the same two folders as an application, and they reach
 | Artifact | Has | Depends on | Published when
 
 | `<artifact>-cli`
-| The tools of `src/cli` (and of the deprecated `grails-app/commands`), and the scripts of `src/main/scripts`
+| The tools of `src/cli` (and of the deprecated `grails-app/commands`), and the scripts of `src/main/scripts`; no classes when all the tools of the plugin are in `src/standalone`
 | The plugin, the tool API (`org.apache.grails:grails-core-cli`), and `<artifact>-cli-standalone` when the plugin has that one, since `src/cli` can use its classes
-| The plugin has a source under `src/cli` or `grails-app/commands`, or a script under `src/main/scripts`
+| The plugin has a tool: a source under `src/cli`, `grails-app/commands` or `src/standalone`, or a script under `src/main/scripts`
 
 | `<artifact>-cli-standalone`
 | The tools of `src/standalone`, with their resources
@@ -362,7 +362,7 @@ A plugin has its tools in the same two folders as an application, and they reach
 | The plugin has a source under `src/standalone`
 |===
 
-A plugin with one of the folders publishes one companion, a plugin with neither publishes none, and an application publishes none. No line of the build of the plugin is needed for it:
+A plugin with tools publishes `<artifact>-cli`, and `<artifact>-cli-standalone` when it has a tool in `src/standalone`. A plugin whose tools are all in `src/standalone` therefore publishes a `-cli` without classes that depends on its `-cli-standalone`, so a build that names `-cli` has every tool of the plugin. A plugin without tools publishes neither, and an application publishes none. No line of the build of the plugin is needed for it:
 
 . *Create the plugin*, if there is none yet:
 +
