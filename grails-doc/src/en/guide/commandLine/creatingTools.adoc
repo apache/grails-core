@@ -447,7 +447,7 @@ cliArtifact {
 }
 ----
 
-Each companion is a module of its own: its jar has its own `Automatic-Module-Name`, and no two jars of the plugin should share a package. Give the classes of `src/cli`, of `src/standalone` and of the plugin itself packages of their own, such as `com.example.myplugin.cli` and `com.example.myplugin.cli.standalone`, so that no package is in both companions, or in a companion and the plugin: two jars with classes of one package cannot be on one module path, and a class of such a package would be found in whichever jar comes first.
+Each companion is a module of its own: with `automaticModuleName` set, the `-cli` jar has that `Automatic-Module-Name` and the `-cli-standalone` jar the one of `standaloneAutomaticModuleName`. No two jars of the plugin should share a package either. Give the classes of `src/cli`, of `src/standalone` and of the plugin itself packages of their own, such as `com.example.myplugin.cli` and `com.example.myplugin.cli.standalone`, so that no package is in both companions, or in a companion and the plugin: two jars with classes of one package cannot be on one module path.
 
 *Taking the tools of a plugin without the plugin.* An application can declare a companion instead of the plugin. The standalone tools of a plugin need nothing of the plugin, so an application that only wants those declares `-cli-standalone`, and then nothing of the plugin is on any of its class paths: not on the class path of the application, of its tests, or of its tools. This is what a REST API application with the `scaffolding` feature declares, to generate controllers and views without the Scaffolding plugin or the Fields plugin, and without GSP but on the class paths of its tests, which have it from the testing support of Grails:
 
