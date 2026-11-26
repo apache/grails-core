@@ -20,7 +20,7 @@ under the License.
 [[ui-scripts]]
 == Commands
 
-The plugin has two commands. They only write files of the project, so they are run without the application being started: the Gradle task `runCommand` of the project compiles the project and runs the command, so the project has to compile.
+The plugin has two commands. They only write files of the project, so the `grails` command line starts each as a Java process of its own, without Gradle and without the application (they are standalone commands, see xref:commandLine#creatingCustomCommands[Creating Custom Commands]), so the project need neither compile nor be able to start. `grails run-command` and the Gradle task `runCommand` run them with the build, which compiles the project first.
 
 [source,bash]
 ----

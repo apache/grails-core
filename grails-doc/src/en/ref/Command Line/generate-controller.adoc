@@ -77,7 +77,7 @@ A REST API application has the commands when it has the `scaffolding` feature, w
 
 === Running the Command
 
-The command is a command of the scaffolding plugin (`org.apache.grails:grails-scaffolding`), which the application has to depend on, and it runs in the application, started by the Gradle task `runCommand` of the project. A REST API application with the `scaffolding` feature depends on the commands of the plugin alone (`grailsCli "org.apache.grails:grails-scaffolding-cli"`), which keeps the plugin, GSP and the fields plugin off the class path the application runs with. There are three ways to run it:
+The command is a command of the scaffolding plugin (`org.apache.grails:grails-scaffolding`), which the application has to depend on. It only reads and writes files of the project, so it is a standalone command: `grails` starts it by its name as a Java process of its own, without Gradle and without the application, with the class path the last build of the project wrote down, and the project need not compile (see "The Three Kinds of Command" in link:{guidePath}commandLine.html[The Command Line]). `run-command` and the Gradle task `runCommand` run it with the build, without the application. A REST API application with the `scaffolding` feature depends on the commands of the plugin alone (`grailsCli "org.apache.grails:grails-scaffolding-cli"`), which keeps the plugin, GSP and the fields plugin off the class path the application runs with. There are three ways to run it:
 
 [source,console]
 ----
@@ -86,7 +86,7 @@ $ grails run-command generate-controller org.bookstore.Book                  <2>
 $ ./gradlew runCommand -Pargs="generate-controller org.bookstore.Book"       <3>
 ----
 <1> By its name. The build lists the commands of the application and its plugins whenever it compiles the project, and in a project it has not compiled yet `grails` has it list them first. See "Commands of the Application and its Plugins" in link:{guidePath}commandLine.html[The Command Line].
-<2> With `run-command`, which also takes an environment in front of the name.
+<2> With `run-command`, which runs it with the build of the project.
 <3> With Gradle alone. `--arg=generate-controller --arg=org.bookstore.Book` in place of `-Pargs` gives each argument as it is.
 
 === Failures

@@ -60,7 +60,7 @@ Flags:
 
 === Running the Command
 
-The command is a command of the scaffolding plugin (`org.apache.grails:grails-scaffolding`), which the application has to depend on, and it runs in the application, started by the Gradle task `runCommand` of the project. In a REST API application with the `scaffolding` feature, which has the commands of the plugin and not the plugin (`grailsCli "org.apache.grails:grails-scaffolding-cli"`), a class this command writes can extend a class of the scaffolding plugin, such as `RestfulServiceController` or `GormService`. It compiles, and the running application does not have that class: declare `implementation "org.apache.grails:grails-scaffolding"` in such an application first. There are three ways to run it:
+The command is a command of the scaffolding plugin (`org.apache.grails:grails-scaffolding`), which the application has to depend on. It only reads and writes files of the project, so it is a standalone command: `grails` starts it by its name as a Java process of its own, without Gradle and without the application, with the class path the last build of the project wrote down, and the project need not compile (see "The Three Kinds of Command" in link:{guidePath}commandLine.html[The Command Line]). `run-command` and the Gradle task `runCommand` run it with the build, without the application. In a REST API application with the `scaffolding` feature, which has the commands of the plugin and not the plugin (`grailsCli "org.apache.grails:grails-scaffolding-cli"`), a class this command writes can extend a class of the scaffolding plugin, such as `RestfulServiceController` or `GormService`. It compiles, and the running application does not have that class: declare `implementation "org.apache.grails:grails-scaffolding"` in such an application first. There are three ways to run it:
 
 [source,console]
 ----
@@ -69,7 +69,7 @@ $ grails run-command generate-scaffold-all org.bookstore.Book                  <
 $ ./gradlew runCommand -Pargs="generate-scaffold-all org.bookstore.Book"       <3>
 ----
 <1> By its name. The build lists the commands of the application and its plugins whenever it compiles the project, and in a project it has not compiled yet `grails` has it list them first. See "Commands of the Application and its Plugins" in link:{guidePath}commandLine.html[The Command Line].
-<2> With `run-command`, which also takes an environment in front of the name.
+<2> With `run-command`, which runs it with the build of the project.
 <3> With Gradle alone. `--arg=generate-scaffold-all --arg=org.bookstore.Book` in place of `-Pargs` gives each argument as it is.
 
 === Failures

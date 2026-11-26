@@ -20,7 +20,7 @@ under the License.
 [[core-scripts]]
 == Commands
 
-The plugin has three commands that create domain classes and add their settings to the configuration of the project. They are commands of the plugin that only write files of the project, so they are run without the application being started: the Gradle task `runCommand` compiles the project and calls the command, and an application that has no security settings yet, or cannot start for another reason, has the commands all the same.
+The plugin has three commands that create domain classes and add their settings to the configuration of the project. They are commands of the plugin that only write files of the project, so they are run without the application being started, and an application that has no security settings yet, or cannot start for another reason, has the commands all the same. `s2-quickstart` is run by the build, without the application: the Gradle task `runCommand` compiles the project and calls the command, because the command reads `application.groovy` of the project as code, which can name classes of the application. `s2-create-persistent-token` and `s2-create-role-hierarchy-entry` need nothing of the build: the `grails` command line starts each as a Java process of its own, without Gradle (they are standalone commands, see xref:commandLine#creatingCustomCommands[Creating Custom Commands]), and `grails run-command` or the Gradle task `runCommand` runs them with the build.
 
 A command is run in one of three ways, here for `s2-quickstart`:
 

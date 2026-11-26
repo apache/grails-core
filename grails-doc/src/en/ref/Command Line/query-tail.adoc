@@ -75,7 +75,7 @@ Arguments:
 * `file` - The capture file, a relative one read against the application directory, as the application reads `grails.gorm.queryTail.file`. Defaults to the one the application writes, `build/query-tail/capture.log` or the file `grails.gorm.queryTail.file` names. A build directory moved in `build.gradle` is followed by the application and by this command: the Grails Gradle plugin hands `grails.project.target.dir` to both, since the build runs both.
 
 The command does not start the application, and it is not a reason to boot it: it is a command that
-runs without the application (a link:{api}org/apache/grails/core/cli/StandaloneCommand.html[StandaloneCommand]), so the task makes no
+the build runs without the application (a link:{api}org/apache/grails/core/cli/GradleCommand.html[GradleCommand]), so the task makes no
 application context for it, opens no data source and runs no `BootStrap`, and it only reads the capture file. The task compiles the
 application first, as it does for every command. When there is no capture yet it waits for
 one and says how to start the application so that it writes one. When the application restarts,

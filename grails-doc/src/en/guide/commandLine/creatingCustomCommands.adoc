@@ -323,9 +323,73 @@ In this example:
 
 When you run this custom command using `./gradlew runCommand -Pargs="backup"`, it will adapt its behavior based on whether you're in a production or non-production environment, demonstrating how the `executionContext` can be used to make environment-specific decisions in a realistic scenario.
 
-**Commands That Run Without the Application**
+**The Three Kinds of Command**
 
-A command is run with the application started around it: its context is built, its plugins are loaded and its data sources are opened, and `BootStrap` runs unless the command sets `skipBootstrap`. A command that only works on the files of the project, one that renders templates into it or reads a file the running application writes, has no use for any of that, and starting a second instance of an application to read a file is slow and can be harmful. Such a command also implements link:{api}org/apache/grails/core/cli/StandaloneCommand.html[StandaloneCommand], an interface without methods:
+A command of an application or of a plugin is one of three kinds. Its class says which, and the name of each kind says how it is run:
+
+[cols="2,3,3,4"]
+|===
+| Kind | The class | What runs it | What the command has
+
+| *Application command*
+| implements `ApplicationCommand` or `GrailsApplicationCommand` and neither of the two below
+| the build of the project (the Gradle task `runCommand`), which compiles the project and starts the application around the command
+| the application context, beans, GORM, the configuration as the application sees it, an environment
+
+| *Gradle command*
+| also implements link:{api}org/apache/grails/core/cli/GradleCommand.html[GradleCommand]
+| the build of the project (the Gradle task `runCommand`), which compiles the project and does *not* start the application
+| the compiled classes of the application, the class path the build resolves, the directories the build gives (a build directory that was moved); no application context
+
+| *Standalone command*
+| also implements link:{api}org/apache/grails/core/cli/StandaloneCommand.html[StandaloneCommand]
+| the `grails` command line, as a plain Java process: no Gradle, no application
+| the files of the project and its own class path; a command of a plugin does not have the classes of the application
+|===
+
+All three are created, registered, listed and typed in the same way: `grails create-command`, a class in `grails-app/commands` (or in `src/cli/groovy` of a plugin), and `grails <name>`. Both interfaces are markers without methods. Choose the kind that needs the least:
+
+* A command that needs a bean, a domain class with GORM, or the configuration as the application sees it is an *application command*. The `dbm-` commands of the Database Migration plugin are: they read the configuration of the application and its data source.
+* A command that would also work if the application could not start, but needs the compiled classes of the application, a class path only Gradle resolves, or a directory only the build knows, is a *Gradle command*. `query-tail` of Grails Data is one: the build tells it where the build directory is. `s2-quickstart` is one: it reads `application.groovy` of the project as code, which may name classes of the application.
+* A command that only renders templates into the project or reads its files is a *standalone command*. The commands of the Scaffolding plugin (`generate-all`, `generate-controller`, `generate-views`, ...) and the other commands of the Spring Security plugins (`s2-create-persistent-token`, `s2ui-override`, `init-oauth2`, ...) are.
+
+*An application command* is every example above this section: `handle()` runs with `applicationContext` set and the beans of the application injected.
+
+*A Gradle command* is run by the build without the application:
+
+[source,groovy]
+.grails-app/commands/com/example/ListFieldsCommand.groovy
+----
+package com.example
+
+import org.apache.grails.core.cli.GradleCommand
+import org.apache.grails.core.cli.GrailsApplicationCommand
+
+class ListFieldsCommand implements GrailsApplicationCommand, GradleCommand {
+
+    String description = 'Lists the fields of classes of the application'
+
+    boolean handle() {
+        // the classes of the application are on the class path: the build compiled them before the command runs
+        args.each { String name ->
+            Class<?> type = Class.forName(name)
+            println "${type.name}: ${type.declaredFields.findAll { !it.synthetic }*.name.sort().join(', ')}"
+        }
+        true
+    }
+}
+----
+
+`grails list-fields com.example.Book`, `grails run-command list-fields com.example.Book` and `./gradlew runCommand --arg=list-fields --arg=com.example.Book` all start the Gradle task `runCommand`, which does this for such a command:
+
+* The application is not started: no application context, no plugins, no data source, no `BootStrap`. The `Application` class is not initialized.
+* `applicationContext` is `null`, and nothing is injected into the command. A `skipBootstrap` property is not read.
+* The command gets what every command gets that is not of the application: the command line (`args`, `executionContext.commandLine`), the directories of the project (`executionContext.baseDir`, `classesDir`, `targetDir`), and with `GrailsApplicationCommand` the helpers for templates, files and models (`render`, `template`, `file`, `model`, ...).
+* The class path is that of every command the build runs: the compiled classes of the application, its run time dependencies, and the command line tier (`grailsCli`). The project is compiled before the command runs, so it has to compile.
+* The configuration of the application is not loaded. A command that needs a setting reads the file, `grails-app/conf/application.yml` for example, and gets what is written there, without what an environment block, a profile, a system property or a plugin would change.
+* `true` ends the task successfully; `false` or an exception fails it.
+
+*A standalone command* is run by the `grails` command line itself, as a process of its own:
 
 [source,groovy]
 .grails-app/commands/com/example/CreateReportCommand.groovy
@@ -353,18 +417,22 @@ class CreateReportCommand implements GrailsApplicationCommand, StandaloneCommand
 }
 ----
 
-The template is `src/main/templates/artifacts/Report.groovy` of the project, or `META-INF/templates/artifacts/Report.groovy` of a plugin, with `${packageName}` and `${className}` where the package and the class name go. The command is created, registered, listed and run as every command is: `grails create-report Sales`, `grails run-command create-report Sales` and `./gradlew runCommand --arg=create-report --arg=Sales`. What differs is what the `runCommand` task does for it:
+The template is `src/main/templates/artifacts/Report.groovy` of the project, or `META-INF/templates/artifacts/Report.groovy` of a plugin, with `${packageName}` and `${className}` where the package and the class name go. `grails create-report Sales` starts no Gradle:
 
-* The application is not started: no application context, no plugins, no data source, no `BootStrap`. The `Application` class is not initialized.
-* `applicationContext` is `null`, and nothing is injected into the command. A `skipBootstrap` property is not read.
-* The command gets what every command gets that is not of the application: the command line (`args`, `executionContext.commandLine`), the directories of the project (`executionContext.baseDir`, `classesDir`, `targetDir`), and with `GrailsApplicationCommand` the helpers for templates, files and models (`render`, `template`, `file`, `model`, ...).
-* The class path is that of every command: the compiled classes of the application, its run time dependencies, and the command line tier (`grailsCli`). The project is compiled before the command runs.
-* The configuration of the application is not loaded. A command that needs a setting reads the file, `grails-app/conf/application.yml` for example, and gets what is written there, without what an environment block, a profile, a system property or a plugin would change.
-* `true` ends the task successfully; `false` or an exception fails it.
+----
+$ grails create-report Sales
+| Running the command create-report of the application, as a process of its own, without Gradle
+----
 
-The descriptor of such a command, and the catalog of the build, name the target `standalone` where another command has `application`. The interface on the class is what decides how the command is run.
+* The `grails` command line starts `java` with a main class of Grails that finds the command by its name, calls `handle()`, and ends with 0 for `true` and with 1 for `false` or an exception. The output of the process is the output of the command; it reads what is typed unless `--non-interactive` is given.
+* `applicationContext` is `null`, nothing is injected, and the configuration of the application is not loaded, as for a Gradle command. The command gets the command line, the directories of the project, and the helpers of `GrailsApplicationCommand`.
+* *The class path is the one the last build of the project wrote down* (see "The class path of standalone commands" below). A standalone command of the application has the compiled classes of the application, its run time dependencies and the command line tier. A standalone command of a plugin has the run time dependencies and the command line tier, and *not the classes of the application*: it runs also while the application does not compile, which a command that generates code has to. A command of a plugin that needs the classes of the application is a Gradle command.
+* *Nothing is run that is older than what it is made from.* When `build.gradle`, `settings.gradle` or `gradle.properties`, a command in `grails-app/commands`, or, for a command of the application, any source of the application was changed since the class path was written down, `grails` runs the build once, after a line that says why, and then starts the command: `| Building the project before create-report is run without Gradle, with the Gradle task grailsStandaloneCommands: src/main/groovy was changed after .grails/cache/standalone-commands.json was written`. The second run starts no build.
+* The Java that is started is the one the Gradle wrapper of the project would be started with: the one `JAVA_HOME` names, and without `JAVA_HOME` the one that runs `grails`. A Java that is older than the classes of the project were compiled for is not started, and the command says which version is needed.
+* `grails run-command create-report Sales` and `./gradlew runCommand --arg=create-report --arg=Sales` run the same command with Gradle, as a Gradle command is run, for a build script or a continuous integration job that calls the task. `run-command` is also the way to run it when `grails` will not start it itself.
+* A standalone command has no environment of its own. `grails.env` is `development` in its process, as it is for every command run by its name; `grails run-command -Dgrails.env=production <name>` runs it with Gradle and that system property. Neither loads the configuration of an environment.
 
-Use it for a command that would also work if the application could not start. A command that needs a bean, a domain class with GORM, or the configuration as the application sees it is a command of the application and does not implement the interface. The `query-tail` command of Grails Data is one that does: it follows the capture file of the application that is running.
+The descriptor of a command, and the catalog of the build, name the kind as the `target`: `application`, `gradle` or `standalone`. The interface on the class is what decides how the command is run. A class that implements both interfaces is a standalone command.
 
 **How to Create a Custom Command from a Grails Plugin**
 
@@ -553,7 +621,7 @@ Write the name in lower case letters and digits, in words joined by single hyphe
 {"format": 1, "class": "com.example.AuditReportCommand", "name": "audit-report", "description": "Writes the audit report", "target": "application"}
 ----
 
-`target` is `application`, or `standalone` for a command that runs without the application; a descriptor without it is of a command of the application.
+`target` is the kind of the command: `application`, `gradle` for a command the build runs without the application, or `standalone` for one that runs as a process of its own; a descriptor without it is of a command of the application.
 
 The `grailsCommandCatalog` task of an application or plugin project writes the list of the commands the project can run with `runCommand` to `.grails/cache/command-catalog.json` in the directory of the project. That is where the `grails` command reads it, and it is the same place whatever the build directory of the project is, so the task writes there also in a build that moves its build directory. Next to the file the task writes a `.gitignore` that keeps the directory out of a commit. Every build that compiles the project runs the task, after `classes`, and it is up to date when nothing it reads has changed; it can also be run by itself:
 
@@ -574,11 +642,32 @@ It lists the commands of the project itself, of the `-cli` companions of its plu
 ----
 
 * `origin` is the coordinates of the artifact the command comes from, or `application` for a command of the project itself.
-* `target` is `application` for a command that is run with the application started around it, and `standalone` for one that is run without it (see "Commands That Run Without the Application" above). A command without a descriptor is listed as `application`, whatever its class says, and is run as its class says.
+* `target` is the kind of the command (see "The Three Kinds of Command" above): `application` for a command that is run with the application started around it, `gradle` for one the build runs without the application, and `standalone` for one the `grails` command line runs as a process of its own, without Gradle. A command without a descriptor is listed as `application`, whatever its class says; the build runs it as its class says, and `grails` runs it through the build.
 * `registration` says how much is known: `descriptor` for a command with a descriptor; `factories` for a command that is registered without one, whose name is the one its class name gives and whose description is empty; `legacy` for a command of a Grails 7 plugin, listed the same way. A command listed by the name its class name gives is run by that name also when it has another name of its own; `runCommand` looks for a command by the name it is listed by first, and by the name a command has of its own when no command, or more than one, is listed by that name.
 * The file lists at most 512 commands in at most 512 KiB, which is what the `grails` command reads: when a project has more, the first by name are listed and a line of `diagnostics` says how many are not.
 * `complete` is `false` when something could not be listed, and `diagnostics` then says what and why, one line each: a descriptor that is not as described above, a name that two commands have (neither is listed, because the task does not choose between them), a descriptor in a jar for a class of the application (the command keeps what the application says of it, and the other descriptor is not used), Grails 7 commands in a project without `legacyCommandSupport`, or a class path the commands run with (`runtimeClasspath` or `grailsCliClasspath`) that does not resolve completely, with what Gradle could not resolve in it. The task prints the same lines as warnings.
 * The task resolves those class paths leniently, so that a build that compiles the project, which does not need them, does not fail because one of them does not resolve: the file then lists the commands of what resolves. Running a command with such a class path fails as running the application does, until the dependencies are corrected.
+
+**The class path of standalone commands**
+
+Beside the catalog the build writes `.grails/cache/standalone-commands.json`, with the Gradle task `grailsStandaloneCommands`, which runs after `grailsCommandCatalog` in every build that compiles the project. It is what lets the `grails` command line start a standalone command without asking Gradle for a class path:
+
+[source,json]
+----
+{"format": 1,
+ "commands": {"create-report": "application", "generate-all": "dependencies"},
+ "application": ["/work/app/build/classes/groovy/main", "/work/app/build/resources/main"],
+ "dependencies": ["/home/me/.gradle/caches/modules-2/files-2.1/.../grails-scaffolding-cli-9.0.0.jar", "..."],
+ "sources": ["/work/app/grails-app/controllers", "/work/app/src/main/groovy", "..."],
+ "java": 21}
+----
+
+* `commands` has the commands of the catalog whose `target` is `standalone`, and for each the class path it runs with: `application` for a command of the project (the entries of `application`, then those of `dependencies`), `dependencies` for a command of a plugin (those of `dependencies` alone). `dependencies` is `runtimeClasspath` and then `grailsCliClasspath`, in that order. Only what exists is written down: a directory of classes that no compiler wrote to, as `build/classes/java/main` of a project without Java sources, is left out. A project without a standalone command has a file without a path.
+* The paths are those of this machine, which is why they are in a file of their own: the catalog has none and is the same for the same commands everywhere, so a build cache can keep it; this file is never taken from a build cache. `.grails/cache` holds a `.gitignore` that keeps both out of a commit.
+* `sources` are the directories of the sources of the project, and `java` is the Java version its classes are compiled for. `grails` takes the file for out of date when it is older than the catalog, when the catalog is (a build file, a file in `grails-app/commands` or a descriptor the compiler wrote is newer than it), when an entry of a class path is no longer there, and, for a command of the project, when a directory or a file in one of `sources` was changed after the file was written. It then runs `grailsStandaloneCommands`, which compiles the project, and reads the file again. The task holds itself to the same rule and writes a file that is older than one of those again.
+* The file has at most 4096 class path entries of at most 1024 characters each, in at most 2 MiB. A class path that is longer, or has a path with a line break or with the character that separates the entries of a class path, is not written down; neither is one that has the output of another project of the build, which only the build keeps current, or one that does not resolve completely. The file then has `throughGradle` with the reason and no path, and `grails <name>` runs the command with the Gradle task `runCommand`, after a line that says why. A long class path is given to `java` in a file (`@file`), so its length is not held to what a command line carries.
+* Starting Java on what the file names runs it, so `grails` holds the file to what it holds a Gradle wrapper above the project to. The catalog, this file, `.grails` and `.grails/cache` are files and directories, no links, owned by you, and not writable by everybody. Every entry of a class path is a whole path to a file or a directory in the build of the project, in the Gradle user home (`GRADLE_USER_HOME`, or `~/.gradle`) or in the local Maven repository (`~/.m2/repository`), and it and every directory from it up to that place are owned by you or by root and are not writable by everybody. Otherwise nothing is started, Gradle is not run either, the command ends with exit code 1, and one line says what is wrong and that `grails run-command <name>` runs the command with the build. A directory named in the environment variable `GRAILS_SAFE_DIRECTORY` is used whoever owns it, with what is in it, as it is for a project: name the directory of a repository that is somewhere else, such as a `maven { url = file(...) }` repository outside the project, there.
+* A class path is taken from the file only for a command the catalog lists with the `target` `standalone`.
 
 The names, descriptions and origins in the file come from the project's dependencies. They are checked to be one line without control characters, and nothing more: a program that shows them must show them as plain text and give no meaning to anything in them.
 
