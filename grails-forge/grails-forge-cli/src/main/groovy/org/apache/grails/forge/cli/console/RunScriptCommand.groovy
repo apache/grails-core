@@ -26,7 +26,8 @@ import picocli.CommandLine
 
 /**
  * {@code run-script}: the Gradle task {@code runScript} of the project, which runs Groovy scripts
- * with the application started around them.
+ * with the application started around them. The command is deprecated: it runs as it did, after one
+ * warning line that names what takes its place, a tool of the application run by its name.
  *
  * <p>The task takes the files as one text, the project property {@code args}, and splits it at
  * spaces outside quotes. The command writes that text so that it is split into the files that were
@@ -40,7 +41,8 @@ import picocli.CommandLine
                 'Runs Groovy scripts in the Grails application: the Gradle task runScript.',
                 'The application is started around the scripts, without a web server.',
                 'The environment is development unless -Dgrails.env names another one.',
-                'What follows @|bold --|@ is given to Gradle as it is.'
+                'What follows @|bold --|@ is given to Gradle as it is.',
+                'run-script is deprecated: write a tool of the application with create-tool, and run it by its name.'
         ],
         customSynopsis = ['${COMMAND-FULL-NAME} [-hvVx] [--non-interactive] [--plain-output]',
                 '        [-DNAME=VALUE]... FILE... [-- GRADLE-ARGUMENT...]'],
@@ -56,8 +58,19 @@ class RunScriptCommand extends GradleEnvironmentCommand {
         return 'development'
     }
 
+    /**
+     * @param spec the command, for how the command line is typed where it runs
+     * @return what is said, after a warning mark, each time the command runs
+     */
+    static String deprecation(CommandLine.Model.CommandSpec spec) {
+        return "run-script is deprecated: write a tool (${UsageHelp.toType(spec, 'create-tool NAME')}) and run it by its name".toString()
+    }
+
     @Override
     protected List<String> gradleArguments(ConsoleProject project) {
+        PrintWriter said = spec.commandLine().getErr()
+        said.println(CommandLine.Help.Ansi.AUTO.string('@|bold,red | Warning|@ ' + deprecation(spec)))
+        said.flush()
         for (String file : files) {
             if (file.isEmpty() || file.indexOf(0) > -1) {
                 throw new CommandLine.ParameterException(spec.commandLine(), "${FeatureSelectionException.shown(file)} is not the name of a file")

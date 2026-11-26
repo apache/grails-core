@@ -317,6 +317,11 @@ final class CommandCatalog {
                     text(spec.usageMessage().description()))
             each.put('project', spec.userObject() instanceof ProjectCommand)
             each.put('origin', spec.userObject() instanceof PackArtefactCommand ? ((PackArtefactCommand) spec.userObject()).getOrigin() : BUILT_IN)
+            // the names of the command that are deprecated: its own name, or another name it has, which still run it after a warning
+            List<String> deprecated = deprecatedNames(spec)
+            if (!deprecated.isEmpty()) {
+                each.put('deprecatedNames', deprecated)
+            }
             each.put('options', options(spec))
             List<Map<String, Object>> parameters = []
             for (CommandLine.Model.PositionalParamSpec parameter : spec.positionalParameters()) {
@@ -340,6 +345,18 @@ final class CommandCatalog {
             described.add(each)
         }
         return described
+    }
+
+    /**
+     * @param spec a command of the command line
+     * @return the names of the command that are deprecated, which still run it after a warning line: {@code run-script}, whose
+     * place tools take, and {@code run-command}, the name {@code run-tool} had
+     */
+    static List<String> deprecatedNames(CommandLine.Model.CommandSpec spec) {
+        if (spec.userObject() instanceof RunScriptCommand) {
+            return [spec.name()]
+        }
+        return spec.userObject() instanceof RunToolCommand ? [RunToolCommand.DEPRECATED_NAME] : Collections.<String>emptyList()
     }
 
     private static final Comparator<CommandLine.Model.OptionSpec> OPTION_ORDER = new ByLongestName()

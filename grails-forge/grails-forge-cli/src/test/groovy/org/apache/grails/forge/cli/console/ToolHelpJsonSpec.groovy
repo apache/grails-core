@@ -118,6 +118,9 @@ class ToolHelpJsonSpec extends CommandSpec implements CommandFixture {
         ((List<Map>) commands['create-tool'].parameters)*.label == ['TOOL-NAME']
         commands['run-tool'].origin == 'built-in'
         commands['run-tool'].aliases == ['run-command']
+        commands['run-tool'].deprecatedNames == ['run-command']
+        commands['run-script'].deprecatedNames == ['run-script']
+        !commands['create-tool'].containsKey('deprecatedNames')
         !commands.containsKey('create-command')
         !commands.containsKey('run-command')
     }

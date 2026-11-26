@@ -293,6 +293,46 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
         given << [['a.groovy'], ['a b.groovy', 'c.groovy'], ['it\'s.groovy'], ['say "hi".groovy'], ['it\'s "both" \'and\' more.groovy', '"', '\'', '"\'"', 'tab\there'], ['  two  spaces  ']]
     }
 
+    void "run-script is deprecated: it runs as it did, after one line that names the tool that takes its place, and ends as it did"() {
+        given:
+        scriptedProject('record')
+        new File(dir, 'scripts').mkdirs()
+        new File(dir, 'scripts/one.groovy').text = ''
+        String warning = '| Warning run-script is deprecated: write a tool (grails-forge-cli create-tool NAME) and run it by its name'
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'run-script', 'scripts/one.groovy')
+
+        then: 'the script is run as before, and the warning is said once'
+        exit == 0
+        new File(dir, 'invoked.txt').text == '<runScript><-Pargs=scripts/one.groovy><-Dgrails.env=development>\n'
+        out.toString().readLines().count { String line -> line == warning } == 1
+
+        when: 'a script that is not there'
+        out.reset()
+        new File(dir, 'invoked.txt').delete()
+        exit = ForgeCli.execute(beanContext, 'run-script', 'scripts/missing.groovy')
+
+        then: 'nothing is run, as before'
+        exit == 1
+        out.toString().readLines().count { String line -> line == warning } == 1
+        !new File(dir, 'invoked.txt').exists()
+
+        when: 'the help and the document for a tool'
+        out.reset()
+        ForgeCli.execute(beanContext, 'help', 'run-script')
+        String help = out.toString().replaceAll(/\s+/, ' ')
+        out.reset()
+        ForgeCli.execute(beanContext, 'help', '--json')
+        Map<String, Map> commands = ((List<Map>) ((Map) new JsonSlurper().parseText(out.toString())).commands).collectEntries { [(it.name): it] }
+
+        then: 'say that run-script is deprecated, and that run-command, another name of run-tool, is'
+        help.contains('run-script is deprecated: write a tool of the application with create-tool, and run it by its name.')
+        commands['run-script'].deprecatedNames == ['run-script']
+        commands['run-tool'].deprecatedNames == ['run-command']
+        commands['run-app'].deprecatedNames == null
+    }
+
     void "run-script runs nothing for a script that is not there, and needs one"() {
         given:
         scriptedProject('record')
