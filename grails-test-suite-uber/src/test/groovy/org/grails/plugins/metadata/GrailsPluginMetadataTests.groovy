@@ -24,18 +24,23 @@ import spock.lang.Specification
 import org.springframework.core.env.StandardEnvironment
 
 import grails.core.DefaultGrailsApplication
+import grails.core.DefaultGrailsClass
 import grails.plugins.DefaultGrailsPluginManager
 import grails.plugins.GrailsPluginManager
-import grails.plugins.metadata.GrailsPlugin
 import grails.util.GrailsUtil
+import grails.util.Holders
 import org.apache.grails.core.plugins.DefaultPluginDiscovery
+import org.grails.plugins.codecs.HTMLCodec
 
+/**
+ * The plugin a class belongs to is the plugin whose descriptor lists it among its artefacts.
+ */
 class GrailsPluginMetadataTests extends Specification {
 
     @Shared GrailsPluginManager pluginManager
 
     void setupSpec() {
-        def app = new DefaultGrailsApplication([Test1, Test2, Test3] as Class[], getClass().classLoader)
+        def app = new DefaultGrailsApplication([NotAnArtefact] as Class[], getClass().classLoader)
         def discovery = new DefaultPluginDiscovery().tap {
             init(new StandardEnvironment())
         }
@@ -44,93 +49,40 @@ class GrailsPluginMetadataTests extends Specification {
         }
     }
 
-    void 'returns plugins for instances'(Object instance, String name) {
-        given:
-        def plugin = pluginManager.getPluginForInstance(instance)
-
+    void 'an artefact the codecs plugin descriptor lists belongs to the codecs plugin'() {
         expect:
-        plugin?.name == name
-
-        where:
-        instance    | name
-        new Test1() | 'controllers'
-        new Test2() | 'dataBinding'
-        new Test3() | null
+        pluginManager.getPluginForClass(HTMLCodec).name == 'codecs'
+        pluginManager.getPluginForInstance(new HTMLCodec()).name == 'codecs'
     }
 
-    void 'returns plugins for classes'(Class clazz, String name) {
-        given:
-        def plugin = pluginManager.getPluginForClass(clazz)
-
+    void 'a class no descriptor lists belongs to no plugin'() {
         expect:
-        plugin?.name == name
-
-        where:
-        clazz | name
-        Test1 | 'controllers'
-        Test2 | 'dataBinding'
-        Test3 | null
+        pluginManager.getPluginForClass(NotAnArtefact) == null
+        pluginManager.getPluginForInstance(new NotAnArtefact()) == null
+        pluginManager.getPluginPathForClass(NotAnArtefact) == null
+        pluginManager.getPluginViewsPathForClass(NotAnArtefact) == null
     }
 
-    void 'returns plugin path for instances'(Object instance, String expectedPath) {
-        given:
-        def path = pluginManager.getPluginPathForInstance(instance)
-
+    void 'the plugin paths of an artefact are those of the plugin that provides it'() {
         expect:
-        path == expectedPath
-
-        where:
-        instance    | expectedPath
-        new Test1() | "/plugins/controllers-$GrailsUtil.grailsVersion"
-        new Test2() | "/plugins/data-binding-$GrailsUtil.grailsVersion"
-        new Test3() | null
+        pluginManager.getPluginPathForClass(HTMLCodec) == "/plugins/codecs-$GrailsUtil.grailsVersion"
+        pluginManager.getPluginPathForInstance(new HTMLCodec()) == "/plugins/codecs-$GrailsUtil.grailsVersion"
+        pluginManager.getPluginViewsPathForClass(HTMLCodec) == "/plugins/codecs-$GrailsUtil.grailsVersion/grails-app/views"
+        pluginManager.getPluginViewsPathForInstance(new HTMLCodec()) == "/plugins/codecs-$GrailsUtil.grailsVersion/grails-app/views"
     }
 
-    void 'returns plugin path for classes'(Class clazz, String expectedPath) {
+    void 'a Grails class names the plugin that provides it'() {
         given:
-        def path = pluginManager.getPluginPathForClass(clazz)
+        GrailsPluginManager previous = Holders.pluginManager
+        Holders.pluginManager = pluginManager
 
         expect:
-        path == expectedPath
+        new DefaultGrailsClass(HTMLCodec, 'Codec').pluginName == 'codecs'
+        new DefaultGrailsClass(NotAnArtefact, '').pluginName == null
 
-        where:
-        clazz | expectedPath
-        Test1 | "/plugins/controllers-$GrailsUtil.grailsVersion"
-        Test2 | "/plugins/data-binding-$GrailsUtil.grailsVersion"
-        Test3 | null
-    }
-
-    void 'returns plugin views path for instances'(Object instance, String expectedPath) {
-        given:
-        def viewsPath = pluginManager.getPluginViewsPathForInstance(instance)
-
-        expect:
-        viewsPath == expectedPath
-
-        where:
-        instance    | expectedPath
-        new Test1() | "/plugins/controllers-$GrailsUtil.grailsVersion/grails-app/views"
-        new Test2() | "/plugins/data-binding-$GrailsUtil.grailsVersion/grails-app/views"
-        new Test3() | null
-    }
-
-    void 'returns plugin views path for classes'(Class clazz, String expectedPath) {
-        given:
-        def viewsPath = pluginManager.getPluginViewsPathForClass(clazz)
-
-        expect:
-        viewsPath == expectedPath
-
-        where:
-        clazz | expectedPath
-        Test1 | "/plugins/controllers-$GrailsUtil.grailsVersion/grails-app/views"
-        Test2 | "/plugins/data-binding-$GrailsUtil.grailsVersion/grails-app/views"
-        Test3 | null
+        cleanup:
+        Holders.pluginManager = previous
     }
 }
 
-@GrailsPlugin(name='controllers', version='1.0')
-class Test1 {}
-@GrailsPlugin(name='dataBinding', version='1.2')
-class Test2 {}
-class Test3 {}
+class NotAnArtefact {}

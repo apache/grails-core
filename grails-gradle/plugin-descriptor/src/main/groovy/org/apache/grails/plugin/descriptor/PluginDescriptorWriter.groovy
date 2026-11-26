@@ -53,7 +53,6 @@ final class PluginDescriptorWriter {
     private static final String CLASS_FILE_EXTENSION = '.class'
     private static final String PLUGIN_DESCRIPTOR_ANNOTATION = 'Lgrails/plugins/metadata/GrailsPluginDescriptor;'
     private static final String ARTEFACT_ANNOTATION = 'Lgrails/artefact/Artefact;'
-    private static final String GRAILS_PLUGIN_METADATA_ANNOTATION = 'Lgrails/plugins/metadata/GrailsPlugin;'
 
     private PluginDescriptorWriter() {
     }
@@ -221,7 +220,6 @@ final class PluginDescriptorWriter {
 
         private int access
         private boolean genericClass
-        private boolean grailsPluginMember
         Map<String, Object> declaration
         String artefactType
 
@@ -241,7 +239,7 @@ final class PluginDescriptorWriter {
         }
 
         boolean isProvidedArtefact() {
-            artefactType != null && (grailsPluginMember || !genericClass)
+            artefactType != null && !genericClass
         }
 
         @Override
@@ -270,10 +268,6 @@ final class PluginDescriptorWriter {
                         }
                     }
                 }
-            }
-            if (GRAILS_PLUGIN_METADATA_ANNOTATION == descriptor) {
-                grailsPluginMember = true
-                return null
             }
             if (ARTEFACT_ANNOTATION == descriptor) {
                 return new AnnotationVisitor(Opcodes.ASM9) {

@@ -275,9 +275,8 @@ public interface GrailsPluginManager extends ApplicationContextAware {
     String getPluginPath(String name, boolean forceCamelCase);
 
     /**
-     * Looks up the {@link GrailsPlugin plugin} that defined the given instance.
-     * If the passed in instance is not an instance of a class annotated with
-     * {@link grails.plugins.metadata.GrailsPlugin}, null is returned.
+     * Looks up the {@link GrailsPlugin plugin} that provides the class of the given instance, an artefact its
+     * descriptor lists. Null is returned for an instance of any other class.
      *
      * @param instance The instance
      * @return The {@link GrailsPlugin plugin} that defined the instance or null
@@ -287,8 +286,7 @@ public interface GrailsPluginManager extends ApplicationContextAware {
     /**
      * Returns the plugin path for the given {@link GrailsPlugin plugin} instance.
      * @param instance The {@link GrailsPlugin plugin} instance
-     * @return The plugin path or {@code null} if the instance is not an instance of a class
-     *         annotated with {@link grails.plugins.metadata.GrailsPlugin}
+     * @return The plugin path or {@code null} if no plugin provides the class of the instance
      */
     String getPluginPathForInstance(Object instance);
 
@@ -296,8 +294,7 @@ public interface GrailsPluginManager extends ApplicationContextAware {
      * Returns the plugin path for the given {@link GrailsPlugin plugin} class.
      *
      * @param theClass The {@link GrailsPlugin plugin} class
-     * @return The plugin path or {@code null} if the class is not annotated with
-     *         {@link grails.plugins.metadata.GrailsPlugin}
+     * @return The plugin path or {@code null} if no plugin provides the class
      */
     String getPluginPathForClass(Class<?> theClass);
 
@@ -305,8 +302,7 @@ public interface GrailsPluginManager extends ApplicationContextAware {
      * Returns the views directory path for the given {@link GrailsPlugin plugin} instance.
      *
      * @param instance The {@link GrailsPlugin plugin}  instance
-     * @return The plugin views directory path or {@code null} if the instance is not
-     *         an instance of a class annotated with {@link grails.plugins.metadata.GrailsPlugin}
+     * @return The plugin views directory path or {@code null} if no plugin provides the class of the instance
      */
     String getPluginViewsPathForInstance(Object instance);
 
@@ -314,8 +310,7 @@ public interface GrailsPluginManager extends ApplicationContextAware {
      * Returns the views directory path for the given {@link GrailsPlugin plugin} class.
      *
      * @param theClass The {@link GrailsPlugin plugin} class
-     * @return The plugin views directory path or {@code null} if the class is not annotated with
-     *         {@link grails.plugins.metadata.GrailsPlugin}
+     * @return The plugin views directory path or {@code null} if no plugin provides the class
      */
     String getPluginViewsPathForClass(Class<? extends Object> theClass);
 
@@ -323,8 +318,7 @@ public interface GrailsPluginManager extends ApplicationContextAware {
      * Returns the {@link GrailsPlugin plugin} for the given class.
      *
      * @param theClass The class to find the {@link GrailsPlugin plugin} for
-     * @return The {@link GrailsPlugin plugin} or null if the class is not an instance of a class annotated with
-     *         {@link grails.plugins.metadata.GrailsPlugin}
+     * @return The {@link GrailsPlugin plugin} whose descriptor lists the class as one of its artefacts, or null
      */
     GrailsPlugin getPluginForClass(Class<?> theClass);
 

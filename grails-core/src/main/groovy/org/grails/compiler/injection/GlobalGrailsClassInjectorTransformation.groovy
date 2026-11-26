@@ -44,9 +44,7 @@ import org.jspecify.annotations.Nullable
 import grails.artefact.Artefact
 import grails.compiler.ast.ClassInjector
 import grails.core.ArtefactHandler
-import grails.plugins.metadata.GrailsPlugin
 import grails.plugins.metadata.GrailsPluginDescriptor
-import grails.util.GrailsNameUtils
 import org.apache.grails.common.compiler.GroovyTransformOrder
 import org.grails.compiler.beans.AutoConfigurationImportsWriter
 import org.grails.compiler.beans.GrailsBeansASTTransformation
@@ -58,7 +56,7 @@ import org.grails.io.support.UrlResource
  * Global AST transformation that applies Grails compiler injection to Grails project sources,
  * including applications and plugins.
  *
- * <p>It identifies Grails artefacts, stamps {@link Artefact} and {@link GrailsPlugin} metadata
+ * <p>It identifies Grails artefacts, stamps {@link Artefact} metadata
  * annotations, applies the relevant {@link ClassInjector} and
  * {@link grails.compiler.traits.TraitInjector} implementations, compiles implicit {@code beans}
  * closures into Spring Boot auto-configurations, and registers artefact handlers and trait
@@ -137,8 +135,6 @@ class GlobalGrailsClassInjectorTransformation implements ASTTransformation, Comp
         }
 
         for (def classNode : source.AST.classes.toList()) { // toList() to avoid concurrent modification exception
-            def projectName = resolveProjectName(classNode)
-            def projectVersion = resolveProjectVersion(classNode)
             if (isGrailsPluginDescriptorClass(classNode)) {
                 compileBeansDsl(classNode, source)
                 continue
@@ -156,10 +152,6 @@ class GlobalGrailsClassInjectorTransformation implements ASTTransformation, Comp
             if (!GrailsResourceUtils.isGrailsResource(new UrlResource(url))) {
                 continue
             }
-            if (projectName && projectVersion) {
-                addPluginAnnotation(classNode, projectName, projectVersion)
-            }
-
             addImport(classNode, 'org.springframework.beans.factory.annotation.Autowired')
 
             for (def handler : artefactHandlers) {
@@ -194,19 +186,6 @@ class GlobalGrailsClassInjectorTransformation implements ASTTransformation, Comp
         AutoConfigurationImportsWriter.reconcile(compilationTargetDirectory, compilationUnit, source)
     }
 
-    private static @Nullable String resolveProjectVersion(ClassNode classNode) {
-        def projectVersion = classNode.getNodeMetaData('projectVersion')?.toString()
-        if (projectVersion == null) {
-            // fallback to the version of the grails-core jar if no project version is available
-            projectVersion = GlobalGrailsClassInjectorTransformation.package.implementationVersion
-        }
-        projectVersion
-    }
-
-    private static @Nullable String resolveProjectName(ClassNode classNode) {
-        classNode.getNodeMetaData('projectName')?.toString()
-    }
-
     private static boolean shouldVisit(@Nullable URL url) {
         url != null && GrailsResourceUtils.isProjectSource(new UrlResource(url))
     }
@@ -214,17 +193,6 @@ class GlobalGrailsClassInjectorTransformation implements ASTTransformation, Comp
     /** Whether a class declares a Grails plugin: a concrete class carrying {@link GrailsPluginDescriptor}. */
     private static boolean isGrailsPluginDescriptorClass(ClassNode classNode) {
         !classNode.abstract && !classNode.getAnnotations(PLUGIN_DESCRIPTOR_ANNOTATION).isEmpty()
-    }
-
-    private static void addPluginAnnotation(ClassNode classNode, String projectName, String projectVersion) {
-        GrailsASTUtils.addAnnotationOrGetExisting(
-                classNode,
-                GrailsPlugin,
-                [
-                        name: GrailsNameUtils.getPropertyNameForLowerCaseHyphenSeparatedName(projectName),
-                        version: projectVersion
-                ] as Map<String, Object>
-        )
     }
 
     private static void addImport(ClassNode classNode, String className) {

@@ -36,9 +36,11 @@ import org.springframework.util.StringUtils;
 
 import grails.core.GrailsApplication;
 import grails.core.GrailsClass;
-import grails.plugins.GrailsVersionUtils;
+import grails.plugins.GrailsPlugin;
+import grails.plugins.GrailsPluginManager;
 import grails.util.GrailsMetaClassUtils;
 import grails.util.GrailsNameUtils;
+import grails.util.Holders;
 import grails.web.Action;
 import org.grails.core.exceptions.NewInstanceCreationException;
 import org.grails.datastore.mapping.reflect.ClassPropertyFetcher;
@@ -91,9 +93,15 @@ public abstract class AbstractGrailsClass implements GrailsClass {
         isAbstract = Modifier.isAbstract(clazz.getModifiers());
     }
 
+    /**
+     * The name of the plugin whose descriptor lists this class among its artefacts, or {@code null} for a class
+     * no plugin provides, such as one of the application's own.
+     */
     @Override
     public String getPluginName() {
-        return GrailsVersionUtils.getPluginName(this.clazz);
+        GrailsPluginManager pluginManager = Holders.getPluginManager();
+        GrailsPlugin plugin = pluginManager != null ? pluginManager.getPluginForClass(this.clazz) : null;
+        return plugin != null ? plugin.getName() : null;
     }
 
     public void setGrailsApplication(GrailsApplication grailsApplication) {

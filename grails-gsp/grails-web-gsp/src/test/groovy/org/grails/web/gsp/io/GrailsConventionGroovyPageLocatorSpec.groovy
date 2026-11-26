@@ -22,8 +22,6 @@ import org.springframework.core.env.StandardEnvironment
 
 import grails.core.DefaultGrailsApplication
 import grails.plugins.Plugin
-import grails.plugins.metadata.GrailsPlugin
-import grails.util.GrailsUtil
 import grails.util.GrailsWebMockUtil
 import groovy.xml.XmlSlurper
 
@@ -128,13 +126,13 @@ class GrailsConventionGroovyPageLocatorSpec extends Specification {
     }
 
     void "Test find view with controller instance and view name from plugin"() {
-        given: "a valid path to a plugin view"
-        resourceLoader.resources["/grails-app/views/plugins/core-${GrailsUtil.grailsVersion}/grails-app/views/bar.gsp"] = new ByteArrayResource("contents".bytes)
+        given: "a view of the shop plugin, which provides PluginController and, compiled without a build, has no version"
+        resourceLoader.resources["/grails-app/views/plugins/shop/grails-app/views/bar.gsp"] = new ByteArrayResource("contents".bytes)
         when: "The controller from a plugin and view name is specified"
         def source = pageLocator.findView(new PluginController(), "bar")
-        then: "the script source is found"
+        then: "the script source is found under the plugin's path, which has no version in it"
         source != null
-        source.URI == "/plugins/core-${GrailsUtil.grailsVersion}/grails-app/views/bar.gsp"
+        source.URI == "/plugins/shop/grails-app/views/bar.gsp"
 
         when: "A non-existent view is queried"
         source = pageLocator.findView(new PluginController(), "notThere")
@@ -250,7 +248,11 @@ artefacts.Resource=org.grails.web.gsp.io.TestBinaryResource
 
         binaryPlugin.@precompiledViewMap["/WEB-INF/grails-app/views/test/binaryView.gsp"] = new GroovyClassLoader().parseClass(sw.toString())
 
-        def discovery = new MockPluginDiscovery([CoreGrailsPlugin] as Class[])
+        Class<?> shopPlugin = new GroovyClassLoader(getClass().classLoader).parseClass('''
+            @grails.plugins.metadata.GrailsPluginDescriptor(name = 'shop', providedArtefacts = [org.grails.web.gsp.io.PluginController])
+            class ShopGrailsPlugin extends grails.plugins.Plugin {}
+        ''')
+        def discovery = new MockPluginDiscovery([CoreGrailsPlugin, shopPlugin] as Class[])
         discovery.loadPluginsFromClasspath = false
         discovery.pluginFilter = new NoOpPluginFilter()
         discovery.init(new StandardEnvironment())
@@ -276,7 +278,6 @@ class TestBinaryResource {}
 
 class TestController {}
 
-@GrailsPlugin(name = "core", version = "0.1")
 class PluginController {}
 
 class MockBinaryPluginResource extends ByteArrayResource {

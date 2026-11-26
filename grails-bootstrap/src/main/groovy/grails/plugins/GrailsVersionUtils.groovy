@@ -22,30 +22,10 @@ import java.util.regex.Pattern
 
 import groovy.transform.CompileStatic
 
-import grails.plugins.metadata.GrailsPlugin
-
 @CompileStatic
 class GrailsVersionUtils {
 
     private static final Pattern DIGITS_PATTERN = ~/\d+/
-
-    /**
-     * Get the name of the a plugin for a particular class.
-     */
-    @CompileStatic
-    static String getPluginName(Class clazz) {
-        GrailsPlugin ann = clazz?.getAnnotation(GrailsPlugin)
-        return ann?.name()
-    }
-
-    /**
-     * Get the version of the a plugin for a particular class.
-     */
-    @CompileStatic
-    static String getPluginVersion(Class clazz) {
-        GrailsPlugin ann = clazz?.getAnnotation(GrailsPlugin)
-        return ann?.version()
-    }
 
     /**
      * Check if the required version is a valid for the given plugin version.

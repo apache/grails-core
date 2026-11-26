@@ -38,8 +38,6 @@ import spock.lang.TempDir
 import spock.util.environment.RestoreSystemProperties
 
 import grails.artefact.Artefact
-import grails.plugins.metadata.GrailsPlugin
-import grails.util.GrailsNameUtils
 import org.apache.grails.common.compiler.GroovyTransformOrder
 
 class GlobalGrailsClassInjectorTransformationSpec extends Specification {
@@ -588,7 +586,7 @@ class GlobalGrailsClassInjectorTransformationSpec extends Specification {
             classNode.getProperty('beans') != null
     }
 
-    void "the global transform annotates a plain Grails resource class with @GrailsPlugin metadata"() {
+    void "the global transform stamps no plugin ownership on a Grails resource class, which its plugin's descriptor records"() {
         given: "a class under grails-app that isn't matched by any registered ArtefactHandler"
             def sourceFile = new File(tempDir, 'grails-app/services/FooWidget.groovy')
             def targetDir = new File(tempDir, 'build/classes/groovy/main')
@@ -601,13 +599,8 @@ class GlobalGrailsClassInjectorTransformationSpec extends Specification {
                     [projectName: 'foowidget', projectVersion: '2.0']
             )
 
-        then: "the class is stamped with the project's @GrailsPlugin metadata"
-            def annotations = classNode.getAnnotations(ClassHelper.make(GrailsPlugin))
-            annotations.size() == 1
-            with(annotations.first()) {
-                getMember('name').text == GrailsNameUtils.getPropertyNameForLowerCaseHyphenSeparatedName('foowidget')
-                getMember('version').text == '2.0'
-            }
+        then: "the class carries no annotation naming a plugin"
+            classNode.annotations.every { !it.classNode.name.startsWith('grails.plugins.metadata.') }
     }
 
     void "the global transform processes a Grails service as an artefact"() {
@@ -722,8 +715,8 @@ class GlobalGrailsClassInjectorTransformationSpec extends Specification {
                     [projectName: 'plain', projectVersion: '1.0']
             )
 
-        then: "no @GrailsPlugin metadata is stamped on the class"
-            classNode.getAnnotations(ClassHelper.make(GrailsPlugin)).empty
+        then: "the class is not treated as an artefact"
+            classNode.getAnnotations(ClassHelper.make(grails.artefact.Artefact)).empty
     }
 
     void "artefact class that already has @Artefact annotation is not re-annotated or double-registered"() {

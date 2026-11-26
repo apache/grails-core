@@ -170,22 +170,18 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
         }
     }
 
+    /**
+     * Marks the classes of a plugin project for the compiler, so an {@code Application} class it holds, which only
+     * runs the plugin in development, is given no servlet initializer.
+     */
     @Override
     protected Closure<String> getGroovyCompilerScript(GroovyCompile compile, Project project) {
-        def versionProvider = project.provider { project.version.toString() }
-        compile.inputs.property('version', versionProvider)
-
-        def projectNameProvider = project.provider { project.name }
-        compile.inputs.property('name', projectNameProvider)
-
         Closure<String> parent = super.getGroovyCompilerScript(compile, project)
         return { ->
             """${parent?.call() ?: ''}
 
             withConfig(configuration) {
                 inline(phase: 'CONVERSION') { source, context, classNode ->
-                    classNode.putNodeMetaData('projectVersion', '${versionProvider.get()}')
-                    classNode.putNodeMetaData('projectName', '${projectNameProvider.get()}')
                     classNode.putNodeMetaData('isPlugin', 'true')
                 }
             }

@@ -1666,6 +1666,14 @@ and nothing else is:
 * The version is the project version. A plugin no longer declares one, and a dependency range may name it as
   `${plugin.version}`.
 * `grailsVersion` defaults to the version of Grails the plugin is compiled against and any later version.
+* `pluginExcludes` are Ant patterns of artefact class names, such as `'com/example/demo/**'`, matched against the
+  artefacts the descriptor would list. A pattern of source files, such as `'grails-app/views/**'` or
+  `'grails-app/views/error.gsp'`, never matched anything and is now a compilation error; leave files out of the jar
+  with the `jar` task instead.
+* The plugin an artefact belongs to is the plugin whose descriptor lists it. The `grails.plugins.metadata.GrailsPlugin`
+  annotation the compiler used to stamp on a plugin project's classes is removed, and with it
+  `GrailsVersionUtils.getPluginName(Class)` and `getPluginVersion(Class)`; ask the plugin manager's
+  `getPluginForClass` instead.
 * The informational properties `title`, `author`, `authorEmail`, `description`, `documentation`, `license`,
   `organization`, `developers`, `issueManagement`, `scm` and `profiles` are not read by anything. Remove them; the
   publication's POM, from the `grailsPublish` block, carries that information.

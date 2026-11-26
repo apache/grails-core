@@ -456,12 +456,20 @@ public abstract class AbstractGrailsPluginManager implements GrailsPluginManager
         return null;
     }
 
+    /**
+     * The plugin whose descriptor lists the class among its artefacts. Classes are matched by name, so a class
+     * reloaded in development still finds its plugin.
+     */
     public GrailsPlugin getPluginForClass(Class<?> theClass) {
-        if (theClass != null) {
-            grails.plugins.metadata.GrailsPlugin ann =
-                    theClass.getAnnotation(grails.plugins.metadata.GrailsPlugin.class);
-            if (ann != null) {
-                return getGrailsPlugin(ann.name());
+        if (theClass == null) {
+            return null;
+        }
+        String className = theClass.getName();
+        for (GrailsPlugin plugin : plugins.values()) {
+            for (Class<?> artefact : plugin.getProvidedArtefacts()) {
+                if (artefact.getName().equals(className)) {
+                    return plugin;
+                }
             }
         }
         return null;
@@ -561,14 +569,8 @@ public abstract class AbstractGrailsPluginManager implements GrailsPluginManager
     }
 
     public String getPluginPathForClass(Class<?> theClass) {
-        if (theClass != null) {
-            grails.plugins.metadata.GrailsPlugin ann =
-                    theClass.getAnnotation(grails.plugins.metadata.GrailsPlugin.class);
-            if (ann != null) {
-                return getPluginPath(ann.name());
-            }
-        }
-        return null;
+        GrailsPlugin plugin = getPluginForClass(theClass);
+        return plugin != null ? getPluginPath(plugin.getName()) : null;
     }
 
     public String getPluginViewsPathForInstance(Object instance) {
