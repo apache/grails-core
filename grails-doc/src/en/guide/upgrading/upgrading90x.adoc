@@ -1658,7 +1658,9 @@ under `META-INF/grails/`:
   written to `META-INF/grails/plugins/<name>/plugin.properties`.
 * *Plugins inside applications or built without the Grails Gradle plugin.* Compiling a Groovy plugin source file
   with the Grails compiler transforms on the classpath and a class output directory generates its discovery metadata
-  beside its classes. This also applies to plugin sources in test source sets. A build applying the Grails Gradle
+  beside its classes. This also applies to plugin sources in test source sets. A `*GrailsPlugin` class is a plugin
+  there only when it is declared in a source file of its own name, so a helper plugin a specification declares beside
+  itself is not discovered by every other test; annotate it with `@GrailsPluginDescriptor` to register it. A build applying the Grails Gradle
   plugin assembles the main source set's descriptors from all compiled classes, including Java classes.
 * *Namespaced plugin configuration and view manifests.* A plugin's `grails-app/conf/plugin.yml` (or `plugin.groovy`) is
   packaged at `META-INF/grails/plugins/<name>/plugin.yml` instead of the JAR root, and precompiled plugin GSP views write
