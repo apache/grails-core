@@ -49,10 +49,7 @@ import org.springframework.core.env.PropertyResolver
 
 @GrailsPluginDescriptor(
         loadAfter = ['domainClass', 'hibernate', 'services', 'converters'],
-        observe = ['services', 'domainClass'],
-        pluginExcludes = [
-                'grails-app/views/error.gsp'
-        ])
+        observe = ['services', 'domainClass'])
 class Neo4jGrailsPlugin extends Plugin {
 
     // resources that are excluded from plugin packaging

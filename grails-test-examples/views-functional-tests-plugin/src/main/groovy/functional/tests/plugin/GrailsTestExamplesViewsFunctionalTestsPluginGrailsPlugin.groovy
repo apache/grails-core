@@ -22,8 +22,5 @@ package functional.tests.plugin
 import grails.plugins.Plugin
 import grails.plugins.metadata.GrailsPluginDescriptor
 
-@GrailsPluginDescriptor(
-        pluginExcludes = [
-            "grails-app/views/error.gsp"
-        ])
+@GrailsPluginDescriptor
 class GrailsTestExamplesViewsFunctionalTestsPluginGrailsPlugin extends Plugin {}

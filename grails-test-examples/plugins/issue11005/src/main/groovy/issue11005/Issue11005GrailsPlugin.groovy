@@ -23,10 +23,7 @@ import grails.plugins.*
 
 import grails.plugins.metadata.GrailsPluginDescriptor
 
-@GrailsPluginDescriptor(
-        pluginExcludes = [
-            "grails-app/views/error.gsp"
-        ])
+@GrailsPluginDescriptor
 class Issue11005GrailsPlugin extends Plugin {
 
     // Extra (optional) plugin metadata

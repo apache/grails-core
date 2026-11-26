@@ -155,7 +155,7 @@ class PluginLoadOrderSpec extends Specification {
 
         then: "exclusions are defined"
         plugin != null
-        plugin.pluginExcludes == ['grails-app/views/error.gsp']
+        plugin.pluginExcludes == ['loadsecond/demo/**']
     }
 
     // ========== Plugin API Tests ==========

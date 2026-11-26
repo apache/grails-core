@@ -133,7 +133,9 @@ public @interface GrailsPluginDescriptor {
     Class<?>[] providedArtefacts() default {};
 
     /**
-     * Ant-style resource patterns excluded from the plugin's packaged artefact list.
+     * Ant-style patterns of the artefact classes left out of the plugin's descriptor, written as class names with
+     * {@code /} between the parts, for example {@code "com/example/demo/**"}. A pattern of source files, one
+     * starting with {@code grails-app/} or {@code src/} or naming a file extension, is an error.
      *
      * @return excluded artefact path patterns
      */

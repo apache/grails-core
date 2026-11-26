@@ -86,7 +86,7 @@ import grails.plugins.metadata.GrailsPluginDescriptor
         dependsOn = ['core'],
         observe = ['controllers'],
         watchedResources = ['file:./grails-app/jobs/**/*Job.groovy'],
-        pluginExcludes = ['grails-app/views/error.gsp'])
+        pluginExcludes = ['example/demo/**'])
 class ExampleGrailsPlugin extends Plugin {
 
     BeanRegistrar beanRegistrar() {
@@ -134,7 +134,8 @@ so `'core:${plugin.version}'` requires the version of `core` the plugin is relea
 |Artefact classes the plugin contributes beyond those compiled with it, such as a tag library from a library it uses.
 
 |`pluginExcludes`
-|Ant patterns of compiled artefacts left out of the plugin's descriptor.
+|Ant patterns of the artefact classes left out of the plugin's descriptor, written as class names with `/` between the
+parts: `'com/example/demo/**'`. A pattern of source files, such as `'grails-app/views/**'`, is an error.
 
 |`enabled`
 |Whether the plugin is enabled. `true` by default.
@@ -386,7 +387,7 @@ Although the link:{commandLineRef}create-plugin.html[create-plugin] command crea
 
 When developing a plugin you may create test classes and sources that are used during the development and testing of the plugin but should not be exported to the application.
 
-To exclude test sources you need to set the `pluginExcludes` of the plugin's `@GrailsPluginDescriptor` AND exclude the resources inside your `build.gradle` file. For example say you have some classes under the `com.demo` package that are in your plugin source tree but should not be packaged in the application. In your plugin descriptor you should exclude these:
+To exclude test sources you need to set the `pluginExcludes` of the plugin's `@GrailsPluginDescriptor` AND exclude the compiled classes inside your `build.gradle` file. For example say you have some classes under the `com.demo` package that are in your plugin source tree but should not be packaged in the application. In your plugin descriptor you should exclude these:
 
 [source,groovy]
 ----

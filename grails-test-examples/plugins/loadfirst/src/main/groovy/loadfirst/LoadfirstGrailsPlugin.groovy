@@ -23,8 +23,5 @@ import grails.plugins.*
 
 import grails.plugins.metadata.GrailsPluginDescriptor
 
-@GrailsPluginDescriptor(
-        pluginExcludes = [
-            "grails-app/views/error.gsp"
-        ])
+@GrailsPluginDescriptor(pluginExcludes = ['loadfirst/demo/**'])
 class LoadfirstGrailsPlugin extends Plugin {}

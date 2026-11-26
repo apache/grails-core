@@ -100,6 +100,13 @@ final class PluginDefinition {
         environmentsExcludes = copyEntries(source.environmentsExcludes)
         watchedResources = copyEntries(source.watchedResources)
         pluginExcludes = copyEntries(source.pluginExcludes)
+        String sourcePath = pluginExcludes.find { String pattern ->
+            pattern.startsWith('grails-app/') || pattern.startsWith('src/') || pattern.contains('.')
+        }
+        if (sourcePath) {
+            throw new IllegalArgumentException("Plugin ${pluginName} excludes '${sourcePath}', which is not a pattern of " +
+                    "artefact class names: pluginExcludes are Ant patterns of class names, such as 'com/example/demo/**'")
+        }
         providedArtefacts = copyEntries(source.providedArtefacts)
         enabled = source.enabled
 

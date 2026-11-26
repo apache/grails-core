@@ -39,10 +39,7 @@ import grails.plugins.metadata.GrailsPluginDescriptor
  */
 @CompileStatic
 @GrailsPluginDescriptor(
-        loadAfter = ['groovyPages'],
-        pluginExcludes = [
-                'grails-app/views/error.gsp'
-        ])
+        loadAfter = ['groovyPages'])
 class ScaffoldingGrailsPlugin extends Plugin {
 
     // Extra (optional) plugin metadata

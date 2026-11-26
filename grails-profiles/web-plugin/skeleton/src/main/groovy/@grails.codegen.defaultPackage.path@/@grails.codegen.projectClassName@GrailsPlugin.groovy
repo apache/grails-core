@@ -13,9 +13,8 @@ import grails.plugins.metadata.GrailsPluginDescriptor
  * description, license and developers, from the grailsPublish block in build.gradle.
  */
 @GrailsPluginDescriptor(
-        // Files left out of the plugin's packaged artefacts
-        pluginExcludes = ['grails-app/views/error.gsp']
         // Plugins this one loads after, or needs: loadAfter = ['controllers'], dependsOn = ['core']
+        // Artefact classes left out of the plugin's descriptor: pluginExcludes = ['com/example/demo/**']
 )
 class @grails.codegen.projectClassName@GrailsPlugin extends Plugin {
 

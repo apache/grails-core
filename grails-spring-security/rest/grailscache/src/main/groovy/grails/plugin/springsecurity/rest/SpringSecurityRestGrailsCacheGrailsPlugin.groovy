@@ -27,10 +27,7 @@ import grails.plugins.Plugin
 import grails.plugins.metadata.GrailsPluginDescriptor
 
 @GrailsPluginDescriptor(
-        loadAfter = ['springSecurityRest'],
-        pluginExcludes = [
-                'grails-app/views/**'
-        ])
+        loadAfter = ['springSecurityRest'])
 class SpringSecurityRestGrailsCacheGrailsPlugin extends Plugin {
 
     Closure doWithSpring() {

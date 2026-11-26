@@ -35,10 +35,7 @@ import org.grails.plugins.databasemigration.liquibase.GrailsLiquibaseFactory
 import org.grails.plugins.databasemigration.liquibase.GroovyChangeLogParser
 
 @GrailsPluginDescriptor(
-        pluginExcludes = [
-                '**/testapp/**',
-                'grails-app/views/error.gsp'
-        ])
+        pluginExcludes = ['**/testapp/**'])
 class DatabaseMigrationGrailsPlugin extends Plugin {
 
     static final String CONFIG_MAIN_PREFIX = 'grails.plugin.databasemigration'

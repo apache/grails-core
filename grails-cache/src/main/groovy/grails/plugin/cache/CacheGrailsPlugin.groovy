@@ -60,11 +60,7 @@ import org.grails.plugin.cache.GrailsCacheManagerDependencyRegistrar
 @GrailsPluginDescriptor(
         loadAfter = ['controllers', 'services'],
         observe = ['controllers', 'services'],
-        pluginExcludes = [
-                '**/com/demo/**',
-                'grails-app/views/**',
-                '**/*.gsp'
-        ])
+        pluginExcludes = ['**/com/demo/**'])
 class CacheGrailsPlugin extends Plugin {
 
     private static final String CACHE_CONFIGURATION_BEAN = 'grailsCacheConfiguration'

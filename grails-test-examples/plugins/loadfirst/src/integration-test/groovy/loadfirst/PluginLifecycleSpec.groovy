@@ -114,7 +114,7 @@ class PluginLifecycleSpec extends Specification {
 
         then: "excludes are defined"
         plugin != null
-        plugin.pluginExcludes == ['grails-app/views/error.gsp']
+        plugin.pluginExcludes == ['loadfirst/demo/**']
     }
 
     // ========== Spring Context Integration Tests ==========

@@ -45,8 +45,7 @@ import org.grails.datastore.gorm.plugin.support.ConfigSupport
 @GrailsPluginDescriptor(
         loadAfter = ['controllers', 'domainClass'],
         observe = ['domainClass'],
-        watchedResources = ['file:./grails-app/conf/hibernate/**.xml'],
-        pluginExcludes = ['src/templates/**'])
+        watchedResources = ['file:./grails-app/conf/hibernate/**.xml'])
 class HibernateGrailsPlugin extends Plugin {
 
     public static final String DEFAULT_DATA_SOURCE_NAME = HibernateDatastoreSpringInitializer.DEFAULT_DATA_SOURCE_NAME

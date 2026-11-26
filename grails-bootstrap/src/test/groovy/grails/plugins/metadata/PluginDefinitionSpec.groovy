@@ -83,4 +83,28 @@ class PluginDefinitionSpec extends Specification {
         'name=probe'              | 'names no plugin class'
         'name=mistake'            | 'name'
     }
+
+    void 'pluginExcludes are patterns of artefact class names'() {
+        when:
+        def definition = new PluginDefinition.Builder(
+                pluginName: 'probe', pluginClass: 'example.ProbeGrailsPlugin',
+                pluginExcludes: ['com/example/demo/**', '**/testapp/**']).build()
+
+        then:
+        definition.pluginExcludes == ['com/example/demo/**', '**/testapp/**']
+    }
+
+    void 'a pluginExcludes pattern of source files is rejected, because it can never match a class: #pattern'() {
+        when:
+        new PluginDefinition.Builder(
+                pluginName: 'probe', pluginClass: 'example.ProbeGrailsPlugin', pluginExcludes: [pattern]).build()
+
+        then:
+        IllegalArgumentException e = thrown()
+        e.message.contains(pattern)
+        e.message.contains('class names')
+
+        where:
+        pattern << ['grails-app/views/error.gsp', 'grails-app/views/**', 'src/templates/**', '**/*.gsp', 'codenarc.properties']
+    }
 }

@@ -27,14 +27,7 @@ import grails.plugins.Plugin
 import grails.plugins.metadata.GrailsPluginDescriptor
 import grails.plugins.redis.RedisBeanDefinitionsPostProcessor
 
-@GrailsPluginDescriptor(
-        pluginExcludes = [
-                'codenarc.properties',
-                'grails-app/conf/**',
-                'grails-app/views/**',
-                'grails-app/domain/**',
-                'grails-app/services/test/**'
-        ])
+@GrailsPluginDescriptor
 class RedisGrailsPlugin extends Plugin {
 
     @Override

@@ -191,14 +191,9 @@ By default Grails excludes the following files during the packaging process:
 
 The default `UrlMappings.groovy` file is not excluded, so remove any mappings that are not required for the plugin to work.  You are also free to add a UrlMappings definition under a different name which *will* be included. For example a file called `grails-app/controllers/BlogUrlMappings.groovy` is fine.
 
-The list of excludes is extensible with the `pluginExcludes` of the plugin's `@GrailsPluginDescriptor`:
-
-[source,groovy]
-----
-// resources that are excluded from plugin packaging
-@GrailsPluginDescriptor(pluginExcludes = ['grails-app/views/error.gsp'])
-class ExampleGrailsPlugin extends Plugin {
-}
-----
+To leave other files out of the plugin's jar, exclude them from the `jar` task in `build.gradle`. A compiled artefact left
+out of the jar must also be left out of the plugin's descriptor, with the `pluginExcludes` of its
+`@GrailsPluginDescriptor`, as <<creatingAndInstallingPlugins>> describes, or the application fails to start looking for
+it.
 
 This is useful for example to include demo or test resources in the plugin repository, but not include them in the final distribution.
