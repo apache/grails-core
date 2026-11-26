@@ -109,4 +109,50 @@ public class ScanTests {
         Assertions.assertEquals("K", scanner.getToken());
         Assertions.assertEquals(GroovyPageScanner.EOF, scanner.nextToken());
     }
+
+    @Test
+    public void testMaxHtmlLengthCutsBeforeAnEscapedExpression() {
+        // the cut falls on the $ of the first escape and on the { of the second
+        String gsp = "012345678\\${a}xyz\\${b}";
+        GroovyPageScanner scanner = new GroovyPageScanner(gsp);
+        scanner.setMaxHtmlLength(10);
+        Assertions.assertEquals(GroovyPageScanner.HTML, scanner.nextToken());
+        Assertions.assertEquals("012345678", scanner.getToken());
+        Assertions.assertEquals(GroovyPageScanner.HTML, scanner.nextToken());
+        Assertions.assertEquals("\\${a}xyz", scanner.getToken());
+        Assertions.assertEquals(GroovyPageScanner.HTML, scanner.nextToken());
+        Assertions.assertEquals("\\${b}", scanner.getToken());
+        Assertions.assertEquals(GroovyPageScanner.EOF, scanner.nextToken());
+    }
+
+    @Test
+    public void testMaxHtmlLengthKeepsAPieceThatStartsWithAnEscapedExpressionWhole() {
+        GroovyPageScanner scanner = new GroovyPageScanner("\\${a}");
+        scanner.setMaxHtmlLength(1);
+        Assertions.assertEquals(GroovyPageScanner.HTML, scanner.nextToken());
+        Assertions.assertEquals("\\${", scanner.getToken());
+        Assertions.assertEquals(GroovyPageScanner.HTML, scanner.nextToken());
+        Assertions.assertEquals("a", scanner.getToken());
+        Assertions.assertEquals(GroovyPageScanner.HTML, scanner.nextToken());
+        Assertions.assertEquals("}", scanner.getToken());
+        Assertions.assertEquals(GroovyPageScanner.EOF, scanner.nextToken());
+    }
+
+    @Test
+    public void testMaxHtmlLengthCutsWhereTextOnlyLooksLikeAnEscapedExpression() {
+        for (String lookalike : new String[] {"\\$ {a}", "\\{a}", "$\\{a}", "\\$"}) {
+            for (int digits = 7; digits <= 10; digits++) {
+                String gsp = "0123456789".substring(0, digits) + lookalike;
+                GroovyPageScanner scanner = new GroovyPageScanner(gsp);
+                scanner.setMaxHtmlLength(10);
+                Assertions.assertEquals(GroovyPageScanner.HTML, scanner.nextToken());
+                Assertions.assertEquals(gsp.substring(0, Math.min(10, gsp.length())), scanner.getToken(), gsp);
+                if (gsp.length() > 10) {
+                    Assertions.assertEquals(GroovyPageScanner.HTML, scanner.nextToken());
+                    Assertions.assertEquals(gsp.substring(10), scanner.getToken(), gsp);
+                }
+                Assertions.assertEquals(GroovyPageScanner.EOF, scanner.nextToken());
+            }
+        }
+    }
 }

@@ -178,7 +178,11 @@ class GroovyPageScanner implements Tokens {
                     }
 
                     if (tokenLength > maxHtmlLength) {
-                        return found(HTML, 0);
+                        int cut = htmlCutPosition();
+                        if (cut != -1) {
+                            end1 = cut + 1;
+                            return found(HTML, 0);
+                        }
                     }
 
                     break;
@@ -284,7 +288,30 @@ class GroovyPageScanner implements Tokens {
      * escaped this way.
      */
     private boolean isEscapedGExpression() {
-        return end1 > 1 && text.charAt(end1 - 2) == '\\';
+        return isEscapedGExpressionAt(end1 - 2);
+    }
+
+    private boolean isEscapedGExpressionAt(int backslash) {
+        return backslash >= 0 && text.startsWith("\\${", backslash);
+    }
+
+    /**
+     * Long text is handed on in pieces of at most {@link #getMaxHtmlLength()} characters, and the backslash
+     * of an escaped expression is only taken out of a piece that has the whole of <code>\${</code>. A cut
+     * that would fall inside one is moved to before its backslash, which makes the piece shorter. A piece
+     * that starts with the escaped expression has no such place, so the text is not cut there and the piece
+     * takes all three characters: it is longer than a limit below 3.
+     *
+     * @return the position the text is cut at, or -1 when the piece starts with the escaped expression
+     */
+    private int htmlCutPosition() {
+        int current = end1 - 1;
+        for (int backslash = current - 2; backslash < current; backslash++) {
+            if (isEscapedGExpressionAt(backslash)) {
+                return backslash > begin1 ? backslash : -1;
+            }
+        }
+        return current;
     }
 
     private boolean skipComment(char c3, char c4) {
