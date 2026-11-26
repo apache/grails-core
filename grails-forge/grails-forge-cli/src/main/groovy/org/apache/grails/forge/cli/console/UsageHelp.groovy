@@ -385,7 +385,8 @@ class UsageHelp extends CommandLine.Help {
                 String first = unmatched.get(0)
                 String more = following(unmatched.subList(1, unmatched.size()))
                 if (first.startsWith('-') && first.length() > 1) {
-                    return "${named(spec)} has no option ${FeatureSelectionException.shown(optionOf(first))}${more}"
+                    String declared = spec.userObject() instanceof OptionAdvice ? ((OptionAdvice) spec.userObject()).adviceForOption(optionOf(first)) : null
+                    return "${named(spec)} has no option ${FeatureSelectionException.shown(optionOf(first))}${more}${declared == null ? '' : '. ' + declared}"
                 }
                 String advice = spec.userObject() instanceof ArgumentAdvice ? ((ArgumentAdvice) spec.userObject()).adviceFor(first) : null
                 return "${named(spec)} takes no argument ${FeatureSelectionException.shown(first)}${more}${advice == null ? '' : '. ' + advice}"
@@ -417,6 +418,19 @@ class UsageHelp extends CommandLine.Help {
          * {@code null} where nothing can be told of the argument
          */
         String adviceFor(String argument)
+    }
+
+    /**
+     * A command that can say, of an option it does not have, where such an option would come from:
+     * the refusal of the option ends with that.
+     */
+    static interface OptionAdvice {
+
+        /**
+         * @param option the first option the command does not have, as it was typed, without a value
+         * @return one sentence without its full stop; {@code null} where nothing can be told of the option
+         */
+        String adviceForOption(String option)
     }
 
     private static String optionOf(String argument) {

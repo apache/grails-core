@@ -173,9 +173,16 @@ final class ApplicationCommandFile {
      */
     final Map<String, String> testPhases
 
+    /**
+     * The options the application and its plugins declare for commands of the CLI, as the file
+     * lists them: none when the file is not used or lists none.
+     */
+    final DeclaredOptions declaredOptions
+
     private ApplicationCommandFile(State state, String reason, List<Entry> commands, boolean complete, List<String> diagnostics, List<String> leftOut,
-                                   Map<String, String> testPhases = null) {
+                                   Map<String, String> testPhases = null, DeclaredOptions declaredOptions = DeclaredOptions.NONE) {
         this.testPhases = testPhases
+        this.declaredOptions = declaredOptions
         this.state = state
         this.reason = reason
         this.commands = commands
@@ -225,7 +232,7 @@ final class ApplicationCommandFile {
             }
             ApplicationCommandFile read = parse(bytes)
             String changed = read.state == State.CURRENT ? changedSince(project, attributes.lastModifiedTime()) : null
-            return changed == null ? read : new ApplicationCommandFile(State.STALE, changed, read.commands, read.complete, read.diagnostics, read.leftOut, read.testPhases)
+            return changed == null ? read : new ApplicationCommandFile(State.STALE, changed, read.commands, read.complete, read.diagnostics, read.leftOut, read.testPhases, read.declaredOptions)
         } catch (IOException | RuntimeException ignored) {
             return refused('cannot be read')
         }
@@ -332,7 +339,7 @@ final class ApplicationCommandFile {
             leftOut.add(MAX_LEFT_OUT, "${notUsed - MAX_LEFT_OUT} more commands of ${LOCATION} are not used, for reasons like these".toString())
         }
         return new ApplicationCommandFile(State.CURRENT, null, commands.asImmutable(), (Boolean) members.get('complete'), ((List<String>) said).asImmutable(), leftOut.asImmutable(),
-                testPhases(members.get('testPhases')))
+                testPhases(members.get('testPhases')), DeclaredOptions.read(members.get(DeclaredOptions.MEMBER)))
     }
 
     // The phases a file lists, each as the task writes one: a phase that is not is left out, since it

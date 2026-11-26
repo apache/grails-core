@@ -374,6 +374,12 @@ final class CommandCatalog {
             entry.put('split', option.splitRegex() ?: null)
             entry.put('choices', choices(option))
             entry.put('default', defaultOf(option))
+            // an option the application or one of its plugins declares: as it is declared, with who declares it and what it sets
+            Map<String, Object> declared = spec.userObject() instanceof DeclaredOptions.Taking ?
+                    DeclaredOptions.describe((DeclaredOptions.Taking) spec.userObject(), option.longestName()) : null
+            if (declared != null) {
+                entry.putAll(declared)
+            }
             options.add(entry)
         }
         return options

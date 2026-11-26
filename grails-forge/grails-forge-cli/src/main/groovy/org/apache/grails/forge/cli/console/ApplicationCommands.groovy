@@ -78,6 +78,8 @@ final class ApplicationCommands {
     // by each name a command of the build would have had: what has the name, and the command that is not there for it
     private final Map<String, String> notAdded = new LinkedHashMap<>()
     private final Map<String, ApplicationCommandFile.Entry> notAddedBy = new LinkedHashMap<>()
+    // what there is to say of the options the application and its plugins declare for run-app
+    private List<String> aboutOptions = Collections.<String>emptyList()
 
     /** Whether the build listed the commands for what was typed just before the command line was put together. */
     boolean listedJustNow
@@ -104,6 +106,8 @@ final class ApplicationCommands {
         commands.add(root)
         // the build lists the test phases of the project in the same file
         TestAppCommand.phasesOf(root, commands.file)
+        // and the options the application and its plugins declare for run-app
+        commands.aboutOptions = DeclaredOptions.addTo(root, RunAppCommand.NAME, commands.file)
         OF.put(root, commands)
     }
 
@@ -279,6 +283,7 @@ final class ApplicationCommands {
         }
         lines.addAll(file.leftOut)
         lines.addAll(scripts.diagnostics)
+        lines.addAll(aboutOptions)
         // once for a command, whichever of its names are taken
         Set<ApplicationCommandFile.Entry> named = Collections.newSetFromMap(new IdentityHashMap<ApplicationCommandFile.Entry, Boolean>())
         for (String name : notAdded.keySet()) {

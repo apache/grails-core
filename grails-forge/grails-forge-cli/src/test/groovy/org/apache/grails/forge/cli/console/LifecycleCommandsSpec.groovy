@@ -270,8 +270,8 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
         line                                                                                       | invoked
         ['run-app']                                                                                | '<bootRun><--quiet><-Dgrails.env=development>'
         ['run-app', '--port', '9090', '--host', '127.0.0.1', '--debug-jvm', '--verbose']           | '<bootRun><--debug-jvm><-Dgrails.env=development><-Dgrails.server.port=9090><-Dgrails.server.address=127.0.0.1>'
-        ['run-app', '-port=9091', '-host=::1', '-debug-jvm', '-query-tail']                        | '<bootRun><--debug-jvm><--quiet><-Dgrails.env=development><-Dgrails.server.port=9091><-Dgrails.server.address=::1><-Pgrails.gorm.queryTail.enabled>'
-        ['run-app', '-Dgrails.env=test', '-Da=b  "c"', '-Pone=two words', '-Pflag', '--query-tail'] | '<bootRun><--quiet><-Dgrails.env=test><-Da=b  "c"><-Pgrails.gorm.queryTail.enabled><-Pone=two words><-Pflag=>'
+        ['run-app', '-port=9091', '-host=::1', '-debug-jvm']                                       | '<bootRun><--debug-jvm><--quiet><-Dgrails.env=development><-Dgrails.server.port=9091><-Dgrails.server.address=::1>'
+        ['run-app', '-Dgrails.env=test', '-Da=b  "c"', '-Pone=two words', '-Pflag']                 | '<bootRun><--quiet><-Dgrails.env=test><-Da=b  "c"><-Pone=two words><-Pflag=>'
         ['run-app', '-x', '--', '--offline', '-Pz=$HOME *', '--port']                              | '<bootRun><--quiet><-Dgrails.env=development><--stacktrace><-Dgrails.full.stacktrace=true><--offline><-Pz=$HOME *><--port>'
         ['run']                                                                                    | '<bootRun><--quiet><-Dgrails.env=development>'
         ['run', '-port=9092', '-Dgrails.env=test', '--', '--offline']                              | '<bootRun><--quiet><-Dgrails.env=test><-Dgrails.server.port=9092><--offline>'
@@ -1542,9 +1542,9 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
         commands['stop-app'].aliases == ['stop']
         commands['shell'].aliases == []
         !commands.containsKey('run') && !commands.containsKey('stop')
-        !(commands['run-app'].options as List<Map>).collectMany { Map option -> option.names as List<String> }.any { String name -> name in ['-port', '-host', '-https', '-debug-jvm', '-query-tail'] }
+        !(commands['run-app'].options as List<Map>).collectMany { Map option -> option.names as List<String> }.any { String name -> name in ['-port', '-host', '-https', '-debug-jvm', '--query-tail'] }
         (commands['run-app'].options as List<Map>).collectMany { Map option -> option.names as List<String> }.containsAll(
-                ['--port', '--host', '--https', '--debug-jvm', '--query-tail', '-P', '-D', '--detach', '--foreground', '--ready-timeout'])
+                ['--port', '--host', '--https', '--debug-jvm', '-P', '-D', '--detach', '--foreground', '--ready-timeout'])
         (commands['run-command'].parameters as List<Map>)*.label == ['NAME', 'ARG']
         (commands['run-script'].parameters as List<Map>)*.label == ['FILE']
 
@@ -1569,7 +1569,7 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
         runApp.readLines().contains('Short form: ra')
         stopApp.readLines().contains('Short form: sa')
         runApp.readLines()[0] == 'Usage: grails-forge-cli run-app [-hvVx] [--non-interactive] [--plain-output]'
-        runApp.contains('[--port=PORT] [--host=HOST] [--https] [--debug-jvm] [--query-tail] [--detach | --foreground]')
+        runApp.contains('[--port=PORT] [--host=HOST] [--https] [--debug-jvm] [--detach | --foreground]')
         runApp.contains('[--ready-timeout=SECONDS] [-DNAME=VALUE]... [-PNAME=VALUE]... [-- GRADLE-ARGUMENT...]')
         runApp.readLines().take(3).every { String line -> line.length() <= 100 }
         !runApp.readLines().take(3).join(' ').contains('-D=') && !runApp.contains('-debug-jvm,') && !runApp.contains('-port,') && !runApp.contains(' -https')

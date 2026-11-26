@@ -61,6 +61,9 @@ import picocli.CommandLine
  * {@code stop-app} asks it to end the build, and it looks for that. Which of the two runs Gradle is
  * decided in {@link GradleBuild}.</p>
  *
+ * <p>The plugins of the project, and the project itself, can declare more options of the command,
+ * each of which sets a property of the application: see {@link DeclaredOptions}.</p>
+ *
  * @since 9.0
  */
 @CommandLine.Command(name = 'run-app', aliases = ['run'],
@@ -70,16 +73,21 @@ import picocli.CommandLine
                 'With @|bold --detach|@, and in the interactive shell, returns when the application answers on its port',
                 'and leaves it running until stop-app.',
                 'The environment is development unless -Dgrails.env names another one.',
+                'The application and its plugins can declare more options, each of which sets a property of the application:',
+                'they are listed below, with who declares them, once the build of the project has listed them.',
                 'What follows @|bold --|@ is given to Gradle as it is.'
         ],
         customSynopsis = [
                 '${COMMAND-FULL-NAME} [-hvVx] [--non-interactive] [--plain-output]',
-                '        [--port=PORT] [--host=HOST] [--https] [--debug-jvm] [--query-tail] [--detach | --foreground]',
+                '        [--port=PORT] [--host=HOST] [--https] [--debug-jvm] [--detach | --foreground]',
                 '        [--ready-timeout=SECONDS] [-DNAME=VALUE]... [-PNAME=VALUE]... [-- GRADLE-ARGUMENT...]'
         ],
         preprocessor = GradleTaskCommand.PassedOn)
 @CompileStatic
-class RunAppCommand extends GradleEnvironmentCommand implements OptionRelation.Declared, UsageHelp.ArgumentAdvice {
+class RunAppCommand extends GradleEnvironmentCommand implements OptionRelation.Declared, UsageHelp.ArgumentAdvice, UsageHelp.OptionAdvice, DeclaredOptions.Taking {
+
+    /** The name of the command. */
+    static final String NAME = 'run-app'
 
     private static final int DEFAULT_PORT = 8080
     private static final int DEFAULT_HTTPS_PORT = 8443
@@ -141,9 +149,6 @@ class RunAppCommand extends GradleEnvironmentCommand implements OptionRelation.D
     @CommandLine.Option(names = ['--debug-jvm'], description = 'Start the JVM of the application suspended, waiting for a debugger on port 5005.')
     boolean debugJvm
 
-    @CommandLine.Option(names = ['--query-tail'], description = 'Capture every statement GORM runs, for the query-tail command.')
-    boolean queryTail
-
     // the options as the shell spells them, with one dash: taken, and not shown
     @CommandLine.Option(names = ['-port'], hidden = true)
     Integer portOfShell
@@ -157,9 +162,6 @@ class RunAppCommand extends GradleEnvironmentCommand implements OptionRelation.D
     @CommandLine.Option(names = ['-debug-jvm'], hidden = true)
     boolean debugJvmOfShell
 
-    @CommandLine.Option(names = ['-query-tail'], hidden = true)
-    boolean queryTailOfShell
-
     @CommandLine.Option(names = ['-P'], paramLabel = 'NAME=VALUE', mapFallbackValue = '', description = 'A project property for the build; can be given more than once.')
     Map<String, String> projectProperties = new LinkedHashMap<>()
 
@@ -168,6 +170,21 @@ class RunAppCommand extends GradleEnvironmentCommand implements OptionRelation.D
 
     @CommandLine.Option(names = ['--foreground'], description = 'Stay with the application until it ends, also in the interactive shell.')
     boolean foreground
+
+    /** What was given for each option the application or one of its plugins declares: the value of the property it sets. */
+    final Map<DeclaredOptions.Declared, String> declaredGiven = new LinkedHashMap<>()
+
+    /** What became of the options the build of the project lists for the command; {@code null} where no project was looked at. */
+    DeclaredOptions.Added declared
+
+    /**
+     * An option the command does not have may be one a plugin declares, which is known once the build
+     * of the project has listed the options: the refusal of the option says so.
+     */
+    @Override
+    String adviceForOption(String option) {
+        return DeclaredOptions.advice(spec, declared, option)
+    }
 
     @Override
     List<OptionRelation> getOptionRelations() {
@@ -273,9 +290,9 @@ class RunAppCommand extends GradleEnvironmentCommand implements OptionRelation.D
         if (host != null) {
             arguments.add("-D${ADDRESS_PROPERTY}=${host}".toString())
         }
-        if (queryTail) {
-            arguments.add('-Pgrails.gorm.queryTail.enabled')
-        }
+        // what the application and its plugins declare an option for, as --port: a system property of the build with the
+        // prefix the Grails Gradle plugin takes off as it hands the property to the application
+        arguments.addAll(DeclaredOptions.arguments(this, systemProperties))
         projectProperties.each { String name, String value ->
             arguments.add("-P${name}=${value}".toString())
         }
@@ -290,7 +307,6 @@ class RunAppCommand extends GradleEnvironmentCommand implements OptionRelation.D
         host = host != null ? host : hostOfShell
         https = https || httpsOfShell
         debugJvm = debugJvm || debugJvmOfShell
-        queryTail = queryTail || queryTailOfShell
         check(detached)
         List<String> arguments = new ArrayList<String>(gradleArguments(project))
         // the system properties of the build as Gradle reads them, from the same arguments: what follows -- among them
