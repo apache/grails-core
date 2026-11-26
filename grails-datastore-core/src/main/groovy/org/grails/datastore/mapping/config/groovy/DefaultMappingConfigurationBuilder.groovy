@@ -19,6 +19,7 @@
 package org.grails.datastore.mapping.config.groovy
 
 import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
 
 import org.springframework.beans.MutablePropertyValues
 import org.springframework.validation.DataBinder
@@ -31,6 +32,7 @@ import org.grails.datastore.mapping.reflect.NameUtils
  * @author Graeme Rocher
  * @since 1.0
  */
+@Slf4j
 class DefaultMappingConfigurationBuilder implements MappingConfigurationBuilder {
 
     public static final String VERSION_KEY = 'VERSION_KEY'
@@ -45,9 +47,38 @@ class DefaultMappingConfigurationBuilder implements MappingConfigurationBuilder 
         propertyClass.metaClass.propertyMissing = { String name, val -> }
     }
 
+    /**
+     * Merges the builder's own property map (populated by {@link #invokeMethod}
+     * during evaluation of the mapping/constraints closures) with
+     * {@code target.propertyConfigs} (populated by alternate paths such as
+     * {@code Entity.property(name, Map)} or constraint evaluators that write
+     * directly to the entity's property configs).
+     *
+     * <p>When the same key is present in both maps, the builder's instance
+     * wins. This protects mapping-configured settings such as
+     * {@code index: true} and {@code indexAttributes} from being silently
+     * overwritten by a less-configured instance in {@code propertyConfigs}.
+     *
+     * <p>The dual-store design (this builder's {@code properties} field vs.
+     * the entity's {@code propertyConfigs}) is a structural legacy; collapsing
+     * the two into a single canonical store would let this method go away.
+     * See <a href="https://github.com/apache/grails-core/issues/15680">#15680</a>.
+     */
     Map<String, Property> getProperties() {
         if (!target.propertyConfigs.isEmpty()) {
-            properties.putAll(target.propertyConfigs)
+            for (Map.Entry entry : target.propertyConfigs.entrySet()) {
+                if (properties.containsKey(entry.key)) {
+                    if (log.isDebugEnabled()) {
+                        log.debug("Property '{}' is configured in both the mapping closure and via Entity.propertyConfigs " +
+                                '(typically a constraint evaluator or direct Entity.property() call). The mapping-side ' +
+                                'configuration takes precedence; the propertyConfigs entry is being ignored to avoid ' +
+                                'overwriting mapping-set fields such as index/indexAttributes. See grails-core#15680.',
+                                entry.key)
+                    }
+                } else {
+                    properties.put(entry.key, entry.value)
+                }
+            }
         }
         return properties
     }

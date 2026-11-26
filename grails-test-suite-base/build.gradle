@@ -46,6 +46,8 @@ dependencies {
     api 'org.apache.groovy:groovy'
 
     compileOnly 'jakarta.servlet:jakarta.servlet-api'
+    // the lifecycle annotations of AbstractGrailsMockTests; the test suites that extend it have the API on their classpath
+    compileOnly 'org.junit.jupiter:junit-jupiter-api'
     compileOnly 'org.springframework:spring-test', {
         // MockHttpServletRequest/Response/Context used in many classes
     }

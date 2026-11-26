@@ -20,4 +20,6 @@
 org.springframework.boot.env.PropertySourceLoader=\
   org.grails.core.cfg.GroovyConfigPropertySourceLoader,\
   org.grails.config.yaml.YamlPropertySourceLoader
+org.springframework.boot.env.EnvironmentPostProcessor=grails.boot.config.GrailsEnvironmentPostProcessor
 org.springframework.boot.SpringApplicationRunListener=grails.config.external.ExternalConfigRunListener
+org.springframework.boot.BootstrapRegistryInitializer=org.apache.grails.core.GrailsBootstrapRegistryInitializer

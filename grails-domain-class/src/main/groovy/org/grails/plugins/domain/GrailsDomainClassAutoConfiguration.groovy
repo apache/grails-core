@@ -71,6 +71,7 @@ class GrailsDomainClassAutoConfiguration {
 
     @Lazy
     @Bean(name = ConstraintsEvaluator.BEAN_NAME)
+    @Deprecated(since = '7.1', forRemoval = true)
     ConstraintEvaluatorAdapter constraintsEvaluator(DefaultConstraintEvaluatorFactoryBean validateableConstraintsEvaluator) {
         new ConstraintEvaluatorAdapter(validateableConstraintsEvaluator.object)
     }

@@ -224,6 +224,7 @@ mockingCodecs: 12.1.7 Mocking Codecs
 unitTestMetaprogramming: 12.1.8 Unit Test Metaprogramming
 integrationTesting: 12.2 Integration Testing
 functionalTesting: 12.3 Functional Testing
+testPhases: 12.4 Custom Test Phases
 i18n: 13. Internationalization
 understandingMessageBundles: 13.1 Understanding Message Bundles
 changingLocales: 13.2 Changing Locales
