@@ -167,7 +167,6 @@ public class GrailsEarlyPluginRegistrationPostProcessor
             pluginManager.loadPlugins();
             pluginManager.setApplicationContext(applicationContext);
 
-            pluginManager.doArtefactConfiguration();
             grailsApplication.initialise();
             // register plugin provided classes first, this gives the opportunity
             // for application classes to override those provided by a plugin

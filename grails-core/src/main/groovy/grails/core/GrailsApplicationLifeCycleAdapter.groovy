@@ -36,11 +36,6 @@ class GrailsApplicationLifeCycleAdapter implements GrailsApplicationLifeCycle {
     }
 
     @Override
-    void doWithDynamicMethods() {
-        // no-op
-    }
-
-    @Override
     void doWithApplicationContext() {
         // no-op
     }

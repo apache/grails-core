@@ -26,10 +26,8 @@ import org.springframework.beans.factory.support.BeanDefinitionRegistry
 import org.springframework.context.ApplicationContext
 import org.springframework.context.ApplicationContextAware
 import org.springframework.context.ConfigurableApplicationContext
-import org.springframework.core.type.filter.TypeFilter
 
 import grails.config.Config
-import grails.core.ArtefactHandler
 import grails.core.GrailsApplication
 import grails.core.GrailsApplicationLifeCycle
 import grails.core.support.GrailsApplicationAware
@@ -75,22 +73,6 @@ abstract class Plugin implements GrailsApplicationLifeCycle, GrailsApplicationAw
      * The {@link GrailsPluginManager} instance
      */
     GrailsPluginManager getManager() { pluginManager }
-
-    /**
-     * List of {@link ArtefactHandler} instances provided by this plugin
-     */
-    final List<ArtefactHandler> artefacts = []
-
-    /**
-     * Filters for the classes a {@code grailsContext:component-scan} in this plugin's Spring configuration
-     * ignores. None by default.
-     *
-     * @return the type filters
-     * @since 9.0
-     */
-    Collection<? extends TypeFilter> getTypeFilters() {
-        Collections.emptyList()
-    }
 
     /**
      * The {@link ApplicationContext} instance
@@ -154,15 +136,9 @@ abstract class Plugin implements GrailsApplicationLifeCycle, GrailsApplicationAw
     }
 
     /**
-     * Invoked in a phase where plugins can add dynamic methods. Subclasses should override
-     */
-    @Override
-    void doWithDynamicMethods() {
-        // no-op
-    }
-
-    /**
-     * Invokes once the {@link ApplicationContext} has been refreshed and after {#doWithDynamicMethods()} is invoked. Subclasses should override
+     * Invoked once the {@link ApplicationContext} has been refreshed, for each plugin in load order. This is
+     * where a plugin adds dynamic methods or properties and works with the beans of the refreshed context.
+     * Subclasses should override.
      */
     @Override
     void doWithApplicationContext() {

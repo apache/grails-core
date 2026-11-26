@@ -252,7 +252,6 @@ public final class PluginUtils {
         attributes.put("watchedResources", List.of(annotation.watchedResources()));
         attributes.put("pluginExcludes", List.of(annotation.pluginExcludes()));
         attributes.put("providedArtefacts", Arrays.stream(annotation.providedArtefacts()).map(Class::getName).toList());
-        attributes.put("enabled", annotation.enabled());
         return PluginDefinition.fromDeclaration(pluginClass.getName(), attributes, publishedVersion(pluginClass), null, Map.of());
     }
 

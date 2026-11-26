@@ -31,6 +31,7 @@ import org.springframework.core.env.StandardEnvironment
 import grails.core.DefaultGrailsApplication
 import grails.core.GrailsApplication
 import grails.plugins.DefaultGrailsPluginManager
+import grails.plugins.exceptions.PluginException
 import org.apache.grails.core.plugins.DefaultPluginDiscovery
 import org.apache.grails.core.plugins.PluginUtils
 import org.grails.support.MockApplicationContext
@@ -104,8 +105,8 @@ class ObservingGrailsPlugin extends Plugin {
 class ObservingAllGrailsPlugin extends Plugin {
 }
 
-@GrailsPluginDescriptor(enabled = false)
-class DisabledGrailsPlugin extends Plugin {
+@GrailsPluginDescriptor(environmentsIncludes = ['neverCurrent'])
+class OtherEnvironmentGrailsPlugin extends Plugin {
 }
 ''')
     }
@@ -184,10 +185,10 @@ class DisabledGrailsPlugin extends Plugin {
         observers.empty
     }
 
-    def 'skips disabled plugins during loading'() {
-        given: 'a plugin manager with one disabled plugin'
+    def 'skips plugins that do not support the current environment during loading'() {
+        given: 'a plugin manager with one plugin limited to another environment'
         def pluginDiscovery = new DefaultPluginDiscovery().tap {
-            pluginClasses = plugins('Another', 'Disabled')
+            pluginClasses = plugins('Another', 'OtherEnvironment')
             init(new StandardEnvironment())
         }
         def pluginManager = new DefaultGrailsPluginManager(grailsApplication, pluginDiscovery)
@@ -195,11 +196,11 @@ class DisabledGrailsPlugin extends Plugin {
         when: 'plugins are loaded'
         pluginManager.loadPlugins()
 
-        then: 'enabled plugins are loaded and disabled plugins are skipped'
+        then: 'the plugins of the current environment are loaded and the other one is skipped'
         with(pluginManager) {
             hasGrailsPlugin('another')
             getGrailsPlugin('another').pluginInstance
-            !hasGrailsPlugin('disabled')
+            !hasGrailsPlugin('otherEnvironment')
         }
     }
 
@@ -279,19 +280,19 @@ class VersionedGrailsPlugin extends grails.plugins.Plugin {
         plugins.indexOf('shouldLoadLast') > plugins.indexOf('someOther')
     }
 
-    def 'does not load a plugin when required dependencies are missing'() {
-        given: 'a plugin manager missing a required dependency'
+    def 'an application whose plugin misses a required dependency does not start'() {
+        given: 'a plugin discovery missing a required dependency'
         def pluginDiscovery = new DefaultPluginDiscovery().tap {
             pluginClasses = plugins('My') // depends on 'another' plugin which is not included here
-            init(new StandardEnvironment())
         }
-        def pluginManager = new DefaultGrailsPluginManager(grailsApplication, pluginDiscovery)
 
-        when: 'plugins are loaded'
-        pluginManager.loadPlugins()
+        when: 'the plugins are discovered'
+        pluginDiscovery.init(new StandardEnvironment())
 
-        then: 'the dependent plugin is not loaded'
-        !pluginManager.hasGrailsPlugin('my')
+        then: 'discovery fails, naming the plugin and its missing dependency'
+        def e = thrown(PluginException)
+        e.message.contains('Grails plug-in [my]')
+        e.message.contains('dependency [another] with required version [1.2] is missing')
     }
 
     def 'loads plugins when required dependencies are satisfied'() {

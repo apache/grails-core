@@ -94,6 +94,8 @@ class QuartzGrailsPlugin extends Plugin {
   gets the same from the Grails annotation processor.
 * **Discovery without creating plugins.** Grails filters and orders plugins from their descriptors, without loading or
   instantiating a plugin class to find out what it is, and stops at a broken descriptor instead of skipping the plugin.
+* **Unmet dependencies stop the application.** A plugin whose `dependsOn` is not met no longer leaves the application
+  running without it: startup fails with one exception that names every such plugin, every dependency it lacks and why.
 * **Namespaced plugin resources.** A plugin's `plugin.yml` or `plugin.groovy`, and its precompiled GSP manifest, sit
   under `META-INF/grails/plugins/<name>/`, so plugins never collide at the jar root in executable jars, shaded jars and
   native images.

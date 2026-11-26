@@ -24,12 +24,8 @@ class @grails.codegen.projectClassName@GrailsPlugin extends Plugin {
         } as BeanRegistrar
     }
 
-    void doWithDynamicMethods() {
-        // TODO Implement registering dynamic methods to classes (optional)
-    }
-
     void doWithApplicationContext() {
-        // TODO Implement post initialization spring config (optional)
+        // TODO Implement post initialization spring config, such as registering dynamic methods (optional)
     }
 
     void onChange(Map<String, Object> event) {

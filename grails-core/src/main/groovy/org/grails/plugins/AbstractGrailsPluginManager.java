@@ -18,7 +18,6 @@ package org.grails.plugins;
 
 import java.io.File;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -45,12 +44,10 @@ import org.springframework.core.convert.converter.Converter;
 import org.springframework.core.convert.converter.ConverterRegistry;
 import org.springframework.core.convert.support.GenericConversionService;
 import org.springframework.core.io.FileSystemResource;
-import org.springframework.core.type.filter.TypeFilter;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
 import grails.artefact.Enhanced;
-import grails.core.ArtefactHandler;
 import grails.core.GrailsApplication;
 import grails.core.GrailsApplicationLifeCycle;
 import grails.plugins.GrailsPlugin;
@@ -62,7 +59,6 @@ import org.apache.grails.core.plugins.PluginDiscovery;
 import org.apache.grails.core.plugins.PluginInfo;
 import org.grails.config.NavigableMap;
 import org.grails.io.support.GrailsResourceUtils;
-import org.grails.plugins.support.WatchPattern;
 import org.grails.spring.RuntimeSpringConfiguration;
 
 /**
@@ -95,32 +91,12 @@ public abstract class AbstractGrailsPluginManager implements GrailsPluginManager
         this.pluginDiscovery = pluginDiscovery;
     }
 
-    public List<TypeFilter> getTypeFilters() {
-        return pluginDiscovery.getPluginsInTopologicalOrder()
-                .stream()
-                .map(PluginInfo::getName)
-                .map(plugins::get)
-                .filter(Objects::nonNull)
-                .map(GrailsPlugin::getTypeFilters)
-                .flatMap(Collection::stream)
-                .map(tf -> (TypeFilter) tf)
-                .toList();
-    }
-
     public GrailsPlugin[] getAllPlugins() {
         return pluginDiscovery.getPluginsInTopologicalOrder()
                 .stream()
                 .map(PluginInfo::getName)
                 .map(plugins::get)
                 .filter(Objects::nonNull)
-                .toArray(GrailsPlugin[]::new);
-    }
-
-    public GrailsPlugin[] getFailedLoadPlugins() {
-        return pluginDiscovery.getFailedPlugins()
-                .stream()
-                .map(PluginInfo::getName)
-                .map(plugins::get)
                 .toArray(GrailsPlugin[]::new);
     }
 
@@ -133,11 +109,6 @@ public abstract class AbstractGrailsPluginManager implements GrailsPluginManager
 
     protected void checkInitialised() {
         Assert.state(initialised, "Must call loadPlugins() before invoking configurational methods on GrailsPluginManager");
-    }
-
-    public GrailsPlugin getFailedPlugin(String name) {
-        PluginInfo pluginInfo = pluginDiscovery.getFailedPlugin(name);
-        return pluginInfo == null ? null : plugins.get(pluginInfo.getName());
     }
 
     /**
@@ -263,21 +234,6 @@ public abstract class AbstractGrailsPluginManager implements GrailsPluginManager
         return pluginDiscovery.hasPlugin(name);
     }
 
-    public void doDynamicMethods() {
-        checkInitialised();
-        Class<?>[] allClasses = application.getAllClasses();
-        if (allClasses != null) {
-            for (Class<?> c : allClasses) {
-                ExpandoMetaClass emc = new ExpandoMetaClass(c, true, true);
-                emc.initialize();
-            }
-            ApplicationContext ctx = applicationContext;
-            for (GrailsPlugin plugin : getOrderedPlugins()) {
-                plugin.doWithDynamicMethods(ctx);
-            }
-        }
-    }
-
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext;
         if (applicationContext != null) {
@@ -341,15 +297,6 @@ public abstract class AbstractGrailsPluginManager implements GrailsPluginManager
         return app.getClassForName(artefact.getName()) != null;
     }
 
-    public void doArtefactConfiguration() {
-        checkInitialised();
-        for (GrailsPlugin plugin : getOrderedPlugins()) {
-            if (plugin.supportsCurrentScopeAndEnvironment()) {
-                plugin.doArtefactConfiguration();
-            }
-        }
-    }
-
     public void onStartup(Map<String, Object> event) {
         for (GrailsPlugin plugin : getOrderedPlugins()) {
             Object instance = plugin.getPluginInstance();
@@ -379,52 +326,6 @@ public abstract class AbstractGrailsPluginManager implements GrailsPluginManager
 
     public boolean isShutdown() {
         return shutdown;
-    }
-
-    public void informOfClassChange(Class<?> aClass) {
-        if (aClass == null || application == null) {
-            return;
-        }
-
-        ArtefactHandler handler = application.getArtefactType(aClass);
-        if (handler == null) {
-            return;
-        }
-
-        String pluginName = handler.getPluginName();
-        if (pluginName == null) {
-            return;
-        }
-
-        GrailsPlugin plugin = getGrailsPlugin(pluginName);
-        if (plugin != null) {
-            plugin.notifyOfEvent(GrailsPlugin.EVENT_ON_CHANGE, aClass);
-        } else {
-            String classNameAsPath = aClass.getName().replace('.', File.separatorChar);
-            String groovyClass = classNameAsPath + ".groovy";
-            String javaClass = classNameAsPath + ".java";
-            for (GrailsPlugin grailsPlugin : getOrderedPlugins()) {
-                List<WatchPattern> watchPatterns = grailsPlugin.getWatchedResourcePatterns();
-                if (watchPatterns != null) {
-                    for (WatchPattern watchPattern : watchPatterns) {
-                        File parent = watchPattern.getDirectory();
-                        String extension = watchPattern.getExtension();
-
-                        if (parent != null && extension != null) {
-                            File f = new File(parent, groovyClass);
-                            if (f.exists() && f.getName().endsWith(extension)) {
-                                grailsPlugin.notifyOfEvent(GrailsPlugin.EVENT_ON_CHANGE, aClass);
-                            } else {
-                                f = new File(parent, javaClass);
-                                if (f.exists() && f.getName().endsWith(extension)) {
-                                    grailsPlugin.notifyOfEvent(GrailsPlugin.EVENT_ON_CHANGE, aClass);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
     }
 
     public String getPluginPath(String name) {

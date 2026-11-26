@@ -21,13 +21,14 @@ package org.grails.plugins
 
 import java.nio.file.Path
 
+import org.codehaus.groovy.control.MultipleCompilationErrorsException
+
 import grails.core.DefaultGrailsApplication
 import grails.plugins.DefaultGrailsPluginManager
 import grails.plugins.Plugin
 import grails.plugins.exceptions.PluginException
 import grails.plugins.metadata.PluginDefinition
 import org.springframework.context.support.GenericApplicationContext
-import org.springframework.core.env.MapPropertySource
 import org.springframework.core.env.StandardEnvironment
 import org.springframework.core.io.ByteArrayResource
 import org.springframework.core.io.Resource
@@ -118,48 +119,6 @@ class DefaultGrailsPluginSpec extends Specification {
 
         then:
             cssResource == null
-    }
-
-    def "Test getPropertySource returns null when no mainContext is set on GrailsApplication"() {
-        when:
-        def binaryPlugin = new DefaultGrailsPlugin(testBinaryDescriptor(), new DefaultGrailsApplication())
-
-        then:
-        binaryPlugin.propertySource == null
-    }
-
-    def "Test getPropertySource looks up plugin.yml from environment"() {
-        given:
-        def grailsApp = new DefaultGrailsApplication()
-        def binaryPlugin = new DefaultGrailsPlugin(testBinaryDescriptor(), grailsApp)
-
-        def appCtx = new GenericApplicationContext()
-        def ymlPropertySource = new MapPropertySource('testBinary-plugin.yml', [foo: 'bar'])
-        appCtx.environment.propertySources.addLast(ymlPropertySource)
-
-        when:
-        grailsApp.mainContext = appCtx
-
-        then:
-        binaryPlugin.propertySource != null
-        binaryPlugin.propertySource.getProperty('foo') == 'bar'
-    }
-
-    def "Test getPropertySource looks up plugin.groovy from environment"() {
-        given:
-        def grailsApp = new DefaultGrailsApplication()
-        def binaryPlugin = new DefaultGrailsPlugin(testBinaryDescriptor(), grailsApp)
-
-        def appCtx = new GenericApplicationContext()
-        def groovyPropertySource = new MapPropertySource('testBinary-plugin.groovy', [bar: 'foo'])
-        appCtx.environment.propertySources.addLast(groovyPropertySource)
-
-        when:
-        grailsApp.mainContext = appCtx
-
-        then:
-        binaryPlugin.propertySource != null
-        binaryPlugin.propertySource.getProperty('bar') == 'foo'
     }
 
     def "Test mutual exclusion of plugin.yml and plugin.groovy is enforced by EPP"() {
@@ -290,11 +249,6 @@ class DefaultGrailsPluginSpec extends Specification {
                 }
 
                 @Override
-                void doWithDynamicMethods() {
-                    events << 'doWithDynamicMethods'
-                }
-
-                @Override
                 void doWithApplicationContext() {
                     events << 'doWithApplicationContext'
                 }
@@ -330,7 +284,6 @@ class DefaultGrailsPluginSpec extends Specification {
         when: 'lifecycle methods are dispatched through GrailsPlugin and GrailsPluginManager'
         plugin.manager = manager
         plugin.doWithRuntimeConfiguration(springConfig)
-        plugin.doWithDynamicMethods(appCtx)
         plugin.doWithApplicationContext(appCtx)
         plugin.notifyOfEvent(DefaultGrailsPlugin.EVENT_ON_CONFIG_CHANGE, [key: 'val'])
         plugin.notifyOfEvent(DefaultGrailsPlugin.EVENT_ON_SHUTDOWN, [:])
@@ -341,24 +294,32 @@ class DefaultGrailsPluginSpec extends Specification {
         then: 'every hook and aware callback was invoked'
         instance.pluginManager == manager
         instance.applicationContext == appCtx
-        instance.events == ['doWithSpring', 'doWithDynamicMethods', 'doWithApplicationContext', 'onConfigChange', 'onShutdown']
+        instance.events == ['doWithSpring', 'doWithApplicationContext', 'onConfigChange', 'onShutdown']
         plugin.beanRegistrar != null
         manager.getGrailsPlugin('lifecycleStarter').pluginInstance.events.contains('onStartup')
     }
 
-    def "Test @GrailsPluginDescriptor enabled=false disables a Plugin subclass"() {
-        given:
-        def pluginClass = compilePlugin('DisabledAnnotatedPlugin', '''
-            @grails.plugins.metadata.GrailsPluginDescriptor(name = 'disabled-annotated', enabled = false)
-            class DisabledAnnotatedPlugin extends grails.plugins.Plugin { }
-        ''')
-        def descriptor = registered(pluginClass, new ByteArrayResource(new byte[0]))
+    def "a plugin can neither override doWithDynamicMethods nor declare an enabled attribute"() {
+        when: 'a plugin overrides the removed doWithDynamicMethods hook, or declares an enabled attribute'
+        new GroovyClassLoader().parseClass(source)
 
-        when:
-        def plugin = new DefaultGrailsPlugin(descriptor, new DefaultGrailsApplication())
+        then: 'it does not compile'
+        def e = thrown(MultipleCompilationErrorsException)
+        e.message.contains(expected)
 
-        then:
-        !plugin.enabled
+        where:
+        source | expected
+        '''
+            @grails.plugins.metadata.GrailsPluginDescriptor
+            class DynamicMethodsGrailsPlugin extends grails.plugins.Plugin {
+                @Override
+                void doWithDynamicMethods() { }
+            }
+        ''' | 'doWithDynamicMethods'
+        '''
+            @grails.plugins.metadata.GrailsPluginDescriptor(enabled = false)
+            class DisabledGrailsPlugin extends grails.plugins.Plugin { }
+        ''' | 'enabled'
     }
 
     def "Test DefaultGrailsPluginManager loads a compiled plugin from its classpath descriptor"() {
@@ -415,7 +376,7 @@ class DefaultGrailsPluginSpec extends Specification {
         plugin.getDependentVersion('core') == '98.7'
     }
 
-    def "Test a plugin honors overridden descriptor name for views and propertySource"() {
+    def "Test a plugin honors overridden descriptor name for views"() {
         given: 'a plugin class whose descriptor declares the logical name bar'
         File root = new File(tempDir, 'renamed-binary-root')
         File descFile = new File(root, PluginUtils.getPluginDescriptorPath('bar'))
@@ -432,17 +393,13 @@ class DefaultGrailsPluginSpec extends Specification {
         def descriptor = descriptorOf(descFile.text, new UrlResource(descFile.toURI().toURL()))
         def loader = new URLClassLoader([root.toURI().toURL()] as URL[], getClass().classLoader)
         def grailsApp = new DefaultGrailsApplication(loader)
-        def appCtx = new GenericApplicationContext()
-        appCtx.environment.propertySources.addLast(new MapPropertySource('bar-plugin.yml', [renamed: 'yes']))
-        grailsApp.mainContext = appCtx
 
         when:
         def binaryPlugin = new DefaultGrailsPlugin(descriptor, grailsApp)
 
-        then: 'the binary plugin uses the overridden name for registration, views, and config lookup'
+        then: 'the binary plugin uses the overridden name for registration and views'
         binaryPlugin.name == 'bar'
         binaryPlugin.resolveView('/bar/index.gsp') == MyView
-        binaryPlugin.propertySource?.getProperty('renamed') == 'yes'
 
         cleanup:
         loader?.close()

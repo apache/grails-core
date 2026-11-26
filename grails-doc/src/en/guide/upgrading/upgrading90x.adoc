@@ -1661,8 +1661,10 @@ and nothing else is:
   (`def doWithSpring = { ... }`, `def onChange = { event -> ... }`) override the `Plugin` methods instead.
 * Every piece of metadata Grails needs before it creates the plugin is an attribute of the annotation, as a constant:
   `name`, `grailsVersion`, `dependsOn`, `loadAfter`, `loadBefore`, `observe`, `evict`, `environmentsIncludes`,
-  `environmentsExcludes`, `watchedResources`, `providedArtefacts`, `pluginExcludes` and `enabled`. The plugin class's
+  `environmentsExcludes`, `watchedResources`, `providedArtefacts` and `pluginExcludes`. The plugin class's
   properties of those names are no longer read.
+* A plugin can no longer be declared disabled. The `enabled` property is not read and the annotation has no `enabled`
+  attribute: an application leaves a plugin out by not depending on it or with `grails.plugin.excludes`.
 * The version is the project version. A plugin no longer declares one, and a dependency range may name it as
   `${plugin.version}`.
 * `grailsVersion` defaults to the version of Grails the plugin is compiled against and any later version.
@@ -1720,6 +1722,22 @@ descriptors only, and it no longer creates a plugin to find out what it is. A de
 a class missing from the class path, or a class that is not a `Plugin`, stops the application from starting instead of
 the plugin being skipped.
 
+===== Unmet Plugin Dependencies Stop the Application
+
+Grails 8 logged a plugin whose `dependsOn` was not met at `ERROR` and started the application without it. Grails 9
+does not start: discovery throws a `PluginException` that names every plugin that cannot be loaded and every dependency
+it lacks, whether the dependency is missing, has a version outside the required range, cannot be loaded itself, is left
+out by `grails.plugin.excludes` or `grails.plugin.includes`, or does not support the current environment.
+
+* `grails.plugin.excludes` no longer excludes the plugins that depend on an excluded plugin. Name them in
+  `grails.plugin.excludes` too; the exception names the ones that are left. `grails.plugin.includes` still includes the
+  plugins an included plugin depends on.
+* A plugin whose dependency's `environmentsIncludes` or `environmentsExcludes` leave it out of an environment must be
+  left out of that environment as well.
+* A plugin that depends on a plugin another plugin evicts still loads, as before.
+* `PluginDiscovery.hasFailedPlugin`, `getFailedPlugin` and `getFailedPlugins`, and `GrailsPluginManager.getFailedPlugin`
+  and `getFailedLoadPlugins`, are removed: discovery never finishes with a plugin that failed to load.
+
 ===== The Runtime Plugin API
 
 Every loaded plugin, whether discovery found it on the class path or its class was registered directly, is one class,
@@ -1739,11 +1757,34 @@ loaded from. The public APIs that described the old model are removed:
   `getProperties()`, `getDescriptor()`, `getPluginDir()`, `setDescriptor`, `setBasePlugin`, `addExclude` and
   `getEvictionNames()` are removed, `GrailsPlugin` is no longer `Comparable`, and `grails.plugins.GrailsPluginInfo` is
   removed, its `getName()`, `getVersion()` and `getFullName()` now being members of `GrailsPlugin`.
-* The public `enabled` field of `Plugin` is removed: whether a plugin is enabled is the `enabled` attribute of its
-  `@GrailsPluginDescriptor`, which `GrailsPlugin.isEnabled()` reports.
+* The public `enabled` field of `Plugin` is removed, and so are `GrailsPlugin.isEnabled()` and
+  `PluginInfo.isEnabled()`.
+* The `doWithDynamicMethods` hook is removed from `Plugin`, `GrailsApplicationLifeCycle` (and so from
+  `GrailsAutoConfiguration` and `GrailsApplicationLifeCycleAdapter`), `GrailsPlugin`, and the plugin manager
+  (`doDynamicMethods`). It ran in the same phase as `doWithApplicationContext`, just before it, once the application
+  context was refreshed: move its code into `doWithApplicationContext`. That hook runs for one plugin after another in
+  load order, so a plugin whose `doWithApplicationContext` calls methods another plugin adds declares that plugin in
+  `loadAfter` or `dependsOn`. The manager no longer removes the metaclasses of `String`, `Integer` and the other common
+  JDK types before the hook, so a metaclass change made to them while the context starts is kept.
+* The `artefacts` list of `Plugin`, `GrailsPlugin.doArtefactConfiguration()` and
+  `GrailsPluginManager.doArtefactConfiguration()` are removed. Artefact handlers are registered in
+  `META-INF/grails.factories`, which the compiler writes for a handler written in Groovy; see
+  <<customArtefacts,Adding Your Own Artefact Types>>.
+* `Plugin.getTypeFilters()`, `GrailsPlugin.getTypeFilters()` and `GrailsPluginManager.getTypeFilters()` are removed; the
+  component scans of `grails.spring.bean.packages` and of the `grailsContext:component-scan` element take no filters from
+  plugins.
+* `GrailsPlugin.getPropertySource()` is removed; a plugin's configuration is read from the application's
+  configuration, below `grails.plugins.<name>`, or from the property source named `<name>-plugin.yml` (or
+  `<name>-plugin.groovy`) in the Spring `Environment`.
+* `GrailsPlugin.getPluginExcludes()` is removed. `pluginExcludes` is used when the descriptor is written; the
+  published value is `PluginInfo.getDefinition().getPluginExcludes()`.
+* `GrailsPluginManager.informOfClassChange(Class)` is removed; `informOfFileChange(File)` and
+  `informOfClassChange(File, Class)` remain.
+* `ProfilingGrailsPluginManager` and the `grails.plugins.PluginManagerLoader` interface are removed. The application
+  context's `ApplicationStartup` records the startup steps, which Spring Boot Actuator's `startup` endpoint shows.
 * Plugin source files are no longer compiled at run time. `PluginDiscovery.setPluginResources`, `getPluginResources`
-  and `getDynamicPlugins`, the `DefaultPluginDiscovery` constructors taking resource paths or resources, the
-  `ProfilingGrailsPluginManager` constructors taking them, `GrailsPluginManager.refreshPlugin` and
+  and `getDynamicPlugins`, the `DefaultPluginDiscovery` constructors taking resource paths or resources,
+  `GrailsPluginManager.refreshPlugin` and
   `GrailsPluginManager.getUserPlugins` are removed. Register compiled plugin classes with
   `PluginDiscovery.setPluginClasses` or `new DefaultPluginDiscovery(Class[])` instead.
 
@@ -1753,6 +1794,9 @@ loaded from. The public APIs that described the old model are removed:
   properties into the annotation, and delete `version`, the informational properties and `profiles`.
 * Replace closure-valued hooks with the `Plugin` methods they stand for.
 * Write `dependsOn` as a list of `'name'` or `'name:range'` strings rather than a map.
+* Move the code of `doWithDynamicMethods` into `doWithApplicationContext`, delete a `def artefacts = [...]` list (the
+  compiler registers the plugin's artefact handlers) and an `enabled` property.
+* Where `grails.plugin.excludes` names a plugin others depend on, name its dependents too.
 * Rebuild and republish the plugin with Grails 9.
 * A plugin written in Java adds `grails-core` to its `annotationProcessor` configuration, so the Grails annotation
   processor writes its descriptor.

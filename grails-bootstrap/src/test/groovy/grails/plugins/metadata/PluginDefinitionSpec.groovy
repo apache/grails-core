@@ -40,6 +40,9 @@ class PluginDefinitionSpec extends Specification {
         published.dependsOn == [core: '9.0.1']
         published.grailsVersionRange == '9.0.1 > *'
         published.loadAfter == ['somePlugin']
+
+        and: 'a plugin is never written as disabled: it is disabled by not shipping it or by grails.plugin.excludes'
+        !output.toString().contains('enabled')
     }
 
     void 'tools read immutable metadata without loading the implementation or its artefacts'() {
@@ -79,7 +82,6 @@ class PluginDefinitionSpec extends Specification {
         where:
         line                      | field
         'format.version=2'        | 'format'
-        'enabled=nope'            | 'enabled'
         'name=probe'              | 'names no plugin class'
         'name=mistake'            | 'name'
     }

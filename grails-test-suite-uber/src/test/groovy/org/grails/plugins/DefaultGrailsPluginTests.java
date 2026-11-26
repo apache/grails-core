@@ -61,7 +61,6 @@ public class DefaultGrailsPluginTests extends AbstractGrailsMockTests {
     private Class<?> versioned2;
     private Class<?> versioned3;
     private Class<?> unversioned;
-    private Class<?> disabled;
     private Class<?> observed;
     private Class<?> camelCased;
 
@@ -82,7 +81,7 @@ public class DefaultGrailsPluginTests extends AbstractGrailsMockTests {
                 "assert event != null" +
                 "}\n" +
                 "}");
-        camelCased = versionedLoader.parseClass("@grails.plugins.metadata.GrailsPluginDescriptor(enabled = false)\n" +
+        camelCased = versionedLoader.parseClass("@grails.plugins.metadata.GrailsPluginDescriptor\n" +
                 "class CamelCasedGrailsPlugin extends grails.plugins.Plugin {}");
         versioned2 = gcl.parseClass("@grails.plugins.metadata.GrailsPluginDescriptor\n" +
                 "class MyTwoGrailsPlugin extends grails.plugins.Plugin {\n" +
@@ -102,9 +101,7 @@ public class DefaultGrailsPluginTests extends AbstractGrailsMockTests {
         unversioned = gcl.parseClass("@grails.plugins.metadata.GrailsPluginDescriptor\n" +
                 "class AnotherGrailsPlugin extends grails.plugins.Plugin {\n" +
                 "}");
-        disabled = gcl.parseClass("@grails.plugins.metadata.GrailsPluginDescriptor(enabled = false)\n" +
-                "class DisabledGrailsPlugin extends grails.plugins.Plugin {}");
-        observed = gcl.parseClass("@grails.plugins.metadata.GrailsPluginDescriptor(observe = ['another'], enabled = false)\n" +
+        observed = gcl.parseClass("@grails.plugins.metadata.GrailsPluginDescriptor(observe = ['another'])\n" +
                 "class ObservingGrailsPlugin extends grails.plugins.Plugin {}");
     }
 
@@ -164,15 +161,6 @@ public class DefaultGrailsPluginTests extends AbstractGrailsMockTests {
 
         GrailsPlugin camelCasedPlugin = new DefaultGrailsPlugin(camelCased, ga);
         assertEquals("/plugins/camel-cased-2.1", camelCasedPlugin.getPluginPath());
-    }
-
-    @Test
-    public void testDisabledPlugin() {
-        GrailsPlugin disabledPlugin = new DefaultGrailsPlugin(disabled, ga);
-        GrailsPlugin enabledPlugin = new DefaultGrailsPlugin(versioned, ga);
-
-        assertFalse(disabledPlugin.isEnabled());
-        assertTrue(enabledPlugin.isEnabled());
     }
 
     @Test

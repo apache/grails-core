@@ -18,18 +18,11 @@
  */
 package grails.plugins;
 
-import java.math.BigDecimal;
-import java.math.BigInteger;
-import java.net.URI;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-
-import groovy.lang.GroovySystem;
-import groovy.lang.MetaClassRegistry;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -42,7 +35,6 @@ import grails.core.GrailsApplication;
 import grails.plugins.exceptions.PluginException;
 import org.apache.grails.core.plugins.PluginDiscovery;
 import org.apache.grails.core.plugins.PluginInfo;
-import org.grails.core.exceptions.GrailsConfigurationException;
 import org.grails.plugins.AbstractGrailsPluginManager;
 import org.grails.plugins.DefaultGrailsPlugin;
 import org.grails.spring.DefaultRuntimeSpringConfiguration;
@@ -55,11 +47,6 @@ import org.grails.spring.RuntimeSpringConfiguration;
  */
 public class DefaultGrailsPluginManager extends AbstractGrailsPluginManager {
 
-    protected static final Class<?>[] COMMON_CLASSES = {
-        Boolean.class, Byte.class, Character.class, Class.class, Double.class, Float.class,
-        Integer.class, Long.class, Number.class, Short.class, String.class, BigInteger.class,
-        BigDecimal.class, URL.class, URI.class
-    };
     private static final Log LOG = LogFactory.getLog(DefaultGrailsPluginManager.class);
 
     private ApplicationContext parentCtx;
@@ -146,33 +133,11 @@ public class DefaultGrailsPluginManager extends AbstractGrailsPluginManager {
     }
 
     public void reloadPlugin(GrailsPlugin plugin) {
-        plugin.doArtefactConfiguration();
-
         RuntimeSpringConfiguration springConfig = new DefaultRuntimeSpringConfiguration(parentCtx);
 
         doRuntimeConfiguration(plugin.getName(), springConfig);
         springConfig.registerBeansWithContext((GenericApplicationContext) applicationContext);
 
         plugin.doWithApplicationContext(applicationContext);
-        plugin.doWithDynamicMethods(applicationContext);
-    }
-
-    @Override
-    public void doDynamicMethods() {
-        checkInitialised();
-        // remove common meta classes just to be sure
-        MetaClassRegistry registry = GroovySystem.getMetaClassRegistry();
-        for (Class<?> COMMON_CLASS : COMMON_CLASSES) {
-            registry.removeMetaClass(COMMON_CLASS);
-        }
-        for (GrailsPlugin plugin : getOrderedPlugins()) {
-            if (plugin.supportsCurrentScopeAndEnvironment()) {
-                try {
-                    plugin.doWithDynamicMethods(applicationContext);
-                } catch (Throwable t) {
-                    throw new GrailsConfigurationException("Error configuring dynamic methods for plugin " + plugin + ": " + t.getMessage(), t);
-                }
-            }
-        }
     }
 }

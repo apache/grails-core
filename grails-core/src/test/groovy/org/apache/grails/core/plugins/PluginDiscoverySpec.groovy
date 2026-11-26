@@ -22,10 +22,13 @@ import ch.qos.logback.classic.Level
 import spock.lang.Specification
 import spock.lang.Unroll
 
+import org.springframework.core.env.MapPropertySource
 import org.springframework.core.env.StandardEnvironment
 
 import grails.plugins.exceptions.PluginException
 import grails.plugins.metadata.PluginDefinition
+import org.apache.grails.core.plugins.filters.ExcludingPluginFilter
+import org.apache.grails.core.plugins.filters.IncludingPluginFilter
 import org.apache.grails.core.testing.support.LogCapture
 
 class PluginDiscoverySpec extends Specification {
@@ -496,7 +499,6 @@ class PluginDiscoverySpec extends Specification {
         metadata.getDependentVersion('i18n') == '9.0.0 > *'
         metadata.evictions as List == ['legacyPlugin']
         metadata.observedPluginNames as List == ['services']
-        metadata.enabled
 
         and: 'a class registered directly without a descriptor on its class path has no version'
         metadata.pluginVersion == null
@@ -574,7 +576,7 @@ class PluginDiscoverySpec extends Specification {
         def first = loader.parseClass('package a; class TestGrailsPlugin extends grails.plugins.Plugin { }')
         def second = loader.parseClass('package b; class TestGrailsPlugin extends grails.plugins.Plugin { }')
         def info1 = new PluginInfo(new PluginDefinition.Builder(pluginName: 'test', pluginClass: 'a.TestGrailsPlugin', pluginVersion: '1.0', loadAfter: ['a']).build(), first, null, null)
-        def info2 = new PluginInfo(new PluginDefinition.Builder(pluginName: 'test', pluginClass: 'b.TestGrailsPlugin', pluginVersion: '2.0', dependsOn: [dep: '1.0'], enabled: false).build(), second, null, null)
+        def info2 = new PluginInfo(new PluginDefinition.Builder(pluginName: 'test', pluginClass: 'b.TestGrailsPlugin', pluginVersion: '2.0', dependsOn: [dep: '1.0'], observe: ['other']).build(), second, null, null)
 
         expect: 'equality is based on name only, not other attributes'
         info1 == info2
@@ -746,11 +748,10 @@ class PluginDiscoverySpec extends Specification {
         discovery.init(new StandardEnvironment())
 
         then: 'the dependency is satisfied and loaded first'
-        !discovery.hasFailedPlugin('needsVersionedDependency')
         discovery.pluginsInLoadOrder*.name == ['unknownVersionDependency', 'needsVersionedDependency']
     }
 
-    def 'reports every missing or incompatible plugin dependency at ERROR'() {
+    def 'stops discovery with one exception naming every missing or incompatible plugin dependency'() {
         given: 'a discovery bean with one available and one unresolved plugin, versioned by their descriptors'
         def root = File.createTempDir()
         def gcl = PluginClassFixtures.versionedPluginLoader(root.toPath(), [AvailableDependencyGrailsPlugin: '1.0.0', UnresolvedDependenciesGrailsPlugin: '4.0.0'])
@@ -762,43 +763,29 @@ class PluginDiscoverySpec extends Specification {
             @grails.plugins.metadata.GrailsPluginDescriptor(dependsOn = ['missingDependency:1.0.0', 'availableDependency:2.0.0'])
             class UnresolvedDependenciesGrailsPlugin extends grails.plugins.Plugin { }
         ''')
-        def discovery = new DefaultPluginDiscovery(
-                [availableDependencyClass, unresolvedDependenciesClass] as Class<?>[]
-        ).tap {
-            loadPluginsFromClasspath = false
-        }
-
-        and: 'configure a logback appender to capture log messages'
-        def logCapture = new LogCapture(DefaultPluginDiscovery)
+        def discovery = directDiscovery(availableDependencyClass, unresolvedDependenciesClass)
 
         when: 'the public discovery API initializes the plugin set'
         discovery.init(new StandardEnvironment())
 
-        then: 'the unresolved plugin remains failed and is not loaded'
-        with(discovery) {
-            hasFailedPlugin('unresolvedDependencies')
-            !hasPlugin('unresolvedDependencies')
-            pluginsInLoadOrder*.name == ['availableDependency']
-        }
+        then: 'the application cannot start: one exception identifies the plugin and every unresolved dependency'
+        def e = thrown(PluginException)
+        e.message.contains('Grails plug-in [unresolvedDependencies] with version [4.0.0] cannot be loaded')
+        e.message.contains('dependency [missingDependency] with required version [1.0.0] is missing')
+        e.message.contains('dependency [availableDependency] has version [1.0.0] but requires [2.0.0]')
 
-        and: 'one message at ERROR identifies the failed plugin and every unresolved dependency'
-        def errors = logCapture.events.findAll { it.formattedMessage.contains('unresolvedDependencies') }
-        errors.size() == 1
-        with(errors[0]) {
-            level == Level.ERROR
-            formattedMessage.contains('Grails plug-in [unresolvedDependencies] with version [4.0.0] cannot be loaded')
-            formattedMessage.contains('dependency [missingDependency] with required version [1.0.0] is missing')
-            formattedMessage.contains('dependency [availableDependency] has version [1.0.0] but requires [2.0.0]')
-            throwableProxy == null
-        }
+        when: 'the discovery is asked for its plugins afterwards'
+        discovery.pluginsInLoadOrder
+
+        then: 'it is not left initialized with a partial plugin set'
+        thrown(IllegalStateException)
 
         cleanup:
-        logCapture.close()
         gcl?.close()
         root.deleteDir()
     }
 
-    def 'reports a dependency that failed to load as failed rather than missing'() {
+    def 'names every plugin that cannot be loaded, reporting a dependency that failed to load as failed rather than missing'() {
         given: 'a plugin whose only dependency itself fails to load due to a genuinely missing dependency'
         def gcl = new GroovyClassLoader()
         def failingDependencyClass = gcl.parseClass('''
@@ -809,39 +796,24 @@ class PluginDiscoverySpec extends Specification {
             @grails.plugins.metadata.GrailsPluginDescriptor(dependsOn = ['failingDependency:1.0.0'])
             class DependentOnFailedGrailsPlugin extends grails.plugins.Plugin { }
         ''')
-        def discovery = new DefaultPluginDiscovery(
-                [failingDependencyClass, dependentClass] as Class<?>[]
-        ).tap {
-            loadPluginsFromClasspath = false
-        }
-
-        and: 'configure a logback appender to capture log messages'
-        def logCapture = new LogCapture(DefaultPluginDiscovery)
+        def discovery = directDiscovery(failingDependencyClass, dependentClass)
 
         when:
         discovery.init(new StandardEnvironment())
 
-        then: 'both plugins end up failed'
-        with(discovery) {
-            hasFailedPlugin('failingDependency')
-            hasFailedPlugin('dependentOnFailed')
-        }
+        then: 'one exception names both plugins, one line each'
+        def e = thrown(PluginException)
+        def lines = e.message.readLines()
+        lines.size() == 3
 
         and: 'the missing root cause is reported as missing'
-        def rootCause = logCapture.events.find { it.formattedMessage.contains('[failingDependency]') }
-        rootCause.level == Level.ERROR
-        rootCause.formattedMessage.contains('dependency [reallyMissing] with required version [1.0.0] is missing')
+        def rootCause = lines.find { it.contains('[failingDependency] cannot be loaded') }
+        rootCause.contains('dependency [reallyMissing] with required version [1.0.0] is missing')
 
         and: 'the plugin depending on the failed plugin reports it as failed, not missing'
-        def dependent = logCapture.events.find { it.formattedMessage.contains('[dependentOnFailed]') }
-        dependent.level == Level.ERROR
-        dependent.formattedMessage.contains(
-                'dependency [failingDependency] with required version [1.0.0] failed to load'
-        )
-        !dependent.formattedMessage.contains('is missing')
-
-        cleanup:
-        logCapture.close()
+        def dependent = lines.find { it.contains('[dependentOnFailed]') }
+        dependent.contains('dependency [failingDependency] with required version [1.0.0] failed to load')
+        !dependent.contains('is missing')
     }
 
     def 'reports a dependency that is still pending load together with the version that was found'() {
@@ -858,36 +830,169 @@ class PluginDiscoverySpec extends Specification {
         ''')
 
         and: 'the dependent plugin is processed before the pending dependency gives up'
-        def discovery = new DefaultPluginDiscovery(
-                [dependentClass, pendingDependencyClass] as Class<?>[]
-        ).tap {
-            loadPluginsFromClasspath = false
-        }
-
-        and: 'configure a logback appender to capture log messages'
-        def logCapture = new LogCapture(DefaultPluginDiscovery)
+        def discovery = directDiscovery(dependentClass, pendingDependencyClass)
 
         when:
         discovery.init(new StandardEnvironment())
 
-        then: 'both plugins end up failed'
-        with(discovery) {
-            hasFailedPlugin('needsNewerPending')
-            hasFailedPlugin('pendingDependency')
-        }
+        then: 'both plugins are named'
+        def e = thrown(PluginException)
+        e.message.contains('Grails plug-in [pendingDependency] with version [1.0.0] cannot be loaded: ' +
+                'dependency [reallyMissing] with required version [1.0.0] is missing')
 
         and: 'the dependent plugin reports the pending dependency with the version it found'
-        def dependent = logCapture.events.find { it.formattedMessage.contains('[needsNewerPending]') }
-        dependent.level == Level.ERROR
-        dependent.formattedMessage.contains(
+        def dependent = e.message.readLines().find { it.contains('[needsNewerPending]') }
+        dependent.contains(
                 'dependency [pendingDependency] with required version [2.0.0] is still pending load ' +
                         'and only version [1.0.0] was found'
         )
-        !dependent.formattedMessage.contains('is missing')
+        !dependent.contains('is missing')
 
         cleanup:
-        logCapture.close()
         gcl?.close()
         root.deleteDir()
+    }
+
+    def 'a dependency excluded by grails.plugin.excludes stops discovery, naming the dependent to exclude too'() {
+        given: 'a dependency and its dependent'
+        def classes = dependencyAndDependent('ExcludedDependency', 'KeptDependent', '')
+        def environment = new StandardEnvironment()
+        environment.propertySources.addFirst(new MapPropertySource('test', ['grails.plugin.excludes': 'excludedDependency']))
+
+        when: 'only the dependency is excluded'
+        directDiscovery(classes).init(environment)
+
+        then: 'the dependent is not dropped silently: the application cannot start'
+        def e = thrown(PluginException)
+        e.message.contains('Grails plug-in [keptDependent] cannot be loaded: dependency ' +
+                '[excludedDependency] is left out by the plugin filter (grails.plugin.excludes or grails.plugin.includes); ' +
+                'leave out [keptDependent] too')
+    }
+
+    def 'excluding a dependency together with its dependents leaves both out'() {
+        given:
+        def classes = dependencyAndDependent('ExcludedTogether', 'ExcludedWithIt', '')
+        def discovery = directDiscovery(classes).tap {
+            pluginFilter = new ExcludingPluginFilter('excludedTogether', 'excludedWithIt')
+        }
+
+        when:
+        discovery.init(new StandardEnvironment())
+
+        then:
+        discovery.pluginsInLoadOrder.empty
+    }
+
+    def 'including a plugin includes its dependencies, so a test application that names a few plugins starts'() {
+        given: 'a dependency, a dependent of it, and an unrelated plugin'
+        def gcl = new GroovyClassLoader()
+        def classes = dependencyAndDependent('IncludedDependency', 'IncludedDependent', '', gcl) +
+                gcl.parseClass('@grails.plugins.metadata.GrailsPluginDescriptor class UnrelatedGrailsPlugin extends grails.plugins.Plugin { }')
+        def discovery = directDiscovery(classes).tap {
+            pluginFilter = new IncludingPluginFilter('includedDependent')
+        }
+
+        when: 'only the dependent is named'
+        discovery.init(new StandardEnvironment())
+
+        then: 'its dependency is included with it, and loaded first'
+        discovery.pluginsInLoadOrder*.name == ['includedDependency', 'includedDependent']
+    }
+
+    def 'including a plugin whose dependency is not on the class path reports the dependency as missing'() {
+        given:
+        def dependent = new GroovyClassLoader().parseClass('''
+            @grails.plugins.metadata.GrailsPluginDescriptor(dependsOn = ['absent'])
+            class IncludedWithoutDependencyGrailsPlugin extends grails.plugins.Plugin { }
+        ''')
+        def discovery = directDiscovery(dependent).tap {
+            pluginFilter = new IncludingPluginFilter('includedWithoutDependency')
+        }
+
+        when:
+        discovery.init(new StandardEnvironment())
+
+        then:
+        def e = thrown(PluginException)
+        e.message.contains('dependency [absent] with required version [*] is missing')
+    }
+
+    def 'a dependency its environments leave out of the current environment stops discovery'() {
+        given: 'a dependency that does not support the current environment'
+        def current = grails.util.Environment.current.name
+        def classes = dependencyAndDependent('OtherEnvironmentDependency', 'EnvironmentDependent',
+                "environmentsExcludes = ['${current}']")
+
+        when:
+        directDiscovery(classes).init(new StandardEnvironment())
+
+        then: 'the dependent cannot be loaded, and the message says why and what to do'
+        def e = thrown(PluginException)
+        e.message.contains("Grails plug-in [environmentDependent] cannot be loaded: dependency " +
+                "[otherEnvironmentDependency] does not support the [${current}] environment; leave " +
+                '[environmentDependent] out of that environment too, with its environmentsIncludes or environmentsExcludes')
+    }
+
+    def 'a plugin left out of the current environment with its dependency loads neither, and is not reported'() {
+        given: 'a dependency and a dependent that both exclude the current environment'
+        def current = grails.util.Environment.current.name
+        def gcl = new GroovyClassLoader()
+        def dependency = gcl.parseClass("""
+            @grails.plugins.metadata.GrailsPluginDescriptor(environmentsExcludes = ['${current}'])
+            class SkippedDependencyGrailsPlugin extends grails.plugins.Plugin { }
+        """)
+        def dependent = gcl.parseClass("""
+            @grails.plugins.metadata.GrailsPluginDescriptor(dependsOn = ['skippedDependency'], environmentsExcludes = ['${current}'])
+            class SkippedDependentGrailsPlugin extends grails.plugins.Plugin { }
+        """)
+        def discovery = directDiscovery(dependent, dependency)
+
+        when:
+        discovery.init(new StandardEnvironment())
+
+        then:
+        discovery.pluginsInLoadOrder.empty
+    }
+
+    def 'a plugin depending on an evicted plugin still loads, the evicting plugin standing in for it'() {
+        given: 'a plugin, a dependent of it, and a plugin that evicts it'
+        def gcl = new GroovyClassLoader()
+        def classes = dependencyAndDependent('Replaced', 'NeedsReplaced', '', gcl) + gcl.parseClass('''
+            @grails.plugins.metadata.GrailsPluginDescriptor(evict = ['replaced'])
+            class ReplacementGrailsPlugin extends grails.plugins.Plugin { }
+        ''')
+        def discovery = directDiscovery(classes)
+
+        when:
+        discovery.init(new StandardEnvironment())
+
+        then: 'the evicted plugin is gone, and the plugin that needed it is loaded with its replacement'
+        discovery.pluginsInLoadOrder*.name as Set == ['needsReplaced', 'replacement'] as Set
+        !discovery.hasPlugin('replaced')
+    }
+
+    private static DefaultPluginDiscovery directDiscovery(Class<?>... pluginClasses) {
+        new DefaultPluginDiscovery(pluginClasses).tap {
+            loadPluginsFromClasspath = false
+        }
+    }
+
+    private static DefaultPluginDiscovery directDiscovery(List<Class<?>> pluginClasses) {
+        directDiscovery(pluginClasses as Class<?>[])
+    }
+
+    /**
+     * A plugin named after {@code dependency} and one named after {@code dependent} that depends on it, the
+     * dependency declaring the given extra descriptor attributes.
+     */
+    private static List<Class<?>> dependencyAndDependent(String dependency, String dependent, String dependencyAttributes,
+                                                     GroovyClassLoader gcl = new GroovyClassLoader()) {
+        String dependencyName = dependency.uncapitalize()
+        [
+                gcl.parseClass("@grails.plugins.metadata.GrailsPluginDescriptor(${dependencyAttributes}) " +
+                        "class ${dependency}GrailsPlugin extends grails.plugins.Plugin { }"),
+                gcl.parseClass("@grails.plugins.metadata.GrailsPluginDescriptor(dependsOn = ['${dependencyName}']) " +
+                        "class ${dependent}GrailsPlugin extends grails.plugins.Plugin { }")
+        ] as List<Class<?>>
     }
 }

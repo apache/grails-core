@@ -55,7 +55,6 @@ final class PluginDefinition {
     final List<String> providedArtefacts
     final Map<String, List<String>> artefactsByType
     final Map<String, String> dependsOn
-    final boolean enabled
 
     /** Mutable declaration inputs. Building takes an immutable, normalized snapshot. */
     static final class Builder {
@@ -74,7 +73,6 @@ final class PluginDefinition {
         List<String> providedArtefacts
         Map<String, List<String>> artefactsByType
         Map<String, String> dependsOn
-        boolean enabled = true
 
         PluginDefinition build() {
             new PluginDefinition(this)
@@ -108,7 +106,6 @@ final class PluginDefinition {
                     "artefact class names: pluginExcludes are Ant patterns of class names, such as 'com/example/demo/**'")
         }
         providedArtefacts = copyEntries(source.providedArtefacts)
-        enabled = source.enabled
 
         Map<String, String> dependencies = new LinkedHashMap<>()
         source.dependsOn?.each { String name, String constraint ->
@@ -158,7 +155,7 @@ final class PluginDefinition {
      * attribute name, so the two agree on every default.
      *
      * @param pluginClass the annotated class
-     * @param attributes the annotation attributes that are set: {@code String}, {@code Boolean} or a
+     * @param attributes the annotation attributes that are set: {@code String} or a
      *        {@code List<String>} of values (class names for {@code providedArtefacts})
      * @param pluginVersion the plugin's version (the build's project version), or {@code null}
      * @param defaultGrailsVersion the Grails range used when the descriptor declares none, or {@code null}
@@ -185,8 +182,6 @@ final class PluginDefinition {
         builder.pluginExcludes = list(attributes, 'pluginExcludes')
         builder.providedArtefacts = list(attributes, 'providedArtefacts')
         builder.dependsOn = parseDependencies(list(attributes, 'dependsOn'))
-        Object enabled = attributes.get('enabled')
-        builder.enabled = enabled == null || (Boolean) enabled
         builder.artefactsByType = artefactsByType ?: [:]
         builder.build()
     }
@@ -259,7 +254,6 @@ final class PluginDefinition {
         builder.watchedResources = entries(values.getProperty('watchedResources'))
         builder.pluginExcludes = entries(values.getProperty('pluginExcludes'))
         builder.providedArtefacts = entries(values.getProperty('providedArtefacts'))
-        builder.enabled = flag(values, 'enabled', true)
         builder.dependsOn = new LinkedHashMap<>()
         builder.artefactsByType = new LinkedHashMap<>()
         for (String key : values.stringPropertyNames().sort()) {
@@ -283,9 +277,6 @@ final class PluginDefinition {
         }
         if (grailsVersionRange) {
             entries.put('grailsVersion', grailsVersionRange)
-        }
-        if (!enabled) {
-            entries.put('enabled', 'false')
         }
         addList(entries, 'loadAfter', loadAfter)
         addList(entries, 'loadBefore', loadBefore)
@@ -415,16 +406,5 @@ final class PluginDefinition {
             }
         }
         sb.toString()
-    }
-
-    private static boolean flag(Properties values, String key, boolean fallback) {
-        String value = values.getProperty(key)?.trim()
-        if (!value) {
-            return fallback
-        }
-        if (!value.equalsIgnoreCase('true') && !value.equalsIgnoreCase('false')) {
-            throw new IllegalArgumentException("Invalid boolean for ${key}: ${value}")
-        }
-        Boolean.parseBoolean(value)
     }
 }

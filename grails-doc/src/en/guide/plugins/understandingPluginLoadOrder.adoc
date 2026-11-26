@@ -35,8 +35,9 @@ class HibernateGrailsPlugin extends Plugin {
 The Hibernate plugin is dependent on the presence of four plugins: the `dataSource`, `domainClass`, `i18n` and `core`
 plugins.
 
-The dependencies will be loaded before the Hibernate plugin and if all dependencies do not load, then the plugin will
-not load.
+The dependencies will be loaded before the Hibernate plugin, and if any of them cannot be loaded the application does
+not start: plugin discovery throws an exception naming every plugin with an unmet dependency and why, as described in
+<<unmetPluginDependencies,Unmet Dependencies>>.
 
 A dependency can name a range of versions after a colon, in a mini expression language:
 
@@ -65,8 +66,8 @@ test source set, has no version, and an unknown version satisfies every range.
 ==== Controlling Load Order
 
 
-Using `dependsOn` establishes a "hard" dependency in that if the dependency is not resolved, the plugin will give up
-and won't load. It is possible though to have a weaker dependency using `loadAfter` and `loadBefore`:
+Using `dependsOn` establishes a "hard" dependency in that if the dependency is not resolved, the application does not
+start. It is possible though to have a weaker dependency using `loadAfter` and `loadBefore`:
 
 [source,groovy]
 ----

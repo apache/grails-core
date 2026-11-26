@@ -28,10 +28,8 @@ import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProce
 import org.springframework.context.annotation.ClassPathBeanDefinitionScanner;
 import org.springframework.core.io.DefaultResourceLoader;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
-import org.springframework.core.type.filter.TypeFilter;
 import org.springframework.util.AntPathMatcher;
 
-import grails.plugins.GrailsPluginManager;
 import grails.util.GrailsStringUtils;
 
 /**
@@ -41,19 +39,19 @@ import grails.util.GrailsStringUtils;
  * that {@link ClosureClassIgnoringComponentScanBeanDefinitionParser} serves, so the scan can
  * be contributed without the XML namespace handler and therefore without the bean builder
  * DSL. The two share their behaviour: class files whose name contains {@code $} are skipped,
- * because a Groovy closure compiles to a class that is never a component candidate, and any
- * {@link TypeFilter} the plugin manager contributes is applied as an include filter.</p>
+ * because a Groovy closure compiles to a class that is never a component candidate.</p>
  *
  * @since 8.0
  */
 public class GrailsComponentScanPostProcessor implements BeanDefinitionRegistryPostProcessor {
 
     private final List<String> packagesToScan;
-    private final GrailsPluginManager pluginManager;
 
-    public GrailsComponentScanPostProcessor(List<String> packagesToScan, GrailsPluginManager pluginManager) {
+    /**
+     * @param packagesToScan the packages to scan for annotated components
+     */
+    public GrailsComponentScanPostProcessor(List<String> packagesToScan) {
         this.packagesToScan = packagesToScan;
-        this.pluginManager = pluginManager;
     }
 
     @Override
@@ -64,11 +62,6 @@ public class GrailsComponentScanPostProcessor implements BeanDefinitionRegistryP
 
         ClassPathBeanDefinitionScanner scanner = new ClassPathBeanDefinitionScanner(registry);
         scanner.setResourceLoader(resourcePatternResolver());
-        if (pluginManager != null) {
-            for (TypeFilter typeFilter : pluginManager.getTypeFilters()) {
-                scanner.addIncludeFilter(typeFilter);
-            }
-        }
         scanner.scan(packagesToScan.toArray(new String[0]));
     }
 

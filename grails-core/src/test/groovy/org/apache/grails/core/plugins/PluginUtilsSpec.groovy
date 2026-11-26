@@ -143,7 +143,6 @@ class PluginUtilsSpec extends Specification {
         metadata.loadBeforeNames.length == 0
         metadata.dependsOnNames.length == 0
         metadata.environments.isEmpty()
-        metadata.enabled
     }
 
     def "createPluginInfo reads the environments the annotation includes and excludes"() {

@@ -113,7 +113,8 @@ plugin is compiled against and any later version.
 
 |`dependsOn`
 |Plugins that must be present, as `'name'` or `'name:range'`. `${plugin.version}` stands for the plugin's own version,
-so `'core:${plugin.version}'` requires the version of `core` the plugin is released with.
+so `'core:${plugin.version}'` requires the version of `core` the plugin is released with. A dependency that is not met
+stops the application from starting: see <<unmetPluginDependencies,Unmet Dependencies>>.
 
 |`loadAfter`, `loadBefore`
 |Plugins this one is loaded after or before, when they are present.
@@ -125,7 +126,7 @@ so `'core:${plugin.version}'` requires the version of `core` the plugin is relea
 |Plugins this one replaces: they are not loaded when it is.
 
 |`environmentsIncludes`, `environmentsExcludes`
-|The environments the plugin is loaded in.
+|The environments the plugin is loaded in. A plugin that depends on it is left out of the other environments too.
 
 |`watchedResources`
 |Ant patterns of the files whose changes are passed to `onChange` while the application runs in development.
@@ -136,18 +137,36 @@ so `'core:${plugin.version}'` requires the version of `core` the plugin is relea
 |`pluginExcludes`
 |Ant patterns of the artefact classes left out of the plugin's descriptor, written as class names with `/` between the
 parts: `'com/example/demo/**'`. A pattern of source files, such as `'grails-app/views/**'`, is an error.
-
-|`enabled`
-|Whether the plugin is enabled. `true` by default.
 |===
+
+A plugin has no switch that turns it off: an application leaves a plugin out by not depending on it, or by naming it in
+`grails.plugin.excludes`.
 
 The plugin's version is not declared: it is the version of the project that builds it. The description, license,
 developers and source locations of a plugin are the publication's, declared in the `grailsPublish` block of
 `build.gradle` and written to its POM.
 
 The plugin's behaviour is the `Plugin` methods it overrides: `beanRegistrar()` (or `doWithSpring()`),
-`doWithApplicationContext()`, `doWithDynamicMethods()`, `onChange(Map)`, `onConfigChange(Map)`, `onStartup(Map)` and
+`doWithApplicationContext()`, `onChange(Map)`, `onConfigChange(Map)`, `onStartup(Map)` and
 `onShutdown(Map)`, described in <<hookingIntoRuntimeConfiguration>> and <<participatingInAutoReloadEvents>>.
+
+[[unmetPluginDependencies]]
+==== Unmet Dependencies
+
+Every `dependsOn` of every plugin the application loads must be met. When one is not, the application does not start:
+plugin discovery throws a `grails.plugins.exceptions.PluginException` that names every plugin that cannot be loaded and,
+for each, every dependency it lacks and why:
+
+* the dependency is not on the class path;
+* its version is outside the required range;
+* it cannot be loaded itself;
+* the application leaves it out with `grails.plugin.excludes`, or does not name it in `grails.plugin.includes`. Excluding
+  a plugin does not exclude the plugins that depend on it: name them in `grails.plugin.excludes` too. Including a plugin
+  includes the plugins it depends on;
+* its `environmentsIncludes` or `environmentsExcludes` leave it out of the current environment. Leave the plugin that
+  depends on it out of that environment as well.
+
+A plugin that depends on a plugin another plugin evicts still loads: the evicting plugin stands in for the evicted one.
 
 ==== The Plugin Descriptor
 

@@ -129,18 +129,6 @@ class GrailsGroovyCompilerConfigSpec extends GradleSpecification {
         result.output.contains("missing-config.groovy' which doesn't exist")
     }
 
-    def "a plugin project declares the version and name it bakes into compiled classes as inputs"() {
-        given: 'a Grails plugin project, whose script stamps projectVersion/projectName AST metadata'
-        setupTestResourceProject('compiler-config-plugin-inputs')
-
-        when:
-        def result = executeTask('inspectPluginInputs')
-
-        then: 'both are inputs of the compile task, so changing either recompiles'
-        result.output.contains('HAS_VERSION_INPUT=true')
-        result.output.contains('HAS_NAME_INPUT=true')
-    }
-
     def "the generator waits for a task that produces the build's own config script"() {
         given: 'a build whose configurationScript is the output of another task'
         setupTestResourceProject('compiler-config-generated-user-script')

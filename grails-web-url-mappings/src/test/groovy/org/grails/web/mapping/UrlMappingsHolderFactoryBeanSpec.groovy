@@ -24,6 +24,7 @@ import grails.plugins.DefaultGrailsPluginManager
 import grails.plugins.GrailsPluginManager
 import grails.web.mapping.UrlMappingsHolder
 import org.apache.grails.core.plugins.DefaultPluginDiscovery
+import org.apache.grails.core.plugins.filters.IncludingPluginFilter
 
 import org.springframework.context.support.GenericApplicationContext
 import spock.lang.Specification
@@ -39,7 +40,9 @@ class UrlMappingsHolderFactoryBeanSpec extends Specification {
         def context = new GenericApplicationContext()
         context.refresh()
         def app = new DefaultGrailsApplication(ExcludeUrlMappings)
+        // the controllers plugin on the test class path needs the url mappings plugin, which this module's tests lack
         def discovery = new DefaultPluginDiscovery()
+        discovery.pluginFilter = new IncludingPluginFilter('core')
         discovery.init(context.getEnvironment())
         def pm = new DefaultGrailsPluginManager(app, discovery)
         context.beanFactory.registerSingleton(GrailsApplication.APPLICATION_ID, app)

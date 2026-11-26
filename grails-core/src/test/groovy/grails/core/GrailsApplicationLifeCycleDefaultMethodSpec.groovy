@@ -36,10 +36,6 @@ class GrailsApplicationLifeCycleDefaultMethodSpec extends Specification {
             }
 
             @Override
-            void doWithDynamicMethods() {
-            }
-
-            @Override
             void doWithApplicationContext() {
             }
 

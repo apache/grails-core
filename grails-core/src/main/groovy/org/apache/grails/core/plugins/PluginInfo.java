@@ -153,11 +153,6 @@ public final class PluginInfo {
         return environments;
     }
 
-    /** @return whether the plugin is enabled by its descriptor */
-    public boolean isEnabled() {
-        return definition.isEnabled();
-    }
-
     /**
      * @param environment an environment
      * @return whether the plugin runs in that environment

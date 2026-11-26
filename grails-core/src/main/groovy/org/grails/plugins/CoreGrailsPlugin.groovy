@@ -50,7 +50,6 @@ import grails.config.ConfigProperties
 import grails.config.Settings
 import grails.core.GrailsApplication
 import grails.core.support.proxy.DefaultProxyHandler
-import grails.plugins.GrailsPluginManager
 import grails.plugins.Plugin
 import grails.plugins.metadata.GrailsPluginDescriptor
 import grails.util.BuildSettings
@@ -270,10 +269,9 @@ class CoreGrailsPlugin extends Plugin {
             if (!packagesToScan) {
                 return
             }
-            GrailsPluginManager pluginManager = manager
             registry.registerBean('grailsComponentScanPostProcessor', GrailsComponentScanPostProcessor) {
                 it.infrastructure().supplier {
-                    new GrailsComponentScanPostProcessor(packagesToScan, pluginManager)
+                    new GrailsComponentScanPostProcessor(packagesToScan)
                 }
             }
         }

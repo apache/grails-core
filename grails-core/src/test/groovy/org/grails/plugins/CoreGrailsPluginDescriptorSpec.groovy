@@ -52,7 +52,6 @@ class CoreGrailsPluginDescriptorSpec extends Specification {
         published.watchedResources == declared.watchedResources
         published.pluginExcludes == declared.pluginExcludes
         published.providedArtefacts == declared.providedArtefacts
-        published.enabled == declared.enabled
     }
 
     void 'the checked-in descriptor records the version grails-core is built at'() {

@@ -64,7 +64,8 @@ public class IncludingPluginFilter extends BasePluginFilter {
      * Adds the direct dependencies declared by the supplied plugin, so they are included as well.
      *
      * <p>Each dependency is registered through {@link #registerDependency(List, PluginInfo)} so that
-     * recursive traversal and deduplication are handled consistently by the base class.</p>
+     * recursive traversal and deduplication are handled consistently by the base class. A dependency that is not
+     * among the plugins found is skipped, and discovery reports it as missing.</p>
      *
      * @param additionalList the list collecting plugins that should also be included
      * @param plugin the plugin whose dependencies should be included
@@ -73,7 +74,10 @@ public class IncludingPluginFilter extends BasePluginFilter {
     protected void addPluginDependencies(List<PluginInfo> additionalList, PluginInfo plugin) {
         var dependencyNames = plugin.getDependsOnNames();
         for (var name : dependencyNames) {
-            registerDependency(additionalList, getNamedPlugin(name));
+            var dependency = getNamedPlugin(name);
+            if (dependency != null) {
+                registerDependency(additionalList, dependency);
+            }
         }
     }
 }

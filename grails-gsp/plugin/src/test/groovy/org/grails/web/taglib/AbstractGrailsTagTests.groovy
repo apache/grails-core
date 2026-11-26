@@ -346,7 +346,6 @@ abstract class AbstractGrailsTagTests {
 
         servletContext.setAttribute(WebApplicationContext.ROOT_WEB_APPLICATION_CONTEXT_ATTRIBUTE, appCtx)
         mockManager.applicationContext = appCtx
-        mockManager.doDynamicMethods()
         initRequestAndResponse()
 
         ga.domainClasses.each { dc ->

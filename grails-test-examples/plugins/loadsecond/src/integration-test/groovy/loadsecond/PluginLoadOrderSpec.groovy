@@ -123,17 +123,6 @@ class PluginLoadOrderSpec extends Specification {
         definition.grailsVersionRange == "${GrailsUtil.grailsVersion} > *"
     }
 
-    // ========== Plugin State Tests ==========
-
-    def "plugin is enabled"() {
-        when: "getting plugin"
-        def plugin = pluginManager.getGrailsPlugin('loadsecond')
-
-        then: "plugin is enabled"
-        plugin != null
-        plugin.enabled
-    }
-
     // ========== Plugin Configuration Tests ==========
 
     def "plugin configuration is loaded from plugin.yml"() {
@@ -149,13 +138,12 @@ class PluginLoadOrderSpec extends Specification {
 
     // ========== Plugin Exclusions Tests ==========
 
-    def "plugin excludes are configured"() {
-        when: "getting plugin"
-        def plugin = pluginManager.getGrailsPlugin('loadsecond')
+    def "plugin excludes are published in its descriptor"() {
+        when: "getting the definition the compiler published for the plugin"
+        def definition = pluginDiscovery.findPlugin('loadsecond').definition
 
         then: "exclusions are defined"
-        plugin != null
-        plugin.pluginExcludes == ['loadsecond/demo/**']
+        definition.pluginExcludes == ['loadsecond/demo/**']
     }
 
     // ========== Plugin API Tests ==========

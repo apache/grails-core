@@ -28,7 +28,6 @@ import java.net.URL;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -48,17 +47,13 @@ import org.springframework.beans.factory.BeanRegistrar;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationListener;
 import org.springframework.context.ConfigurableApplicationContext;
-import org.springframework.core.env.ConfigurableEnvironment;
-import org.springframework.core.env.PropertySource;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.core.io.support.ResourcePatternResolver;
-import org.springframework.core.type.filter.TypeFilter;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
-import grails.core.ArtefactHandler;
 import grails.core.GrailsApplication;
 import grails.io.IOUtils;
 import grails.io.ResourceUtils;
@@ -377,46 +372,12 @@ public class DefaultGrailsPlugin implements GrailsPlugin {
         return basePlugin;
     }
 
-    @Override
-    public boolean isEnabled() {
-        return definition.isEnabled();
-    }
-
     /**
      * @return the directory of the project whose class directory the plugin was loaded from, or {@code null} for a
      *         plugin loaded from a jar or compiled in memory
      */
     public @Nullable File getProjectDirectory() {
         return projectDirectory;
-    }
-
-    /**
-     * Retrieves the plugin's property source from the Spring {@link ConfigurableEnvironment}.
-     *
-     * <p>Plugin configuration files ({@code plugin.yml} or {@code plugin.groovy}) are loaded
-     * early in the application lifecycle by
-     * {@link grails.boot.config.GrailsEnvironmentPostProcessor} and registered as named
-     * property sources in the environment. This method looks up the property source by the
-     * expected name ({@code "<pluginName>-plugin.yml"} or {@code "<pluginName>-plugin.groovy"}).</p>
-     *
-     * @return the plugin's property source, or {@code null} if no configuration was loaded
-     *         or the application context is not yet available
-     */
-    @Override
-    public PropertySource<?> getPropertySource() {
-        ApplicationContext mainContext = grailsApplication != null ? grailsApplication.getMainContext() : null;
-        if (mainContext == null) {
-            return null;
-        }
-        if (mainContext.getEnvironment() instanceof ConfigurableEnvironment configurableEnv) {
-            var propertySources = configurableEnv.getPropertySources();
-            PropertySource<?> ps = propertySources.get(getName() + "-" + PluginUtils.PLUGIN_YML_CONFIG);
-            if (ps != null) {
-                return ps;
-            }
-            return propertySources.get(getName() + "-" + PluginUtils.PLUGIN_GROOVY_CONFIG);
-        }
-        return null;
     }
 
     @Override
@@ -467,11 +428,6 @@ public class DefaultGrailsPlugin implements GrailsPlugin {
     @Override
     public String[] getObservedPluginNames() {
         return pluginInfo.getObservedPluginNames();
-    }
-
-    @Override
-    public List<String> getPluginExcludes() {
-        return definition.getPluginExcludes();
     }
 
     @Override
@@ -553,11 +509,6 @@ public class DefaultGrailsPlugin implements GrailsPlugin {
     }
 
     @Override
-    public void doWithDynamicMethods(ApplicationContext ctx) {
-        plugin.doWithDynamicMethods();
-    }
-
-    @Override
     @SuppressWarnings("unchecked")
     public void notifyOfEvent(Map event) {
         plugin.onChange(event);
@@ -588,18 +539,6 @@ public class DefaultGrailsPlugin implements GrailsPlugin {
                 notifyOfEvent(event);
         }
         return event;
-    }
-
-    @Override
-    public void doArtefactConfiguration() {
-        for (ArtefactHandler handler : plugin.getArtefacts()) {
-            grailsApplication.registerArtefactHandler(handler);
-        }
-    }
-
-    @Override
-    public Collection<? extends TypeFilter> getTypeFilters() {
-        return plugin.getTypeFilters();
     }
 
     /**

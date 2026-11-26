@@ -20,12 +20,10 @@ package grails.plugins;
 
 import java.io.File;
 import java.util.Collection;
-import java.util.List;
 import java.util.Map;
 
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
-import org.springframework.core.type.filter.TypeFilter;
 
 import grails.core.GrailsApplication;
 import grails.plugins.exceptions.PluginException;
@@ -68,13 +66,6 @@ public interface GrailsPluginManager extends ApplicationContextAware {
     GrailsPlugin[] getAllPlugins();
 
     /**
-     * Returns any plugins that failed to load due to dependency resolution errors.
-     *
-     * @return All plugins that failed to load
-     */
-    GrailsPlugin[] getFailedLoadPlugins();
-
-    /**
      * Performs the initial load of plugins.
      *
      * @throws PluginException if any error occurs when loading the plugins
@@ -95,11 +86,6 @@ public interface GrailsPluginManager extends ApplicationContextAware {
      * @param applicationContext The {@link ApplicationContext Spring application context}
      */
     void doPostProcessing(ApplicationContext applicationContext);
-
-    /**
-     * Called on all plugins so that they can add new methods/properties/constructors etc.
-     */
-    void doDynamicMethods();
 
     /**
      * Executes the {@link Plugin#onStartup(Map)} hook for all plugins.
@@ -131,14 +117,6 @@ public interface GrailsPluginManager extends ApplicationContextAware {
      * @return true if the manager has a loaded plugin with the given name
      */
     boolean hasGrailsPlugin(String name);
-
-    /**
-     * Retrieves a plugin that failed to load, or null if it doesn't exist.
-     *
-     * @param name The name of the plugin
-     * @return A {@link GrailsPlugin} instance, or null if it doesn't exist
-     */
-    GrailsPlugin getFailedPlugin(String name);
 
     /**
      * Retrieves a plugin with the given name and version.
@@ -190,14 +168,6 @@ public interface GrailsPluginManager extends ApplicationContextAware {
     void informObservers(String pluginName, Map event);
 
     /**
-     * Called prior to the initialisation of the {@link GrailsApplication} object
-     * to allow registration of additional {@link grails.core.ArtefactHandler} objects.
-     *
-     * @see grails.core.ArtefactHandler
-     */
-    void doArtefactConfiguration();
-
-    /**
      * Registers pre-compiled artefacts with the {@link GrailsApplication} instance,
      * only overriding if the application doesn't already provide an artefact of the same name.
      *
@@ -209,20 +179,6 @@ public interface GrailsPluginManager extends ApplicationContextAware {
      * Shuts down this plugin manager.
      */
     void shutdown();
-
-    /**
-     * Method for handling changes to a class and triggering {@link Plugin#onChange onChange} events etc.
-     *
-     * @param aClass The class that has changed
-     */
-    void informOfClassChange(Class<?> aClass);
-
-    /**
-     * Get all the {@link TypeFilter} definitions defined by the plugins.
-     *
-     * @return A list of {@link TypeFilter} definitions
-     */
-    List<TypeFilter> getTypeFilters();
 
     /**
      * Returns the plugin path for the {@link GrailsPlugin plugin} with the given name.

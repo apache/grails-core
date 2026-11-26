@@ -17,17 +17,25 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-Plugins can easily provide their own artefacts so that they can easily find out what implementations are available and take part in reloading. All you need to do is create an `ArtefactHandler` implementation and register it in your main plugin class:
+Plugins can easily provide their own artefacts so that they can easily find out what implementations are available and take part in reloading. All you need to do is create an `ArtefactHandler` implementation in the plugin's sources:
 
 [source,groovy]
 ----
-class MyGrailsPlugin {
-    def artefacts = [ org.somewhere.MyArtefactHandler ]
+package org.somewhere
+
+import grails.core.ArtefactHandlerAdapter
+
+class MyArtefactHandler extends ArtefactHandlerAdapter {
     ...
 }
 ----
 
-The `artefacts` list can contain either handler classes (as above) or instances of handlers.
+The Grails compiler registers every concrete `ArtefactHandler` written in Groovy in the `META-INF/grails.factories` file it writes beside the compiled classes, under the `grails.core.ArtefactHandler` key, and the application loads every handler that the `grails.factories` files on its class path list. The plugin class does not list its handlers. A handler written in Java, which the Grails compiler does not see, is registered by hand in `src/main/resources/META-INF/grails.factories`, whose entries the compiler merges with the ones it writes:
+
+[source,properties]
+----
+grails.core.ArtefactHandler=org.somewhere.MyArtefactHandler
+----
 
 So, what does an artefact handler look like? Well, put simply it is an implementation of the link:{api}grails/core/ArtefactHandler.html[ArtefactHandler] interface. To make life a bit easier, there is a skeleton implementation that can readily be extended: link:{api}grails/core/ArtefactHandlerAdapter.html[ArtefactHandlerAdapter].
 

@@ -50,31 +50,10 @@ public interface PluginDiscovery {
      * the main application context finishes bootstrapping.</p>
      *
      * @param environment the environment used to determine plugin filtering and ordering
+     * @throws grails.plugins.exceptions.PluginException if a plugin cannot be loaded, including when a
+     *         {@code dependsOn} of a plugin is not met
      */
     void init(Environment environment);
-
-    /**
-     * Determines whether a plugin failed during discovery or dependency resolution.
-     *
-     * @param name the name of the plugin; implementations may normalize the name before lookup
-     * @return {@code true} if the named plugin could not be loaded successfully
-     */
-    boolean hasFailedPlugin(String name);
-
-    /**
-     * Returns a plugin that failed during discovery or dependency resolution.
-     *
-     * @param name the name of the plugin; implementations may normalize the name before lookup
-     * @return the failed plugin, or {@code null} if no matching failed plugin exists
-     */
-    PluginInfo getFailedPlugin(String name);
-
-    /**
-     * Returns every plugin that failed during discovery or dependency resolution.
-     *
-     * @return the plugins that could not be loaded successfully
-     */
-    Collection<PluginInfo> getFailedPlugins();
 
     /**
      * Finds a discovered plugin by name.

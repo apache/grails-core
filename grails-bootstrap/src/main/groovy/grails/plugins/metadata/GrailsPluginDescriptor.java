@@ -140,11 +140,4 @@ public @interface GrailsPluginDescriptor {
      * @return excluded artefact path patterns
      */
     String[] pluginExcludes() default {};
-
-    /**
-     * Whether the plugin is enabled by default.
-     *
-     * @return {@code true} if enabled
-     */
-    boolean enabled() default true;
 }

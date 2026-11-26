@@ -33,6 +33,7 @@ import grails.util.Holders
 import grails.web.mapping.AbstractUrlMappingsSpec
 import grails.web.mapping.UrlMappingsHolder
 import org.apache.grails.core.plugins.DefaultPluginDiscovery
+import org.apache.grails.core.plugins.filters.IncludingPluginFilter
 import org.grails.core.DefaultGrailsControllerClass
 import org.grails.core.artefact.ControllerArtefactHandler
 import org.grails.web.mapping.UrlMappingsHolderFactoryBean
@@ -258,7 +259,9 @@ class ReloadedControllerMappingSpec extends AbstractUrlMappingsSpec {
      */
     private static GenericApplicationContext runningContext(DefaultGrailsApplication grailsApplication) {
         def context = new GenericApplicationContext()
+        // the controllers plugin on the test class path needs the url mappings plugin, which this module's tests lack
         def discovery = new DefaultPluginDiscovery()
+        discovery.pluginFilter = new IncludingPluginFilter('core')
         discovery.init(context.environment)
         context.beanFactory.registerSingleton(GrailsApplication.APPLICATION_ID, grailsApplication)
         context.beanFactory.registerSingleton(GrailsPluginManager.BEAN_NAME, new DefaultGrailsPluginManager(grailsApplication, discovery))

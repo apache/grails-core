@@ -191,7 +191,6 @@ class GrailsApplicationPostProcessor implements BeanDefinitionRegistryPostProces
     }
 
     protected void performGrailsInitializationSequence() {
-        pluginManager.doArtefactConfiguration()
         grailsApplication.initialise()
         // register plugin provided classes first, this gives the oppurtunity
         // for application classes to override those provided by a plugin
@@ -483,10 +482,6 @@ class GrailsApplicationPostProcessor implements BeanDefinitionRegistryPostProces
                 }
                 Environment.setInitializing(false)
                 pluginManager.setApplicationContext(context)
-                pluginManager.doDynamicMethods()
-                for (GrailsApplicationLifeCycle lifeCycle in lifeCycleBeans) {
-                    lifeCycle.doWithDynamicMethods()
-                }
                 pluginManager.doPostProcessing(context)
                 for (GrailsApplicationLifeCycle lifeCycle in lifeCycleBeans) {
                     lifeCycle.doWithApplicationContext()

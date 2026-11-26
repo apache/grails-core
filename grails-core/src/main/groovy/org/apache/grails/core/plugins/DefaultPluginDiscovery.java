@@ -37,6 +37,7 @@ import org.springframework.core.env.Environment;
 
 import grails.plugins.GrailsPluginSorter;
 import grails.plugins.GrailsVersionUtils;
+import grails.plugins.exceptions.PluginException;
 import grails.util.Metadata;
 import org.apache.grails.core.plugins.filters.PluginFilter;
 import org.apache.grails.core.plugins.filters.PluginFilterRetriever;
@@ -51,8 +52,15 @@ import org.apache.grails.core.plugins.filters.PluginFilterRetriever;
  * </ul>
  *
  * <p>When {@link #init(Environment)} is invoked, the discovery process loads candidate plugins, applies the
- * configured {@link PluginFilter}, resolves load ordering and delayed dependencies, and exposes both the
- * load order and the topologically sorted order required by later bootstrap components.</p>
+ * configured {@link PluginFilter}, leaves out the plugins that do not support the current Grails environment,
+ * resolves load ordering and delayed dependencies, and exposes both the load order and the topologically sorted
+ * order required by later bootstrap components.</p>
+ *
+ * <p>Every {@code dependsOn} of every plugin must be met. A plugin whose dependency is missing, has a version
+ * outside the required range, was left out by the plugin filter or by its environments, or cannot load itself,
+ * stops discovery with one {@link PluginException} that names every unmet dependency of every such plugin.
+ * Dependencies are checked before evictions are applied: a plugin depending on a plugin another plugin evicts
+ * still loads, the evicting plugin standing in for the evicted one.</p>
  */
 public class DefaultPluginDiscovery implements PluginDiscovery {
 
@@ -66,6 +74,9 @@ public class DefaultPluginDiscovery implements PluginDiscovery {
     protected Map<String, Set<PluginInfo>> pluginToObserverMap;
     protected List<PluginInfo> delayedLoadPlugins;
     protected Map<String, PluginInfo> failedPlugins;
+    protected Map<String, List<String>> unmetDependencies;
+    protected Map<String, PluginInfo> filteredOutPlugins;
+    protected Map<String, PluginInfo> environmentExcludedPlugins;
     protected Map<PluginInfo, String[]> delayedEvictions;
     protected PluginFilter pluginFilter;
     protected boolean loadClasspathPlugins = true;
@@ -186,24 +197,12 @@ public class DefaultPluginDiscovery implements PluginDiscovery {
         loadOrderedPlugins = new ArrayList<>();
         pluginToObserverMap = new HashMap<>();
         delayedLoadPlugins = new LinkedList<>();
-        failedPlugins = new HashMap<>();
+        failedPlugins = new LinkedHashMap<>();
+        unmetDependencies = new HashMap<>();
+        filteredOutPlugins = new HashMap<>();
+        environmentExcludedPlugins = new HashMap<>();
         delayedEvictions = new HashMap<>();
         orderedPlugins = new ArrayList<>();
-    }
-
-    @Override
-    public Collection<PluginInfo> getFailedPlugins() {
-        return Collections.unmodifiableCollection(failedPlugins.values());
-    }
-
-    @Override
-    public PluginInfo getFailedPlugin(String name) {
-        return failedPlugins.get(PluginUtils.normalizePluginName(name));
-    }
-
-    @Override
-    public boolean hasFailedPlugin(String name) {
-        return failedPlugins.containsKey(PluginUtils.normalizePluginName(name));
     }
 
     /**
@@ -231,10 +230,12 @@ public class DefaultPluginDiscovery implements PluginDiscovery {
      * Discovers, filters, and orders plugins for the current environment.
      *
      * <p>This method discovers classpath plugins, adds the plugin classes registered directly, applies the
-     * configured filter, resets previous discovery state, and then registers plugins immediately or defers
-     * them until their dependencies can be satisfied.</p>
+     * configured filter, resets previous discovery state, leaves out the plugins that do not support the current
+     * Grails environment, and then registers plugins immediately or defers them until their dependencies can be
+     * satisfied.</p>
      *
      * @param environment the environment used to determine plugin filtering and load order
+     * @throws PluginException if a {@code dependsOn} of any plugin is not met
      */
     void populatePlugins(Environment environment) {
         var classLoader = resolveClassLoader();
@@ -262,15 +263,26 @@ public class DefaultPluginDiscovery implements PluginDiscovery {
         reset();
         initialized = true;
 
-        if (filteredPlugins.isEmpty()) {
-            LOG.debug("All plugins were excluded by plugin filtering");
+        for (var plugin : allPlugins) {
+            if (!filteredPlugins.contains(plugin)) {
+                filteredOutPlugins.putIfAbsent(plugin.getName(), plugin);
+            }
+        }
+        var candidates = supportedInCurrentEnvironment(filteredPlugins);
+
+        if (candidates.isEmpty()) {
+            LOG.debug("All plugins were excluded by plugin filtering or by their environments");
             return;
         }
 
-        attemptRegisterPlugins(filteredPlugins);
+        attemptRegisterPlugins(candidates);
 
         if (!delayedLoadPlugins.isEmpty()) {
             loadDelayedPlugins();
+        }
+        if (!failedPlugins.isEmpty()) {
+            initialized = false;
+            throw new PluginException(unmetDependenciesMessage());
         }
         if (!delayedEvictions.isEmpty()) {
             processDelayedEvictions();
@@ -283,6 +295,24 @@ public class DefaultPluginDiscovery implements PluginDiscovery {
                 PluginInfo::getLoadAfterNames,
                 PluginInfo::getLoadBeforeNames
         );
+    }
+
+    /**
+     * The plugins that support the current Grails environment. The others are recorded, so a plugin that depends on
+     * one of them is reported as depending on a plugin its environments leave out.
+     */
+    private List<PluginInfo> supportedInCurrentEnvironment(List<PluginInfo> filteredPlugins) {
+        var current = grails.util.Environment.getCurrent();
+        var supported = new ArrayList<PluginInfo>();
+        for (var plugin : filteredPlugins) {
+            if (plugin.supportsEnvironment(current)) {
+                supported.add(plugin);
+            } else {
+                environmentExcludedPlugins.putIfAbsent(plugin.getName(), plugin);
+                LOG.info("Grails plugin {} does not support the [{}] environment and was not loaded", plugin, current.getName());
+            }
+        }
+        return supported;
     }
 
     protected void evictPlugin(PluginInfo evictor, String evicteeName) {
@@ -317,8 +347,8 @@ public class DefaultPluginDiscovery implements PluginDiscovery {
      * Attempts to register plugins that could not be loaded during the first registration pass.
      *
      * <p>Plugins remain delayed until their dependencies are available and any declared {@code loadAfter}
-     * relationships can be satisfied. Plugins whose dependencies can never be resolved are moved to the
-     * failed plugin collection.</p>
+     * relationships can be satisfied. Plugins whose dependencies can never be resolved are recorded as failed,
+     * which stops discovery once every plugin has been tried.</p>
      */
     private void loadDelayedPlugins() {
         while (!delayedLoadPlugins.isEmpty()) {
@@ -344,18 +374,37 @@ public class DefaultPluginDiscovery implements PluginDiscovery {
                     delayedLoadPlugins.add(plugin);
                 } else {
                     failedPlugins.put(plugin.getName(), plugin);
-                    logUnresolvedDependencies(plugin);
+                    // described now, while the plugins it waited for are still pending
+                    unmetDependencies.put(plugin.getName(), unresolvedDependencies(plugin));
                 }
             }
         }
     }
 
-    private void logUnresolvedDependencies(PluginInfo plugin) {
+    /**
+     * The message of the exception that stops discovery: one line for every plugin that cannot be loaded, naming
+     * each of its unmet dependencies.
+     */
+    private String unmetDependenciesMessage() {
+        var message = new StringBuilder("Grails plug-ins cannot be loaded because their dependencies are not met:");
+        for (var plugin : failedPlugins.values()) {
+            message.append(System.lineSeparator())
+                    .append("- Grails plug-in [").append(plugin.getName()).append(']');
+            if (plugin.getPluginVersion() != null) {
+                message.append(" with version [").append(plugin.getPluginVersion()).append(']');
+            }
+            message.append(" cannot be loaded: ").append(String.join("; ", unmetDependencies.get(plugin.getName())));
+        }
+        return message.toString();
+    }
+
+    private List<String> unresolvedDependencies(PluginInfo plugin) {
         var unresolvedDependencies = new ArrayList<String>();
         for (var name : plugin.getDependsOnNames()) {
             var requiredVersion = plugin.getDependentVersion(name);
             var dependency = findPlugin(name);
             var delayedDependency = dependency == null ? findDelayedPlugin(name) : null;
+            var normalizedName = PluginUtils.normalizePluginName(name);
             if (dependency != null) {
                 if (!GrailsVersionUtils.isValidVersion(dependency.getPluginVersion(), requiredVersion)) {
                     unresolvedDependencies.add(
@@ -363,7 +412,7 @@ public class DefaultPluginDiscovery implements PluginDiscovery {
                                     "] but requires [" + requiredVersion + "]"
                     );
                 }
-            } else if (getFailedPlugin(name) != null) {
+            } else if (failedPlugins.containsKey(normalizedName)) {
                 unresolvedDependencies.add(
                         "dependency [" + name + "] with required version [" + requiredVersion + "] failed to load"
                 );
@@ -373,18 +422,24 @@ public class DefaultPluginDiscovery implements PluginDiscovery {
                                 "] is still pending load and only version [" + delayedDependency.getPluginVersion() +
                                 "] was found"
                 );
+            } else if (environmentExcludedPlugins.containsKey(normalizedName)) {
+                unresolvedDependencies.add(
+                        "dependency [" + name + "] does not support the [" + grails.util.Environment.getCurrent().getName() +
+                                "] environment; leave [" + plugin.getName() + "] out of that environment too, with " +
+                                "its environmentsIncludes or environmentsExcludes"
+                );
+            } else if (filteredOutPlugins.containsKey(normalizedName)) {
+                unresolvedDependencies.add(
+                        "dependency [" + name + "] is left out by the plugin filter (grails.plugin.excludes or " +
+                                "grails.plugin.includes); leave out [" + plugin.getName() + "] too"
+                );
             } else {
                 unresolvedDependencies.add(
                         "dependency [" + name + "] with required version [" + requiredVersion + "] is missing"
                 );
             }
         }
-        LOG.error(
-                "Grails plug-in [{}] with version [{}] cannot be loaded: {}",
-                plugin.getName(),
-                plugin.getPluginVersion(),
-                String.join("; ", unresolvedDependencies)
-        );
+        return unresolvedDependencies;
     }
 
     /**
@@ -458,8 +513,8 @@ public class DefaultPluginDiscovery implements PluginDiscovery {
     /**
      * Registers a plugin that is eligible to be loaded.
      *
-     * <p>This method skips disabled plugins and plugins already registered under the same name (a plugin
-     * may be declared by more than one descriptor on the classpath), records eviction and observer
+     * <p>This method skips plugins already registered under the same name (a plugin may be declared by more
+     * than one descriptor on the classpath), records eviction and observer
      * relationships, and appends the plugin to the discovered load order.</p>
      *
      * @param plugin the plugin to register
@@ -474,13 +529,6 @@ public class DefaultPluginDiscovery implements PluginDiscovery {
                     registeredPlugin.getPluginVersion(),
                     plugin.getPluginVersion()
             );
-            return;
-        }
-
-        if (!plugin.isEnabled() || !plugin.supportsEnvironment(grails.util.Environment.getCurrent())) {
-            if (LOG.isInfoEnabled()) {
-                LOG.info("Grails plugin {} is disabled and was not loaded", plugin);
-            }
             return;
         }
 

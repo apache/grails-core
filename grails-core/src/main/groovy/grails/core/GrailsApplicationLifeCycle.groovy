@@ -57,11 +57,9 @@ interface GrailsApplicationLifeCycle {
     }
 
     /**
-     * Invoked once the {@link org.springframework.context.ApplicationContext} has been refreshed in a phase where plugins can add dynamic methods. Subclasses should override
-     */
-    void doWithDynamicMethods()
-    /**
-     * Invoked once the {@link org.springframework.context.ApplicationContext} has been refreshed and after {#doWithDynamicMethods()} is invoked. Subclasses should override
+     * Invoked once the {@link org.springframework.context.ApplicationContext} has been refreshed. This is where
+     * dynamic methods or properties are added and the beans of the refreshed context are worked with.
+     * Subclasses should override
      */
     void doWithApplicationContext()
 
@@ -73,7 +71,7 @@ interface GrailsApplicationLifeCycle {
     void onConfigChange(Map<String, Object> event)
 
     /**
-     * Invoked once all prior initialization hooks: {@link GrailsApplicationLifeCycle#doWithSpring()}, {@link GrailsApplicationLifeCycle#doWithDynamicMethods()} and {@link GrailsApplicationLifeCycle#doWithApplicationContext()}
+     * Invoked once all prior initialization hooks: {@link GrailsApplicationLifeCycle#doWithSpring()} and {@link GrailsApplicationLifeCycle#doWithApplicationContext()}
      *
      * @param event The event
      */

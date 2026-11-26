@@ -425,6 +425,7 @@ class LinkGeneratorSpec extends Specification {
     protected setPlugins(List<Class> pluginClasses) {
         def app = new DefaultGrailsApplication()
         def pluginDiscovery = new DefaultPluginDiscovery(pluginClasses as Class[])
+        pluginDiscovery.loadPluginsFromClasspath = false
         pluginDiscovery.init(new StandardEnvironment())
         pluginManager = new DefaultGrailsPluginManager(app, pluginDiscovery)
         pluginManager.loadPlugins()

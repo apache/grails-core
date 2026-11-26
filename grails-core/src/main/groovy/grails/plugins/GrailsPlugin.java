@@ -18,15 +18,12 @@
  */
 package grails.plugins;
 
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
 import org.springframework.beans.factory.BeanRegistrar;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
-import org.springframework.core.env.PropertySource;
-import org.springframework.core.type.filter.TypeFilter;
 
 import grails.core.GrailsApplication;
 import grails.util.Environment;
@@ -153,18 +150,6 @@ public interface GrailsPlugin extends ApplicationContextAware {
     String getDependentVersion(String name);
 
     /**
-     * Returns the plugin's configuration as a {@link PropertySource}, looked up from the
-     * Spring {@link org.springframework.core.env.Environment} by naming convention.
-     * <p>Plugin configuration is loaded early in the Spring Boot lifecycle by
-     * {@code grails.boot.config.GrailsEnvironmentPostProcessor} and registered as a
-     * property source named {@code <pluginName>-plugin.yml} or {@code <pluginName>-plugin.groovy}.
-     * This method retrieves that property source from the application context's environment.</p>
-     * @return the plugin's property source from the environment, or {@code null} if the
-     *         GrailsApplication main context is not yet available or no matching property source exists
-     */
-    PropertySource<?> getPropertySource();
-
-    /**
      * Retrieves the plugin manager if known, otherwise returns null
      * @return The PluginManager or null
      */
@@ -186,17 +171,6 @@ public interface GrailsPlugin extends ApplicationContextAware {
     void setApplication(GrailsApplication application);
 
     /**
-     * Calls the plugin's {@link Plugin#doWithDynamicMethods()}, which allows a plugin to register dynamic methods
-     * @param applicationContext The Spring ApplicationContext instance
-     */
-    void doWithDynamicMethods(ApplicationContext applicationContext);
-
-    /**
-     * @return Whether the plugin's descriptor enables it. Discovery loads only enabled plugins.
-     */
-    boolean isEnabled();
-
-    /**
      * Retrieve the plugin names that this plugin is observing for changes
      * @return The names of the observed plugins
      */
@@ -215,13 +189,6 @@ public interface GrailsPlugin extends ApplicationContextAware {
      * @return a Map that represents the event
      */
     Map notifyOfEvent(int eventKind, Object source);
-
-    /**
-     * Called prior to the initialisation of the GrailsApplication instance to
-     * allow the registration of additional ArtefactHandlers
-     * @see grails.core.ArtefactHandler
-     */
-    void doArtefactConfiguration();
 
     /**
      * Retrieves an array of provided Artefacts that are pre-compiled additions to the GrailsApplication object
@@ -250,24 +217,11 @@ public interface GrailsPlugin extends ApplicationContextAware {
     Class<? extends Plugin> getPluginClass();
 
     /**
-     * Ant patterns of the artefact class names the plugin excludes from its packaged distribution
-     * @return a List of patterns
-     */
-    List<String> getPluginExcludes();
-
-    /**
      * Returns whether this plugin is the project being run: when you execute grails run-app from a plugin project,
      * the plugin whose classes are that project's is the base plugin.
      * @return true if it is the base plugin
      */
     boolean isBasePlugin();
-
-    /**
-     * Plugin can provide a list of Spring TypeFilters so that annotated components can
-     * be scanned into the ApplicationContext
-     * @return A collection of TypeFilter instance
-     */
-    Collection<? extends TypeFilter> getTypeFilters();
 
     /**
      * Resources that this plugin watches

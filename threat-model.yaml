@@ -70,7 +70,7 @@ components:
   - name: plugin_artefact_discovery
     in_model: true
     representative_files:
-      - grails-core/src/main/groovy/grails/plugins/PluginManagerLoader.groovy
+      - grails-core/src/main/groovy/org/apache/grails/core/plugins/ClasspathPluginFinder.java
       - grails-core/src/main/groovy/grails/boot/config/tools/ClassPathScanner.groovy
       - grails-core/src/main/groovy/org/grails/core/io/support/GrailsFactoriesLoader.groovy
   - name: compile_time_ast_transforms

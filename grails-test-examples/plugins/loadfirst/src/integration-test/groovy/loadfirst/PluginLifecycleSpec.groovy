@@ -68,15 +68,6 @@ class PluginLifecycleSpec extends Specification {
         plugin.pluginInstance instanceof LoadfirstGrailsPlugin
     }
 
-    def "plugin is loaded and active"() {
-        when: "checking plugin status"
-        def plugin = pluginManager.getGrailsPlugin('loadfirst')
-
-        then: "plugin is enabled"
-        plugin != null
-        plugin.enabled
-    }
-
     // ========== Plugin Configuration Tests ==========
 
     def "plugin configuration from plugin.yml is loaded"() {
@@ -108,13 +99,12 @@ class PluginLifecycleSpec extends Specification {
         plugin.version == pluginDiscovery.findPlugin('loadfirst').pluginVersion
     }
 
-    def "plugin excludes are configured"() {
-        when: "getting plugin excludes"
-        def plugin = pluginManager.getGrailsPlugin('loadfirst')
+    def "plugin excludes are published in its descriptor"() {
+        when: "getting the definition the compiler published for the plugin"
+        def definition = pluginDiscovery.findPlugin('loadfirst').definition
 
         then: "excludes are defined"
-        plugin != null
-        plugin.pluginExcludes == ['loadfirst/demo/**']
+        definition.pluginExcludes == ['loadfirst/demo/**']
     }
 
     // ========== Spring Context Integration Tests ==========
