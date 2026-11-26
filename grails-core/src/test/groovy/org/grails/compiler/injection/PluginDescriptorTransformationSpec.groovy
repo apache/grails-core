@@ -22,8 +22,12 @@ import java.nio.file.Files
 
 import org.codehaus.groovy.control.CompilationUnit
 import org.codehaus.groovy.control.CompilerConfiguration
+import org.codehaus.groovy.control.MultipleCompilationErrorsException
 import spock.lang.Specification
 import spock.lang.TempDir
+import spock.util.environment.RestoreSystemProperties
+
+import grails.util.BuildSettings
 
 import org.apache.grails.core.plugins.PluginUtils
 
@@ -38,9 +42,9 @@ class PluginDescriptorTransformationSpec extends Specification {
         File sources = new File(project, 'src/test/groovy')
         sources.mkdirs()
         File alpha = new File(sources, 'AlphaGrailsPlugin.groovy')
-        alpha.text = "class AlphaGrailsPlugin { def version = '1.0' }"
+        alpha.text = '@grails.plugins.metadata.GrailsPluginDescriptor class AlphaGrailsPlugin extends grails.plugins.Plugin { }'
         File beta = new File(sources, 'BetaGrailsPlugin.groovy')
-        beta.text = "class BetaGrailsPlugin { def version = '1.0' }"
+        beta.text = '@grails.plugins.metadata.GrailsPluginDescriptor class BetaGrailsPlugin extends grails.plugins.Plugin { }'
         writeService(output, 'SampleService')
 
         when:
@@ -76,7 +80,7 @@ class PluginDescriptorTransformationSpec extends Specification {
         !new File(output, 'META-INF/grails/plugins/beta/plugin.properties').exists()
     }
 
-    void 'a GrailsPlugin class declared in a file named for another class is not a plugin unless annotated'() {
+    void 'a Plugin subclass is not a plugin unless annotated, whatever its name'() {
         given: 'helper plugins a specification declares beside itself, as test fixtures'
         File output = new File(project, 'classes')
         File sources = new File(project, 'src/test/groovy')
@@ -84,23 +88,86 @@ class PluginDescriptorTransformationSpec extends Specification {
         File spec = new File(sources, 'HelperSpec.groovy')
         spec.text = """
             class HelperSpec {}
-            class HelperGrailsPlugin { def version = '1.0' }
+            class HelperGrailsPlugin extends grails.plugins.Plugin { }
             @grails.plugins.metadata.GrailsPluginDescriptor(name = 'declared')
-            class DeclaredGrailsPlugin { def version = '1.0' }
+            class DeclaredGrailsPlugin extends grails.plugins.Plugin { }
+            @grails.plugins.metadata.GrailsPluginDescriptor
+            class NoSuffix extends grails.plugins.Plugin { }
         """
 
         when:
         compile(output, spec)
 
-        then: 'only the annotated one is registered, so the helper is not discovered by every test'
-        descriptors(output).keySet() == ['declared'] as Set
+        then: 'only the annotated ones are registered, so the helper is not discovered by every test'
+        descriptors(output).keySet() == ['declared', 'noSuffix'] as Set
         !new File(output, 'META-INF/grails/plugins/helper/plugin.properties').exists()
+    }
+
+    void 'an annotated class that is not a concrete Plugin fails the compilation: #description'() {
+        given:
+        File output = new File(project, 'classes')
+        File source = new File(project, 'src/main/groovy/Broken.groovy')
+        source.parentFile.mkdirs()
+        source.text = declaration
+
+        when:
+        compile(output, source)
+
+        then:
+        def e = thrown(MultipleCompilationErrorsException)
+        e.message.contains('is annotated with @GrailsPluginDescriptor, so it must be a concrete subclass of grails.plugins.Plugin')
+
+        and: 'no descriptor is written'
+        !new File(output, 'META-INF/grails/plugins.imports').exists()
+
+        where:
+        description               | declaration
+        'a class that is no Plugin' | '@grails.plugins.metadata.GrailsPluginDescriptor class BrokenGrailsPlugin { }'
+        'an abstract Plugin'      | '@grails.plugins.metadata.GrailsPluginDescriptor abstract class BrokenGrailsPlugin extends grails.plugins.Plugin { }'
+        'an interface'            | '@grails.plugins.metadata.GrailsPluginDescriptor interface BrokenGrailsPlugin { }'
+    }
+
+    @RestoreSystemProperties
+    void 'the descriptor records the build version and resolves ${plugin.version} in dependencies'() {
+        given:
+        System.setProperty(BuildSettings.PLUGIN_VERSION, '7.8.9')
+        File output = new File(project, 'classes')
+        File source = new File(project, 'src/main/groovy/VersionedGrailsPlugin.groovy')
+        source.parentFile.mkdirs()
+        source.text = '''
+            @grails.plugins.metadata.GrailsPluginDescriptor(dependsOn = ['sibling:${plugin.version}', 'other'])
+            class VersionedGrailsPlugin extends grails.plugins.Plugin { }
+        '''
+
+        when:
+        compile(output, source)
+        def definition = definitionsOf(output).versioned
+
+        then:
+        definition.pluginVersion == '7.8.9'
+        definition.pluginClass == 'VersionedGrailsPlugin'
+        definition.dependsOn == [sibling: '7.8.9', other: '*']
+    }
+
+    void 'a plugin compiled without a build version records none'() {
+        given:
+        File output = new File(project, 'classes')
+        File source = new File(project, 'src/test/groovy/UnversionedGrailsPlugin.groovy')
+        source.parentFile.mkdirs()
+        source.text = '@grails.plugins.metadata.GrailsPluginDescriptor class UnversionedGrailsPlugin extends grails.plugins.Plugin { }'
+
+        when:
+        compile(output, source)
+
+        then:
+        definitionsOf(output).unversioned.pluginVersion == null
+        !new File(output, PluginUtils.getPluginDescriptorPath('unversioned')).text.readLines().any { it.startsWith('version=') }
     }
 
     void 'javac discovers an annotated Java plugin without Gradle'() {
         given:
         File source = new File(project, 'JavaPlugin.java')
-        source.text = '@grails.plugins.metadata.GrailsPluginDescriptor(name="java-probe") public class JavaPlugin {}'
+        source.text = '@grails.plugins.metadata.GrailsPluginDescriptor(name="java-probe") public class JavaPlugin extends grails.plugins.Plugin {}'
         File output = new File(project, 'java-classes')
         output.mkdirs()
         File clean = new File(project, 'clean-java')
@@ -114,7 +181,7 @@ class PluginDescriptorTransformationSpec extends Specification {
         new File(output, 'META-INF/grails/plugins/javaProbe/plugin.properties').text.readLines().contains('version=3.0')
 
         when: 'the last annotated class is recompiled as an ordinary class'
-        source.text = 'public class JavaPlugin {}'
+        source.text = 'public class JavaPlugin extends grails.plugins.Plugin {}'
         compileJava(output, source)
         compileJava(clean, source)
 
@@ -123,18 +190,32 @@ class PluginDescriptorTransformationSpec extends Specification {
         descriptors(output).isEmpty()
         !new File(output, 'META-INF/grails/plugins.imports').exists()
         !new File(output, 'META-INF/grails/plugins/javaProbe/plugin.properties').exists()
-        !new File(output, 'META-INF/grails-plugin.xml').exists()
+    }
+
+    void 'javac rejects an annotated Java class that is not a Plugin'() {
+        given:
+        File source = new File(project, 'JavaPlugin.java')
+        source.text = '@grails.plugins.metadata.GrailsPluginDescriptor(name="java-probe") public class JavaPlugin {}'
+        File output = new File(project, 'java-classes')
+        output.mkdirs()
+
+        expect:
+        !compileJavaTask(output, source).call()
+        !new File(output, 'META-INF/grails/plugins.imports').exists()
     }
 
     private static void compileJava(File output, File source) {
+        assert compileJavaTask(output, source).call()
+    }
+
+    private static javax.tools.JavaCompiler.CompilationTask compileJavaTask(File output, File source) {
         def compiler = javax.tools.ToolProvider.systemJavaCompiler
-        String classpath = new File(grails.plugins.metadata.GrailsPluginDescriptor.protectionDomain.codeSource.location.toURI()).path
-        compiler.getStandardFileManager(null, null, null).withCloseable { files ->
-            def task = compiler.getTask(null, files, null, ['-classpath', classpath, '-d', output.path,
-                    '-Agrails.plugin.version=3.0'], null, files.getJavaFileObjects(source))
-            task.processors = [new JavaPluginDescriptorProcessor()]
-            assert task.call()
-        }
+        String classpath = System.getProperty('java.class.path')
+        def files = compiler.getStandardFileManager(null, null, null)
+        def task = compiler.getTask(new StringWriter(), files, null, ['-classpath', classpath, '-d', output.path,
+                '-Agrails.plugin.version=3.0'], null, files.getJavaFileObjects(source))
+        task.processors = [new JavaPluginDescriptorProcessor()]
+        task
     }
 
     private void writeService(File output, String name) {
@@ -150,6 +231,14 @@ class PluginDescriptorTransformationSpec extends Specification {
         def unit = new CompilationUnit(new CompilerConfiguration(targetDirectory: output))
         unit.addSources(sources)
         unit.compile()
+    }
+
+    private static Map<String, grails.plugins.metadata.PluginDefinition> definitionsOf(File output) {
+        new URLClassLoader([output.toURI().toURL()] as URL[], (ClassLoader) null).withCloseable { loader ->
+            PluginUtils.scanPluginDescriptorResources(loader).collectEntries {
+                [(it.pluginName): it.definition]
+            }
+        }
     }
 
     private static Map descriptors(File output) {

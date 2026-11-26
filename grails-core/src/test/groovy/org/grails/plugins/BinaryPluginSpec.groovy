@@ -19,16 +19,13 @@
 
 package org.grails.plugins
 
+import java.nio.file.Path
+
 import grails.core.DefaultGrailsApplication
-import grails.core.GrailsApplicationLifeCycle
 import grails.plugins.DefaultGrailsPluginManager
-import grails.plugins.GrailsPluginManager
 import grails.plugins.Plugin
-import grails.plugins.PluginManagerAware
-import grails.plugins.metadata.GrailsPluginDescriptor
-import org.springframework.beans.factory.BeanRegistrar
-import org.springframework.context.ApplicationContext
-import org.springframework.context.ApplicationContextAware
+import grails.plugins.exceptions.PluginException
+import grails.plugins.metadata.PluginDefinition
 import org.springframework.context.support.GenericApplicationContext
 import org.springframework.core.env.MapPropertySource
 import org.springframework.core.env.StandardEnvironment
@@ -59,10 +56,37 @@ class BinaryPluginSpec extends Specification {
     artefacts.Domain=org.grails.plugins.TestBinaryResource
     '''
 
+    private static PluginDescriptor descriptorOf(String properties, Resource resource) {
+        Properties props = new Properties()
+        props.load(new StringReader(properties.stripIndent()))
+        PluginDescriptor.fromProperties(props.getProperty('name'), resource, props)
+    }
+
+    private PluginDescriptor testBinaryDescriptor(Resource resource = new ByteArrayResource(testBinary.getBytes('UTF-8'))) {
+        descriptorOf(testBinary, resource)
+    }
+
+    private final List<URLClassLoader> loaders = []
+
+    void cleanup() {
+        loaders*.close()
+    }
+
+    /**
+     * Compiles a plugin class into a directory of its own, as a plugin jar holds it, so that the test class
+     * path does not list it as a plugin of its own.
+     */
+    private Class<?> compilePlugin(String className, String source) {
+        Path root = new File(tempDir, "compiled-${className}").toPath()
+        PluginClassFixtures.compile(root, "${className}.groovy", source)
+        URLClassLoader loader = PluginClassFixtures.loaderOver(root)
+        loaders << loader
+        loader.loadClass(className)
+    }
+
     def "Test creation of a binary plugin"() {
         when:
-        def descriptor = new PluginDescriptor(new ByteArrayResource(testBinary.getBytes('UTF-8')), ['org.grails.plugins.TestBinaryResource'], ['org.grails.plugins.TestBinaryResource'])
-            def binaryPlugin = new BinaryGrailsPlugin(TestBinaryGrailsPlugin, descriptor, new DefaultGrailsApplication())
+            def binaryPlugin = new BinaryGrailsPlugin(TestBinaryGrailsPlugin, testBinaryDescriptor(), new DefaultGrailsApplication())
 
         then:
             binaryPlugin.version == "1.0"
@@ -74,7 +98,7 @@ class BinaryPluginSpec extends Specification {
     def "Test load static resource from binary plugin"() {
         when:
             def resource = new MockBinaryPluginResource(testBinary.getBytes('UTF-8'))
-        def descriptor = new PluginDescriptor(resource, ['org.grails.plugins.TestBinaryResource'], [])
+            def descriptor = testBinaryDescriptor(resource)
             resource.relativesResources['static/css/main.css'] = new ByteArrayResource(''.bytes)
             def binaryPlugin = new BinaryGrailsPlugin(TestBinaryGrailsPlugin, descriptor, new DefaultGrailsApplication())
             def cssResource = binaryPlugin.getResource("/css/main.css")
@@ -90,8 +114,7 @@ class BinaryPluginSpec extends Specification {
 
     def "Test getPropertySource returns null when no mainContext is set on GrailsApplication"() {
         when:
-        def descriptor = new PluginDescriptor(new ByteArrayResource(testBinary.getBytes('UTF-8')), ['org.grails.plugins.TestBinaryResource'], [])
-        def binaryPlugin = new BinaryGrailsPlugin(TestBinaryGrailsPlugin, descriptor, new DefaultGrailsApplication())
+        def binaryPlugin = new BinaryGrailsPlugin(TestBinaryGrailsPlugin, testBinaryDescriptor(), new DefaultGrailsApplication())
 
         then:
         binaryPlugin.propertySource == null
@@ -99,9 +122,8 @@ class BinaryPluginSpec extends Specification {
 
     def "Test getPropertySource looks up plugin.yml from environment"() {
         given:
-        def descriptor = new PluginDescriptor(new ByteArrayResource(testBinary.getBytes('UTF-8')), ['org.grails.plugins.TestBinaryResource'], [])
         def grailsApp = new DefaultGrailsApplication()
-        def binaryPlugin = new BinaryGrailsPlugin(TestBinaryGrailsPlugin, descriptor, grailsApp)
+        def binaryPlugin = new BinaryGrailsPlugin(TestBinaryGrailsPlugin, testBinaryDescriptor(), grailsApp)
 
         def appCtx = new GenericApplicationContext()
         def ymlPropertySource = new MapPropertySource('testBinary-plugin.yml', [foo: 'bar'])
@@ -117,9 +139,8 @@ class BinaryPluginSpec extends Specification {
 
     def "Test getPropertySource looks up plugin.groovy from environment"() {
         given:
-        def descriptor = new PluginDescriptor(new ByteArrayResource(testBinary.getBytes('UTF-8')), ['org.grails.plugins.TestBinaryResource'], [])
         def grailsApp = new DefaultGrailsApplication()
-        def binaryPlugin = new BinaryGrailsPlugin(TestBinaryGrailsPlugin, descriptor, grailsApp)
+        def binaryPlugin = new BinaryGrailsPlugin(TestBinaryGrailsPlugin, testBinaryDescriptor(), grailsApp)
 
         def appCtx = new GenericApplicationContext()
         def groovyPropertySource = new MapPropertySource('testBinary-plugin.groovy', [bar: 'foo'])
@@ -135,50 +156,57 @@ class BinaryPluginSpec extends Specification {
 
     def "Test mutual exclusion of plugin.yml and plugin.groovy is enforced by EPP"() {
         expect: "Constructor no longer throws when both config files exist - validation moved to GrailsEnvironmentPostProcessor"
-        def descriptor = new PluginDescriptor(new ByteArrayResource(testBinary.getBytes('UTF-8')), ['org.grails.plugins.TestBinaryResource'], [])
-        new BinaryGrailsPlugin(TestBinaryGrailsPlugin, descriptor, new DefaultGrailsApplication()) != null
+        new BinaryGrailsPlugin(TestBinaryGrailsPlugin, testBinaryDescriptor(), new DefaultGrailsApplication()) != null
     }
 
-    def "Test creation of a descriptor-less starter binary plugin"() {
+    def "Test a binary plugin whose descriptor names another class is rejected"() {
         given:
-        def props = new Properties()
-        props.load(new StringReader('''
-            format.version=1
-            name=starterPlugin
-            version=2.0.0
-            loadAfter=core
-            metadata.complete=true
-            artefacts.Service=org.grails.plugins.TestBinaryResource
-        '''.stripIndent()))
-        def descriptor = PluginDescriptor.fromProperties('starterPlugin', new ByteArrayResource(new byte[0]), props)
-        def metadata = org.apache.grails.core.plugins.PluginUtils.extractPluginMetadata(descriptor, null)
-        def grailsApp = new DefaultGrailsApplication()
+        def descriptor = new PluginDescriptor(null,
+                new PluginDefinition.Builder(pluginName: 'other', pluginClass: 'com.example.OtherGrailsPlugin').build())
 
         when:
-        def binaryPlugin = new BinaryGrailsPlugin(descriptor, metadata, grailsApp)
+        new BinaryGrailsPlugin(TestBinaryGrailsPlugin, descriptor, new DefaultGrailsApplication())
 
         then:
-        binaryPlugin.name == 'starterPlugin'
-        binaryPlugin.version == '2.0.0'
-        binaryPlugin.pluginClass == null
-        binaryPlugin.loadAfterNames as List == ['core']
-        binaryPlugin.providedArtefacts as List == [TestBinaryResource]
-        binaryPlugin.enabled
+        def e = thrown(PluginException)
+        e.message.contains('com.example.OtherGrailsPlugin')
+        e.message.contains(TestBinaryGrailsPlugin.name)
+    }
+
+    def "Test a binary plugin whose class is not a Plugin is rejected"() {
+        given:
+        def descriptor = new PluginDescriptor(null,
+                new PluginDefinition.Builder(pluginName: 'resource', pluginClass: TestBinaryResource.name).build())
+
+        when:
+        new BinaryGrailsPlugin(TestBinaryResource, descriptor, new DefaultGrailsApplication())
+
+        then:
+        thrown(PluginException)
     }
 
     def "Test creation of a binary plugin annotated with @GrailsPluginDescriptor without GrailsPlugin suffix"() {
         given:
-        def descriptor = new PluginDescriptor(new ByteArrayResource(new byte[0]), [AnnotatedStarterDescriptor.name], [TestBinaryResource.name])
-        def grailsApp = new DefaultGrailsApplication()
+        def pluginClass = compilePlugin('AnnotatedStarterDescriptor', '''
+            @grails.plugins.metadata.GrailsPluginDescriptor(
+                    name = 'annotated-starter',
+                    loadAfter = ['core'],
+                    providedArtefacts = [org.grails.plugins.TestBinaryResource]
+            )
+            class AnnotatedStarterDescriptor extends grails.plugins.Plugin { }
+        ''')
+        def descriptor = new PluginDescriptor(new ByteArrayResource(new byte[0]), PluginUtils.definitionOf(pluginClass))
 
         when:
-        def binaryPlugin = new BinaryGrailsPlugin(AnnotatedStarterDescriptor, descriptor, grailsApp)
+        def binaryPlugin = new BinaryGrailsPlugin(pluginClass, descriptor, new DefaultGrailsApplication())
 
         then:
         binaryPlugin.name == 'annotatedStarter'
-        binaryPlugin.version == '1.5.0'
         binaryPlugin.loadAfterNames as List == ['core']
         binaryPlugin.providedArtefacts as List == [TestBinaryResource]
+
+        and: 'a class registered directly, without a descriptor of its own on the class path, has no version'
+        binaryPlugin.version == null
     }
 
     def "Test getResource resolves META-INF/static assets for class-backed binary plugins"() {
@@ -190,7 +218,7 @@ class BinaryPluginSpec extends Specification {
         jsFile.text = 'console.log(1)'
         URLClassLoader loader = PluginClassFixtures.loaderOver(root.toPath())
         Class<?> pluginClass = loader.loadClass('fixture.staticres.StaticResGrailsPlugin')
-        def descriptor = new PluginDescriptor(new ByteArrayResource(new byte[0]), [pluginClass.name], [])
+        def descriptor = new PluginDescriptor(new ByteArrayResource(new byte[0]), PluginUtils.definitionOf(pluginClass))
         def binaryPlugin = new BinaryGrailsPlugin(pluginClass, descriptor, new DefaultGrailsApplication(loader))
 
         when:
@@ -204,35 +232,30 @@ class BinaryPluginSpec extends Specification {
         loader?.close()
     }
 
-    def "Test descriptor-less starter plugin resolves archive root static resources, namespaced views, and ignores refresh"() {
-        given: 'an exploded starter plugin directory with descriptor, views.properties, and META-INF/static asset'
+    def "Test a compiled binary plugin resolves archive root static resources, namespaced views, and ignores refresh"() {
+        given: 'a compiled plugin directory with its descriptor, views.properties, and META-INF/static asset'
         File root = new File(tempDir, 'starter-root')
+        PluginClassFixtures.compilePlugin(root.toPath(), 'fixture.starter.StarterRootGrailsPlugin')
         File descriptorFile = new File(root, PluginUtils.getPluginDescriptorPath('starterRoot'))
-        descriptorFile.parentFile.mkdirs()
-        descriptorFile.text = '''
-            format.version=1
-            name=starterRoot
-            version=1.0.0
-            metadata.complete=true
-        '''.stripIndent()
         File viewsFile = new File(root, PluginUtils.getPluginViewsPath('starterRoot'))
         viewsFile.text = "/starter/index.gsp=${MyView.name}\n"
         File staticCss = new File(root, 'META-INF/static/css/starter.css')
         staticCss.parentFile.mkdirs()
         staticCss.text = 'body { color: green; }'
 
-        def props = new Properties()
-        descriptorFile.withInputStream { props.load(it) }
-        def descriptor = PluginDescriptor.fromProperties('starterRoot', new UrlResource(descriptorFile.toURI().toURL()), props)
-        def metadata = PluginUtils.extractPluginMetadata(descriptor, null)
-        def loader = new URLClassLoader([root.toURI().toURL()] as URL[], getClass().classLoader)
+        def loader = PluginClassFixtures.loaderOver(root.toPath())
+        def pluginClass = loader.loadClass('fixture.starter.StarterRootGrailsPlugin')
+        def descriptor = descriptorOf(descriptorFile.text, new UrlResource(descriptorFile.toURI().toURL()))
         def grailsApp = new DefaultGrailsApplication(loader)
 
         when:
-        def binaryPlugin = new BinaryGrailsPlugin(descriptor, metadata, grailsApp)
+        def binaryPlugin = new BinaryGrailsPlugin(pluginClass, descriptor, grailsApp)
         binaryPlugin.refresh()
 
-        then: 'static assets and precompiled views resolve from the derived archive root'
+        then: 'the compiler wrote the descriptor naming the class'
+        descriptor.pluginClassName == 'fixture.starter.StarterRootGrailsPlugin'
+
+        and: 'static assets and precompiled views resolve from the archive root'
         binaryPlugin.getResource('/css/starter.css')?.inputStream?.text == 'body { color: green; }'
         binaryPlugin.resolveView('/starter/index.gsp') == MyView
 
@@ -240,14 +263,59 @@ class BinaryPluginSpec extends Specification {
         loader?.close()
     }
 
-    def "Test Java @GrailsPluginDescriptor implementing GrailsApplicationLifeCycle receives all lifecycle hooks"() {
+    def "Test a Plugin subclass receives all lifecycle hooks"() {
         given:
+        def pluginClass = compilePlugin('LifecycleStarterPlugin', '''
+            import grails.plugins.Plugin
+            import org.springframework.beans.factory.BeanRegistrar
+
+            @grails.plugins.metadata.GrailsPluginDescriptor(name = 'lifecycle-starter')
+            class LifecycleStarterPlugin extends Plugin {
+                List<String> events = []
+
+                @Override
+                Closure doWithSpring() {
+                    events << 'doWithSpring'
+                    return { -> }
+                }
+
+                @Override
+                BeanRegistrar beanRegistrar() {
+                    return { registry, env -> } as BeanRegistrar
+                }
+
+                @Override
+                void doWithDynamicMethods() {
+                    events << 'doWithDynamicMethods'
+                }
+
+                @Override
+                void doWithApplicationContext() {
+                    events << 'doWithApplicationContext'
+                }
+
+                @Override
+                void onConfigChange(Map<String, Object> event) {
+                    events << 'onConfigChange'
+                }
+
+                @Override
+                void onStartup(Map<String, Object> event) {
+                    events << 'onStartup'
+                }
+
+                @Override
+                void onShutdown(Map<String, Object> event) {
+                    events << 'onShutdown'
+                }
+            }
+        ''')
         def grailsApp = new DefaultGrailsApplication()
-        def descriptor = new PluginDescriptor(new ByteArrayResource(new byte[0]), [LifecycleStarterPlugin.name], [])
-        def plugin = new BinaryGrailsPlugin(LifecycleStarterPlugin, descriptor, grailsApp)
+        def descriptor = new PluginDescriptor(new ByteArrayResource(new byte[0]), PluginUtils.definitionOf(pluginClass))
+        def plugin = new BinaryGrailsPlugin(pluginClass, descriptor, grailsApp)
         def appCtx = new GenericApplicationContext()
         def springConfig = new DefaultRuntimeSpringConfiguration(appCtx)
-        def discovery = new DefaultPluginDiscovery([LifecycleStarterPlugin] as Class<?>[]).tap {
+        def discovery = new DefaultPluginDiscovery([pluginClass] as Class<?>[]).tap {
             loadPluginsFromClasspath = false
         }
         discovery.init(new StandardEnvironment())
@@ -261,7 +329,7 @@ class BinaryPluginSpec extends Specification {
         plugin.doWithApplicationContext(appCtx)
         plugin.notifyOfEvent(DefaultGrailsPlugin.EVENT_ON_CONFIG_CHANGE, [key: 'val'])
         plugin.notifyOfEvent(DefaultGrailsPlugin.EVENT_ON_SHUTDOWN, [:])
-        LifecycleStarterPlugin instance = (LifecycleStarterPlugin) plugin.pluginInstance
+        Plugin instance = (Plugin) plugin.pluginInstance
         manager.loadPlugins()
         manager.onStartup([started: true])
 
@@ -270,38 +338,38 @@ class BinaryPluginSpec extends Specification {
         instance.applicationContext == appCtx
         instance.events == ['doWithSpring', 'doWithDynamicMethods', 'doWithApplicationContext', 'onConfigChange', 'onShutdown']
         plugin.beanRegistrar != null
-        ((LifecycleStarterPlugin) manager.getGrailsPlugin('lifecycleStarter').pluginInstance).events.contains('onStartup')
+        manager.getGrailsPlugin('lifecycleStarter').pluginInstance.events.contains('onStartup')
     }
 
     def "Test @GrailsPluginDescriptor enabled=false disables a Plugin subclass"() {
         given:
-        def grailsApp = new DefaultGrailsApplication()
-        def descriptor = new PluginDescriptor(new ByteArrayResource(new byte[0]), [DisabledAnnotatedPlugin.name], [])
+        def pluginClass = compilePlugin('DisabledAnnotatedPlugin', '''
+            @grails.plugins.metadata.GrailsPluginDescriptor(name = 'disabled-annotated', enabled = false)
+            class DisabledAnnotatedPlugin extends grails.plugins.Plugin { }
+        ''')
+        def descriptor = new PluginDescriptor(new ByteArrayResource(new byte[0]), PluginUtils.definitionOf(pluginClass))
 
         when:
-        def plugin = new BinaryGrailsPlugin(DisabledAnnotatedPlugin, descriptor, grailsApp)
+        def plugin = new BinaryGrailsPlugin(pluginClass, descriptor, new DefaultGrailsApplication())
 
         then:
         !plugin.enabled
     }
 
-    def "Test DefaultGrailsPluginManager loads descriptor-less starter plugins from classpath"() {
-        given: 'a classpath root containing a descriptor-less starter plugin'
-        File root = new File(tempDir, 'manager-starter')
-        File imports = new File(root, PluginUtils.PLUGINS_IMPORTS_PATH)
-        imports.parentFile.mkdirs()
-        imports.text = 'managerStarter\n'
-        File descFile = new File(root, PluginUtils.getPluginDescriptorPath('managerStarter'))
-        descFile.parentFile.mkdirs()
+    def "Test DefaultGrailsPluginManager loads a compiled plugin from its classpath descriptor"() {
+        given: 'a classpath root holding a compiled plugin, whose descriptor records a version and an artefact'
+        File root = new File(tempDir, 'manager-plugin')
+        PluginClassFixtures.compilePlugin(root.toPath(), 'fixture.manager.ManagerProbeGrailsPlugin')
+        File descFile = new File(root, PluginUtils.getPluginDescriptorPath('managerProbe'))
         descFile.text = '''
             format.version=1
-            name=managerStarter
+            name=managerProbe
             version=1.2.0
-            metadata.complete=true
+            class=fixture.manager.ManagerProbeGrailsPlugin
             artefacts.Service=org.grails.plugins.TestBinaryResource
         '''.stripIndent()
 
-        def loader = new URLClassLoader([root.toURI().toURL()] as URL[], getClass().classLoader)
+        def loader = PluginClassFixtures.loaderOver(root.toPath())
         def originalCl = Thread.currentThread().contextClassLoader
         Thread.currentThread().contextClassLoader = loader
         def grailsApp = new DefaultGrailsApplication(loader)
@@ -313,11 +381,11 @@ class BinaryPluginSpec extends Specification {
         when:
         manager.loadPlugins()
 
-        then: 'the descriptor-less starter plugin is registered and loaded'
-        def loaded = manager.getGrailsPlugin('managerStarter')
-        loaded != null
+        then: 'the plugin is registered and loaded as its descriptor describes it'
+        def loaded = manager.getGrailsPlugin('managerProbe')
+        loaded instanceof BinaryGrailsPlugin
         loaded.version == '1.2.0'
-        loaded.pluginClass == null
+        loaded.pluginClass.name == 'fixture.manager.ManagerProbeGrailsPlugin'
         loaded.providedArtefacts as List == [TestBinaryResource]
 
         cleanup:
@@ -327,15 +395,12 @@ class BinaryPluginSpec extends Specification {
 
     def "activation uses the same complete definition as discovery"() {
         given:
-        Properties props = new Properties()
-        props.load(new StringReader("""
+        def descriptor = descriptorOf('''
             name=testBinary
             version=98.7
-            class=${TestBinaryGrailsPlugin.name}
+            class=org.grails.plugins.TestBinaryGrailsPlugin
             dependsOn.core=98.7
-            metadata.complete=true
-        """))
-        def descriptor = PluginDescriptor.fromProperties('testBinary', null, props)
+        ''', null)
 
         when:
         def plugin = new BinaryGrailsPlugin(TestBinaryGrailsPlugin, descriptor, new DefaultGrailsApplication())
@@ -346,23 +411,20 @@ class BinaryPluginSpec extends Specification {
     }
 
     def "Test BinaryGrailsPlugin honors overridden descriptor name for views and propertySource"() {
-        given: 'a *GrailsPlugin class whose descriptor declares an overridden logical name bar'
+        given: 'a plugin class whose descriptor declares the logical name bar'
         File root = new File(tempDir, 'renamed-binary-root')
         File descFile = new File(root, PluginUtils.getPluginDescriptorPath('bar'))
         descFile.parentFile.mkdirs()
-        descFile.text = """
+        descFile.text = '''
             format.version=1
             name=bar
             version=1.0.0
-            class=${TestBinaryGrailsPlugin.name}
-            metadata.complete=false
-        """.stripIndent()
+            class=org.grails.plugins.TestBinaryGrailsPlugin
+        '''.stripIndent()
         File viewsFile = new File(root, PluginUtils.getPluginViewsPath('bar'))
         viewsFile.text = "/bar/index.gsp=${MyView.name}\n"
 
-        def props = new Properties()
-        descFile.withInputStream { props.load(it) }
-        def descriptor = PluginDescriptor.fromProperties('bar', new UrlResource(descFile.toURI().toURL()), props)
+        def descriptor = descriptorOf(descFile.text, new UrlResource(descFile.toURI().toURL()))
         def loader = new URLClassLoader([root.toURI().toURL()] as URL[], getClass().classLoader)
         def grailsApp = new DefaultGrailsApplication(loader)
         def appCtx = new GenericApplicationContext()
@@ -383,64 +445,11 @@ class BinaryPluginSpec extends Specification {
 
 }
 
-@GrailsPluginDescriptor(name = 'lifecycle-starter', version = '1.0.0')
-class LifecycleStarterPlugin implements GrailsApplicationLifeCycle, PluginManagerAware, ApplicationContextAware {
-
-    GrailsPluginManager pluginManager
-    ApplicationContext applicationContext
-    List<String> events = []
-
-    @Override
-    Closure doWithSpring() {
-        events << 'doWithSpring'
-        return { -> }
-    }
-
-    @Override
-    BeanRegistrar beanRegistrar() {
-        return { registry, env -> } as BeanRegistrar
-    }
-
-    @Override
-    void doWithDynamicMethods() {
-        events << 'doWithDynamicMethods'
-    }
-
-    @Override
-    void doWithApplicationContext() {
-        events << 'doWithApplicationContext'
-    }
-
-    @Override
-    void onConfigChange(Map<String, Object> event) {
-        events << 'onConfigChange'
-    }
-
-    @Override
-    void onStartup(Map<String, Object> event) {
-        events << 'onStartup'
-    }
-
-    @Override
-    void onShutdown(Map<String, Object> event) {
-        events << 'onShutdown'
-    }
-}
-
-@GrailsPluginDescriptor(name = 'disabled-annotated', version = '1.0.0', enabled = false)
-class DisabledAnnotatedPlugin extends Plugin {
-}
-
-@grails.plugins.metadata.GrailsPluginDescriptor(
-        name = 'annotated-starter',
-        version = '1.5.0',
-        loadAfter = ['core']
-)
-class AnnotatedStarterDescriptor {
-}
-
-class TestBinaryGrailsPlugin {
-    def version = 1.0
+/**
+ * A plugin class described by the descriptors the tests hand it. It carries no annotation, so that the
+ * test class path does not list it as a plugin of its own.
+ */
+class TestBinaryGrailsPlugin extends Plugin {
 }
 
 class TestBinaryResource {}
@@ -465,4 +474,3 @@ class MyView extends Script {
         return "Good"
     }
 }
-

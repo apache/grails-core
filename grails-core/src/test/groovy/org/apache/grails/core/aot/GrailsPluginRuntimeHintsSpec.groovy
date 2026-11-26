@@ -24,6 +24,7 @@ import org.springframework.aot.hint.predicate.RuntimeHintsPredicates
 import spock.lang.Specification
 import spock.lang.TempDir
 
+import grails.plugins.exceptions.PluginException
 import org.apache.grails.core.plugins.PluginUtils
 import org.grails.plugins.CoreGrailsPlugin
 
@@ -105,16 +106,16 @@ class GrailsPluginRuntimeHintsSpec extends Specification {
                     .test(hints)
     }
 
-    void 'a descriptor-less starter plugin registers its descriptor and config without reflection hints'() {
-        given: 'a descriptor-less plugin'
+    void 'a descriptor that names no plugin class fails, as discovery does'() {
+        given: 'a classless descriptor, which a starter plugin used to be'
             def loader = withDescriptor('starterOnly', null, true, false)
 
         when:
             new GrailsPluginRuntimeHints().registerHints(hints, loader)
 
         then:
-            RuntimeHintsPredicates.resource().forResource('META-INF/grails/plugins/starterOnly/plugin.properties').test(hints)
-            RuntimeHintsPredicates.resource().forResource('META-INF/grails/plugins/starterOnly/plugin.yml').test(hints)
+            def e = thrown(PluginException)
+            e.message.contains('names no plugin class')
     }
 
     void 'a plugin class a descriptor names can be located'() {
@@ -140,34 +141,14 @@ class GrailsPluginRuntimeHintsSpec extends Specification {
             !RuntimeHintsPredicates.resource().forResource('com/example/AbsentGrailsPlugin.class').test(hints)
     }
 
-    void 'a legacy META-INF/grails-plugin.xml descriptor is carried when present on the classpath'() {
-        given: 'a legacy XML plugin descriptor on the classpath'
-            def legacyXml = new File(classpathRoot, 'META-INF/grails-plugin.xml')
-            legacyXml.parentFile.mkdirs()
-            legacyXml.text = "<plugin name='legacyCore' version='1.0.0'><type>${CoreGrailsPlugin.name}</type></plugin>"
-            def loader = new URLClassLoader([classpathRoot.toURI().toURL()] as URL[], getClass().classLoader)
-
-        when:
-            new GrailsPluginRuntimeHints().registerHints(hints, loader)
-
-        then:
-            RuntimeHintsPredicates.resource().forResource('META-INF/grails-plugin.xml').test(hints)
-            RuntimeHintsPredicates.reflection().onType(CoreGrailsPlugin)
-                    .withMemberCategories(MemberCategory.INVOKE_DECLARED_CONSTRUCTORS)
-                    .test(hints)
-
-        cleanup:
-            loader?.close()
-    }
-
-    void 'a descriptor declaring a name other than its import is rejected, and only the imported name is registered'() {
+    void 'a descriptor declaring a name other than its import is rejected'() {
         given: 'a plugins.imports entry whose descriptor declares a conflicting name with its own config resource'
             def imports = new File(classpathRoot, PluginUtils.PLUGINS_IMPORTS_PATH)
             imports.parentFile.mkdirs()
             imports.text = 'my-plugin\n'
             def descriptor = new File(classpathRoot, PluginUtils.getPluginDescriptorPath('myPlugin'))
             descriptor.parentFile.mkdirs()
-            descriptor.text = 'format.version=1\nname=customAlias\nversion=1.0.0\n'
+            descriptor.text = "format.version=1\nname=customAlias\nversion=1.0.0\nclass=${CoreGrailsPlugin.name}\n"
             def aliasedConfig = new File(classpathRoot, PluginUtils.getPluginConfigPath('customAlias', PluginUtils.PLUGIN_YML_CONFIG))
             aliasedConfig.parentFile.mkdirs()
             aliasedConfig.text = 'custom:\n  enabled: true\n'
@@ -176,8 +157,11 @@ class GrailsPluginRuntimeHintsSpec extends Specification {
         when:
             new GrailsPluginRuntimeHints().registerHints(hints, loader)
 
-        then: 'the import path is registered, and the conflicting name is not trusted as a namespace'
-            RuntimeHintsPredicates.resource().forResource('META-INF/grails/plugins/myPlugin/plugin.properties').test(hints)
+        then: 'the broken descriptor fails, as discovery does'
+            def e = thrown(PluginException)
+            e.message.contains('conflicting name customAlias')
+
+        and: 'the conflicting name is not trusted as a namespace'
             !RuntimeHintsPredicates.resource().forResource('META-INF/grails/plugins/customAlias/plugin.yml').test(hints)
 
         cleanup:

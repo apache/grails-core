@@ -32,15 +32,15 @@ import spock.lang.TempDir
 
 import grails.plugins.GrailsPlugin
 import grails.plugins.GrailsPluginManager
+import grails.plugins.exceptions.PluginException
 import org.apache.grails.core.plugins.PluginClassFixtures
 import org.apache.grails.core.plugins.PluginUtils
 import org.springframework.aot.generate.NameGenerator
 
 /**
- * Covers each plugin's configuration reaching an application running on generated code, where every class is
- * at the same root and a plugin's {@code plugin.yml} cannot be found relative to its class.
- *
- * <p>An image built without these lost every plugin's configuration.</p>
+ * Covers each plugin's configuration reaching an application running on generated code: a plugin's
+ * {@code plugin.yml} or {@code plugin.groovy} sits beside its descriptor, under
+ * {@code META-INF/grails/plugins/<name>/}, and an image carries it only when asked.
  */
 class PluginConfigurationBeanFactoryInitializationAotProcessorSpec extends Specification {
 
@@ -56,21 +56,22 @@ class PluginConfigurationBeanFactoryInitializationAotProcessorSpec extends Speci
         loaders*.close()
     }
 
-    /** A plugin class in a root of its own, as each plugin's JAR is, with the configuration given, if any. */
-    private Class<?> plugin(String className, String configFileName = null, String configuration = null) {
+    /** A plugin class in a root of its own, as each plugin's JAR is, with the namespaced configuration given, if any. */
+    private Class<?> plugin(String className, String pluginName, String configFileName = null, String configuration = null) {
         Path root = temp.resolve(className)
         PluginClassFixtures.compilePlugin(root, className)
         if (configFileName) {
-            PluginClassFixtures.write(root, configFileName, configuration)
+            PluginClassFixtures.write(root, PluginUtils.getPluginConfigPath(pluginName, configFileName), configuration)
         }
         URLClassLoader loader = PluginClassFixtures.loaderOver(root)
         loaders << loader
         loader.loadClass(className)
     }
 
-    private void loaded(Class<?>... pluginClasses) {
-        GrailsPlugin[] plugins = pluginClasses.collect { Class<?> pluginClass ->
+    private void loaded(Map<String, Class<?>> pluginClassesByName) {
+        GrailsPlugin[] plugins = pluginClassesByName.collect { String name, Class<?> pluginClass ->
             Stub(GrailsPlugin) {
+                getName() >> name
                 getPluginClass() >> pluginClass
             }
         } as GrailsPlugin[]
@@ -87,139 +88,52 @@ class PluginConfigurationBeanFactoryInitializationAotProcessorSpec extends Speci
         generation
     }
 
-    private static String generated(DefaultGenerationContext generation, String path) {
-        ((InMemoryGeneratedFiles) generation.generatedFiles).getGeneratedFileContent(Kind.RESOURCE, path)
-    }
-
-    void 'each plugin configuration is copied under the name of its plugin class'() {
-        given: 'two plugins with a plugin.yml each, at the same path in their own roots'
-            loaded(plugin('fixture.alpha.AlphaGrailsPlugin', 'plugin.yml', 'alpha: one'),
-                    plugin('fixture.beta.BetaGrailsPlugin', 'plugin.yml', 'beta: two'))
-            String alpha = PluginUtils.getGeneratedConfigurationPath('fixture.alpha.AlphaGrailsPlugin', 'plugin.yml')
-            String beta = PluginUtils.getGeneratedConfigurationPath('fixture.beta.BetaGrailsPlugin', 'plugin.yml')
+    void 'each plugin configuration is carried into an image at its namespaced path, without a copy'() {
+        given: 'two plugins with a plugin.yml each, in their own roots'
+            loaded(alpha: plugin('fixture.alpha.AlphaGrailsPlugin', 'alpha', 'plugin.yml', 'alpha: one'),
+                    beta: plugin('fixture.beta.BetaGrailsPlugin', 'beta', 'plugin.yml', 'beta: two'))
 
         when:
             def generation = generate()
 
-        then: 'each is written where only its own plugin looks for it'
-            generated(generation, alpha) == 'alpha: one'
-            generated(generation, beta) == 'beta: two'
+        then: 'each namespaced path is registered'
+            RuntimeHintsPredicates.resource().forResource(PluginUtils.getPluginConfigPath('alpha', 'plugin.yml')).test(generation.runtimeHints)
+            RuntimeHintsPredicates.resource().forResource(PluginUtils.getPluginConfigPath('beta', 'plugin.yml')).test(generation.runtimeHints)
 
-        and: 'carried into an image'
-            RuntimeHintsPredicates.resource().forResource(alpha).test(generation.runtimeHints)
-            RuntimeHintsPredicates.resource().forResource(beta).test(generation.runtimeHints)
+        and: 'nothing is generated, since the paths are already distinct'
+            ((InMemoryGeneratedFiles) generation.generatedFiles).getGeneratedFiles(Kind.RESOURCE).isEmpty()
     }
 
-    void 'a configuration written as Groovy keeps its name'() {
+    void 'a configuration written as Groovy is carried under its own name'() {
         given:
-            loaded(plugin('fixture.groovy.ScriptedGrailsPlugin', 'plugin.groovy', 'scripted = true'))
+            loaded(scripted: plugin('fixture.groovy.ScriptedGrailsPlugin', 'scripted', 'plugin.groovy', 'scripted = true'))
 
         expect: 'the name is how its format is chosen'
-            generated(generate(),
-                    PluginUtils.getGeneratedConfigurationPath('fixture.groovy.ScriptedGrailsPlugin', 'plugin.groovy')) ==
-                    'scripted = true'
-    }
-
-    void 'where every class is at one root each plugin still finds its own configuration'() {
-        given: 'two configured plugins and one without configuration, copied while the roots still exist'
-            loaded(plugin('fixture.alpha.AlphaGrailsPlugin', 'plugin.yml', 'alpha: one'),
-                    plugin('fixture.beta.BetaGrailsPlugin', 'plugin.yml', 'beta: two'),
-                    plugin('fixture.gamma.GammaGrailsPlugin'))
-            def generation = generate()
-
-        and: 'an image of them: their classes and the copies at a single root, and neither plugin.yml'
-            Path image = temp.resolve('image')
-            ['fixture.alpha.AlphaGrailsPlugin', 'fixture.beta.BetaGrailsPlugin', 'fixture.gamma.GammaGrailsPlugin'].each {
-                PluginClassFixtures.compilePlugin(image, it)
-            }
-            ((InMemoryGeneratedFiles) generation.generatedFiles).getGeneratedFiles(Kind.RESOURCE).each { path, content ->
-                PluginClassFixtures.write(image, path, content.inputStream.text)
-            }
-            URLClassLoader loader = PluginClassFixtures.loaderOver(image)
-            loaders << loader
-
-        expect:
-            PluginUtils.readPluginConfiguration(loader.loadClass('fixture.alpha.AlphaGrailsPlugin')).inputStream.text == 'alpha: one'
-            PluginUtils.readPluginConfiguration(loader.loadClass('fixture.beta.BetaGrailsPlugin')).inputStream.text == 'beta: two'
-            PluginUtils.readPluginConfiguration(loader.loadClass('fixture.gamma.GammaGrailsPlugin')) == null
+            RuntimeHintsPredicates.resource().forResource(PluginUtils.getPluginConfigPath('scripted', 'plugin.groovy'))
+                    .test(generate().runtimeHints)
     }
 
     void 'plugins without configuration contribute nothing'() {
         given:
-            loaded(plugin('fixture.gamma.GammaGrailsPlugin'))
+            loaded(gamma: plugin('fixture.gamma.GammaGrailsPlugin', 'gamma'))
 
         expect:
             new PluginConfigurationBeanFactoryInitializationAotProcessor().processAheadOfTime(context.beanFactory) == null
     }
 
-    void 'namespaced plugin configuration registers a resource hint without copying'() {
-        given: 'a plugin whose plugin.yml is already packaged under META-INF/grails/plugins/<name>/'
-            String namespacedPath = PluginUtils.getPluginConfigPath('namespaced', PluginUtils.PLUGIN_YML_CONFIG)
-            Class<?> pluginClass = plugin('fixture.namespaced.NamespacedGrailsPlugin', namespacedPath, 'namespaced: true')
-            GrailsPlugin stubPlugin = Stub(GrailsPlugin) {
-                getName() >> 'namespaced'
-                getPluginClass() >> pluginClass
-            }
-            context.beanFactory.registerSingleton(GrailsPluginManager.BEAN_NAME, Stub(GrailsPluginManager) {
-                getAllPlugins() >> ([stubPlugin] as GrailsPlugin[])
-            })
-
-        when:
-            def generation = generate()
-
-        then: 'no duplicate copy is generated'
-            ((InMemoryGeneratedFiles) generation.generatedFiles).getGeneratedFiles(Kind.RESOURCE).isEmpty()
-
-        and: 'the namespaced path itself is registered as a runtime hint'
-            RuntimeHintsPredicates.resource().forResource(namespacedPath).test(generation.runtimeHints)
-    }
-
-    void 'descriptor-less starter plugin configuration registers a resource hint through the bean class loader'() {
-        given: 'a starter plugin with no pluginClass and namespaced plugin.yml on the bean class loader'
-            String namespacedPath = PluginUtils.getPluginConfigPath('starterOnly', PluginUtils.PLUGIN_YML_CONFIG)
-            Path root = temp.resolve('starterOnly')
-            PluginClassFixtures.write(root, namespacedPath, 'starter: enabled')
-            URLClassLoader loader = PluginClassFixtures.loaderOver(root)
-            loaders << loader
-            context.beanFactory.setBeanClassLoader(loader)
-            GrailsPlugin starterPlugin = Stub(GrailsPlugin) {
-                getName() >> 'starterOnly'
-                getPluginClass() >> null
-            }
-            context.beanFactory.registerSingleton(GrailsPluginManager.BEAN_NAME, Stub(GrailsPluginManager) {
-                getAllPlugins() >> ([starterPlugin] as GrailsPlugin[])
-            })
-
-        when:
-            def generation = generate()
-
-        then:
-            ((InMemoryGeneratedFiles) generation.generatedFiles).getGeneratedFiles(Kind.RESOURCE).isEmpty()
-            RuntimeHintsPredicates.resource().forResource(namespacedPath).test(generation.runtimeHints)
-    }
-
     void 'a plugin with both namespaced plugin.yml and plugin.groovy fails AOT processing'() {
-        given: 'a starter plugin whose namespace contains both plugin.yml and plugin.groovy'
-            Path root = temp.resolve('dualStarter')
-            PluginClassFixtures.write(root, PluginUtils.getPluginConfigPath('dualStarter', PluginUtils.PLUGIN_YML_CONFIG), 'dual: true')
-            PluginClassFixtures.write(root, PluginUtils.getPluginConfigPath('dualStarter', PluginUtils.PLUGIN_GROOVY_CONFIG), 'dual = true')
-            URLClassLoader loader = PluginClassFixtures.loaderOver(root)
-            loaders << loader
-            context.beanFactory.setBeanClassLoader(loader)
-            GrailsPlugin starterPlugin = Stub(GrailsPlugin) {
-                getName() >> 'dualStarter'
-                getPluginClass() >> null
-            }
-            context.beanFactory.registerSingleton(GrailsPluginManager.BEAN_NAME, Stub(GrailsPluginManager) {
-                getAllPlugins() >> ([starterPlugin] as GrailsPlugin[])
-            })
+        given: 'a plugin whose namespace contains both plugin.yml and plugin.groovy'
+            Class<?> pluginClass = plugin('fixture.dual.DualGrailsPlugin', 'dual', 'plugin.yml', 'dual: true')
+            Path root = temp.resolve('fixture.dual.DualGrailsPlugin')
+            PluginClassFixtures.write(root, PluginUtils.getPluginConfigPath('dual', PluginUtils.PLUGIN_GROOVY_CONFIG), 'dual = true')
+            loaded(dual: pluginClass)
 
         when:
             new PluginConfigurationBeanFactoryInitializationAotProcessor().processAheadOfTime(context.beanFactory)
 
         then:
-            def e = thrown(RuntimeException)
-            e.message.contains('dualStarter')
+            def e = thrown(PluginException)
+            e.message.contains('[dual]')
     }
 
     void 'a context that is not a Grails application contributes nothing'() {

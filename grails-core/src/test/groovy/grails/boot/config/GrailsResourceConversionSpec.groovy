@@ -33,7 +33,6 @@ import spock.lang.Specification
 
 import grails.boot.GrailsApp
 import grails.core.GrailsApplication
-import grails.plugins.Plugin
 import grails.util.Environment
 import grails.util.Holders
 import org.apache.grails.core.plugins.DefaultPluginDiscovery
@@ -205,7 +204,7 @@ class GrailsResourceConversionSpec extends Specification {
     void 'the early registration phase expands patterns for plugin beans and plugin configuration reads'() {
         given: 'a plugin context with the early phase only and no Grails application post-processor'
         AnnotationConfigApplicationContext context = bootConversionContext()
-        context.beanFactory.registerSingleton(PluginDiscovery.BEAN_NAME, discovery(context, ResourceConversionGrailsPlugin))
+        context.beanFactory.registerSingleton(PluginDiscovery.BEAN_NAME, discovery(context, resourceConversionPluginClass))
         context.beanFactory.registerSingleton(GrailsEarlyPluginRegistrationPostProcessor.APPLICATION_SOURCE_CLASSES_BEAN_NAME,
                 [ResourceConversionEarlyApplication] as Class<?>[])
         new GrailsPluginLifecycleInitializer().initialize(context)
@@ -251,6 +250,35 @@ class GrailsResourceConversionSpec extends Specification {
 
     private static Set<URL> urls(Resource[] resources) {
         resources*.URL as Set<URL>
+    }
+
+    /** A plugin compiled at run time, so that the test class path does not list it as a plugin of its own. */
+    private static Class<?> getResourceConversionPluginClass() {
+        new GroovyClassLoader(GrailsResourceConversionSpec.classLoader).parseClass('''
+            import org.springframework.beans.factory.config.PropertiesFactoryBean
+            import org.springframework.core.io.Resource
+            import grails.boot.config.GrailsResourceConversionSpec
+            import grails.boot.config.ResourceConversionHolder
+
+            @grails.plugins.metadata.GrailsPluginDescriptor
+            class ResourceConversionGrailsPlugin extends grails.plugins.Plugin {
+
+                @Override
+                Closure doWithSpring() {
+                    { ->
+                        earlyOptionalProperties(PropertiesFactoryBean) {
+                            locations = GrailsResourceConversionSpec.MISSING
+                        }
+                        earlyHolder(ResourceConversionHolder) {
+                            resources = GrailsResourceConversionSpec.PATTERN
+                        }
+                        earlyConfigHolder(ResourceConversionHolder) {
+                            resources = config.getProperty('resource.conversion.locations', Resource[])
+                        }
+                    }
+                }
+            }
+        ''')
     }
 }
 
@@ -308,24 +336,4 @@ class ResourceConversionApplication extends GrailsAutoConfiguration {
 
 /** Stands in for the application class GrailsApp stashes; it contributes no beans of its own. */
 class ResourceConversionEarlyApplication extends GrailsAutoConfiguration {
-}
-
-class ResourceConversionGrailsPlugin extends Plugin {
-
-    def version = '1.0'
-
-    @Override
-    Closure doWithSpring() {
-        { ->
-            earlyOptionalProperties(PropertiesFactoryBean) {
-                locations = GrailsResourceConversionSpec.MISSING
-            }
-            earlyHolder(ResourceConversionHolder) {
-                resources = GrailsResourceConversionSpec.PATTERN
-            }
-            earlyConfigHolder(ResourceConversionHolder) {
-                resources = config.getProperty('resource.conversion.locations', Resource[])
-            }
-        }
-    }
 }

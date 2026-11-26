@@ -20,11 +20,14 @@ package org.apache.grails.core.plugins
 
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.StandardOpenOption
 
 import groovy.transform.CompileStatic
 
 import org.codehaus.groovy.control.CompilationUnit
 import org.codehaus.groovy.control.CompilerConfiguration
+
+import grails.plugins.metadata.PluginDefinition
 
 /**
  * Plugin classes compiled into a directory of their own, laid out as a plugin's build lays them out, so that
@@ -34,17 +37,45 @@ import org.codehaus.groovy.control.CompilerConfiguration
 class PluginClassFixtures {
 
     /**
-     * Compiles a plugin class with the given name into {@code root}.
+     * Compiles a plugin class with the given name into {@code root}. The compiler writes the plugin's
+     * descriptor beside it, as a plugin's build does.
      */
     static void compilePlugin(Path root, String className) {
         int dot = className.lastIndexOf('.')
         String simpleName = className.substring(dot + 1)
+        compile(root, "${simpleName}.groovy",
+                "package ${className.substring(0, dot)}\n@grails.plugins.metadata.GrailsPluginDescriptor\n" +
+                        "class ${simpleName} extends grails.plugins.Plugin {\n}\n")
+    }
+
+    /**
+     * Compiles Groovy source into {@code root}, so that its classes have class files of their own, as a
+     * plugin jar's do, without being on the test class path.
+     */
+    static void compile(Path root, String fileName, String source) {
         CompilerConfiguration configuration = new CompilerConfiguration()
         configuration.targetDirectory = root.toFile()
-        CompilationUnit unit = new CompilationUnit(configuration)
-        unit.addSource("${simpleName}.groovy",
-                "package ${className.substring(0, dot)}\nclass ${simpleName} {\n    def version = '1.0'\n}\n")
+        CompilationUnit unit = new CompilationUnit(configuration, null, new GroovyClassLoader(PluginClassFixtures.classLoader))
+        unit.addSource(fileName, source)
         unit.compile()
+    }
+
+    /**
+     * A class loader that parses plugin classes at run time, whose class path holds a descriptor recording the
+     * version of each, as a plugin jar does. A plugin class registered directly takes its version from it.
+     *
+     * @param versionsByClass the version of each plugin class, by class name
+     */
+    static GroovyClassLoader versionedPluginLoader(Path root, Map<String, String> versionsByClass) {
+        versionsByClass.each { String className, String version ->
+            String name = PluginDefinition.deriveName(className, null)
+            Path imports = root.resolve(PluginUtils.PLUGINS_IMPORTS_PATH)
+            Files.createDirectories(imports.parent)
+            Files.writeString(imports, name + '\n', StandardOpenOption.CREATE, StandardOpenOption.APPEND)
+            write(root, PluginUtils.getPluginDescriptorPath(name),
+                    "format.version=1\nname=${name}\nclass=${className}\nversion=${version}\n")
+        }
+        new GroovyClassLoader(loaderOver(root))
     }
 
     /**

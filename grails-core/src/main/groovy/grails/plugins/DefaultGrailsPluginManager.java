@@ -37,7 +37,6 @@ import org.apache.commons.logging.LogFactory;
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.support.GenericApplicationContext;
-import org.springframework.core.io.Resource;
 
 import grails.core.GrailsApplication;
 import grails.core.support.ParentApplicationContextAware;

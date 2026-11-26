@@ -24,8 +24,8 @@ import spock.lang.Unroll
 
 import org.springframework.core.env.StandardEnvironment
 
+import grails.plugins.exceptions.PluginException
 import grails.plugins.metadata.PluginDefinition
-import grails.plugins.metadata.GrailsPluginDescriptor
 import org.apache.grails.core.testing.support.LogCapture
 
 class PluginDiscoverySpec extends Specification {
@@ -47,8 +47,8 @@ class PluginDiscoverySpec extends Specification {
                 Thread.currentThread().contextClassLoader
         )
 
-        then: 'at least one descriptor is found'
-        !descriptors.empty
+        then: 'the core plugin descriptor is among them'
+        descriptors.any { it.pluginName == 'core' && it.pluginClassName == 'org.grails.plugins.CoreGrailsPlugin' }
 
         and: 'each descriptor has a resource'
         descriptors.every { it.resource }
@@ -65,7 +65,7 @@ class PluginDiscoverySpec extends Specification {
         descriptors.empty
     }
 
-    def 'captures provided class names grouped by artefact type from plugin.properties'() {
+    def 'captures the plugin class and provided class names grouped by artefact type from plugin.properties'() {
         given: 'a plugin.properties descriptor with class and grouped artefact entries'
         def tempDir = File.createTempDir()
         writePluginDescriptor(tempDir, 'test', '''
@@ -86,9 +86,9 @@ class PluginDiscoverySpec extends Specification {
         with(descriptors[0]) {
             pluginName == 'test'
             pluginVersion == '1.0.0'
-            providedPlugins == ['com.example.TestGrailsPlugin']
+            pluginClassName == 'com.example.TestGrailsPlugin'
             providedClasses == ['com.example.MyDomainClass', 'com.example.MyService']
-            providedArtefactsByType == [
+            artefactsByType == [
                     Domain : ['com.example.MyDomainClass'],
                     Service: ['com.example.MyService']
             ]
@@ -101,8 +101,8 @@ class PluginDiscoverySpec extends Specification {
         tempDir.deleteDir()
     }
 
-    def 'skips a plugin descriptor with an unsupported format.version while loading valid descriptors'() {
-        given: 'one descriptor with an unsupported format version and one valid descriptor'
+    def 'fails on a plugin descriptor with an unsupported format.version'() {
+        given: 'a descriptor with an unsupported format version'
         def badDir = File.createTempDir()
         writePluginDescriptor(badDir, 'future', '''
             format.version=99
@@ -110,149 +110,127 @@ class PluginDiscoverySpec extends Specification {
             version=1.0.0
             class=com.example.FutureGrailsPlugin
         ''')
-        def goodDir = File.createTempDir()
-        writePluginDescriptor(goodDir, 'plain', '''
-            format.version=1
-            name=plain
-            version=1.0.0
-            class=com.example.PlainGrailsPlugin
-        ''')
-        def classLoader = new URLClassLoader(
-                [badDir.toURI().toURL(), goodDir.toURI().toURL()] as URL[], (ClassLoader) null)
+        def classLoader = new URLClassLoader([badDir.toURI().toURL()] as URL[], (ClassLoader) null)
 
         when: 'plugin descriptor resources are scanned'
-        def descriptors = PluginUtils.scanPluginDescriptorResources(classLoader)
+        PluginUtils.scanPluginDescriptorResources(classLoader)
 
-        then: 'only the supported descriptor is returned'
-        descriptors*.providedPlugins == [['com.example.PlainGrailsPlugin']]
+        then: 'the broken descriptor fails discovery, naming the format'
+        def e = thrown(PluginException)
+        e.message.contains('Unsupported plugin descriptor format 99')
 
         cleanup:
         classLoader?.close()
         badDir.deleteDir()
-        goodDir.deleteDir()
     }
 
-    def 'falls back to legacy META-INF/grails-plugin.xml when a plugin has not migrated yet and avoids duplicates'() {
-        given: 'one legacy XML-only plugin and one plugin that has both modern and legacy descriptors'
-        def legacyDir = File.createTempDir()
-        def legacyXml = new File(legacyDir, 'META-INF/grails-plugin.xml')
-        legacyXml.parentFile.mkdirs()
-        legacyXml.text = '''
-            <plugin name='legacy-asset' version='5.2.3'>
-                <type>com.example.LegacyAssetGrailsPlugin</type>
-                <resources>
-                    <resource>com.example.AssetTagLib</resource>
-                </resources>
-            </plugin>
-        '''.stripIndent()
-
-        def dualDir = File.createTempDir()
-        writePluginDescriptor(dualDir, 'modern', '''
+    def 'fails on a plugin descriptor that names no plugin class'() {
+        given: 'a classless descriptor, which a starter plugin used to be'
+        def tempDir = File.createTempDir()
+        writePluginDescriptor(tempDir, 'starterMetrics', '''
             format.version=1
-            name=modern
-            version=2.0.0
-            class=com.example.ModernGrailsPlugin
-            artefacts.Service=com.example.ModernService
+            name=starterMetrics
+            version=2.1.0
         ''')
-        def dualXml = new File(dualDir, 'META-INF/grails-plugin.xml')
-        dualXml.parentFile.mkdirs()
-        dualXml.text = '''
-            <plugin name='modern' version='1.0.0'>
-                <type>com.example.ModernGrailsPlugin</type>
-            </plugin>
-        '''.stripIndent()
+        def classLoader = new URLClassLoader([tempDir.toURI().toURL()] as URL[], (ClassLoader) null)
 
-        def classLoader = new URLClassLoader(
-                [legacyDir.toURI().toURL(), dualDir.toURI().toURL()] as URL[], (ClassLoader) null)
+        when:
+        new ClasspathPluginFinder().findClasspathPlugins(classLoader, '9.0.0')
 
-        when: 'plugin descriptor resources are scanned'
-        def descriptors = PluginUtils.scanPluginDescriptorResources(classLoader)
-
-        then: 'the modern plugin is loaded once from plugin.properties and the legacy XML-only plugin is discovered via fallback'
-        descriptors.size() == 2
-        with(descriptors.find { it.pluginName == 'modern' }) {
-            pluginVersion == '2.0.0'
-            providedPlugins == ['com.example.ModernGrailsPlugin']
-            providedClasses == ['com.example.ModernService']
-        }
-        with(descriptors.find { it.pluginName == 'legacyAsset' }) {
-            pluginVersion == '5.2.3'
-            providedPlugins == ['com.example.LegacyAssetGrailsPlugin']
-            providedClasses == ['com.example.AssetTagLib']
-        }
+        then:
+        def e = thrown(PluginException)
+        e.message.contains('starterMetrics')
+        e.message.contains('names no plugin class')
 
         cleanup:
         classLoader?.close()
-        legacyDir.deleteDir()
-        dualDir.deleteDir()
+        tempDir.deleteDir()
     }
 
-    def 'skips only already-discovered plugin classes when a legacy XML descriptor shares a name with a modern descriptor'() {
-        given: 'a modern descriptor for alpha and a legacy XML descriptor named alpha that lists beta'
-        def modernDir = File.createTempDir()
-        writePluginDescriptor(modernDir, 'alpha', '''
-            format.version=1
-            name=alpha
-            version=2.0.0
-            class=com.example.AlphaGrailsPlugin
-        ''')
+    def 'fails on a plugin descriptor whose plugin class is not on the class path'() {
+        given:
+        def tempDir = File.createTempDir()
+        writePluginDescriptor(tempDir, 'absent', 'format.version=1\nname=absent\nversion=1.0\nclass=com.example.AbsentGrailsPlugin\n')
+        def classLoader = new URLClassLoader([tempDir.toURI().toURL()] as URL[], (ClassLoader) null)
 
-        def legacyDir = File.createTempDir()
-        def legacyXml = new File(legacyDir, 'META-INF/grails-plugin.xml')
-        legacyXml.parentFile.mkdirs()
-        legacyXml.text = """
-            <plugin name='alpha' version='1.0.0'>
-                ${alphaType}
-                <type>com.example.BetaGrailsPlugin</type>
-            </plugin>
-        """.stripIndent()
+        when:
+        new ClasspathPluginFinder().findClasspathPlugins(classLoader, '9.0.0')
 
-        def classLoader = new URLClassLoader(
-                [modernDir.toURI().toURL(), legacyDir.toURI().toURL()] as URL[], (ClassLoader) null)
-
-        when: 'plugin descriptor resources are scanned'
-        def descriptors = PluginUtils.scanPluginDescriptorResources(classLoader)
-
-        then: 'alpha is loaded from the modern descriptor and beta is still discovered from the legacy descriptor'
-        descriptors.size() == 2
-        descriptors[0].providedPlugins == ['com.example.AlphaGrailsPlugin']
-        descriptors[0].pluginVersion == '2.0.0'
-        descriptors[1].providedPlugins == ['com.example.BetaGrailsPlugin']
-        descriptors[1].pluginVersion == '1.0.0'
-        descriptors[1].pluginName == 'beta'
+        then:
+        def e = thrown(PluginException)
+        e.message.contains('com.example.AbsentGrailsPlugin')
+        e.message.contains('cannot be loaded')
 
         cleanup:
         classLoader?.close()
-        modernDir.deleteDir()
-        legacyDir.deleteDir()
-
-        where:
-        alphaType << ['', '<type>com.example.AlphaGrailsPlugin</type>']
+        tempDir.deleteDir()
     }
 
-    def 'rejects invalid plugin names and skips path traversal entries in plugins.imports'() {
-        given: 'a plugins.imports file containing invalid path-traversal entries alongside a valid entry'
+    def 'fails on a plugin descriptor whose class is not a grails.plugins.Plugin'() {
+        given: 'a descriptor naming a class that does not extend Plugin'
+        def tempDir = File.createTempDir()
+        writePluginDescriptor(tempDir, 'notAPlugin', 'format.version=1\nname=notAPlugin\nversion=1.0\nclass=java.lang.String\n')
+        def classLoader = new URLClassLoader([tempDir.toURI().toURL()] as URL[], PluginDiscoverySpec.classLoader)
+
+        when:
+        new ClasspathPluginFinder().findClasspathPlugins(classLoader, '9.0.0')
+
+        then:
+        def e = thrown(PluginException)
+        e.message.contains('notAPlugin')
+        e.message.contains('java.lang.String')
+
+        cleanup:
+        classLoader?.close()
+        tempDir.deleteDir()
+    }
+
+    def 'fails on a plugins.imports entry #entry that is not a valid plugin name'() {
+        given: 'a plugins.imports file containing an invalid entry'
         def tempDir = File.createTempDir()
         def imports = new File(tempDir, PluginUtils.PLUGINS_IMPORTS_PATH)
         imports.parentFile.mkdirs()
-        imports.text = '''
-            ../evil
-            foo/bar
-            a..b
-            validPlugin
-        '''.stripIndent()
-        def validDesc = new File(tempDir, PluginUtils.getPluginDescriptorPath('validPlugin'))
-        validDesc.parentFile.mkdirs()
-        validDesc.text = 'format.version=1\nname=validPlugin\nversion=1.0.0\n'
+        imports.text = "validPlugin\n${entry}\n"
         def classLoader = new URLClassLoader([tempDir.toURI().toURL()] as URL[], (ClassLoader) null)
 
         when: 'plugin descriptors are scanned'
-        def descriptors = PluginUtils.scanPluginDescriptorResources(classLoader)
+        PluginUtils.scanPluginDescriptorResources(classLoader)
 
-        then: 'only the valid entry is discovered'
-        descriptors*.pluginName == ['validPlugin']
+        then: 'the entry is rejected rather than resolved against the class path'
+        def e = thrown(PluginException)
+        e.message.contains("Invalid Grails plugin name [${entry}]")
 
-        and: 'path helper methods reject invalid plugin names and config file names'
+        cleanup:
+        classLoader?.close()
+        tempDir.deleteDir()
+
+        where:
+        entry << ['../evil', 'foo/bar', 'a..b']
+    }
+
+    def 'fails on a plugins.imports entry that has no descriptor'() {
+        given:
+        def tempDir = File.createTempDir()
+        def imports = new File(tempDir, PluginUtils.PLUGINS_IMPORTS_PATH)
+        imports.parentFile.mkdirs()
+        imports.text = 'listedOnly\n'
+        def classLoader = new URLClassLoader([tempDir.toURI().toURL()] as URL[], (ClassLoader) null)
+
+        when:
+        PluginUtils.scanPluginDescriptorResources(classLoader)
+
+        then:
+        def e = thrown(PluginException)
+        e.message.contains('[listedOnly]')
+        e.message.contains(PluginUtils.getPluginDescriptorPath('listedOnly'))
+
+        cleanup:
+        classLoader?.close()
+        tempDir.deleteDir()
+    }
+
+    def 'path helper methods reject invalid plugin names and config file names'() {
+        expect:
         !PluginUtils.isValidPluginName('../evil')
         !PluginUtils.isValidPluginName('foo/bar')
         !PluginUtils.isValidPluginName('a..b')
@@ -273,170 +251,150 @@ class PluginDiscoverySpec extends Specification {
         PluginUtils.getPluginViewsPath('foo/bar')
         then:
         thrown(IllegalArgumentException)
-
-        cleanup:
-        classLoader?.close()
-        tempDir.deleteDir()
     }
 
-    def 'rejects DOCTYPE declarations and skips malformed legacy XML descriptors without blocking valid ones'() {
-        given: 'a legacy XML with DOCTYPE, a malformed legacy XML, and a valid legacy XML'
-        def xxeDir = File.createTempDir()
-        def xxeXml = new File(xxeDir, 'META-INF/grails-plugin.xml')
-        xxeXml.parentFile.mkdirs()
-        xxeXml.text = '''<?xml version="1.0"?>
-            <!DOCTYPE plugin [<!ENTITY xxe SYSTEM "file:///etc/passwd">]>
-            <plugin name="xxe" version="1.0.0"><type>com.example.XxeGrailsPlugin</type></plugin>
-        '''.stripIndent()
-
-        def brokenDir = File.createTempDir()
-        def brokenXml = new File(brokenDir, 'META-INF/grails-plugin.xml')
-        brokenXml.parentFile.mkdirs()
-        brokenXml.text = '<plugin name="broken"><type>unclosed'
-
-        def validDir = File.createTempDir()
-        def validXml = new File(validDir, 'META-INF/grails-plugin.xml')
-        validXml.parentFile.mkdirs()
-        validXml.text = '''
-            <plugin name='good-legacy' version='1.2.3'>
-                <type>com.example.GoodLegacyGrailsPlugin</type>
-            </plugin>
-        '''.stripIndent()
-
-        def classLoader = new URLClassLoader(
-                [xxeDir.toURI().toURL(), brokenDir.toURI().toURL(), validDir.toURI().toURL()] as URL[],
-                (ClassLoader) null
-        )
-
-        when: 'plugin descriptors are scanned'
-        def descriptors = PluginUtils.scanPluginDescriptorResources(classLoader)
-
-        then: 'only the valid legacy descriptor is returned'
-        descriptors.size() == 1
-        descriptors[0].pluginName == 'goodLegacy'
-        descriptors[0].providedPlugins == ['com.example.GoodLegacyGrailsPlugin']
-
-        cleanup:
-        classLoader?.close()
-        xxeDir.deleteDir()
-        brokenDir.deleteDir()
-        validDir.deleteDir()
-    }
-
-    def 'defaults empty dependsOn version to wildcard and normalizes observe entries'() {
+    def 'defaults empty dependsOn version to wildcard and normalizes observe entries of a classpath descriptor'() {
         given: 'a descriptor with an empty dependsOn version and hyphenated observe entries'
+        def gcl = new GroovyClassLoader()
+        gcl.parseClass('''
+            @grails.plugins.metadata.GrailsPluginDescriptor
+            class EdgeMetaGrailsPlugin extends grails.plugins.Plugin { }
+        ''')
         def tempDir = File.createTempDir()
         writePluginDescriptor(tempDir, 'edgeMeta', '''
             format.version=1
             name=edgeMeta
             version=1.0.0
+            class=EdgeMetaGrailsPlugin
             grailsVersion=9.0.0 > *
             dependsOn.core=
             observe=spring-security-core, *,  
-            metadata.complete=true
         ''')
-        def classLoader = new URLClassLoader([tempDir.toURI().toURL()] as URL[], (ClassLoader) null)
+        def classLoader = new URLClassLoader([tempDir.toURI().toURL()] as URL[], gcl)
 
         when: 'classpath plugins are discovered'
-        def plugins = new ClasspathPluginFinder().findClasspathPlugins(classLoader, '9.0.0')
+        def plugin = new ClasspathPluginFinder().findClasspathPlugins(classLoader, '9.0.0').find { it.name == 'edgeMeta' }
 
         then: 'empty dependsOn defaults to * and observe normalizes names while preserving *'
-        plugins.size() == 1
-        plugins[0].metadata.getDependentVersion('core') == '*'
-        plugins[0].observedPluginNames as List == ['springSecurityCore', '*']
+        plugin != null
+        plugin.metadata.getDependentVersion('core') == '*'
+        plugin.observedPluginNames as List == ['springSecurityCore', '*']
 
         cleanup:
         classLoader?.close()
         tempDir.deleteDir()
     }
 
-    def 'sanitizes blank dependsOn names, normalizes observe, and uses descriptor grailsVersion fallback for annotations'() {
-        given: 'a descriptor with a grailsVersion range and an annotated class that omits grailsVersion'
-        def props = new Properties()
-        props.load(new StringReader('''
-            format.version=1
-            name=edgeAnnotated
-            version=1.0.0
-            grailsVersion=9.0.0 > *
-            class=org.apache.grails.core.plugins.EdgeAnnotatedDescriptor
-        '''.stripIndent()))
-        def descriptor = PluginDescriptor.fromProperties('edgeAnnotated', null, props)
+    def 'sanitizes blank dependsOn names and normalizes observe entries declared by the annotation'() {
+        given: 'a plugin class registered directly whose annotation has edge-case entries'
+        def pluginClass = new GroovyClassLoader().parseClass('''
+            @grails.plugins.metadata.GrailsPluginDescriptor(
+                    name = 'edge-annotated',
+                    dependsOn = [':1.0', ' :2.0', 'i18n'],
+                    observe = ['spring-security-core', '*', ' ']
+            )
+            class EdgeAnnotatedDescriptor extends grails.plugins.Plugin { }
+        ''')
 
-        when: 'metadata is extracted with the descriptor'
-        def metadata = PluginUtils.extractPluginMetadata(descriptor, EdgeAnnotatedDescriptor)
+        when: 'metadata is extracted from the annotation'
+        def metadata = PluginUtils.extractPluginMetadata(pluginClass)
 
-        then: 'blank dependsOn names are ignored, bare dependency defaults to *, observe is normalized, and grailsVersion falls back'
-        metadata != null
-        metadata.grailsVersionRange == '9.0.0 > *'
+        then: 'blank dependsOn names are ignored, a bare dependency defaults to *, and observe is normalized'
+        metadata.name == 'edgeAnnotated'
         metadata.dependsOnNames as List == ['i18n']
         metadata.getDependentVersion('i18n') == '*'
         metadata.observedPluginNames as List == ['springSecurityCore', '*']
     }
 
-    def 'handles null elements safely in Groovy plugin loadAfter arrays'() {
-        given: 'a Groovy plugin class whose loadAfter list contains a null element'
+    def 'a classpath plugin is described by its descriptor, not by its annotation'() {
+        given: 'a plugin class whose annotation and descriptor disagree'
         def gcl = new GroovyClassLoader()
         def pluginClass = gcl.parseClass('''
-            class NullSafeLoadAfterGrailsPlugin {
-                def version = '1.0.0'
-                def loadAfter = [null, 'core', 'spring-security-core']
-            }
+            @grails.plugins.metadata.GrailsPluginDescriptor(loadAfter = ['fromAnnotation'])
+            class DescribedGrailsPlugin extends grails.plugins.Plugin { }
         ''')
+        def props = new Properties()
+        props.load(new StringReader('''
+            format.version=1
+            name=described
+            version=1.0.0
+            grailsVersion=9.0.0 > *
+            class=DescribedGrailsPlugin
+            loadAfter=fromDescriptor
+        '''.stripIndent()))
+        def descriptor = PluginDescriptor.fromProperties('described', null, props)
 
-        when: 'metadata is extracted'
-        def metadata = PluginUtils.extractPluginMetadata(pluginClass)
+        when:
+        def metadata = PluginUtils.extractPluginMetadata(descriptor, pluginClass)
 
-        then: 'null elements are converted safely without throwing'
-        metadata != null
-        metadata.loadAfterNames as List == ['core', 'springSecurityCore']
+        then: 'the compiled descriptor is the single source of the metadata'
+        metadata.pluginVersion == '1.0.0'
+        metadata.grailsVersionRange == '9.0.0 > *'
+        metadata.loadAfterNames as List == ['fromDescriptor']
+    }
+
+    def 'extracting metadata with a descriptor for another class fails'() {
+        given:
+        def pluginClass = new GroovyClassLoader().parseClass('''
+            @grails.plugins.metadata.GrailsPluginDescriptor
+            class MismatchedGrailsPlugin extends grails.plugins.Plugin { }
+        ''')
+        def descriptor = new PluginDescriptor(null,
+                new PluginDefinition.Builder(pluginName: 'mismatched', pluginClass: 'com.example.OtherGrailsPlugin').build())
+
+        when:
+        PluginUtils.extractPluginMetadata(descriptor, pluginClass)
+
+        then:
+        def e = thrown(PluginException)
+        e.message.contains('com.example.OtherGrailsPlugin')
+        e.message.contains('MismatchedGrailsPlugin')
     }
 
     def 'loads namespaced plugin.groovy and fails when both plugin.yml and plugin.groovy exist'() {
-        given: 'a starter plugin with namespaced plugin.groovy'
+        given: 'a plugin with namespaced plugin.groovy, in the class path root of its class'
         def groovyDir = File.createTempDir()
-        writePluginDescriptor(groovyDir, 'groovyStarter', '''
-            format.version=1
-            name=groovyStarter
-            version=1.0.0
-            metadata.complete=true
+        writePluginDescriptor(groovyDir, 'groovyConfigured',
+                'format.version=1\nname=groovyConfigured\nversion=1.0.0\nclass=GroovyConfiguredGrailsPlugin\n')
+        new File(groovyDir, PluginUtils.getPluginConfigPath('groovyConfigured', PluginUtils.PLUGIN_GROOVY_CONFIG)).text = 'starter.flag = true\n'
+        def groovyLoader = new GroovyClassLoader(new URLClassLoader([groovyDir.toURI().toURL()] as URL[], PluginDiscoverySpec.classLoader))
+        groovyLoader.parseClass('''
+            @grails.plugins.metadata.GrailsPluginDescriptor
+            class GroovyConfiguredGrailsPlugin extends grails.plugins.Plugin { }
         ''')
-        def groovyCfg = new File(groovyDir, PluginUtils.getPluginConfigPath('groovyStarter', PluginUtils.PLUGIN_GROOVY_CONFIG))
-        groovyCfg.parentFile.mkdirs()
-        groovyCfg.text = 'starter.flag = true\n'
-        def groovyLoader = new URLClassLoader([groovyDir.toURI().toURL()] as URL[], (ClassLoader) null)
 
-        and: 'a starter plugin with both plugin.yml and plugin.groovy'
+        and: 'a plugin with both plugin.yml and plugin.groovy'
         def bothDir = File.createTempDir()
-        writePluginDescriptor(bothDir, 'clashStarter', '''
-            format.version=1
-            name=clashStarter
-            version=1.0.0
-            metadata.complete=true
+        writePluginDescriptor(bothDir, 'clashConfigured',
+                'format.version=1\nname=clashConfigured\nversion=1.0.0\nclass=ClashConfiguredGrailsPlugin\n')
+        new File(bothDir, PluginUtils.getPluginConfigPath('clashConfigured', PluginUtils.PLUGIN_YML_CONFIG)).text = 'starter:\n  flag: true\n'
+        new File(bothDir, PluginUtils.getPluginConfigPath('clashConfigured', PluginUtils.PLUGIN_GROOVY_CONFIG)).text = 'starter.flag = true\n'
+        def bothLoader = new GroovyClassLoader(new URLClassLoader([bothDir.toURI().toURL()] as URL[], PluginDiscoverySpec.classLoader))
+        bothLoader.parseClass('''
+            @grails.plugins.metadata.GrailsPluginDescriptor
+            class ClashConfiguredGrailsPlugin extends grails.plugins.Plugin { }
         ''')
-        def ymlCfg = new File(bothDir, PluginUtils.getPluginConfigPath('clashStarter', PluginUtils.PLUGIN_YML_CONFIG))
-        ymlCfg.parentFile.mkdirs()
-        ymlCfg.text = 'starter:\n  flag: true\n'
-        def secondGroovyCfg = new File(bothDir, PluginUtils.getPluginConfigPath('clashStarter', PluginUtils.PLUGIN_GROOVY_CONFIG))
-        secondGroovyCfg.text = 'starter.flag = true\n'
-        def bothLoader = new URLClassLoader([bothDir.toURI().toURL()] as URL[], (ClassLoader) null)
 
-        when: 'the plugin.groovy starter is discovered'
-        def plugins = new ClasspathPluginFinder().findClasspathPlugins(groovyLoader, '9.0.0')
+        when: 'the plugin.groovy plugin is discovered'
+        def plugin = new ClasspathPluginFinder().findClasspathPlugins(groovyLoader, '9.0.0').find { it.name == 'groovyConfigured' }
 
         then: 'its namespaced plugin.groovy config resource is returned'
-        plugins.size() == 1
-        plugins[0].configResource != null
-        plugins[0].configResource.filename == 'plugin.groovy'
+        plugin.configResource != null
+        plugin.configResource.filename == 'plugin.groovy'
+        plugin.configResource.inputStream.text == 'starter.flag = true\n'
 
         when: 'configuration is read directly for a plugin with both config files'
-        PluginUtils.readPluginConfiguration('clashStarter', null, bothLoader)
+        PluginUtils.readPluginConfiguration('clashConfigured', bothLoader)
 
-        then: 'a RuntimeException is thrown'
-        def e = thrown(RuntimeException)
-        e.message.contains('clashStarter')
+        then: 'reading it fails, naming the plugin'
+        def e = thrown(PluginException)
+        e.message.contains('clashConfigured')
 
-        and: 'tolerant classpath discovery skips the misconfigured plugin'
-        new ClasspathPluginFinder().findClasspathPlugins(bothLoader, '9.0.0').isEmpty()
+        when: 'the misconfigured plugin is found on the class path'
+        new ClasspathPluginFinder().findClasspathPlugins(bothLoader, '9.0.0')
+
+        then: 'classpath discovery fails too, rather than skipping it'
+        thrown(PluginException)
 
         cleanup:
         groovyLoader?.close()
@@ -445,32 +403,27 @@ class PluginDiscoverySpec extends Specification {
         bothDir.deleteDir()
     }
 
-    def 'honors descriptor plugin name override for class-backed plugins and resolves config under the overridden name'() {
-        given: 'a *GrailsPlugin class packaged under a custom logical name via grails { plugin { name = ... } }'
-        def gcl = new GroovyClassLoader()
-        gcl.parseClass('''
-            package com.example
-            class RenamedSourceGrailsPlugin {
-                def version = '1.0.0'
-            }
-        ''')
+    def 'registers a classpath plugin under its descriptor name and resolves config under that name'() {
+        given: 'a plugin class whose annotation declares the logical name bar, with its descriptor and plugin.yml'
         def tempDir = File.createTempDir()
         writePluginDescriptor(tempDir, 'bar', '''
             format.version=1
             name=bar
             version=1.0.0
             class=com.example.RenamedSourceGrailsPlugin
-            metadata.complete=false
         ''')
-        def ymlCfg = new File(tempDir, PluginUtils.getPluginConfigPath('bar', PluginUtils.PLUGIN_YML_CONFIG))
-        ymlCfg.parentFile.mkdirs()
-        ymlCfg.text = 'bar:\n  enabled: true\n'
-        def classLoader = new URLClassLoader([tempDir.toURI().toURL()] as URL[], gcl)
+        new File(tempDir, PluginUtils.getPluginConfigPath('bar', PluginUtils.PLUGIN_YML_CONFIG)).text = 'bar:\n  enabled: true\n'
+        def classLoader = new GroovyClassLoader(new URLClassLoader([tempDir.toURI().toURL()] as URL[], PluginDiscoverySpec.classLoader))
+        classLoader.parseClass('''
+            package com.example
+            @grails.plugins.metadata.GrailsPluginDescriptor(name = 'bar')
+            class RenamedSourceGrailsPlugin extends grails.plugins.Plugin { }
+        ''')
 
         when: 'classpath plugins are discovered'
         def plugins = new ClasspathPluginFinder().findClasspathPlugins(classLoader, '9.0.0')
 
-        then: 'the plugin registers under the overridden descriptor name and finds its namespaced plugin.yml'
+        then: 'the plugin registers under the declared name and finds its namespaced plugin.yml'
         def barPlugin = plugins.find { it.pluginClass?.name == 'com.example.RenamedSourceGrailsPlugin' }
         barPlugin != null
         barPlugin.name == 'bar'
@@ -499,7 +452,7 @@ class PluginDiscoverySpec extends Specification {
         alphaDesc.text = 'format.version=1\nname=alpha\nversion=1.0\nclass=com.example.AlphaGrailsPlugin\n'
         def betaDesc = new File(tempDir, PluginUtils.getPluginDescriptorPath('betaStarter'))
         betaDesc.parentFile.mkdirs()
-        betaDesc.text = 'format.version=1\nname=betaStarter\nversion=1.0\n'
+        betaDesc.text = 'format.version=1\nname=betaStarter\nversion=1.0\nclass=com.example.BetaStarterGrailsPlugin\n'
         def classLoader = new URLClassLoader([tempDir.toURI().toURL()] as URL[], (ClassLoader) null)
 
         when: 'plugin descriptors are scanned'
@@ -507,46 +460,7 @@ class PluginDiscoverySpec extends Specification {
 
         then: 'both descriptors are discovered with normalized logical names'
         descriptors*.pluginName == ['alpha', 'betaStarter']
-        descriptors[0].providedPlugins == ['com.example.AlphaGrailsPlugin']
-        descriptors[1].descriptorLess
-
-        cleanup:
-        classLoader?.close()
-        tempDir.deleteDir()
-    }
-
-    def 'discovers descriptor-less starter plugins with metadata and namespaced plugin.yml'() {
-        given: 'a descriptor-less starter plugin on the classpath with a namespaced plugin.yml'
-        def tempDir = File.createTempDir()
-        writePluginDescriptor(tempDir, 'starterMetrics', '''
-            format.version=1
-            name=starterMetrics
-            version=2.1.0
-            grailsVersion=9.0.0 > *
-            loadAfter=core
-            metadata.complete=true
-            artefacts.Service=com.example.MetricsService
-        ''')
-        def configFile = new File(tempDir, PluginUtils.getPluginConfigPath('starterMetrics', PluginUtils.PLUGIN_YML_CONFIG))
-        configFile.parentFile.mkdirs()
-        configFile.text = 'metrics:\n  enabled: true\n'
-        def classLoader = new URLClassLoader([tempDir.toURI().toURL()] as URL[], (ClassLoader) null)
-
-        when: 'classpath plugins are discovered'
-        def plugins = new ClasspathPluginFinder().findClasspathPlugins(classLoader, '9.0.0')
-
-        then: 'the descriptor-less plugin is discovered with full metadata and its namespaced config'
-        plugins.size() == 1
-        with(plugins[0]) {
-            name == 'starterMetrics'
-            pluginVersion == '2.1.0'
-            pluginClass == null
-            grailsVersionRange == '9.0.0 > *'
-            loadAfterNames as List == ['core']
-            pluginDescriptor.providedClasses == ['com.example.MetricsService']
-            configResource != null
-            configResource.inputStream.text.contains('enabled: true')
-        }
+        descriptors*.pluginClassName == ['com.example.AlphaGrailsPlugin', 'com.example.BetaStarterGrailsPlugin']
 
         cleanup:
         classLoader?.close()
@@ -554,13 +468,29 @@ class PluginDiscoverySpec extends Specification {
     }
 
     def 'extracts metadata directly from @GrailsPluginDescriptor without instantiating the class'() {
-        when: 'metadata is extracted from an annotated plugin descriptor class whose constructor throws'
-        def metadata = PluginUtils.extractPluginMetadata(AnnotatedNonInstantiableDescriptor)
+        given: 'an annotated plugin class whose constructor throws'
+        def pluginClass = new GroovyClassLoader().parseClass('''
+            @grails.plugins.metadata.GrailsPluginDescriptor(
+                    name = 'annotated-plugin',
+                    grailsVersion = '9.0.0 > *',
+                    loadAfter = ['core', 'spring-security-core'],
+                    loadBefore = ['controllers'],
+                    dependsOn = ['i18n:9.0.0 > *'],
+                    evict = ['legacy-plugin'],
+                    observe = ['services']
+            )
+            class AnnotatedNonInstantiableDescriptor extends grails.plugins.Plugin {
+                AnnotatedNonInstantiableDescriptor() {
+                    throw new AssertionError('Constructor must not be invoked when reading @GrailsPluginDescriptor metadata')
+                }
+            }
+        ''')
+
+        when: 'metadata is extracted'
+        def metadata = PluginUtils.extractPluginMetadata(pluginClass)
 
         then: 'all metadata is extracted from the annotation without calling the constructor'
-        metadata != null
         metadata.name == 'annotatedPlugin'
-        metadata.pluginVersion == '3.2.1'
         metadata.grailsVersionRange == '9.0.0 > *'
         metadata.loadAfterNames as List == ['core', 'springSecurityCore']
         metadata.loadBeforeNames as List == ['controllers']
@@ -569,54 +499,81 @@ class PluginDiscoverySpec extends Specification {
         metadata.evictions as List == ['legacyPlugin']
         metadata.observedPluginNames as List == ['services']
         metadata.enabled
+
+        and: 'a class registered directly without a descriptor on its class path has no version'
+        metadata.pluginVersion == null
     }
 
-    def 'extracts plugin class names from descriptors'() {
-        given: 'two plugin descriptors with declared plugin classes'
-        def tempDir = File.createTempDir()
-        writePluginDescriptor(tempDir, 'alpha', 'format.version=1\nname=alpha\nversion=1.0\nclass=com.example.AlphaGrailsPlugin\n')
-        writePluginDescriptor(tempDir, 'beta', 'format.version=1\nname=beta\nversion=1.0\nclass=com.example.BetaGrailsPlugin\n')
-        def classLoader = new URLClassLoader([tempDir.toURI().toURL()] as URL[], (ClassLoader) null)
+    def 'a plugin class registered directly takes its version from its descriptor on the class path'() {
+        given:
+        def root = File.createTempDir()
+        def gcl = PluginClassFixtures.versionedPluginLoader(root.toPath(), [VersionedProbeGrailsPlugin: '4.5.6'])
+        def pluginClass = gcl.parseClass('''
+            @grails.plugins.metadata.GrailsPluginDescriptor(dependsOn = ['other:${plugin.version}'])
+            class VersionedProbeGrailsPlugin extends grails.plugins.Plugin { }
+        ''')
 
-        when: 'plugin descriptors are scanned for class names'
-        def classNames = PluginUtils.scanPluginDescriptors(classLoader)
+        when:
+        def definition = PluginUtils.definitionOf(pluginClass)
 
-        then: 'returns class names from plugin.properties descriptors'
-        classNames == ['com.example.AlphaGrailsPlugin', 'com.example.BetaGrailsPlugin']
+        then: 'the version is the descriptor\'s, and ${plugin.version} resolves to it'
+        definition.pluginVersion == '4.5.6'
+        definition.dependsOn == [other: '4.5.6']
 
         cleanup:
-        classLoader?.close()
-        tempDir.deleteDir()
+        gcl?.close()
+        root.deleteDir()
     }
 
-    def 'returns no plugin class names when the class loader has no plugin descriptors'() {
-        given: 'a class loader with no Grails plugin descriptors'
-        def emptyClassLoader = new URLClassLoader([] as URL[], (ClassLoader) null)
+    def 'a ${plugin.version} dependency of a plugin without a known version accepts any version'() {
+        given:
+        def pluginClass = new GroovyClassLoader().parseClass('''
+            @grails.plugins.metadata.GrailsPluginDescriptor(dependsOn = ['other:${plugin.version}'])
+            class UnversionedProbeGrailsPlugin extends grails.plugins.Plugin { }
+        ''')
 
-        when: 'plugin descriptors are scanned for class names'
-        def classNames = PluginUtils.scanPluginDescriptors(emptyClassLoader)
+        expect:
+        PluginUtils.definitionOf(pluginClass).dependsOn == [other: '*']
+    }
 
-        then: 'no plugin class names are found'
-        classNames.empty
+    def 'a class that is not a plugin is rejected: #description'() {
+        when:
+        PluginUtils.definitionOf(new GroovyClassLoader().parseClass(source))
+
+        then:
+        def e = thrown(PluginException)
+        e.message.contains('is not a Grails plugin')
+
+        where:
+        description                                  | source
+        'a *GrailsPlugin class that is not a Plugin' | 'class NamedOnlyGrailsPlugin { }'
+        'a Plugin without the annotation'            | 'class UnannotatedGrailsPlugin extends grails.plugins.Plugin { }'
+        'an abstract annotated Plugin'               | '@grails.plugins.metadata.GrailsPluginDescriptor abstract class AbstractGrailsPlugin extends grails.plugins.Plugin { }'
     }
 
     @Unroll
-    def "derives logical plugin name '#expectedName' from plugin class #pluginClass.simpleName"() {
-        expect: 'the logical plugin name matches the Grails naming convention or @GrailsPluginDescriptor'
+    def "derives logical plugin name '#expectedName' from plugin class #className"() {
+        given:
+        def pluginClass = new GroovyClassLoader().parseClass(
+                "@grails.plugins.metadata.GrailsPluginDescriptor${annotation} class ${className} extends grails.plugins.Plugin { }")
+
+        expect: 'the logical plugin name follows the class name, or the name @GrailsPluginDescriptor declares'
         PluginUtils.getLogicalPluginName(pluginClass) == expectedName
+        PluginUtils.definitionOf(pluginClass).pluginName == expectedName
 
         where:
-        pluginClass                        || expectedName
-        DiscoveryTestCoreGrailsPlugin      || 'discoveryTestCore'
-        DiscoveryTestSimpleGrailsPlugin    || 'discoveryTestSimple'
-        DiscoveryTestABCGrailsPlugin       || 'discoveryTestABC'
-        AnnotatedNonInstantiableDescriptor || 'annotatedPlugin'
+        className                            | annotation                   || expectedName
+        'DiscoveryTestCoreGrailsPlugin'      | ''                           || 'discoveryTestCore'
+        'DiscoveryTestSimpleGrailsPlugin'    | ''                           || 'discoveryTestSimple'
+        'DiscoveryTestABCGrailsPlugin'       | ''                           || 'discoveryTestABC'
+        'DiscoveryNoSuffix'                  | ''                           || 'discoveryNoSuffix'
+        'AnnotatedNameDescriptor'            | "(name = 'annotated-plugin')" || 'annotatedPlugin'
     }
 
     def 'treats plugin metadata with the same name as equal'() {
         given: 'two metadata instances that differ in every field except the name'
-        def meta1 = new PluginMetadata(new PluginDefinition.Builder(pluginName: 'test', pluginVersion: '1.0', loadAfter: ['a']).build(), String)
-        def meta2 = new PluginMetadata(new PluginDefinition.Builder(pluginName: 'test', pluginVersion: '2.0', dependsOn: [dep:'1.0'], enabled: false).build(), String)
+        def meta1 = new PluginMetadata(new PluginDefinition.Builder(pluginName: 'test', pluginClass: 'a.TestGrailsPlugin', pluginVersion: '1.0', loadAfter: ['a']).build(), String)
+        def meta2 = new PluginMetadata(new PluginDefinition.Builder(pluginName: 'test', pluginClass: 'b.TestGrailsPlugin', pluginVersion: '2.0', dependsOn: [dep: '1.0'], enabled: false).build(), String)
 
         expect: 'metadata equality is based on name only, not other attributes'
         meta1 == meta2
@@ -625,8 +582,8 @@ class PluginDiscoverySpec extends Specification {
 
     def 'treats plugin metadata with different names as distinct'() {
         given: 'two metadata instances with different names'
-        def meta1 = new PluginMetadata(new PluginDefinition.Builder(pluginName: 'alpha', pluginVersion: '1.0').build(), String)
-        def meta2 = new PluginMetadata(new PluginDefinition.Builder(pluginName: 'beta', pluginVersion: '1.0').build(), String)
+        def meta1 = new PluginMetadata(new PluginDefinition.Builder(pluginName: 'alpha', pluginClass: 'AlphaGrailsPlugin', pluginVersion: '1.0').build(), String)
+        def meta2 = new PluginMetadata(new PluginDefinition.Builder(pluginName: 'beta', pluginClass: 'BetaGrailsPlugin', pluginVersion: '1.0').build(), String)
 
         expect: 'metadata with different names are not equal'
         meta1 != meta2
@@ -634,7 +591,7 @@ class PluginDiscoverySpec extends Specification {
 
     def 'includes the plugin name in plugin metadata string output'() {
         given: 'plugin metadata for a named plugin'
-        def meta = new PluginMetadata(new PluginDefinition.Builder(pluginName: 'myPlugin', pluginVersion: '1.0').build(), String)
+        def meta = new PluginMetadata(new PluginDefinition.Builder(pluginName: 'myPlugin', pluginClass: 'MyGrailsPlugin', pluginVersion: '1.0').build(), String)
 
         expect: 'the string form includes the logical plugin name'
         meta.toString() == 'GrailsPluginClassMetadata[myPlugin]'
@@ -656,20 +613,24 @@ class PluginDiscoverySpec extends Specification {
         }
     }
 
-    def 'two independent starter definitions with one id report both origins'() {
+    def 'two different plugin classes with one name report both origins'() {
         given:
-        def roots = (1..2).collect {
+        def gcl = new GroovyClassLoader()
+        ['First', 'Second'].each {
+            gcl.parseClass("@grails.plugins.metadata.GrailsPluginDescriptor(name = 'conflictingId') class ${it}ConflictGrailsPlugin extends grails.plugins.Plugin { }")
+        }
+        def roots = ['First', 'Second'].collect {
             def dir = File.createTempDir()
-            writePluginDescriptor(dir, 'conflictingId', "name=conflictingId\nversion=${it}\n")
+            writePluginDescriptor(dir, 'conflictingId', "name=conflictingId\nversion=1\nclass=${it}ConflictGrailsPlugin\n")
             dir
         }
-        def loader = new URLClassLoader(roots*.toURI()*.toURL() as URL[], (ClassLoader) null)
+        def loader = new URLClassLoader(roots*.toURI()*.toURL() as URL[], gcl)
 
         when:
         new ClasspathPluginFinder().findClasspathPlugins(loader, '9.0.0')
 
         then:
-        def error = thrown(grails.plugins.exceptions.PluginException)
+        def error = thrown(PluginException)
         roots.every { error.message.contains(it.name) }
         error.message.contains('conflictingId')
 
@@ -682,9 +643,8 @@ class PluginDiscoverySpec extends Specification {
         given: 'a plugin class compiled by a Groovy class loader'
         def gcl = new GroovyClassLoader()
         gcl.parseClass('''
-            class DuplicateDescriptorProbeGrailsPlugin {
-                def version = "1.0.0"
-            }
+            @grails.plugins.metadata.GrailsPluginDescriptor
+            class DuplicateDescriptorProbeGrailsPlugin extends grails.plugins.Plugin { }
         ''')
 
         and: 'two classpath roots each declaring the same plugin class'
@@ -723,9 +683,8 @@ class PluginDiscoverySpec extends Specification {
     def 'a plugin class supplied more than once is registered only once and skipping is logged at WARN'() {
         given: 'a discovery bean supplied the same plugin class twice'
         def pluginClass = new GroovyClassLoader().parseClass('''
-            class RepeatedProbeGrailsPlugin {
-                def version = '1.0.0'
-            }
+            @grails.plugins.metadata.GrailsPluginDescriptor
+            class RepeatedProbeGrailsPlugin extends grails.plugins.Plugin { }
         ''')
         def discovery = new DefaultPluginDiscovery([pluginClass, pluginClass] as Class<?>[]).tap {
             loadPluginsFromClasspath = false
@@ -755,19 +714,56 @@ class PluginDiscoverySpec extends Specification {
         logCapture.close()
     }
 
-    def 'reports every missing or incompatible plugin dependency at ERROR'() {
-        given: 'a discovery bean with one available and one unresolved plugin'
+    def 'a class supplied to discovery that is not a plugin fails discovery'() {
+        given:
+        def notAPlugin = new GroovyClassLoader().parseClass('class LegacyShapedGrailsPlugin { def version = "1.0" }')
+        def discovery = new DefaultPluginDiscovery([notAPlugin] as Class<?>[]).tap {
+            loadPluginsFromClasspath = false
+        }
+
+        when:
+        discovery.init(new StandardEnvironment())
+
+        then:
+        def e = thrown(PluginException)
+        e.message.contains('LegacyShapedGrailsPlugin')
+        e.message.contains('is not a Grails plugin')
+    }
+
+    def 'a dependency of unknown version satisfies any required version'() {
+        given: 'two plugins registered directly, without descriptors, so neither has a version'
         def gcl = new GroovyClassLoader()
+        def dependencyClass = gcl.parseClass('''
+            @grails.plugins.metadata.GrailsPluginDescriptor
+            class UnknownVersionDependencyGrailsPlugin extends grails.plugins.Plugin { }
+        ''')
+        def dependentClass = gcl.parseClass('''
+            @grails.plugins.metadata.GrailsPluginDescriptor(dependsOn = ['unknownVersionDependency:2.0.0 > *'])
+            class NeedsVersionedDependencyGrailsPlugin extends grails.plugins.Plugin { }
+        ''')
+        def discovery = new DefaultPluginDiscovery([dependentClass, dependencyClass] as Class<?>[]).tap {
+            loadPluginsFromClasspath = false
+        }
+
+        when:
+        discovery.init(new StandardEnvironment())
+
+        then: 'the dependency is satisfied and loaded first'
+        !discovery.hasFailedPlugin('needsVersionedDependency')
+        discovery.pluginsInLoadOrder*.name == ['unknownVersionDependency', 'needsVersionedDependency']
+    }
+
+    def 'reports every missing or incompatible plugin dependency at ERROR'() {
+        given: 'a discovery bean with one available and one unresolved plugin, versioned by their descriptors'
+        def root = File.createTempDir()
+        def gcl = PluginClassFixtures.versionedPluginLoader(root.toPath(), [AvailableDependencyGrailsPlugin: '1.0.0', UnresolvedDependenciesGrailsPlugin: '4.0.0'])
         def availableDependencyClass = gcl.parseClass('''
-            class AvailableDependencyGrailsPlugin {
-                def version = "1.0.0"
-            }
+            @grails.plugins.metadata.GrailsPluginDescriptor
+            class AvailableDependencyGrailsPlugin extends grails.plugins.Plugin { }
         ''')
         def unresolvedDependenciesClass = gcl.parseClass('''
-            class UnresolvedDependenciesGrailsPlugin {
-                def version = "4.0.0"
-                def dependsOn = [missingDependency: "1.0.0", availableDependency: "2.0.0"]
-            }
+            @grails.plugins.metadata.GrailsPluginDescriptor(dependsOn = ['missingDependency:1.0.0', 'availableDependency:2.0.0'])
+            class UnresolvedDependenciesGrailsPlugin extends grails.plugins.Plugin { }
         ''')
         def discovery = new DefaultPluginDiscovery(
                 [availableDependencyClass, unresolvedDependenciesClass] as Class<?>[]
@@ -801,22 +797,20 @@ class PluginDiscoverySpec extends Specification {
 
         cleanup:
         logCapture.close()
+        gcl?.close()
+        root.deleteDir()
     }
 
     def 'reports a dependency that failed to load as failed rather than missing'() {
         given: 'a plugin whose only dependency itself fails to load due to a genuinely missing dependency'
         def gcl = new GroovyClassLoader()
         def failingDependencyClass = gcl.parseClass('''
-            class FailingDependencyGrailsPlugin {
-                def version = "1.0.0"
-                def dependsOn = [reallyMissing: "1.0.0"]
-            }
+            @grails.plugins.metadata.GrailsPluginDescriptor(dependsOn = ['reallyMissing:1.0.0'])
+            class FailingDependencyGrailsPlugin extends grails.plugins.Plugin { }
         ''')
         def dependentClass = gcl.parseClass('''
-            class DependentOnFailedGrailsPlugin {
-                def version = "1.0.0"
-                def dependsOn = [failingDependency: "1.0.0"]
-            }
+            @grails.plugins.metadata.GrailsPluginDescriptor(dependsOn = ['failingDependency:1.0.0'])
+            class DependentOnFailedGrailsPlugin extends grails.plugins.Plugin { }
         ''')
         def discovery = new DefaultPluginDiscovery(
                 [failingDependencyClass, dependentClass] as Class<?>[]
@@ -855,18 +849,15 @@ class PluginDiscoverySpec extends Specification {
 
     def 'reports a dependency that is still pending load together with the version that was found'() {
         given: 'a plugin that requires a newer version of a dependency which is itself still waiting on a missing plugin'
-        def gcl = new GroovyClassLoader()
+        def root = File.createTempDir()
+        def gcl = PluginClassFixtures.versionedPluginLoader(root.toPath(), [NeedsNewerPendingGrailsPlugin: '1.0.0', PendingDependencyGrailsPlugin: '1.0.0'])
         def dependentClass = gcl.parseClass('''
-            class NeedsNewerPendingGrailsPlugin {
-                def version = "1.0.0"
-                def dependsOn = [pendingDependency: "2.0.0"]
-            }
+            @grails.plugins.metadata.GrailsPluginDescriptor(dependsOn = ['pendingDependency:2.0.0'])
+            class NeedsNewerPendingGrailsPlugin extends grails.plugins.Plugin { }
         ''')
         def pendingDependencyClass = gcl.parseClass('''
-            class PendingDependencyGrailsPlugin {
-                def version = "1.0.0"
-                def dependsOn = [reallyMissing: "1.0.0"]
-            }
+            @grails.plugins.metadata.GrailsPluginDescriptor(dependsOn = ['reallyMissing:1.0.0'])
+            class PendingDependencyGrailsPlugin extends grails.plugins.Plugin { }
         ''')
 
         and: 'the dependent plugin is processed before the pending dependency gives up'
@@ -899,42 +890,7 @@ class PluginDiscoverySpec extends Specification {
 
         cleanup:
         logCapture.close()
+        gcl?.close()
+        root.deleteDir()
     }
-}
-
-class DiscoveryTestCoreGrailsPlugin {
-    def version = '1.0'
-}
-
-class DiscoveryTestSimpleGrailsPlugin {
-    def version = '1.0'
-}
-
-class DiscoveryTestABCGrailsPlugin {
-    def version = '1.0'
-}
-
-@GrailsPluginDescriptor(
-        name = 'annotated-plugin',
-        version = '3.2.1',
-        grailsVersion = '9.0.0 > *',
-        loadAfter = ['core', 'spring-security-core'],
-        loadBefore = ['controllers'],
-        dependsOn = ['i18n:9.0.0 > *'],
-        evict = ['legacy-plugin'],
-        observe = ['services']
-)
-class AnnotatedNonInstantiableDescriptor {
-    AnnotatedNonInstantiableDescriptor() {
-        throw new AssertionError('Constructor must not be invoked when reading @GrailsPluginDescriptor metadata')
-    }
-}
-
-@GrailsPluginDescriptor(
-        name = 'edge-annotated',
-        version = '1.0.0',
-        dependsOn = [':1.0', ' :2.0', 'i18n'],
-        observe = ['spring-security-core', '*', ' ']
-)
-class EdgeAnnotatedDescriptor {
 }

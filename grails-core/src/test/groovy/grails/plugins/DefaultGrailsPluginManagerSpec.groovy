@@ -18,8 +18,11 @@
  */
 package grails.plugins
 
+import java.nio.file.Path
+
 import ch.qos.logback.classic.Level
 import spock.lang.Specification
+import spock.lang.TempDir
 import spock.lang.Unroll
 
 import org.springframework.context.support.GenericApplicationContext
@@ -28,6 +31,7 @@ import org.springframework.core.env.StandardEnvironment
 import grails.core.DefaultGrailsApplication
 import grails.core.GrailsApplication
 import org.apache.grails.core.plugins.DefaultPluginDiscovery
+import org.apache.grails.core.plugins.PluginClassFixtures
 import org.apache.grails.core.plugins.PluginDiscovery
 import org.apache.grails.core.plugins.PluginInfo
 import org.apache.grails.core.plugins.PluginUtils
@@ -37,6 +41,9 @@ import org.apache.grails.core.testing.support.LogCapture
  * Test suite for DefaultGrailsPluginManager
  */
 class DefaultGrailsPluginManagerSpec extends Specification {
+
+    @TempDir
+    Path temp
 
     def "plugin manager can be created with application and discovery bean"() {
         given:
@@ -116,17 +123,14 @@ class DefaultGrailsPluginManagerSpec extends Specification {
 
     def "per-plugin loaded messages are DEBUG and a single INFO summary reports the load order"() {
         given: 'a discovery bean with two plugins registered in reverse of their load order'
-        def gcl = new GroovyClassLoader()
+        def gcl = PluginClassFixtures.versionedPluginLoader(temp, [AlphaProbeGrailsPlugin: '1.0.0', BetaProbeGrailsPlugin: '2.0.0'])
         def alphaClass = gcl.parseClass('''
-            class AlphaProbeGrailsPlugin {
-                def version = '1.0.0'
-            }
+            @grails.plugins.metadata.GrailsPluginDescriptor
+            class AlphaProbeGrailsPlugin extends grails.plugins.Plugin { }
         ''')
         def betaClass = gcl.parseClass('''
-            class BetaProbeGrailsPlugin {
-                def version = '2.0.0'
-                def loadAfter = ['alphaProbe']
-            }
+            @grails.plugins.metadata.GrailsPluginDescriptor(loadAfter = ['alphaProbe'])
+            class BetaProbeGrailsPlugin extends grails.plugins.Plugin { }
         ''')
         def application = new DefaultGrailsApplication(mainContext: new GenericApplicationContext())
         def discovery = new DefaultPluginDiscovery([betaClass, alphaClass] as Class<?>[]).tap {
@@ -167,16 +171,15 @@ class DefaultGrailsPluginManagerSpec extends Specification {
 
         cleanup:
         logCapture.close()
+        gcl?.close()
     }
 
     private static PluginInfo stubPluginWithGrailsVersion(String grailsVersion) {
         def gcl = new GroovyClassLoader()
         PluginUtils.createPluginInfo(
                 gcl.parseClass("""
-                    class ACustomGrailsPlugin {
-                        def version = '1.0.0'
-                        def grailsVersion = "$grailsVersion"
-                    }
+                    @grails.plugins.metadata.GrailsPluginDescriptor(grailsVersion = '$grailsVersion')
+                    class ACustomGrailsPlugin extends grails.plugins.Plugin { }
                 """),
                 null,
                 true

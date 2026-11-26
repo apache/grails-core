@@ -21,7 +21,6 @@ package grails.boot
 import grails.boot.config.GrailsAutoConfiguration
 import grails.boot.config.GrailsEarlyPluginRegistrationPostProcessor
 import grails.plugins.GrailsPluginManager
-import grails.plugins.Plugin
 import grails.util.Environment
 import org.apache.grails.core.plugins.DefaultPluginDiscovery
 import org.apache.grails.core.plugins.PluginDiscovery
@@ -45,7 +44,7 @@ class DevelopmentModeWatchSpec extends Specification {
         System.setProperty(Environment.KEY, Environment.DEVELOPMENT.getName())
         System.setProperty("base.dir", ".")
         GrailsApp app = new GrailsApp(GrailsTestConfigurationClass.class)
-        DefaultPluginDiscovery discovery = new DefaultPluginDiscovery([WatchedResourcesGrailsPlugin] as Class<?>[])
+        DefaultPluginDiscovery discovery = new DefaultPluginDiscovery([watchedResourcesPluginClass] as Class<?>[])
         discovery.loadPluginsFromClasspath = false
         app.addBootstrapRegistryInitializer(new BootstrapRegistryInitializer() {
             @Override
@@ -55,7 +54,7 @@ class DevelopmentModeWatchSpec extends Specification {
         })
         ConfigurableApplicationContext context = app.run()
         GrailsPluginManager pluginManager = context.getBean(GrailsPluginManager.BEAN_NAME, GrailsPluginManager)
-        WatchedResourcesGrailsPlugin plugin = (WatchedResourcesGrailsPlugin) pluginManager.getGrailsPlugin('watchedResources').instance
+        def plugin = pluginManager.getGrailsPlugin('watchedResources').instance
 
         when:
         File watchedFile = new File('testWatchedFile.properties')
@@ -79,7 +78,7 @@ class DevelopmentModeWatchSpec extends Specification {
         setup:
         System.setProperty(Environment.KEY, Environment.DEVELOPMENT.getName())
         System.setProperty("base.dir", ".")
-        DefaultPluginDiscovery discovery = new DefaultPluginDiscovery([WatchedResourcesGrailsPlugin] as Class<?>[])
+        DefaultPluginDiscovery discovery = new DefaultPluginDiscovery([watchedResourcesPluginClass] as Class<?>[])
         discovery.loadPluginsFromClasspath = false
         GrailsAppBuilder parentBuilder = new GrailsAppBuilder(GrailsTestConfigurationClass)
         GrailsAppBuilder childBuilder = parentBuilder.child(WatchedResourcesApplication)
@@ -95,7 +94,7 @@ class DevelopmentModeWatchSpec extends Specification {
         ConfigurableApplicationContext child = childBuilder.run()
         ConfigurableApplicationContext parent = parentBuilder.context()
         GrailsPluginManager pluginManager = child.getBean(GrailsPluginManager.BEAN_NAME, GrailsPluginManager)
-        WatchedResourcesGrailsPlugin plugin = (WatchedResourcesGrailsPlugin) pluginManager.getGrailsPlugin('watchedResources').instance
+        def plugin = pluginManager.getGrailsPlugin('watchedResources').instance
 
         then: 'the parent, which has no plugin manager of its own, started without a watch to install'
         parent.isActive()
@@ -122,6 +121,20 @@ class DevelopmentModeWatchSpec extends Specification {
             watchedFile.delete()
         }
     }
+
+    /** A plugin compiled at run time, so that the test class path does not list it as a plugin of its own. */
+    private static Class<?> getWatchedResourcesPluginClass() {
+        new GroovyClassLoader(DevelopmentModeWatchSpec.classLoader).parseClass('''
+            @grails.plugins.metadata.GrailsPluginDescriptor(watchedResources = ['file:./**/*.properties'])
+            class WatchedResourcesGrailsPlugin extends grails.plugins.Plugin {
+                String fileIsChanged = ""
+
+                void onChange(Map<String, Object> event) {
+                    fileIsChanged = event.source.path.toString()
+                }
+            }
+        ''')
+    }
 }
 
 class WatchedResourcesApplication extends GrailsAutoConfiguration {
@@ -129,14 +142,4 @@ class WatchedResourcesApplication extends GrailsAutoConfiguration {
 
 @Configuration
 class GrailsTestConfigurationClass {
-}
-
-class WatchedResourcesGrailsPlugin extends Plugin {
-    def version = "1.0"
-    def watchedResources = "file:./**/*.properties"
-
-    void onChange(Map<String, Object> event) {
-        fileIsChanged = event.source.path.toString()
-    }
-    String fileIsChanged = ""
 }

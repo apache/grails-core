@@ -106,100 +106,122 @@ class PluginUtilsSpec extends Specification {
         compatible
     }
 
-    // Tests for extractPluginMetadata method
-    
-    def "extractPluginMetadata extracts loadAfter, loadBefore, and dependsOn"() {
+    private static Class<?> parsePlugin(String source) {
+        new GroovyClassLoader(PluginUtilsSpec.classLoader).parseClass(source)
+    }
+
+    def "extractPluginMetadata extracts loadAfter, loadBefore, and dependsOn from the annotation"() {
+        given:
+        def pluginClass = parsePlugin('''
+            @grails.plugins.metadata.GrailsPluginDescriptor(
+                    loadAfter = ['alpha', 'beta'], loadBefore = ['gamma'], dependsOn = ['delta:1.0'])
+            class PluginWithAllOrderingGrailsPlugin extends grails.plugins.Plugin { }
+        ''')
+
         when:
-        def metadata = PluginUtils.extractPluginMetadata(PluginWithAllOrderingGrailsPlugin)
+        def metadata = PluginUtils.extractPluginMetadata(pluginClass)
 
         then:
-        metadata
         metadata.name == 'pluginWithAllOrdering'
+        metadata.pluginClass == pluginClass
         metadata.loadAfterNames == ['alpha', 'beta'] as String[]
         metadata.loadBeforeNames == ['gamma'] as String[]
         metadata.dependsOnNames == ['delta'] as String[]
+        metadata.getDependentVersion('delta') == '1.0'
     }
 
     def "extractPluginMetadata returns empty arrays for plugin with no ordering declarations"() {
         when:
-        def metadata = PluginUtils.extractPluginMetadata(UtilsTestSimpleGrailsPlugin)
+        def metadata = PluginUtils.extractPluginMetadata(parsePlugin('''
+            @grails.plugins.metadata.GrailsPluginDescriptor
+            class UtilsTestSimpleGrailsPlugin extends grails.plugins.Plugin { }
+        '''))
 
         then:
-        metadata
         metadata.name == 'utilsTestSimple'
         metadata.loadAfterNames.length == 0
         metadata.loadBeforeNames.length == 0
         metadata.dependsOnNames.length == 0
+        metadata.environments.isEmpty()
+        metadata.enabled
     }
 
-    def "extractPluginMetadata returns null for class not ending in GrailsPlugin"() {
-        expect:
-        PluginUtils.extractPluginMetadata(String) == null
-    }
-
-    def "extractPluginMetadata returns null for null input"() {
-        expect:
-        PluginUtils.extractPluginMetadata(null) == null
-    }
-
-    def "extractPluginMetadata handles plugin that throws on instantiation"() {
+    def "extractPluginMetadata reads the environments the annotation includes and excludes"() {
         when:
-        PluginUtils.extractPluginMetadata(FailingConstructorUtilsGrailsPlugin)
+        def metadata = PluginUtils.extractPluginMetadata(parsePlugin('''
+            @grails.plugins.metadata.GrailsPluginDescriptor(environmentsIncludes = ['dev', 'test'], environmentsExcludes = ['prod'])
+            class EnvironmentsGrailsPlugin extends grails.plugins.Plugin { }
+        '''))
 
-        then: 'throws IllegalStateException when plugin cannot be instantiated'
-        thrown(IllegalStateException)
+        then: 'short environment names resolve to the environments they stand for'
+        metadata.environments[DefaultGrailsPlugin.INCLUDES] == ['development', 'test'] as Set
+        metadata.environments[DefaultGrailsPlugin.EXCLUDES] == ['production'] as Set
+    }
+
+    @Unroll
+    def "extractPluginMetadata rejects #description"() {
+        when:
+        PluginUtils.extractPluginMetadata(pluginClass)
+
+        then:
+        def e = thrown(grails.plugins.exceptions.PluginException)
+        e.message.contains('is not a Grails plugin')
+
+        where:
+        description                                    | pluginClass
+        'a class that is not a Plugin'                 | String
+        'a *GrailsPlugin class that is not a Plugin'   | parsePlugin('class LegacyGrailsPlugin { def version = "1.0" }')
+        'a Plugin without @GrailsPluginDescriptor'     | parsePlugin('class BareGrailsPlugin extends grails.plugins.Plugin { }')
+    }
+
+    def "extractPluginMetadata does not create the plugin"() {
+        when:
+        def metadata = PluginUtils.extractPluginMetadata(parsePlugin('''
+            @grails.plugins.metadata.GrailsPluginDescriptor
+            class FailingConstructorUtilsGrailsPlugin extends grails.plugins.Plugin {
+                FailingConstructorUtilsGrailsPlugin() {
+                    throw new RuntimeException('Intentional failure for testing')
+                }
+            }
+        '''))
+
+        then: 'the constructor is never called'
+        metadata.name == 'failingConstructorUtils'
     }
 
     def "extractPluginMetadata extracts multiple dependsOn names"() {
         when:
-        def metadata = PluginUtils.extractPluginMetadata(PluginWithMultipleDepsGrailsPlugin)
+        def metadata = PluginUtils.extractPluginMetadata(parsePlugin('''
+            @grails.plugins.metadata.GrailsPluginDescriptor(dependsOn = ['core:1.0', 'i18n:1.0'])
+            class PluginWithMultipleDepsGrailsPlugin extends grails.plugins.Plugin { }
+        '''))
 
         then:
-        metadata
         metadata.name == 'pluginWithMultipleDeps'
         metadata.dependsOnNames as Set == ['core', 'i18n'] as Set
     }
 
     def "readPluginConfiguration returns null when no plugin.yml or plugin.groovy exists"() {
-        when:
-        def resource = PluginUtils.readPluginConfiguration(UtilsTestSimpleGrailsPlugin)
-
-        then: 'no config file exists for this test fixture class'
-        !resource
+        expect: 'no config file exists for this plugin name'
+        PluginUtils.readPluginConfiguration('utilsTestSimple', PluginUtilsSpec.classLoader) == null
     }
 
-    def "getConfigurationResource returns resource that does not exist for non-existent path"() {
-        when: 'a resource is requested for a non-existent path'
-        def resource = PluginUtils.getConfigurationResource(
-                UtilsTestSimpleGrailsPlugin,
-                '/nonexistent.yml'
-        )
-
-        then: 'resource is returned'
-        resource
-
-        and: 'resource does not exist'
-        !resource.exists()
-    }
-
-    def "getGeneratedConfigurationPath names the copy after the plugin class"() {
+    def "readPluginConfiguration returns null for an invalid plugin name"() {
         expect:
-        PluginUtils.getGeneratedConfigurationPath('com.example.FooGrailsPlugin', 'plugin.yml') ==
-                'META-INF/grails/plugin-configuration/com.example.FooGrailsPlugin/plugin.yml'
+        PluginUtils.readPluginConfiguration('../escape', PluginUtilsSpec.classLoader) == null
     }
 
     @Unroll
-    def "readPluginConfiguration prefers the generated copy of a #fileName to the one beside the plugin"(String fileName) {
-        given: 'a plugin with its configuration at its root, and a copy the build generated'
+    def "readPluginConfiguration finds a plugin's namespaced #fileName"(String fileName) {
+        given: 'a plugin whose configuration was copied under its name by the compiler, and a stray one at the root'
         Path root = temp.resolve('plugin')
         PluginClassFixtures.compilePlugin(root, 'fixture.copy.CopiedGrailsPlugin')
         PluginClassFixtures.write(root, fileName, 'beside: the plugin')
-        PluginClassFixtures.write(root,
-                PluginUtils.getGeneratedConfigurationPath('fixture.copy.CopiedGrailsPlugin', fileName), 'copied: by the build')
+        PluginClassFixtures.write(root, PluginUtils.getPluginConfigPath('copied', fileName), 'copied: by the build')
         URLClassLoader loader = PluginClassFixtures.loaderOver(root)
 
         when:
-        def resource = PluginUtils.readPluginConfiguration(loader.loadClass('fixture.copy.CopiedGrailsPlugin'))
+        def resource = PluginUtils.readPluginConfiguration('copied', loader)
 
         then: 'it keeps its name, which is how its format is chosen'
         resource.filename == fileName
@@ -213,25 +235,42 @@ class PluginUtilsSpec extends Specification {
     }
 
     def "readPluginConfiguration finds each plugin's own configuration where every class is at one root"() {
-        given: 'two plugins at one root, as every class is in a native image, each with only a copy of its configuration'
+        given: 'two plugins at one root, as every class is in a native image, each with its namespaced configuration'
         Path root = temp.resolve('image')
         PluginClassFixtures.compilePlugin(root, 'fixture.alpha.AlphaGrailsPlugin')
         PluginClassFixtures.compilePlugin(root, 'fixture.beta.BetaGrailsPlugin')
-        PluginClassFixtures.write(root,
-                PluginUtils.getGeneratedConfigurationPath('fixture.alpha.AlphaGrailsPlugin', 'plugin.yml'), 'alpha: one')
-        PluginClassFixtures.write(root,
-                PluginUtils.getGeneratedConfigurationPath('fixture.beta.BetaGrailsPlugin', 'plugin.yml'), 'beta: two')
+        PluginClassFixtures.write(root, PluginUtils.getPluginConfigPath('alpha', 'plugin.yml'), 'alpha: one')
+        PluginClassFixtures.write(root, PluginUtils.getPluginConfigPath('beta', 'plugin.yml'), 'beta: two')
         URLClassLoader loader = PluginClassFixtures.loaderOver(root)
 
         expect:
-        PluginUtils.readPluginConfiguration(loader.loadClass('fixture.alpha.AlphaGrailsPlugin')).inputStream.text == 'alpha: one'
-        PluginUtils.readPluginConfiguration(loader.loadClass('fixture.beta.BetaGrailsPlugin')).inputStream.text == 'beta: two'
+        PluginUtils.readPluginConfiguration('alpha', loader).inputStream.text == 'alpha: one'
+        PluginUtils.readPluginConfiguration('beta', loader).inputStream.text == 'beta: two'
+
+        and: 'the compiler listed both plugins'
+        PluginUtils.scanPluginImports(loader).containsAll(['alpha', 'beta'])
 
         cleanup:
         loader?.close()
     }
 
-    // Tests for additional public methods
+    def "readPluginConfiguration rejects a plugin with both plugin.yml and plugin.groovy"() {
+        given:
+        Path root = temp.resolve('both')
+        PluginClassFixtures.write(root, PluginUtils.getPluginConfigPath('both', 'plugin.yml'), 'a: 1')
+        PluginClassFixtures.write(root, PluginUtils.getPluginConfigPath('both', 'plugin.groovy'), 'a = 1')
+        URLClassLoader loader = PluginClassFixtures.loaderOver(root)
+
+        when:
+        PluginUtils.readPluginConfiguration('both', loader)
+
+        then:
+        def e = thrown(grails.plugins.exceptions.PluginException)
+        e.message.contains('[both]')
+
+        cleanup:
+        loader?.close()
+    }
 
     @Unroll
     def "normalizePluginName converts name #input"(String input, String output) {
@@ -246,42 +285,19 @@ class PluginUtilsSpec extends Specification {
     }
 
     @Unroll
-    def "getLogicalPluginNameFromClassName extracts plugin name from class name #input"(String input, String output) {
+    def "isGrailsPlugin is #isPlugin for #description"() {
         expect:
-        PluginUtils.getLogicalPluginNameFromClassName(input) == output
+        PluginUtils.isGrailsPlugin(clazz) == isPlugin
 
         where:
-        input                  || output
-        'MyPluginGrailsPlugin' || 'myPlugin'
-        'CoreGrailsPlugin'     || 'core'
-        'SimpleGrailsPlugin'   || 'simple'
-    }
-
-    @Unroll
-    def "isGrailsPluginClassNamedCorrectly validates plugin naming correctly for #clazz"(Class<?> clazz, boolean isValidPluginClassName) {
-        expect:
-        PluginUtils.isGrailsPluginClassNamedCorrectly(clazz) == isValidPluginClassName
-
-        where:
-        clazz                             || isValidPluginClassName
-        PluginWithAllOrderingGrailsPlugin || true
-        UtilsTestSimpleGrailsPlugin       || true
-        String                            || false
-        null                              || false
-
-    }
-
-    @Unroll
-    def "isGrailsPluginLoadable returns #isLoadable for #clazz"(Class<?> clazz, boolean isLoadable) {
-        expect:
-        PluginUtils.isGrailsPluginLoadable(clazz) == isLoadable
-
-        where:
-        clazz                             || isLoadable
-        PluginWithAllOrderingGrailsPlugin || true
-        DefaultGrailsPlugin               || false // DefaultGrailsPlugin is not loadable since it's not a plugin class
-        String                            || true // Method returns true for String since it's not abstract and not DefaultGrailsPlugin.class
-        null                              || false
+        description                                | clazz                                                                                                  || isPlugin
+        'an annotated Plugin subclass'             | parsePlugin('@grails.plugins.metadata.GrailsPluginDescriptor class AGrailsPlugin extends grails.plugins.Plugin { }') || true
+        'an annotated Plugin without the suffix'   | parsePlugin('@grails.plugins.metadata.GrailsPluginDescriptor class Starter extends grails.plugins.Plugin { }')       || true
+        'a Plugin subclass without the annotation' | parsePlugin('class BGrailsPlugin extends grails.plugins.Plugin { }')                                                || false
+        'an abstract annotated Plugin'             | parsePlugin('@grails.plugins.metadata.GrailsPluginDescriptor abstract class CGrailsPlugin extends grails.plugins.Plugin { }') || false
+        'a *GrailsPlugin class that is no Plugin'  | parsePlugin('class DGrailsPlugin { }')                                                                             || false
+        'DefaultGrailsPlugin'                      | DefaultGrailsPlugin                                                                                                || false
+        'null'                                     | null                                                                                                               || false
     }
 
     def "supportsValueInIncludeExcludeMap returns true for empty map"() {
@@ -307,16 +323,6 @@ class PluginUtilsSpec extends Specification {
         !PluginUtils.supportsValueInIncludeExcludeMap(mapWithExcludes, 'prod')
     }
 
-    def "scanPluginDescriptors returns empty list when no descriptors found"() {
-        when:
-        def classNames = PluginUtils.scanPluginDescriptors(
-                new URLClassLoader([] as URL[], (ClassLoader) null)
-        )
-
-        then:
-        classNames.empty
-    }
-
     def "scanPluginDescriptorResources returns empty list when no descriptors found"() {
         when:
         def descriptors = PluginUtils.scanPluginDescriptorResources(
@@ -328,99 +334,15 @@ class PluginUtilsSpec extends Specification {
     }
 
     @Unroll
-    def "getLogicalPluginName derives plugin name #expectedName from plugin class #clazz"(Class<?> clazz, String expectedName) {
+    def "getLogicalPluginName derives plugin name #expectedName from plugin class #className"() {
         expect:
-        PluginUtils.getLogicalPluginName(clazz) == expectedName
+        PluginUtils.getLogicalPluginName(parsePlugin(
+                "@grails.plugins.metadata.GrailsPluginDescriptor${annotation} class ${className} extends grails.plugins.Plugin { }")) == expectedName
 
         where:
-        clazz                              || expectedName
-        PluginWithAllOrderingGrailsPlugin  || 'pluginWithAllOrdering'
-        UtilsTestSimpleGrailsPlugin        || 'utilsTestSimple'
-        PluginWithMultipleDepsGrailsPlugin || 'pluginWithMultipleDeps'
+        className                            | annotation               || expectedName
+        'PluginWithAllOrderingGrailsPlugin'  | ''                       || 'pluginWithAllOrdering'
+        'CoreLikeGrailsPlugin'               | ''                       || 'coreLike'
+        'RenamedGrailsPlugin'                | "(name = 'my-plugin')"   || 'myPlugin'
     }
-
-    def "evaluateIncludeExcludeProperty parses include/exclude map structure"() {
-        given:
-        def plugin = new GroovyObject() {
-            def environments = [
-                'includes': ['dev', 'test'],
-                'excludes': ['prod']
-            ]
-        }
-
-        when:
-        def result = PluginUtils.evaluateIncludeExcludeProperty(
-            plugin,
-            'environments',
-            { obj -> obj }  // identity converter
-        )
-
-        then:
-        result.containsKey('includes')
-        result.containsKey('excludes')
-        result['includes'] == ['dev', 'test'] as Set
-        result['excludes'] == ['prod'] as Set
-    }
-
-    def "evaluateIncludeExcludeProperty handles string values"() {
-        given:
-        def plugin = new GroovyObject() {
-            def scope = 'development'
-        }
-
-        when:
-        def result = PluginUtils.evaluateIncludeExcludeProperty(
-            plugin,
-            'scope',
-            { obj -> obj }  // identity converter
-        )
-
-        then:
-        result.containsKey('includes')
-        result['includes'] == ['development'] as Set
-    }
-
-    def "evaluateIncludeExcludeProperty handles list values"() {
-        given:
-        def plugin = new GroovyObject() {
-            def scopes = ['dev', 'test']
-        }
-
-        when:
-        def result = PluginUtils.evaluateIncludeExcludeProperty(
-            plugin,
-            'scopes',
-            { obj -> obj }  // identity converter
-        )
-
-        then:
-        result.containsKey('includes')
-        result['includes'] == ['dev', 'test'] as Set
-    }
-}
-
-// Test fixture plugin classes for GrailsPluginUtilsSpec
-
-class UtilsTestSimpleGrailsPlugin {
-    def version = '1.0'
-}
-
-class PluginWithAllOrderingGrailsPlugin {
-    def version = '1.0'
-    def loadAfter = ['alpha', 'beta']
-    def loadBefore = ['gamma']
-    def dependsOn = [delta: '1.0']
-}
-
-class FailingConstructorUtilsGrailsPlugin {
-    def version = '1.0'
-
-    FailingConstructorUtilsGrailsPlugin() {
-        throw new RuntimeException('Intentional failure for testing')
-    }
-}
-
-class PluginWithMultipleDepsGrailsPlugin {
-    def version = '1.0'
-    def dependsOn = [core: '1.0', i18n: '1.0']
 }

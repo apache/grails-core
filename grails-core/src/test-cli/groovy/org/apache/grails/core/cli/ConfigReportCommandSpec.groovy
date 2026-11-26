@@ -421,8 +421,8 @@ class ConfigReportCommandSpec extends Specification {
     }
 
     def "loadPropertyMetadata includes the resources of a plugin on the classpath as Gradle output directories"() {
-        given: "a plugin whose descriptor is in the generated descriptor output and its metadata in the processed resources"
-        File pluginClasses = classpathRoot('plugin/build/generated/resources/grailsPluginDescriptor', [
+        given: "a plugin whose descriptor the compiler wrote beside its classes and its metadata in the processed resources"
+        File pluginClasses = classpathRoot('plugin/build/classes/groovy/main', [
                 'META-INF/grails/plugins.imports': 'acme\n'
         ])
         File pluginResources = classpathRoot('plugin/build/resources/main', [
@@ -457,19 +457,19 @@ class ConfigReportCommandSpec extends Specification {
         classLoader?.close()
     }
 
-    def "loadPropertyMetadata maps grailsLibraryPluginDescriptor to Java, Groovy, and resource outputs and detects legacy XML roots"() {
-        given: "a library plugin using grailsLibraryPluginDescriptor with metadata in classes/java/main"
-        File libraryDescriptor = classpathRoot('libplugin/build/generated/resources/grailsLibraryPluginDescriptor', [
+    def "loadPropertyMetadata maps a Java plugin's classes to its resources and ignores a legacy grails-plugin.xml"() {
+        given: "a Java plugin whose descriptor javac wrote into classes/java/main and its metadata in resources/main"
+        File libraryJavaClasses = classpathRoot('libplugin/build/classes/java/main', [
                 'META-INF/grails/plugins.imports': 'libmod\n'
         ])
-        File libraryJavaClasses = classpathRoot('libplugin/build/classes/java/main', [
+        File libraryResources = classpathRoot('libplugin/build/resources/main', [
                 'META-INF/spring-configuration-metadata.json': '''{
                     "groups": [{"name": "libmod", "description": "LibMod"}],
                     "properties": [{"name": "libmod.enabled", "type": "java.lang.Boolean", "description": "Whether LibMod is enabled."}]
                 }'''
         ])
 
-        and: "a legacy plugin with META-INF/grails-plugin.xml"
+        and: "a jar with only a META-INF/grails-plugin.xml, which no longer makes it a plugin"
         File legacyPlugin = classpathRoot('legacy-plugin', [
                 'META-INF/grails-plugin.xml': '<plugin name="legacy" version="1.0.0"/>',
                 'META-INF/spring-configuration-metadata.json': '''{
@@ -478,7 +478,7 @@ class ConfigReportCommandSpec extends Specification {
                 }'''
         ])
 
-        URL[] urls = [libraryDescriptor, libraryJavaClasses, legacyPlugin].collect { it.toURI().toURL() } as URL[]
+        URL[] urls = [libraryJavaClasses, libraryResources, legacyPlugin].collect { it.toURI().toURL() } as URL[]
         URLClassLoader classLoader = new URLClassLoader(urls, (ClassLoader) null)
 
         when:
@@ -487,7 +487,7 @@ class ConfigReportCommandSpec extends Specification {
 
         then:
         names.contains('libmod.enabled')
-        names.contains('legacy.flag')
+        !names.contains('legacy.flag')
 
         cleanup:
         classLoader?.close()

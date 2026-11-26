@@ -20,6 +20,7 @@ package grails.plugins
 
 import grails.core.DefaultGrailsApplication
 import org.apache.grails.core.plugins.DefaultPluginDiscovery
+import org.apache.grails.core.plugins.PluginUtils
 import org.springframework.core.env.StandardEnvironment
 import spock.lang.Specification
 
@@ -109,44 +110,35 @@ class DefaultGrailsPluginManagerRegistryContractSpec extends Specification {
         manager
     }
 
+    /**
+     * The ordering plugins, parsed by a class loader whose class path holds their descriptors, as a plugin jar
+     * does, so that each has the version its descriptor records.
+     */
     private static List<Class<?>> orderingPluginClasses() {
-        def classLoader = new GroovyClassLoader()
-        [
-                classLoader.parseClass('''
-class RegistryOrderingTailGrailsPlugin {
-    def version = '1.0.0'
-    def loadAfter = ['registryOrderingJoin']
-}
-'''),
-                classLoader.parseClass('''
-class RegistryOrderingJoinGrailsPlugin {
-    def version = '1.0.0'
-    def loadAfter = ['registryOrderingLeft', 'registryOrderingRight']
-}
-'''),
-                classLoader.parseClass('''
-class RegistryOrderingRightGrailsPlugin {
-    def version = '1.0.0'
-    def loadAfter = ['registryOrderingRoot']
-}
-'''),
-                classLoader.parseClass('''
-class RegistryOrderingLeftGrailsPlugin {
-    def version = '1.0.0'
-    def loadAfter = ['registryOrderingRoot']
-}
-'''),
-                classLoader.parseClass('''
-class RegistryOrderingRootGrailsPlugin {
-    def version = '1.0.0'
-}
-'''),
-                classLoader.parseClass('''
-class RegistryOrderingBeforeGrailsPlugin {
-    def version = '1.0.0'
-    def loadBefore = ['registryOrderingRoot']
-}
-''')
+        Map<String, String> annotations = [
+                RegistryOrderingTailGrailsPlugin  : "loadAfter = ['registryOrderingJoin']",
+                RegistryOrderingJoinGrailsPlugin  : "loadAfter = ['registryOrderingLeft', 'registryOrderingRight']",
+                RegistryOrderingRightGrailsPlugin : "loadAfter = ['registryOrderingRoot']",
+                RegistryOrderingLeftGrailsPlugin  : "loadAfter = ['registryOrderingRoot']",
+                RegistryOrderingRootGrailsPlugin  : '',
+                RegistryOrderingBeforeGrailsPlugin: "loadBefore = ['registryOrderingRoot']"
         ]
+        File root = File.createTempDir()
+        root.deleteOnExit()
+        File imports = new File(root, PluginUtils.PLUGINS_IMPORTS_PATH)
+        imports.parentFile.mkdirs()
+        annotations.keySet().each { String className ->
+            String name = PluginUtils.normalizePluginName(className[0].toLowerCase() + className[1..-1] - 'GrailsPlugin')
+            imports << "${name}\n"
+            File descriptor = new File(root, PluginUtils.getPluginDescriptorPath(name))
+            descriptor.parentFile.mkdirs()
+            descriptor.text = "format.version=1\nname=${name}\nclass=${className}\nversion=1.0.0\n"
+        }
+        def classLoader = new GroovyClassLoader(new URLClassLoader([root.toURI().toURL()] as URL[],
+                DefaultGrailsPluginManagerRegistryContractSpec.classLoader))
+        annotations.collect { String className, String attributes ->
+            classLoader.parseClass(
+                    "@grails.plugins.metadata.GrailsPluginDescriptor(${attributes}) class ${className} extends grails.plugins.Plugin { }")
+        }
     }
 }

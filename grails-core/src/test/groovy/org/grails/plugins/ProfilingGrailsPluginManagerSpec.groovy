@@ -69,8 +69,8 @@ class ProfilingGrailsPluginManagerSpec extends Specification {
         given:
         def gcl = new GroovyClassLoader()
         def probeClass = gcl.parseClass('''
-class ProfilingProbeGrailsPlugin {
-    def version = "1.0.0"
+@grails.plugins.metadata.GrailsPluginDescriptor
+class ProfilingProbeGrailsPlugin extends grails.plugins.Plugin {
 }
 ''')
         def application = new DefaultGrailsApplication()

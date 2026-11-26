@@ -83,9 +83,11 @@ class ResourceLocatorSpec extends Specification {
         def resource = new MockBinaryPluginResource(pluginProps.bytes).tap {
             relativesResources['static/css/main.css'] = new ByteArrayResource(''.bytes)
         }
+        def properties = new Properties()
+        properties.load(new StringReader(pluginProps))
         new BinaryGrailsPlugin(
                 TestBinaryGrailsPlugin,
-                new PluginDescriptor(resource, ['org.grails.plugins.TestBinaryGrailsPlugin'], []),
+                PluginDescriptor.fromProperties('testBinary', resource, properties),
                 new DefaultGrailsApplication().tap {
                     mainContext = new GenericApplicationContext()
                 }

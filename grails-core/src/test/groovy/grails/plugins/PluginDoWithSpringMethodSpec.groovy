@@ -33,6 +33,57 @@ import spock.lang.Specification
  */
 class PluginDoWithSpringMethodSpec extends Specification {
 
+    private static final String IMPORTS = '''
+        import grails.plugins.Plugin
+        import grails.plugins.metadata.GrailsPluginDescriptor
+        import grails.spring.BeanBuilder
+        import org.springframework.beans.propertyeditors.ClassEditor
+    '''
+
+    private static final String METHOD_HOOK = IMPORTS + '''
+        @GrailsPluginDescriptor
+        class MethodHookGrailsPlugin extends Plugin {
+            @Override
+            void doWithSpring(BeanBuilder beans) {
+                beans.methodEditor(ClassEditor, grailsApplication.classLoader)
+            }
+        }
+    '''
+
+    private static final String BOTH_HOOKS = IMPORTS + '''
+        @GrailsPluginDescriptor
+        class BothHooksGrailsPlugin extends Plugin {
+            @Override
+            Closure doWithSpring() {
+                { ->
+                    classEditor(ClassEditor, application.classLoader)
+                }
+            }
+
+            @Override
+            void doWithSpring(BeanBuilder beans) {
+                beans.customEditor(ClassEditor, grailsApplication.classLoader)
+            }
+        }
+    '''
+
+    private static final String CLOSURE_HOOK = IMPORTS + '''
+        @GrailsPluginDescriptor
+        class ClosureHookGrailsPlugin extends Plugin {
+            @Override
+            Closure doWithSpring() {
+                { ->
+                    classEditor(ClassEditor, application.classLoader)
+                }
+            }
+        }
+    '''
+
+    /** Plugins compiled at run time, so that the test class path does not list them as plugins of its own. */
+    private static Class<?> plugin(String source) {
+        new GroovyClassLoader(PluginDoWithSpringMethodSpec.classLoader).parseClass(source)
+    }
+
     void "a Plugin subclass can register beans by overriding doWithSpring(BeanBuilder)"() {
         given: "a plugin that registers a bean through the method-based hook"
             def app = new DefaultGrailsApplication()
@@ -65,7 +116,7 @@ class PluginDoWithSpringMethodSpec extends Specification {
     void "DefaultGrailsPlugin invokes the method-based doWithSpring(BeanBuilder) hook"() {
         given: "a plugin descriptor that uses only the method-based hook"
             def app = new DefaultGrailsApplication()
-            def plugin = new DefaultGrailsPlugin(MethodHookGrailsPlugin, app)
+            def plugin = new DefaultGrailsPlugin(plugin(METHOD_HOOK), app)
             RuntimeSpringConfiguration springConfig = new DefaultRuntimeSpringConfiguration()
 
         when: "runtime configuration is performed"
@@ -79,7 +130,7 @@ class PluginDoWithSpringMethodSpec extends Specification {
     void "DefaultGrailsPlugin throws when a plugin defines both doWithSpring hooks"() {
         given: "a plugin descriptor that overrides both hooks"
             def app = new DefaultGrailsApplication()
-            def plugin = new DefaultGrailsPlugin(BothHooksGrailsPlugin, app)
+            def plugin = new DefaultGrailsPlugin(plugin(BOTH_HOOKS), app)
             RuntimeSpringConfiguration springConfig = new DefaultRuntimeSpringConfiguration()
 
         when: "runtime configuration is performed"
@@ -91,10 +142,10 @@ class PluginDoWithSpringMethodSpec extends Specification {
             e.message.contains('doWithSpring(BeanBuilder)')
     }
 
-    void "DefaultGrailsPlugin still supports the legacy closure-returning doWithSpring hook"() {
+    void "DefaultGrailsPlugin supports the closure-returning doWithSpring hook"() {
         given: "a plugin descriptor that overrides only the closure-returning hook"
             def app = new DefaultGrailsApplication()
-            def plugin = new DefaultGrailsPlugin(LegacyClosureGrailsPlugin, app)
+            def plugin = new DefaultGrailsPlugin(plugin(CLOSURE_HOOK), app)
             RuntimeSpringConfiguration springConfig = new DefaultRuntimeSpringConfiguration()
 
         when: "runtime configuration is performed"
@@ -114,40 +165,4 @@ class MethodHookPlugin extends Plugin {
 }
 
 class NoOpPlugin extends Plugin {
-}
-
-class MethodHookGrailsPlugin extends Plugin {
-    def version = '1.0'
-
-    @Override
-    void doWithSpring(BeanBuilder beans) {
-        beans.methodEditor(ClassEditor, grailsApplication.classLoader)
-    }
-}
-
-class BothHooksGrailsPlugin extends Plugin {
-    def version = '1.0'
-
-    @Override
-    Closure doWithSpring() {
-        { ->
-            classEditor(ClassEditor, application.classLoader)
-        }
-    }
-
-    @Override
-    void doWithSpring(BeanBuilder beans) {
-        beans.customEditor(ClassEditor, grailsApplication.classLoader)
-    }
-}
-
-class LegacyClosureGrailsPlugin extends Plugin {
-    def version = '1.0'
-
-    @Override
-    Closure doWithSpring() {
-        { ->
-            classEditor(ClassEditor, application.classLoader)
-        }
-    }
 }

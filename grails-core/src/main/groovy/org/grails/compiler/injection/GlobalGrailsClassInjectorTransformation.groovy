@@ -216,9 +216,6 @@ class GlobalGrailsClassInjectorTransformation implements ASTTransformation, Comp
         !classNode.abstract && !classNode.getAnnotations(PLUGIN_DESCRIPTOR_ANNOTATION).isEmpty()
     }
 
-
-
-
     private static void addPluginAnnotation(ClassNode classNode, String projectName, String projectVersion) {
         GrailsASTUtils.addAnnotationOrGetExisting(
                 classNode,

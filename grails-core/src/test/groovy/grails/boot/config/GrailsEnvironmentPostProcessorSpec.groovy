@@ -274,24 +274,8 @@ class GrailsEnvironmentPostProcessorSpec extends Specification {
     }
 
     private static PluginInfo createPluginInfo(String name, Resource configResource) {
-        def metadata = new PluginMetadata(new grails.plugins.metadata.PluginDefinition.Builder(
-                pluginName: name, pluginVersion: '1.0', grailsVersionRange: '*').build(), CoreTestGrailsPlugin)
-        def descriptor = new PluginDescriptor(null, [], [])
-        return new PluginInfo(descriptor, metadata, configResource, false)
+        def definition = new grails.plugins.metadata.PluginDefinition.Builder(
+                pluginName: name, pluginClass: "test.${name}GrailsPlugin", pluginVersion: '1.0', grailsVersionRange: '*').build()
+        return new PluginInfo(new PluginDescriptor(null, definition), new PluginMetadata(definition, null), configResource, false)
     }
-}
-
-// Test fixture plugin classes (minimal, no GrailsApplication dependency)
-class CoreTestGrailsPlugin {
-    def version = '1.0'
-    def loadAfter = []
-    def loadBefore = []
-}
-
-class SimpleGrailsPlugin {
-    def version = '1.0'
-}
-
-class ABCGrailsPlugin {
-    def version = '1.0'
 }
