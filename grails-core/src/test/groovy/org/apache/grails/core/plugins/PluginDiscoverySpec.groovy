@@ -24,6 +24,7 @@ import spock.lang.Unroll
 
 import org.springframework.core.env.StandardEnvironment
 
+import grails.plugins.metadata.PluginDefinition
 import grails.plugins.metadata.GrailsPluginDescriptor
 import org.apache.grails.core.testing.support.LogCapture
 
@@ -387,7 +388,7 @@ class PluginDiscoverySpec extends Specification {
 
         then: 'null elements are converted safely without throwing'
         metadata != null
-        metadata.loadAfterNames as List == ['', 'core', 'spring-security-core']
+        metadata.loadAfterNames as List == ['core', 'springSecurityCore']
     }
 
     def 'loads namespaced plugin.groovy and fails when both plugin.yml and plugin.groovy exist'() {
@@ -614,34 +615,8 @@ class PluginDiscoverySpec extends Specification {
 
     def 'treats plugin metadata with the same name as equal'() {
         given: 'two metadata instances that differ in every field except the name'
-        def meta1 = new PluginMetadata(
-                'test',
-                '1.0',
-                '9.0.0',
-                String,
-                ['a'] as String[],
-                [] as String[],
-                [:],
-                [] as String[],
-                [] as String[],
-                [] as String[],
-                [:],
-                true
-        )
-        def meta2 = new PluginMetadata(
-                'test',
-                '2.0',
-                '9.1.0',
-                Integer,
-                ['b'] as String[],
-                ['c'] as String[],
-                ['dep': '1.0'],
-                ['d'] as String[],
-                [] as String[],
-                [] as String[],
-                [:],
-                false
-        )
+        def meta1 = new PluginMetadata(new PluginDefinition.Builder(pluginName: 'test', pluginVersion: '1.0', loadAfter: ['a']).build(), String)
+        def meta2 = new PluginMetadata(new PluginDefinition.Builder(pluginName: 'test', pluginVersion: '2.0', dependsOn: [dep:'1.0'], enabled: false).build(), String)
 
         expect: 'metadata equality is based on name only, not other attributes'
         meta1 == meta2
@@ -650,16 +625,8 @@ class PluginDiscoverySpec extends Specification {
 
     def 'treats plugin metadata with different names as distinct'() {
         given: 'two metadata instances with different names'
-        def meta1 = new PluginMetadata(
-                'alpha', '1.0', '9.0.0', String,
-                [] as String[], [] as String[], [:], [] as String[],
-                [] as String[], [] as String[], [:], true
-        )
-        def meta2 = new PluginMetadata(
-                'beta', '1.0', '9.0.0', String,
-                [] as String[], [] as String[], [:], [] as String[],
-                [] as String[], [] as String[], [:], true
-        )
+        def meta1 = new PluginMetadata(new PluginDefinition.Builder(pluginName: 'alpha', pluginVersion: '1.0').build(), String)
+        def meta2 = new PluginMetadata(new PluginDefinition.Builder(pluginName: 'beta', pluginVersion: '1.0').build(), String)
 
         expect: 'metadata with different names are not equal'
         meta1 != meta2
@@ -667,11 +634,7 @@ class PluginDiscoverySpec extends Specification {
 
     def 'includes the plugin name in plugin metadata string output'() {
         given: 'plugin metadata for a named plugin'
-        def meta = new PluginMetadata(
-                'myPlugin', '1.0', '9.0.0', String,
-                [] as String[], [] as String[], [:], [] as String[],
-                [] as String[], [] as String[], [:], true
-        )
+        def meta = new PluginMetadata(new PluginDefinition.Builder(pluginName: 'myPlugin', pluginVersion: '1.0').build(), String)
 
         expect: 'the string form includes the logical plugin name'
         meta.toString() == 'GrailsPluginClassMetadata[myPlugin]'

@@ -274,20 +274,8 @@ class GrailsEnvironmentPostProcessorSpec extends Specification {
     }
 
     private static PluginInfo createPluginInfo(String name, Resource configResource) {
-        def metadata = new PluginMetadata(
-                name,
-                '1.0',
-                '*',
-                CoreTestGrailsPlugin,
-                new String[0],
-                new String[0],
-                Collections.emptyMap(),
-                new String[0],
-                new String[0],
-                new String[0],
-                Collections.emptyMap(),
-                true
-        )
+        def metadata = new PluginMetadata(new grails.plugins.metadata.PluginDefinition.Builder(
+                pluginName: name, pluginVersion: '1.0', grailsVersionRange: '*').build(), CoreTestGrailsPlugin)
         def descriptor = new PluginDescriptor(null, [], [])
         return new PluginInfo(descriptor, metadata, configResource, false)
     }

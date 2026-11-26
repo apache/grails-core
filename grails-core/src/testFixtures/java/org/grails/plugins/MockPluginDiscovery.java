@@ -18,10 +18,8 @@
  */
 package org.grails.plugins;
 
-import java.util.List;
-import java.util.Map;
-
 import grails.plugins.GrailsPlugin;
+import grails.plugins.metadata.PluginDefinition;
 import org.apache.grails.core.plugins.DefaultPluginDiscovery;
 import org.apache.grails.core.plugins.PluginDescriptor;
 import org.apache.grails.core.plugins.PluginInfo;
@@ -65,24 +63,12 @@ public class MockPluginDiscovery extends DefaultPluginDiscovery {
     }
 
     private static PluginDescriptor syntheticDescriptor(GrailsPlugin plugin) {
-        return new PluginDescriptor(
-                null,
-                plugin.getName(),
-                plugin.getVersion(),
-                null,
-                List.of(),
-                List.of(),
-                Map.of(),
-                List.of(),
-                List.of(),
-                Map.of(),
-                List.of(),
-                List.of(),
-                List.of(),
-                List.of(),
-                plugin.isEnabled(),
-                true
-        );
+        var builder = new PluginDefinition.Builder();
+        builder.setPluginName(plugin.getName());
+        builder.setPluginVersion(plugin.getVersion());
+        builder.setEnabled(plugin.isEnabled());
+        builder.setMetadataComplete(true);
+        return new PluginDescriptor(null, builder.build());
     }
 
     public void registerMockPlugin(PluginInfo pluginInfo) {

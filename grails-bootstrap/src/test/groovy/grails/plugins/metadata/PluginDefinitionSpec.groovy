@@ -22,6 +22,26 @@ import spock.lang.Specification
 
 class PluginDefinitionSpec extends Specification {
 
+    void 'a declaration and its published form give consumers the same resolved constraints'() {
+        given:
+        def definition = new PluginDefinition.Builder(
+                pluginName: 'data-source', pluginVersion: '9.0.1',
+                grailsVersionRange: '${plugin.version} > *',
+                dependsOn: [core: '${plugin.version}'], loadAfter: ['some-plugin']
+        ).build()
+        def output = new StringWriter()
+
+        when:
+        definition.write(output)
+        def published = PluginDefinition.read('dataSource', new StringReader(output.toString()))
+
+        then:
+        published == definition
+        published.dependsOn == [core: '9.0.1']
+        published.grailsVersionRange == '9.0.1 > *'
+        published.loadAfter == ['somePlugin']
+    }
+
     void 'tools read immutable metadata without loading the implementation or its artefacts'() {
         when:
         def definition = PluginDefinition.read('catalog-probe', new StringReader('''

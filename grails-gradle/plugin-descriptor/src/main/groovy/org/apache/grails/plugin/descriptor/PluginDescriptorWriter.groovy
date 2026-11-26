@@ -32,6 +32,8 @@ import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassVisitor
 import org.objectweb.asm.Opcodes
 
+import grails.plugins.metadata.PluginDefinition
+
 /**
  * Discovers compiled plugin and artefact classes and writes their classpath index.
  * Shared with the framework build, which must bootstrap before Gradle plugins are available.
@@ -47,7 +49,6 @@ final class PluginDescriptorWriter {
     static final String PLUGINS_IMPORTS_PATH = 'META-INF/grails/plugins.imports'
     static final String PLUGIN_DESCRIPTORS_PREFIX = 'META-INF/grails/plugins/'
     static final String PLUGIN_PROPERTIES_FILE = 'plugin.properties'
-    static final String FORMAT_VERSION = '1'
 
     private static final String GRAILS_PLUGIN_SUFFIX = 'GrailsPlugin'
     private static final String CLASS_FILE_EXTENSION = '.class'
@@ -108,24 +109,20 @@ final class PluginDescriptorWriter {
             File pluginConfigFile,
             File outDir,
             boolean publishXml = true) {
-        SortedSet<String> importNames = new TreeSet<>()
-        Map<String, String> seenPluginNames = new LinkedHashMap<>()
+        Map<String, PluginDefinition> definitions = new TreeMap<>()
         for (ScannedPlugin plugin : plugins) {
-            if (!(plugin.logicalName ==~ /[A-Za-z0-9][A-Za-z0-9._-]*/) || plugin.logicalName.contains('..')) {
-                throw new IllegalArgumentException("Invalid Grails plugin name '${plugin.logicalName}'")
-            }
-            String previous = seenPluginNames.putIfAbsent(plugin.logicalName, plugin.className ?: 'grails.plugin')
+            PluginDefinition definition = plugin.toDefinition(artefactsByType, defaultVersion)
+            PluginDefinition previous = definitions.putIfAbsent(definition.pluginName, definition)
             if (previous != null) {
-                throw new IllegalArgumentException(
-                        "Duplicate Grails plugin logical name '${plugin.logicalName}' declared by [${previous}] and [${plugin.className ?: 'grails.plugin'}]"
-                )
+                throw new IllegalArgumentException("Duplicate Grails plugin logical name '${definition.pluginName}' declared by " +
+                        "[${previous.providedPlugins}] and [${definition.providedPlugins}]")
             }
-            importNames.add(plugin.logicalName)
-            File pluginDir = new File(outDir, "${PLUGIN_DESCRIPTORS_PREFIX}${plugin.logicalName}")
+        }
+        for (PluginDefinition definition : definitions.values()) {
+            File pluginDir = new File(outDir, PLUGIN_DESCRIPTORS_PREFIX + definition.pluginName)
             pluginDir.mkdirs()
-
             File descriptorFile = new File(pluginDir, PLUGIN_PROPERTIES_FILE)
-            descriptorFile.setText(renderProperties(plugin, artefactsByType, defaultVersion), StandardCharsets.UTF_8.name())
+            descriptorFile.withWriter('UTF-8') { Writer writer -> definition.write(writer) }
 
             if (pluginConfigFile != null && pluginConfigFile.isFile()) {
                 Files.copy(
@@ -138,53 +135,43 @@ final class PluginDescriptorWriter {
 
         File importsFile = new File(outDir, PLUGINS_IMPORTS_PATH)
         importsFile.parentFile.mkdirs()
-        importsFile.setText(importNames.join('\n') + '\n', StandardCharsets.UTF_8.name())
+        importsFile.setText(definitions.keySet().join('\n') + '\n', StandardCharsets.UTF_8.name())
         if (publishXml && plugins) {
-            writeXmlProjection(outDir, importNames)
+            writeXmlProjection(outDir, definitions.values())
         }
     }
 
-    private static void writeXmlProjection(File outDir, Set<String> names) {
-        List<Properties> definitions = names.collect { String name ->
-            Properties definition = new Properties()
-            new File(outDir, PLUGIN_DESCRIPTORS_PREFIX + name + '/' + PLUGIN_PROPERTIES_FILE)
-                    .withReader('UTF-8') { Reader reader -> definition.load(reader) }
-            definition
-        }
+    private static void writeXmlProjection(File outDir, Collection<PluginDefinition> definitions) {
         new File(outDir, 'META-INF/grails-plugin.xml').withWriter('UTF-8') { Writer writer ->
             def xml = XMLOutputFactory.newFactory().createXMLStreamWriter(writer)
             xml.writeStartElement('plugin')
             if (definitions.size() == 1) {
-                Properties definition = definitions.first()
-                for (String key : ['name', 'version', 'grailsVersion']) {
-                    if (definition.containsKey(key)) {
-                        xml.writeAttribute(key, definition.getProperty(key))
-                    }
+                PluginDefinition definition = definitions.first()
+                xml.writeAttribute('name', definition.pluginName)
+                if (definition.pluginVersion) {
+                    xml.writeAttribute('version', definition.pluginVersion)
                 }
-                List<String> dependencies = definition.stringPropertyNames().findAll { it.startsWith('dependsOn.') }.sort()
-                if (dependencies) {
+                if (definition.grailsVersionRange) {
+                    xml.writeAttribute('grailsVersion', definition.grailsVersionRange)
+                }
+                if (definition.dependsOn) {
                     xml.writeStartElement('dependsOn')
-                    for (String key : dependencies) {
-                        String dependency = key.substring('dependsOn.'.length())
-                        if (dependency ==~ /[A-Za-z_][A-Za-z0-9._-]*/) {
-                            xml.writeAttribute(dependency, definition.getProperty(key))
+                    new TreeMap<>(definition.dependsOn).each { String key, String constraint ->
+                        if (key ==~ /[A-Za-z_][A-Za-z0-9._-]*/) {
+                            xml.writeAttribute(key, constraint)
                         }
                     }
                     xml.writeEndElement()
                 }
             }
             Set<String> classes = new TreeSet<>()
-            for (Properties definition : definitions) {
-                if (definition.getProperty('class')) {
+            for (PluginDefinition definition : definitions) {
+                for (String name : definition.providedPlugins) {
                     xml.writeStartElement('type')
-                    xml.writeCharacters(definition.getProperty('class'))
+                    xml.writeCharacters(name)
                     xml.writeEndElement()
                 }
-                for (String key : definition.stringPropertyNames()) {
-                    if (key == 'artefacts' || key.startsWith('artefacts.')) {
-                        classes.addAll(definition.getProperty(key).tokenize(','))
-                    }
-                }
+                classes.addAll(definition.providedClasses)
             }
             xml.writeStartElement('resources')
             for (String name : classes) {
@@ -198,109 +185,8 @@ final class PluginDescriptorWriter {
         }
     }
 
-    static String renderProperties(
-            ScannedPlugin plugin,
-            Map<String, SortedSet<String>> artefactsByType,
-            String defaultVersion) {
-        Map<String, String> entries = new TreeMap<>()
-        entries.put('format.version', FORMAT_VERSION)
-        entries.put('name', plugin.logicalName)
-
-        String version = trimToNull(plugin.version) ?: trimToNull(defaultVersion)
-        if (version) {
-            entries.put('version', version)
-        }
-        if (plugin.className) {
-            entries.put('class', plugin.className)
-        }
-        entries.put('metadata.complete', Boolean.toString(plugin.metadataComplete))
-
-        String grailsVer = trimToNull(plugin.grailsVersion)
-        if (grailsVer) {
-            if (grailsVer.contains('${plugin.version}')) {
-                if (!version) {
-                    throw new IllegalArgumentException("Plugin ${plugin.logicalName} must declare a version for its compatibility range")
-                }
-                grailsVer = grailsVer.replace('${plugin.version}', version)
-            }
-            entries.put('grailsVersion', grailsVer)
-        }
-        if (plugin.loadAfter) {
-            entries.put('loadAfter', plugin.loadAfter.collect { normalizePluginName(it) }.findAll { it }.join(','))
-        }
-        if (plugin.loadBefore) {
-            entries.put('loadBefore', plugin.loadBefore.collect { normalizePluginName(it) }.findAll { it }.join(','))
-        }
-        for (Map.Entry<String, String> dep : plugin.dependsOn.entrySet()) {
-            String depKey = trimToNull(dep.key)
-            if (depKey) {
-                String constraint = trimToNull(dep.value) ?: '*'
-                if (constraint == '${plugin.version}') {
-                    if (!version) {
-                        throw new IllegalArgumentException("Plugin ${plugin.logicalName} must declare a version for dependency ${depKey}")
-                    }
-                    constraint = version
-                }
-                entries.put("dependsOn.${normalizePluginName(depKey)}".toString(), constraint)
-            }
-        }
-        if (plugin.evict) {
-            entries.put('evict', plugin.evict.collect { normalizePluginName(it) }.findAll { it }.join(','))
-        }
-        if (plugin.observe) {
-            entries.put('observe', plugin.observe.collect { normalizePluginName(it) }.findAll { it }.join(','))
-        }
-        if (plugin.environmentsIncludes) {
-            entries.put('environments.includes', plugin.environmentsIncludes.collect { trimToNull(it) }.findAll { it }.join(','))
-        }
-        if (plugin.environmentsExcludes) {
-            entries.put('environments.excludes', plugin.environmentsExcludes.collect { trimToNull(it) }.findAll { it }.join(','))
-        }
-        if (!plugin.enabled) {
-            entries.put('enabled', 'false')
-        }
-
-        for (Map.Entry<String, SortedSet<String>> entry : artefactsByType.entrySet()) {
-            Collection<String> included = entry.value.findAll { String className ->
-                !isExcluded(className, plugin.pluginExcludes)
-            }
-            if (included) {
-                entries.put("artefacts.${entry.key}".toString(), included.join(','))
-            }
-        }
-
-        StringBuilder sb = new StringBuilder()
-        sb.append('# Generated by Grails. Do not edit.\n')
-        for (Map.Entry<String, String> entry : entries.entrySet()) {
-            sb.append(escapeKey(entry.key)).append('=').append(escapeValue(entry.value)).append('\n')
-        }
-        sb.toString()
-    }
-
     static String normalizePluginName(String raw) {
-        String trimmed = trimToNull(raw)
-        if (trimmed == null) {
-            return null
-        }
-        if (!trimmed.contains('-')) {
-            return trimmed
-        }
-        StringBuilder pascal = new StringBuilder()
-        for (String token : trimmed.split('-')) {
-            if (!token.isEmpty()) {
-                pascal.append(Character.toUpperCase(token.charAt(0)))
-                if (token.length() > 1) {
-                    pascal.append(token.substring(1))
-                }
-            }
-        }
-        if (pascal.length() == 0) {
-            return ''
-        }
-        if (pascal.length() > 1 && Character.isUpperCase(pascal.charAt(0)) && Character.isUpperCase(pascal.charAt(1))) {
-            return pascal.toString()
-        }
-        Character.toLowerCase(pascal.charAt(0)).toString() + pascal.substring(1)
+        PluginDefinition.normalizePluginName(raw)
     }
 
     static String trimToNull(String value) {
@@ -373,77 +259,6 @@ final class PluginDescriptorWriter {
         path.matches(regex.toString())
     }
 
-    private static String escapeKey(String key) {
-        StringBuilder sb = new StringBuilder(key.length())
-        for (int i = 0; i < key.length(); i++) {
-            char ch = key.charAt(i)
-            if (ch == ('\\' as char)) {
-                sb.append('\\\\')
-            }
-            else if (ch == ('=' as char)) {
-                sb.append('\\=')
-            }
-            else if (ch == (':' as char)) {
-                sb.append('\\:')
-            }
-            else if (ch == (' ' as char)) {
-                sb.append('\\ ')
-            }
-            else if (ch == ('\t' as char)) {
-                sb.append('\\t')
-            }
-            else if (ch == ('\n' as char)) {
-                sb.append('\\n')
-            }
-            else if (ch == ('\r' as char)) {
-                sb.append('\\r')
-            }
-            else if (ch == ('\f' as char)) {
-                sb.append('\\f')
-            }
-            else {
-                sb.append(ch)
-            }
-        }
-        sb.toString()
-    }
-
-    private static String escapeValue(String value) {
-        StringBuilder sb = new StringBuilder(value.length())
-        boolean leading = true
-        for (int i = 0; i < value.length(); i++) {
-            char ch = value.charAt(i)
-            if (ch == (' ' as char)) {
-                sb.append(leading ? '\\ ' : ' ')
-            }
-            else if (ch == ('\\' as char)) {
-                sb.append('\\\\')
-                leading = false
-            }
-            else if (ch == ('\t' as char)) {
-                sb.append('\\t')
-                leading = false
-            }
-            else if (ch == ('\n' as char)) {
-                sb.append('\\n')
-                leading = false
-            }
-            else if (ch == ('\r' as char)) {
-                sb.append('\\r')
-                leading = false
-            }
-            else if (ch == ('\f' as char)) {
-                sb.append('\\f')
-                leading = false
-            }
-            else {
-                sb.append(ch)
-                leading = false
-            }
-        }
-        sb.toString()
-    }
-
     static class ScanResult {
         final List<ScannedPlugin> plugins
         final Map<String, SortedSet<String>> artefactsByType
@@ -501,6 +316,20 @@ final class PluginDescriptorWriter {
             this.metadataComplete = metadataComplete
         }
 
+        PluginDefinition toDefinition(Map<String, SortedSet<String>> artefactsByType, String defaultVersion) {
+            Map<String, List<String>> included = [:]
+            artefactsByType.each { String type, SortedSet<String> names ->
+                included.put(type, names.findAll { String name -> !isExcluded(name, pluginExcludes) }.toList())
+            }
+            new PluginDefinition.Builder(
+                    pluginName: logicalName, pluginVersion: trimToNull(version) ?: defaultVersion,
+                    providedPlugins: className ? [className] : [], providedArtefactsByType: included,
+                    grailsVersionRange: grailsVersion, dependsOn: dependsOn, loadAfter: loadAfter,
+                    loadBefore: loadBefore, observe: observe, evict: evict, environmentsIncludes: environmentsIncludes,
+                    environmentsExcludes: environmentsExcludes, enabled: enabled, metadataComplete: metadataComplete
+            ).build()
+        }
+
         ScannedPlugin withLogicalName(String overrideName) {
             new ScannedPlugin(
                     className, overrideName, version, grailsVersion,
@@ -542,7 +371,7 @@ final class PluginDescriptorWriter {
         String grailsVersion
         List<String> loadAfter = []
         List<String> loadBefore = []
-        Map<String, String> dependsOn = new LinkedHashMap<>()
+        List<String> dependencyDeclarations = []
         List<String> evict = []
         List<String> observe = []
         List<String> environmentsIncludes = []
@@ -617,23 +446,7 @@ final class PluginDescriptorWriter {
                             return stringArrayCollector(pluginExcludes)
                         }
                         if ('dependsOn' == name) {
-                            return new AnnotationVisitor(Opcodes.ASM9) {
-                                @Override
-                                void visit(String ignored, Object value) {
-                                    if (value instanceof String && !((String) value).isBlank()) {
-                                        String spec = ((String) value).trim()
-                                        int sep = spec.indexOf(':')
-                                        if (sep > 0) {
-                                            String depName = spec.substring(0, sep).trim()
-                                            String depVersion = spec.substring(sep + 1).trim()
-                                            dependsOn.put(depName, depVersion ?: '*')
-                                        }
-                                        else {
-                                            dependsOn.put(spec, '*')
-                                        }
-                                    }
-                                }
-                            }
+                            return stringArrayCollector(dependencyDeclarations)
                         }
                         null
                     }
@@ -696,7 +509,7 @@ final class PluginDescriptorWriter {
                     grailsVersion,
                     loadAfter,
                     loadBefore,
-                    dependsOn,
+                    PluginDefinition.parseDependencies(dependencyDeclarations),
                     evict,
                     observe,
                     environmentsIncludes,

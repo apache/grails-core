@@ -346,24 +346,8 @@ public final class PluginUtils {
                             label, LEGACY_PLUGIN_DESCRIPTOR_PATH, url, PLUGINS_IMPORTS_PATH);
 
                     Resource descriptorResource = new UrlResource(url);
-                    descriptors.add(new PluginDescriptor(
-                            descriptorResource,
-                            descriptorName,
-                            handler.getPluginVersion(),
-                            null,
-                            remainingClasses,
-                            handler.getProvidedClasses(),
-                            Map.of(),
-                            List.of(),
-                            List.of(),
-                            Map.of(),
-                            List.of(),
-                            List.of(),
-                            List.of(),
-                            List.of(),
-                            true,
-                            false
-                    ));
+                    descriptors.add(new PluginDescriptor(descriptorResource, descriptorName, handler.getPluginVersion(),
+                            remainingClasses, handler.getProvidedClasses()));
                     discoveredPluginClasses.addAll(remainingClasses);
                 } catch (IOException | ParserConfigurationException | SAXException e) {
                     LOG.debug("Error parsing legacy plugin descriptor at [{}]: {}", url, e.getMessage());
@@ -630,30 +614,31 @@ public final class PluginUtils {
     /** Reads a conventional plugin's computed metadata from its existing lifecycle instance. */
     public static PluginMetadata readPluginInstanceMetadata(
             Object pluginInstance, BeanWrapper beanWrapper, String pluginName, @Nullable String fallbackVersion) {
-        var pluginVersion = evaluatePluginVersion(beanWrapper, pluginInstance, pluginName, fallbackVersion);
-        var grailsVersion = getPluginGrailsVersionRange(pluginInstance, pluginName);
-        var dependencies = evaluatePluginDependencies(beanWrapper, pluginInstance);
-        var loadAfterNames = evaluatePluginLoadAfters(beanWrapper, pluginInstance);
-        var loadBeforeNames = evaluatePluginLoadBefores(beanWrapper, pluginInstance);
-        var evictions = evaluatePluginEvictionPolicy(beanWrapper, pluginInstance);
-        var observedPluginNames = evaluateObservedPlugins(beanWrapper, pluginInstance);
-        var status = evaluatePluginStatus(beanWrapper, pluginInstance);
+        var builder = new PluginDefinition.Builder();
+        builder.setPluginName(pluginName);
+        builder.setPluginVersion(evaluatePluginVersion(beanWrapper, pluginInstance, pluginName, fallbackVersion));
+        builder.setGrailsVersionRange(getPluginGrailsVersionRange(pluginInstance, pluginName));
+        builder.setProvidedPlugins(List.of(pluginInstance.getClass().getName()));
+        Map<String, String> dependencies = new LinkedHashMap<>();
+        evaluatePluginDependencies(beanWrapper, pluginInstance).dependencies().forEach((name, version) -> {
+            if (version == null) {
+                throw new PluginException("Plugin [" + pluginName + "] referenced dependency [" + name + "] with no version!");
+            }
+            dependencies.put(name, version.toString());
+        });
+        builder.setDependsOn(dependencies);
+        builder.setLoadAfter(Arrays.asList(evaluatePluginLoadAfters(beanWrapper, pluginInstance)));
+        builder.setLoadBefore(Arrays.asList(evaluatePluginLoadBefores(beanWrapper, pluginInstance)));
+        builder.setEvict(Arrays.asList(evaluatePluginEvictionPolicy(beanWrapper, pluginInstance)));
+        builder.setObserve(Arrays.asList(evaluateObservedPlugins(beanWrapper, pluginInstance)));
         var environments = evaluatePluginEnvironments(beanWrapper, pluginInstance);
-
-        return new PluginMetadata(
-                pluginName,
-                pluginVersion,
-                grailsVersion,
-                pluginInstance.getClass(),
-                loadAfterNames,
-                loadBeforeNames,
-                dependencies.dependencies,
-                dependencies.dependencyNames,
-                evictions,
-                observedPluginNames,
-                environments,
-                status != null && status.equalsIgnoreCase(DefaultGrailsPlugin.STATUS_ENABLED)
-        );
+        builder.setEnvironmentsIncludes(environments.getOrDefault(DefaultGrailsPlugin.INCLUDES, Set.of())
+                .stream().map(Object::toString).toList());
+        builder.setEnvironmentsExcludes(environments.getOrDefault(DefaultGrailsPlugin.EXCLUDES, Set.of())
+                .stream().map(Object::toString).toList());
+        builder.setEnabled(DefaultGrailsPlugin.STATUS_ENABLED.equalsIgnoreCase(evaluatePluginStatus(beanWrapper, pluginInstance)));
+        builder.setMetadataComplete(true);
+        return new PluginMetadata(builder.build(), pluginInstance.getClass());
     }
 
     public static PluginMetadata extractPluginMetadataFromAnnotation(
@@ -685,98 +670,30 @@ public final class PluginUtils {
         String grailsVersion = !annotation.grailsVersion().isBlank() ?
                 annotation.grailsVersion().trim() : fallbackGrailsVersion;
 
-        if (grailsVersion != null) {
-            grailsVersion = grailsVersion.replace("${plugin.version}", pluginVersion);
-        }
-
-        Map<String, Object> dependencies = new LinkedHashMap<>();
-        for (String depSpec : annotation.dependsOn()) {
-            if (depSpec == null || depSpec.isBlank()) {
-                continue;
-            }
-            String trimmedSpec = depSpec.trim();
-            int sep = trimmedSpec.indexOf(':');
-            if (sep >= 0) {
-                String rawName = trimmedSpec.substring(0, sep).trim();
-                if (rawName.isEmpty()) {
-                    continue;
-                }
-                String depVersion = trimmedSpec.substring(sep + 1).trim();
-                if (depVersion.equals("${plugin.version}")) {
-                    depVersion = pluginVersion;
-                }
-                dependencies.put(normalizePluginName(rawName), depVersion.isEmpty() ? "*" : depVersion);
-            } else {
-                dependencies.put(normalizePluginName(trimmedSpec), "*");
-            }
-        }
-
-        Map<String, Set<Object>> environments = buildEnvironmentsMap(
-                Arrays.asList(annotation.environmentsIncludes()),
-                Arrays.asList(annotation.environmentsExcludes())
-        );
-
-        return new PluginMetadata(
-                pluginName,
-                pluginVersion,
-                grailsVersion,
-                pluginClass,
-                normalizeNameArray(annotation.loadAfter()),
-                normalizeNameArray(annotation.loadBefore()),
-                dependencies,
-                dependencies.keySet().toArray(new String[0]),
-                normalizeNameArray(annotation.evict()),
-                normalizeNameArray(annotation.observe()),
-                environments,
-                annotation.enabled()
-        );
+        var builder = new PluginDefinition.Builder();
+        builder.setPluginName(pluginName);
+        builder.setPluginVersion(pluginVersion);
+        builder.setGrailsVersionRange(grailsVersion);
+        builder.setProvidedPlugins(List.of(pluginClass.getName()));
+        builder.setLoadAfter(Arrays.asList(annotation.loadAfter()));
+        builder.setLoadBefore(Arrays.asList(annotation.loadBefore()));
+        builder.setDependsOn(PluginDefinition.parseDependencies(Arrays.asList(annotation.dependsOn())));
+        builder.setEvict(Arrays.asList(annotation.evict()));
+        builder.setObserve(Arrays.asList(annotation.observe()));
+        builder.setEnvironmentsIncludes(Arrays.asList(annotation.environmentsIncludes()));
+        builder.setEnvironmentsExcludes(Arrays.asList(annotation.environmentsExcludes()));
+        builder.setEnabled(annotation.enabled());
+        builder.setMetadataComplete(true);
+        return new PluginMetadata(builder.build(), pluginClass);
     }
 
     private static @Nullable PluginMetadata extractPluginMetadataFromDescriptor(
-            PluginDescriptor descriptor,
-            @Nullable Class<?> pluginClass) {
-        String pluginName = descriptor.getPluginName();
-        if (pluginName == null || pluginName.isBlank()) {
-            return null;
-        }
-        String pluginVersion = descriptor.getPluginVersion();
-        if (pluginVersion == null || pluginVersion.isBlank()) {
-            throw new PluginException("Plugin [" + pluginName + "] must specify a version!");
-        }
-
-        Map<String, Object> dependencies = new LinkedHashMap<>(descriptor.getDependsOn());
-        Map<String, Set<Object>> environments = buildEnvironmentsMap(
-                descriptor.getEnvironmentsIncludes(),
-                descriptor.getEnvironmentsExcludes()
-        );
-
-        return new PluginMetadata(
-                pluginName,
-                pluginVersion,
-                descriptor.getGrailsVersionRange(),
-                pluginClass,
-                normalizeNameArray(descriptor.getLoadAfter().toArray(new String[0])),
-                normalizeNameArray(descriptor.getLoadBefore().toArray(new String[0])),
-                dependencies,
-                dependencies.keySet().toArray(new String[0]),
-                normalizeNameArray(descriptor.getEvict().toArray(new String[0])),
-                normalizeNameArray(descriptor.getObserve().toArray(new String[0])),
-                environments,
-                descriptor.isEnabled()
-        );
+            PluginDescriptor descriptor, @Nullable Class<?> pluginClass) {
+        PluginDefinition definition = descriptor.getDefinition();
+        return definition != null ? new PluginMetadata(definition, pluginClass) : null;
     }
 
-    private static String[] normalizeNameArray(String[] names) {
-        List<String> result = new ArrayList<>(names.length);
-        for (String name : names) {
-            if (name != null && !name.isBlank()) {
-                result.add(normalizePluginName(name.trim()));
-            }
-        }
-        return result.toArray(new String[0]);
-    }
-
-    private static Map<String, Set<Object>> buildEnvironmentsMap(List<String> includes, List<String> excludes) {
+    static Map<String, Set<Object>> buildEnvironmentsMap(List<String> includes, List<String> excludes) {
         Map<String, Set<Object>> result = new HashMap<>();
         Function<Object, Object> converter = arg -> {
             var envName = (String) arg;
