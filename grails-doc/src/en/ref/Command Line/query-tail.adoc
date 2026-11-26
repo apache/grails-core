@@ -32,7 +32,7 @@ link:{guidePath}conf.html#queryTail[Finding Query-Heavy Pages with query-tail].
 
 [source,groovy]
 ----
-grails run-app --query-tail                                                 // in one terminal: run the application with capture on
+grails run-app --query-tail             // in one terminal: run the application with capture on
 
 grails query-tail                       // in another: the pages, as requests are served
 grails query-tail --statements          // the statements themselves, the most run first

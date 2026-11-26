@@ -32,8 +32,12 @@ It takes two terminals. In the first, start the application with capture turned 
 grails run-app --query-tail
 ----
 
-or, with Gradle, `./gradlew bootRun -Pgrails.gorm.queryTail.enabled`. In the second, follow the
-capture and use the application:
+or, with Gradle, `./gradlew bootRun -Pgrails.gorm.queryTail.enabled`. `--query-tail` is an option
+Grails Data declares for `run-app` (in its command line artifact, `grails-datamapping-core-cli`):
+it is one of `run-app` once a build has compiled the project, as `grails compile` does, and
+`grails help run-app` then lists it; it starts the application with the system property
+`grails.gorm.queryTail.enabled=true`. In the second terminal, follow the capture and use the
+application:
 
 [source,shell]
 ----

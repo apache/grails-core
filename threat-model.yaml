@@ -225,6 +225,11 @@ entry_points:
     attacker_controllable: false
     trusted_role: operator
     notes: "grailsw only; the jar is compared with the checksum file the same repository serves (or the checksums inside the jar) and installed only when whole - protection against truncation and corruption, not against a compromised repository."
+  - surface: DeclaredOptions
+    parameter: options_plugins_declare_for_run_app
+    attacker_controllable: false
+    trusted_role: plugin_author
+    notes: "CLI and Grails Gradle plugin; META-INF/grails-command-options.json of a jar of the project's class path, listed by grailsCommandCatalog as commandOptions of .grails/cache/command-catalog.json. Read as bounded strict JSON, never executed; a given option becomes one Gradle argument -Dgrails.<property>=<value>, never through a shell. Names, properties and switch values are held to patterns; properties of the JVM, the build, the environment and of where configuration, profiles and classes are loaded from are refused, and an option of run-app itself cannot be replaced. Defence in depth: the declaring plugin's code already runs in the application."
   - surface: ConsoleProject
     parameter: project_directory_and_gradle_wrapper
     attacker_controllable: false

@@ -585,3 +585,85 @@ The names, descriptions and origins in the file come from the project's dependen
 Every command in the file is run with `./gradlew runCommand --arg=<name>` followed by its arguments. The task loads no class of the project or of its dependencies, and the file has neither a time nor a path of the machine in it, so the same commands give the same file.
 
 The `grails` command reads this file: in the project, every command in it is a command of `grails` under its name, listed by `help` with its origin and run through `runCommand` with its arguments as they were typed. Every build that compiles the project keeps the file current, and where it is missing or out of date, a name that is no command has the `grails` command run the task once before it refuses the name. A command whose name is a command of the command line itself, another name of one or the short form of one, such as `install-templates`, is not added there; `help` says so, and the command is run with `grails run-command install-templates`.
+
+[[runAppOptions]]
+**Adding Options to `run-app` from a Plugin**
+
+A plugin, or an application, can give `grails run-app` an option of its own that sets a property of the application `run-app` starts. The option is declared, not programmed: no code of the plugin runs in the `grails` command. The command line artifact of Grails Data does this for `grails run-app --query-tail`, which starts the application with `grails.gorm.queryTail.enabled=true`.
+
+The declaration is one JSON resource, `META-INF/grails-command-options.json`. A plugin that ships its commands as a companion `-cli` artifact puts it beside them, in `src/cli/resources/META-INF/`; a plugin without a companion puts it in `src/main/resources/META-INF/`; an application puts it in `src/main/resources/META-INF/` or `grails-app/conf/META-INF/`.
+
+[source,json]
+.src/cli/resources/META-INF/grails-command-options.json
+----
+{
+  "format": 1,
+  "options": [
+    {
+      "command": "run-app",
+      "name": "audit-trail",
+      "description": "Log every change the application makes to a domain object.",
+      "type": "boolean",
+      "property": "myplugin.audit.enabled",
+      "value": "true"
+    },
+    {
+      "command": "run-app",
+      "name": "tenant",
+      "description": "The tenant the application runs as.",
+      "type": "string",
+      "property": "myplugin.tenant"
+    }
+  ]
+}
+----
+
+[cols="1,4"]
+|===
+|Member |Meaning
+
+|`format`
+|The number `1`.
+
+|`command`
+|The command the option is one of. `run-app` is the only command that takes declared options in this version; the member is there so that another command can take them later, and an option for any other command is not used.
+
+|`name`
+|The long name of the option without its two hyphens: `audit-trail` is typed `--audit-trail`. Lower-case letters and digits in words joined by single hyphens, starting with a letter, 2 to 32 characters.
+
+|`description`
+|One line for the help of `run-app`, at most 200 characters, without `$`, `%` and `@`. The help shows it with where the option comes from and the property it sets.
+
+|`type`
+|`boolean` for a switch, which is also what an option without the member is, or `string` for an option that takes a value: `--tenant acme` or `--tenant=acme`.
+
+|`property`
+|The property of the application the option sets, as it is written in `application.yml`: two or more parts of letters, digits, hyphens and underscores joined by dots, at most 128 characters. See below for the properties no option can set.
+
+|`value`
+|What a switch sets the property to: letters, digits, dots, hyphens and underscores, at most 64 characters. `true` without the member. An option of the type `string` has no such member: its value is the one typed.
+|===
+
+The build of the application lists the declarations it finds on the class path of the application and of its commands, with the commands themselves: the Gradle task `grailsCommandCatalog` writes them into `.grails/cache/command-catalog.json` as the member `commandOptions`, each with the `origin` it comes from. Every build that compiles the project runs the task. The `grails` command reads the options there and nowhere else, so an option is one of `run-app` once the project has been built with the plugin; before that, the option is refused as one `run-app` does not have, with a line that says how the options are listed.
+
+[source,json]
+----
+"commandOptions": [
+  {"command": "run-app", "name": "audit-trail", "description": "Log every change the application makes to a domain object.",
+   "type": "boolean", "property": "myplugin.audit.enabled", "value": "true", "origin": "com.example:my-plugin-cli:1.0.0"}
+]
+----
+
+An option that is given becomes one system property of the build, `-Dgrails.myplugin.audit.enabled=true`, which the Grails Gradle plugin hands to the application without the `grails.` in front, as it does with `--port` and with any `-Dgrails.NAME=VALUE` of `run-app`. The application reads `myplugin.audit.enabled` as it reads any property, and a value in `application.yml` gives way to it. With Gradle alone the same is `./gradlew bootRun -Dgrails.myplugin.audit.enabled=true`. The value of a `string` option is given to Gradle as the one argument it is, whatever it contains, and never to a shell. A `-Dgrails.myplugin.audit.enabled=...` on the same command line is left as it was typed, and the option adds nothing to it.
+
+A declaration comes from a jar and ends on the command line of a JVM, so it is held to the form above, and what is not as it has to be is not used:
+
+* An option whose name, description, type, property or value is not as the table says is left out alone. The task says so in the `diagnostics` of the file and as a warning of the build, by the place of the option in its resource and without repeating anything of it, and `grails help` shows the line.
+* No option sets a property of the JVM or of the build, or one that decides which environment, configuration, profiles or classes the application starts with. Refused are the properties `grails.env`, `base.dir`, `server.port`, `server.address` and `logging.config`, and every property that starts with `java.`, `javax.`, `jdk.`, `sun.`, `com.sun.`, `user.`, `os.`, `file.`, `line.`, `path.`, `http.`, `https.`, `ftp.`, `socks.`, `org.gradle.`, `groovy.`, `loader.`, `spring.config.`, `spring.profiles.`, `spring.main.`, `spring.application.`, `spring.devtools.`, `spring.cloud.`, `server.ssl.`, `grails.config.` or `grails.project.`, whatever its case and with or without the hyphens and underscores of its words (`spring.config.additional-location` is `spring.config.additionalLocation`).
+* An option `run-app` has itself stays its own: a declared `port`, `detach` or `help` is not added, and `grails help`, `grails help run-app` and `help --json` say so.
+* A name two plugins declare differently is the option of neither, and the diagnostics name both. A plugin and its companion that declare the same thing declare it once. What the application declares holds over what a plugin declares for the same name, so an application can settle such a clash by declaring the option itself.
+* A resource has at most 32 KiB and 16 options, and a project at most 32 declared options, the first by name.
+
+The plugin's code is on the class path of the application and runs in it with every right the application has, with or without an option; the rules keep a declaration from reaching further than that, into the command line of Gradle or the JVM of the build, and from changing what the application is behind the name of a harmless switch. The help of `run-app` shows each declared option with the artifact that declares it and the property it sets.
+
+`test-app`, `console` and the other commands take no declared options.

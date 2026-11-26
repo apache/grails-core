@@ -300,7 +300,7 @@ The `grails` command has the commands of the Grails shell that run the applicati
 
 |`run-app`
 |`gradlew bootRun --quiet -Dgrails.env=development`
-|`--port PORT`, `--host HOST`, `--https`, `--debug-jvm`, `--query-tail`, `-Dname=value`, `-Pname=value`, `--detach`, `--foreground`, `--ready-timeout SECONDS`; `--verbose` leaves `--quiet` out.
+|`--port PORT`, `--host HOST`, `--https`, `--debug-jvm`, `-Dname=value`, `-Pname=value`, `--detach`, `--foreground`, `--ready-timeout SECONDS`; `--verbose` leaves `--quiet` out. The options the application and its plugins declare, such as `--query-tail` of Grails Data (see below).
 
 |`stop-app`
 |Nothing: it ends what `run-app` started.
@@ -330,13 +330,36 @@ The `grails` command has the commands of the Grails shell that run the applicati
 [source,console]
 ----
 $ grails run-app --port 9090
-$ grails run-app --detach -Dgrails.env=test -Pgrails.gorm.queryTail.enabled
+$ grails run-app --detach -Dgrails.env=test --query-tail
 $ grails stop-app
 $ grails run-command dbm-status --contexts "two words"
 $ grails run-script src/main/scripts/load.groovy
 ----
 
 `--port` and `--host` are given to the application as `-Dgrails.server.port` and `-Dgrails.server.address`. `--https` gives it a self-signed certificate for `localhost`, which is created in `build/ssl/keystore` when there is none (with the `keytool` of the Java installation the command runs with, and the password `123456`: it is for development on your own computer; the file can be read by you only), and the port 8443 unless a port is given or configured; give `-Dgrails.server.ssl.key-store=FILE` to use a key store of your own, before `--` or after it. Then no certificate is created, and the command gives the application no password either, so the passwords of your configuration (`server.ssl.key-store-password` and `server.ssl.key-password`) are the ones it uses. As for the commands above, what follows `--` is given to Gradle as it is, except for `run-command`. The options `--port`, `--host`, `--https`, `--debug-jvm` and `--query-tail` are also taken with one dash, as the Grails shell spells them.
+
+[[declaredRunAppOptions]]
+==== Options the application and its plugins declare
+
+The application and its plugins can give `run-app` more options, each of which sets one property of the application that is started. `--query-tail` is one: the command line artifact of Grails Data, which every application with GORM has, declares it, and it starts the application with `grails.gorm.queryTail.enabled=true` (see link:conf.html#queryTail[Finding Query-Heavy Pages with query-tail]).
+
+[source,console]
+----
+$ grails run-app --query-tail
+$ grails help run-app
+...
+      --query-tail   Capture every statement GORM runs, for the query-tail command.
+                       (org.apache.grails.data:grails-datamapping-core-cli:9.0.0: sets
+                       grails.gorm.queryTail.enabled=true)
+----
+
+* The options are declared in a resource of a jar or of the application, and no code of a plugin runs in the `grails` command for them. The build of the project lists them with the commands of the application and its plugins, in `.grails/cache/command-catalog.json`, and the `grails` command reads them there: they are options of `run-app` once a build has compiled the project, and `grails gradle grailsCommandCatalog` lists them at once. Outside a project, and before that, such an option is refused as any option `run-app` does not have (exit code 2), with a line that says that plugins can declare options and how they are listed.
+* `grails help run-app` and `run-app --help` show each of them with the artifact that declares it (`the application` for the project's own) and the property it sets, `help --json` describes it with `origin` and `property` (and `value` for a switch), and the interactive console completes it.
+* An option that is given becomes one argument of Gradle, the system property `-Dgrails.NAME=VALUE` of the build, which the Grails Gradle plugin gives the application as `NAME`: the way `--port` takes. That is so for `--detach`, for `--foreground` and for both ways the command runs Gradle. The value of an option that takes one is that one argument, whatever is in it. A `-Dgrails.NAME=VALUE` of the same command line for the same property is left as it was typed.
+* An option `run-app` has itself stays its own, whatever a plugin declares, and a name two plugins declare differently is the option of neither: `grails help` and `help --json` say so in their notes on the commands of the application.
+* A file that may be out of date still gives its options, and the help says that they may have changed.
+
+How a plugin declares an option, and which properties none can set, is in link:commandLine.html#runAppOptions[Adding Options to run-app from a Plugin] of Creating Custom Commands.
 
 ==== The two ways run-app runs
 
