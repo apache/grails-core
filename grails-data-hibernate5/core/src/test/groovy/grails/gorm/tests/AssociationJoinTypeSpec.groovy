@@ -22,7 +22,9 @@ import grails.gorm.DetachedCriteria
 import grails.gorm.annotation.Entity
 import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
+import org.grails.orm.hibernate.cfg.GrailsHibernateUtil
 import org.hibernate.Hibernate
+import org.hibernate.criterion.Restrictions
 import spock.lang.IgnoreIf
 
 import jakarta.persistence.criteria.JoinType
@@ -98,7 +100,6 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
         manager.session.clear()
     }
 
-    @IgnoreIf({ instance.leftJoinSort })
     void 'a criteria query with an inner join that fetch requests returns the same rows with a sort'() {
         when:
         final results = Team.createCriteria().list(sort: 'club.name', fetch: [club: JoinType.INNER]) {
@@ -135,6 +136,80 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
         'findAllWhere'    | { Team.findAllWhere([name: 'Unattached First Team'], [sort: 'club.name', fetch: [club: JoinType.INNER]]) }      || []
         'findWhere'       | { Team.findWhere([name: 'Unattached First Team'], [sort: 'club.name', fetch: [club: JoinType.INNER]]) }         || null
         'find by example' | { Team.find(new Team(name: 'Unattached First Team'), [sort: 'club.name', fetch: [club: JoinType.INNER]]) }     || null
+    }
+
+    void 'a requested left join applies to an existing criteria #associationForm regardless of #request'() {
+        when:
+        final arguments = request == 'fetch' ? [fetch: [club: JoinType.LEFT]] : [:]
+        final results = Team.createCriteria().list(arguments) {
+            if (request == 'before') {
+                join('club', JoinType.LEFT)
+            }
+            if (associationForm == 'alias') {
+                createAlias('club', 'c')
+                or {
+                    eq('c.name', 'Chelsea')
+                    eq('name', 'Unattached First Team')
+                }
+            }
+            else {
+                or {
+                    club { eq('name', 'Chelsea') }
+                    eq('name', 'Unattached First Team')
+                }
+            }
+            if (request == 'after') {
+                join('club', JoinType.LEFT)
+            }
+        }
+
+        then:
+        results*.name.sort() == ['Chelsea First Team', 'Unattached First Team']
+
+        where:
+        [associationForm, request] << [['block', 'alias'], ['before', 'after', 'fetch']].combinations()
+    }
+
+    void 'criteria arguments apply #paging before the requested #joinType fetch of #path'() {
+        given:
+        saveTeamWithAPlayerWithoutContract()
+
+        when:
+        final results = Team.withSession { session ->
+            final criteria = session.createCriteria(Team)
+            criteria.add(Restrictions.like('name', '%Team'))
+            GrailsHibernateUtil.populateArgumentsForCriteria(manager.hibernateDatastore, Team, criteria,
+                    paging + [sort: 'name', order: 'desc', fetch: [(path): joinType]], manager.hibernateDatastore.mappingContext.conversionService)
+            criteria.list()
+        }
+
+        then:
+        results*.name == expected
+        results.every { !Hibernate.isInitialized(it.players) }
+        results.findAll { it.name == 'Squad Team' }.every { it.players*.name.sort() == ['Squad Player A', 'Squad Player B', 'Squad Player without contract'] }
+
+        where:
+        [path, joinType, paging] << [['players', 'players.contract'], [JoinType.LEFT, JoinType.INNER], [[max: 2], [max: 1, offset: 1], [offset: 2]]].combinations()
+        expected = paging.offset == 2 ? (joinType == JoinType.LEFT ? ['Playerless First Team', 'MU First Team', 'Chelsea First Team', 'Arsenal First Team'] :
+                ['MU First Team', 'Chelsea First Team', 'Arsenal First Team']) : paging.offset == 1 ? ['Squad Team'] : ['Unattached First Team', 'Squad Team']
+    }
+
+    void 'a paged criteria requested join keeps every element of a collection on its path'() {
+        given:
+        saveTeamWithAPlayerWithoutContract()
+
+        when:
+        final results = Team.createCriteria().list(max: 2, offset: offset, fetch: ['players.contract': joinType]) {
+            order('name', 'desc')
+        }
+        final squad = results.find { it.name == 'Squad Team' }
+
+        then:
+        squad != null
+        squad.players*.name.sort() == ['Squad Player A', 'Squad Player B', 'Squad Player without contract']
+
+        where:
+        [joinType, offset] << [[JoinType.LEFT, JoinType.INNER], [0, 1]].combinations()
     }
 
     void 'a paged detached criteria keeps the alias of the queried class when the total is read'() {
@@ -496,6 +571,32 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
         counted == 1
         updated == 1
         AssociationJoinTypePost.list()*.title.sort() == ['Untagged post', 'Updated post']
+    }
+
+    void '#api joins and fetches the associations before a collection on a path that it requests an inner join for'() {
+        given:
+        saveTeamWithAPlayerWithoutContract()
+        final lonelyTeam = new Team(name: 'Lonely Team').save(failOnError: true)
+        new Player(name: 'Lonely Player', team: lonelyTeam).save(validate: false, flush: true)
+        manager.session.clear()
+
+        when:
+        final List<Player> players = query.call()
+
+        then: 'a player whose team has no player with a contract is left out'
+        players*.name.unique().sort() == ['Arsenal Player', 'Chelsea Player', 'MU Player', 'Squad Player A', 'Squad Player B', 'Squad Player without contract', 'Unattached Player']
+
+        and: 'a where query returns each player once, and a criteria query once for each player of the fetched team'
+        players.size() == rows
+
+        and: 'the team of each player is fetched, with all of its players'
+        players.every { Hibernate.isInitialized(it.team) && Hibernate.isInitialized(it.team.players) }
+        players.find { it.name == 'Squad Player A' }.team.players.size() == 3
+
+        where:
+        api                | query                                                                                                              || rows
+        'a where query'    | { Player.where { name ==~ '%Player%' }.join('team.players.contract', JoinType.INNER).list() }                      || 7
+        'a criteria query' | { Player.createCriteria().list { like('name', '%Player%'); join('team.players.contract', JoinType.INNER) } }       || 13
     }
 
     void 'a right join requested for a collection that criteria on the collection join returns the instances that an inner join returns'() {
@@ -920,6 +1021,147 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
         results.sort() == TEAMS_WITH_A_CLUB
     }
 
+    void 'a criteria query joins an association with the join type that join requests'() {
+        when:
+        final results = Team.createCriteria().list {
+            like('name', '%First%')
+            join('club', joinType)
+        }
+
+        then:
+        results*.name.sort() == expected
+
+        and: 'the association is fetched'
+        results.findAll { it.club != null }.every { Hibernate.isInitialized(it.club) }
+
+        where:
+        joinType       || expected
+        JoinType.LEFT  || ALL_TEAMS
+        JoinType.INNER || TEAMS_WITH_A_CLUB
+        JoinType.RIGHT || TEAMS_WITH_A_CLUB
+    }
+
+    void 'a criteria sort keeps an explicitly requested left join from #request'() {
+        when:
+        final results = query.call()
+
+        then:
+        results*.name.sort() == expected
+        results.totalCount == expected.size()
+
+        where:
+        request      | query                                                                                                                          | expected
+        'fetch'      | { Team.createCriteria().list(max: 10, sort: 'club.name', fetch: [club: JoinType.LEFT]) {} }                                       | ALL_TEAMS
+        'join'       | { Team.createCriteria().list(max: 10, sort: 'club.name') { join('club', JoinType.LEFT) } }                                         | ALL_TEAMS
+        'nested fetch' | { Player.createCriteria().list(max: 10, sort: 'team.club.name', fetch: ['team.club': JoinType.LEFT]) {} }                     | ['Arsenal Player', 'Chelsea Player', 'MU Player', 'Unattached Player']
+        'nested join'  | { Player.createCriteria().list(max: 10, sort: 'team.club.name') { join('team.club', JoinType.LEFT) } }                       | ['Arsenal Player', 'Chelsea Player', 'MU Player', 'Unattached Player']
+    }
+
+    void 'count and get apply an inner join that a criteria query requests'() {
+        when:
+        final count = Team.createCriteria().count {
+            like('name', '%First%')
+            join('club', JoinType.INNER)
+        }
+        final team = Team.createCriteria().get {
+            eq('name', 'Unattached First Team')
+            join('club', JoinType.INNER)
+        }
+
+        then:
+        count == 4
+        team == null
+    }
+
+    void 'a criteria query joins an association with the join type that the fetch argument requests'() {
+        when:
+        final results = Team.createCriteria().list(fetch: [club: joinType]) {
+            like('name', '%First%')
+        }
+
+        then:
+        results*.name.sort() == expected
+
+        and: 'the association is fetched'
+        results.findAll { it.club != null }.every { Hibernate.isInitialized(it.club) }
+
+        where:
+        joinType       || expected
+        JoinType.LEFT  || ALL_TEAMS
+        JoinType.INNER || TEAMS_WITH_A_CLUB
+        JoinType.RIGHT || TEAMS_WITH_A_CLUB
+    }
+
+    void 'the total count of a paged criteria query counts the rows of an inner join that fetch requests'() {
+        when:
+        final results = Team.createCriteria().list(max: 2, fetch: [club: JoinType.INNER]) {
+            like('name', '%First%')
+        }
+
+        then:
+        results.size() == 2
+        results.totalCount == 4
+    }
+
+    void 'a criteria query joins a collection with the join type that join requests'() {
+        when:
+        final results = Team.createCriteria().list {
+            like('name', '%First%')
+            join('players', joinType)
+        }
+        final count = Team.createCriteria().count {
+            like('name', '%First%')
+            join('players', joinType)
+        }
+
+        then:
+        results*.name.sort() == expected
+        count == expected.size()
+
+        and: 'the collection is fetched'
+        results.every { Hibernate.isInitialized(it.players) }
+
+        where:
+        joinType       || expected
+        JoinType.LEFT  || ALL_TEAMS
+        JoinType.INNER || TEAMS_WITH_PLAYERS
+        JoinType.RIGHT || TEAMS_WITH_PLAYERS
+    }
+
+    void 'a criteria query joins a collection with the join type that the fetch argument requests'() {
+        when:
+        final results = Team.createCriteria().list(max: 2, fetch: [players: joinType]) {
+            like('name', '%First%')
+        }
+
+        then:
+        results.size() == 2
+        results.totalCount == expectedTotal
+
+        and: 'the limited rows do not initialize a partial collection'
+        results.every { !Hibernate.isInitialized(it.players) }
+        results.every { it.players.size() == 1 }
+
+        where:
+        joinType       || expectedTotal
+        JoinType.LEFT  || 5
+        JoinType.INNER || 4
+        JoinType.RIGHT || 4
+    }
+
+    void 'an inner join that a criteria query requests for a nested association joins every association on the path'() {
+        when:
+        final results = Player.createCriteria().list {
+            join('team.club', JoinType.INNER)
+        }
+
+        then: 'the player whose team has no club is left out'
+        results*.name.sort() == ['Arsenal Player', 'Chelsea Player', 'MU Player']
+
+        and: 'the associations on the path are fetched'
+        results.every { Hibernate.isInitialized(it.team) && Hibernate.isInitialized(it.team.club) }
+    }
+
     void 'a fetch that a criteria query requests for a collection is kept when it requests an inner join for an association of the collection'() {
         given:
         saveTeamWithAPlayerWithoutContract()
@@ -937,7 +1179,41 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
         squad.players.size() == 3
     }
 
-    void 'an association that a criteria query joins through an alias keeps its join when join requests a join type'() {
+    void 'an inner join that a criteria query requests for an association of a collection fetches the collection with all of its elements'() {
+        given:
+        saveTeamWithAPlayerWithoutContract()
+
+        when:
+        final results = Team.createCriteria().list {
+            like('name', '%Team%')
+            join('players.contract', JoinType.INNER)
+        }
+        final count = Team.createCriteria().count {
+            like('name', '%Team%')
+            join('players.contract', JoinType.INNER)
+        }
+        final paged = Team.createCriteria().list(max: 10, fetch: ['players.contract': JoinType.INNER]) {
+            like('name', '%Team%')
+        }
+        final squad = results.find { it.name == 'Squad Team' }
+
+        then: 'each team is counted once'
+        results*.name.unique().sort() == (TEAMS_WITH_PLAYERS + 'Squad Team').sort()
+        count == 5
+        paged.totalCount == 5
+
+        and: 'returned once for each of its players, as a criteria query returns an instance for a fetched collection'
+        results.size() == 7
+
+        and: 'the paged query loads the collection separately and returns each root once'
+        paged.size() == 5
+
+        and: 'the inner join does not leave the player without a contract out of the fetched collection'
+        Hibernate.isInitialized(squad.players)
+        squad.players*.name.sort() == ['Squad Player A', 'Squad Player B', 'Squad Player without contract']
+    }
+
+    void 'a requested inner join reuses the alias of a criteria query'() {
         when:
         final results = Player.createCriteria().list {
             createAlias('team', 't')
@@ -950,7 +1226,7 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
         results*.name.sort() == ['Arsenal Player', 'Chelsea Player', 'MU Player']
     }
 
-    void 'an association that a criteria query has criteria on keeps its join when join requests a join type'() {
+    void 'criteria on an association use its requested inner join'() {
         when:
         final results = Team.createCriteria().list {
             join('club', JoinType.INNER)

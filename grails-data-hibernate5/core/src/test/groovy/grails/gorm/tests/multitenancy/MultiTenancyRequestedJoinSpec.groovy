@@ -110,6 +110,19 @@ class MultiTenancyRequestedJoinSpec extends Specification {
         count == 1
     }
 
+    void 'a criteria query that requests an inner join for a collection leaves out an instance whose elements belong to another tenant'() {
+        when:
+        final List<RequestedJoinShelf> results = RequestedJoinShelf.withTransaction {
+            RequestedJoinShelf.createCriteria().list {
+                like('name', '%shelf')
+                join('books', JoinType.INNER)
+            }
+        }
+
+        then:
+        results*.name == ['Shared shelf']
+    }
+
     void 'a bulk update of a bidirectional collection uses the tenant filter of its elements'() {
         expect:
         RequestedJoinShelf.withTransaction { status ->
