@@ -628,6 +628,8 @@ public class JpaQueryBuilder {
                 QueryableCriteria subquery = inQuery.getSubquery();
                 if (subquery != null) {
                     buildSubQuery(q, whereClause, position, parameters, conversionService, allowJoins, hibernateCompatible, subquery);
+                    // the parameters of the subquery take the positions that the criteria after this one continue from
+                    position = parameters.size();
                 }
                 else {
                     for (Iterator i = inQuery.getValues().iterator(); i.hasNext();) {
@@ -782,7 +784,7 @@ public class JpaQueryBuilder {
                 .append(comparisonExpression);
         buildSubQuery(q, whereClause, position, parameters, conversionService, allowJoins, hibernateCompatible, subquery);
         whereClause.append(CLOSE_BRACKET);
-        return position;
+        return parameters.size();
     }
 
     protected static int handleSizeComparison(PersistentEntity entity, Query.PropertyCriterion criterion, StringBuilder whereClause, String logicalName, int position, List parameters, ConversionService conversionService, String operator, boolean hibernateCompatible) {
@@ -811,12 +813,14 @@ public class JpaQueryBuilder {
         whereClause.append(" FROM ")
                 .append(associatedEntityName)
                 .append(' ')
-                .append(associatedEntityLogicalName)
-                .append(" WHERE ");
+                .append(associatedEntityLogicalName);
         List<Query.Criterion> criteria = subquery.getCriteria();
-        for (Query.Criterion subCriteria : criteria) {
-            QueryHandler queryHandler = queryHandlers.get(subCriteria.getClass());
-            queryHandler.handle(associatedEntity, subCriteria, q, whereClause, associatedEntityLogicalName, position, parameters, conversionService, allowJoins, hibernateCompatible);
+        if (!criteria.isEmpty()) {
+            // the criteria of a subquery are all required, as they are of the query, and a subquery without criteria
+            // has no WHERE
+            whereClause.append(WHERE_CLAUSE);
+            buildWhereClauseForCriterion(associatedEntity, new Query.Conjunction(), q, whereClause, associatedEntityLogicalName,
+                    criteria, position, parameters, conversionService, allowJoins, hibernateCompatible);
         }
     }
 

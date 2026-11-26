@@ -56,7 +56,7 @@ interface BeanPropertyAccessor {
      * @return the GORM domain type of `beanType`. This will be null if `beanType` is not a domain class.
      * @deprecated use {@link #getEntity}
      */
-    @Deprecated
+    @Deprecated(forRemoval = true)
     GrailsDomainClass getBeanClass()
 
     /**

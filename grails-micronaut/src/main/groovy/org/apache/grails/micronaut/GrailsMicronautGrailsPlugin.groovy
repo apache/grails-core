@@ -25,6 +25,8 @@ import io.micronaut.context.ApplicationContext as MicronautApplicationContext
 import io.micronaut.context.env.AbstractPropertySourceLoader
 import io.micronaut.context.env.PropertySource
 
+import org.springframework.core.env.EnumerablePropertySource
+
 import grails.plugins.GrailsPlugin
 import grails.plugins.GrailsPluginManager
 import grails.plugins.Plugin
@@ -35,6 +37,9 @@ class GrailsMicronautGrailsPlugin extends Plugin {
 
     def grailsVersion = '7.0.0-SNAPSHOT > *'
     def title = 'Grails Micronaut Plugin'
+
+    private static final String PLUGIN_YML_SUFFIX = '-plugin.yml'
+    private static final String PLUGIN_GROOVY_SUFFIX = '-plugin.groovy'
 
     @Override
     void doWithApplicationContext() {
@@ -63,6 +68,8 @@ class GrailsMicronautGrailsPlugin extends Plugin {
 
         log.debug('Loading configurations from the plugins to the parent Micronaut context')
 
+        def springEnv = applicationContext.environment
+        def springPropertySources = springEnv.propertySources
         def plugins = pluginManager.allPlugins
         def pluginsFromContext = pluginManagerFromContext ?
                 pluginManagerFromContext.allPlugins :
@@ -71,17 +78,17 @@ class GrailsMicronautGrailsPlugin extends Plugin {
         [plugins, pluginsFromContext].each { pluginsToProcess ->
             pluginsToProcess
                     .findAll { it.propertySource != null }
-                    .each {
-                        log.debug('Loading configurations from {} plugin to the parent Micronaut context', it.name)
-                        // If invoking the source as `.source`, the NavigableMapPropertySource will return null,
-                        // while invoking the getter, it will return the correct value
-                        micronautEnv.addPropertySource(
-                                PropertySource.of(
-                                        "grails.plugins.$it.name",
-                                        (Map) it.propertySource.getSource(),
-                                        --priority
-                                )
-                        )
+                    .each { plugin ->
+                        // Look up the plugin's property source from the Spring environment,
+                        // where it was loaded by GrailsEnvironmentPostProcessor
+                        def pluginName = plugin.name
+                        def ymlSourceName = pluginName + PLUGIN_YML_SUFFIX
+                        def groovySourceName = pluginName + PLUGIN_GROOVY_SUFFIX
+                        def springPs = springPropertySources.get(ymlSourceName) ?: springPropertySources.get(groovySourceName)
+                        if (springPs instanceof EnumerablePropertySource) {
+                            log.debug('Loading configurations from {} plugin to the parent Micronaut context', pluginName)
+                            micronautEnv.addPropertySource(PropertySource.of("grails.plugins.${pluginName}", (Map) springPs.source, --priority))
+                        }
                     }
         }
         micronautEnv.refresh()

@@ -209,9 +209,9 @@ class GormEnhancer implements Closeable {
     }
 
     /**
-     * @deprecated Use #createNamedQuery(entity, queryName) instead
+     * @deprecated Named queries are deprecated, use where queries instead
      */
-    @Deprecated
+    @Deprecated(since = '3.2', forRemoval = true)
     static GormQueryOperations findNamedQuery(Class entity, String queryName) {
         return createNamedQuery(entity, queryName)
     }
@@ -221,9 +221,11 @@ class GormEnhancer implements Closeable {
      *
      * @param entity The entity name
      * @param queryName The query name
+     * @deprecated Named queries are deprecated, use where queries instead
      *
      * @return The named query or null if it doesn't exist
      */
+    @Deprecated(since = '7.1', forRemoval = true)
     static GormQueryOperations createNamedQuery(Class entity, String queryName) {
         createNamedQuery(entity, queryName, null)
     }
@@ -233,9 +235,11 @@ class GormEnhancer implements Closeable {
      *
      * @param entity The entity name
      * @param queryName The query name
+     * @deprecated Named queries are deprecated, use where queries instead
      *
      * @return The named query or null if it doesn't exist
      */
+    @Deprecated(since = '7.1', forRemoval = true)
     static GormQueryOperations createNamedQuery(Class entity, String queryName, Object... args) {
         def className = entity.getName()
         def namedQueries = NAMED_QUERIES.get(className)
@@ -262,6 +266,10 @@ class GormEnhancer implements Closeable {
         return buildNamedCriteriaProxy(entity, namedQueries, queryName, args)
     }
 
+    /**
+     * @deprecated Named queries are deprecated, use where queries instead
+     */
+    @Deprecated(since = '7.1', forRemoval = true)
     private static NamedCriteriaProxy buildNamedCriteriaProxy(Class entity, Map<String, Closure> namedQueries, String queryName, Object... args) {
         NamedCriteriaProxy namedCriteriaProxy = null
         GormStaticApi staticApi = findStaticApi(entity)

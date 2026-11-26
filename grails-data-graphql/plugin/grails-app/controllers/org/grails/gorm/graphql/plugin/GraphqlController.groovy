@@ -51,7 +51,7 @@ class GraphqlController {
 
         GraphQLRequest graphQLRequest
 
-        HttpMethod method = HttpMethod.resolve(request.method)
+        HttpMethod method = HttpMethod.valueOf(request.method)
         if (request.contentLength != 0 && method != HttpMethod.GET) {
             String encoding = request.characterEncoding ?: 'UTF-8'
             String body = IOUtils.toString(request.inputStream, encoding)
@@ -96,6 +96,14 @@ class GraphqlController {
     def browser() {
         if (grailsGraphQLConfiguration.enabled && grailsGraphQLConfiguration.browser) {
             if (resolvedBrowserHtml == null) {
+                InputStream resource = this.class.classLoader.getResourceAsStream('graphiql.html')
+                if (resource == null) {
+                    // The bundled GraphiQL assets (graphiql.html/css/js) were removed
+                    // upstream. The browser feature is effectively retired unless the
+                    // host application supplies its own graphiql.html on the classpath.
+                    render(status: 404)
+                    return
+                }
                 String endpoint = grailsLinkGenerator.link(controller: 'graphql', action: 'index')
                 String staticBase = grailsLinkGenerator.resource([:])
 
@@ -103,7 +111,7 @@ class GraphqlController {
                     staticBase = staticBase + '/'
                 }
 
-                resolvedBrowserHtml = IOUtils.toString(this.class.classLoader.getResourceAsStream('graphiql.html'), "UTF8")
+                resolvedBrowserHtml = IOUtils.toString(resource, 'UTF8')
                         .replaceAll(/\{endpoint}/, endpoint)
                         .replaceAll(/\{staticBase}/, staticBase)
             }
