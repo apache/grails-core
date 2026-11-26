@@ -18,12 +18,18 @@
  */
 package org.grails.scaffolding.model.property
 
+import jakarta.validation.constraints.NotNull
+import jakarta.validation.constraints.Size
+
+import org.grails.datastore.gorm.validation.jakarta.JakartaValidatorRegistry
+import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings
 import org.grails.datastore.mapping.keyvalue.mapping.config.KeyValueMappingContext
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.model.types.Embedded
 import org.grails.scaffolding.model.MocksDomain
+import org.springframework.validation.annotation.Validated
 import spock.lang.Shared
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -89,6 +95,33 @@ class EntityValidatorDomainPropertySpec extends Specification implements MocksDo
         "testRequired4" | true         | false       | false
     }
 
+    @Unroll
+    void "test the constraints of a domain class with Bean Validation annotations, #propertyName required: #required"() {
+        given: "the validator GORM registers for an annotated domain class"
+        MappingContext context = new KeyValueMappingContext("annotated")
+        PersistentEntity entity = context.addPersistentEntity(AnnotatedScaffoldedDomain)
+        JakartaValidatorRegistry registry = new JakartaValidatorRegistry(context, new ConnectionSourceSettings())
+        context.addEntityValidator(entity, registry.getValidator(entity))
+
+        when:
+        DomainProperty property = new DomainPropertyImpl(entity.getPropertyByName(propertyName), context)
+        property.convertEmptyStringsToNull = true
+        property.trimStrings = true
+
+        then: "the annotations and the constraints block are both seen"
+        property.isRequired() == required
+        property.constrained.maxSize == maxSize
+
+        cleanup:
+        registry.close()
+
+        where:
+        propertyName | required | maxSize
+        "name"       | true     | null
+        "code"       | false    | 5
+        "note"       | true     | null
+    }
+
     class ScaffoldedDomain {
         Long id
         Long version
@@ -120,4 +153,22 @@ class EntityValidatorDomainPropertySpec extends Specification implements MocksDo
     }
 
 
+}
+
+@Validated
+class AnnotatedScaffoldedDomain {
+    Long id
+    Long version
+
+    @NotNull
+    String name
+
+    @Size(max = 5)
+    String code
+
+    String note
+
+    static constraints = {
+        note(nullable: false)
+    }
 }
