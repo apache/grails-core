@@ -18,6 +18,7 @@
  */
 package org.grails.orm.hibernate.cfg;
 
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -30,15 +31,22 @@ import org.hibernate.FetchMode;
 import org.hibernate.FlushMode;
 import org.hibernate.Hibernate;
 import org.hibernate.LockMode;
+import org.hibernate.MappingException;
+import org.hibernate.QueryException;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.criterion.Order;
 import org.hibernate.engine.spi.EntityEntry;
+import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.engine.spi.SessionImplementor;
 import org.hibernate.engine.spi.Status;
+import org.hibernate.internal.CriteriaImpl;
 import org.hibernate.internal.util.StringHelper;
 import org.hibernate.proxy.HibernateProxy;
 import org.hibernate.sql.JoinType;
+import org.hibernate.type.CollectionType;
+import org.hibernate.type.EntityType;
+import org.hibernate.type.Type;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -240,6 +248,10 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
         } else { // nested property
             String sortHead = sort.substring(0, firstDotPos);
             String sortTail = sort.substring(firstDotPos + 1);
+            if (datastore == null) {
+                addOrderPossiblyNestedByHibernateMetadata(c, targetClass, sortHead, sortTail, sort, order, ignoreCase);
+                return;
+            }
             PersistentProperty property = getGrailsDomainClassProperty(datastore, targetClass, sortHead);
             if (property instanceof Embedded) {
                 // embedded objects cannot reference entities (at time of writing), so no more recursion needed
@@ -255,6 +267,73 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
                 addOrderPossiblyNested(datastore, subCriteria, propertyTargetClass, sortTail, order, ignoreCase); // Recurse on nested sort
             }
         }
+    }
+
+    /**
+     * A nested sort of a criteria that has no datastore, such as one of a criteria builder constructed with a session
+     * factory: there is no mapping of the class, so the property is looked up in the Hibernate metadata of the session
+     * factory of the criteria. An association is joined, as with a mapping, with an inner join (the
+     * <code>grails.gorm.leftJoinAssociationSort</code> setting is part of the mapping), a component is sorted by the
+     * path, and any other property is sorted as given, which Hibernate reports when it cannot resolve it.
+     */
+    private static void addOrderPossiblyNestedByHibernateMetadata(Criteria c, Class<?> targetClass, String sortHead, String sortTail,
+            String sort, String order, boolean ignoreCase) {
+        SessionFactoryImplementor factory = sessionFactoryOf(c);
+        Type type = null;
+        if (factory != null && targetClass != null) {
+            try {
+                type = factory.getMetamodel().entityPersister(targetClass).getPropertyType(sortHead);
+            }
+            catch (MappingException | QueryException ignored) {
+                // not a property that Hibernate knows: sorted as given below, so Hibernate reports it
+            }
+        }
+        Class<?> associatedClass = null;
+        if (type instanceof EntityType) {
+            associatedClass = type.getReturnedClass();
+        }
+        else if (type instanceof CollectionType) {
+            Type elementType = ((CollectionType) type).getElementType(factory);
+            associatedClass = elementType.isEntityType() ? elementType.getReturnedClass() : null;
+        }
+        if (associatedClass != null) {
+            // a join of the association that the criteria already has, made by its block or by an earlier sort, is used
+            Criteria subCriteria = existingSubcriteria(c, sortHead);
+            if (subCriteria == null) {
+                subCriteria = c.createCriteria(sortHead, JoinType.INNER_JOIN);
+            }
+            addOrderPossiblyNested(null, subCriteria, associatedClass, sortTail, order, ignoreCase);
+        }
+        else {
+            addOrder(c, sort, order, ignoreCase);
+        }
+    }
+
+    private static Criteria existingSubcriteria(Criteria c, String associationPath) {
+        Criteria root = c;
+        while (root instanceof CriteriaImpl.Subcriteria) {
+            root = ((CriteriaImpl.Subcriteria) root).getParent();
+        }
+        if (root instanceof CriteriaImpl) {
+            for (Iterator<CriteriaImpl.Subcriteria> i = ((CriteriaImpl) root).iterateSubcriteria(); i.hasNext();) {
+                CriteriaImpl.Subcriteria subcriteria = i.next();
+                if (subcriteria.getParent() == c && associationPath.equals(subcriteria.getPath())) {
+                    return subcriteria;
+                }
+            }
+        }
+        return null;
+    }
+
+    private static SessionFactoryImplementor sessionFactoryOf(Criteria c) {
+        Criteria current = c;
+        while (current instanceof CriteriaImpl.Subcriteria) {
+            current = ((CriteriaImpl.Subcriteria) current).getParent();
+        }
+        if (current instanceof CriteriaImpl && ((CriteriaImpl) current).getSession() != null) {
+            return ((CriteriaImpl) current).getSession().getFactory();
+        }
+        return null;
     }
 
     /**

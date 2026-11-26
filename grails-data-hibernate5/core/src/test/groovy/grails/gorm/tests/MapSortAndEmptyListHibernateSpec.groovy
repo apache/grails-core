@@ -314,6 +314,29 @@ class MapSortAndEmptyListHibernateSpec extends GrailsDataTckSpec<GrailsDataHiber
         'a collection of strings, negated'      | { -> MsBook.createCriteria().list { not { inList('tags', [] as Object[]) }; order('title') }*.title }  | ['alpha', 'beta', 'omega', 'zeta']
         'a collection of strings, with values'  | { -> MsBook.createCriteria().list { inList('tags', ['y'] as Object[]) }*.title }                        | ['zeta']
     }
+
+    void "a sort by a property of an association on a criteria builder constructed on its own sorts like the one of the domain class"() {
+        given: 'books whose authors have an embedded home'
+        MsHomeAuthor dan = new MsHomeAuthor(name: 'dan', home: new MsHome(city: 'rome')).save(failOnError: true)
+        MsHomeAuthor eve = new MsHomeAuthor(name: 'eve', home: new MsHome(city: 'oslo')).save(failOnError: true)
+        MsHomeAuthor fay = new MsHomeAuthor(name: 'fay', home: new MsHome(city: 'oslo')).save(failOnError: true)
+        new MsHomeBook(title: 'one', author: dan).save(failOnError: true)
+        new MsHomeBook(title: 'two', author: eve).save(failOnError: true)
+        new MsHomeBook(title: 'three', author: fay).save(flush: true, failOnError: true)
+        manager.session.clear()
+
+        expect: 'the builder has no datastore, so the association is found in the Hibernate metadata, and a join it already has is used'
+        new HibernateCriteriaBuilder(MsBook, manager.sessionFactory).list(sort: 'author.name') { }*.title == ['beta', 'alpha', 'zeta', 'omega']
+        new HibernateCriteriaBuilder(MsBook, manager.sessionFactory).list(sort: ['author.name': 'asc', title: 'desc']) { }*.title == ['beta', 'alpha', 'zeta', 'omega']
+        new HibernateCriteriaBuilder(MsBook, manager.sessionFactory).list(sort: ['author.name': 'desc', title: 'asc']) { author { eq('active', true) } }*.title == ['zeta', 'alpha', 'beta']
+        new HibernateCriteriaBuilder(MsBook, manager.sessionFactory).list(sort: ['author.publisher.name': 'asc', title: 'asc']) { }*.title == ['zeta', 'alpha', 'beta', 'omega']
+        new HibernateCriteriaBuilder(MsHomeBook, manager.sessionFactory).list(sort: ['author.home.city': 'asc', 'author.name': 'desc']) { }*.title == ['three', 'two', 'one']
+
+        and: 'each gives the rows of the builder of the domain class'
+        MsBook.createCriteria().list(sort: ['author.name': 'desc', title: 'asc']) { author { eq('active', true) } }*.title == ['zeta', 'alpha', 'beta']
+        MsBook.createCriteria().list(sort: ['author.publisher.name': 'asc', title: 'asc']) { }*.title == ['zeta', 'alpha', 'beta', 'omega']
+        MsHomeBook.createCriteria().list(sort: ['author.home.city': 'asc', 'author.name': 'desc']) { }*.title == ['three', 'two', 'one']
+    }
 }
 
 @Entity

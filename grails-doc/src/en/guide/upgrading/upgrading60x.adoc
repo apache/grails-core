@@ -1354,6 +1354,7 @@ With GORM for Hibernate, a where query, a detached criteria or a dynamic finder 
 These calls on Hibernate 5 returned the wrong rows or failed. Each now does what it asks:
 
 * A map as the `sort` argument of a criteria or detached criteria, `list(sort: [a: 'asc', b: 'desc'])`, threw a `ClassCastException`. It now orders by every property, in the order the map lists them, as `list` does.
+* A sort by a property of an association, in a string or a map, on a criteria builder constructed with a session factory, `new HibernateCriteriaBuilder(Book, sessionFactory).list(sort: 'author.name') { }`, threw `IllegalArgumentException: Unexpected: class is not a domain class`. It now sorts as the criteria of the domain class does, and uses a join of the association that the criteria already has.
 * Sorting a domain class with a composite id by one of the properties of the id threw a `NullPointerException`; it sorts now (issue https://github.com/apache/grails-core/issues/14451[#14451]).
 * A sort that the call gives keeps the default sort of the mapping off, as `sort:` always did.
 * An empty list given to `inList`, or to `in` in any of its forms, is an explicit false, so its negation matches every row: `not { inList('year', []) }` and `findAllByYearNotInList([])` matched no row on PostgreSQL, MySQL and MariaDB (issues https://github.com/apache/grails-core/issues/14653[#14653] and https://github.com/apache/grails-core/issues/14457[#14457]).
