@@ -21,6 +21,7 @@ package org.grails.plugins.metadata
 import spock.lang.Shared
 import spock.lang.Specification
 
+import org.springframework.context.support.GenericApplicationContext
 import org.springframework.core.env.StandardEnvironment
 
 import grails.core.DefaultGrailsApplication
@@ -69,6 +70,26 @@ class GrailsPluginMetadataTests extends Specification {
         pluginManager.getPluginPathForInstance(new HTMLCodec()) == "/plugins/codecs-$GrailsUtil.grailsVersion"
         pluginManager.getPluginViewsPathForClass(HTMLCodec) == "/plugins/codecs-$GrailsUtil.grailsVersion/grails-app/views"
         pluginManager.getPluginViewsPathForInstance(new HTMLCodec()) == "/plugins/codecs-$GrailsUtil.grailsVersion/grails-app/views"
+    }
+
+    void 'a Grails class of an application names the plugin that provides it, through the application\'s plugin manager'() {
+        given: 'an application whose context holds the plugin manager, and nothing in Holders'
+        GrailsPluginManager previous = Holders.pluginManager
+        Holders.pluginManager = null
+        def context = new GenericApplicationContext()
+        context.beanFactory.registerSingleton(GrailsPluginManager.BEAN_NAME, pluginManager)
+        context.refresh()
+        def application = new DefaultGrailsApplication()
+        application.mainContext = context
+        def codec = new DefaultGrailsClass(HTMLCodec, 'Codec')
+        codec.grailsApplication = application
+
+        expect:
+        codec.pluginName == 'codecs'
+
+        cleanup:
+        context?.close()
+        Holders.pluginManager = previous
     }
 
     void 'a Grails class names the plugin that provides it'() {

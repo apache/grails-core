@@ -29,6 +29,7 @@ import groovy.lang.MetaClass;
 import groovy.lang.MetaProperty;
 
 import org.springframework.beans.BeanUtils;
+import org.springframework.context.ApplicationContext;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.ReflectionUtils;
@@ -99,9 +100,21 @@ public abstract class AbstractGrailsClass implements GrailsClass {
      */
     @Override
     public String getPluginName() {
-        GrailsPluginManager pluginManager = Holders.getPluginManager();
+        GrailsPluginManager pluginManager = pluginManager();
         GrailsPlugin plugin = pluginManager != null ? pluginManager.getPluginForClass(this.clazz) : null;
         return plugin != null ? plugin.getName() : null;
+    }
+
+    /**
+     * The plugin manager of the application this class belongs to, from its context, or else the one
+     * {@link Holders} holds, as outside an application.
+     */
+    private GrailsPluginManager pluginManager() {
+        ApplicationContext context = grailsApplication != null ? grailsApplication.getMainContext() : null;
+        if (context != null && context.containsBean(GrailsPluginManager.BEAN_NAME)) {
+            return context.getBean(GrailsPluginManager.BEAN_NAME, GrailsPluginManager.class);
+        }
+        return Holders.getPluginManager();
     }
 
     public void setGrailsApplication(GrailsApplication grailsApplication) {
