@@ -942,6 +942,11 @@ With GORM for Hibernate, a where query, a detached criteria, a dynamic finder or
 - A comparison against a subquery that returns more than one row, and the `exists`, `notExists`, `all` and `some` forms, throw an `InvalidDataAccessResourceUsageException` that names the form. A subquery runs on the connection of its own criteria, so for a query on another connection build the subquery with `withConnection`.
 - `deleteAll()` and `updateAll()` of such a query run the subquery too, so they select the rows a `list()` of the same query finds. `where { age != max(age) }.deleteAll()` deleted every row.
 
+## Negated conditions on an embedded value in MongoDB
+
+- A negated condition on an embedded value (`address { ne('city', x) }`, `not { address { eq('city', x) } }`, `where { address.city != x }`) also matched an owner with no embedded value (issue #17187), because MongoDB's `$ne`, `$nin`, `$not` and `$nor` match a missing field. That owner no longer matches, as with Hibernate: the embedded value is required in the `or` branch that holds the negation.
+- An owner whose embedded value exists with the property unset still matches a negated condition, as before. Queries that returned owners without an embedded value return fewer rows, and `deleteAll()` and `updateAll()` select the same rows.
+
 # After the Upgrade
 
 ## Verification Checklist

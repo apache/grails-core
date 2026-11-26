@@ -23,10 +23,12 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import groovy.lang.Closure;
@@ -828,6 +830,7 @@ public class MongoQuery extends BsonQuery implements QueryArgumentsAware {
         }
 
         populateMongoQuery(queryEncoder, query, criteria, entity);
+        requireEmbeddedValuesOfNegations(entity, query);
     }
 
     @SuppressWarnings("unchecked")
@@ -870,6 +873,172 @@ public class MongoQuery extends BsonQuery implements QueryArgumentsAware {
             } else {
                 throw new InvalidDataAccessResourceUsageException("Queries of type " + criterion.getClass().getSimpleName() + " are not supported by this implementation");
             }
+        }
+    }
+
+    private static final Set<String> NEGATING_OPERATORS = Set.of("$ne", "$nin", NOT_OPERATOR);
+
+    /**
+     * MongoDB matches a missing field with {@code $ne}, {@code $nin}, {@code $not} and {@code $nor}, so a negated
+     * condition on a property of an embedded value also matches an owner that has no such value. An embedded value is the
+     * columns of its owner for a join-based store, where a negated condition on a missing value is unknown and does not
+     * match, as the condition itself does not. A negation on a path through an embedded property therefore also requires
+     * that embedded value, at the level of the query document that holds the negation: the branch of an {@code $and} or
+     * {@code $or} that holds it, and not the whole query, which would drop the owners that match another branch.
+     */
+    private static void requireEmbeddedValuesOfNegations(PersistentEntity entity, Document level) {
+        distributeNegations(level);
+        Set<String> required = new LinkedHashSet<>();
+        for (Map.Entry<String, Object> entry : level.entrySet()) {
+            String key = entry.getKey();
+            Object value = entry.getValue();
+            if (NOR_OPERATOR.equals(key)) {
+                collectEmbeddedPaths(entity, value, required);
+            }
+            else if (key.startsWith("$")) {
+                if (value instanceof List) {
+                    for (Object element : (List<?>) value) {
+                        if (element instanceof Document) {
+                            requireEmbeddedValuesOfNegations(entity, (Document) element);
+                        }
+                    }
+                }
+            }
+            else if (value instanceof Document && negates((Document) value)) {
+                addEmbeddedPrefix(entity, key, required);
+            }
+        }
+        for (String path : required) {
+            Object existing = level.get(path);
+            if (existing instanceof Document) {
+                ((Document) existing).put("$ne", null);
+            }
+            else if (existing == null) {
+                level.put(path, new Document("$ne", null));
+            }
+        }
+    }
+
+    /**
+     * Pushes a {@code $nor} over an {@code $and}, an {@code $or} or several fields down to the conditions it holds, as
+     * De Morgan does: the negation of a conjunction is a disjunction of the negations, and of a disjunction a conjunction
+     * of them. A negated condition on an embedded property requires the embedded value, and that requirement belongs to
+     * the one condition, not to the whole negated group: {@code not { and { eq('name', 'Bob'); eq('address.city', 'Paris') } }}
+     * holds for an owner named Nina with no address, because her name is not Bob, as it does where the address is a join.
+     */
+    private static void distributeNegations(Document level) {
+        Object nor = level.get(NOR_OPERATOR);
+        if (!(nor instanceof List)) {
+            return;
+        }
+        List<Object> kept = new ArrayList<>();
+        List<Document> conjuncts = new ArrayList<>();
+        for (Object element : (List<?>) nor) {
+            List<Document> negated = negationOf(element);
+            if (negated == null) {
+                kept.add(element);
+            }
+            else {
+                conjuncts.addAll(negated);
+            }
+        }
+        if (conjuncts.isEmpty()) {
+            return;
+        }
+        if (kept.isEmpty()) {
+            level.remove(NOR_OPERATOR);
+        }
+        else {
+            level.put(NOR_OPERATOR, kept);
+        }
+        Object and = level.get("$and");
+        List<Object> all = new ArrayList<>();
+        if (and instanceof List) {
+            all.addAll((List<?>) and);
+        }
+        all.addAll(conjuncts);
+        level.put("$and", all);
+    }
+
+    /** The conditions, all of which must hold, that say the same as the negation of a group; null for a single condition. */
+    private static List<Document> negationOf(Object element) {
+        if (!(element instanceof Document)) {
+            return null;
+        }
+        Document group = (Document) element;
+        if (group.size() == 1 && group.get("$and") instanceof List) {
+            return List.of(new Document("$or", negationsOf((List<?>) group.get("$and"))));
+        }
+        if (group.size() == 1 && group.get("$or") instanceof List) {
+            List<Document> conjuncts = new ArrayList<>();
+            for (Object negation : negationsOf((List<?>) group.get("$or"))) {
+                conjuncts.add((Document) negation);
+            }
+            return conjuncts;
+        }
+        if (group.size() > 1 && group.keySet().stream().noneMatch(key -> key.startsWith("$"))) {
+            List<Object> fields = new ArrayList<>();
+            for (Map.Entry<String, Object> field : group.entrySet()) {
+                fields.add(new Document(field.getKey(), field.getValue()));
+            }
+            return List.of(new Document("$or", negationsOf(fields)));
+        }
+        return null;
+    }
+
+    private static List<Object> negationsOf(List<?> conditions) {
+        List<Object> negations = new ArrayList<>();
+        for (Object condition : conditions) {
+            negations.add(new Document(NOR_OPERATOR, new ArrayList<>(List.of(condition))));
+        }
+        return negations;
+    }
+
+    private static boolean negates(Document condition) {
+        for (String operator : NEGATING_OPERATORS) {
+            if (condition.containsKey(operator)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** The paths through embedded properties of every field a {@code $nor} negates, however deep its branches nest. */
+    private static void collectEmbeddedPaths(PersistentEntity entity, Object negated, Set<String> required) {
+        if (negated instanceof List) {
+            for (Object element : (List<?>) negated) {
+                collectEmbeddedPaths(entity, element, required);
+            }
+        }
+        else if (negated instanceof Document) {
+            for (Map.Entry<String, Object> entry : ((Document) negated).entrySet()) {
+                if (entry.getKey().startsWith("$")) {
+                    collectEmbeddedPaths(entity, entry.getValue(), required);
+                }
+                else {
+                    addEmbeddedPrefix(entity, entry.getKey(), required);
+                }
+            }
+        }
+    }
+
+    /** The innermost embedded property that a dotted field goes through, such as {@code address} for {@code address.city}. */
+    private static void addEmbeddedPrefix(PersistentEntity entity, String field, Set<String> required) {
+        String[] parts = field.split("\\.");
+        PersistentEntity current = entity;
+        StringBuilder path = new StringBuilder();
+        String innermost = null;
+        for (int i = 0; i < parts.length - 1 && current != null; i++) {
+            PersistentProperty property = current.getPropertyByName(parts[i]);
+            if (!(property instanceof Embedded)) {
+                break;
+            }
+            path.append(path.length() == 0 ? "" : ".").append(parts[i]);
+            innermost = path.toString();
+            current = ((Embedded) property).getAssociatedEntity();
+        }
+        if (innermost != null) {
+            required.add(innermost);
         }
     }
 
