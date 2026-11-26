@@ -120,7 +120,7 @@ public abstract class AbstractGrailsPlugin extends GroovyObjectSupport implement
     }
 
     public String getFileSystemName() {
-        return getFileSystemShortName() + '-' + getVersion();
+        return getFileSystemShortName() + versionSuffix();
     }
 
     public String getFileSystemShortName() {
@@ -166,14 +166,22 @@ public abstract class AbstractGrailsPlugin extends GroovyObjectSupport implement
         return version;
     }
 
+    /**
+     * {@code -<version>}, or nothing for a plugin without a version, one compiled outside a build that sets it,
+     * so names and paths built from a plugin's version never end in {@code -null}.
+     */
+    protected String versionSuffix() {
+        return version != null ? "-" + version : "";
+    }
+
     public String getPluginPath() {
-        return PLUGINS_PATH + '/' + GrailsNameUtils.getScriptName(getName()) + '-' + getVersion();
+        return PLUGINS_PATH + '/' + GrailsNameUtils.getScriptName(getName()) + versionSuffix();
     }
 
     // https://github.com/apache/grails-core/issues/9406
     // The name of the plugin for my-plug on the path is myPlugin the GrailsNameUtils.getScriptName(getName()) will always use my-plugin
     public String getPluginPathCamelCase() {
-        return PLUGINS_PATH + '/' + GrailsNameUtils.getPropertyNameForLowerCaseHyphenSeparatedName(getName()) + '-' + getVersion();
+        return PLUGINS_PATH + '/' + GrailsNameUtils.getPropertyNameForLowerCaseHyphenSeparatedName(getName()) + versionSuffix();
     }
 
     public GrailsPluginManager getManager() {

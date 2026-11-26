@@ -283,7 +283,7 @@ public class BinaryGrailsPlugin extends DefaultGrailsPlugin {
      * @return the view class which is a subclass of GroovyPage
      */
     public Class resolveView(String viewName) {
-        String extraPath = "/plugins/" + getName() + '-' + getVersion() + '/';
+        String extraPath = "/plugins/" + getName() + versionSuffix() + '/';
         viewName = viewName.replace(extraPath, "/");
 
         return precompiledViewMap.get(viewName);

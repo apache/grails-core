@@ -188,19 +188,35 @@ public class DefaultGrailsPlugin extends AbstractGrailsPlugin implements ParentA
         return values;
     }
 
-    /** Loads the classes a definition names, with the application's class loader. */
+    /**
+     * Loads the classes a definition names: with the application's class loader, so a class reloaded in
+     * development is the application's copy, or else with the plugin class's own, which sees every class its
+     * plugin names.
+     */
     protected Class<?>[] loadClasses(List<String> classNames) {
-        ClassLoader classLoader = grailsApplication != null ? grailsApplication.getClassLoader() : pluginClass.getClassLoader();
+        ClassLoader applicationLoader = grailsApplication != null ? grailsApplication.getClassLoader() : null;
         List<Class<?>> classes = new ArrayList<>();
         for (String className : classNames) {
-            try {
-                classes.add(classLoader.loadClass(className));
-            }
-            catch (ClassNotFoundException | LinkageError e) {
-                throw new PluginException("Failed to load class [" + className + "] of plugin [" + getName() + "]: " + e.getMessage(), e);
-            }
+            classes.add(loadClass(className, applicationLoader));
         }
         return classes.toArray(new Class<?>[0]);
+    }
+
+    private Class<?> loadClass(String className, @Nullable ClassLoader applicationLoader) {
+        if (applicationLoader != null) {
+            try {
+                return applicationLoader.loadClass(className);
+            }
+            catch (ClassNotFoundException e) {
+                // the plugin's own class loader may still see it
+            }
+        }
+        try {
+            return Class.forName(className, false, pluginClass.getClassLoader());
+        }
+        catch (ClassNotFoundException | LinkageError e) {
+            throw new PluginException("Failed to load class [" + className + "] of plugin [" + getName() + "]: " + e.getMessage(), e);
+        }
     }
 
     /** @return the plugin's definition */
@@ -524,7 +540,7 @@ public class DefaultGrailsPlugin extends AbstractGrailsPlugin implements ParentA
     }
 
     public String getFullName() {
-        return getName() + '-' + getVersion();
+        return getName() + versionSuffix();
     }
 
     public org.grails.io.support.@Nullable Resource getDescriptor() {

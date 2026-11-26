@@ -84,6 +84,20 @@ class GrailsPluginTests {
     }
 
     @Test
+    void testUnversionedPluginNamesAndPathsCarryNoVersion() {
+        // a plugin compiled outside a build that sets the version has none
+        Class<?> unversioned = new GroovyClassLoader(getClass().classLoader).parseClass(
+                '@grails.plugins.metadata.GrailsPluginDescriptor class TestTwoGrailsPlugin extends grails.plugins.Plugin { }')
+        def plugin = new DefaultGrailsPlugin(unversioned, new DefaultGrailsApplication())
+
+        assertNull plugin.version
+        assertEquals "/plugins/test-two", plugin.pluginPath
+        assertEquals "/plugins/testTwo", plugin.pluginPathCamelCase
+        assertEquals "test-two", plugin.fileSystemName
+        assertEquals "testTwo", plugin.fullName
+    }
+
+    @Test
     void testSimpleEnvironmentEvaluation() {
         def test1 = versionedPlugin('TestGrailsPlugin', "(environmentsIncludes = ['dev'])")
 
