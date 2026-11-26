@@ -19,7 +19,12 @@
 
 package grails.plugin.springsecurity.acl
 
-class AclClass {
+import groovy.transform.EqualsAndHashCode
+
+@EqualsAndHashCode(includes = 'className')
+class AclClass implements Serializable {
+
+    private static final long serialVersionUID = 1
 
     String className
 

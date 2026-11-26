@@ -155,6 +155,7 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
      * applied once the criteria are built, see {@link #applyRequestedJoinTypes()}.
      */
     private final Map<String, JoinType> requestedJoinTypes = new LinkedHashMap<>();
+    // Fetch modes that replace a requested join type retain precedence over an implied outer join.
     private final Set<String> explicitFetchModes = new HashSet<>();
     /**
      * The orders that the criteria request, in the order of the requests. They are added once the
@@ -341,8 +342,9 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
     public BuildableCriteria join(String associationPath) {
         criteria.setFetchMode(calculatePropertyName(associationPath), FetchMode.JOIN);
         // the fetch mode alone replaces a join type that was requested for the association before
-        requestedJoinTypes.remove(getRequestedJoinPath(associationPath));
-        explicitFetchModes.add(getRequestedJoinPath(associationPath));
+        if (requestedJoinTypes.remove(getRequestedJoinPath(associationPath)) != null) {
+            explicitFetchModes.add(getRequestedJoinPath(associationPath));
+        }
         return this;
     }
 
@@ -403,8 +405,9 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
             }
             else {
                 criteria.setFetchMode(associationPath, GrailsHibernateUtil.getFetchMode(fetchValue));
-                requestedJoinTypes.remove(associationPath);
-                explicitFetchModes.add(associationPath);
+                if (requestedJoinTypes.remove(associationPath) != null) {
+                    explicitFetchModes.add(associationPath);
+                }
             }
         }
         Map remaining = new HashMap(arguments);
@@ -445,8 +448,9 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
      */
     public BuildableCriteria select(String associationPath) {
         criteria.setFetchMode(calculatePropertyName(associationPath), FetchMode.SELECT);
-        requestedJoinTypes.remove(getRequestedJoinPath(associationPath));
-        explicitFetchModes.add(getRequestedJoinPath(associationPath));
+        if (requestedJoinTypes.remove(getRequestedJoinPath(associationPath)) != null) {
+            explicitFetchModes.add(getRequestedJoinPath(associationPath));
+        }
         return this;
     }
 
@@ -685,8 +689,9 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
     public void fetchMode(String associationPath, FetchMode fetchMode) {
         if (criteria != null) {
             criteria.setFetchMode(associationPath, fetchMode);
-            requestedJoinTypes.remove(associationPath);
-            explicitFetchModes.add(associationPath);
+            if (requestedJoinTypes.remove(associationPath) != null) {
+                explicitFetchModes.add(associationPath);
+            }
         }
     }
 
@@ -1613,15 +1618,14 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
         for (Object property : properties) {
             String sortProperty = (String) property;
             String wholePath = getWholeAssociationPath(sortProperty);
-            int lastPropertyPos = wholePath.lastIndexOf('.');
-            if (lastPropertyPos < 0) {
+            int firstPropertyPos = wholePath.indexOf('.');
+            if (firstPropertyPos < 0) {
                 continue;
             }
-            String sortAssociationPath = wholePath.substring(0, lastPropertyPos);
+            String firstAssociation = wholePath.substring(0, firstPropertyPos + 1);
             for (Map.Entry<String, JoinType> requested : requestedJoinTypes.entrySet()) {
-                // The sort can use either the requested association or an intermediate association on its path.
-                if (requested.getValue() == JoinType.LEFT && (wholePath.startsWith(requested.getKey() + '.') ||
-                        requested.getKey().startsWith(sortAssociationPath + '.'))) {
+                // Sibling paths can share an implied left join; the resolver chooses each remaining join's type.
+                if (requested.getValue() == JoinType.LEFT && (requested.getKey() + '.').startsWith(firstAssociation)) {
                     calculateOrderPropertyName(new RequestedOrder(sortProperty.split("\\."), Order::asc, targetClass, "", null));
                     break;
                 }

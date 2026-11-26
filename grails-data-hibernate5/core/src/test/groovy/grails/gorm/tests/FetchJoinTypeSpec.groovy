@@ -41,8 +41,9 @@ import jakarta.persistence.criteria.JoinType
  * </pre>
  *
  * Every club has a team, so a right join returns the same teams as an inner join. A where query, a dynamic finder
-     * and {@code list} return each team once. An unpaged criteria query and a query by example return a team once
-     * for each fetched collection element. A paged criteria query loads the collection separately.
+     * and {@code list}, as well as a query by example with a typed collection fetch, return each team once.
+     * An unpaged criteria query returns a team once for each fetched collection element. A paged criteria
+     * query loads the collection separately.
  */
 class FetchJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
 
@@ -79,7 +80,7 @@ class FetchJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager
     ]
 
     private static final List<String> RETURN_EACH_TEAM_ONCE = ['a where query with the fetch argument', 'a where query with join', 'a dynamic finder',
-                                                            'a criteria query with the fetch argument', 'list', 'a paged list']
+                                                            'a criteria query with the fetch argument', 'findAll by example', 'list', 'a paged list']
 
     private static final List<Map> CHART = [
             [fetch: [players: JoinType.INNER], teams: TEAMS_WITH_PLAYERS, loaded: 'players'],
@@ -149,7 +150,7 @@ class FetchJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager
         final results = Team.findAll(new Team(), [fetch: [players: JoinType.LEFT], sort: ['players.name': 'asc', 'players.id': 'desc']])
 
         then:
-        results*.name.countBy { it } == ['Clubless Team': 1, 'Contracted Team': 2, 'Playerless Team': 1, 'Uncontracted Team': 1]
+        results*.name.countBy { it } == ['Clubless Team': 1, 'Contracted Team': 1, 'Playerless Team': 1, 'Uncontracted Team': 1]
         results.every { Hibernate.isInitialized(it.players) && it.players*.name.sort() == PLAYERS[it.name] }
     }
 

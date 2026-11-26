@@ -19,7 +19,12 @@
 
 package grails.plugin.springsecurity.acl
 
-class AclSid {
+import groovy.transform.EqualsAndHashCode
+
+@EqualsAndHashCode(includes = ['sid', 'principal'])
+class AclSid implements Serializable {
+
+    private static final long serialVersionUID = 1
 
     String sid
     boolean principal

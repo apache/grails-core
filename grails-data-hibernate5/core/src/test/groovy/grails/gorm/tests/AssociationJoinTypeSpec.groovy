@@ -23,8 +23,11 @@ import grails.gorm.annotation.Entity
 import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.grails.datastore.mapping.query.Query
+import org.grails.orm.hibernate.cfg.GrailsHibernateUtil
+import org.hibernate.FetchMode
 import org.hibernate.Hibernate
 import org.hibernate.criterion.CriteriaSpecification
+import org.hibernate.criterion.Restrictions
 import spock.lang.IgnoreIf
 
 import jakarta.persistence.criteria.JoinType
@@ -161,7 +164,7 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
 
         then:
         results.every { it?.name == 'Squad Team' }
-        results.size() == (api == 'findAll by example' ? (paged ? 2 : 3) : 1)
+        results.size() == 1
         results.first().players*.name.sort() == ['Squad Player A', 'Squad Player B', 'Squad Player without contract']
 
         where:
@@ -180,6 +183,73 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
             default:
                 return { String name, Map arguments -> Team.find(new Team(name: name), arguments) }
         }
+    }
+
+    void '#api returns distinct roots for typed #joinType fetch of #path with sort #sort and pagination #paged'() {
+        given:
+        final first = new Team(name: 'Typed fetch team').save(failOnError: true)
+        final second = new Team(name: 'Typed fetch team').save(failOnError: true)
+        final empty = new Team(name: 'Typed fetch team').save(failOnError: true)
+        savePlayer('Typed A', first)
+        savePlayer('Typed B', first)
+        new Player(name: 'Typed C', team: first).save(validate: false, flush: true)
+        savePlayer('Typed D', second)
+        final expectedIds = joinType == JoinType.LEFT ? [first.id, second.id, empty.id] : [first.id, second.id]
+        final expectedPlayers = [(first.id): ['Typed A', 'Typed B', 'Typed C'], (second.id): ['Typed D'], (empty.id): []]
+        manager.session.clear()
+
+        when:
+        final results = exampleQuery(api).call('Typed fetch team', [fetch: [(path): joinType]] + sort + (paged ? [max: 100] : [:]))
+
+        then:
+        results*.id.sort() == expectedIds.sort()
+        results.every { it.players*.name.sort() == expectedPlayers[it.id] }
+
+        where:
+        [api, path, joinType, sort, paged] << [
+                ['findAll by example', 'findAllWhere'],
+                ['players', 'players.contract'],
+                [JoinType.LEFT, JoinType.INNER],
+                [[:], [sort: 'id'], [sort: 'name'], [sort: 'players.name'], [sort: ['players.name': 'asc', id: 'asc']]],
+                [false, true],
+        ].combinations()
+    }
+
+    void '#api retains plain #fetch collection multiplicity with typed to-one #typedToOne and pagination #paged'() {
+        given:
+        saveTeamWithAPlayerWithoutContract()
+        final fetches = [players: fetch] + (typedToOne ? [club: JoinType.LEFT] : [:])
+        manager.session.clear()
+
+        when:
+        final results = exampleQuery(api).call('Squad Team', [sort: 'id', fetch: fetches] + (paged ? [max: 100] : [:]))
+
+        then:
+        results*.name == Collections.nCopies(api == 'findAll by example' ? 3 : 1, 'Squad Team')
+        results.every { it.players*.name.sort() == ['Squad Player A', 'Squad Player B', 'Squad Player without contract'] }
+
+        where:
+        [api, fetch, typedToOne, paged] << [['findAll by example', 'findAllWhere'], ['join', 'eager'], [false, true], [false, true]].combinations()
+    }
+
+    void '#api keeps both players when a requested LEFT collection sort has a one-row page'() {
+        given:
+        final team = new Team(name: 'One-row page team').save(failOnError: true)
+        savePlayer('Page A', team)
+        savePlayer('Page B', team)
+        manager.session.clear()
+
+        when:
+        final arguments = [max: 1, sort: 'players.name', fetch: [players: JoinType.LEFT]]
+        final result = exampleQuery(api).call('One-row page team', arguments)
+        final results = result instanceof List ? result : [result]
+
+        then:
+        results*.name == ['One-row page team']
+        results.first().players*.name.sort() == ['Page A', 'Page B']
+
+        where:
+        api << ['findAllWhere', 'findWhere', 'findAll by example', 'find by example']
     }
 
     void 'example API #api loads complete #path collections with typed #joinType and page #paging without an association sort'() {
@@ -249,7 +319,7 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
                 ],
         ].combinations().collect { List row -> row[0..2] + row[3] }
         query = exampleQuery(api)
-        expectedRows = api == 'findAll by example' && teamName == 'Squad Team' ? (paged ? 2 : 3) : 1
+        expectedRows = 1
     }
 
     void 'example API #api keeps an explicit intermediate INNER before a nested LEFT with map #sortMap and reversed requests #reverse'() {
@@ -354,6 +424,91 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
         sortProperty = paths[1]
     }
 
+    void 'a bare #source #mode fetch keeps a nested LEFT #ordering by #sortProperty with pagination #paged'() {
+        given:
+        saveTeamWithAPlayerWithoutContract()
+        final arguments = paged ? [max: 10] : [:]
+        if (source == 'argument') {
+            arguments.fetch = [players: mode, 'players.contract': JoinType.LEFT]
+        }
+        if (ordering == 'sort') {
+            arguments.sort = sortProperty
+        }
+        else if (ordering == 'sort map') {
+            arguments.sort = [(sortProperty): 'asc', name: 'asc']
+        }
+
+        when:
+        final results = Team.createCriteria().list(arguments) {
+            if (source != 'argument') {
+                join('players.contract', JoinType.LEFT)
+                if (source == 'select') {
+                    select('players')
+                }
+                else if (source == 'join') {
+                    join('players')
+                }
+                else {
+                    fetchMode('players', mode == 'select' ? FetchMode.SELECT : FetchMode.JOIN)
+                }
+            }
+            if (ordering == 'order') {
+                order(sortProperty)
+            }
+            else if (ordering == 'Query.Order') {
+                order(Query.Order.asc(sortProperty))
+            }
+        }
+
+        then:
+        results*.name.countBy { it } == ALL_TEAMS.collectEntries { [(it): 1] } + ['Squad Team': 3]
+        !paged || results.every { !Hibernate.isInitialized(it.players) }
+        results.find { it.name == 'Squad Team' }.players*.name.sort() == ['Squad Player A', 'Squad Player B', 'Squad Player without contract']
+
+        where:
+        [loading, ordering, sortProperty, paged] << [[['argument', 'select'], ['argument', 'join'], ['argument', 'lazy'], ['argument', 'eager'],
+                                                    ['select', 'select'], ['join', 'join'], ['fetchMode', 'select'], ['fetchMode', 'join']],
+                                                   ['sort', 'sort map', 'order', 'Query.Order'], ['players.name', 'players.contract.salary'], [false, true]].combinations()
+        source = loading[0]
+        mode = loading[1]
+    }
+
+    void 'a nested LEFT #request preserves its common association with a sibling #ordering and pagination #paged'() {
+        given:
+        saveTeamWithAPlayerWithoutContract()
+        final arguments = paged ? [max: 10] : [:]
+        if (request == 'fetch') {
+            arguments.fetch = ['players.contract': JoinType.LEFT]
+        }
+        if (ordering == 'sort') {
+            arguments.sort = 'players.team.name'
+        }
+        else if (ordering == 'sort map') {
+            arguments.sort = ['players.team.name': 'asc', name: 'asc']
+        }
+
+        when:
+        final results = Team.createCriteria().list(arguments) {
+            if (request == 'join') {
+                join('players.contract', JoinType.LEFT)
+            }
+            if (ordering == 'order') {
+                order('players.team.name')
+            }
+            else if (ordering == 'Query.Order') {
+                order(Query.Order.asc('players.team.name'))
+            }
+        }
+
+        then: 'only the shared association is implied LEFT; the sibling follows the setting'
+        results*.name.countBy { it } == (leftJoinSort ? ALL_TEAMS : TEAMS_WITH_PLAYERS).collectEntries { [(it): 1] } + ['Squad Team': 3]
+        !paged || results.every { !Hibernate.isInitialized(it.players) }
+        results.find { it.name == 'Squad Team' }.players*.name.sort() == ['Squad Player A', 'Squad Player B', 'Squad Player without contract']
+
+        where:
+        [request, ordering, paged] << [['fetch', 'join'], ['sort', 'sort map', 'order', 'Query.Order'], [false, true]].combinations()
+    }
+
     void 'a nested LEFT criteria #sortForm by #sortProperty respects the intermediate #request request'() {
         given:
         saveTeamWithAPlayerWithoutContract()
@@ -381,7 +536,7 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
         results*.name.unique().sort() == (TEAMS_WITH_PLAYERS + 'Squad Team').sort()
 
         where:
-        [request, sortProperty, sortForm] << [['inner', 'join', 'select', 'fetchMode', 'fetch'], ['players.contract.salary', 'players.name'], ['string', 'map']].combinations()
+        [request, sortProperty, sortForm] << [['inner', 'join', 'select', 'fetchMode', 'fetch'], ['players.contract.salary', 'players.name', 'players.team.name'], ['string', 'map']].combinations()
     }
 
     void 'a nested LEFT criteria #sortForm by #sortProperty retains an intermediate association predicate'() {
@@ -398,7 +553,7 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
         results*.name == ['Arsenal First Team']
 
         where:
-        [sortProperty, sortForm] << [['players.contract.salary', 'players.name'], ['string', 'map']].combinations()
+        [sortProperty, sortForm] << [['players.contract.salary', 'players.name', 'players.team.name'], ['string', 'map']].combinations()
     }
 
     void 'a nested LEFT #request keeps the intermediate alias join type for #sortForm by #sortProperty with left alias #leftAlias'() {
@@ -417,10 +572,10 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
         }
 
         then:
-        results*.name.sort() == (leftAlias ? ALL_TEAMS : TEAMS_WITH_PLAYERS)
+        results*.name.sort() == (leftAlias && (!sortProperty.endsWith('team.name') || leftJoinSort) ? ALL_TEAMS : TEAMS_WITH_PLAYERS)
 
         where:
-        [request, sortProperty, sortForm, leftAlias] << [['fetch', 'join'], ['players.name', 'p.name'], ['string', 'map'], [false, true]].combinations()
+        [request, sortProperty, sortForm, leftAlias] << [['fetch', 'join'], ['players.name', 'p.name', 'players.team.name', 'p.team.name'], ['string', 'map'], [false, true]].combinations()
     }
 
     void 'a nested LEFT to-one criteria #ordering keeps a missing nested association'() {
@@ -461,6 +616,30 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
 
         where:
         request << ['fetch', 'join', 'select']
+    }
+
+    void 'criteria arguments apply #paging before the requested #joinType fetch of #path'() {
+        given:
+        saveTeamWithAPlayerWithoutContract()
+
+        when:
+        final results = Team.withSession { session ->
+            final criteria = session.createCriteria(Team)
+            criteria.add(Restrictions.like('name', '%Team'))
+            GrailsHibernateUtil.populateArgumentsForCriteria(manager.hibernateDatastore, Team, criteria,
+                    paging + [sort: 'name', order: 'desc', fetch: [(path): joinType]], manager.hibernateDatastore.mappingContext.conversionService)
+            criteria.list()
+        }
+
+        then:
+        results*.name == expected
+        results.every { !Hibernate.isInitialized(it.players) }
+        results.findAll { it.name == 'Squad Team' }.every { it.players*.name.sort() == ['Squad Player A', 'Squad Player B', 'Squad Player without contract'] }
+
+        where:
+        [path, joinType, paging] << [['players', 'players.contract'], [JoinType.LEFT, JoinType.INNER], [[max: 2], [max: 1, offset: 1], [offset: 2]]].combinations()
+        expected = paging.offset == 2 ? (joinType == JoinType.LEFT ? ['Playerless First Team', 'MU First Team', 'Chelsea First Team', 'Arsenal First Team'] :
+                ['MU First Team', 'Chelsea First Team', 'Arsenal First Team']) : paging.offset == 1 ? ['Squad Team'] : ['Unattached First Team', 'Squad Team']
     }
 
     void 'a paged criteria requested join keeps every element of a collection on its path'() {
@@ -685,6 +864,40 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
         and:
         query.list(max: 10).count { it == null } == 2
         query.list(max: 10).totalCount == 6
+    }
+
+    void 'a right join that criteria on the association make keeps one null row for each club that no team refers to when a fetch mode replaced it'() {
+        given:
+        new Club(name: 'Another teamless club').save()
+        new Club(name: 'Teamless').save(flush: true)
+        manager.session.clear()
+
+        when:
+        final query = Team.where { club.name ==~ '%' }.join('club', JoinType.RIGHT).join('club')
+        final results = query.list()
+
+        then: 'the right join is kept for the criteria, so each club without a team adds a row without a team'
+        results.findAll { it != null }*.name.sort() == TEAMS_WITH_A_CLUB
+        results.count { it == null } == 2
+        query.count() == 6
+
+        and:
+        query.list(max: 10).count { it == null } == 2
+        query.list(max: 10).totalCount == 6
+    }
+
+    void 'an alias named like an association does not take the place of the join that the query requests for the association'() {
+        given: 'an alias of the players named club, and an alias of the club named players'
+        final aliasNamedClub = new DetachedCriteria(Team).build { createAlias('players', 'club') }.join('club', JoinType.INNER)
+        final aliasNamedPlayers = new DetachedCriteria(Team).build { createAlias('club', 'players') }.join('players', JoinType.INNER)
+        final teamsWithAClubAndPlayers = TEAMS_WITH_A_CLUB.intersect(TEAMS_WITH_PLAYERS).sort()
+
+        expect: 'both joins are inner joins, so the team without a club and the team without players are left out'
+        aliasNamedClub.list()*.name.sort() == teamsWithAClubAndPlayers
+        aliasNamedClub.count() == 3
+        aliasNamedPlayers.list()*.name.sort() == teamsWithAClubAndPlayers
+        aliasNamedPlayers.count() == 3
+        Team.where { name ==~ '%First%' }.list(fetch: [club: JoinType.INNER]) { createAlias('players', 'club') }*.name.sort() == teamsWithAClubAndPlayers
     }
 
     void 'a paged #api with a requested #joinType join through a collection keeps its elements'() {
