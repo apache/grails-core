@@ -1402,3 +1402,21 @@ only shows in a schema that Hibernate creates: an application that manages its s
 keeps the columns it has, and `hbm2ddl.auto: update` does not change an existing column.
 The one difference from a `String` property is a `maxSize` shorter than the longest constant name: `maxSize` does not validate an
 enum, so the column is made as long as the longest name, and no value of the enum fails at the database.
+
+==== A GSP error names the line of the page it is on
+
+The line that an error in a GSP names was wrong for many pages. As of Grails 7.0.18 it is the line of the page:
+
+* An expression, a tag or a scriptlet on the last line of a page that does not end with a line break was reported on line 1. It is reported on the last line.
+* What follows a `<%-- --%>` or `%{-- --}%` comment could be reported on an earlier line than it is on, also after a comment of one line, and by more the longer the comments before it are. It is reported where it is.
+* After an expression, a scriptlet or a tag attribute that spans several lines, an error the compiler finds and the line a stack trace is mapped to were later than the line they are on, by the line breaks inside it. They are on their line. An error inside a scriptlet or an expression of several lines names the line it starts on.
+* In a page whose generated class has more than 1,000 lines, an error could be reported on a line that is not its own, and an error near the end of such a page on line 1. They are right for a page of any length.
+* What is only found where the page ends, such as a tag or a block that is never closed, was reported on line 1 for a page that ends with a line break. It is reported on the last line of the page.
+* An expression that is never closed, `${` without its `}`, was reported on the line the text in front of it starts on. It is reported on the line the expression starts on.
+* A bracket that closes nothing in an expression, as in `${a]}`, failed with an `EmptyStackException`. It is a compile error that names its line.
+
+This is the line in the message of a `GroovyPagesException` and of a `GrailsTagException` (`on line [12]`, `[/book/show.gsp:12]`) and what their `getLineNumber()` returns. What a page renders is not changed. A precompiled page carries these lines, as arguments in its class and in the table of lines beside it, so the compiled pages of an application differ from those of earlier versions for the same source; they are compiled again when the application is built.
+
+A line of a page ends with a line feed. A carriage return by itself ends no line of a page, so a page that has carriage returns and no line feeds is one line, and every error in it is on line 1.
+
+A test that asserts the line of a GSP error asserts the line of the page instead.
