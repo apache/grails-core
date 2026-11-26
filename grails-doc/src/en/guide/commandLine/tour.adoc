@@ -151,8 +151,7 @@ A name without a package goes into the default package of the project. The comma
 
 Which commands there are depends on the record. `create-job` is there because this project has the `grails-quartz` feature, and `create-functional-test` writes a Geb test because it has the `geb-with-testcontainers` feature, as a web application has by default; `create-restful-controller` and `create-domain-resource` are commands of REST API applications and REST API plugins, where `create-functional-test` writes a test that calls the application over HTTP.
 
-// TOOLS-VERIFY: that cT fits create-taglib and create-tool, and cTo is create-tool (P4).
-Names can be shortened to the first letters of their words: `cDC` is `create-domain-class`. A short form that fits two commands runs neither: in a project `cT` fits `create-taglib` and `create-tool`, so type `cTo`.
+Names can be shortened to the first letters of their words: `cDC` is `create-domain-class`. A short form that fits two commands runs neither: in a project `s` fits `stats` and `shell`, so type `st`. `cT` is `create-taglib`, and `create-tool` has no short form: it is typed with its whole name.
 
 The files come from templates, and a project can have its own under `src/main/templates`; `install-templates` copies the built-in ones there as a starting point. The table of commands and the template syntax are under "Creating Classes with the `grails` Command" in xref:commandLine[the introduction of this chapter].
 

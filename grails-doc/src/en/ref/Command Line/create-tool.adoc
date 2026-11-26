@@ -54,6 +54,8 @@ Options:
 * `--standalone` - Write a standalone tool into `src/standalone/groovy`, in place of a tool into `src/cli/groovy`.
 * `-f`, `--force` - Replace a file that is there already. Without it the command writes nothing when one of its files exists, says which, and ends with exit code 1.
 
+`create-tool` has no short form, so it is only typed with its whole name: `cT` and `ct` are `create-taglib`, as in Grails 8, and `cTo` and `cto` are no command.
+
 The name can be given with hyphens (`data-import` becomes `DataImportTool`), and a name that ends with `Tool` already is taken without it.
 
 The tool that was created is run by its name with hyphens, as are the tools of the plugins the application depends on. The command says the name in its last line:

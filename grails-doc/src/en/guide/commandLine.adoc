@@ -350,7 +350,6 @@ To create an application in an existing build, see the `--subproject` option of 
 
 The name of a command can be shortened to the first letters of its words, or to the start of each of its words:
 
-// TOOLS-VERIFY: the short forms of this section with create-tool and run-tool in place of create-command and run-command (P4): cc is create-controller alone, ct fits create-taglib and create-tool, ru starts run-script and run-tool, rn offers run-tool.
 [source,console]
 ----
 $ grails ra                      <1>
@@ -413,9 +412,9 @@ Upper case and hyphens say where the words begin, so a form that has them is rea
 |none
 |`run` and `stop` are names of `run-app` and `stop-app` only when they are typed whole: `ru` starts `run-script` and `run-tool` as much as `run`.
 
-|`ct`
+|`cTo`, `cto`
 |none
-|It fits `create-taglib` and `create-tool`, so neither is run (see below).
+|`create-tool` has no short form, and `cT` and `ct` are `create-taglib`: the tool is only run when it is typed with its whole name.
 
 |`Ra`
 |none
@@ -426,7 +425,7 @@ Upper case and hyphens say where the words begin, so a form that has them is rea
 |A short form stands for one name: `f a` is `feature add`, and no command has two words that start with `f` and `a`.
 |===
 
-* When a short form fits more than one command of the directory, none of them is run. The command line names the commands it fits, each with the shortest form of lower-case letters that fits it alone, and ends with exit code 2: `ct is short for more than one command: create-taglib (cta), create-tool (cto)`. Type more of the name, or that form. Where the Grails shell ran the first command that fits, `grails` asks. In a project this happens with the short forms that come to mind first: `ct` and `cT` fit `create-taglib` and `create-tool`, `s` fits `stats` and `shell`, and `c` fits `compile`, `clean` and `console`.
+* When a short form fits more than one command of the directory, none of them is run. The command line names the commands it fits, each with the shortest form of lower-case letters that fits it alone, and ends with exit code 2: `co is short for more than one command: compile (com), console (con)`. Type more of the name, or that form. Where the Grails shell ran the first command that fits, `grails` asks. In a project this happens with the short forms that come to mind first: `s` fits `stats` and `shell`, `co` fits `compile` and `console`, and `c` fits `compile`, `clean` and `console`. `create-tool` has no short form: it is only ever typed with its whole name, so `cT` and `ct` are `create-taglib` as in Grails 8, `cTo` and `cto` are no command, and `cC` and `cc` are `create-controller`. `run-tool` has them: `rt` and `rc` are `run-tool`.
 * The help of a command, `grails help NAME` and `NAME --help`, ends its description with the shortest form that is that command, as `Short form: ra` for `run-app` and `Short form: f a` for `feature add`. Which form that is depends on the commands of the directory: it is worked out when the help is shown.
 * Only the name of a command is ever looked at, never what follows it: in `create-app cA` the application is called `cA`, and everything after `gradle` reaches Gradle as it was typed.
 * What stands where a command is expected and is neither a command nor the short form of one is refused with exit code 2, together with the commands that are most like it, one line that shows how the command line is used, and `Run 'grails help' for the commands`. The commands it nearly is the short form of come first: one letter more, one less, one other or two the other way round, the first letter kept, so `grails rn` offers `run-app`, `run-script` and `run-tool`, and `grails Ra` offers `run-app`. The same holds for every mistake in the use of a command: what is wrong, the one line of the usage of that command, and where its help is. The help itself is shown by `help` and `--help`. After `--help` or `--version` (`-h`, `-V`) it is not looked at: `grails --help anything` shows the help.
