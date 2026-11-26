@@ -39,14 +39,11 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.support.GenericApplicationContext;
 
 import grails.core.GrailsApplication;
-import grails.core.support.ParentApplicationContextAware;
 import grails.plugins.exceptions.PluginException;
-import org.apache.grails.core.plugins.PluginDescriptor;
 import org.apache.grails.core.plugins.PluginDiscovery;
 import org.apache.grails.core.plugins.PluginInfo;
 import org.grails.core.exceptions.GrailsConfigurationException;
 import org.grails.plugins.AbstractGrailsPluginManager;
-import org.grails.plugins.BinaryGrailsPlugin;
 import org.grails.plugins.DefaultGrailsPlugin;
 import org.grails.spring.DefaultRuntimeSpringConfiguration;
 import org.grails.spring.RuntimeSpringConfiguration;
@@ -69,57 +66,6 @@ public class DefaultGrailsPluginManager extends AbstractGrailsPluginManager {
 
     public DefaultGrailsPluginManager(GrailsApplication application, PluginDiscovery pluginDiscovery) {
         super(application, pluginDiscovery);
-    }
-
-    private static PluginDiscovery reinitDiscovery(GrailsApplication application, Class<?>[] plugins) {
-        PluginDiscovery discovery = resolveAndResetDiscovery(application);
-        discovery.setPluginClasses(plugins);
-        discovery.init(application.getMainContext().getEnvironment());
-        return discovery;
-    }
-
-    private static PluginDiscovery reinitDiscovery(GrailsApplication application, String[] pluginResources) {
-        PluginDiscovery discovery = resolveAndResetDiscovery(application);
-        discovery.setPluginResources(pluginResources);
-        discovery.init(application.getMainContext().getEnvironment());
-        return discovery;
-    }
-
-    private static PluginDiscovery reinitDiscovery(GrailsApplication application, String resourcePath) {
-        PluginDiscovery discovery = resolveAndResetDiscovery(application);
-        discovery.setPluginResources(resourcePath);
-        discovery.init(application.getMainContext().getEnvironment());
-        return discovery;
-    }
-
-    /**
-     * Resolves the {@link PluginDiscovery} bean from the application context,
-     * resets and reinitializes it. The GrailsApplication always has an application context
-     * set when these deprecated constructors are called.
-     */
-    private static PluginDiscovery resolveAndResetDiscovery(GrailsApplication application) {
-        ApplicationContext ctx = application.getMainContext();
-        PluginDiscovery discovery = (PluginDiscovery) ctx.getBean(PluginDiscovery.BEAN_NAME);
-        LOG.warn("Using deprecated DefaultGrailsPluginManager constructor. " +
-                "Plugin discovery should be configured through the GrailsPluginDiscovery bean. " +
-                "Reinitializing plugin discovery.");
-        discovery.reset();
-        return discovery;
-    }
-
-    public GrailsPlugin[] getUserPlugins() {
-        return pluginDiscovery.getDynamicPlugins().stream()
-                .map(PluginInfo::getName)
-                .map(plugins::get)
-                .filter(Objects::nonNull)
-                .toArray(GrailsPlugin[]::new);
-    }
-
-    public void refreshPlugin(String name) {
-        if (hasGrailsPlugin(name)) {
-            getGrailsPlugin(name).refresh();
-            artefactsChanged();
-        }
     }
 
     public Collection<GrailsPlugin> getPluginObservers(GrailsPlugin grailsPlugin) {
@@ -156,12 +102,7 @@ public class DefaultGrailsPluginManager extends AbstractGrailsPluginManager {
         List<String> loadedPlugins = new ArrayList<>();
         // Note: the environment is null here since the plugins should have always been populated in the bootstrap phase
         pluginDiscovery.getPluginsInLoadOrder().forEach(pluginInfo -> {
-            GrailsPlugin plugin;
-            if (pluginInfo.isDynamic()) {
-                plugin = createGrailsPlugin(pluginInfo.getPluginClass(), pluginInfo.getPluginDescriptor());
-            } else {
-                plugin = new BinaryGrailsPlugin(pluginInfo.getPluginClass(), pluginInfo.getPluginDescriptor(), application);
-            }
+            GrailsPlugin plugin = createGrailsPlugin(pluginInfo);
 
             if (LOG.isDebugEnabled()) {
                 LOG.debug("Grails plug-in [" + plugin.getName() + "] with version [" + plugin.getVersion() + "] loaded successfully");
@@ -169,9 +110,6 @@ public class DefaultGrailsPluginManager extends AbstractGrailsPluginManager {
 
             // plugin is always ApplicationContextAware
             plugin.setApplicationContext(applicationContext);
-            if (plugin instanceof ParentApplicationContextAware) {
-                ((ParentApplicationContextAware) plugin).setParentApplicationContext(parentCtx);
-            }
             plugin.setManager(this);
             plugins.put(plugin.getName(), plugin);
             loadedPlugins.add(plugin.getName() + " (" + plugin.getVersion() + ")");
@@ -185,8 +123,14 @@ public class DefaultGrailsPluginManager extends AbstractGrailsPluginManager {
         initialised = true;
     }
 
-    protected GrailsPlugin createGrailsPlugin(Class<?> pluginClass, PluginDescriptor descriptor) {
-        return new DefaultGrailsPlugin(pluginClass, descriptor, application);
+    /**
+     * Creates the runtime plugin for a discovered plugin.
+     *
+     * @param pluginInfo the plugin, as discovery found it
+     * @return the plugin
+     */
+    protected GrailsPlugin createGrailsPlugin(PluginInfo pluginInfo) {
+        return new DefaultGrailsPlugin(pluginInfo, application);
     }
 
     @Override

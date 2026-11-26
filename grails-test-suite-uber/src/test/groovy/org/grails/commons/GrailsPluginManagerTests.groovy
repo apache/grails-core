@@ -40,8 +40,6 @@ import org.grails.support.MockApplicationContext
  */
 class GrailsPluginManagerTests extends Specification {
 
-    private static final String TEST_PLUGIN_RESOURCE_PATH = 'classpath:org/grails/plugins/ClassEditorGrailsPlugin.groovy'
-
     @Shared ApplicationContext ctx = new MockApplicationContext()
     @Shared GrailsApplication grailsApplication = new DefaultGrailsApplication().tap {
         applicationContext = ctx
@@ -200,25 +198,21 @@ class DisabledGrailsPlugin extends Plugin {
         then: 'enabled plugins are loaded and disabled plugins are skipped'
         with(pluginManager) {
             hasGrailsPlugin('another')
-            getGrailsPlugin('another').instance
+            getGrailsPlugin('another').pluginInstance
             !hasGrailsPlugin('disabled')
         }
     }
 
-    def 'discovers plugin resources from the configured path'() {
-        given: 'the discovery is configured with the plugin resource path'
-        def pluginDiscovery = new DefaultPluginDiscovery(TEST_PLUGIN_RESOURCE_PATH)
+    def 'loads a plugin class registered directly, which has no version and so satisfies every version range'() {
+        given: 'a plugin class compiled outside a build that sets a version, registered directly'
+        Class classEditor = new GroovyClassLoader(GrailsPluginManagerTests.classLoader).parseClass('''
+package org.grails.plugins
 
-        when: 'plugin discovery is initialized'
-        pluginDiscovery.init(new StandardEnvironment())
-
-        then: 'the configured plugin resource is discovered'
-        pluginDiscovery.pluginResources.length == 1
-    }
-
-    def 'loads a plugin compiled from a resource, which has no version and so satisfies every version range'() {
-        given: 'the plugin discovery has been initialized from the resource path'
-        def pluginDiscovery = new DefaultPluginDiscovery(TEST_PLUGIN_RESOURCE_PATH).tap {
+@grails.plugins.metadata.GrailsPluginDescriptor
+class ClassEditorGrailsPlugin extends grails.plugins.Plugin {
+}
+''')
+        def pluginDiscovery = new DefaultPluginDiscovery([classEditor] as Class[]).tap {
             init(new StandardEnvironment())
         }
         def pluginManager = new DefaultGrailsPluginManager(grailsApplication, pluginDiscovery)
@@ -227,7 +221,7 @@ class DisabledGrailsPlugin extends Plugin {
         pluginManager.loadPlugins()
         def plugin = pluginManager.getGrailsPlugin('classEditor')
 
-        then: 'the plugin is available, compiled from the resource, without a version'
+        then: 'the plugin is available, without a version'
         plugin
         plugin.name == 'classEditor'
         plugin.pluginClass.name == 'org.grails.plugins.ClassEditorGrailsPlugin'

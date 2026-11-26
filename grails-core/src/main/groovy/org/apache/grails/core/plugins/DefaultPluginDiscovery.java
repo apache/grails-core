@@ -18,9 +18,7 @@
  */
 package org.apache.grails.core.plugins;
 
-import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -32,24 +30,16 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-import groovy.lang.GroovyClassLoader;
-import org.codehaus.groovy.control.CompilationFailedException;
-import org.codehaus.groovy.runtime.IOGroovyMethods;
-
-import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.springframework.core.env.Environment;
-import org.springframework.core.io.Resource;
 
 import grails.plugins.GrailsPluginSorter;
 import grails.plugins.GrailsVersionUtils;
-import grails.plugins.exceptions.PluginException;
 import grails.util.Metadata;
 import org.apache.grails.core.plugins.filters.PluginFilter;
 import org.apache.grails.core.plugins.filters.PluginFilterRetriever;
-import org.grails.core.io.CachingPathMatchingResourcePatternResolver;
 
 /**
  * Default {@link PluginDiscovery} implementation used during Grails bootstrap.
@@ -57,7 +47,7 @@ import org.grails.core.io.CachingPathMatchingResourcePatternResolver;
  * <p>This class discovers plugins from two sources:</p>
  * <ul>
  *     <li>classpath plugin descriptors discovered via {@link ClasspathPluginFinder}</li>
- *     <li>dynamically supplied plugin classes or Groovy resources configured through the setter methods</li>
+ *     <li>plugin classes registered directly through {@link #setPluginClasses(Class[])}</li>
  * </ul>
  *
  * <p>When {@link #init(Environment)} is invoked, the discovery process loads candidate plugins, applies the
@@ -69,12 +59,10 @@ public class DefaultPluginDiscovery implements PluginDiscovery {
     private static final Logger LOG = LoggerFactory.getLogger(DefaultPluginDiscovery.class);
 
     protected Metadata applicationMeta = Metadata.getCurrent();
-    protected Resource[] pluginResources = new Resource[0];
     protected Class<?>[] pluginClasses = new Class[0];
     protected LinkedHashMap<String, PluginInfo> plugins;
     protected List<PluginInfo> orderedPlugins;
     protected List<PluginInfo> loadOrderedPlugins;
-    protected List<PluginInfo> dynamicPlugins;
     protected Map<String, Set<PluginInfo>> pluginToObserverMap;
     protected List<PluginInfo> delayedLoadPlugins;
     protected Map<String, PluginInfo> failedPlugins;
@@ -93,58 +81,14 @@ public class DefaultPluginDiscovery implements PluginDiscovery {
         this.filterRetriever = filterRetriever;
     }
 
-    public DefaultPluginDiscovery(String resourcePath) {
-        this();
-        setPluginResources(resourcePath);
-    }
-
     public DefaultPluginDiscovery(Class<?>[] pluginClasses) {
         this();
         setPluginClasses(pluginClasses);
     }
 
-    public DefaultPluginDiscovery(String[] pluginResources) {
-        this();
-        setPluginResources(pluginResources);
-    }
-
-    public DefaultPluginDiscovery(Resource[] pluginFiles) {
-        this();
-        setPluginResources(pluginFiles);
-    }
-
-    @Override
-    public void setPluginResources(String[] pluginResources) {
-        var resolver = CachingPathMatchingResourcePatternResolver.INSTANCE;
-        var resourceList = new ArrayList<Resource>();
-        for (var resourcePath : pluginResources) {
-            try {
-                resourceList.addAll(Arrays.asList(resolver.getResources(resourcePath)));
-            } catch (IOException ioe) {
-                LOG.debug("Unable to load plugins for resource path {}", resourcePath, ioe);
-            }
-        }
-        this.pluginResources = resourceList.toArray(new Resource[0]);
-    }
-
     @Override
     public void setPluginClasses(Class<?>[] pluginClasses) {
         this.pluginClasses = pluginClasses;
-    }
-
-    @Override
-    public void setPluginResources(String resourcePath) {
-        var resolver = CachingPathMatchingResourcePatternResolver.INSTANCE;
-        try {
-            pluginResources = resolver.getResources(resourcePath);
-        } catch (IOException ioe) {
-            LOG.debug("Unable to load plugins for resource path {}", resourcePath, ioe);
-        }
-    }
-
-    @Override
-    public void setPluginResources(Resource[] pluginResources) {
-        this.pluginResources = pluginResources;
     }
 
     @Override
@@ -221,12 +165,6 @@ public class DefaultPluginDiscovery implements PluginDiscovery {
     }
 
     @Override
-    public Resource[] getPluginResources() {
-        validateInitialized();
-        return pluginResources;
-    }
-
-    @Override
     public void init(Environment environment) {
         if (!initialized) {
             if (environment == null) {
@@ -251,11 +189,6 @@ public class DefaultPluginDiscovery implements PluginDiscovery {
         failedPlugins = new HashMap<>();
         delayedEvictions = new HashMap<>();
         orderedPlugins = new ArrayList<>();
-    }
-
-    @Override
-    public Collection<PluginInfo> getDynamicPlugins() {
-        return Collections.unmodifiableList(dynamicPlugins);
     }
 
     @Override
@@ -288,21 +221,16 @@ public class DefaultPluginDiscovery implements PluginDiscovery {
             pluginFilter = filterRetriever.getPluginFilter(environment);
         }
 
-        var filteredMetadataSet = new HashSet<>(pluginFilter.filterPluginList(
-                plugins.stream()
-                        .map(PluginInfo::getMetadata)
-                        .toList()
-        ));
-
+        var filtered = new HashSet<>(pluginFilter.filterPluginList(plugins));
         return plugins.stream()
-                .filter(p -> filteredMetadataSet.contains(p.getMetadata()))
+                .filter(filtered::contains)
                 .toList();
     }
 
     /**
      * Discovers, filters, and orders plugins for the current environment.
      *
-     * <p>This method discovers classpath plugins, collects any dynamically supplied plugins, applies the
+     * <p>This method discovers classpath plugins, adds the plugin classes registered directly, applies the
      * configured filter, resets previous discovery state, and then registers plugins immediately or defers
      * them until their dependencies can be satisfied.</p>
      *
@@ -326,11 +254,8 @@ public class DefaultPluginDiscovery implements PluginDiscovery {
                             "troubleshooting and FAQ for more info.");
         }
 
-        // TODO: These were previously never filtered, and continue to behave this way
-        dynamicPlugins = findDynamicPlugins(classLoader);
-
         var allPlugins = new ArrayList<>(classpathPlugins);
-        allPlugins.addAll(dynamicPlugins);
+        allPlugins.addAll(registeredPlugins());
 
         var filteredPlugins = filterPlugins(allPlugins, environment);
 
@@ -428,7 +353,7 @@ public class DefaultPluginDiscovery implements PluginDiscovery {
     private void logUnresolvedDependencies(PluginInfo plugin) {
         var unresolvedDependencies = new ArrayList<String>();
         for (var name : plugin.getDependsOnNames()) {
-            var requiredVersion = plugin.getMetadata().getDependentVersion(name);
+            var requiredVersion = plugin.getDependentVersion(name);
             var dependency = findPlugin(name);
             var delayedDependency = dependency == null ? findDelayedPlugin(name) : null;
             if (dependency != null) {
@@ -487,7 +412,7 @@ public class DefaultPluginDiscovery implements PluginDiscovery {
      */
     private boolean isDependentOn(PluginInfo plugin, PluginInfo dependency) {
         for (var name : plugin.getDependsOnNames()) {
-            var requiredVersion = plugin.getMetadata().getDependentVersion(name);
+            var requiredVersion = plugin.getDependentVersion(name);
             if (name.equals(dependency.getName()) &&
                     GrailsVersionUtils.isValidVersion(dependency.getPluginVersion(), requiredVersion)) {
                 return true;
@@ -552,7 +477,7 @@ public class DefaultPluginDiscovery implements PluginDiscovery {
             return;
         }
 
-        if (!plugin.getMetadata().canRegisterPlugin()) {
+        if (!plugin.isEnabled() || !plugin.supportsEnvironment(grails.util.Environment.getCurrent())) {
             if (LOG.isInfoEnabled()) {
                 LOG.info("Grails plugin {} is disabled and was not loaded", plugin);
             }
@@ -597,8 +522,8 @@ public class DefaultPluginDiscovery implements PluginDiscovery {
     }
 
     private boolean areDependenciesResolved(PluginInfo plugin) {
-        for (var name : plugin.getMetadata().getDependsOnNames()) {
-            if (!hasGrailsPlugin(name, plugin.getMetadata().getDependentVersion(name))) {
+        for (var name : plugin.getDependsOnNames()) {
+            if (!hasGrailsPlugin(name, plugin.getDependentVersion(name))) {
                 return false;
             }
         }
@@ -610,36 +535,16 @@ public class DefaultPluginDiscovery implements PluginDiscovery {
     }
 
     /**
-     * Discovers dynamically supplied plugins from configured Groovy resources and explicit plugin classes.
-     *
-     * <p>Resource-based plugins are compiled with a {@link GroovyClassLoader}, while pre-supplied plugin
-     * classes are converted directly into {@link PluginInfo} instances.</p>
-     *
-     * @param classLoader the base class loader used to discover and compile dynamic plugins
-     * @return the dynamically discovered plugins
+     * The plugins whose classes were registered directly, each described by its {@code @GrailsPluginDescriptor}.
      */
-    private List<PluginInfo> findDynamicPlugins(ClassLoader classLoader) {
-        var discoveredPlugins = new ArrayList<PluginInfo>();
-        var pluginResourceClassLoader = resolvePluginResourceClassLoader(classLoader);
-        LOG.info("Attempting to load [{}] dynamically defined plugins", pluginResources.length);
-        for (var resource : pluginResources) {
-            discoveredPlugins.add(createDynamicPluginInfo(loadPluginClass(pluginResourceClassLoader, resource), resource));
-        }
+    private List<PluginInfo> registeredPlugins() {
+        var registered = new ArrayList<PluginInfo>();
         for (var pluginClass : pluginClasses) {
-            discoveredPlugins.add(createDynamicPluginInfo(pluginClass, null));
+            var pluginInfo = PluginUtils.createPluginInfo(pluginClass);
+            pluginInfo.isGrailsVersionCompatible(applicationMeta.getGrailsVersion());
+            registered.add(pluginInfo);
         }
-        return discoveredPlugins;
-    }
-
-    private PluginInfo createDynamicPluginInfo(Class<?> pluginClass, @Nullable Resource resource) {
-        if (!PluginUtils.isGrailsPlugin(pluginClass)) {
-            throw new PluginException("Class [" + pluginClass.getName() + "]" +
-                    (resource != null ? " loaded from [" + resource.getDescription() + "]" : "") +
-                    " is not a Grails plugin: a plugin is a concrete grails.plugins.Plugin subclass annotated with @GrailsPluginDescriptor");
-        }
-        var pluginInfo = PluginUtils.createPluginInfo(pluginClass, resource, true);
-        pluginInfo.isGrailsVersionCompatible(applicationMeta.getGrailsVersion());
-        return pluginInfo;
+        return registered;
     }
 
     /**
@@ -653,42 +558,5 @@ public class DefaultPluginDiscovery implements PluginDiscovery {
             classLoader = DefaultPluginDiscovery.class.getClassLoader();
         }
         return classLoader;
-    }
-
-    /**
-     * Resolves a {@link GroovyClassLoader} for compiling plugin resources expressed as Groovy source files.
-     *
-     * @param classLoader the base class loader for plugin discovery
-     * @return a Groovy-capable class loader backed by the supplied class loader
-     */
-    private GroovyClassLoader resolvePluginResourceClassLoader(ClassLoader classLoader) {
-        if (classLoader instanceof GroovyClassLoader) {
-            return (GroovyClassLoader) classLoader;
-        }
-        if (LOG.isDebugEnabled()) {
-            LOG.debug("Wrapping class loader [{}] in GroovyClassLoader for dynamic plugin resource compilation", classLoader);
-        }
-        return new GroovyClassLoader(classLoader);
-    }
-
-    /**
-     * Compiles a plugin class from a Groovy resource.
-     *
-     * @param cl the Groovy class loader used to compile the resource
-     * @param r the plugin resource to compile
-     * @return the compiled plugin class
-     * @throws PluginException if the resource cannot be read or compiled
-     */
-    private Class<?> loadPluginClass(GroovyClassLoader cl, Resource r) {
-        try {
-            if (LOG.isInfoEnabled()) {
-                LOG.info("Parsing & compiling {}", r.getFilename());
-            }
-            return cl.parseClass(IOGroovyMethods.getText(r.getInputStream(), "UTF-8"));
-        } catch (CompilationFailedException e) {
-            throw new PluginException("Error compiling plugin [" + r.getFilename() + "] " + e.getMessage(), e);
-        } catch (IOException e) {
-            throw new PluginException("Error reading plugin [" + r.getFilename() + "] " + e.getMessage(), e);
-        }
     }
 }

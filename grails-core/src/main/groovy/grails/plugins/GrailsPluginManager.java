@@ -34,36 +34,24 @@ import org.grails.spring.RuntimeSpringConfiguration;
 /**
  * Handles the loading and management of plugins in the Grails framework.
  * <p>
- * A plugin is just like a normal Grails application, except it contains
- * a Groovy "plugin descriptor class" which extends {@link Plugin} and has a name
- * ending with {@code GrailsPlugin}.
- * <p>
- * This plugin descriptor class has a {@link GrailsPluginInfo#getVersion() version}
- * property and optionally Closure properties that are event handlers used to react to
- * {@link grails.core.GrailsApplicationLifeCycle Grails lifecycle} events,
- * like {@link grails.core.GrailsApplicationLifeCycle#doWithSpring doWithSpring} and
- * {@link grails.core.GrailsApplicationLifeCycle#doWithApplicationContext doWithApplicationContext}.
- * <p>
- * The {@link grails.core.GrailsApplicationLifeCycle#doWithSpring doWithSpring} Closure uses the
- * {@link grails.spring.BeanBuilder} DSL to provide runtime configuration of Grails via Spring.
- * <p>
- * The {@link grails.core.GrailsApplicationLifeCycle#doWithApplicationContext doWithApplicationContext}
- * Closure is called after the Spring {@link ApplicationContext} is built and accepts a single argument -
- * the application context.
- *
+ * A plugin is a concrete subclass of {@link Plugin} annotated with
+ * {@link grails.plugins.metadata.GrailsPluginDescriptor}, which declares its name, ordering and other metadata.
+ * The manager creates a {@link GrailsPlugin} for each plugin discovery finds, and drives it through the
+ * application's lifecycle: {@link Plugin#beanRegistrar() beanRegistrar} and
+ * {@link Plugin#doWithSpring() doWithSpring} contribute beans,
+ * {@link Plugin#doWithApplicationContext() doWithApplicationContext} runs once the
+ * {@link ApplicationContext} is refreshed, and {@link Plugin#onChange(Map) onChange},
+ * {@link Plugin#onConfigChange(Map) onConfigChange} and {@link Plugin#onShutdown(Map) onShutdown} react to events.
  * <p>
  * Example:
  * <pre>
- * class ClassEditorGrailsPlugin {
- *      def version = '1.1'
- *      def doWithSpring = { application ->
- *          classEditor(org.springframework.beans.propertyeditors.ClassEditor, application.classLoader)
- *      }
+ * &#64;GrailsPluginDescriptor(dependsOn = 'core')
+ * class ClassEditorGrailsPlugin extends Plugin {
+ *     BeanRegistrar beanRegistrar() {
+ *         ...
+ *     }
  * }
  * </pre>
- * <p>
- * The plugin descriptor class can also optionally define {@code dependsOn} and {@code evict} properties that
- * specify any other plugins that the plugin depends on and any plugins it is incompatible with and should evict.
  *
  * @author Graeme Rocher
  * @since 0.4
@@ -78,13 +66,6 @@ public interface GrailsPluginManager extends ApplicationContextAware {
      * @return All loaded plugins
      */
     GrailsPlugin[] getAllPlugins();
-
-    /**
-     * Returns plugins installed by the user (e.g., not provided by the core framework).
-     *
-     * @return All user plugins
-     */
-    GrailsPlugin[] getUserPlugins();
 
     /**
      * Returns any plugins that failed to load due to dependency resolution errors.
@@ -188,16 +169,6 @@ public interface GrailsPluginManager extends ApplicationContextAware {
      * @return the initialisation status of the manager
      */
     boolean isInitialised();
-
-    /**
-     * Refreshes the plugin with the given name.
-     * <p>
-     * A refresh will force the plugin to "touch" each of its watched resources
-     * and fire modified events for each of them.
-     *
-     * @param name The name of the plugin to refresh
-     */
-    void refreshPlugin(String name);
 
     /**
      * Retrieves a collection of plugins that are observing the specified {@link GrailsPlugin plugin}.

@@ -39,7 +39,7 @@ import grails.plugins.GrailsPluginManager;
 import grails.plugins.PluginManagerAware;
 import grails.util.Environment;
 import org.grails.io.support.GrailsResourceUtils;
-import org.grails.plugins.BinaryGrailsPlugin;
+import org.grails.plugins.DefaultGrailsPlugin;
 
 /**
  * Default ResourceLocator implementation that doesn't take into account servlet loading.
@@ -167,8 +167,8 @@ public class DefaultResourceLocator implements ResourceLocator, ResourceLoaderAw
         if (pluginManager != null) {
             String fullPluginName = info.pluginName;
             for (GrailsPlugin plugin : pluginManager.getAllPlugins()) {
-                if (plugin.getFileSystemName().equals(fullPluginName) && (plugin instanceof BinaryGrailsPlugin)) {
-                    return ((BinaryGrailsPlugin) plugin).getResource(info.uri);
+                if (plugin.getFileSystemName().equals(fullPluginName) && (plugin instanceof DefaultGrailsPlugin)) {
+                    return ((DefaultGrailsPlugin) plugin).getResource(info.uri);
                 }
             }
         }

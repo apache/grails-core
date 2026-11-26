@@ -47,7 +47,7 @@ import org.grails.gsp.GroovyPageTemplate;
 import org.grails.gsp.GroovyPagesTemplateEngine;
 import org.grails.gsp.io.GroovyPageCompiledScriptSource;
 import org.grails.gsp.io.GroovyPageScriptSource;
-import org.grails.plugins.BinaryGrailsPlugin;
+import org.grails.plugins.DefaultGrailsPlugin;
 import org.grails.web.servlet.mvc.GrailsWebRequest;
 import org.grails.web.util.GrailsApplicationAttributes;
 
@@ -188,8 +188,8 @@ public class GroovyPagesServlet extends FrameworkServlet implements PluginManage
             if (pageClass == null && pluginManager != null) {
                 final GrailsPlugin[] allPlugins = pluginManager.getAllPlugins();
                 for (GrailsPlugin plugin : allPlugins) {
-                    if (plugin instanceof BinaryGrailsPlugin) {
-                        BinaryGrailsPlugin binaryPlugin = (BinaryGrailsPlugin) plugin;
+                    if (plugin instanceof DefaultGrailsPlugin) {
+                        DefaultGrailsPlugin binaryPlugin = (DefaultGrailsPlugin) plugin;
 
                         pageClass = binaryPlugin.resolveView(pageName);
                         if (pageClass != null) {

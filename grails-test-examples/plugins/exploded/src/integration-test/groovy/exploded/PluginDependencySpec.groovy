@@ -183,7 +183,7 @@ class PluginDependencySpec extends Specification {
 
         then: "it is the annotated plugin class, with the build version the compiler recorded"
         plugin != null
-        plugin.instance instanceof ExplodedGrailsPlugin
+        plugin.pluginInstance instanceof ExplodedGrailsPlugin
         plugin.version
     }
 

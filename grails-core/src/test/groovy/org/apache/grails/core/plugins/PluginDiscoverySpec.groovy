@@ -48,10 +48,10 @@ class PluginDiscoverySpec extends Specification {
         )
 
         then: 'the core plugin descriptor is among them'
-        descriptors.any { it.pluginName == 'core' && it.pluginClassName == 'org.grails.plugins.CoreGrailsPlugin' }
+        descriptors.values().any { it.pluginName == 'core' && it.pluginClass == 'org.grails.plugins.CoreGrailsPlugin' }
 
-        and: 'each descriptor has a resource'
-        descriptors.every { it.resource }
+        and: 'each descriptor is a resource that exists'
+        descriptors.keySet().every { it.exists() }
     }
 
     def 'returns no plugin descriptors when the class loader has no plugins.imports resources'() {
@@ -62,7 +62,7 @@ class PluginDiscoverySpec extends Specification {
         def descriptors = PluginUtils.scanPluginDescriptorResources(emptyClassLoader)
 
         then: 'no descriptors are found'
-        descriptors.empty
+        descriptors.isEmpty()
     }
 
     def 'captures the plugin class and provided class names grouped by artefact type from plugin.properties'() {
@@ -83,18 +83,17 @@ class PluginDiscoverySpec extends Specification {
 
         then: 'the descriptor captures the plugin class and artefact classes without including the plugin class as an artefact'
         descriptors.size() == 1
-        with(descriptors[0]) {
+        with(descriptors.values().first()) {
             pluginName == 'test'
             pluginVersion == '1.0.0'
-            pluginClassName == 'com.example.TestGrailsPlugin'
+            pluginClass == 'com.example.TestGrailsPlugin'
             providedClasses == ['com.example.MyDomainClass', 'com.example.MyService']
             artefactsByType == [
                     Domain : ['com.example.MyDomainClass'],
                     Service: ['com.example.MyService']
             ]
-            resource != null
-            resource.exists()
         }
+        descriptors.keySet().first().exists()
 
         cleanup:
         classLoader?.close()
@@ -277,7 +276,7 @@ class PluginDiscoverySpec extends Specification {
 
         then: 'empty dependsOn defaults to * and observe normalizes names while preserving *'
         plugin != null
-        plugin.metadata.getDependentVersion('core') == '*'
+        plugin.getDependentVersion('core') == '*'
         plugin.observedPluginNames as List == ['springSecurityCore', '*']
 
         cleanup:
@@ -297,7 +296,7 @@ class PluginDiscoverySpec extends Specification {
         ''')
 
         when: 'metadata is extracted from the annotation'
-        def metadata = PluginUtils.extractPluginMetadata(pluginClass)
+        def metadata = PluginUtils.createPluginInfo(pluginClass)
 
         then: 'blank dependsOn names are ignored, a bare dependency defaults to *, and observe is normalized'
         metadata.name == 'edgeAnnotated'
@@ -322,10 +321,10 @@ class PluginDiscoverySpec extends Specification {
             class=DescribedGrailsPlugin
             loadAfter=fromDescriptor
         '''.stripIndent()))
-        def descriptor = PluginDescriptor.fromProperties('described', null, props)
+        def definition = PluginDefinition.fromProperties('described', props)
 
         when:
-        def metadata = PluginUtils.extractPluginMetadata(descriptor, pluginClass)
+        def metadata = PluginUtils.createPluginInfo(pluginClass, definition, null)
 
         then: 'the compiled descriptor is the single source of the metadata'
         metadata.pluginVersion == '1.0.0'
@@ -333,17 +332,16 @@ class PluginDiscoverySpec extends Specification {
         metadata.loadAfterNames as List == ['fromDescriptor']
     }
 
-    def 'extracting metadata with a descriptor for another class fails'() {
+    def 'a plugin with a descriptor for another class is rejected'() {
         given:
         def pluginClass = new GroovyClassLoader().parseClass('''
             @grails.plugins.metadata.GrailsPluginDescriptor
             class MismatchedGrailsPlugin extends grails.plugins.Plugin { }
         ''')
-        def descriptor = new PluginDescriptor(null,
-                new PluginDefinition.Builder(pluginName: 'mismatched', pluginClass: 'com.example.OtherGrailsPlugin').build())
+        def definition = new PluginDefinition.Builder(pluginName: 'mismatched', pluginClass: 'com.example.OtherGrailsPlugin').build()
 
         when:
-        PluginUtils.extractPluginMetadata(descriptor, pluginClass)
+        PluginUtils.createPluginInfo(pluginClass, definition, null)
 
         then:
         def e = thrown(PluginException)
@@ -459,8 +457,8 @@ class PluginDiscoverySpec extends Specification {
         def descriptors = PluginUtils.scanPluginDescriptorResources(classLoader)
 
         then: 'both descriptors are discovered with normalized logical names'
-        descriptors*.pluginName == ['alpha', 'betaStarter']
-        descriptors*.pluginClassName == ['com.example.AlphaGrailsPlugin', 'com.example.BetaStarterGrailsPlugin']
+        descriptors.values()*.pluginName == ['alpha', 'betaStarter']
+        descriptors.values()*.pluginClass == ['com.example.AlphaGrailsPlugin', 'com.example.BetaStarterGrailsPlugin']
 
         cleanup:
         classLoader?.close()
@@ -487,7 +485,7 @@ class PluginDiscoverySpec extends Specification {
         ''')
 
         when: 'metadata is extracted'
-        def metadata = PluginUtils.extractPluginMetadata(pluginClass)
+        def metadata = PluginUtils.createPluginInfo(pluginClass)
 
         then: 'all metadata is extracted from the annotation without calling the constructor'
         metadata.name == 'annotatedPlugin'
@@ -570,31 +568,30 @@ class PluginDiscoverySpec extends Specification {
         'AnnotatedNameDescriptor'            | "(name = 'annotated-plugin')" || 'annotatedPlugin'
     }
 
-    def 'treats plugin metadata with the same name as equal'() {
-        given: 'two metadata instances that differ in every field except the name'
-        def meta1 = new PluginMetadata(new PluginDefinition.Builder(pluginName: 'test', pluginClass: 'a.TestGrailsPlugin', pluginVersion: '1.0', loadAfter: ['a']).build(), String)
-        def meta2 = new PluginMetadata(new PluginDefinition.Builder(pluginName: 'test', pluginClass: 'b.TestGrailsPlugin', pluginVersion: '2.0', dependsOn: [dep: '1.0'], enabled: false).build(), String)
+    def 'treats discovered plugins with the same name as equal'() {
+        given: 'two plugins that differ in every field except the name'
+        def loader = new GroovyClassLoader()
+        def first = loader.parseClass('package a; class TestGrailsPlugin extends grails.plugins.Plugin { }')
+        def second = loader.parseClass('package b; class TestGrailsPlugin extends grails.plugins.Plugin { }')
+        def info1 = new PluginInfo(new PluginDefinition.Builder(pluginName: 'test', pluginClass: 'a.TestGrailsPlugin', pluginVersion: '1.0', loadAfter: ['a']).build(), first, null, null)
+        def info2 = new PluginInfo(new PluginDefinition.Builder(pluginName: 'test', pluginClass: 'b.TestGrailsPlugin', pluginVersion: '2.0', dependsOn: [dep: '1.0'], enabled: false).build(), second, null, null)
 
-        expect: 'metadata equality is based on name only, not other attributes'
-        meta1 == meta2
-        meta1.hashCode() == meta2.hashCode()
+        expect: 'equality is based on name only, not other attributes'
+        info1 == info2
+        info1.hashCode() == info2.hashCode()
     }
 
-    def 'treats plugin metadata with different names as distinct'() {
-        given: 'two metadata instances with different names'
-        def meta1 = new PluginMetadata(new PluginDefinition.Builder(pluginName: 'alpha', pluginClass: 'AlphaGrailsPlugin', pluginVersion: '1.0').build(), String)
-        def meta2 = new PluginMetadata(new PluginDefinition.Builder(pluginName: 'beta', pluginClass: 'BetaGrailsPlugin', pluginVersion: '1.0').build(), String)
+    def 'treats discovered plugins with different names as distinct, and names them in their string form'() {
+        given:
+        def loader = new GroovyClassLoader()
+        def alpha = loader.parseClass('class AlphaGrailsPlugin extends grails.plugins.Plugin { }')
+        def beta = loader.parseClass('class BetaGrailsPlugin extends grails.plugins.Plugin { }')
+        def info1 = new PluginInfo(new PluginDefinition.Builder(pluginName: 'alpha', pluginClass: 'AlphaGrailsPlugin', pluginVersion: '1.0').build(), alpha, null, null)
+        def info2 = new PluginInfo(new PluginDefinition.Builder(pluginName: 'beta', pluginClass: 'BetaGrailsPlugin', pluginVersion: '1.0').build(), beta, null, null)
 
-        expect: 'metadata with different names are not equal'
-        meta1 != meta2
-    }
-
-    def 'includes the plugin name in plugin metadata string output'() {
-        given: 'plugin metadata for a named plugin'
-        def meta = new PluginMetadata(new PluginDefinition.Builder(pluginName: 'myPlugin', pluginClass: 'MyGrailsPlugin', pluginVersion: '1.0').build(), String)
-
-        expect: 'the string form includes the logical plugin name'
-        meta.toString() == 'GrailsPluginClassMetadata[myPlugin]'
+        expect:
+        info1 != info2
+        info1.toString() == 'PluginInfo[name=alpha, class=AlphaGrailsPlugin]'
     }
 
     def 'exposes the expected plugin utility constants'() {

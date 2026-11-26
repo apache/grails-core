@@ -20,9 +20,7 @@ package org.grails.plugins;
 
 import grails.plugins.GrailsPlugin;
 import org.apache.grails.core.plugins.DefaultPluginDiscovery;
-import org.apache.grails.core.plugins.PluginDescriptor;
 import org.apache.grails.core.plugins.PluginInfo;
-import org.apache.grails.core.plugins.PluginUtils;
 
 public class MockPluginDiscovery extends DefaultPluginDiscovery {
 
@@ -36,19 +34,15 @@ public class MockPluginDiscovery extends DefaultPluginDiscovery {
     }
 
     /**
-     * Registers a plugin the test created, by its definition.
+     * Registers a plugin the test created, by the {@link PluginInfo} it was created from.
      *
-     * @param plugin a {@link DefaultGrailsPlugin} or {@link BinaryGrailsPlugin}
+     * @param plugin a {@link DefaultGrailsPlugin}
      */
     public void registerMockPlugin(GrailsPlugin plugin) {
         if (!(plugin instanceof DefaultGrailsPlugin defaultPlugin)) {
-            throw new IllegalArgumentException("A mock plugin is a DefaultGrailsPlugin or a BinaryGrailsPlugin, not " + plugin);
+            throw new IllegalArgumentException("A mock plugin is a DefaultGrailsPlugin, not " + plugin);
         }
-        boolean binary = plugin instanceof BinaryGrailsPlugin;
-        PluginDescriptor descriptor = binary ?
-                ((BinaryGrailsPlugin) plugin).getPluginDescriptor() :
-                new PluginDescriptor(null, defaultPlugin.getDefinition());
-        registerMockPlugin(PluginUtils.createPluginInfoByDescriptor(plugin.getPluginClass(), descriptor, !binary));
+        registerMockPlugin(defaultPlugin.getPluginInfo());
     }
 
     public void registerMockPlugin(PluginInfo pluginInfo) {

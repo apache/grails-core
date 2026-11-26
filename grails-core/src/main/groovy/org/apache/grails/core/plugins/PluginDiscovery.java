@@ -22,7 +22,6 @@ import java.util.Collection;
 import java.util.List;
 
 import org.springframework.core.env.Environment;
-import org.springframework.core.io.Resource;
 
 import org.apache.grails.core.plugins.filters.PluginFilter;
 
@@ -53,15 +52,6 @@ public interface PluginDiscovery {
      * @param environment the environment used to determine plugin filtering and ordering
      */
     void init(Environment environment);
-
-    /**
-     * Returns plugins supplied dynamically instead of being discovered from classpath descriptors.
-     *
-     * <p>This is most commonly used by tests that configure plugin classes or resources directly.</p>
-     *
-     * @return dynamically configured plugins discovered outside the standard classpath descriptor scan
-     */
-    Collection<PluginInfo> getDynamicPlugins();
 
     /**
      * Determines whether a plugin failed during discovery or dependency resolution.
@@ -156,39 +146,13 @@ public interface PluginDiscovery {
     void setPluginFilter(PluginFilter filter);
 
     /**
-     * Configures Groovy plugin resources to be treated as dynamic plugins.
+     * Registers plugin classes directly, in addition to the plugins found on the class path. Each is a concrete
+     * {@code grails.plugins.Plugin} subclass annotated with {@code @GrailsPluginDescriptor}, which supplies its
+     * definition.
      *
-     * @param pluginResources the resources containing dynamically defined plugin classes
-     */
-    void setPluginResources(Resource[] pluginResources);
-
-    /**
-     * Configures resource locations to search for dynamically defined plugins.
-     *
-     * @param pluginResources the resource location patterns containing dynamically defined plugins
-     */
-    void setPluginResources(String[] pluginResources);
-
-    /**
-     * Configures a single resource location to search for dynamically defined plugins.
-     *
-     * @param resourcePath the resource location containing dynamically defined plugins
-     */
-    void setPluginResources(String resourcePath);
-
-    /**
-     * Configures explicit plugin classes to be treated as dynamic plugins.
-     *
-     * @param pluginClasses the dynamically supplied plugin classes
+     * @param pluginClasses the plugin classes
      */
     void setPluginClasses(Class<?>[] pluginClasses);
-
-    /**
-     * Returns the configured dynamic plugin resources.
-     *
-     * @return the dynamic plugin resources currently configured for discovery
-     */
-    Resource[] getPluginResources();
 
     /**
      * Resets the discovery state so plugins can be discovered again.

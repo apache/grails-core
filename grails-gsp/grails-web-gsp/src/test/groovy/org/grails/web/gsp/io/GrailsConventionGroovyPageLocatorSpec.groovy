@@ -26,12 +26,12 @@ import grails.util.GrailsWebMockUtil
 import groovy.xml.XmlSlurper
 
 import org.apache.grails.core.plugins.filters.NoOpPluginFilter
-import org.apache.grails.core.plugins.PluginDescriptor
+import org.apache.grails.core.plugins.PluginInfo
 import org.grails.core.io.SimpleMapResourceLoader
 import org.grails.gsp.compiler.GroovyPageParser
 import org.grails.gsp.io.GroovyPageCompiledScriptSource
 import org.grails.gsp.io.GroovyPageResourceScriptSource
-import org.grails.plugins.BinaryGrailsPlugin
+import org.grails.plugins.DefaultGrailsPlugin
 import org.grails.plugins.CoreGrailsPlugin
 import org.grails.plugins.MockPluginDiscovery
 import org.grails.plugins.MockGrailsPluginManager
@@ -237,9 +237,9 @@ artefacts.Resource=org.grails.web.gsp.io.TestBinaryResource
         def resource = new MockBinaryPluginResource(str.bytes)
         def properties = new Properties()
         properties.load(new StringReader(str))
-        def descriptor = PluginDescriptor.fromProperties('testBinary', resource, properties)
+        def descriptor = new PluginInfo(grails.plugins.metadata.PluginDefinition.fromProperties('testBinary', properties), TestBinaryGrailsPlugin, resource, null)
         resource.relativesResources['static/css/main.css'] = new ByteArrayResource(''.bytes)
-        def binaryPlugin = new BinaryGrailsPlugin(TestBinaryGrailsPlugin, descriptor, new DefaultGrailsApplication())
+        def binaryPlugin = new DefaultGrailsPlugin(descriptor, new DefaultGrailsApplication())
         GroovyPageParser gpp = new GroovyPageParser("binaryView", "/test/binaryView.gsp", "/test/binaryView.gsp", new ByteArrayInputStream("hello world".bytes), "UTF-8", "HTML", null)
         gpp.packageName = "foo.bar"
         gpp.className = "test_binary_view"
@@ -268,7 +268,7 @@ artefacts.Resource=org.grails.web.gsp.io.TestBinaryResource
 }
 
 /**
- * A binary plugin described by the descriptor the test builds. It carries no annotation, so that no other
+ * A plugin described by the descriptor the test builds. It carries no annotation, so that no other
  * test discovers it from the class path.
  */
 class TestBinaryGrailsPlugin extends Plugin {

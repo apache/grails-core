@@ -25,8 +25,8 @@ import org.springframework.aot.hint.RuntimeHints;
 import org.springframework.aot.hint.RuntimeHintsRegistrar;
 import org.springframework.util.ClassUtils;
 
+import grails.plugins.metadata.PluginDefinition;
 import org.apache.grails.common.aot.RegistrableTypes;
-import org.apache.grails.core.plugins.PluginDescriptor;
 import org.apache.grails.core.plugins.PluginUtils;
 
 /**
@@ -45,9 +45,9 @@ public class GrailsPluginRuntimeHints implements RuntimeHintsRegistrar {
         if (loader == null) {
             return;
         }
-        for (PluginDescriptor descriptor : PluginUtils.scanPluginDescriptorResources(loader)) {
-            registerPluginResources(hints, loader, descriptor.getPluginName());
-            String pluginClass = descriptor.getPluginClassName();
+        for (PluginDefinition definition : PluginUtils.scanPluginDescriptorResources(loader).values()) {
+            registerPluginResources(hints, loader, definition.getPluginName());
+            String pluginClass = definition.getPluginClass();
             if (RegistrableTypes.loads(pluginClass, loader)) {
                 hints.reflection().registerTypeIfPresent(loader, pluginClass,
                         MemberCategory.INVOKE_DECLARED_CONSTRUCTORS,

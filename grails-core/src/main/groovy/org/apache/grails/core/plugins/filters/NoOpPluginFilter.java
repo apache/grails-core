@@ -20,7 +20,7 @@ package org.apache.grails.core.plugins.filters;
 
 import java.util.List;
 
-import org.apache.grails.core.plugins.PluginMetadata;
+import org.apache.grails.core.plugins.PluginInfo;
 
 /**
  * A {@link PluginFilter} implementation that performs no filtering.
@@ -37,7 +37,7 @@ public class NoOpPluginFilter implements PluginFilter {
      * @return the same {@code original} list reference, without modification
      */
     @Override
-    public List<PluginMetadata> filterPluginList(List<PluginMetadata> original) {
+    public List<PluginInfo> filterPluginList(List<PluginInfo> original) {
         return original;
     }
 }

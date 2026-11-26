@@ -235,15 +235,15 @@ class PluginDescriptorTransformationSpec extends Specification {
 
     private static Map<String, grails.plugins.metadata.PluginDefinition> definitionsOf(File output) {
         new URLClassLoader([output.toURI().toURL()] as URL[], (ClassLoader) null).withCloseable { loader ->
-            PluginUtils.scanPluginDescriptorResources(loader).collectEntries {
-                [(it.pluginName): it.definition]
+            PluginUtils.scanPluginDescriptorResources(loader).values().collectEntries {
+                [(it.pluginName): it]
             }
         }
     }
 
     private static Map descriptors(File output) {
         new URLClassLoader([output.toURI().toURL()] as URL[], (ClassLoader) null).withCloseable { loader ->
-            PluginUtils.scanPluginDescriptorResources(loader).collectEntries {
+            PluginUtils.scanPluginDescriptorResources(loader).values().collectEntries {
                 [(it.pluginName): it.providedClasses]
             }
         }

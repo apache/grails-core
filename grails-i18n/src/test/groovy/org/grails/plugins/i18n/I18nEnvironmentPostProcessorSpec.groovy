@@ -81,7 +81,7 @@ locales=fr
     private static PluginInfo pluginInfo(String prefix) {
         Class<?> pluginClass = new GroovyClassLoader(I18nEnvironmentPostProcessorSpec.classLoader).parseClass(
                 "@grails.plugins.metadata.GrailsPluginDescriptor class ${prefix}GrailsPlugin extends grails.plugins.Plugin { }")
-        PluginUtils.createPluginInfo(pluginClass, null, true)
+        PluginUtils.createPluginInfo(pluginClass)
     }
 
     private I18nEnvironmentPostProcessor processor(List<PluginInfo> topological, List<PluginInfo> load) {

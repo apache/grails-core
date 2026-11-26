@@ -1720,6 +1720,33 @@ descriptors only, and it no longer creates a plugin to find out what it is. A de
 a class missing from the class path, or a class that is not a `Plugin`, stops the application from starting instead of
 the plugin being skipped.
 
+===== The Runtime Plugin API
+
+Every loaded plugin, whether discovery found it on the class path or its class was registered directly, is one class,
+`org.grails.plugins.DefaultGrailsPlugin`. What it offers depends on what the plugin has: the artefacts its descriptor
+lists, the precompiled views of its `views.properties` (`resolveView`), and the static resources (`getResource`),
+message bundles (`getProperties(Locale)`) and project directory (`getProjectDirectory`) found where its classes were
+loaded from. The public APIs that described the old model are removed:
+
+* `BinaryGrailsPlugin` and `AbstractGrailsPlugin` are removed. Code that tested `plugin instanceof BinaryGrailsPlugin`
+  to resolve a plugin's views or resources tests `instanceof DefaultGrailsPlugin`.
+* `PluginDescriptor` and `PluginMetadata` (package `org.apache.grails.core.plugins`) are removed. `PluginInfo`, the one
+  record discovery and the plugin filters work with, holds the plugin's `PluginDefinition`, its class, the
+  `plugin.properties` it was read from and its configuration. `PluginUtils.scanPluginDescriptorResources` returns each
+  descriptor with the definition read from it, and `PluginUtils.createPluginInfo(Class)` describes a plugin class
+  registered directly.
+* `GrailsPlugin.getInstance()` is removed; `getPluginInstance()` returns the plugin's `Plugin` instance. `refresh()`,
+  `getProperties()`, `getDescriptor()`, `getPluginDir()`, `setDescriptor`, `setBasePlugin`, `addExclude` and
+  `getEvictionNames()` are removed, `GrailsPlugin` is no longer `Comparable`, and `grails.plugins.GrailsPluginInfo` is
+  removed, its `getName()`, `getVersion()` and `getFullName()` now being members of `GrailsPlugin`.
+* The public `enabled` field of `Plugin` is removed: whether a plugin is enabled is the `enabled` attribute of its
+  `@GrailsPluginDescriptor`, which `GrailsPlugin.isEnabled()` reports.
+* Plugin source files are no longer compiled at run time. `PluginDiscovery.setPluginResources`, `getPluginResources`
+  and `getDynamicPlugins`, the `DefaultPluginDiscovery` constructors taking resource paths or resources, the
+  `ProfilingGrailsPluginManager` constructors taking them, `GrailsPluginManager.refreshPlugin` and
+  `GrailsPluginManager.getUserPlugins` are removed. Register compiled plugin classes with
+  `PluginDiscovery.setPluginClasses` or `new DefaultPluginDiscovery(Class[])` instead.
+
 ===== Required Actions
 
 * Annotate each plugin class with `@GrailsPluginDescriptor`, make it extend `grails.plugins.Plugin`, move its metadata
@@ -1730,3 +1757,5 @@ the plugin being skipped.
 * A plugin written in Java adds `grails-core` to its `annotationProcessor` configuration, so the Grails annotation
   processor writes its descriptor.
 * Merge the lines of `META-INF/grails/plugins.imports` when combining plugin archives into a single JAR.
+* Replace references to `BinaryGrailsPlugin`, `PluginDescriptor`, `PluginMetadata`, `GrailsPlugin.getInstance()`,
+  `refreshPlugin` and `setPluginResources` as described above.

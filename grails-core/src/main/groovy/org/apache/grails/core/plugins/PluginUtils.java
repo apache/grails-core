@@ -179,13 +179,14 @@ public final class PluginUtils {
     }
 
     /**
-     * Reads the descriptor of every plugin listed in a {@code META-INF/grails/plugins.imports} on a class path.
-     * A name listed by more than one jar yields one descriptor per jar.
+     * Reads the descriptor of every plugin listed in a {@code META-INF/grails/plugins.imports} on a class path,
+     * without loading the plugins' classes. A name listed by more than one jar yields one entry per jar.
      *
+     * @return each {@code plugin.properties} found, with the definition read from it, in class path order
      * @throws PluginException if a listed plugin has no descriptor, or a descriptor cannot be read
      */
-    public static List<PluginDescriptor> scanPluginDescriptorResources(ClassLoader classLoader) {
-        List<PluginDescriptor> descriptors = new ArrayList<>();
+    public static Map<Resource, PluginDefinition> scanPluginDescriptorResources(ClassLoader classLoader) {
+        Map<Resource, PluginDefinition> descriptors = new LinkedHashMap<>();
         for (String pluginName : scanPluginImports(classLoader)) {
             String descriptorPath = getPluginDescriptorPath(pluginName);
             List<URL> urls = resources(classLoader, descriptorPath);
@@ -194,18 +195,18 @@ public final class PluginUtils {
                         " but has no " + descriptorPath);
             }
             for (URL url : urls) {
-                descriptors.add(readDescriptor(pluginName, url));
+                descriptors.put(new UrlResource(url), readDefinition(pluginName, url));
             }
         }
         return descriptors;
     }
 
-    private static PluginDescriptor readDescriptor(String pluginName, URL url) {
+    private static PluginDefinition readDefinition(String pluginName, URL url) {
         try (InputStream input = url.openStream();
              InputStreamReader reader = new InputStreamReader(input, StandardCharsets.UTF_8)) {
             Properties properties = new Properties();
             properties.load(reader);
-            return PluginDescriptor.fromProperties(pluginName, new UrlResource(url), properties);
+            return PluginDefinition.fromProperties(pluginName, properties);
         }
         catch (IOException | IllegalArgumentException e) {
             throw new PluginException("Invalid Grails plugin descriptor " + url + ": " + e.getMessage(), e);
@@ -265,45 +266,34 @@ public final class PluginUtils {
         if (url == null) {
             return null;
         }
-        PluginDefinition published = readDescriptor(name, url).getDefinition();
+        PluginDefinition published = readDefinition(name, url);
         return pluginClass.getName().equals(published.getPluginClass()) ? published.getPluginVersion() : null;
     }
 
     /**
-     * @param pluginClass a plugin class registered directly
-     * @param descriptorResource the source file it was compiled from, or {@code null}
-     * @param dynamic whether the plugin was compiled from source at run time
+     * The plugin a class registered directly is: its definition is read from its {@link GrailsPluginDescriptor},
+     * and its configuration from its class loader.
+     *
+     * @throws PluginException if the class is not a Grails plugin
      */
-    public static PluginInfo createPluginInfo(Class<?> pluginClass, @Nullable Resource descriptorResource, boolean dynamic) {
-        return createPluginInfoByDescriptor(pluginClass, new PluginDescriptor(descriptorResource, definitionOf(pluginClass)), dynamic);
+    public static PluginInfo createPluginInfo(Class<?> pluginClass) {
+        PluginDefinition definition = definitionOf(pluginClass);
+        return new PluginInfo(definition, pluginClass, null,
+                readPluginConfiguration(definition.getPluginName(), pluginClass.getClassLoader()));
     }
 
     /**
-     * @param pluginClass the class the descriptor names
-     * @param descriptor the plugin's descriptor
-     * @param dynamic whether the plugin was compiled from source at run time
-     * @throws PluginException if the class is not the descriptor's Grails plugin class
+     * The plugin a descriptor on the class path describes.
+     *
+     * @param pluginClass the class the definition names, loaded
+     * @param definition the definition read from the descriptor
+     * @param descriptorResource the descriptor, or {@code null} when the definition was not read from one
+     * @throws PluginException if the class is not the definition's Grails plugin class
      */
-    public static PluginInfo createPluginInfoByDescriptor(Class<?> pluginClass, PluginDescriptor descriptor, boolean dynamic) {
-        PluginMetadata metadata = extractPluginMetadata(descriptor, pluginClass);
-        ClassLoader loader = pluginClass.getClassLoader();
-        return new PluginInfo(descriptor, metadata, readPluginConfiguration(metadata.getName(), loader), dynamic);
-    }
-
-    /**
-     * @throws PluginException if the class is not the descriptor's Grails plugin class
-     */
-    public static PluginMetadata extractPluginMetadata(PluginDescriptor descriptor, Class<?> pluginClass) {
-        if (!pluginClass.getName().equals(descriptor.getPluginClassName()) || !Plugin.class.isAssignableFrom(pluginClass)) {
-            throw new PluginException("Grails plugin [" + descriptor.getPluginName() + "] names plugin class [" +
-                    descriptor.getPluginClassName() + "], but [" + pluginClass.getName() + "] is not that grails.plugins.Plugin");
-        }
-        return new PluginMetadata(descriptor.getDefinition(), pluginClass);
-    }
-
-    /** The metadata of a plugin class registered directly. */
-    public static PluginMetadata extractPluginMetadata(Class<?> pluginClass) {
-        return new PluginMetadata(definitionOf(pluginClass), pluginClass);
+    public static PluginInfo createPluginInfo(Class<?> pluginClass, PluginDefinition definition,
+            @Nullable Resource descriptorResource) {
+        return new PluginInfo(definition, pluginClass, descriptorResource,
+                readPluginConfiguration(definition.getPluginName(), pluginClass.getClassLoader()));
     }
 
     /**

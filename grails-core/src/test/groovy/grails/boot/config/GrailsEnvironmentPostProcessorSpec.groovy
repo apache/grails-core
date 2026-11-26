@@ -19,10 +19,8 @@
 package grails.boot.config
 
 import grails.util.Environment
-import org.apache.grails.core.plugins.PluginDescriptor
 import org.apache.grails.core.plugins.PluginDiscovery
 import org.apache.grails.core.plugins.PluginInfo
-import org.apache.grails.core.plugins.PluginMetadata
 import org.springframework.boot.bootstrap.ConfigurableBootstrapContext
 import org.springframework.boot.SpringApplication
 import org.springframework.core.env.StandardEnvironment
@@ -274,8 +272,10 @@ class GrailsEnvironmentPostProcessorSpec extends Specification {
     }
 
     private static PluginInfo createPluginInfo(String name, Resource configResource) {
+        Class<?> pluginClass = new GroovyClassLoader().parseClass(
+                "package test; class ${name.capitalize()}GrailsPlugin extends grails.plugins.Plugin {}")
         def definition = new grails.plugins.metadata.PluginDefinition.Builder(
-                pluginName: name, pluginClass: "test.${name}GrailsPlugin", pluginVersion: '1.0', grailsVersionRange: '*').build()
-        return new PluginInfo(new PluginDescriptor(null, definition), new PluginMetadata(definition, null), configResource, false)
+                pluginName: name, pluginClass: pluginClass.name, pluginVersion: '1.0', grailsVersionRange: '*').build()
+        return new PluginInfo(definition, pluginClass, null, configResource)
     }
 }

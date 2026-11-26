@@ -25,7 +25,10 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.springframework.core.io.Resource;
+
 import grails.plugins.exceptions.PluginException;
+import grails.plugins.metadata.PluginDefinition;
 
 /**
  * Finds the Grails plugins on a class path: every name listed in a {@code META-INF/grails/plugins.imports},
@@ -47,27 +50,29 @@ public class ClasspathPluginFinder {
      */
     public List<PluginInfo> findClasspathPlugins(ClassLoader classLoader, String targetGrailsVersion) {
         Map<String, PluginInfo> byName = new LinkedHashMap<>();
-        for (PluginDescriptor descriptor : PluginUtils.scanPluginDescriptorResources(classLoader)) {
-            Class<?> pluginClass = loadPluginClass(descriptor, classLoader);
-            PluginInfo candidate = PluginUtils.createPluginInfoByDescriptor(pluginClass, descriptor, false);
+        for (Map.Entry<Resource, PluginDefinition> descriptor : PluginUtils.scanPluginDescriptorResources(classLoader).entrySet()) {
+            Resource resource = descriptor.getKey();
+            PluginDefinition definition = descriptor.getValue();
+            Class<?> pluginClass = loadPluginClass(definition, resource, classLoader);
+            PluginInfo candidate = PluginUtils.createPluginInfo(pluginClass, definition, resource);
             candidate.isGrailsVersionCompatible(targetGrailsVersion);
             PluginInfo previous = byName.putIfAbsent(candidate.getName(), candidate);
             if (previous != null && previous.getPluginClass() != candidate.getPluginClass()) {
                 throw new PluginException("Conflicting definitions for Grails plugin [" + candidate.getName() + "]: " +
-                        previous.getPluginDescriptor() + " and " + candidate.getPluginDescriptor());
+                        previous.getDescriptorResource() + " and " + candidate.getDescriptorResource());
             }
         }
         LOG.debug("Found [{}] plugins on the class path", byName.size());
         return List.copyOf(byName.values());
     }
 
-    private static Class<?> loadPluginClass(PluginDescriptor descriptor, ClassLoader classLoader) {
+    private static Class<?> loadPluginClass(PluginDefinition definition, Resource resource, ClassLoader classLoader) {
         try {
-            return classLoader.loadClass(descriptor.getPluginClassName());
+            return classLoader.loadClass(definition.getPluginClass());
         }
         catch (ClassNotFoundException | LinkageError e) {
-            throw new PluginException("Grails plugin [" + descriptor.getPluginName() + "] names plugin class [" +
-                    descriptor.getPluginClassName() + "], which cannot be loaded: " + descriptor.getResource(), e);
+            throw new PluginException("Grails plugin [" + definition.getPluginName() + "] names plugin class [" +
+                    definition.getPluginClass() + "], which cannot be loaded: " + resource, e);
         }
     }
 }

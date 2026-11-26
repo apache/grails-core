@@ -22,7 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.grails.core.plugins.PluginMetadata;
+import org.apache.grails.core.plugins.PluginInfo;
 
 /**
  * A {@link PluginFilter} implementation that removes explicitly named plugins and any plugins that
@@ -56,7 +56,7 @@ public class ExcludingPluginFilter extends BasePluginFilter {
      * @return a filtered list that preserves the original order of the remaining plugins
      */
     @Override
-    protected List<PluginMetadata> getPluginList(List<PluginMetadata> original, List<PluginMetadata> pluginList) {
+    protected List<PluginInfo> getPluginList(List<PluginInfo> original, List<PluginInfo> pluginList) {
         var newList = new ArrayList<>(original);
         newList.removeIf(pluginList::contains);
         return newList;
@@ -66,14 +66,14 @@ public class ExcludingPluginFilter extends BasePluginFilter {
      * Adds plugins that depend on the supplied plugin, so they are excluded as well.
      *
      * <p>The plugin itself is ignored during the scan, and each matching dependent is registered through
-     * {@link #registerDependency(List, PluginMetadata)} so recursive traversal and deduplication are handled
+     * {@link #registerDependency(List, PluginInfo)} so recursive traversal and deduplication are handled
      * consistently.</p>
      *
      * @param additionalList the list collecting plugins that should also be excluded
      * @param plugin the plugin whose dependents should be excluded
      */
     @Override
-    protected void addPluginDependencies(List<PluginMetadata> additionalList, PluginMetadata plugin) {
+    protected void addPluginDependencies(List<PluginInfo> additionalList, PluginInfo plugin) {
         var pluginName = plugin.getName();
         getAllPlugins().stream()
                 .filter(p -> !pluginName.equals(p.getName())) // looking for dependents, so don't include self

@@ -120,7 +120,7 @@ public class GrailsEnvironmentPostProcessor implements EnvironmentPostProcessor,
      * This means earlier plugins (in sort order) get higher property precedence.</p>
      *
      * <p>Property sources are added with the same names and types that
-     * {@link org.grails.plugins.AbstractGrailsPlugin} would produce:
+     * {@link org.grails.plugins.DefaultGrailsPlugin#getPropertySource()} looks up:
      * a {@link org.grails.config.NavigableMapPropertySource} with name
      * {@code "<pluginName>-plugin.yml"} or {@code "<pluginName>-plugin.groovy"},
      * and a {@link PrefixedMapPropertySource} for the {@code grails.plugins.<name>} prefix.</p>
@@ -160,14 +160,14 @@ public class GrailsEnvironmentPostProcessor implements EnvironmentPostProcessor,
                 for (PropertySource<?> ps : loaded) {
                     if (ps != null) {
                         // Add the prefixed property source (grails.plugins.<name>.<prop>),
-                        // matching what AbstractGrailsPlugin / loadApplicationConfig() does
+                        // matching what loadApplicationConfig() does
                         if (ps instanceof EnumerablePropertySource<?> eps) {
                             propertySources.addLast(new PrefixedMapPropertySource(
                                     "grails.plugins." + plugin.getName(), eps));
                         }
 
                         // Add the property source directly (NavigableMapPropertySource)
-                        // with the same name that AbstractGrailsPlugin would produce
+                        // with the name DefaultGrailsPlugin.getPropertySource() looks up
                         propertySources.addLast(ps);
                         loadedCount++;
                     }

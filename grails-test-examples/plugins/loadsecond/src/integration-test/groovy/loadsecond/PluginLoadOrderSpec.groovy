@@ -73,7 +73,7 @@ class PluginLoadOrderSpec extends Specification {
 
         then: "metadata is correct"
         plugin != null
-        plugin.instance instanceof LoadsecondGrailsPlugin
+        plugin.pluginInstance instanceof LoadsecondGrailsPlugin
     }
 
     def "loadAfter is declared correctly"() {
@@ -117,7 +117,7 @@ class PluginLoadOrderSpec extends Specification {
 
     def "plugin grails version constraint defaults to the Grails version it was compiled with"() {
         when: "getting the definition the compiler published for the plugin"
-        def definition = pluginDiscovery.findPlugin('loadsecond').metadata.definition
+        def definition = pluginDiscovery.findPlugin('loadsecond').definition
 
         then: "the grails version constraint is the compiling Grails version or later"
         definition.grailsVersionRange == "${GrailsUtil.grailsVersion} > *"

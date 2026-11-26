@@ -29,7 +29,7 @@ plugins {
 version = '0.0.1'
 group = 'functional.tests.plugin'
 
-// TODO: the fileSystemShortName in the BinaryGrailsPlugin must match the plugin name for views to be found on the classpath
+// TODO: the fileSystemShortName of the plugin (DefaultGrailsPlugin) must match the plugin name for views to be found on the classpath
 dependencies {
     implementation platform(project(':grails-bom'))
 

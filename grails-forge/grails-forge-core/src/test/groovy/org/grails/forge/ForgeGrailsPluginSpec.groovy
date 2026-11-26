@@ -79,7 +79,7 @@ class ForgeGrailsPluginSpec extends Specification {
 
         and: 'the descriptor carries the plugin metadata'
         GrailsPlugin plugin = pluginManager.getGrailsPlugin('forge')
-        plugin.instance instanceof ForgeGrailsPlugin
+        plugin.pluginInstance instanceof ForgeGrailsPlugin
         plugin.version
     }
 

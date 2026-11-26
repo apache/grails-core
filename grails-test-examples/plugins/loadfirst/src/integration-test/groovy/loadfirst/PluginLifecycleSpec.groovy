@@ -65,7 +65,7 @@ class PluginLifecycleSpec extends Specification {
 
         then: "instance is correct type"
         plugin != null
-        plugin.instance instanceof LoadfirstGrailsPlugin
+        plugin.pluginInstance instanceof LoadfirstGrailsPlugin
     }
 
     def "plugin is loaded and active"() {
@@ -92,7 +92,7 @@ class PluginLifecycleSpec extends Specification {
 
     def "plugin version constraint defaults to the Grails version it was compiled with"() {
         when: "getting the definition the compiler published for the plugin"
-        def definition = pluginDiscovery.findPlugin('loadfirst').metadata.definition
+        def definition = pluginDiscovery.findPlugin('loadfirst').definition
 
         then: "the grails version constraint is the compiling Grails version or later"
         definition.grailsVersionRange == "${GrailsUtil.grailsVersion} > *"

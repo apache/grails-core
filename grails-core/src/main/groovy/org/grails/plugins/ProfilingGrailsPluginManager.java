@@ -25,7 +25,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.springframework.context.ApplicationContext;
-import org.springframework.core.io.Resource;
 
 import grails.core.GrailsApplication;
 import grails.plugins.DefaultGrailsPluginManager;
@@ -53,42 +52,9 @@ public class ProfilingGrailsPluginManager extends DefaultGrailsPluginManager {
         this(application, reinitDiscovery(application, plugins));
     }
 
-    public ProfilingGrailsPluginManager(Resource[] pluginFiles, GrailsApplication application) {
-        this(application, reinitDiscovery(application, pluginFiles));
-    }
-
-    public ProfilingGrailsPluginManager(String resourcePath, GrailsApplication application) {
-        this(application, reinitDiscovery(application, resourcePath));
-    }
-
-    public ProfilingGrailsPluginManager(String[] pluginResources, GrailsApplication application) {
-        this(application, reinitDiscovery(application, pluginResources));
-    }
-
     private static PluginDiscovery reinitDiscovery(GrailsApplication application, Class<?>[] plugins) {
         PluginDiscovery discovery = resolveAndResetDiscovery(application);
         discovery.setPluginClasses(plugins);
-        discovery.init(application.getMainContext().getEnvironment());
-        return discovery;
-    }
-
-    private static PluginDiscovery reinitDiscovery(GrailsApplication application, String[] pluginResources) {
-        PluginDiscovery discovery = resolveAndResetDiscovery(application);
-        discovery.setPluginResources(pluginResources);
-        discovery.init(application.getMainContext().getEnvironment());
-        return discovery;
-    }
-
-    private static PluginDiscovery reinitDiscovery(GrailsApplication application, Resource[] pluginResources) {
-        PluginDiscovery discovery = resolveAndResetDiscovery(application);
-        discovery.setPluginResources(pluginResources);
-        discovery.init(application.getMainContext().getEnvironment());
-        return discovery;
-    }
-
-    private static PluginDiscovery reinitDiscovery(GrailsApplication application, String resourcePath) {
-        PluginDiscovery discovery = resolveAndResetDiscovery(application);
-        discovery.setPluginResources(resourcePath);
         discovery.init(application.getMainContext().getEnvironment());
         return discovery;
     }

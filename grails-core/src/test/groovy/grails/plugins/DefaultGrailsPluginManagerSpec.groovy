@@ -180,9 +180,7 @@ class DefaultGrailsPluginManagerSpec extends Specification {
                 gcl.parseClass("""
                     @grails.plugins.metadata.GrailsPluginDescriptor(grailsVersion = '$grailsVersion')
                     class ACustomGrailsPlugin extends grails.plugins.Plugin { }
-                """),
-                null,
-                true
+                """)
         )
     }
 }

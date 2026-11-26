@@ -27,8 +27,9 @@ import org.springframework.core.io.ResourceLoader
 import grails.core.DefaultGrailsApplication
 import grails.plugins.GrailsPlugin
 import grails.plugins.GrailsPluginManager
-import org.apache.grails.core.plugins.PluginDescriptor
-import org.grails.plugins.BinaryGrailsPlugin
+import grails.plugins.metadata.PluginDefinition
+import org.apache.grails.core.plugins.PluginInfo
+import org.grails.plugins.DefaultGrailsPlugin
 import org.grails.plugins.MockBinaryPluginResource
 import org.grails.plugins.TestBinaryGrailsPlugin
 
@@ -56,7 +57,7 @@ class ResourceLocatorSpec extends Specification {
         !resource
     }
 
-    void 'finds a static resource contributed by a binary plugin'() {
+    void 'finds a static resource contributed by a plugin'() {
         given: 'a resource locator configured with a plugin manager exposing a binary plugin'
         def resourceLocator = new MockResourceLocator(defaultResourceLoader: new MockStringResourceLoader())
         def binaryPlugin = binaryPlugin
@@ -73,7 +74,7 @@ class ResourceLocatorSpec extends Specification {
         resource
     }
 
-    private static BinaryGrailsPlugin getBinaryPlugin() {
+    private static DefaultGrailsPlugin getBinaryPlugin() {
         def pluginProps = '''
             format.version=1
             name=testBinary
@@ -85,9 +86,8 @@ class ResourceLocatorSpec extends Specification {
         }
         def properties = new Properties()
         properties.load(new StringReader(pluginProps))
-        new BinaryGrailsPlugin(
-                TestBinaryGrailsPlugin,
-                PluginDescriptor.fromProperties('testBinary', resource, properties),
+        new DefaultGrailsPlugin(
+                new PluginInfo(PluginDefinition.fromProperties('testBinary', properties), TestBinaryGrailsPlugin, resource, null),
                 new DefaultGrailsApplication().tap {
                     mainContext = new GenericApplicationContext()
                 }

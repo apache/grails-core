@@ -81,7 +81,7 @@ class HibernateGrailsPluginSpec extends Specification {
         config.getProperty('some.class', Class) == PluginSpecBook
 
         and: "the plugin recorded the configured data source names"
-        (grailsPlugin.instance as HibernateGrailsPlugin).dataSourceNames.contains(ConnectionSource.DEFAULT)
+        (grailsPlugin.pluginInstance as HibernateGrailsPlugin).dataSourceNames.contains(ConnectionSource.DEFAULT)
     }
 
     void "onChange is a no-op"() {

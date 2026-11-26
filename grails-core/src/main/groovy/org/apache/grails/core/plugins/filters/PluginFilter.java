@@ -20,10 +20,10 @@ package org.apache.grails.core.plugins.filters;
 
 import java.util.List;
 
-import org.apache.grails.core.plugins.PluginMetadata;
+import org.apache.grails.core.plugins.PluginInfo;
 
 /**
- * Defines a strategy for filtering a list of {@link PluginMetadata}.
+ * Defines a strategy for filtering a list of {@link PluginInfo}.
  */
 public interface PluginFilter {
 
@@ -33,5 +33,5 @@ public interface PluginFilter {
      * @param original the original plugin metadata list to filter
      * @return the filtered plugin metadata list
      */
-    List<PluginMetadata> filterPluginList(List<PluginMetadata> original);
+    List<PluginInfo> filterPluginList(List<PluginInfo> original);
 }

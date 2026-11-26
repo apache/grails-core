@@ -469,11 +469,6 @@ public abstract class AbstractGrailsPluginManager implements GrailsPluginManager
         return artefactIndex().get(theClass.getName());
     }
 
-    /** Drops the artefact index, after a plugin's artefacts changed without the plugins changing. */
-    protected void artefactsChanged() {
-        artefactIndex = null;
-    }
-
     private Map<String, GrailsPlugin> artefactIndex() {
         ArtefactIndex index = artefactIndex;
         if (index == null || !index.describes(plugins)) {

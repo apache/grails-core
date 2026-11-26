@@ -54,7 +54,7 @@ class DevelopmentModeWatchSpec extends Specification {
         })
         ConfigurableApplicationContext context = app.run()
         GrailsPluginManager pluginManager = context.getBean(GrailsPluginManager.BEAN_NAME, GrailsPluginManager)
-        def plugin = pluginManager.getGrailsPlugin('watchedResources').instance
+        def plugin = pluginManager.getGrailsPlugin('watchedResources').pluginInstance
 
         when:
         File watchedFile = new File('testWatchedFile.properties')
@@ -94,7 +94,7 @@ class DevelopmentModeWatchSpec extends Specification {
         ConfigurableApplicationContext child = childBuilder.run()
         ConfigurableApplicationContext parent = parentBuilder.context()
         GrailsPluginManager pluginManager = child.getBean(GrailsPluginManager.BEAN_NAME, GrailsPluginManager)
-        def plugin = pluginManager.getGrailsPlugin('watchedResources').instance
+        def plugin = pluginManager.getGrailsPlugin('watchedResources').pluginInstance
 
         then: 'the parent, which has no plugin manager of its own, started without a watch to install'
         parent.isActive()

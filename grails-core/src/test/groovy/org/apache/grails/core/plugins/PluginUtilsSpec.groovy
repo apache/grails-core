@@ -110,7 +110,7 @@ class PluginUtilsSpec extends Specification {
         new GroovyClassLoader(PluginUtilsSpec.classLoader).parseClass(source)
     }
 
-    def "extractPluginMetadata extracts loadAfter, loadBefore, and dependsOn from the annotation"() {
+    def "createPluginInfo extracts loadAfter, loadBefore, and dependsOn from the annotation"() {
         given:
         def pluginClass = parsePlugin('''
             @grails.plugins.metadata.GrailsPluginDescriptor(
@@ -119,7 +119,7 @@ class PluginUtilsSpec extends Specification {
         ''')
 
         when:
-        def metadata = PluginUtils.extractPluginMetadata(pluginClass)
+        def metadata = PluginUtils.createPluginInfo(pluginClass)
 
         then:
         metadata.name == 'pluginWithAllOrdering'
@@ -130,9 +130,9 @@ class PluginUtilsSpec extends Specification {
         metadata.getDependentVersion('delta') == '1.0'
     }
 
-    def "extractPluginMetadata returns empty arrays for plugin with no ordering declarations"() {
+    def "createPluginInfo returns empty arrays for plugin with no ordering declarations"() {
         when:
-        def metadata = PluginUtils.extractPluginMetadata(parsePlugin('''
+        def metadata = PluginUtils.createPluginInfo(parsePlugin('''
             @grails.plugins.metadata.GrailsPluginDescriptor
             class UtilsTestSimpleGrailsPlugin extends grails.plugins.Plugin { }
         '''))
@@ -146,9 +146,9 @@ class PluginUtilsSpec extends Specification {
         metadata.enabled
     }
 
-    def "extractPluginMetadata reads the environments the annotation includes and excludes"() {
+    def "createPluginInfo reads the environments the annotation includes and excludes"() {
         when:
-        def metadata = PluginUtils.extractPluginMetadata(parsePlugin('''
+        def metadata = PluginUtils.createPluginInfo(parsePlugin('''
             @grails.plugins.metadata.GrailsPluginDescriptor(environmentsIncludes = ['dev', 'test'], environmentsExcludes = ['prod'])
             class EnvironmentsGrailsPlugin extends grails.plugins.Plugin { }
         '''))
@@ -159,9 +159,9 @@ class PluginUtilsSpec extends Specification {
     }
 
     @Unroll
-    def "extractPluginMetadata rejects #description"() {
+    def "createPluginInfo rejects #description"() {
         when:
-        PluginUtils.extractPluginMetadata(pluginClass)
+        PluginUtils.createPluginInfo(pluginClass)
 
         then:
         def e = thrown(grails.plugins.exceptions.PluginException)
@@ -174,9 +174,9 @@ class PluginUtilsSpec extends Specification {
         'a Plugin without @GrailsPluginDescriptor'     | parsePlugin('class BareGrailsPlugin extends grails.plugins.Plugin { }')
     }
 
-    def "extractPluginMetadata does not create the plugin"() {
+    def "createPluginInfo does not create the plugin"() {
         when:
-        def metadata = PluginUtils.extractPluginMetadata(parsePlugin('''
+        def metadata = PluginUtils.createPluginInfo(parsePlugin('''
             @grails.plugins.metadata.GrailsPluginDescriptor
             class FailingConstructorUtilsGrailsPlugin extends grails.plugins.Plugin {
                 FailingConstructorUtilsGrailsPlugin() {
@@ -189,9 +189,9 @@ class PluginUtilsSpec extends Specification {
         metadata.name == 'failingConstructorUtils'
     }
 
-    def "extractPluginMetadata extracts multiple dependsOn names"() {
+    def "createPluginInfo extracts multiple dependsOn names"() {
         when:
-        def metadata = PluginUtils.extractPluginMetadata(parsePlugin('''
+        def metadata = PluginUtils.createPluginInfo(parsePlugin('''
             @grails.plugins.metadata.GrailsPluginDescriptor(dependsOn = ['core:1.0', 'i18n:1.0'])
             class PluginWithMultipleDepsGrailsPlugin extends grails.plugins.Plugin { }
         '''))
@@ -323,14 +323,14 @@ class PluginUtilsSpec extends Specification {
         !PluginUtils.supportsValueInIncludeExcludeMap(mapWithExcludes, 'prod')
     }
 
-    def "scanPluginDescriptorResources returns empty list when no descriptors found"() {
+    def "scanPluginDescriptorResources returns nothing when no descriptors are found"() {
         when:
         def descriptors = PluginUtils.scanPluginDescriptorResources(
                 new URLClassLoader([] as URL[], (ClassLoader) null)
         )
 
         then:
-        descriptors.empty
+        descriptors.isEmpty()
     }
 
     @Unroll
