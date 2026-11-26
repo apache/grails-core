@@ -1636,8 +1636,18 @@ Where there is no `grailsCacheManager`, as with `grails.cache.enabled: false`, t
 * A `grailsCacheManager` cannot be created from a bean with cached methods, as that bean is given `grailsCacheManager` while it is created; the context does not start. Create it from the dependencies of that bean instead.
 * A plugin compiled against Grails 8 keeps the Grails 8.0.1 behaviour for its cached classes until it is compiled against Grails 9.
 
+==== 34. Jakarta Expression Language 6 for Bean Validation
+
+GORM's default Expression Language implementation is Expressly 6.0.0, with Jakarta EL API 6.0.1, matching the EL 6
+API that Hibernate Validator 9 uses. This fixes message interpolation in standalone validation: reporting a standard
+`@DecimalMin` or `@DecimalMax` violation could previously throw `NoClassDefFoundError` for
+`jakarta.el.RecordELResolver` instead of returning the constraint violation and its message.
+
+If the application replaces GORM's default EL implementation, supply an EL 6-compatible implementation and remove
+explicit EL 5 version overrides. Applications using the default dependencies need no code changes.
+
 [[upgradingPluginDescriptors]]
-==== 34. Modernized Plugin Descriptors, Namespaced Packaging, and Optional Plugin Classes
+==== 35. Modernized Plugin Descriptors, Namespaced Packaging, and Optional Plugin Classes
 
 Grails 9 replaces the legacy `META-INF/grails-plugin.xml` descriptor with a collision-free, build-time-generated layout
 under `META-INF/grails/`:
