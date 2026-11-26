@@ -1,0 +1,63 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+format: 1
+kind: feature
+templateApi: 1
+name: grails-publish
+compatibility:
+  grails: '[9.0.0,10.0.0)'
+  forge: '[9.0.0,10.0.0)'
+title: Grails Publish
+description: Sets a plugin up for publishing to a Maven repository with the Grails Publish Gradle plugin
+category: Packaging
+applicationTypes: [plugin, web-plugin, rest-api-plugin]
+dependencies:
+  - scope: buildscript
+    coordinates: org.apache.grails.gradle:grails-publish
+buildPlugins:
+  - id: org.apache.grails.gradle.grails-publish
+    apply: true
+build:
+  extensions:
+    grailsPublish: |-
+      // TODO: the GitHub repository of the plugin, as owner/name. The links of the published POM are made from it.
+      githubSlug = 'TODO-owner/TODO-repository'
+      license {
+          name = 'Apache-2.0'
+      }
+      // The title is the name of the project unless it is set here.
+      // title = 'My Plugin'
+      // TODO: one sentence that says what the plugin is for.
+      desc = 'TODO: describe the plugin'
+      // TODO: the developers of the plugin, each by an id and a name.
+      developers = [todo: 'TODO: your name']
+readme: |
+  ## Publishing the plugin
+
+  The build applies the Grails Publish Gradle plugin (`org.apache.grails.gradle.grails-publish`), which publishes the plugin with its sources, its API documentation and a complete POM. Before the first publish, replace the `TODO` values of the `grailsPublish` block of `build.gradle`: `githubSlug`, `desc` and `developers`, and the `license` if it is not the Apache License 2.0. Set `group` in `build.gradle` to the group the plugin is published under.
+
+  The version of `gradle.properties` decides how the plugin is published:
+
+  - A version that ends with `-SNAPSHOT` is a snapshot. `./gradlew publishToMavenLocal` installs it into the local Maven repository, and `./gradlew publish` uploads it to the Maven repository of `MAVEN_PUBLISH_URL`, with `MAVEN_PUBLISH_USERNAME` and `MAVEN_PUBLISH_PASSWORD` where the repository asks for them.
+  - Any other version is a release, and a release is signed: every publish task, `publishToMavenLocal` among them, needs the signing key of `SIGNING_KEY`, read from the keyring file of `SIGNING_KEYRING` with `SIGNING_PASSPHRASE`, or by the local `gpg` command when no keyring file is named. `./gradlew publishToSonatype closeSonatypeStagingRepository` uploads a release to the Nexus staging repository of `NEXUS_PUBLISH_URL`, with `NEXUS_PUBLISH_USERNAME`, `NEXUS_PUBLISH_PASSWORD` and `NEXUS_PUBLISH_STAGING_PROFILE_ID`.
+
+  `GRAILS_PUBLISH_RELEASE`, set to `true` or `false`, decides between the two whatever the version is. Each of the other names is an environment variable; the Gradle properties `mavenPublishUrl`, `mavenPublishUsername`, `mavenPublishPassword`, `nexusPublishUrl`, `nexusPublishUsername`, `nexusPublishPassword`, `nexusPublishStagingProfileId`, `signing.keyId`, `signing.secretKeyRingFile` and `signing.password` are read first. Keep credentials out of the files of the project.
+instructions: |
+  Fill in the TODO values of the grailsPublish block of build.gradle before you publish the plugin.
+  The version of gradle.properties is a release, and publishing a release needs a signing key:
+  give the plugin a version that ends with -SNAPSHOT while you develop it.
+  README.md says how a snapshot and a release are published.

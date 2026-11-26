@@ -1,0 +1,127 @@
+compatibility: grails [9.0.0,10.0.0), forge [9.0.0,10.0.0)
+requires: []
+conflicts: []
+oneOf: null
+dependency: buildscript org.apache.grails.gradle:grails-publish without a version
+build plugin: org.apache.grails.gradle.grails-publish without a version, applied
+
+# web
+not for this kind of application
+
+# rest_api
+not for this kind of application
+
+# web_plugin
+title: Grails Publish
+description: Sets a plugin up for publishing to a Maven repository with the Grails Publish Gradle plugin
+category: Packaging
+documentation: null
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+== README.md
++ ## Publishing the plugin
++ The build applies the Grails Publish Gradle plugin (`org.apache.grails.gradle.grails-publish`), which publishes the plugin with its sources, its API documentation and a complete POM. Before the first publish, replace the `TODO` values of the `grailsPublish` block of `build.gradle`: `githubSlug`, `desc` and `developers`, and the `license` if it is not the Apache License 2.0. Set `group` in `build.gradle` to the group the plugin is published under.
++ The version of `gradle.properties` decides how the plugin is published:
++ - A version that ends with `-SNAPSHOT` is a snapshot. `./gradlew publishToMavenLocal` installs it into the local Maven repository, and `./gradlew publish` uploads it to the Maven repository of `MAVEN_PUBLISH_URL`, with `MAVEN_PUBLISH_USERNAME` and `MAVEN_PUBLISH_PASSWORD` where the repository asks for them.
++ - Any other version is a release, and a release is signed: every publish task, `publishToMavenLocal` among them, needs the signing key of `SIGNING_KEY`, read from the keyring file of `SIGNING_KEYRING` with `SIGNING_PASSPHRASE`, or by the local `gpg` command when no keyring file is named. `./gradlew publishToSonatype closeSonatypeStagingRepository` uploads a release to the Nexus staging repository of `NEXUS_PUBLISH_URL`, with `NEXUS_PUBLISH_USERNAME`, `NEXUS_PUBLISH_PASSWORD` and `NEXUS_PUBLISH_STAGING_PROFILE_ID`.
++ `GRAILS_PUBLISH_RELEASE`, set to `true` or `false`, decides between the two whatever the version is. Each of the other names is an environment variable; the Gradle properties `mavenPublishUrl`, `mavenPublishUsername`, `mavenPublishPassword`, `nexusPublishUrl`, `nexusPublishUsername`, `nexusPublishPassword`, `nexusPublishStagingProfileId`, `signing.keyId`, `signing.secretKeyRingFile` and `signing.password` are read first. Keep credentials out of the files of the project.
++ 
++ 
++ 
++ 
++ 
+== build.gradle
++         classpath "org.apache.grails.gradle:grails-publish"
++ apply plugin: "org.apache.grails.gradle.grails-publish"
++ grailsPublish {
++     // TODO: the GitHub repository of the plugin, as owner/name. The links of the published POM are made from it.
++     githubSlug = 'TODO-owner/TODO-repository'
++     license {
++         name = 'Apache-2.0'
++     }
++     // The title is the name of the project unless it is set here.
++     // title = 'My Plugin'
++     // TODO: one sentence that says what the plugin is for.
++     desc = 'TODO: describe the plugin'
++     // TODO: the developers of the plugin, each by an id and a name.
++     developers = [todo: 'TODO: your name']
++ }
++ 
+
+# plugin
+title: Grails Publish
+description: Sets a plugin up for publishing to a Maven repository with the Grails Publish Gradle plugin
+category: Packaging
+documentation: null
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+== README.md
++ ## Publishing the plugin
++ The build applies the Grails Publish Gradle plugin (`org.apache.grails.gradle.grails-publish`), which publishes the plugin with its sources, its API documentation and a complete POM. Before the first publish, replace the `TODO` values of the `grailsPublish` block of `build.gradle`: `githubSlug`, `desc` and `developers`, and the `license` if it is not the Apache License 2.0. Set `group` in `build.gradle` to the group the plugin is published under.
++ The version of `gradle.properties` decides how the plugin is published:
++ - A version that ends with `-SNAPSHOT` is a snapshot. `./gradlew publishToMavenLocal` installs it into the local Maven repository, and `./gradlew publish` uploads it to the Maven repository of `MAVEN_PUBLISH_URL`, with `MAVEN_PUBLISH_USERNAME` and `MAVEN_PUBLISH_PASSWORD` where the repository asks for them.
++ - Any other version is a release, and a release is signed: every publish task, `publishToMavenLocal` among them, needs the signing key of `SIGNING_KEY`, read from the keyring file of `SIGNING_KEYRING` with `SIGNING_PASSPHRASE`, or by the local `gpg` command when no keyring file is named. `./gradlew publishToSonatype closeSonatypeStagingRepository` uploads a release to the Nexus staging repository of `NEXUS_PUBLISH_URL`, with `NEXUS_PUBLISH_USERNAME`, `NEXUS_PUBLISH_PASSWORD` and `NEXUS_PUBLISH_STAGING_PROFILE_ID`.
++ `GRAILS_PUBLISH_RELEASE`, set to `true` or `false`, decides between the two whatever the version is. Each of the other names is an environment variable; the Gradle properties `mavenPublishUrl`, `mavenPublishUsername`, `mavenPublishPassword`, `nexusPublishUrl`, `nexusPublishUsername`, `nexusPublishPassword`, `nexusPublishStagingProfileId`, `signing.keyId`, `signing.secretKeyRingFile` and `signing.password` are read first. Keep credentials out of the files of the project.
++ 
++ 
++ 
++ 
++ 
+== build.gradle
++         classpath "org.apache.grails.gradle:grails-publish"
++ apply plugin: "org.apache.grails.gradle.grails-publish"
++ grailsPublish {
++     // TODO: the GitHub repository of the plugin, as owner/name. The links of the published POM are made from it.
++     githubSlug = 'TODO-owner/TODO-repository'
++     license {
++         name = 'Apache-2.0'
++     }
++     // The title is the name of the project unless it is set here.
++     // title = 'My Plugin'
++     // TODO: one sentence that says what the plugin is for.
++     desc = 'TODO: describe the plugin'
++     // TODO: the developers of the plugin, each by an id and a name.
++     developers = [todo: 'TODO: your name']
++ }
++ 
+
+# rest_api_plugin
+title: Grails Publish
+description: Sets a plugin up for publishing to a Maven repository with the Grails Publish Gradle plugin
+category: Packaging
+documentation: null
+thirdPartyDocumentation: null
+visible: true
+dependentFeatures: []
+== README.md
++ ## Publishing the plugin
++ The build applies the Grails Publish Gradle plugin (`org.apache.grails.gradle.grails-publish`), which publishes the plugin with its sources, its API documentation and a complete POM. Before the first publish, replace the `TODO` values of the `grailsPublish` block of `build.gradle`: `githubSlug`, `desc` and `developers`, and the `license` if it is not the Apache License 2.0. Set `group` in `build.gradle` to the group the plugin is published under.
++ The version of `gradle.properties` decides how the plugin is published:
++ - A version that ends with `-SNAPSHOT` is a snapshot. `./gradlew publishToMavenLocal` installs it into the local Maven repository, and `./gradlew publish` uploads it to the Maven repository of `MAVEN_PUBLISH_URL`, with `MAVEN_PUBLISH_USERNAME` and `MAVEN_PUBLISH_PASSWORD` where the repository asks for them.
++ - Any other version is a release, and a release is signed: every publish task, `publishToMavenLocal` among them, needs the signing key of `SIGNING_KEY`, read from the keyring file of `SIGNING_KEYRING` with `SIGNING_PASSPHRASE`, or by the local `gpg` command when no keyring file is named. `./gradlew publishToSonatype closeSonatypeStagingRepository` uploads a release to the Nexus staging repository of `NEXUS_PUBLISH_URL`, with `NEXUS_PUBLISH_USERNAME`, `NEXUS_PUBLISH_PASSWORD` and `NEXUS_PUBLISH_STAGING_PROFILE_ID`.
++ `GRAILS_PUBLISH_RELEASE`, set to `true` or `false`, decides between the two whatever the version is. Each of the other names is an environment variable; the Gradle properties `mavenPublishUrl`, `mavenPublishUsername`, `mavenPublishPassword`, `nexusPublishUrl`, `nexusPublishUsername`, `nexusPublishPassword`, `nexusPublishStagingProfileId`, `signing.keyId`, `signing.secretKeyRingFile` and `signing.password` are read first. Keep credentials out of the files of the project.
++ 
++ 
++ 
++ 
++ 
+== build.gradle
++         classpath "org.apache.grails.gradle:grails-publish"
++ apply plugin: "org.apache.grails.gradle.grails-publish"
++ grailsPublish {
++     // TODO: the GitHub repository of the plugin, as owner/name. The links of the published POM are made from it.
++     githubSlug = 'TODO-owner/TODO-repository'
++     license {
++         name = 'Apache-2.0'
++     }
++     // The title is the name of the project unless it is set here.
++     // title = 'My Plugin'
++     // TODO: one sentence that says what the plugin is for.
++     desc = 'TODO: describe the plugin'
++     // TODO: the developers of the plugin, each by an id and a name.
++     developers = [todo: 'TODO: your name']
++ }
++ 
+
