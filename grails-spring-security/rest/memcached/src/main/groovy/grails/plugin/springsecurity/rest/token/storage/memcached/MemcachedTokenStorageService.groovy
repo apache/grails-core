@@ -60,12 +60,13 @@ class MemcachedTokenStorageService implements TokenStorageService {
         memcachedClient.set tokenValue, expiration, principal
     }
 
+    /**
+     * Removes the token with one delete, which memcached answers with whether it held the key, so of two removals of
+     * the same token only the one that removed it returns, and the other throws {@link TokenNotFoundException}.
+     */
     void removeToken(String tokenValue) throws TokenNotFoundException {
         log.debug "Removing token ${tokenValue} from memcached"
-        def userDetails = findExistingUserDetails(tokenValue)
-        if (userDetails) {
-            memcachedClient.delete tokenValue
-        } else {
+        if (!isKey(tokenValue) || !memcachedClient.delete(tokenValue).get()) {
             throw new TokenNotFoundException("Token ${tokenValue} not found")
         }
     }

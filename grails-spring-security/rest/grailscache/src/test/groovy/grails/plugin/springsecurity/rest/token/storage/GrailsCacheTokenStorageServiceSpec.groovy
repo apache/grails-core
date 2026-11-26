@@ -18,10 +18,20 @@
  */
 package grails.plugin.springsecurity.rest.token.storage
 
-import spock.lang.Specification
+import java.util.concurrent.Callable
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
+import java.util.concurrent.Future
 
+import spock.lang.Specification
+import spock.lang.Unroll
+
+import org.springframework.cache.Cache
+import org.springframework.cache.support.SimpleValueWrapper
 import org.springframework.security.core.userdetails.User
 
+import grails.plugin.cache.GrailsConcurrentLinkedMapCacheManager
 import grails.plugin.cache.GrailsConcurrentMapCacheManager
 import org.grails.plugin.cache.GrailsCacheManager
 
@@ -30,8 +40,7 @@ class GrailsCacheTokenStorageServiceSpec extends Specification {
     private service
 
     def setup() {
-        service = new GrailsCacheTokenStorageService(grailsCacheManager: new GrailsConcurrentMapCacheManager(), cacheName: 'tokenStorage')
-        service.init()
+        service = newService(new GrailsConcurrentMapCacheManager())
     }
 
     void "store a principal for a given token"() {
@@ -88,17 +97,80 @@ class GrailsCacheTokenStorageServiceSpec extends Specification {
         thrown(TokenNotFoundException)
     }
 
-    void "throw token not found exception if the principal of a given token was removed before"() {
+    @Unroll
+    void "a token is removed once from a cache of the #cacheManager.class.simpleName"() {
         given:
-        def tokenValue = '12345'
-        service.storeToken(tokenValue, new User('foo', 'bar', []))
-        service.removeToken(tokenValue)
+        def storage = newService(cacheManager)
+        storage.storeToken('12345', new User('foo', 'bar', []))
 
         when:
-        service.removeToken(tokenValue)
+        storage.removeToken('12345')
+
+        then:
+        !storage.cache.get('12345')
+
+        when:
+        storage.removeToken('12345')
 
         then:
         thrown(TokenNotFoundException)
+
+        where:
+        cacheManager << [new GrailsConcurrentMapCacheManager(), new GrailsConcurrentLinkedMapCacheManager()]
+    }
+
+    void "throw token not found exception if another removal evicted the token first"() {
+        given: 'a cache that holds the token when it is looked up, but no longer when it is evicted'
+        Cache cache = Stub(Cache) {
+            get('12345') >> new SimpleValueWrapper(new User('foo', 'bar', []))
+            evictIfPresent('12345') >> false
+        }
+        def storage = newService(Stub(GrailsCacheManager) {
+            getCache('tokenStorage') >> cache
+        })
+
+        when:
+        storage.removeToken('12345')
+
+        then:
+        thrown(TokenNotFoundException)
+    }
+
+    @Unroll
+    void "of concurrent removals of one token from a cache of the #cacheManager.class.simpleName, one removes it"() {
+        given:
+        def storage = newService(cacheManager)
+        int removals = 4
+        ExecutorService executor = Executors.newFixedThreadPool(removals)
+
+        when: 'each of several tokens is removed by concurrent removals'
+        List<Integer> removedCounts = (1..20).collect { int round ->
+            String token = "token-${round}"
+            storage.storeToken(token, new User('foo', 'bar', []))
+            CountDownLatch start = new CountDownLatch(1)
+            List<Future<Boolean>> results = (1..removals).collect {
+                executor.submit({
+                    start.await()
+                    try {
+                        storage.removeToken(token)
+                        return true
+                    } catch (TokenNotFoundException ignored) {
+                        return false
+                    }
+                } as Callable<Boolean>)
+            }
+            start.countDown()
+            results.count { Future<Boolean> result -> result.get() } as Integer
+        }
+
+        then: 'exactly one removal of each token removed it, and the others did not find it'
+        removedCounts.every { it == 1 }
+
+        cleanup:
+        executor?.shutdownNow()
+
+        where:
+        cacheManager << [new GrailsConcurrentMapCacheManager(), new GrailsConcurrentLinkedMapCacheManager()]
     }
 
     void "throw illegal state exeption if grails cache manager was not injected"() {
@@ -133,5 +205,11 @@ class GrailsCacheTokenStorageServiceSpec extends Specification {
 
         then:
         thrown(IllegalStateException)
+    }
+
+    private static GrailsCacheTokenStorageService newService(GrailsCacheManager cacheManager) {
+        def storage = new GrailsCacheTokenStorageService(grailsCacheManager: cacheManager, cacheName: 'tokenStorage')
+        storage.init()
+        storage
     }
 }

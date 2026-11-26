@@ -58,14 +58,18 @@ class GrailsCacheTokenStorageService implements TokenStorageService {
         throw new TokenNotFoundException(tokenNotFoundMsg)
     }
 
+    /**
+     * Removes the token in one step with {@link Cache#evictIfPresent}, so of two removals of the same token only the
+     * one that removed it returns, and the other throws {@link TokenNotFoundException}. The cache must report whether
+     * it held the token, as both caches of the Grails cache plugin do.
+     */
     @Override
     void removeToken(String tokenValue) throws TokenNotFoundException {
-        if (cache.get(tokenValue) == null) {
+        if (!cache.evictIfPresent(tokenValue)) {
             def tokenNotFoundMsg = "No principal found for token $tokenValue"
             log.debug tokenNotFoundMsg
             throw new TokenNotFoundException(tokenNotFoundMsg)
         }
-        cache.evict(tokenValue)
         log.debug "Removed principal for token ${tokenValue}"
     }
 
