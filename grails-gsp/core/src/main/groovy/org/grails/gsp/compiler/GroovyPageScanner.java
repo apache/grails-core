@@ -177,8 +177,12 @@ class GroovyPageScanner implements Tokens {
                         return found(GDIRECT, 2);
                     }
 
-                    if (tokenLength > maxHtmlLength && !isInEscapedGExpressionStart(c, c1)) {
-                        return found(HTML, 0);
+                    if (tokenLength > maxHtmlLength) {
+                        int cut = htmlCutPosition(c, c1);
+                        if (cut != -1) {
+                            end1 = cut + 1;
+                            return found(HTML, 0);
+                        }
                     }
 
                     break;
@@ -288,14 +292,25 @@ class GroovyPageScanner implements Tokens {
     }
 
     /**
-     * Long text is handed on in pieces, and the backslash of an escaped expression is only taken out of
-     * a piece that has the whole of <code>\${</code>: the text is not cut inside one.
+     * Long text is handed on in pieces of at most {@link #getMaxHtmlLength()} characters, and the backslash
+     * of an escaped expression is only taken out of a piece that has the whole of <code>\${</code>. A cut
+     * that would fall inside one is moved to before its backslash, so no piece grows past the limit.
+     *
+     * @return the position the text is cut at, or -1 when the piece starts with the escaped expression
      */
-    private boolean isInEscapedGExpressionStart(char c, char c1) {
-        if (c == '$' && c1 == '{') {
-            return isEscapedGExpression();
+    private int htmlCutPosition(char c, char c1) {
+        int current = end1 - 1;
+        int backslash;
+        if (c == '$' && c1 == '{' && isEscapedGExpression()) {
+            backslash = current - 1;
         }
-        return c == '{' && end1 > 2 && text.charAt(end1 - 2) == '$' && text.charAt(end1 - 3) == '\\';
+        else if (c == '{' && current > 1 && text.charAt(current - 1) == '$' && text.charAt(current - 2) == '\\') {
+            backslash = current - 2;
+        }
+        else {
+            return current;
+        }
+        return backslash > begin1 ? backslash : -1;
     }
 
     private boolean skipComment(char c3, char c4) {
