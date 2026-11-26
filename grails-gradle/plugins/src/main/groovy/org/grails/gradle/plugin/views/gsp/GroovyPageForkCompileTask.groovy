@@ -129,7 +129,7 @@ abstract class GroovyPageForkCompileTask extends AbstractCompile {
     final Property<String> viewsManifestPath
 
     /**
-     * Generated {@code META-INF/grails/plugins.imports} file(s) produced by {@code generatePluginDescriptor}.
+     * The {@code META-INF/grails/plugins.imports} file(s) the compiler wrote beside the main classes.
      * Read at execution time when {@link #viewsManifestPath} is not explicitly set so that the manifest
      * namespace matches the compiled plugin's logical name even on clean builds with the configuration cache.
      *

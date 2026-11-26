@@ -30,6 +30,7 @@ import grails.core.GrailsApplication
 import grails.core.GrailsClass
 import grails.orm.bootstrap.HibernateDatastoreSpringInitializer
 import grails.plugins.Plugin
+import grails.plugins.metadata.GrailsPluginDescriptor
 import grails.util.Environment
 import org.grails.core.artefact.DomainClassArtefactHandler
 import org.grails.datastore.gorm.plugin.support.ConfigSupport
@@ -41,26 +42,14 @@ import org.grails.datastore.gorm.plugin.support.ConfigSupport
  * @since 3.0
  */
 @CompileStatic
+@GrailsPluginDescriptor(
+        loadAfter = ['controllers', 'domainClass'],
+        observe = ['domainClass'],
+        watchedResources = ['file:./grails-app/conf/hibernate/**.xml'],
+        pluginExcludes = ['src/templates/**'])
 class HibernateGrailsPlugin extends Plugin {
 
     public static final String DEFAULT_DATA_SOURCE_NAME = HibernateDatastoreSpringInitializer.DEFAULT_DATA_SOURCE_NAME
-
-    def grailsVersion = '8.0.0-SNAPSHOT > *'
-
-    def author = 'Apache Grails Team'
-    def title = 'Hibernate 5 for Grails'
-    def description = 'Provides integration between Grails and Hibernate 5 through GORM'
-    def documentation = 'https://grails.apache.org/docs/latest/grails-data/'
-
-    def observe = ['domainClass']
-    def loadAfter = ['controllers', 'domainClass']
-    def watchedResources = ['file:./grails-app/conf/hibernate/**.xml']
-    def pluginExcludes = ['src/templates/**']
-
-    def license = 'APACHE'
-    def organization = [name: 'Apache Grails', url: 'https://grails.apache.org']
-    def issueManagement = [system: 'Github', url: 'https://github.com/apache/grails-core/issues']
-    def scm = [url: 'https://github.com/apache/grails-core']
 
     Set<String> dataSourceNames
 

@@ -18,7 +18,8 @@
  */
 package org.grails.plugins.web.mime
 
-import grails.util.GrailsUtil
+import grails.plugins.Plugin
+import grails.plugins.metadata.GrailsPluginDescriptor
 
 /**
  * Provides content negotiation capabilities to Grails via a new withFormat method on controllers
@@ -27,9 +28,6 @@ import grails.util.GrailsUtil
  * @author Graeme Rocher
  * @since 1.0
  */
-class MimeTypesGrailsPlugin {
-    
-    def version = GrailsUtil.getGrailsVersion()
-    def dependsOn = [core: version, controllers: version]
-    def observe = ['controllers']
+@GrailsPluginDescriptor(dependsOn = ['core:${plugin.version}', 'controllers:${plugin.version}'], observe = ['controllers'])
+class MimeTypesGrailsPlugin extends Plugin {
 }

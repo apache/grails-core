@@ -24,7 +24,12 @@ import javax.annotation.processing.RoundEnvironment
 import javax.annotation.processing.SupportedAnnotationTypes
 import javax.annotation.processing.SupportedOptions
 import javax.lang.model.SourceVersion
+import javax.lang.model.element.Element
+import javax.lang.model.element.ElementKind
+import javax.lang.model.element.Modifier
 import javax.lang.model.element.TypeElement
+import javax.lang.model.type.TypeMirror
+import javax.tools.Diagnostic
 import javax.tools.StandardLocation
 
 import com.sun.source.util.JavacTask
@@ -32,16 +37,21 @@ import com.sun.source.util.TaskEvent
 import com.sun.source.util.TaskListener
 import groovy.transform.CompileStatic
 
+import grails.plugins.metadata.GrailsPluginDescriptor
 import org.apache.grails.plugin.descriptor.PluginDescriptorWriter
 
 /**
- * Explicit javac processor for Java-only plugin modules. Reconciles the class
- * directory once javac has finished generating all classes in the compilation.
+ * Writes the descriptors of the plugins a javac compilation produces, beside its classes, once javac has
+ * written them all, as {@link PluginDescriptorTransformation} does for Groovy. An annotated class that is
+ * not a concrete {@code grails.plugins.Plugin} subclass is reported as an error. The plugin version is
+ * the {@code grails.plugin.version} processor option.
  */
 @CompileStatic
-@SupportedAnnotationTypes('*')
+@SupportedAnnotationTypes('grails.plugins.metadata.GrailsPluginDescriptor')
 @SupportedOptions('grails.plugin.version')
 class JavaPluginDescriptorProcessor extends AbstractProcessor {
+
+    private static final String PLUGIN_CLASS = 'grails.plugins.Plugin'
 
     @Override
     SourceVersion getSupportedSourceVersion() {
@@ -63,12 +73,22 @@ class JavaPluginDescriptorProcessor extends AbstractProcessor {
 
     @Override
     boolean process(Set<? extends TypeElement> annotations, RoundEnvironment round) {
+        TypeElement plugin = processingEnv.elementUtils.getTypeElement(PLUGIN_CLASS)
+        TypeMirror pluginType = plugin != null ? processingEnv.typeUtils.erasure(plugin.asType()) : null
+        for (Element element : round.getElementsAnnotatedWith(GrailsPluginDescriptor)) {
+            boolean concrete = element.kind == ElementKind.CLASS && !element.modifiers.contains(Modifier.ABSTRACT)
+            if (!concrete || pluginType == null || !processingEnv.typeUtils.isAssignable(element.asType(), pluginType)) {
+                processingEnv.messager.printMessage(Diagnostic.Kind.ERROR,
+                        "${element} is annotated with @GrailsPluginDescriptor, so it must be a concrete subclass of ${PLUGIN_CLASS}".toString(),
+                        element)
+            }
+        }
         false
     }
 
     private static void writeDescriptors(ProcessingEnvironment environment) {
         def index = environment.filer.createResource(StandardLocation.CLASS_OUTPUT, '', PluginDescriptorWriter.PLUGINS_IMPORTS_PATH)
         File directory = new File(index.toUri()).parentFile.parentFile.parentFile
-        CompilerPluginDescriptors.reconcile(directory, environment.options.get('grails.plugin.version'), true)
+        CompilerPluginDescriptors.reconcile(directory, environment.options.get('grails.plugin.version'))
     }
 }

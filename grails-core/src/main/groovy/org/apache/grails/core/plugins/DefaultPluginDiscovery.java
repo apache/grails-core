@@ -36,6 +36,7 @@ import groovy.lang.GroovyClassLoader;
 import org.codehaus.groovy.control.CompilationFailedException;
 import org.codehaus.groovy.runtime.IOGroovyMethods;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -622,46 +623,23 @@ public class DefaultPluginDiscovery implements PluginDiscovery {
         var pluginResourceClassLoader = resolvePluginResourceClassLoader(classLoader);
         LOG.info("Attempting to load [{}] dynamically defined plugins", pluginResources.length);
         for (var resource : pluginResources) {
-            var pluginClass = loadPluginClass(pluginResourceClassLoader, resource);
-            if (PluginUtils.isGrailsPluginClassNamedCorrectly(pluginClass)) {
-                try {
-                    var pluginInfo = PluginUtils.createPluginInfo(pluginClass, resource, true);
-                    pluginInfo.isGrailsVersionCompatible(applicationMeta.getGrailsVersion());
-                    discoveredPlugins.add(pluginInfo);
-                } catch (Exception e) {
-                    logPluginLoadingError(pluginClass, e);
-                }
-            } else {
-                LOG.warn(
-                        "Class [{}] loaded from Resource [{}] not loaded as plug-in. Grails plug-ins must end with " +
-                                "the convention 'GrailsPlugin'!",
-                        pluginClass.getName(),
-                        resource.getDescription()
-                );
-            }
+            discoveredPlugins.add(createDynamicPluginInfo(loadPluginClass(pluginResourceClassLoader, resource), resource));
         }
-
         for (var pluginClass : pluginClasses) {
-            if (PluginUtils.isGrailsPluginClassNamedCorrectly(pluginClass)) {
-                try {
-                    var pluginInfo = PluginUtils.createPluginInfo(pluginClass, null, true);
-                    pluginInfo.isGrailsVersionCompatible(applicationMeta.getGrailsVersion());
-                    discoveredPlugins.add(pluginInfo);
-                } catch (Exception e) {
-                    logPluginLoadingError(pluginClass, e);
-                }
-            } else {
-                LOG.warn("Class [{}] not loaded as plug-in. Grails plug-ins must end with the convention 'GrailsPlugin'!", pluginClass.getName());
-            }
+            discoveredPlugins.add(createDynamicPluginInfo(pluginClass, null));
         }
         return discoveredPlugins;
     }
 
-    private void logPluginLoadingError(Class<?> pluginClass, Exception e) {
-        LOG.warn("Error loading plugin class [{}]; skipping", pluginClass.getName());
-        if (LOG.isDebugEnabled()) {
-            LOG.debug(e.getMessage(), e);
+    private PluginInfo createDynamicPluginInfo(Class<?> pluginClass, @Nullable Resource resource) {
+        if (!PluginUtils.isGrailsPlugin(pluginClass)) {
+            throw new PluginException("Class [" + pluginClass.getName() + "]" +
+                    (resource != null ? " loaded from [" + resource.getDescription() + "]" : "") +
+                    " is not a Grails plugin: a plugin is a concrete grails.plugins.Plugin subclass annotated with @GrailsPluginDescriptor");
         }
+        var pluginInfo = PluginUtils.createPluginInfo(pluginClass, resource, true);
+        pluginInfo.isGrailsVersionCompatible(applicationMeta.getGrailsVersion());
+        return pluginInfo;
     }
 
     /**

@@ -24,17 +24,10 @@ import org.springframework.beans.factory.BeanRegistrar
 import org.springframework.beans.factory.BeanRegistry
 import org.springframework.core.env.Environment
 
+import grails.plugins.metadata.GrailsPluginDescriptor
+
+@GrailsPluginDescriptor(loadAfter = ['springSecurityCore'])
 class LoadafterGrailsPlugin extends Plugin {
-
-    def title = "Load After" // Headline display name of the plugin
-    def author = "Your name"
-    def authorEmail = ""
-    def description = '''\
-Brief summary/description of the plugin.
-'''
-    def profiles = ['web']
-
-    def loadAfter = ['springSecurityCore']
 
     // Exercises the retimed plugin lifecycle end-to-end (see app3 PluginBeansBeforeAutoConfigurationSpec):
     // doWithSpring beans register ahead of auto-configuration through real plugin discovery, so the

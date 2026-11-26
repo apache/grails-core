@@ -39,9 +39,9 @@ import grails.config.Config;
 import grails.core.GrailsApplication;
 import grails.plugins.GrailsPlugin;
 import grails.plugins.GrailsPluginManager;
+import grails.plugins.metadata.PluginDefinition;
 import grails.util.GrailsNameUtils;
 import org.apache.grails.core.plugins.PluginUtils;
-import org.grails.core.AbstractGrailsClass;
 import org.grails.plugins.support.WatchPattern;
 
 /**
@@ -53,13 +53,11 @@ public abstract class AbstractGrailsPlugin extends GroovyObjectSupport implement
     private static final Logger LOG = LoggerFactory.getLogger(AbstractGrailsPlugin.class);
 
     public static final String PLUGIN_YML = PluginUtils.PLUGIN_YML_CONFIG;
-    public static final String PLUGIN_YML_PATH = PluginUtils.PLUGIN_YML_CONFIG_PATH;
     public static final String PLUGIN_GROOVY = PluginUtils.PLUGIN_GROOVY_CONFIG;
-    public static final String PLUGIN_GROOVY_PATH = PluginUtils.PLUGIN_GROOVY_CONFIG_PATH;
 
     protected GrailsApplication grailsApplication;
     protected boolean isBase = false;
-    protected String version = "1.0";
+    protected @Nullable String version;
     protected Map<String, Object> dependencies = new HashMap<>();
     protected String[] dependencyNames = {};
     protected Class<?> pluginClass;
@@ -70,42 +68,17 @@ public abstract class AbstractGrailsPlugin extends GroovyObjectSupport implement
     protected Config config;
 
     /**
-     * Wrapper Grails class for plugins.
-     *
-     * @author Graeme Rocher
+     * @param pluginClass the plugin's {@code grails.plugins.Plugin} subclass
+     * @param definition the plugin's definition
+     * @param application the Grails application
      */
-    class GrailsPluginClass extends AbstractGrailsClass {
-        public GrailsPluginClass(Class<?> clazz) {
-            super(clazz, clazz.getSimpleName().endsWith(TRAILING_NAME) ? TRAILING_NAME : "");
-        }
-    }
-
-    public AbstractGrailsPlugin(Class<?> pluginClass, GrailsApplication application) {
+    protected AbstractGrailsPlugin(Class<?> pluginClass, PluginDefinition definition, GrailsApplication application) {
         Assert.notNull(pluginClass, "Argument [pluginClass] cannot be null");
-        Assert.isTrue(PluginUtils.isGrailsPluginClassNamedCorrectly(pluginClass),
-                "Argument [pluginClass] with value [" + pluginClass +
-                        "] is not a Grails plugin (class name must end with 'GrailsPlugin' or carry @GrailsPluginDescriptor)");
+        Assert.notNull(definition, "Argument [definition] cannot be null");
         this.grailsApplication = application;
         this.pluginClass = pluginClass;
-        this.pluginName = PluginUtils.getLogicalPluginName(pluginClass);
-    }
-
-    /**
-     * Creates a plugin backed by a declarative descriptor rather than a plugin class.
-     *
-     * @param pluginName the logical plugin name
-     * @param version the plugin version
-     * @param application the Grails application
-     * @since 9.0
-     */
-    protected AbstractGrailsPlugin(String pluginName, String version, GrailsApplication application) {
-        Assert.hasText(pluginName, "Argument [pluginName] cannot be blank");
-        this.grailsApplication = application;
-        this.pluginClass = null;
-        this.pluginName = PluginUtils.normalizePluginName(pluginName);
-        if (version != null) {
-            this.version = version;
-        }
+        this.pluginName = definition.getPluginName();
+        this.version = definition.getPluginVersion();
     }
 
     /**

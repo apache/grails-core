@@ -67,33 +67,16 @@ import grails.plugin.springsecurity.rest.token.reader.HttpHeaderTokenReader
 import grails.plugin.springsecurity.rest.token.rendering.DefaultAccessTokenJsonRenderer
 import grails.plugin.springsecurity.rest.token.storage.jwt.JwtTokenStorageService
 import grails.plugins.Plugin
+import grails.plugins.metadata.GrailsPluginDescriptor
 
 @Slf4j
+@GrailsPluginDescriptor(
+        loadAfter = ['springSecurityCore'],
+        pluginExcludes = [
+                'grails-app/views/**'
+        ])
 class SpringSecurityRestGrailsPlugin extends Plugin {
 
-    // the version or versions of Grails the plugin is designed for
-    String grailsVersion = '7.0.0 > *'
-    List loadAfter = ['springSecurityCore']
-    List pluginExcludes = [
-            'grails-app/views/**'
-    ]
-
-    String title = 'Spring Security REST Plugin'
-    String author = 'Apache Grails Team'
-    String authorEmail = ''
-    String description = 'Implements authentication for REST APIs based on Spring Security. It uses a token-based workflow'
-
-    def profiles = ['web']
-
-    // URL to the plugin's documentation
-    String documentation = 'https://grails.apache.org/documentation.html'
-
-    // Extra (optional) plugin metadata
-    String license = 'APACHE'
-    def organization = [name: 'Apache Grails', url: 'https://grails.apache.org']
-
-    def issueManagement = [system: 'GitHub', url: 'https://github.com/apache/grails-core/issues']
-    def scm = [url: 'https://github.com/apache/grails-core']
     GrailsApplication grailsApplication
 
     Closure doWithSpring() {

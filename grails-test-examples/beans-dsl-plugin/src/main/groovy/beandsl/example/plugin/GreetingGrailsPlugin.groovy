@@ -23,6 +23,7 @@ import org.springframework.boot.autoconfigure.AutoConfiguration
 
 import grails.compiler.beans.GrailsBeans
 import grails.plugins.Plugin
+import grails.plugins.metadata.GrailsPluginDescriptor
 
 /**
  * Demonstrates {@code field(...)} and {@code method(...)} - the same shape real autoconfigurations
@@ -33,9 +34,8 @@ import grails.plugins.Plugin
  */
 @GrailsBeans
 @AutoConfiguration
+@GrailsPluginDescriptor
 class GreetingGrailsPlugin extends Plugin {
-
-    String version = '1.0'
 
     def beans = {
         field('greetingSuffix', String).annotate(Value, value: '${beandsl.example.greeting-suffix:!}')

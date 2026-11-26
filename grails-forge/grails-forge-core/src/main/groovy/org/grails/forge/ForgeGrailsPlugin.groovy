@@ -22,6 +22,7 @@ import groovy.transform.CompileStatic
 import org.springframework.boot.autoconfigure.AutoConfiguration
 import org.springframework.context.annotation.Import
 import grails.plugins.Plugin
+import grails.plugins.metadata.GrailsPluginDescriptor
 
 /**
  * The application generator as a Grails plugin: the feature catalogue, the project generator and the
@@ -34,16 +35,6 @@ import grails.plugins.Plugin
 @CompileStatic
 @AutoConfiguration
 @Import(ForgeCoreConfiguration)
+@GrailsPluginDescriptor
 class ForgeGrailsPlugin extends Plugin {
-
-    def grailsVersion = '8.1.0-SNAPSHOT > *'
-    def author = 'Apache Grails Team'
-    def title = 'Grails Forge'
-    def description = 'Generates Grails applications: the feature catalogue and project generator shared by the Forge web service and the Forge CLI'
-    def documentation = 'https://grails.apache.org/'
-    def license = 'Apache 2.0 License'
-    def organization = [name: 'Apache Grails', url: 'https://grails.apache.org/']
-    def issueManagement = [system: 'GitHub', url: 'https://github.com/apache/grails-core/issues']
-    def scm = [url: 'https://github.com/apache/grails-core']
-
 }

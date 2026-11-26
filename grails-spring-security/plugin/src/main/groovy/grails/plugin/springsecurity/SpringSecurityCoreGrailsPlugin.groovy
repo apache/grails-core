@@ -62,6 +62,7 @@ import grails.plugin.springsecurity.web.filter.GrailsRememberMeAuthenticationFil
 import grails.plugin.springsecurity.web.filter.IpAddressFilter
 import grails.plugin.springsecurity.web.filter.StartupGateFilter
 import grails.plugins.Plugin
+import grails.plugins.metadata.GrailsPluginDescriptor
 import groovy.util.logging.Slf4j
 import org.grails.web.config.http.GrailsFilters
 import org.grails.web.mime.HttpServletResponseExtension
@@ -146,6 +147,9 @@ import jakarta.servlet.DispatcherType
  * @author Burt Beckwith
  */
 @Slf4j
+@GrailsPluginDescriptor(
+        loadAfter = ['controllers', 'hibernate', 'hibernate4', 'hibernate5', 'services'],
+        observe = ['controllers'])
 class SpringSecurityCoreGrailsPlugin extends Plugin {
 
     public static final String ENCODING_ID_BCRYPT = 'bcrypt'
@@ -158,20 +162,6 @@ class SpringSecurityCoreGrailsPlugin extends Plugin {
     public static final String ENCODING_ID_ARGON2 = 'argon2'
     public static final String ENCODING_ID_SHA1 = 'SHA-1'
     public static final String ENCODING_IDSHA256 = 'SHA-256'
-
-    String grailsVersion = '7.0.0 > *'
-    List observe = ['controllers']
-    List loadAfter = ['controllers', 'hibernate', 'hibernate4', 'hibernate5', 'services']
-    String author = 'Burt Beckwith'
-    String authorEmail = ''
-    String title = 'Spring Security Core Plugin'
-    String description = 'Spring Security Core plugin'
-    String documentation = 'https://grails.apache.org/documentation.html'
-    String license = 'APACHE'
-    def organization = [name: 'Apache Grails', url: 'https://grails.apache.org']
-    def issueManagement = [url: 'https://github.com/apache/grails-core/issues']
-    def scm = [url: 'https://github.com/apache/grails-core']
-    def profiles = ['web']
 
     private beanTypeResolver
 

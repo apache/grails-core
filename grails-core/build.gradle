@@ -134,6 +134,12 @@ def writeProps = tasks.register('writeGrailsProperties', WriteProperties) {
 
 tasks.named('processResources', ProcessResources) {
     from(writeProps)
+    // The checked-in descriptor of CoreGrailsPlugin records the version it is built at, as a compiled one does
+    def grailsVersion = project.version.toString()
+    inputs.property('grailsVersion', grailsVersion)
+    filesMatching('META-INF/grails/plugins/core/plugin.properties') {
+        filter(org.apache.tools.ant.filters.ReplaceTokens, tokens: ['grails.version': grailsVersion])
+    }
 }
 
 apply {

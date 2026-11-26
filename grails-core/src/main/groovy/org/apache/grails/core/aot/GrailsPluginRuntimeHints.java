@@ -39,32 +39,23 @@ import org.apache.grails.core.plugins.PluginUtils;
 public class GrailsPluginRuntimeHints implements RuntimeHintsRegistrar {
 
     @Override
-    @SuppressWarnings({"deprecation", "removal"})
     public void registerHints(RuntimeHints hints, @Nullable ClassLoader classLoader) {
         hints.resources().registerPattern(PluginUtils.PLUGINS_IMPORTS_PATH);
         ClassLoader loader = (classLoader != null) ? classLoader : ClassUtils.getDefaultClassLoader();
         if (loader == null) {
             return;
         }
-        registerResourceIfPresent(hints, loader, PluginUtils.LEGACY_PLUGIN_DESCRIPTOR_PATH);
-        for (String importName : PluginUtils.scanPluginImports(loader)) {
-            registerPluginResources(hints, loader, importName);
-        }
         for (PluginDescriptor descriptor : PluginUtils.scanPluginDescriptorResources(loader)) {
-            String pluginName = descriptor.getPluginName();
-            if (PluginUtils.isValidPluginName(pluginName)) {
-                registerPluginResources(hints, loader, pluginName);
-            }
-            for (String pluginClass : descriptor.getProvidedPlugins()) {
-                if (RegistrableTypes.loads(pluginClass, loader)) {
-                    hints.reflection().registerTypeIfPresent(loader, pluginClass,
-                            MemberCategory.INVOKE_DECLARED_CONSTRUCTORS,
-                            MemberCategory.INVOKE_PUBLIC_METHODS,
-                            MemberCategory.INVOKE_DECLARED_METHODS,
-                            MemberCategory.ACCESS_DECLARED_FIELDS);
-                    hints.resources().registerPattern(ClassUtils.convertClassNameToResourcePath(pluginClass) +
-                            ClassUtils.CLASS_FILE_SUFFIX);
-                }
+            registerPluginResources(hints, loader, descriptor.getPluginName());
+            String pluginClass = descriptor.getPluginClassName();
+            if (RegistrableTypes.loads(pluginClass, loader)) {
+                hints.reflection().registerTypeIfPresent(loader, pluginClass,
+                        MemberCategory.INVOKE_DECLARED_CONSTRUCTORS,
+                        MemberCategory.INVOKE_PUBLIC_METHODS,
+                        MemberCategory.INVOKE_DECLARED_METHODS,
+                        MemberCategory.ACCESS_DECLARED_FIELDS);
+                hints.resources().registerPattern(ClassUtils.convertClassNameToResourcePath(pluginClass) +
+                        ClassUtils.CLASS_FILE_SUFFIX);
             }
         }
     }

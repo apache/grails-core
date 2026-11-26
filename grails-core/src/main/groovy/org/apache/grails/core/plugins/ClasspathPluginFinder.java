@@ -18,8 +18,6 @@
  */
 package org.apache.grails.core.plugins;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -30,93 +28,46 @@ import org.slf4j.LoggerFactory;
 import grails.plugins.exceptions.PluginException;
 
 /**
- * Discovers Grails plugins from {@code META-INF/grails/plugins.imports} and per-plugin
- * {@code META-INF/grails/plugins/<name>/plugin.properties} descriptors available on the classpath.
+ * Finds the Grails plugins on a class path: every name listed in a {@code META-INF/grails/plugins.imports},
+ * read from its {@code META-INF/grails/plugins/<name>/plugin.properties}.
  *
- * <p>Supports class-backed plugins (traditional {@code *GrailsPlugin} classes and
- * {@link grails.plugins.metadata.GrailsPluginDescriptor}-annotated classes) as well as descriptor-less
- * starter plugins that declare no plugin class at all.</p>
- *
- * <p>Discovery is intentionally tolerant: individual plugin load failures are logged and skipped so the
- * remaining classpath plugins can still be discovered.</p>
+ * <p>A descriptor that cannot be read, that names a class which is not on the class path, or a class that
+ * is not a {@code grails.plugins.Plugin}, fails discovery: the jar it came from is broken. The same plugin
+ * found twice, as on a test class path that holds both a project's classes and its jar, is found once; two
+ * different plugins with one name fail discovery.</p>
  */
 public class ClasspathPluginFinder {
 
     private static final Logger LOG = LoggerFactory.getLogger(ClasspathPluginFinder.class);
 
     /**
-     * Discovers classpath plugins for the supplied Grails version.
-     *
-     * @param classLoader the class loader used to locate descriptors and load plugin classes
-     * @param targetGrailsVersion the Grails version the discovered plugins should be checked against
-     * @return the discovered classpath plugins, or an empty list when no descriptors are found
+     * @param classLoader the class loader whose class path is searched
+     * @param targetGrailsVersion the Grails version the plugins are checked against
+     * @return the plugins found, one per name
      */
     public List<PluginInfo> findClasspathPlugins(ClassLoader classLoader, String targetGrailsVersion) {
-        var pluginDescriptors = PluginUtils.scanPluginDescriptorResources(classLoader);
-        if (pluginDescriptors.isEmpty()) {
-            return Collections.emptyList();
-        }
-
-        var discoveredPlugins = new ArrayList<PluginInfo>();
-
-        LOG.debug("Attempting to load [{}] plugin descriptors", pluginDescriptors.size());
-        for (var pluginDescriptor : pluginDescriptors) {
-            if (pluginDescriptor.isDescriptorLess()) {
-                try {
-                    var metadata = PluginUtils.extractPluginMetadata(pluginDescriptor, null);
-                    if (metadata != null) {
-                        var configResource = PluginUtils.readPluginConfiguration(metadata.getName(), null, classLoader);
-                        var pluginInfo = new PluginInfo(pluginDescriptor, metadata, configResource, false);
-                        pluginInfo.isGrailsVersionCompatible(targetGrailsVersion);
-                        discoveredPlugins.add(pluginInfo);
-                    }
-                } catch (Exception e) {
-                    LOG.debug("Error loading descriptor-less plugin [{}]: {}",
-                            pluginDescriptor.getPluginName(), e.getMessage());
-                }
-                continue;
-            }
-
-            for (var pluginClassName : pluginDescriptor.getProvidedPlugins()) {
-                try {
-                    var pluginClass = attemptPluginClassLoad(pluginClassName, classLoader);
-                    if (PluginUtils.isGrailsPluginLoadable(pluginClass)) {
-                        var metadata = PluginUtils.extractPluginMetadata(pluginDescriptor, pluginClass);
-                        if (metadata != null) {
-                            var configResource = PluginUtils.readPluginConfiguration(
-                                    metadata.getName(), pluginClass, classLoader);
-                            var pluginInfo = new PluginInfo(pluginDescriptor, metadata, configResource, false);
-                            pluginInfo.isGrailsVersionCompatible(targetGrailsVersion);
-                            discoveredPlugins.add(pluginInfo);
-                        }
-                    }
-                } catch (Exception e) {
-                    LOG.debug("Error loading plugin class [{}]: {}", pluginClassName, e.getMessage());
-                }
-            }
-        }
-
         Map<String, PluginInfo> byName = new LinkedHashMap<>();
-        for (PluginInfo candidate : discoveredPlugins) {
+        for (PluginDescriptor descriptor : PluginUtils.scanPluginDescriptorResources(classLoader)) {
+            Class<?> pluginClass = loadPluginClass(descriptor, classLoader);
+            PluginInfo candidate = PluginUtils.createPluginInfoByDescriptor(pluginClass, descriptor, false);
+            candidate.isGrailsVersionCompatible(targetGrailsVersion);
             PluginInfo previous = byName.putIfAbsent(candidate.getName(), candidate);
-            if (previous != null && (candidate.getPluginClass() != previous.getPluginClass() ||
-                    candidate.getPluginClass() == null && !candidate.getPluginDescriptor().equals(previous.getPluginDescriptor()))) {
+            if (previous != null && previous.getPluginClass() != candidate.getPluginClass()) {
                 throw new PluginException("Conflicting definitions for Grails plugin [" + candidate.getName() + "]: " +
                         previous.getPluginDescriptor() + " and " + candidate.getPluginDescriptor());
             }
         }
+        LOG.debug("Found [{}] plugins on the class path", byName.size());
         return List.copyOf(byName.values());
     }
 
-    private static Class<?> attemptPluginClassLoad(String pluginClassName, ClassLoader classLoader) {
+    private static Class<?> loadPluginClass(PluginDescriptor descriptor, ClassLoader classLoader) {
         try {
-            return classLoader.loadClass(pluginClassName);
-        } catch (ClassNotFoundException e) {
-            LOG.warn("Grails Plugin [{}] not found, resuming load without..", pluginClassName);
-            if (LOG.isDebugEnabled()) {
-                LOG.debug(e.getMessage(), e);
-            }
+            return classLoader.loadClass(descriptor.getPluginClassName());
         }
-        return null;
+        catch (ClassNotFoundException | LinkageError e) {
+            throw new PluginException("Grails plugin [" + descriptor.getPluginName() + "] names plugin class [" +
+                    descriptor.getPluginClassName() + "], which cannot be loaded: " + descriptor.getResource(), e);
+        }
     }
 }

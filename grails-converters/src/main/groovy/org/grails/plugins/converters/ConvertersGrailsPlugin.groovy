@@ -35,7 +35,7 @@ import grails.converters.json.NamedJsonConfigurationRegistry
 import grails.core.GrailsApplication
 import grails.core.support.proxy.ProxyHandler
 import grails.plugins.Plugin
-import grails.util.GrailsUtil
+import grails.plugins.metadata.GrailsPluginDescriptor
 import org.grails.plugins.codecs.JSONCodec
 import org.grails.plugins.codecs.XMLCodec
 import org.grails.web.converters.configuration.ConvertersConfigurationInitializer
@@ -55,15 +55,14 @@ import org.grails.web.converters.marshaller.json.ValidationErrorsMarshaller as J
  * @since 0.6
  */
 @CompileStatic
+@GrailsPluginDescriptor(
+        dependsOn = ['controllers:${plugin.version}', 'domainClass:${plugin.version}'],
+        observe = ['controllers'],
+        providedArtefacts = [
+            JSONCodec,
+            XMLCodec
+        ])
 class ConvertersGrailsPlugin extends Plugin {
-
-    def version = GrailsUtil.getGrailsVersion()
-    def observe = ['controllers']
-    def dependsOn = [controllers: version, domainClass: version]
-    def providedArtefacts = [
-        JSONCodec,
-        XMLCodec
-    ]
 
     @Override
     BeanRegistrar beanRegistrar() {

@@ -26,6 +26,7 @@ import org.springframework.beans.factory.support.BeanDefinitionRegistry
 import org.springframework.context.ApplicationContext
 import org.springframework.context.ApplicationContextAware
 import org.springframework.context.ConfigurableApplicationContext
+import org.springframework.core.type.filter.TypeFilter
 
 import grails.config.Config
 import grails.core.ArtefactHandler
@@ -37,8 +38,10 @@ import grails.util.Environment
 import org.grails.spring.context.support.MapBasedSmartPropertyOverrideConfigurer
 
 /**
- * Super class for plugins to implement. Plugin implementations should define the various plugin hooks
- * (doWithSpring, doWithApplicationContext, doWithDynamicMethods etc.)
+ * The super class of every Grails plugin. A plugin is a concrete subclass annotated with
+ * {@link grails.plugins.metadata.GrailsPluginDescriptor}, which declares its name, ordering and other
+ * metadata; the subclass overrides the hooks it needs ({@link #beanRegistrar()}, {@link #doWithSpring()},
+ * {@link #doWithApplicationContext()}, {@link #onChange(Map)} and the rest).
  *
  * @author Graeme Rocher
  * @since 3.0
@@ -82,6 +85,17 @@ abstract class Plugin implements GrailsApplicationLifeCycle, GrailsApplicationAw
      * List of {@link ArtefactHandler} instances provided by this plugin
      */
     final List<ArtefactHandler> artefacts = []
+
+    /**
+     * Filters for the classes a {@code grailsContext:component-scan} in this plugin's Spring configuration
+     * ignores. None by default.
+     *
+     * @return the type filters
+     * @since 9.0
+     */
+    Collection<? extends TypeFilter> getTypeFilters() {
+        Collections.emptyList()
+    }
 
     /**
      * The {@link ApplicationContext} instance

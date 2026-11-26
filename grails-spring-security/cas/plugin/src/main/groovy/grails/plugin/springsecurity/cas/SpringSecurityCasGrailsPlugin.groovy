@@ -41,22 +41,13 @@ import grails.plugin.springsecurity.BeanTypeResolver
 import grails.plugin.springsecurity.SecurityFilterPosition
 import grails.plugin.springsecurity.SpringSecurityUtils
 import grails.plugins.Plugin
+import grails.plugins.metadata.GrailsPluginDescriptor
 import org.grails.web.config.http.GrailsFilters
 
 @Slf4j
 @CompileStatic
+@GrailsPluginDescriptor(loadAfter = ['springSecurityCore'])
 class SpringSecurityCasGrailsPlugin extends Plugin {
-
-    String grailsVersion = '8.0.0-SNAPSHOT > *'
-    String title = 'Apereo CAS support for the Spring Security plugin.'
-    String description = 'Apereo CAS support for the Spring Security plugin.'
-    String documentation = 'https://apache.github.io/grails-spring-security'
-    String license = 'APACHE'
-    List loadAfter = ['springSecurityCore']
-    def organization = [name: 'Grails', url: 'https://grails.apache.org/']
-    def issueManagement = [system: 'Github', url: 'https://github.com/apache/grails-core/issues']
-    def scm = [url: 'https://github.com/apache/grails-core']
-    def profiles = ['web']
 
     @CompileDynamic
     Closure doWithSpring() {

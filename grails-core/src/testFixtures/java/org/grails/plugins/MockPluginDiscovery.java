@@ -19,7 +19,6 @@
 package org.grails.plugins;
 
 import grails.plugins.GrailsPlugin;
-import grails.plugins.metadata.PluginDefinition;
 import org.apache.grails.core.plugins.DefaultPluginDiscovery;
 import org.apache.grails.core.plugins.PluginDescriptor;
 import org.apache.grails.core.plugins.PluginInfo;
@@ -36,39 +35,20 @@ public class MockPluginDiscovery extends DefaultPluginDiscovery {
         super(pluginClasses);
     }
 
+    /**
+     * Registers a plugin the test created, by its definition.
+     *
+     * @param plugin a {@link DefaultGrailsPlugin} or {@link BinaryGrailsPlugin}
+     */
     public void registerMockPlugin(GrailsPlugin plugin) {
-        if (plugin instanceof BinaryGrailsPlugin binaryPlugin) {
-            registerMockPlugin(binaryPlugin);
-            return;
+        if (!(plugin instanceof DefaultGrailsPlugin defaultPlugin)) {
+            throw new IllegalArgumentException("A mock plugin is a DefaultGrailsPlugin or a BinaryGrailsPlugin, not " + plugin);
         }
-        Class<?> pluginClass = plugin.getPluginClass();
-        if (pluginClass != null) {
-            registerMockPlugin(PluginUtils.createPluginInfo(pluginClass, null, true));
-            return;
-        }
-        PluginDescriptor descriptor = syntheticDescriptor(plugin);
-        registerMockPlugin(PluginUtils.createPluginInfoForDescriptor(descriptor, null, true));
-    }
-
-    public void registerMockPlugin(BinaryGrailsPlugin plugin) {
-        PluginDescriptor descriptor = plugin.getPluginDescriptor();
-        Class<?> pluginClass = plugin.getPluginClass();
-        if (pluginClass != null) {
-            registerMockPlugin(PluginUtils.createPluginInfo(
-                    pluginClass, descriptor != null ? descriptor.getResource() : null, false));
-            return;
-        }
-        PluginDescriptor effectiveDescriptor = descriptor != null ? descriptor : syntheticDescriptor(plugin);
-        registerMockPlugin(PluginUtils.createPluginInfoForDescriptor(effectiveDescriptor, null, false));
-    }
-
-    private static PluginDescriptor syntheticDescriptor(GrailsPlugin plugin) {
-        var builder = new PluginDefinition.Builder();
-        builder.setPluginName(plugin.getName());
-        builder.setPluginVersion(plugin.getVersion());
-        builder.setEnabled(plugin.isEnabled());
-        builder.setMetadataComplete(true);
-        return new PluginDescriptor(null, builder.build());
+        boolean binary = plugin instanceof BinaryGrailsPlugin;
+        PluginDescriptor descriptor = binary ?
+                ((BinaryGrailsPlugin) plugin).getPluginDescriptor() :
+                new PluginDescriptor(null, defaultPlugin.getDefinition());
+        registerMockPlugin(PluginUtils.createPluginInfoByDescriptor(plugin.getPluginClass(), descriptor, !binary));
     }
 
     public void registerMockPlugin(PluginInfo pluginInfo) {

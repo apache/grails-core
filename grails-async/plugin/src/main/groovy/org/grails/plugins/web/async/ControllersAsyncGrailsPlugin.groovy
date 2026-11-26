@@ -41,6 +41,7 @@ import grails.async.Promises
 import grails.async.web.StreamItemRenderer
 import grails.async.web.WebPromises
 import grails.plugins.Plugin
+import grails.plugins.metadata.GrailsPluginDescriptor
 import org.grails.async.factory.PromiseFactoryBuilder
 import org.grails.async.factory.future.VirtualThreadPromiseFactory
 import org.grails.plugins.web.async.mvc.AsyncActionResultTransformer
@@ -57,6 +58,7 @@ import org.grails.plugins.web.async.mvc.PublisherActionResultTransformer
  */
 @CompileStatic
 @Slf4j
+@GrailsPluginDescriptor(loadAfter = ['controllers'])
 class ControllersAsyncGrailsPlugin extends Plugin {
 
     public static final String STREAMING_ENABLED = 'grails.async.streaming.enabled'
@@ -64,9 +66,6 @@ class ControllersAsyncGrailsPlugin extends Plugin {
     public static final String DEFAULT_RENDERER = 'defaultStreamItemRenderer'
     public static final String JACKSON_RENDERER = 'jacksonStreamItemRenderer'
     private static final String JSON_MAPPER_CLASS = 'tools.jackson.databind.json.JsonMapper'
-
-    def grailsVersion = '8.0.0-SNAPSHOT > *'
-    def loadAfter = ['controllers']
 
     @Override
     BeanRegistrar beanRegistrar() {

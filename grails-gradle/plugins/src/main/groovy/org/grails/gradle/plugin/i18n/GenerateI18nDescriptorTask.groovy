@@ -16,10 +16,12 @@
  */
 package org.grails.gradle.plugin.i18n
 
+import grails.util.GrailsNameUtils
 import groovy.transform.CompileStatic
 
 import org.gradle.api.DefaultTask
 import org.gradle.api.InvalidUserDataException
+import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
@@ -92,9 +94,23 @@ abstract class GenerateI18nDescriptorTask extends DefaultTask {
     @Input
     abstract Property<String> getArtifactType()
 
-    /** The application or plugin name; for a plugin it also constrains the permitted base names. */
+    /**
+     * The application or plugin name; for a plugin it also constrains the permitted base names. A plugin's
+     * name is the one in {@link #getPluginImports()} when the compiler wrote one, and this otherwise.
+     */
     @Input
     abstract Property<String> getArtifactName()
+
+    /**
+     * The {@code META-INF/grails/plugins.imports} the compiler wrote beside a plugin's classes. The plugin's
+     * name is declared in code, by {@code @GrailsPluginDescriptor}, so it is read from there.
+     *
+     * @since 9.0
+     */
+    @InputFiles
+    @Optional
+    @PathSensitive(PathSensitivity.NONE)
+    abstract ConfigurableFileCollection getPluginImports()
 
     /** The artifact version, recorded for diagnostics only — it plays no part in ordering. */
     @Input
@@ -121,7 +137,7 @@ abstract class GenerateI18nDescriptorTask extends DefaultTask {
         I18nBundleIndex index = I18nBundleIndex.from(fileNames, declaredBasenames.get())
 
         String type = artifactType.get()
-        String name = artifactName.get()
+        String name = type == TYPE_PLUGIN ? (declaredPluginName() ?: artifactName.get()) : artifactName.get()
         if (type == TYPE_PLUGIN) {
             validatePluginNamespace(index.basenames, name)
         }
@@ -145,6 +161,14 @@ abstract class GenerateI18nDescriptorTask extends DefaultTask {
         text << "basenames=${index.basenames.join(',')}\n"
         text << "locales=${index.locales.join(',')}\n"
         descriptor.setText(text.toString(), 'UTF-8')
+    }
+
+    private String declaredPluginName() {
+        String name = pluginImports.files.findAll { File file -> file.isFile() }
+                .collectMany { File file -> file.readLines('UTF-8') }
+                .collect { String line -> line.trim() }
+                .find { String line -> line && !line.startsWith('#') }
+        name ? GrailsNameUtils.getScriptName(name) : null
     }
 
     /**

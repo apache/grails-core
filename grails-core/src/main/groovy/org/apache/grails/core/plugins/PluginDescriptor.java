@@ -29,46 +29,41 @@ import org.springframework.core.io.Resource;
 
 import grails.plugins.metadata.PluginDefinition;
 
-/** A classpath resource and the plugin declarations it contributed to discovery. */
+/**
+ * A plugin's published {@link PluginDefinition} together with the resource it was read from, normally
+ * {@code META-INF/grails/plugins/<name>/plugin.properties} in the plugin's jar or class directory.
+ *
+ * @since 9.0
+ */
 public final class PluginDescriptor {
 
     private final @Nullable Resource resource;
-    private final @Nullable PluginDefinition definition;
-    private final @Nullable String pluginName;
-    private final @Nullable String pluginVersion;
-    private final List<String> providedPlugins;
-    private final List<String> providedClasses;
+    private final PluginDefinition definition;
 
+    /**
+     * @param resource the resource the definition was read from, or {@code null} for a plugin class
+     *        registered directly, whose definition comes from its annotation
+     * @param definition the plugin definition
+     */
     public PluginDescriptor(@Nullable Resource resource, PluginDefinition definition) {
         this.resource = resource;
-        this.definition = definition;
-        this.pluginName = definition.getPluginName();
-        this.pluginVersion = definition.getPluginVersion();
-        this.providedPlugins = definition.getProvidedPlugins();
-        this.providedClasses = definition.getProvidedClasses();
+        this.definition = Objects.requireNonNull(definition, "definition");
     }
 
-    public PluginDescriptor(@Nullable Resource resource, List<String> providedPlugins, List<String> providedClasses) {
-        this(resource, null, null, providedPlugins, providedClasses);
-    }
-
-    /** An XML or dynamic registration can identify classes before their metadata is available. */
-    PluginDescriptor(@Nullable Resource resource, @Nullable String name, @Nullable String version,
-            List<String> providedPlugins, List<String> providedClasses) {
-        this.resource = resource;
-        this.definition = null;
-        this.pluginName = name;
-        this.pluginVersion = version;
-        this.providedPlugins = List.copyOf(providedPlugins);
-        this.providedClasses = List.copyOf(providedClasses);
-    }
-
-    public static PluginDescriptor fromProperties(@Nullable String defaultName, @Nullable Resource resource,
+    /**
+     * Reads a descriptor from the properties of a {@code plugin.properties} file.
+     *
+     * @param importedName the name {@code plugins.imports} lists the plugin under
+     * @param resource the file
+     * @param properties its contents
+     * @return the descriptor
+     */
+    public static PluginDescriptor fromProperties(@Nullable String importedName, @Nullable Resource resource,
             Properties properties) {
-        return new PluginDescriptor(resource, PluginDefinition.fromProperties(defaultName, properties));
+        return new PluginDescriptor(resource, PluginDefinition.fromProperties(importedName, properties));
     }
 
-    public @Nullable PluginDefinition getDefinition() {
+    public PluginDefinition getDefinition() {
         return definition;
     }
 
@@ -76,57 +71,46 @@ public final class PluginDescriptor {
         return resource;
     }
 
-    public @Nullable String getPluginName() {
-        return pluginName;
+    public String getPluginName() {
+        return definition.getPluginName();
     }
 
     public @Nullable String getPluginVersion() {
-        return pluginVersion;
+        return definition.getPluginVersion();
     }
 
-    public List<String> getProvidedPlugins() {
-        return providedPlugins;
+    /** @return the name of the plugin's {@code grails.plugins.Plugin} subclass */
+    public String getPluginClassName() {
+        return definition.getPluginClass();
     }
 
+    /** @return the artefact classes the plugin contributes */
     public List<String> getProvidedClasses() {
-        return providedClasses;
+        return definition.getProvidedClasses();
     }
 
-    public @Nullable String getPluginClassName() {
-        return providedPlugins.isEmpty() ? null : providedPlugins.get(0);
-    }
-
-    public Map<String, List<String>> getProvidedArtefactsByType() {
-        return definition == null ? Map.of() : definition.getProvidedArtefactsByType();
+    /** @return the artefact classes compiled with the plugin, by artefact type */
+    public Map<String, List<String>> getArtefactsByType() {
+        return definition.getArtefactsByType();
     }
 
     public @Nullable String getGrailsVersionRange() {
-        return definition == null ? null : definition.getGrailsVersionRange();
-    }
-
-    public boolean isMetadataComplete() {
-        return definition != null && definition.isMetadataComplete();
-    }
-
-    public boolean isDescriptorLess() {
-        return providedPlugins.isEmpty();
+        return definition.getGrailsVersionRange();
     }
 
     @Override
     public boolean equals(Object other) {
         return other instanceof PluginDescriptor that && Objects.equals(resource, that.resource) &&
-                Objects.equals(definition, that.definition) && Objects.equals(pluginName, that.pluginName) &&
-                Objects.equals(pluginVersion, that.pluginVersion) && providedPlugins.equals(that.providedPlugins) &&
-                providedClasses.equals(that.providedClasses);
+                definition.equals(that.definition);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(resource, definition, pluginName, pluginVersion, providedPlugins, providedClasses);
+        return Objects.hash(resource, definition);
     }
 
     @Override
     public String toString() {
-        return "PluginDescriptor[name=" + pluginName + ", resource=" + resource + ", providedPlugins=" + providedPlugins + "]";
+        return "PluginDescriptor[name=" + getPluginName() + ", class=" + getPluginClassName() + ", resource=" + resource + "]";
     }
 }

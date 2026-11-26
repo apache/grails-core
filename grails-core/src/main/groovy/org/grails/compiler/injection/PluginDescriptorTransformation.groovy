@@ -22,6 +22,7 @@ import groovy.transform.CompilationUnitAware
 import groovy.transform.CompileStatic
 import org.codehaus.groovy.ast.ASTNode
 import org.codehaus.groovy.ast.ClassHelper
+import org.codehaus.groovy.ast.ClassNode
 import org.codehaus.groovy.control.CompilationUnit
 import org.codehaus.groovy.control.Phases
 import org.codehaus.groovy.control.SourceUnit
@@ -32,12 +33,18 @@ import grails.plugins.metadata.GrailsPluginDescriptor
 import org.apache.grails.plugin.descriptor.PluginDescriptorWriter
 
 /**
- * Publishes descriptors beside the classes produced by a standalone Groovy compilation.
- * Builds with a dedicated packaging task disable this transform on that source set.
+ * Writes the descriptors of the plugins a Groovy compilation produces, beside its classes, once the
+ * compilation has written them. A plugin is a concrete {@code grails.plugins.Plugin} subclass annotated
+ * with {@link GrailsPluginDescriptor}; an annotated class that is not one fails the compilation.
+ *
+ * @see CompilerPluginDescriptors
  */
 @CompileStatic
 @GroovyASTTransformation
 class PluginDescriptorTransformation implements ASTTransformation, CompilationUnitAware {
+
+    private static final ClassNode DESCRIPTOR = ClassHelper.make(GrailsPluginDescriptor)
+    private static final String PLUGIN_CLASS = 'grails.plugins.Plugin'
 
     CompilationUnit compilationUnit
     private final Set<File> scheduled = []
@@ -51,15 +58,24 @@ class PluginDescriptorTransformation implements ASTTransformation, CompilationUn
         if (target == null) {
             return
         }
-        File imports = new File(target, PluginDescriptorWriter.PLUGINS_IMPORTS_PATH)
-        boolean declaresPlugin = source.AST.classes.any { type ->
-            type.nameWithoutPackage.endsWith('GrailsPlugin') ||
-                    !type.getAnnotations(ClassHelper.make(GrailsPluginDescriptor)).empty
+        boolean declaresPlugin = false
+        for (ClassNode type : source.AST.classes) {
+            if (type.getAnnotations(DESCRIPTOR).empty) {
+                continue
+            }
+            if (type.abstract || type.interface || !GrailsASTUtils.isSubclassOf(type, PLUGIN_CLASS)) {
+                source.addErrorAndContinue(new org.codehaus.groovy.syntax.SyntaxException(
+                        "${type.name} is annotated with @GrailsPluginDescriptor, so it must be a concrete " +
+                                "subclass of ${PLUGIN_CLASS}".toString(), type.lineNumber, type.columnNumber))
+                continue
+            }
+            declaresPlugin = true
         }
+        File imports = new File(target, PluginDescriptorWriter.PLUGINS_IMPORTS_PATH)
         if ((declaresPlugin || imports.isFile()) && scheduled.add(target)) {
             compilationUnit.addPhaseOperation({ SourceUnit unit ->
                 if (unit.is(source)) {
-                    CompilerPluginDescriptors.reconcile(target, null, false)
+                    CompilerPluginDescriptors.reconcile(target, null)
                 }
             } as CompilationUnit.ISourceUnitOperation, Phases.OUTPUT)
         }

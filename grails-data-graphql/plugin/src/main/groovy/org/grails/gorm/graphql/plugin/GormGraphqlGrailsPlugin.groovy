@@ -27,6 +27,7 @@ import org.springframework.context.MessageSource
 import org.springframework.core.env.Environment
 
 import grails.plugins.Plugin
+import grails.plugins.metadata.GrailsPluginDescriptor
 import grails.web.mime.MimeType
 import graphql.GraphQL
 import graphql.schema.GraphQLCodeRegistry
@@ -57,17 +58,8 @@ import org.grails.gorm.graphql.types.DefaultGraphQLTypeManager
 import org.grails.gorm.graphql.types.GraphQLTypeManager
 
 @CompileStatic
+@GrailsPluginDescriptor
 class GormGraphqlGrailsPlugin extends Plugin {
-
-    def license = 'Apache 2.0 License'
-    def organization = [name: 'Grails', url: 'https://grails.apache.org/']
-    def issueManagement = [system: 'Github', url: 'https://github.com/apache/grails-core/issues']
-    def scm = [url: 'https://github.com/apache/grails-core']
-    def grailsVersion = '8.0.0-SNAPSHOT > *'
-    def profiles = ['web']
-    def title = 'GORM GraphQL'
-    def description = 'Generates a GraphQL schema based on entities in GORM'
-    def documentation = 'https://grails.apache.org/docs/latest/grails-data/graphql/manual/'
 
     public static final MimeType GRAPHQL_MIME = new MimeType('application/graphql')
 

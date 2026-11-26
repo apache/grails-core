@@ -58,13 +58,7 @@ class ConfigReportCommand implements ApplicationCommand {
 
     static final String PLUGIN_DESCRIPTOR_RESOURCE = 'META-INF/grails/plugins.imports'
 
-    @Deprecated(since = '9.0', forRemoval = true)
-    static final String LEGACY_PLUGIN_DESCRIPTOR_RESOURCE = 'META-INF/grails-plugin.xml'
-
     static final Pattern GRADLE_CLASSES_DIRECTORY = Pattern.compile('^(file:.*/)classes/[^/]+/([^/]+)/$')
-
-    static final Pattern GRADLE_GENERATED_DESCRIPTOR_DIRECTORY =
-            Pattern.compile('^(file:.*/)generated/resources/grails(?:Library)?PluginDescriptor/$')
 
     final String description = 'Generates an AsciiDoc report of the application configuration'
 
@@ -348,25 +342,15 @@ class ConfigReportCommand implements ApplicationCommand {
      * @param classLoader the class loader to search
      * @return the roots of the Grails plugins
      */
-    @SuppressWarnings('deprecation')
     Set<String> findPluginRoots(ClassLoader classLoader) {
         Set<String> roots = new HashSet<String>()
-        for (String descriptorResource : [PLUGIN_DESCRIPTOR_RESOURCE, LEGACY_PLUGIN_DESCRIPTOR_RESOURCE]) {
-            Enumeration<URL> descriptors = classLoader.getResources(descriptorResource)
-            while (descriptors.hasMoreElements()) {
-                String root = resourceRoot(descriptors.nextElement(), descriptorResource)
-                roots.add(root)
-                Matcher classesDirectory = GRADLE_CLASSES_DIRECTORY.matcher(root)
-                if (classesDirectory.matches()) {
-                    roots.add("${classesDirectory.group(1)}resources/${classesDirectory.group(2)}/".toString())
-                }
-                Matcher generatedDirectory = GRADLE_GENERATED_DESCRIPTOR_DIRECTORY.matcher(root)
-                if (generatedDirectory.matches()) {
-                    String buildDir = generatedDirectory.group(1)
-                    roots.add("${buildDir}resources/main/".toString())
-                    roots.add("${buildDir}classes/java/main/".toString())
-                    roots.add("${buildDir}classes/groovy/main/".toString())
-                }
+        Enumeration<URL> descriptors = classLoader.getResources(PLUGIN_DESCRIPTOR_RESOURCE)
+        while (descriptors.hasMoreElements()) {
+            String root = resourceRoot(descriptors.nextElement(), PLUGIN_DESCRIPTOR_RESOURCE)
+            roots.add(root)
+            Matcher classesDirectory = GRADLE_CLASSES_DIRECTORY.matcher(root)
+            if (classesDirectory.matches()) {
+                roots.add("${classesDirectory.group(1)}resources/${classesDirectory.group(2)}/".toString())
             }
         }
         roots

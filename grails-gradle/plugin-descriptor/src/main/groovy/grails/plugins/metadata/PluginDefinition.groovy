@@ -22,9 +22,10 @@ import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 
 /**
- * Published metadata for one Grails plugin. Class names are symbolic so tools can
- * inspect a plugin without loading it or its dependencies. A complete definition
- * supplies all fields required for filtering and ordering before activation.
+ * The metadata of one Grails plugin, as its {@link GrailsPluginDescriptor} declares it and the compiler
+ * publishes it in {@code META-INF/grails/plugins/<name>/plugin.properties}. Class names are symbolic, so
+ * tools read a plugin without loading it or its dependencies, and discovery filters and orders plugins
+ * without creating them.
  *
  * @since 9.0
  */
@@ -34,39 +35,46 @@ final class PluginDefinition {
 
     static final String FORMAT_VERSION = '1'
 
+    /** The {@code ${plugin.version}} placeholder a dependency range may use for the plugin's own version. */
+    static final String PLUGIN_VERSION_PLACEHOLDER = '${plugin.version}'
+
+    private static final String GRAILS_PLUGIN_SUFFIX = 'GrailsPlugin'
+
     final String pluginName
     final String pluginVersion
     final String grailsVersionRange
-    final List<String> providedPlugins
-    final List<String> providedClasses
+    final String pluginClass
     final List<String> loadAfter
     final List<String> loadBefore
     final List<String> evict
     final List<String> observe
     final List<String> environmentsIncludes
     final List<String> environmentsExcludes
-    final Map<String, List<String>> providedArtefactsByType
+    final List<String> watchedResources
+    final List<String> pluginExcludes
+    final List<String> providedArtefacts
+    final Map<String, List<String>> artefactsByType
     final Map<String, String> dependsOn
     final boolean enabled
-    final boolean metadataComplete
 
     /** Mutable declaration inputs. Building takes an immutable, normalized snapshot. */
     static final class Builder {
         String pluginName
         String pluginVersion
         String grailsVersionRange
-        List<String> providedPlugins
-        List<String> providedClasses
+        String pluginClass
         List<String> loadAfter
         List<String> loadBefore
         List<String> evict
         List<String> observe
         List<String> environmentsIncludes
         List<String> environmentsExcludes
-        Map<String, List<String>> providedArtefactsByType
+        List<String> watchedResources
+        List<String> pluginExcludes
+        List<String> providedArtefacts
+        Map<String, List<String>> artefactsByType
         Map<String, String> dependsOn
         boolean enabled = true
-        boolean metadataComplete = true
 
         PluginDefinition build() {
             new PluginDefinition(this)
@@ -78,19 +86,24 @@ final class PluginDefinition {
         if (!(pluginName ==~ /[A-Za-z0-9][A-Za-z0-9._-]*/) || pluginName.contains('..')) {
             throw new IllegalArgumentException("Invalid Grails plugin name '${source.pluginName}'")
         }
+        pluginClass = source.pluginClass?.trim() ?: null
+        if (!pluginClass) {
+            throw new IllegalArgumentException("Grails plugin '${pluginName}' names no plugin class")
+        }
         pluginVersion = source.pluginVersion?.trim() ?: null
         grailsVersionRange = resolveVersion(source.grailsVersionRange?.trim())
-        providedPlugins = copyEntries(source.providedPlugins)
         loadAfter = names(source.loadAfter)
         loadBefore = names(source.loadBefore)
         observe = names(source.observe)
         evict = names(source.evict)
         environmentsIncludes = copyEntries(source.environmentsIncludes)
         environmentsExcludes = copyEntries(source.environmentsExcludes)
+        watchedResources = copyEntries(source.watchedResources)
+        pluginExcludes = copyEntries(source.pluginExcludes)
+        providedArtefacts = copyEntries(source.providedArtefacts)
         enabled = source.enabled
-        metadataComplete = source.metadataComplete
 
-        Map<String, String> dependencies = [:]
+        Map<String, String> dependencies = new LinkedHashMap<>()
         source.dependsOn?.each { String name, String constraint ->
             String normalized = normalizePluginName(name)
             if (normalized) {
@@ -99,32 +112,104 @@ final class PluginDefinition {
         }
         dependsOn = Collections.unmodifiableMap(dependencies)
 
-        Map<String, List<String>> typed = [:]
-        Set<String> classes = new LinkedHashSet<>()
-        source.providedArtefactsByType?.each { String type, List<String> entries ->
+        Map<String, List<String>> typed = new TreeMap<>()
+        source.artefactsByType?.each { String type, List<String> entries ->
             List<String> included = copyEntries(entries)
             if (type?.trim() && included) {
                 typed.put(type.trim(), included)
-                classes.addAll(included)
             }
         }
-        classes.addAll(copyEntries(source.providedClasses))
-        providedArtefactsByType = Collections.unmodifiableMap(typed)
-        providedClasses = List.copyOf(classes)
+        artefactsByType = Collections.unmodifiableMap(typed)
+    }
+
+    /**
+     * The artefact classes the plugin contributes: those compiled with it, by type, and those its
+     * descriptor names in {@code providedArtefacts}.
+     */
+    List<String> getProvidedClasses() {
+        Set<String> classes = new LinkedHashSet<>()
+        artefactsByType.values().each { List<String> names -> classes.addAll(names) }
+        classes.addAll(providedArtefacts)
+        List.copyOf(classes)
     }
 
     private String resolveVersion(String value) {
-        if (!value?.contains('${plugin.version}')) {
+        if (!value?.contains(PLUGIN_VERSION_PLACEHOLDER)) {
             return value ?: null
         }
         if (!pluginVersion) {
-            throw new IllegalArgumentException("Plugin ${pluginName} must declare a version to resolve ${value}")
+            // Without a version (a class compiled outside a build) the plugin's own version is unknown,
+            // and a range written against it cannot be checked.
+            return '*'
         }
-        value.replace('${plugin.version}', pluginVersion)
+        value.replace(PLUGIN_VERSION_PLACEHOLDER, pluginVersion)
+    }
+
+    /**
+     * Builds the definition a {@link GrailsPluginDescriptor} declares. The compiler reads the
+     * annotation from bytecode and the runtime by reflection; both hand its attributes here, keyed by
+     * attribute name, so the two agree on every default.
+     *
+     * @param pluginClass the annotated class
+     * @param attributes the annotation attributes that are set: {@code String}, {@code Boolean} or a
+     *        {@code List<String>} of values (class names for {@code providedArtefacts})
+     * @param pluginVersion the plugin's version (the build's project version), or {@code null}
+     * @param defaultGrailsVersion the Grails range used when the descriptor declares none, or {@code null}
+     * @param artefactsByType the artefact classes compiled with the plugin, by artefact type
+     */
+    static PluginDefinition fromDeclaration(
+            String pluginClass,
+            Map<String, Object> attributes,
+            String pluginVersion,
+            String defaultGrailsVersion,
+            Map<String, List<String>> artefactsByType) {
+        Builder builder = new Builder()
+        builder.pluginClass = pluginClass
+        builder.pluginName = deriveName(pluginClass, (String) attributes.get('name'))
+        builder.pluginVersion = pluginVersion
+        builder.grailsVersionRange = ((String) attributes.get('grailsVersion'))?.trim() ?: defaultGrailsVersion
+        builder.loadAfter = list(attributes, 'loadAfter')
+        builder.loadBefore = list(attributes, 'loadBefore')
+        builder.evict = list(attributes, 'evict')
+        builder.observe = list(attributes, 'observe')
+        builder.environmentsIncludes = list(attributes, 'environmentsIncludes')
+        builder.environmentsExcludes = list(attributes, 'environmentsExcludes')
+        builder.watchedResources = list(attributes, 'watchedResources')
+        builder.pluginExcludes = list(attributes, 'pluginExcludes')
+        builder.providedArtefacts = list(attributes, 'providedArtefacts')
+        builder.dependsOn = parseDependencies(list(attributes, 'dependsOn'))
+        Object enabled = attributes.get('enabled')
+        builder.enabled = enabled == null || (Boolean) enabled
+        builder.artefactsByType = artefactsByType ?: [:]
+        builder.build()
+    }
+
+    @SuppressWarnings('unchecked')
+    private static List<String> list(Map<String, Object> attributes, String name) {
+        (List<String>) attributes.get(name) ?: List.<String>of()
+    }
+
+    /**
+     * The logical name of a plugin: the declared name, or else the simple class name without a
+     * {@code GrailsPlugin} suffix, in property-name form ({@code FooBarGrailsPlugin} is {@code fooBar}).
+     */
+    static String deriveName(String pluginClass, String declaredName) {
+        if (declaredName?.trim()) {
+            return normalizePluginName(declaredName)
+        }
+        String simpleName = pluginClass.substring(pluginClass.lastIndexOf('.') + 1)
+        simpleName = simpleName.substring(simpleName.lastIndexOf('$') + 1)
+        if (simpleName.endsWith(GRAILS_PLUGIN_SUFFIX) && simpleName.length() > GRAILS_PLUGIN_SUFFIX.length()) {
+            simpleName = simpleName.substring(0, simpleName.length() - GRAILS_PLUGIN_SUFFIX.length())
+        }
+        if (simpleName.length() > 1 && Character.isUpperCase(simpleName.charAt(0)) && Character.isUpperCase(simpleName.charAt(1))) {
+            return simpleName
+        }
+        Character.toLowerCase(simpleName.charAt(0)).toString() + simpleName.substring(1)
     }
 
     static Map<String, String> parseDependencies(Iterable<String> declarations) {
-        Map<String, String> dependencies = [:]
+        Map<String, String> dependencies = new LinkedHashMap<>()
         for (String declaration : declarations) {
             String spec = declaration?.trim()
             if (spec) {
@@ -155,25 +240,26 @@ final class PluginDefinition {
         if (importedName && normalizePluginName(builder.pluginName) != normalizePluginName(importedName)) {
             throw new IllegalArgumentException("Plugin ${importedName} declares a conflicting name ${builder.pluginName}")
         }
+        builder.pluginClass = values.getProperty('class')
         builder.pluginVersion = values.getProperty('version')
         builder.grailsVersionRange = values.getProperty('grailsVersion')
-        builder.providedPlugins = entries(values.getProperty('class'))
-        builder.providedClasses = entries(values.getProperty('artefacts'))
         builder.loadAfter = entries(values.getProperty('loadAfter'))
         builder.loadBefore = entries(values.getProperty('loadBefore'))
         builder.evict = entries(values.getProperty('evict'))
         builder.observe = entries(values.getProperty('observe'))
         builder.environmentsIncludes = entries(values.getProperty('environments.includes'))
         builder.environmentsExcludes = entries(values.getProperty('environments.excludes'))
+        builder.watchedResources = entries(values.getProperty('watchedResources'))
+        builder.pluginExcludes = entries(values.getProperty('pluginExcludes'))
+        builder.providedArtefacts = entries(values.getProperty('providedArtefacts'))
         builder.enabled = flag(values, 'enabled', true)
-        builder.metadataComplete = flag(values, 'metadata.complete', builder.providedPlugins.empty)
-        builder.dependsOn = [:]
-        builder.providedArtefactsByType = [:]
+        builder.dependsOn = new LinkedHashMap<>()
+        builder.artefactsByType = new LinkedHashMap<>()
         for (String key : values.stringPropertyNames().sort()) {
             if (key.startsWith('dependsOn.')) {
                 builder.dependsOn.put(key.substring('dependsOn.'.length()), values.getProperty(key))
             } else if (key.startsWith('artefacts.')) {
-                builder.providedArtefactsByType.put(key.substring('artefacts.'.length()), entries(values.getProperty(key)))
+                builder.artefactsByType.put(key.substring('artefacts.'.length()), entries(values.getProperty(key)))
             }
         }
         builder.build()
@@ -184,7 +270,7 @@ final class PluginDefinition {
         Map<String, String> entries = new TreeMap<>()
         entries.put('format.version', FORMAT_VERSION)
         entries.put('name', pluginName)
-        entries.put('metadata.complete', Boolean.toString(metadataComplete))
+        entries.put('class', pluginClass)
         if (pluginVersion) {
             entries.put('version', pluginVersion)
         }
@@ -194,21 +280,18 @@ final class PluginDefinition {
         if (!enabled) {
             entries.put('enabled', 'false')
         }
-        addList(entries, 'class', providedPlugins)
         addList(entries, 'loadAfter', loadAfter)
         addList(entries, 'loadBefore', loadBefore)
         addList(entries, 'evict', evict)
         addList(entries, 'observe', observe)
         addList(entries, 'environments.includes', environmentsIncludes)
         addList(entries, 'environments.excludes', environmentsExcludes)
+        addList(entries, 'watchedResources', watchedResources)
+        addList(entries, 'pluginExcludes', pluginExcludes)
+        addList(entries, 'providedArtefacts', providedArtefacts)
         dependsOn.each { String key, String value -> entries.put('dependsOn.' + key, value) }
-        Set<String> untyped = new LinkedHashSet<>(providedClasses)
-        providedArtefactsByType.each { String key, List<String> values ->
-            addList(entries, 'artefacts.' + key, values)
-            untyped.removeAll(values)
-        }
-        addList(entries, 'artefacts', untyped)
-        writer.write('# Generated by Grails. Do not edit.\n')
+        artefactsByType.each { String key, List<String> values -> addList(entries, 'artefacts.' + key, values) }
+        writer.write('# Generated by the Grails compiler. Do not edit.\n')
         entries.each { String key, String value -> writer.write(escapeKey(key) + '=' + escapeValue(value) + '\n') }
     }
 

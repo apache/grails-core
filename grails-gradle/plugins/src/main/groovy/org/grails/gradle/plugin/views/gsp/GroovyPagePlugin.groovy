@@ -30,7 +30,6 @@ import org.gradle.api.tasks.compile.GroovyCompile
 import org.gradle.api.file.Directory
 import org.gradle.api.file.DuplicatesStrategy
 import org.gradle.api.file.FileCollection
-import org.gradle.api.file.RegularFile
 import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.api.provider.Provider
@@ -44,7 +43,6 @@ import org.gradle.jvm.toolchain.JavaLauncher
 import org.gradle.jvm.toolchain.JavaToolchainService
 
 import org.apache.grails.plugin.descriptor.PluginDescriptorWriter
-import org.grails.gradle.plugin.core.GeneratePluginDescriptorTask
 import org.grails.gradle.plugin.core.GrailsCompileStaticOptions
 import org.grails.gradle.plugin.core.GrailsGradlePlugin
 import org.grails.gradle.plugin.core.GrailsPluginGradlePlugin
@@ -417,10 +415,9 @@ class GroovyPagePlugin implements Plugin<Project> {
         wireCompileStaticOptions(project, [compileGroovyPages, compileWebappGroovyPages])
 
         project.plugins.withId(GrailsPluginGradlePlugin.PLUGIN_ID) {
-            TaskProvider<GeneratePluginDescriptorTask> descriptorTask = project.tasks.named(
-                    'generatePluginDescriptor', GeneratePluginDescriptorTask)
-            Provider<RegularFile> importsFile = descriptorTask.flatMap { GeneratePluginDescriptorTask t ->
-                t.outputDirectory.file(PluginDescriptorWriter.PLUGINS_IMPORTS_PATH)
+            // The compiler lists the plugins of the main source set beside its classes.
+            FileCollection importsFile = SourceSets.findMainSourceSet(project).output.classesDirs.asFileTree.matching {
+                PatternFilterable pattern -> pattern.include(PluginDescriptorWriter.PLUGINS_IMPORTS_PATH)
             }
             compileGroovyPages.configure { GroovyPageForkCompileTask task ->
                 task.pluginImportsFiles.from(importsFile)

@@ -65,7 +65,7 @@ class GrailsApplication implements GrailsApplicationFeature, DefaultFeature {
         }
         if (applicationType == ApplicationType.PLUGIN || applicationType == ApplicationType.WEB_PLUGIN) {
             generatorContext.addTemplate('plugin', new GspTemplate(generatorContext.getSourcePath('/{packagePath}/{className}GrailsPlugin'),
-                    GspView.of('/forge/feature/grails/templates/plugin.gsp', [project: generatorContext.getProject(), applicationType: applicationType])))
+                    GspView.of('/forge/feature/grails/templates/plugin.gsp', [project: generatorContext.getProject()])))
         }
         generatorContext.addTemplate('bootStrap', new GspTemplate('grails-app/init/{packagePath}/BootStrap.groovy', GspView.of('/forge/feature/lang/groovy/templates/bootStrap.gsp', [project: generatorContext.getProject(), features: generatorContext.getFeatures()])))
     }

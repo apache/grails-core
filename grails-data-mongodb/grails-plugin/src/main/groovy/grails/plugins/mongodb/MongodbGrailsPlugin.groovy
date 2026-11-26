@@ -30,23 +30,16 @@ import grails.core.GrailsClass
 import grails.mongodb.bootstrap.MongoDbDataStoreSpringInitializer
 import grails.plugins.GrailsPlugin
 import grails.plugins.Plugin
+import grails.plugins.metadata.GrailsPluginDescriptor
 import grails.util.Metadata
 import org.grails.core.artefact.DomainClassArtefactHandler
 import org.grails.datastore.gorm.plugin.support.ConfigSupport
 import org.grails.datastore.mapping.mongo.MongoDatastore
 
+@GrailsPluginDescriptor(
+        loadAfter = ['domainClass', 'hibernate', 'hibernate5', 'hibernate7', 'services'],
+        observe = ['services', 'domainClass'])
 class MongodbGrailsPlugin extends Plugin {
-
-    def license = 'Apache 2.0 License'
-    def organization = [name: 'Apache Grails', url: 'https://grails.apache.org/']
-    def issueManagement = [system: 'Github', url: 'https://github.com/apache/grails-core/issues']
-    def scm = [url: 'https://github.com/apache/grails-core']
-    def grailsVersion = '7.0.0-SNAPSHOT > *'
-    def observe = ['services', 'domainClass']
-    def loadAfter = ['domainClass', 'hibernate', 'hibernate5', 'hibernate7', 'services']
-    def title = 'GORM MongoDB'
-    def description = 'A plugin that integrates the MongoDB document datastore into the Grails framework, providing a GORM API onto it'
-    def documentation = 'https://grails.apache.org/docs/latest/grails-data/mongodb/manual/'
 
     @Override
     @CompileStatic

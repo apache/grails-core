@@ -27,6 +27,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnBooleanProp
 import org.springframework.cache.Cache
 
 import grails.plugins.Plugin
+import grails.plugins.metadata.GrailsPluginDescriptor
 import org.grails.plugin.cache.GrailsCacheManager
 import org.grails.plugin.cache.GrailsCacheManagerAliasRegistrar
 import org.grails.plugin.cache.GrailsCacheManagerDependencyRegistrar
@@ -56,19 +57,15 @@ import org.grails.plugin.cache.GrailsCacheManagerDependencyRegistrar
 @CompileStatic
 @AutoConfiguration
 @ConditionalOnBooleanProperty(name = 'grails.cache.enabled', matchIfMissing = true)
+@GrailsPluginDescriptor(
+        loadAfter = ['controllers', 'services'],
+        observe = ['controllers', 'services'],
+        pluginExcludes = [
+                '**/com/demo/**',
+                'grails-app/views/**',
+                '**/*.gsp'
+        ])
 class CacheGrailsPlugin extends Plugin {
-
-    def grailsVersion = '8.0.0-SNAPSHOT > *'
-    def observe = ['controllers', 'services']
-    def loadAfter = ['controllers', 'services']
-    def authorEmail = ''
-    def description = 'Grails Cache Plugin'
-
-    def pluginExcludes = [
-            '**/com/demo/**',
-            'grails-app/views/**',
-            '**/*.gsp'
-    ]
 
     private static final String CACHE_CONFIGURATION_BEAN = 'grailsCacheConfiguration'
 

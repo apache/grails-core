@@ -34,8 +34,6 @@ project.layout.projectDirectory.file('../../gradle.properties').asFile.withInput
     project.ext.gradleProperties = props
 }
 
-sourceSets.main.groovy.srcDir(layout.projectDirectory.dir('../../grails-gradle/plugin-descriptor/src/main/groovy'))
-
 dependencies {
     // Gradle plugins are declared by their implementation artifact, not by their plugin marker
     // (<id>:<id>.gradle.plugin). A marker is a POM-only module, so Gradle also requests a jar for it

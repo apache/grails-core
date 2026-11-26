@@ -25,13 +25,22 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Declares strongly-typed metadata for a Grails plugin descriptor class.
+ * Declares a Grails plugin and all of its metadata.
  *
- * <p>Classes annotated with {@code @GrailsPluginDescriptor} may be written in Java or statically-compiled
- * Groovy and do not require the legacy {@code *GrailsPlugin} class name suffix. Build-time tooling reads
- * the annotation attributes directly from bytecode into
- * {@code META-INF/grails/plugins/<name>/plugin.properties}, and runtime discovery extracts the metadata
- * without instantiating the class via reflection.</p>
+ * <p>A Grails plugin is a concrete subclass of {@code grails.plugins.Plugin} carrying this annotation,
+ * written in Groovy or Java. Nothing else is a plugin: the class name does not matter, and a class
+ * without the annotation is never discovered. The plugin's behaviour is its overridden {@code Plugin}
+ * methods; everything known before the plugin runs is declared here, as constants.</p>
+ *
+ * <p>The compiler writes the annotation, with the plugin's version and the artefacts compiled with it,
+ * to {@code META-INF/grails/plugins/<name>/plugin.properties} and lists the name in
+ * {@code META-INF/grails/plugins.imports}. Discovery reads those files, so plugins are filtered and
+ * ordered without being loaded or created.</p>
+ *
+ * <p>The plugin's version is not declared: it is the version of the build that compiles it. A
+ * dependency range may refer to it as {@code ${plugin.version}}, for example
+ * {@code dependsOn = "core:${plugin.version}"} for a plugin released with the Grails version it
+ * requires.</p>
  *
  * @since 9.0
  */
@@ -49,16 +58,10 @@ public @interface GrailsPluginDescriptor {
     String name() default "";
 
     /**
-     * The plugin version. When omitted, the build's project version is recorded at build time.
-     *
-     * @return the plugin version, or an empty string to inherit the project version
-     */
-    String version() default "";
-
-    /**
      * The supported Grails version range expression (for example {@code "9.0.0 > *"}).
      *
-     * @return the Grails version range, or an empty string if unconstrained
+     * @return the Grails version range, or an empty string for the version of Grails the plugin is
+     *         compiled against and any later version
      */
     String grailsVersion() default "";
 
@@ -112,6 +115,22 @@ public @interface GrailsPluginDescriptor {
      * @return excluded environment names
      */
     String[] environmentsExcludes() default {};
+
+    /**
+     * Ant-style patterns of the files whose changes are passed to {@code Plugin.onChange} while the
+     * application runs in development, for example {@code "file:./grails-app/controllers/**}{@code /*Controller.groovy"}.
+     *
+     * @return watched resource patterns
+     */
+    String[] watchedResources() default {};
+
+    /**
+     * Artefact classes the plugin contributes in addition to those compiled with it, such as a tag
+     * library from a library it depends on.
+     *
+     * @return additional artefact classes
+     */
+    Class<?>[] providedArtefacts() default {};
 
     /**
      * Ant-style resource patterns excluded from the plugin's packaged artefact list.

@@ -38,7 +38,7 @@ import grails.databinding.converters.FormattedValueConverter
 import grails.databinding.converters.ValueConverter
 import grails.databinding.events.DataBindingListener
 import grails.plugins.Plugin
-import grails.util.GrailsUtil
+import grails.plugins.metadata.GrailsPluginDescriptor
 import grails.web.databinding.GrailsWebDataBinder
 import org.grails.databinding.bindingsource.DataBindingSourceCreator
 import org.grails.databinding.converters.DefaultConvertersConfiguration
@@ -61,9 +61,8 @@ import org.grails.web.databinding.bindingsource.JsonDataBindingSourceCreator
 @AutoConfigureOrder
 @EnableConfigurationProperties(DataBindingConfigurationProperties)
 @ImportAutoConfiguration(DefaultConvertersConfiguration)
+@GrailsPluginDescriptor
 class DataBindingGrailsPlugin extends Plugin {
-
-    def version = GrailsUtil.getGrailsVersion()
 
     def beans = {
         // Must be lazily initialized because plugins' ValueConverters and StructuredBindingEditors

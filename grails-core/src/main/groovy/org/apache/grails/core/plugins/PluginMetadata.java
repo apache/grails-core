@@ -41,9 +41,6 @@ public final class PluginMetadata {
     private final Map<String, Set<Object>> environments;
 
     public PluginMetadata(PluginDefinition definition, @Nullable Class<?> pluginClass) {
-        if (definition.getPluginVersion() == null || definition.getPluginVersion().isBlank()) {
-            throw new PluginException("Plugin [" + definition.getPluginName() + "] must specify a version!");
-        }
         this.definition = definition;
         this.pluginClass = pluginClass;
         this.environments = PluginUtils.buildEnvironmentsMap(definition.getEnvironmentsIncludes(), definition.getEnvironmentsExcludes());
@@ -65,9 +62,9 @@ public final class PluginMetadata {
     /**
      * Returns the declared plugin version.
      *
-     * @return the plugin version
+     * @return the plugin version, or {@code null} for a plugin compiled outside a build that sets one
      */
-    public String getPluginVersion() {
+    public @Nullable String getPluginVersion() {
         return definition.getPluginVersion();
     }
 

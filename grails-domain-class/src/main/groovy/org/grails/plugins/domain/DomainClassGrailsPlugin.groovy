@@ -27,7 +27,7 @@ import org.springframework.context.MessageSource
 
 import grails.core.GrailsApplication
 import grails.plugins.Plugin
-import grails.util.GrailsUtil
+import grails.plugins.metadata.GrailsPluginDescriptor
 import org.grails.datastore.gorm.validation.constraints.factory.ConstraintFactory
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.plugins.domain.support.DefaultConstraintEvaluatorFactoryBean
@@ -46,14 +46,12 @@ import org.grails.plugins.domain.support.ValidatorRegistryFactoryBean
 // I18nAutoConfiguration doesn't exist as a compilable class for this class to reference.
 @AutoConfiguration(afterName = ['org.grails.plugins.i18n.I18nAutoConfiguration'])
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
+@GrailsPluginDescriptor(
+        loadAfter = ['controllers', 'dataSource'],
+        dependsOn = ['i18n:${plugin.version}'],
+        watchedResources = ['file:./grails-app/domain/**/*.groovy',
+                                'file:./plugins/*/grails-app/domain/**/*.groovy'])
 class DomainClassGrailsPlugin extends Plugin {
-
-    def watchedResources = ['file:./grails-app/domain/**/*.groovy',
-                            'file:./plugins/*/grails-app/domain/**/*.groovy']
-
-    def version = GrailsUtil.getGrailsVersion()
-    def dependsOn = [i18n: version]
-    def loadAfter = ['controllers', 'dataSource']
 
     def beans = {
         bean('grailsDomainClassMappingContext', DefaultMappingContextFactoryBean).lazy() { GrailsApplication grailsApplication, List<MessageSource> messageSources, List<ConstraintFactory> factories ->

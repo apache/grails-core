@@ -21,24 +21,11 @@ package loadfirst
 
 import grails.plugins.*
 
+import grails.plugins.metadata.GrailsPluginDescriptor
+
+@GrailsPluginDescriptor(
+        pluginExcludes = [
+            "grails-app/views/error.gsp"
+        ])
 class LoadfirstGrailsPlugin extends Plugin {
-
-   // the version or versions of Grails the plugin is designed for
-    def grailsVersion = '7.0.0.SNAPSHOT > *'
-    // resources that are excluded from plugin packaging
-    def pluginExcludes = [
-        "grails-app/views/error.gsp"
-    ]
-
-    // TODO Fill in these fields
-    def title = "Loadfirst" // Headline display name of the plugin
-    def author = "Your name"
-    def authorEmail = ""
-    def description = '''\
-This plugin should be loaded before the loadsecond plugin because loadsecond expresses loadAfter=['loadfirst'].
-'''
-    def profiles = ['web']
-
-    // URL to the plugin's documentation
-    def documentation = "https://grails.apache.org/plugins.html"
 }

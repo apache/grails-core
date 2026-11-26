@@ -32,25 +32,14 @@ import grails.plugin.springsecurity.ui.strategy.DefaultRoleStrategy
 import grails.plugin.springsecurity.ui.strategy.DefaultUserStrategy
 import grails.plugin.springsecurity.ui.strategy.MailPluginMailStrategy
 import grails.plugins.Plugin
+import grails.plugins.metadata.GrailsPluginDescriptor
 
 /**
  * @author Burt Beckwith
  */
 @Slf4j
+@GrailsPluginDescriptor(loadAfter = ['springSecurityCore', 'springSecurityAcl'])
 class SpringSecurityUiGrailsPlugin extends Plugin {
-
-    String grailsVersion = '7.0.0-SNAPSHOT > *'
-    String author = 'Burt Beckwith'
-    String authorEmail = ''
-    String title = 'Spring Security UI plugin'
-    String description = 'User interface extensions for the Spring Security plugin'
-    String documentation = 'https://grails.apache.org/documentation.html'
-    String license = 'APACHE'
-    def organization = [name: 'Apache Grails', url: 'https://grails.apache.org']
-    def issueManagement = [url: 'https://github.com/apache/grails-core/issues']
-    def scm = [ url: 'https://github.com/apache/grails-core']
-    def loadAfter = ['springSecurityCore', 'springSecurityAcl']
-    def profiles = ['web']
 
     Closure doWithSpring() {
         { ->

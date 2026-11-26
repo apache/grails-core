@@ -4,45 +4,20 @@ import org.springframework.beans.factory.BeanRegistrar
 import org.springframework.beans.factory.BeanRegistry
 import org.springframework.core.env.Environment
 
-import grails.plugins.*
+import grails.plugins.Plugin
+import grails.plugins.metadata.GrailsPluginDescriptor
 
+/**
+ * The @grails.codegen.projectNaturalName@ plugin. Its name, ordering and the rest of its metadata are
+ * declared by the annotation; its version is the project version. The published POM carries the
+ * description, license and developers, from the grailsPublish block in build.gradle.
+ */
+@GrailsPluginDescriptor(
+        // Files left out of the plugin's packaged artefacts
+        pluginExcludes = ['grails-app/views/error.gsp']
+        // Plugins this one loads after, or needs: loadAfter = ['controllers'], dependsOn = ['core']
+)
 class @grails.codegen.projectClassName@GrailsPlugin extends Plugin {
-
-    // the version or versions of Grails the plugin is designed for
-    def grailsVersion = "@grails.version@ > *"
-    // resources that are excluded from plugin packaging
-    def pluginExcludes = [
-        "grails-app/views/error.gsp"
-    ]
-
-    // TODO Fill in these fields
-    def title = "@grails.codegen.projectNaturalName@" // Headline display name of the plugin
-    def author = "Your name"
-    def authorEmail = ""
-    def description = '''\
-Brief summary/description of the plugin.
-'''
-    def profiles = ['web']
-
-    // URL to the plugin's documentation
-    def documentation = "https://grails-plugins.github.io/@grails.codegen.projectName@"
-
-    // Extra (optional) plugin metadata
-
-    // License: one of 'APACHE', 'GPL2', 'GPL3'
-//    def license = "APACHE"
-
-    // Details of company behind the plugin (if there is one)
-//    def organization = [ name: "My Company", url: "http://www.my-company.com/" ]
-
-    // Any additional developers beyond the author specified above.
-//    def developers = [ [ name: "Joe Bloggs", email: "joe@bloggs.net" ]]
-
-    // Location of the plugin's issue tracker.
-//    def issueManagement = [ system: "JIRA", url: "http://jira.grails.org/browse/GPMYPLUGIN" ]
-
-    // Online location of the plugin's browseable source code.
-//    def scm = [ url: "http://svn.codehaus.org/grails-plugins/" ]
 
     BeanRegistrar beanRegistrar() {
         return { BeanRegistry registry, Environment environment ->

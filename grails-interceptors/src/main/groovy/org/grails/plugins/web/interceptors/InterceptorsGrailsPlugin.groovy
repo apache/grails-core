@@ -30,7 +30,7 @@ import grails.artefact.Interceptor
 import grails.config.Settings
 import grails.core.GrailsClass
 import grails.plugins.Plugin
-import grails.util.GrailsUtil
+import grails.plugins.metadata.GrailsPluginDescriptor
 
 /**
  * A plugin for interceptors
@@ -39,12 +39,11 @@ import grails.util.GrailsUtil
  * @since 3.0
  */
 @CompileStatic
+@GrailsPluginDescriptor(
+        loadAfter = ['domainClass', 'hibernate'],
+        dependsOn = ['controllers:${plugin.version}', 'urlMappings:${plugin.version}'],
+        watchedResources = ['file:./grails-app/controllers/**/*Interceptor.groovy'])
 class InterceptorsGrailsPlugin extends Plugin {
-
-    def final version = GrailsUtil.getGrailsVersion()
-    def final dependsOn = [controllers: version, urlMappings: version]
-    def final watchedResources = 'file:./grails-app/controllers/**/*Interceptor.groovy'
-    def final loadAfter = ['domainClass', 'hibernate']
 
     GrailsInterceptorHandlerInterceptorAdapter interceptorAdapter
 

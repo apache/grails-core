@@ -50,11 +50,17 @@ class GrailsVersionUtils {
     /**
      * Check if the required version is a valid for the given plugin version.
      *
-     * @param pluginVersion The plugin version
+     * <p>A plugin without a version, one compiled outside a build that sets it, cannot be checked and so
+     * satisfies every range.</p>
+     *
+     * @param pluginVersion The plugin version, or {@code null} when it is unknown
      * @param requiredVersion The required version
      * @return true if it is valid
      */
     static boolean isValidVersion(String pluginVersion, String requiredVersion) {
+        if (pluginVersion == null) {
+            return true
+        }
         def vc = new VersionComparator()
         pluginVersion = trimTag(pluginVersion)
 

@@ -52,9 +52,9 @@ import grails.core.GrailsApplication
 import grails.core.support.proxy.DefaultProxyHandler
 import grails.plugins.GrailsPluginManager
 import grails.plugins.Plugin
+import grails.plugins.metadata.GrailsPluginDescriptor
 import grails.util.BuildSettings
 import grails.util.Environment as GrailsEnvironment
-import grails.util.GrailsUtil
 import org.grails.beans.support.PropertiesEditor
 import org.grails.core.io.DefaultResourceLocator
 import org.grails.core.support.ClassEditor
@@ -90,13 +90,14 @@ import org.grails.spring.context.support.MapBasedSmartPropertyOverrideConfigurer
 // whole rather than on the beans that name the application, so that an application either has the
 // core plugin's beans or has none of them.
 @ConditionalOnBean(GrailsApplication)
+// grails-core is compiled before the compiler that writes plugin descriptors, so this plugin's is
+// checked in: src/main/resources/META-INF/grails/plugins/core/plugin.properties. Keep the two in step.
+@GrailsPluginDescriptor(name = 'core', watchedResources = [
+        'file:./grails-app/conf/spring/resources.xml',
+        'file:./grails-app/conf/spring/resources.groovy',
+        'file:./grails-app/conf/application.groovy',
+        'file:./grails-app/conf/application.yml'])
 class CoreGrailsPlugin extends Plugin {
-
-    def version = GrailsUtil.getGrailsVersion()
-    def watchedResources = [    'file:./grails-app/conf/spring/resources.xml',
-                                'file:./grails-app/conf/spring/resources.groovy',
-                                'file:./grails-app/conf/application.groovy',
-                                'file:./grails-app/conf/application.yml']
 
     private static final String SPRING_PROXY_TARGET_CLASS_CONFIG = 'spring.aop.proxy-target-class'
 

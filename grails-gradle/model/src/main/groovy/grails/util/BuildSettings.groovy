@@ -99,6 +99,24 @@ class BuildSettings {
      * The base directory of the application
      */
     public static final String APP_BASE_DIR = 'base.dir'
+
+    /**
+     * The system property that gives the compiler the version of the plugins it compiles. The Grails
+     * Gradle plugin sets it to the project version for the main source set; a plugin compiled without it
+     * has no version.
+     *
+     * @since 9.0
+     */
+    public static final String PLUGIN_VERSION = 'grails.plugin.version'
+
+    /**
+     * The system property that names the directory holding a plugin's {@code plugin.yml} or
+     * {@code plugin.groovy}, which the compiler copies beside the plugin's descriptor. The Grails Gradle
+     * plugin sets it to {@code grails-app/conf} for the main source set.
+     *
+     * @since 9.0
+     */
+    public static final String PLUGIN_CONFIG_DIR = 'grails.plugin.config.dir'
     /**
      * The name of the system property for the Grails work directory.
      */

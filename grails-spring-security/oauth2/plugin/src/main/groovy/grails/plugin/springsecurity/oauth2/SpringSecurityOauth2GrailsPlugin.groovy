@@ -24,23 +24,11 @@ import groovy.util.logging.Slf4j
 import grails.plugin.springsecurity.ReflectionUtils
 import grails.plugin.springsecurity.SpringSecurityUtils
 import grails.plugins.Plugin
+import grails.plugins.metadata.GrailsPluginDescriptor
 
 @Slf4j
+@GrailsPluginDescriptor(loadAfter = ['spring-security-core'])
 class SpringSecurityOauth2GrailsPlugin extends Plugin {
-
-    // the version or versions of Grails the plugin is designed for
-    def grailsVersion = '7.0.0 > *'
-    List loadAfter = ['spring-security-core']
-
-    // TODO Fill in these fields
-    def title = 'Spring Security Oauth2' // Headline display name of the plugin
-    def author = 'Apache Grails Team'
-    def authorEmail = ''
-    def description = '''\
-This plugin provides the capability to authenticate via oauth. Depends on grails-spring-security.
-'''
-    def profiles = ['web']
-    def license = 'APACHE'
 
     @Override
     Closure doWithSpring() {

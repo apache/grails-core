@@ -39,21 +39,11 @@ import grails.plugin.springsecurity.ldap.userdetails.GrailsLdapAuthoritiesPopula
 import grails.plugin.springsecurity.ldap.userdetails.GrailsLdapUserDetailsManager
 import grails.plugin.springsecurity.userdetails.GormUserDetailsService
 import grails.plugins.Plugin
+import grails.plugins.metadata.GrailsPluginDescriptor
 
 @SuppressWarnings('GroovyUnusedDeclaration')
+@GrailsPluginDescriptor(loadAfter = ['springSecurityCore'])
 class SpringSecurityLdapGrailsPlugin extends Plugin {
-
-    String grailsVersion = '7.0.0 > *'
-    List loadAfter = ['springSecurityCore']
-    String author = 'Burt Beckwith'
-    String authorEmail = ''
-    String title = 'LDAP authentication support for the Spring Security plugin.'
-    String description = 'LDAP authentication support for the Spring Security plugin.'
-    String documentation = 'https://grails.apache.org/documentation.html'
-    String license = 'APACHE'
-    def organization = [name: 'Apache Grails', url: 'https://grails.apache.org']
-    def issueManagement = [url: 'https://github.com/apache/grails-core/issues']
-    def scm = [url: 'https://github.com/apache/grails-core']
 
     Closure doWithSpring() {
         { ->

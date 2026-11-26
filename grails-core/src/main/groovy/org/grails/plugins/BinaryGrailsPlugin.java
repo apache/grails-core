@@ -46,13 +46,13 @@ import grails.io.ResourceUtils;
 import grails.plugins.exceptions.PluginException;
 import grails.util.BuildSettings;
 import org.apache.grails.core.plugins.PluginDescriptor;
-import org.apache.grails.core.plugins.PluginMetadata;
 import org.apache.grails.core.plugins.PluginUtils;
 import org.grails.core.io.StaticResourceLoader;
 
 /**
- * Models a pre-compiled binary plugin backed by a {@code META-INF/grails/plugins/<name>/plugin.properties}
- * descriptor, with or without a Groovy/Java plugin descriptor class.
+ * A pre-compiled plugin from a jar or a class directory, described by the
+ * {@code META-INF/grails/plugins/<name>/plugin.properties} its compiler wrote, with the artefacts and
+ * precompiled views it ships.
  *
  * @see grails.plugins.GrailsPlugin
  *
@@ -62,24 +62,13 @@ import org.grails.core.io.StaticResourceLoader;
 @SuppressWarnings("rawtypes")
 public class BinaryGrailsPlugin extends DefaultGrailsPlugin {
 
-    /**
-     * Legacy XML plugin descriptor path.
-     *
-     * @deprecated Replaced in Grails 9.0 by {@link PluginUtils#PLUGINS_IMPORTS_PATH} and
-     *             {@code META-INF/grails/plugins/<name>/plugin.properties}.
-     */
-    @Deprecated(since = "9.0", forRemoval = true)
-    @SuppressWarnings("removal")
-    public static final String PLUGIN_DESCRIPTOR_PATH = PluginUtils.LEGACY_PLUGIN_DESCRIPTOR_PATH;
-
     public static final String VIEWS_PROPERTIES = "views.properties";
-    public static final String RELATIVE_VIEWS_PROPERTIES = "gsp/views.properties";
     public static final char UNDERSCORE = '_';
     public static final String PROPERTIES_EXTENSION = ".properties";
     public static final String DEFAULT_PROPERTIES_ENCODING = "UTF-8";
 
-    private final @Nullable PluginDescriptor descriptor;
-    private Class[] providedArtefacts = {};
+    private final PluginDescriptor descriptor;
+    private Class<?>[] providedArtefacts = {};
     private final Map<String, Class> precompiledViewMap = new HashMap<>();
     private final @Nullable Resource baseResource;
     private final @Nullable Resource baseResourcesResource;
@@ -87,86 +76,33 @@ public class BinaryGrailsPlugin extends DefaultGrailsPlugin {
     private final @Nullable File projectDirectory;
 
     /**
-     * Creates a binary plugin instance backed by a plugin descriptor class.
+     * A plugin from a jar or a class directory, described by its descriptor.
      *
-     * @param pluginClass the plugin class
-     * @param descriptor the parsed plugin descriptor
-     * @param application the application
+     * @param pluginClass the class the descriptor names
+     * @param descriptor the plugin's descriptor
+     * @param application the Grails application
      */
-    public BinaryGrailsPlugin(Class<?> pluginClass, @Nullable PluginDescriptor descriptor, GrailsApplication application) {
-        this(pluginClass, descriptor, application,
-                descriptor != null && descriptor.isMetadataComplete() ? PluginUtils.extractPluginMetadata(descriptor, pluginClass) : null);
-    }
-
-    public BinaryGrailsPlugin(Class<?> pluginClass, @Nullable PluginDescriptor descriptor,
-            GrailsApplication application, @Nullable PluginMetadata metadata) {
-        super(pluginClass,
-                descriptor != null ? descriptor.getResource() : null,
-                application,
-                descriptor != null ? descriptor.getPluginVersion() : null,
-                descriptor != null && descriptor.getProvidedPlugins().size() <= 1 ? descriptor.getPluginName() : null, metadata);
+    public BinaryGrailsPlugin(Class<?> pluginClass, PluginDescriptor descriptor, GrailsApplication application) {
+        super(pluginClass, descriptor, application);
         this.descriptor = descriptor;
         URL rootResource = IOUtils.findRootResource(pluginClass);
         this.baseResource = rootResource != null ? new UrlResource(rootResource) : null;
-        this.isJar = resolveIsJar(this.baseResource, descriptor, pluginClass);
+        this.isJar = resolveIsJar(this.baseResource);
         this.projectDirectory = (!isJar && rootResource != null) ? IOUtils.findApplicationDirectoryFile(pluginClass) : null;
-
         if (BuildSettings.BASE_DIR != null && projectDirectory != null) {
             try {
                 if (projectDirectory.getCanonicalPath().startsWith(BuildSettings.BASE_DIR.getCanonicalPath())) {
                     isBase = true;
                 }
-            } catch (IOException e) {
+            }
+            catch (IOException e) {
                 // ignore
             }
         }
-
         URL rootResourcesURL = IOUtils.findRootResourcesURL(pluginClass);
         this.baseResourcesResource = rootResourcesURL != null ? new UrlResource(rootResourcesURL) : null;
-        if (descriptor != null) {
-            initializeProvidedArtefacts(descriptor.getProvidedClasses());
-            initializeViewMap(descriptor);
-        }
-    }
-
-    /**
-     * Creates a binary plugin instance for a descriptor-less starter plugin that declares no plugin class.
-     *
-     * @param descriptor the parsed plugin descriptor
-     * @param metadata the extracted plugin metadata
-     * @param application the application
-     * @since 9.0
-     */
-    public BinaryGrailsPlugin(PluginDescriptor descriptor, PluginMetadata metadata, GrailsApplication application) {
-        super(metadata, descriptor.getResource(), application);
-        this.descriptor = descriptor;
-        Resource archiveRoot = resolveArchiveRootResource(descriptor.getResource());
-        this.baseResource = archiveRoot != null ? archiveRoot : descriptor.getResource();
-        this.isJar = resolveIsJar(this.baseResource, descriptor, null);
-        this.projectDirectory = null;
-        this.baseResourcesResource = archiveRoot;
-        initializeProvidedArtefacts(descriptor.getProvidedClasses());
-        initializeViewMap(descriptor);
-    }
-
-    @SuppressWarnings({"deprecation", "removal"})
-    private static @Nullable Resource resolveArchiveRootResource(@Nullable Resource descriptorResource) {
-        if (descriptorResource == null) {
-            return null;
-        }
-        try {
-            String urlStr = descriptorResource.getURL().toString();
-            int markerIdx = urlStr.lastIndexOf(PluginUtils.PLUGIN_DESCRIPTORS_PREFIX);
-            if (markerIdx < 0) {
-                markerIdx = urlStr.lastIndexOf(PluginUtils.LEGACY_PLUGIN_DESCRIPTOR_PATH);
-            }
-            if (markerIdx > 0) {
-                return new UrlResource(urlStr.substring(0, markerIdx));
-            }
-        } catch (IOException e) {
-            // fall through
-        }
-        return null;
+        this.providedArtefacts = loadClasses(descriptor.getProvidedClasses());
+        initializeViewMap();
     }
 
     @Override
@@ -174,101 +110,48 @@ public class BinaryGrailsPlugin extends DefaultGrailsPlugin {
         // Binary plugins are pre-compiled and cannot be re-parsed from their descriptor resource
     }
 
-    private static boolean resolveIsJar(
-            @Nullable Resource baseResource,
-            @Nullable PluginDescriptor descriptor,
-            @Nullable Class<?> pluginClass) {
-        if (baseResource != null) {
-            try {
-                return ResourceUtils.isJarURL(baseResource.getURL());
-            } catch (IOException e) {
-                if (descriptor == null && pluginClass != null) {
-                    throw new PluginException("Cannot evaluate plugin location for plugin " + pluginClass, e);
-                }
-                return true;
-            }
+    private static boolean resolveIsJar(@Nullable Resource baseResource) {
+        if (baseResource == null) {
+            return true;
         }
-        return true;
+        try {
+            return ResourceUtils.isJarURL(baseResource.getURL());
+        }
+        catch (IOException e) {
+            return true;
+        }
     }
 
     public @Nullable File getProjectDirectory() {
         return projectDirectory;
     }
 
-    protected void initializeViewMap(PluginDescriptor descriptor) {
-        Resource viewsPropertiesResource = resolveViewsPropertiesResource(descriptor);
-        if (viewsPropertiesResource == null || !viewsPropertiesResource.exists()) {
+    /**
+     * Reads the plugin's precompiled views from {@code META-INF/grails/plugins/<name>/views.properties}.
+     */
+    protected void initializeViewMap() {
+        URL manifest = grailsApplication != null ?
+                grailsApplication.getClassLoader().getResource(PluginUtils.getPluginViewsPath(getName())) : null;
+        if (manifest == null) {
             return;
         }
-
         Properties viewsProperties = new Properties();
-        try (InputStream input = viewsPropertiesResource.getInputStream()) {
+        try (InputStream input = manifest.openStream()) {
             viewsProperties.load(input);
-            for (Object view : viewsProperties.keySet()) {
-                String viewName = view.toString();
-                final String viewClassName = viewsProperties.getProperty(viewName);
-                try {
-                    final Class<?> viewClass = grailsApplication.getClassLoader().loadClass(viewClassName);
-                    precompiledViewMap.put(viewName, viewClass);
-                } catch (Throwable e) {
-                    throw new PluginException(
-                            "Failed to initialize view [" + viewName + "] from plugin [" + getName() + "] : " + e.getMessage(), e);
-                }
-            }
-        } catch (IOException e) {
-            LOG.error("Error loading views for binary plugin [" + this + "]: " + e.getMessage(), e);
         }
-    }
-
-    private @Nullable Resource resolveViewsPropertiesResource(PluginDescriptor descriptor) {
-        ClassLoader classLoader = grailsApplication != null ? grailsApplication.getClassLoader() : null;
-        if (classLoader != null) {
-            URL namespacedViews = classLoader.getResource(PluginUtils.getPluginViewsPath(getName()));
-            if (namespacedViews != null) {
-                return new UrlResource(namespacedViews);
-            }
+        catch (IOException e) {
+            throw new PluginException("Could not read the views of plugin [" + getName() + "] from " + manifest, e);
         }
-
-        final Resource descriptorResource = descriptor.getResource();
-        if (descriptorResource != null) {
+        for (String viewName : viewsProperties.stringPropertyNames()) {
+            String viewClassName = viewsProperties.getProperty(viewName);
             try {
-                Resource relative = descriptorResource.createRelative(VIEWS_PROPERTIES);
-                if (relative != null && relative.exists()) {
-                    return relative;
-                }
-            } catch (IOException e) {
-                // ignore
+                precompiledViewMap.put(viewName, grailsApplication.getClassLoader().loadClass(viewClassName));
+            }
+            catch (ClassNotFoundException | LinkageError e) {
+                throw new PluginException(
+                        "Failed to initialize view [" + viewName + "] from plugin [" + getName() + "] : " + e.getMessage(), e);
             }
         }
-
-        if (baseResource != null) {
-            try {
-                Resource rootViews = baseResource.createRelative(RELATIVE_VIEWS_PROPERTIES);
-                if (rootViews != null && rootViews.exists()) {
-                    return rootViews;
-                }
-            } catch (IOException e) {
-                // ignore
-            }
-        }
-        return null;
-    }
-
-    protected void initializeProvidedArtefacts(List<String> classNames) {
-        List<Class> artefacts = new ArrayList<>();
-        if (!classNames.isEmpty()) {
-            final ClassLoader classLoader = grailsApplication.getClassLoader();
-            for (String className : classNames) {
-                try {
-                    artefacts.add(classLoader.loadClass(className));
-                } catch (Throwable e) {
-                    throw new PluginException(
-                            "Failed to initialize class [" + className + "] from plugin [" + getName() + "] : " + e.getMessage(), e);
-                }
-            }
-        }
-        artefacts.addAll(Arrays.asList(super.getProvidedArtefacts()));
-        providedArtefacts = artefacts.toArray(new Class[artefacts.size()]);
     }
 
     @Override
@@ -279,7 +162,7 @@ public class BinaryGrailsPlugin extends DefaultGrailsPlugin {
     /**
      * @return the parsed plugin descriptor
      */
-    public @Nullable PluginDescriptor getPluginDescriptor() {
+    public PluginDescriptor getPluginDescriptor() {
         return descriptor;
     }
 
@@ -291,7 +174,7 @@ public class BinaryGrailsPlugin extends DefaultGrailsPlugin {
      */
     public @Nullable Resource getResource(String path) {
         String normalizedPath = path.startsWith("/") ? path : "/" + path;
-        final Resource descriptorResource = descriptor != null ? descriptor.getResource() : null;
+        final Resource descriptorResource = descriptor.getResource();
         if (descriptorResource != null) {
             try {
                 Resource resource = descriptorResource.createRelative("static" + normalizedPath);

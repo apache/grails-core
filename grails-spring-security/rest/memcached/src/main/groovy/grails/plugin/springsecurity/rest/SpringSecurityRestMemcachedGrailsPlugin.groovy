@@ -28,32 +28,14 @@ import grails.plugin.springsecurity.rest.token.generation.SecureRandomTokenGener
 import grails.plugin.springsecurity.rest.token.storage.memcached.CustomSerializingTranscoder
 import grails.plugin.springsecurity.rest.token.storage.memcached.MemcachedTokenStorageService
 import grails.plugins.Plugin
+import grails.plugins.metadata.GrailsPluginDescriptor
 
+@GrailsPluginDescriptor(
+        loadAfter = ['springSecurityRest'],
+        pluginExcludes = [
+                'grails-app/views/**'
+        ])
 class SpringSecurityRestMemcachedGrailsPlugin extends Plugin {
-
-    // the version or versions of Grails the plugin is designed for
-    String grailsVersion = '7.0.0 > *'
-    List loadAfter = ['springSecurityRest']
-    List pluginExcludes = [
-            'grails-app/views/**'
-    ]
-
-    String title = 'Spring Security REST Plugin - Memcached support'
-    String author = 'Apache Grails Team'
-    String authorEmail = ''
-    String description = 'Implements authentication for REST APIs based on Spring Security. It uses a token-based workflow'
-
-    def profiles = ['web']
-
-    // URL to the plugin's documentation
-    String documentation = 'https://grails.apache.org/documentation.html'
-
-    // Extra (optional) plugin metadata
-    String license = 'APACHE'
-    def organization = [name: 'Apache Grails', url: 'https://grails.apache.org']
-
-    def issueManagement = [system: 'GitHub', url: 'https://github.com/apache/grails-core/issues']
-    def scm = [url: 'https://github.com/apache/grails-spring-security-rest']
 
     Closure doWithSpring() {
         { ->

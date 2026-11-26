@@ -18,8 +18,6 @@
  */
 package org.grails.compiler.injection
 
-import java.lang.reflect.Modifier
-
 import groovy.transform.CompilationUnitAware
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
@@ -31,7 +29,6 @@ import org.codehaus.groovy.ast.PropertyNode
 import org.codehaus.groovy.ast.expr.ClosureExpression
 import org.codehaus.groovy.ast.expr.ConstantExpression
 import org.codehaus.groovy.ast.expr.Expression
-import org.codehaus.groovy.ast.expr.ListExpression
 import org.codehaus.groovy.ast.expr.MethodCallExpression
 import org.codehaus.groovy.ast.stmt.BlockStatement
 import org.codehaus.groovy.ast.stmt.ExpressionStatement
@@ -49,7 +46,6 @@ import grails.compiler.ast.ClassInjector
 import grails.core.ArtefactHandler
 import grails.plugins.metadata.GrailsPlugin
 import grails.plugins.metadata.GrailsPluginDescriptor
-import grails.plugins.metadata.CompiledPluginMetadata
 import grails.util.GrailsNameUtils
 import org.apache.grails.common.compiler.GroovyTransformOrder
 import org.grails.compiler.beans.AutoConfigurationImportsWriter
@@ -69,9 +65,8 @@ import org.grails.io.support.UrlResource
  * injectors in {@code META-INF/grails.factories}.</p>
  *
  * <p>Plugin descriptors ({@code META-INF/grails/plugins.imports} and
- * {@code META-INF/grails/plugins/<name>/plugin.properties}) are generated at build time by the
- * Gradle plugin descriptor task from compiled bytecode rather than mutated incrementally inside
- * the Groovy compiler.</p>
+ * {@code META-INF/grails/plugins/<name>/plugin.properties}) are written by
+ * {@link PluginDescriptorTransformation} once the compilation has written its classes.</p>
  *
  * @since 3.0
  */
@@ -91,7 +86,6 @@ class GlobalGrailsClassInjectorTransformation implements ASTTransformation, Comp
     public static final ClassNode ARTEFACT_HANDLER_CLASS = ClassHelper.make('grails.core.ArtefactHandler')
     public static final ClassNode TRAIT_INJECTOR_CLASS = ClassHelper.make('grails.compiler.traits.TraitInjector')
     public static final ClassNode PLUGIN_DESCRIPTOR_ANNOTATION = ClassHelper.make(GrailsPluginDescriptor)
-    public static final ClassNode COMPILED_PLUGIN_METADATA = ClassHelper.make(CompiledPluginMetadata)
 
     private static final String GRAILS_AUTO_CONFIGURATION_CLASS_NAME = 'grails.boot.config.GrailsAutoConfiguration'
     private static final String BEANS_PROPERTY = 'beans'
@@ -146,11 +140,6 @@ class GlobalGrailsClassInjectorTransformation implements ASTTransformation, Comp
             def projectName = resolveProjectName(classNode)
             def projectVersion = resolveProjectVersion(classNode)
             if (isGrailsPluginDescriptorClass(classNode)) {
-                def pluginVersion = resolvePluginVersion(classNode, projectVersion?.toString())
-                if (pluginVersion && classNode.getAnnotations(PLUGIN_DESCRIPTOR_ANNOTATION).isEmpty()) {
-                    addPluginVersionProperty(classNode, pluginVersion)
-                }
-                stampCompiledPluginMetadata(classNode)
                 compileBeansDsl(classNode, source)
                 continue
             }
@@ -222,68 +211,13 @@ class GlobalGrailsClassInjectorTransformation implements ASTTransformation, Comp
         url != null && GrailsResourceUtils.isProjectSource(new UrlResource(url))
     }
 
-    /**
-     * Determines whether a class is a concrete Grails plugin descriptor class, either by the
-     * {@code *GrailsPlugin} naming convention or by carrying {@link GrailsPluginDescriptor}.
-     */
+    /** Whether a class declares a Grails plugin: a concrete class carrying {@link GrailsPluginDescriptor}. */
     private static boolean isGrailsPluginDescriptorClass(ClassNode classNode) {
-        !classNode.abstract && (classNode.name.endsWith('GrailsPlugin') || !classNode.getAnnotations(PLUGIN_DESCRIPTOR_ANNOTATION).isEmpty())
+        !classNode.abstract && !classNode.getAnnotations(PLUGIN_DESCRIPTOR_ANNOTATION).isEmpty()
     }
 
-    private static @Nullable String resolvePluginVersion(ClassNode classNode, @Nullable String projectVersion) {
-        if (projectVersion) {
-            return projectVersion
-        }
-        def versionField = classNode.getDeclaredField('version')
-        def initialExpression = versionField?.initialExpression
-        initialExpression instanceof ConstantExpression ? initialExpression.text : null
-    }
 
-    private static void addPluginVersionProperty(ClassNode classNode, String pluginVersion) {
-        if (!classNode.hasProperty('version')) {
-            classNode.addProperty(
-                    new PropertyNode(
-                            'version',
-                            Modifier.PUBLIC,
-                            ClassHelper.make(Object),
-                            classNode,
-                            new ConstantExpression(pluginVersion),
-                            null,
-                            null
-                    )
-            )
-        }
-    }
 
-    private static void stampCompiledPluginMetadata(ClassNode classNode) {
-        if (!classNode.getAnnotations(PLUGIN_DESCRIPTOR_ANNOTATION).empty ||
-                !classNode.getAnnotations(COMPILED_PLUGIN_METADATA).empty) {
-            return
-        }
-        AnnotationNode metadata = new AnnotationNode(COMPILED_PLUGIN_METADATA)
-        for (String name : ['version', 'grailsVersion']) {
-            Expression value = classNode.getDeclaredField(name)?.initialExpression
-            if (value instanceof ConstantExpression && value.value instanceof String) {
-                metadata.addMember(name, new ConstantExpression(value.value))
-            }
-        }
-        String frameworkVersion = GlobalGrailsClassInjectorTransformation.package.implementationVersion
-        if (!classNode.getProperty('grailsVersion') && frameworkVersion) {
-            metadata.addMember('grailsVersion', new ConstantExpression(frameworkVersion + ' > *'))
-        }
-        Expression excludes = classNode.getDeclaredField('pluginExcludes')?.initialExpression
-        if (excludes instanceof ListExpression) {
-            List<Expression> patterns = excludes.expressions.findAll {
-                it instanceof ConstantExpression && it.value instanceof String
-            }
-            if (patterns) {
-                metadata.addMember('pluginExcludes', new ListExpression(patterns))
-            }
-        }
-        if (metadata.members) {
-            classNode.addAnnotation(metadata)
-        }
-    }
 
     private static void addPluginAnnotation(ClassNode classNode, String projectName, String projectVersion) {
         GrailsASTUtils.addAnnotationOrGetExisting(

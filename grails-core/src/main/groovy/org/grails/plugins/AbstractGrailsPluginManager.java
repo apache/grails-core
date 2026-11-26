@@ -60,7 +60,6 @@ import grails.util.Environment;
 import grails.util.GrailsNameUtils;
 import org.apache.grails.core.plugins.PluginDiscovery;
 import org.apache.grails.core.plugins.PluginInfo;
-import org.apache.grails.core.plugins.PluginUtils;
 import org.grails.config.NavigableMap;
 import org.grails.io.support.GrailsResourceUtils;
 import org.grails.plugins.support.WatchPattern;
@@ -245,7 +244,13 @@ public abstract class AbstractGrailsPluginManager implements GrailsPluginManager
     }
 
     public GrailsPlugin getGrailsPluginForClassName(String name) {
-        return getGrailsPlugin(PluginUtils.getLogicalPluginNameFromClassName(name));
+        for (GrailsPlugin plugin : plugins.values()) {
+            Class<?> pluginClass = plugin.getPluginClass();
+            if (pluginClass != null && (pluginClass.getName().equals(name) || pluginClass.getSimpleName().equals(name))) {
+                return plugin;
+            }
+        }
+        return null;
     }
 
     public GrailsPlugin getGrailsPlugin(String name, Object version) {

@@ -80,44 +80,34 @@ class CompilePlugin implements Plugin<Project> {
     }
 
     /**
-     * Registers {@link GeneratePluginDescriptorTask} on framework library modules that do not apply
-     * {@code org.apache.grails.gradle.grails-plugin}, so core Grails plugins such as {@code grails-core}
-     * and {@code grails-controllers} generate {@code META-INF/grails/plugins.imports} and
-     * {@code META-INF/grails/plugins/<name>/plugin.properties} from compiled bytecode.
+     * Gives the Groovy compiler of each framework module's main source set the module version and its
+     * {@code grails-app/conf}, which the compiler writes into the descriptors of the plugins the module
+     * declares (see {@link PluginDescriptorArgumentProvider}). A module that applies the Grails plugin
+     * Gradle plugin is given them by that plugin instead.
      */
     private static void configurePluginDescriptorGeneration(Project project) {
         if (project.gradle.rootProject.name in GRADLE_SIDE_BUILDS) {
-            return
-        }
-        if (project.plugins.hasPlugin('org.apache.grails.gradle.grails-plugin')) {
             return
         }
         def main = project.extensions.getByType(JavaPluginExtension).sourceSets.findByName(SourceSet.MAIN_SOURCE_SET_NAME)
         if (main == null) {
             return
         }
+        def configDir = project.layout.projectDirectory.dir('grails-app/conf')
         project.tasks.withType(GroovyCompile).configureEach { GroovyCompile compile ->
-            if (compile.name == main.getCompileTaskName('groovy')) {
-                compile.groovyOptions.disabledGlobalASTTransformations.add('org.grails.compiler.injection.PluginDescriptorTransformation')
+            if (compile.name != main.getCompileTaskName('groovy') ||
+                    project.plugins.hasPlugin('org.apache.grails.gradle.grails-plugin')) {
+                return
             }
-        }
-        def generatedDir = project.layout.buildDirectory.dir('generated/resources/grailsLibraryPluginDescriptor')
-        def task = project.tasks.register('generateGrailsPluginDescriptor', GeneratePluginDescriptorTask) { GeneratePluginDescriptorTask t ->
-            t.group = 'build'
-            t.description = 'Generates META-INF/grails/plugins.imports and per-plugin plugin.properties descriptors from compiled classes'
-            t.classesDirs.from(main.output.classesDirs)
-            t.projectVersion.set(project.provider {
-                Object ver = project.version
-                ver != null && ver.toString() != 'unspecified' ? ver.toString() : null
+            def provider = project.objects.newInstance(PluginDescriptorArgumentProvider)
+            provider.pluginVersion.set(project.provider {
+                Object version = project.version
+                version != null && version.toString() != 'unspecified' ? version.toString() : null
             })
-            t.outputDirectory.set(generatedDir)
+            provider.configDirectory.set(configDir.asFile)
+            provider.configFiles.from(configDir.file('plugin.yml'), configDir.file('plugin.groovy'))
+            compile.groovyOptions.forkOptions.jvmArgumentProviders.add(provider)
         }
-        project.plugins.withId('org.apache.grails.gradle.grails-plugin') {
-            task.configure { GeneratePluginDescriptorTask t ->
-                t.enabled = false
-            }
-        }
-        main.output.dir(Collections.<String, Object> singletonMap('builtBy', task), generatedDir)
     }
 
     /**

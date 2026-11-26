@@ -23,6 +23,7 @@ import grails.core.GrailsClass
 import grails.neo4j.bootstrap.Neo4jDataStoreSpringInitializer
 import grails.plugins.GrailsPlugin
 import grails.plugins.Plugin
+import grails.plugins.metadata.GrailsPluginDescriptor
 import groovy.transform.CompileStatic
 import org.grails.core.artefact.DomainClassArtefactHandler
 import org.grails.datastore.gorm.neo4j.converters.InstantToLongConverter
@@ -46,31 +47,15 @@ import org.springframework.beans.factory.support.BeanDefinitionRegistry
 import org.springframework.context.ConfigurableApplicationContext
 import org.springframework.core.env.PropertyResolver
 
+@GrailsPluginDescriptor(
+        loadAfter = ['domainClass', 'hibernate', 'services', 'converters'],
+        observe = ['services', 'domainClass'],
+        pluginExcludes = [
+                'grails-app/views/error.gsp'
+        ])
 class Neo4jGrailsPlugin extends Plugin {
 
-    def license = 'Apache 2.0 License'
-    def organization = [ name: 'Grails', url: 'https://grails.apache.org/' ]
-    def issueManagement = [ system: 'Github', url: 'https://github.com/apache/grails-core/issues' ]
-    def scm = [ url: 'https://github.com/apache/grails-core' ]
-
-    def grailsVersion = '3.3.0 > *'
-    def loadAfter = ['domainClass', 'hibernate', 'services', 'converters']
-    //def loadBefore = ['dataSource']
-    def observe = ['services', 'domainClass']
-
-    def author = 'Apache Grails Team'
-    def authorEmail = ''
-    def title = 'Neo4j GORM'
-    def description = 'A plugin that integrates the Neo4j graph database into Grails, providing a GORM API onto it'
-
-    def documentation = 'https://gorm.grails.org/latest/neo4j/manual/'
-
-    def dependsOn = [:]
     // resources that are excluded from plugin packaging
-
-    def pluginExcludes = [
-            'grails-app/views/error.gsp'
-    ]
 
     @Override
     @CompileStatic

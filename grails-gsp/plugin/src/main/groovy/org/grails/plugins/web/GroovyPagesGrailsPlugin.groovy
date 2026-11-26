@@ -32,9 +32,9 @@ import grails.config.Config
 import grails.core.gsp.GrailsTagLibClass
 import grails.gsp.PageRenderer
 import grails.plugins.Plugin
+import grails.plugins.metadata.GrailsPluginDescriptor
 import grails.util.BuildSettings
 import grails.util.Environment
-import grails.util.GrailsUtil
 import grails.util.Metadata
 import grails.web.pages.GroovyPagesUriService
 import org.apache.grails.common.aot.AheadOfTimeProcessing
@@ -71,30 +71,27 @@ import org.grails.web.util.GrailsApplicationAttributes
  * @since 1.1
  */
 @Slf4j
+@GrailsPluginDescriptor(
+        loadAfter = ['filters'],
+        dependsOn = ['core:${plugin.version}', 'i18n:${plugin.version}'],
+        observe = ['controllers'],
+        watchedResources = ['file:./plugins/*/grails-app/taglib/**/*TagLib.groovy',
+                                'file:./grails-app/taglib/**/*TagLib.groovy'],
+        providedArtefacts = [
+                ApplicationTagLib,
+                CountryTagLib,
+                FormatTagLib,
+                FormTagLib,
+                JavascriptTagLib,
+                RenderTagLib,
+                UrlMappingTagLib,
+                ValidationTagLib,
+                PluginTagLib,
+        ])
 class GroovyPagesGrailsPlugin extends Plugin {
 
     public static final String GSP_RELOAD_INTERVAL = 'grails.gsp.reload.interval'
     public static final String GSP_VIEWS_DIR = 'grails.gsp.view.dir'
-
-    def watchedResources = ['file:./plugins/*/grails-app/taglib/**/*TagLib.groovy',
-                            'file:./grails-app/taglib/**/*TagLib.groovy']
-
-    def grailsVersion = '7.0.0-SNAPSHOT > *'
-    def dependsOn = [core: GrailsUtil.getGrailsVersion(), i18n: GrailsUtil.getGrailsVersion()]
-    def observe = ['controllers']
-    def loadAfter = ['filters']
-
-    def providedArtefacts = [
-            ApplicationTagLib,
-            CountryTagLib,
-            FormatTagLib,
-            FormTagLib,
-            JavascriptTagLib,
-            RenderTagLib,
-            UrlMappingTagLib,
-            ValidationTagLib,
-            PluginTagLib,
-    ]
 
     /**
      * Clear the page cache with the ApplicationContext is loaded

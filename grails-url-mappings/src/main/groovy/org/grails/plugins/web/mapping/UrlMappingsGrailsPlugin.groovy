@@ -36,8 +36,8 @@ import org.springframework.web.filter.CorsFilter
 
 import grails.config.Settings
 import grails.plugins.Plugin
+import grails.plugins.metadata.GrailsPluginDescriptor
 import grails.util.Environment as GrailsEnvironment
-import grails.util.GrailsUtil
 import grails.web.CamelCaseUrlConverter
 import grails.web.HyphenatedUrlConverter
 import grails.web.UrlConverter
@@ -65,13 +65,11 @@ import org.grails.web.util.HiddenHttpMethod
 @AutoConfiguration
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 @EnableConfigurationProperties([GrailsCorsConfiguration])
+@GrailsPluginDescriptor(
+        loadAfter = ['controllers'],
+        dependsOn = ['core:${plugin.version}'],
+        watchedResources = ['file:./grails-app/controllers/*UrlMappings.groovy'])
 class UrlMappingsGrailsPlugin extends Plugin {
-
-    def watchedResources = ['file:./grails-app/controllers/*UrlMappings.groovy']
-
-    def version = GrailsUtil.getGrailsVersion()
-    def dependsOn = [core: version]
-    def loadAfter = ['controllers']
 
     def beans = {
         field('cacheUrls', Boolean).value(Settings.WEB_LINK_GENERATOR_USE_CACHE, '#{null}')

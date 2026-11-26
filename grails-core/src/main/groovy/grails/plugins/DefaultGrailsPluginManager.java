@@ -42,6 +42,7 @@ import org.springframework.core.io.Resource;
 import grails.core.GrailsApplication;
 import grails.core.support.ParentApplicationContextAware;
 import grails.plugins.exceptions.PluginException;
+import org.apache.grails.core.plugins.PluginDescriptor;
 import org.apache.grails.core.plugins.PluginDiscovery;
 import org.apache.grails.core.plugins.PluginInfo;
 import org.grails.core.exceptions.GrailsConfigurationException;
@@ -161,11 +162,9 @@ public class DefaultGrailsPluginManager extends AbstractGrailsPluginManager {
         pluginDiscovery.getPluginsInLoadOrder().forEach(pluginInfo -> {
             GrailsPlugin plugin;
             if (pluginInfo.isDynamic()) {
-                plugin = createGrailsPlugin(pluginInfo.getPluginClass(), pluginInfo.getPluginDescriptor().getResource());
-            } else if (pluginInfo.getPluginClass() == null) {
-                plugin = new BinaryGrailsPlugin(pluginInfo.getPluginDescriptor(), pluginInfo.getMetadata(), application);
+                plugin = createGrailsPlugin(pluginInfo.getPluginClass(), pluginInfo.getPluginDescriptor());
             } else {
-                plugin = new BinaryGrailsPlugin(pluginInfo.getPluginClass(), pluginInfo.getPluginDescriptor(), application, pluginInfo.getMetadata());
+                plugin = new BinaryGrailsPlugin(pluginInfo.getPluginClass(), pluginInfo.getPluginDescriptor(), application);
             }
 
             if (LOG.isDebugEnabled()) {
@@ -190,8 +189,8 @@ public class DefaultGrailsPluginManager extends AbstractGrailsPluginManager {
         initialised = true;
     }
 
-    protected GrailsPlugin createGrailsPlugin(Class<?> pluginClass, Resource resource) {
-        return new DefaultGrailsPlugin(pluginClass, resource, application);
+    protected GrailsPlugin createGrailsPlugin(Class<?> pluginClass, PluginDescriptor descriptor) {
+        return new DefaultGrailsPlugin(pluginClass, descriptor, application);
     }
 
     @Override

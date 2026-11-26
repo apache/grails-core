@@ -16,6 +16,7 @@
 package quartz
 
 import grails.plugins.Plugin
+import grails.plugins.metadata.GrailsPluginDescriptor
 import grails.plugins.quartz.CustomTriggerFactoryBean
 import grails.plugins.quartz.GrailsJobClass
 import grails.plugins.quartz.GrailsJobFactory
@@ -39,24 +40,10 @@ import org.springframework.context.ApplicationContext
 import org.springframework.scheduling.quartz.SchedulerFactoryBean
 
 @Slf4j
+@GrailsPluginDescriptor(
+        loadAfter = ['hibernate', 'services'],
+        watchedResources = ['file:./grails-app/jobs/**/*Job.groovy'])
 class QuartzGrailsPlugin extends Plugin {
-
-    def grailsVersion = '7.0.0-SNAPSHOT > *'
-    def watchedResources = 'file:./grails-app/jobs/**/*Job.groovy'
-    def title = 'Quartz Plugin'
-    def author = 'Apache Grails Team'
-    def description = 'Adds Quartz job scheduling features'
-    def profiles = ['web']
-    // 'hibernate' is the GORM for Hibernate plugin. Quartz must be configured after it so that the
-    // dataSource, transactionManager and session beans it contributes already exist -- the scheduler
-    // refs them when the JDBC job store is enabled, and SessionBinderJobListener autowires by name.
-    List loadAfter = ['hibernate', 'services']
-    def documentation = 'https://grails.apache.org/documentation.html'
-    def license = 'APACHE'
-    def issueManagement = [ system: 'Github Issues', url: 'https://github.com/apache/grails-core/issues' ]
-
-    // Online location of the plugin's browsable source code.
-    def scm = [url: 'https://github.com/apache/grails-core']
 
     /**
      * Whether the plugin is active. When disabled no scheduler, job beans or listeners are registered

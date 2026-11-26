@@ -69,11 +69,13 @@ import grails.plugin.springsecurity.acl.domain.NullAclAuditLogger
 import grails.plugin.springsecurity.acl.jdbc.GormAclLookupStrategy
 import grails.plugin.springsecurity.acl.model.GormObjectIdentityRetrievalStrategy
 import grails.plugins.Plugin
+import grails.plugins.metadata.GrailsPluginDescriptor
 import grails.util.GrailsClassUtils as GCU
 
 /**
  * @author <a href='mailto:burt@burtbeckwith.com'>Burt Beckwith</a>
  */
+@GrailsPluginDescriptor(loadAfter = ['springSecurityCore'])
 class SpringSecurityAclGrailsPlugin extends Plugin {
 
     public static final String ENCODING_ID_BCRYPT = 'bcrypt'
@@ -85,19 +87,6 @@ class SpringSecurityAclGrailsPlugin extends Plugin {
     public static final String ENCODING_ID_SCRYPT = 'scrypt'
     public static final String ENCODING_ID_SHA1 = 'SHA-1'
     public static final String ENCODING_IDSHA256 = 'SHA-256'
-
-    String grailsVersion = '7.0.0 > *'
-    String author = 'Burt Beckwith'
-    String authorEmail = ''
-    String title = 'Spring Security ACL plugin'
-    String description = 'ACL support for the Spring Security plugin'
-    String documentation = 'https://grails.apache.org/documentation.html'
-    String license = 'APACHE'
-    def organization = [name: 'Apache Grails', url: 'https://grails.apache.org']
-    def issueManagement = [url: 'https://github.com/apache/grails-core/issues']
-    def scm = [url: 'https://github.com/apache/grails-core']
-    def loadAfter = ['springSecurityCore']
-    def profiles = ['web']
 
     private beanTypeResolver
 

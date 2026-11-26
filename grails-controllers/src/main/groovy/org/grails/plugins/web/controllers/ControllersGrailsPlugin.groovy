@@ -31,7 +31,7 @@ import org.springframework.core.env.Environment
 import grails.config.Settings
 import grails.core.GrailsControllerClass
 import grails.plugins.Plugin
-import grails.util.GrailsUtil
+import grails.plugins.metadata.GrailsPluginDescriptor
 import org.grails.core.artefact.ControllerArtefactHandler
 import org.grails.plugins.web.servlet.context.BootStrapClassRunner
 import org.grails.web.servlet.mvc.TokenResponseActionResultTransformer
@@ -45,15 +45,13 @@ import org.grails.web.servlet.view.CompositeViewResolver
  */
 @Slf4j
 @CompileStatic
+@GrailsPluginDescriptor(
+        dependsOn = ['core:${plugin.version}', 'i18n:${plugin.version}', 'urlMappings:${plugin.version}'],
+        observe = ['domainClass'],
+        watchedResources = [
+                'file:./grails-app/controllers/**/*Controller.groovy',
+                'file:./plugins/*/grails-app/controllers/**/*Controller.groovy'])
 class ControllersGrailsPlugin extends Plugin {
-
-    def watchedResources = [
-            'file:./grails-app/controllers/**/*Controller.groovy',
-            'file:./plugins/*/grails-app/controllers/**/*Controller.groovy']
-
-    def version = GrailsUtil.getGrailsVersion()
-    def observe = ['domainClass']
-    def dependsOn = [core: version, i18n: version, urlMappings: version]
 
     @Override
     BeanRegistrar beanRegistrar() {
