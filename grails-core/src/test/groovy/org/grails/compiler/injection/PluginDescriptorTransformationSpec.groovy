@@ -37,15 +37,14 @@ class PluginDescriptorTransformationSpec extends Specification {
         File output = new File(project, 'classes')
         File sources = new File(project, 'src/test/groovy')
         sources.mkdirs()
-        File bundle = new File(sources, 'Plugins.groovy')
-        bundle.text = """
-            class AlphaGrailsPlugin { def version = '1.0' }
-            class BetaGrailsPlugin { def version = '1.0' }
-        """
+        File alpha = new File(sources, 'AlphaGrailsPlugin.groovy')
+        alpha.text = "class AlphaGrailsPlugin { def version = '1.0' }"
+        File beta = new File(sources, 'BetaGrailsPlugin.groovy')
+        beta.text = "class BetaGrailsPlugin { def version = '1.0' }"
         writeService(output, 'SampleService')
 
         when:
-        compile(output, bundle)
+        compile(output, alpha, beta)
 
         then:
         descriptors(output) == [alpha: ['SampleService'], beta: ['SampleService']]
@@ -54,13 +53,13 @@ class PluginDescriptorTransformationSpec extends Specification {
         Files.delete(new File(output, 'AlphaGrailsPlugin.class').toPath())
         Files.delete(new File(output, 'SampleService.class').toPath())
         writeService(output, 'RenamedService')
-        bundle.text = "class BetaGrailsPlugin { def version = '1.0' }"
-        compile(output, bundle)
+        assert alpha.delete()
+        compile(output, beta)
 
         then:
         def clean = new File(project, 'clean')
         writeService(clean, 'RenamedService')
-        compile(clean, bundle)
+        compile(clean, beta)
         descriptors(output) == descriptors(clean)
         descriptors(output) == [beta: ['RenamedService']]
         !new File(output, 'META-INF/grails/plugins/alpha/plugin.properties').exists()
@@ -75,6 +74,27 @@ class PluginDescriptorTransformationSpec extends Specification {
         descriptors(output).isEmpty()
         !new File(output, 'META-INF/grails/plugins.imports').exists()
         !new File(output, 'META-INF/grails/plugins/beta/plugin.properties').exists()
+    }
+
+    void 'a GrailsPlugin class declared in a file named for another class is not a plugin unless annotated'() {
+        given: 'helper plugins a specification declares beside itself, as test fixtures'
+        File output = new File(project, 'classes')
+        File sources = new File(project, 'src/test/groovy')
+        sources.mkdirs()
+        File spec = new File(sources, 'HelperSpec.groovy')
+        spec.text = """
+            class HelperSpec {}
+            class HelperGrailsPlugin { def version = '1.0' }
+            @grails.plugins.metadata.GrailsPluginDescriptor(name = 'declared')
+            class DeclaredGrailsPlugin { def version = '1.0' }
+        """
+
+        when:
+        compile(output, spec)
+
+        then: 'only the annotated one is registered, so the helper is not discovered by every test'
+        descriptors(output).keySet() == ['declared'] as Set
+        !new File(output, 'META-INF/grails/plugins/helper/plugin.properties').exists()
     }
 
     void 'javac discovers an annotated Java plugin without Gradle'() {

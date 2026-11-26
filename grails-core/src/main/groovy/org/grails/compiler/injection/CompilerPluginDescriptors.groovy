@@ -41,7 +41,7 @@ final class CompilerPluginDescriptors {
         if (imports.exists() && (!previous || previous.first() != GENERATED)) {
             return
         }
-        def scan = PluginDescriptorWriter.scan(Collections.singleton(directory))
+        def scan = PluginDescriptorWriter.scan(Collections.singleton(directory), true)
         Set<String> names = scan.plugins.collect { it.logicalName }.toSet()
         if (names) {
             PluginDescriptorWriter.writeDescriptors(scan.plugins, scan.artefactsByType, defaultVersion, null, directory, publishXml)

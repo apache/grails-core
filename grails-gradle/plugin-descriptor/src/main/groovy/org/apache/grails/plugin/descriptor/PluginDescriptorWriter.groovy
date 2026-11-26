@@ -57,6 +57,22 @@ final class PluginDescriptorWriter {
     private static final String ARTEFACT_ANNOTATION = 'Lgrails/artefact/Artefact;'
 
     static ScanResult scan(Set<File> classesDirs) {
+        scan(classesDirs, false)
+    }
+
+    /**
+     * Scans compiled classes for plugin descriptors.
+     *
+     * @param classesDirs the class directories to scan
+     * @param ownSourceFileOnly when {@code true}, a class is a plugin by its {@code GrailsPlugin} suffix only
+     *        when it was compiled from a source file of its own name, as a plugin descriptor is written; a
+     *        helper such as a test plugin declared inside a specification then stays an ordinary class.
+     *        A class annotated with {@code @GrailsPluginDescriptor} is a plugin either way.
+     */
+    static ScanResult scan(Set<File> classesDirs, boolean ownSourceFileOnly) {
+        int readFlags = ownSourceFileOnly ?
+                (ClassReader.SKIP_CODE | ClassReader.SKIP_FRAMES) :
+                (ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES)
         List<ScannedPlugin> plugins = []
         Map<String, SortedSet<String>> artefactsByType = new TreeMap<>()
 
@@ -76,14 +92,15 @@ final class PluginDescriptorWriter {
                     throw new IllegalArgumentException("Could not read ${file} while generating plugin descriptors", e)
                 }
                 PluginClassScanner scanner = new PluginClassScanner()
-                reader.accept(scanner, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES)
+                reader.accept(scanner, readFlags)
 
                 if (scanner.isConcrete()) {
                     String fqcn = reader.className.replace('/' as char, '.' as char)
                     int lastDot = fqcn.lastIndexOf('.')
                     String simpleName = lastDot >= 0 ? fqcn.substring(lastDot + 1) : fqcn
                     boolean matchesSuffix = simpleName.endsWith(GRAILS_PLUGIN_SUFFIX) &&
-                            simpleName.length() > GRAILS_PLUGIN_SUFFIX.length()
+                            simpleName.length() > GRAILS_PLUGIN_SUFFIX.length() &&
+                            (!ownSourceFileOnly || scanner.compiledFrom(simpleName))
                     if (!scanner.frameworkPluginWrapper &&
                             (scanner.hasPluginDescriptorAnnotation || matchesSuffix)) {
                         plugins.add(scanner.toScannedPlugin(fqcn))
@@ -379,9 +396,19 @@ final class PluginDescriptorWriter {
         List<String> pluginExcludes = []
         boolean enabled = true
         String artefactType
+        String sourceFile
 
         PluginClassScanner() {
             super(Opcodes.ASM9)
+        }
+
+        @Override
+        void visitSource(String source, String debug) {
+            this.sourceFile = source
+        }
+
+        boolean compiledFrom(String simpleName) {
+            sourceFile == null || sourceFile == simpleName + '.groovy' || sourceFile == simpleName + '.java'
         }
 
         @Override
