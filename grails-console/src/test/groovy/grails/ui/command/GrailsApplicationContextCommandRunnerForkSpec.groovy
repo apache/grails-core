@@ -29,10 +29,11 @@ import grails.boot.config.GrailsAutoConfiguration
 import grails.core.GrailsApplication
 import grails.ui.StartedJvmCoverage
 import org.apache.grails.core.cli.ApplicationCommand
+import org.apache.grails.core.cli.ApplicationTool
 import org.apache.grails.core.cli.ExecutionContext
 
 /**
- * {@link GrailsApplicationContextCommandRunner} as the {@code runCommand} task of a build starts it: its
+ * {@link GrailsApplicationContextCommandRunner} as the {@code runTool} task of a build starts it: its
  * {@code main} method in a JVM of its own, which it ends itself with the status of the command.
  */
 class GrailsApplicationContextCommandRunnerForkSpec extends Specification {
@@ -42,14 +43,20 @@ class GrailsApplicationContextCommandRunnerForkSpec extends Specification {
     @TempDir
     File dir
 
-    def "a command runs with the application context, its arguments and its flags, and the JVM ends with 0"() {
+    @Unroll
+    def "#kind runs with the application context, its arguments and its flags, and the JVM ends with 0"() {
         when:
-        Map result = run('fork-spec-succeeds', 'one', '--flag=value', 'two', CommandRunnerApplication.name)
+        Map result = run(command, 'one', '--flag=value', 'two', CommandRunnerApplication.name)
 
         then:
         result.ended
         result.exit == 0
-        result.out.contains('COMMAND=fork-spec-succeeds [one, two] value DefaultGrailsApplication true')
+        result.out.contains("COMMAND=${command} [one, two] value DefaultGrailsApplication true")
+
+        where:
+        kind                                     | command
+        'an application tool'                    | 'fork-spec-application'
+        'a tool written with a name of Grails 8' | 'fork-spec-succeeds'
     }
 
     def "the arguments of a file are those of the command, each as it is"() {
@@ -119,10 +126,10 @@ class GrailsApplicationContextCommandRunnerForkSpec extends Specification {
 
         where:
         what                                            | arguments                                                                     | said
-        'with a class of the application there is none' | ['fork-spec-succeeds', 'no.such.Application']                                 | 'runCommand: Application class no.such.Application not found'
+        'with a class of the application there is none' | ['fork-spec-succeeds', 'no.such.Application']                                 | 'runTool: Application class no.such.Application not found'
         'without the class of the application'          | ['fork-spec-succeeds']                                                        | 'Missing application class name and script name arguments'
         'with nothing'                                  | []                                                                            | 'Missing application class name and script name arguments'
-        'with a file of arguments there is none of'     | ['fork-spec-succeeds', CommandRunnerApplication.name, '--grails-args-file=/no/such'] | 'runCommand: The file of arguments does not exist or is not a file.'
+        'with a file of arguments there is none of'     | ['fork-spec-succeeds', CommandRunnerApplication.name, '--grails-args-file=/no/such'] | 'runTool: The file of arguments does not exist or is not a file.'
     }
 
     private Map run(String... arguments) {
@@ -162,6 +169,18 @@ class FailingApplication extends GrailsAutoConfiguration {
 }
 
 class ForkSpecSucceedsCommand implements ApplicationCommand {
+
+    GrailsApplication grailsApplication
+
+    @Override
+    boolean handle(ExecutionContext executionContext) {
+        println "COMMAND=${name} ${executionContext.commandLine.remainingArgs} ${executionContext.commandLine.optionValue('flag')} " +
+                "${grailsApplication?.getClass()?.simpleName} ${applicationContext?.isActive()}"
+        true
+    }
+}
+
+class ForkSpecApplicationTool implements ApplicationTool {
 
     GrailsApplication grailsApplication
 

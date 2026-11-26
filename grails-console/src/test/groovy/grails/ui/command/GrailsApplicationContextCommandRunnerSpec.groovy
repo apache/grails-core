@@ -17,11 +17,16 @@
 package grails.ui.command
 
 import org.apache.grails.core.cli.ApplicationCommandTargetAware
+import org.apache.grails.core.cli.ApplicationTool
+import org.apache.grails.core.cli.ExecutionContext
+import org.apache.grails.core.cli.GrailsTool
+import org.apache.grails.core.cli.StandaloneTool
 import spock.lang.Specification
 import spock.lang.Unroll
 
 /**
- * Tests for {@link GrailsApplicationContextCommandRunner#filterCommandOptions(String[])}.
+ * Tests for {@link GrailsApplicationContextCommandRunner#filterCommandOptions(String[])}, and for
+ * which tools the application is started around.
  *
  * Verifies that command-specific options (--key=value, --flag) are filtered out
  * before being passed to Spring Boot's SpringApplication.run(), while preserving
@@ -30,7 +35,25 @@ import spock.lang.Unroll
 class GrailsApplicationContextCommandRunnerSpec extends Specification {
 
     private static final String LEGACY_COMMAND_HINT =
-            'Grails 7 commands were detected; set grails { legacyCommandSupport = true } or upgrade the plugin.'
+            '/plugins/old.jar has commands of Grails 7, which Grails 9 does not run: use a version of the plugin for Grails 9'
+
+    @Unroll
+    def "the application is started around #kind: #starts"() {
+        expect:
+        GrailsApplicationContextCommandRunner.startsApplication(tool) == starts
+
+        where:
+        kind                                                         | tool                                                          || starts
+        'an application tool that says nothing'                      | new RunnerSpecApplicationTool()                               || true
+        'an application tool that does not start it'                 | new RunnerSpecApplicationTool(startsApplication: false)       || false
+        'a standalone tool'                                          | new RunnerSpecStandaloneTool()                                || false
+        'a tool that is neither kind'                                | new RunnerSpecNeitherTool()                                   || false
+        'a tool that is both kinds'                                  | new RunnerSpecBothTool()                                      || false
+        'an adapter of a standalone tool'                            | new RunnerSpecAdapterTool(target: new RunnerSpecStandaloneTool()) || false
+        'an adapter of a tool that does not start it'                | new RunnerSpecAdapterTool(target: new RunnerSpecApplicationTool(startsApplication: false)) || false
+        'an adapter of what is no tool, which says it starts it'     | new RunnerSpecAdapterTool(target: new Object())               || true
+        'an adapter of what is no tool, which says it does not'      | new RunnerSpecAdapterTool(target: new Object(), startsApplication: false) || false
+    }
 
     def "unknown command output appends the legacy command hint"() {
         expect:
@@ -199,6 +222,48 @@ class GrailsApplicationContextCommandRunnerSpec extends Specification {
     def "resolveSkipBootstrap ignores a non-Boolean flag declared by the target"() {
         expect:
         GrailsApplicationContextCommandRunner.resolveSkipBootstrap(new TargetAwareAdapter(new TextSkipBootstrapCommand())) == null
+    }
+
+    static class RunnerSpecApplicationTool implements ApplicationTool {
+
+        @Override
+        boolean handle(ExecutionContext executionContext) {
+            true
+        }
+    }
+
+    static class RunnerSpecStandaloneTool implements StandaloneTool {
+
+        @Override
+        boolean handle(ExecutionContext executionContext) {
+            true
+        }
+    }
+
+    static class RunnerSpecNeitherTool implements GrailsTool {
+
+        @Override
+        boolean handle(ExecutionContext executionContext) {
+            true
+        }
+    }
+
+    static class RunnerSpecBothTool implements ApplicationTool, StandaloneTool {
+
+        @Override
+        boolean handle(ExecutionContext executionContext) {
+            true
+        }
+    }
+
+    static class RunnerSpecAdapterTool implements ApplicationTool, ApplicationCommandTargetAware {
+
+        Object target
+
+        @Override
+        boolean handle(ExecutionContext executionContext) {
+            true
+        }
     }
 
     /**

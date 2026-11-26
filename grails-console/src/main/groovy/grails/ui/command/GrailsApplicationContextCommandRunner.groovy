@@ -26,6 +26,7 @@ import org.apache.grails.core.cli.ApplicationContextCommandRegistry
 import org.apache.grails.core.cli.ApplicationTool
 import org.apache.grails.core.cli.ExecutionContext
 import org.apache.grails.core.cli.GrailsTool
+import org.apache.grails.core.cli.StandaloneTool
 import org.apache.grails.core.cli.ApplicationCommandTargetAware
 import grails.ui.support.DevelopmentGrailsApplication
 import org.apache.grails.gradle.model.cli.CommandArgumentsFile
@@ -33,12 +34,15 @@ import org.grails.build.parsing.CommandLine
 import org.grails.build.parsing.CommandLineParser
 
 /**
- * Runs a command of the application or of one of its plugins, as the {@code runCommand} task of a
- * build starts it. The application is started around the command, which is given its application
- * context, unless the command is an {@link ApplicationTool} that says it does not start the
- * application, or is no {@link ApplicationTool}, as a {@code StandaloneTool} is: that one is run
- * without the application, and nothing of it is started. A {@code StandaloneTool} needs no build
- * either, and the command line starts it without one; a build that is asked for it runs it here.
+ * Runs a tool of the application or of one of its plugins, as the {@code runTool} task of a build
+ * (and {@code runCommand}, its deprecated other name) starts it. The application is started around
+ * an {@link ApplicationTool}, which is given its application context, unless the tool says it does
+ * not start the application ({@code startsApplication = false}). A tool that does not start it, and
+ * a {@link StandaloneTool}, are run without the application: nothing of it is started, nothing is
+ * injected into the tool, and no {@code skipBootstrap} of the tool is read. A {@link StandaloneTool}
+ * needs no build either, and the command line starts it without one; a build that is asked for it
+ * runs it here. What the tool says is read from the instance the registry makes; for an adapter
+ * ({@link ApplicationCommandTargetAware}), from the tool it adapts.
  *
  * @since 3.0
  */
@@ -59,8 +63,8 @@ class GrailsApplicationContextCommandRunner extends DevelopmentGrailsApplication
         if (command) {
             Object autowireTarget = resolveAutowireTarget(command)
 
-            // a command that says it needs no application is run as it is: nothing is started for it
-            if (!(command instanceof ApplicationTool) || !((ApplicationTool) command).startsApplication) {
+            // a tool that says it needs no application is run as it is: nothing is started for it
+            if (!startsApplication(command)) {
                 try {
                     def result = command.handle(new ExecutionContext(new CommandLineParser().parse(args)))
                     result ? System.exit(0) : System.exit(1)
@@ -140,6 +144,21 @@ class GrailsApplicationContextCommandRunner extends DevelopmentGrailsApplication
         args.findAll { it != null && !it.startsWith('--') } as String[]
     }
 
+    /**
+     * Whether the application is started around a tool: it is for an {@link ApplicationTool} that does not
+     * say otherwise, and is not for a {@link StandaloneTool}, for an {@link ApplicationTool} whose
+     * {@code startsApplication} is {@code false}, or for a tool that is neither. Of an adapter, the tool it
+     * adapts says, when that one is a {@link GrailsTool}.
+     *
+     * @param command the tool the registry found
+     * @return whether the application is started around it
+     */
+    static boolean startsApplication(GrailsTool command) {
+        Object target = resolveAutowireTarget(command)
+        Object tool = target instanceof GrailsTool ? target : command
+        tool instanceof ApplicationTool && !(tool instanceof StandaloneTool) && ((ApplicationTool) tool).startsApplication
+    }
+
     static String unknownCommandMessage(String commandName, String missingCommandHint) {
         String message = "Command not found for name: $commandName"
         missingCommandHint ? "${message}\n${missingCommandHint}" : message
@@ -147,7 +166,7 @@ class GrailsApplicationContextCommandRunner extends DevelopmentGrailsApplication
 
     /**
      * Resolves the object that Spring should autowire and inspect for the {@code skipBootstrap}
-     * property. For a command loaded through the deprecated Grails 7 compatibility layer the
+     * property. For a command a provider of the deprecated registry SPI contributed as an adapter the
      * registry returns an {@link ApplicationCommandTargetAware} adapter; the target it wraps - not
      * the adapter - is what must be autowired and queried, because the adapter forwards
      * {@code applicationContext} and {@code handle} to that same instance. Any other command is
@@ -163,9 +182,9 @@ class GrailsApplicationContextCommandRunner extends DevelopmentGrailsApplication
 
     /**
      * Reads the optional {@code skipBootstrap} flag declared by a command. The flag is looked up on
-     * the autowire target rather than on {@code command} itself, so a command reached through the
-     * deprecated Grails 7 compatibility layer keeps its flag: the adapter forwards {@code handle}
-     * but not the arbitrary properties a command declares.
+     * the autowire target rather than on {@code command} itself, so a command reached through an
+     * adapter keeps its flag: the adapter forwards {@code handle} but not the arbitrary properties a
+     * command declares.
      *
      * @param command the command resolved from the registry
      * @return the declared flag, or {@code null} when the target declares no {@code skipBootstrap} property or declares one that is not a {@link Boolean}
@@ -188,7 +207,7 @@ class GrailsApplicationContextCommandRunner extends DevelopmentGrailsApplication
             // a build gives the arguments of the command in a file when they are not for a command line
             args = CommandArgumentsFile.expand(args)
         } catch (CommandArgumentsFile.Refused refused) {
-            System.err.println("runCommand: The file of arguments ${refused.message}")
+            System.err.println("runTool: The file of arguments ${refused.message}")
             System.exit(1)
         }
         if (args.size() > 1) {
@@ -197,7 +216,7 @@ class GrailsApplicationContextCommandRunner extends DevelopmentGrailsApplication
             try {
                 applicationClass = Thread.currentThread().contextClassLoader.loadClass(className)
             } catch (Throwable e) {
-                System.err.println("runCommand: Application class ${className} not found")
+                System.err.println("runTool: Application class ${className} not found")
                 System.exit(1)
             }
 
