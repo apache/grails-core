@@ -100,7 +100,7 @@ The alias uses the requested join type. A left join alone does not guarantee tha
 
 In Hibernate 7, every explicitly requested alias of an entity association creates a join even when no restriction, projection, or order references it. Declaring a left alias and an inner alias for the same association therefore excludes rows with no associated entity, even if the inner alias is otherwise unused.
 
-In Hibernate 7, an alias declared inside an association block is relative to that association, not the outer domain class. Hibernate 5 resolves the alias path from the domain class being queried. In Hibernate 7, aliases declared in a `list { ... }` closure do not carry over to a subsequent `list { ... }` call on the same criteria builder.
+In Hibernate 7, an alias declared inside an association block is relative to that association, not the outer domain class. Hibernate 5 resolves the alias path from the domain class being queried. In Hibernate 7, every `list`, `listDistinct`, `get`, `count` and `scroll` call on a builder starts a new query, and nothing set in the closure of an earlier call carries over: not the criteria, projections, aliases, joins, paging, `lock`, `readOnly` or `cache`. What was set on the builder before a call, such as `maxResults(1)`, applies to that call only. Hibernate 5 runs one query on a builder and refuses a second call.
 
 In Hibernate 7, an entity alias declared inside an association block creates its requested join in that association's scope even if the alias is unused. This applies to lists, counts, and paginated totals.
 
@@ -168,7 +168,7 @@ Below is a node reference for each criterion method:
 |*ne*|Where a property does not equal a particular value| `ne("branch", "London")`
 |*neProperty*|Where one property does not equal another| `neProperty("lastTx", "firstTx")`
 |*order*|Order the results by a particular property| `order("holderLastName", "desc")`
-|*rlike*|Similar to like, but uses a regex. Supported on MySQL, MariaDB, PostgreSQL, Oracle, H2 and Db2 for Linux, UNIX and Windows and for IBM i; with Hibernate 7 it falls back to like on other databases.| `rlike("holderFirstName", /Steph.+/)`
+|*rlike*|Similar to like, but uses a regex. Supported on MySQL, MariaDB, PostgreSQL, Oracle, H2 and Db2 for Linux, UNIX and Windows and for IBM i. On any other database, such as SQL Server and Db2 for z/OS, it falls back to like with Hibernate 5 and 7 alike, so the pattern is matched as a like pattern and not as a regex. Whether the match ignores case follows the database: it does on MySQL and MariaDB with a case-insensitive collation, it does not on Oracle, H2 and Db2, and on PostgreSQL it does with Hibernate 5 (`~*`) and does not with Hibernate 7 (`~`).| `rlike("holderFirstName", /Steph.+/)`
 |*sizeEq*|Where a collection property's size equals a particular value| `sizeEq("transactions", 10)`
 |*sizeGt*|Where a collection property's size is greater than a particular value| `sizeGt("transactions", 10)`
 |*sizeGe*|Where a collection property's size is greater than or equal to a particular value| `sizeGe("transactions", 10)`

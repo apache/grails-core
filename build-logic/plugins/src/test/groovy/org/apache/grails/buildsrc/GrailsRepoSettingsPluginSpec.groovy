@@ -56,12 +56,13 @@ class GrailsRepoSettingsPluginSpec extends Specification {
         List<String> repositories = urls(result, 'DEPENDENCY_REPOSITORIES')
 
         then:
-        repositories.size() == 5
+        repositories.size() == 6
         repositories[0].startsWith(MAVEN_CENTRAL)
         repositories[1].startsWith(GRAILS_RESTRICTED)
         repositories[2].startsWith(APACHE_SNAPSHOTS)
         repositories[3].startsWith(SONATYPE_SNAPSHOTS)
         repositories[4].startsWith(APACHE_STAGING)
+        repositories[5].startsWith(PLUGIN_PORTAL)
     }
 
     void 'plugin repositories start with Maven Central and the plugin portal'() {
@@ -95,7 +96,7 @@ class GrailsRepoSettingsPluginSpec extends Specification {
         List<String> pluginRepositories = urls(result, 'PLUGIN_REPOSITORIES')
 
         then:
-        dependencyRepositories.size() == 6
+        dependencyRepositories.size() == 7
         dependencyRepositories[0].startsWith('file:')
         dependencyRepositories[1].startsWith(MAVEN_CENTRAL)
         dependencyRepositories[2].startsWith(GRAILS_RESTRICTED)
@@ -105,10 +106,13 @@ class GrailsRepoSettingsPluginSpec extends Specification {
     }
 
     private GradleRunner runner() {
+        // The plugin adds mavenLocal() whenever GRAILS_INCLUDE_MAVEN_LOCAL is set, whatever its value,
+        // so the build under test runs without it unless a feature sets it.
         GradleRunner.create()
                 .withProjectDir(projectDir)
                 .withArguments('help', '--offline', '--stacktrace')
                 .withPluginClasspath()
+                .withEnvironment(System.getenv().findAll { it.key != 'GRAILS_INCLUDE_MAVEN_LOCAL' })
     }
 
     private static List<String> urls(BuildResult result, String label) {

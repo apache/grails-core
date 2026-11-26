@@ -58,12 +58,23 @@ class SecurityTagLib implements GrailsConfigurationAware {
     protected Map<String, Expression> expressionCache = [:]
 
     /**
+     * Whether Spring Security is active ({@code grails.plugin.springsecurity.active}, default {@code true}). When it is
+     * not, the plugin defines none of its beans, so every tag renders nothing.
+     */
+    protected boolean isActive() {
+        grailsApplication?.config?.getProperty('grails.plugin.springsecurity.active', Boolean, Boolean.TRUE)
+    }
+
+    /**
      * Renders the body if all of the specified roles are granted to the user. Roles are
      * specified in the 'roles' attribute which is a comma-delimited string.
      *
      * @attr roles REQUIRED the role name(s)
      */
     def ifAllGranted = { attrs, body ->
+        if (!isActive()) {
+            return
+        }
 
         String roles = assertAttribute('roles', attrs, 'ifAllGranted')
 
@@ -79,6 +90,9 @@ class SecurityTagLib implements GrailsConfigurationAware {
      * @attr roles REQUIRED the role name(s)
      */
     def ifNotGranted = { attrs, body ->
+        if (!isActive()) {
+            return
+        }
 
         String roles = assertAttribute('roles', attrs, 'ifNotGranted')
 
@@ -94,6 +108,9 @@ class SecurityTagLib implements GrailsConfigurationAware {
      * @attr roles REQUIRED the role name(s)
      */
     def ifAnyGranted = { attrs, body ->
+        if (!isActive()) {
+            return
+        }
 
         String roles = assertAttribute('roles', attrs, 'ifAnyGranted')
 
@@ -108,6 +125,9 @@ class SecurityTagLib implements GrailsConfigurationAware {
      * @attr field REQUIRED the field name
      */
     def loggedInUserInfo = { attrs, body ->
+        if (!isActive()) {
+            return
+        }
 
         // TODO support 'var' and 'scope' and set the result instead of writing it
 
@@ -136,6 +156,9 @@ class SecurityTagLib implements GrailsConfigurationAware {
      * Renders the user's username if logged in.
      */
     def username = { attrs ->
+        if (!isActive()) {
+            return
+        }
         if (springSecurityService.isLoggedIn()) {
             out << springSecurityService.authentication.name.encodeAsHTML()
         }
@@ -145,6 +168,9 @@ class SecurityTagLib implements GrailsConfigurationAware {
      * Renders the body if the user is authenticated.
      */
     def ifLoggedIn = { attrs, body ->
+        if (!isActive()) {
+            return
+        }
         if (springSecurityService.isLoggedIn()) {
             out << body()
         }
@@ -154,6 +180,9 @@ class SecurityTagLib implements GrailsConfigurationAware {
      * Renders the body if the user is not authenticated.
      */
     def ifNotLoggedIn = { attrs, body ->
+        if (!isActive()) {
+            return
+        }
         if (!springSecurityService.isLoggedIn()) {
             out << body()
         }
@@ -163,6 +192,9 @@ class SecurityTagLib implements GrailsConfigurationAware {
      * Renders the body if the user is authenticated as another user via run-as.
      */
     def ifSwitched = { attrs, body ->
+        if (!isActive()) {
+            return
+        }
         if (SpringSecurityUtils.isSwitched()) {
             out << body()
         }
@@ -172,6 +204,9 @@ class SecurityTagLib implements GrailsConfigurationAware {
      * Renders the body if the user is not authenticated as another user via run-as.
      */
     def ifNotSwitched = { attrs, body ->
+        if (!isActive()) {
+            return
+        }
         if (!SpringSecurityUtils.isSwitched()) {
             out << body()
         }
@@ -181,6 +216,9 @@ class SecurityTagLib implements GrailsConfigurationAware {
      * Renders the username of the 'real' authentication when authenticated as another user via run-as.
      */
     def switchedUserOriginalUsername = { attrs ->
+        if (!isActive()) {
+            return
+        }
         if (SpringSecurityUtils.isSwitched()) {
             out << SpringSecurityUtils.switchedUserOriginalUsername.encodeAsHTML()
         }
@@ -195,6 +233,9 @@ class SecurityTagLib implements GrailsConfigurationAware {
      * @attr method the method of the URL, defaults to 'GET'
      */
     def access = { attrs, body ->
+        if (!isActive()) {
+            return
+        }
         if (hasAccess(attrs, 'access')) {
             out << body()
         }
@@ -205,6 +246,9 @@ class SecurityTagLib implements GrailsConfigurationAware {
      * Renders the link if the user has access to the specified URL.
      */
     def link = { attrs, body ->
+        if (!isActive()) {
+            return
+        }
         boolean isFallback = isFallback(attrs)
         // retain original attributes for later, since hasAccess() removes ones necessary to create a link
         def origAttrsMinusExpression = [:] + attrs
@@ -228,6 +272,9 @@ class SecurityTagLib implements GrailsConfigurationAware {
      * @attr method the method of the URL, defaults to 'GET'
      */
     def noAccess = { attrs, body ->
+        if (!isActive()) {
+            return
+        }
         if (!hasAccess(attrs, 'noAccess')) {
             out << body()
         }
