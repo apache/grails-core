@@ -32,6 +32,8 @@ import org.gradle.api.component.AdhocComponentWithVariants
 import org.gradle.api.component.ConfigurationVariantDetails
 import org.gradle.api.component.SoftwareComponentFactory
 import org.gradle.api.provider.Property
+import org.gradle.api.publish.PublishingExtension
+import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.bundling.Jar
@@ -227,6 +229,10 @@ abstract class GrailsCliArtifactGradlePlugin implements Plugin<Project> {
             publishCompanion(project, CLI_STANDALONE_COMPONENT_NAME, standaloneApiElements, standaloneRuntimeElements, standaloneRuntimeClasspath)
             exportArtifactId(project, ToolBuildNames.CLI_STANDALONE_ARTIFACT_ID_PROPERTY, extension.standaloneArtifactId)
             advertise(project, CLI_STANDALONE_ARTIFACT_MANIFEST_ATTRIBUTE, extension.standaloneArtifactId)
+            // -cli depends on -cli-standalone of this project by the capability of its feature, which a POM cannot say.
+            // The POM has the module of that capability all the same (dependency mapping, see CliPublishingSupport),
+            // and Gradle's warning of each publication of -cli that it could not write the capability is not said
+            withoutPomWarningsOfCapabilities(project, [cliApiElements, cliRuntimeElements])
         }
 
         // dependency mapping fixes the pom only; the module metadata keeps the capability
@@ -336,6 +342,20 @@ abstract class GrailsCliArtifactGradlePlugin implements Plugin<Project> {
             }
             details.mapToMavenScope('runtime')
             CliPublishingSupport.configureDependencyMapping(project, details, runtimeClasspath)
+        }
+    }
+
+    // Gradle warns of a variant of a Maven publication with a dependency declared by a capability, which a POM has no
+    // place for. The variants of -cli have one on -cli-standalone, which is written into the POM as the module of the
+    // companion, so the warning is not said of them, in the publication of the Grails publish plugin and in one a build
+    // makes itself from the component cli. Another variant of a publication still has the warning.
+    private static void withoutPomWarningsOfCapabilities(Project project, List<Configuration> variants) {
+        project.pluginManager.withPlugin('maven-publish') {
+            project.extensions.getByType(PublishingExtension).publications.withType(MavenPublication).configureEach { MavenPublication publication ->
+                for (Configuration variant : variants) {
+                    publication.suppressPomMetadataWarningsFor(variant.name)
+                }
+            }
         }
     }
 

@@ -84,9 +84,10 @@ class ToolsPluginProjectSpec extends CommandSpec {
         BuildResult published = executeGradle('publish', '-Pversion=0.1-SNAPSHOT', "-PmavenPublishUrl=${repository.toURI()}".toString())
         File group = new File(repository, 'example/grails')
 
-        then: 'the plugin and its two companions'
+        then: 'the plugin and its two companions, and nothing said of the metadata of their POMs'
         published.output.contains('BUILD SUCCESSFUL')
         [artifact, "${artifact}-cli", "${artifact}-cli-standalone"].every { String name -> publishedFile(group, name, '.jar') != null }
+        !published.output.contains('pom metadata warnings')
 
         and: 'the compilations of both folders of tools said nothing of SLF4J, whose API the class path of src/standalone has without a binding'
         published.task(':compileStandaloneGroovy').outcome == TaskOutcome.SUCCESS

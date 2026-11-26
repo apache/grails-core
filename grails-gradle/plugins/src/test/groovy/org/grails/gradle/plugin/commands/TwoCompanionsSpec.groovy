@@ -37,12 +37,15 @@ class TwoCompanionsSpec extends CommandProjectSpecification {
 
     private static final String REPOSITORY = 'build/test-repo/org/example/test'
 
+    // what Gradle says of a publication with a variant it cannot write into the POM as it is declared
+    private static final String POM_METADATA_WARNINGS = 'pom metadata warnings'
+
     def "a plugin with both folders publishes -cli and -cli-standalone, each with the classes of its folder and its own dependencies"() {
         given:
         setupCompanions()
 
         when:
-        executeTask(':my-plugin:publishAllPublicationsToTestCaseMavenRepoRepository')
+        BuildResult result = executeTask(':my-plugin:publishAllPublicationsToTestCaseMavenRepoRepository')
 
         then: 'the plugin jar has neither tool and names both companions'
         entries('my-plugin') == ['META-INF/MANIFEST.MF', 'com/example/MyPlugin.class'] as Set
@@ -70,6 +73,9 @@ class TwoCompanionsSpec extends CommandProjectSpecification {
 
         and: 'the plugin itself depends on neither'
         !published('my-plugin', '.pom').text.contains('-cli')
+
+        and: 'publishing says nothing of the metadata of the POMs: the dependency of -cli on -cli-standalone, declared by its capability, is in the POM as a module'
+        !result.output.contains(POM_METADATA_WARNINGS)
     }
 
     @Unroll
@@ -167,9 +173,10 @@ class TwoCompanionsSpec extends CommandProjectSpecification {
         setupCompanions()
 
         when:
-        executeTask(':standalone-plugin:publishAllPublicationsToTestCaseMavenRepoRepository')
+        BuildResult published = executeTask(':standalone-plugin:publishAllPublicationsToTestCaseMavenRepoRepository')
 
-        then: 'the plugin publishes both companions and names both: -cli has no class and depends on -cli-standalone'
+        then: 'the plugin publishes both companions and names both, and says nothing of the metadata of the POMs: -cli has no class and depends on -cli-standalone'
+        !published.output.contains(POM_METADATA_WARNINGS)
         manifest('standalone-plugin') == ['Grails-Cli-Artifact': 'org.example.test:standalone-plugin-cli',
                                           'Grails-Cli-Standalone-Artifact': 'org.example.test:standalone-plugin-cli-standalone']
         entries('standalone-plugin-cli') == ['META-INF/MANIFEST.MF'] as Set
