@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -75,6 +76,7 @@ import org.grails.datastore.mapping.query.api.BuildableCriteria;
 import org.grails.datastore.mapping.query.api.QueryableCriteria;
 import org.grails.datastore.mapping.reflect.NameUtils;
 import org.grails.orm.hibernate.AbstractHibernateDatastore;
+import org.grails.orm.hibernate.cfg.GrailsHibernateUtil;
 
 /**
  * Abstract super class for sharing code between Hibernate 3 and 4 implementations of HibernateCriteriaBuilder
@@ -137,6 +139,11 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
     protected List<String> aliasStack = new ArrayList<>();
     protected List<Criteria> aliasInstanceStack = new ArrayList<>();
     protected Map<String, String> aliasMap = new HashMap<>();
+    /**
+     * The join types requested with {@link #join(String, JoinType)}, by association path. They are
+     * applied once the criteria are built, see {@link #applyRequestedJoinTypes()}.
+     */
+    private final Map<String, JoinType> requestedJoinTypes = new LinkedHashMap<>();
     protected static final String ALIAS = "_alias";
     protected ResultTransformer resultTransformer;
     protected int aliasCount;
@@ -316,12 +323,73 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
      */
     public BuildableCriteria join(String associationPath) {
         criteria.setFetchMode(calculatePropertyName(associationPath), FetchMode.JOIN);
+        // the fetch mode alone replaces a join type that was requested for the association before
+        requestedJoinTypes.remove(getRequestedJoinPath(associationPath));
         return this;
     }
 
+    /**
+     * Use a join query with the given type of join
+     *
+     * @param property The path of the association
+     * @param joinType The type of join
+     */
     public BuildableCriteria join(String property, JoinType joinType) {
         criteria.setFetchMode(calculatePropertyName(property), FetchMode.JOIN);
+        requestedJoinTypes.put(getRequestedJoinPath(property), joinType);
         return this;
+    }
+
+    /**
+     * Returns the path from the queried class of an association that a join or a fetch mode is
+     * requested for, which is relative to the association that the criteria are being built for.
+     */
+    private String getRequestedJoinPath(String property) {
+        String associationPath = getAssociationPath();
+        return associationPath.isEmpty() ? property : associationPath + '.' + property;
+    }
+
+    /**
+     * Applies the join types requested with {@link #join(String, JoinType)}. This happens once the
+     * criteria are built, so that the requested type also applies to a join created by a block or alias.
+     */
+    private void applyRequestedJoinTypes() {
+        for (Map.Entry<String, JoinType> requestedJoinType : requestedJoinTypes.entrySet()) {
+            GrailsHibernateUtil.applyJoinType(datastore, targetClass, criteria, requestedJoinType.getKey(), requestedJoinType.getValue());
+        }
+        requestedJoinTypes.clear();
+    }
+
+    /**
+     * Applies the {@code fetch} argument of a list call, which replaces what the criteria request
+     * for the same associations. The other arguments are applied once the orders of the criteria
+     * are added. The fetch argument is applied before that, so that an order by a property of an
+     * association uses the join type, and keeps the fetch, that the argument requests for the
+     * association.
+     *
+     * @param arguments The arguments of the list call
+     * @return The arguments that are left to apply
+     */
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private Map applyFetchArgument(Map arguments) {
+        Object fetch = arguments.get(HibernateQueryConstants.ARGUMENT_FETCH);
+        if (!(fetch instanceof Map)) {
+            return arguments;
+        }
+        for (Object entry : ((Map) fetch).entrySet()) {
+            String associationPath = (String) ((Map.Entry) entry).getKey();
+            Object fetchValue = ((Map.Entry) entry).getValue();
+            if (fetchValue instanceof JoinType) {
+                requestedJoinTypes.put(associationPath, (JoinType) fetchValue);
+            }
+            else {
+                criteria.setFetchMode(associationPath, GrailsHibernateUtil.getFetchMode(fetchValue));
+                requestedJoinTypes.remove(associationPath);
+            }
+        }
+        Map remaining = new HashMap(arguments);
+        remaining.remove(HibernateQueryConstants.ARGUMENT_FETCH);
+        return remaining;
     }
 
     /**
@@ -357,6 +425,7 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
      */
     public BuildableCriteria select(String associationPath) {
         criteria.setFetchMode(calculatePropertyName(associationPath), FetchMode.SELECT);
+        requestedJoinTypes.remove(getRequestedJoinPath(associationPath));
         return this;
     }
 
@@ -595,6 +664,7 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
     public void fetchMode(String associationPath, FetchMode fetchMode) {
         if (criteria != null) {
             criteria.setFetchMode(associationPath, fetchMode);
+            requestedJoinTypes.remove(associationPath);
         }
     }
 
@@ -1708,14 +1778,23 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
             createCriteriaInstance();
 
             // Check for pagination params
+            Map listArguments = null;
             if (name.equals(LIST_CALL) && args.length == 2) {
                 paginationEnabledList = true;
                 orderEntries = new ArrayList<>();
                 invokeClosureNode(args[1]);
+                listArguments = applyFetchArgument((Map) args[0]);
+                if (listArguments.containsKey(HibernateQueryConstants.ARGUMENT_MAX)) {
+                    criteria.setMaxResults(conversionService.convert(listArguments.get(HibernateQueryConstants.ARGUMENT_MAX), Integer.class));
+                }
+                if (listArguments.containsKey(HibernateQueryConstants.ARGUMENT_OFFSET)) {
+                    criteria.setFirstResult(conversionService.convert(listArguments.get(HibernateQueryConstants.ARGUMENT_OFFSET), Integer.class));
+                }
             }
             else {
                 invokeClosureNode(args[0]);
             }
+            applyRequestedJoinTypes();
 
             if (resultTransformer != null) {
                 criteria.setResultTransformer(resultTransformer);
@@ -1757,7 +1836,7 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
                         criteria.setResultTransformer(resultTransformer);
                     }
                     // GRAILS-7324 look if we already have association to sort by
-                    Map argMap = (Map) args[0];
+                    Map argMap = listArguments;
                     final String sort = (String) argMap.get(HibernateQueryConstants.ARGUMENT_SORT);
                     if (sort != null) {
                         boolean ignoreCase = true;
@@ -2023,6 +2102,7 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
         createCriteriaInstance();
         criteriaClosure.setDelegate(this);
         criteriaClosure.call();
+        applyRequestedJoinTypes();
         return criteria;
     }
 

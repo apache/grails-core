@@ -74,6 +74,68 @@ class MultiTenancyRequestedJoinSpec extends Specification {
         System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, '')
     }
 
+    void 'a where query that requests #joinType for a collection leaves out an instance whose elements belong to another tenant'() {
+        when:
+        final List<RequestedJoinShelf> results = RequestedJoinShelf.withTransaction {
+            final shelves = RequestedJoinShelf.where {
+                name ==~ '%shelf'
+            }.list(arguments + [fetch: [books: joinType]])
+            shelves.each { Hibernate.initialize(it.books) }
+            shelves
+        }
+
+        then:
+        results*.name == ['Shared shelf']
+
+        and: 'the collection holds the books of the current tenant only'
+        results.first().books*.title == ['A novel']
+
+        where:
+        joinType       | arguments
+        JoinType.INNER | [:]
+        JoinType.RIGHT | [:]
+        JoinType.INNER | [sort: 'books.title']
+        JoinType.INNER | [max: 10]
+    }
+
+    void 'count applies the tenant filter to an inner join that is requested for a collection'() {
+        when:
+        final count = RequestedJoinShelf.withTransaction {
+            RequestedJoinShelf.where {
+                name ==~ '%shelf'
+            }.join('books', JoinType.INNER).count()
+        }
+
+        then:
+        count == 1
+    }
+
+    void 'a criteria query that requests an inner join for a collection leaves out an instance whose elements belong to another tenant'() {
+        when:
+        final List<RequestedJoinShelf> results = RequestedJoinShelf.withTransaction {
+            RequestedJoinShelf.createCriteria().list {
+                like('name', '%shelf')
+                join('books', JoinType.INNER)
+            }
+        }
+
+        then:
+        results*.name == ['Shared shelf']
+    }
+
+    void 'a bulk update of a bidirectional collection uses the tenant filter of its elements'() {
+        expect:
+        RequestedJoinShelf.withTransaction { status ->
+            status.setRollbackOnly()
+            final query = RequestedJoinShelf.where { name ==~ '%shelf' }.join('books', JoinType.INNER)
+            assert query.list()*.name == ['Shared shelf']
+            assert query.updateAll(name: 'Updated shelf') == 1
+            datastore.currentSession.clear()
+            assert RequestedJoinShelf.list(sort: 'name')*.name == ['Travel shelf', 'Updated shelf']
+            true
+        }
+    }
+
     void 'a left join requested for a collection returns an instance whose elements belong to another tenant'() {
         when:
         final List<RequestedJoinShelf> results = RequestedJoinShelf.withTransaction {
