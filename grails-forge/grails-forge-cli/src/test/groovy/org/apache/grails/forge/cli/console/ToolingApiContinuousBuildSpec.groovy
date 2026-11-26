@@ -64,8 +64,9 @@ class ToolingApiContinuousBuildSpec extends CommandSpec {
         }
         '''.stripIndent()
 
+    // a continuous build runs again when a file it read changes, which a build that watches the file system is told of
     @Shared
-    IsolatedGradle gradle = new IsolatedGradle()
+    IsolatedGradle gradle = new IsolatedGradle(true)
 
     PrintStream originalOut
     PrintStream originalErr

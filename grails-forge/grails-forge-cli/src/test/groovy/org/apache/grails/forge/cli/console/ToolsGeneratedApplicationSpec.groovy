@@ -336,7 +336,7 @@ class ToolsGeneratedApplicationSpec extends CommandSpec implements CommandFixtur
     private void application(ApplicationType type, String... features) {
         generateProject(type, features)
         new File(dir, 'settings.gradle') << '\n' + gradle.recording
-        new File(dir, 'gradle.properties') << "\norg.gradle.daemon.registry.base=${gradle.registry.canonicalPath}\norg.gradle.daemon.idletimeout=${IsolatedGradle.IDLE_MILLIS}\n"
+        new File(dir, 'gradle.properties') << gradle.ofAGeneratedApplication
         File wrapper = new File(dir, 'gradlew')
         Files.move(wrapper.toPath(), new File(dir, 'gradlew.real').toPath())
         wrapper.text = '#!/bin/sh\nhere="$(dirname "$0")"\necho "$*" >> "$here/gradle-runs.txt"\nexec "$here/gradlew.real" "$@"\n'

@@ -80,7 +80,7 @@ class GeneratedApplicationToolSpec extends CommandSpec implements CommandFixture
         given: 'a generated application with a tool as create-tool writes it, and no catalog of its tools'
         generateProject(ApplicationType.WEB)
         new File(dir, 'settings.gradle') << '\n' + gradle.recording
-        new File(dir, 'gradle.properties') << "\norg.gradle.daemon.registry.base=${gradle.registry.canonicalPath}\norg.gradle.daemon.idletimeout=${IsolatedGradle.IDLE_MILLIS}\n"
+        new File(dir, 'gradle.properties') << gradle.ofAGeneratedApplication
         out.reset()
         assert ForgeCli.execute(beanContext, 'create-tool', 'data-import') == 0
         assert out.toString().readLines() == [
@@ -129,7 +129,7 @@ class GeneratedApplicationToolSpec extends CommandSpec implements CommandFixture
         given: 'a generated application with a tool in the deprecated folder that has a name of its own, over the name the tool it extends has'
         generateProject(ApplicationType.WEB)
         new File(dir, 'settings.gradle') << '\n' + gradle.recording
-        new File(dir, 'gradle.properties') << "\norg.gradle.daemon.registry.base=${gradle.registry.canonicalPath}\norg.gradle.daemon.idletimeout=${IsolatedGradle.IDLE_MILLIS}\n"
+        new File(dir, 'gradle.properties') << gradle.ofAGeneratedApplication
         File commands = new File(dir, 'grails-app/commands/example/grails')
         commands.mkdirs()
         new File(commands, 'OldNameCommand.groovy').text = '''\

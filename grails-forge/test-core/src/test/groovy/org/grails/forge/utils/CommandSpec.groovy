@@ -62,11 +62,32 @@ abstract class CommandSpec extends Specification {
     void setupSpec() {
         applicationContext = Application.builder().run()
         testKit = Files.createTempDirectory("${tempDirectoryPrefix}TestKit").toFile()
-        gradleRunner.withTestKitDir(testKit)
+        useGradleUserHome(testKit)
     }
 
     void setup() {
         dir = Files.createTempDirectory(tempDirectoryPrefix).toFile()
+        // the Gradle user home of the specification is removed after each feature
+        notWatching(testKit)
+    }
+
+    /**
+     * Has the builds of the specification run with a Gradle user home of its own, whose builds do not watch the
+     * file system ({@code org.gradle.vfs.watch=false}). A feature changes files of a project between two builds,
+     * and a daemon that watches knows of a change by the events of the system, which on a busy machine come late:
+     * the next build then took a changed file for unchanged, and could reuse what the configuration cache had
+     * stored for it. Without watching, a daemon looks at the files at the start of each build.
+     *
+     * @param home the directory TestKit has as the Gradle user home of the builds
+     */
+    void useGradleUserHome(File home) {
+        notWatching(home)
+        gradleRunner.withTestKitDir(home)
+    }
+
+    private static void notWatching(File home) {
+        home.mkdirs()
+        new File(home, 'gradle.properties').text = 'org.gradle.vfs.watch=false\n'
     }
 
     void cleanup() {

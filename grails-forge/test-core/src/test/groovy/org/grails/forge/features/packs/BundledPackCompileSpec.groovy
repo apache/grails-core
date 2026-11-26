@@ -107,7 +107,7 @@ class BundledPackCompileSpec extends CommandSpec {
         // one Gradle user home for all the applications: the dependencies are downloaded once and the
         // daemon is reused. CommandSpec removes its own after each feature method
         userHome = Files.createTempDirectory("${tempDirectoryPrefix}TestKit").toFile()
-        gradleRunner.withTestKitDir(userHome)
+        useGradleUserHome(userHome)
 
         long started = System.currentTimeMillis()
         packs = new TreeSet<String>(applicationContext.getBeansOfType(PackFeature).values()*.name)

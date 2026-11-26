@@ -183,7 +183,7 @@ class EhcacheBuildSpec extends CommandSpec {
 
     void setupSpec() {
         userHome = Files.createTempDirectory("${tempDirectoryPrefix}TestKit").toFile()
-        gradleRunner.withTestKitDir(userHome)
+        useGradleUserHome(userHome)
     }
 
     void cleanupSpec() {

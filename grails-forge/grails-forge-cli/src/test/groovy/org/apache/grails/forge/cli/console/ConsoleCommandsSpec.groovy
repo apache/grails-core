@@ -557,8 +557,8 @@ class ConsoleCommandsSpec extends CommandSpec implements CommandFixture {
 
     @IgnoreIf({ os.windows })
     void "continuous testing is the continuous build of Gradle, and cancelling the command stops Gradle and the build"() {
-        given: 'a build without a daemon: the JVM the task runs in is then one that ends with the build'
-        plainProject(dir, false)
+        given: 'a build without a daemon: the JVM the task runs in is then one that ends with the build; a continuous build watches the files'
+        plainProject(dir, false, true)
         File started = new File(dir, 'started.txt')
         AtomicInteger exit = new AtomicInteger(-1)
         Thread command = new Thread({ exit.set(ForgeCli.execute(beanContext, 'test-app', '--continuous', '-Dhang=true')) })
@@ -1284,7 +1284,8 @@ class ConsoleCommandsSpec extends CommandSpec implements CommandFixture {
     }
 
     // the wrapper of a generated application, and around it a build that needs nothing of Grails
-    private void plainProject(File directory, boolean withDaemon = true) {
+    // a project whose builds watch the file system only where asked to: a continuous build, which waits for a change
+    private void plainProject(File directory, boolean withDaemon = true, boolean watches = false) {
         generateProject(ApplicationType.WEB)
         directory.eachFile { File file ->
             if (!(file.name in ['gradlew', 'gradlew.bat', 'gradle'])) {
@@ -1299,7 +1300,7 @@ class ConsoleCommandsSpec extends CommandSpec implements CommandFixture {
         // the daemon of the specification is given the system properties of each build anew: the builds say what
         // the command line of Gradle had, which is of one build
         new File(directory, 'settings.gradle').text = daemon.settingsOf(withDaemon)
-        new File(directory, 'gradle.properties').text = daemon.propertiesOf(withDaemon)
+        new File(directory, 'gradle.properties').text = daemon.propertiesOf(withDaemon, watches)
         new File(directory, 'build.gradle').text = BUILD
         new File(directory, 'grails-app').mkdirs()
     }
