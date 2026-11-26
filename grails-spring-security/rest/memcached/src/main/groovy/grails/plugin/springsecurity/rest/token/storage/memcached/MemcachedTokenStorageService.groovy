@@ -23,6 +23,7 @@ import groovy.util.logging.Slf4j
 
 import net.spy.memcached.CASValue
 import net.spy.memcached.MemcachedClient
+import net.spy.memcached.util.StringUtils
 
 import org.springframework.security.core.userdetails.UserDetails
 
@@ -72,6 +73,10 @@ class MemcachedTokenStorageService implements TokenStorageService {
     @SuppressWarnings('GroovyVariableNotAssigned')
     private UserDetails findExistingUserDetails(String tokenValue) {
         log.debug "Searching in Memcached for UserDetails of token ${tokenValue}"
+        if (!isKey(tokenValue)) {
+            log.debug 'The token cannot be a key of memcached, so no UserDetails are stored for it'
+            return null
+        }
         CASValue<Object> result = memcachedClient.getAndTouch(tokenValue, expiration)
         UserDetails userDetails
         if (result) {
@@ -81,5 +86,20 @@ class MemcachedTokenStorageService implements TokenStorageService {
             log.debug 'UserDetails not found'
         }
         return userDetails
+    }
+
+    /**
+     * Whether memcached accepts the token as a key. The token of a request is whatever the caller sent, and the client
+     * throws for a key that is empty or longer than 250 bytes; no principal was ever stored under such a token. The
+     * keys are checked by the rules of the binary protocol, which the plugin configures the client with: a space or a
+     * line break is a valid key there, so a token that holds one can be stored and is found.
+     */
+    private static boolean isKey(String tokenValue) {
+        try {
+            StringUtils.validateKey(tokenValue, true)
+            return true
+        } catch (IllegalArgumentException ignored) {
+            return false
+        }
     }
 }

@@ -1402,3 +1402,11 @@ only shows in a schema that Hibernate creates: an application that manages its s
 keeps the columns it has, and `hbm2ddl.auto: update` does not change an existing column.
 The one difference from a `String` property is a `maxSize` shorter than the longest constant name: `maxSize` does not validate an
 enum, so the column is made as long as the longest name, and no value of the enum fails at the database.
+
+==== Logging out an unknown token answers 404 with every token storage of the Spring Security REST plugin
+
+The logout endpoint of the Spring Security REST plugin, `/api/logout` by default, answers 404 when the token storage does not have the token of the request, as the plugin's guide says. With the Redis and the Grails cache token storage it answered 200 for any token, including one that was never issued, was logged out before or has expired, because `RedisTokenStorageService.removeToken` and `GrailsCacheTokenStorageService.removeToken` did not throw the `TokenNotFoundException` that `TokenStorageService.removeToken` declares. As of Grails 7.0.18 they throw it, as the GORM and the memcached token storage already did.
+
+The memcached token storage also answers for a token that memcached does not take as a key: one that is empty or longer than 250 bytes. Validating or logging out such a token gave a 500 response. It is now a token that was not found, so validation answers 401 and logout answers 404.
+
+A client that logs out with the Redis or the Grails cache token storage treats a 404 from the logout endpoint as "this token is not logged in", not as a failure: a second logout of the same token, or a logout after the token expired, answers 404. Code of your own that calls `removeToken` on one of the two services handles `TokenNotFoundException` where the token may be gone.

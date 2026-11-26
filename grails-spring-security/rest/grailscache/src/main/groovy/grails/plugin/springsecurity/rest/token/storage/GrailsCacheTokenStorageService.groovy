@@ -60,6 +60,11 @@ class GrailsCacheTokenStorageService implements TokenStorageService {
 
     @Override
     void removeToken(String tokenValue) throws TokenNotFoundException {
+        if (cache.get(tokenValue) == null) {
+            def tokenNotFoundMsg = "No principal found for token $tokenValue"
+            log.debug tokenNotFoundMsg
+            throw new TokenNotFoundException(tokenNotFoundMsg)
+        }
         cache.evict(tokenValue)
         log.debug "Removed principal for token ${tokenValue}"
     }
