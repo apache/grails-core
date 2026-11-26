@@ -149,9 +149,28 @@ class CompilePlugin implements Plugin<Project> {
                     'Implementation-Version': lookupPropertyByType(project, 'grailsVersion', String),
                     'Implementation-Vendor': 'grails.apache.org'
             )
+            // archiveClassifier is present on the main jar with an empty value, so present alone
+            // would skip Automatic-Module-Name there and only the classified jars would be considered.
+            String classifier = jar.archiveClassifier.getOrNull()
+            if (classifier == null || classifier.isEmpty()) {
+                jar.manifest.attributes('Automatic-Module-Name': automaticModuleName(project))
+            }
             // Explicitly fail since duplicates indicate a double configuration that needs fixed
             jar.duplicatesStrategy = DuplicatesStrategy.FAIL
         }
+    }
+
+    static String automaticModuleName(Project project) {
+        String configuredModuleName = project.findProperty('automaticModuleName') as String
+        if (configuredModuleName) {
+            return configuredModuleName
+        }
+        String groupPrefix = project.group == null ? 'org.apache.grails' : project.group.toString()
+        return "${groupPrefix}.${project.name}"
+                .replace('-', '.')
+                .replaceAll('[^A-Za-z0-9_.]', '.')
+                .replaceAll('\\.+', '.')
+                .replaceAll('^\\.|\\.$', '')
     }
 
     private static void configureCompiler(Project project) {
