@@ -51,8 +51,8 @@ class QueryTailCaptureFileSpec extends Specification {
 
     def "an application that configures nothing writes under its build directory, wherever the build has put that"() {
         expect:
-        QueryTailCommand.defaultCaptureFile(appDir, new File(appDir, 'build')) == new File(appDir, 'build/query-tail/capture.log')
-        QueryTailCommand.defaultCaptureFile(appDir, new File(appDir, 'out/moved')) == new File(appDir, 'out/moved/query-tail/capture.log')
+        QueryTailTool.defaultCaptureFile(appDir, new File(appDir, 'build')) == new File(appDir, 'build/query-tail/capture.log')
+        QueryTailTool.defaultCaptureFile(appDir, new File(appDir, 'out/moved')) == new File(appDir, 'out/moved/query-tail/capture.log')
     }
 
     @Unroll
@@ -63,7 +63,7 @@ class QueryTailCaptureFileSpec extends Specification {
         new File(conf, fileName).text = content
 
         expect:
-        QueryTailCommand.defaultCaptureFile(appDir, new File(appDir, 'build')) == new File(appDir, 'captured/statements.log')
+        QueryTailTool.defaultCaptureFile(appDir, new File(appDir, 'build')) == new File(appDir, 'captured/statements.log')
 
         where:
         where                       | fileName             | content
@@ -80,7 +80,7 @@ class QueryTailCaptureFileSpec extends Specification {
         new File(conf, 'application.groovy').text = "grails.gorm.queryTail.file = '${elsewhere.path.replace('\\', '\\\\')}'\n"
 
         expect:
-        QueryTailCommand.defaultCaptureFile(appDir, new File(appDir, 'build')) == elsewhere
+        QueryTailTool.defaultCaptureFile(appDir, new File(appDir, 'build')) == elsewhere
     }
 
     def "application.groovy is read after application.yml, as the application reads them, and a configuration that names no file leaves the default"() {
@@ -90,20 +90,20 @@ class QueryTailCaptureFileSpec extends Specification {
         new File(conf, 'application.yml').text = 'grails:\n    gorm:\n        queryTail:\n            file: from-yml.log\n            enabled: true\n'
 
         expect:
-        QueryTailCommand.defaultCaptureFile(appDir, new File(appDir, 'build')) == new File(appDir, 'from-yml.log')
+        QueryTailTool.defaultCaptureFile(appDir, new File(appDir, 'build')) == new File(appDir, 'from-yml.log')
 
         when:
         new File(conf, 'application.groovy').text = "grails.gorm.queryTail.file = 'from-groovy.log'\n"
 
         then:
-        QueryTailCommand.defaultCaptureFile(appDir, new File(appDir, 'build')) == new File(appDir, 'from-groovy.log')
+        QueryTailTool.defaultCaptureFile(appDir, new File(appDir, 'build')) == new File(appDir, 'from-groovy.log')
 
         when: 'neither names a file'
         new File(conf, 'application.yml').text = 'grails:\n    gorm:\n        queryTail:\n            enabled: true\n'
         new File(conf, 'application.groovy').text = "grails.profile = 'web'\n"
 
         then:
-        QueryTailCommand.defaultCaptureFile(appDir, new File(appDir, 'build')) == new File(appDir, 'build/query-tail/capture.log')
+        QueryTailTool.defaultCaptureFile(appDir, new File(appDir, 'build')) == new File(appDir, 'build/query-tail/capture.log')
     }
 
     def "the file the build was given, as a system property, is read before the files of the application are"() {
@@ -114,6 +114,6 @@ class QueryTailCaptureFileSpec extends Specification {
         System.setProperty(QueryTailSettings.SETTING_FILE, 'given/statements.log')
 
         expect:
-        QueryTailCommand.defaultCaptureFile(appDir, new File(appDir, 'build')) == new File(appDir, 'given/statements.log')
+        QueryTailTool.defaultCaptureFile(appDir, new File(appDir, 'build')) == new File(appDir, 'given/statements.log')
     }
 }

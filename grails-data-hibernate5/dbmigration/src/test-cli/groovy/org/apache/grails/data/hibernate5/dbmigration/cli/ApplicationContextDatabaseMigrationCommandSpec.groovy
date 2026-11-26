@@ -23,7 +23,7 @@ import grails.config.Config
 import grails.core.DefaultGrailsApplication
 import grails.core.GrailsApplication
 import grails.core.support.GrailsApplicationAware
-import org.apache.grails.core.cli.ApplicationCommand
+import org.apache.grails.core.cli.ApplicationTool
 import org.apache.grails.core.cli.ExecutionContext
 import grails.orm.bootstrap.HibernateDatastoreSpringInitializer
 import grails.persistence.Entity
@@ -46,7 +46,7 @@ abstract class ApplicationContextDatabaseMigrationCommandSpec extends DatabaseMi
     @AutoCleanup
     GenericApplicationContext applicationContext
 
-    ApplicationCommand command
+    ApplicationTool command
 
     Config config
 
@@ -85,7 +85,7 @@ abstract class ApplicationContextDatabaseMigrationCommandSpec extends DatabaseMi
         }
     }
 
-    protected ApplicationCommand createCommand(Class<ApplicationCommand> applicationCommand) {
+    protected ApplicationTool createCommand(Class<ApplicationTool> applicationCommand) {
         def command = applicationCommand.getDeclaredConstructor().newInstance()
         command.applicationContext = applicationContext
         command.changeLogFile.parentFile.mkdirs()
@@ -96,12 +96,12 @@ abstract class ApplicationContextDatabaseMigrationCommandSpec extends DatabaseMi
         [] as Class[]
     }
 
-    protected Class<ApplicationCommand> getCommandClass() {
+    protected Class<ApplicationTool> getCommandClass() {
         null
     }
 
-    protected ExecutionContext getExecutionContext(Class<ApplicationCommand> clazz = commandClass, String... args) {
-        def commandClassName = GrailsNameUtils.getScriptName(GrailsNameUtils.getLogicalName(clazz.name, 'Command'))
+    protected ExecutionContext getExecutionContext(Class<ApplicationTool> clazz = commandClass, String... args) {
+        def commandClassName = GrailsNameUtils.getScriptName(GrailsNameUtils.getLogicalName(clazz.name, 'Tool'))
         new ExecutionContext(
             new CommandLineParser().parse(([commandClassName] + args.toList()) as String[])
         )

@@ -27,7 +27,7 @@ import org.springframework.validation.annotation.Validated
  * the {@code myapp.typed} prefix.
  *
  * <p>Properties for this bean are defined in {@code application.yml}
- * and verified in the ConfigReportCommand integration test.
+ * and verified in the ConfigReportTool integration test.
  */
 @CompileStatic
 @Validated

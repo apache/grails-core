@@ -13,6 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# ConfigReportCommand is registered by hand because CommandFactoriesTransformation compiles in
+# ConfigReportTool is registered by hand because CommandFactoriesTransformation compiles in
 # the same source set — a global transform never runs on its own compilation unit.
-org.apache.grails.core.cli.GrailsTool=org.apache.grails.core.cli.ConfigReportCommand
+org.apache.grails.core.cli.GrailsTool=org.apache.grails.core.cli.ConfigReportTool

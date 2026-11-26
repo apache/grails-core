@@ -37,7 +37,7 @@ class QueryTailHooksMain {
         int before = hooks.size()
         int times = Integer.parseInt(args[1])
         times.times {
-            new QueryTailCommand().handle(new ExecutionContext(new CommandLineParser().parse('query-tail', '--once', "--file=${args[0]}".toString())))
+            new QueryTailTool().handle(new ExecutionContext(new CommandLineParser().parse('query-tail', '--once', "--file=${args[0]}".toString())))
         }
         System.out.println("hooks left: ${hooks.size() - before}")
     }

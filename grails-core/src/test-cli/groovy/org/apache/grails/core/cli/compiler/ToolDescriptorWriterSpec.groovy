@@ -33,7 +33,7 @@ import org.codehaus.groovy.control.messages.SyntaxErrorMessage
 import org.apache.grails.core.cli.GrailsTool
 import org.apache.grails.core.cli.ApplicationTool
 import org.apache.grails.core.cli.ApplicationContextCommandRegistry
-import org.apache.grails.core.cli.ConfigReportCommand
+import org.apache.grails.core.cli.ConfigReportTool
 import org.apache.grails.gradle.model.cli.ToolCatalogBuilder
 import org.apache.grails.gradle.model.cli.ToolDescriptor
 import spock.lang.Specification
@@ -335,11 +335,11 @@ class ToolDescriptorWriterSpec extends Specification {
 
     def "the descriptor written by hand for the command this module registers by hand says what the command says"() {
         given: 'the compiler does not describe a command of the module its transformation is in'
-        ConfigReportCommand command = new ConfigReportCommand()
-        InputStream resource = ConfigReportCommand.classLoader.getResourceAsStream(ToolDescriptor.location(ConfigReportCommand.name))
+        ConfigReportTool command = new ConfigReportTool()
+        InputStream resource = ConfigReportTool.classLoader.getResourceAsStream(ToolDescriptor.location(ConfigReportTool.name))
 
         expect:
-        resource.getText('US-ASCII') == ToolDescriptor.toJson(ConfigReportCommand.name, command.name, command.description)
+        resource.getText('US-ASCII') == ToolDescriptor.toJson(ConfigReportTool.name, command.name, command.description)
         ToolDescriptor.isCommandName(command.name)
         ToolDescriptor.isDescription(command.description)
     }
