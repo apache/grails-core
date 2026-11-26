@@ -25,9 +25,12 @@ import org.codehaus.groovy.ast.ClassHelper
 import org.codehaus.groovy.ast.ClassNode
 import org.codehaus.groovy.control.CompilationUnit
 import org.codehaus.groovy.control.CompilerConfiguration
+import org.codehaus.groovy.control.MultipleCompilationErrorsException
 import org.codehaus.groovy.control.Phases
+import org.codehaus.groovy.control.messages.Message
+import org.codehaus.groovy.control.messages.SyntaxErrorMessage
 
-import org.apache.grails.core.cli.ApplicationCommand
+import org.apache.grails.core.cli.GrailsTool
 import org.apache.grails.core.cli.ApplicationTool
 import org.apache.grails.core.cli.ApplicationContextCommandRegistry
 import org.apache.grails.core.cli.ConfigReportCommand
@@ -38,12 +41,14 @@ import spock.lang.TempDir
 import spock.lang.Unroll
 
 /**
- * Compiling a command writes its descriptor beside its registration, with what the source says as
- * a constant and nothing that would take running the command to know.
+ * Compiling a tool writes its descriptor beside its registration, with what the source says as
+ * a constant and nothing that would take running the tool to know: its name, its description, its
+ * target, whether it starts the application, and what is deprecated about how it is written. A tool
+ * whose startsApplication cannot be read does not compile.
  */
-class CommandDescriptorWriterSpec extends Specification {
+class ToolDescriptorWriterSpec extends Specification {
 
-    private static final String CONTRACT = 'org.apache.grails.core.cli.ApplicationCommand'
+    private static final String CONTRACT = 'org.apache.grails.core.cli.ApplicationTool'
 
     @TempDir
     File tempDir
@@ -80,16 +85,59 @@ class CommandDescriptorWriterSpec extends Specification {
         'a method'                           | CONTRACT                                              | "String getDescription() { 'Greets someone' }; ${HANDLE}"
         'a method with a return'             | CONTRACT                                              | "String getDescription() { return 'Greets someone' }; ${HANDLE}"
         'a method, beside a property'        | CONTRACT                                              | "String description = 'Not this'; String getDescription() { 'Greets someone' }; ${HANDLE}"
-        'a property of a Grails command'     | 'org.apache.grails.core.cli.GrailsApplicationCommand' | "String description = 'Greets someone'; boolean handle() { true }"
+        'a property of a tool with the helpers' | "${CONTRACT}, ${SUPPORT}"                          | "String description = 'Greets someone'; boolean handle() { true }"
     }
 
-    def "a Grails command that declares nothing is described by the name its class gives"() {
+    def "a tool with the helpers that declares nothing is described by the name its class gives"() {
         when:
-        compile('GreetCommand', 'class GreetCommand implements org.apache.grails.core.cli.GrailsApplicationCommand { boolean handle() { true } }')
+        compile('GreetCommand', "class GreetCommand implements ${CONTRACT}, ${SUPPORT} { boolean handle() { true } }")
 
         then:
         descriptor('example.GreetCommand') == [format: 1, class: 'example.GreetCommand', name: 'greet',
                                                description: 'greet', target: 'application', startsApplication: true]
+    }
+
+    @Unroll
+    def "a class that implements #type itself, which is deprecated, is described as it was, and as one that implements a deprecated type"() {
+        when:
+        compile('GreetCommand', "class GreetCommand implements org.apache.grails.core.cli.${type} { String description = 'Greets someone'; ${members} }", Phases.ALL)
+
+        then:
+        descriptor('example.GreetCommand') == [format: 1, class: 'example.GreetCommand', name: 'greet', description: 'Greets someone',
+                                               target: 'application', startsApplication: true, deprecated: ['type']]
+        startsApplication('example.GreetCommand')
+
+        where:
+        type                       | members
+        'ApplicationCommand'       | HANDLE
+        'GrailsApplicationCommand' | 'boolean handle() { true }'
+    }
+
+    def "a class that extends one implementing a deprecated type does not implement it itself"() {
+        when:
+        compile('GreetCommand', 'abstract class OldCommand implements org.apache.grails.core.cli.ApplicationCommand { }\n' +
+                "class GreetCommand extends OldCommand { ${HANDLE} }")
+
+        then:
+        descriptor('example.GreetCommand') == [format: 1, class: 'example.GreetCommand', name: 'greet', description: 'greet',
+                                               target: 'application', startsApplication: true]
+    }
+
+    @Unroll
+    def "a tool in grails-app/commands, which is deprecated, is described as one whose folder is deprecated: #type"() {
+        when:
+        compile('GreetCommand', "class GreetCommand implements org.apache.grails.core.cli.${type} { ${HANDLE} }", Phases.CANONICALIZATION,
+                null, [], 'grails-app/commands')
+
+        then:
+        descriptor('example.GreetCommand') == [format: 1, class: 'example.GreetCommand', name: 'greet', description: 'greet',
+                                               target: 'application', startsApplication: true, deprecated: deprecated]
+        registered() == ['example.GreetCommand']
+
+        where:
+        type                 || deprecated
+        'ApplicationTool'    || ['folder']
+        'ApplicationCommand' || ['type', 'folder']
     }
 
     @Unroll
@@ -141,7 +189,7 @@ class CommandDescriptorWriterSpec extends Specification {
         kind                               | source
         'worked out when it is read'       | "class GreetCommand implements ${CONTRACT} { String getName() { System.getProperty('greet.name') }; ${HANDLE} }"
         'given by another trait'           | "trait Renamed { String getName() { 'renamed' } }\nclass GreetCommand implements ${CONTRACT}, Renamed { ${HANDLE} }"
-        'given by a class compiled before' | "class GreetCommand extends ${NamedElsewhere.name} { ${HANDLE} }"
+        'given by a class compiled before' | "class GreetCommand extends ${NamedElsewhere.name} { boolean startsApplication = true; ${HANDLE} }"
     }
 
     def "what a class extends is read too, and a class that cannot be a command gets nothing"() {
@@ -231,7 +279,7 @@ class CommandDescriptorWriterSpec extends Specification {
         given: 'the registration and the descriptor of a command the compiler does not describe, in the resources, as the guide says'
         File resources = new File(tempDir, 'src/main/resources/META-INF')
         new File(resources, 'grails-tools').mkdirs()
-        new File(resources, 'grails-cli.factories').text = "${CONTRACT}=example.AuditReportJavaCommand\n"
+        new File(resources, 'grails-cli.factories').text = "${ToolDescriptor.FACTORIES_KEY_COMMAND}=example.AuditReportJavaCommand\n"
         new File(resources, 'grails-tools/example.AuditReportJavaCommand.json').text =
                 '{"format": 1, "class": "example.AuditReportJavaCommand", "name": "audit", "description": "Writes the audit report", "target": "application", "startsApplication": true}\n'
 
@@ -258,7 +306,7 @@ class CommandDescriptorWriterSpec extends Specification {
         new File(classes, CommandFactoriesTransformation.CLI_FACTORIES_LOCATION).withInputStream { merged.load(it) }
 
         expect: 'the compiler copied the registration written by hand into the classes directory, without a descriptor for it'
-        merged.getProperty(CONTRACT) == 'example.AuditReportJavaCommand'
+        merged.getProperty(ToolDescriptor.FACTORIES_KEY_COMMAND) == 'example.AuditReportJavaCommand'
         merged.getProperty(TOOL) == 'example.GreetCommand'
         new File(classes, 'META-INF/grails-tools').list() as List == ['example.GreetCommand.json']
 
@@ -278,7 +326,8 @@ class CommandDescriptorWriterSpec extends Specification {
                 diagnostics: [],
                 tools      : [
                         [name: 'audit', aliases: [], description: 'Writes the audit report', origin: 'application', target: 'application', startsApplication: true, registration: 'descriptor'],
-                        [name: 'greet', aliases: [], description: 'Greets someone', origin: 'application', target: 'application', startsApplication: true, registration: 'descriptor'],
+                        [name: 'greet', aliases: [], description: 'Greets someone', origin: 'application', target: 'application', startsApplication: true, registration: 'descriptor',
+                         deprecated: ['folder']],
                 ],
         ]
         apart.build() == together.build()
@@ -296,7 +345,7 @@ class CommandDescriptorWriterSpec extends Specification {
     }
 
     @Unroll
-    def "a command that says it does not start the application, #where, is described as one the build runs without the application"() {
+    def "a tool that says it does not start the application #where is described as one the build runs without the application"() {
         when:
         compile('TailCommand', source, Phases.ALL)
 
@@ -305,20 +354,29 @@ class CommandDescriptorWriterSpec extends Specification {
                                               description: 'Follows a file', target: 'application', startsApplication: false]
         registered() == ['example.TailCommand']
 
-        and: 'which is what the command says when it is made'
+        and: 'which is what the tool says when it is made'
         !startsApplication('example.TailCommand')
 
         where:
-        where                         | source
-        'on the class'                | "class TailCommand implements ${CONTRACT} { boolean startsApplication = false; String description = 'Follows a file'; ${HANDLE} }"
-        'on a tool'                   | "class TailCommand implements ${APPLICATION} { boolean startsApplication = false; String description = 'Follows a file'; ${HANDLE} }"
-        'on a Grails command'         | "class TailCommand implements org.apache.grails.core.cli.GrailsApplicationCommand { boolean startsApplication = false; String description = 'Follows a file'; boolean handle() { true } }"
-        'on a tool with the helpers'  | "class TailCommand implements ${APPLICATION}, org.apache.grails.core.cli.ToolSupport { boolean startsApplication = false; String description = 'Follows a file'; boolean handle() { true } }"
-        'on a class it extends'       | "abstract class FileCommand implements ${CONTRACT} { boolean startsApplication = false; String description = 'Follows a file' }\nclass TailCommand extends FileCommand { ${HANDLE} }"
+        where                                                   | source
+        'with the property'                                     | "class TailCommand implements ${APPLICATION} { boolean startsApplication = false; String description = 'Follows a file'; ${HANDLE} }"
+        'with the property declared without a value'           | "class TailCommand implements ${APPLICATION} { boolean startsApplication; String description = 'Follows a file'; ${HANDLE} }"
+        'with the property, as a tool with the helpers'         | "class TailCommand implements ${APPLICATION}, ${SUPPORT} { boolean startsApplication = false; String description = 'Follows a file'; boolean handle() { true } }"
+        'with the property of a class it extends'               | "abstract class FileCommand implements ${APPLICATION} { boolean startsApplication = false; String description = 'Follows a file' }\nclass TailCommand extends FileCommand { ${HANDLE} }"
+        'with the property, beside a trait that has fields'     | "trait Skipping { boolean skipBootstrap = true; List<String> words = ['a']; String other = System.getProperty('tail.other') }\nclass TailCommand implements ${APPLICATION}, Skipping { boolean startsApplication = false; String description = 'Follows a file'; ${HANDLE} }"
+        'in its constructor'                                    | "class TailCommand implements ${APPLICATION} { String description = 'Follows a file'; TailCommand() { startsApplication = false }; ${HANDLE} }"
+        'in its constructor, through this'                      | "class TailCommand implements ${APPLICATION} { String description = 'Follows a file'; TailCommand() { this.startsApplication = false }; ${HANDLE} }"
+        'in its constructor, by the setter'                     | "class TailCommand implements ${APPLICATION} { String description = 'Follows a file'; TailCommand() { setStartsApplication(false) }; ${HANDLE} }"
+        'in every constructor'                                  | "class TailCommand implements ${APPLICATION} { String description = 'Follows a file'; TailCommand() { startsApplication = false }; TailCommand(int times) { startsApplication = false }; ${HANDLE} }"
+        'in a method its constructor calls'                     | "class TailCommand implements ${APPLICATION} { String description = 'Follows a file'; TailCommand() { configure() }; private void configure() { startsApplication = false }; ${HANDLE} }"
+        'in the constructor of a class it extends'              | "abstract class FileCommand implements ${APPLICATION} { String description = 'Follows a file'; FileCommand() { startsApplication = false } }\nclass TailCommand extends FileCommand { ${HANDLE} }"
+        'in its constructor, beside a trait that has fields'    | "trait Skipping { boolean skipBootstrap = true }\nclass TailCommand implements ${APPLICATION}, Skipping { String description = 'Follows a file'; TailCommand() { startsApplication = false }; ${HANDLE} }"
+        'with a method that returns the constant'               | "class TailCommand implements ${APPLICATION} { String description = 'Follows a file'; boolean isStartsApplication() { false }; ${HANDLE} }"
+        'with a method of a class it extends'                   | "abstract class FileCommand implements ${APPLICATION} { String description = 'Follows a file'; boolean isStartsApplication() { return false } }\nclass TailCommand extends FileCommand { ${HANDLE} }"
     }
 
     @Unroll
-    def "a command that #what starts the application, and is described so"() {
+    def "a tool that #what starts the application, and is described so"() {
         when:
         compile('TailCommand', source, Phases.ALL)
 
@@ -328,16 +386,65 @@ class CommandDescriptorWriterSpec extends Specification {
         startsApplication('example.TailCommand')
 
         where:
-        what                             | source
-        'says nothing of it'             | "class TailCommand implements ${APPLICATION} { ${HANDLE} }"
-        'says that it does'              | "class TailCommand implements ${APPLICATION} { boolean startsApplication = true; ${HANDLE} }"
-        'says it over a class it extends' | "abstract class FileCommand implements ${APPLICATION} { boolean startsApplication = false }\nclass TailCommand extends FileCommand { boolean startsApplication = true; ${HANDLE} }"
+        what                                          | source
+        'says nothing of it'                          | "class TailCommand implements ${APPLICATION} { ${HANDLE} }"
+        'says nothing of it, beside a trait that has fields' | "trait Skipping { Boolean skipBootstrap = true; String other = System.getProperty('tail.other') }\nclass TailCommand implements ${APPLICATION}, Skipping { ${HANDLE} }"
+        'reads it, and does not set it'               | "class TailCommand implements ${APPLICATION} { TailCommand() { println startsApplication }; ${HANDLE} }"
+        'says that it does'                           | "class TailCommand implements ${APPLICATION} { boolean startsApplication = true; ${HANDLE} }"
+        'says that it does in its constructor'        | "class TailCommand implements ${APPLICATION} { TailCommand() { startsApplication = true }; ${HANDLE} }"
+        'says it over a class it extends'             | "abstract class FileCommand implements ${APPLICATION} { boolean startsApplication = false }\nclass TailCommand extends FileCommand { boolean startsApplication = true; ${HANDLE} }"
+        'sets it only in a method that runs later'    | "class TailCommand implements ${APPLICATION} { void prepare() { startsApplication = false }; ${HANDLE} }"
     }
 
     @Unroll
-    def "a command that runs as a process of its own, marked #where, is described as standalone"() {
+    def "a tool whose startsApplication #how does not compile, as the build could not know it without running the tool"() {
         when:
-        compile('RenderCommand', source)
+        List<String> errors = errors('TailCommand', "${others}\nclass TailCommand implements ${APPLICATION}${traits} {\n${members}\n${HANDLE}\n}")
+
+        then:
+        errors == ['startsApplication of TailCommand has to be the constant true or false, where it is declared or in every constructor: ' +
+                           'the build reads it without running the tool.']
+        !descriptorFile('example.TailCommand').exists()
+
+        where:
+        how                                                           | others                                              | traits     | members
+        'is worked out'                                               | ''                                                  | ''         | "boolean startsApplication = Boolean.getBoolean('tail.app')"
+        'is set when a condition holds'                               | ''                                                  | ''         | "TailCommand() { if (System.getProperty('tail.app')) { startsApplication = false } }"
+        'is set to two values by two constructors'                    | ''                                                  | ''         | 'TailCommand() { startsApplication = false }\nTailCommand(int times) { startsApplication = true }'
+        'is set by one constructor and not by another'                | ''                                                  | ''         | 'TailCommand() { startsApplication = false }\nTailCommand(int times) { }'
+        'is set in a closure'                                         | ''                                                  | ''         | 'TailCommand() { [1].each { startsApplication = false } }'
+        'is set, and then code that is not read runs'                 | ''                                                  | ''         | "TailCommand() { startsApplication = false; println 'made' }"
+        'is set in an initializer block, which ApplicationTool undoes' | ''                                                 | ''         | '{ startsApplication = false }'
+        'is what a method works out'                                  | ''                                                  | ''         | "boolean isStartsApplication() { Boolean.getBoolean('tail.app') }"
+        'is said by getStartsApplication, which it is not read with'  | ''                                                  | ''         | 'boolean getStartsApplication() { false }'
+        'is the property of another trait'                            | 'trait NoApplication { boolean startsApplication = false }' | ', NoApplication' | ''
+    }
+
+    def "a tool that extends a class compiled before, which implements ApplicationTool, says itself whether it starts the application"() {
+        given: 'the class it extends, compiled on its own'
+        File classes = new File(tempDir, 'build/classes/groovy/base')
+        compile('FileCommand', "abstract class FileCommand implements ${APPLICATION} { }", Phases.ALL, classes)
+
+        when: 'the tool says nothing'
+        List<String> errors = errors('TailCommand', "class TailCommand extends FileCommand { ${HANDLE} }", 'src/cli/groovy', [classes])
+
+        then: 'what the class compiled before makes of it is not known'
+        errors == ['startsApplication of TailCommand has to be the constant true or false, where it is declared or in every constructor: ' +
+                           'the build reads it without running the tool.']
+
+        when: 'the tool declares it'
+        compile('TailCommand', "class TailCommand extends FileCommand { boolean startsApplication = false; ${HANDLE} }", Phases.ALL, targetDirectory, [classes])
+
+        then:
+        descriptor('example.TailCommand') == [format: 1, class: 'example.TailCommand', name: 'tail', description: 'tail',
+                                              target: 'application', startsApplication: false]
+        !startsApplication('example.TailCommand', classes)
+    }
+
+    @Unroll
+    def "a tool that runs as a process of its own, marked #where, is described as standalone"() {
+        when:
+        compile('RenderCommand', source, Phases.CANONICALIZATION, null, [], 'src/standalone/groovy')
 
         then:
         descriptor('example.RenderCommand') == [format: 1, class: 'example.RenderCommand', name: 'render',
@@ -347,9 +454,10 @@ class CommandDescriptorWriterSpec extends Specification {
         where:
         where                         | source
         'on the class'                | "class RenderCommand implements ${STANDALONE} { String description = 'Renders a file'; ${HANDLE} }"
-        'with the helpers'            | "class RenderCommand implements ${STANDALONE}, org.apache.grails.core.cli.ToolSupport { String description = 'Renders a file'; boolean handle() { true } }"
+        'with the helpers'            | "class RenderCommand implements ${STANDALONE}, ${SUPPORT} { String description = 'Renders a file'; boolean handle() { true } }"
         'on a trait it has'           | "trait FileCommand implements ${STANDALONE} {}\nclass RenderCommand implements FileCommand { String description = 'Renders a file'; ${HANDLE} }"
         'on a class it extends'       | "abstract class FileCommand implements ${STANDALONE} { String description = 'Renders a file' }\nclass RenderCommand extends FileCommand { ${HANDLE} }"
+        'whatever startsApplication is' | "class RenderCommand implements ${STANDALONE} { String description = 'Renders a file'; boolean startsApplication = Boolean.getBoolean('x'); ${HANDLE} }"
     }
 
     @Unroll
@@ -481,8 +589,9 @@ class CommandDescriptorWriterSpec extends Specification {
         File classes = new File(tempDir, 'build/classes/groovy/base')
         compile('OldNameCommand', "abstract class OldNameCommand implements ${CONTRACT} {\n${base}\n}", Phases.ALL, classes)
 
-        when:
-        compile('ImportDataCommand', "class ImportDataCommand extends OldNameCommand {\n${members}\n${HANDLE}\n}", Phases.ALL, targetDirectory, [classes])
+        when: 'a tool that extends a class compiled before says whether it starts the application itself'
+        compile('ImportDataCommand', "class ImportDataCommand extends OldNameCommand {\nboolean isStartsApplication() { true }\n${members}\n${HANDLE}\n}",
+                Phases.ALL, targetDirectory, [classes])
 
         then:
         (descriptorFile('example.ImportDataCommand').isFile() ? descriptor('example.ImportDataCommand').name : null) == recorded
@@ -500,8 +609,8 @@ class CommandDescriptorWriterSpec extends Specification {
 
     @Unroll
     def "a name the code a constructor calls sets is recorded when that code is read, and nothing is recorded when it is not: #how"() {
-        when:
-        compile('ImportDataCommand', "abstract class OldNameCommand implements ${CONTRACT} {\n${base}\n}\n" +
+        when: 'whether it starts the application is said by a method, which what is made does not change'
+        compile('ImportDataCommand', "abstract class OldNameCommand implements ${CONTRACT} {\nboolean isStartsApplication() { true }\n${base}\n}\n" +
                 "class ImportDataCommand extends OldNameCommand {\n${members}\n${HANDLE}\n}\n${others}", Phases.ALL)
 
         then: 'what is recorded is the name the command has when it is made, or nothing'
@@ -568,7 +677,7 @@ class CommandDescriptorWriterSpec extends Specification {
         List<Map> listed = (List<Map>) catalog.build().tools
 
         and: 'the command is looked for by the name listed, as the runner of runCommand looks for it'
-        ApplicationCommand found = withCompiledCommands { new ApplicationContextCommandRegistry().findCommand((String) listed[0].name) }
+        GrailsTool found = withCompiledCommands { new ApplicationContextCommandRegistry().findCommand((String) listed[0].name) }
 
         then:
         listed == [[name: 'import-data', aliases: [], description: 'import-data', origin: 'application', target: 'application', startsApplication: true, registration: 'descriptor']]
@@ -590,7 +699,7 @@ class CommandDescriptorWriterSpec extends Specification {
         String name = made('example.LegacyImportCommand').name
         List<String> found = withCompiledCommands {
             ApplicationContextCommandRegistry registry = new ApplicationContextCommandRegistry()
-            [registry.findCommand((String) listed[0].name), registry.findCommand(name)].collect { ApplicationCommand command -> command?.getClass()?.name }
+            [registry.findCommand((String) listed[0].name), registry.findCommand(name)].collect { GrailsTool command -> command?.getClass()?.name }
         }
 
         then:
@@ -677,18 +786,18 @@ class CommandDescriptorWriterSpec extends Specification {
         ClassNode plain = new ClassNode('example.ArchiveReportCommand', Modifier.PUBLIC, ClassHelper.OBJECT_TYPE)
 
         expect:
-        CommandDescriptorWriter.write(plain, targetDirectory)
+        ToolDescriptorWriter.write(plain, targetDirectory)
         descriptor('example.ArchiveReportCommand') == [format: 1, class: 'example.ArchiveReportCommand', name: 'archive-report',
                                                        description: 'archive-report', target: 'application', startsApplication: true]
 
         when:
-        CommandDescriptorWriter.remove('example.ArchiveReportCommand', targetDirectory)
+        ToolDescriptorWriter.remove('example.ArchiveReportCommand', targetDirectory)
 
         then:
         !descriptorFile('example.ArchiveReportCommand').exists()
 
         when: 'there is none to remove'
-        CommandDescriptorWriter.remove('example.ArchiveReportCommand', targetDirectory)
+        ToolDescriptorWriter.remove('example.ArchiveReportCommand', targetDirectory)
 
         then:
         noExceptionThrown()
@@ -697,6 +806,7 @@ class CommandDescriptorWriterSpec extends Specification {
     private static final String TOOL = 'org.apache.grails.core.cli.GrailsTool'
     private static final String APPLICATION = 'org.apache.grails.core.cli.ApplicationTool'
     private static final String STANDALONE = 'org.apache.grails.core.cli.StandaloneTool'
+    private static final String SUPPORT = 'org.apache.grails.core.cli.ToolSupport'
 
     private static final String HANDLE = 'boolean handle(org.apache.grails.core.cli.ExecutionContext executionContext) { true }'
 
@@ -725,29 +835,44 @@ class CommandDescriptorWriterSpec extends Specification {
         factories.getProperty(TOOL).tokenize(',').sort()
     }
 
-    private void compile(String fileName, String source, int phase = Phases.CANONICALIZATION, File target = null, List<File> classpath = []) {
-        File sourceFile = new File(tempDir, "src/cli/groovy/example/${fileName}.groovy")
+    private void compile(String fileName, String source, int phase = Phases.CANONICALIZATION, File target = null, List<File> classpath = [],
+                         String folder = 'src/cli/groovy') {
+        File sourceFile = new File(tempDir, "${folder}/example/${fileName}.groovy")
         sourceFile.parentFile.mkdirs()
         sourceFile.text = "package example\n${source}"
-        // a directory that is not there yet is false to Groovy
+        // a directory that is not there yet is false to Groovy; the transformations of artefacts are not what is tested
         CompilationUnit unit = new CompilationUnit(new CompilerConfiguration(targetDirectory: target != null ? target : targetDirectory,
-                classpathList: classpath*.absolutePath))
+                classpathList: classpath*.absolutePath, disabledGlobalASTTransformations: [
+                'org.grails.compiler.injection.GlobalGrailsClassInjectorTransformation',
+                'org.grails.compiler.injection.GlobalImportTransformation',
+        ] as Set))
         unit.addSource(sourceFile)
         unit.compile(phase)
+    }
+
+    // the errors compiling the source gives, without where they are
+    private List<String> errors(String fileName, String source, String folder = 'src/cli/groovy', List<File> classpath = []) {
+        try {
+            compile(fileName, source, Phases.CANONICALIZATION, null, classpath, folder)
+            return []
+        } catch (MultipleCompilationErrorsException e) {
+            return e.errorCollector.errors.collect { Message message -> ((SyntaxErrorMessage) message).cause.originalMessage }
+        }
     }
 
     // the name and the description a compiled command has when it is made, as the registry of commands makes it
     private Map<String, String> made(String className, File... classpath) {
         URL[] urls = ([targetDirectory] + (classpath as List<File>)).collect { File directory -> directory.toURI().toURL() } as URL[]
-        new URLClassLoader(urls, ApplicationCommand.classLoader).withCloseable { URLClassLoader loader ->
-            ApplicationCommand command = (ApplicationCommand) loader.loadClass(className).getDeclaredConstructor().newInstance()
+        new URLClassLoader(urls, GrailsTool.classLoader).withCloseable { URLClassLoader loader ->
+            GrailsTool command = (GrailsTool) loader.loadClass(className).getDeclaredConstructor().newInstance()
             [name: command.getName(), description: command.getDescription()]
         }
     }
 
-    // whether a compiled command says, when it is made, that the application is started around it
-    private boolean startsApplication(String className) {
-        new URLClassLoader([targetDirectory.toURI().toURL()] as URL[], ApplicationCommand.classLoader).withCloseable { URLClassLoader loader ->
+    // whether a compiled tool says, when it is made, that the application is started around it, as a runner reads it
+    private boolean startsApplication(String className, File... classpath) {
+        URL[] urls = ([targetDirectory] + (classpath as List<File>)).collect { File directory -> directory.toURI().toURL() } as URL[]
+        new URLClassLoader(urls, GrailsTool.classLoader).withCloseable { URLClassLoader loader ->
             ((ApplicationTool) loader.loadClass(className).getDeclaredConstructor().newInstance()).startsApplication
         }
     }
@@ -756,7 +881,7 @@ class CommandDescriptorWriterSpec extends Specification {
     private <T> T withCompiledCommands(Closure<T> action) {
         Thread thread = Thread.currentThread()
         ClassLoader original = thread.contextClassLoader
-        new URLClassLoader([targetDirectory.toURI().toURL()] as URL[], ApplicationCommand.classLoader).withCloseable { URLClassLoader loader ->
+        new URLClassLoader([targetDirectory.toURI().toURL()] as URL[], GrailsTool.classLoader).withCloseable { URLClassLoader loader ->
             thread.contextClassLoader = loader
             try {
                 action.call()
@@ -770,13 +895,13 @@ class CommandDescriptorWriterSpec extends Specification {
     private String compiledName(String className) {
         compile(className.substring(className.lastIndexOf('.') + 1),
                 "class BackupDatabaseCommand implements ${CONTRACT} { ${HANDLE} }", Phases.ALL)
-        new URLClassLoader([targetDirectory.toURI().toURL()] as URL[], ApplicationCommand.classLoader).withCloseable { URLClassLoader loader ->
-            ((ApplicationCommand) loader.loadClass(className).getDeclaredConstructor().newInstance()).name
+        new URLClassLoader([targetDirectory.toURI().toURL()] as URL[], GrailsTool.classLoader).withCloseable { URLClassLoader loader ->
+            ((GrailsTool) loader.loadClass(className).getDeclaredConstructor().newInstance()).name
         }
     }
 }
 
-abstract class NamedElsewhere implements ApplicationCommand {
+abstract class NamedElsewhere implements ApplicationTool {
 
     String getName() {
         'named-elsewhere'

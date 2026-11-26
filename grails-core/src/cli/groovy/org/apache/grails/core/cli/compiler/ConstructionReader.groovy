@@ -21,8 +21,10 @@ package org.apache.grails.core.cli.compiler
 import java.lang.reflect.Method
 
 import groovy.transform.CompileStatic
+import groovy.transform.Generated
 import groovy.transform.PackageScope
 import org.codehaus.groovy.ast.ASTNode
+import org.codehaus.groovy.ast.AnnotationNode
 import org.codehaus.groovy.ast.ClassHelper
 import org.codehaus.groovy.ast.ClassNode
 import org.codehaus.groovy.ast.CodeVisitorSupport
@@ -83,7 +85,8 @@ import org.codehaus.groovy.transform.trait.Traits
  * it runs, from the class at the root down to the command: of each class its field initializers, its
  * initializer blocks and, for each of its constructors, the constructor, with the methods they call.
  *
- * <p>The property is known after a statement that sets it to a string constant: an assignment,
+ * <p>The property is known after a statement that sets it to a constant of its kind, a string for
+ * {@link #read} and {@code true} or {@code false} for {@link #readBoolean}: an assignment,
  * {@code name = '...'} or {@code this.name = '...'}, or a call of its setter, {@code setName('...')},
  * in that code or in a method it calls on the command, or a static method of its classes it gives the
  * command to, that is compiled with the command. Such a method is read in turn, to a bounded depth, and
@@ -95,16 +98,26 @@ import org.codehaus.groovy.transform.trait.Traits
  * and where the ways meet again it is not known what it holds, so what is done through it from there
  * makes the property unknown.</p>
  *
+ * <p>The code with which a trait compiled with the command gives its fields their values when the
+ * command is made is read as the rest; that of a trait compiled elsewhere, other than those of the
+ * command contract, is not.</p>
+ *
  * <p>What can set the property and is not read makes it unknown: a method that is not compiled with
  * the command or has no code, one of the Groovy runtime or one the runtime looks for, an assignment
  * through {@code super}, by a name that is worked out or through a subscript, a setter of the property
- * written by hand, a trait other than those of the command contract that gives its fields values, and a
+ * written by hand, a trait compiled elsewhere that gives its fields values, and a
  * class that takes over how its properties are set and its methods found. Code that is not read and is
  * not given the command, such as {@code new JsonSlurper()}, cannot reach it, and leaves the property
  * as it is until the command is handed to code that is not read (a closure holds the command, and a
  * class compiled elsewhere that the command extends may have handed it out): from then on any code that
  * is not read makes the property unknown. Changes to the meta class of a command, methods an extension
  * module adds, and code that runs in another thread are not seen.</p>
+ *
+ * <p>A property of a trait of the command contract ({@link #readTraitBoolean}) gets the value its trait
+ * gives it when the trait initializes the class that implements it, which is after the field
+ * initializers and the initializer blocks of that class: a constant a statement sets before then is
+ * undone, and makes the property unknown, as what the code says is not what the command is. The
+ * getters and the setters that trait adds to the class read and write its field and nothing else.</p>
  *
  * @since 9.0
  */
@@ -113,6 +126,9 @@ import org.codehaus.groovy.transform.trait.Traits
 class ConstructionReader {
 
     private static final Object UNKNOWN = new Object()
+
+    // the trait of the command contract whose accessors read and write a field and do nothing else
+    private static final String APPLICATION_TOOL = 'org.apache.grails.core.cli.ApplicationTool'
 
     // how deep calls are followed, and how many calls one property is read through
     private static final int DEEPEST_CALL = 16
@@ -136,6 +152,10 @@ class ConstructionReader {
 
     private static final ClassNode TRAIT_BRIDGE = ClassHelper.make(Traits.TraitBridge)
 
+    private static final String TRAIT_CLASS_MEMBER = 'traitClass'
+
+    private static final ClassNode GENERATED = ClassHelper.make(Generated)
+
     // methods of a class that decide how its properties are set and its methods are found
     private static final List<String> MOP_METHODS = ['getProperty', 'setProperty', 'invokeMethod', 'methodMissing', 'propertyMissing'].asImmutable()
 
@@ -150,6 +170,15 @@ class ConstructionReader {
 
     private final String setter
 
+    // the class of the constants that make the property known
+    private final Class<?> kind
+
+    // the trait of the command contract that declares the property, or null for a property a class declares
+    private final String trait
+
+    // the value that trait gives the property
+    private final Object traitValue
+
     // the command and the classes it extends, nearest first, without Object
     private final List<ClassNode> hierarchy
 
@@ -161,19 +190,24 @@ class ConstructionReader {
 
     private int calls
 
-    private ConstructionReader(ClassNode command, ClassNode declaring, String property) {
+    private ConstructionReader(ClassNode command, ClassNode declaring, String property, Class<?> kind, String trait, Object traitValue) {
         this.command = command
         this.declaring = declaring
         this.property = property
         this.setter = 'set' + property.capitalize()
+        this.kind = kind
+        this.trait = trait
+        this.traitValue = traitValue
         List<ClassNode> types = []
         for (ClassNode type = command; type != null && type != ClassHelper.OBJECT_TYPE; type = type.superClass) {
             types << type
         }
         this.hierarchy = types.asImmutable()
         List<ClassNode> below = types.subList(0, Math.max(0, types.findIndexOf { ClassNode type -> type.name == declaring.name }) + 1)
-        // a setter written by hand may make of a value something else
-        this.setterWritten = below.any { ClassNode type -> type.getDeclaredMethods(setter).any { MethodNode method -> !method.isStatic() } }
+        // a setter written by hand may make of a value something else; the one a trait of the contract adds sets its field
+        this.setterWritten = below.any { ClassNode type ->
+            type.getDeclaredMethods(setter).any { MethodNode method -> !method.isStatic() && !isContractAccessor(method) }
+        }
         // with a field of that name in a class below the one that declares the property, what the runtime sets by the name is not certain
         this.shadowed = below.any { ClassNode type -> type.name != declaring.name && type.getDeclaredField(property) != null }
     }
@@ -186,7 +220,142 @@ class ConstructionReader {
      * {@code null} when that cannot be known from the source
      */
     static String read(ClassNode command, ClassNode declaring, String property) {
-        new ConstructionReader(command, declaring, property).read()
+        (String) new ConstructionReader(command, declaring, property, String, null, null).read()
+    }
+
+    /**
+     * @param command the command class
+     * @param declaring the class, the command or one it extends, that declares the property
+     * @param property the name of a property of the type {@code boolean}
+     * @return the constant {@code true} or {@code false} the property is once an instance of the
+     * command is made, or {@code null} when that cannot be known from the source
+     */
+    static Boolean readBoolean(ClassNode command, ClassNode declaring, String property) {
+        (Boolean) new ConstructionReader(command, declaring, property, Boolean, null, null).read()
+    }
+
+    /**
+     * @param command the command class
+     * @param declaring the class, the command or one it extends, that implements the trait
+     * @param property the name of a property of the type {@code boolean} the trait declares
+     * @param trait the name of the trait, one of the command contract
+     * @param value the value the trait gives the property
+     * @return the constant {@code true} or {@code false} the property is once an instance of the
+     * command is made, or {@code null} when that cannot be known from the source
+     */
+    static Boolean readTraitBoolean(ClassNode command, ClassNode declaring, String property, String trait, boolean value) {
+        (Boolean) new ConstructionReader(command, declaring, property, Boolean, trait, value).read()
+    }
+
+    /**
+     * @param command the command class
+     * @param property the name of a property
+     * @return whether code of the command, of a class it extends or of a trait it has, that is compiled
+     * with it, assigns the property, calls its setter or its own {@code setProperty}, or sets a property
+     * or calls a method whose name is worked out; the getters, setters and other methods a compiler
+     * writes are not looked at
+     */
+    static boolean writes(ClassNode command, String property) {
+        String setterName = 'set' + property.capitalize()
+        boolean[] found = [false] as boolean[]
+        CodeVisitorSupport targets = new CodeVisitorSupport() {
+
+            @Override
+            void visitVariableExpression(VariableExpression expression) {
+                found[0] = found[0] || expression.name == property
+            }
+
+            @Override
+            void visitPropertyExpression(PropertyExpression expression) {
+                String name = expression.propertyAsString
+                found[0] = found[0] || name == null || name == property
+            }
+
+            @Override
+            void visitAttributeExpression(AttributeExpression expression) {
+                String name = expression.propertyAsString
+                found[0] = found[0] || name == null || name == property
+            }
+        }
+        CodeVisitorSupport writing = new CodeVisitorSupport() {
+
+            @Override
+            void visitBinaryExpression(BinaryExpression expression) {
+                if (Types.ofType(expression.operation.type, Types.ASSIGNMENT_OPERATOR)) {
+                    expression.leftExpression.visit(targets)
+                }
+                super.visitBinaryExpression(expression)
+            }
+
+            @Override
+            void visitMethodCallExpression(MethodCallExpression call) {
+                String name = call.methodAsString
+                Expression receiver = call.objectExpression
+                // the instance is this in a class, and the first parameter of a method of a trait
+                boolean onSelf = receiver instanceof VariableExpression &&
+                        (((VariableExpression) receiver).isThisExpression() || ((VariableExpression) receiver).name == '$self')
+                found[0] = found[0] || name == null || name == setterName || (onSelf && name == 'setProperty')
+                super.visitMethodCallExpression(call)
+            }
+        }
+        for (ClassNode type : written(command)) {
+            for (FieldNode field : type.fields) {
+                field.initialValueExpression?.visit(writing)
+            }
+            for (Statement statement : type.objectInitializerStatements) {
+                statement.visit(writing)
+            }
+            List<MethodNode> code = new ArrayList<MethodNode>(type.declaredConstructors)
+            code.addAll(type.methods)
+            for (MethodNode method : code) {
+                if (method.getAnnotations(GENERATED).isEmpty() && method.getAnnotations(TRAIT_BRIDGE).isEmpty()) {
+                    method.code?.visit(writing)
+                }
+            }
+        }
+        found[0]
+    }
+
+    /**
+     * @param method a method of a class
+     * @return the name of the trait the method is added to the class for, or {@code null} for a method
+     * no trait adds
+     */
+    static String bridgedTrait(MethodNode method) {
+        for (AnnotationNode annotation : method.getAnnotations(TRAIT_BRIDGE)) {
+            Expression traitClass = annotation.getMember(TRAIT_CLASS_MEMBER)
+            if (traitClass instanceof ClassExpression) {
+                return ((ClassExpression) traitClass).type.name
+            }
+        }
+        null
+    }
+
+    // the classes compiled with the command whose code can set a property of it: the command, the classes it
+    // extends, the traits they have, and the classes declared in any of them
+    private static Set<ClassNode> written(ClassNode command) {
+        Set<ClassNode> types = new LinkedHashSet<ClassNode>()
+        Deque<ClassNode> pending = new ArrayDeque<ClassNode>()
+        for (ClassNode type = command; type != null && type != ClassHelper.OBJECT_TYPE; type = type.superClass) {
+            pending << type
+            pending.addAll(type.allInterfaces.findAll { ClassNode trait -> Traits.isTrait(trait) })
+        }
+        while (!pending.isEmpty()) {
+            ClassNode type = pending.poll()
+            if (type.isPrimaryClassNode() && types.add(type)) {
+                pending.addAll(type.innerClasses.toList())
+            }
+        }
+        types
+    }
+
+    // a getter or a setter the trait whose accessors do nothing else adds to a class
+    private static boolean isContractAccessor(MethodNode method) {
+        if (bridgedTrait(method) != APPLICATION_TOOL) {
+            return false
+        }
+        int count = method.parameters.length
+        ((method.name.startsWith('get') || method.name.startsWith('is')) && count == 0) || (method.name.startsWith('set') && count == 1)
     }
 
     /**
@@ -250,11 +419,11 @@ class ConstructionReader {
         found[0]
     }
 
-    private String read() {
+    private Object read() {
         if (hierarchy.any { ClassNode type -> MOP_METHODS.any { String name -> !type.getDeclaredMethods(name).isEmpty() } }) {
             return null
         }
-        State state = new State(UNKNOWN, false)
+        State state = new State(initialValue(), false)
         for (ClassNode type : hierarchy.reverse()) {
             // the constructor of a class compiled elsewhere is not read: it may set the property, and hand the command out
             state = type.isPrimaryClassNode() ? made(type, state) : new State(UNKNOWN, true)
@@ -262,7 +431,14 @@ class ConstructionReader {
                 return null
             }
         }
-        state.value instanceof String ? (String) state.value : null
+        kind.isInstance(state.value) ? state.value : null
+    }
+
+    // what the property is when the command has been allocated and nothing has run: the value of a field of the
+    // type boolean that the class declaring the property has for it, which is false
+    private Object initialValue() {
+        FieldNode field = trait == null ? declaring.getDeclaredField(property) : null
+        kind == Boolean && field != null && !field.isStatic() && field.type == ClassHelper.boolean_TYPE ? Boolean.FALSE : UNKNOWN
     }
 
     // what the property is after the class's part of making the command, whichever constructor runs
@@ -289,9 +465,9 @@ class ConstructionReader {
                 continue
             }
             boolean carries = eval(initial, current, frame)
-            if (field.name == property && type.name == declaring.name) {
+            if (trait == null && field.name == property && type.name == declaring.name) {
                 // the value the property is declared with goes into its field, whatever its setter is
-                current.value = stringConstant(initial) ?: UNKNOWN
+                current.value = known(initial)
             }
             if (carries) {
                 current.escaped = true
@@ -729,21 +905,21 @@ class ConstructionReader {
         callOnCommand(other, [value instanceof ConstantExpression ? value : EmptyExpression.INSTANCE], false, false, state, frame)
     }
 
-    // the property set to the value through its setter or its field: the string constant the value is, if it is one
+    // the property set to the value through its setter or its field: the constant the value is, if it is one of its kind
     private void set(State state, Expression value, boolean carries) {
         escapeIf(state, carries)
         if (setterWritten) {
             unknown(state)
             return
         }
-        state.value = value == null ? UNKNOWN : stringConstant(value) ?: UNKNOWN
+        state.value = value == null ? UNKNOWN : known(value)
     }
 
     private boolean call(MethodCallExpression call, State state, Frame frame) {
         Expression receiver = call.objectExpression
         String name = call.methodAsString
         // a call written without a receiver has this as its receiver
-        boolean onCommand = isThis(receiver) || isAlias(receiver, frame)
+        boolean onCommand = isCommand(receiver, frame)
         boolean onSuper = receiver instanceof VariableExpression && ((VariableExpression) receiver).isSuperExpression()
         List<Expression> arguments = arguments(call.arguments)
         if (name != null && !call.isSpreadSafe() && arguments != null) {
@@ -751,7 +927,7 @@ class ConstructionReader {
                 return callOnCommand(name, arguments, onSuper, false, state, frame)
             }
             if (receiver instanceof ClassExpression && isTraitInit(receiver.type, name)) {
-                traitInit(receiver.type, name, state)
+                traitInit(receiver.type, name, state, frame)
                 return false
             }
             if (receiver instanceof ClassExpression && inHierarchy(receiver.type)) {
@@ -767,7 +943,7 @@ class ConstructionReader {
         ClassNode owner = call.ownerType
         List<Expression> arguments = arguments(call.arguments)
         if (isTraitInit(owner, call.method)) {
-            traitInit(owner, call.method, state)
+            traitInit(owner, call.method, state, frame)
             return false
         }
         if (arguments != null && inHierarchy(owner)) {
@@ -782,14 +958,41 @@ class ConstructionReader {
         method.startsWith(TRAIT_INIT) && helper.name.endsWith(TRAIT_HELPER)
     }
 
-    // the traits of the command contract give their fields no value, and nor does a trait compiled with the command that
-    // gives none; any other trait may set the property, and keep the command
-    private static void traitInit(ClassNode helper, String method, State state) {
-        String trait = helper.name.substring(0, helper.name.length() - TRAIT_HELPER.length())
-        boolean empty = helper.isPrimaryClassNode() && helper.getDeclaredMethods(method).every { MethodNode init -> isEmpty(init.code) }
-        if (!CONTRACT_TRAITS.contains(trait) && !empty) {
+    // the traits of the command contract give their fields no value the property is read for; a trait compiled with
+    // the command gives its fields values with code that is read as any other; any other trait may set the property,
+    // and keep the command. The trait of a trait's property gives it its value, and undoes what was set before.
+    private void traitInit(ClassNode helper, String method, State state, Frame frame) {
+        String initialized = helper.name.substring(0, helper.name.length() - TRAIT_HELPER.length())
+        if (trait != null && frame.owner.name == declaring.name && initialized == trait && method == TRAIT_INIT) {
+            // a constant the code set before is undone: what it says is not what the command is made with
+            state.value = kind.isInstance(state.value) ? UNKNOWN : traitValue
+            return
+        }
+        if (!CONTRACT_TRAITS.contains(initialized) && !(method == TRAIT_INIT && followed(helper, state))) {
             unknown(state)
         }
+    }
+
+    // reads what a trait compiled with the command runs to give the fields of the instance their values, which it is
+    // given the command to do; says whether it was read
+    private boolean followed(ClassNode helper, State state) {
+        if (!helper.isPrimaryClassNode()) {
+            return false
+        }
+        List<MethodNode> inits = helper.getDeclaredMethods(TRAIT_INIT)
+        if (inits.size() != 1 || inits[0].parameters.length != 1 || inits[0].code == null) {
+            return false
+        }
+        MethodNode init = inits[0]
+        if (isEmpty(init.code)) {
+            return true
+        }
+        if (calling.contains(init) || calling.size() >= DEEPEST_CALL || calls + 1 > MOST_CALLS) {
+            return false
+        }
+        calls++
+        state.take(invoke(init, [(Expression) VariableExpression.THIS_EXPRESSION], [true], state.copy()) ?: new State(UNKNOWN, true))
+        true
     }
 
     private boolean instantiate(ConstructorCallExpression call, State state, Frame frame) {
@@ -869,6 +1072,11 @@ class ConstructionReader {
             if (onClass || !generatedAccessor(name, arguments.size())) {
                 unknown(state)
             }
+            escapeIf(state, handed || self.any())
+            return false
+        }
+        if (candidates.every { MethodNode method -> isContractAccessor(method) }) {
+            // a getter or a setter a trait of the contract adds, which reads or writes its field and nothing else
             escapeIf(state, handed || self.any())
             return false
         }
@@ -1011,8 +1219,16 @@ class ConstructionReader {
                 !((VariableExpression) expression).isSuperExpression()
     }
 
+    // this, a parameter that holds the command, or one of them cast to a type the command is, which leaves it as it is
     private boolean isCommand(Expression expression, Frame frame) {
+        if (expression instanceof CastExpression && isOwnType(((CastExpression) expression).type)) {
+            return isCommand(((CastExpression) expression).expression, frame)
+        }
         isThis(expression) || isAlias(expression, frame)
+    }
+
+    private boolean isOwnType(ClassNode type) {
+        hierarchy.any { ClassNode member -> member.name == type.name || member.allInterfaces.any { ClassNode face -> face.name == type.name } }
     }
 
     private static boolean isThis(Expression expression) {
@@ -1061,9 +1277,10 @@ class ConstructionReader {
         false
     }
 
-    private static String stringConstant(Expression expression) {
-        expression instanceof ConstantExpression && ((ConstantExpression) expression).value instanceof String ?
-                (String) ((ConstantExpression) expression).value : null
+    // the constant the expression is, when it is one of the kind of the property; otherwise unknown
+    private Object known(Expression expression) {
+        expression instanceof ConstantExpression && kind.isInstance(((ConstantExpression) expression).value) ?
+                ((ConstantExpression) expression).value : UNKNOWN
     }
 
     private static boolean isEmpty(Statement code) {
