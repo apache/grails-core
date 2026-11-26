@@ -409,21 +409,56 @@ class FeatureAddCommand extends BaseCommand implements Callable<Integer>, Projec
             }
             return has == null ? feature : has.name
         }
+        List<String> has = lock.featureNames
         boolean nothingToTake = addedOptions.featurePackDigests.isEmpty() && named.every { String feature ->
-            feature == null || (!PackArtifacts.isCoordinates(feature) && (isKnown(state, feature) || toAdd.any { Pack pack -> pack.descriptor.name == feature }))
+            feature == null || (!PackArtifacts.isCoordinates(feature) && (isKnown(has, feature) || toAdd.any { Pack pack -> pack.descriptor.name == feature }))
         }
         if (nothingToTake) {
             return new Asked(named, ofTheApplication, toAdd)
         }
-        packSelection = new PackSelection(new SelectionHost(state, named, said, warned))
+        packSelection = new PackSelection(new SelectionHost(typeName(state.manifest.applicationType), has, named, said, warned))
         PackSelection.Taken taken = packSelection.select(toAdd, null)
         return new Asked(taken.features, ofTheApplication, taken.packs)
     }
 
+    /**
+     * What was asked for of a new application of a type, which has no record: the packs that were
+     * given and the packs that were taken as {@link #asked} takes them, all of them packs the
+     * application is created with, and the features by their names.
+     *
+     * @param type the type of the application
+     * @param given the packs that were given as directories and files
+     */
+    Asked askedOfNew(ApplicationType type, List<Pack> given, Consumer<String> said, Consumer<String> warned) {
+        List<String> has = Collections.<String>emptyList()
+        boolean nothingToTake = addedOptions.featurePackDigests.isEmpty() && features.every { String feature ->
+            feature == null || (!PackArtifacts.isCoordinates(feature) && (isKnown(has, feature) || given.any { Pack pack -> pack.descriptor.name == feature }))
+        }
+        if (nothingToTake) {
+            return new Asked(features, Collections.<Pack>emptyList(), given)
+        }
+        packSelection = new PackSelection(new SelectionHost(typeName(type), has, features, said, warned))
+        PackSelection.Taken taken = packSelection.select(given, null)
+        return new Asked(taken.features, Collections.<Pack>emptyList(), taken.packs)
+    }
+
+    /**
+     * @param type the type of the application that is spoken of
+     * @param has the features it has, by name
+     * @return what takes packs and reads the feature catalogs for such an application, with the options of this command
+     */
+    PackSelection selectionOf(ApplicationType type, List<String> has, Consumer<String> said, Consumer<String> warned) {
+        return new PackSelection(new SelectionHost(typeName(type), has, features, said, warned))
+    }
+
+    private static String typeName(ApplicationType type) {
+        return type.getName().replace('_', '-')
+    }
+
     // a name the command knows without a pack that is taken: a feature of Grails, for whichever type of application, and a feature the application has
-    private boolean isKnown(ProjectState state, String name) {
+    boolean isKnown(List<String> has, String name) {
         ProjectGenerator generator = projectGeneratorSource.get()
-        return state.lock.featureNames.contains(name) || ApplicationType.values().any { ApplicationType type ->
+        return has.contains(name) || ApplicationType.values().any { ApplicationType type ->
             generator.availableFeatures(type, Collections.<Pack>emptyList()).findFeature(name, true).isPresent()
         }
     }
@@ -438,7 +473,10 @@ class FeatureAddCommand extends BaseCommand implements Callable<Integer>, Projec
                 'Add the feature that makes it so first, so that the versions are chosen for that BOM')
     }
 
-    private PackArtifacts packArtifacts() {
+    /**
+     * @return what fetches the jars of the command, which says of each whether it was the copy that is kept on this computer
+     */
+    PackArtifacts packArtifacts() {
         if (packArtifacts == null) {
             packArtifacts = createPackArtifacts()
         }
@@ -530,13 +568,15 @@ class FeatureAddCommand extends BaseCommand implements Callable<Integer>, Projec
     /** What the command gives the taking of the packs it adds: its options, what it says, and what it reads of the environment. */
     private final class SelectionHost implements PackSelection.Host {
 
-        private final ProjectState state
+        private final String typeName
+        private final List<String> has
         private final List<String> asked
         private final Consumer<String> said
         private final Consumer<String> warned
 
-        SelectionHost(ProjectState state, List<String> asked, Consumer<String> said, Consumer<String> warned) {
-            this.state = state
+        SelectionHost(String typeName, List<String> has, List<String> asked, Consumer<String> said, Consumer<String> warned) {
+            this.typeName = typeName
+            this.has = has
             this.asked = asked
             this.said = said
             this.warned = warned
@@ -579,17 +619,17 @@ class FeatureAddCommand extends BaseCommand implements Callable<Integer>, Projec
 
         @Override
         String getApplicationTypeName() {
-            return state.manifest.applicationType.getName().replace('_', '-')
+            return typeName
         }
 
         @Override
         String getBomArtifact() {
-            return GrailsBase.bomArtifactId(state.lock.featureNames + asked.findAll { String each -> each != null })
+            return GrailsBase.bomArtifactId(has + asked.findAll { String each -> each != null })
         }
 
         @Override
         boolean isKnownFeature(String name) {
-            return FeatureAddCommand.this.isKnown(state, name)
+            return FeatureAddCommand.this.isKnown(has, name)
         }
 
         @Override

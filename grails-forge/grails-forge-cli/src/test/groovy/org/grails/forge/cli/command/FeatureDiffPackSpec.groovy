@@ -164,7 +164,7 @@ class FeatureDiffPackSpec extends CommandSpec {
         'a catalog that is no file'                   | { ['acme-audit', '--feature-catalog', new File(it.work, 'none.json').toURI().toString()] }     | 1        | 'none.json'
     }
 
-    void "the options of a feature that is added are those of the application of the current directory: #where they are a mistake in the command line"() {
+    void "#where feature diff shows what the feature of a plugin changes in a new application, with the option it was given"() {
         given:
         Map<String, String> before = tree()
         if (outside) {
@@ -172,19 +172,20 @@ class FeatureDiffPackSpec extends CommandSpec {
         }
 
         when:
-        int exit = run((['feature', 'diff', 'grails-quartz'] + type + options) as String[])
+        int exit = run((['feature', 'diff'] + byCoordinates(['--feature-pack-sha256', "${COORDINATES}=${sha256(jar)}".toString(),
+                                                              '--feature-option', 'acme-audit.store=collection']) + type) as String[])
+        List<String> diff = out.toString().readLines()
 
-        then:
-        exit == 2
-        out.toString().isEmpty()
-        err.toString().contains("${named} for a feature that is added to the application of the current directory. ${where}, feature diff shows a new application")
+        then: 'the pack is taken as the create commands take it, and the diff is that of an application that is created with the feature'
+        exit == 0
+        diff.contains('+    implementation "com.acme:acme-audit-grails:2.3.0"')
+        diff.contains('+audit.store=collection')
         tree() == before
 
         where:
-        where               | outside | type                  | options                                                                   | named
-        'With --type'       | false   | ['--type', 'web']     | ['--feature-option', 'acme-audit.store=collection']                       | '--feature-option is an option'
-        'With --type'       | false   | ['--type=rest-api']   | ['--refresh', '--feature-catalog', 'none']                                | '--feature-catalog, --refresh are options'
-        'Outside a project' | true    | []                    | ['--feature-pack-sha256', "${COORDINATES}=${'ab' * 32}".toString()]        | '--feature-pack-sha256 is an option'
+        where               | outside | type
+        'With --type'       | false   | ['--type', 'rest-api']
+        'Outside a project' | true    | []
     }
 
     void "feature diff takes every option feature add takes for what is added, by one declaration"() {

@@ -31,6 +31,9 @@ grails feature show grails-quartz
 grails feature info grails-quartz
 grails feature show postgres --type rest-api
 grails feature show cache --json
+grails feature show com.acme:acme-audit-grails:2.3.0
+grails feature show acme-audit --feature-pack-dir ~/acme-audit/src/main/forge
+grails feature show acme-audit --feature-catalog https://plugins.acme.example/catalog.json
 ----
 
 === Description
@@ -39,21 +42,29 @@ Usage:
 
 [source,console]
 ----
-grails feature show [--json] [--type=TYPE] [--feature-pack-dir=DIRECTORY]... [--feature-pack-repository=URL]... [--offline] FEATURE
-grails feature info [--json] [--type=TYPE] [--feature-pack-dir=DIRECTORY]... [--feature-pack-repository=URL]... [--offline] FEATURE
+grails feature show [--json] [--type=TYPE] [--feature-option=FEATURE.NAME=VALUE]... [--feature-pack-dir=DIRECTORY]...
+                    [--feature-pack-repository=URL]... [--feature-pack-sha256=COORDINATES=SHA256]... [--feature-catalog=URL]... [--refresh] [--offline]
+                    FEATURE
+grails feature info [--json] [--type=TYPE] ... FEATURE
 ----
 
 Arguments:
 
-* `FEATURE` - The name of the feature, as link:feature-list.html[feature list], link:feature-find.html[feature find] and `--list-features` have it.
+* `FEATURE` - The name of the feature, as link:feature-list.html[feature list], link:feature-find.html[feature find] and `--list-features` have it. The feature of a link:{guidePath}plugins.html#forgeFeaturePacks[feature pack] that is not part of Grails is named as link:feature-add.html[feature add] takes it, also when the application does not have the pack: by the coordinates of its plugin, `group:artifact:version`; by its name with `--feature-pack-dir`; or by a name, or a full name `group:artifact#name`, of a feature catalog.
 
 Options:
 
 * `--type=TYPE` - Speak of a new application of this type, and not of the application in the current directory: `web` (what `create-app` creates), `rest-api`, `plugin`, `web-plugin` or `rest-api-plugin`. Outside a project the type is `web` when the option is not given.
 * `--json` - Write what is known of the feature as one JSON document for a tool to read, and nothing else.
-* `--feature-pack-dir=DIRECTORY` - In the directory of an application: the directory of a feature pack that is not part of Grails and that the application was generated with, as link:feature-add.html[feature add] takes it. For a new application: the directory of a feature pack whose feature is then one the command says something of, as the `create-` commands take it. Can be given more than once.
-* `--feature-pack-repository=URL` - A Maven repository to fetch the jar of a plugin from, whose feature pack the application was generated with, as `feature add` takes it. Can be given more than once.
-* `--offline` - Ask nothing of the network: such a jar is taken only from a repository that is a directory.
+* `--feature-pack-dir=DIRECTORY` - The directory of a feature pack that is not part of Grails: one the application was generated with, given again, or one whose feature is asked for, as link:feature-add.html[feature add] and the `create-` commands take it. Can be given more than once.
+* `--feature-pack-repository=URL` - A Maven repository to fetch the jar of a plugin from, whose feature pack the application has or whose feature is asked for, as `feature add` takes it. Can be given more than once.
+* `--feature-pack-sha256=COORDINATES=SHA256` - As for `feature add`: the SHA-256 the jar of a plugin that is named by its coordinates has to have, as `group:artifact:version=sha256`. A jar with another one is refused before it is opened. Can be given more than once.
+* `--feature-catalog=URL` - As for `feature add`: a feature catalog, in which a name that is neither a feature of Grails nor that of a pack that was given is looked up: `https`, or `file:` for a file; `none` for no catalog. Without the option the catalogs of `GRAILS_FORGE_CATALOG` are read, else the plugin index `GRAILS_PLUGIN_INDEX` names, and without either none. Can be given more than once.
+* `--refresh` - As for `feature add`: read each feature catalog anew, and fetch the jar of a plugin again and not take the copy of it that is kept in `.grails/forge/packs` of the home directory.
+* `--feature-option=FEATURE.NAME=VALUE` - As for `feature add`: an option of the feature, which its pack declares as a parameter. What the feature contributes is then worked out with it. Can be given more than once.
+* `--offline` - Ask nothing of the network: the jar of a plugin is taken from the copy of it that is kept on this computer or from a repository that is a directory, and a feature catalog from its copy on this computer or from a file.
+
+These are the options of link:feature-add.html[feature add] for feature packs, declared once for `feature add`, link:feature-diff.html[feature diff], link:feature-find.html[feature find] and this command, and a pack is taken by the same steps for all of them: the jar is checked against the checksum its repository publishes, held to the SHA-256 that was asked for or that a catalog gives, and kept on this computer for the next command. So `feature show` is how a pack is looked at before its feature is added, and what it says is what `feature add` then does.
 
 `feature show` is the `show` command of the `feature` command, and `feature info` is the same command by its other name. It speaks of one application. In the directory of an application that has a record under `.grails`, or anywhere below it, that is this application: its type, the options it was created with and the features it has are read from the record. Outside a project, in a project without a record, and wherever `--type` is given, it is a new application of the type, with the options a `create-` command has when it is given none; the type is `web` when `--type` is not given. The command writes no file in either case.
 
@@ -90,7 +101,41 @@ What the feature is, is read from the feature:
 * the features it requires by name, which come with it;
 * its exclusive group, when it has one, and the other features of the group: an application has one feature of such a group, as one database driver, so these are the features it is not used together with;
 * the addresses of its documentation and of the documentation of what it integrates, where it names them;
-* for the feature of a feature pack that is not part of Grails: the name of the pack, and the coordinates of the plugin whose jar has it, or the directory the pack was given as.
+* for the feature of a feature pack that is not part of Grails: the name of the pack, and the coordinates of the plugin whose jar has it, or the directory the pack was given as; for a jar its SHA-256, and under it what `feature add` says of where a pack came from: that the coordinates are those a feature catalog has for the name, that the jar has the SHA-256 that was asked for, which checksum of the repository it was checked against, or that it is the copy that is kept on this computer. In the directory of an application that does not have the pack, the line says so;
+* the options the feature takes, each as `--feature-option` gives it, with its values, its default and what it is for;
+* the commands it gives the command line of an application that has it;
+* what its pack says to do once the feature is added, which `feature add` and the `create-` commands show then.
+
+[source,console]
+----
+$ grails feature show com.acme:acme-audit-grails:2.3.0 --feature-pack-sha256 com.acme:acme-audit-grails:2.3.0=36845bd4...
+Feature: acme-audit (Acme Audit Trail)
+
+Adds the Acme audit plugin
+
+* Category: Other
+* Application types: web, rest-api, web-plugin, plugin, rest-api-plugin
+* By default: no, in a new application of type web with the options of this one
+* In this application: no
+* Requires: none
+* Feature pack: acme-audit, of the plugin com.acme:acme-audit-grails:2.3.0, sha256 36845bd4.... The application does not have it: feature add takes it as it was taken here
+    the jar has the SHA-256 that was asked for with --feature-pack-sha256
+    the jar matches the sha256 checksum the repository publishes for it
+* Options, each given as --feature-option acme-audit.NAME=VALUE:
+    store=table|collection (default table)  Where audit events are kept
+    retention=text (default 90)
+* Commands it gives the command line of an application that has it:
+    create-audit-report  Creates a report of audit events
+* What its feature pack says to do once it is added:
+    Run `./gradlew dbmGormDiff` to generate the migration of the audit tables.
+* In this application feature add would change 3 files:
+    changed  build.gradle
+             + implementation "com.acme:acme-audit-grails:2.3.0"
+    added    grails-app/conf/audit.properties
+    ...
+----
+
+A preset is not a feature: named by its coordinates it is refused with what `feature add` says of it (exit code 2), since an application is made from a preset when it is created, with `--preset`. A jar that does not have the SHA-256 that was asked for, a repository that does not have the jar and a catalog that cannot be read end the command with exit code 1, as they end `feature add`; a name that is in no catalog is no feature, and the error says where it was looked for.
 
 What the feature comes to in the application is worked out by the project generator:
 
@@ -138,7 +183,13 @@ With `--json` the document has `format` (1), `projectDirectory` (`null` for a ne
 | The addresses, or `null`.
 
 | `featurePack`
-| For the feature of a feature pack that is not part of Grails, its `name`, the `coordinates` of the plugin (`group:artifact:version`, or `null` for the pack of a directory), its `origin` and its `contentSha256`; otherwise `null`.
+| For the feature of a feature pack that is not part of Grails, its `name`, the `coordinates` of the plugin (`group:artifact:version`, or `null` for the pack of a directory), its `origin` and its `contentSha256`; for a jar its `sha256` and the `repository` it was asked of, and for one a catalog named the `catalog` and its `catalogSha256` (each `null` otherwise); `inApplication`, whether the application of the current directory has the pack (`false` for one `feature add` would take with the feature, `null` for a new application); and `provenance`, the lines `feature add` says of where the pack came from. Otherwise `null`.
+
+| `options`
+| The options the feature takes, which its pack declares as parameters: each with its `name`, its `type` (`string`, `boolean` or `choice`), its `default`, its `choices` (`null` unless it is a choice), its `description`, the `option` that gives it (`--feature-option FEATURE.NAME=VALUE`) and its `usage`, the line the command shows. Empty for a feature that takes none.
+
+| `instructions`
+| The lines its pack says are to be done once the feature is added; empty when it says none.
 
 | `commands`
 | The commands the feature gives the command line of an application that has it, each with its `name` (`create-<name>`) and its `description`; empty for a feature that gives none. Without `--json` they are listed under `Commands it gives the command line of an application that has it`.

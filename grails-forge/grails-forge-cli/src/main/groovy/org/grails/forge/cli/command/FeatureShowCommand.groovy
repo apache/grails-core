@@ -21,14 +21,19 @@ package org.grails.forge.cli.command
 import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
 import org.apache.grails.forge.cli.console.UsageHelp
+import org.apache.grails.forge.cli.pack.FeatureOptions
 import org.apache.grails.forge.cli.pack.PackArtifactException
+import org.apache.grails.forge.cli.pack.PackSelection
 import org.apache.grails.forge.core.change.ChangePlan
 import org.apache.grails.forge.core.change.FeatureAddition
 import org.apache.grails.forge.core.change.FeatureRequestException
 import org.apache.grails.forge.core.change.ProjectChangeException
 import org.apache.grails.forge.core.pack.Pack
 import org.apache.grails.forge.core.pack.PackArtefact
+import org.apache.grails.forge.core.pack.PackDescriptor
 import org.apache.grails.forge.core.pack.PackFeature
+import org.apache.grails.forge.core.pack.PackInstructions
+import org.apache.grails.forge.core.pack.PackParameter
 import org.apache.grails.forge.core.state.ProjectStateException
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.application.generator.GeneratorContext
@@ -39,6 +44,7 @@ import org.grails.forge.feature.FeatureSelectionException
 import org.grails.forge.feature.OneOfFeature
 import org.grails.forge.io.ConsoleOutput
 import org.grails.forge.io.MapOutputHandler
+import org.grails.forge.options.Options
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.annotation.Scope
 import org.springframework.stereotype.Component
@@ -60,7 +66,9 @@ import picocli.CommandLine
         'In the directory of an application it says whether the application has the feature, and which files and which lines of the build files ' +
                 'feature add would add, change and remove there. Outside a project, with --type, and for a feature the application has, these are ' +
                 'worked out for a new application of the type.',
-        'For the feature of a feature pack that is not part of Grails, the pack and the coordinates of its plugin are named. ' +
+        'The feature of a feature pack that is not part of Grails is named as feature add takes it, also of a pack the application does not have: ' +
+                'by the coordinates of its plugin, by its name with --feature-pack-dir, or by its name in a feature catalog. Of such a feature the command says ' +
+                'where the pack comes from, the options it takes, the commands it gives, and what its pack says to do once it is added. ' +
                 'The command is also there as @|bold feature info|@.'])
 @Component
 @Scope('prototype')
@@ -76,7 +84,9 @@ class FeatureShowCommand extends FeatureQueryCommand {
     private static final String NONE = 'none'
 
     @CommandLine.Parameters(arity = '1', paramLabel = 'FEATURE', completionCandidates = KnownFeatureCandidates,
-            description = 'The name of the feature, as feature list and feature find have it.')
+            description = 'The name of the feature, as feature list and feature find have it; or, as for feature add, the coordinates of a plugin with a ' +
+                    'feature pack, group:artifact:version, the name of the feature of a pack that is given with --feature-pack-dir, or a name, or a full name ' +
+                    'group:artifact#name, of a feature catalog.')
     String feature
 
     @CommandLine.Option(names = ['--json'], description = 'Write what is known of the feature as one JSON document for a tool to read, and nothing else.')
@@ -95,13 +105,15 @@ class FeatureShowCommand extends FeatureQueryCommand {
     @Override
     Integer call() throws Exception {
         List<String> notes = []
-        FeatureScope scope = scope(notes)
+        // the feature of a pack that is asked for by the coordinates of its plugin, or by a name of a catalog, is taken as feature add takes it
+        FeatureScope scope = scope(notes, [feature])
         if (scope == null) {
             return 1
         }
-        Feature found = scope.available.findFeature(feature).filter { Feature each -> each.isVisible() }.orElse(null)
+        String asked = scope.names.isEmpty() ? feature : scope.names.first()
+        Feature found = scope.available.findFeature(asked).filter { Feature each -> each.isVisible() }.orElse(null)
         if (found == null) {
-            return failed(scope, notes, unknown(scope))
+            return failed(scope, notes, unknown(scope) + getTaker().notInCatalog())
         }
         String name = found.getName()
         Set<String> defaults = scope.defaults
@@ -123,8 +135,10 @@ class FeatureShowCommand extends FeatureQueryCommand {
         info.put('inApplication', has == null ? null : inApplication)
         info.put('documentation', found.getDocumentation())
         info.put('thirdPartyDocumentation', found.getThirdPartyDocumentation())
-        info.put('featurePack', packOf(found))
+        info.put('featurePack', packOf(scope, found))
+        info.put('options', optionsOf(found))
         info.put('commands', commandsOf(found))
+        info.put('instructions', instructionsOf(found))
         Worked worked = scope.isOfProject() && !inApplication ? inProject(scope, name) : null
         if (worked == null || worked.contribution == null) {
             Worked generated = generated(scope, name, defaults != null && defaults.contains(name))
@@ -157,17 +171,20 @@ class FeatureShowCommand extends FeatureQueryCommand {
         worked.ofProject = true
         try {
             FeatureAddition addition = new FeatureAddition(getProjectGenerator())
+            addition.featureOptions = getTaker().optionsOfFeatures()
             ChangePlan plan
             try {
-                plan = addition.plan(scope.directory, [name], getOperatingSystem(), ConsoleOutput.NOOP, false, scope.givenPacks)
+                plan = addition.plan(scope.directory, [name], getOperatingSystem(), ConsoleOutput.NOOP, false, scope.givenPacks, scope.addedPacks)
             } catch (FeatureRequestException e) {
                 if (e.getReason() != FeatureRequestException.REPLACE_REQUIRED) {
                     throw e
                 }
                 // what it comes to with the option that feature add then names
                 worked.replaceOption = true
-                plan = addition.plan(scope.directory, [name], getOperatingSystem(), ConsoleOutput.NOOP, true, scope.givenPacks)
+                plan = addition.plan(scope.directory, [name], getOperatingSystem(), ConsoleOutput.NOOP, true, scope.givenPacks, scope.addedPacks)
             }
+            // a pack a catalog chose was chosen for the BOM the application has, as for feature add
+            getTaker().heldToItsBom(scope.directory, plan)
             worked.contribution = FeatureContribution.ofPlan(plan)
             worked.replaces = plan.isRefused() ? new ArrayList<String>(plan.lostFeatures) : new ArrayList<String>(plan.replaced)
             worked.with = plan.added.findAll { String each -> each != name && scope.available.findFeature(each).isPresent() }.sort()
@@ -190,9 +207,13 @@ class FeatureShowCommand extends FeatureQueryCommand {
         ProjectGenerator generator = getProjectGenerator()
         try {
             // an application has a default without being asked for it, and is without it when it is left out
+            // a new application is created with the packs that were taken and the options that were given for their features
+            List<Pack> packs = scope.packs + scope.addedPacks
+            Options options = scope.isOfProject() ? scope.options : scope.options.withFeatureOptions(getTaker().optionsOfFeatures())
+            // an option is that of a feature that is selected: the application without the feature is created without it
             GeneratorContext without = generator.createGeneratorContext(scope.type, scope.project, scope.options, getOperatingSystem(), Collections.<String>emptyList(),
-                    ConsoleOutput.NOOP, scope.packs, byDefault ? [name] : Collections.<String>emptyList())
-            GeneratorContext with = generator.createGeneratorContext(scope.type, scope.project, scope.options, getOperatingSystem(), [name], ConsoleOutput.NOOP, scope.packs)
+                    ConsoleOutput.NOOP, packs, byDefault ? [name] : Collections.<String>emptyList())
+            GeneratorContext with = generator.createGeneratorContext(scope.type, scope.project, options, getOperatingSystem(), [name], ConsoleOutput.NOOP, packs)
             List<String> before = without.getFeatures().getFeatures()*.getName()
             List<String> after = with.getFeatures().getFeatures()*.getName()
             worked.replaces = before.findAll { String each -> !after.contains(each) }.sort()
@@ -221,8 +242,8 @@ class FeatureShowCommand extends FeatureQueryCommand {
         return scope.visible.findAll { Feature each -> each instanceof OneOfFeature && ((OneOfFeature) each).getGroup() == group && each.getName() != feature.getName() }*.getName()
     }
 
-    // the pack of a feature that is not part of Grails, and the plugin whose jar has it
-    private static Map<String, Object> packOf(Feature feature) {
+    // the pack of a feature that is not part of Grails: the plugin whose jar has it, where it comes from and which jar it was
+    private Map<String, Object> packOf(FeatureScope scope, Feature feature) {
         if (!(feature instanceof PackFeature) || ((PackFeature) feature).getPack().isBundled()) {
             return null
         }
@@ -232,7 +253,45 @@ class FeatureShowCommand extends FeatureQueryCommand {
         said.put('coordinates', pack.artifact?.coordinates)
         said.put('origin', pack.origin)
         said.put('contentSha256', pack.contentSha256)
+        said.put('sha256', pack.artifact?.sha256)
+        said.put('repository', pack.artifact?.repository)
+        said.put('catalog', pack.artifact?.catalog)
+        said.put('catalogSha256', pack.artifact?.catalogSha256)
+        // whether the application of the current directory has the pack, or would get it with the feature; null for a new application
+        said.put('inApplication', scope.isOfProject() ? !scope.addedPacks.any { Pack added -> added.descriptor.name == pack.descriptor.name } : null)
+        // what feature add says of where the pack came from, under its headline
+        said.put('provenance', PackSelection.origin(pack, getTaker().packArtifacts()).drop(1).collect { String line -> shown(line.trim()) })
         return said
+    }
+
+    // the options the feature takes, which its pack declares as parameters, each as --feature-option gives it
+    private static List<Map<String, Object>> optionsOf(Feature feature) {
+        if (!(feature instanceof PackFeature)) {
+            return []
+        }
+        PackDescriptor descriptor = ((PackFeature) feature).getPack().descriptor
+        List<Map<String, Object>> options = []
+        for (PackParameter each : descriptor.parameters) {
+            Map<String, Object> option = new LinkedHashMap<>()
+            option.put('name', each.name)
+            option.put('type', each.type)
+            option.put('default', each.defaultValue)
+            option.put('choices', each.choices ?: null)
+            option.put('description', each.description)
+            option.put('option', "${FeatureOptions.OPTION} ${descriptor.name}.${each.name}=VALUE".toString())
+            option.put('usage', each.usage)
+            options << option
+        }
+        return options
+    }
+
+    // what the pack of the feature says is to be done once the feature is added, as feature add says it then
+    private static List<String> instructionsOf(Feature feature) {
+        if (!(feature instanceof PackFeature)) {
+            return []
+        }
+        PackInstructions instructions = PackInstructions.of(((PackFeature) feature).getPack().descriptor)
+        return instructions == null ? Collections.<String>emptyList() : instructions.lines
     }
 
     // the commands the feature gives the command line of an application that has it, each with what it says of itself
@@ -287,13 +346,31 @@ class FeatureShowCommand extends FeatureQueryCommand {
         Map<String, Object> pack = (Map<String, Object>) info.get('featurePack')
         if (pack != null) {
             out("* Feature pack: ${shown((String) pack.get('name'))}, " + (pack.get('coordinates') ? "of the plugin ${shown((String) pack.get('coordinates'))}" :
-                    "of ${shown((String) pack.get('origin'))}"))
+                    "of ${shown((String) pack.get('origin'))}") + (pack.get('sha256') ? ", sha256 ${pack.get('sha256')}" : '') +
+                    (pack.get('inApplication') == Boolean.FALSE ? '. The application does not have it: feature add takes it as it was taken here' : ''))
+            for (String line : (List<String>) pack.get('provenance')) {
+                out("    ${line}")
+            }
+        }
+        List<Map<String, Object>> options = (List<Map<String, Object>>) info.get('options')
+        if (options) {
+            out("* Options, each given as ${FeatureOptions.OPTION} ${shown(name)}.NAME=VALUE:")
+            for (Map<String, Object> option : options) {
+                out("    ${shown((String) option.get('usage'))}${option.get('description') ? '  ' + shown((String) option.get('description')) : ''}")
+            }
         }
         List<Map<String, String>> commands = (List<Map<String, String>>) info.get('commands')
         if (commands) {
             out('* Commands it gives the command line of an application that has it:')
             for (Map<String, String> command : commands) {
                 out("    ${shown(command.get('name'))}${command.get('description') ? '  ' + shown(command.get('description')) : ''}")
+            }
+        }
+        List<String> instructions = (List<String>) info.get('instructions')
+        if (instructions) {
+            out('* What its feature pack says to do once it is added:')
+            for (String line : instructions) {
+                out("    ${line.replace('@|', '@ |')}")
             }
         }
         if (info.get('addable') == Boolean.FALSE) {

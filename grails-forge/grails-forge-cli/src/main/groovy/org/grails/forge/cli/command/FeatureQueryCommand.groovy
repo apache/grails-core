@@ -23,6 +23,7 @@ import java.util.function.Consumer
 import java.util.function.Supplier
 import groovy.transform.CompileStatic
 import org.apache.grails.forge.cli.console.GradleRunner
+import org.apache.grails.forge.cli.pack.AddedPackOptions
 import org.apache.grails.forge.cli.pack.PackArtifactException
 import org.apache.grails.forge.cli.pack.PackArtifacts
 import org.apache.grails.forge.cli.pack.RecordedPackOptions
@@ -37,6 +38,8 @@ import picocli.CommandLine
  * What {@code feature find}, {@code feature show} and {@code feature diff} share: the application
  * they speak of, see {@link FeatureScope}, which is that of the current directory or, with
  * {@code --type} and outside a project, a new application of a type. None of them changes anything.
+ * A feature of a feature pack the application does not have is spoken of as {@code feature add}
+ * would add it: the pack is taken with the options of that command, by that command.
  *
  * @since 9.0
  */
@@ -53,6 +56,13 @@ abstract class FeatureQueryCommand extends BaseCommand implements Callable<Integ
 
     @CommandLine.Mixin
     RecordedPackOptions packOptions = new RecordedPackOptions()
+
+    // declared where feature add declares them, so that what that command takes these take
+    @CommandLine.Mixin
+    AddedPackOptions addedOptions = new AddedPackOptions()
+
+    // feature add of what this command was asked for, which takes the packs as it takes them when it adds their features
+    private FeatureAddCommand taker
 
     // asked of the Forge application when the command first needs it
     private final Supplier<ProjectGenerator> projectGeneratorSource
@@ -71,15 +81,58 @@ abstract class FeatureQueryCommand extends BaseCommand implements Callable<Integ
     }
 
     /**
-     * @param notes given what is said while the packs of the application are had again, one line each
+     * {@code feature add} of features, with the feature packs, the repositories and the options this
+     * command was given: what takes the packs that are asked for, the same way for every command.
+     *
+     * @param features the features that were asked for
+     */
+    protected FeatureAddCommand taker(List<String> features) {
+        FeatureQueryCommand query = this
+        FeatureAddCommand add = new FeatureAddCommand(getProjectGenerator()) {
+
+            @Override
+            protected PackArtifacts createPackArtifacts() {
+                return query.createPackArtifacts()
+            }
+
+            @Override
+            protected String grailsRepoUrl() {
+                return query.grailsRepoUrl()
+            }
+        }
+        add.spec = spec
+        add.features = features
+        add.packOptions = packOptions
+        add.addedOptions = addedOptions
+        taker = add
+        return add
+    }
+
+    /**
+     * @return the {@code feature add} that took the packs of this command, once {@link #scope} was asked
+     */
+    protected FeatureAddCommand getTaker() {
+        return taker
+    }
+
+    /**
+     * @param notes given what is said while the packs of the application are had again, and the packs
+     * of the features that were asked for are taken, one line each
+     * @param features the features that were asked for, each as {@code feature add} takes it: a name,
+     * the coordinates of a plugin, or a name a feature catalog has; none for a command that names none
      * @return the application the command speaks of, or {@code null} when it cannot be spoken of, which
      * was then said as an error
+     * @throws CommandLine.ParameterException for a mistake in the command line
      */
-    protected FeatureScope scope(List<String> notes) {
+    protected FeatureScope scope(List<String> notes, List<String> features) {
+        FeatureAddCommand add = taker(features)
+        // an option of a feature that is not written as one is a mistake in the command line, as for feature add
+        add.optionsOfFeatures()
         try {
             return FeatureScope.of(getProjectGenerator(), FeatureScope.typeOf(spec.commandLine(), type), FileSystemOutputHandler.getDefaultBaseDirectory().toPath(),
-                    packOptions, createPackArtifacts(), grailsRepoUrl(), getOperatingSystem(), { String line -> notes << shown(line) } as Consumer<String>,
-                    { String line -> notes << shown(line) } as Consumer<String>)
+                    packOptions, add.packArtifacts(), grailsRepoUrl(), getOperatingSystem(),
+                    { String line -> notes << shown(line.replace('@|blue ||@ ', '')) } as Consumer<String>,
+                    { String line -> notes << shown(line) } as Consumer<String>, add)
         } catch (ProjectStateException | ProjectChangeException | IllegalArgumentException | PackArtifactException e) {
             err(shown(e.getMessage() ?: e.getClass().getSimpleName()))
             if (showStacktrace()) {

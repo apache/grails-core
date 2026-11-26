@@ -482,6 +482,60 @@ final class PackCatalogs {
     }
 
     /**
+     * The features the catalogs offer by a name, for a command that looks for features: each with the
+     * plugin and the version that would be taken for it, as {@link #listing} lists them. A plugin is
+     * offered by the catalog that speaks for it, and a name of a feature of the framework by none.
+     *
+     * @param ofFramework whether a name is that of a feature of the framework, which no plugin has
+     * @return the features, in the order of their names
+     */
+    List<Offered> offered(String applicationType, String grails, String forge, Predicate<String> ofFramework, String bom, Function<String, String> managed) {
+        List<Offered> offered = []
+        for (PackCatalog catalog : read()) {
+            for (Plugin plugin : catalog.plugins) {
+                if (!listed().get(plugin.coordinates).plugin.is(plugin)) {
+                    continue
+                }
+                for (String name : plugin.versions.findAll { Version version -> version.feature }*.name.unique()) {
+                    Object result = of(plugin, plugin.versions.findAll { Version version -> version.name == name && version.feature }, applicationType, grails, forge, bom, managed)
+                    if (result instanceof Version && !ofFramework.test(name)) {
+                        offered << new Offered(name, ((Version) result).coordinates.toString(), plugin.title, plugin.description, catalog.address)
+                    }
+                }
+            }
+        }
+        return offered.sort { Offered each -> each.name + ' ' + each.coordinates }
+    }
+
+    /** A feature a catalog offers by its name. */
+    @CompileStatic
+    static final class Offered {
+
+        /** The name of the feature */
+        final String name
+
+        /** The plugin that would be taken for it, as {@code group:artifact:version} */
+        final String coordinates
+
+        /** What the catalog says the plugin is called, or {@code null} */
+        final String title
+
+        /** What the catalog says of the plugin, or {@code null} */
+        final String description
+
+        /** The address of the catalog */
+        final String catalog
+
+        Offered(String name, String coordinates, String title, String description, String catalog) {
+            this.name = name
+            this.coordinates = coordinates
+            this.title = title
+            this.description = description
+            this.catalog = catalog
+        }
+    }
+
+    /**
      * @return what is said of the catalogs after a name that none of them has: where it was looked
      * for, and that plugins were left out when there are such
      */

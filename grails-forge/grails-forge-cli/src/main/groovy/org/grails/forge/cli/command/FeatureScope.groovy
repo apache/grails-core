@@ -78,6 +78,20 @@ final class FeatureScope {
     /** Those of them the application is generated with: for a project, the ones its record has. */
     final List<Pack> packs
 
+    /**
+     * The feature packs the application of the current directory does not have, which were given or
+     * taken for a feature that was asked for, as {@code feature add} takes them: their features are
+     * among those there are, and {@code feature add} adds them with the pack. None for a new
+     * application, which is created with every pack.
+     */
+    final List<Pack> addedPacks
+
+    /**
+     * The features that were asked for, by their names: with the name of its feature in the place of
+     * a plugin that was named by its coordinates, by a full name or by a name a feature catalog has.
+     */
+    final List<String> names
+
     /** The features there are for the application. */
     final AvailableFeatures available
 
@@ -87,15 +101,17 @@ final class FeatureScope {
     private boolean defaultsAsked
 
     private FeatureScope(ProjectGenerator generator, Path directory, ProjectState state, ApplicationType type, List<Pack> givenPacks, List<Pack> packs,
-                         @Nullable OperatingSystem operatingSystem) {
+                         List<Pack> addedPacks, List<String> names, @Nullable OperatingSystem operatingSystem) {
         this.generator = generator
         this.directory = directory
         this.state = state
         this.type = type
         this.givenPacks = givenPacks
         this.packs = packs
+        this.addedPacks = addedPacks
+        this.names = names
         this.operatingSystem = operatingSystem
-        this.available = generator.availableFeatures(type, packs)
+        this.available = generator.availableFeatures(type, packs + addedPacks)
     }
 
     /**
@@ -126,25 +142,37 @@ final class FeatureScope {
      * @param operatingSystem the operating system the generator is told of
      * @param said where it is said which jar is fetched again
      * @param warned where a repository that is not asked is named
+     * @param taker {@code feature add} of the features that were asked for, with the options of the command, which
+     * takes the packs the application does not have as it takes them when it adds their features
      * @return the application the command speaks of
      * @throws org.apache.grails.forge.core.state.ProjectStateException when the record of the project cannot be read
      * @throws org.apache.grails.forge.core.change.ProjectChangeException when a pack of the record is not to be had, or another was given
      * @throws IllegalArgumentException when a pack that was given is none
+     * @throws CommandLine.ParameterException for a mistake in the command line, as a preset that is asked for as a feature
+     * @throws org.apache.grails.forge.cli.pack.PackArtifactException when a pack or a catalog could not be taken
      */
     static FeatureScope of(ProjectGenerator generator, ApplicationType given, Path current, RecordedPackOptions packOptions, PackArtifacts artifacts,
-                           String grailsRepoUrl, @Nullable OperatingSystem operatingSystem, Consumer<String> said, Consumer<String> warned) {
+                           String grailsRepoUrl, @Nullable OperatingSystem operatingSystem, Consumer<String> said, Consumer<String> warned,
+                           FeatureAddCommand taker) {
         ConsoleProject.Search search = ConsoleProject.search(current)
         if (given == null && search.project != null && ProjectState.exists(search.project.directory)) {
             Path directory = search.project.directory
             ProjectState state = ProjectState.readSelection(directory, true)
             // an application no feature is added to as it is has its features of Grails said all the same, without its packs being asked for
             boolean asIs = FeatureAvailability.refusal(state) == null
-            List<Pack> givenPacks = asIs ? packOptions.packs(directory, artifacts, grailsRepoUrl, said, warned) : Collections.<Pack>emptyList()
-            List<Pack> ofTheLock = asIs ? FeatureAddition.recordedPacks(state.lock, state.manifest.preset, givenPacks) : Collections.<Pack>emptyList()
-            return new FeatureScope(generator, directory, state, state.manifest.applicationType, givenPacks, ofTheLock, operatingSystem)
+            if (!asIs) {
+                return new FeatureScope(generator, directory, state, state.manifest.applicationType, Collections.<Pack>emptyList(), Collections.<Pack>emptyList(),
+                        Collections.<Pack>emptyList(), taker.features, operatingSystem)
+            }
+            // a pack the application has no feature of is one whose feature is asked for, as it is for feature add
+            FeatureAddCommand.Asked asked = taker.asked(directory, packOptions.packs(directory, artifacts, grailsRepoUrl, said, warned), said, warned)
+            List<Pack> ofTheLock = FeatureAddition.recordedPacks(state.lock, state.manifest.preset, asked.ofTheApplication)
+            return new FeatureScope(generator, directory, state, state.manifest.applicationType, asked.ofTheApplication, ofTheLock, asked.added, asked.features,
+                    operatingSystem)
         }
-        List<Pack> givenPacks = newApplicationPacks(packOptions)
-        return new FeatureScope(generator, null, null, given ?: ApplicationType.DEFAULT_OPTION, givenPacks, givenPacks, operatingSystem)
+        ApplicationType type = given ?: ApplicationType.DEFAULT_OPTION
+        FeatureAddCommand.Asked asked = taker.askedOfNew(type, newApplicationPacks(packOptions), said, warned)
+        return new FeatureScope(generator, null, null, type, asked.added, asked.added, Collections.<Pack>emptyList(), asked.features, operatingSystem)
     }
 
     // the packs of directories and jars that were given for a new application, which has no record to hold them to
@@ -226,6 +254,7 @@ final class FeatureScope {
         return new Options(recorded.reloading, recorded.data, recorded.servlet, recorded.jdk, operatingSystem)
                 .withGiven(EnumSet.allOf(OptionName))
                 .withSubproject(recorded.subproject)
+                .withFeatureOptions(recorded.featureOptions)
     }
 
     /**

@@ -22,9 +22,7 @@ import java.nio.file.Path
 import java.util.function.Consumer
 import groovy.transform.CompileStatic
 import org.apache.grails.forge.cli.console.ConsoleProject
-import org.apache.grails.forge.cli.pack.AddedPackOptions
 import org.apache.grails.forge.cli.pack.PackArtifactException
-import org.apache.grails.forge.cli.pack.PackArtifacts
 import org.apache.grails.forge.core.change.ChangePlan
 import org.apache.grails.forge.core.change.ChangePlan.PlannedFile
 import org.apache.grails.forge.core.change.FeatureAddition
@@ -77,10 +75,6 @@ class FeatureDiffCommand extends FeatureQueryCommand {
     @CommandLine.Option(names = ['--replace'], description = 'As for feature add: a feature that was asked for by name makes way for the feature that takes its place.')
     boolean replace
 
-    // declared where feature add declares them, so that what that command takes this one takes
-    @CommandLine.Mixin
-    AddedPackOptions addedOptions = new AddedPackOptions()
-
     @Autowired
     FeatureDiffCommand(ProjectGenerator projectGenerator) {
         super({ projectGenerator })
@@ -96,51 +90,21 @@ class FeatureDiffCommand extends FeatureQueryCommand {
         ApplicationType given = FeatureScope.typeOf(spec.commandLine(), type)
         ConsoleProject.Search search = ConsoleProject.search(FileSystemOutputHandler.getDefaultBaseDirectory().toPath())
         if (given != null || search.project == null) {
-            List<String> ofAnAddition = addedOptions.given()
-            if (!ofAnAddition.isEmpty()) {
-                // there is no application a pack is added to: a new one has the features of Grails and of the packs that are given as directories
-                throw new CommandLine.ParameterException(spec.commandLine(), "${ofAnAddition.join(', ')} ${ofAnAddition.size() == 1 ? 'is an option' : 'are options'} " +
-                        "for a feature that is added to the application of the current directory. ${given != null ? 'With --type' : 'Outside a project'}, feature diff " +
-                        'shows a new application, with the features of Grails and of the feature packs --feature-pack-dir gives')
-            }
             return ofNewApplication()
         }
         return ofProject(search.project.directory)
     }
 
-    // feature add of the same features, with the feature packs, the repositories and the options this command was given, which takes the packs that are added
-    private FeatureAddCommand asAdded() {
-        FeatureDiffCommand diff = this
-        FeatureAddCommand add = new FeatureAddCommand(getProjectGenerator()) {
-
-            @Override
-            protected PackArtifacts createPackArtifacts() {
-                return diff.createPackArtifacts()
-            }
-
-            @Override
-            protected String grailsRepoUrl() {
-                return diff.grailsRepoUrl()
-            }
-        }
-        add.spec = spec
-        add.features = features
-        add.packOptions = packOptions
-        add.addedOptions = addedOptions
-        add.replace = replace
-        return add
-    }
-
     // the plan of feature add, of which the diff is written
     private Integer ofProject(Path directory) {
-        FeatureAddCommand add = asAdded()
+        FeatureAddCommand add = taker(features)
         // an option of a feature that is not written as one is a mistake in the command line, as for feature add
         Map<String, Map<String, String>> options = add.optionsOfFeatures()
         try {
             if (!ProjectState.exists(directory)) {
                 throw new ProjectStateException("${FeatureAddCommand.noRecord(spec)}. With --type, feature diff shows what the features change in a new application of that type")
             }
-            List<Pack> packs = packOptions.packs(directory, createPackArtifacts(), grailsRepoUrl(), { String line -> note(shown(line)) } as Consumer<String>,
+            List<Pack> packs = packOptions.packs(directory, add.packArtifacts(), grailsRepoUrl(), { String line -> note(shown(line)) } as Consumer<String>,
                     { String line -> warned(shown(line)) } as Consumer<String>)
             // the feature of a plugin that is named by its coordinates, or of a pack that is given, is taken as feature add takes it
             FeatureAddCommand.Asked asked = add.asked(directory, packs, { String line -> note(shown(line.replace('@|blue ||@ ', ''))) } as Consumer<String>,
@@ -187,7 +151,8 @@ class FeatureDiffCommand extends FeatureQueryCommand {
     // what the features change in an application of a type that is created with them
     private Integer ofNewApplication() {
         List<String> notes = []
-        FeatureScope scope = scope(notes)
+        // a pack that is asked for is taken as the create commands take it, with the options feature add has for it
+        FeatureScope scope = scope(notes, features)
         if (scope == null) {
             return 1
         }
@@ -196,11 +161,11 @@ class FeatureDiffCommand extends FeatureQueryCommand {
         }
         Lines lines = new Lines()
         try {
-            GeneratorContext context = getProjectGenerator().createGeneratorContext(scope.type, scope.project, scope.options, getOperatingSystem(), features,
-                    new Notes(), scope.packs)
+            GeneratorContext context = getProjectGenerator().createGeneratorContext(scope.type, scope.project,
+                    scope.options.withFeatureOptions(getTaker().optionsOfFeatures()), getOperatingSystem(), scope.names, new Notes(), scope.packs)
             new FeatureDiffer().produceDiff(getProjectGenerator(), context, lines)
         } catch (FeatureSelectionException e) {
-            throw new CommandLine.ParameterException(spec.commandLine(), shown(e.getMessage()))
+            throw new CommandLine.ParameterException(spec.commandLine(), shown(e.getMessage()) + getTaker().notInCatalog())
         } catch (IllegalArgumentException e) {
             // a feature that refuses the application it is selected for, as one that needs a later JDK
             throw new CommandLine.ParameterException(spec.commandLine(), shown(e.getMessage() ?: e.getClass().getSimpleName()))
