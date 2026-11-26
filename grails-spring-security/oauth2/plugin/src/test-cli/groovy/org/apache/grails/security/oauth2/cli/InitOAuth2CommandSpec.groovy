@@ -19,7 +19,7 @@
 
 package org.apache.grails.security.oauth2.cli
 
-import org.apache.grails.core.cli.GradleCommand
+import org.apache.grails.core.cli.StandaloneCommand
 import spock.lang.Specification
 import spock.lang.TempDir
 import spock.lang.Unroll
@@ -249,6 +249,6 @@ class InitOAuth2CommandSpec extends Specification {
 
     void 'the commands only write files of the project, so they are run without the application being started'() {
         expect: 'an application that cannot start, as one that is not configured yet, has them all the same'
-        [InitOAuth2Command].every { Class command -> GradleCommand.isAssignableFrom(command) }
+        [InitOAuth2Command].every { Class command -> StandaloneCommand.isAssignableFrom(command) }
     }
 }

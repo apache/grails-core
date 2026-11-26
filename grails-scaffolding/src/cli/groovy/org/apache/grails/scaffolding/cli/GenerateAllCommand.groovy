@@ -23,6 +23,7 @@ import groovy.transform.CompileStatic
 import grails.build.logging.ConsoleLogger
 import grails.build.logging.GrailsConsole
 import org.apache.grails.core.cli.GrailsApplicationCommand
+import org.apache.grails.core.cli.StandaloneCommand
 
 /**
  * Generates a controller that performs CRUD operations and the associated views
@@ -32,7 +33,7 @@ import org.apache.grails.core.cli.GrailsApplicationCommand
  * @since 5.0.0
  */
 @CompileStatic
-class GenerateAllCommand implements GrailsApplicationCommand, CommandLineHelper, SkipBootstrap {
+class GenerateAllCommand implements GrailsApplicationCommand, StandaloneCommand, CommandLineHelper, SkipBootstrap {
 
     String description = 'Generates a controller that performs CRUD operations and the associated views'
 

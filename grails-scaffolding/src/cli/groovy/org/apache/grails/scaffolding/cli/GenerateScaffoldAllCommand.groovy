@@ -24,6 +24,7 @@ import grails.build.logging.ConsoleLogger
 import grails.build.logging.GrailsConsole
 import grails.codegen.model.Model
 import org.apache.grails.core.cli.GrailsApplicationCommand
+import org.apache.grails.core.cli.StandaloneCommand
 
 /**
  * Generates a scaffolded service and controller.
@@ -33,7 +34,7 @@ import org.apache.grails.core.cli.GrailsApplicationCommand
  * @since 7.1.0
  */
 @CompileStatic
-class GenerateScaffoldAllCommand implements GrailsApplicationCommand, CommandLineHelper, SkipBootstrap {
+class GenerateScaffoldAllCommand implements GrailsApplicationCommand, StandaloneCommand, CommandLineHelper, SkipBootstrap {
 
     String description = 'Generates a scaffolded service and controller'
 

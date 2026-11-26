@@ -24,6 +24,7 @@ import grails.build.logging.ConsoleLogger
 import grails.build.logging.GrailsConsole
 import grails.codegen.model.Model
 import org.apache.grails.core.cli.GrailsApplicationCommand
+import org.apache.grails.core.cli.StandaloneCommand
 import org.grails.io.support.Resource
 
 /**
@@ -34,7 +35,7 @@ import org.grails.io.support.Resource
  * @since 5.0.0
  */
 @CompileStatic
-class GenerateViewsCommand implements GrailsApplicationCommand, CommandLineHelper, SkipBootstrap {
+class GenerateViewsCommand implements GrailsApplicationCommand, StandaloneCommand, CommandLineHelper, SkipBootstrap {
 
     private static final String DOMAIN_TEMPLATE = '_domain.gson'
     private static final List<String> JSON_VIEW_NAMES = ['index.gson', 'show.gson', DOMAIN_TEMPLATE].asImmutable()

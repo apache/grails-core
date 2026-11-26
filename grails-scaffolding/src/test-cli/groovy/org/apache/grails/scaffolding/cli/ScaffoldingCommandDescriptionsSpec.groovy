@@ -21,6 +21,7 @@ package org.apache.grails.scaffolding.cli
 import spock.lang.Specification
 
 import org.apache.grails.core.cli.ApplicationCommand
+import org.apache.grails.core.cli.StandaloneCommand
 
 /**
  * What the list of commands shows for the commands of the scaffolding plugin: a command that does not
@@ -47,6 +48,12 @@ class ScaffoldingCommandDescriptionsSpec extends Specification {
         and:
         new GenerateViewsCommand().name == 'generate-views'
         new GenerateViewsCommand().description == 'Generates the views for the specified domain class: GSP views, or JSON views in a REST application'
+    }
+
+    def "the commands only read and write files of the project, so each runs as a process of its own, without Gradle and without the application"() {
+        expect:
+        registeredCommands().size() >= 9
+        registeredCommands().every { String className -> StandaloneCommand.isAssignableFrom(getClass().classLoader.loadClass(className)) }
     }
 
     private List<String> registeredCommands() {

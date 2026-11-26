@@ -195,6 +195,21 @@ class StandaloneGeneratedApplicationSpec extends CommandSpec implements CommandF
         err.toString().readLines().contains('| Running the command plain of the application, with the Gradle task runCommand')
         out.toString().readLines().contains("KIND standalone second context=false args=[four] flag=null base=${dir.canonicalPath}".toString())
 
+        when: 'a standalone command of a plugin is run for a domain class the build has not compiled'
+        new File(dir, 'grails-app/domain/example/grails').mkdirs()
+        new File(dir, 'grails-app/domain/example/grails/Book.groovy').text = 'package example.grails\n\nclass Book {\n\n    String title\n}\n'
+        out.reset()
+        err.reset()
+        exit = ForgeCli.execute(beanContext, 'generate-controller', 'example.grails.Book')
+
+        then: 'it has the run time and command line dependencies of the project and nothing of the application, and Gradle is not run for it'
+        assert exit == 0 : err.toString() + out.toString()
+        runs() == 5
+        standaloneFile().commands.'generate-controller' == 'dependencies'
+        err.toString().readLines()[0].startsWith('| Running the command generate-controller of org.apache.grails:grails-scaffolding-cli:')
+        err.toString().readLines()[0].endsWith(', as a process of its own, without Gradle')
+        new File(dir, 'grails-app/controllers/example/grails/BookController.groovy').isFile()
+
         when: 'a tool asks how the commands are run'
         out.reset()
         err.reset()
@@ -204,6 +219,7 @@ class StandaloneGeneratedApplicationSpec extends CommandSpec implements CommandF
         then:
         ((List<Map>) described.commands).findAll { it.origin == 'application' }.collectEntries { [(it.name): it.target] } ==
                 [built: 'gradle', inside: 'application', plain: 'standalone']
+        ((List<Map>) described.commands).find { it.name == 'generate-controller' }.target == 'standalone'
         runs() == 5
 
         cleanup: 'how long the same work took each way, for whoever reads the report of the specification'

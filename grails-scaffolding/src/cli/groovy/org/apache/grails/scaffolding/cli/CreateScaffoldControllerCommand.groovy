@@ -24,6 +24,7 @@ import grails.build.logging.ConsoleLogger
 import grails.build.logging.GrailsConsole
 import grails.codegen.model.Model
 import org.apache.grails.core.cli.GrailsApplicationCommand
+import org.apache.grails.core.cli.StandaloneCommand
 
 /**
  * Creates a scaffolded controller.
@@ -32,7 +33,7 @@ import org.apache.grails.core.cli.GrailsApplicationCommand
  * @since 5.0.0
  */
 @CompileStatic
-class CreateScaffoldControllerCommand implements GrailsApplicationCommand, CommandLineHelper, SkipBootstrap {
+class CreateScaffoldControllerCommand implements GrailsApplicationCommand, StandaloneCommand, CommandLineHelper, SkipBootstrap {
 
     String description = 'Creates a scaffolded controller'
 

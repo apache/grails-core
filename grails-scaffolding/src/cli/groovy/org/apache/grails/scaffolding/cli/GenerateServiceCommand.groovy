@@ -24,6 +24,7 @@ import grails.build.logging.ConsoleLogger
 import grails.build.logging.GrailsConsole
 import grails.codegen.model.Model
 import org.apache.grails.core.cli.GrailsApplicationCommand
+import org.apache.grails.core.cli.StandaloneCommand
 import org.grails.io.support.Resource
 
 /**
@@ -34,7 +35,7 @@ import org.grails.io.support.Resource
  * @since 5.0.0
  */
 @CompileStatic
-class GenerateServiceCommand implements GrailsApplicationCommand, CommandLineHelper, SkipBootstrap {
+class GenerateServiceCommand implements GrailsApplicationCommand, StandaloneCommand, CommandLineHelper, SkipBootstrap {
 
     String description = 'Generates a Grails data service for the specified domain-class.'
 

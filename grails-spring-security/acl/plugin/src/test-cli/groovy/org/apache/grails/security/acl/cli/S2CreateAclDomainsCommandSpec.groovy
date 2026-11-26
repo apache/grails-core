@@ -22,7 +22,7 @@ package org.apache.grails.security.acl.cli
 import grails.plugin.springsecurity.acl.AclClass
 import grails.plugin.springsecurity.acl.AclObjectIdentity
 import grails.plugin.springsecurity.acl.AclSid
-import org.apache.grails.core.cli.GradleCommand
+import org.apache.grails.core.cli.StandaloneCommand
 import spock.lang.AutoCleanup
 import spock.lang.Issue
 import spock.lang.Specification
@@ -271,6 +271,6 @@ class S2CreateAclDomainsCommandSpec extends Specification {
 
     void 'the commands only write files of the project, so they are run without the application being started'() {
         expect: 'an application that cannot start, as one that is not configured yet, has them all the same'
-        [S2CreateAclDomainsCommand].every { Class command -> GradleCommand.isAssignableFrom(command) }
+        [S2CreateAclDomainsCommand].every { Class command -> StandaloneCommand.isAssignableFrom(command) }
     }
 }
