@@ -26,8 +26,10 @@ import picocli.CommandLine
 
 /**
  * {@code run-script}: the Gradle task {@code runScript} of the project, which runs Groovy scripts
- * with the application started around them. The command is deprecated: it runs as it did, after one
- * warning line that names what takes its place, a tool of the application run by its name.
+ * with the application started around them. The command is deprecated: it runs as it did, and its
+ * help says what takes its place, a tool of the application run by its name. The warning each run
+ * gives is the one line of the task, which {@code ./gradlew runScript} gives as well, so either way
+ * of running it warns once.
  *
  * <p>The task takes the files as one text, the project property {@code args}, and splits it at
  * spaces outside quotes. The command writes that text so that it is split into the files that were
@@ -58,19 +60,8 @@ class RunScriptCommand extends GradleEnvironmentCommand {
         return 'development'
     }
 
-    /**
-     * @param spec the command, for how the command line is typed where it runs
-     * @return what is said, after a warning mark, each time the command runs
-     */
-    static String deprecation(CommandLine.Model.CommandSpec spec) {
-        return "run-script is deprecated: write a tool (${UsageHelp.toType(spec, 'create-tool NAME')}) and run it by its name".toString()
-    }
-
     @Override
     protected List<String> gradleArguments(ConsoleProject project) {
-        PrintWriter said = spec.commandLine().getErr()
-        said.println(CommandLine.Help.Ansi.AUTO.string('@|bold,red | Warning|@ ' + deprecation(spec)))
-        said.flush()
         for (String file : files) {
             if (file.isEmpty() || file.indexOf(0) > -1) {
                 throw new CommandLine.ParameterException(spec.commandLine(), "${FeatureSelectionException.shown(file)} is not the name of a file")

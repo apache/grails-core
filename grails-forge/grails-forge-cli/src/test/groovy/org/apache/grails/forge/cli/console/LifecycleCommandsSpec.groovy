@@ -293,20 +293,21 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
         given << [['a.groovy'], ['a b.groovy', 'c.groovy'], ['it\'s.groovy'], ['say "hi".groovy'], ['it\'s "both" \'and\' more.groovy', '"', '\'', '"\'"', 'tab\there'], ['  two  spaces  ']]
     }
 
-    void "run-script is deprecated: it runs as it did, after one line that names the tool that takes its place, and ends as it did"() {
+    void "run-script is deprecated: it runs as it did, its help names the tool that takes its place, and the warning is the one of the task"() {
         given:
         scriptedProject('record')
         new File(dir, 'scripts').mkdirs()
         new File(dir, 'scripts/one.groovy').text = ''
-        String warning = '| Warning run-script is deprecated: write a tool (grails-forge-cli create-tool NAME) and run it by its name'
 
         when:
         int exit = ForgeCli.execute(beanContext, 'run-script', 'scripts/one.groovy')
 
-        then: 'the script is run as before, and the warning is said once'
+        then: 'the script is run as before, by the task runScript, which says once that it is deprecated, as ./gradlew runScript does'
         exit == 0
         new File(dir, 'invoked.txt').text == '<runScript><-Pargs=scripts/one.groovy><-Dgrails.env=development>\n'
-        out.toString().readLines().count { String line -> line == warning } == 1
+
+        and: 'the command line says nothing of it itself, so the warning is not said twice'
+        !out.toString().contains('deprecated')
 
         when: 'a script that is not there'
         out.reset()
@@ -315,7 +316,7 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
 
         then: 'nothing is run, as before'
         exit == 1
-        out.toString().readLines().count { String line -> line == warning } == 1
+        !out.toString().contains('deprecated')
         !new File(dir, 'invoked.txt').exists()
 
         when: 'the help and the document for a tool'
