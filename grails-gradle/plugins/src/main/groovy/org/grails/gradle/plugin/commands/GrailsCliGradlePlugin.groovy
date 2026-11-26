@@ -126,6 +126,15 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
      */
     public static final String GRAILS_CLI_STANDALONE_DETECT_CONFIGURATION = 'grailsCliStandaloneDetect'
 
+    /** What {@code runCommand}, the deprecated other name of {@code runTool}, says each time it runs. */
+    public static final String RUN_COMMAND_DEPRECATED = 'runCommand is deprecated: use runTool'
+
+    /** What {@code runScript}, which runs a script against the application context, says each time it runs. */
+    public static final String RUN_SCRIPT_DEPRECATED = 'runScript is deprecated: write a tool and run it with runTool'
+
+    /** What {@code runScriptCommand}, which runs a script command, says each time it runs. */
+    public static final String SCRIPT_COMMANDS_DEPRECATED = 'Script commands are deprecated: write a tool and run it with runTool'
+
     /** The project property that turned on the bridge for the commands of Grails 7, which was removed. */
     @PackageScope
     static final String LEGACY_COMMAND_SUPPORT_PROPERTY = 'grailsLegacyCommandSupport'
@@ -186,7 +195,9 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
             }
             project.tasks.register(ScriptCommandTask.TASK_NAME, ScriptCommandTask) { ScriptCommandTask task ->
                 task.group = GRAILS_COMMAND_GROUP
-                task.description = 'Runs a script command: src/main/scripts/<name>.groovy of the project, or META-INF/commands/<name>.groovy of a plugin'
+                task.description = 'Runs a script command: src/main/scripts/<name>.groovy of the project, or META-INF/commands/<name>.groovy of a plugin. ' +
+                        'Script commands are deprecated: write a tool and run it with runTool'
+                task.doFirst(new WarnOfDeprecation(SCRIPT_COMMANDS_DEPRECATED))
                 task.classpath = project.files(
                         project.configurations.named(JavaPlugin.RUNTIME_CLASSPATH_CONFIGURATION_NAME),
                         project.configurations.named(GRAILS_CLI_CLASSPATH_CONFIGURATION))
@@ -916,6 +927,10 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
         shellTask
     }
 
+    /**
+     * Registers {@code runScript}, which runs a Groovy script file against the application context, as in
+     * Grails 7 and 8. It is deprecated: it runs as before, after a warning that says to write a tool.
+     */
     @CompileDynamic
     protected void configureRunScript(Project project) {
         if (!project.tasks.names.contains('runScript')) {
@@ -923,7 +938,8 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
             project.afterEvaluate {
                 runTask.configure {
                     it.group = GRAILS_COMMAND_GROUP
-                    it.description = 'Executes a Grails script'
+                    it.description = 'Deprecated: executes a Grails script against the application context; write a tool and run it with runTool'
+                    it.doFirst(new WarnOfDeprecation(RUN_SCRIPT_DEPRECATED))
                     SourceSet mainSourceSet = SourceSets.findMainSourceSet(project)
                     it.classpath = mainSourceSet.runtimeClasspath + project.configurations.getByName(GRAILS_CLI_CLASSPATH_CONFIGURATION)
                     it.systemProperty(Environment.KEY, System.getProperty(Environment.KEY, Environment.DEVELOPMENT.getName()))
@@ -959,7 +975,7 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
             registerRunTool(project, ToolBuildNames.RUN_TOOL_TASK,
                     'Runs a tool of the project or of one of its plugins: the first argument is the name of the tool (--arg=<name>)', null)
             registerRunTool(project, ToolBuildNames.RUN_COMMAND_TASK, "Deprecated: use ${ToolBuildNames.RUN_TOOL_TASK}".toString(),
-                    new WarnOfDeprecatedTask(ToolBuildNames.RUN_COMMAND_TASK, ToolBuildNames.RUN_TOOL_TASK))
+                    new WarnOfDeprecation(RUN_COMMAND_DEPRECATED))
         }
     }
 
@@ -1018,25 +1034,23 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
     }
 
     /**
-     * Says, when a task that has another name now runs, that its name is deprecated. A class of its own
-     * and not a closure, which the configuration cache would have to store with what it encloses.
+     * Says, once each time a deprecated task runs, that it is deprecated and what to do instead. A class of
+     * its own and not a closure, which the configuration cache would have to store with what it encloses.
      */
     @PackageScope
-    static class WarnOfDeprecatedTask implements Action<Task>, Serializable {
+    static class WarnOfDeprecation implements Action<Task>, Serializable {
 
         private static final long serialVersionUID = 1L
 
-        private final String deprecated
-        private final String replacement
+        private final String message
 
-        WarnOfDeprecatedTask(String deprecated, String replacement) {
-            this.deprecated = deprecated
-            this.replacement = replacement
+        WarnOfDeprecation(String message) {
+            this.message = message
         }
 
         @Override
         void execute(Task task) {
-            task.logger.warn('{} is deprecated: use {}', deprecated, replacement)
+            task.logger.warn(message)
         }
     }
 }

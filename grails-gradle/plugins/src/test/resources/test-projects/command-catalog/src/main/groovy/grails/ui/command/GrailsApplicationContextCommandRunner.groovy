@@ -32,11 +32,17 @@ class GrailsApplicationContextCommandRunner {
             println "CLASSPATH_ENTRY=${entry}"
         }
         say('STARTED', args)
+        String[] arguments = null
         try {
-            say('ARGUMENT', CommandArgumentsFile.expand(args))
+            arguments = CommandArgumentsFile.expand(args)
         } catch (CommandArgumentsFile.Refused refused) {
-            System.err.println("runCommand: The file of arguments ${refused.message}")
+            System.err.println("runTool: The file of arguments ${refused.message}")
             System.exit(1)
+        }
+        say('ARGUMENT', arguments)
+        // a tool that fails: the exit code the build is to report
+        if (arguments.length > 0 && arguments[0] == 'fail') {
+            System.exit(3)
         }
     }
 
