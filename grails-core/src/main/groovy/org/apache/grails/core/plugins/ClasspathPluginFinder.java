@@ -24,10 +24,10 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import grails.plugins.exceptions.PluginException;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import grails.plugins.exceptions.PluginException;
 
 /**
  * Discovers Grails plugins from {@code META-INF/grails/plugins.imports} and per-plugin
@@ -99,10 +99,10 @@ public class ClasspathPluginFinder {
         Map<String, PluginInfo> byName = new LinkedHashMap<>();
         for (PluginInfo candidate : discoveredPlugins) {
             PluginInfo previous = byName.putIfAbsent(candidate.getName(), candidate);
-            if (previous != null && (candidate.getPluginClass() != previous.getPluginClass()
-                    || candidate.getPluginClass() == null && !candidate.getPluginDescriptor().equals(previous.getPluginDescriptor()))) {
-                throw new PluginException("Conflicting definitions for Grails plugin [" + candidate.getName() + "]: "
-                        + previous.getPluginDescriptor() + " and " + candidate.getPluginDescriptor());
+            if (previous != null && (candidate.getPluginClass() != previous.getPluginClass() ||
+                    candidate.getPluginClass() == null && !candidate.getPluginDescriptor().equals(previous.getPluginDescriptor()))) {
+                throw new PluginException("Conflicting definitions for Grails plugin [" + candidate.getName() + "]: " +
+                        previous.getPluginDescriptor() + " and " + candidate.getPluginDescriptor());
             }
         }
         return List.copyOf(byName.values());

@@ -42,7 +42,6 @@ import org.springframework.core.io.Resource;
 import grails.core.GrailsApplication;
 import grails.core.support.ParentApplicationContextAware;
 import grails.plugins.exceptions.PluginException;
-import org.apache.grails.core.plugins.PluginDescriptor;
 import org.apache.grails.core.plugins.PluginDiscovery;
 import org.apache.grails.core.plugins.PluginInfo;
 import org.grails.core.exceptions.GrailsConfigurationException;

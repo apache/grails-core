@@ -114,10 +114,10 @@ public final class PluginDescriptor {
 
     @Override
     public boolean equals(Object other) {
-        return other instanceof PluginDescriptor that && Objects.equals(resource, that.resource)
-                && Objects.equals(definition, that.definition) && Objects.equals(pluginName, that.pluginName)
-                && Objects.equals(pluginVersion, that.pluginVersion) && providedPlugins.equals(that.providedPlugins)
-                && providedClasses.equals(that.providedClasses);
+        return other instanceof PluginDescriptor that && Objects.equals(resource, that.resource) &&
+                Objects.equals(definition, that.definition) && Objects.equals(pluginName, that.pluginName) &&
+                Objects.equals(pluginVersion, that.pluginVersion) && providedPlugins.equals(that.providedPlugins) &&
+                providedClasses.equals(that.providedClasses);
     }
 
     @Override

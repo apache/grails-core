@@ -257,9 +257,9 @@ public class DefaultGrailsPlugin extends AbstractGrailsPlugin implements ParentA
 
         GrailsPluginDescriptor annotation = clazz.getAnnotation(GrailsPluginDescriptor.class);
         if (metadata == null) {
-            metadata = annotation == null
-                    ? PluginUtils.readPluginInstanceMetadata(plugin, pluginBean, pluginName, fallbackVersion)
-                    : PluginUtils.extractPluginMetadataFromAnnotation(clazz, fallbackVersion, null, pluginName);
+            metadata = annotation == null ?
+                    PluginUtils.readPluginInstanceMetadata(plugin, pluginBean, pluginName, fallbackVersion) :
+                    PluginUtils.extractPluginMetadataFromAnnotation(clazz, fallbackVersion, null, pluginName);
         }
         applyMetadata(metadata);
         if (annotation == null) {
