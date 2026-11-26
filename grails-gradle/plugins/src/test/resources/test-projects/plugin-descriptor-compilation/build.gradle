@@ -1,0 +1,22 @@
+plugins {
+    id 'org.apache.grails.gradle.grails-plugin'
+}
+
+grails {
+    bom = null
+    cliAutoProvision = false
+}
+
+// Prints what the main and test Groovy compilers are given for plugin descriptors.
+tasks.register('printDescriptorArguments') {
+    def main = providers.provider {
+        tasks.named('compileGroovy', GroovyCompile).get().groovyOptions.forkOptions.jvmArgumentProviders*.asArguments().flatten()
+    }
+    def test = providers.provider {
+        tasks.named('compileTestGroovy', GroovyCompile).get().groovyOptions.forkOptions.jvmArgumentProviders*.asArguments().flatten()
+    }
+    doLast {
+        println "MAIN_ARGS=${main.get()}"
+        println "TEST_ARGS=${test.get()}"
+    }
+}

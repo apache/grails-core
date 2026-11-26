@@ -28,7 +28,7 @@ import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.Directory
-import org.gradle.api.file.FileTree
+import org.gradle.api.file.FileCollection
 import org.gradle.api.file.ProjectLayout
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.Copy
@@ -149,11 +149,24 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
         project.tasks.named(mainSourceSet.compileJavaTaskName, JavaCompile).configure { JavaCompile compile ->
             compile.options.compilerArgumentProviders.add(new JavacPluginVersionProvider(version, compile.options))
         }
-        FileTree imports = mainSourceSet.output.classesDirs.asFileTree.matching { PatternFilterable pattern ->
-            pattern.include(PluginDescriptorWriter.PLUGINS_IMPORTS_PATH)
-        }
+        FileCollection imports = pluginImportsFiles(project)
         project.tasks.withType(GenerateI18nDescriptorTask).configureEach { GenerateI18nDescriptorTask task ->
             task.pluginImports.from(imports)
+        }
+    }
+
+    /**
+     * The {@code META-INF/grails/plugins.imports} of the main source set: the one the compiler wrote beside the
+     * classes, or one checked in among the resources, as a project compiled without the Grails compiler has.
+     * The resources are read at their source, so a task that {@code processResources} packages may depend on
+     * this without a cycle.
+     *
+     * @since 9.0
+     */
+    static FileCollection pluginImportsFiles(Project project) {
+        SourceSet mainSourceSet = SourceSets.findMainSourceSet(project)
+        (mainSourceSet.output.classesDirs + mainSourceSet.resources.sourceDirectories).asFileTree.matching { PatternFilterable pattern ->
+            pattern.include(PluginDescriptorWriter.PLUGINS_IMPORTS_PATH)
         }
     }
 

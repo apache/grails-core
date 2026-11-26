@@ -581,14 +581,10 @@ class GroovyPagePluginFunctionalSpec extends GradleSpecification {
             standInClass.parentFile.mkdirs()
             standInClass.bytes = getClass().classLoader.getResource(standIn).bytes
         }
-        File pluginSource = new File(projectDir, 'src/main/groovy/com/example/SpringSecurityCoreGrailsPlugin.groovy')
-        pluginSource.parentFile.mkdirs()
-        pluginSource.text = '''
-            package com.example
-            class SpringSecurityCoreGrailsPlugin {
-                def version = '1.0.0'
-            }
-        '''.stripIndent()
+        // The project is compiled without the Grails compiler, so its plugins.imports is checked in
+        File imports = new File(projectDir, 'src/main/resources/META-INF/grails/plugins.imports')
+        imports.parentFile.mkdirs()
+        imports.text = 'springSecurityCore\n'
         File view = new File(projectDir, 'grails-app/views/login/auth.gsp')
         view.parentFile.mkdirs()
         view.text = '<p>Login</p>'
@@ -597,8 +593,7 @@ class GroovyPagePluginFunctionalSpec extends GradleSpecification {
         when: 'compiling pages from a clean build with configuration cache enabled'
         def result = executeTask('compileGroovyPages', ['--configuration-cache'])
 
-        then: 'the manifest path uses the compiled plugin logical name rather than the Gradle project name'
-        assertTaskSuccess('generatePluginDescriptor', result)
+        then: 'the manifest path uses the plugin name in plugins.imports rather than the Gradle project name'
         assertTaskSuccess('compileGroovyPages', result)
         recorded.readLines('UTF-8').contains('viewsManifestPath=META-INF/grails/plugins/springSecurityCore/views.properties')
 
@@ -612,7 +607,7 @@ class GroovyPagePluginFunctionalSpec extends GradleSpecification {
     }
 
     def "a multi-plugin jar writes a views manifest for every plugin listed in plugins.imports"() {
-        given: 'a plugin project declaring two plugin descriptor classes'
+        given: 'a plugin project whose plugins.imports lists two plugins'
         def runner = setupTestResourceProject('gsp-compile-classpath-grails')
         File projectDir = runner.projectDir
         new File(projectDir, 'settings.gradle').text = "rootProject.name = 'multi-plugin-jar'\n"
@@ -638,16 +633,9 @@ class GroovyPagePluginFunctionalSpec extends GradleSpecification {
             standInClass.parentFile.mkdirs()
             standInClass.bytes = getClass().classLoader.getResource(standIn).bytes
         }
-        ['AlphaGrailsPlugin', 'BetaGrailsPlugin'].each { String className ->
-            File src = new File(projectDir, "src/main/groovy/com/example/${className}.groovy")
-            src.parentFile.mkdirs()
-            src.text = """
-                package com.example
-                class ${className} {
-                    def version = '1.0.0'
-                }
-            """.stripIndent()
-        }
+        File imports = new File(projectDir, 'src/main/resources/META-INF/grails/plugins.imports')
+        imports.parentFile.mkdirs()
+        imports.text = 'alpha\nbeta\n'
         File view = new File(projectDir, 'grails-app/views/shared/index.gsp')
         view.parentFile.mkdirs()
         view.text = '<p>Shared</p>'
@@ -656,7 +644,6 @@ class GroovyPagePluginFunctionalSpec extends GradleSpecification {
         def result = executeTask('compileGroovyPages', ['--configuration-cache'])
 
         then: 'every plugin in plugins.imports gets its own views.properties manifest'
-        assertTaskSuccess('generatePluginDescriptor', result)
         assertTaskSuccess('compileGroovyPages', result)
         File alphaViews = new File(projectDir, 'build/gsp-classes/main/META-INF/grails/plugins/alpha/views.properties')
         File betaViews = new File(projectDir, 'build/gsp-classes/main/META-INF/grails/plugins/beta/views.properties')

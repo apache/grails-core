@@ -186,23 +186,30 @@ class CompilePluginSpec extends Specification {
         result.output.contains('TEST_INDY=true')
     }
 
-    def "places generateGrailsPluginDescriptor output in grailsLibraryPluginDescriptor directory"() {
+    def "the main Groovy compiler, and only it, is given the plugin version and grails-app/conf for plugin descriptors"() {
         given:
         testProjectDir.resolve('build.gradle').toFile().append('''
-            tasks.register('printDescriptorDir') {
-                def descTask = tasks.named('generateGrailsPluginDescriptor', org.apache.grails.buildsrc.GeneratePluginDescriptorTask)
+            version = '9.1.0'
+            tasks.register('printDescriptorArguments') {
+                def main = tasks.named('compileGroovy', org.gradle.api.tasks.compile.GroovyCompile)
+                def test = tasks.named('compileTestGroovy', org.gradle.api.tasks.compile.GroovyCompile)
                 doLast {
-                    println "DESCRIPTOR_DIR=${descTask.get().outputDirectory.get().asFile.path}"
+                    println "MAIN_ARGS=${main.get().groovyOptions.forkOptions.jvmArgumentProviders*.asArguments().flatten()}"
+                    println "TEST_ARGS=${test.get().groovyOptions.forkOptions.jvmArgumentProviders*.asArguments().flatten()}"
                 }
             }
         ''')
 
         when:
-        def result = run(['printDescriptorDir'])
+        def result = run(['printDescriptorArguments'])
 
         then:
-        result.task(':printDescriptorDir').outcome == TaskOutcome.SUCCESS
-        result.output.replace('\\', '/').contains('generated/resources/grailsLibraryPluginDescriptor')
+        result.task(':printDescriptorArguments').outcome == TaskOutcome.SUCCESS
+        String main = result.output.readLines().find { it.startsWith('MAIN_ARGS=') }.replace('\\', '/')
+        String test = result.output.readLines().find { it.startsWith('TEST_ARGS=') }
+        main.contains('-Dgrails.plugin.version=9.1.0')
+        main.contains('-Dgrails.plugin.config.dir=') && main.contains('/grails-app/conf')
+        !test.contains('grails.plugin.version')
     }
 
     private def run(List<String> arguments) {

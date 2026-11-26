@@ -5,4 +5,6 @@ plugins {
 // A plugin shipping message bundles as templates: they must reach the jar as written, not escaped
 grails {
     native2ascii = false
+    bom = null
+    cliAutoProvision = false
 }

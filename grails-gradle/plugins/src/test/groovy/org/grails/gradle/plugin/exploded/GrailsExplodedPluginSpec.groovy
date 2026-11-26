@@ -22,8 +22,8 @@ import org.grails.gradle.plugin.core.GradleSpecification
 
 class GrailsExplodedPluginSpec extends GradleSpecification {
 
-    def 'exploded runtime variant builds and publishes Java, resources and the generated plugin definition'() {
-        given:
+    def 'the exploded runtime variant publishes every main output directory, the classes and the resources'() {
+        given: 'a plugin project, its plugins.imports checked in as it is when the Grails compiler does not write it'
         def runner = setupTestResourceProject('exploded-plugin')
 
         when:
@@ -35,7 +35,5 @@ class GrailsExplodedPluginSpec extends GradleSpecification {
         new File(collected, 'example/Marker.class').isFile()
         new File(collected, 'application-resource.txt').isFile()
         new File(collected, 'META-INF/grails/plugins.imports').text == 'explodedPlugin\n'
-        new File(collected, 'META-INF/grails/plugins/explodedPlugin/plugin.properties').isFile()
-        new File(collected, 'META-INF/grails/plugins/explodedPlugin/plugin.yml').text == 'example.enabled: true\n'
     }
 }

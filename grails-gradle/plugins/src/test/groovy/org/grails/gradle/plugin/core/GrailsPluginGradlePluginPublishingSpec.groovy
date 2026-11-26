@@ -19,14 +19,12 @@
 package org.grails.gradle.plugin.core
 
 /**
- * Tests that {@link GrailsPluginGradlePlugin} gives {@code grails-publish} the {@code grails-plugin.xml}
- * sidecar only for a project that declares a plugin. {@code grails-publish} adds the sidecar artifact to the
- * publication whenever the descriptor is present, and the descriptor task writes no XML for a project
- * without a plugin, so publishing such a project failed on a missing artifact file.
+ * Tests that {@link GrailsPluginGradlePlugin} publishes no {@code grails-plugin.xml} sidecar: a Grails 9 plugin is
+ * described by the descriptors inside its jar.
  */
 class GrailsPluginGradlePluginPublishingSpec extends GradleSpecification {
 
-    def "a project without a plugin class or starter publishes no grails-plugin.xml"() {
+    def "a project without a plugin publishes no grails-plugin.xml"() {
         given:
         setupTestResourceProject('plugin-xml-sidecar')
 
@@ -34,27 +32,19 @@ class GrailsPluginGradlePluginPublishingSpec extends GradleSpecification {
         descriptorPresent() == 'false'
     }
 
-    def "a project with a GrailsPlugin source file publishes the grails-plugin.xml"() {
+    def "a project with a plugin class publishes no grails-plugin.xml"() {
         given:
         def runner = setupTestResourceProject('plugin-xml-sidecar')
         def source = new File(runner.projectDir, 'src/main/groovy/demo/SidecarGrailsPlugin.groovy')
         source.parentFile.mkdirs()
-        source.text = "package demo\nclass SidecarGrailsPlugin { def version = '1.0' }\n"
+        source.text = "package demo\nclass SidecarGrailsPlugin {}\n"
 
         expect:
-        descriptorPresent() == 'true'
+        descriptorPresent() == 'false'
     }
 
-    def "a classless starter publishes the grails-plugin.xml"() {
-        given:
-        setupTestResourceProject('plugin-xml-sidecar')
-
-        expect:
-        descriptorPresent(['-Pstarter=true']) == 'true'
-    }
-
-    private String descriptorPresent(List<String> args = []) {
-        def result = executeTask('inspectPluginDescriptor', args)
+    private String descriptorPresent() {
+        def result = executeTask('inspectPluginDescriptor')
         (result.output =~ /PLUGIN_DESCRIPTOR_PRESENT=(\w+)/)[0][1]
     }
 }

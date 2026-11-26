@@ -119,9 +119,11 @@ final class PluginDescriptorWriter {
                 return
             }
             dir.eachFileRecurse(FileType.FILES) { File file ->
-                if (!file.name.endsWith(CLASS_FILE_EXTENSION) || file.name.contains('$')) {
+                if (!file.name.endsWith(CLASS_FILE_EXTENSION)) {
                     return
                 }
+                // A nested class can declare a plugin; closures and other inner classes are never artefacts
+                boolean nested = file.name.contains('$')
                 ClassReader reader
                 try {
                     reader = new ClassReader(file.bytes)
@@ -138,7 +140,7 @@ final class PluginDescriptorWriter {
                 if (scanner.declaration != null) {
                     plugins.add(new DeclaredPlugin(className, scanner.declaration))
                 }
-                else if (scanner.providedArtefact) {
+                else if (!nested && scanner.providedArtefact) {
                     artefactsByType.computeIfAbsent(scanner.artefactType) { new TreeSet<String>() }.add(className)
                 }
             }

@@ -42,7 +42,6 @@ import org.gradle.api.tasks.bundling.War
 import org.gradle.jvm.toolchain.JavaLauncher
 import org.gradle.jvm.toolchain.JavaToolchainService
 
-import org.apache.grails.plugin.descriptor.PluginDescriptorWriter
 import org.grails.gradle.plugin.core.GrailsCompileStaticOptions
 import org.grails.gradle.plugin.core.GrailsGradlePlugin
 import org.grails.gradle.plugin.core.GrailsPluginGradlePlugin
@@ -415,10 +414,7 @@ class GroovyPagePlugin implements Plugin<Project> {
         wireCompileStaticOptions(project, [compileGroovyPages, compileWebappGroovyPages])
 
         project.plugins.withId(GrailsPluginGradlePlugin.PLUGIN_ID) {
-            // The compiler lists the plugins of the main source set beside its classes.
-            FileCollection importsFile = SourceSets.findMainSourceSet(project).output.classesDirs.asFileTree.matching {
-                PatternFilterable pattern -> pattern.include(PluginDescriptorWriter.PLUGINS_IMPORTS_PATH)
-            }
+            FileCollection importsFile = GrailsPluginGradlePlugin.pluginImportsFiles(project)
             compileGroovyPages.configure { GroovyPageForkCompileTask task ->
                 task.pluginImportsFiles.from(importsFile)
             }

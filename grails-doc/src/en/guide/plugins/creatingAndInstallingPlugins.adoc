@@ -166,7 +166,11 @@ stops the application from starting: the jar it came from is broken.
 
 The Grails Gradle plugin gives the compiler the project version and the location of `grails-app/conf`. A plugin compiled
 without them, such as one in a test source set, has no version and no configuration file; an unknown version satisfies
-every `dependsOn` range. A plugin written in Java has its descriptor written by the Grails annotation processor, which
+every `dependsOn` range.
+
+A plugin class compiled into a test source set is a plugin of the tests: its descriptor is written beside the test
+classes, so every test that starts an application discovers it. A plugin class a test registers itself, and that other
+tests must not see, is compiled by the test at run time, with a `GroovyClassLoader`, rather than in the source set. A plugin written in Java has its descriptor written by the Grails annotation processor, which
 it runs by adding `grails-core` to its `annotationProcessor` configuration.
 
 ==== Plugin Configuration

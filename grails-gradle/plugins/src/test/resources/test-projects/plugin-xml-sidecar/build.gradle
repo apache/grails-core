@@ -5,15 +5,6 @@ plugins {
 
 group = 'org.example.test'
 
-if (providers.gradleProperty('starter').present) {
-    grails {
-        plugin {
-            starter = true
-            name = 'sidecar-starter'
-        }
-    }
-}
-
 grailsPublish {
     githubSlug = 'apache/grails-core'
     license {

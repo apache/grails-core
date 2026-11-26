@@ -47,13 +47,14 @@ class BeansIndexIncrementalSpec extends PluginIndexFixture {
         String base = '''
             package demo
             import grails.plugins.Plugin
+            import grails.plugins.metadata.GrailsPluginDescriptor
             import grails.compiler.beans.GrailsBeans
             import org.springframework.boot.autoconfigure.AutoConfiguration
 
             @GrailsBeans
             @AutoConfiguration
+            @GrailsPluginDescriptor
             class GreetingGrailsPlugin extends Plugin {
-                String version = '1.0'
         '''
         descriptor.text = base + "\n def beans = { bean('generatedGreeting', String) { 'generated' } }\n}"
         // This independent resource JAR registers a class from the plugin, as applications may do.

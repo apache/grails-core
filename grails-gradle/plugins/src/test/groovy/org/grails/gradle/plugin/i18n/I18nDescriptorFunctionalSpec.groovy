@@ -24,7 +24,7 @@ import org.grails.gradle.plugin.core.GradleSpecification
 /**
  * Exercises the i18n descriptor through the plugins an application or plugin author actually applies,
  * rather than by invoking the task directly: automatic registration, application-versus-plugin
- * dispatch, plugin-name derivation from the {@code *GrailsPlugin.groovy} descriptor, the
+ * dispatch, the plugin name read from {@code META-INF/grails/plugins.imports}, the
  * {@code grails { i18n { } }} block, and inclusion in {@code processResources}.
  */
 class I18nDescriptorFunctionalSpec extends GradleSpecification {
@@ -57,7 +57,7 @@ class I18nDescriptorFunctionalSpec extends GradleSpecification {
     }
 
     void 'a plugin project records the hyphenated Grails plugin name, not the project name'() {
-        given: 'a descriptor class named SpringSecurityDemoGrailsPlugin in a project named otherwise'
+        given: 'a plugin named springSecurityDemo in plugins.imports, in a project named otherwise'
         GradleRunner runner = setupTestResourceProject('i18n-descriptor-plugin')
 
         when:
