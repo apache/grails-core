@@ -76,9 +76,10 @@ class ToolSourceSetsSpec extends CommandProjectSpecification {
         !paths.RUNTIME.any { it in TOOL_ONLY }
         !paths.MAIN.any { it.startsWith('build/classes/groovy/cli') || it.startsWith('build/classes/java/standalone') }
 
-        and: 'src/cli has the application, both scopes and the classes of src/standalone'
-        paths.CLI.containsAll(TOOL_ONLY + ['build/classes/groovy/main', 'build/resources/main', 'build/classes/java/standalone', 'build/resources/standalone'])
-        paths.CLI_RUN.containsAll(TOOL_ONLY + ['build/classes/groovy/main', 'build/classes/groovy/cli', 'build/classes/java/standalone'])
+        and: 'src/cli has the classes of the application, both scopes and the classes of src/standalone; the resources of the application only when it runs'
+        paths.CLI.containsAll(TOOL_ONLY + ['build/classes/groovy/main', 'build/classes/java/standalone', 'build/resources/standalone'])
+        !paths.CLI.contains('build/resources/main')
+        paths.CLI_RUN.containsAll(TOOL_ONLY + ['build/classes/groovy/main', 'build/resources/main', 'build/classes/groovy/cli', 'build/classes/java/standalone'])
 
         and: 'src/standalone has the tool API and grailsCliStandalone, and nothing of the application, of src/cli or of grailsCli'
         paths.STANDALONE.containsAll(['only-for-standalone-tools-1.0.jar', 'grails-core-cli-0.0.1-test.jar'])
@@ -117,6 +118,22 @@ class ToolSourceSetsSpec extends CommandProjectSpecification {
         }
         packaged.contains('example/Application.class')
         !packaged.any { it.contains('NewTool') || it.contains('OldCommand') || it.contains('CopyTool') || it.contains('FilesHelper') }
+    }
+
+    def "the tools of src/cli are compiled once when the next build is for another environment, which changes the resources of the application"() {
+        given:
+        setupTools()
+
+        when: 'a build without an environment, as the one that lists the tools, and then one for development, as runTool is'
+        BuildResult listing = executeTask('classes', ['cliClasses'])
+        BuildResult running = executeTask('classes', ['cliClasses', '-Dgrails.env=development'])
+
+        then: 'the second build writes the environment into the resources of the application, and does not compile the tools again'
+        listing.task(':compileCliGroovy').outcome == TaskOutcome.SUCCESS
+        running.task(':buildProperties').outcome == TaskOutcome.SUCCESS
+        new File(projectDir, 'build/resources/main/META-INF/grails.build.info').text.contains('grails.env=development')
+        running.task(':compileCliGroovy').outcome == TaskOutcome.UP_TO_DATE
+        running.task(':compileGroovy').outcome == TaskOutcome.UP_TO_DATE
     }
 
     def "the executable jar of the application has no tool and no library that only tools have"() {

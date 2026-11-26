@@ -497,7 +497,7 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
     /**
      * Gives every project the source sets of its tools ({@link ToolSourceSets}) and their class paths.
      *
-     * <p>In an application, {@code src/cli} is compiled against the output and the compile class path
+     * <p>In an application, {@code src/cli} is compiled against the classes and the compile class path
      * of the main source set and the output of {@code src/standalone}, and runs with the run time class
      * path of the main source set; the tests and the integration tests have the output of both source
      * sets, so a test can make a tool as it could when tools were in the main source set. In a plugin,
@@ -543,6 +543,11 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
      * What the source set {@code src/cli} of an application has of the application: the output and
      * the compile (or run time) class path of the main source set, and the output of
      * {@code src/standalone}. Nothing in a plugin.
+     *
+     * <p>The tools are compiled with the classes of the main source set, and not with its resources,
+     * as a project that depends on another is: the build writes the environment it is run for into
+     * the resources ({@code META-INF/grails.build.info}), so the build that lists the tools and the one
+     * that runs a tool for {@code development} after it would otherwise compile the tools twice.</p>
      */
     @PackageScope
     static class OfApplication implements Callable<Object> {
@@ -565,7 +570,7 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
                 return Collections.emptyList()
             }
             runtime ? [main.output, main.runtimeClasspath, standalone.output, standalone.runtimeClasspath] :
-                    [main.output, main.compileClasspath, standalone.output]
+                    [main.output.classesDirs, main.compileClasspath, standalone.output]
         }
     }
 
