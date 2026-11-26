@@ -1,0 +1,680 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+[[creatingCustomCommands]]
+The `grails` command has commands of its own: `create-app`, `run-app`, `feature add`, `help` and the others of this chapter. What an application or a plugin adds to it is a _tool_. A tool is a class of the project or of a plugin, and it is run by its name, as a command of `grails` is: `grails dbm-update` runs a tool of the Database Migration plugin, `grails generate-all Book` one of the Scaffolding plugin, and `grails data-import orders.csv` a tool of your own.
+
+[[whereToPutATool]]
+=== Where to Put a Tool
+
+Where the source of a tool is decides what the tool can use and how it is run. The folders are the same in an application and in a plugin:
+
+[cols="2,4,4,2"]
+|===
+| Folder | What the tool can use | How it is run | Created by
+
+| `src/cli/groovy`
+| The classes of the project and the libraries they use. Unless the tool says otherwise, the running application as well: its beans, GORM and the configuration as the application sees it.
+| By the build of the project, with the Gradle task `runTool`: the project is compiled first, so it has to compile, and the application is started around the tool. A tool that declares `boolean startsApplication = false` is run without the application.
+| `grails create-tool NAME`
+
+| `src/standalone/groovy`
+| The files of the project, and the tool API. Not the classes of the project, and not the application.
+| By `grails` itself, as a Java process of its own: no Gradle, no application. It runs also while the project does not compile.
+| `grails create-tool --standalone NAME`
+|===
+
+*The rule: a tool that only reads and writes files of the project, such as one that renders a template into `grails-app`, goes into `src/standalone`. Every other tool goes into `src/cli`.* A tool in `src/cli` that needs the classes of the project but not the running application says `boolean startsApplication = false`, and starts faster for it.
+
+Java sources go into `src/cli/java` and `src/standalone/java`, and resources, such as templates, into `src/cli/resources` and `src/standalone/resources`. A tool of `src/cli` can use the classes of `src/standalone`, so a helper that both kinds need is written there; a standalone tool cannot use the classes of `src/cli`.
+
+*Nothing of either folder is part of the application.* The classes of `src/cli` and `src/standalone`, and the libraries only tools use, are on no class path of the application as it runs (`bootRun`) or as it is packaged (`bootJar`, `bootWar`, the `jar` of an application), and they are not in the jar of a plugin. A tool can therefore depend on a library that the application must not have at run time, and a tool of a plugin does not make the application larger or change what it does. That is what the two folders, and the two scopes below, are for.
+
+A library that only tools use is declared in the scope `grailsCli`, and one that only standalone tools use in `grailsCliStandalone`:
+
+[source,groovy]
+.build.gradle
+----
+dependencies {
+    grailsCli 'org.example:report-writer:1.2.0'          // for the tools of src/cli
+    grailsCliStandalone 'org.example:templates:3.0.0'    // for the tools of src/standalone, and so for those of src/cli too
+}
+----
+
+* What `grailsCli` holds is on the class path the tools of `src/cli` are compiled and run with, and what `grailsCliStandalone` holds is on that of both folders.
+* Neither scope is on the class path of `src/main` and `grails-app`: code of the application that uses a class of such a library does not compile. A library the application uses itself is declared with `implementation`, as any other.
+* The tests of the project have both folders and both scopes on their class paths, so a spec in `src/test/groovy` can make a tool and call it.
+
+A tool in `src/standalone` that implements `org.apache.grails.core.cli.ApplicationTool`, or a tool in `src/cli`, `grails-app` or `src/main` that implements `org.apache.grails.core.cli.StandaloneTool`, does not compile, and the error says which folder the tool belongs in. So does a class that implements both, or neither of the two:
+
+// TOOLS-VERIFY: the four compile errors are quoted from TOOLS-DESIGN section 6 and Appendix A (settled point 2); check them against the compiler (P1), and the wording of the error for a class that implements neither type.
+----
+CreateReportTool is a StandaloneTool, and grails-app/commands/com/example/CreateReportTool.groovy is not in src/standalone: a standalone tool is compiled without the classes of the project. Move it to src/standalone/groovy, or implement ApplicationTool to keep it here.
+ImportTool is an ApplicationTool, and src/standalone/groovy/com/example/ImportTool.groovy is in src/standalone, which has neither the application nor its classes. Move it to src/cli/groovy, or implement StandaloneTool.
+----
+
+The sources of the tests (`src/test`, `src/integration-test`, `src/testFixtures` and the other test folders) are not held to this, so a spec can declare a tool of either kind where it needs one.
+
+A project of Grails 8 has its tools in `grails-app/commands`. That folder still works, and is deprecated: see <<toolsOfGrails8,Tools Written for Grails 8>>.
+
+[[writingATool]]
+=== Writing a Tool
+
+`create-tool` writes a tool into `src/cli/groovy`, and with `--standalone` into `src/standalone/groovy`:
+
+// TOOLS-VERIFY: the "Rendered tool to" lines (create-tool is P4's), and that a tool is written as <Name>Tool.groovy into the default package of the project as shown.
+[source,console]
+----
+$ grails create-tool DataImport
+| Rendered tool to src/cli/groovy/com/example/DataImportTool.groovy
+| Run it with: grails data-import
+$ grails create-tool --standalone CreateReport
+| Rendered tool to src/standalone/groovy/com/example/CreateReportTool.groovy
+| Run it with: grails create-report
+----
+
+The first class implements `ApplicationTool` and the second `StandaloneTool`, both from the package `org.apache.grails.core.cli`, and both `ToolSupport`, which gives a tool the arguments it was given and the helpers for templates, files and models. As it is written, a tool prints its name and its arguments and succeeds, so `grails data-import` runs at once:
+
+// TOOLS-VERIFY: the body of the templates artifacts/Tool.groovy and artifacts/StandaloneTool.groovy (P4).
+[source,groovy]
+.src/cli/groovy/com/example/DataImportTool.groovy
+----
+package com.example
+
+import org.apache.grails.core.cli.ApplicationTool
+import org.apache.grails.core.cli.ToolSupport
+
+class DataImportTool implements ApplicationTool, ToolSupport {
+
+    boolean handle() {
+        // args holds what was given after the name of the tool. Return true when the tool has
+        // done its work, and false to end it with exit code 1.
+        println "Ran ${name} with the arguments ${args}"
+        return true
+    }
+}
+----
+
+Replace that body with the work of the tool. `handle()` returns `true` when the tool succeeded; `false`, or an exception, ends it with exit code 1.
+
+* *The name* of a tool is what is typed after `grails`, and its class name gives it: the class name without `Tool` at its end, in words joined by hyphens, so `DataImportTool` is `data-import`. A class whose name does not end with `Tool` loses `Command` at its end instead, so a class written for Grails 8, such as `UrlMappingsReportCommand`, keeps its name, `url-mappings-report`. A tool that is to have another name returns it from `getName()` or sets the property `name`.
+* *The description* is one line, which `grails help` shows. It is the string `getDescription()` returns or the property `description` is set to, and the name of the tool without one:
++
+[source,groovy]
+----
+class DataImportTool implements ApplicationTool, ToolSupport {
+
+    String description = 'Imports the orders of a CSV file'
+    ...
+}
+----
+* *What a tool is given.* `args` is the arguments of the command line after the name of the tool, and `executionContext` has the rest: `executionContext.commandLine` the options (`executionContext.commandLine.hasOption('dry-run')` for `--dry-run`), `executionContext.baseDir` the directory of the project, and `executionContext.project` what the project is (see <<standaloneTools,A Standalone Tool>>). With `ToolSupport` the tool also has `render`, `template`, `file`, `model` and the other methods of `TemplateRenderer`, `FileSystemInteraction` and `ModelBuilder` as its own.
+* *Without `ToolSupport`* a tool implements `boolean handle(ExecutionContext executionContext)` and is given the context as its argument. That is the form for a tool written in Java:
++
+[source,java]
+.src/cli/java/com/example/CountTool.java
+----
+package com.example;
+
+import org.apache.grails.core.cli.ApplicationTool;
+import org.apache.grails.core.cli.ExecutionContext;
+
+public class CountTool implements ApplicationTool {
+
+    @Override
+    public boolean handle(ExecutionContext executionContext) {
+        System.out.println(executionContext.getCommandLine().getRemainingArgs());
+        return true;
+    }
+}
+----
+
+`create-tool` reads its template from `src/main/templates/artifacts/Tool.groovy` of the project when there is one, and with `--standalone` from `src/main/templates/artifacts/StandaloneTool.groovy`; a project of Grails 8 that has `src/main/templates/artifacts/Command.groovy` has that one read for `create-tool` without `--standalone`, with a warning. See link:{commandLineRef}create-tool.html[create-tool].
+
+[[toolsInTheApplication]]
+=== A Tool That Uses the Application
+
+A tool in `src/cli` is run with the application started around it, unless it says otherwise. `handle()` then runs with `applicationContext` set and the beans of the application injected into the tool, as into a service, so the tool can use GORM, services and the configuration:
+
+[source,groovy]
+.src/cli/groovy/com/example/BackupTool.groovy
+----
+package com.example
+
+import grails.util.Environment
+
+import org.apache.grails.core.cli.ApplicationTool
+import org.apache.grails.core.cli.ToolSupport
+
+class BackupTool implements ApplicationTool, ToolSupport {
+
+    String description = 'Backs up the customer data'
+
+    CustomerService customerService
+
+    boolean handle() {
+        if (Environment.current == Environment.PRODUCTION) {
+            println "Full backup of ${customerService.count()} customers"
+        } else {
+            println 'Partial backup of the customers'
+        }
+        return true
+    }
+}
+----
+
+* The environment is `development`, as for every tool that is run by its name. `grails run-tool -Dgrails.env=production backup` runs the tool for another environment: the environment is named in front of the name of the tool, since everything after the name is an argument of the tool (see <<runningATool,Running a Tool>>).
+* A tool that sets `boolean skipBootstrap = true` is run without the `BootStrap` classes of the application.
+* The application is started without its web server, so a tool can run while the application runs elsewhere, against the same database.
+
+The tools of the Database Migration plugin (`dbm-update` and the others) and `schema-export` of the Hibernate plugin are such tools: they read the data sources of the application as it configures them.
+
+[[toolsWithoutTheApplication]]
+=== A Tool That Does Not Start the Application
+
+A tool in `src/cli` that uses the classes of the project but not the running application says so:
+
+[source,groovy]
+.src/cli/groovy/com/example/ListFieldsTool.groovy
+----
+package com.example
+
+import org.apache.grails.core.cli.ApplicationTool
+import org.apache.grails.core.cli.ToolSupport
+
+class ListFieldsTool implements ApplicationTool, ToolSupport {
+
+    boolean startsApplication = false
+
+    String description = 'Lists the fields of classes of the application'
+
+    boolean handle() {
+        // the classes of the application are on the class path: the build compiled them before the tool runs
+        args.each { String name ->
+            Class<?> type = Class.forName(name)
+            println "${type.name}: ${type.declaredFields.findAll { !it.synthetic }*.name.sort().join(', ')}"
+        }
+        return true
+    }
+}
+----
+
+`grails list-fields com.example.Book` has the build compile the project and run the tool, as for every tool of `src/cli`, with this difference:
+
+* The application is not started: no application context, no plugins, no data source, no `BootStrap`. The `Application` class is not initialized.
+* `applicationContext` is `null`, and nothing is injected into the tool. A `skipBootstrap` property is not read.
+* The class path is the same: the compiled classes of the application, its run time dependencies, `src/cli`, `src/standalone` and the two scopes of the tools.
+* The configuration of the application is not loaded. A tool that needs a setting reads the file, `grails-app/conf/application.yml` for example, and gets what is written there, without what an environment block, a Spring profile, a system property or a plugin would change.
+
+The build reads `startsApplication` from the source of the tool, without running it, so its value has to be the constant `true` or `false`: where the property is declared, as above, or set to the same constant in every constructor of the tool. Any other value does not compile:
+
+// TOOLS-VERIFY: the compile error for an unreadable startsApplication (TOOLS-DESIGN section 6, P1).
+----
+startsApplication of ListFieldsTool has to be the constant true or false, where it is declared or in every constructor: the build reads it without running the tool.
+----
+
+`query-tail` of Grails Data is such a tool, since the build tells it where the build directory is, and `s2-quickstart` of the Spring Security plugin, since it reads `application.groovy` of the project as code, which may name classes of the application.
+
+[[standaloneTools]]
+=== A Standalone Tool
+
+A tool in `src/standalone` is run by the `grails` command line itself, as a Java process of its own, without Gradle and without the application:
+
+[source,groovy]
+.src/standalone/groovy/com/example/CreateReportTool.groovy
+----
+package com.example
+
+import org.apache.grails.core.cli.StandaloneTool
+import org.apache.grails.core.cli.ToolSupport
+
+class CreateReportTool implements StandaloneTool, ToolSupport {
+
+    String description = 'Creates a report class from a template'
+
+    boolean handle() {
+        if (!args) {
+            System.err.println('Usage: create-report <name>')
+            return false
+        }
+        def model = model(args[0])
+        render template: template('artifacts/Report.groovy'),
+               destination: file("src/main/groovy/${model.packagePath}/${model.simpleName}Report.groovy"),
+               model: model
+        return true
+    }
+}
+----
+
+The template is `src/main/templates/artifacts/Report.groovy` of the project, or `META-INF/templates/artifacts/Report.groovy` of a plugin (in `src/standalone/resources`), with `${packageName}` and `${className}` where the package and the class name go. `grails create-report Sales` starts no Gradle:
+
+// TOOLS-VERIFY: the line grails says before it starts a standalone tool (P4).
+[source,console]
+----
+$ grails create-report Sales
+| Running the tool create-report of the application, as a process of its own, without Gradle
+----
+
+* `grails` starts `java` with a main class of Grails that finds the tool by its name, calls `handle()`, and ends with 0 for `true` and with 1 for `false` or an exception. The output of the process is the output of the tool; it reads what is typed unless `--non-interactive` is given.
+* `applicationContext` does not exist, nothing is injected, and the configuration of the application is not loaded. The tool gets the command line, the directories of the project and, with `ToolSupport`, the helpers for templates, files and models.
+* *The class path has the classes of `src/standalone`, what `grailsCliStandalone` holds, and the tool API* (`grails-core-cli`, with what it needs: `grails-core`, `grails-bootstrap`, Spring Framework and Groovy). It has nothing of `src/main`, of the dependencies of the application or of `grailsCli`. A class of the application does not resolve when the tool is compiled, so a tool that needs one is a tool of `src/cli`.
+* *It runs while the project does not compile.* A tool that generates code has to: `grails generate-all org.bookstore.Book` reads the source of the domain class and writes the controller, the views and the specs in a project that does not compile at the moment.
+* *What the project is* is `executionContext.project`, read from the record the `grails` command line keeps of the project (`.grails`, see xref:commandLine#creatingProject[Creating a Grails Project]): `recorded` is whether the project has a record, `applicationType` is `web`, `rest-api`, `plugin`, `web-plugin` or `rest-api-plugin`, and `features` the names of the features of the project, those it has by default among them. A project that the command line neither generated nor migrated has no record: `recorded` is `false`, `applicationType` is `null` and `features` is empty. A tool reads this and not the record itself, and gets the same answer however it is started. The tools of the Scaffolding plugin decide from it whether a project gets GSP or JSON views.
+* A standalone tool has no environment of its own. `grails.env` is `development` in its process; `grails run-tool -Dgrails.env=production NAME` runs it with the build and that system property. Neither loads the configuration of an environment.
+* The Java that is started is the one `JAVA_HOME` names, without `JAVA_HOME` the one that runs `grails`, and without either `java` on the `PATH`. A Java that is older than the one the classes of the tools are compiled for is not started, and the command says which version is needed.
+
+*Nothing is run that is older than what it is made from.* The class path is the one the last build of the project wrote down (see <<standaloneToolsRecord,The Class Path of Standalone Tools>>). When a build file, a source of `src/standalone` or an entry of that class path has changed since, `grails` runs the build once, after one line that says why, and then starts the tool; the build compiles `src/standalone` and nothing else of the project. A change to the application or to `src/cli` does not make the build run:
+
+// TOOLS-VERIFY: the line grails says before it runs grailsStandaloneTools (P4), and that the refresh compiles src/standalone only (P2).
+[source,console]
+----
+$ grails create-report Sales
+| Building the project before create-report is run without Gradle, with the Gradle task grailsStandaloneTools: src/standalone/groovy was changed after .grails/cache/standalone-tools.json was written
+----
+
+`grails run-tool create-report Sales` and `./gradlew runTool --arg=create-report --arg=Sales` run the same tool with the build, without the application, for a build script or a continuous integration job that calls the task. `run-tool` is also the way to run it when `grails` will not start it itself.
+
+The tools of the Scaffolding plugin (`generate-all`, `generate-controller`, `generate-views` and the others) and the Spring Security tools other than `s2-quickstart` (`s2-create-persistent-token`, `s2ui-override`, `init-oauth2` and the others) are standalone tools.
+
+[[runningATool]]
+=== Running a Tool
+
+A tool is run by its name with the `grails` command, in the directory of the project or below it:
+
+[source,console]
+----
+$ grails data-import orders.csv
+$ grails run-tool data-import orders.csv
+$ grails run-tool -Dgrails.env=production data-import orders.csv
+$ ./gradlew runTool --arg=data-import --arg=orders.csv
+----
+
+The build lists the tools of the application and its plugins whenever it compiles the project, and `grails` has the build list them when a name it does not know yet is typed, so a new tool is run by its name at once (see "Tools of the Application and its Plugins" in xref:commandLine[The Command Line]). `grails run-tool` runs the same tool, takes an environment in front of its name, and does not depend on the list. `./gradlew runTool` is what both run for a tool of `src/cli`, and runs a standalone tool with the build. A tool of a plugin also has a Gradle task of its own, named by its name in camel case, such as `./gradlew dbmUpdate` for `dbm-update`.
+
+`run-command` and the Gradle task `runCommand` of Grails 8 still run every tool, each after a warning that it is deprecated; `run-command` is another name of `run-tool`.
+
+If the Grails application is a subproject of a larger Gradle build (here one named `server`), its tools are run from the Gradle wrapper of the build with the path of the project:
+
+[source,console]
+----
+./gradlew server:runTool --arg=data-import --arg=orders.csv
+----
+
+*Arguments with spaces, quotes and other special characters.* The tool tasks, `runTool` and the task of each tool, take the arguments one at a time, each exactly as it is given:
+
+[source,shell]
+----
+# three arguments: the tool, a name with a space in it, and an option
+./gradlew runTool --arg=greet --arg="Alice Smith" --arg=--loud
+
+# the task of a tool takes the arguments of the tool only
+./gradlew dbmGenerateChangelog --arg="my changelog.groovy"
+----
+
+Each `--arg` is one argument, in the order given; for `runTool` the first is the name of the tool. Nothing is split, trimmed or unquoted after your shell has read the line, so a value can contain spaces, quotes, `$`, `*`, backslashes, a leading dash or a line break. Gradle does not accept an empty value (`--arg=`).
+
+A program that runs a tool, or a command line that cannot carry an argument (an empty one, or one your shell cannot quote), gives the arguments in a file instead:
+
+[source,shell]
+----
+./gradlew runTool --args-file=build/tmp/greet-args.json
+----
+
+The file is UTF-8 and holds a JSON array of strings, one for each argument, for example `["greet", "Alice \"Al\" Smith", ""]`. A relative path is in the project directory. The file can be at most 1 MiB and hold at most 4096 arguments, and an argument cannot contain the character U+0000. The file is read when the task runs and is not deleted. What it holds is not put on a command line: the JVM that runs the tool is given the path of the file and reads it, so the arguments appear in no process listing and in no log of the build. Because the arguments are not on the Gradle command line either, a build with the configuration cache reuses its configuration when only the arguments change, which is not so for `--arg` and `-Pargs`.
+
+`-Pargs` is the third form, one text: `./gradlew runTool -Pargs="greet 'Alice Smith'"` is the tool `greet` with the one argument `Alice Smith`. Gradle hands the text to the build, which splits it at spaces and reads single and double quotes the way a shell does, so what `-Pargs` holds is quoted twice, once for your shell and once for this split, and a program that puts the text together from arguments has to quote each of them for the split. Use one of the three forms in a build: `--arg`, `--args-file` or `-Pargs`. The task fails when it is given arguments in more than one of them.
+
+In the tool, `executionContext.commandLine.rawArguments` is the arguments as they were given, the name of the tool first. `args` and the options of `executionContext.commandLine` are what Grails reads from them: an argument that starts with a dash is an option, which takes the argument after it as its value unless it has one of its own (`--name=value`), surrounding white space and surrounding double quotes are removed, and an empty argument is left out.
+
+[[toolsOfAPlugin]]
+=== Tools of a Plugin
+
+A plugin has its tools in the same two folders as an application, and they reach the applications that use the plugin without being in the jar of the plugin. Every Grails plugin project publishes them beside the plugin, in up to two _companion_ artifacts, one for each folder:
+
+[cols="2,3,3,3"]
+|===
+| Artifact | Has | Depends on | Published when
+
+| `<artifact>-cli`
+| The tools of `src/cli` (and of the deprecated `grails-app/commands`), and the scripts of `src/main/scripts`
+| The plugin, the tool API (`org.apache.grails:grails-core-cli`), and `<artifact>-cli-standalone` when the plugin has that one, since `src/cli` can use its classes
+| The plugin has a source under `src/cli` or `grails-app/commands`, or a script under `src/main/scripts`
+
+| `<artifact>-cli-standalone`
+| The tools of `src/standalone`, with their resources
+| The tool API and the libraries the plugin declares for `src/standalone`. *Never the plugin.*
+| The plugin has a source under `src/standalone`
+|===
+
+A plugin with one of the folders publishes one companion, a plugin with neither publishes none, and an application publishes none. No line of the build of the plugin is needed for it:
+
+. *Create the plugin*, if there is none yet:
++
+[source,shell]
+----
+grails create-plugin my-plugin
+----
+
+. *Write the tools* into `src/cli/groovy` and `src/standalone/groovy` of the plugin, with `grails create-tool` as in an application. Give them a package that is the plugin's own:
++
+[source,groovy]
+.src/cli/groovy/com/example/myplugin/cli/AuditReportTool.groovy
+----
+package com.example.myplugin.cli
+
+import org.apache.grails.core.cli.ApplicationTool
+import org.apache.grails.core.cli.ToolSupport
+
+class AuditReportTool implements ApplicationTool, ToolSupport {
+
+    String description = 'Prints an audit report'
+
+    boolean handle() {
+        println 'Audit report...'
+        return true
+    }
+}
+----
++
+Compiling a folder registers its tools in `META-INF/grails-cli.factories` of its output, so no registration file is written by hand. Templates a standalone tool renders go into `src/standalone/resources/META-INF/templates`, so that they are in the `-cli-standalone` jar.
+
+. *Declare the libraries of the tools*, if any: `cliImplementation` for the tools of `src/cli`, `standaloneImplementation` for those of `src/standalone` (and so also for those of `src/cli`). The plugin itself and its runtime dependencies are on the class path of `src/cli` already, and never on that of `src/standalone`.
++
+[source,groovy]
+.build.gradle
+----
+dependencies {
+    cliImplementation 'org.example:report-writer:1.2.0'
+    standaloneImplementation 'org.example:templates:3.0.0'
+}
+----
+
+. *Publish.* With the Grails publish plugin (`org.apache.grails.gradle.grails-publish`), publishing the plugin publishes each companion beside it, as its own coordinate with its own POM, sources and javadoc:
++
+[source,shell]
+----
+./gradlew publishToMavenLocal
+# com.example:my-plugin                  (the plugin: no tool)
+# com.example:my-plugin-cli              (the tools of src/cli)
+# com.example:my-plugin-cli-standalone   (the tools of src/standalone)
+----
++
+Without the Grails publish plugin, each companion is still built and advertised, and its publication is configured by hand from the software components `cli` and `cliStandalone`. A release process that lists the artifacts of a plugin by hand has to list a companion once the plugin has its first tool in that folder.
+
+. *Use the plugin in an application.* The application declares the plugin and nothing else. The jar of the plugin names its companions in its manifest (`Grails-Cli-Artifact` and `Grails-Cli-Standalone-Artifact`), and the Grails Gradle plugin adds `-cli` to the scope `grailsCli` of the application and `-cli-standalone` to `grailsCliStandalone`, and registers the Gradle task of each tool:
++
+[source,groovy]
+.build.gradle
+----
+dependencies {
+    implementation 'com.example:my-plugin:1.0.0'   // my-plugin-cli and my-plugin-cli-standalone follow
+}
+----
+
+. *Run the tools* by their names: `grails audit-report`, or `./gradlew runTool --arg=audit-report`, or the task of the tool, `./gradlew auditReport`.
+
+Every project that applies the Grails plugin Gradle plugin (`org.apache.grails.gradle.grails-plugin`) is built this way. The Gradle plugin that produces the companions, `org.apache.grails.gradle.grails-plugin-cli`, is applied with it, so a build script of Grails 8 that applies it by hand still works, and the line can be removed. A project that is no Grails plugin, such as a library of tools, applies `org.apache.grails.gradle.grails-plugin-cli` itself. Whether a folder has a source is decided when the build is configured, so the first tool in a folder changes the configuration of the build, as a new source set would. The `cliArtifact` block of the build changes what the companions are called:
+
+[source,groovy]
+.build.gradle
+----
+cliArtifact {
+    // recommended: a unique, stable JPMS module name matching the package of the tools
+    automaticModuleName = 'com.example.myplugin.cli'
+
+    // optional: the coordinates of the companions (by default '<artifact>-cli' and '<artifact>-cli-standalone')
+    // artifactId = 'my-plugin-tools'
+    // standaloneArtifactId = 'my-plugin-tools-standalone'
+}
+----
+
+*Taking the tools of a plugin without the plugin.* An application can declare a companion instead of the plugin. The standalone tools of a plugin need nothing of the plugin, so an application that only wants those declares `-cli-standalone`, and then nothing of the plugin is on any of its class paths: not on the class path of the application, of its tests, or of its tools. This is what a REST API application with the `scaffolding` feature declares, to generate controllers and views without having the Scaffolding plugin, GSP or the Fields plugin:
+
+[source,groovy]
+.build.gradle
+----
+dependencies {
+    grailsCliStandalone 'org.apache.grails:grails-scaffolding-cli-standalone'
+}
+----
+
+A `-cli` companion depends on its plugin, so `grailsCli 'com.example:my-plugin-cli:1.0.0'` brings the plugin with it, on the class path of the tools only. An application that turns the discovery of companions off (`grails { cliAutoProvision = false }`) declares each companion it wants in one of the two scopes.
+
+*Depending on another module's tools.* Within a multi-project build, the tools of one project may build on the companion of another. Declare the dependency on the owning project with a _capability_ naming the companion:
+
+[source,groovy]
+----
+dependencies {
+    cliApi(project(':my-other-plugin')) {
+        capabilities {
+            requireCapability('com.example:my-other-plugin-cli')
+        }
+    }
+}
+----
+
+The companion is published with such a dependency as a plain dependency on the companion coordinate (`com.example:my-other-plugin-cli`, or `-cli-standalone`), in both the POM and the module metadata, so external consumers resolve the published artifacts directly. This works with a customized `cliArtifact { artifactId = ... }` as well: the customized coordinate is carried as a capability of the companion, and the published metadata records the customized plain coordinate.
+
+A library that consumes a companion in its *main* configurations (`api`/`implementation`), rather than from a folder of tools, applies the `org.apache.grails.gradle.grails-cli-library` plugin to publish such dependencies the same way:
+
+[source,groovy]
+----
+plugins {
+    id 'java-library'
+    id 'org.apache.grails.gradle.grails-cli-library'
+}
+
+dependencies {
+    api(project(':my-other-plugin')) {
+        capabilities {
+            requireCapability('com.example:my-other-plugin-cli')
+        }
+    }
+}
+----
+
+WARNING: Capability requests are a build-internal addressing scheme. Never declare `requireCapability` on an *external* (binary) Grails dependency: published metadata cannot satisfy it and resolution fails with a capability conflict. External consumers always depend on the plain coordinate, as `grailsCli 'com.example:my-plugin-cli:1.0.0'` or `grailsCliStandalone 'com.example:my-plugin-cli-standalone:1.0.0'`.
+
+A companion of Grails 8, or of an earlier build of Grails 9, has no `-cli-standalone` beside it: its tools are all run by the build, which is correct, and slower for a tool that only works on files.
+
+[[toolsOfGrails8]]
+=== Tools Written for Grails 8
+
+Grails 8 called tools _commands_, wrote them into `grails-app/commands` and had them implement `ApplicationCommand` or `GrailsApplicationCommand`. Both still work, and both are deprecated:
+
+* *`grails-app/commands` is compiled with `src/cli`*, and its classes are run as before. They are no longer packaged with the application or in the jar of a plugin: a plugin publishes them in its `-cli` companion. The build warns once each time the folder is compiled, and `grails NAME` warns each time such a tool is run.
+* *`org.apache.grails.core.cli.ApplicationCommand` and `GrailsApplicationCommand`* are names of `ApplicationTool` and of `ApplicationTool` with `ToolSupport`: a class that implements one is such a tool, and runs as before. The compiler warns, and so does `grails NAME`.
+* *Nothing new is written there.* `create-tool` never writes into `grails-app/commands` or a class that implements a deprecated type, and `create-command` of Grails 8 is no command any more.
+
+// TOOLS-VERIFY: the four warning texts of the legacy folder and the legacy types (TOOLS-DESIGN section 7; Gradle plugin P2, compiler P1, command line P4).
+----
+grails-app/commands is deprecated: the classes in it are compiled and run as before, and are no longer packaged with the application. Move them to src/cli/groovy, as they are; a new tool is written there by: grails create-tool
+DataImportCommand implements ApplicationCommand, which is deprecated: implement ApplicationTool (GrailsApplicationCommand: ApplicationTool, ToolSupport). Nothing else changes.
+| Warning data-import is in grails-app/commands, which is deprecated: move it to src/cli/groovy
+| Warning data-import implements ApplicationCommand, which is deprecated: implement ApplicationTool
+----
+
+Nothing has to change to upgrade. When a class is touched anyway, move it to `src/cli/groovy`, into the directory of its package, as it is, and replace `implements GrailsApplicationCommand` with `implements ApplicationTool, ToolSupport` (or `implements ApplicationCommand` with `implements ApplicationTool`). Its name stays the same, since the name of `DataImportCommand` is `data-import` either way. A tool that only reads and writes files of the project can move to `src/standalone/groovy` instead and implement `StandaloneTool`, to run without Gradle; note 46 of xref:upgrading#upgrading90x[Upgrading from Grails 8 to Grails 9] says which tools can, and what such a tool loses. `grails project health` lists the files in `grails-app/commands` and the tools of a deprecated type, as advice.
+
+The tools of Grails 7 implemented `grails.dev.commands.ApplicationCommand`. Grails 9 does not have those types: a source that imports `grails.dev.commands.*` does not compile, and is changed to import `org.apache.grails.core.cli.ApplicationTool` and `ToolSupport` (or, with no other change, `org.apache.grails.core.cli.GrailsApplicationCommand`, whose members are the same). `ExecutionContext`, `TemplateRenderer` and `FileSystemInteraction` have the same names in `org.apache.grails.core.cli`. A plugin jar compiled for Grails 7 that registers commands has none of them listed or run: the build says so with a warning, and a version of the plugin for Grails 9 is needed.
+
+[[toolCatalog]]
+=== Listing Tools Without Running Them
+
+When a tool is compiled, the compiler writes a descriptor of it beside its registration: `META-INF/grails-tools/<class name>.json`, with the name and the description of the tool and how it is run. The build reads it to list the tool without loading its class or starting the application. The descriptor holds what the source says as a constant:
+
+* The name is the one the class name gives, or the string that `getName()` returns or that the property `name` is set to: where the property is declared, or when the tool is made, by statements such as `name = 'audit'` or `setName('audit')` in an initializer block, in every constructor, or in a method of the tool or of a class it extends that one of them calls. The last of those statements to run decides.
+* The description is the string that `getDescription()` returns or that the property `description` is set to, in the same ways. Without one, the description is the name.
+* Of a tool that extends another class, what the tool declares or sets itself comes before what it inherits, as it does when the tool runs: a tool that sets `name` in its constructor, or in a method its constructor calls, is described by that name, whatever name the class it extends gives.
+* A name that is worked out, that is set only under a condition, to a string that is given to the method that sets it, or to a different string by each constructor, cannot be described. Neither can a name that is set, or may be set after the statements above, by code the compiler does not read: a closure, a method of another class or of the Groovy runtime, reflection, code the tool is handed to, a trait other than those of `org.apache.grails.core.cli` that gives its fields values, or a class compiled in another project or jar. Such a tool has no descriptor and is listed by the name its class name gives, which runs it too. A description given in such a way is left out of the descriptor.
+* A property that is declared `final` is the string it is declared with. Groovy lets a constructor of the class set such a property again; when one does, the property is read as any other is, from what the constructors leave it as.
+* A method that is given the tool may stop holding it on one way through its code (`tool = null` in one branch of an `if`). Each way is read with what holds the tool on that way, and where the ways meet again and it is no longer certain what holds the tool, a name that is set from there on is not described.
+* The name a tool is listed by is the name that runs it: the name of its descriptor, or the name its class name gives when it has none. Another tool that gives itself that name when it is made, in a way the compiler does not read, does not take it over: of an `AlphaTool` and a `BetaTool` that have no descriptors, `beta` runs `BetaTool`, whatever `AlphaTool.getName()` returns. A name that no tool is listed by, or that more than one is, which is then not listed, runs the tool that has that name when it is made.
+* `target` is `application` for a tool of `src/cli` and `standalone` for one of `src/standalone`, and `startsApplication` says, for the first, whether the application is started around it. `deprecated` lists `type` for a class that implements `ApplicationCommand` or `GrailsApplicationCommand` and `folder` for a source in `grails-app/commands`.
+
+Write the name in lower case letters and digits, in words joined by single hyphens, with at most 64 characters, and the description on one line of at most 512 characters; a tool whose descriptor has anything else is left out of the list, with the reason. A tool whose name or description is not written that way gets a descriptor without the description, or none when it is the name. A tool written in Java, or registered by hand in `META-INF/grails-cli.factories`, has no generated descriptor. Add the file to the resources next to the registration:
+
+[source,json]
+.src/cli/resources/META-INF/grails-tools/com.example.AuditReportTool.json
+----
+{"format": 1, "class": "com.example.AuditReportTool", "name": "audit-report", "description": "Writes the audit report", "target": "application", "startsApplication": true}
+----
+
+A descriptor of a standalone tool, in `src/standalone/resources/META-INF/grails-tools`, has the `target` `standalone` and no `startsApplication`. A descriptor whose `target` does not fit the folder it is in is not used, and the list says why in the words of the compile errors above.
+
+The `grailsToolCatalog` task of an application or plugin project writes the list of the tools the project has to `.grails/cache/tool-catalog.json` in the directory of the project. That is where the `grails` command reads it, and it is the same place whatever the build directory of the project is, so the task writes there also in a build that moves its build directory. Next to the file the task writes a `.gitignore` that keeps the directory out of a commit. Every build that compiles the project runs the task, after `classes` and after the compilation of `src/cli` and `src/standalone`, and it is up to date when nothing it reads has changed; it can also be run by itself:
+
+[source,shell]
+----
+./gradlew grailsToolCatalog
+----
+
+It lists the tools of the project itself, of the companions of its plugins, and of plugin jars that register tools. The file is one JSON document:
+
+// TOOLS-VERIFY: the member order and values of a catalog entry, with the catalog builder as P2 leaves it.
+[source,json]
+----
+{"format": 1, "complete": true, "diagnostics": [],
+ "tools": [
+   {"name": "audit-report", "aliases": [], "description": "Writes the audit report",
+    "origin": "com.example:my-plugin-cli:1.0.0", "target": "application", "startsApplication": true, "registration": "descriptor"},
+   {"name": "create-report", "aliases": [], "description": "Creates a report class from a template",
+    "origin": "application", "target": "standalone", "startsApplication": false, "registration": "descriptor"}
+ ]}
+----
+
+* `origin` is the coordinates of the artifact the tool comes from, or `application` for a tool of the project itself.
+* `target` and `startsApplication` say how the tool is run: `application` is run by the build, with the application started around it when `startsApplication` is `true` and without it when it is `false`, and `standalone` is run by the `grails` command line as a process of its own, without Gradle. A tool without a descriptor is listed as `application`, whatever its class says; the build runs it as its class says, and `grails` runs it through the build.
+* `deprecated`, where it is there, says what of the tool is deprecated: `type`, `folder` or both, as in its descriptor.
+* `registration` says how much is known: `descriptor` for a tool with a descriptor; `factories` for a tool that is registered without one, whose name is the one its class name gives and whose description is empty. A tool listed by the name its class name gives is run by that name also when it has another name of its own; `runTool` looks for a tool by the name it is listed by first, and by the name a tool has of its own when no tool, or more than one, is listed by that name.
+* The file lists at most 512 tools in at most 512 KiB, which is what the `grails` command reads: when a project has more, the first by name are listed and a line of `diagnostics` says how many are not.
+* `complete` is `false` when something could not be listed, and `diagnostics` then says what and why, one line each: a descriptor that is not as described above or does not fit its folder, a name that two tools have (neither is listed, because the task does not choose between them), a descriptor in a jar for a class of the application (the tool keeps what the application says of it, and the other descriptor is not used), a plugin jar with commands of Grails 7, or a class path the tools run with that does not resolve completely, with what Gradle could not resolve in it. The task prints the same lines as warnings.
+* The task resolves those class paths leniently, so that a build that compiles the project, which does not need them, does not fail because one of them does not resolve: the file then lists the tools of what resolves. Running a tool with such a class path fails as running the application does, until the dependencies are corrected.
+
+The names, descriptions and origins in the file come from the project's dependencies. They are checked to be one line without control characters, and nothing more: a program that shows them must show them as plain text and give no meaning to anything in them.
+
+Every tool in the file is run with `./gradlew runTool --arg=<name>` followed by its arguments. The task loads no class of the project or of its dependencies, and the file has neither a time nor a path of the machine in it, so the same tools give the same file.
+
+The `grails` command reads this file: in the project, every tool in it is run by its name, listed by `help` with its origin, and run as its `target` says, with its arguments as they were typed. Every build that compiles the project keeps the file current, and where it is missing or out of date, a name that is no command has the `grails` command run the task once before it refuses the name. A tool whose name is a command of the command line itself, another name of one or the short form of one, such as `install-templates`, is not run by that name; `help` says so, and the tool is run with `grails run-tool install-templates`.
+
+[[standaloneToolsRecord]]
+=== The Class Path of Standalone Tools
+
+Beside the catalog the build writes `.grails/cache/standalone-tools.json`, with the Gradle task `grailsStandaloneTools`, which runs after `grailsToolCatalog` in every build that compiles the project. It is what lets the `grails` command line start a standalone tool without asking Gradle for a class path:
+
+// TOOLS-VERIFY: the content of the record, in particular which directories `sources` lists (P2).
+[source,json]
+----
+{"format": 1,
+ "tools": ["create-report", "generate-all"],
+ "classpath": ["/work/app/build/classes/groovy/standalone", "/work/app/build/resources/standalone",
+               "/home/me/.gradle/caches/modules-2/files-2.1/.../grails-scaffolding-cli-standalone-9.0.0.jar", "..."],
+ "sources": ["/work/app/src/standalone/groovy", "/work/app/src/standalone/resources"],
+ "java": 21}
+----
+
+* `tools` has the tools of the catalog whose `target` is `standalone`, and `classpath` the one class path they all run with: the compiled classes and the resources of `src/standalone`, then what `grailsCliStandalone` resolves to, which has the `-cli-standalone` companions of the plugins and the tool API. Only what exists is written down: a directory of classes that no compiler wrote to, as `build/classes/java/standalone` of a project without Java tools, is left out. A project without a standalone tool has a file without a path.
+* The task does not depend on the compilation of the application: it compiles `src/standalone` and resolves its class path, so it succeeds while `src/main` does not compile.
+* The paths are those of this machine, which is why they are in a file of their own: the catalog has none and is the same for the same tools everywhere, so a build cache can keep it; this file is never taken from a build cache. `.grails/cache` holds a `.gitignore` that keeps both out of a commit.
+* `sources` are the directories of the sources of `src/standalone`, and `java` is the Java version its classes are compiled for. `grails` takes the file for out of date when it is missing, when it is older than a build file (`build.gradle`, `settings.gradle`, `gradle.properties` and their Kotlin forms), when a directory or a file in one of `sources` was changed after it was written, when an entry of `classpath` is no longer there, or when it does not list the tool. It then runs `grailsStandaloneTools` and reads the file again. A change to the application or to `src/cli` does not make it out of date.
+* The file has at most 4096 class path entries of at most 1024 characters each, in at most 2 MiB. A class path that is longer, or has a path with a line break or with the character that separates the entries of a class path, is not written down; neither is one that has the output of another project of the build, which only the build keeps current, or one that does not resolve completely. The file then has `throughGradle` with the reason and no path, and `grails <name>` runs the tool with the Gradle task `runTool`, after a line that says why. A long class path is given to `java` in a file (`@file`), so its length is not held to what a command line carries.
+* Starting Java on what the file names runs it, so `grails` holds the file to what it holds a Gradle wrapper above the project to. The catalog, this file, `.grails` and `.grails/cache` are files and directories, no links, owned by you, and not writable by everybody. Every entry of the class path is a whole path to a file or a directory in the build of the project, in the Gradle user home (`GRADLE_USER_HOME`, or `~/.gradle`) or in the local Maven repository (`~/.m2/repository`), and it and every directory from it up to that place are owned by you or by root and are not writable by everybody. Otherwise nothing is started, Gradle is not run either, the tool ends with exit code 1, and one line says what is wrong and that `grails run-tool <name>` runs the tool with the build. A directory named in the environment variable `GRAILS_SAFE_DIRECTORY` is used whoever owns it, with what is in it, as it is for a project: name the directory of a repository that is somewhere else, such as a `maven { url = file(...) }` repository outside the project or a local Maven repository that `maven.repo.local` moves, there. The line that refuses an entry in such a place names the directory to put into the variable: the one the entries outside the three places have in common.
+* A class path is taken from the file only for a tool the catalog lists with the `target` `standalone`.
+
+[[runAppOptions]]
+=== Adding Options to `run-app` from a Plugin
+
+A plugin, or an application, can give `grails run-app` an option of its own that sets a property of the application `run-app` starts. The option is declared, not programmed: no code of the plugin runs in the `grails` command. The command line artifact of Grails Data does this for `grails run-app --query-tail`, which starts the application with `grails.gorm.queryTail.enabled=true`.
+
+The declaration is one JSON resource, `META-INF/grails-command-options.json`. A plugin that has tools puts it beside them, in `src/cli/resources/META-INF/`, so that it is in the `-cli` companion; a plugin without tools puts it in `src/main/resources/META-INF/`; an application puts it in `src/main/resources/META-INF/` or `grails-app/conf/META-INF/`.
+
+[source,json]
+.src/cli/resources/META-INF/grails-command-options.json
+----
+{
+  "format": 1,
+  "options": [
+    {
+      "command": "run-app",
+      "name": "audit-trail",
+      "description": "Log every change the application makes to a domain object.",
+      "type": "boolean",
+      "property": "myplugin.audit.enabled",
+      "value": "true"
+    },
+    {
+      "command": "run-app",
+      "name": "tenant",
+      "description": "The tenant the application runs as.",
+      "type": "string",
+      "property": "myplugin.tenant"
+    }
+  ]
+}
+----
+
+[cols="1,4"]
+|===
+|Member |Meaning
+
+|`format`
+|The number `1`.
+
+|`command`
+|The command the option is one of. `run-app` is the only command that takes declared options in this version; the member is there so that another command can take them later, and an option for any other command is not used.
+
+|`name`
+|The long name of the option without its two hyphens: `audit-trail` is typed `--audit-trail`. Lower-case letters and digits in words joined by single hyphens, starting with a letter, 2 to 32 characters.
+
+|`description`
+|One line for the help of `run-app`, at most 200 characters, without `$`, `%` and `@`. The help shows it with where the option comes from and the property it sets.
+
+|`type`
+|`boolean` for a switch, which is also what an option without the member is, or `string` for an option that takes a value: `--tenant acme` or `--tenant=acme`.
+
+|`property`
+|The property of the application the option sets, as it is written in `application.yml`: two or more parts of letters, digits, hyphens and underscores joined by dots, at most 128 characters. See below for the properties no option can set.
+
+|`value`
+|What a switch sets the property to: letters, digits, dots, hyphens and underscores, at most 64 characters. `true` without the member. An option of the type `string` has no such member: its value is the one typed.
+|===
+
+The build of the application lists the declarations it finds on the class path of the application and of its tools, with the tools themselves: the Gradle task `grailsToolCatalog` writes them into `.grails/cache/tool-catalog.json` as the member `commandOptions`, each with the `origin` it comes from. Every build that compiles the project runs the task. The `grails` command reads the options there and nowhere else, so an option is one of `run-app` once the project has been built with the plugin; before that, the option is refused as one `run-app` does not have, with a line that says how the options are listed.
+
+[source,json]
+----
+"commandOptions": [
+  {"command": "run-app", "name": "audit-trail", "description": "Log every change the application makes to a domain object.",
+   "type": "boolean", "property": "myplugin.audit.enabled", "value": "true", "origin": "com.example:my-plugin-cli:1.0.0"}
+]
+----
+
+An option that is given becomes one system property of the build, `-Dgrails.myplugin.audit.enabled=true`, which the Grails Gradle plugin hands to the application without the `grails.` in front, as it does with `--port` and with any `-Dgrails.NAME=VALUE` of `run-app`. The application reads `myplugin.audit.enabled` as it reads any property, and a value in `application.yml` gives way to it. With Gradle alone the same is `./gradlew bootRun -Dgrails.myplugin.audit.enabled=true`. The value of a `string` option is given to Gradle as the one argument it is, whatever it contains, and never to a shell. A `-Dgrails.myplugin.audit.enabled=...` on the same command line is left as it was typed, and the option adds nothing to it.
+
+A declaration comes from a jar and ends on the command line of a JVM, so it is held to the form above, and what is not as it has to be is not used:
+
+* An option whose name, description, type, property or value is not as the table says is left out alone. The task says so in the `diagnostics` of the file and as a warning of the build, by the place of the option in its resource and without repeating anything of it, and `grails help` shows the line.
+* No option sets a property of the JVM or of the build, or one that decides which environment, configuration, profiles or classes the application starts with. Refused are the properties `grails.env`, `base.dir`, `server.port`, `server.address` and `logging.config`, and every property that starts with `java.`, `javax.`, `jdk.`, `sun.`, `com.sun.`, `user.`, `os.`, `file.`, `line.`, `path.`, `http.`, `https.`, `ftp.`, `socks.`, `org.gradle.`, `groovy.`, `loader.`, `spring.config.`, `spring.profiles.`, `spring.main.`, `spring.application.`, `spring.devtools.`, `spring.cloud.`, `server.ssl.`, `grails.config.` or `grails.project.`, whatever its case and with or without the hyphens and underscores of its words (`spring.config.additional-location` is `spring.config.additionalLocation`).
+* An option `run-app` has itself stays its own: a declared `port`, `detach` or `help` is not added, and `grails help`, `grails help run-app` and `help --json` say so.
+* A name two plugins declare differently is the option of neither, and the diagnostics name both. A plugin and its companion that declare the same thing declare it once. What the application declares holds over what a plugin declares for the same name, so an application can settle such a clash by declaring the option itself.
+* A resource has at most 32 KiB and 16 options, and a project at most 32 declared options, the first by name.
+
+The plugin's code is on the class path of the application and runs in it with every right the application has, with or without an option; the rules keep a declaration from reaching further than that, into the command line of Gradle or the JVM of the build, and from changing what the application is behind the name of a harmless switch. The help of `run-app` shows each declared option with the artifact that declares it and the property it sets.
+
+`test-app`, `console`, `run-tool` and the other commands take no declared options.

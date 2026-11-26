@@ -29,7 +29,7 @@ Grails adopts the "convention over configuration" approach to configure itself. 
 * `taglib` - link:theWebLayer.html#taglibs[Tag Libraries].
 * `utils` - Houses Grails-specific utilities.
 * `views` - link:theWebLayer.html#gsp[Groovy Server Pages (GSP)] or link:theWebLayer.html#gson[JSON Views] - Responsible for the "V" in MVC.
-* `commands` - <<creatingCustomCommands,Custom Grails Commands>> - Create your own Grails CLI commands.
+* `commands` - <<creatingTools,Tools of the Application>> - Create your own Grails CLI commands.
 
 2.  `src/main/groovy` - Supporting Sources
 

@@ -226,7 +226,7 @@ The scaffolding plugin, which a web application has by default, brings link:{com
 
 A project can also have _scripts_ in `src/main/scripts`. A script is run by the build without the application and cannot use the classes of the application. Scripts are deprecated: the scripts a project has still run, no command creates a new one, and a new command is a class that `create-command` writes.
 
-See "Commands of the Application and its Plugins" in xref:commandLine[the introduction of this chapter], xref:commandLine#creatingCustomCommands[Creating Custom Commands] and xref:commandLine#creatingCustomScripts[Creating Custom Scripts].
+See "Commands of the Application and its Plugins" in xref:commandLine[the introduction of this chapter], xref:commandLine#creatingTools[Creating Tools] and xref:commandLine#creatingCustomScripts[Creating Custom Scripts].
 
 === Finding plugins
 
@@ -334,7 +334,7 @@ See "The state of a project" in xref:commandLine#creatingProject[Creating a Grai
 
 A plugin can give its users two things on the command line.
 
-*Commands.* A plugin has commands like an application has. A plugin that applies the `org.apache.grails.gradle.grails-plugin-cli` Gradle plugin keeps them in `src/cli/groovy` and publishes them in a companion artifact, so that they are not on the class path of the running application. Users of the plugin get them as described above. See xref:commandLine#creatingCustomCommands[Creating Custom Commands] and link:plugins.html#providingBasicArtefacts[Providing Basic Artefacts].
+*Commands.* A plugin has commands like an application has. A plugin that applies the `org.apache.grails.gradle.grails-plugin-cli` Gradle plugin keeps them in `src/cli/groovy` and publishes them in a companion artifact, so that they are not on the class path of the running application. Users of the plugin get them as described above. See xref:commandLine#creatingTools[Creating Tools] and link:plugins.html#providingBasicArtefacts[Providing Basic Artefacts].
 
 *A feature.* A _feature pack_ describes what an application needs in order to use the plugin: the dependency, configuration, files rendered from templates. It is a `feature.yml` and a `templates` directory in `src/main/forge` of the plugin, and it is published inside the jar of the plugin. Most of the features of Grails itself are written in the same format. A user selects the feature of a published plugin by the coordinates of the plugin when creating an application:
 

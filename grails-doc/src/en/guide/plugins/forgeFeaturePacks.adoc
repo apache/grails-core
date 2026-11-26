@@ -1227,7 +1227,7 @@ Many features of Grails are written as feature packs inside the command line, in
 |The application is generated again as it was, which takes the very pack.
 |===
 
-Neither kind of pack can make an entry of `gradle.properties` conditional or add to `settings.gradle`: a build property is set for every application the feature is in, and the settings of a build are written by the feature `gradle-settings-file`. The commands a pack gives the command line are those of `artefacts`, which write a class from a template in which names are replaced: a pack brings no command that runs code of its own. Such a command is a class of the plugin, see xref:commandLine#creatingCustomCommands[Creating Custom Commands].
+Neither kind of pack can make an entry of `gradle.properties` conditional or add to `settings.gradle`: a build property is set for every application the feature is in, and the settings of a build are written by the feature `gradle-settings-file`. The commands a pack gives the command line are those of `artefacts`, which write a class from a template in which names are replaced: a pack brings no command that runs code of its own. Such a command is a class of the plugin, see xref:commandLine#creatingTools[Creating Tools].
 
 [[forgeFeaturePackSameEveryTime]]
 ==== What Is the Same Every Time

@@ -205,7 +205,7 @@ Also, the standard scaffold views expect model variables of the form `<propertyN
 
 Grails lets you generate a controller and the views used to create the above interface from the command line.
 
-NOTE: The commands of this section are commands of the scaffolding plugin. They only read and write files of the project, so `grails` starts each as a Java process of its own, without Gradle and without the application (they are standalone commands, see xref:commandLine#creatingCustomCommands[Creating Custom Commands]). `grails` has them as commands by their names; in a project the build has not compiled yet, it has the build list the commands of the application and its plugins first. `grails run-command generate-all Book` and `./gradlew runCommand -Pargs="generate-all Book"` run the same command. Each has a page in the command line reference, for example link:{commandLineRef}generate-all.html[generate-all].
+NOTE: The commands of this section are commands of the scaffolding plugin. They only read and write files of the project, so `grails` starts each as a Java process of its own, without Gradle and without the application (they are standalone commands, see xref:commandLine#creatingTools[Creating Tools]). `grails` has them as commands by their names; in a project the build has not compiled yet, it has the build list the commands of the application and its plugins first. `grails run-command generate-all Book` and `./gradlew runCommand -Pargs="generate-all Book"` run the same command. Each has a page in the command line reference, for example link:{commandLineRef}generate-all.html[generate-all].
 
 ===== Generating Controllers and Views
 

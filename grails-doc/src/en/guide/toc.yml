@@ -83,7 +83,7 @@ commandLine:
   tour: A Tour from Install to Maintaining a Project
   interactiveMode: Interactive Mode
   creatingCustomScripts: Creating Custom Scripts
-  creatingCustomCommands: Creating Custom Commands
+  creatingTools: Creating Tools
   creatingProject: Creating a Grails Project
   reusingGrailsScripts: Re-using Grails scripts
   gradleBuild:

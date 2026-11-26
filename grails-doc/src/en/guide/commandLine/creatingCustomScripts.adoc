@@ -18,7 +18,7 @@ under the License.
 ////
 
 
-WARNING: Script commands are deprecated. The scripts a project has, and the scripts of its plugins, still run, and no command creates a new one: `create-script` of earlier versions is removed. Write a new command as a class of the application with link:{commandLineRef}create-command.html[create-command] (see xref:commandLine#creatingCustomCommands[Creating Custom Commands]).
+WARNING: Script commands are deprecated. The scripts a project has, and the scripts of its plugins, still run, and no command creates a new one: `create-script` of earlier versions is removed. Write a new command as a class of the application with link:{commandLineRef}create-command.html[create-command] (see xref:commandLine#creatingTools[Creating Tools]).
 
 A script command is a Groovy script in `src/main/scripts` of the project, and is a command of the project by the name of its file: `src/main/scripts/hello-world.groovy` is the command `hello-world`.
 
@@ -189,4 +189,4 @@ before('data-import') { context ->
 dataImport('orders.csv')
 ----
 
-Script commands are kept for the applications that have them and are deprecated. A new command is written as a class in `grails-app/commands` (see xref:commandLine#creatingCustomCommands[Creating Custom Commands]), which the `grails` command lists with its description.
+Script commands are kept for the applications that have them and are deprecated. A new command is written as a class in `grails-app/commands` (see xref:commandLine#creatingTools[Creating Tools]), which the `grails` command lists with its description.

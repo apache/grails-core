@@ -107,14 +107,14 @@ dependencies {
 When the Grails publish plugin (`org.apache.grails.gradle.grails-publish`) is applied, the
 companion is published alongside the plugin as `org.example:my-plugin-cli` with its own pom,
 sources, and javadoc. See the
-xref:commandLine#creatingCustomCommands[Creating Custom Commands] section for the complete
+xref:commandLine#creatingTools[Creating Tools] section for the complete
 workflow.
 
 A plugin can also give `grails run-app` an option that sets a property of the application, as
 `--query-tail` of Grails Data does, by declaring it in `META-INF/grails-command-options.json` of
 the companion (`src/cli/resources/META-INF/`). No code of the plugin runs for it. See "Adding
 Options to `run-app` from a Plugin" in
-xref:commandLine#creatingCustomCommands[Creating Custom Commands].
+xref:commandLine#creatingTools[Creating Tools].
 
 You can also inform Grails to skip the execution of `Bootstrap.groovy` files with a simple property in your command:
 

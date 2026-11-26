@@ -51,7 +51,7 @@ Until Grails 8 a project was created from a _profile_: an artifact with a skelet
 |A preset, which names the type of application, gives the options their defaults, asks for features and adds dependencies, configuration and files: see xref:applicationTypes#presets[Making Applications from a Preset]. A feature that every application of the organisation can have is a plugin with a feature pack: see xref:applicationTypes#customizingGeneration[Customizing What a New Application Gets]. A preset and a feature pack add to an application of one of the types. Neither has a skeleton that takes the place of the files Grails generates or that makes several projects, and neither extends another; those parts of a profile are converted by hand, as the page on presets describes.
 
 |The commands of a profile (`commands/*.groovy`, `commands/*.yml`)
-|The commands of the `grails` command line, the commands an application or a plugin brings as classes (xref:commandLine#creatingCustomCommands[Creating Custom Commands]) and the scripts of a project (xref:commandLine#creatingCustomScripts[Creating Custom Scripts]). A feature pack brings no commands.
+|The commands of the `grails` command line, the commands an application or a plugin brings as classes (xref:commandLine#creatingTools[Creating Tools]) and the scripts of a project (xref:commandLine#creatingCustomScripts[Creating Custom Scripts]). A feature pack brings no commands.
 
 |`create-profile`, `create-feature`, `create-template`, `create-creator-command`, `create-generator-command`, `create-gradle-command`
 |Removed. No command creates a feature pack: its descriptor and its templates are written by hand, as xref:plugins#forgeFeaturePacks[Adding a Feature to Application Creation] describes.

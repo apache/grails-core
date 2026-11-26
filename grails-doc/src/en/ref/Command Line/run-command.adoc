@@ -44,7 +44,7 @@ The above expects `grails-app/commands/HelloWorldCommand.groovy` to exist in the
 ./gradlew runCommand --arg=hello-world --arg="an argument with spaces" --arg=--force
 ----
 
-`--args-file=<file>` reads the arguments from a UTF-8 file that holds a JSON array of strings. See link:{guidePath}commandLine.html#creatingCustomCommands[Creating Custom Commands] for both.
+`--args-file=<file>` reads the arguments from a UTF-8 file that holds a JSON array of strings. See link:{guidePath}commandLine.html#creatingTools[Creating Tools] for both.
 
 === Description
 

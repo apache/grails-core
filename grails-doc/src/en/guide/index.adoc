@@ -275,10 +275,10 @@ include::commandLine/interactiveMode.adoc[]
 
 include::commandLine/creatingCustomScripts.adoc[]
 
-[[creatingCustomCommands]]
-=== Creating Custom Commands
+[[creatingTools]]
+=== Creating Tools
 
-include::commandLine/creatingCustomCommands.adoc[]
+include::commandLine/creatingTools.adoc[]
 
 [[applicationTypes]]
 == Application Types, Features and Feature Packs
