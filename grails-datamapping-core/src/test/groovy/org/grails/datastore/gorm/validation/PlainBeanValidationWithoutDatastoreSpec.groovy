@@ -20,6 +20,7 @@ package org.grails.datastore.gorm.validation
 
 import java.lang.ref.WeakReference
 
+import org.springframework.validation.BeanPropertyBindingResult
 import org.springframework.validation.Errors
 import org.springframework.validation.Validator
 
@@ -156,6 +157,33 @@ class PlainBeanValidationWithoutDatastoreSpec extends Specification {
         then:
         api.hasErrors(bean)
         api.getErrors(bean).getFieldError('name').code == 'second'
+    }
+
+    @Unroll
+    void 'a set of errors added to the errors of a bean that was #state is kept'() {
+        given:
+        GormValidationApi<PlainBean> api = api()
+        PlainBean bean = new PlainBean(name: 'ok')
+        if (validated) {
+            api.validate(bean)
+        }
+        Errors added = new BeanPropertyBindingResult(bean, PlainBean.name)
+        added.rejectValue('name', 'first')
+        added.reject('second')
+
+        when:
+        api.getErrors(bean).addAllErrors(added)
+
+        then:
+        api.hasErrors(bean)
+        api.getErrors(bean).getFieldError('name').code == 'first'
+        api.getErrors(bean).globalError.code == 'second'
+        api.getErrors(bean).errorCount == 2
+
+        where:
+        validated | state
+        false     | 'never validated'
+        true      | 'validated'
     }
 
     void 'a bean that nothing refers to any more is freed with its errors'() {

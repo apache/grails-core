@@ -373,6 +373,15 @@ class GormValidationApi<D> extends AbstractGormApi<D> {
                     kept.add(error)
                 }
             }
+
+            /** Spring adds a set of errors to its own list, not through {@link #addError} */
+            @Override
+            void addAllErrors(Errors errors) {
+                super.addAllErrors(errors)
+                synchronized (lock) {
+                    kept.addAll(errors.allErrors)
+                }
+            }
         }
 
         private static final class IdentityKey extends WeakReference<Object> {
