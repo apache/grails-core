@@ -41,7 +41,7 @@ import picocli.CommandLine
  */
 @CommandLine.Command(name = RunToolCommand.NAME, aliases = [RunToolCommand.DEPRECATED_NAME],
         description = [
-                'Runs a tool of the Grails application by its name: the Gradle task runTool.',
+                'Runs a tool of the Grails application: the Gradle task runTool.',
                 'NAME is a tool of the application or of one of its plugins, which is run with the application started around it,',
                 'or without the application when the tool is one that needs none. A tool that runs as a process of its own is run by the build as well.',
                 'Everything after NAME is given to that tool as it is, also what looks like an option of this one.',

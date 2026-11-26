@@ -179,7 +179,7 @@ class RunToolSpec extends CommandSpec implements CommandFixture {
         then: 'the help of run-tool'
         exit == 0
         help.contains('Usage: grails-forge-cli run-tool [-hvVx] [--non-interactive] [--plain-output] [-DNAME=VALUE]... NAME [ARG...]')
-        help.contains('Runs a tool of the Grails application by its name: the Gradle task runTool.')
+        help.contains('Runs a tool of the Grails application: the Gradle task runTool.')
         help.contains('run-command is another name of this command, which is deprecated.')
 
         when:

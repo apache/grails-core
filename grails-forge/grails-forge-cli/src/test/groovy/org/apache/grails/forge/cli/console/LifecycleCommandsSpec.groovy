@@ -1567,7 +1567,7 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
         listed.any { String line -> line =~ /^  console +Runs the Swing console of the Grails application: the Gradle task console\./ }
         listed.any { String line -> line =~ /^  shell +Runs the Groovy shell of the Grails application: the Gradle task shell\./ }
         listed.any { String line -> line =~ /^  run-script +Runs Groovy scripts in the Grails application: the Gradle task runScript\.$/ }
-        listed.any { String line -> line =~ /^  run-tool, run-command +Runs a tool of the Grails application by its name: the Gradle task runTool\.$/ }
+        listed.any { String line -> line =~ /^  run-tool, run-command +Runs a tool of the Grails application: the Gradle task runTool\.$/ }
 
         when:
         out.reset()
