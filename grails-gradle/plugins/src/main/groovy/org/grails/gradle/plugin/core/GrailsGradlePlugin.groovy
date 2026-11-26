@@ -278,6 +278,11 @@ class GrailsGradlePlugin implements Plugin<Project> {
             // pattern as forked test/run tasks (see configureForkSettings).
             c.groovyOptions.forkOptions.jvmArgumentProviders.add(new GrailsAppBaseDirProvider(project.projectDir))
 
+            // The transformations of Grails make a logger of SLF4J, and a class path without a binding, as that of
+            // src/standalone, had SLF4J say so in three lines for every compilation. Every compilation of the project
+            // has the same arguments, so that they share their worker JVMs.
+            c.groovyOptions.forkOptions.jvmArgumentProviders.add(new GrailsCompilerSlf4jProvider())
+
             // Publish the grails { compileStatic { controllers / services / tagLibs } } opt-ins to the
             // compiler worker JVM as system properties so CompileStaticArtefactInjector can stamp
             // @GrailsCompileStatic onto the matching artefacts. Read lazily (asArguments) so the value

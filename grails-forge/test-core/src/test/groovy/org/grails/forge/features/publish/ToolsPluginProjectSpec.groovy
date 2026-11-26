@@ -22,6 +22,7 @@ import java.nio.file.Files
 import java.util.zip.ZipFile
 import org.apache.grails.forge.cli.console.ToolCatalogFile
 import org.gradle.testkit.runner.BuildResult
+import org.gradle.testkit.runner.TaskOutcome
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.application.OperatingSystem
 import org.grails.forge.application.generator.ProjectGenerator
@@ -86,6 +87,11 @@ class ToolsPluginProjectSpec extends CommandSpec {
         then: 'the plugin and its two companions'
         published.output.contains('BUILD SUCCESSFUL')
         [artifact, "${artifact}-cli", "${artifact}-cli-standalone"].every { String name -> publishedFile(group, name, '.jar') != null }
+
+        and: 'the compilations of both folders of tools said nothing of SLF4J, whose API the class path of src/standalone has without a binding'
+        published.task(':compileStandaloneGroovy').outcome == TaskOutcome.SUCCESS
+        published.task(':compileCliGroovy').outcome == TaskOutcome.SUCCESS
+        !published.output.contains('SLF4J')
 
         and: 'the companion of the tools the build runs depends on the plugin and on the other companion; the standalone one on neither'
         String cliPom = publishedFile(group, "${artifact}-cli", '.pom').text
