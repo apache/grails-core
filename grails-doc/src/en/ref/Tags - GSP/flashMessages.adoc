@@ -1,0 +1,146 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+
+== flashMessages
+
+
+
+=== Purpose
+
+
+Renders `flash.message`, `flash.error`, and `flash.warning` as dismissible Bootstrap alert divs with appropriate styling. Automatically prevents duplicate rendering when used in both pages and layouts.
+
+
+=== Examples
+
+
+Basic usage in a view:
+
+[source,xml]
+----
+<g:flashMessages />
+----
+
+In a layout (safe to use alongside page-level usage -- the tag skips rendering if already called):
+
+[source,xml]
+----
+<g:flashMessages />
+<g:layoutBody/>
+----
+
+Non-dismissible alerts:
+
+[source,xml]
+----
+<g:flashMessages dismissible="false" />
+----
+
+Custom ARIA role:
+
+[source,xml]
+----
+<g:flashMessages role="status" />
+----
+
+Custom styling for success messages:
+
+[source,xml]
+----
+<g:flashMessages messageClass="alert alert-info" messageIcon="bi bi-info-circle me-2" />
+----
+
+Setting flash messages in a controller:
+
+[source,groovy]
+----
+// Success message (renders as green alert)
+flash.message = "Book '${book.title}' saved successfully."
+
+// Error message (renders as red alert)
+flash.error = "Unable to delete the record."
+
+// Warning message (renders as yellow alert)
+flash.warning = "You have unsaved changes."
+----
+
+
+=== Description
+
+
+The `flashMessages` tag renders any combination of `flash.message`, `flash.error`, and `flash.warning` as Bootstrap 5 alert divs. Each flash key maps to a different alert style:
+
+[cols="1,2,2"]
+|===
+| Flash Key | Default Alert Class | Default Icon
+
+| `flash.message`
+| `alert alert-success alert-dismissible fade show`
+| `bi bi-check-circle me-2`
+
+| `flash.error`
+| `alert alert-danger alert-dismissible fade show`
+| `bi bi-exclamation-triangle me-2`
+
+| `flash.warning`
+| `alert alert-warning alert-dismissible fade show`
+| `bi bi-exclamation-circle me-2`
+|===
+
+The tag automatically sets a `_flashRendered` request attribute after rendering. On subsequent calls within the same request, the tag detects this attribute and outputs nothing. This allows both pages and layouts to include `<g:flashMessages />` without producing duplicate alerts -- whichever renders first wins.
+
+All flash message content is HTML-encoded to prevent XSS.
+
+==== Configuration
+
+The defaults target Bootstrap 5. Applications that use a different CSS framework can override the defaults globally in `application.yml`:
+
+[source,yaml]
+----
+grails:
+    views:
+        gsp:
+            flashMessages:
+                messageClass: 'notification is-success'
+                messageIcon: 'fa-solid fa-check'
+                errorClass: 'notification is-danger'
+                errorIcon: 'fa-solid fa-triangle-exclamation'
+                warningClass: 'notification is-warning'
+                warningIcon: 'fa-solid fa-circle-exclamation'
+                role: 'alert'
+                dismissible: true
+----
+
+Resolution order for every default is:
+
+. Tag attribute (e.g. `<g:flashMessages messageClass="..." />`)
+. Configured value under `grails.views.gsp.flashMessages.*`
+. Built-in Bootstrap fallback
+
+Attributes
+
+* `messageClass` (optional) - CSS class for `flash.message` alerts. Default: `alert alert-success alert-dismissible fade show`
+* `messageIcon` (optional) - Icon class for `flash.message` alerts. Default: `bi bi-check-circle me-2`
+* `errorClass` (optional) - CSS class for `flash.error` alerts. Default: `alert alert-danger alert-dismissible fade show`
+* `errorIcon` (optional) - Icon class for `flash.error` alerts. Default: `bi bi-exclamation-triangle me-2`
+* `warningClass` (optional) - CSS class for `flash.warning` alerts. Default: `alert alert-warning alert-dismissible fade show`
+* `warningIcon` (optional) - Icon class for `flash.warning` alerts. Default: `bi bi-exclamation-circle me-2`
+* `role` (optional) - ARIA role for alert divs. Default: `alert`
+* `dismissible` (optional) - Whether to show a close button. Default: `true`

@@ -61,7 +61,7 @@ class EmbeddedInputObjectTypeBuilderSpec extends HibernateSpec {
         props = builder.builder.getProperties(Embed.gormPersistentEntity)
 
         then: 'one is included because it is the owning side, many is included because it is not bidirectional'
-        props*.name == ['many', 'one']
+        props*.name == ['one', 'many']
         !props.any { !it.nullable } //all are nullable
     }
 
@@ -83,7 +83,7 @@ class EmbeddedInputObjectTypeBuilderSpec extends HibernateSpec {
         props = builder.builder.getProperties(Embed.gormPersistentEntity)
 
         then: 'one is included because it is the owning side, many is included because it is not bidirectional'
-        props*.name == ['many', 'one']
+        props*.name == ['one', 'many']
         props.any { !it.nullable } //some are not nullable
     }
 }

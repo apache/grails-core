@@ -18,19 +18,25 @@
  */
 package org.grails.gorm.graphql.entity;
 
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
+
 import graphql.execution.MergedField;
 import graphql.language.Field;
 import graphql.language.Selection;
 import graphql.language.SelectionSet;
 import graphql.schema.DataFetchingEnvironment;
+
 import org.grails.datastore.gorm.GormEnhancer;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.model.types.ToMany;
 import org.grails.datastore.mapping.model.types.ToOne;
-
-import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * Helper class to determine which properties should be eagerly
@@ -158,7 +164,6 @@ public class EntityFetchOptions {
         joinProperties.addAll(new EntityFetchOptions(entity, resolvedName).getJoinProperties(fields));
     }
 
-
     public Set<String> getJoinProperties(List<Field> fields) {
         return getJoinProperties(fields, false);
     }
@@ -240,7 +245,6 @@ public class EntityFetchOptions {
         arguments.put(FETCH, joins);
         return arguments;
     }
-
 
     public Map<String, Map> getFetchArgument(DataFetchingEnvironment environment) {
         return getFetchArgument(environment, false);

@@ -29,7 +29,7 @@ import grails.converters.JSON
  * @since 1.2
  * @deprecated Use {@link groovy.json.StreamingJsonBuilder} instead
  */
-@Deprecated
+@Deprecated(since = '3', forRemoval = true)
 class JSONBuilder {
 
     static NODE_ELEMENT = 'element'

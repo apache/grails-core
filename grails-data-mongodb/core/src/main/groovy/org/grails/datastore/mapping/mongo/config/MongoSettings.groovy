@@ -95,4 +95,18 @@ interface MongoSettings extends Settings {
 
     String SETTING_ENGINE = 'grails.mongodb.engine'
 
+    /**
+     * Global default storage type for {@code String id} fields when no per-domain
+     * {@code id storedAs: ...} mapping is declared. Accepted values are the names (or hex
+     * aliases) {@code 'string'} (default, current behavior) and {@code 'objectid'}.
+     *
+     * <p>When set to {@code 'objectid'}, every domain that declares {@code String id}
+     * without an explicit {@code storedAs} will persist {@code _id} as a BSON ObjectId,
+     * while keeping the {@code String} ergonomics in application code. Domains that use
+     * natural string keys (slug, email, UUID) should opt out per-domain via
+     * {@code static mapping = { id storedAs: String }}.
+     *
+     * @since 7.1.1
+     */
+    String SETTING_STRING_IDS_DEFAULT_STORED_AS = 'grails.mongodb.stringIds.defaultStoredAs'
 }
