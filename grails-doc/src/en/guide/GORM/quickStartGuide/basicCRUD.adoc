@@ -101,6 +101,11 @@ def p = Person.load(1)
 This incurs no database access until a method other than getId() is called. Hibernate then initializes the proxied instance, or
 throws an exception if no record is found for the specified id.
 
+With Hibernate 5 and Hibernate 7, reading a proxy's `metaClass` property or calling `getMetaClass()` returns the metaclass of the
+persistent class the proxy represents, without initializing it. This remains true after initialization: a proxy loaded for a
+superclass keeps that superclass's metaclass even when the underlying entity is a subclass. Methods declared on the superclass
+still dispatch to the subclass's implementation.
+
 
 === Update
 

@@ -72,6 +72,9 @@ public class GroovyProxyInterceptorLogic {
     }
 
     private static boolean isMetaClassRequest(String methodName, Object... args) {
+        if (GET_PROPERTY.equals(methodName) && args != null && args.length == 1) {
+            return META_CLASS_PROPERTY.equals(args[0]);
+        }
         return (GET_META_CLASS.equals(methodName) || methodName.endsWith("getStaticMetaClass")) &&
                 (args == null || args.length == 0);
     }
@@ -83,9 +86,6 @@ public class GroovyProxyInterceptorLogic {
         if (GET_PROPERTY.equals(methodName) && args.length == 1) {
             if (ID_PROPERTY.equals(args[0])) {
                 return state.identifier();
-            }
-            if (META_CLASS_PROPERTY.equals(args[0])) {
-                return InvokerHelper.getMetaClass(state.persistentClass());
             }
         }
         if (IDENT_METHOD.equals(methodName) && (args == null || args.length == 0)) {

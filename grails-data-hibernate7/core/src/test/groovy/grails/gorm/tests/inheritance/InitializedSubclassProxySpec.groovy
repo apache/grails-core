@@ -74,7 +74,46 @@ class InitializedSubclassProxySpec extends GrailsDataTckSpec<GrailsDataHibernate
         Drawing.first().@shape
     }
 
+    void "a #persistentClass.simpleName proxy keeps its metaclass after initialization"() {
+        given:
+        Long id = new Circle(name: 'round').save(failOnError: true).id
+        manager.session.flush()
+        manager.session.clear()
+        Shape shape = persistentClass.load(id)
+
+        expect:
+        !Hibernate.isInitialized(shape)
+        shape.getMetaClass().theClass == persistentClass
+        metaClassTypeOf(shape) == persistentClass
+        metaClassPropertyTypeOf(shape) == persistentClass
+        !Hibernate.isInitialized(shape)
+
+        when:
+        Hibernate.initialize(shape)
+
+        then:
+        Hibernate.isInitialized(shape)
+        Hibernate.unproxy(shape) instanceof Circle
+        shape.getMetaClass().theClass == persistentClass
+        metaClassTypeOf(shape) == persistentClass
+        metaClassPropertyTypeOf(shape) == persistentClass
+        shape.name == 'round'
+        kindOf(shape) == 'circle'
+        descriptionOf(shape) == 'a circle named round'
+
+        where:
+        persistentClass << [Shape, Circle]
+    }
+
     // Spock rewrites the calls in a condition, so the calls under test are made from ordinary methods
+
+    private static Class metaClassTypeOf(Shape shape) {
+        shape.metaClass.theClass
+    }
+
+    private static Class metaClassPropertyTypeOf(Shape shape) {
+        shape.getProperty('metaClass').theClass
+    }
 
     private static String kindPropertyOf(Shape shape) {
         shape.kind
