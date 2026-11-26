@@ -108,6 +108,7 @@ include(
         // extract them the way the guide shows. Only published metadata can prove a build gets them.
         'agent-skills',
         'agent-skills-plain-build',
+        'cli-index-incremental',
         'legacy-commands',
         'legacy-commands-plugin',
         // Verifies message resolution inside a compiled GraalVM binary. The native half is opt-in
@@ -119,6 +120,7 @@ include(
         // cannot survive in the index that is published. Incremental behaviour against real
         // published artifacts is not something the core build can express.
         'taglib-index-incremental',
+        'plugin-index-incremental',
         // Belongs here rather than in grails-test-examples: it imports grails-bom as a Maven BOM
         // through io.spring.dependency-management, which resolves imports in its own detached
         // configuration. That bypasses any project substitution, so the import can only ever be

@@ -223,6 +223,7 @@ class GrailsGradlePlugin implements Plugin<Project> {
         }
 
         configureGroovyCompiler(project)
+        GormServiceDescriptor.register(project)
 
         configureMatchingExplodedRules(project)
     }
