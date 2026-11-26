@@ -26,6 +26,8 @@ import spock.lang.Specification
 import spock.lang.TempDir
 import spock.lang.Unroll
 
+import grails.util.Environment
+
 /**
  * A {@link StandaloneTool} as the {@code grails} command line starts it: by the {@code main}
  * method of {@link StandaloneToolRunner} in a JVM of its own, which is no build and starts no
@@ -107,6 +109,22 @@ class StandaloneToolRunnerSpec extends Specification {
         'written with a name of Grails 8'             | 'runner-spec-old'
     }
 
+    @Unroll
+    def "-Dgrails.env=production among the arguments of a standalone tool is #how, and does not change the environment the tool runs in"() {
+        when: 'the JVM is started as the command line starts it, for the environment development'
+        Map result = runWith(['-Dgrails.env=development'], 'runner-spec-environment', *arguments)
+
+        then: 'the tool runs in development, and finds what it was given in the system properties of its command line'
+        result.ended
+        result.exit == 0
+        result.out.readLines() == ["ENVIRONMENT=development given=production remaining=${remaining}".toString()]
+
+        where:
+        how                                     | arguments                                      || remaining
+        'its only argument'                     | ['-Dgrails.env=production']                    || []
+        'one of its arguments'                  | ['report', '-Dgrails.env=production', 'more'] || ['report', 'more']
+    }
+
     def "a name that no command has, and no name at all, end the JVM with 1"() {
         when:
         Map unknown = run('runner-spec-no-such-command')
@@ -120,15 +138,20 @@ class StandaloneToolRunnerSpec extends Specification {
     }
 
     private Map run(String... arguments) {
+        return runWith([], arguments)
+    }
+
+    private Map runWith(List<String> jvmArguments, String... arguments) {
         File registrations = new File(dir, 'registrations')
         new File(registrations, 'META-INF').mkdirs()
         new File(registrations, 'META-INF/grails-cli.factories').text = "${GrailsTool.name}=" +
                 [RunnerSpecSucceedsCommand, RunnerSpecReturnsFalseCommand, RunnerSpecThrowsCommand, RunnerSpecGradleCommand, RunnerSpecApplicationCommand,
-                 RunnerSpecOldCommand]*.name.join(',') + '\n'
+                 RunnerSpecOldCommand, RunnerSpecEnvironmentCommand]*.name.join(',') + '\n'
         List<String> command = [new File(System.getProperty('java.home'), 'bin/java').path,
                                 '-cp', registrations.path + File.pathSeparator + System.getProperty('java.class.path'),
-                                "-Dbase.dir=${dir.path}".toString(),
-                                StandaloneToolRunner.name]
+                                "-Dbase.dir=${dir.path}".toString()]
+        command.addAll(jvmArguments)
+        command.add(StandaloneToolRunner.name)
         command.addAll(arguments.toList())
         File out = new File(dir, 'out.txt')
         File err = new File(dir, 'err.txt')
@@ -185,6 +208,16 @@ class RunnerSpecApplicationCommand implements ApplicationTool {
     @Override
     boolean handle(ExecutionContext executionContext) {
         println "COMMAND=${name}"
+        true
+    }
+}
+
+class RunnerSpecEnvironmentCommand implements StandaloneTool {
+
+    @Override
+    boolean handle(ExecutionContext executionContext) {
+        println "ENVIRONMENT=${Environment.current.name} given=${executionContext.commandLine.systemProperties.getProperty(Environment.KEY)} " +
+                "remaining=${executionContext.commandLine.remainingArgs}"
         true
     }
 }

@@ -22,6 +22,7 @@ import org.springframework.beans.factory.config.AutowireCapableBeanFactory
 import org.springframework.context.ConfigurableApplicationContext
 
 import grails.config.Settings
+import grails.util.Environment
 import org.apache.grails.core.cli.ApplicationContextCommandRegistry
 import org.apache.grails.core.cli.ApplicationTool
 import org.apache.grails.core.cli.ExecutionContext
@@ -66,7 +67,7 @@ class GrailsApplicationContextCommandRunner extends DevelopmentGrailsApplication
             // a tool that says it needs no application is run as it is: nothing is started for it
             if (!startsApplication(command)) {
                 try {
-                    def result = command.handle(new ExecutionContext(new CommandLineParser().parse(args)))
+                    def result = command.handle(new ExecutionContext(parseToolArguments(args)))
                     result ? System.exit(0) : System.exit(1)
                 } catch (Throwable e) {
                     System.err.println("Command execution error: $e.message")
@@ -101,7 +102,7 @@ class GrailsApplicationContextCommandRunner extends DevelopmentGrailsApplication
 
             try {
                 // Parse the FULL args (including --options) for the command
-                CommandLine commandLine = new CommandLineParser().parse(args)
+                CommandLine commandLine = parseToolArguments(args)
                 ctx.autowireCapableBeanFactory.autowireBeanProperties(autowireTarget, AutowireCapableBeanFactory.AUTOWIRE_BY_TYPE, false)
                 ((ApplicationTool) command).applicationContext = ctx
                 def result = command.handle(new ExecutionContext(commandLine))
@@ -142,6 +143,29 @@ class GrailsApplicationContextCommandRunner extends DevelopmentGrailsApplication
      */
     static String[] filterCommandOptions(String[] args) {
         args.findAll { it != null && !it.startsWith('--') } as String[]
+    }
+
+    /**
+     * Reads the arguments of a tool. They are data: a {@code -Dgrails.env=NAME} among them is one of
+     * them, which the tool finds in {@code commandLine.systemProperties}, and does not change the
+     * environment the tool runs in, which is the one the build started this JVM with. The parser sets
+     * the environment of the JVM when it reads one, as the Grails shell did for what was typed to it;
+     * that is undone here, as the runner of script commands does.
+     *
+     * @param args the name of the tool and its arguments
+     * @return the command line of the tool
+     */
+    static CommandLine parseToolArguments(String[] args) {
+        String environment = System.getProperty(Environment.KEY)
+        try {
+            return new CommandLineParser().parse(args)
+        } finally {
+            if (environment == null) {
+                System.clearProperty(Environment.KEY)
+            } else {
+                System.setProperty(Environment.KEY, environment)
+            }
+        }
     }
 
     /**

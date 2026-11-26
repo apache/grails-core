@@ -27,6 +27,7 @@ import spock.lang.Unroll
 
 import grails.boot.config.GrailsAutoConfiguration
 import grails.ui.StartedJvmCoverage
+import grails.util.Environment
 import org.apache.grails.core.cli.ApplicationTool
 import org.apache.grails.core.cli.ExecutionContext
 import org.apache.grails.core.cli.GrailsApplicationCommand
@@ -169,6 +170,22 @@ class ApplicationToolRunnerForkSpec extends Specification {
         result.out.contains('PROJECT=true rest-api [views-json, h2]')
     }
 
+    @Unroll
+    def "-Dgrails.env=production among the arguments of a tool that #how is one of them, and does not change the environment the tool runs in"() {
+        when: 'the JVM is started as the runTool task starts it, for the environment development'
+        Map result = run(command, 'report', '-Dgrails.env=production', ToolKindStartedApplication.name)
+
+        then: 'the tool runs in development, and finds what it was given in the system properties of its command line'
+        result.ended
+        result.exit == 0
+        result.out.readLines().contains("ENVIRONMENT=${command} development given=production remaining=[report] context=${context}".toString())
+
+        where:
+        how                                | command                          || context
+        'does not start the application'   | 'tool-kind-spec-environment'     || false
+        'starts the application'           | 'tool-kind-spec-environment-app' || true
+    }
+
     private Map run(String... arguments) {
         List<String> command = [new File(System.getProperty('java.home'), 'bin/java').path,
                                 '-cp', System.getProperty('java.class.path'),
@@ -296,6 +313,28 @@ class ToolKindSpecProjectTool implements ApplicationTool {
     @Override
     boolean handle(ExecutionContext executionContext) {
         println "PROJECT=${executionContext.project.recorded} ${executionContext.project.applicationType} ${executionContext.project.features}"
+        true
+    }
+}
+
+class ToolKindSpecEnvironmentTool implements ApplicationTool {
+
+    boolean startsApplication = false
+
+    @Override
+    boolean handle(ExecutionContext executionContext) {
+        println "ENVIRONMENT=${name} ${Environment.current.name} given=${executionContext.commandLine.systemProperties.getProperty(Environment.KEY)} " +
+                "remaining=${executionContext.commandLine.remainingArgs} context=${applicationContext != null}"
+        true
+    }
+}
+
+class ToolKindSpecEnvironmentAppTool implements ApplicationTool {
+
+    @Override
+    boolean handle(ExecutionContext executionContext) {
+        println "ENVIRONMENT=${name} ${Environment.current.name} given=${executionContext.commandLine.systemProperties.getProperty(Environment.KEY)} " +
+                "remaining=${executionContext.commandLine.remainingArgs} context=${applicationContext != null}"
         true
     }
 }

@@ -20,7 +20,9 @@ package org.apache.grails.core.cli
 
 import groovy.transform.CompileStatic
 
+import grails.util.Environment
 import org.apache.grails.gradle.model.cli.CommandArgumentsFile
+import org.grails.build.parsing.CommandLine
 import org.grails.build.parsing.CommandLineParser
 
 /**
@@ -80,7 +82,7 @@ final class StandaloneToolRunner {
             return 1
         }
         try {
-            boolean succeeded = command.handle(new ExecutionContext(new CommandLineParser().parse(given as String[])))
+            boolean succeeded = command.handle(new ExecutionContext(parse(given as String[])))
             System.out.flush()
             return succeeded ? 0 : 1
         } catch (Throwable e) {
@@ -90,6 +92,22 @@ final class StandaloneToolRunner {
                 e.printStackTrace()
             }
             return 1
+        }
+    }
+
+    // The arguments are data: a -Dgrails.env=NAME among them is one of them, in commandLine.systemProperties,
+    // and does not change the environment of the tool. The parser sets the environment of the JVM when it
+    // reads one, as the Grails shell did for what was typed to it; that is undone here.
+    private static CommandLine parse(String[] args) {
+        String environment = System.getProperty(Environment.KEY)
+        try {
+            return new CommandLineParser().parse(args)
+        } finally {
+            if (environment == null) {
+                System.clearProperty(Environment.KEY)
+            } else {
+                System.setProperty(Environment.KEY, environment)
+            }
         }
     }
 
