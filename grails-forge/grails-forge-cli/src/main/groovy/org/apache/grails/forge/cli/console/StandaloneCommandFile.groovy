@@ -270,7 +270,9 @@ final class StandaloneCommandFile {
                 Path place = places.find { Path each -> real.startsWith(each) }
                 if (place == null) {
                     return refused("${GradleRunner.line(entry)} of the class path is not within the build of the project, the Gradle user home or the local Maven repository " +
-                            "(${places.collect { Path each -> GradleRunner.line(each) }.join(', ')})")
+                            "(${places.collect { Path each -> GradleRunner.line(each) }.join(', ')}), as a file of a repository that is a directory " +
+                            '(maven { url = file(...) }) or of a local Maven repository in another place is. To use what is in it, name ' +
+                            "${GradleRunner.line(elsewhere(entries, places, real))} in the environment variable ${ConsoleProject.SAFE_DIRECTORY}")
                 }
                 for (Path each = real; each != null && each.startsWith(place); each = each.getParent()) {
                     String distrusted = looked.computeIfAbsent(each) { Path looking -> distrust(looking) ?: '' }
@@ -282,6 +284,36 @@ final class StandaloneCommandFile {
             classpath.add(real)
         }
         return new StandaloneCommandFile(State.READY, null, classpath.asImmutable(), java)
+    }
+
+    // The directory to name as safe for an entry that is in none of the places: the one that it and the
+    // other such entries of the class path have in common, which for the jars of one repository is a
+    // directory of that repository, and the directory of the entry where they have none worth naming
+    // (the root of a file system, a directory right below it, or the home directory of the user).
+    private static Path elsewhere(List<String> entries, List<Path> places, Path first) {
+        Path common = first.getParent() ?: first
+        for (String entry : entries) {
+            Path real
+            try {
+                Path path = Path.of(entry)
+                real = path.isAbsolute() ? path.toRealPath() : null
+            } catch (IOException | RuntimeException ignored) {
+                real = null
+            }
+            if (real == null || places.any { Path place -> real.startsWith(place) } || isSafe(real)) {
+                continue
+            }
+            Path shared = common
+            while (shared != null && !real.startsWith(shared)) {
+                shared = shared.getParent()
+            }
+            // nor the home directory of the user or a directory above it: that would be all the user has
+            if (shared == null || shared.getNameCount() < 2 || Path.of(System.getProperty('user.home', '/')).toAbsolutePath().startsWith(shared)) {
+                return first.getParent() ?: first
+            }
+            common = shared
+        }
+        return common
     }
 
     // whether a directory the user named as safe is the path or above it

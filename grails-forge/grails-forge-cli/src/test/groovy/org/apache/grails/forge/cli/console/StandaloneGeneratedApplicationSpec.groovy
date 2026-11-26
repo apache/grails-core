@@ -226,6 +226,50 @@ class StandaloneGeneratedApplicationSpec extends CommandSpec implements CommandF
         originalOut?.println("TIMING standalone command, no Gradle: ${standaloneMillis} ms; Gradle command, running daemon: ${gradleMillis} ms")
     }
 
+    void "the scaffolding commands of a REST API application, which has them without the plugin, run as processes without Gradle"() {
+        given: 'a REST API application with the scaffolding feature, which was never built, and a domain class'
+        generateProject(ApplicationType.REST_API, 'scaffolding')
+        new File(dir, 'settings.gradle') << '\n' + gradle.recording
+        new File(dir, 'gradle.properties') << "\norg.gradle.daemon.registry.base=${gradle.registry.canonicalPath}\norg.gradle.daemon.idletimeout=${IsolatedGradle.IDLE_MILLIS}\n"
+        new File(dir, 'grails-app/domain/example/grails').mkdirs()
+        new File(dir, 'grails-app/domain/example/grails/Bird.groovy').text = 'package example.grails\n\nclass Bird {\n\n    String name\n}\n'
+        File wrapper = new File(dir, 'gradlew')
+        Files.move(wrapper.toPath(), new File(dir, 'gradlew.real').toPath())
+        wrapper.text = '#!/bin/sh\nhere="$(dirname "$0")"\necho "$*" >> "$here/gradle-runs.txt"\nexec "$here/gradlew.real" "$@"\n'
+        wrapper.setExecutable(true, false)
+        safeRepository()
+
+        expect: 'the commands of the plugin are on the class path of the commands alone'
+        new File(dir, 'build.gradle').text.contains('    grailsCli "org.apache.grails:grails-scaffolding-cli"\n')
+        !new File(dir, 'build.gradle').text.contains('"org.apache.grails:grails-scaffolding"')
+
+        when: 'generate-all is run by its name'
+        int exit = ForgeCli.execute(beanContext, 'generate-all', 'example.grails.Bird')
+
+        then: 'the build listed the commands once, and the command ran as a process, with the templates of a REST API application'
+        assert exit == 0 : err.toString() + out.toString()
+        runs() == 1
+        standaloneFile().commands.'generate-all' == 'dependencies'
+        err.toString().readLines().any { String line ->
+            line.startsWith('| Running the command generate-all of org.apache.grails:grails-scaffolding-cli:') && line.endsWith(', as a process of its own, without Gradle')
+        }
+        new File(dir, 'grails-app/controllers/example/grails/BirdController.groovy').text.contains("static responseFormats = ['json']")
+        ['index.gson', 'show.gson', '_bird.gson'].every { String view -> new File(dir, "grails-app/views/bird/${view}").isFile() }
+        !new File(dir, 'grails-app/views/bird/index.gsp').exists()
+
+        when: 'the views are generated again, in an application whose new classes the build has not compiled'
+        new File(dir, 'grails-app/views/bird/show.gson').delete()
+        out.reset()
+        err.reset()
+        exit = ForgeCli.execute(beanContext, 'generate-views', 'example.grails.Bird', '--force')
+
+        then: 'Gradle is not started'
+        assert exit == 0 : err.toString() + out.toString()
+        runs() == 1
+        new File(dir, 'grails-app/views/bird/show.gson').isFile()
+        !new File(dir, 'grails-app/views/bird/show.gsp').exists()
+    }
+
     private static String plainCommand(String version) {
         return """\
             package example.grails

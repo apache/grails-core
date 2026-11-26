@@ -334,6 +334,41 @@ class StandaloneCommandsSpec extends CommandSpec implements CommandFixture {
         !ran.exists()
     }
 
+    void "entries in a repository that is elsewhere name the directory to put in GRAILS_SAFE_DIRECTORY, and the command runs once it is there"() {
+        given: 'two entries of one repository that is in none of the places an entry can be in'
+        listed([TOOL])
+        StandaloneCommandFile.setPlaces([])
+        away = Files.createTempDirectory('grailsoutside').toFile().canonicalFile
+        File repository = new File(away, 'repository')
+        File first = new File(repository, 'org/example/tool/1.0/classes')
+        File second = new File(repository, 'cloud/other/lib/2.0/classes')
+        assert first.parentFile.mkdirs() && second.mkdirs()
+        assert library.renameTo(first)
+        written([tool: 'dependencies'], [first.path, second.path])
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'tool')
+        String said = err.toString().readLines().last()
+
+        then: 'nothing is started, and the line says what to name and what runs the command meanwhile'
+        exit == 1
+        out.toString().isEmpty()
+        !ran.exists()
+        said.contains('as a file of a repository that is a directory (maven { url = file(...) }) or of a local Maven repository in another place is. ' +
+                "To use what is in it, name ${repository.path} in the environment variable GRAILS_SAFE_DIRECTORY. ")
+        said.endsWith('The command was not run; the build runs it with: grails-forge-cli run-command tool')
+
+        when: 'the directory is named'
+        ConsoleProject.setSafeDirectories(repository.path)
+        err.reset()
+        exit = ForgeCli.execute(beanContext, 'tool')
+
+        then:
+        exit == 0
+        line('classpath=') == [first.path, second.path].join(File.pathSeparator)
+        !ran.exists()
+    }
+
     void "a class path is taken for no command the list does not say is a standalone command"() {
         given: 'a file that names a command the build runs'
         listed([TOOL, BUILD_TOOL])
