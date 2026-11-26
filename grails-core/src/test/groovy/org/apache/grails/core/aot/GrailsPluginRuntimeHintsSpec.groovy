@@ -160,8 +160,8 @@ class GrailsPluginRuntimeHintsSpec extends Specification {
             loader?.close()
     }
 
-    void 'registers hints for both the imported plugin name and an aliased descriptor name'() {
-        given: 'a plugins.imports entry whose descriptor declares an aliased name with its own config resource'
+    void 'a descriptor declaring a name other than its import is rejected, and only the imported name is registered'() {
+        given: 'a plugins.imports entry whose descriptor declares a conflicting name with its own config resource'
             def imports = new File(classpathRoot, PluginUtils.PLUGINS_IMPORTS_PATH)
             imports.parentFile.mkdirs()
             imports.text = 'my-plugin\n'
@@ -176,9 +176,9 @@ class GrailsPluginRuntimeHintsSpec extends Specification {
         when:
             new GrailsPluginRuntimeHints().registerHints(hints, loader)
 
-        then: 'both the import path and the aliased descriptor namespace resources are registered'
+        then: 'the import path is registered, and the conflicting name is not trusted as a namespace'
             RuntimeHintsPredicates.resource().forResource('META-INF/grails/plugins/myPlugin/plugin.properties').test(hints)
-            RuntimeHintsPredicates.resource().forResource('META-INF/grails/plugins/customAlias/plugin.yml').test(hints)
+            !RuntimeHintsPredicates.resource().forResource('META-INF/grails/plugins/customAlias/plugin.yml').test(hints)
 
         cleanup:
             loader?.close()
