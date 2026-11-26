@@ -68,6 +68,12 @@ public class HibernateQuery extends AbstractHibernateQuery {
     }
 
     /**
+     * Returns the Hibernate criteria of the query. This method makes the joins and adds the orders
+     * that the criteria, projections and sorts of the query have registered so far, with the join
+     * types that the query requests at that point, so that the criteria can be executed as they are.
+     * Joins and orders that are registered afterwards are made when the query is executed, or by the
+     * next call of this method.
+     *
      * @return The hibernate criteria
      */
     public Criteria getHibernateCriteria() {

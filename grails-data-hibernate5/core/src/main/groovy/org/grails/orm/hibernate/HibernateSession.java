@@ -19,9 +19,12 @@
 package org.grails.orm.hibernate;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import jakarta.persistence.FlushModeType;
 import jakarta.persistence.criteria.CriteriaBuilder;
@@ -76,8 +79,8 @@ import org.grails.orm.hibernate.query.HibernateQuery;
 public class HibernateSession extends AbstractHibernateSession {
 
     /**
-     * The number of identifiers that a delete by identifiers deletes with one statement, below the
-     * number of parameters that databases allow in a list.
+     * The number of identifiers that an update or a delete by identifiers changes with one statement,
+     * below the number of parameters that databases allow in a list.
      */
     private static final int IDENTIFIER_BATCH_SIZE = 500;
 
@@ -121,15 +124,12 @@ public class HibernateSession extends AbstractHibernateSession {
             builder.setConversionService(getMappingContext().getConversionService());
             builder.setHibernateCompatible(true);
             JpaQueryInfo jpaQueryInfo = builder.buildDelete();
-            if (hasRequestedSubqueryJoin(criteria.getCriteria())) {
+            List<RequestedJoinRestriction> restrictions = buildRequestedJoinRestrictions(criteria);
+            if (modifiesByIdentifiers(criteria, restrictions, true)) {
                 return modifyByIdentifiers(session, criteria, null);
             }
-            String delete = applyRequestedJoins(jpaQueryInfo.getQuery(), criteria);
-            if (!delete.equals(jpaQueryInfo.getQuery()) && restrictsThroughJoinTable(criteria)) {
-                return deleteByIdentifiers(session, criteria.getPersistentEntity(), delete, jpaQueryInfo.getParameters());
-            }
 
-            org.hibernate.query.Query query = session.createQuery(delete);
+            org.hibernate.query.Query query = session.createQuery(applyRequestedJoins(jpaQueryInfo.getQuery(), criteria, restrictions));
             getHibernateTemplate().applySettings(query);
             setParameters(query, jpaQueryInfo.getParameters());
 
@@ -164,11 +164,12 @@ public class HibernateSession extends AbstractHibernateSession {
             }
 
             JpaQueryInfo jpaQueryInfo = builder.buildUpdate(properties);
-            if (hasRequestedSubqueryJoin(criteria.getCriteria())) {
+            List<RequestedJoinRestriction> restrictions = buildRequestedJoinRestrictions(criteria);
+            if (modifiesByIdentifiers(criteria, restrictions, false)) {
                 return modifyByIdentifiers(session, criteria, properties);
             }
 
-            org.hibernate.query.Query query = session.createQuery(applyRequestedJoins(jpaQueryInfo.getQuery(), criteria));
+            org.hibernate.query.Query query = session.createQuery(applyRequestedJoins(jpaQueryInfo.getQuery(), criteria, restrictions));
             getHibernateTemplate().applySettings(query);
             setParameters(query, jpaQueryInfo.getParameters());
 
@@ -218,6 +219,40 @@ public class HibernateSession extends AbstractHibernateSession {
         return false;
     }
 
+    /**
+     * Whether an update or a delete selects the identifiers of the instances first, and then changes
+     * the instances by their identifiers, see {@link #modifyByIdentifiers(Session, QueryableCriteria, Map)},
+     * instead of restricting the update or the delete itself. That is the case:
+     * <ul>
+     *     <li>when a subquery requests a join type, which the subquery of an update or a delete
+     *     cannot apply;</li>
+     *     <li>for a delete, when a requested join is applied through a collection of the queried class
+     *     that has a join table. Hibernate deletes the rows of the join tables of the instances before
+     *     it deletes the instances, with the same restriction, which then no longer finds them;</li>
+     *     <li>when a requested join selects from the table that the update or the delete modifies, on a
+     *     database that does not allow that, see {@link #canSelectFromModifiedTable()}.</li>
+     * </ul>
+     */
+    private boolean modifiesByIdentifiers(QueryableCriteria criteria, List<RequestedJoinRestriction> restrictions, boolean delete) {
+        if (hasRequestedSubqueryJoin(criteria.getCriteria())) {
+            return true;
+        }
+        for (RequestedJoinRestriction restriction : restrictions) {
+            if ((delete && restriction.throughJoinTable()) || (restriction.selectsFromModifiedTable() && !canSelectFromModifiedTable())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Updates or deletes the instances that the criteria return. The identifiers of the instances are
+     * selected first, with the criteria and the join types that they request, and the instances are
+     * then updated or deleted by their identifiers, in batches.
+     *
+     * @param properties The properties to update, or null to delete the instances
+     * @return The number of instances updated or deleted
+     */
     private int modifyByIdentifiers(Session session, QueryableCriteria source, Map<String, Object> properties) {
         PersistentEntity entity = source.getPersistentEntity();
         Criteria nativeSelection = source.getAlias() == null ? session.createCriteria(entity.getJavaClass()) :
@@ -233,10 +268,13 @@ public class HibernateSession extends AbstractHibernateSession {
             }
         }
         selection.projections().id();
-        List identifiers = selection.list();
+        // a join of a collection selects an identifier for each element, and a right join a null for each row without an instance
+        Set<Object> selected = new LinkedHashSet<>(selection.list());
+        selected.remove(null);
+        List<Object> identifiers = new ArrayList<>(selected);
         int changed = 0;
         for (int from = 0; from < identifiers.size(); from += IDENTIFIER_BATCH_SIZE) {
-            List batch = identifiers.subList(from, Math.min(from + IDENTIFIER_BATCH_SIZE, identifiers.size()));
+            List<Object> batch = identifiers.subList(from, Math.min(from + IDENTIFIER_BATCH_SIZE, identifiers.size()));
             JpaQueryBuilder builder = new JpaQueryBuilder(entity, Collections.singletonList(new Query.In(entity.getIdentity().getName(), batch)));
             builder.setConversionService(getMappingContext().getConversionService());
             builder.setHibernateCompatible(true);
@@ -263,102 +301,53 @@ public class HibernateSession extends AbstractHibernateSession {
     }
 
     /**
-     * Whether a join type that the criteria request is applied through a collection of the queried
-     * class that has a join table. Hibernate deletes the rows of the join tables of the instances
-     * before it deletes the instances, with the same restriction, which then no longer finds the
-     * instances: see {@link #deleteByIdentifiers(Session, PersistentEntity, String, List)}.
+     * A restriction to the instances for which a requested join returns a row.
+     *
+     * @param condition The condition that an update or a delete is restricted with
+     * @param selectsFromModifiedTable Whether the condition selects from the table of the queried class
+     * @param throughJoinTable Whether the join starts with a collection of the queried class that has a join table
      */
-    private boolean restrictsThroughJoinTable(QueryableCriteria criteria) {
-        if (!(criteria instanceof AbstractDetachedCriteria)) {
-            return false;
-        }
-        SessionFactoryImplementor factory = (SessionFactoryImplementor) getHibernateTemplate().getSessionFactory();
-        EntityPersister persister = factory.getMetamodel().entityPersister(criteria.getPersistentEntity().getName());
-        Map<String, JoinType> joinTypes = ((AbstractDetachedCriteria<?>) criteria).getJoinTypes();
-        for (Map.Entry<String, JoinType> requestedJoin : joinTypes.entrySet()) {
-            if (requestedJoin.getValue() == null || requestedJoin.getValue() == JoinType.LEFT) {
-                continue;
-            }
-            String association = requestedJoin.getKey().split("\\.")[0];
-            Type type;
-            try {
-                type = persister.getPropertyType(association);
-            }
-            catch (RuntimeException e) {
-                continue;
-            }
-            if (type instanceof CollectionType && factory.getMetamodel().collectionPersister(((CollectionType) type).getRole()).isManyToMany()) {
-                return true;
-            }
-        }
-        return false;
+    private record RequestedJoinRestriction(String condition, boolean selectsFromModifiedTable, boolean throughJoinTable) {
     }
 
     /**
-     * Deletes the instances that a delete query restricts to by their identifiers. The identifiers
-     * are selected first, with the restriction of the delete, so that the restriction is evaluated
-     * before Hibernate deletes the rows of the join tables of the instances.
+     * Returns the restrictions for the join types other than a left join that the criteria request.
+     * Such a join leaves out the instances for which it returns no row, see
+     * {@link #buildRequestedJoinRestriction(PersistentEntity, String, int)}.
      */
-    private int deleteByIdentifiers(Session session, PersistentEntity entity, String delete, List parameters) {
-        String alias = entity.getDecapitalizedName();
-        String prefix = JpaQueryBuilder.DELETE_CLAUSE + entity.getName() + ' ' + alias;
-        SessionFactoryImplementor factory = (SessionFactoryImplementor) getHibernateTemplate().getSessionFactory();
-        String identifierName = factory.getMetamodel().entityPersister(entity.getName()).getIdentifierPropertyName();
-        String identifier = alias + '.' + (identifierName != null ? identifierName : "id");
-        ApplicationEventPublisher applicationEventPublisher = datastore.getApplicationEventPublisher();
-
-        org.hibernate.query.Query select = session.createQuery("SELECT " + identifier + " FROM " + entity.getName() + ' ' + alias + delete.substring(prefix.length()));
-        getHibernateTemplate().applySettings(select);
-        setParameters(select, parameters);
-        HibernateHqlQuery selectQuery = new HibernateHqlQuery(HibernateSession.this, entity, select);
-        applicationEventPublisher.publishEvent(new PreQueryEvent(datastore, selectQuery));
-        List identifiers = select.list();
-        applicationEventPublisher.publishEvent(new PostQueryEvent(datastore, selectQuery, identifiers));
-
-        int deleted = 0;
-        for (int from = 0; from < identifiers.size(); from += IDENTIFIER_BATCH_SIZE) {
-            List batch = identifiers.subList(from, Math.min(from + IDENTIFIER_BATCH_SIZE, identifiers.size()));
-            org.hibernate.query.Query query = session.createQuery(prefix + " WHERE " + identifier + " IN (:identifiers)");
-            getHibernateTemplate().applySettings(query);
-            query.setParameterList("identifiers", batch);
-            HibernateHqlQuery hqlQuery = new HibernateHqlQuery(HibernateSession.this, entity, query);
-            applicationEventPublisher.publishEvent(new PreQueryEvent(datastore, hqlQuery));
-            int result = query.executeUpdate();
-            applicationEventPublisher.publishEvent(new PostQueryEvent(datastore, hqlQuery, Collections.singletonList(result)));
-            deleted += result;
+    private List<RequestedJoinRestriction> buildRequestedJoinRestrictions(QueryableCriteria criteria) {
+        if (!(criteria instanceof AbstractDetachedCriteria)) {
+            return Collections.emptyList();
         }
-        return deleted;
+        List<RequestedJoinRestriction> restrictions = new ArrayList<>();
+        for (Map.Entry<String, JoinType> requestedJoin : ((AbstractDetachedCriteria<?>) criteria).getJoinTypes().entrySet()) {
+            if (requestedJoin.getValue() == null || requestedJoin.getValue() == JoinType.LEFT) {
+                continue;
+            }
+            RequestedJoinRestriction restriction = buildRequestedJoinRestriction(criteria.getPersistentEntity(), requestedJoin.getKey(), restrictions.size());
+            if (restriction != null) {
+                restrictions.add(restriction);
+            }
+        }
+        return restrictions;
     }
 
     /**
      * Restricts an update or a delete to the instances that the criteria return when they are
-     * listed. A join type other than a left join that the criteria request for an association
-     * leaves out the instances for which the join returns no row. An update and a delete cannot
-     * join, so each such join is applied as a restriction, see
-     * {@link #buildRequestedJoinRestriction(PersistentEntity, String, int)}.
+     * listed. An update and a delete cannot join, so each join that the criteria request is applied
+     * as a restriction.
      *
      * @param query The update or delete query of the criteria
      * @param criteria The criteria
+     * @param restrictions The restrictions of the requested joins
      * @return The query with the restrictions
      */
-    private String applyRequestedJoins(String query, QueryableCriteria criteria) {
-        if (!(criteria instanceof AbstractDetachedCriteria)) {
-            return query;
-        }
-        Map<String, JoinType> joinTypes = ((AbstractDetachedCriteria<?>) criteria).getJoinTypes();
+    private static String applyRequestedJoins(String query, QueryableCriteria criteria, List<RequestedJoinRestriction> restrictions) {
         StringBuilder restricted = new StringBuilder(query);
         boolean hasWhereClause = !criteria.getCriteria().isEmpty();
-        int index = 0;
-        for (Map.Entry<String, JoinType> requestedJoin : joinTypes.entrySet()) {
-            if (requestedJoin.getValue() == null || requestedJoin.getValue() == JoinType.LEFT) {
-                continue;
-            }
-            String restriction = buildRequestedJoinRestriction(criteria.getPersistentEntity(), requestedJoin.getKey(), index);
-            if (restriction != null) {
-                restricted.append(hasWhereClause ? JpaQueryBuilder.LOGICAL_AND : " WHERE ").append(restriction);
-                hasWhereClause = true;
-                index++;
-            }
+        for (RequestedJoinRestriction restriction : restrictions) {
+            restricted.append(hasWhereClause ? JpaQueryBuilder.LOGICAL_AND : " WHERE ").append(restriction.condition());
+            hasWhereClause = true;
         }
         return restricted.toString();
     }
@@ -373,22 +362,18 @@ public class HibernateSession extends AbstractHibernateSession {
      * other entity has, such as a {@code hasOne}, is matched through the property of the other entity
      * that refers back. A collection of a basic type has no entity of its own, so a path that starts
      * with one selects from the entity itself.
-     * <p>
-     * MySQL does not allow an update or a delete to select from the table that it modifies. A path
-     * that leads back to the class of the entity cannot be applied there, and is rejected instead of
-     * being left to fail in the database.
-     *
-     * @throws UnsupportedOperationException if the join cannot be applied to an update or a delete
      */
-    private String buildRequestedJoinRestriction(PersistentEntity entity, String associationPath, int index) {
+    private RequestedJoinRestriction buildRequestedJoinRestriction(PersistentEntity entity, String associationPath, int index) {
         String rootAlias = entity.getDecapitalizedName();
         String[] tokens = associationPath.split("\\.");
         int last = tokens.length - 1;
-        EntityPersister persister = ((SessionFactoryImplementor) getHibernateTemplate().getSessionFactory()).getMetamodel().entityPersister(entity.getName());
+        SessionFactoryImplementor factory = (SessionFactoryImplementor) getHibernateTemplate().getSessionFactory();
+        EntityPersister persister = factory.getMetamodel().entityPersister(entity.getName());
         StringBuilder from = new StringBuilder();
         String correlation = null;
         String alias = null;
         boolean selectsFromModifiedTable = false;
+        boolean throughJoinTable = false;
         PersistentEntity currentEntity = entity;
         for (int i = 0; i < tokens.length; i++) {
             PersistentProperty property = currentEntity != null ? currentEntity.getPropertyByName(tokens[i]) : null;
@@ -419,6 +404,7 @@ public class HibernateSession extends AbstractHibernateSession {
                     Association inverse = association.getInverseSide();
                     correlation = inverse instanceof ToOne ? joinAlias + '.' + inverse.getName() + " = " + rootAlias :
                             joinAlias + " MEMBER OF " + rootAlias + '.' + tokens[i];
+                    throughJoinTable = type instanceof CollectionType && factory.getMetamodel().collectionPersister(((CollectionType) type).getRole()).isManyToMany();
                 }
                 else if (referencedProperty != null) {
                     correlation = joinAlias + '.' + referencedProperty + " = " + rootAlias;
@@ -433,12 +419,7 @@ public class HibernateSession extends AbstractHibernateSession {
             alias = joinAlias;
             currentEntity = associatedEntity;
         }
-        if (selectsFromModifiedTable && !canSelectFromModifiedTable()) {
-            throw new UnsupportedOperationException("The join type requested for [" + associationPath + "] of [" + entity.getName() +
-                    "] cannot be applied to an update or a delete on this database, which does not allow them to select from the table that they modify. " +
-                    "Do not request the join type for the update or the delete, and restrict the query with criteria instead.");
-        }
-        return "EXISTS (SELECT 1 FROM " + from + " WHERE " + correlation + ")";
+        return new RequestedJoinRestriction("EXISTS (SELECT 1 FROM " + from + " WHERE " + correlation + ")", selectsFromModifiedTable, throughJoinTable);
     }
 
     /**
