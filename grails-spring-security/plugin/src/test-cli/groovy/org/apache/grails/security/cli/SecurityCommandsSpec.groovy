@@ -582,6 +582,7 @@ class DemoGrailsPlugin extends Plugin {
 
 import com.example.UserPasswordEncoderListener
 
+import grails.plugins.Plugin
 
 class DemoGrailsPlugin extends Plugin {
 
@@ -599,6 +600,7 @@ class DemoGrailsPlugin extends Plugin {
         String pluginClass = 'src/main/groovy/demo/DemoGrailsPlugin.groovy'
         write(pluginClass, '''package demo
 
+import grails.plugins.Plugin
 
 class DemoGrailsPlugin extends Plugin {
 
@@ -618,7 +620,9 @@ class DemoGrailsPlugin extends Plugin {
         result
         written(pluginClass) == '''package demo
 
+import com.example.UserPasswordEncoderListener
 
+import grails.plugins.Plugin
 
 class DemoGrailsPlugin extends Plugin {
 
