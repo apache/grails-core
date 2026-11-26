@@ -20,6 +20,7 @@ package org.grails.orm.hibernate.query
 
 import groovy.transform.CompileStatic
 import groovy.transform.RecordOptions
+import groovy.transform.TupleConstructor
 
 import org.grails.datastore.mapping.query.Query
 
@@ -43,9 +44,10 @@ import org.grails.datastore.mapping.query.Query
 @SuppressWarnings('Indentation')
 @CompileStatic
 @RecordOptions(getAt = false, toList = false, toMap = false, size = false)
+@TupleConstructor(defaults = false, namedVariant = false)
 record SqlRestriction(String sql, List<?> values) implements Query.Criterion {
 
-    SqlRestriction {
+    SqlRestriction(String sql, List<?> values) {
         if (sql == null) {
             throw new IllegalArgumentException('The SQL of a sqlRestriction must not be null')
         }
@@ -57,7 +59,8 @@ record SqlRestriction(String sql, List<?> values) implements Query.Criterion {
             }
             copy.add(value instanceof CharSequence ? value.toString() : value)
         }
-        values = Collections.unmodifiableList(copy)
+        this.sql = sql
+        this.values = Collections.unmodifiableList(copy)
     }
 
     /**

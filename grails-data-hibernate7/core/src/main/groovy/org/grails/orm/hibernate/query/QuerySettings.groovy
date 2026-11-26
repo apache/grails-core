@@ -37,11 +37,11 @@ import org.hibernate.jpa.AvailableHints
 @TupleConstructor(defaults = false, namedVariant = false)
 record QuerySettings(Map<String, Object> querySettings, Map<String, Object> hints) {
 
-    QuerySettings {
-        querySettings = querySettings == null ?
+    QuerySettings(Map<String, Object> querySettings, Map<String, Object> hints) {
+        this.querySettings = querySettings == null ?
                 Collections.<String, Object> emptyMap() :
                 Collections.unmodifiableMap(new HashMap<String, Object>(querySettings))
-        hints = filterHints(hints)
+        this.hints = filterHints(hints)
     }
 
     static QuerySettings of(Map<String, Object> settings, Map<String, Object> hints) {

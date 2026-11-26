@@ -45,11 +45,11 @@ record QueryParameters(Map<String, Object> namedParams, List<Object> positionalP
     record Expanded(String query, QueryParameters parameters) {
     }
 
-    QueryParameters {
-        namedParams = namedParams == null ?
+    QueryParameters(Map<String, Object> namedParams, List<Object> positionalParams) {
+        this.namedParams = namedParams == null ?
                 Collections.<String, Object> emptyMap() :
                 Collections.unmodifiableMap(new HashMap<String, Object>(namedParams))
-        positionalParams = positionalParams == null ?
+        this.positionalParams = positionalParams == null ?
                 Collections.<Object> emptyList() :
                 Collections.unmodifiableList(new ArrayList<Object>(positionalParams))
     }
