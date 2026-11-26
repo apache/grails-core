@@ -203,7 +203,6 @@ The project needs its Gradle wrapper for these commands: the `grails` command br
 
 An application can add _tools_ of its own to the `grails` command, and so can each of its plugins. A tool is a class, and where its source is decides what it can use. A tool in `src/cli` is run by the build with the application started around it, which makes it the place for work that needs the services and the domain classes of the application, such as an import or a report:
 
-// TOOLS-VERIFY: the output of create-tool (P4).
 [source,console]
 ----
 $ grails create-tool data-import
@@ -325,12 +324,11 @@ added    src/test/groovy/com/example/BookSpec.groovy
 
 `project health` reads the project and says what makes its build fail, what the upgrade notes ask for and is not done, and what the guide recommends, each with what to do. It changes nothing and runs nothing of the build. It ends with exit code 1 when there is an error, and with `--strict` when there is a warning too, so a job can hold the project to it:
 
-// TOOLS-VERIFY: the id and text of tool-catalog.missing and the number of checks (P4).
 [source,console]
 ----
 $ grails project health
 | Project shop on Grails 9.0.0 (gradle.properties), checked by the command line of Grails 9.0.0, offline
-| Advice  tool-catalog.missing  The tools of the application and its plugins are not listed: ... Fix: A build that compiles the project lists them (grails compile, run-app, test-app, assemble), and so does typing the name of one; grails gradle grailsToolCatalog lists them now
+| Advice  tool-catalog.missing  The tools of the application and its plugins are not listed: there is no .grails/cache/tool-catalog.json, so the grails command does not have them by their names. Fix: A build that compiles the project lists them (grails compile, run-app, test-app, assemble), and so does typing the name of one; grails gradle grailsToolCatalog lists them now
 | 12 checks OK (-v lists them). 0 errors, 0 warnings, 1 advice, 0 skipped
 ----
 

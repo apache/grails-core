@@ -131,7 +131,6 @@ All scripts have access to methods on the link:{api}org/apache/grails/core/cli/i
 
 The `grails` command has every script `src/main/scripts/<name>.groovy` of a project as a command, by the name of its file:
 
-// TOOLS-VERIFY: the heading of the help and the deprecation line of a script (P4).
 [source,console]
 ----
 $ ls src/main/scripts
@@ -141,7 +140,8 @@ $ grails help
 Tools of the application and its plugins:
   data-import  (script of the application)
 $ grails data-import orders.csv --dry-run
-| Warning Script commands are deprecated. Write a tool of the application in their place: create-tool
+| Running the script data-import of src/main/scripts, with the Gradle task runScriptCommand
+Script commands are deprecated: write a tool and run it with runTool
 ----
 
 A script is run by the build of the project, and not by the `grails` command. The command starts the Gradle task `runScriptCommand` with the Gradle wrapper of the project, and that task compiles and runs the script in a JVM of the build. A script is code of the project, as its build file is: whoever runs the build of a project runs its scripts, and nothing else does. The command line itself never compiles, evaluates or opens a script:

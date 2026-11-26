@@ -35,7 +35,6 @@ grails project health --json
 
 === Description
 
-// TOOLS-VERIFY: the check ids tool-catalog.* and tools.* with their levels and texts, and the number of checks (P4).
 Usage:
 
 [source,console]
@@ -323,7 +322,7 @@ The id of a finding is the name of its check and the name of the finding, as `ja
 
 | `tools.legacy-type`
 | advice
-| A tool of the list implements `ApplicationCommand` or `GrailsApplicationCommand`, which are deprecated.
+| A tool of the application in the list implements `ApplicationCommand` or `GrailsApplicationCommand`, which are deprecated. The tools of plugins are not named.
 | Implement `ApplicationTool` in place of `ApplicationCommand`, and `ApplicationTool` and `ToolSupport` in place of `GrailsApplicationCommand`. Nothing else changes.
 
 4+| `leftover`: what an earlier version of Grails read and Grails {grailsMajorVersion} does not.

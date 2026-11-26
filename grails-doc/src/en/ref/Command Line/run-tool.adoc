@@ -64,7 +64,6 @@ Arguments:
 
 `run-command`, the name this command had in Grails 8, runs the same tool after one warning line, and the Gradle task `runCommand` runs it after a Gradle warning:
 
-// TOOLS-VERIFY: the deprecation lines of run-command and of the task runCommand (P4, P2).
 [source,console]
 ----
 $ grails run-command hello-world

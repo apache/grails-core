@@ -60,7 +60,6 @@ The name can be given with hyphens (`data-import` becomes `DataImportTool`), and
 
 The tool that was created is run by its name with hyphens, as are the tools of the plugins the application depends on. The command says the name in its last line:
 
-// TOOLS-VERIFY: the output of create-tool (P4).
 [source,console]
 ----
 $ grails create-tool DataImport
