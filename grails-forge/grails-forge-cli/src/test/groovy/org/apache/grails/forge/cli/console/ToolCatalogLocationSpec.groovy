@@ -245,8 +245,8 @@ class ToolCatalogLocationSpec extends CommandSpec implements CommandFixture {
     void "the places the command line reads the catalog by are those of the rule"() {
         expect:
         ToolCatalogFile.BUILD_FILES == ToolCatalogFreshness.BUILD_FILES
-        ToolCatalogFile.SOURCE_DIRECTORIES == ['src/cli', 'src/standalone', 'grails-app/commands']
-        ToolCatalogFile.SOURCE_ENDINGS == ['.groovy', '.java']
+        ToolCatalogFile.SOURCE_DIRECTORIES == ToolCatalogFreshness.TOOL_SOURCES
+        ToolCatalogFile.SOURCE_ENDINGS == ToolCatalogFreshness.SOURCE_ENDINGS
         ToolCatalogFile.DESCRIPTOR_DIRECTORIES == ['main', 'cli', 'standalone'].collect { String sourceSet -> "build/classes/groovy/${sourceSet}/${ToolCatalogFreshness.DESCRIPTORS}".toString() }
         ToolCatalogFile.DESCRIPTOR_ENDING == ToolCatalogFreshness.DESCRIPTOR_ENDING
         ToolCatalogFile.MAX_WALKED == ToolCatalogFreshness.MAX_WALKED
