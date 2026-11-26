@@ -66,10 +66,9 @@ public class ByteBuddyGroovyInterceptor extends ByteBuddyInterceptor {
     public Object intercept(Object proxy, Method method, Object[] args) throws Throwable {
         String methodName = method.getName();
 
-        // Reading the identifier never initializes the proxy, so it is always the internal identifier:
-        // getIdentifier() initializes the proxy when hibernate.jpa.compliance.proxy is enabled. Every call
-        // arrives here, including the one Hibernate makes to reach the lazy initializer.
-        // Only the mapped getter can return the identifier without invoking the entity.
+        // Reading the identifier never initializes the proxy. The identifier is therefore always read with
+        // getInternalIdentifier(), never with Hibernate's getIdentifier(), which loads the entity when
+        // hibernate.jpa.compliance.proxy is enabled.
         if (getIdentifierMethod != null && getIdentifierMethod.equals(method)) {
             return getInternalIdentifier();
         }
