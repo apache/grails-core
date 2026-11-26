@@ -19,6 +19,7 @@
 package org.grails.datastore.gorm.mongo.connections
 
 import org.springframework.transaction.IllegalTransactionStateException
+import org.springframework.transaction.support.TransactionTemplate
 import spock.lang.AutoCleanup
 import spock.lang.Unroll
 import spock.util.environment.RestoreSystemProperties
@@ -60,9 +61,10 @@ class PlainClassInTenantBlockSpec extends AutoStartedMongoSpec {
                 'grails.gorm.multiTenancy.tenantResolverClass': SystemPropertyTenantResolver,
                 (MongoSettings.SETTING_URL)                   : "mongodb://${mongoHost}:${mongoPort}/plainClassDefaultDb".toString(),
                 (MongoSettings.SETTING_CONNECTIONS)           : [
-                        foo: [url: "mongodb://${mongoHost}:${mongoPort}/plainClassFooDb".toString()]
+                        foo: [url: "mongodb://${mongoHost}:${mongoPort}/plainClassFooDb".toString()],
+                        bar: [url: "mongodb://${mongoHost}:${mongoPort}/plainClassBarDb".toString()]
                 ]
-        ], PlainMongoNote, TenantMongoNote)
+        ], PlainMongoNote, TenantMongoNote, NamedPlainMongoNote)
         seed = new PlainMongoNote(text: 'seed').save(flush: true)
     }
 
@@ -114,6 +116,7 @@ class PlainClassInTenantBlockSpec extends AutoStartedMongoSpec {
         then: 'read without GORM'
         IllegalTransactionStateException e = thrown()
         e.message.contains(PlainMongoNote.name)
+        e.message.contains('Flushing does not replace a transaction.')
         textsIn('plainClassDefaultDb', PlainMongoNote) == ['seed']
         textsIn('plainClassFooDb', PlainMongoNote) == []
 
@@ -121,15 +124,24 @@ class PlainClassInTenantBlockSpec extends AutoStartedMongoSpec {
         write << WRITES.keySet().toList()
     }
 
-    void 'a save of a plain class inside a tenant\'s transaction fails while a session of its datastore is bound, as in a web request'() {
+    @Unroll
+    void 'a save with flush=#flush fails while a session of its datastore is bound, as in a web request'() {
         when:
         PlainMongoNote.withSession {
-            Tenants.withId('foo') { new TransactionalNoteWriter().run { new PlainMongoNote(text: 'pending').save() } }
+            Tenants.withId('foo') {
+                new TransactionalNoteWriter().run {
+                    new PlainMongoNote(text: 'inner').save(flush: flush)
+                    throw new IllegalStateException('tenant failed')
+                }
+            }
         }
 
         then:
         thrown(IllegalTransactionStateException)
         textsIn('plainClassDefaultDb', PlainMongoNote) == ['seed']
+
+        where:
+        flush << [false, true]
     }
 
     @Unroll
@@ -160,7 +172,66 @@ class PlainClassInTenantBlockSpec extends AutoStartedMongoSpec {
         outcome = fails ? 'fails' : 'commits'
     }
 
+    @Unroll
+    void 'a flushed save with tenant #tenantId and boundSession=#boundSession needs no tenant transaction'() {
+        given:
+        Closure write = {
+            Tenants.withTenant(PlainMongoNote, tenantId) {
+                new PlainMongoNote(text: 'flushed').save(flush: true)
+            }
+        }
+
+        when:
+        if (boundSession) {
+            PlainMongoNote.withSession { write.call() }
+        }
+        else {
+            write.call()
+        }
+
+        then: 'read without GORM'
+        textsIn('plainClassDefaultDb', PlainMongoNote) == ['flushed', 'seed']
+        textsIn('plainClassFooDb', PlainMongoNote) == []
+
+        where:
+        [tenantId, boundSession] << [['foo', 'unregistered'], [false, true]].combinations()
+    }
+
+    @Unroll
+    void 'a flushed save with tenant #tenantId ignores another transaction and boundSession=#boundSession'() {
+        given:
+        def other = (MongoDatastore) datastore.getDatastoreForConnection('bar')
+        Closure write = {
+            Tenants.withTenant(PlainMongoNote, tenantId) {
+                new PlainMongoNote(text: 'flushed').save(flush: true)
+            }
+        }
+
+        when:
+        new TransactionTemplate(other.transactionManager).execute { status ->
+            if (boundSession) {
+                PlainMongoNote.withSession { write.call() }
+            }
+            else {
+                write.call()
+            }
+            status.setRollbackOnly()
+        }
+
+        then: 'the other transaction does not own the write'
+        textsIn('plainClassDefaultDb', PlainMongoNote) == ['flushed', 'seed']
+        textsIn('plainClassFooDb', PlainMongoNote) == []
+        textsIn('plainClassBarDb', PlainMongoNote) == []
+
+        where:
+        [tenantId, boundSession] << [['foo', 'unregistered'], [false, true]].combinations()
+    }
+
     static final Map<String, Closure> WRITES = [
+            'a flushed save': { PlainClassInTenantBlockSpec spec -> new PlainMongoNote(text: 'inner').save(flush: true) },
+            'a flushed insert': { PlainClassInTenantBlockSpec spec -> new PlainMongoNote(text: 'inner').insert(flush: true) },
+            'a flushed delete': { PlainClassInTenantBlockSpec spec -> PlainMongoNote.get(spec.seed.id).delete(flush: true) },
+            'a flushed deleteAll': { PlainClassInTenantBlockSpec spec -> PlainMongoNote.deleteAll([flush: true], [PlainMongoNote.get(spec.seed.id)]) },
             'a save'     : { PlainClassInTenantBlockSpec spec -> new PlainMongoNote(text: 'pending').save() },
             'an insert'  : { PlainClassInTenantBlockSpec spec -> new PlainMongoNote(text: 'pending').insert() },
             'a delete'   : { PlainClassInTenantBlockSpec spec -> PlainMongoNote.get(spec.seed.id).delete() },
@@ -169,7 +240,9 @@ class PlainClassInTenantBlockSpec extends AutoStartedMongoSpec {
     ]
 
     static final Map<String, Closure> OWN_TRANSACTION_WRITES = [
-            'a save with flush: true'     : { PlainClassInTenantBlockSpec spec -> new PlainMongoNote(text: 'inner').save(flush: true) },
+            'a flushed save in withTransaction': { PlainClassInTenantBlockSpec spec ->
+                PlainMongoNote.withTransaction { new PlainMongoNote(text: 'inner').save(flush: true) }
+            },
             'a save in withTransaction'   : { PlainClassInTenantBlockSpec spec ->
                 PlainMongoNote.withTransaction { new PlainMongoNote(text: 'inner').save() }
             },
@@ -180,6 +253,28 @@ class PlainClassInTenantBlockSpec extends AutoStartedMongoSpec {
                 spec.datastore.getService(PlainMongoNoteService).save(new PlainMongoNote(text: 'inner'))
             },
     ]
+
+    @Unroll
+    void 'a named-only plain class can be flushed with tenant #tenantId and boundSession=#boundSession'() {
+        given:
+        Closure write = {
+            Tenants.withTenant(NamedPlainMongoNote, tenantId) {
+                new NamedPlainMongoNote(text: 'flushed').save(flush: true)
+            }
+        }
+
+        when:
+        NamedPlainMongoNote saved = boundSession ? NamedPlainMongoNote.withSession { write.call() } : write.call()
+
+        then:
+        NamedPlainMongoNote.get(saved.id)?.text == 'flushed'
+        textsIn('plainClassFooDb', NamedPlainMongoNote) == ['flushed']
+        documentsIn('plainClassDefaultDb', NamedPlainMongoNote) == 0
+        documentsIn('plainClassBarDb', NamedPlainMongoNote) == 0
+
+        where:
+        [tenantId, boundSession] << [['foo', 'bar', 'unregistered'], [false, true]].combinations()
+    }
 
     void 'a multi-tenant class still reaches the tenant\'s database inside a tenant block'() {
         given:
@@ -223,6 +318,16 @@ class PlainMongoNote {
 class TenantMongoNote implements MultiTenant<TenantMongoNote> {
 
     String text
+}
+
+@Entity
+class NamedPlainMongoNote {
+
+    String text
+
+    static mapping = {
+        connections(['foo'])
+    }
 }
 
 @Service(PlainMongoNote)

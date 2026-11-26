@@ -20,13 +20,19 @@ package org.grails.datastore.gorm
 
 import grails.gorm.annotation.Entity
 import grails.gorm.multitenancy.CurrentTenantHolder
+import grails.gorm.multitenancy.Tenants
 import org.grails.datastore.mapping.core.Datastore
+import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.datastore.mapping.core.Session
 import org.grails.datastore.mapping.core.SessionCallback
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
 import org.grails.datastore.mapping.simple.SimpleMapDatastore
+import org.springframework.transaction.IllegalTransactionStateException
 import org.springframework.transaction.PlatformTransactionManager
+import org.springframework.transaction.support.AbstractPlatformTransactionManager
+import org.springframework.transaction.support.TransactionSynchronizationManager
+import org.springframework.transaction.support.TransactionTemplate
 import spock.lang.AutoCleanup
 import spock.lang.Specification
 
@@ -135,11 +141,11 @@ class AbstractGormApiSpec extends Specification {
         AbstractGormApi.EXCLUDES.is(AbstractGormApi.getEXCLUDES())
 
         and: "the exact set jdaugherty's review restored, plus getTransactionManager for the new abstract getter"
-        AbstractGormApi.EXCLUDES as Set == [
+        (AbstractGormApi.EXCLUDES as Set) == ([
             'setProperty', 'getProperty', 'getMetaClass', 'setMetaClass', 'invokeMethod',
             'getMethods', 'getExtendedMethods', 'wait', 'equals', 'toString', 'hashCode',
             'getClass', 'notify', 'notifyAll', 'setTransactionManager', 'getTransactionManager'
-        ] as Set
+        ] as Set)
     }
 
     void "ConstantDatastoreResolver always resolves to the datastore it was constructed with"() {
@@ -149,6 +155,91 @@ class AbstractGormApiSpec extends Specification {
 
         expect:
         resolver.resolve().is(ds)
+    }
+
+    void 'a plain class can be flushed with tenant #tenantId bound and unrelatedTransaction=#unrelatedTransaction'() {
+        given:
+        datastore.close()
+        datastore = new SimpleMapDatastore(
+                DatastoreUtils.createPropertyResolver(['grails.gorm.multiTenancy.mode': 'DATABASE']),
+                [ConnectionSource.DEFAULT, 'tenant', 'other'], AbstractGormApiThing)
+
+        when:
+        Closure write = {
+            Tenants.withTenant(AbstractGormApiThing, tenantId) {
+                new AbstractGormApiThing(name: 'flushed').save(flush: true)
+            }
+        }
+        def saved = unrelatedTransaction
+                ? new TransactionTemplate(((SimpleMapDatastore) datastore.getDatastoreForConnection('other')).transactionManager).execute { write.call() }
+                : write.call()
+
+        then:
+        AbstractGormApiThing.get(saved.id)?.name == 'flushed'
+
+        where:
+        [tenantId, unrelatedTransaction] << [['tenant', 'unregistered'], [false, true]].combinations()
+    }
+
+    void 'a named-only plain class can be flushed with tenant #tenantId bound'() {
+        given:
+        datastore.close()
+        datastore = new SimpleMapDatastore(
+                DatastoreUtils.createPropertyResolver(['grails.gorm.multiTenancy.mode': 'DATABASE']),
+                [ConnectionSource.DEFAULT, 'tenant', 'named'], AbstractGormApiNamedThing)
+
+        when:
+        def saved = GormRegistry.withConnectionScope(AbstractGormApiNamedThing, 'named') {
+            Tenants.withTenant(AbstractGormApiNamedThing, tenantId) {
+                new AbstractGormApiNamedThing(name: 'flushed').save(flush: true)
+            }
+        }
+
+        then:
+        AbstractGormApiNamedThing.named.get(saved.id)?.name == 'flushed'
+        AbstractGormApiNamedThing.named.withSession { Session session ->
+            session.datastore.is(datastore.getDatastoreForConnection('named'))
+        }
+
+        where:
+        tenantId << ['tenant', 'named', 'unregistered']
+    }
+
+    void 'a plain class #operation is refused in a tenant transaction without synchronization'() {
+        given:
+        datastore.close()
+        datastore = new SimpleMapDatastore(
+                DatastoreUtils.createPropertyResolver(['grails.gorm.multiTenancy.mode': 'DATABASE']),
+                [ConnectionSource.DEFAULT, 'tenant'], AbstractGormApiThing)
+        def tenant = (SimpleMapDatastore) datastore.getDatastoreForConnection('tenant')
+        tenant.transactionManager.transactionSynchronization = AbstractPlatformTransactionManager.SYNCHRONIZATION_NEVER
+
+        when:
+        Tenants.withTenant(AbstractGormApiThing, 'tenant') {
+            new TransactionTemplate(tenant.transactionManager).execute { status ->
+                assert !TransactionSynchronizationManager.isSynchronizationActive()
+                assert !TransactionSynchronizationManager.isActualTransactionActive()
+                status.setRollbackOnly()
+                write.call(new AbstractGormApiThing(name: 'unsafe'))
+            }
+        }
+
+        then:
+        thrown(IllegalTransactionStateException)
+        AbstractGormApiThing.withTransaction { AbstractGormApiThing.count() } == 0
+
+        where:
+        operation                      | write
+        'save without flush'           | { thing -> thing.save(flush: false) }
+        'save with flush'              | { thing -> thing.save(flush: true) }
+        'insert without flush'         | { thing -> thing.insert(flush: false) }
+        'insert with flush'            | { thing -> thing.insert(flush: true) }
+        'delete without flush'         | { thing -> thing.delete(flush: false) }
+        'delete with flush'            | { thing -> thing.delete(flush: true) }
+        'saveAll'                      | { thing -> AbstractGormApiThing.saveAll([thing]) }
+        'deleteAll without parameters' | { thing -> AbstractGormApiThing.deleteAll([thing]) }
+        'deleteAll without flush'      | { thing -> AbstractGormApiThing.deleteAll([flush: false], [thing]) }
+        'deleteAll with flush'         | { thing -> AbstractGormApiThing.deleteAll([flush: true], [thing]) }
     }
 
     interface MixedDatastore extends MultiTenantCapableDatastore, Datastore {}
@@ -183,6 +274,15 @@ class AbstractGormApiSpec extends Specification {
 class AbstractGormApiThing {
     Long id
     String name
+}
+
+@Entity
+class AbstractGormApiNamedThing {
+    String name
+
+    static mapping = {
+        datasources(['named'])
+    }
 }
 
 class AbstractGormApiTenantThing implements grails.gorm.MultiTenant<AbstractGormApiTenantThing> {
