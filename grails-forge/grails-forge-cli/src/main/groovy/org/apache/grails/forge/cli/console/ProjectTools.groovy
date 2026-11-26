@@ -348,7 +348,7 @@ final class ProjectTools {
         }
         // only now: a tool of the build does not take a name from another one of the build
         for (ToolCatalogFile.Entry entry : added) {
-            CommandLine.Model.CommandSpec spec = ToolCommand.specOf(entry, root.getFactory())
+            CommandLine.Model.CommandSpec spec = ToolCommand.specOf(entry, root)
             root.addSubcommand(entry.name, new CommandLine(spec, root.getFactory()))
         }
         listSeparately(root)

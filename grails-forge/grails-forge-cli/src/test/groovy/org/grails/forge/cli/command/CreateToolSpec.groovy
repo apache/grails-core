@@ -263,6 +263,7 @@ class CreateToolSpec extends CommandSpec implements CommandFixture {
 
         then:
         exit == 0
+        help.startsWith('Usage: grails-forge-cli create-tool [-fhvVx] [--non-interactive] [--plain-output] [--standalone] TOOL-NAME ')
         help.contains('Creates a tool of the application: a class the grails command runs by its name.')
         help.contains('A tool is written to src/cli/groovy and is run by the build, with the application started around it unless it says otherwise.')
         help.contains('With --standalone it is written to src/standalone/groovy and runs as a process of its own, without Gradle and without the application, on the files of the project.')

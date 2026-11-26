@@ -20,7 +20,7 @@ package org.grails.forge.features.publish
 
 import java.nio.file.Files
 import java.util.zip.ZipFile
-import groovy.json.JsonSlurper
+import org.apache.grails.forge.cli.console.ToolCatalogFile
 import org.gradle.testkit.runner.BuildResult
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.application.OperatingSystem
@@ -115,8 +115,8 @@ class ToolsPluginProjectSpec extends CommandSpec {
         String cli = executeGradle('runTool', '-Pargs=hello one').output
         String standalone = executeGradle('runTool', '-Pargs=plain two').output
         executeGradle('grailsStandaloneTools')
-        Map catalog = (Map) new JsonSlurper().parse(new File(application, '.grails/cache/tool-catalog.json'))
-        Map record = (Map) new JsonSlurper().parse(new File(application, '.grails/cache/standalone-tools.json'))
+        ToolCatalogFile catalog = ToolCatalogFile.read(application.toPath())
+        String record = new File(application, '.grails/cache/standalone-tools.json').text
 
         then: 'both tools run, without a line for either companion'
         cli.contains('KIND cli args=[one]')
@@ -124,16 +124,18 @@ class ToolsPluginProjectSpec extends CommandSpec {
         !new File(application, 'build.gradle').text.contains('-cli')
 
         and: 'the catalog has each as its kind, from its companion'
-        Map<String, Map> tools = ((List<Map>) catalog.tools).collectEntries { [(it.name): it] }
-        tools.hello.subMap(['target', 'startsApplication']) == [target: 'application', startsApplication: false]
-        ((String) tools.hello.origin).startsWith("example.grails:${artifact}-cli:")
-        tools.plain.target == 'standalone'
-        ((String) tools.plain.origin).startsWith("example.grails:${artifact}-cli-standalone:")
+        catalog.state == ToolCatalogFile.State.CURRENT
+        ToolCatalogFile.Entry hello = catalog.tools.find { it.name == 'hello' }
+        ToolCatalogFile.Entry plain = catalog.tools.find { it.name == 'plain' }
+        hello.target == 'application' && !hello.startsApplication
+        hello.origin.startsWith("example.grails:${artifact}-cli:")
+        plain.standalone
+        plain.origin.startsWith("example.grails:${artifact}-cli-standalone:")
 
         and: 'the standalone tool is started with its companion, and with nothing of the plugin'
-        ((List<String>) record.tools).contains('plain')
-        ((List<String>) record.classpath).any { it.endsWith("${artifact}-cli-standalone-0.1.jar") }
-        !((List<String>) record.classpath).any { it.endsWith("/${artifact}-0.1.jar") }
+        record.contains('"plain"')
+        record.contains("${artifact}-cli-standalone-0.1.jar")
+        !record.contains("${artifact}-0.1.jar")
 
         cleanup:
         plugin?.deleteDir()

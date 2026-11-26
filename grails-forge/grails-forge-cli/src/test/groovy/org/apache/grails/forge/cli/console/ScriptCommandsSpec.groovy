@@ -46,7 +46,8 @@ class ScriptCommandsSpec extends CommandSpec implements CommandFixture {
 
     static final String BUILD = ProjectToolsSpec.BUILD + "tasks.register('runScriptCommand', RunTool)\n"
     static final String MARKER = 'new File("evaluated.txt").text = "a script was evaluated"\nnew File(System.getProperty("user.dir"), "evaluated.txt").text = "a script was evaluated"\n'
-    static final String DEPRECATED = '| Warning Script commands are deprecated. Write a new tool as a class of the application: create-tool'
+    // what the help of a script says; the task that runs a script says it is deprecated itself, once, and the command line does not
+    static final String DEPRECATED = 'Script commands are deprecated: write a tool, with grails-forge-cli create-tool'
     static final String HOW = 'That one is run with: grails-forge-cli gradle runScriptCommand --arg='
 
     PrintStream originalOut
@@ -104,7 +105,7 @@ class ScriptCommandsSpec extends CommandSpec implements CommandFixture {
         out.toString().readLines()[0] == 'Usage: grails-forge-cli nightly-report [ARGS...]'
         help.contains('A script of the application, in src/main/scripts. It is run by the build of the project, without the application, and not by this program: ' +
                 'it is started by the Gradle task runScriptCommand of the project.')
-        help.contains('Script commands are deprecated. Write a new tool as a class of the application: create-tool')
+        help.contains(DEPRECATED)
         help.contains('Everything after the name of the tool is given to the tool as it is, the options too.')
 
         when: 'the document for a tool'
@@ -370,9 +371,9 @@ class ScriptCommandsSpec extends CommandSpec implements CommandFixture {
         lineOf('permissions=') == 'rw------- rwx------'
         errors() == []
 
-        and: 'before Gradle is started it is said what is run, and that scripts are deprecated'
+        and: 'before Gradle is started it is said what is run; that scripts are deprecated is said by the task that runs them, and not twice'
         err.toString().readLines()[0] == '| Running the script data-import of src/main/scripts, with the Gradle task runScriptCommand'
-        err.toString().readLines()[1] == DEPRECATED
+        !err.toString().contains('deprecated')
 
         and: 'the file of the arguments is gone; the init script with which Gradle checks the path of the project stays, see ProjectPathCheck'
         !file.exists()

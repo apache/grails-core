@@ -61,8 +61,14 @@ class ToolCommand extends InProjectCommand {
     /** What names the environment of the build, which a tool of the application takes before its name with run-tool and not after it. */
     public static final String ENVIRONMENT_OPTION = '-Dgrails.env='
 
-    /** What is said of every script: scripts are kept for the applications that have them. */
-    public static final String DEPRECATED = 'Script commands are deprecated. Write a new tool as a class of the application: create-tool'
+    /**
+     * @param createTool how {@code create-tool} is typed where the help is shown
+     * @return what the help of every script says: scripts are kept for the applications that have them, and
+     * the task that runs one says it each time it runs
+     */
+    static String deprecatedScripts(String createTool) {
+        return "Script commands are deprecated: write a tool, with ${createTool}".toString()
+    }
 
     @CommandLine.Parameters(arity = '0..*', paramLabel = 'ARGS', description = 'The arguments of the tool, which are given to it as they are.')
     List<String> arguments = []
@@ -75,11 +81,11 @@ class ToolCommand extends InProjectCommand {
 
     /**
      * @param entry a tool the build of the project lists
-     * @param factory the factory of the command line the command is added to
+     * @param root the command line the command is added to
      * @return the tool as picocli has it, under the names the build gives
      */
-    static CommandLine.Model.CommandSpec specOf(ToolCatalogFile.Entry entry, CommandLine.IFactory factory) {
-        CommandLine.Model.CommandSpec spec = CommandLine.Model.CommandSpec.forAnnotatedObject(new ToolCommand(entry), factory)
+    static CommandLine.Model.CommandSpec specOf(ToolCatalogFile.Entry entry, CommandLine root) {
+        CommandLine.Model.CommandSpec spec = CommandLine.Model.CommandSpec.forAnnotatedObject(new ToolCommand(entry), root.getFactory())
         // the options every command of the CLI has would be taken from what is meant for the tool
         for (CommandLine.Model.OptionSpec option : new ArrayList<CommandLine.Model.OptionSpec>(spec.options())) {
             spec.remove(option)
@@ -95,7 +101,7 @@ class ToolCommand extends InProjectCommand {
         if (entry.isScript()) {
             description.add(("A script of the application, in ${ScriptCommandFiles.LOCATION}. It is run by the build of the project, without the application, " +
                     "and not by this program: it is started by the Gradle task ${ScriptCommandFiles.TASK} of the project.").toString())
-            description.add(DEPRECATED)
+            description.add(deprecatedScripts(UsageHelp.toType(root, 'create-tool')))
         } else {
             // where a tool comes from is the name of a jar or of a project: text, as the description is
             String of = "A tool of ${entry.origin == ToolCatalogFile.APPLICATION ? 'the application' : shown(entry.origin).replace('%', '%%')}, "
@@ -226,9 +232,8 @@ class ToolCommand extends InProjectCommand {
             // the name of a tool of a plugin by one letter, and this says what runs before it does.
             PrintWriter said = spec.commandLine().getErr()
             said.println(CommandLine.Help.Ansi.AUTO.string("@|bold | Running|@ ${entry.isScript() ? "the script ${entry.name} of ${ScriptCommandFiles.LOCATION}, with the Gradle task ${task()}" : running(entry.name, entry.origin)}"))
-            if (entry.isScript()) {
-                said.println(CommandLine.Help.Ansi.AUTO.string('@|bold,red | Warning|@ ' + DEPRECATED))
-            } else {
+            // the task that runs a script says itself, once, that scripts are deprecated
+            if (!entry.isScript()) {
                 warnOfDeprecations(said, entry)
                 warnOfEnvironment(said)
             }
