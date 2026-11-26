@@ -39,7 +39,7 @@ import org.apache.grails.plugin.descriptor.PluginDescriptorWriter
  * directory once javac has finished generating all classes in the compilation.
  */
 @CompileStatic
-@SupportedAnnotationTypes('grails.plugins.metadata.GrailsPluginDescriptor')
+@SupportedAnnotationTypes('*')
 @SupportedOptions('grails.plugin.version')
 class JavaPluginDescriptorProcessor extends AbstractProcessor {
 
@@ -69,10 +69,6 @@ class JavaPluginDescriptorProcessor extends AbstractProcessor {
     private static void writeDescriptors(ProcessingEnvironment environment) {
         def index = environment.filer.createResource(StandardLocation.CLASS_OUTPUT, '', PluginDescriptorWriter.PLUGINS_IMPORTS_PATH)
         File directory = new File(index.toUri()).parentFile.parentFile.parentFile
-        def scan = PluginDescriptorWriter.scan(Collections.singleton(directory))
-        if (scan.plugins) {
-            PluginDescriptorWriter.writeDescriptors(scan.plugins, scan.artefactsByType,
-                    environment.options.get('grails.plugin.version'), null, directory)
-        }
+        CompilerPluginDescriptors.reconcile(directory, environment.options.get('grails.plugin.version'), true)
     }
 }

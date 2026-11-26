@@ -37,14 +37,15 @@ class PluginDescriptorTransformationSpec extends Specification {
         File output = new File(project, 'classes')
         File sources = new File(project, 'src/test/groovy')
         sources.mkdirs()
-        File alpha = new File(sources, 'AlphaGrailsPlugin.groovy')
-        alpha.text = "class AlphaGrailsPlugin { def version = '1.0' }"
-        File beta = new File(sources, 'BetaGrailsPlugin.groovy')
-        beta.text = "class BetaGrailsPlugin { def version = '1.0' }"
+        File bundle = new File(sources, 'Plugins.groovy')
+        bundle.text = """
+            class AlphaGrailsPlugin { def version = '1.0' }
+            class BetaGrailsPlugin { def version = '1.0' }
+        """
         writeService(output, 'SampleService')
 
         when:
-        compile(output, alpha, beta)
+        compile(output, bundle)
 
         then:
         descriptors(output) == [alpha: ['SampleService'], beta: ['SampleService']]
@@ -53,9 +54,14 @@ class PluginDescriptorTransformationSpec extends Specification {
         Files.delete(new File(output, 'AlphaGrailsPlugin.class').toPath())
         Files.delete(new File(output, 'SampleService.class').toPath())
         writeService(output, 'RenamedService')
-        compile(output, beta)
+        bundle.text = "class BetaGrailsPlugin { def version = '1.0' }"
+        compile(output, bundle)
 
         then:
+        def clean = new File(project, 'clean')
+        writeService(clean, 'RenamedService')
+        compile(clean, bundle)
+        descriptors(output) == descriptors(clean)
         descriptors(output) == [beta: ['RenamedService']]
         !new File(output, 'META-INF/grails/plugins/alpha/plugin.properties').exists()
 
@@ -77,20 +83,38 @@ class PluginDescriptorTransformationSpec extends Specification {
         source.text = '@grails.plugins.metadata.GrailsPluginDescriptor(name="java-probe") public class JavaPlugin {}'
         File output = new File(project, 'java-classes')
         output.mkdirs()
-        def compiler = javax.tools.ToolProvider.systemJavaCompiler
-        def files = compiler.getStandardFileManager(null, null, null)
-        String classpath = new File(grails.plugins.metadata.GrailsPluginDescriptor.protectionDomain.codeSource.location.toURI()).path
-        def task = compiler.getTask(null, files, null, ['-classpath', classpath, '-d', output.path,
-                '-Agrails.plugin.version=3.0'], null, files.getJavaFileObjects(source))
-        task.processors = [new JavaPluginDescriptorProcessor()]
+        File clean = new File(project, 'clean-java')
+        clean.mkdirs()
 
-        expect:
-        task.call()
+        when:
+        compileJava(output, source)
+
+        then:
         descriptors(output) == [javaProbe: []]
         new File(output, 'META-INF/grails/plugins/javaProbe/plugin.properties').text.readLines().contains('version=3.0')
 
-        cleanup:
-        files?.close()
+        when: 'the last annotated class is recompiled as an ordinary class'
+        source.text = 'public class JavaPlugin {}'
+        compileJava(output, source)
+        compileJava(clean, source)
+
+        then:
+        descriptors(output) == descriptors(clean)
+        descriptors(output).isEmpty()
+        !new File(output, 'META-INF/grails/plugins.imports').exists()
+        !new File(output, 'META-INF/grails/plugins/javaProbe/plugin.properties').exists()
+        !new File(output, 'META-INF/grails-plugin.xml').exists()
+    }
+
+    private static void compileJava(File output, File source) {
+        def compiler = javax.tools.ToolProvider.systemJavaCompiler
+        String classpath = new File(grails.plugins.metadata.GrailsPluginDescriptor.protectionDomain.codeSource.location.toURI()).path
+        compiler.getStandardFileManager(null, null, null).withCloseable { files ->
+            def task = compiler.getTask(null, files, null, ['-classpath', classpath, '-d', output.path,
+                    '-Agrails.plugin.version=3.0'], null, files.getJavaFileObjects(source))
+            task.processors = [new JavaPluginDescriptorProcessor()]
+            assert task.call()
+        }
     }
 
     private void writeService(File output, String name) {
